@@ -1,6 +1,6 @@
 import inspect
 import hashlib
-import shelve
+import shelve # TODO: Use a better implementation for DB
 import __builtin__
 
 def register(function):
@@ -12,10 +12,11 @@ def register(function):
 def memoize(function):
     def wrapper(*args):
         if repr(args) not in cache:
-            cache[repr(args)] = function(*args)
+            cache[repr(args)] = function(*args) # TODO: Check what is *kargs
         return cache[repr(args)]
     return wrapper
 
+# TODO: Read as binary for caching
 def new_open(old_open):
     def wrapper(*args):
         file_cursor = old_open(*args)
