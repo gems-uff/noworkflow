@@ -1,5 +1,5 @@
-import fibonacci
 import provenance
+import fibonacci
 
 provenance.register(fibonacci.fib)
 
