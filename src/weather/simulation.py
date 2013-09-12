@@ -4,7 +4,7 @@ import tempfile
 import os
 #this code requires matplotlib to be installed
 #please refer to http://matplotlib.org/downloads.html 
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
     
 class TabularData:
     def __init__(self, data, header=None):
@@ -61,15 +61,16 @@ def extractColumn(d, column_name, column):
             print 'processing row', row
             col_data.append(row[idx])
         return col_data
-
-# TODO: FIX THIS    
-def mplScatter(y,x):
+  
+def mplScatter(x,y):
     kwargs = {}        
     #kwargs['y'] = y
     #kwargs['x'] = x
-    pathCollection = matplotlib.pyplot.scatter(x, y, s=20, c='b', marker='o', cmap=None, norm=None, 
+    plt.scatter(x, y, s=20, c='b', marker='o', cmap=None, norm=None, 
                     vmin=None, vmax=None, alpha=None, linewidths=None, verts=None, **kwargs)
-    return pathCollection
+    plt.xlabel('Temperature')
+    plt.ylabel('Precipitation')
+    plt.show()
     
 ######################################################################################    
 #Main Program
@@ -95,5 +96,5 @@ out1 = [float(i) for i in columnX]
 out2 = [float(i) for i in columnY] 
 print 'Generating result...'
 p = mplScatter(out1, out2)
-print p 
+
 
