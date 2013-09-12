@@ -2,6 +2,9 @@ import csv
 import time
 import tempfile
 import os
+#this code requires matplotlib to be installed
+#please refer to http://matplotlib.org/downloads.html 
+import matplotlib.pyplot
     
 class TabularData:
     def __init__(self, data, header=None):
@@ -58,7 +61,16 @@ def extractColumn(d, column_name, column):
             print 'processing row', row
             col_data.append(row[idx])
         return col_data
-        
+
+# TODO: FIX THIS    
+def mplScatter(y,x):
+    kwargs = {}        
+    #kwargs['y'] = y
+    #kwargs['x'] = x
+    pathCollection = matplotlib.pyplot.scatter(x, y, s=20, c='b', marker='o', cmap=None, norm=None, 
+                    vmin=None, vmax=None, alpha=None, linewidths=None, verts=None, **kwargs)
+    return pathCollection
+    
 ######################################################################################    
 #Main Program
 print 'Reading data temp_precip1.dat...'
@@ -77,4 +89,11 @@ columnY = extractColumn(d, '', 1)
 #GetTemperature
 print 'Extracting temperature...'
 columnX = extractColumn(d, '', 0)
-#mplScatter(columnY, columnX)
+#Transform column values in a list of float
+print 'Converting values...'
+out1 = [float(i) for i in columnX]
+out2 = [float(i) for i in columnY] 
+print 'Generating result...'
+p = mplScatter(out1, out2)
+print p 
+
