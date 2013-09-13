@@ -1,0 +1,5 @@
+These docs define how modules are versioned in python:
+
+- Where to define version numbers: http://www.python.org/dev/peps/pep-0396/
+- How to define version numbers: http://www.python.org/dev/peps/pep-0386/
+- Metadata definition of packages: http://www.python.org/dev/peps/pep-0345/
