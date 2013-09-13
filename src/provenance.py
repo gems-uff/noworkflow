@@ -37,7 +37,8 @@ def get_version(module):
         pass
     
     # If no other option work, return the hash of the source-code of the module
-    return hashlib.sha1(inspect.getsource(module)).hexdigest() # TODO: Use bytecode instead
+    with open(inspect.getfile(module), 'rb') as f:
+        return hashlib.sha1(f.read()).hexdigest()
 
 def memoize(function):
     def wrapper(*args):
