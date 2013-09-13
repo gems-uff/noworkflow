@@ -26,7 +26,7 @@ def get_version(module):
 
     # Check explicitly declared module version
     try:
-        return getattr(module, 'version', '__version__', 'VERSION', '__VERSION__')
+        return getattr(module, '__version__', 'version', 'VERSION', '__VERSION__')
     except AttributeError:
         pass
     
