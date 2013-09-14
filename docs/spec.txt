@@ -1,0 +1,78 @@
+Prospective provenance specification:
+
+For a given code, extract a tuple:
+
+(version, dependencies)
+
+Where *version* is the version of the code itself. It can be computed in a heuristic way, searching for a defined version number 
+in the module that contains the code according to http://www.python.org/dev/peps/pep-0396/. If there is no predefined version
+for the model, a sha1 hash should be computed for the module source-code.
+
+The *dependencies* information is structured as follows:
+
+{ 'name1': tuple1, 'name2': tuple2, ... }
+
+Where nameN is the name of each dependency (functions/methods) and tupleN is the previouly defined tuple (version, dependencies)
+of each dependency.   
+
+Example 1:
+
+Main program code hash: 111111
+Main program tuple: (111111, { 'a()': (222222, {}), 'b()': (333333, {'b()': (...)}) })
+
+a() code hash: 222222
+a() tuple: (222222, {})
+
+b() code hash: 333333
+b() tuple: (333333, {'b()': (...)})
+
+Example 2 (wrong. remove or rebuild):
+
+>>> def a():
+...   b()
+... 
+>>> def b():
+...   c()
+...   d()
+... 
+>>> def c():
+...   b()
+... 
+>>> def d():
+...   pass
+... 
+
+>>> depa = {}
+>>> cache['hasha'] = depa
+>>> cache
+{'hasha': {}}
+>>> depb = {}
+>>> cache['hashb'] = depb
+>>> cache
+{'hasha': {}, 'hashb': {}}
+>>> depc = {}
+>>> cache['hashc'] = depc
+>>> cache
+{'hasha': {}, 'hashc': {}, 'hashb': {}}
+>>> depb = cache['hashb']
+>>> depc['b()'] = depb
+>>> cache
+{'hasha': {}, 'hashc': {'b()': {}}, 'hashb': {}}
+>>> depb['c()'] = depc
+>>> cache
+{'hasha': {}, 'hashc': {'b()': {'c()': {...}}}, 'hashb': {'c()': {'b()': {...}}}}
+>>> depd = {}
+>>> cache['hashd'] = depd
+>>> depb['d()'] = depd
+>>> depa['b()'] = depb
+>>> 
+>>> cache
+{'hashd': {}, 'hasha': {'b()': {'c()': {'b()': {...}}, 'd()': {}}}, 'hashc': {'b()': {'c()': {...}, 'd()': {}}}, 'hashb': {'c()': {'b()': {...}}, 'd()': {}}}
+>>> depa
+{'b()': {'c()': {'b()': {...}}, 'd()': {}}}
+>>> depb
+{'c()': {'b()': {...}}, 'd()': {}}
+
+Actually, depa should be:
+
+{'b()': ('1.2.3', {'c()': ('1.1.1', {'b()': (...)}), 'd()': (12345612345, {})}}
