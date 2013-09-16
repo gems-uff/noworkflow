@@ -12,7 +12,7 @@ The *dependencies* information is structured as follows:
 
 { 'name1': tuple1, 'name2': tuple2, ... }
 
-Where nameN is the name of each dependency (functions/methods) and tupleN is the previouly defined tuple (version, dependencies)
+Where *nameN* is the name of each dependency (functions/methods) and *tupleN* is the previouly defined tuple (version, dependencies)
 of each dependency.   
 
 Example 1:
