@@ -6,6 +6,9 @@ from pprint import pprint
 function_defs = {}
 calls = {}
 
+def a():
+    pass
+
 class CallGraphVisitor(ast.NodeVisitor):
     'Identifies the function declarations and calls of the program'
     namespace = []
@@ -42,7 +45,6 @@ class CallGraphVisitor(ast.NodeVisitor):
         if caller not in calls:
             calls[caller] = {}
 
-        print 'Func name? ' + ast.dump(node)
         callee = self.get_function_name(node.func)        
         if callee not in calls:
             calls[callee] = {}
