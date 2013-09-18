@@ -1,4 +1,5 @@
 import re
+import example2
 
 def a(var1):
     def x():
@@ -17,3 +18,5 @@ x = 10
 a(x)
 x = 5
 c()
+example2.e(x)
+xx = re

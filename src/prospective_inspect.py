@@ -1,7 +1,6 @@
 import inspect
 import hashlib
 import utils
-from pprint import pprint
 
 sourcecode_rep = {}
 functions = {}

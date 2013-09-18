@@ -1,7 +1,7 @@
-import provenance
+import decorators
 import fibonacci
 
-provenance.register(fibonacci.fib)
+decorators.register(fibonacci.fib)
 
 print fibonacci.fib(100)
-print provenance.cache
+print decorators.cache

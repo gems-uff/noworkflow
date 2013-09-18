@@ -1,6 +1,4 @@
 import ast
-import inspect
-from astpp import parseprint
 from pprint import pprint
 
 function_defs = {}
