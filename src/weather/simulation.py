@@ -13,8 +13,9 @@ class TabularData:
 
 ###############################################################
         
-def simulation(dataA, dataB): 
-    time.sleep(20)
+def simulation(dataA, dataB):
+    #TODO: trocar aqui para 20 novamente  
+    time.sleep(2)
     
     all_data = dataA.data + dataB.data
     
@@ -95,6 +96,6 @@ print 'Converting values...'
 out1 = [float(i) for i in columnX]
 out2 = [float(i) for i in columnY] 
 print 'Generating result...'
-p = mplScatter(out1, out2)
+mplScatter(out1, out2)
 
 
