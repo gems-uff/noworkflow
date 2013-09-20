@@ -74,15 +74,3 @@ def load_ipython_extension(ip):
             parseprint(cell, mode=args.mode)
     
     ip.register_magics(AstMagics)
-    
-if __name__ == '__main__':
-    import sys, tokenize
-    for filename in sys.argv[1:]:
-        print('=' * 50)
-        print('AST tree for', filename)
-        print('=' * 50)
-        with tokenize.open(filename) as f:
-            fstr = f.read()
-        
-        parseprint(fstr, filename=filename, include_attributes=True)
-        print()

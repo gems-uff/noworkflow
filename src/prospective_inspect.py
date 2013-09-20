@@ -30,5 +30,5 @@ bytecode = compile(sourcecode, filename, 'exec')
 get_functions([], sourcecode, bytecode)
 
     
-utils.printmap('FUNCTIONS', functions)
-utils.printmap('CODE REPOSITORY', sourcecode_rep)
+utils.print_map('FUNCTIONS', functions)
+utils.print_map('CODE REPOSITORY', sourcecode_rep)
