@@ -75,10 +75,10 @@ def mplScatter(x,y):
     
 ######################################################################################    
 #Main Program
-print 'Reading data temp_precip1.dat...'
-dataA = csvRead('temp_precip1.dat')
-print 'Reading data temp_precip2.dat...'
-dataB = csvRead('temp_precip2.dat')
+print 'Reading data data1.dat...'
+dataA = csvRead('data1.dat')
+print 'Reading data data2.dat...'
+dataB = csvRead('data2.dat')
 #Simulation
 print 'Executing simulation...'
 tempFile = simulation(dataA, dataB)
