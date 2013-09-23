@@ -1,37 +1,62 @@
+# Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
+# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+
 'Supporting infrastructure to run scientific experiments without a scientific workflow management system.'
+
 import sys
 import argparse
-import os
-import posixpath
+import os.path
+import traceback
+import persistence
+import output
+from output import write
 
 def main():
     parser = argparse.ArgumentParser(description = __doc__)
-    parser.add_argument('script', help = 'Python script to be executed.')
+    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
+    parser.add_argument('script', help = 'Python script to be executed')
     args = parser.parse_args()
     
-    script_path = posixpath.realpath(args.script)
-    script_name = posixpath.basename(script_path)
-    script_dir = posixpath.dirname(script_path)
+    script_path = os.path.realpath(args.script)
+    script_dir = os.path.dirname(script_path)
+    output.verbose = args.verbose
     
     if not os.path.exists(script_path):
-        print '[noWorkflow] Error:', script_path, 'does not exist'
+        write('the script does not exist', True)
         sys.exit(1)
+        
+    write('connecting to local provenance store')
+    persistence.connect(script_dir)
 
-    del sys.argv[0] # Hide "now" from argument list
-    sys.path[0] = script_dir # Replace now's dir with script's dir in front of module search path.
 
-    try:
-        #pdb._runscript(mainpyfile)
-        exec(open(script_path).read()) 
-        print '[noWorkflow] The program {0} finished SUCCESSFULLY'.format(script_name)
-    except SystemExit:
-        print '[noWorkflow] The program {0} exited via sys.exit(). Exit status: '.format(script_name),
-        print sys.exc_info()[1]
+    write('collecting prospective provenance')
+    # prospective.extract(script_path)
+
+    try:        
+        del sys.argv[0] # Hide "now" from argument list
+        sys.path[0] = script_dir # Replace now's dir with script's dir in front of module search path.
+        
+        # Clear up the __main__ namespace
+        import __main__
+        __main__.__dict__.clear()
+        __main__.__dict__.update({"__name__"    : "__main__",
+                                  "__file__"    : script_path,
+                                  "__builtins__": __builtins__,
+                                 })
+
+        write('enabling collection of retrospective provenance')
+        # TODO: Register to listen trace calls
+        # sys.settrace(???) 
+        # sys.setprofile(???) <-- this seems more appropriate
+
+        write('executing the script')
+        execfile(script_path, __main__.__dict__) 
+        write('the execution finished successfully')
+    except SystemExit as ex:
+        write('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
     except:
-        #traceback.print_exc()
-        print '[noWorkflow] The program {0} finished with an uncaught exception:'.format(script_name)
-        raise sys.exc_info()[2]
-
-
-    
-    
+        write('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
+    finally:
+        # TODO: Remove one of these
+        sys.settrace(None)
+        sys.setprofile(None)

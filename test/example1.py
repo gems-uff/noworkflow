@@ -16,6 +16,7 @@ def c():
 x = 10
 y = a(x)
 x = 5
-c(y)
+c()
 example2.e(x)
-b(x)
+print 40
+b()
