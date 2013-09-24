@@ -1,4 +1,5 @@
 import example2
+import re
 
 def a(var1):
     def x():

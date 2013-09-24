@@ -8,7 +8,6 @@ setup(
     version = "0.1",
     package_dir = {'': 'src'},
     packages = find_packages('src'),
-    install_requires = ['snakefood == 1.4'],
     
     entry_points = {
         'console_scripts': [

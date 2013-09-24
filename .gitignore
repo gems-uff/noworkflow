@@ -28,3 +28,6 @@ nosetests.xml
 
 # Translations
 *.mo
+
+# Execution data
+.noworkflow
