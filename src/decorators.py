@@ -2,8 +2,6 @@ import inspect
 import hashlib
 import shelve # TODO: Use a better implementation for DB
 import __builtin__
-import pkg_resources
-import sys
 
 def register(function):
     source = inspect.getsource(function)
@@ -18,27 +16,6 @@ def deep_hash(function):
     # - AST
     # - use of co_names (method calls) and co_varnames
          
-
-def get_version(module):
-    # Check built-in module
-    if module.__name__ == '__builtins__':
-        return sys.version 
-
-    # Check explicitly declared module version
-    try:
-        return getattr(module, '__version__', 'version', 'VERSION', '__VERSION__')
-    except AttributeError:
-        pass
-    
-    # Check package declared module version
-    try: 
-        return pkg_resources.get_distribution(module.__name__).version 
-    except: 
-        pass
-    
-    # If no other option work, return the hash of the source-code of the module
-    with open(inspect.getfile(module), 'rb') as f:
-        return hashlib.sha1(f.read()).hexdigest()
 
 def memoize(function):
     def wrapper(*args):

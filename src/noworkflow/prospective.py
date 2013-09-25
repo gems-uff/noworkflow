@@ -2,30 +2,39 @@
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 import persistence
 import sys
-import os.path
 import pkg_resources
 import modulefinder
-from utils import write
+from utils import print_msg
 import utils
 import platform
 import importlib
+import ast
+import os
+import socket
+import astpp # TODO: Remove
 
-def clean(path):
-    'Use package name instead of __init__.py'
-    if os.path.basename(path) == '__init__.py':
-        return os.path.dirname(path)
-    else:
-        return path
-    
-def get_module_dependencies(path):
+def collect_environment_provenance():    
+    environment = {}   
+    for name in os.sysconf_names:
+        environment[name] = os.sysconf(name)
+    for name in os.confstr_names:
+        environment[name] = os.confstr(name)
+    environment.update(os.environ)
+    environment['PWD'] = os.getcwd()
+    environment['USER'] = os.getlogin()
+    environment['PID'] = os.getpid()
+    environment['OS_NAME'], _, environment['OS_RELEASE'], environment['OS_VERSION'], _ = os.uname()
+    environment['HOSTNAME'] = socket.gethostname()   
+    environment['ARCH'] = platform.architecture()[0]
+    environment['PROCESSOR'] = platform.processor()
+    environment['PYTHON_IMPLEMENTATION'] = platform.python_implementation()
+    environment['PYTHON_VERSION'] = platform.python_version()
+    return environment
+
+def collect_modules_provenance(modules):
     'returns a set of module dependencies in the form: (name, version, path, code hash)'
-    write('finding module dependencies')
-    finder = modulefinder.ModuleFinder()
-    finder.run_script(path)
-    
-    write('collecting provenance from {} dependencies'.format(len(finder.modules)))
     dependencies = []
-    for name, module in finder.modules.iteritems():
+    for name, module in modules.iteritems():
         if name != '__main__':
             version = get_version(name)
             path = module.__file__
@@ -44,7 +53,7 @@ def get_version(module_name):
      
     # Check package declared module version
     try:
-        return pkg_resources.get_distribution(module_name).version 
+        return pkg_resources.get_distribution(module_name).version # TODO: This is slow! Is there any alternative?
     except: 
         pass
     
@@ -64,12 +73,33 @@ def get_version(module_name):
     # If no other option work, return None    
     return None
 
-def collect_provenance(script_path, list_modules):
+def find_functions(path):
+    tree = ast.parse(open(path).read(), path)
+    print astpp.dump(tree, True, True, '\t')
+    return []
 
-    modules_dep = get_module_dependencies(script_path)    
-    if (list_modules):
-        utils.list_dependencies(modules_dep)
+def collect_provenance(args):
+    print_msg('collecting provenance from environment')
+    environment = collect_environment_provenance() # TODO: store this variable somewhere (relational DB?)
+    if (args.list_environment):
+        utils.print_map('this script was executed under the following environment conditions', environment)
     
-    
-
-    
+    if args.bypass_modules:
+        print_msg('using previously detected module dependencies (--bypass-modules).')
+        modules = {} # TODO: code the actual behavior of using previous detected modules 
+    else:
+        print_msg('finding module dependencies')
+        finder = modulefinder.ModuleFinder()
+        finder.run_script(args.script)
+        
+        print_msg('collecting provenance from {} dependencies'.format(len(finder.modules)))
+        modules = collect_modules_provenance(finder.modules)  # TODO: store this variable somewhere (relational DB?)
+    if (args.list_modules):
+        utils.print_modules(modules)
+        
+    print_msg('finding user-defined functions')
+    functions = find_functions(args.script)  # TODO: store this variable somewhere (relational DB?)
+    print_msg('collecting provenance from {} functions'.format(len(functions)))
+    pass
+    if (args.list_functions):
+        utils.print_functions(functions)
