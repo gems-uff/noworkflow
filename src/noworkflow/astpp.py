@@ -45,32 +45,3 @@ def dump(node, annotate_fields=True, include_attributes=False, indent='  '):
     if not isinstance(node, AST):
         raise TypeError('expected AST, got %r' % node.__class__.__name__)
     return _format(node)
-
-def parseprint(code, filename="<string>", mode="exec", **kwargs):
-    """Parse some code from a string and pretty-print it."""
-    node = parse(code, mode=mode)   # An ode to the code
-    print(dump(node, **kwargs))
-
-# Short name: pdp = parse, dump, print
-pdp = parseprint
-
-def load_ipython_extension(ip):
-    from IPython.core.magic import Magics, magics_class, cell_magic
-    from IPython.core import magic_arguments
-    
-    @magics_class
-    class AstMagics(Magics):
-        
-        @magic_arguments.magic_arguments()
-        @magic_arguments.argument(
-            '-m', '--mode', default='exec',
-            help="The mode in which to parse the code. Can be exec (the default), "
-                 "eval or single."
-        )    
-        @cell_magic
-        def dump_ast(self, line, cell):
-            """Parse the code in the cell, and pretty-print the AST."""
-            args = magic_arguments.parse_argstring(self.dump_ast, line)
-            parseprint(cell, mode=args.mode)
-    
-    ip.register_magics(AstMagics)

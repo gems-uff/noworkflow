@@ -109,8 +109,8 @@ USAGE
         if DEBUG or TESTRUN:
             raise(e)
         indent = len(program_name) * " "
-        sys.stderr.write(program_name + ": " + repr(e) + "\n")
-        sys.stderr.write(indent + "  for help use --help")
+        sys.stderr.print_msg(program_name + ": " + repr(e) + "\n")
+        sys.stderr.print_msg(indent + "  for help use --help")
         return 2
 
 if __name__ == "__main__":

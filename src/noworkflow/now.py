@@ -10,21 +10,24 @@ import traceback
 import persistence
 import utils
 import prospective
-from utils import write
+from utils import print_msg
 
 def main():
     parser = argparse.ArgumentParser(description = __doc__)
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
-    parser.add_argument("-m", "--modules", help="list the module dependencies", action="store_true")
+    parser.add_argument("-e", "--list-environment", help="list the environment provenance", action="store_true")
+    parser.add_argument("-m", "--list-modules", help="list the module dependency provenance", action="store_true")
+    parser.add_argument("-b", "--bypass-modules", help="bypass module dependencies analysis, assuming that no module changes occurred since last execution", action="store_true")
+    parser.add_argument("-f", "--list-functions", help="list the user-defined functions provenance", action="store_true")
     parser.add_argument('script', help = 'Python script to be executed')
     args = parser.parse_args()
     
-    script_path = os.path.realpath(args.script)
-    script_dir = os.path.dirname(script_path)
+    args.script = os.path.realpath(args.script)
+    script_dir = os.path.dirname(args.script)
     utils.verbose = args.verbose
     
-    if not os.path.exists(script_path):
-        write('the script does not exist', True)
+    if not os.path.exists(args.script):
+        print_msg('the script does not exist', True)
         sys.exit(1)
 
     del sys.argv[0] # Hide "now" from argument list
@@ -34,30 +37,34 @@ def main():
     import __main__
     __main__.__dict__.clear()
     __main__.__dict__.update({"__name__"    : "__main__",
-                              "__file__"    : script_path,
+                              "__file__"    : args.script,
                               "__builtins__": __builtins__,
                              })
 
-    write('setting up local provenance store')
+    print_msg('setting up local provenance store')
     persistence.connect(script_dir)
 
-    write('collecting prospective provenance')
-    prospective.collect_provenance(script_path, args.modules)
+    print_msg('collecting prospective provenance')
+    prospective.collect_provenance(args)
 
-    write('enabling collection of retrospective provenance')
+    print_msg('enabling collection of retrospective provenance')
     # TODO: Register to listen trace calls
     # sys.settrace(???) 
     # sys.setprofile(???) <-- this seems more appropriate
 
-    write('executing the script')
+    print_msg('executing the script')
     try:
-        execfile(script_path, __main__.__dict__) 
-        write('the execution finished successfully')
+        execfile(args.script, __main__.__dict__) 
+        print_msg('the execution finished successfully')
     except SystemExit as ex:
-        write('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
+        print_msg('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
     except:
-        write('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
+        print_msg('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
     finally:
         # TODO: Remove one of these
         sys.settrace(None)
         sys.setprofile(None)
+
+if __name__ == '__main__':
+    import now #@UnresolvedImport
+    now.main()
