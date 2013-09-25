@@ -29,7 +29,7 @@ else:
     """)
         
     for row in cursor.fetchall():
-        id, data = row
-        print '%2d %s' % (id, data)
+        table_id, data = row
+        print '%2d %s' % (table_id, data)
 
 conn.close()
