@@ -17,7 +17,11 @@ def print_modules(modules):
     
 def print_functions(functions):
     print_msg('this script has the following functions:', True)
-    pass # TODO: Pending
+    output = []
+    for name in functions:
+        arguments, global_vars = functions[name]
+        output.append('  Name: {}\n  Arguments: {}\n  Globals: {}'.format(name, arguments, global_vars))
+    print '\n\n'.join(output)
 
 def print_map(title, a_map):
     print_msg(title, True)

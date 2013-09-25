@@ -1,6 +1,6 @@
-import t2
-import t3
+def a():
+    def b():
+        print 'b'
+    print 'a'
 
-t3.add(5)
-t2.run()
-print t3.store
+print a.b()

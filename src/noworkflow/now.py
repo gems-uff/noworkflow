@@ -15,10 +15,10 @@ from utils import print_msg
 def main():
     parser = argparse.ArgumentParser(description = __doc__)
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
-    parser.add_argument("-e", "--list-environment", help="list the environment provenance", action="store_true")
-    parser.add_argument("-m", "--list-modules", help="list the module dependency provenance", action="store_true")
+    parser.add_argument("-e", "--list-environment", help="list the environment conditions", action="store_true")
+    parser.add_argument("-m", "--list-modules", help="list the module dependencies", action="store_true")
     parser.add_argument("-b", "--bypass-modules", help="bypass module dependencies analysis, assuming that no module changes occurred since last execution", action="store_true")
-    parser.add_argument("-f", "--list-functions", help="list the user-defined functions provenance", action="store_true")
+    parser.add_argument("-f", "--list-functions", help="list the user-defined functions", action="store_true")
     parser.add_argument('script', help = 'Python script to be executed')
     args = parser.parse_args()
     
