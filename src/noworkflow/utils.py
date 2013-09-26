@@ -2,7 +2,7 @@
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 import hashlib
 
-LABEL = 'now: '
+LABEL = '[now] '
 verbose = False
 
 def print_msg(message, force = False):
@@ -12,15 +12,15 @@ def print_modules(modules):
     print_msg('this script depends on the following modules:', True)
     output = []
     for (name, version, path, code_hash) in modules:
-        output.append('  Name: {}\n  Version: {}\n  File: {}\n  Content hash: {}'.format(name, version, path, code_hash))
+        output.append('  Name: {}\n  Version: {}\n  File: {}\n  Code hash: {}'.format(name, version, path, code_hash))
     print '\n\n'.join(output)
     
 def print_functions(functions):
     print_msg('this script has the following functions:', True)
     output = []
     for name in functions:
-        arguments, global_vars = functions[name]
-        output.append('  Name: {}\n  Arguments: {}\n  Globals: {}'.format(name, arguments, global_vars))
+        arguments, global_vars, calls, code_hash = functions[name]
+        output.append('  Name: {}\n  Arguments: {}\n  Globals: {}\n  Function calls: {}\n  Code hash: {}'.format(name, arguments, global_vars, calls, code_hash))
     print '\n\n'.join(output)
 
 def print_map(title, a_map):

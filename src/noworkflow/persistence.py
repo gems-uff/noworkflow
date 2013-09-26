@@ -23,7 +23,7 @@ def put(content):
     content_filename = os.path.join(content_dirname, content_hash[2:])
     if not os.path.isfile(content_filename):
         with open(content_filename, "wb") as content_file:
-            content_file.print_msg(content)
+            content_file.write(content)
     return content_hash
 
 def get(content_hash):

@@ -2,11 +2,13 @@ import csv
 import time
 import matplotlib.pyplot as plt
 
+wait = 2
 
 def run_simulation(data_a, data_b):
+    global wait
     data = data_a + data_b
 
-    time.sleep(2)
+    time.sleep(wait)
 
     return data
 
