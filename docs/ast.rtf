@@ -1,0 +1,137 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf390
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\paperw11905\paperh16837\margl1440\margr1440\vieww28600\viewh15000\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
+
+\f0\fs24 \cf0 Module(body=[\
+		Import(names=[\
+				alias(name='csv', asname=None),\
+			], lineno=1, col_offset=0),\
+		Import(names=[\
+				alias(name='time', asname=None),\
+			], lineno=2, col_offset=0),\
+		Import(names=[\
+				alias(name='matplotlib.pyplot', asname='plt'),\
+			], lineno=3, col_offset=0),\
+		Assign(targets=[\
+				Name(id='wait', ctx=Store(), lineno=5, col_offset=0),\
+			], value=Num(n=2, lineno=5, col_offset=7), lineno=5, col_offset=0),\
+		FunctionDef(name='run_simulation', args=arguments(args=[\
+				Name(id='data_a', ctx=Param(), lineno=7, col_offset=19),\
+				Name(id='data_b', ctx=Param(), lineno=7, col_offset=27),\
+			], vararg=None, kwarg=None, defaults=[]), body=[\
+				Global(names=[\
+						'wait',\
+					], lineno=8, col_offset=4),\
+				Assign(targets=[\
+						Name(id='data', ctx=Store(), lineno=9, col_offset=4),\
+					], value=BinOp(left=Name(id='data_a', ctx=Load(), lineno=9, col_offset=11), op=Add(), right=Name(id='data_b', ctx=Load(), lineno=9, col_offset=20), lineno=9, col_offset=11), lineno=9, col_offset=4),\
+				Expr(value=Call(func=Attribute(value=Name(id='time', ctx=Load(), lineno=11, col_offset=4), attr='sleep', ctx=Load(), lineno=11, col_offset=4), args=[\
+						Name(id='wait', ctx=Load(), lineno=11, col_offset=15),\
+					], keywords=[], starargs=None, kwargs=None, lineno=11, col_offset=4), lineno=11, col_offset=4),\
+				Return(value=Name(id='data', ctx=Load(), lineno=13, col_offset=11), lineno=13, col_offset=4),\
+			], decorator_list=[], lineno=7, col_offset=0),\
+		FunctionDef(name='csv_read', args=arguments(args=[\
+				Name(id='f', ctx=Param(), lineno=16, col_offset=13),\
+			], vararg=None, kwarg=None, defaults=[]), body=[\
+				Assign(targets=[\
+						Name(id='reader', ctx=Store(), lineno=17, col_offset=4),\
+					], value=Call(func=Attribute(value=Name(id='csv', ctx=Load(), lineno=17, col_offset=13), attr='reader', ctx=Load(), lineno=17, col_offset=13), args=[\
+						Call(func=Name(id='open', ctx=Load(), lineno=17, col_offset=24), args=[\
+								Name(id='f', ctx=Load(), lineno=17, col_offset=29),\
+								Str(s='rU', lineno=17, col_offset=32),\
+							], keywords=[], starargs=None, kwargs=None, lineno=17, col_offset=24),\
+					], keywords=[\
+						keyword(arg='delimiter', value=Str(s=':', lineno=17, col_offset=49)),\
+					], starargs=None, kwargs=None, lineno=17, col_offset=13), lineno=17, col_offset=4),\
+				Assign(targets=[\
+						Name(id='data', ctx=Store(), lineno=18, col_offset=4),\
+					], value=List(elts=[], ctx=Load(), lineno=18, col_offset=11), lineno=18, col_offset=4),\
+				For(target=Name(id='row', ctx=Store(), lineno=19, col_offset=8), iter=Name(id='reader', ctx=Load(), lineno=19, col_offset=15), body=[\
+						Expr(value=Call(func=Attribute(value=Name(id='data', ctx=Load(), lineno=20, col_offset=8), attr='append', ctx=Load(), lineno=20, col_offset=8), args=[\
+								Name(id='row', ctx=Load(), lineno=20, col_offset=20),\
+							], keywords=[], starargs=None, kwargs=None, lineno=20, col_offset=8), lineno=20, col_offset=8),\
+					], orelse=[], lineno=19, col_offset=4),\
+				Return(value=Name(id='data', ctx=Load(), lineno=21, col_offset=11), lineno=21, col_offset=4),\
+			], decorator_list=[], lineno=16, col_offset=0),\
+		FunctionDef(name='extract_column', args=arguments(args=[\
+				Name(id='data', ctx=Param(), lineno=23, col_offset=19),\
+				Name(id='column', ctx=Param(), lineno=23, col_offset=25),\
+			], vararg=None, kwarg=None, defaults=[]), body=[\
+				Assign(targets=[\
+						Name(id='col_data', ctx=Store(), lineno=24, col_offset=8),\
+					], value=List(elts=[], ctx=Load(), lineno=24, col_offset=19), lineno=24, col_offset=8),\
+				For(target=Name(id='row', ctx=Store(), lineno=25, col_offset=12), iter=Name(id='data', ctx=Load(), lineno=25, col_offset=19), body=[\
+						Expr(value=Call(func=Attribute(value=Name(id='col_data', ctx=Load(), lineno=26, col_offset=12), attr='append', ctx=Load(), lineno=26, col_offset=12), args=[\
+								Call(func=Name(id='float', ctx=Load(), lineno=26, col_offset=28), args=[\
+										Subscript(value=Name(id='row', ctx=Load(), lineno=26, col_offset=34), slice=Index(value=Name(id='column', ctx=Load(), lineno=26, col_offset=38)), ctx=Load(), lineno=26, col_offset=34),\
+									], keywords=[], starargs=None, kwargs=None, lineno=26, col_offset=28),\
+							], keywords=[], starargs=None, kwargs=None, lineno=26, col_offset=12), lineno=26, col_offset=12),\
+					], orelse=[], lineno=25, col_offset=8),\
+				Return(value=Name(id='col_data', ctx=Load(), lineno=27, col_offset=15), lineno=27, col_offset=8),\
+			], decorator_list=[], lineno=23, col_offset=0),\
+		FunctionDef(name='plot', args=arguments(args=[\
+				Name(id='x', ctx=Param(), lineno=29, col_offset=9),\
+				Name(id='y', ctx=Param(), lineno=29, col_offset=11),\
+			], vararg=None, kwarg=None, defaults=[]), body=[\
+				Assign(targets=[\
+						Name(id='kwargs', ctx=Store(), lineno=30, col_offset=4),\
+					], value=Dict(keys=[], values=[], lineno=30, col_offset=13), lineno=30, col_offset=4),\
+				Expr(value=Call(func=Attribute(value=Name(id='plt', ctx=Load(), lineno=31, col_offset=4), attr='scatter', ctx=Load(), lineno=31, col_offset=4), args=[\
+						Name(id='x', ctx=Load(), lineno=31, col_offset=16),\
+						Name(id='y', ctx=Load(), lineno=31, col_offset=19),\
+					], keywords=[\
+						keyword(arg='s', value=Num(n=20, lineno=31, col_offset=24)),\
+						keyword(arg='c', value=Str(s='b', lineno=31, col_offset=30)),\
+						keyword(arg='marker', value=Str(s='o', lineno=31, col_offset=42)),\
+						keyword(arg='cmap', value=Name(id='None', ctx=Load(), lineno=31, col_offset=52)),\
+						keyword(arg='norm', value=Name(id='None', ctx=Load(), lineno=31, col_offset=63)),\
+						keyword(arg='vmin', value=Name(id='None', ctx=Load(), lineno=32, col_offset=25)),\
+						keyword(arg='vmax', value=Name(id='None', ctx=Load(), lineno=32, col_offset=36)),\
+						keyword(arg='alpha', value=Name(id='None', ctx=Load(), lineno=32, col_offset=48)),\
+						keyword(arg='linewidths', value=Name(id='None', ctx=Load(), lineno=32, col_offset=65)),\
+						keyword(arg='verts', value=Name(id='None', ctx=Load(), lineno=32, col_offset=77)),\
+					], starargs=None, kwargs=Name(id='kwargs', ctx=Load(), lineno=32, col_offset=85), lineno=31, col_offset=4), lineno=31, col_offset=4),\
+				Expr(value=Call(func=Attribute(value=Name(id='plt', ctx=Load(), lineno=33, col_offset=4), attr='xlabel', ctx=Load(), lineno=33, col_offset=4), args=[\
+						Str(s='Temperature', lineno=33, col_offset=15),\
+					], keywords=[], starargs=None, kwargs=None, lineno=33, col_offset=4), lineno=33, col_offset=4),\
+				Expr(value=Call(func=Attribute(value=Name(id='plt', ctx=Load(), lineno=34, col_offset=4), attr='ylabel', ctx=Load(), lineno=34, col_offset=4), args=[\
+						Str(s='Precipitation', lineno=34, col_offset=15),\
+					], keywords=[], starargs=None, kwargs=None, lineno=34, col_offset=4), lineno=34, col_offset=4),\
+				Expr(value=Call(func=Attribute(value=Name(id='plt', ctx=Load(), lineno=35, col_offset=4), attr='show', ctx=Load(), lineno=35, col_offset=4), args=[], keywords=[], starargs=None, kwargs=None, lineno=35, col_offset=4), lineno=35, col_offset=4),\
+			], decorator_list=[], lineno=29, col_offset=0),\
+		Assign(targets=[\
+				Name(id='dataA', ctx=Store(), lineno=39, col_offset=0),\
+			], value=Call(func=Name(id='csv_read', ctx=Load(), lineno=39, col_offset=8), args=[\
+				Str(s='data1.dat', lineno=39, col_offset=17),\
+			], keywords=[], starargs=None, kwargs=None, lineno=39, col_offset=8), lineno=39, col_offset=0),\
+		Assign(targets=[\
+				Name(id='dataB', ctx=Store(), lineno=40, col_offset=0),\
+			], value=Call(func=Name(id='csv_read', ctx=Load(), lineno=40, col_offset=8), args=[\
+				Str(s='data2.dat', lineno=40, col_offset=17),\
+			], keywords=[], starargs=None, kwargs=None, lineno=40, col_offset=8), lineno=40, col_offset=0),\
+		Assign(targets=[\
+				Name(id='data', ctx=Store(), lineno=42, col_offset=0),\
+			], value=Call(func=Name(id='run_simulation', ctx=Load(), lineno=42, col_offset=7), args=[\
+				Name(id='dataA', ctx=Load(), lineno=42, col_offset=22),\
+				Name(id='dataB', ctx=Load(), lineno=42, col_offset=29),\
+			], keywords=[], starargs=None, kwargs=None, lineno=42, col_offset=7), lineno=42, col_offset=0),\
+		Assign(targets=[\
+				Name(id='columnX', ctx=Store(), lineno=44, col_offset=0),\
+			], value=Call(func=Name(id='extract_column', ctx=Load(), lineno=44, col_offset=10), args=[\
+				Name(id='data', ctx=Load(), lineno=44, col_offset=25),\
+				Num(n=0, lineno=44, col_offset=31),\
+			], keywords=[], starargs=None, kwargs=None, lineno=44, col_offset=10), lineno=44, col_offset=0),\
+		Assign(targets=[\
+				Name(id='columnY', ctx=Store(), lineno=46, col_offset=0),\
+			], value=Call(func=Name(id='extract_column', ctx=Load(), lineno=46, col_offset=10), args=[\
+				Name(id='data', ctx=Load(), lineno=46, col_offset=25),\
+				Num(n=1, lineno=46, col_offset=31),\
+			], keywords=[], starargs=None, kwargs=None, lineno=46, col_offset=10), lineno=46, col_offset=0),\
+		Expr(value=Call(func=Name(id='plot', ctx=Load(), lineno=47, col_offset=0), args=[\
+				Name(id='columnX', ctx=Load(), lineno=47, col_offset=5),\
+				Name(id='columnY', ctx=Load(), lineno=47, col_offset=14),\
+			], keywords=[], starargs=None, kwargs=None, lineno=47, col_offset=0), lineno=47, col_offset=0),\
+	])\
+}

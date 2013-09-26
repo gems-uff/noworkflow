@@ -5,6 +5,7 @@
 <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">canopy</pydev_property>
 <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
 <path>/${PROJECT_DIR_NAME}/src</path>
-<path>/${PROJECT_DIR_NAME}/test</path>
+<path>/${PROJECT_DIR_NAME}/resources</path>
+<path>/${PROJECT_DIR_NAME}/tests</path>
 </pydev_pathproperty>
 </pydev_project>
