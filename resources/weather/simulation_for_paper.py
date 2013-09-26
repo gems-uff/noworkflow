@@ -33,8 +33,8 @@ def plot(x, y):
                     verts=None, **kwargs)
     plt.xlabel('Temperature')
     plt.ylabel('Precipitation')
-    plt.show()
-
+    #plt.show()
+    plt.savefig("output.png")
 
 ###############################################################################
 #Main Program
