@@ -40,12 +40,12 @@ def plot(x, y):
 
 ###############################################################################
 #Main Program
-dataA = csv_read('data1.dat')
-dataB = csv_read('data2.dat')
+data_a = csv_read('data1.dat')
+data_b = csv_read('data2.dat')
 #Simulation
-data = run_simulation(dataA, dataB)
+data = run_simulation(data_a, data_b)
 #GetTemperature
-columnX = extract_column(data, 0)
+column_x = extract_column(data, 0)
 #GetPrecipitation
-columnY = extract_column(data, 1)
-plot(columnX, columnY)
+column_y = extract_column(data, 1)
+plot(column_x, column_y)
