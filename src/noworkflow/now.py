@@ -10,6 +10,7 @@ import traceback
 import persistence
 import utils
 import prospective
+import retrospective
 from utils import print_msg
 
 def main():
@@ -48,9 +49,7 @@ def main():
     prospective.collect_provenance(args)
 
     print_msg('enabling collection of retrospective provenance')
-    # TODO: Register to listen trace calls
-    # sys.settrace(???) 
-    # sys.setprofile(???) <-- this seems more appropriate
+    retrospective.enable(args)
 
     print_msg('executing the script')
     try:
@@ -61,9 +60,7 @@ def main():
     except:
         print_msg('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
     finally:
-        # TODO: Remove one of these
-        sys.settrace(None)
-        sys.setprofile(None)
+        retrospective.disable()
 
 if __name__ == '__main__':
     import now #@UnresolvedImport

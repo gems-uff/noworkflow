@@ -10,6 +10,8 @@ CONTENT_DIRNAME = 'db'
 provenance_dir = ''
 content_dir = ''
 
+storage = {}  # Logical store
+
 def connect(script_dir):
     global provenance_dir, content_dir
     provenance_dir = os.path.join(script_dir, PROVENANCE_DIRNAME)        
@@ -30,5 +32,11 @@ def get(content_hash):
     content_filename = os.path.join(content_dir, content_hash[:2], content_hash[2:])
     with open(content_filename, 'rb') as content_file:
         return content_file.read()
+
+def store(name, data):
+    global storage
+    storage[name] = data
+    
+
         
     

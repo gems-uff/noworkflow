@@ -11,35 +11,6 @@ import importlib
 import ast
 import os
 import socket
-import astpp  # TODO: Remove
-
-
-# class CallVisitor(ast.NodeVisitor):
-# 
-#     def get_function_name(self, func):        
-#         'Gets the function_name of a function'
-#         if isinstance(func, ast.Name): # direct function call
-#             return func.id
-#         elif isinstance(func, ast.Attribute): # function call inside an attribute
-#             return '.'.join([self.get_function_name(func.value), func.attr])
-#         elif isinstance(func, ast.Str): # function call from a string
-#             return 'string'        
-#         else: # What else? TODO: call inside call - in this case, we can consider two different calls (recursion will deal with it. Get the first one)
-#             print 'Please, define a behavior for this type of function: ' + ast.dump(func)
-#             assert False
-# 
-#     def visit_Call(self, node):
-#         'Associates the called function with the callee'
-#         caller = '.'.join(self.namespace)
-#         if caller not in calls:
-#             calls[caller] = {}
-# 
-#         callee = self.get_function_name(node.func)        
-#         if callee not in calls:
-#             calls[callee] = {}
-#         
-#         calls[caller][callee] = calls[callee]
-            
 
 class FunctionVisitor(ast.NodeVisitor):
     'Identifies the function declarations and related data'
@@ -100,6 +71,7 @@ class FunctionVisitor(ast.NodeVisitor):
             self.names.append(node.id)
         self.generic_visit(node)
 
+
 def collect_environment_provenance():
     environment = {}
     for name in os.sysconf_names:
@@ -120,7 +92,7 @@ def collect_environment_provenance():
 
 
 def collect_modules_provenance(modules):
-    'returns a set of module dependencies in the form: (function_name, version, path, code hash)'
+    'returns a set of module dependencies in the form: (name, version, path, code_hash)'
     dependencies = []
     for name, module in modules.iteritems():
         if name != '__main__':
@@ -164,6 +136,7 @@ def get_version(module_name):
 
 
 def find_functions(path):
+    'returns a map of function in the form: name -> (arguments, global_vars, calls, code_hash)'
     code = open(path).read()
     tree = ast.parse(code, path)
     visitor = FunctionVisitor(code)
@@ -174,9 +147,10 @@ def find_functions(path):
 def collect_provenance(args):
     print_msg('collecting provenance from environment')
     environment = collect_environment_provenance()  # TODO: store this variable somewhere (relational DB?)
+    persistence.store('environment', environment)
     if (args.list_environment):
         utils.print_map('this script is being executed under the following environment conditions', environment)
-
+        
     if args.bypass_modules:
         print_msg('using previously detected module dependencies (--bypass-modules).')
         modules = {}  # TODO: code the actual behavior of using previous detected modules 
@@ -187,12 +161,12 @@ def collect_provenance(args):
 
         print_msg('collecting provenance from {} dependencies'.format(len(finder.modules)))
         modules = collect_modules_provenance(finder.modules)  # TODO: store this variable somewhere (relational DB?)
+    persistence.store('modules', modules)
     if (args.list_modules):
         utils.print_modules(modules)
 
     print_msg('finding user-defined functions')
     functions = find_functions(args.script)  # TODO: store this variable somewhere (relational DB?)
-    print_msg('collecting provenance from {} functions'.format(len(functions)))
-    pass
+    persistence.store('functions', functions)
     if (args.list_functions):
         utils.print_functions(functions)
