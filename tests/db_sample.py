@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import datetime
 
 #see tutorial at http://pymotw.com/2/sqlite3/
 
@@ -14,22 +15,25 @@ if db_is_new:
     with open(db_script, 'rt') as f:
         schema = f.read()
         conn.executescript(schema)
+
+    print 'Inserting sample data...'
+    now = datetime.datetime.now()
+    print now
+    conn.execute("insert into prospective_provenance (tstamp) values (?)", (now,))
     
-    print 'Inserting sample data...'   
-    conn.execute("""
-    insert into test (id, data) 
-    values (1, 'row 1') 
-    """)    
+    # se tstamp eh TEXT, tem que usar funcao de conversao  --> FUNCIONA OK
+    # conn.execute("insert into prospective_provenance (tstamp) values (strftime('%Y-%m-%d %H:%M:%S',?))", (now,))
+    
     conn.commit()
 else:
     print 'Database exists, assuming schema does, too.'
     cursor = conn.cursor()
     cursor.execute("""
-    select id, data from test
+    select id, tstamp from prospective_provenance
     """)
-        
+
     for row in cursor.fetchall():
-        table_id, data = row
-        print '%2d %s' % (table_id, data)
+        table_id, timestamp = row
+        print '%2d %s' % (table_id, timestamp)
 
 conn.close()
