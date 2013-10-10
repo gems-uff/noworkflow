@@ -68,6 +68,3 @@ create table file (
 	function_id INTEGER,
 	FOREIGN KEY (function_id) REFERENCES function ON DELETE CASCADE
 );
-
-	
-
