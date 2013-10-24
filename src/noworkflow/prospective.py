@@ -11,6 +11,7 @@ import importlib
 import ast
 import os
 import socket
+from datetime import datetime
 
 class FunctionVisitor(ast.NodeVisitor):
     'Identifies the function declarations and related data'
@@ -145,28 +146,37 @@ def find_functions(path):
 
 
 def collect_provenance(args):
+    now = datetime.now()
+    
+    try:
+        persistence.store_prospective(now, args.bypass_modules)
+    except TypeError:
+        print_msg('not able to bypass modules check because no previous trial was found', True)
+        print_msg('aborting execution', True)
+        sys.exit(1)
+
     print_msg('collecting provenance from environment')
-    environment = collect_environment_provenance()  # TODO: store this variable somewhere (relational DB?)
-    persistence.store('environment', environment)
+    environment = collect_environment_provenance()
+    persistence.store_environment(environment)
     if (args.list_environment):
         utils.print_map('this script is being executed under the following environment conditions', environment)
         
     if args.bypass_modules:
         print_msg('using previously detected module dependencies (--bypass-modules).')
-        modules = {}  # TODO: code the actual behavior of using previous detected modules 
+        modules = persistence.retrieve_dependencies()
     else:
         print_msg('finding module dependencies')
         finder = modulefinder.ModuleFinder()
         finder.run_script(args.script)
 
-        print_msg('collecting provenance from {} dependencies'.format(len(finder.modules)))
-        modules = collect_modules_provenance(finder.modules)  # TODO: store this variable somewhere (relational DB?)
-    persistence.store('modules', modules)
+        print_msg('collecting provenance from {} modules'.format(len(finder.modules)))
+        modules = collect_modules_provenance(finder.modules)
+        persistence.store_dependencies(modules)
     if (args.list_modules):
         utils.print_modules(modules)
 
     print_msg('finding user-defined functions')
-    functions = find_functions(args.script)  # TODO: store this variable somewhere (relational DB?)
-    persistence.store('functions', functions)
+    functions = find_functions(args.script)
+    persistence.store_functions(functions)
     if (args.list_functions):
         utils.print_functions(functions)
