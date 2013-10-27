@@ -53,14 +53,15 @@ def main():
 
     print_msg('executing the script')
     try:
-        execfile(args.script, __main__.__dict__) 
+        execfile(args.script, __main__.__dict__)
+        retrospective.disable()
         print_msg('the execution finished successfully')
     except SystemExit as ex:
+        retrospective.disable()
         print_msg('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
     except:
-        print_msg('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
-    finally:
         retrospective.disable()
+        print_msg('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
 
 if __name__ == '__main__':
     import now #@UnresolvedImport

@@ -2,7 +2,6 @@
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 import sys
 import os
-import inspect
 import utils
 import persistence
 import __builtin__
@@ -12,20 +11,24 @@ script = None
 call_stack = []
 CURRENT = -1
 
+
 def new_open(old_open):
     'Wraps the open buildin function to register file access'    
     def wrapper(name, *args, **kwargs):
-        with old_open(name, 'rb') as f:
-            file_access = {  # Create a file access object with default values
-                'name': name,
-                'mode': 'r',
-                'buffering': 'default',
-                'content_before': persistence.put(f.read()),
-                'timestamp': datetime.datetime.now()
-            }
-        file_access.update(kwargs)  # Update with the informed keyword arguments
-        # Update with the informed positional arguments
-        if len(args) > 0:
+        file_access = {  # Create a file access object with default values
+            'name': name,
+            'mode': 'r',
+            'buffering': 'default',
+            'content_before': None,
+            'timestamp': datetime.datetime.now()
+        }
+        
+        if os.path.exists(name):  # Read previous content if file exists
+            with old_open(name, 'rb') as f:
+                file_access['content_before'] = persistence.put(f.read())
+
+        file_access.update(kwargs)  # Update with the informed keyword arguments (mode and buffering)
+        if len(args) > 0:  # Update with the informed positional arguments
             file_access['mode'] = args[0]
         elif len(args) > 1:
             file_access['buffering'] = args[1]
@@ -36,6 +39,7 @@ def new_open(old_open):
 
     return wrapper
 
+
 def identify(frame):
     path = frame.f_code.co_filename
     filename = os.path.basename(path)
@@ -44,6 +48,7 @@ def identify(frame):
     codename = frame.f_code.co_name
     line = frame.f_lineno    
     return (filename, codename, line)
+
 
 def tracer(frame, event, arg):
     if script == frame.f_code.co_filename:
@@ -101,6 +106,7 @@ def tracer(frame, event, arg):
 #         print ''
 
 #     return tracer
+  
     
 def enable(args):
     global script
@@ -108,6 +114,7 @@ def enable(args):
     persistence.std_open = open
     __builtin__.open = new_open(open)
     sys.setprofile(tracer)
+  
     
 def disable():
     sys.setprofile(None)
