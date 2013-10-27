@@ -177,6 +177,6 @@ def collect_provenance(args):
 
     print_msg('finding user-defined functions')
     functions = find_functions(args.script)
-    persistence.store_functions(functions)
+    persistence.store_function_defs(functions)
     if (args.list_functions):
         utils.print_functions(functions)
