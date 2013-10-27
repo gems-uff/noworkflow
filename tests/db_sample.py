@@ -19,7 +19,7 @@ if db_is_new:
     print 'Inserting sample data...'
     now = datetime.datetime.now()
     print now
-    conn.execute("insert into prospective_provenance (tstamp) values (?)", (now,))
+    conn.execute("insert into prospective (tstamp) values (?)", (now,))
     
     # se tstamp eh TEXT, tem que usar funcao de conversao  --> FUNCIONA OK
     # conn.execute("insert into prospective_provenance (tstamp) values (strftime('%Y-%m-%d %H:%M:%S',?))", (now,))
@@ -29,7 +29,7 @@ else:
     print 'Database exists, assuming schema does, too.'
     cursor = conn.cursor()
     cursor.execute("""
-    select id, tstamp from prospective_provenance
+    select id, tstamp from prospective
     """)
 
     for row in cursor.fetchall():

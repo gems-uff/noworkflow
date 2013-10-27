@@ -1,6 +1,8 @@
-create table prospective_provenance (
+create table prospective (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	tstamp TIMESTAMP
+	tstamp TIMESTAMP,
+	inherited_id INTEGER, -- Id of the prospective tuple that we are inheriting module information (due to --bypass-modules)
+	FOREIGN KEY (inherited_id) REFERENCES prospective ON DELETE RESTRICT  
 );
 
 create table module (
@@ -9,40 +11,40 @@ create table module (
 	version TEXT,
 	file TEXT,
 	code_hash TEXT,
-	prospective_provenance_id INTEGER,
-	FOREIGN KEY (prospective_provenance_id) REFERENCES prospective_provenance ON DELETE CASCADE
+	prospective_id INTEGER,
+	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
 );
 
 create table environment_attribute (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
 	value TEXT,
-	prospective_provenance_id INTEGER,
-	FOREIGN KEY (prospective_provenance_id) REFERENCES prospective_provenance ON DELETE CASCADE
+	prospective_id INTEGER,
+	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
 );
 
 create table function_def (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
 	code_hash TEXT,
-	prospective_provenance_id INTEGER,
-	depends_on INTEGER,
-	FOREIGN KEY (prospective_provenance_id) REFERENCES prospective_provenance ON DELETE CASCADE,
-	FOREIGN KEY (depends_on) REFERENCES function_def ON DELETE CASCADE
+	prospective_id INTEGER,
+	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
 );
 
-create table function_def_arguments (
+create table object (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
+	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION')),
 	function_def_id INTEGER,
 	FOREIGN KEY (function_def_id) REFERENCES function_def ON DELETE CASCADE
 );
 
-create table retrospective_provenance (
+create table retrospective (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	tstamp TIMESTAMP,
 	user TEXT,
-	prospective_provenance_id INTEGER,
-	FOREIGN KEY (prospective_provenance_id) REFERENCES prospective_provenance ON DELETE CASCADE
+	prospective_id INTEGER,
+	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
 );
 
 create table function (
@@ -52,10 +54,16 @@ create table function (
 	line_numebr INTEGER,
 	start TIMESTAMP,
 	finish TIMESTAMP,
-	retrospective_provenance_id INTEGER,
-	called_by INTEGER,
-	FOREIGN KEY (retrospective_provenance_id) REFERENCES retrospective_provenance ON DELETE CASCADE
-	FOREIGN KEY (called_by) REFERENCES function ON DELETE CASCADE
+	retrospective_id INTEGER,
+	FOREIGN KEY (retrospective_id) REFERENCES retrospective ON DELETE CASCADE
+);
+
+create table function_call (
+	callee_id INTEGER NOT NULL,
+	called_id INTEGER NOT NULL,
+	PRIMARY KEY (callee_id, called_id),
+	FOREIGN KEY (callee_id) REFERENCES function ON DELETE CASCADE,
+	FOREIGN KEY (called_id) REFERENCES function ON DELETE CASCADE
 );
 
 create table file (
@@ -68,6 +76,3 @@ create table file (
 	function_id INTEGER,
 	FOREIGN KEY (function_id) REFERENCES function ON DELETE CASCADE
 );
-
-	
-

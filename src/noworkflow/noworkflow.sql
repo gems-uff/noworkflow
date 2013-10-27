@@ -25,16 +25,16 @@ create table environment_attribute (
 
 create table function_def (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
 	code_hash TEXT,
 	prospective_id INTEGER,
-	depends_on INTEGER,
-	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE,
-	FOREIGN KEY (depends_on) REFERENCES function_def ON DELETE CASCADE
+	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
 );
 
-create table function_def_arguments (
+create table object (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
+	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION')),
 	function_def_id INTEGER,
 	FOREIGN KEY (function_def_id) REFERENCES function_def ON DELETE CASCADE
 );
@@ -55,9 +55,15 @@ create table function (
 	start TIMESTAMP,
 	finish TIMESTAMP,
 	retrospective_id INTEGER,
-	called_by INTEGER,
 	FOREIGN KEY (retrospective_id) REFERENCES retrospective ON DELETE CASCADE
-	FOREIGN KEY (called_by) REFERENCES function ON DELETE CASCADE
+);
+
+create table function_call (
+	callee_id INTEGER NOT NULL,
+	called_id INTEGER NOT NULL,
+	PRIMARY KEY (callee_id, called_id),
+	FOREIGN KEY (callee_id) REFERENCES function ON DELETE CASCADE,
+	FOREIGN KEY (called_id) REFERENCES function ON DELETE CASCADE
 );
 
 create table file (
