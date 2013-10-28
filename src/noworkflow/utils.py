@@ -15,7 +15,7 @@ def print_modules(modules):
         output.append('  Name: {}\n  Version: {}\n  File: {}\n  Code hash: {}'.format(name, version, path, code_hash))
     print '\n\n'.join(output)
     
-def print_functions(functions):
+def print_function_defs(functions):
     print_msg('this script has the following functions:', True)
     output = []
     for name in functions:
@@ -29,6 +29,12 @@ def print_map(title, a_map):
     for key in a_map:
         output.append('  {}: {}'.format(key, a_map[key]))
     print '\n'.join(sorted(output))
+    
+def print_function_calls(function_calls):
+    pass  # TODO: Code!
+
+def print_file_accesses(function_calls):
+    pass  # TODO: Code!
 
 def get_hash(content):
-    return hashlib.sha1(content).hexdigest() 
+    return hashlib.sha1(content).hexdigest()

@@ -136,9 +136,8 @@ def get_version(module_name):
     return None
 
 
-def find_functions(path):
+def find_functions(path, code):
     'returns a map of function in the form: name -> (arguments, global_vars, calls, code_hash)'
-    code = open(path).read()
     tree = ast.parse(code, path)
     visitor = FunctionVisitor(code)
     visitor.visit(tree)
@@ -147,9 +146,11 @@ def find_functions(path):
 
 def collect_provenance(args):
     now = datetime.now()
+    with open(args.script) as f:
+        code = f.read()
     
     try:
-        persistence.store_prospective(now, args.bypass_modules)
+        persistence.store_trial(now, args.script, code, args.bypass_modules)
     except TypeError:
         print_msg('not able to bypass modules check because no previous trial was found', True)
         print_msg('aborting execution', True)
@@ -176,7 +177,7 @@ def collect_provenance(args):
         utils.print_modules(modules)
 
     print_msg('finding user-defined functions')
-    functions = find_functions(args.script)
+    functions = find_functions(args.script, code)
     persistence.store_function_defs(functions)
-    if (args.list_functions):
-        utils.print_functions(functions)
+    if (args.list_function_defs):
+        utils.print_function_defs(functions)

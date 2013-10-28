@@ -14,7 +14,7 @@ DB_SCRIPT = 'noworkflow.sql'
 
 content_path = None  # Base path for storing content of files
 db_conn = None  # Connection to the database
-prospective_id = None  # Id of the prospective provenance used in this trial
+trial_id = None  # Id of the prospective provenance used in this trial
 
 std_open = open  # Original Python open function.
 
@@ -33,16 +33,7 @@ def connect(script_dir):
         print_msg('creating provenance database')
         with db_conn as db:
             db.executescript(resource_string(__name__, DB_SCRIPT))  # Accessing the content of a file via setuptools
-            
-      
-# FILE ACCESS FUNCTIONS
 
-def register_file_access(name, mode = 'r', buffering = 'default'):
-    'registers an access to a file'
-    with std_open(name, 'rb') as f:
-        content_hash = put(f.read())
-        # TODO: store the content hash together with access type in the current context and its call stack
-        
         
 # CONTENT STORAGE FUNCTIONS
             
@@ -67,40 +58,59 @@ def get(content_hash):
 # DATABASE STORE/RETRIEVE FUNCTIONS
 # TODO: Avoid replicating information in the DB. This will also help when diffing data.
 
-def store_prospective(tstamp, bypass_modules):
-    global prospective_id
+def insert(table_name, attrs, **extra_attrs):  # Not in use, but can be useful in the future
+    query = 'insert into {}({}) values ({})'.format(table_name, ','.join(attrs.keys() + extra_attrs.keys()),','.join(['?'] * (len(attrs) + len(extra_attrs))))
+    with db_conn as db:
+        db.execute(query, attrs.values() + extra_attrs.values())
+        
+
+def insertmany(table_name, attrs_list, **extra_attrs):  # Not in use, but can be useful in the future
+    for attrs in attrs_list:
+        insert(table_name, attrs, **extra_attrs)
+
+
+def store_trial(start, script, code, bypass_modules):
+    global trial_id
+    code_hash = put(code)
     with db_conn as db:
         if bypass_modules:
-            (iherited_id,) = db.execute("select id from prospective where tstamp in (select max(tstamp) from prospective where inherited_id is NULL)").fetchone()
+            (iherited_id,) = db.execute("select id from trial where timestamp in (select max(timestamp) from trial where inherited_id is NULL)").fetchone()
         else:
             iherited_id = None
         
-        prospective_id = db.execute("insert into prospective (tstamp, inherited_id) values (?, ?)", (tstamp, iherited_id)).lastrowid
-        
+        trial_id = db.execute("insert into trial (start, script, code_hash, inherited_id) values (?, ?, ?, ?)", (start, script, code_hash, iherited_id)).lastrowid
+
+
+def update_trial(finish, function_calls):
+    for function_call in function_calls:
+        store_function_call(function_call, None)
+    with db_conn as db:        
+        db.execute("update trial set finish = ? where id = ?", (finish, trial_id))
+
 
 def store_environment(env_attrs):
-    data = [(name, value, prospective_id) for name, value in env_attrs.iteritems()]
+    data = [(name, value, trial_id) for name, value in env_attrs.iteritems()]
     with db_conn as db:
-        db.executemany("insert into environment_attribute(name, value, prospective_id) values (?, ?, ?)", data)
+        db.executemany("insert into environment_attr(name, value, trial_id) values (?, ?, ?)", data)
         
 
 def store_dependencies(dependencies):
-    data = [(name, version, path, code_hash, prospective_id) for name, version, path, code_hash in dependencies]    
+    data = [(name, version, path, code_hash, trial_id) for name, version, path, code_hash in dependencies]    
     with db_conn as db:
-        db.executemany("insert into module(name, version, file, code_hash, prospective_id) values (?, ?, ?, ?, ?)", data)
+        db.executemany("insert into module(name, version, file, code_hash, trial_id) values (?, ?, ?, ?, ?)", data)
 
 
 def retrieve_iherited_id(an_id):
     with db_conn as db:
-        (iherited_id,) = db.execute("select inherited_id from prospective where id = ?", (an_id,)).fetchone()
+        (iherited_id,) = db.execute("select inherited_id from trial where id = ?", (an_id,)).fetchone()
     return iherited_id
 
         
 def retrieve_dependencies():
-    an_id = retrieve_iherited_id(prospective_id)
-    if not an_id: an_id = prospective_id
+    an_id = retrieve_iherited_id(trial_id)
+    if not an_id: an_id = trial_id
     with db_conn as db:
-        return db.execute("select name, version, file, code_hash from module where prospective_id = ?", (an_id,)).fetchall()
+        return db.execute("select name, version, file, code_hash from module where trial_id = ?", (an_id,)).fetchall()
 
 
 def store_objects(objects, obj_type, function_def_id):
@@ -112,7 +122,23 @@ def store_objects(objects, obj_type, function_def_id):
 def store_function_defs(functions):  
     with db_conn as db:
         for name, (arguments, global_vars, calls, code_hash) in functions.items():
-            function_def_id = db.execute("insert into function_def(name, code_hash, prospective_id) values (?, ?, ?)", (name, code_hash, prospective_id)).lastrowid
+            function_def_id = db.execute("insert into function_def(name, code_hash, trial_id) values (?, ?, ?)", (name, code_hash, trial_id)).lastrowid
             store_objects(arguments, 'ARGUMENT', function_def_id)
             store_objects(global_vars, 'GLOBAL', function_def_id)
             store_objects(calls, 'FUNCTION', function_def_id)
+            
+            
+def store_file_accesses(file_accesses, function_call_id):
+    with db_conn as db:
+        for file_access in file_accesses:
+            data = (file_access['name'], file_access['mode'], file_access['buffering'], file_access['content_hash_before'], file_access['content_hash_after'], file_access['timestamp'], function_call_id)
+            db.execute("insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_call_id) values (?, ?, ?, ?, ?, ?, ?)", data)
+       
+  
+def store_function_call(function_call, callee_id):
+    data = (function_call['name'], function_call['line'], function_call['start'], function_call['finish'], callee_id, trial_id)
+    with db_conn as db:
+        function_call_id = db.execute("insert into function_call(name, line, start, finish, callee_id, trial_id) values (?, ?, ?, ?, ?, ?)", data).lastrowid
+    store_file_accesses(function_call['file_accesses'], function_call_id)
+    for inner_function_call in function_call['function_calls']:
+        store_function_call(inner_function_call, function_call_id)

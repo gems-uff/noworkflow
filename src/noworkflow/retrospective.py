@@ -5,27 +5,31 @@ import os
 import utils
 import persistence
 import __builtin__
-import datetime
+from datetime import datetime
 
 script = None
+list_function_calls = None
+list_file_accesses = None
 call_stack = []
+function_calls = []
 CURRENT = -1
 
 
 def new_open(old_open):
     'Wraps the open buildin function to register file access'    
-    def wrapper(name, *args, **kwargs):
+    def open(name, *args, **kwargs):  # @ReservedAssignment
         file_access = {  # Create a file access object with default values
             'name': name,
             'mode': 'r',
             'buffering': 'default',
-            'content_before': None,
-            'timestamp': datetime.datetime.now()
+            'content_hash_before': None,
+            'content_hash_after': None,
+            'timestamp': datetime.now()
         }
         
         if os.path.exists(name):  # Read previous content if file exists
             with old_open(name, 'rb') as f:
-                file_access['content_before'] = persistence.put(f.read())
+                file_access['content_hash_before'] = persistence.put(f.read()) 
 
         file_access.update(kwargs)  # Update with the informed keyword arguments (mode and buffering)
         if len(args) > 0:  # Update with the informed positional arguments
@@ -33,57 +37,47 @@ def new_open(old_open):
         elif len(args) > 1:
             file_access['buffering'] = args[1]
 
-        call_stack[CURRENT]['file_access'].append(file_access)
-        utils.print_msg('file {name} accessed in mode {mode}'.format(**file_access))
+        call_stack[CURRENT]['file_accesses'].append(file_access)
+#         utils.print_msg('file {name} accessed in mode {mode}'.format(**file_access))
         return old_open(name, *args, **kwargs)
-
-    return wrapper
-
-
-def identify(frame):
-    path = frame.f_code.co_filename
-    filename = os.path.basename(path)
-    if (filename == '__init__.py'):
-        filename = os.path.basename(os.path.dirname(path))
-    codename = frame.f_code.co_name
-    line = frame.f_lineno    
-    return (filename, codename, line)
+    return open
 
 
 def tracer(frame, event, arg):
-    if script == frame.f_code.co_filename:
-        if event == 'c_call':
-            call = {
-                'name': arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
-                'line': frame.f_lineno,
-                'start': datetime.datetime.now(),
-                'file_access': []
-            }
-            call_stack.append(call)
-            utils.print_msg('call to {name} at {start}'.format(**call))  
-        elif event == 'c_return':
-            call = call_stack.pop()
-            call['finish'] = datetime.datetime.now()
-            # TODO: update content of written files
-            # TODO: store the call in the database
-            utils.print_msg('return from {name} at {finish}'.format(**call))
-    if script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]:  # TODO: should not trace wrapper call, but should trace open. Is it enough renaming?
-        if event == "call":
-            call = {
-                'name': frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
-                'line': frame.f_back.f_lineno,
-                'start': datetime.datetime.now(),
-                'file_access': []
-            }
-            call_stack.append(call)
-            utils.print_msg('call to {name} at {start}'.format(**call))  
-        elif event == 'return':
-            call = call_stack.pop()
-            call['finish'] = datetime.datetime.now()
+    call = None
+    if event == 'c_call' and script == frame.f_code.co_filename:
+        call = {
+            'name': arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
+            'line': frame.f_lineno
+        }
+    if event == "call" and script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]:
+        call = {
+            'name': frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
+            'line': frame.f_back.f_lineno
+        }
+    if call:
+        call['start'] = datetime.now()
+        call['file_accesses'] = []
+        call['function_calls'] = []
+        call_stack.append(call)
+#         utils.print_msg('call to {name} at {start}'.format(**call))
 
-            # TODO: update content of written files
-            # TODO: store the call in the database
-            utils.print_msg('return from {name} at {finish}'.format(**call))
+    if (event == 'c_return' and script == frame.f_code.co_filename or 
+        event == 'return' and script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]):
+        call = call_stack.pop()
+        call['finish'] = datetime.now()
+        for accessed_file in call['file_accesses']:  # Update content of accessed files
+            if os.path.exists(accessed_file['name']):  # Checks if file still exists
+                with persistence.std_open(accessed_file['name'], 'rb') as f:
+                    accessed_file['content_hash_after'] = persistence.put(f.read())
+        if call_stack:  # Store the current call in the previous call
+            call_stack[CURRENT]['function_calls'].append(call)
+        else:  # Store the current call in the list of calls
+            function_calls.append(call)
+#             utils.print_msg('return from {name} at {finish}'.format(**call))
+
+
+
 
     
 #     if (frame.f_code.co_filename == script or frame.f_back.f_code.co_filename == script):
@@ -109,14 +103,21 @@ def tracer(frame, event, arg):
   
     
 def enable(args):
-    global script
+    global script, list_function_calls, list_file_accesses
     script = args.script
+    list_function_calls = args.list_function_calls
+    list_file_accesses = args.list_file_accesses
     persistence.std_open = open
     __builtin__.open = new_open(open)
     sys.setprofile(tracer)
   
     
 def disable():
+    persistence.update_trial(datetime.now(), function_calls)
+    if list_function_calls:
+        utils.print_function_calls(function_calls)
+    if list_file_accesses:
+        utils.print_file_accesses(function_calls)
     sys.setprofile(None)
     __builtin__.open = persistence.std_open
 

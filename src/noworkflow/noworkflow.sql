@@ -1,8 +1,11 @@
-create table prospective (
+create table trial (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	tstamp TIMESTAMP,
+	start TIMESTAMP,
+	finish TIMESTAMP,
+	script TEXT,
+	code_hash TEXT,
 	inherited_id INTEGER, -- Id of the prospective tuple that we are inheriting module information (due to --bypass-modules)
-	FOREIGN KEY (inherited_id) REFERENCES prospective ON DELETE RESTRICT  
+	FOREIGN KEY (inherited_id) REFERENCES trial ON DELETE RESTRICT  
 );
 
 create table module (
@@ -11,24 +14,24 @@ create table module (
 	version TEXT,
 	file TEXT,
 	code_hash TEXT,
-	prospective_id INTEGER,
-	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
+	trial_id INTEGER,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
 
-create table environment_attribute (
+create table environment_attr (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
 	value TEXT,
-	prospective_id INTEGER,
-	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
+	trial_id INTEGER,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
 
 create table function_def (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
 	code_hash TEXT,
-	prospective_id INTEGER,
-	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
+	trial_id INTEGER,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
 
 create table object (
@@ -39,40 +42,26 @@ create table object (
 	FOREIGN KEY (function_def_id) REFERENCES function_def ON DELETE CASCADE
 );
 
-create table retrospective (
+create table function_call (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	tstamp TIMESTAMP,
-	user TEXT,
-	prospective_id INTEGER,
-	FOREIGN KEY (prospective_id) REFERENCES prospective ON DELETE CASCADE
-);
-
-create table function (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	script_name TEXT,
-	function_name TEXT,
-	line_numebr INTEGER,
+	name TEXT,
+	line INTEGER,
 	start TIMESTAMP,
 	finish TIMESTAMP,
-	retrospective_id INTEGER,
-	FOREIGN KEY (retrospective_id) REFERENCES retrospective ON DELETE CASCADE
+	callee_id INTEGER,
+	trial_id INTEGER,
+	FOREIGN KEY (callee_id) REFERENCES function_call ON DELETE CASCADE,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE	
 );
 
-create table function_call (
-	callee_id INTEGER NOT NULL,
-	called_id INTEGER NOT NULL,
-	PRIMARY KEY (callee_id, called_id),
-	FOREIGN KEY (callee_id) REFERENCES function ON DELETE CASCADE,
-	FOREIGN KEY (called_id) REFERENCES function ON DELETE CASCADE
-);
-
-create table file (
+create table file_access (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
 	mode TEXT,
+	buffering TEXT,
 	content_hash_before TEXT,
 	content_hash_after TEXT,
-	tstamp TIMESTAMP,
-	function_id INTEGER,
-	FOREIGN KEY (function_id) REFERENCES function ON DELETE CASCADE
+	timestamp TIMESTAMP,
+	function_call_id INTEGER,
+	FOREIGN KEY (function_call_id) REFERENCES function_call ON DELETE CASCADE
 );
