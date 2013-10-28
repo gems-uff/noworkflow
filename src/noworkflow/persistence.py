@@ -74,16 +74,15 @@ def store_trial(start, script, code, bypass_modules):
     code_hash = put(code)
     with db_conn as db:
         if bypass_modules:
-            (iherited_id,) = db.execute("select id from trial where timestamp in (select max(timestamp) from trial where inherited_id is NULL)").fetchone()
+            (iherited_id,) = db.execute("select id from trial where start in (select max(start) from trial where inherited_id is NULL)").fetchone()
         else:
             iherited_id = None
         
         trial_id = db.execute("insert into trial (start, script, code_hash, inherited_id) values (?, ?, ?, ?)", (start, script, code_hash, iherited_id)).lastrowid
 
 
-def update_trial(finish, function_calls):
-    for function_call in function_calls:
-        store_function_call(function_call, None)
+def update_trial(finish, function_call):
+    store_function_call(function_call, None)
     with db_conn as db:        
         db.execute("update trial set finish = ? where id = ?", (finish, trial_id))
 
@@ -131,8 +130,8 @@ def store_function_defs(functions):
 def store_file_accesses(file_accesses, function_call_id):
     with db_conn as db:
         for file_access in file_accesses:
-            data = (file_access['name'], file_access['mode'], file_access['buffering'], file_access['content_hash_before'], file_access['content_hash_after'], file_access['timestamp'], function_call_id)
-            db.execute("insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_call_id) values (?, ?, ?, ?, ?, ?, ?)", data)
+            data = (file_access['name'], file_access['mode'], file_access['buffering'], file_access['content_hash_before'], file_access['content_hash_after'], file_access['timestamp'], function_call_id, trial_id)
+            db.execute("insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_call_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)", data)
        
   
 def store_function_call(function_call, callee_id):

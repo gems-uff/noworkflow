@@ -63,5 +63,7 @@ create table file_access (
 	content_hash_after TEXT,
 	timestamp TIMESTAMP,
 	function_call_id INTEGER,
-	FOREIGN KEY (function_call_id) REFERENCES function_call ON DELETE CASCADE
+	trial_id INTEGER,
+	FOREIGN KEY (function_call_id) REFERENCES function_call ON DELETE CASCADE,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
