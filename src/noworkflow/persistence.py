@@ -134,10 +134,10 @@ def store_file_accesses(file_accesses, function_call_id):
             db.execute("insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_call_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)", data)
        
   
-def store_function_call(function_call, callee_id):
-    data = (function_call['name'], function_call['line'], function_call['start'], function_call['finish'], callee_id, trial_id)
+def store_function_call(function_call, caller_id):
+    data = (function_call['name'], function_call['line'], function_call['start'], function_call['finish'], caller_id, trial_id)
     with db_conn as db:
-        function_call_id = db.execute("insert into function_call(name, line, start, finish, callee_id, trial_id) values (?, ?, ?, ?, ?, ?)", data).lastrowid
+        function_call_id = db.execute("insert into function_call(name, line, start, finish, caller_id, trial_id) values (?, ?, ?, ?, ?, ?)", data).lastrowid
     store_file_accesses(function_call['file_accesses'], function_call_id)
     for inner_function_call in function_call['function_calls']:
         store_function_call(inner_function_call, function_call_id)

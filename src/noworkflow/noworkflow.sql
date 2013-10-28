@@ -48,9 +48,9 @@ create table function_call (
 	line INTEGER,
 	start TIMESTAMP,
 	finish TIMESTAMP,
-	callee_id INTEGER,
+	caller_id INTEGER,
 	trial_id INTEGER,
-	FOREIGN KEY (callee_id) REFERENCES function_call ON DELETE CASCADE,
+	FOREIGN KEY (caller_id) REFERENCES function_call ON DELETE CASCADE,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE	
 );
 
