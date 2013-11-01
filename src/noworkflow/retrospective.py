@@ -3,6 +3,7 @@
 import sys
 import os
 import utils
+import inspect
 import persistence
 import __builtin__
 from datetime import datetime
@@ -60,6 +61,8 @@ def tracer(frame, event, arg):
         call['start'] = datetime.now()
         call['file_accesses'] = []
         call['function_calls'] = []
+        # TODO: Capture argument and global values
+        # print "ARG_VALUES", inspect.getargvalues(frame)
         call_stack.append(call)
 
     if (event == 'c_return' and script == frame.f_code.co_filename or 
