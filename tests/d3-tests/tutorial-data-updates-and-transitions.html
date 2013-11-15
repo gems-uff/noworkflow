@@ -91,6 +91,7 @@
                                                                          svg.selectAll("rect")
                                                                          .data(dataset)
                                                                          .transition()								// <-- This makes it a smooth transition!
+                                                                         .duration(5000)
                                                                          .attr("y", function(d) {
                                                                                return h - yScale(d);
                                                                                })
@@ -104,6 +105,8 @@
                                                                          //Update all labels
                                                                          svg.selectAll("text")
                                                                          .data(dataset)
+                                                                         .transition()
+                                                                         .duration(5000)
                                                                          .text(function(d) {
                                                                                return d;
                                                                                })
