@@ -50,25 +50,36 @@ def tracer(frame, event, arg):
     if event == 'c_call' and script == frame.f_code.co_filename:
         call = {
             'name': arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
-            'line': frame.f_lineno
+            'line': frame.f_lineno,
+            'arguments': {}
         }
     if event == "call" and script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]:
         call = {
             'name': frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
-            'line': frame.f_back.f_lineno
+            'line': frame.f_back.f_lineno,
+            'arguments': {}
         }
+        (args, varargs, keywords, values) = inspect.getargvalues(frame)  # Capturing arguments
+        for arg in args:
+            call['arguments'][arg] = repr(values[arg])
+        if varargs:
+            call['arguments'][varargs] = repr(values[varargs])
+        if keywords:
+            for key, value in values[keywords].iteritems():
+                call['arguments'][key] = repr(value)
+        # TODO: Capture global values
+
     if call:
         call['start'] = datetime.now()
         call['file_accesses'] = []
         call['function_calls'] = []
-        # TODO: Capture argument and global values
-        # print "ARG_VALUES", inspect.getargvalues(frame)
         call_stack.append(call)
 
     if (event == 'c_return' and script == frame.f_code.co_filename or 
         event == 'return' and script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]):
         call = call_stack.pop()
         call['finish'] = datetime.now()
+        call['return'] = repr(arg) if event == 'return' else None
         for file_access in call['file_accesses']:  # Update content of accessed files
             if os.path.exists(file_access['name']):  # Checks if file still exists
                 with persistence.std_open(file_access['name'], 'rb') as f:

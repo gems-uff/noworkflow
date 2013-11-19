@@ -46,12 +46,22 @@ create table function_call (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
 	line INTEGER,
+	return TEXT,
 	start TIMESTAMP,
 	finish TIMESTAMP,
 	caller_id INTEGER,
 	trial_id INTEGER,
 	FOREIGN KEY (caller_id) REFERENCES function_call ON DELETE CASCADE,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE	
+);
+
+create table object_value (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT,
+	value TEXT,
+	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT')),
+	function_call_id INTEGER,
+	FOREIGN KEY (function_call_id) REFERENCES function_call ON DELETE CASCADE
 );
 
 create table file_access (
