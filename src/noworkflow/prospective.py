@@ -159,8 +159,6 @@ def collect_provenance(args):
     print_msg('collecting provenance from environment')
     environment = collect_environment_provenance()
     persistence.store_environment(environment)
-    if (args.list_environment):
-        utils.print_map('this script is being executed under the following environment conditions', environment)
         
     if args.bypass_modules:
         print_msg('using previously detected module dependencies (--bypass-modules).')
@@ -173,11 +171,7 @@ def collect_provenance(args):
         print_msg('collecting provenance from {} modules'.format(len(finder.modules)))
         modules = collect_modules_provenance(finder.modules)
         persistence.store_dependencies(modules)
-    if (args.list_modules):
-        utils.print_modules(modules)
 
     print_msg('finding user-defined functions')
     functions = find_functions(args.script, code)
     persistence.store_function_defs(functions)
-    if (args.list_function_defs):
-        utils.print_function_defs(functions)

@@ -69,15 +69,29 @@ def insertmany(table_name, attrs_list, **extra_attrs):  # Not in use, but can be
         insert(table_name, attrs, **extra_attrs)
 
 
+def last_trial_id():
+    with db_conn as db:
+        (an_id,) = db.execute("select id from trial where start in (select max(start) from trial)").fetchone()
+    return an_id   
+
+
+def last_trial_id_without_iheritance():
+    with db_conn as db:
+        (an_id,) = db.execute("select id from trial where start in (select max(start) from trial where inherited_id is NULL)").fetchone()
+    return an_id   
+
+
+def iherited_id(an_id):
+    with db_conn as db:
+        (iherited_id,) = db.execute("select inherited_id from trial where id = ?", (an_id,)).fetchone()
+    return iherited_id
+
+
 def store_trial(start, script, code, bypass_modules):
     global trial_id
     code_hash = put(code)
-    with db_conn as db:
-        if bypass_modules:
-            (iherited_id,) = db.execute("select id from trial where start in (select max(start) from trial where inherited_id is NULL)").fetchone()
-        else:
-            iherited_id = None
-        
+    iherited_id = last_trial_id_without_iheritance() if bypass_modules else None
+    with db_conn as db: 
         trial_id = db.execute("insert into trial (start, script, code_hash, inherited_id) values (?, ?, ?, ?)", (start, script, code_hash, iherited_id)).lastrowid
 
 
@@ -85,6 +99,17 @@ def update_trial(finish, function_call):
     store_function_call(function_call, None)
     with db_conn as db:        
         db.execute("update trial set finish = ? where id = ?", (finish, trial_id))
+        
+        
+def load_trial(an_id):
+    global trial_id
+    trial_id = an_id
+    with db_conn as db:
+        return db.execute("select * from trial where id = ?", (trial_id,)).fetchone()
+
+
+def load_last_trial():
+    return load_trial(last_trial_id())
 
 
 def store_environment(env_attrs):
@@ -98,15 +123,9 @@ def store_dependencies(dependencies):
     with db_conn as db:
         db.executemany("insert into module(name, version, file, code_hash, trial_id) values (?, ?, ?, ?, ?)", data)
 
-
-def retrieve_iherited_id(an_id):
-    with db_conn as db:
-        (iherited_id,) = db.execute("select inherited_id from trial where id = ?", (an_id,)).fetchone()
-    return iherited_id
-
         
-def retrieve_dependencies():
-    an_id = retrieve_iherited_id(trial_id)
+def load_dependencies():
+    an_id = iherited_id(trial_id)
     if not an_id: an_id = trial_id
     with db_conn as db:
         return db.execute("select name, version, file, code_hash from module where trial_id = ?", (an_id,)).fetchall()

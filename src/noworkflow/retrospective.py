@@ -9,8 +9,6 @@ import __builtin__
 from datetime import datetime
 
 script = None
-list_function_calls = None
-list_file_accesses = None
 call_stack = []
 function_call = None
 file_accesses = []
@@ -94,8 +92,6 @@ def tracer(frame, event, arg):
 def enable(args):
     global script, list_function_calls, list_file_accesses
     script = args.script
-    list_function_calls = args.list_function_calls
-    list_file_accesses = args.list_file_accesses
     persistence.std_open = open
     __builtin__.open = new_open(open)
     sys.setprofile(tracer)
@@ -106,10 +102,6 @@ def disable():
     sys.setprofile(None)
     __builtin__.open = persistence.std_open
     persistence.update_trial(now, function_call)
-    if list_function_calls:
-        utils.print_function_calls(function_call)
-    if list_file_accesses:
-        utils.print_file_accesses(file_accesses)
 
-# Processor load. Should be collected from time to time (there are static and dynamic metadata)
+# TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()
