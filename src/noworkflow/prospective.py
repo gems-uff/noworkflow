@@ -150,7 +150,7 @@ def collect_provenance(args):
         code = f.read()
     
     try:
-        persistence.store_trial(now, args.script, code, args.bypass_modules)
+        persistence.store_trial(now, os.path.basename(args.script), code, args.bypass_modules)
     except TypeError:
         print_msg('not able to bypass modules check because no previous trial was found', True)
         print_msg('aborting execution', True)
@@ -162,7 +162,7 @@ def collect_provenance(args):
         
     if args.bypass_modules:
         print_msg('using previously detected module dependencies (--bypass-modules).')
-        modules = persistence.retrieve_dependencies()
+        modules = persistence.load_dependencies()
     else:
         print_msg('finding module dependencies')
         finder = modulefinder.ModuleFinder()

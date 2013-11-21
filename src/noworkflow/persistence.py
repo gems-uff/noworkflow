@@ -4,6 +4,7 @@
 import os.path
 import hashlib
 import sqlite3
+import sys
 from utils import print_msg
 from pkg_resources import resource_string  #@UnresolvedImport
 
@@ -18,9 +19,14 @@ trial_id = None  # Id of the prospective provenance used in this trial
 
 std_open = open  # Original Python open function.
 
-def connect(script_dir):
+def has_provenance(path):
+    provenance_path = os.path.join(path, PROVENANCE_DIRNAME)
+    return os.path.isdir(provenance_path)
+
+
+def connect(path):
     global content_path, db_conn
-    provenance_path = os.path.join(script_dir, PROVENANCE_DIRNAME)
+    provenance_path = os.path.join(path, PROVENANCE_DIRNAME)
             
     content_path = os.path.join(provenance_path, CONTENT_DIRNAME)
     if not os.path.isdir(content_path):
@@ -29,10 +35,18 @@ def connect(script_dir):
     db_path = os.path.join(provenance_path, DB_FILENAME)
     new_db = not os.path.exists(db_path)
     db_conn = sqlite3.connect(db_path)
+    db_conn.row_factory = sqlite3.Row
     if new_db:
         print_msg('creating provenance database')
         with db_conn as db:
             db.executescript(resource_string(__name__, DB_SCRIPT))  # Accessing the content of a file via setuptools
+
+
+def connect_existing(path):
+    if not has_provenance(path):
+        print_msg('there is no provenance store in the current directory', True)
+        sys.exit(1)
+    connect(path)
 
         
 # CONTENT STORAGE FUNCTIONS
@@ -57,6 +71,11 @@ def get(content_hash):
 
 # DATABASE STORE/RETRIEVE FUNCTIONS
 # TODO: Avoid replicating information in the DB. This will also help when diffing data.
+
+def load_all(table_name):
+    with db_conn as db:
+        return db.execute('select * from {}'.format(table_name))
+
 
 def insert(table_name, attrs, **extra_attrs):  # Not in use, but can be useful in the future
     query = 'insert into {}({}) values ({})'.format(table_name, ','.join(attrs.keys() + extra_attrs.keys()),','.join(['?'] * (len(attrs) + len(extra_attrs))))
@@ -106,11 +125,7 @@ def load_trial(an_id):
     trial_id = an_id
     with db_conn as db:
         return db.execute("select * from trial where id = ?", (trial_id,)).fetchone()
-
-
-def load_last_trial():
-    return load_trial(last_trial_id())
-
+    
 
 def store_environment(env_attrs):
     data = [(name, value, trial_id) for name, value in env_attrs.iteritems()]

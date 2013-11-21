@@ -2,13 +2,14 @@
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 
 import os
+import sys
 from utils import print_msg
 from utils import print_map
 import persistence
 
 def print_trial(trial):
     print_msg('trial information:', True)
-    print '  Id: {0}\n  Inherited Id: {5}\n  Script: {3}\n  Code hash: {4}\n  Start: {1}\n  Finish: {2}\n'.format(*trial)
+    print '  Id: {id}\n  Inherited Id: {inherited_id}\n  Script: {script}\n  Code hash: {code_hash}\n  Start: {start}\n  Finish: {finish}'.format(**trial)
     
 
 def print_modules(modules):
@@ -48,8 +49,13 @@ def print_file_accesses(file_accesses):
     print '\n\n'.join(output)
 
 def execute(args):
-    persistence.connect(os.getcwd())
-    trial = persistence.load_trial(args.trial) if args.trial else persistence.load_last_trial()
+    persistence.connect_existing(os.getcwd())
+    last_trial_id = persistence.last_trial_id()
+    trial_id = args.trial if args.trial != None else last_trial_id
+    if not 1 <= trial_id <= last_trial_id:
+        print_msg('this trial does not exist', True)
+        sys.exit(1)
+    trial = persistence.load_trial(trial_id)
     print_trial(trial)
     
          
