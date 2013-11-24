@@ -162,7 +162,6 @@ def collect_provenance(args):
         
     if args.bypass_modules:
         print_msg('using previously detected module dependencies (--bypass-modules).')
-        modules = persistence.load_dependencies()
     else:
         print_msg('finding module dependencies')
         finder = modulefinder.ModuleFinder()

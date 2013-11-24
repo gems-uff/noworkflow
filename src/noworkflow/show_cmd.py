@@ -13,10 +13,10 @@ def print_trial(trial):
     
 
 def print_modules(modules):
-    print_msg('this script depends on the following modules:', True)
+    print_msg('this trial depends on the following modules:', True)
     output = []
-    for (name, version, path, code_hash) in modules:
-        output.append('  Name: {}\n  Version: {}\n  File: {}\n  Code hash: {}'.format(name, version, path, code_hash))
+    for module in modules:
+        output.append('  Name: {name}\n  Version: {version}\n  File: {file}\n  Code hash: {code_hash}'.format(**module))
     print '\n\n'.join(output)
 
     
@@ -55,16 +55,16 @@ def execute(args):
     if not 1 <= trial_id <= last_trial_id:
         print_msg('this trial does not exist', True)
         sys.exit(1)
-    trial = persistence.load_trial(trial_id)
-    print_trial(trial)
+    print_trial(persistence.load_trial(trial_id).fetchone())
+
+    if args.modules:
+        print_modules(persistence.load_dependencies())
     
          
     
 #     if args.environment:
 #         print_map('this script is being executed under the following environment conditions', environment)
 #  
-#     if args.modules:
-#         print_modules(modules)
 #  
 #     if args.function_defs:
 #         print_function_defs(functions)

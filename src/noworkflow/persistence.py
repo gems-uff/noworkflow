@@ -72,9 +72,12 @@ def get(content_hash):
 # DATABASE STORE/RETRIEVE FUNCTIONS
 # TODO: Avoid replicating information in the DB. This will also help when diffing data.
 
-def load_all(table_name):
+def load(table_name, **condition):
+    where = '1'
+    for key in condition:
+        where += ' and {} = {}'.format(key, condition[key]) 
     with db_conn as db:
-        return db.execute('select * from {}'.format(table_name))
+        return db.execute('select * from {} where {}'.format(table_name, where))
 
 
 def insert(table_name, attrs, **extra_attrs):  # Not in use, but can be useful in the future
@@ -123,15 +126,8 @@ def update_trial(finish, function_call):
 def load_trial(an_id):
     global trial_id
     trial_id = an_id
-    with db_conn as db:
-        return db.execute("select * from trial where id = ?", (trial_id,)).fetchone()
+    return load('trial', id = trial_id)
     
-
-def store_environment(env_attrs):
-    data = [(name, value, trial_id) for name, value in env_attrs.iteritems()]
-    with db_conn as db:
-        db.executemany("insert into environment_attr(name, value, trial_id) values (?, ?, ?)", data)
-        
 
 def store_dependencies(dependencies):
     data = [(name, version, path, code_hash, trial_id) for name, version, path, code_hash in dependencies]    
@@ -142,9 +138,14 @@ def store_dependencies(dependencies):
 def load_dependencies():
     an_id = iherited_id(trial_id)
     if not an_id: an_id = trial_id
-    with db_conn as db:
-        return db.execute("select name, version, file, code_hash from module where trial_id = ?", (an_id,)).fetchall()
+    return load('module', trial_id = an_id)
 
+
+def store_environment(env_attrs):
+    data = [(name, value, trial_id) for name, value in env_attrs.iteritems()]
+    with db_conn as db:
+        db.executemany("insert into environment_attr(name, value, trial_id) values (?, ?, ?)", data)
+        
 
 def store_objects(objects, obj_type, function_def_id):
     data = [(name, obj_type, function_def_id) for name in objects]
