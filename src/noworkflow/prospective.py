@@ -150,7 +150,7 @@ def collect_provenance(args):
         code = f.read()
     
     try:
-        persistence.store_trial(now, os.path.basename(args.script), code, args.bypass_modules)
+        persistence.store_trial(now, sys.argv[0], code, ' '.join(sys.argv[1:]), args.bypass_modules)
     except TypeError:
         print_msg('not able to bypass modules check because no previous trial was found', True)
         print_msg('aborting execution', True)

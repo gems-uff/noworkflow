@@ -113,12 +113,12 @@ def iherited_id(an_id):
     return iherited_id
 
 
-def store_trial(start, script, code, bypass_modules):
+def store_trial(start, script, code, arguments, bypass_modules):
     global trial_id
     code_hash = put(code)
     iherited_id = last_trial_id_without_iheritance() if bypass_modules else None
     with db_conn as db: 
-        trial_id = db.execute("insert into trial (start, script, code_hash, inherited_id) values (?, ?, ?, ?)", (start, script, code_hash, iherited_id)).lastrowid
+        trial_id = db.execute("insert into trial (start, script, code_hash, arguments, inherited_id) values (?, ?, ?, ?, ?)", (start, script, code_hash, arguments, iherited_id)).lastrowid
 
 
 def update_trial(finish, function_call):

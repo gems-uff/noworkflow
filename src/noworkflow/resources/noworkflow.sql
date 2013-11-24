@@ -4,6 +4,7 @@ create table trial (
 	finish TIMESTAMP,
 	script TEXT,
 	code_hash TEXT,
+	arguments TEXT,
 	inherited_id INTEGER, -- Id of the prospective tuple that we are inheriting module information (due to --bypass-modules)
 	FOREIGN KEY (inherited_id) REFERENCES trial ON DELETE RESTRICT  
 );

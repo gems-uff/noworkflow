@@ -41,7 +41,8 @@ def main():
     parser_export.add_argument('-j', '--json', help='exports to json', action='store_true')
     parser_export.set_defaults(func=export_cmd.execute)
     
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
+    print unknown_args
     args.func(args)
 
 

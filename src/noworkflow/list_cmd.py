@@ -9,6 +9,10 @@ def execute(args):
     persistence.connect_existing(os.getcwd())
     print_msg('trials available in the provenance store:', True)
     for trial in persistence.load('trial'):
-        print '  Trial {id} of {script} run at {start}'.format(**trial)
+        text = '  Trial {id}: {script} {arguments}'.format(**trial)
+        indent = text.index(': ') + 2
+        print text
+        print '{indent}with code hash {code_hash}'.format(indent = ' ' * indent, **trial)
+        print '{indent}ran from {start} to {finish}'.format(indent = ' ' * indent, **trial)
 
     
