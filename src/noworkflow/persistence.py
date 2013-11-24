@@ -75,10 +75,13 @@ def get(content_hash):
 def load(table_name, **condition):
     where = '1'
     for key in condition:
-        where += ' and {} = {}'.format(key, condition[key]) 
+        if condition[key] == None:
+            where += ' and {} is NULL'.format(key)
+        else:
+            where += ' and {} = {}'.format(key, condition[key]) 
+ 
     with db_conn as db:
-        print 'select * from {} where {}'.format(table_name, where)
-        return db.execute('select * from {} where {}'.format(table_name, where))
+        return db.execute('select * from {} where {} order by id'.format(table_name, where))
 
 
 def insert(table_name, attrs, **extra_attrs):  # Not in use, but can be useful in the future

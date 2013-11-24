@@ -31,16 +31,29 @@ def print_function_defs(function_defs):
     print '\n\n'.join(output)
 
 
-# def print_function_call(function_call, level = 1):
-#     print '{}{}: {} ({} - {})'.format('  ' * level, function_call['line'], function_call['name'], function_call['start'], function_call['finish'])
-#     for inner_function_call in function_call['function_calls']:
-#         print_function_call(inner_function_call, level + 1)    
-#     
-#     
-# def print_function_calls(function_call):
-#     print_msg('this script called the following functions:', True)
-#     for inner_function_call in function_call['function_calls']:
-#         print_function_call(inner_function_call)
+def print_function_call(function_call, level = 1):
+    object_values = {'GLOBAL':[], 'ARGUMENT':[]}
+    for obj in persistence.load('object_value', function_call_id = function_call['id']):
+        object_values[obj['type']].append('{} = {}'.format(obj['name'], obj['value']))
+    text = '{indent}{line}: {name} ({start} - {finish})'.format(indent = '  ' * level, **function_call)
+    indent = text.index(': ') + 2
+    print text
+    if object_values['ARGUMENT']:
+        print '{indent}Arguments: {arguments}'.format(indent = ' ' * indent, arguments = ', '.join(object_values['ARGUMENT']))
+    if object_values['GLOBAL']:
+        print '{indent}Globals: {globals}'.format(indent = ' ' * indent, globals = ', '.join(object_values['GLOBALS']))
+    if function_call['return']:
+        print '{indent}Return value: {ret}'.format(indent = ' ' * indent, ret = function_call['return'])
+
+    for inner_function_call in persistence.load('function_call', caller_id = function_call['id']):
+        print_function_call(inner_function_call, level + 1)    
+     
+     
+def print_function_calls(function_call):
+    print_msg('this trial has the following function call graph:', True)
+    
+    for inner_function_call in persistence.load('function_call', caller_id = function_call['id']):
+        print_function_call(inner_function_call)
 # 
 # 
 # def print_file_accesses(file_accesses):
@@ -49,6 +62,7 @@ def print_function_defs(function_defs):
 #     for file_access in file_accesses:
 #         output.append('  Name: {name}\n  Mode: {mode}\n  Buffering: {buffering}\n  Content hash before: {content_hash_before}\n  Content hash after: {content_hash_after}\n  Timestamp: {timestamp}'.format(**file_access))
 #     print '\n\n'.join(output)
+
 
 def execute(args):
     persistence.connect_existing(os.getcwd())
@@ -69,9 +83,8 @@ def execute(args):
         environment = {attr['name']: attr['value'] for attr in persistence.load('environment_attr', trial_id = trial_id)}
         print_map('this trial has been executed under the following environment conditions', environment)
 
-
-#     if args.function_calls:
-#         print_function_calls(function_call)
+    if args.function_calls:
+        print_function_calls(persistence.load('function_call', caller_id = None, trial_id = trial_id).fetchone())
 #  
 #     if args.file_accesses:
 #         print_file_accesses(file_accesses)
