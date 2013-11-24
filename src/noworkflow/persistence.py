@@ -184,6 +184,7 @@ def store_function_call(function_call, caller_id):
     with db_conn as db:
         function_call_id = db.execute("insert into function_call(name, line, return, start, finish, caller_id, trial_id) values (?, ?, ?, ?, ?, ?, ?)", data).lastrowid
     store_object_values(function_call['arguments'], 'ARGUMENT', function_call_id)
+    store_object_values(function_call['globals'], 'GLOBAL', function_call_id)
     store_file_accesses(function_call['file_accesses'], function_call_id)
     for inner_function_call in function_call['function_calls']:
         store_function_call(inner_function_call, function_call_id)

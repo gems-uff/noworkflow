@@ -41,7 +41,7 @@ def print_function_call(function_call, level = 1):
     if object_values['ARGUMENT']:
         print '{indent}Arguments: {arguments}'.format(indent = ' ' * indent, arguments = ', '.join(object_values['ARGUMENT']))
     if object_values['GLOBAL']:
-        print '{indent}Globals: {globals}'.format(indent = ' ' * indent, globals = ', '.join(object_values['GLOBALS']))
+        print '{indent}Globals: {globals}'.format(indent = ' ' * indent, globals = ', '.join(object_values['GLOBAL']))
     if function_call['return']:
         print '{indent}Return value: {ret}'.format(indent = ' ' * indent, ret = function_call['return'])
 

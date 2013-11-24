@@ -49,15 +49,19 @@ def tracer(frame, event, arg):
         call = {
             'name': arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
             'line': frame.f_lineno,
-            'arguments': {}
+            'arguments': {},
+            'globals': {}
         }
     if event == "call" and script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]:
         call = {
             'name': frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
             'line': frame.f_back.f_lineno,
-            'arguments': {}
+            'arguments': {},
+            'globals': {}
         }
-        (args, varargs, keywords, values) = inspect.getargvalues(frame)  # Capturing arguments
+        
+        # Capturing arguments
+        (args, varargs, keywords, values) = inspect.getargvalues(frame)
         for arg in args:
             call['arguments'][arg] = repr(values[arg])
         if varargs:
@@ -65,7 +69,12 @@ def tracer(frame, event, arg):
         if keywords:
             for key, value in values[keywords].iteritems():
                 call['arguments'][key] = repr(value)
-        # TODO: Capture global values
+                
+        # Capturing globals
+        function_def = persistence.load('function_def', name = repr(call['name']), trial_id = persistence.trial_id).fetchone()
+        if function_def:
+            for global_var in persistence.load('object', type = repr('GLOBAL'), function_def_id = function_def['id']):                
+                call['globals'][global_var['name']] = frame.f_globals[global_var['name']]
 
     if call:
         call['start'] = datetime.now()
