@@ -42,7 +42,6 @@ def main():
     parser_export.set_defaults(func=export_cmd.execute)
     
     args, unknown_args = parser.parse_known_args()
-    print unknown_args
     args.func(args)
 
 

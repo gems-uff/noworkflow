@@ -54,14 +54,24 @@ def print_function_calls(function_call):
     
     for inner_function_call in persistence.load('function_call', caller_id = function_call['id']):
         print_function_call(inner_function_call)
-# 
-# 
-# def print_file_accesses(file_accesses):
-#     print_msg('this script accessed the following files:', True)
-#     output = []
-#     for file_access in file_accesses:
-#         output.append('  Name: {name}\n  Mode: {mode}\n  Buffering: {buffering}\n  Content hash before: {content_hash_before}\n  Content hash after: {content_hash_after}\n  Timestamp: {timestamp}'.format(**file_access))
-#     print '\n\n'.join(output)
+ 
+ 
+def print_file_accesses(file_accesses):
+    print_msg('this trial accessed the following files:', True)
+    output = []
+    for file_access in file_accesses:
+        stack = []
+        function_call = persistence.load('function_call', id = file_access['function_call_id']).fetchone()
+        while function_call:
+            function_name = function_call['name']
+            function_call = persistence.load('function_call', id = function_call['caller_id']).fetchone()
+            if function_call:
+                stack.insert(0, function_name)
+        if stack[-1] != 'open':
+            stack.append(' ... -> open')
+        
+        output.append('  Name: {name}\n  Mode: {mode}\n  Buffering: {buffering}\n  Content hash before: {content_hash_before}\n  Content hash after: {content_hash_after}\n  Timestamp: {timestamp}\n  Function: {stack}'.format(stack = ' -> '.join(stack), **file_access))
+    print '\n\n'.join(output)
 
 
 def execute(args):
@@ -85,6 +95,6 @@ def execute(args):
 
     if args.function_calls:
         print_function_calls(persistence.load('function_call', caller_id = None, trial_id = trial_id).fetchone())
-#  
-#     if args.file_accesses:
-#         print_file_accesses(file_accesses)
+  
+    if args.file_accesses:
+        print_file_accesses(persistence.load('file_access', trial_id = trial_id))
