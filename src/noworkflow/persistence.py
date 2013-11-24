@@ -77,6 +77,7 @@ def load(table_name, **condition):
     for key in condition:
         where += ' and {} = {}'.format(key, condition[key]) 
     with db_conn as db:
+        print 'select * from {} where {}'.format(table_name, where)
         return db.execute('select * from {} where {}'.format(table_name, where))
 
 
