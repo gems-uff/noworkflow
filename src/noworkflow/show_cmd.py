@@ -65,13 +65,11 @@ def execute(args):
     if args.function_defs:
         print_function_defs(persistence.load('function_def', trial_id = trial_id))
 
-         
-    
-#     if args.environment:
-#         print_map('this script is being executed under the following environment conditions', environment)
-#  
-#  
-#  
+    if args.environment:
+        environment = {attr['name']: attr['value'] for attr in persistence.load('environment_attr', trial_id = trial_id)}
+        print_map('this trial has been executed under the following environment conditions', environment)
+
+
 #     if args.function_calls:
 #         print_function_calls(function_call)
 #  

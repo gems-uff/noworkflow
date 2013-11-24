@@ -18,14 +18,6 @@ create table module (
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
 
-create table environment_attr (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	name TEXT,
-	value TEXT,
-	trial_id INTEGER,
-	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
-);
-
 create table function_def (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -40,6 +32,14 @@ create table object (
 	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION')),
 	function_def_id INTEGER,
 	FOREIGN KEY (function_def_id) REFERENCES function_def ON DELETE CASCADE
+);
+
+create table environment_attr (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT,
+	value TEXT,
+	trial_id INTEGER,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
 
 create table function_call (
