@@ -11,7 +11,7 @@ from pkg_resources import resource_string  #@UnresolvedImport
 PROVENANCE_DIRNAME = '.noworkflow'
 CONTENT_DIRNAME = 'content'
 DB_FILENAME = 'db.sqlite'
-DB_SCRIPT = 'noworkflow.sql'
+DB_SCRIPT = 'resources/noworkflow.sql'
 
 content_path = None  # Base path for storing content of files
 db_conn = None  # Connection to the database
