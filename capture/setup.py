@@ -5,9 +5,8 @@ use_setuptools()
 from setuptools import setup, find_packages
 setup(
     name = "noworkflow",
-    version = "0.1",
-    package_dir = {'': 'src'},
-    packages = find_packages('src'),
+    version = "0.2",
+    packages = find_packages(),
     include_package_data = True,
     
     entry_points = {
