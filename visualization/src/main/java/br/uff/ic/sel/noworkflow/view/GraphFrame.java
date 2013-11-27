@@ -11,9 +11,12 @@ import edu.uci.ics.jung.graph.DirectedGraph;
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
+import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Paint;
+import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.collections15.Predicate;
@@ -28,7 +31,15 @@ public class GraphFrame extends javax.swing.JFrame {
     /**
      * Creates new form GraphFrame
      */
-    public GraphFrame(DirectedGraph<FunctionCall, Flow> graph) {
+    public GraphFrame(Collection<FunctionCall> functionCalls, Collection<Flow> flows) {
+        DirectedGraph<FunctionCall, Flow> graph = new DirectedSparseGraph<>();
+        for (FunctionCall functionCall : functionCalls) {
+            graph.addVertex(functionCall);
+        }
+        for (Flow flow : flows) {
+            graph.addEdge(flow, flow.getSource(), flow.getTarget());
+        }
+
         initComponents();
         initGraphComponent(graph);
     }
@@ -53,7 +64,7 @@ public class GraphFrame extends javax.swing.JFrame {
         // Filtering vertices with less than 2 indications
         Filter<FunctionCall, Flow> filter = new VertexPredicateFilter<>(new Predicate<FunctionCall>() {
             @Override
-            public boolean evaluate(FunctionCall researcher) {
+            public boolean evaluate(FunctionCall functionCall) {
                 return true;  //researcher.getNominationsCount() > 1;
             }
         });
@@ -65,7 +76,7 @@ public class GraphFrame extends javax.swing.JFrame {
 //        Layout<Researcher, Indication> layout = new ISOMLayout<Researcher, Indication>(graph);
 //        Layout<Researcher, Indication> layout = new KKLayout<>(graph);
         Layout<FunctionCall, Flow> layout = new SpringLayout2<>(graph);
-//        layout.setSize(new Dimension(2000, 2000));
+        layout.setSize(new Dimension(2000, 2000));
 
         VisualizationViewer<FunctionCall, Flow> view = new VisualizationViewer<>(layout);
 
@@ -76,14 +87,30 @@ public class GraphFrame extends javax.swing.JFrame {
 
 
         // Labelling vertices
-//        view.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<Researcher>());
+        //view.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<FunctionCall>());
+        Transformer vertexLabeller = new Transformer<FunctionCall, String>() {
+            public String transform(FunctionCall functionCall) {
+                return functionCall.getName();
+            }
+        };
+        view.getRenderContext().setVertexLabelTransformer(vertexLabeller);
+
+        // Labelling edges
+        //view.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<FunctionCall>());
+        Transformer edgeLabeller = new Transformer<Flow, String>() {
+            public String transform(Flow flow) {
+                return Integer.toString(flow.getTransitionCount());
+            }
+        };
+        view.getRenderContext().setEdgeLabelTransformer(edgeLabeller);
 
         // Painting vertices
         Transformer vertexPainter = new Transformer<FunctionCall, Paint>() {
             @Override
-            public Paint transform(FunctionCall researcher) {
-                int tone = Math.round(255);  // * ( 1 - researcher.getNominationsCount() / (float) Function.getMaxNominationsCount() ));
-                return new Color(tone, tone, tone);
+            public Paint transform(FunctionCall functionCall) {
+                int tone = Math.round(250);  // * ( 1 - researcher.getNominationsCount() / (float) Function.getMaxNominationsCount() ));
+                //return new Color(tone, tone, tone);
+                return new Color(72,61,139);
             }
         };
         view.getRenderContext().setVertexFillPaintTransformer(vertexPainter);
@@ -93,7 +120,7 @@ public class GraphFrame extends javax.swing.JFrame {
         Transformer edgePainter = new Transformer<Flow, Paint>() {
             @Override
             public Paint transform(Flow indication) {
-                int tone = Math.round(255); // * ( 1 - indication.getSource().getNominationsCount() / (float) Function.getMaxNominationsCount() ));
+                int tone = Math.round(0); // * ( 1 - indication.getSource().getNominationsCount() / (float) Function.getMaxNominationsCount() ));
                 return new Color(tone, tone, tone);
             }
         };
@@ -121,42 +148,19 @@ public class GraphFrame extends javax.swing.JFrame {
                     break;
                 }
             }
-        }
-        catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException ex) {
             java.util.logging.Logger.getLogger(GraphFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        catch (InstantiationException ex) {
+        } catch (InstantiationException ex) {
             java.util.logging.Logger.getLogger(GraphFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        catch (IllegalAccessException ex) {
+        } catch (IllegalAccessException ex) {
             java.util.logging.Logger.getLogger(GraphFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        catch (javax.swing.UnsupportedLookAndFeelException ex) {
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(GraphFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
         try {
-            //<editor-fold defaultstate="collapsed" desc="Load graph file">
-            SQLiteReader tsvReader = new SQLiteReader("graph.tsv", 1);
-            final DirectedGraph<FunctionCall, Flow> graph = new DirectedSparseGraph<FunctionCall, Flow>();
-            for (FunctionCall researcher : tsvReader.getFunctionCalls()) {
-                graph.addVertex(researcher);
-            }
-            for (Flow indication : tsvReader.getFlows()) {
-                graph.addEdge(indication, indication.getSource(), indication.getTarget());
-            }
-            //</editor-fold>
-
-            //<editor-fold defaultstate="collapsed" desc="Create and display the form">
-            java.awt.EventQueue.invokeLater(new Runnable() {
-                public void run() {
-                    new GraphFrame(graph).setVisible(true);
-                }
-            });
-            //</editor-fold>
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             Logger.getLogger(GraphFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
