@@ -74,8 +74,8 @@ public class SQLiteReader {
         int id = rs.getInt("id");
         Map<String, String> arguments = getArguments(id);
         String returnValue = rs.getString("return");
-        Timestamp start = rs.getTimestamp("start");
-        Timestamp finish = rs.getTimestamp("finish");
+        Timestamp start = Timestamp.valueOf(rs.getString("start"));
+        Timestamp finish = Timestamp.valueOf(rs.getString("finish"));
 
         String key = callerId + line + name;
         FunctionCall functionCall = functionCalls.get(key);
