@@ -32,3 +32,4 @@ nosetests.xml
 # Execution data
 .noworkflow
 /visualization/target/
+output.png
