@@ -39,10 +39,10 @@ public class Activation {
     }   
     
     /**
-     * Informs the duration of an activation in milliseconds
+     * Informs the duration of an activation in nanoseconds
      */
     public long getDuration() {
-        return finish.getTime() - start.getTime();
+        return 1000000 * (finish.getTime() - start.getTime()) + (finish.getNanos() % 1000000 - start.getNanos() % 1000000);
     }
     
     @Override
@@ -52,6 +52,16 @@ public class Activation {
             text.append("\n    ").append("Argument ").append(arg).append(" = ").append(arguments.get(arg));
         }
         text.append("\n    ").append("Return ").append(returnValue);
+        return text.toString();
+    }
+    
+    public String toHtml() {
+        StringBuilder text = new StringBuilder("Activation #").append(id);
+        text.append(" from ").append(start).append(" to ").append(finish).append(" (").append(getDuration()).append(" nanoseconds)");
+        for (String arg : arguments.keySet()) {
+            text.append("<br/>").append("Argument ").append(arg).append(" = ").append(arguments.get(arg));
+        }
+        text.append("<br/>").append("Returned ").append(returnValue);
         return text.toString();
     }
 }

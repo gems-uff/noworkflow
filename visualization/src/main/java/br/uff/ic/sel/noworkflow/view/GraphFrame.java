@@ -1,5 +1,6 @@
 package br.uff.ic.sel.noworkflow.view;
 
+import br.uff.ic.sel.noworkflow.model.Activation;
 import br.uff.ic.sel.noworkflow.model.Flow;
 import br.uff.ic.sel.noworkflow.model.FunctionCall;
 import edu.uci.ics.jung.algorithms.layout.ISOMLayout;
@@ -14,6 +15,7 @@ import java.awt.Color;
 import java.awt.Paint;
 import java.awt.Stroke;
 import java.util.Collection;
+import javax.swing.ToolTipManager;
 import org.apache.commons.collections15.Transformer;
 
 public class GraphFrame extends javax.swing.JFrame {
@@ -89,6 +91,16 @@ public class GraphFrame extends javax.swing.JFrame {
             public Paint transform(FunctionCall functionCall) {
                 int proportion = Math.round(510 * (functionCall.getMeanDuration() - minDuration) / (float) (maxDuration - minDuration));
                 return new Color(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
+            }
+        });
+
+        // Adding tooltip to the vertices
+        ToolTipManager.sharedInstance().setInitialDelay(0);
+        ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
+        viewer.setVertexToolTipTransformer(new Transformer<FunctionCall, String>() {
+            @Override
+            public String transform(FunctionCall functionCall) {
+                return functionCall.toHtml();
             }
         });
 
