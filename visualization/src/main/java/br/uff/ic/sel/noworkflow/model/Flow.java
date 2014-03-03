@@ -1,8 +1,5 @@
 package br.uff.ic.sel.noworkflow.model;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class Flow {
     public enum Type { SEQUENCE, CALL, RETURN }
 

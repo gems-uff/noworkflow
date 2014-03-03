@@ -1,6 +1,5 @@
 package br.uff.ic.sel.noworkflow.view;
 
-import br.uff.ic.sel.noworkflow.model.Activation;
 import br.uff.ic.sel.noworkflow.model.Flow;
 import br.uff.ic.sel.noworkflow.model.FunctionCall;
 import edu.uci.ics.jung.algorithms.layout.ISOMLayout;
@@ -59,10 +58,14 @@ public class GraphFrame extends javax.swing.JFrame {
 
     private VisualizationViewer<FunctionCall, Flow> getViewer(DirectedGraph<FunctionCall, Flow> graph) {
         // Choosing layout
+        // TODO: create a custom layout in a tree-like look
         Layout<FunctionCall, Flow> layout = new ISOMLayout<>(graph);
         VisualizationViewer<FunctionCall, Flow> viewer = new VisualizationViewer<>(layout);
 
-        // Adding interation via mouse
+        // Painting background 
+        viewer.setBackground(Color.white);
+        
+        // Adding interation via mouse ("p" for picking, "t" for translation)
         DefaultModalGraphMouse mouse = new DefaultModalGraphMouse();
         viewer.setGraphMouse(mouse);
         viewer.addKeyListener(mouse.getModeKeyListener());
@@ -75,15 +78,6 @@ public class GraphFrame extends javax.swing.JFrame {
             }
         };
         viewer.getRenderContext().setVertexLabelTransformer(vertexLabeller);
-
-        // Labelling edges
-        Transformer edgeLabeller = new Transformer<Flow, String>() {
-            @Override
-            public String transform(Flow flow) {
-                return Integer.toString(flow.getTransitionCount());
-            }
-        };
-        viewer.getRenderContext().setEdgeLabelTransformer(edgeLabeller);
 
         // Painting vertices according to the execution duration (traffic light scale)
         viewer.getRenderContext().setVertexFillPaintTransformer(new Transformer<FunctionCall, Paint>() {
@@ -104,6 +98,15 @@ public class GraphFrame extends javax.swing.JFrame {
             }
         });
 
+        // Labelling edges
+        Transformer edgeLabeller = new Transformer<Flow, String>() {
+            @Override
+            public String transform(Flow flow) {
+                return Integer.toString(flow.getTransitionCount());
+            }
+        };
+        viewer.getRenderContext().setEdgeLabelTransformer(edgeLabeller);
+
         // Set the flow stroke (dashed or plain line, tickness, etc)
         viewer.getRenderContext().setEdgeStrokeTransformer(new Transformer<Flow, Stroke>() {
             @Override
@@ -121,24 +124,25 @@ public class GraphFrame extends javax.swing.JFrame {
                     dash = new float[1];
                     dash[0] = 5;
                 }
-                return new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 10, dash, 0);
+                return new BasicStroke(width, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, dash, 0);
             }
         });
 
         // Painting edges
         Transformer edgePainter = new Transformer<Flow, Paint>() {
             @Override
-            public Paint transform(Flow indication) {
-                int tone = Math.round(0); // * ( 1 - indication.getSource().getNominationsCount() / (float) Function.getMaxNominationsCount() ));
-                return new Color(tone, tone, tone);
+            public Paint transform(Flow flow) {
+                if (flow.isSequence()) {
+                    return new Color(128, 128, 128);
+                } else {
+                    return new Color(0, 0, 0);
+                }            
             }
         };
         viewer.getRenderContext().setEdgeDrawPaintTransformer(edgePainter);
         viewer.getRenderContext().setArrowDrawPaintTransformer(edgePainter);
         viewer.getRenderContext().setArrowFillPaintTransformer(edgePainter);
-
-        viewer.setBackground(Color.white);
-
+        
         return viewer;
     }
 }
