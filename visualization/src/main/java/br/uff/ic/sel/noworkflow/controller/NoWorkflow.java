@@ -1,10 +1,6 @@
 package br.uff.ic.sel.noworkflow.controller;
 
-import br.uff.ic.sel.noworkflow.model.Flow;
-import br.uff.ic.sel.noworkflow.model.FunctionCall;
 import br.uff.ic.sel.noworkflow.view.GraphFrame;
-import edu.uci.ics.jung.graph.DirectedGraph;
-import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import java.io.File;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -12,15 +8,16 @@ import java.util.logging.Logger;
 public class NoWorkflow {
 
     public static void main(String[] args) {
+                
         if (args.length != 2) {
-            System.out.println("Please, inform the database path and the trial id.");
-            System.out.println("Example: java -jar target/noWorkflowVis-0.1-jar-with-dependencies.jar ../tests/weather/.noworkflow/db.sqlite 1");
+            System.out.println("Please, inform the script path and the trial id.");
+            System.out.println("Example: java -jar target/noWorkflowVis-0.1-jar-with-dependencies.jar ../tests/weather 1");
             System.exit(1);
         }
 
-        File file = new File(args[0]);
+        File file = new File(args[0] + File.separator + ".noworkflow/db.sqlite");
         if (!file.exists()) {
-            System.out.println("Could not find a SQLite database at " + args[0]);
+            System.out.println("Could not find a noWorkflow repository at " + args[0]);
             System.exit(1);
         }
         
@@ -33,16 +30,7 @@ public class NoWorkflow {
         }
         
         try {
-            final SQLiteReader reader = new SQLiteReader(args[0], trialId);
-
-//        for (FunctionCall f : reader.getFunctionCalls()) {
-//            System.out.println(f);
-//        }
-//        
-//        for (Flow f : reader.getFlows()) {
-//            System.out.println(f);
-//        }
-
+            final SQLiteReader reader = new SQLiteReader(file.getCanonicalPath(), trialId);
             java.awt.EventQueue.invokeLater(new Runnable() {
                 public void run() {
                     new GraphFrame(reader.getFunctionCalls(), reader.getFlows()).setVisible(true);
@@ -52,6 +40,5 @@ public class NoWorkflow {
         catch (Exception ex) {
             Logger.getLogger(GraphFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
-
     }
 }
