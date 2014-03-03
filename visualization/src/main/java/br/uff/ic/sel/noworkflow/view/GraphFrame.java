@@ -2,19 +2,24 @@ package br.uff.ic.sel.noworkflow.view;
 
 import br.uff.ic.sel.noworkflow.model.Flow;
 import br.uff.ic.sel.noworkflow.model.FunctionCall;
+import edu.uci.ics.jung.algorithms.layout.ISOMLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
-import edu.uci.ics.jung.algorithms.layout.SpringLayout2;
 import edu.uci.ics.jung.graph.DirectedGraph;
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Paint;
+import java.awt.Stroke;
 import java.util.Collection;
 import org.apache.commons.collections15.Transformer;
 
 public class GraphFrame extends javax.swing.JFrame {
+
+    private long minDuration = Long.MAX_VALUE;
+    private long maxDuration = 0;
 
     /**
      * Creates new form GraphFrame
@@ -26,6 +31,13 @@ public class GraphFrame extends javax.swing.JFrame {
         setLocationRelativeTo(null);
 
         DirectedGraph<FunctionCall, Flow> graph = getGraph(functionCalls, flows);
+
+        for (FunctionCall functionCall : functionCalls) {
+            long meanDuration = functionCall.getMeanDuration();
+            this.minDuration = Math.min(this.minDuration, meanDuration);
+            this.maxDuration = Math.max(this.maxDuration, meanDuration);
+        }
+
         VisualizationViewer<FunctionCall, Flow> viewer = getViewer(graph);
 
         getContentPane().setLayout(new BorderLayout());
@@ -45,11 +57,7 @@ public class GraphFrame extends javax.swing.JFrame {
 
     private VisualizationViewer<FunctionCall, Flow> getViewer(DirectedGraph<FunctionCall, Flow> graph) {
         // Choosing layout
-//        Layout<Researcher, Indication> layout = new CircleLayout<Researcher, Indication>(graph);
-//        Layout<Researcher, Indication> layout = new FRLayout2<Researcher, Indication>(graph);
-//        Layout<Researcher, Indication> layout = new ISOMLayout<Researcher, Indication>(graph);
-//        Layout<Researcher, Indication> layout = new KKLayout<>(graph);
-        Layout<FunctionCall, Flow> layout = new SpringLayout2<>(graph);
+        Layout<FunctionCall, Flow> layout = new ISOMLayout<>(graph);
         VisualizationViewer<FunctionCall, Flow> viewer = new VisualizationViewer<>(layout);
 
         // Adding interation via mouse
@@ -58,8 +66,8 @@ public class GraphFrame extends javax.swing.JFrame {
         viewer.addKeyListener(mouse.getModeKeyListener());
 
         // Labelling vertices
-        //view.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<FunctionCall>());
         Transformer vertexLabeller = new Transformer<FunctionCall, String>() {
+            @Override
             public String transform(FunctionCall functionCall) {
                 return functionCall.getName();
             }
@@ -67,25 +75,43 @@ public class GraphFrame extends javax.swing.JFrame {
         viewer.getRenderContext().setVertexLabelTransformer(vertexLabeller);
 
         // Labelling edges
-        //view.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<FunctionCall>());
         Transformer edgeLabeller = new Transformer<Flow, String>() {
+            @Override
             public String transform(Flow flow) {
                 return Integer.toString(flow.getTransitionCount());
             }
         };
         viewer.getRenderContext().setEdgeLabelTransformer(edgeLabeller);
 
-        // Painting vertices
-        Transformer vertexPainter = new Transformer<FunctionCall, Paint>() {
+        // Painting vertices according to the execution duration (traffic light scale)
+        viewer.getRenderContext().setVertexFillPaintTransformer(new Transformer<FunctionCall, Paint>() {
             @Override
             public Paint transform(FunctionCall functionCall) {
-                int tone = Math.round(250);  // * ( 1 - researcher.getNominationsCount() / (float) Function.getMaxNominationsCount() ));
-                //return new Color(tone, tone, tone);
-                return new Color(72, 61, 139);
+                int tone = Math.round(255 * (functionCall.getMeanDuration() - minDuration) / (float) (maxDuration - minDuration));
+                return new Color(tone, 255 - tone, 0);
             }
-        };
-        viewer.getRenderContext().setVertexFillPaintTransformer(vertexPainter);
-        viewer.getRenderContext().setVertexDrawPaintTransformer(vertexPainter);
+        });
+
+        // Set the flow stroke (dashed or plain line, tickness, etc)
+        viewer.getRenderContext().setEdgeStrokeTransformer(new Transformer<Flow, Stroke>() {
+            @Override
+            public Stroke transform(Flow flow) {
+                float width;
+                float[] dash;
+                if (flow.isCall()) {
+                    width = 2;
+                    dash = null;
+                } else if (flow.isSequence()) {
+                    width = 1;
+                    dash = null;
+                } else { // flow.isReturn()
+                    width = 2;
+                    dash = new float[1];
+                    dash[0] = 5;
+                }
+                return new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 10, dash, 0);
+            }
+        });
 
         // Painting edges
         Transformer edgePainter = new Transformer<Flow, Paint>() {

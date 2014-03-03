@@ -36,7 +36,14 @@ public class Activation {
 
     public Timestamp getFinish() {
         return finish;
-    }    
+    }   
+    
+    /**
+     * Informs the duration of an activation in milliseconds
+     */
+    public long getDuration() {
+        return finish.getTime() - start.getTime();
+    }
     
     @Override
     public String toString() {

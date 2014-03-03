@@ -31,6 +31,18 @@ public class FunctionCall {
     public String getName() {
         return name;
     }
+    
+    /**
+     * Informs the mean duration of all activation of this function call in milliseconds
+     */
+    public long getMeanDuration() {
+        long sum = 0;
+        for (Activation activation : activations) {
+            sum += activation.getDuration();
+        }
+        return sum / activations.size();
+        
+    }
 
     public void addActivation(int id, Map<String, String> arguments, String returnValue, Timestamp start, Timestamp finish) {
         activations.add(new Activation(id, arguments, returnValue, start, finish));        
