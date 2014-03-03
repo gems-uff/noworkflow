@@ -87,8 +87,8 @@ public class GraphFrame extends javax.swing.JFrame {
         viewer.getRenderContext().setVertexFillPaintTransformer(new Transformer<FunctionCall, Paint>() {
             @Override
             public Paint transform(FunctionCall functionCall) {
-                int tone = Math.round(255 * (functionCall.getMeanDuration() - minDuration) / (float) (maxDuration - minDuration));
-                return new Color(tone, 255 - tone, 0);
+                int proportion = Math.round(510 * (functionCall.getMeanDuration() - minDuration) / (float) (maxDuration - minDuration));
+                return new Color(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
             }
         });
 
