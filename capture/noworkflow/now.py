@@ -30,8 +30,8 @@ def main():
     parser_show.add_argument('-m', '--modules', help='shows module dependencies', action='store_true')
     parser_show.add_argument('-d', '--function-defs', help='shows the user-defined functions', action='store_true')
     parser_show.add_argument('-e', '--environment', help='shows the environment conditions', action='store_true')
-    parser_show.add_argument('-c', '--function-calls', help='shows function calls', action='store_true')
-    parser_show.add_argument('-a', '--file-accesses', help='shows read/write access to files', action='store_true')
+    parser_show.add_argument('-a', '--function-activations', help='shows function activations', action='store_true')
+    parser_show.add_argument('-f', '--file-accesses', help='shows read/write access to files', action='store_true')
     parser_show.set_defaults(func=show_cmd.execute)
 
     # export subcomand

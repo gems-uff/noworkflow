@@ -30,8 +30,8 @@ public class SQLiteReader {
         }
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + path)) {
-            PreparedStatement stmtFunctionCall = conn.prepareStatement("select * from function_call where trial_id = ? order by id");
-            stmtObjectValue = conn.prepareStatement("select * from object_value where function_call_id = ? order by id");
+            PreparedStatement stmtFunctionCall = conn.prepareStatement("select * from function_activation where trial_id = ? order by id");
+            stmtObjectValue = conn.prepareStatement("select * from object_value where function_activation_id = ? order by id");
 
             stmtFunctionCall.setInt(1, trialId);
             ResultSet rs = stmtFunctionCall.executeQuery();

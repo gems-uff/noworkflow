@@ -9,8 +9,8 @@ import __builtin__
 from datetime import datetime
 
 script = None
-call_stack = []
-function_call = None
+activation_stack = []
+function_activation = None
 file_accesses = []
 CURRENT = -1
 
@@ -37,23 +37,23 @@ def new_open(old_open):
         elif len(args) > 1:
             file_access['buffering'] = args[1]
 
-        call_stack[CURRENT]['file_accesses'].append(file_access)
+        activation_stack[CURRENT]['file_accesses'].append(file_access)
         return old_open(name, *args, **kwargs)
     return open
 
 
 def tracer(frame, event, arg):
-    global function_call
-    call = None
+    global function_activation
+    activation = None
     if event == 'c_call' and script == frame.f_code.co_filename:
-        call = {
+        activation = {
             'name': arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
             'line': frame.f_lineno,
             'arguments': {},
             'globals': {}
         }
     if event == "call" and script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]:
-        call = {
+        activation = {
             'name': frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
             'line': frame.f_back.f_lineno,
             'arguments': {},
@@ -63,43 +63,43 @@ def tracer(frame, event, arg):
         # Capturing arguments
         (args, varargs, keywords, values) = inspect.getargvalues(frame)
         for arg in args:
-            call['arguments'][arg] = repr(values[arg])
+            activation['arguments'][arg] = repr(values[arg])
         if varargs:
-            call['arguments'][varargs] = repr(values[varargs])
+            activation['arguments'][varargs] = repr(values[varargs])
         if keywords:
             for key, value in values[keywords].iteritems():
-                call['arguments'][key] = repr(value)
+                activation['arguments'][key] = repr(value)
                 
         # Capturing globals
-        function_def = persistence.load('function_def', name = repr(call['name']), trial_id = persistence.trial_id).fetchone()
+        function_def = persistence.load('function_def', name = repr(activation['name']), trial_id = persistence.trial_id).fetchone()
         if function_def:
             for global_var in persistence.load('object', type = repr('GLOBAL'), function_def_id = function_def['id']):                
-                call['globals'][global_var['name']] = frame.f_globals[global_var['name']]
+                activation['globals'][global_var['name']] = frame.f_globals[global_var['name']]
 
-    if call:
-        call['start'] = datetime.now()
-        call['file_accesses'] = []
-        call['function_calls'] = []
-        call_stack.append(call)
+    if activation:
+        activation['start'] = datetime.now()
+        activation['file_accesses'] = []
+        activation['function_activations'] = []
+        activation_stack.append(activation)
 
     if (event == 'c_return' and script == frame.f_code.co_filename or 
         event == 'return' and script in [frame.f_code.co_filename, frame.f_back.f_code.co_filename]):
-        call = call_stack.pop()
-        call['finish'] = datetime.now()
-        call['return'] = repr(arg) if event == 'return' else None
-        for file_access in call['file_accesses']:  # Update content of accessed files
+        activation = activation_stack.pop()
+        activation['finish'] = datetime.now()
+        activation['return'] = repr(arg) if event == 'return' else None
+        for file_access in activation['file_accesses']:  # Update content of accessed files
             if os.path.exists(file_access['name']):  # Checks if file still exists
                 with persistence.std_open(file_access['name'], 'rb') as f:
                     file_access['content_hash_after'] = persistence.put(f.read())
             file_accesses.append(file_access)
-        if call_stack:  # Store the current call in the previous call
-            call_stack[CURRENT]['function_calls'].append(call)
-        else:  # Store the current call in the list of calls
-            function_call = call
+        if activation_stack:  # Store the current activation in the previous activation
+            activation_stack[CURRENT]['function_activations'].append(activation)
+        else:  # Store the current activation in the list of activations
+            function_activation = activation
               
     
 def enable(args):
-    global script, list_function_calls, list_file_accesses
+    global script, list_function_activations, list_file_accesses
     script = args.script
     persistence.std_open = open
     __builtin__.open = new_open(open)
@@ -110,7 +110,7 @@ def disable():
     now = datetime.now()
     sys.setprofile(None)
     __builtin__.open = persistence.std_open
-    persistence.update_trial(now, function_call)
+    persistence.update_trial(now, function_activation)
 
 # TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()

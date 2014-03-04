@@ -31,29 +31,29 @@ def print_function_defs(function_defs):
     print '\n\n'.join(output)
 
 
-def print_function_call(function_call, level = 1):
+def print_function_activation(function_activation, level = 1):
     object_values = {'GLOBAL':[], 'ARGUMENT':[]}
-    for obj in persistence.load('object_value', function_call_id = function_call['id']):
+    for obj in persistence.load('object_value', function_activation_id = function_activation['id']):
         object_values[obj['type']].append('{} = {}'.format(obj['name'], obj['value']))
-    text = '{indent}{line}: {name} ({start} - {finish})'.format(indent = '  ' * level, **function_call)
+    text = '{indent}{line}: {name} ({start} - {finish})'.format(indent = '  ' * level, **function_activation)
     indent = text.index(': ') + 2
     print text
     if object_values['ARGUMENT']:
         print '{indent}Arguments: {arguments}'.format(indent = ' ' * indent, arguments = ', '.join(object_values['ARGUMENT']))
     if object_values['GLOBAL']:
         print '{indent}Globals: {globals}'.format(indent = ' ' * indent, globals = ', '.join(object_values['GLOBAL']))
-    if function_call['return']:
-        print '{indent}Return value: {ret}'.format(indent = ' ' * indent, ret = function_call['return'])
+    if function_activation['return']:
+        print '{indent}Return value: {ret}'.format(indent = ' ' * indent, ret = function_activation['return'])
 
-    for inner_function_call in persistence.load('function_call', caller_id = function_call['id']):
-        print_function_call(inner_function_call, level + 1)    
+    for inner_function_activation in persistence.load('function_activation', caller_id = function_activation['id']):
+        print_function_activation(inner_function_activation, level + 1)    
      
      
-def print_function_calls(function_call):
-    print_msg('this trial has the following function call graph:', True)
+def print_function_activations(function_activation):
+    print_msg('this trial has the following function activation graph:', True)
     
-    for inner_function_call in persistence.load('function_call', caller_id = function_call['id']):
-        print_function_call(inner_function_call)
+    for inner_function_activation in persistence.load('function_activation', caller_id = function_activation['id']):
+        print_function_activation(inner_function_activation)
  
  
 def print_file_accesses(file_accesses):
@@ -61,11 +61,11 @@ def print_file_accesses(file_accesses):
     output = []
     for file_access in file_accesses:
         stack = []
-        function_call = persistence.load('function_call', id = file_access['function_call_id']).fetchone()
-        while function_call:
-            function_name = function_call['name']
-            function_call = persistence.load('function_call', id = function_call['caller_id']).fetchone()
-            if function_call:
+        function_activation = persistence.load('function_activation', id = file_access['function_activation_id']).fetchone()
+        while function_activation:
+            function_name = function_activation['name']
+            function_activation = persistence.load('function_activation', id = function_activation['caller_id']).fetchone()
+            if function_activation:
                 stack.insert(0, function_name)
         if stack[-1] != 'open':
             stack.append(' ... -> open')
@@ -93,8 +93,8 @@ def execute(args):
         environment = {attr['name']: attr['value'] for attr in persistence.load('environment_attr', trial_id = trial_id)}
         print_map('this trial has been executed under the following environment conditions', environment)
 
-    if args.function_calls:
-        print_function_calls(persistence.load('function_call', caller_id = None, trial_id = trial_id).fetchone())
+    if args.function_activations:
+        print_function_activations(persistence.load('function_activation', caller_id = None, trial_id = trial_id).fetchone())
   
     if args.file_accesses:
         print_file_accesses(persistence.load('file_access', trial_id = trial_id))

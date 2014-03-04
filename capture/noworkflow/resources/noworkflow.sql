@@ -49,7 +49,7 @@ create table environment_attr (
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
 
-create table function_call (
+create table function_activation (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
 	line INTEGER,
@@ -58,7 +58,7 @@ create table function_call (
 	finish TIMESTAMP,
 	caller_id INTEGER,
 	trial_id INTEGER,
-	FOREIGN KEY (caller_id) REFERENCES function_call ON DELETE CASCADE,
+	FOREIGN KEY (caller_id) REFERENCES function_activation ON DELETE CASCADE,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE	
 );
 
@@ -67,8 +67,8 @@ create table object_value (
 	name TEXT,
 	value TEXT,
 	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT')),
-	function_call_id INTEGER,
-	FOREIGN KEY (function_call_id) REFERENCES function_call ON DELETE CASCADE
+	function_activation_id INTEGER,
+	FOREIGN KEY (function_activation_id) REFERENCES function_activation ON DELETE CASCADE
 );
 
 create table file_access (
@@ -79,8 +79,8 @@ create table file_access (
 	content_hash_before TEXT,
 	content_hash_after TEXT,
 	timestamp TIMESTAMP,
-	function_call_id INTEGER,
+	function_activation_id INTEGER,
 	trial_id INTEGER,
-	FOREIGN KEY (function_call_id) REFERENCES function_call ON DELETE CASCADE,
+	FOREIGN KEY (function_activation_id) REFERENCES function_activation ON DELETE CASCADE,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );

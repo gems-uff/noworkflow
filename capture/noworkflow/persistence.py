@@ -120,8 +120,8 @@ def store_trial(start, script, code, arguments, bypass_modules):
         trial_id = db.execute("insert into trial (start, script, code_hash, arguments, inherited_id) values (?, ?, ?, ?, ?)", (start, script, code_hash, arguments, iherited_id)).lastrowid
 
 
-def update_trial(finish, function_call):
-    store_function_call(function_call, None)
+def update_trial(finish, function_activation):
+    store_function_activation(function_activation, None)
     with db_conn as db:        
         db.execute("update trial set finish = ? where id = ?", (finish, trial_id))
         
@@ -171,26 +171,26 @@ def store_function_defs(functions):
             store_objects(calls, 'FUNCTION', function_def_id)
             
             
-def store_file_accesses(file_accesses, function_call_id):
+def store_file_accesses(file_accesses, function_activation_id):
     with db_conn as db:
         for file_access in file_accesses:
-            data = (file_access['name'], file_access['mode'], file_access['buffering'], file_access['content_hash_before'], file_access['content_hash_after'], file_access['timestamp'], function_call_id, trial_id)
-            db.execute("insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_call_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)", data)
+            data = (file_access['name'], file_access['mode'], file_access['buffering'], file_access['content_hash_before'], file_access['content_hash_after'], file_access['timestamp'], function_activation_id, trial_id)
+            db.execute("insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_activation_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)", data)
        
 
-def store_object_values(object_values, obj_type, function_call_id):
-    data = [(name, value, obj_type, function_call_id) for name, value in object_values.iteritems()]
+def store_object_values(object_values, obj_type, function_activation_id):
+    data = [(name, value, obj_type, function_activation_id) for name, value in object_values.iteritems()]
     with db_conn as db:
-        db.executemany("insert into object_value(name, value, type, function_call_id) values (?, ?, ?, ?)", data)    
+        db.executemany("insert into object_value(name, value, type, function_activation_id) values (?, ?, ?, ?)", data)    
 
   
-def store_function_call(function_call, caller_id):
-    data = (function_call['name'], function_call['line'], function_call['return'], function_call['start'], function_call['finish'], caller_id, trial_id)
+def store_function_activation(function_activation, caller_id):
+    data = (function_activation['name'], function_activation['line'], function_activation['return'], function_activation['start'], function_activation['finish'], caller_id, trial_id)
     with db_conn as db:
-        function_call_id = db.execute("insert into function_call(name, line, return, start, finish, caller_id, trial_id) values (?, ?, ?, ?, ?, ?, ?)", data).lastrowid
-    store_object_values(function_call['arguments'], 'ARGUMENT', function_call_id)
-    store_object_values(function_call['globals'], 'GLOBAL', function_call_id)
-    store_file_accesses(function_call['file_accesses'], function_call_id)
-    for inner_function_call in function_call['function_calls']:
-        store_function_call(inner_function_call, function_call_id)
+        function_activation_id = db.execute("insert into function_activation(name, line, return, start, finish, caller_id, trial_id) values (?, ?, ?, ?, ?, ?, ?)", data).lastrowid
+    store_object_values(function_activation['arguments'], 'ARGUMENT', function_activation_id)
+    store_object_values(function_activation['globals'], 'GLOBAL', function_activation_id)
+    store_file_accesses(function_activation['file_accesses'], function_activation_id)
+    for inner_function_activation in function_activation['function_activations']:
+        store_function_activation(inner_function_activation, function_activation_id)
         
