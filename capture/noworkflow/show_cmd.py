@@ -3,17 +3,17 @@
 
 import os
 import sys
-from utils import print_msg
-from utils import print_map
+import utils
 import persistence
 
 def print_trial(trial):
-    print_msg('trial information:', True)
+    print trial.keys()
+    utils.print_msg('trial information:', True)
     print '  Id: {id}\n  Inherited Id: {inherited_id}\n  Script: {script}\n  Code hash: {code_hash}\n  Start: {start}\n  Finish: {finish}'.format(**trial)
     
 
 def print_modules(modules):
-    print_msg('this trial depends on the following modules:', True)
+    utils.print_msg('this trial depends on the following modules:', True)
     output = []
     for module in modules:
         output.append('  Name: {name}\n  Version: {version}\n  Path: {path}\n  Code hash: {code_hash}'.format(**module))
@@ -21,7 +21,7 @@ def print_modules(modules):
 
     
 def print_function_defs(function_defs):
-    print_msg('this trial has the following functions:', True)
+    utils.print_msg('this trial has the following functions:', True)
     output = []
     for function_def in function_defs:
         objects = {'GLOBAL':[], 'ARGUMENT':[], 'FUNCTION_CALL':[]}
@@ -50,14 +50,14 @@ def print_function_activation(function_activation, level = 1):
      
      
 def print_function_activations(function_activation):
-    print_msg('this trial has the following function activation graph:', True)
+    utils.print_msg('this trial has the following function activation graph:', True)
     
     for inner_function_activation in persistence.load('function_activation', caller_id = function_activation['id']):
         print_function_activation(inner_function_activation)
  
  
 def print_file_accesses(file_accesses):
-    print_msg('this trial accessed the following files:', True)
+    utils.print_msg('this trial accessed the following files:', True)
     output = []
     for file_access in file_accesses:
         stack = []
@@ -79,7 +79,7 @@ def execute(args):
     last_trial_id = persistence.last_trial_id()
     trial_id = args.trial if args.trial != None else last_trial_id
     if not 1 <= trial_id <= last_trial_id:
-        print_msg('this trial does not exist', True)
+        utils.print_msg('inexistent trial id', True)
         sys.exit(1)
     print_trial(persistence.load_trial(trial_id).fetchone())
 
@@ -91,7 +91,7 @@ def execute(args):
 
     if args.environment:
         environment = {attr['name']: attr['value'] for attr in persistence.load('environment_attr', trial_id = trial_id)}
-        print_map('this trial has been executed under the following environment conditions', environment)
+        utils.print_map('this trial has been executed under the following environment conditions', environment)
 
     if args.function_activations:
         print_function_activations(persistence.load('function_activation', caller_id = None, trial_id = trial_id).fetchone())

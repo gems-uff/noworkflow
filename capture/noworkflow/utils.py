@@ -14,3 +14,10 @@ def print_map(title, a_map):
     for key in a_map:
         output.append('  {}: {}'.format(key, a_map[key]))
     print '\n'.join(sorted(output))
+    
+    
+def print_modules(modules):
+    output = []
+    for module in modules:
+        output.append('  Name: {name}\n  Version: {version}\n  Path: {path}\n  Code hash: {code_hash}'.format(**module))
+    print '\n\n'.join(output)

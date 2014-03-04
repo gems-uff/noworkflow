@@ -7,6 +7,7 @@ import argparse
 import run_cmd
 import list_cmd
 import show_cmd
+import diff_cmd
 import export_cmd
 
 def main():
@@ -33,6 +34,12 @@ def main():
     parser_show.add_argument('-a', '--function-activations', help='shows function activations', action='store_true')
     parser_show.add_argument('-f', '--file-accesses', help='shows read/write access to files', action='store_true')
     parser_show.set_defaults(func=show_cmd.execute)
+
+    # diff subcomand
+    parser_diff = subparsers.add_parser('diff', help='compares the collected provenance of two trials')
+    parser_diff.add_argument('trial', type=int, nargs=2, help='trial id to be compared')
+    parser_diff.add_argument('-m', '--modules', help='compare module dependencies', action='store_true')
+    parser_diff.set_defaults(func=diff_cmd.execute)
 
     # export subcomand
     parser_export = subparsers.add_parser('export', help='exports the collected provenance of a trial')
