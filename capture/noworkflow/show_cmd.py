@@ -7,7 +7,6 @@ import utils
 import persistence
 
 def print_trial(trial):
-    print trial.keys()
     utils.print_msg('trial information:', True)
     print '  Id: {id}\n  Inherited Id: {inherited_id}\n  Script: {script}\n  Code hash: {code_hash}\n  Start: {start}\n  Finish: {finish}'.format(**trial)
     
