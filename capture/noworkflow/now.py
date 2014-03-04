@@ -39,6 +39,7 @@ def main():
     parser_diff = subparsers.add_parser('diff', help='compares the collected provenance of two trials')
     parser_diff.add_argument('trial', type=int, nargs=2, help='trial id to be compared')
     parser_diff.add_argument('-m', '--modules', help='compare module dependencies', action='store_true')
+    parser_diff.add_argument('-e', '--environment', help='compare environment conditions', action='store_true')
     parser_diff.set_defaults(func=diff_cmd.execute)
 
     # export subcomand

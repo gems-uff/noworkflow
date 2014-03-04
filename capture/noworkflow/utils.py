@@ -21,3 +21,9 @@ def print_modules(modules):
     for module in modules:
         output.append('  Name: {name}\n  Version: {version}\n  Path: {path}\n  Code hash: {code_hash}'.format(**module))
     print '\n\n'.join(output)
+    
+def print_environment_attrs(environment_attrs):
+    output = []
+    for environment_attr in environment_attrs:
+        output.append('  {name}: {value}'.format(**environment_attr))
+    print '\n'.join(output)
