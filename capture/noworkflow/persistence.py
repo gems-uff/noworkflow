@@ -168,7 +168,7 @@ def store_function_defs(functions):
             function_def_id = db.execute("insert into function_def(name, code_hash, trial_id) values (?, ?, ?)", (name, code_hash, trial_id)).lastrowid
             store_objects(arguments, 'ARGUMENT', function_def_id)
             store_objects(global_vars, 'GLOBAL', function_def_id)
-            store_objects(calls, 'FUNCTION', function_def_id)
+            store_objects(calls, 'FUNCTION_CALL', function_def_id)
             
             
 def store_file_accesses(file_accesses, function_activation_id):

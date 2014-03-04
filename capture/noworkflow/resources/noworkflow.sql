@@ -36,7 +36,7 @@ create table function_def (
 create table object (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
-	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION')),
+	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION_CALL')),
 	function_def_id INTEGER,
 	FOREIGN KEY (function_def_id) REFERENCES function_def ON DELETE CASCADE
 );

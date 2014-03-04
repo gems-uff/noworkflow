@@ -24,10 +24,10 @@ def print_function_defs(function_defs):
     print_msg('this trial has the following functions:', True)
     output = []
     for function_def in function_defs:
-        objects = {'GLOBAL':[], 'ARGUMENT':[], 'FUNCTION':[]}
+        objects = {'GLOBAL':[], 'ARGUMENT':[], 'FUNCTION_CALL':[]}
         for obj in persistence.load('object', function_def_id = function_def['id']):
             objects[obj['type']].append(obj['name'])
-        output.append('  Name: {name}\n  Arguments: {arguments}\n  Globals: {globals}\n  Function calls: {calls}\n  Code hash: {code_hash}'.format(arguments = ', '.join(objects['ARGUMENT']), globals = ', '.join(objects['GLOBAL']), calls = ', '.join(objects['FUNCTION']), **function_def))
+        output.append('  Name: {name}\n  Arguments: {arguments}\n  Globals: {globals}\n  Function calls: {calls}\n  Code hash: {code_hash}'.format(arguments = ', '.join(objects['ARGUMENT']), globals = ', '.join(objects['GLOBAL']), calls = ', '.join(objects['FUNCTION_CALL']), **function_def))
     print '\n\n'.join(output)
 
 
