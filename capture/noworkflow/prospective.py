@@ -167,7 +167,7 @@ def collect_provenance(args):
         finder = modulefinder.ModuleFinder()
         finder.run_script(args.script)
 
-        print_msg('collecting provenance from {} modules'.format(len(finder.modules)))
+        print_msg('collecting provenance from {} modules'.format(len(finder.modules) - 1))
         modules = collect_modules_provenance(finder.modules)
         persistence.store_dependencies(modules)
 

@@ -70,7 +70,6 @@ def get(content_hash):
 
 
 # DATABASE STORE/RETRIEVE FUNCTIONS
-# TODO: Avoid replicating information in the DB. This will also help when diffing data.
 
 def load(table_name, **condition):
     where = '1'
@@ -134,16 +133,22 @@ def load_trial(an_id):
     
 
 def store_dependencies(dependencies):
-    data = [(name, version, path, code_hash, trial_id) for name, version, path, code_hash in dependencies]    
     with db_conn as db:
-        db.executemany("insert into module(name, version, file, code_hash, trial_id) values (?, ?, ?, ?, ?)", data)
+        for (name, version, path, code_hash) in dependencies:
+            modules = db.execute('select id from module where name = ? and (version is null or version = ?) and (code_hash is null or code_hash = ?)', (name, version, code_hash)).fetchone()
+            if modules:
+                (module_id,) = modules
+            else:
+                module_id = db.execute("insert into module (name, version, path, code_hash) values (?, ?, ?, ?)", (name, version, path, code_hash)).lastrowid
+            db.execute("insert into dependency (trial_id, module_id) values (?, ?)", (trial_id, module_id))
 
         
 def load_dependencies():
     an_id = iherited_id(trial_id)
     if not an_id: an_id = trial_id
-    return load('module', trial_id = an_id)
-
+    with db_conn as db:
+        return db.execute('select id, name, version, path, code_hash from module as m, dependency as d where m.id = d.module_id and ? = d.trial_id order by id', (trial_id,))
+ 
 
 def store_environment(env_attrs):
     data = [(name, value, trial_id) for name, value in env_attrs.iteritems()]

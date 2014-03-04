@@ -16,7 +16,7 @@ def print_modules(modules):
     print_msg('this trial depends on the following modules:', True)
     output = []
     for module in modules:
-        output.append('  Name: {name}\n  Version: {version}\n  File: {file}\n  Code hash: {code_hash}'.format(**module))
+        output.append('  Name: {name}\n  Version: {version}\n  Path: {path}\n  Code hash: {code_hash}'.format(**module))
     print '\n\n'.join(output)
 
     

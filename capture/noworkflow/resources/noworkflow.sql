@@ -13,10 +13,16 @@ create table module (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
 	version TEXT,
-	file TEXT,
-	code_hash TEXT,
-	trial_id INTEGER,
-	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
+	path TEXT,
+	code_hash TEXT
+);
+
+create table dependency (
+    trial_id INTEGER NOT NULL,
+    module_id INTEGER NOT NULL,
+    PRIMARY KEY (trial_id, module_id),
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE,
+	FOREIGN KEY (module_id) REFERENCES module ON DELETE CASCADE    
 );
 
 create table function_def (
