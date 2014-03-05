@@ -43,10 +43,9 @@ def main():
     parser_diff.set_defaults(func=diff_cmd.execute)
 
     # export subcomand
-    parser_export = subparsers.add_parser('export', help='exports the collected provenance of a trial')
-    parser_export.add_argument('trial', type=int, help='trial id or none for last trial')
-    parser_export.add_argument('-p', '--prolog', help='exports to prolog', action='store_true')
-    parser_export.add_argument('-j', '--json', help='exports to json', action='store_true')
+    parser_export = subparsers.add_parser('export', help='exports the collected provenance of a trial to Prolog')
+    parser_export.add_argument('trial', type=int, nargs='?', help='trial id or none for last trial')
+    parser_export.add_argument('-r', '--rules', help='also exports inference rules', action='store_true')
     parser_export.set_defaults(func=export_cmd.execute)
     
     args, unknown_args = parser.parse_known_args()
