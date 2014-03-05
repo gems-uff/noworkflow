@@ -5,8 +5,9 @@ import sys
 import traceback
 
 import persistence
-import prospective
-import retrospective
+import prov_definition
+import prov_deployment
+import prov_execution
 from utils import print_msg
 import utils
 
@@ -35,20 +36,23 @@ def execute(args):
     print_msg('setting up local provenance store')
     persistence.connect(script_dir)
 
-    print_msg('collecting prospective provenance')  # TODO: remove environment from prospective
-    prospective.collect_provenance(args)
+    print_msg('collecting definition provenance')
+    prov_definition.collect_provenance(args)
 
-    print_msg('enabling collection of retrospective provenance')
-    retrospective.enable(args)
+    print_msg('collecting deployment provenance')
+    prov_deployment.collect_provenance(args)
 
-    print_msg('executing the script')
+    print_msg('collection execution provenance')
+    prov_execution.enable(args)
+
+    print_msg('  executing the script')
     try:
         execfile(args.script, __main__.__dict__)
-        retrospective.disable()
+        prov_execution.disable()
         print_msg('the execution of trial {} finished successfully'.format(persistence.trial_id))
     except SystemExit as ex:
-        retrospective.disable()
+        prov_execution.disable()
         print_msg('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
     except:
-        retrospective.disable()
+        prov_execution.disable()
         print_msg('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)

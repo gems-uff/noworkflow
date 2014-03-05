@@ -2,7 +2,6 @@
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 import sys
 import os
-import utils
 import inspect
 import persistence
 import __builtin__
