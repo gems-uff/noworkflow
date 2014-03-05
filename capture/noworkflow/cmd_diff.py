@@ -1,10 +1,12 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 
-import persistence
 import os
-import utils
 import sys
+
+import persistence
+import utils
+
 
 def diff_dict(before, after):
     for key in before.keys():

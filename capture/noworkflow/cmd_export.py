@@ -1,12 +1,14 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 
-import persistence
-import os
-import utils
-import sys
 from datetime import datetime
-from pkg_resources import resource_string  #@UnresolvedImport
+import os
+import sys
+from pkg_resources import resource_string #@UnresolvedImport
+
+import persistence
+import utils
+
 
 RULES = 'resources/rules.pl'
 

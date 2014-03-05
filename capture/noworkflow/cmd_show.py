@@ -3,8 +3,10 @@
 
 import os
 import sys
-import utils
+
 import persistence
+import utils
+
 
 def print_trial(trial):
     utils.print_msg('trial information:', True)

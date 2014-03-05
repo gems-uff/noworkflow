@@ -1,11 +1,13 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
-import sys
-import os
-import inspect
-import persistence
 import __builtin__
 from datetime import datetime
+import inspect
+import os
+import sys
+
+import persistence
+
 
 script = None
 activation_stack = []

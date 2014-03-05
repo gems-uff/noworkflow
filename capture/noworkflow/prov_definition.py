@@ -1,10 +1,12 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
-import persistence
-import sys
-from utils import print_msg
 import ast
 from datetime import datetime
+import sys
+
+import persistence
+from utils import print_msg
+
 
 class FunctionVisitor(ast.NodeVisitor):
     'Identifies the function declarations and related data'

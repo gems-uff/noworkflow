@@ -1,12 +1,14 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 
-import os.path
 import hashlib
+import os.path
 import sqlite3
 import sys
+from pkg_resources import resource_string #@UnresolvedImport
+
 from utils import print_msg
-from pkg_resources import resource_string  #@UnresolvedImport
+
 
 PROVENANCE_DIRNAME = '.noworkflow'
 CONTENT_DIRNAME = 'content'
@@ -147,7 +149,7 @@ def load_dependencies():
     an_id = iherited_id(trial_id)
     if not an_id: an_id = trial_id
     with db_conn as db:
-        return db.execute('select id, name, version, path, code_hash from module as m, dependency as d where m.id = d.module_id and ? = d.trial_id order by id', (trial_id,))
+        return db.execute('select id, name, version, path, code_hash from module as m, dependency as d where m.id = d.module_id and d.trial_id = ? order by id', (an_id,))
  
 
 def store_environment(env_attrs):

@@ -1,14 +1,16 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
-import persistence
+import importlib
+import modulefinder
+import os
+import platform
+import socket
 import sys
 import pkg_resources
-import modulefinder
+
+import persistence
 from utils import print_msg
-import platform
-import importlib
-import os
-import socket
+
 
 def collect_environment_provenance():
     environment = {}

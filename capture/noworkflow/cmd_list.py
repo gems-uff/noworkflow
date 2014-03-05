@@ -2,8 +2,10 @@
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 
 import os
+
 import persistence
 from utils import print_msg
+
 
 def execute(args):
     persistence.connect_existing(os.getcwd())
