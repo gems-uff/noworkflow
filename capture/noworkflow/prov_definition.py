@@ -3,6 +3,7 @@
 import ast
 from datetime import datetime
 import sys
+import time
 
 import persistence
 from utils import print_msg
@@ -77,6 +78,7 @@ def find_functions(path, code):
 
 
 def collect_provenance(args):
+    before = time.time()
     now = datetime.now()
     with open(args.script) as f:
         code = f.read()
@@ -91,3 +93,5 @@ def collect_provenance(args):
     print_msg('  registering user-defined functions')
     functions = find_functions(args.script, code)
     persistence.store_function_defs(functions)
+    after = time.time()
+    print 'Definition: {}'.format(after - before)

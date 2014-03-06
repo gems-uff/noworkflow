@@ -5,6 +5,7 @@ from datetime import datetime
 import inspect
 import os
 import sys
+import time
 
 import persistence
 
@@ -100,7 +101,8 @@ def tracer(frame, event, arg):
               
     
 def enable(args):
-    global script, list_function_activations, list_file_accesses
+    global script, list_function_activations, list_file_accesses, before
+    before = time.time()
     script = args.script
     persistence.std_open = open
     __builtin__.open = new_open(open)
@@ -112,6 +114,9 @@ def disable():
     sys.setprofile(None)
     __builtin__.open = persistence.std_open
     persistence.update_trial(now, function_activation)
+    
+    after = time.time()
+    print "Execution: {}".format(after - before)
 
 # TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()

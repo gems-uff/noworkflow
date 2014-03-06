@@ -3,6 +3,8 @@ import time
 import sys
 import matplotlib.pyplot as plt
 
+before = time.time()
+
 wait = 2
 
 def run_simulation(data_a, data_b):
@@ -42,3 +44,5 @@ data_b = sys.argv[2]
 data = run_simulation(data_a, data_b)
 plot(data)
 
+after = time.time()
+print 'Script: {}'.format(after - before)
