@@ -1,16 +1,12 @@
 import csv
-import time
 import sys
 import matplotlib.pyplot as plt
-
-wait = 2
+from simulator import simulate
 
 def run_simulation(data_a, data_b):
-    global wait
     a = csv_read(data_a)
     b = csv_read(data_b)
-    time.sleep(wait)
-    data = a + b
+    data = simulate(a, b)
     return data
 
 def csv_read(f):
