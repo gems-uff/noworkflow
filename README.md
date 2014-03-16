@@ -12,10 +12,6 @@ Included software
 
 Parts of the following software were used by noWorkflow directly or in an adapted form:
 
-Snakefood
-Copyright (c) 2001-2007 Martin Blais.
-All rights reserved.
-
 The Python Debugger
 Copyright (c) 2001-2013 Python Software Foundation.
 All Rights Reserved.
