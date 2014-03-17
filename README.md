@@ -1,8 +1,6 @@
 noWorkflow
 ==========
 
-Supporting infrastructure to run scientific experiments without a scientific workflow management system.
-
 Copyright (c) 2013 Universidade Federal Fluminense (UFF).
 Copyright (c) 2013 Polytechnic Institute of New York University.
 All rights reserved.
@@ -32,11 +30,7 @@ To install noWorkflow, you should follow these basic instructions:
 Precondition: Git (just to clone our repository) and Python
 ```bash
 $ git clone git@github.com:gems-uff/noworkflow.git
-```
-```bash
 $ cd noworkflow/capture
-```
-```bash
 $ ./setup.py install
 ```
 
