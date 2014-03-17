@@ -34,7 +34,7 @@ $ cd noworkflow/capture
 $ ./setup.py install
 ```
 
-This is installs noWorkflow on your system. 
+This installs noWorkflow on your system. 
 
 Basic Usage
 -----------
