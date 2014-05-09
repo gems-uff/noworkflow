@@ -9,6 +9,8 @@ create table trial (
 	FOREIGN KEY (inherited_id) REFERENCES trial ON DELETE RESTRICT  
 );
 
+CREATE INDEX trial_inherited_id on trial(inherited_id);
+
 create table module (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
@@ -25,6 +27,9 @@ create table dependency (
 	FOREIGN KEY (module_id) REFERENCES module ON DELETE CASCADE    
 );
 
+CREATE INDEX dependency_trial_id on dependency(trial_id);
+CREATE INDEX dependency_module_id on dependency(module_id);
+
 create table function_def (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -32,6 +37,8 @@ create table function_def (
 	trial_id INTEGER,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
+
+CREATE INDEX function_def_trial_id on function_def(trial_id);
 
 create table object (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +48,8 @@ create table object (
 	FOREIGN KEY (function_def_id) REFERENCES function_def ON DELETE CASCADE
 );
 
+CREATE INDEX object_function_def_id on object(function_def_id);
+
 create table environment_attr (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
@@ -48,6 +57,8 @@ create table environment_attr (
 	trial_id INTEGER,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
+
+CREATE INDEX environment_attr_trial_id on environment_attr(trial_id);
 
 create table function_activation (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,6 +73,9 @@ create table function_activation (
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE	
 );
 
+CREATE INDEX function_activation_caller_id on function_activation(caller_id);
+CREATE INDEX function_activation_trial_id on function_activation(trial_id);
+
 create table object_value (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT,
@@ -70,6 +84,8 @@ create table object_value (
 	function_activation_id INTEGER,
 	FOREIGN KEY (function_activation_id) REFERENCES function_activation ON DELETE CASCADE
 );
+
+CREATE INDEX object_value_function_activation_id on object_value(function_activation_id);
 
 create table file_access (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,3 +100,6 @@ create table file_access (
 	FOREIGN KEY (function_activation_id) REFERENCES function_activation ON DELETE CASCADE,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
+
+CREATE INDEX file_access_function_activation_id on file_access(function_activation_id);
+CREATE INDEX file_access_trial_id on file_access(trial_id);
