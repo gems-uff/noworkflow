@@ -12,14 +12,23 @@ import cmd_run
 import cmd_show
 
 
+def non_negative(string):
+    value = int(string)
+    if value < 0:
+        raise argparse.ArgumentTypeError("%s is not a non-negative integer value" % string)
+    return value
+
+
 def main():
     parser = argparse.ArgumentParser(description = __doc__)
     subparsers = parser.add_subparsers()
-    
+
     # run subcomand
     parser_run = subparsers.add_parser('run', help='runs a script collecting its provenance')
     parser_run.add_argument('-v', '--verbose', help='increase output verbosity', action='store_true')
     parser_run.add_argument('-b', '--bypass-modules', help='bypass module dependencies analysis, assuming that no module changes occurred since last execution', action='store_true')
+    parser_run.add_argument('-c', '--depth-context', help='functions subject to depth computation when capturing activations', choices=['non-user', 'all'], default='non-user')
+    parser_run.add_argument('-d', '--depth-threshold', type=non_negative, help='depth threshold for capturing function activations', default=1)
     parser_run.add_argument('script', help = 'Python script to be executed')
     parser_run.set_defaults(func=cmd_run.execute)
 
@@ -49,7 +58,7 @@ def main():
     parser_export.add_argument('trial', type=int, nargs='?', help='trial id or none for last trial')
     parser_export.add_argument('-r', '--rules', help='also exports inference rules', action='store_true')
     parser_export.set_defaults(func=cmd_export.execute)
-    
+
     args, _ = parser.parse_known_args()
     args.func(args)
 

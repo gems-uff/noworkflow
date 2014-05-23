@@ -13,7 +13,7 @@ import utils
 
 def execute(args):
     utils.verbose = args.verbose
-    
+
     utils.print_msg('removing noWorkflow boilerplate')
     while (sys.argv[0] != args.script):
         del sys.argv[0] # Hide now command and arguments from argument list
@@ -24,7 +24,7 @@ def execute(args):
 
     script_dir = os.path.dirname(args.script)
     sys.path[0] = script_dir # Replace now's dir with script's dir in front of module search path.
-    
+
     # Clear up the __main__ namespace
     import __main__
     __main__.__dict__.clear()
@@ -48,11 +48,13 @@ def execute(args):
     utils.print_msg('  executing the script')
     try:
         execfile(args.script, __main__.__dict__)
-        prov_execution.disable()
-        utils.print_msg('the execution of trial {} finished successfully'.format(persistence.trial_id))
     except SystemExit as ex:
         prov_execution.disable()
         utils.print_msg('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
     except:
         prov_execution.disable()
         utils.print_msg('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
+    else:
+        prov_execution.disable()
+        prov_execution.store()  # TODO: exceptions should be registered as return from the activation and stored in the database. We are currently ignoring all the activation tree when exceptions are raised.
+        utils.print_msg('the execution of trial {} finished successfully'.format(persistence.trial_id))
