@@ -30,11 +30,11 @@ public class SQLiteReader {
         }
 
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + path)) {
-            PreparedStatement stmtFunctionCall = conn.prepareStatement("select * from function_activation where trial_id = ? order by id");
+            PreparedStatement stmtFunctionActivation = conn.prepareStatement("select * from function_activation where trial_id = ? order by id");
             stmtObjectValue = conn.prepareStatement("select * from object_value where function_activation_id = ? order by id");
 
-            stmtFunctionCall.setInt(1, trialId);
-            ResultSet rs = stmtFunctionCall.executeQuery();
+            stmtFunctionActivation.setInt(1, trialId);
+            ResultSet rs = stmtFunctionActivation.executeQuery();
             while (rs.next()) {
                 FunctionCall currentFunctionCall = getFunctionCall(rs);
                 if (previousFunctionCall != null) {
@@ -77,7 +77,7 @@ public class SQLiteReader {
         Timestamp start = Timestamp.valueOf(rs.getString("start"));
         Timestamp finish = Timestamp.valueOf(rs.getString("finish"));
 
-        String key = callerId + line + name;
+        String key = callerId + " " + line + " " + name;
         FunctionCall functionCall = functionCalls.get(key);
         if (functionCall == null) {
             functionCall = new FunctionCall(callerId, line, name, id, arguments, returnValue, start, finish);
@@ -85,12 +85,12 @@ public class SQLiteReader {
         } else {
             functionCall.addActivation(id, arguments, returnValue, start, finish);
         }
-
+        
         return functionCall;
     }
 
     private void addFlow(FunctionCall source, FunctionCall target) {
-        String key = source.getCallerId() + source.getLine() + source.getName() + target.getCallerId() + target.getLine() + target.getName();
+        String key = source.getCallerId() + " " + source.getLine() + " " + source.getName() + " " + target.getCallerId() + " " + target.getLine() + " " + target.getName();
         Flow flow = flows.get(key);
         if (flow == null) {
             if (source.hasActivation(target.getCallerId())) {
@@ -101,7 +101,7 @@ public class SQLiteReader {
             } else if (target.hasActivation(source.getCallerId())) {
                 flows.put(key, new Flow(source, target, Flow.Type.RETURN));
                 callStack.remove(callStack.size() - 1);
-            } else {
+            } else {  // Situation where the source is the last method activation of top (parent) and target is a method in the sequence of top (A -> top -> source and A -> target).
                 FunctionCall top = callStack.get(callStack.size() - 1);
                 addFlow(source, top);
                 addFlow(top, target);

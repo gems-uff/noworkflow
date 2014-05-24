@@ -36,8 +36,7 @@ public class NoWorkflow {
                     new GraphFrame(reader.getFunctionCalls(), reader.getFlows()).setVisible(true);
                 }
             });
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             Logger.getLogger(GraphFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
