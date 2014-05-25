@@ -151,7 +151,7 @@ def enable(args):
     script = args.script
     enabled = False  # wait for the first call to the script to really enable gathering
     depth_context = args.depth_context
-    depth_threshold = args.depth_threshold
+    depth_threshold = args.depth
     persistence.std_open = open
     __builtin__.open = new_open(open)
     sys.setprofile(tracer)

@@ -28,7 +28,7 @@ def main():
     parser_run.add_argument('-v', '--verbose', help='increase output verbosity', action='store_true')
     parser_run.add_argument('-b', '--bypass-modules', help='bypass module dependencies analysis, assuming that no module changes occurred since last execution', action='store_true')
     parser_run.add_argument('-c', '--depth-context', help='functions subject to depth computation when capturing activations (defaults to non-user)', choices=['non-user', 'all'], default='non-user')
-    parser_run.add_argument('-d', '--depth-threshold', type=non_negative, help='depth threshold for capturing function activations (defaults to 1)', default=1)
+    parser_run.add_argument('-d', '--depth', type=non_negative, help='depth for capturing function activations (defaults to 1)', default=1)
     parser_run.add_argument('script', help = 'Python script to be executed')
     parser_run.set_defaults(func=cmd_run.execute)
 
