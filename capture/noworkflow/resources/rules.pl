@@ -45,7 +45,7 @@ access_stack_id(File, [Function|Functions]) :- access_id(Function, File), activa
 
 indirect_access_id(Function, File) :- access_stack_id(File, Functions), member(Function, Functions).
 
-access_influence_id(Influencer, Influenced) :- file_read_id(Influencer), file_write_id(Influenced), successor_id(Influencer, Influenced), access_id(F1, Influencer), access_id(F2, Influenced), activation_influence_id(F1, F2).
+access_influence_id(Influencer, Influenced) :- file_read_id(Influencer), file_written_id(Influenced), successor_id(Influencer, Influenced), access_id(F1, Influencer), access_id(F2, Influenced), activation_influence_id(F1, F2).
 
 %
 % NAME-BASED ACCESSOR RULES
