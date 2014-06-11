@@ -21,7 +21,7 @@ activation_id(Caller, Called) :- activation(Called, _, _, _, Caller).
 
 mode_id(Id, Mode) :- access(Id, _, Mode, _, _, _, _).
 file_read_id(Id) :- mode_id(Id, Mode), atom_prefix(Mode, 'r').
-file_wrote_id(Id) :- mode_id(Id, Mode), atom_prefix(Mode, 'w').
+file_written_id(Id) :- mode_id(Id, Mode), atom_prefix(Mode, 'w').
 
 hash_id(Id, Hash, before) :- access(Id, _, _, Hash, _, _, _).
 hash_id(Id, Hash, after) :- access(Id, _, _, _, Hash, _, _).
@@ -45,7 +45,7 @@ access_stack_id(File, [Function|Functions]) :- access_id(Function, File), activa
 
 indirect_access_id(Function, File) :- access_stack_id(File, Functions), member(Function, Functions).
 
-access_influence_id(Influencer, Influenced) :- file_read_id(Influencer), file_wrote_id(Influenced), successor_id(Influencer, Influenced), access_id(F1, Influencer), access_id(F2, Influenced), activation_influence_id(F1, F2).
+access_influence_id(Influencer, Influenced) :- file_read_id(Influencer), file_write_id(Influenced), successor_id(Influencer, Influenced), access_id(F1, Influencer), access_id(F2, Influenced), activation_influence_id(F1, F2).
 
 %
 % NAME-BASED ACCESSOR RULES
@@ -57,7 +57,7 @@ duration(Name, Duration) :- duration_id(Id, Duration), name(Id, Name).
 successor(Before, After) :- successor_id(Before_id, After_id), name(Before_id, Before), name(After_id, After).
 mode(Name, Mode) :- mode(Id, Mode), name(Id, Name).
 file_read(Name) :- file_read_id(Id), name(Id, Name).
-file_wrote(Name) :- file_write_id(Id), name(Id, Name).
+file_written(Name) :- file_written_id(Id), name(Id, Name).
 hash(Name, Hash, Moment) :- hash_id(Id, Hash, Moment), name(Id, Name).
 changed(Name) :- changed_id(Id), name(Id, Name).
 
