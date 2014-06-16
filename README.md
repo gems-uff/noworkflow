@@ -129,6 +129,12 @@ The Python Debugger
 Copyright (c) 2001-2013 Python Software Foundation.
 All Rights Reserved.
 
+Acknowledgements
+----------------
+
+We would like to thank JetBrains for providing us a license for PyCharm. We also want to thank CNPq, FAPERJ, and
+the National Science Foundation (CNS-1229185, CNS-1153503, IIS-1142013) for partially supporting this work.
+
 License Terms
 -------------
 
