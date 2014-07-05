@@ -15,7 +15,10 @@ from utils import print_msg
 def collect_environment_provenance():
     environment = {}
     for name in os.sysconf_names:
-        environment[name] = os.sysconf(name)
+	try:
+            environment[name] = os.sysconf(name)
+        except:
+            pass
     for name in os.confstr_names:
         environment[name] = os.confstr(name)
     environment.update(os.environ)
