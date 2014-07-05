@@ -15,9 +15,10 @@ def execute(args):
     utils.verbose = args.verbose
 
     utils.print_msg('removing noWorkflow boilerplate')
-    while (sys.argv[0] != args.script):
-        del sys.argv[0] # Hide now command and arguments from argument list
-    args.script = os.path.realpath(args.script)
+   
+    args_script = args.script
+    args.script = os.path.realpath(args.script[0])
+    
     if not os.path.exists(args.script):  # TODO: check this using argparse
         utils.print_msg('the script does not exist', True)
         sys.exit(1)
@@ -25,6 +26,8 @@ def execute(args):
     script_dir = os.path.dirname(args.script)
     sys.path[0] = script_dir # Replace now's dir with script's dir in front of module search path.
 
+    # Clear argv
+    sys.argv = args_script
     # Clear up the __main__ namespace
     import __main__
     __main__.__dict__.clear()
