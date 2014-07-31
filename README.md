@@ -12,7 +12,7 @@ noWorkflow was developed in Python and it currently is able to capture provenanc
 Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below. 
 
 Team
------------
+----
 
 The noWorkflow team is composed by researchers from Universidade Federal Fluminense (UFF) in Brazil and New York University (NYU), in the USA.
 
@@ -21,6 +21,11 @@ The noWorkflow team is composed by researchers from Universidade Federal Flumine
 * Juliana Freire (NYU)
 * Fernando Chirigati (NYU)
 * David Koop (NYU)
+ 
+Publications
+------------
+
+[MURTA, L. G. P.; BRAGANHOLO, V.; CHIRIGATI, F. S.; KOOP, D.; FREIRE, J.; noWorkflow: Capturing and Analyzing Provenance of Scripts. In: International Provenance and Annotation Workshop (IPAW), 2014, Cologne, Germany.] (https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2014.pdf)
 
 Quick Installation
 ------------------
