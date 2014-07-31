@@ -126,7 +126,7 @@ The remaining options of noWorkflow are *diff* and *export*. The *diff* option c
 
 We have also a graph visualization implemented in Java, named noWorkflowVis, which connects to noWorkflow database and allows interactive analysis. 
 
-Included software
+Included Software
 -----------------
 
 Parts of the following software were used by noWorkflow directly or in an adapted form:
