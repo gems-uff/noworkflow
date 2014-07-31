@@ -16,11 +16,12 @@ Team
 
 The noWorkflow team is composed by researchers from Universidade Federal Fluminense (UFF) in Brazil and New York University (NYU), in the USA.
 
-* Leonardo Murta (UFF)    
 * Vanessa Braganholo (UFF)
-* Juliana Freire (NYU)
 * Fernando Chirigati (NYU)
+* Juliana Freire (NYU)
 * David Koop (NYU)
+* Leonardo Murta (UFF)
+* João Felipe Pimentel (UFF)
  
 Publications
 ------------
