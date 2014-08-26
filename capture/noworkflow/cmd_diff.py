@@ -1,6 +1,6 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
-
+from __future__ import print_function
 import os
 import sys
 
@@ -11,7 +11,7 @@ import utils
 def diff_dict(before, after):
     for key in before.keys():
         if key != 'id' and before[key] != after[key]:
-            print '  {} changed from {} to {}'.format(key, before[key], after[key])
+            print('  {} changed from {} to {}'.format(key, before[key], after[key]))
 
 def diff_set(before, after):
     removed = before - after
@@ -34,7 +34,7 @@ def diff_set(before, after):
 def diff_trials(before, after):
     utils.print_msg('trial diff:', True)
     diff_dict(before, after)
-    print
+    print()
     
 
 def diff_modules(before, after):
@@ -42,17 +42,17 @@ def diff_modules(before, after):
 
     utils.print_msg('{} modules added:'.format(len(added),), True)
     utils.print_modules(added)
-    print
+    print()
 
     utils.print_msg('{} modules removed:'.format(len(removed),), True)
     utils.print_modules(removed)
-    print
+    print()
 
     utils.print_msg('{} modules replaced:'.format(len(replaced),), True)
     for (module_removed, module_added) in replaced:
-        print '  Name: {}'.format(module_removed['name'],)
+        print('  Name: {}'.format(module_removed['name'],))
         diff_dict(module_removed, module_added)
-        print
+        print()
         
 
 def diff_environment(before, after):
@@ -60,15 +60,15 @@ def diff_environment(before, after):
 
     utils.print_msg('{} environment attributes added:'.format(len(added),), True)
     utils.print_environment_attrs(added)
-    print
+    print()
 
     utils.print_msg('{} environment attributes removed:'.format(len(removed),), True)
     utils.print_environment_attrs(removed)
-    print
+    print()
 
     utils.print_msg('{} environment attributes replaced:'.format(len(replaced),), True)
     for (attr_removed, attr_added) in replaced:
-        print '  Environment attribute {} changed from {} to {}'.format(attr_removed['name'], attr_removed['value'], attr_added['value'])
+        print('  Environment attribute {} changed from {} to {}'.format(attr_removed['name'], attr_removed['value'], attr_added['value']))
     
 
 def execute(args):

@@ -57,7 +57,7 @@ class FunctionVisitor(ast.NodeVisitor):
     def visit_FunctionDef(self, node):
         self.contexts.append(Context(node.name))
         self.generic_visit(node)
-        code_hash = persistence.put('\n'.join(self.code[node.lineno - 1:self.lineno]))
+        code_hash = persistence.put('\n'.join(self.code[node.lineno - 1:self.lineno]).encode('utf-8'))
         self.functions[self.namespace] = self.contexts[-1].to_tuple(code_hash)
         self.contexts.pop()
 

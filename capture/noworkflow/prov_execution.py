@@ -1,6 +1,9 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
-import __builtin__
+try:
+    import __builtin__ as builtins
+except ImportError:
+    import builtins
 from datetime import datetime
 import inspect
 import os
@@ -153,13 +156,13 @@ def enable(args):
     depth_context = args.depth_context
     depth_threshold = args.depth
     persistence.std_open = open
-    __builtin__.open = new_open(open)
+    builtins.open = new_open(open)
     sys.setprofile(tracer)
 
 
 def disable():
     sys.setprofile(None)
-    __builtin__.open = persistence.std_open
+    builtins.open = persistence.std_open
 
 
 def store():

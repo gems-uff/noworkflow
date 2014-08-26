@@ -116,7 +116,7 @@ def iherited_id(an_id):
 
 def store_trial(start, script, code, arguments, bypass_modules):
     global trial_id
-    code_hash = put(code)
+    code_hash = put(code.encode('utf-8'))
     iherited_id = last_trial_id_without_iheritance() if bypass_modules else None
     with db_conn as db: 
         trial_id = db.execute("insert into trial (start, script, code_hash, arguments, inherited_id) values (?, ?, ?, ?, ?)", (start, script, code_hash, arguments, iherited_id)).lastrowid
@@ -153,15 +153,19 @@ def load_dependencies():
  
 
 def store_environment(env_attrs):
-    data = [(name, value, trial_id) for name, value in env_attrs.iteritems()]
     with db_conn as db:
-        db.executemany("insert into environment_attr(name, value, trial_id) values (?, ?, ?)", data)
+        db.executemany(
+            "insert into environment_attr(name, value, trial_id) values (?, ?, ?)", 
+            ((name, env_attrs[name], trial_id) for name in env_attrs)
+        )
         
 
 def store_objects(objects, obj_type, function_def_id):
-    data = [(name, obj_type, function_def_id) for name in objects]
     with db_conn as db:
-        db.executemany("insert into object(name, type, function_def_id) values (?, ?, ?)", data)    
+        db.executemany(
+            "insert into object(name, type, function_def_id) values (?, ?, ?)", 
+            ((name, obj_type, function_def_id) for name in objects)
+        )    
 
 
 def store_function_defs(functions):  
@@ -181,9 +185,11 @@ def store_file_accesses(file_accesses, function_activation_id):
        
 
 def store_object_values(object_values, obj_type, function_activation_id):
-    data = [(name, value, obj_type, function_activation_id) for name, value in object_values.iteritems()]
     with db_conn as db:
-        db.executemany("insert into object_value(name, value, type, function_activation_id) values (?, ?, ?, ?)", data)    
+        db.executemany(
+            "insert into object_value(name, value, type, function_activation_id) values (?, ?, ?, ?)", 
+            ((name, object_values[name], obj_type, function_activation_id) for name in object_values)
+        )    
 
   
 def store_function_activation(function_activation, caller_id):

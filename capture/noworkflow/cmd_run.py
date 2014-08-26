@@ -50,7 +50,9 @@ def execute(args):
 
     utils.print_msg('  executing the script')
     try:
-        execfile(args.script, __main__.__dict__)
+        with open(args.script) as f:
+            code = compile(f.read(), args.script, 'exec')
+            exec(code, __main__.__dict__)
     except SystemExit as ex:
         prov_execution.disable()
         utils.print_msg('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)

@@ -15,7 +15,7 @@ from utils import print_msg
 def collect_environment_provenance():
     environment = {}
     for name in os.sysconf_names:
-	try:
+        try:
             environment[name] = os.sysconf(name)
         except:
             pass
@@ -37,7 +37,7 @@ def collect_environment_provenance():
 def collect_modules_provenance(modules):
     'returns a set of module dependencies in the form: (name, version, path, code_hash)'
     dependencies = []
-    for name, module in modules.iteritems():
+    for name, module in modules.items():
         if name != '__main__':
             version = get_version(name)
             path = module.__file__
