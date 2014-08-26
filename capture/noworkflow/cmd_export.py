@@ -23,6 +23,7 @@ def timestamp(string):
 def export_facts(trial_id): # TODO: export remaining data (now focusing only on activation and file access)
     result = []
     result.append('%\n% FACT: activation(id, name, start, finish, caller_activation_id).\n%\n')
+    result.append(':- dynamic activation/5.')
     for activation in persistence.load('function_activation', trial_id = trial_id):
         activation = dict(activation)
         activation['name'] = str(activation['name'])
@@ -33,6 +34,7 @@ def export_facts(trial_id): # TODO: export remaining data (now focusing only on 
         result.append('activation({id}, {name!r}, {start:-f}, {finish:-f}, {caller_id}).'.format(**activation))
 
     result.append('\n%\n% FACT: access(id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).\n%\n') 
+    result.append(':- dynamic access/7.')
     for access in persistence.load('file_access', trial_id = trial_id):
         access = dict(access)
         access['name'] = str(access['name'])
@@ -57,8 +59,7 @@ def execute(args):
         utils.print_msg('inexistent trial id', True)
         sys.exit(1)
         
-    facts = export_facts(trial_id)
+    print(export_facts(trial_id))
     if args.rules:
-        print(export_rules(trial_id).replace("% {{{FACTS}}}", facts))
-    else:
-        print(facts)
+        print(export_rules(trial_id))
+

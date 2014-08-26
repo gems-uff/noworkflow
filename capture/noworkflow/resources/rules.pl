@@ -1,12 +1,4 @@
 %
-% Optional Facts
-%
-:- dynamic access/7.
-:- dynamic activation/5.
-
-% {{{FACTS}}}
-
-%
 % ID-BASED ACCESSOR RULES FOR
 % activation(id, name, start, finish, caller_activation_id).
 % access(id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).
