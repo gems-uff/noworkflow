@@ -1,3 +1,10 @@
+%
+% Optional Facts
+%
+:- dynamic access/7.
+:- dynamic activation/5.
+
+% {{{FACTS}}}
 
 %
 % ID-BASED ACCESSOR RULES FOR

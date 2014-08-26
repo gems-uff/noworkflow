@@ -1,9 +1,11 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 
-from datetime import datetime
+from __future__ import print_function
 import os
 import sys
+from datetime import datetime
+
 from pkg_resources import resource_string #@UnresolvedImport
 
 import persistence
@@ -18,8 +20,9 @@ def timestamp(string):
     return (time - epoch).total_seconds()
     
 
-def print_facts(trial_id): # TODO: export remaining data (now focusing only on activation and file access)
-    print '%\n% FACT: activation(id, name, start, finish, caller_activation_id).\n%\n'
+def export_facts(trial_id): # TODO: export remaining data (now focusing only on activation and file access)
+    result = []
+    result.append('%\n% FACT: activation(id, name, start, finish, caller_activation_id).\n%\n')
     for activation in persistence.load('function_activation', trial_id = trial_id):
         activation = dict(activation)
         activation['name'] = str(activation['name'])
@@ -27,9 +30,9 @@ def print_facts(trial_id): # TODO: export remaining data (now focusing only on a
         activation['finish'] = timestamp(activation['finish'])
         if not activation['caller_id']: 
             activation['caller_id'] = 'nil' 
-        print 'activation({id}, {name!r}, {start:-f}, {finish:-f}, {caller_id}).'.format(**activation)
+        result.append('activation({id}, {name!r}, {start:-f}, {finish:-f}, {caller_id}).'.format(**activation))
 
-    print '\n%\n% FACT: access(id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).\n%\n' 
+    result.append('\n%\n% FACT: access(id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).\n%\n') 
     for access in persistence.load('file_access', trial_id = trial_id):
         access = dict(access)
         access['name'] = str(access['name'])
@@ -38,11 +41,12 @@ def print_facts(trial_id): # TODO: export remaining data (now focusing only on a
         access['content_hash_before'] = str(access['content_hash_before'])
         access['content_hash_after'] = str(access['content_hash_after'])        
         access['timestamp'] = timestamp(access['timestamp'])
-        print 'access({id}, {name!r}, {mode!r}, {content_hash_before!r}, {content_hash_after!r}, {timestamp:-f}, {function_activation_id}).'.format(**access)
+        result.append('access({id}, {name!r}, {mode!r}, {content_hash_before!r}, {content_hash_after!r}, {timestamp:-f}, {function_activation_id}).'.format(**access))
+    return '\n'.join(result)
 
 
-def print_rules(trial_id):
-    print resource_string(__name__, RULES)  # Accessing the content of a file via setuptools
+def export_rules(trial_id):
+    return resource_string(__name__, RULES)  # Accessing the content of a file via setuptools
 
 
 def execute(args):
@@ -53,7 +57,8 @@ def execute(args):
         utils.print_msg('inexistent trial id', True)
         sys.exit(1)
         
-    print_facts(trial_id)
-
+    facts = export_facts(trial_id)
     if args.rules:
-        print_rules(trial_id)
+        print(export_rules(trial_id).replace("% {{{FACTS}}}", facts))
+    else:
+        print(facts)
