@@ -1,11 +1,27 @@
 # Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 import ast
-from datetime import datetime
 import sys
+from datetime import datetime
 
 import persistence
 from utils import print_msg
+
+class Context(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.arguments = []
+        self.global_vars = []
+        self.calls = [] 
+
+    def to_tuple(self, code_hash):
+        return (
+            list(self.arguments),
+            list(self.global_vars), 
+            set(self.calls),
+            code_hash,
+        )
 
 
 class FunctionVisitor(ast.NodeVisitor):
@@ -13,16 +29,18 @@ class FunctionVisitor(ast.NodeVisitor):
     code = None
     functions = {}
     
+
     # Temporary attributes for recursive data collection
-    namespace = []
-    arguments = None
-    global_vars = None
-    calls = None
+    contexts = [Context('(global)')]
     names = None
     lineno = None
     
     def __init__(self, code):
         self.code = code.split('\n')
+
+    @property
+    def namespace(self):
+        return '.'.join(context.name for context in self.contexts[1:])
     
     def generic_visit(self, node):  # Delegation, but collecting the current line number
         try:
@@ -32,34 +50,30 @@ class FunctionVisitor(ast.NodeVisitor):
         ast.NodeVisitor.generic_visit(self, node)
 
     def visit_ClassDef(self, node): # ignoring classes
-        self.namespace.append(node.name)
+        self.contexts.append(Context(node.name))
         self.generic_visit(node)
-        self.namespace.pop()
+        self.contexts.pop()
     
     def visit_FunctionDef(self, node):
-        if not self.namespace: # ignoring inner functions and class methods
-            self.namespace.append(node.name)
-            self.global_vars = []
-            self.arguments = []
-            self.calls = []  # TODO: should use a stack to avoid getting inner calls
-            self.generic_visit(node)  # TODO: should call it anyway, by removing the if above.
-            code_hash = persistence.put('\n'.join(self.code[node.lineno - 1:self.lineno]))
-            self.functions['.'.join(self.namespace)] = (list(self.arguments), list(self.global_vars), set(self.calls), code_hash)
-            self.namespace.pop()
+        self.contexts.append(Context(node.name))
+        self.generic_visit(node)
+        code_hash = persistence.put('\n'.join(self.code[node.lineno - 1:self.lineno]))
+        self.functions[self.namespace] = self.contexts[-1].to_tuple(code_hash)
+        self.contexts.pop()
 
     def visit_arguments(self, node):
         self.names = []
         self.generic_visit(node)
-        self.arguments.extend(self.names)
+        self.contexts[-1].arguments.extend(self.names)
         
     def visit_Global(self, node):
-        self.global_vars.extend(node.names)
+        self.contexts[-1].global_vars.extend(node.names)
         self.generic_visit(node)
 
     def visit_Call(self, node):
         func = node.func
         if isinstance(func, ast.Name): # collecting only direct function call
-            self.calls.append(func.id)
+            self.contexts[-1].calls.append(func.id)
         self.generic_visit(node)
 
     def visit_Name(self, node):
