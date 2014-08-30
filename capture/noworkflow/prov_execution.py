@@ -13,32 +13,41 @@ from collections import defaultdict
 
 import persistence
 
-profiler = None
+provider = None
 
-class Profiler(object):
+class ExecutionProvider(object):
 
     def __init__(self, script, depth_context, depth_threshold):
-        self.script = script
         self.enabled = False  # Indicates when activations should be collected (only after the first call to the script)
+        self.script = script
         self.depth_context = depth_context  # which function types ('non-user' or 'all') should be considered for the threshold
         self.depth_threshold = depth_threshold  # how deep we want to go when capturing function activations?
-        self.depth_user = -1  # the number of user functions activated (starts with -1 to compensate the first call to the script itself)
-        self.depth_non_user = 0  # the number of non-user functions activated
-        self.activation_stack = []
-        self.function_activation = None
-        self.CURRENT = -1
+        
+        self.event_map = defaultdict(lambda: self.trace_empty, {})
+   
+    def trace_empty(self, frame, event, arg):
+        pass
 
-        self.event_map = defaultdict(lambda: self.trace_empty, {
-            'c_call': self.trace_c_call,
-            'call': self.trace_call,
-            'c_return': self.trace_c_return,
-            'c_exception': self.trace_c_exception,
-            'return': self.trace_return,
-        })
+    def tracer(self, frame, event, arg):
+        self.event_map[event](frame, event, arg)
 
+    def store(self):
+        pass
+
+    def teardown(self):
+        pass
+
+
+class StoreOpenMixin(ExecutionProvider):
+
+    def __init__(self, *args):
+        super(StoreOpenMixin, self).__init__(*args)
         persistence.std_open = open
         builtins.open = self.new_open(open)
 
+    def add_file_access(self, file_access):
+        'The class that uses this mixin must override this method'
+        pass
 
     def new_open(self, old_open):
         'Wraps the open buildin function to register file access'
@@ -63,10 +72,32 @@ class Profiler(object):
                 elif len(args) > 1:
                     file_access['buffering'] = args[1]
 
-                self.activation_stack[self.CURRENT]['file_accesses'].append(file_access)
+                self.add_file_access(file_access)
             return old_open(name, *args, **kwargs)
 
         return open
+
+    def teardown(self):
+        builtins.open = persistence.std_open
+
+
+class Profiler(StoreOpenMixin):
+
+    def __init__(self, *args):
+        super(Profiler, self).__init__(*args)
+        self.depth_user = -1  # the number of user functions activated (starts with -1 to compensate the first call to the script itself)
+        self.depth_non_user = 0  # the number of non-user functions activated
+        self.activation_stack = []
+        self.function_activation = None
+
+        self.event_map['c_call'] = self.trace_c_call
+        self.event_map['call'] = self.trace_call
+        self.event_map['c_return'] = self.trace_c_return
+        self.event_map['c_exception'] = self.trace_c_exception
+        self.event_map['return'] = self.trace_return
+        
+    def add_file_access(self, file_access):
+        self.activation_stack[-1]['file_accesses'].append(file_access)
 
     def valid_depth(self):
         return ((self.depth_context == 'all' and self.depth_user + self.depth_non_user <= self.depth_threshold) or 
@@ -91,13 +122,10 @@ class Profiler(object):
                 with persistence.std_open(file_access['name'], 'rb') as f:
                     file_access['content_hash_after'] = persistence.put(f.read())
         if self.activation_stack:  # Store the current activation in the previous activation
-            self.activation_stack[self.CURRENT]['function_activations'].append(activation)
+            self.activation_stack[-1]['function_activations'].append(activation)
         else:  # Store the current activation as the first activation
             self.function_activation = activation
             self.enabled = False
-
-    def trace_empty(self, frame, event, arg):
-        pass
 
     def trace_c_call(self, frame, event, arg):
         self.depth_non_user += 1
@@ -108,7 +136,6 @@ class Profiler(object):
                 'arguments': {},
                 'globals': {}
             })
-
 
     def capture_python_params(self, frame, activation):
         values = frame.f_locals
@@ -192,13 +219,13 @@ class Profiler(object):
             self.enabled = True
 
         if self.enabled:
-            self.event_map[event](frame, event, arg)
+            super(Profiler, self).tracer(frame, event, arg)
 
     def store(self):
         now = datetime.now()
         persistence.update_trial(now, self.function_activation)
 
-
+   
 class InspectProfiler(Profiler):
     """ This Profiler uses the inspect.getargvalues that is slower because
     it considers the existence of anonymous tuple """ 
@@ -217,20 +244,28 @@ class InspectProfiler(Profiler):
                 activation['arguments'][key] = repr(value)
 
 
+def provenance_provider(execution_provenance):
+    glob = globals()
+    if execution_provenance in glob:
+        return glob[execution_provenance]
+    return Profiler
+
 def enable(args):
-    global profiler
-    # TODO: add an arg the allows the use of the InspectProfiler
-    profiler = Profiler(args.script, args.depth_context, args.depth)
-    sys.setprofile(profiler.tracer)
+    global provider
+    provider = provenance_provider(args.execution_provenance)(
+        args.script, args.depth_context, args.depth
+    )
+    sys.setprofile(provider.tracer)
 
 
 def disable():
+    global provider
     sys.setprofile(None)
-    builtins.open = persistence.std_open
+    provider.teardown()
 
 
 def store():
-    global profiler
-    profiler.store()
+    global provider
+    provider.store()
 # TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()
