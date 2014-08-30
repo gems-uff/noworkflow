@@ -5,6 +5,7 @@ import hashlib
 import os.path
 import sqlite3
 import sys
+from collections import deque
 from pkg_resources import resource_string #@UnresolvedImport
 
 from utils import print_msg
@@ -107,6 +108,11 @@ def last_trial_id_without_iheritance():
         (an_id,) = db.execute("select id from trial where start in (select max(start) from trial where inherited_id is NULL)").fetchone()
     return an_id   
 
+def function_activation_id_seq():
+    an_id = 0
+    with db_conn as db:
+        (an_id,) = db.execute("select seq from SQLITE_SEQUENCE WHERE name='function_activation'").fetchone()
+    return an_id + 1
 
 def iherited_id(an_id):
     with db_conn as db:
@@ -176,29 +182,75 @@ def store_function_defs(functions):
             store_objects(global_vars, 'GLOBAL', function_def_id)
             store_objects(calls, 'FUNCTION_CALL', function_def_id)
             
-            
-def store_file_accesses(file_accesses, function_activation_id):
-    with db_conn as db:
-        for file_access in file_accesses:
-            data = (file_access['name'], file_access['mode'], file_access['buffering'], file_access['content_hash_before'], file_access['content_hash_after'], file_access['timestamp'], function_activation_id, trial_id)
-            db.execute("insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_activation_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)", data)
-       
 
-def store_object_values(object_values, obj_type, function_activation_id):
+def extract_function_activation(function_activation, caller_id, function_activation_id):
+    return (
+        function_activation_id,
+        function_activation['name'],
+        function_activation['line'],
+        function_activation['return'],
+        function_activation['start'],
+        function_activation['finish'],
+        caller_id,
+        trial_id,
+    )
+
+
+def extract_object_values(object_values, obj_type, function_activation_id):
+    for name in object_values:
+        yield (name, object_values[name], obj_type, function_activation_id)
+
+
+def extract_file_accesses(file_accesses, function_activation_id):
+    for file_access in file_accesses:
+        yield (
+            file_access['name'],
+            file_access['mode'],
+            file_access['buffering'],
+            file_access['content_hash_before'],
+            file_access['content_hash_after'],
+            file_access['timestamp'],
+            function_activation_id,
+            trial_id
+        )
+
+
+def store_function_activation(function_activation, caller_id):
+    function_activation_id = function_activation_id_seq()
+    
+    function_activations, object_values, file_accesses = [], [], []
+
+    queue = deque()
+    queue.append((function_activation, caller_id))
+    while queue:
+        function_activation, caller_id = queue.popleft()
+        function_activations.append(
+            extract_function_activation(function_activation, caller_id, function_activation_id)
+        )
+        for object_value in extract_object_values(function_activation['arguments'], 'ARGUMENT', function_activation_id):
+            object_values.append(object_value)
+
+        for object_value in extract_object_values(function_activation['globals'], 'GLOBAL', function_activation_id):
+            object_values.append(object_value)
+        
+        for file_access in extract_file_accesses(function_activation['file_accesses'], function_activation_id):
+            file_accesses.append(file_access)
+        
+        for inner_function_activation in function_activation['function_activations']:
+            queue.append((inner_function_activation, function_activation_id))
+        
+        function_activation_id += 1
+
     with db_conn as db:
         db.executemany(
-            "insert into object_value(name, value, type, function_activation_id) values (?, ?, ?, ?)", 
-            ((name, object_values[name], obj_type, function_activation_id) for name in object_values)
-        )    
-
-  
-def store_function_activation(function_activation, caller_id):
-    data = (function_activation['name'], function_activation['line'], function_activation['return'], function_activation['start'], function_activation['finish'], caller_id, trial_id)
-    with db_conn as db:
-        function_activation_id = db.execute("insert into function_activation(name, line, return, start, finish, caller_id, trial_id) values (?, ?, ?, ?, ?, ?, ?)", data).lastrowid
-    store_object_values(function_activation['arguments'], 'ARGUMENT', function_activation_id)
-    store_object_values(function_activation['globals'], 'GLOBAL', function_activation_id)
-    store_file_accesses(function_activation['file_accesses'], function_activation_id)
-    for inner_function_activation in function_activation['function_activations']:
-        store_function_activation(inner_function_activation, function_activation_id)
-        
+            "insert into function_activation(id, name, line, return, start, finish, caller_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)",
+            function_activations
+        )
+        db.executemany(
+            "insert into object_value(name, value, type, function_activation_id) values (?, ?, ?, ?)",
+            object_values
+        )
+        db.executemany(
+            "insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_activation_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)",
+            file_accesses
+        )
