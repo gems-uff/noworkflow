@@ -2,10 +2,8 @@ import os
 from noworkflow import persistence
 from flask import render_template, jsonify
 from app import app
+from models import load_trial, load_trials
 
-def load_trials(cwd):
-	persistence.connect_existing(cwd)
-	return persistence.load('trial')
 
 @app.route('/<path:path>')
 def static_proxy(path):
@@ -42,25 +40,9 @@ def trials():
 def trial(tid):
 	cwd = os.getcwd()
 	persistence.connect_existing(cwd)
-	main = None
-	activations = []
-	for activation in persistence.load('function_activation', trial_id=tid):
-		activations.append({
-			'id': activation[0],
-			'name': activation[1],
-			'line': activation[2],
-			'return': activation[3],
-			'start': activation[4],
-			'finish': activation[5],
-			'caller_id': activation[6],
-		})
-		if not activation[6]:
-			main = activations[-1]
-
-	return jsonify(
-		main=main,
-		activations=activations
-	)
+	trial = load_trial(tid)
+	print trial
+	return jsonify(**trial)
 
 @app.route('/')
 def index():

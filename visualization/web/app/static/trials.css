@@ -78,7 +78,6 @@ svg:not(.active):not(.ctrl) {
 
 #show path.link {
   fill: none;
-  stroke: #666;
   stroke-width: 1.5px;
 }
 
@@ -156,4 +155,26 @@ svg:not(.active):not(.ctrl) {
 
 #side #main .desc {
   font-weight: bold;
+}
+
+
+.call-arrow {
+  stroke: #666;
+}
+
+.return-arrow {
+  stroke: #666;
+  stroke-dasharray: 10,2;
+}
+
+.sequence-arrow {
+  stroke: #F00;
+}
+
+.initial-arrow {
+  stroke: #666;
+}
+
+.label_text {
+  fill: #000;
 }

@@ -1,9 +1,7 @@
-function trial_graph(svg, nodes, edges, options) {
+function trial_graph(svg, nodes, edges, min_duration, max_duration) {
 
-    var width = options.width || 300;
-    var height = options.height || 300;
-    console.log(nodes);
-    console.log(edges);
+    var width = 300;
+    var height = 300;
 
     var force = d3.layout.force()
         .nodes(nodes)
@@ -33,8 +31,37 @@ function trial_graph(svg, nodes, edges, options) {
     var path = svg_g.append("svg:g").selectAll("path")
         .data(force.links())
       .enter().append("svg:path")
+        .attr("id", function(d, i) {
+            return "pathId-"+i;
+        })
         .attr("class", "link")
-        .attr("marker-end", "url(#end)");
+        .attr("marker-end", "url(#end)")
+        .classed('call-arrow', function(d) {
+            return d.type == 'call';
+        }).classed('return-arrow', function(d) {
+            return d.type == 'return';
+        }).classed('sequence-arrow', function(d) {
+            return d.type == 'sequence';
+        }).classed('initial-arrow', function(d) {
+            return d.type == 'initial';
+        });
+
+
+    var label_path = svg_g.selectAll(".label_text")
+        .data(force.links())
+      .enter().append("text")
+        .attr("class", "label_text")
+        .attr("dx", 20)
+        .attr("dy", -3)
+      .append("textPath")
+        .attr("xlink:href", function(d, i){
+            return "#pathId-"+i;
+        })
+        .text(function(d){
+            return (d.type == 'initial') ? '' : d.count;
+        });
+
+
 
     var node = svg_g.selectAll(".node")
         .data(force.nodes())
@@ -43,12 +70,17 @@ function trial_graph(svg, nodes, edges, options) {
         .call(force.drag);
 
     node.append("circle")
-        .attr("r", 5);
+        .attr("r", 5)
+        .style('fill', function(d) {
+            proportion = Math.round(510 * (d.mean - min_duration) / (max_duration - min_duration));
+            return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
+        });
 
     node.append("text")
         .attr("x", 12)
         .attr("dy", ".35em")
         .text(function(d) { return d.name; });
+
 
     var state_mousedown_node = false;
 
@@ -83,15 +115,37 @@ function trial_graph(svg, nodes, edges, options) {
 
     function tick() {
         path.attr("d", function(d) {
-            var dx = d.target.x - d.source.x,
+            var x1 = d.source.x,
+                y1 = d.source.y,
+                x2 = d.target.x,
+                y2 = d.target.y,
+                dx = d.target.x - d.source.x,
                 dy = d.target.y - d.source.y,
-                dr = Math.sqrt(dx * dx + dy * dy);
-            return "M" + 
-                d.source.x + "," + 
-                d.source.y + "A" + 
-                dr + "," + dr + " 0 0,1 " + 
-                d.target.x + "," + 
-                d.target.y;
+                dr = Math.sqrt(dx * dx + dy * dy),
+                drx = dr,
+                dry = dr,
+                rotation = 0,
+                large_arc = 0,
+                sweep = 1;
+            
+            if (dx == 0 && dy == 0 && d.type != 'initial') {
+                rotation = -45;
+                large_arc = 1;
+                drx = 15;
+                dry = 20;
+                x2 = x2 + 1;
+                y2 = y2 + 1;
+            } else if (d.type == 'initial') {
+                x1 = x2 - 20;
+                y1 = y2 - 20;
+                large_arc = 1;
+                sweep = 0;
+            }
+
+            return "M" + x1 + "," + y1 + 
+                "A" + drx + "," + dry + 
+                " " + rotation + "," + large_arc + "," + sweep + 
+                " " + x2 + "," + y2;
         });
 
         node.attr("transform", function(d) { 

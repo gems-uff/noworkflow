@@ -126,6 +126,14 @@ HistoryGraph.prototype.node_mousedown = function(d3node, d){
     state.mousedown_node = d;
 };
 
+
+HistoryGraph.prototype.select_node = function(node) {
+    this.state.selected_node = node;
+    this.custom_select_node(node)
+    d3.select($('#history text.id:contains("'+node.title+'")')
+        .siblings()[0]).classed('selected', true)
+}
+
 HistoryGraph.prototype.node_mouseup = function(d3node, d){
     var self = this,
         state = self.state,
@@ -139,20 +147,14 @@ HistoryGraph.prototype.node_mouseup = function(d3node, d){
         // dragged, not clicked
         state.just_scale = false;
     } else{
-        var prev_node = state.selected_node;            
-        
-        if (!prev_node || prev_node.id !== d.id){
-            if (state.selected_node) {
-                self.unselect_node();
-            }
-
-            d3node.classed(HistoryGraph.consts.selected_class, true);
-            state.selected_node = d;
-            self.custom_select_node(d);
-        } else{
+        if (state.selected_node) {
             self.unselect_node();
-            self.custom_unselect_node();
         }
+
+        d3node.classed(HistoryGraph.consts.selected_class, true);
+        state.selected_node = d;
+        self.custom_select_node(d);
+        
     }
       
     
@@ -239,6 +241,8 @@ HistoryGraph.prototype.update_circle = function(circle) {
         return d.reflexive; 
     });
 }
+
+
 
 // call to propagate changes to graph
 HistoryGraph.prototype.restart = function(){

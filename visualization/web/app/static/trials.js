@@ -17,30 +17,26 @@ function select_node(n){
         async: true,
         data: {}, 
         success: function (data) {
-
             var nodes = [];
             var edges = [];
-            var map = {};
-
-            for (var i = 0; i < data.activations.length; i++) {
+            var id = 0;
+            for (var i = 0; i < data.nodes.length; i++) {
                 node = {
-                    id: data.activations[i].id,
-                    name: data.activations[i].name
+                    name: data.nodes[i].name,
+                    index: data.nodes[i].index,
+                    mean: data.nodes[i].mean
                 };
                 nodes.push(node)
-                map[data.activations[i].id] = node;
             }
-            for (var i = 0; i < data.activations.length; i++) {
-                if (data.activations[i].caller_id) {
-                    edges.push({
-                        source: map[data.activations[i].caller_id],
-                        target: map[data.activations[i].id]
-                    })
-  
-                }
+            for (var i = 0; i < data.edges.length; i++) {
+                var edge = data.edges[i];
+                edge.source = nodes[edge.source];
+                edge.target = nodes[edge.target];
+                
+                edges.push(edge);        
             }
-
             $('#graph').html('');
+
             $('#side-internal').html(
                 '<div id="main">'+
                     '<h1>Trial ' + n.title + '</h1>'+
@@ -55,13 +51,13 @@ function select_node(n){
                 .append('svg')
                 .attr("width", 300)
                 .attr("height", 300);
-            trial_graph(trial_svg, nodes, edges, {});
+            trial_graph(trial_svg, nodes, edges,
+                        data.min_duration, data.max_duration);
             
             resize_trial();
            
         },
-        error: function (result) {
-
+        error: function (result, status) {
         }
     })
 }
@@ -104,9 +100,7 @@ $.ajax({
         });
 
         history_graph.restart();
-        select_node(nodes[0])
-        d3.select($('#history text.id:contains("'+nodes[0].title+'")')
-            .siblings()[0]).classed('selected', true)
+        history_graph.select_node(nodes[0]);
     },
     error: function (result) {
 
