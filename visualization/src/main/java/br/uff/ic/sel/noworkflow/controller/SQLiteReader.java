@@ -77,7 +77,7 @@ public class SQLiteReader {
         Timestamp start = Timestamp.valueOf(rs.getString("start"));
         Timestamp finish = Timestamp.valueOf(rs.getString("finish"));
 
-        String key = callerId + " " + line + " " + name;
+        String key = line + " " + name;
         FunctionCall functionCall = functionCalls.get(key);
         if (functionCall == null) {
             functionCall = new FunctionCall(callerId, line, name, id, arguments, returnValue, start, finish);
@@ -90,7 +90,7 @@ public class SQLiteReader {
     }
 
     private void addFlow(FunctionCall source, FunctionCall target) {
-        String key = source.getCallerId() + " " + source.getLine() + " " + source.getName() + " " + target.getCallerId() + " " + target.getLine() + " " + target.getName();
+        String key = source.getLine() + " " + source.getName() + " " + target.getLine() + " " + target.getName();
         Flow flow = flows.get(key);
         if (flow == null) {
             if (source.hasActivation(target.getCallerId())) {
