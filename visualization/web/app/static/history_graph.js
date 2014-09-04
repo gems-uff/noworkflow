@@ -1,10 +1,8 @@
 
 function HistoryGraph(svg, nodes, edges, options) {
     var self = this;
-    self.idct = 0;
 
     self.custom_select_node = options.select_node || function() {};
-    self.custom_unselect_node = options.unselect_node || function() {};
 
     self.height = HistoryGraph.consts.height
 
@@ -13,11 +11,7 @@ function HistoryGraph(svg, nodes, edges, options) {
 
     self.state = {
         selected_node: null,
-        selected_link: null,
-        mousedown_link: null,
         mousedown_node: null,
-        mouseup_node: null,
-        graph_mousedown: false,
         just_scale: false
     };
 
@@ -53,9 +47,6 @@ function HistoryGraph(svg, nodes, edges, options) {
     self.circle = svg_g.append('svg:g').selectAll('g');
 
     // Mouse events
-    svg.on("mousedown", function(d){
-        self.svg_mousedown.call(self, d);
-    });
     svg.on("mouseup", function(d){
         self.svg_mouseup.call(self, d);
     });
@@ -75,9 +66,7 @@ function HistoryGraph(svg, nodes, edges, options) {
     svg.call(drag_svg).on("dblclick.zoom", null);
 
 }
-HistoryGraph.prototype.setIdCt = function(idct){
-    this.idct = idct;
-};
+
 
 HistoryGraph.prototype.set_height = function(height){
     this.height = height;
@@ -87,20 +76,12 @@ HistoryGraph.prototype.set_height = function(height){
 
 HistoryGraph.consts =  {
     selected_class: "selected",
-    circle_class: "conceptG",
     graph_class: "graph",
     move_x: 20,
     move_y: 25,
     move_y2: 10,
     radius: 20,
     height: 100,
-};
-
-
-HistoryGraph.prototype.reset_mouse = function(idct){
-    this.state.mousedown_node = null;
-    this.state.mouseup_node = null;
-    this.state.mousedown_link = null;
 };
 
 HistoryGraph.prototype.unselect_node = function() {
@@ -114,11 +95,6 @@ HistoryGraph.prototype.unselect_node = function() {
     state.selected_node = null;
 };
 
-HistoryGraph.prototype.link_mousedown = function(d3path, d){
-
-};
-
-
 HistoryGraph.prototype.node_mousedown = function(d3node, d){
     var self = this,
         state = self.state;
@@ -126,13 +102,12 @@ HistoryGraph.prototype.node_mousedown = function(d3node, d){
     state.mousedown_node = d;
 };
 
-
 HistoryGraph.prototype.select_node = function(node) {
     this.state.selected_node = node;
     this.custom_select_node(node)
     d3.select($('#history text.id:contains("'+node.title+'")')
         .siblings()[0]).classed('selected', true)
-}
+};
 
 HistoryGraph.prototype.node_mouseup = function(d3node, d){
     var self = this,
@@ -163,11 +138,6 @@ HistoryGraph.prototype.node_mouseup = function(d3node, d){
 }; 
 
 
-// mousedown on main svg
-HistoryGraph.prototype.svg_mousedown = function(){
-    this.state.graph_mousedown = true;
-};
-
 // mouseup on main svg
 HistoryGraph.prototype.svg_mouseup = function(){
     var state = this.state;
@@ -175,7 +145,6 @@ HistoryGraph.prototype.svg_mouseup = function(){
       // dragged not clicked
       state.just_scale = false;
     } 
-    state.graph_mousedown = false;
 };
 
 
@@ -184,9 +153,7 @@ HistoryGraph.prototype.update_path = function(path){
         consts = HistoryGraph.consts,
         state = this.state;
 
-    return path.classed('selected', function(d) { 
-        return d === state.selected_link; 
-    }).attr("d", function(d){
+    return path.attr("d", function(d){
         var deltaX = d.target.x - d.source.x,
             deltaY = d.target.y - d.source.y,
             dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
@@ -216,9 +183,6 @@ HistoryGraph.prototype.update_path = function(path){
         result += ',' + (targetX + consts.move_x/2) + ',' + (sourceY);
         result += ',' + targetX + ',' + targetY;
 
-            // result += 'L' + (sourceX - consts.move_x) + ',' + (sourceY + consts.move_y*d.level);
-            // result += 'L' + (targetX + consts.move_x) + ',' + (sourceY + consts.move_y*d.level);
-            // result += 'L' + targetX + ',' + targetY;
         return result;
     }).style('marker-start', function(d) { 
         return d.left ? 'url(#start-arrow)' : ''; 
@@ -261,12 +225,7 @@ HistoryGraph.prototype.restart = function(){
     path = self.path.enter().append("svg:path")
         .attr('class', 'link')
     
-    self.update_path(path)
-        .on('mousedown', function(d) {
-            self.link_mousedown(self, d3.select(this), d);
-        }).on("mouseup", function(d){
-            self.mousedown_link = null;
-        });
+    self.update_path(path);
       
     // remove old links
     self.path.exit().remove();

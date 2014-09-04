@@ -1,12 +1,31 @@
-var colors = d3.scale.category10();
+var width, height;
+var history_graph, trial_svg;
 
 var docEl = document.documentElement,
-    bodyEl = document.getElementsByTagName('body')[0];
+    bodyEl = document.getElementsByTagName('body')[0],
+    colors = d3.scale.category10();
 
-var width = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth,
+
+// Resizing
+
+function calculate_window_size() {
+    width = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
     height =  window.innerHeight|| docEl.clientHeight|| bodyEl.clientHeight;
+};
+calculate_window_size();
 
-var trial_svg;
+function resize_trial() {
+    trial_svg.attr("height", height).attr("width", width);
+}
+
+window.onresize = function() {
+    calculate_window_size();
+    history_graph.updateWindow();
+    resize_trial();
+};
+
+
+// Graphs
 
 function select_node(n){
     $.ajax({
@@ -62,7 +81,7 @@ function select_node(n){
     })
 }
 
-var history_graph;
+
 
 $.ajax({
     type: "GET",
@@ -92,11 +111,7 @@ $.ajax({
             .attr("height", HistoryGraph.consts.height);
 
         history_graph = new HistoryGraph(svg, nodes, edges, {
-            select_node: select_node,
-            unselect_node: function(n) {
-                console.log("un"); 
-            }
-
+            select_node: select_node
         });
 
         history_graph.restart();
@@ -108,19 +123,7 @@ $.ajax({
 });
 
 
-function resize_trial() {
-    // console.log(trial_svg[0].getBoundingClientRect());
-    var docEl = document.documentElement,
-        bodyEl = document.getElementsByTagName('body')[0];
-    var x = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
-    var y = window.innerHeight || docEl.clientHeight || bodyEl.clientHeight;
-    trial_svg.attr("height", y).attr("width", x);
-}
-
-window.onresize = function() {
-    history_graph.updateWindow();
-    resize_trial();
-};
+// Splitters
 
 var horizontal = $('#splitter').split({
     orientation: 'horizontal', limit: 20,

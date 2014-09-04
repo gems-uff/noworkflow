@@ -2,8 +2,9 @@ import os
 from noworkflow import persistence
 from flask import render_template, jsonify
 from app import app
-from models import load_trial, load_trials
-
+from models.trials import load_trials
+from models.trial import load_trial_activation_tree
+from trial_visitors.trial_graph import TrialGraphVisitor
 
 @app.route('/<path:path>')
 def static_proxy(path):
@@ -12,37 +13,17 @@ def static_proxy(path):
 @app.route('/trials')
 def trials():
 	cwd = os.getcwd()
-	result = {
-		'nodes': [],
-		'edges': [],
-	}
-	tid = 0
-	for trial in load_trials(cwd):
-		result['nodes'].append({
-			'id': trial[0],
-			'start': trial[1],
-			'finish': trial[2],
-			'script': trial[3],
-			'code_hash': trial[4],
-			'arguments': trial[5],
-			'inherited_id': trial[6],
-		})
-		if tid:
-			result['edges'].append({
-				'source': tid,
-				'target': tid - 1,
-				'level': 0
-			})
-		tid += 1
-	return jsonify(**result)
+	persistence.connect_existing(cwd)
+	return jsonify(**load_trials())
 
 @app.route('/trials/<tid>')
 def trial(tid):
 	cwd = os.getcwd()
 	persistence.connect_existing(cwd)
-	trial = load_trial(tid)
-	print trial
-	return jsonify(**trial)
+	tree = load_trial_activation_tree(tid)
+	visitor = TrialGraphVisitor()
+	tree.visit(visitor)
+	return jsonify(**visitor.to_dict())
 
 @app.route('/')
 def index():
