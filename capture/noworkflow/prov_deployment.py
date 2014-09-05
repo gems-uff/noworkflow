@@ -14,15 +14,29 @@ from utils import print_msg
 
 def collect_environment_provenance():
     environment = {}
-    for name in os.sysconf_names:
-        environment[name] = os.sysconf(name)
-    for name in os.confstr_names:
-        environment[name] = os.confstr(name)
+
+    environment['OS_NAME'] = platform.system()
+    # Unix environment
+    try:
+        for name in os.sysconf_names:
+            try:
+                environment[name] = os.sysconf(name)
+            except:
+                pass
+        for name in os.confstr_names:
+            environment[name] = os.confstr(name)
+        environment['USER'] = os.getlogin()
+        environment['OS_NAME'], _, environment['OS_RELEASE'], environment['OS_VERSION'], _ = os.uname()
+    except:
+        pass
+    # Windows environment
+    if environment['OS_NAME'] == 'Windows':
+        environment['OS_RELEASE'], environment['OS_VERSION'], _, _ = platform.win32_ver()
+
+    # Both Unix and Windows
     environment.update(os.environ)
     environment['PWD'] = os.getcwd()
-    environment['USER'] = os.getlogin()
     environment['PID'] = os.getpid()
-    environment['OS_NAME'], _, environment['OS_RELEASE'], environment['OS_VERSION'], _ = os.uname()
     environment['HOSTNAME'] = socket.gethostname()
     environment['ARCH'] = platform.architecture()[0]
     environment['PROCESSOR'] = platform.processor()
@@ -34,7 +48,7 @@ def collect_environment_provenance():
 def collect_modules_provenance(modules):
     'returns a set of module dependencies in the form: (name, version, path, code_hash)'
     dependencies = []
-    for name, module in modules.iteritems():
+    for name, module in modules.items():
         if name != '__main__':
             version = get_version(name)
             path = module.__file__

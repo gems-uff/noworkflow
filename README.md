@@ -12,15 +12,21 @@ noWorkflow was developed in Python and it currently is able to capture provenanc
 Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below. 
 
 Team
------------
+----
 
 The noWorkflow team is composed by researchers from Universidade Federal Fluminense (UFF) in Brazil and New York University (NYU), in the USA.
 
-* Leonardo Murta (UFF)    
 * Vanessa Braganholo (UFF)
-* Juliana Freire (NYU)
 * Fernando Chirigati (NYU)
+* Juliana Freire (NYU)
 * David Koop (NYU)
+* Leonardo Murta (UFF)
+* João Felipe Pimentel (UFF)
+ 
+Publications
+------------
+
+[MURTA, L. G. P.; BRAGANHOLO, V.; CHIRIGATI, F. S.; KOOP, D.; FREIRE, J.; noWorkflow: Capturing and Analyzing Provenance of Scripts. In: International Provenance and Annotation Workshop (IPAW), 2014, Cologne, Germany.] (https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2014.pdf)
 
 Quick Installation
 ------------------
@@ -120,7 +126,7 @@ The remaining options of noWorkflow are *diff* and *export*. The *diff* option c
 
 We have also a graph visualization implemented in Java, named noWorkflowVis, which connects to noWorkflow database and allows interactive analysis. 
 
-Included software
+Included Software
 -----------------
 
 Parts of the following software were used by noWorkflow directly or in an adapted form:
@@ -128,6 +134,12 @@ Parts of the following software were used by noWorkflow directly or in an adapte
 The Python Debugger
 Copyright (c) 2001-2013 Python Software Foundation.
 All Rights Reserved.
+
+Acknowledgements
+----------------
+
+We would like to thank JetBrains for providing us a license for PyCharm. We also want to thank CNPq, FAPERJ, and
+the National Science Foundation (CNS-1229185, CNS-1153503, IIS-1142013) for partially supporting this work.
 
 License Terms
 -------------
