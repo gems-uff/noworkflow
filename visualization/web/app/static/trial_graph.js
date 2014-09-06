@@ -11,6 +11,8 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
         .charge(-300)
         .on("tick", tick)
         .start();
+
+    force_links = force.links();
     
     svg_g = svg.append("g")
         .classed('trialgraph', true);
@@ -29,7 +31,7 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
         .attr("d", "M0,-5L10,0L0,5");
 
     var path = svg_g.append("svg:g").selectAll("path")
-        .data(force.links())
+        .data(force_links)
       .enter().append("svg:path")
         .attr("id", function(d, i) {
             return "pathId-"+i;
@@ -46,13 +48,17 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
             return d.type == 'initial';
         });
 
+    
 
     var label_path = svg_g.selectAll(".label_text")
-        .data(force.links())
+        .data(force_links)
       .enter().append("text")
         .attr("class", "label_text")
         .attr("dx", 20)
         .attr("dy", -3)
+        .attr("id", function(d, i) {
+            return "pathlabel-"+i;
+        })
       .append("textPath")
         .attr("xlink:href", function(d, i){
             return "#pathId-"+i;
@@ -66,15 +72,20 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
     var node = svg_g.selectAll(".node")
         .data(force.nodes())
       .enter().append("g")
+        .attr("id", function(d) { 
+            return "node-"+d.index;
+        })
         .attr("class", "node")
         .call(force.drag);
 
     node.append("circle")
         .attr("r", 5)
+        .attr("data-clicked", "0")
+        
         .style('fill', function(d) {
             proportion = Math.round(510 * (d.mean - min_duration) / (max_duration - min_duration));
             return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
-        });
+        }).on("click", toggle_nodes);
 
     node.append("text")
         .attr("x", 12)
@@ -151,6 +162,89 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
         node.attr("transform", function(d) { 
             return "translate(" + d.x + "," + d.y + ")"; 
         });
+    }
+
+
+    // Add links to nodes
+    force_links.forEach(function(link, i) {
+        var source = link.source, target = link.target;
+        source.arrival_links || (source.arrival_links = []);
+        source.sequence_links || (source.sequence_links = []);
+        source.call_links || (source.call_links = []);
+        source.return_links || (source.return_links = []);
+        target.sequence_links || (target.sequence_links = []);
+        target.call_links || (target.call_links = []);
+        target.return_links || (target.return_links = []);
+        
+
+        if (link.type == 'sequence') source.sequence_links.push([i, target]);
+        if (link.type == 'call') source.call_links.push([i, target]);
+        if (link.type == 'return') source.return_links.push([i, target]);
+        (target.arrival_links || (target.arrival_links = [])).push([i, source, link.type]);
+    });
+
+    // Toggle nodes
+    function toggle_nodes(node, i){
+        if (!node.call_links.length || !d3.event.ctrlKey) {
+            return;
+        }
+
+        var visibility = 'visible',
+            data_clicked = 0;
+        if (d3.select(this).attr("data-clicked") == "1") {
+            d3.select(this).attr("data-clicked", "0");
+            data_clicked = 0;
+            visibility = 'visible';
+        } else {
+            d3.select(this).attr("data-clicked", "1");
+            visibility = 'hidden';   
+            data_clicked = 1;
+        }
+
+        var used = {};
+        used[node.index] = 1;
+        var queue = [];
+        node.call_links.forEach(function(n){
+            queue.push(n);
+            used[n[1].index] = 1;
+            n[1].arrival_links.forEach(hide_path);
+        })
+        node.arrival_links.forEach(function(a) {
+            if (a[2] == 'return') hide_path(a);
+        });
+
+        while (queue.length) {
+            var ln = queue.pop(),
+                l = ln[0], n = ln[1],
+                node_clicked = d3.select("#node-"+n.index +' circle')
+                    .attr("data-clicked");
+            
+            d3.select("#node-"+n.index).style('visibility', visibility);
+            
+            if (visibility == 'hidden' || node_clicked == data_clicked) { 
+                n.call_links.forEach(add_to_queue);  
+                n.arrival_links.forEach(hide_path);
+            } else if (visibility != 'hidden' && node_clicked != data_clicked) {
+                n.arrival_links.forEach(function(a) {
+                    if (a[2] != 'return') hide_path(a);
+                });
+            }
+            
+
+            n.sequence_links.forEach(add_to_queue);
+        }
+
+        function hide_path(a) {
+            d3.select("#pathId-"+a[0]).style('visibility', visibility);  
+            d3.select("#pathlabel-"+a[0]).style('visibility', visibility);
+        }
+
+        function add_to_queue(n2) {
+            if (n2[1].index != node.index && !used[n2[1].index]) {
+                queue.push(n2);
+                used[n2[1].index] = 1;
+            }
+        }
     }
 
 

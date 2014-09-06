@@ -101,6 +101,16 @@ svg:not(.active):not(.ctrl) {
   cursor: pointer;
 }
 
+#show .node.hidden {
+  visibility: hidden;
+}
+
+
+#show .node circle[data-clicked="1"] {
+  stroke: #00f;
+  stroke-width: 3px;
+}
+
 #history {
   background: #ccc;
   overflow: hidden !important;
@@ -178,3 +188,8 @@ svg:not(.active):not(.ctrl) {
 .label_text {
   fill: #000;
 }
+
+.hidden {
+  display: none;
+}
+

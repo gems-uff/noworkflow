@@ -43,17 +43,20 @@ function select_node(n){
                 node = {
                     name: data.nodes[i].name,
                     index: data.nodes[i].index,
-                    mean: data.nodes[i].mean
+                    mean: data.nodes[i].mean,
+                    visible: true,
+                    subtree_visible: true
                 };
                 nodes.push(node)
             }
+            /* 
             for (var i = 0; i < data.edges.length; i++) {
                 var edge = data.edges[i];
                 edge.source = nodes[edge.source];
                 edge.target = nodes[edge.target];
                 
                 edges.push(edge);        
-            }
+            }*/
             $('#graph').html('');
 
             $('#side-internal').html(
@@ -70,7 +73,7 @@ function select_node(n){
                 .append('svg')
                 .attr("width", 300)
                 .attr("height", 300);
-            trial_graph(trial_svg, nodes, edges,
+            trial_graph(trial_svg, nodes, data.edges,
                         data.min_duration, data.max_duration);
             
             resize_trial();
