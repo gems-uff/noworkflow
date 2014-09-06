@@ -1,0 +1,195 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Verdana", "Geneva", "sans-serif";
+}
+
+svg {
+  background-color: #eee;
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+svg:not(.active):not(.ctrl) {
+  cursor: crosshair;
+}
+
+#history path.link {
+  fill: none;
+  stroke: #000;
+  stroke-width: 4px;
+  cursor: default;
+}
+
+#history svg:not(.active):not(.ctrl) path.link {
+  cursor: crosshair;
+}
+
+#history path.link.selected {
+  stroke-dasharray: 10,2;
+}
+
+#history path.link.dragline {
+  pointer-events: none;
+}
+
+#history path.link.hidden {
+  stroke-width: 0;
+}
+
+#history circle.node {
+  stroke-width: 1.5px;
+  cursor: pointer;
+  fill: #F6FBFF;
+  stroke: #333;
+  stroke-width: 2px;
+}
+
+#history circle.node:hover {
+  stroke-width: 1.5px;
+  cursor: pointer;
+  fill: rgb(200, 238, 241);
+  stroke: #333;
+  stroke-width: 2px;
+}
+
+#history circle.selected {
+  fill: rgb(200, 238, 241) !important;
+}
+
+#history circle.node.reflexive {
+  stroke: #000 !important;
+  stroke-width: 2.5px;
+}
+
+#history text {
+  font: 12px sans-serif;
+  pointer-events: none;
+}
+
+#history text.id {
+  text-anchor: middle;
+  font-weight: bold;
+}
+
+#show path.link {
+  fill: none;
+  stroke-width: 1.5px;
+}
+
+#show circle {
+  fill: #ccc;
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+#show text {
+  fill: #000;
+  font: 10px sans-serif;
+  pointer-events: none;
+}
+
+#show .node {
+  cursor: pointer;
+}
+
+#show.node:hover {
+  cursor: pointer;
+}
+
+#show .node.hidden {
+  visibility: hidden;
+}
+
+
+#show .node circle[data-clicked="1"] {
+  stroke: #00f;
+  stroke-width: 3px;
+}
+
+#history {
+  background: #ccc;
+  overflow: hidden !important;
+}
+
+#splitter {
+  height: 100vh;
+  width: 100%;
+}
+#splitter div {
+  overflow: auto;
+}
+.hsplitbar {
+  width: 5px;
+  background: #aaa;
+}
+
+#show {
+  background: #ccc;
+  overflow: hidden !important;
+}
+
+#graph {
+  background: #ccc;
+  overflow: hidden !important;
+}
+
+#side {
+  background: #fff;
+  font-size: 14px;
+}
+
+#side-internal {
+  margin: 5px;
+}
+
+#side h1, h3 {
+  margin: 0px;
+}
+
+#side h3 {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+#side #main .attr {
+  display: block;
+  margin: 3px 0;
+
+} 
+
+#side #main .desc {
+  font-weight: bold;
+}
+
+
+.call-arrow {
+  stroke: #666;
+}
+
+.return-arrow {
+  stroke: #666;
+  stroke-dasharray: 10,2;
+}
+
+.sequence-arrow {
+  stroke: #F00;
+}
+
+.initial-arrow {
+  stroke: #666;
+}
+
+.label_text {
+  fill: #000;
+}
+
+.hidden {
+  display: none;
+}
+
