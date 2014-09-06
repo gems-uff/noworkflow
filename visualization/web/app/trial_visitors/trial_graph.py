@@ -24,14 +24,14 @@ class TrialGraphVisitor(object):
     		'max_duration': self.max_duration
     	}
 
-    def add_node(self, activation):
+    def add_node(self, activation, duration=None, mean=None):
         self.nodes.append({
             'index': self.nid,
             'caller_id': activation.parent,
             'line': activation.line,
             'name': activation.name,
-            'duration': activation.duration,
-            'mean': activation.mean()
+            'duration': activation.duration if duration is None else duration,
+            'mean': activation.mean() if mean is None else mean
         })
         original = self.nid
         self.nid += 1
@@ -51,11 +51,20 @@ class TrialGraphVisitor(object):
         return result
 
     def solve_delegation(self, node_id, node_count, delegated):
-        for key, edge in delegated.items():
-            if key == 'return':
-                self.add_edge(node_id, edge.node, edge.count, key)
-            elif key:
-                self.add_edge(edge.node, node_id, node_count, key)
+        self.solve_cis_delegation(node_id, node_count, delegated)
+        self.solve_ret_delegation(node_id, node_count, delegated)
+
+    def solve_cis_delegation(self, node_id, node_count, delegated):
+        # call initial sequence
+        for typ in ['call', 'initial', 'sequence']:
+            if typ in delegated:
+                edge = delegated[typ]
+                self.add_edge(edge.node, node_id, node_count, typ)
+
+    def solve_ret_delegation(self, node_id, node_count, delegated):
+        if 'return' in delegated:
+            edge = delegated['return']
+            self.add_edge(node_id, edge.node, edge.count, 'return')
 
     def update_durations(self, element):
     	self.max_duration = max(self.max_duration, element.duration)
@@ -75,27 +84,29 @@ class TrialGraphVisitor(object):
         call.called.visit(self)
         return caller_id, call
      
-    def visit_sequence(self, sequence):
+    def visit_group(self, group):
         delegated = self.use_delegated()
-        last = None
 
-        for i, activation in enumerate(sequence.activations):
-            if i == 0:
-                for key, edge in delegated.items():
-                    if key != 'return': 
-                        self.delegated[key] = edge
-                        del delegated[key]
-            elif i == len(sequence.activations) - 1:
-                if 'return' in delegated:
-                    self.delegated['return'] = delegated['return']
-                    del delegated['return']
+        node_map = {}
+        for duration, nodes in group.nodes.values():
+            node_id, node = nodes[0].visit(self)
+            self.nodes[node_id]['duration'] = duration
+            self.nodes[node_id]['mean'] = duration / len(nodes)
+            node_map[node] = node_id
             
-            last = activation.visit(self)
+            #node_map[nodes[0]] = self.add_node(nodes[0], duration=duration,
+            #                                   mean=duration / len(nodes))
 
-            if i < len(sequence.activations) - 1:
-                self.delegated['sequence'] = Edge(last[0], last[1].count)
-        return last
+        self.solve_cis_delegation(node_map[group.next], group.count, delegated)
+        self.solve_ret_delegation(node_map[group.last], group.count, delegated)
 
+        for previous, edges in group.edges.items():
+            for next, count in edges.items():
+                self.add_edge(node_map[previous], node_map[next],
+                              count, 'sequence')
+
+        return node_map[group.next], group.next
+ 
     def visit_single(self, single):
     	self.update_durations(single)
         delegated = self.use_delegated()

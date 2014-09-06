@@ -1,8 +1,17 @@
 from datetime import datetime
 from noworkflow import persistence
+from collections import OrderedDict, Counter
 
 
 FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+
+
+class OrderedCounter(OrderedDict, Counter):
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__,
+                            OrderedDict(self))
+    def __reduce__(self):
+        return self.__class__, (OrderedDict(self),)
 
 
 class TreeElement(object):
@@ -12,6 +21,16 @@ class TreeElement(object):
 
     def visit(self, visitor):
         return visitor.visit_default(self)
+
+    def calculate_repr(self):
+        pass
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+    def __repr__(self):
+        return self.repr
+
 
 class Single(TreeElement):
 
@@ -29,8 +48,7 @@ class Single(TreeElement):
                 datetime.strptime(activation['start'], FORMAT)
             ).total_seconds() * 1000000)
 
-    def __repr__(self):
-        return self.name
+        self.repr = "S({0}-{1})".format(self.line, self.name)
 
     def __eq__(self, other):
         if type(self) != type(other):
@@ -45,30 +63,48 @@ class Single(TreeElement):
         return visitor.visit_single(self)
 
 
-class Sequence(TreeElement):
+class Group(TreeElement):
 
     def __init__(self, previous, next):
-        self.activations = [previous]
-        if isinstance(next, Sequence):
-            self.activations += next.activations
-        elif next:
-            self.activations.append(next)
-        self.parent = previous.parent
+        self.nodes = {}
+        self.nodes[next] = [next.duration, [next]]
+        self.duration = next.duration
+        self.next = next
+        self.last = next
+        self.edges = OrderedDict()
+        self.add_subelement(previous)
+        self.parent = next.parent
         self.count = 1
-        self.duration = sum(act.duration for act in self.activations)
+        self.repr = ""
 
-    def __repr__(self):
-        return 'S({})'.format(', '.join(str(act) for act in self.activations))
+    def add_subelement(self, previous):
+        next, self.next = self.next, previous
+        if not previous in self.edges:
+            self.edges[previous] = OrderedCounter()
+        if not previous in self.nodes:
+            self.nodes[previous] = [0, []]
+        self.nodes[previous][0] += previous.duration
+        self.nodes[previous][1].append(previous)
+        self.edges[previous][next] += 1
+        
+    def calculate_repr(self):
+        result = [
+            "[{0}-{1}->{2}]".format(previous, count, next)
+            for previous, edges in self.edges.items()
+            for next, count in edges.items()
+        ]
+      
+        self.repr = "G({0})".format(', '.join(result))
 
     def __eq__(self, other):
         if type(self) != type(other):
             return False
-        if not self.activations == other.activations:
+        if not self.edges == other.edges:
             return False
         return True
 
     def visit(self, visitor):
-        return visitor.visit_sequence(self)
+        return visitor.visit_group(self)
 
 
 class Call(TreeElement):
@@ -76,13 +112,12 @@ class Call(TreeElement):
     def __init__(self, caller, called):
         self.caller = caller
         self.called = called
+        self.called.calculate_repr()
         self.parent = caller.parent
         self.count = 1
         self.id = self.caller.id
         self.duration = self.caller.duration
-
-    def __repr__(self):
-        return 'C({0}, {1})'.format(self.caller, self.called)
+        self.repr = 'C({0}, {1})'.format(self.caller, self.called)
 
     def __eq__(self, other):
         if type(self) != type(other):
@@ -97,32 +132,17 @@ class Call(TreeElement):
         return visitor.visit_call(self)
 
 
-def wrap_sequence(element):
-    if isinstance(element, Sequence):
-        return element
-    return Sequence(element, None)
-
-
-def unwrap_sequence(sequence):
-    if len(sequence.activations) > 1:
-        return sequence
-    return sequence.activations[0]
+def sequence(previous, next):
+    if isinstance(next, Group):
+        next.add_subelement(previous)
+        return next
+    return Group(previous, next)
 
 
 def add_flow(stack, stack2, previous, next):
     if previous.parent == next.parent:
         # Same function level
-        rest = wrap_sequence(next)
-        next = rest.activations[0]
-        if previous == next:
-            # Same workflow: combine results
-            previous.count += next.count
-            previous.duration += next.duration
-            rest.activations = rest.activations[1:]
-        # if the results were combined, Sequence will return a sequence with
-        #   one element and unwrap will return the element itself
-        # if the results were not combined, unwrap will return the new Sequence
-        stack2.append(unwrap_sequence(Sequence(previous, rest)))
+        stack2.append(sequence(previous, next))
 
     elif previous.id == next.parent:
         # Previously called next

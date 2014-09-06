@@ -21,6 +21,8 @@ def trial(tid):
 	cwd = os.getcwd()
 	persistence.connect_existing(cwd)
 	tree = load_trial_activation_tree(tid)
+	print tree
+	#return "falha"
 	visitor = TrialGraphVisitor()
 	tree.visit(visitor)
 	return jsonify(**visitor.to_dict())
