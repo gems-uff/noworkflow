@@ -232,30 +232,35 @@ def extract_file_accesses(file_accesses, function_activation_id):
 
 
 def store_function_activation(function_activation, caller_id):
-    function_activation_id = function_activation_id_seq()
-
     function_activations, object_values, file_accesses = [], [], []
+    d = { 
+        'fid': function_activation_id_seq(),
+        'activations': function_activations,
+        'object_values': object_values,
+        'file_accesses': file_accesses,
+    }
 
-    queue = deque()
-    queue.append((function_activation, caller_id))
-    while queue:
-        function_activation, caller_id = queue.popleft()
-        function_activations.append(
-            extract_function_activation(function_activation, caller_id, function_activation_id)
+    def add_activation(function_activation, caller_id):
+        fid = d['fid']
+        d['activations'].append(
+            extract_function_activation(function_activation, caller_id, fid)
         )
-        for object_value in extract_object_values(function_activation['arguments'], 'ARGUMENT', function_activation_id):
-            object_values.append(object_value)
+        for object_value in extract_object_values(function_activation['arguments'], 'ARGUMENT', fid):
+            d['object_values'].append(object_value)
 
-        for object_value in extract_object_values(function_activation['globals'], 'GLOBAL', function_activation_id):
-            object_values.append(object_value)
+        for object_value in extract_object_values(function_activation['globals'], 'GLOBAL', fid):
+            d['object_values'].append(object_value)
 
-        for file_access in extract_file_accesses(function_activation['file_accesses'], function_activation_id):
-            file_accesses.append(file_access)
+        for file_access in extract_file_accesses(function_activation['file_accesses'], fid):
+            d['file_accesses'].append(file_access)
 
+        d['fid'] += 1
+        
         for inner_function_activation in function_activation['function_activations']:
-            queue.append((inner_function_activation, function_activation_id))
+            add_activation(inner_function_activation, fid)
 
-        function_activation_id += 1
+    add_activation(function_activation, caller_id)
+
 
     with db_conn as db:
         db.executemany(
