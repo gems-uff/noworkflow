@@ -8,7 +8,15 @@
       <div id="splitter">
         <div id="history" style="overflow: auto"></div>
         <div id="show">
-          <div id="graph"></div>
+          <div id="graphbox">
+            <form class="toolbar">
+              <input id="indgraph" type="radio" name="graphtype" value="independent" checked>
+              <label for="indgraph" title="Calls have counting independent from caller activations">Exact Match</label>
+              <input id="combgraph" type="radio" name="graphtype" value="combined">
+              <label for="combgraph" title="Calls are combined and a function may have more than one call workflow">Combined</label>
+            </form>
+            <div id="graph"></div>
+          </div>
           <div id="side">
             <div id="side-internal"></div>
 

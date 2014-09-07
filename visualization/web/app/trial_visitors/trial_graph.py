@@ -88,15 +88,10 @@ class TrialGraphVisitor(object):
         delegated = self.use_delegated()
 
         node_map = {}
-        for duration, nodes in group.nodes.values():
-            node_id, node = nodes[0].visit(self)
-            self.nodes[node_id]['duration'] = duration
-            self.nodes[node_id]['mean'] = duration / len(nodes)
+        for element in group.nodes.values():
+            node_id, node = element.visit(self)
             node_map[node] = node_id
             
-            #node_map[nodes[0]] = self.add_node(nodes[0], duration=duration,
-            #                                   mean=duration / len(nodes))
-
         self.solve_cis_delegation(node_map[group.next], group.count, delegated)
         self.solve_ret_delegation(node_map[group.last], group.count, delegated)
 
@@ -116,5 +111,66 @@ class TrialGraphVisitor(object):
             self.solve_delegation(node_id, single.count, delegated)
         return node_id, single
 
+    def visit_mixed(self, mixed):
+        node_id, node = mixed.elements[0].visit(self)
+        self.nodes[node_id]['duration'] = mixed.duration
+        self.nodes[node_id]['mean'] = mixed.duration / mixed.count
+        return node_id, node
+
+
     def visit_default(self, empty):
     	pass
+
+
+class TrialGraphCombineVisitor(TrialGraphVisitor):
+
+    def __init__(self):
+        super(TrialGraphCombineVisitor, self).__init__()
+        self.context = {}
+        self.context_edges = {}
+        self.namestack = []
+        
+    def namespace(self):
+        return ' '.join(self.namestack)
+
+    def add_node(self, activation, duration=None, mean=None):
+        self.namestack.append(activation.name_id())
+        namespace = self.namespace()
+        self.namestack.pop()
+        if namespace in self.context:
+            return self.context[namespace]['index']
+
+        activation.namespace = namespace
+        result = super(TrialGraphCombineVisitor, self).add_node(activation, 
+                                                                duration,
+                                                                mean)
+        self.context[namespace] = self.nodes[-1]
+        return result
+
+    def add_edge(self, source, target, count, typ):
+
+        edge = "{} {} {}".format(source, target, typ)
+
+        if not edge in self.context_edges:
+            super(TrialGraphCombineVisitor, self).add_edge(source, target,
+                                                           count, typ)
+            self.context_edges[edge] = self.edges[-1]
+        else:
+            self.context_edges[edge]['count'] += count
+
+    def visit_call(self, call):
+        self.namestack.append(call.caller.name_id())
+        result = super(TrialGraphCombineVisitor, self).visit_call(call)
+        self.namestack.pop()
+        return result
+
+    def visit_mixed(self, mixed):
+        node_id, node = None, None
+        self.namestack.append('<M>')
+        for element in mixed.elements:
+            node_id, node = element.visit(self)
+            self.nodes[node_id]['duration'] += element.duration
+            self.nodes[node_id]['mean'] += element.duration / mixed.count
+        self.namestack.pop()
+        return node_id, node
+

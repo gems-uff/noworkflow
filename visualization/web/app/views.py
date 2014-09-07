@@ -4,7 +4,7 @@ from flask import render_template, jsonify
 from app import app
 from models.trials import load_trials
 from models.trial import load_trial_activation_tree
-from trial_visitors.trial_graph import TrialGraphVisitor
+from trial_visitors.trial_graph import TrialGraphVisitor, TrialGraphCombineVisitor
 
 @app.route('/<path:path>')
 def static_proxy(path):
@@ -16,14 +16,21 @@ def trials():
 	persistence.connect_existing(cwd)
 	return jsonify(**load_trials())
 
-@app.route('/trials/<tid>')
-def trial(tid):
+@app.route('/trials/<tid>/independent')
+def independent_trial_graph(tid):
 	cwd = os.getcwd()
 	persistence.connect_existing(cwd)
 	tree = load_trial_activation_tree(tid)
-	print tree
-	#return "falha"
 	visitor = TrialGraphVisitor()
+	tree.visit(visitor)
+	return jsonify(**visitor.to_dict())
+
+@app.route('/trials/<tid>/combined')
+def combined_trial_graph(tid):
+	cwd = os.getcwd()
+	persistence.connect_existing(cwd)
+	tree = load_trial_activation_tree(tid)
+	visitor = TrialGraphCombineVisitor()
 	tree.visit(visitor)
 	return jsonify(**visitor.to_dict())
 

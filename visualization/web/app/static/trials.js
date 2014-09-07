@@ -1,5 +1,7 @@
 var width, height;
-var history_graph, trial_svg;
+var history_graph, trial_svg, 
+    selected_graph = "independent",
+    current_nid = 0;
 
 var docEl = document.documentElement,
     bodyEl = document.getElementsByTagName('body')[0],
@@ -26,53 +28,33 @@ window.onresize = function() {
 
 
 // Graphs
-
-function select_node(n){
+function load_graph(nid, url) {
     $.ajax({
         type: "GET",
         contentType: "application/json; charset=utf-8",
-        url: 'trials/' + n.title,
+        url: 'trials/' + nid + '/' + url,
         dataType: 'json',
         async: true,
         data: {}, 
         success: function (data) {
-            var nodes = [];
-            var edges = [];
-            var id = 0;
+            var nodes = [],
+                edges = [],
+                id = 0;
             for (var i = 0; i < data.nodes.length; i++) {
                 node = {
                     name: data.nodes[i].name,
                     index: data.nodes[i].index,
-                    mean: data.nodes[i].mean,
-                    visible: true,
-                    subtree_visible: true
+                    mean: data.nodes[i].mean
                 };
                 nodes.push(node)
             }
-            /* 
-            for (var i = 0; i < data.edges.length; i++) {
-                var edge = data.edges[i];
-                edge.source = nodes[edge.source];
-                edge.target = nodes[edge.target];
-                
-                edges.push(edge);        
-            }*/
+
             $('#graph').html('');
 
-            $('#side-internal').html(
-                '<div id="main">'+
-                    '<h1>Trial ' + n.title + '</h1>'+
-                    '<h3>' + n.info.code_hash + '</h1>'+
-                    '<span class="attr"><span class="desc">Script: </span><span class="script">' + n.info.script + '</span></span>' +
-                    '<span class="attr"><span class="desc">Start: </span><span class="start">' + n.info.start + '</span></span>' +
-                    '<span class="attr"><span class="desc">Finish: </span><span class="finish">' + n.info.finish + '</span></span>' +
-                    (n.info.arguments ? ('<span class="attr"><span class="desc">Arguments: </span><span class="arguments">' + n.info.arguments + '</span></span>') : "") +
-                '</div>'
-            );
             trial_svg = d3.select('#graph')
                 .append('svg')
-                .attr("width", 300)
-                .attr("height", 300);
+                .attr("width", 500)
+                .attr("height", 500);
             trial_graph(trial_svg, nodes, data.edges,
                         data.min_duration, data.max_duration);
             
@@ -81,7 +63,23 @@ function select_node(n){
         },
         error: function (result, status) {
         }
-    })
+    });
+}
+
+function select_node(n){
+
+    $('#side-internal').html(
+        '<div id="main">'+
+            '<h1>Trial ' + n.title + '</h1>'+
+            '<h3>' + n.info.code_hash + '</h1>'+
+            '<span class="attr"><span class="desc">Script: </span><span class="script">' + n.info.script + '</span></span>' +
+            '<span class="attr"><span class="desc">Start: </span><span class="start">' + n.info.start + '</span></span>' +
+            '<span class="attr"><span class="desc">Finish: </span><span class="finish">' + n.info.finish + '</span></span>' +
+            (n.info.arguments ? ('<span class="attr"><span class="desc">Arguments: </span><span class="arguments">' + n.info.arguments + '</span></span>') : "") +
+        '</div>'
+    );
+    current_nid = n.title;
+    load_graph(current_nid, selected_graph);
 }
 
 
@@ -144,4 +142,10 @@ $('#show').split({
         resize_trial();
     }
 
+});
+
+// Graph type
+$( "[name='graphtype']" ).change(function() {
+    selected_graph = $(this).attr('value');
+    load_graph(current_nid, selected_graph);
 });

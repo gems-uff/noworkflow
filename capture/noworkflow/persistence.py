@@ -78,7 +78,7 @@ def get(content_hash):
 
 # DATABASE STORE/RETRIEVE FUNCTIONS
 
-def load(table_name, selection=["*"], **condition):
+def load(table_name, selection=["*"], order="id", **condition):
     where = '1'
     for key in condition:
         if condition[key] is None:
@@ -87,8 +87,8 @@ def load(table_name, selection=["*"], **condition):
             where += ' and {} = {}'.format(key, condition[key])
 
     with db_conn as db:
-        return db.execute('select {} from {} where {} order by id'.format(
-            ','.join(selection), table_name, where))
+        return db.execute('select {} from {} where {} order by {}'.format(
+            ','.join(selection), table_name, where, order))
 
 
 def insert(table_name, attrs, **extra_attrs):

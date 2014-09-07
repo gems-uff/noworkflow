@@ -1,7 +1,7 @@
 function trial_graph(svg, nodes, edges, min_duration, max_duration) {
 
-    var width = 300;
-    var height = 300;
+    var width = 400;
+    var height = 400;
 
     var force = d3.layout.force()
         .nodes(nodes)

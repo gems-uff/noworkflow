@@ -59,15 +59,34 @@ class Single(TreeElement):
             return False
         return True
 
+    def name_id(self):
+        return "{0} {1}".format(self.line, self.name)
+
     def visit(self, visitor):
         return visitor.visit_single(self)
+
+
+class Mixed(TreeElement):
+
+    def __init__(self, activation):
+        self.duration = activation.duration
+        self.elements = [activation]
+        self.count = 1
+
+    def add_element(self, element):
+        self.elements.append(element)
+        self.count += element.count
+        self.duration += element.duration
+
+    def visit(self, visitor):
+        return visitor.visit_mixed(self)
 
 
 class Group(TreeElement):
 
     def __init__(self, previous, next):
         self.nodes = {}
-        self.nodes[next] = [next.duration, [next]]
+        self.nodes[next] = Mixed(next)
         self.duration = next.duration
         self.next = next
         self.last = next
@@ -82,9 +101,9 @@ class Group(TreeElement):
         if not previous in self.edges:
             self.edges[previous] = OrderedCounter()
         if not previous in self.nodes:
-            self.nodes[previous] = [0, []]
-        self.nodes[previous][0] += previous.duration
-        self.nodes[previous][1].append(previous)
+            self.nodes[previous] = Mixed(previous)
+        else:
+            self.nodes[previous].add_element(previous)
         self.edges[previous][next] += 1
         
     def calculate_repr(self):
@@ -175,7 +194,8 @@ def load_trial_activation_tree(tid):
     min_duration = 1000^10
     max_duration = 0
 
-    raw_activations = persistence.load('function_activation', trial_id=tid)
+    raw_activations = persistence.load('function_activation', trial_id=tid,
+                                       order='start')
     for raw_activation in raw_activations:
         #activation = row_to_dict(raw_activation)
         single = Single(raw_activation)
