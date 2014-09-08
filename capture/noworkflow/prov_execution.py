@@ -145,7 +145,7 @@ class Profiler(StoreOpenMixin):
         # Capture args
         for var in itertools.islice(names, 0, nargs):
             try:
-                activation['arguments'][arg] = repr(values[arg])
+                activation['arguments'][var] = repr(values[var])
             except:  # ignoring any exception during capture
                 pass
         # Capture *args
