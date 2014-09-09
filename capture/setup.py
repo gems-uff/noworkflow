@@ -5,7 +5,7 @@ use_setuptools()
 from setuptools import setup
 setup(
     name = "noworkflow",
-    version = "0.4.0-dev",
+    version = "0.4.0",
     packages = ['noworkflow'],
     package_data = {'noworkflow': ['resources/*']},
     entry_points = {'console_scripts': ['now = noworkflow.now:main']},
