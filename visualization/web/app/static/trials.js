@@ -37,26 +37,15 @@ function load_graph(nid, url) {
         async: true,
         data: {}, 
         success: function (data) {
-            var nodes = [],
-                edges = [],
-                id = 0;
-            for (var i = 0; i < data.nodes.length; i++) {
-                node = {
-                    name: data.nodes[i].name,
-                    index: data.nodes[i].index,
-                    mean: data.nodes[i].mean
-                };
-                nodes.push(node)
-            }
-
             $('#graph').html('');
 
             trial_svg = d3.select('#graph')
                 .append('svg')
                 .attr("width", 500)
                 .attr("height", 500);
-            trial_graph(trial_svg, nodes, data.edges,
+            trial_graph(trial_svg, data.nodes, data.edges,
                         data.min_duration, data.max_duration);
+            console.log(data.min_duration, data.max_duration);
             
             resize_trial();
            

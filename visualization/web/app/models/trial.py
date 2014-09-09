@@ -5,6 +5,12 @@ from collections import OrderedDict, Counter
 
 FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
+def calculate_duration(activation):
+    return int((
+        datetime.strptime(activation['finish'], FORMAT) -
+        datetime.strptime(activation['start'], FORMAT)
+    ).total_seconds() * 1000000)
+
 
 class OrderedCounter(OrderedDict, Counter):
     def __repr__(self):
@@ -25,6 +31,9 @@ class TreeElement(object):
     def calculate_repr(self):
         pass
 
+    def mix(self, other):
+        pass
+
     def __hash__(self):
         return hash(self.__repr__())
 
@@ -36,6 +45,7 @@ class Single(TreeElement):
 
     def __init__(self, activation):
         self.activation = activation
+        self.activations = [activation]
         self.parent = activation['caller_id']
         self.count = 1
         self.id = activation['id']
@@ -43,12 +53,13 @@ class Single(TreeElement):
         self.name = activation['name']
         self.duration = 0
         if activation['finish'] and activation['start']:
-            self.duration = int((
-                datetime.strptime(activation['finish'], FORMAT) -
-                datetime.strptime(activation['start'], FORMAT)
-            ).total_seconds() * 1000000)
-
+            self.duration = calculate_duration(activation)
         self.repr = "S({0}-{1})".format(self.line, self.name)
+
+    def mix(self, other):
+        self.count += other.count
+        self.duration += other.duration
+        self.activations += other.activations
 
     def __eq__(self, other):
         if type(self) != type(other):
@@ -81,6 +92,14 @@ class Mixed(TreeElement):
     def visit(self, visitor):
         return visitor.visit_mixed(self)
 
+    def mix(self, other):
+        self.elements += other.elements
+        self.mix_results()
+
+    def mix_results(self):
+        initial = self.elements[0]
+        for element in self.elements[1:]:
+            initial.mix(element)
 
 class Group(TreeElement):
 
@@ -125,6 +144,10 @@ class Group(TreeElement):
     def visit(self, visitor):
         return visitor.visit_group(self)
 
+    def mix(self, other):
+        for node, value in self.nodes.items():
+            value.mix(other.nodes[node])
+
 
 class Call(TreeElement):
 
@@ -149,6 +172,10 @@ class Call(TreeElement):
 
     def visit(self, visitor):
         return visitor.visit_call(self)
+
+    def mix(self, other):
+        self.caller.mix(other.caller)
+        self.called.mix(other.called)
 
 
 def sequence(previous, next):

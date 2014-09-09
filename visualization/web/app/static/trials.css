@@ -5,7 +5,7 @@ html, body {
 }
 
 svg {
-  background-color: #eee;
+  background-color: #fff;
   cursor: default;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -16,6 +16,10 @@ svg {
 
 svg:not(.active):not(.ctrl) {
   cursor: crosshair;
+}
+
+#history svg {
+  background-color: #eee;
 }
 
 #history path.link {
@@ -83,8 +87,18 @@ svg:not(.active):not(.ctrl) {
 
 #show circle {
   fill: #ccc;
-  stroke: #fff;
-  stroke-width: 1.5px;
+  stroke: #000;
+  stroke-width: 2px;
+}
+
+
+#show .node circle[data-clicked="1"] {
+  stroke: #00f;
+  stroke-width: 4px;
+}
+
+#show circle.selected {
+  stroke-dasharray: 2,2;
 }
 
 #show text {
@@ -106,10 +120,6 @@ svg:not(.active):not(.ctrl) {
 }
 
 
-#show .node circle[data-clicked="1"] {
-  stroke: #00f;
-  stroke-width: 3px;
-}
 
 #history {
   background: #ccc;
@@ -196,7 +206,7 @@ svg:not(.active):not(.ctrl) {
 .toolbar {
   float: left;
   overflow: none;
-  width: 245px;
+  width: 252px;
   height: auto;
   z-index: 3;
   position: absolute;
@@ -214,21 +224,8 @@ svg:not(.active):not(.ctrl) {
     margin: 10px;
     display: none
 }
-
-.toolbar input[type=radio] + label {
-    display:inline-block;
-    margin:-2px;
-    padding: 4px 12px;
-    background-color: #e7e7e7;
-    border-color: #ddd;
-}
-.toolbar input[type=radio]:checked + label { 
-   background-image: none;
-    background-color:#d0d0d0;
-}
-
  
-input[type=radio] + label {
+.toolbar input[type=radio] + label {
     display:inline-block;
     margin:-2px;
     padding: 4px 12px;
@@ -258,11 +255,54 @@ input[type=radio] + label {
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),0 1px 2px rgba(0,0,0,0.05);
 }
  
-input[type=radio]:checked + label {
+.toolbar input[type=radio]:checked + label {
        background-image: none;
     outline: 0;
     -webkit-box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);
     -moz-box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.05);
         background-color:#e0e0e0;
+}
+
+.toolbar input[type=checkbox] {
+    margin: 10px;
+    display: none
+}
+ 
+.toolbar input[type=checkbox] + label {
+    display:inline-block;
+    margin:-2px;
+    padding: 4px 12px;
+    color: black;
+    cursor: pointer;
+}
+
+
+.toolbar input[type=checkbox]:checked + label {
+    color: blue;
+}
+
+div.tooltip {
+    position: absolute;
+    left: 1px;
+    right: 1px;
+    max-height: 200px;
+    max-width: 400px;
+    overflow: auto;
+    padding: 5px;
+    padding-bottom: 10px;
+    font: 12px sans-serif;
+    background: #DDD;
+    border: 0px;
+    border-radius: 8px;
+    z-index: 2000;
+}
+
+.tooltip.hidden {
+    display: none;
+}
+
+
+body {
+    overflow: hidden;
 }

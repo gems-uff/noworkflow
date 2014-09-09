@@ -3,6 +3,7 @@
     <title>Nowviz - {{ cwd }}</title>
     <link rel="stylesheet" href="trials.css">
     <link rel="stylesheet" href="external/jquery.splitter.css">
+    <link rel="stylesheet" href="font-awesome-4.2.0/css/font-awesome.min.css">
   </head>
   <body>
       <div id="splitter">
@@ -14,6 +15,8 @@
               <label for="indgraph" title="Calls have counting independent from caller activations">Exact Match</label>
               <input id="combgraph" type="radio" name="graphtype" value="combined">
               <label for="combgraph" title="Calls are combined and a function may have more than one call workflow">Combined</label>
+              <input id="showtooltips" type="checkbox" name="showtooltips" value="show">
+              <label for="showtooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
             </form>
             <div id="graph"></div>
           </div>

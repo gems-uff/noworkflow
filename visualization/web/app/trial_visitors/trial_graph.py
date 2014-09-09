@@ -1,7 +1,63 @@
+from datetime import datetime
 from collections import namedtuple
-
+from noworkflow import persistence
+from ..models.trial import calculate_duration, FORMAT
 
 Edge = namedtuple("Edge", "node count")
+
+
+class Info(object):
+
+    def __init__(self, single):
+        self.title = "Function <b>{name}</b> called at line {line}".format(
+            name=single.name, line=single.line)
+        self.activations = []
+        self.extract_activations(single)
+
+    def update_by_node(self, node):
+        self.duration = self.duration_text(node['duration'], node['count'])
+        self.mean = self.mean_text(node['mean'])
+        self.activations.sort(key=lambda a: a[0])
+
+    def add_activation(self, activation):
+        self.activations.append(
+            (datetime.strptime(activation['start'], FORMAT), activation))
+
+    def extract_activations(self, single):
+        for activation in single.activations:
+            self.add_activation(activation)
+
+    def duration_text(self, duration, count):
+        return "Total duration: {} microseconds for {} activations".format(
+            duration, count)
+
+    def mean_text(self, mean):
+        return "Mean: {} microseconds per activation".format(mean)
+
+    def activation_text(self, activation):
+        values = persistence.load('object_value', 
+                                  function_activation_id=activation['id'],
+                                  order='id')
+        values = [value for value in values if value['type'] == 'ARGUMENT']
+        result = [
+            "",
+            "Activation #{id} from {start} to {finish} ({dur} microseconds)"
+                .format(dur=calculate_duration(activation), **activation),
+        ]
+        if values:
+            result.append("Arguments: {}".format(
+                ", ".join("{}={}".format(value["name"], value["value"])
+                    for value in values)))
+        return result + [
+            "Returned {}".format(activation['return'])
+        ]
+
+    def __repr__(self):
+        result = [self.title, self.duration, self.mean]
+        for activation in self.activations:
+            result += self.activation_text(activation[1])
+
+        return '<br/>'.join(result)
 
 
 class TrialGraphVisitor(object):
@@ -17,6 +73,14 @@ class TrialGraphVisitor(object):
         self.max_duration = 0
 
     def to_dict(self):
+        for node in self.nodes:
+            node['mean'] = node['duration'] / node['count']
+            node['info'].update_by_node(node)
+            node['info'] = repr(node['info'])
+            self.update_durations(node['duration'])
+
+        self.update_edges()
+
     	return {
     		'nodes': self.nodes,
     		'edges': self.edges,
@@ -24,14 +88,20 @@ class TrialGraphVisitor(object):
     		'max_duration': self.max_duration
     	}
 
-    def add_node(self, activation, duration=None, mean=None):
+    def update_edges(self):
+        for edge in self.edges:
+            if edge['type'] in ['return', 'call']:
+                edge['count'] = ''
+
+    def add_node(self, single):
         self.nodes.append({
             'index': self.nid,
-            'caller_id': activation.parent,
-            'line': activation.line,
-            'name': activation.name,
-            'duration': activation.duration if duration is None else duration,
-            'mean': activation.mean() if mean is None else mean
+            'caller_id': single.parent,
+            'line': single.line,
+            'name': single.name,
+            'count': single.count,
+            'duration': single.duration,
+            'info': Info(single)
         })
         original = self.nid
         self.nid += 1
@@ -66,20 +136,21 @@ class TrialGraphVisitor(object):
             edge = delegated['return']
             self.add_edge(node_id, edge.node, edge.count, 'return')
 
-    def update_durations(self, element):
-    	self.max_duration = max(self.max_duration, element.duration)
-    	self.min_duration = min(self.min_duration, element.duration)
+    def update_durations(self, duration):
+    	self.max_duration = max(self.max_duration, duration)
+    	self.min_duration = min(self.min_duration, duration)
 
     def visit_call(self, call):
-    	self.update_durations(call)
+    	#self.update_durations(call.caller.duration)
+        
         delegated = self.use_delegated()
         caller_id = self.add_node(call.caller)
         
         if delegated:
-            self.solve_delegation(caller_id, call.count, delegated)
+            self.solve_delegation(caller_id, 0, delegated)
 
-        self.delegated['call'] = Edge(caller_id, call.count)
-        self.delegated['return'] = Edge(caller_id, call.count)
+        self.delegated['call'] = Edge(caller_id, 1)
+        self.delegated['return'] = Edge(caller_id, 1)
         
         call.called.visit(self)
         return caller_id, call
@@ -103,7 +174,7 @@ class TrialGraphVisitor(object):
         return node_map[group.next], group.next
  
     def visit_single(self, single):
-    	self.update_durations(single)
+    	#self.update_durations(single.duration)
         delegated = self.use_delegated()
         node_id = self.add_node(single)
 
@@ -112,9 +183,9 @@ class TrialGraphVisitor(object):
         return node_id, single
 
     def visit_mixed(self, mixed):
+        mixed.mix_results()
         node_id, node = mixed.elements[0].visit(self)
         self.nodes[node_id]['duration'] = mixed.duration
-        self.nodes[node_id]['mean'] = mixed.duration / mixed.count
         return node_id, node
 
 
@@ -130,20 +201,27 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
         self.context_edges = {}
         self.namestack = []
         
+    def update_edges(self):
+        pass
+
     def namespace(self):
         return ' '.join(self.namestack)
 
-    def add_node(self, activation, duration=None, mean=None):
-        self.namestack.append(activation.name_id())
+    def add_node(self, single):
+        self.namestack.append(single.name_id())
         namespace = self.namespace()
         self.namestack.pop()
         if namespace in self.context:
+            self.context[namespace]['count'] += single.count
+            self.context[namespace]['duration'] += single.duration
+            
+            self.context[namespace]['info'].add_activation(single.activation)
+            
+
             return self.context[namespace]['index']
 
-        activation.namespace = namespace
-        result = super(TrialGraphCombineVisitor, self).add_node(activation, 
-                                                                duration,
-                                                                mean)
+        single.namespace = namespace
+        result = super(TrialGraphCombineVisitor, self).add_node(single)
         self.context[namespace] = self.nodes[-1]
         return result
 
@@ -166,11 +244,6 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
 
     def visit_mixed(self, mixed):
         node_id, node = None, None
-        self.namestack.append('<M>')
         for element in mixed.elements:
             node_id, node = element.visit(self)
-            self.nodes[node_id]['duration'] += element.duration
-            self.nodes[node_id]['mean'] += element.duration / mixed.count
-        self.namestack.pop()
         return node_id, node
-

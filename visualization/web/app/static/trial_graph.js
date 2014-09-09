@@ -1,5 +1,14 @@
 function trial_graph(svg, nodes, edges, min_duration, max_duration) {
 
+    var state_mousedown_node = false;
+
+    var div = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0)
+        .on("mouseout", function(){
+            close_tooltip();
+        })
+    
     var width = 400;
     var height = 400;
 
@@ -13,6 +22,12 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
         .start();
 
     force_links = force.links();
+
+    svg.append("text")
+        .text("Ctrl-click to toggle nodes")
+        .attr("dx", 5)
+        .attr("dy", 45);
+            
     
     svg_g = svg.append("g")
         .classed('trialgraph', true);
@@ -93,11 +108,12 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
         .text(function(d) { return d.name; });
 
 
-    var state_mousedown_node = false;
+    
 
     drag = d3.behavior.drag();
     var drag_svg = d3.behavior.zoom()
         .on("zoom", function(){
+            close_tooltip();
             if (!state_mousedown_node) {
                 d3.select(".trialgraph")
                     .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")"); 
@@ -116,13 +132,22 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
     node.on('mousedown', function(d) {
         translate = drag_svg.translate();
         state_mousedown_node = true;
+        close_tooltip();
     }).on('mouseup', function(d) {
         if (translate){
             drag_svg.translate(translate);   
-            translate = false
+            translate = false;
         }
         state_mousedown_node = false;
-    }).call(force.drag);
+    }).on('mouseover',function(d) {
+        var use_tooltip = d3.select("#showtooltips").property("checked");
+        if (!state_mousedown_node && use_tooltip) {
+            close_tooltip();
+            show_tooltip(d);
+        }
+    
+    })
+    .call(force.drag);
 
     function tick() {
         path.attr("d", function(d) {
@@ -247,7 +272,23 @@ function trial_graph(svg, nodes, edges, min_duration, max_duration) {
         }
     }
 
+    function show_tooltip(d) {
+        div.classed("hidden", false);
+        div.transition()
+            .duration(200)
+            .style("opacity", .9)
+        div.html(d.info)
+            .style("left", (d3.event.pageX - 3) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+    }
 
+    function close_tooltip() {
+        div.transition()
+            .duration(500)
+            .style("opacity", 0);
+        div.classed("hidden", true);
+    
+    }
 
 }
 
