@@ -37,6 +37,9 @@ class ExecutionProvider(object):
     def teardown(self):
         pass
 
+    def tearup(self):
+        pass
+
 
 class StoreOpenMixin(ExecutionProvider):
 
@@ -220,12 +223,17 @@ class Profiler(StoreOpenMixin):
 
         if self.enabled:
             super(Profiler, self).tracer(frame, event, arg)
+        return self.tracer
 
     def store(self):
         now = datetime.now()
         persistence.update_trial(now, self.function_activation)
 
    
+    def tearup(self):
+        sys.setprofile(self.tracer)
+
+
 class InspectProfiler(Profiler):
     """ This Profiler uses the inspect.getargvalues that is slower because
     it considers the existence of anonymous tuple """ 
@@ -244,6 +252,67 @@ class InspectProfiler(Profiler):
                 activation['arguments'][key] = repr(value)
 
 
+import linecache
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
+
+class Tracer(Profiler):
+
+    def trace_empty(self, frame, event, iarg):
+        co = frame.f_code
+        print '->', linecache.getline(co.co_filename, frame.f_lineno).strip()
+        """
+        print dir(frame)
+        print 'back'
+        pp.pprint(frame.f_trace) # Olhar
+        print 'builtins'
+        pp.pprint(frame.f_builtins) # Talvez
+        print 'code'
+        pp.pprint(frame.f_code)
+        print 'exc_traceback'
+        pp.pprint(frame.f_exc_traceback)
+        print 'exc_type'
+        pp.pprint(frame.f_exc_type)
+        print 'globals'
+        pp.pprint(frame.f_globals) # Talvez        
+        print 'lasti'
+        pp.pprint(frame.f_lasti)
+        print 'lineno'
+        pp.pprint(frame.f_lineno) # importante
+        print 'locals'
+        pp.pprint(frame.f_locals) # inportante
+        print 'restricted'
+        pp.pprint(frame.f_restricted)
+        print 'trace'
+        pp.pprint(frame.f_trace) # Olhar
+        """
+
+
+        """
+        print dir(co)
+        print 'argcount', co.co_argcount
+        print 'cellvars', co.co_cellvars
+        print 'code', co.co_code #olhar
+        print 'consts', co.co_consts
+        print 'filename', co.co_filename
+        print 'firstlineno', co.co_firstlineno
+        print 'flags', co.co_flags
+        print 'freevars', co.co_freevars
+        print 'lnotab', co.co_lnotab #olhar
+        print 'name', co.co_name
+        print 'names', co.co_varnames
+        print 'nlocals', co.co_nlocals
+        print 'stacksize', co.co_stacksize
+        print 'varnames', co.co_varnames
+        """
+
+
+        
+        
+    def tearup(self):
+        sys.settrace(self.tracer)
+
+
 def provenance_provider(execution_provenance):
     glob = globals()
     if execution_provenance in glob:
@@ -255,7 +324,7 @@ def enable(args):
     provider = provenance_provider(args.execution_provenance)(
         args.script, args.depth_context, args.depth
     )
-    sys.setprofile(provider.tracer)
+    provider.tearup()    
 
 
 def disable():

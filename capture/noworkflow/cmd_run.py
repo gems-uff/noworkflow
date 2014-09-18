@@ -56,8 +56,9 @@ def execute(args):
     except SystemExit as ex:
         prov_execution.disable()
         utils.print_msg('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
-    except:
+    except Exception as e:
         prov_execution.disable()
+        print e
         utils.print_msg('the execution finished with an uncaught exception. {}'.format(traceback.format_exc()), True)
     else:
         prov_execution.disable()

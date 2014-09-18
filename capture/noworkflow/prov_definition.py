@@ -6,6 +6,7 @@ from datetime import datetime
 
 import persistence
 from utils import print_msg
+from collections import defaultdict
 
 class Context(object):
 
@@ -35,7 +36,7 @@ class FunctionVisitor(ast.NodeVisitor):
     names = None
     lineno = None
     
-    def __init__(self, code):
+    def __init__(self, code, path):
         self.code = code.split('\n')
 
     @property
@@ -82,11 +83,47 @@ class FunctionVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+class SlicingVisitor(FunctionVisitor):
+
+    def __init__(self, code, path):
+        super(SlicingVisitor, self).__init__(code, path)
+        self.path = path
+        self.dependencies = {}
+        self.dependencies[path] = defaultdict(lambda: {
+                'Load': [], 'Store': [], 'Del': [],
+                'AugLoad': [], 'AugStore': [], 'Param': [],
+            })
+
+    def add_dependency(self, node):
+        self.dependencies[self.path][node.lineno][type(node.ctx).__name__]\
+            .append(node.id) 
+
+    def visit_AugAssign(self, node):
+        self.visit(node.target)
+        self.visit(node.op)
+        self.visit(node.value)
+        
+    def visit_Assign(self, node):
+        # TODO: match value with targets to capture complex dependencies
+        #   c = a, b = x, (lambda x: x + 1)(y)
+        #       c depends on x, y
+        #       a depends on x
+        #       b depends on y
+        self.visit(node.value)
+        for target in node.targets:
+            self.visit(target)
+
+    def visit_Name(self, node):
+        self.add_dependency(node)
+        super(SlicingVisitor, self).visit_Name(node)
+
 def find_functions(path, code):
     'returns a map of function in the form: name -> (arguments, global_vars, calls, code_hash)'
     tree = ast.parse(code, path)
-    visitor = FunctionVisitor(code)
+    visitor = SlicingVisitor(code, path)
     visitor.visit(tree)
+    import pprint
+    pprint.pprint(dict(visitor.dependencies[path]))
     return visitor.functions
 
 
