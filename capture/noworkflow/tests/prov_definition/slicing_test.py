@@ -75,3 +75,43 @@ class TestSlicing(unittest.TestCase):
 			self.assertFalse(self.dependencies(1)['c.attr2'])
 			self.assertFalse(self.dependencies(1)['d'])
 			self.assertFalse(self.dependencies(1)['d.attr3'])
+
+		def test_lambda_assignment(self):
+			tree = ast.parse("a = (lambda x: x + b)(c)")
+			self.visitor.visit(tree)
+			self.assertEqual(['b', 'c'], self.dependencies(1)['a'])
+
+		def test_lambda2_assignment(self):
+			tree = ast.parse("a = (lambda x: (lambda y: x + y))(b)(c)")
+			self.visitor.visit(tree)
+			self.assertEqual(['b', 'c'], self.dependencies(1)['a'])
+
+		def test_list_comprehension_assignment(self):
+			tree = ast.parse("a = [i + b for i in c if i + d == b]")
+			self.visitor.visit(tree)
+			self.assertEqual(['c', 'd', 'b', 'b'], self.dependencies(1)['a'])
+
+		def test_list_comprehension2_assignment(self):
+			tree = ast.parse("a = [i + j for i in c for j in d]")
+			self.visitor.visit(tree)
+			self.assertEqual(['c', 'd'], self.dependencies(1)['a'])
+
+		def test_set_comprehension_assignment(self):
+			tree = ast.parse("a = {i for i in c}")
+			self.visitor.visit(tree)
+			self.assertEqual(['c'], self.dependencies(1)['a'])
+
+		def test_generator_assignment(self):
+			tree = ast.parse("a = sum(i for i in c)")
+			self.visitor.visit(tree)
+			self.assertEqual(['sum', 'c'], self.dependencies(1)['a'])
+
+		def test_dict_comprehension_assignment(self):
+			tree = ast.parse("a = {i:i**b for i in c}")
+			self.visitor.visit(tree)
+			self.assertEqual(['c', 'b'], self.dependencies(1)['a'])
+
+		def test_function_call_assignment(self):
+			tree = ast.parse("a = fn(b=c)")
+			self.visitor.visit(tree)
+			self.assertEqual(['fn', 'c'], self.dependencies(1)['a'])

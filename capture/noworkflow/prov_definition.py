@@ -112,10 +112,61 @@ class AssignRightVisitor(ast.NodeVisitor):
 
     def __init__(self):
         self.names = []
+        self.use_special = False
+        self.special = [set()]
+
+    def add(self, name, ctx, lineno):
+        if not self.use_special:
+            self.names.append((name, ctx, lineno)) 
+        else:
+            self.special[-1].add(name) 
+
+    def in_special(self, node):
+        return node.id in reduce((lambda x, y: x.union(y)), self.special)
 
     def visit_Name(self, node):
-        self.names.append((node.id, node.ctx, node.lineno))
+        if not self.in_special(node):
+            self.add(node.id, node.ctx, node.lineno)
         self.generic_visit(node)
+
+    def visit_Lambda(self, node):
+        self.special.append(set())
+        self.use_special = True
+        self.visit(node.args)
+        self.use_special = False
+        self.visit(node.body)
+        self.special.pop()
+
+    def visit_ListComp(self, node):
+        self.special.append(set())
+        for gen in node.generators:
+            self.visit(gen)
+        self.visit(node.elt)
+        self.special.pop()
+
+
+    def visit_SetComp(self, node):
+        self.visit_ListComp(node)
+
+    def visit_GeneratorExp(self, node):
+        self.visit_ListComp(node)
+
+    def visit_DictComp(self, node):
+        self.special.append(set())
+        for gen in node.generators:
+            self.visit(gen)
+        self.visit(node.key)
+        self.visit(node.value)
+        self.special.pop()
+    
+    def visit_comprehension(self, node):
+        self.use_special = True
+        self.visit(node.target)
+        self.use_special = False
+        self.visit(node.iter)
+        for _if in node.ifs:
+            self.visit(_if)
+
 
 
 def tuple_or_list(node):
