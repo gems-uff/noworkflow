@@ -83,39 +83,98 @@ class FunctionVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+class AssignLeftVisitor(ast.NodeVisitor):
+
+    def __init__(self):
+        self.names = []
+        self.enable = True
+        self.last = ""
+
+    def visit_Attribute(self, node):
+        self.generic_visit(node)
+        if self.enable:
+            self.last += '.' + node.attr
+            self.names.append((self.last, node.ctx, node.lineno))
+        
+    def visit_Subscript(self, node):
+        self.visit(node.value)
+        self.enable = False
+        self.visit(node.slice)
+
+    def visit_Name(self, node):
+        if self.enable:
+            self.last = node.id
+            self.names.append((self.last, node.ctx, node.lineno))
+        self.generic_visit(node)
+
+
+class AssignRightVisitor(ast.NodeVisitor):
+
+    def __init__(self):
+        self.names = []
+
+    def visit_Name(self, node):
+        self.names.append((node.id, node.ctx, node.lineno))
+        self.generic_visit(node)
+
+
+def tuple_or_list(node):
+    return isinstance(node, ast.Tuple) or isinstance(node, ast.List)
+
+
+def assign_dependencies(target, value, dependencies, aug=False):
+    left, right = AssignLeftVisitor(), AssignRightVisitor()
+    
+    if tuple_or_list(target) and tuple_or_list(value):
+        for i, targ in enumerate(target.elts):
+            assign_dependencies(targ, value.elts[i], dependencies)
+        return
+    
+    left.visit(target)
+    right.visit(value)
+    for name, ctx, lineno in left.names:
+        dependencies[lineno][name]
+        for value, ctx2, lineno2 in right.names:
+            dependencies[lineno][name].append(value)
+        if aug:
+            dependencies[lineno][name].append(name)
+
+    
 class SlicingVisitor(FunctionVisitor):
 
     def __init__(self, code, path):
         super(SlicingVisitor, self).__init__(code, path)
         self.path = path
+        self.name_refs = {}
         self.dependencies = {}
-        self.dependencies[path] = defaultdict(lambda: {
+        self.name_refs[path] = defaultdict(lambda: {
                 'Load': [], 'Store': [], 'Del': [],
                 'AugLoad': [], 'AugStore': [], 'Param': [],
             })
-
-    def add_dependency(self, node):
-        self.dependencies[self.path][node.lineno][type(node.ctx).__name__]\
-            .append(node.id) 
-
-    def visit_AugAssign(self, node):
-        self.visit(node.target)
-        self.visit(node.op)
-        self.visit(node.value)
+        self.dependencies[path] = defaultdict(lambda: defaultdict(list))
         
+    def visit_AugAssign(self, node):
+        assign_dependencies(node.target, node.value,
+                            self.dependencies[self.path], aug=True)
+        self.generic_visit(node)
+
     def visit_Assign(self, node):
-        # TODO: match value with targets to capture complex dependencies
-        #   c = a, b = x, (lambda x: x + 1)(y)
-        #       c depends on x, y
-        #       a depends on x
-        #       b depends on y
-        self.visit(node.value)
         for target in node.targets:
-            self.visit(target)
+            assign_dependencies(target, node.value,
+                                self.dependencies[self.path])
+        
+        self.generic_visit(node)
+
+    def visit_For(self, node):
+        assign_dependencies(node.target, node.iter,
+                            self.dependencies[self.path])
+        self.generic_visit(node)
+
 
     def visit_Name(self, node):
-        self.add_dependency(node)
-        super(SlicingVisitor, self).visit_Name(node)
+        self.name_refs[self.path][node.lineno][type(node.ctx).__name__]\
+            .append(node.id)
+        self.generic_visit(node) 
 
 def find_functions(path, code):
     'returns a map of function in the form: name -> (arguments, global_vars, calls, code_hash)'
