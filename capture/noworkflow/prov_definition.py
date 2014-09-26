@@ -83,6 +83,30 @@ class FunctionVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+class NamedContext(object):
+
+    def __init__(self):
+        self._names = [set()]
+        self.use = False
+
+    def flat(self):
+        return reduce((lambda x, y: x.union(y)), self._names)
+
+    def enable(self):
+        self.use = True
+        self._names.append(set())
+
+    def disable(self):
+        self.use = False
+
+    def pop(self):
+        self._names.pop()
+
+    def add(self, name):
+        if self.use:
+            self._names[-1].add(name)
+
+
 class AssignLeftVisitor(ast.NodeVisitor):
 
     def __init__(self):
@@ -112,17 +136,16 @@ class AssignRightVisitor(ast.NodeVisitor):
 
     def __init__(self):
         self.names = []
-        self.use_special = False
-        self.special = [set()]
+        self.special = NamedContext()
 
     def add(self, name, ctx, lineno):
-        if not self.use_special:
+        if not self.special.use:
             self.names.append((name, ctx, lineno)) 
         else:
-            self.special[-1].add(name) 
+            self.special.add(name) 
 
     def in_special(self, node):
-        return node.id in reduce((lambda x, y: x.union(y)), self.special)
+        return node.id in self.special.flat()
 
     def visit_Name(self, node):
         if not self.in_special(node):
@@ -130,20 +153,19 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Lambda(self, node):
-        self.special.append(set())
-        self.use_special = True
+        self.special.enable()
         self.visit(node.args)
-        self.use_special = False
+        self.special.disable()
         self.visit(node.body)
         self.special.pop()
 
     def visit_ListComp(self, node):
-        self.special.append(set())
+        self.special.enable()
+        self.special.disable()
         for gen in node.generators:
             self.visit(gen)
         self.visit(node.elt)
         self.special.pop()
-
 
     def visit_SetComp(self, node):
         self.visit_ListComp(node)
@@ -152,7 +174,8 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.visit_ListComp(node)
 
     def visit_DictComp(self, node):
-        self.special.append(set())
+        self.special.enable()
+        self.special.disable()
         for gen in node.generators:
             self.visit(gen)
         self.visit(node.key)
@@ -160,9 +183,9 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.special.pop()
     
     def visit_comprehension(self, node):
-        self.use_special = True
+        self.special.use = True
         self.visit(node.target)
-        self.use_special = False
+        self.special.disable()
         self.visit(node.iter)
         for _if in node.ifs:
             self.visit(_if)
@@ -172,23 +195,39 @@ class AssignRightVisitor(ast.NodeVisitor):
 def tuple_or_list(node):
     return isinstance(node, ast.Tuple) or isinstance(node, ast.List)
 
+def add_all_names(dest, origin):
+    for name in origin:
+        dest.append(name)
 
-def assign_dependencies(target, value, dependencies, aug=False):
+def assign_dependencies(target, value, dependencies, conditions, loop,
+                        aug=False):
     left, right = AssignLeftVisitor(), AssignRightVisitor()
-    
+
     if tuple_or_list(target) and tuple_or_list(value):
         for i, targ in enumerate(target.elts):
-            assign_dependencies(targ, value.elts[i], dependencies)
+            assign_dependencies(targ, value.elts[i], dependencies, conditions,
+                                loop)
         return
     
     left.visit(target)
     right.visit(value)
     for name, ctx, lineno in left.names:
+        self_reference = False
         dependencies[lineno][name]
         for value, ctx2, lineno2 in right.names:
             dependencies[lineno][name].append(value)
+            if name == value:
+                self_reference = True
+
         if aug:
             dependencies[lineno][name].append(name)
+            self_reference = True
+
+        if self_reference:
+            add_all_names(dependencies[lineno][name], loop)
+
+        add_all_names(dependencies[lineno][name], conditions)
+
 
     
 class SlicingVisitor(FunctionVisitor):
@@ -203,26 +242,56 @@ class SlicingVisitor(FunctionVisitor):
                 'AugLoad': [], 'AugStore': [], 'Param': [],
             })
         self.dependencies[path] = defaultdict(lambda: defaultdict(list))
-        
+        self.condition = NamedContext()
+        self.loop = NamedContext()
+
+    def visit_stmts(self, stmts):
+        for stmt in stmts:
+            self.visit(stmt)
+
     def visit_AugAssign(self, node):
         assign_dependencies(node.target, node.value,
-                            self.dependencies[self.path], aug=True)
+                            self.dependencies[self.path], 
+                            self.condition.flat(), 
+                            self.loop.flat(), aug=True)
         self.generic_visit(node)
 
     def visit_Assign(self, node):
         for target in node.targets:
             assign_dependencies(target, node.value,
-                                self.dependencies[self.path])
+                                self.dependencies[self.path],
+                                self.condition.flat(),
+                                self.loop.flat())
         
         self.generic_visit(node)
 
     def visit_For(self, node):
         assign_dependencies(node.target, node.iter,
-                            self.dependencies[self.path])
-        self.generic_visit(node)
+                            self.dependencies[self.path],
+                            self.condition.flat(),
+                            self.loop.flat())
+        self.loop.enable()
+        self.visit(node.target)
+        self.loop.disable()
+        self.visit(node.iter)
+        self.visit_stmts(node.body)
+        self.visit_stmts(node.orelse)
+        self.loop.pop()
 
+    def visit_While(self, node):
+        self.condition.enable()
+        self.visit(node.test)
+        self.condition.disable()
+        self.visit_stmts(node.body)
+        self.visit_stmts(node.orelse)
+        self.condition.pop()
+
+    def visit_If(self, node):
+        self.visit_While(node)
 
     def visit_Name(self, node):
+        self.condition.add(node.id)
+        self.loop.add(node.id)
         self.name_refs[self.path][node.lineno][type(node.ctx).__name__]\
             .append(node.id)
         self.generic_visit(node) 

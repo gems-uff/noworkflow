@@ -10,7 +10,7 @@ from prov_definition import SlicingVisitor
 
 NAME = '<unknown>'
 
-class TestSlicing(unittest.TestCase):
+class TestSlicingDependencies(unittest.TestCase):
 
 		def setUp(self):
 			self.visitor = SlicingVisitor('code', NAME)
@@ -115,3 +115,51 @@ class TestSlicing(unittest.TestCase):
 			tree = ast.parse("a = fn(b=c)")
 			self.visitor.visit(tree)
 			self.assertEqual(['fn', 'c'], self.dependencies(1)['a'])
+
+		def test_while(self):
+			tree = ast.parse("while i:\n"
+							 "    b = c\n"
+							 "else:\n"
+							 "    c = d")
+			self.visitor.visit(tree)
+			self.assertEqual(['c', 'i'], self.dependencies(2)['b'])
+			self.assertEqual(['d', 'i'], self.dependencies(4)['c'])
+
+		def test_if(self):
+			tree = ast.parse("if i:\n"
+							 "    b = c\n"
+							 "else:\n"
+							 "    c = d")
+			self.visitor.visit(tree)
+			self.assertEqual(['c', 'i'], self.dependencies(2)['b'])
+			self.assertEqual(['d', 'i'], self.dependencies(4)['c'])
+
+		def test_nested(self):
+			tree = ast.parse("if i:\n"
+							 "    if j:\n"
+							 "        a = x\n"
+							 "    b = y\n"
+							 "c = z")
+			self.visitor.visit(tree)
+			self.assertEqual(['x', 'i', 'j'], self.dependencies(3)['a'])
+			self.assertEqual(['y', 'i'], self.dependencies(4)['b'])
+			self.assertEqual(['z'], self.dependencies(5)['c'])
+
+		def test_for_independent(self):
+			tree = ast.parse("for i in a:\n"
+							 "    b = c")
+			self.visitor.visit(tree)
+			self.assertEqual(['c'], self.dependencies(2)['b'])
+
+		def test_for_dependent(self):
+			tree = ast.parse("for i in a:\n"
+							 "    b = b + c")
+			self.visitor.visit(tree)
+			self.assertEqual(['b', 'c', 'i'], self.dependencies(2)['b'])
+
+		def test_for_dependent_augment(self):
+			tree = ast.parse("for i in a:\n"
+							 "    b += c")
+			self.visitor.visit(tree) 
+			self.assertEqual(['c', 'b', 'i'], self.dependencies(2)['b'])
+
