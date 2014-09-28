@@ -8,18 +8,22 @@ import inspect
 import itertools
 import os
 import sys
+import linecache
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, namedtuple, deque
+from utils import print_msg
 
 import persistence
 
 provider = None
+Variable = namedtuple("Variable", "id name dependencies line")
 
 class Activation(object):
     __slots__ = (
         'start', 'file_accesses', 'function_activations',
         'finish', 'return_value', 
         'name', 'line', 'arguments', 'globals',
+        'context', 'slice_stack'
     )
     
     def __init__(self, name, line):
@@ -32,16 +36,20 @@ class Activation(object):
         self.line = line
         self.arguments = {}
         self.globals = {}
+        # Variable context. Used in the slicing lookup
+        self.context = {} 
+        # Line execution stack. Used to evaluate function calls before execution line 
+        self.slice_stack = [] 
 
 
 class ExecutionProvider(object):
 
-    def __init__(self, script, depth_context, depth_threshold):
+    def __init__(self, script, depth_context, depth_threshold, def_prov):
         self.enabled = False  # Indicates when activations should be collected (only after the first call to the script)
         self.script = script
         self.depth_context = depth_context  # which function types ('non-user' or 'all') should be considered for the threshold
         self.depth_threshold = depth_threshold  # how deep we want to go when capturing function activations?
-        
+        self.definition_provenance = def_prov        
         self.event_map = defaultdict(lambda: self.trace_empty, {})
    
     def trace_empty(self, frame, event, arg):
@@ -267,57 +275,52 @@ class InspectProfiler(Profiler):
 
 class Tracer(Profiler):
 
-    def trace_empty(self, frame, event, iarg):
+    def __init__(self, *args):
+        super(Tracer, self).__init__(*args)
+        self.event_map['line'] = self.trace_line
+        self.dependencies = self.definition_provenance.dependencies
+        self.variables = []
+        self.current = -1
+
+        
+    def slice_line(self, context, dependencies, lineno, filename):
+        #print_msg('Slice [{}] -> {}'.format(lineno,
+        #        linecache.getline(filename, lineno).strip()))
+        
+        for name, others in dependencies.items():
+            self.current += 1
+            self.variables.append(Variable(self.current, name, [], lineno))
+            for dependency in others:
+                if dependency in context:
+                    self.variables[-1].dependencies.append(
+                        context[dependency][0])
+
+            context[name] = self.variables[-1]
+
+
+    def close_activation(self, event, arg):
+        for line in self.activation_stack[-1].slice_stack:
+            self.slice_line(*line)
+        super(Tracer, self).close_activation(event, arg)
+
+
+    def trace_line(self, frame, event, arg):
         co = frame.f_code
-        print '->', linecache.getline(co.co_filename, frame.f_lineno).strip()
-        """
-        print dir(frame)
-        print 'back'
-        pp.pprint(frame.f_trace) # Olhar
-        print 'builtins'
-        pp.pprint(frame.f_builtins) # Talvez
-        print 'code'
-        pp.pprint(frame.f_code)
-        print 'exc_traceback'
-        pp.pprint(frame.f_exc_traceback)
-        print 'exc_type'
-        pp.pprint(frame.f_exc_type)
-        print 'globals'
-        pp.pprint(frame.f_globals) # Talvez        
-        print 'lasti'
-        pp.pprint(frame.f_lasti)
-        print 'lineno'
-        pp.pprint(frame.f_lineno) # importante
-        print 'locals'
-        pp.pprint(frame.f_locals) # inportante
-        print 'restricted'
-        pp.pprint(frame.f_restricted)
-        print 'trace'
-        pp.pprint(frame.f_trace) # Olhar
-        """
+        if not co.co_filename in self.dependencies:
+            # unmonitored file
+            return
 
-
-        """
-        print dir(co)
-        print 'argcount', co.co_argcount
-        print 'cellvars', co.co_cellvars
-        print 'code', co.co_code #olhar
-        print 'consts', co.co_consts
-        print 'filename', co.co_filename
-        print 'firstlineno', co.co_firstlineno
-        print 'flags', co.co_flags
-        print 'freevars', co.co_freevars
-        print 'lnotab', co.co_lnotab #olhar
-        print 'name', co.co_name
-        print 'names', co.co_varnames
-        print 'nlocals', co.co_nlocals
-        print 'stacksize', co.co_stacksize
-        print 'varnames', co.co_varnames
-        """
-
-
+        activation = self.activation_stack[-1]
+        dependencies = self.dependencies[co.co_filename][frame.f_lineno]
+        #print_msg('[{}] -> {}'.format(frame.f_lineno,
+        #        linecache.getline(co.co_filename, frame.f_lineno).strip()))
         
-        
+        if activation.slice_stack:
+            self.slice_line(*activation.slice_stack.pop())
+        activation.slice_stack.append([
+            activation.context, dependencies, frame.f_lineno, co.co_filename])
+
+         
     def tearup(self):
         sys.settrace(self.tracer)
 
@@ -328,10 +331,10 @@ def provenance_provider(execution_provenance):
         return glob[execution_provenance]
     return Profiler
 
-def enable(args):
+def enable(args, definition_provenance):
     global provider
     provider = provenance_provider(args.execution_provenance)(
-        args.script, args.depth_context, args.depth
+        args.script, args.depth_context, args.depth, definition_provenance
     )
     provider.tearup()    
 

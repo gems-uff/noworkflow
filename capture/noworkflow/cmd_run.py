@@ -40,13 +40,13 @@ def execute(args):
     persistence.connect(script_dir)
 
     utils.print_msg('collecting definition provenance')
-    prov_definition.collect_provenance(args)
+    definition_provenance = prov_definition.collect_provenance(args)
 
     utils.print_msg('collecting deployment provenance')
     prov_deployment.collect_provenance(args)
 
     utils.print_msg('collection execution provenance')
-    prov_execution.enable(args)
+    prov_execution.enable(args, definition_provenance)
 
     utils.print_msg('  executing the script')
     try:

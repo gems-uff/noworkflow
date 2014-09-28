@@ -163,3 +163,8 @@ class TestSlicingDependencies(unittest.TestCase):
 			self.visitor.visit(tree) 
 			self.assertEqual(['c', 'b', 'i'], self.dependencies(2)['b'])
 
+		def test_for_dependent_augment(self):
+			tree = ast.parse("(a if b[0]%2 == 0 else c)[0] = d")
+			self.visitor.visit(tree) 
+			#self.assertEqual(['d'], self.dependencies(1)['a'])
+			self.assertEqual(['d'], self.dependencies(1)['c'])

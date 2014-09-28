@@ -71,10 +71,13 @@ class FunctionVisitor(ast.NodeVisitor):
         self.contexts[-1].global_vars.extend(node.names)
         self.generic_visit(node)
 
-    def visit_Call(self, node):
+    def call(self, node):
         func = node.func
         if isinstance(func, ast.Name): # collecting only direct function call
-            self.contexts[-1].calls.append(func.id)
+            self.contexts[-1].calls.append(func.id) 
+
+    def visit_Call(self, node):
+        self.call(node)
         self.generic_visit(node)
 
     def visit_Name(self, node):
@@ -199,8 +202,7 @@ def add_all_names(dest, origin):
     for name in origin:
         dest.append(name)
 
-def assign_dependencies(target, value, dependencies, conditions, loop,
-                        aug=False):
+def assign_dependencies(target, value, dependencies, conditions, loop, aug=False):
     left, right = AssignLeftVisitor(), AssignRightVisitor()
 
     if tuple_or_list(target) and tuple_or_list(value):
@@ -227,7 +229,6 @@ def assign_dependencies(target, value, dependencies, conditions, loop,
             add_all_names(dependencies[lineno][name], loop)
 
         add_all_names(dependencies[lineno][name], conditions)
-
 
     
 class SlicingVisitor(FunctionVisitor):
@@ -296,14 +297,20 @@ class SlicingVisitor(FunctionVisitor):
             .append(node.id)
         self.generic_visit(node) 
 
-def find_functions(path, code):
-    'returns a map of function in the form: name -> (arguments, global_vars, calls, code_hash)'
+    def visit_Call(self, node):
+        self.call(node)
+        self.generic_visit(node)
+
+def visit_ast(path, code):
+    '''returns a visitor that visited the tree and filled the attributes:
+        functions: map of function in the form: name -> (arguments, global_vars, calls, code_hash)
+        name_refs[path]: map of identifiers in categories Load, Store
+        dependencies[path]: map of dependencies
+    '''
     tree = ast.parse(code, path)
     visitor = SlicingVisitor(code, path)
     visitor.visit(tree)
-    import pprint
-    pprint.pprint(dict(visitor.dependencies[path]))
-    return visitor.functions
+    return visitor
 
 
 def collect_provenance(args):
@@ -319,5 +326,6 @@ def collect_provenance(args):
         sys.exit(1)
 
     print_msg('  registering user-defined functions')
-    functions = find_functions(args.script, code)
-    persistence.store_function_defs(functions)
+    visitor = visit_ast(args.script, code)
+    persistence.store_function_defs(visitor.functions)
+    return visitor
