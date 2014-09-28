@@ -110,7 +110,67 @@ class NamedContext(object):
             self._names[-1].add(name)
 
 
-class AssignLeftVisitor(ast.NodeVisitor):
+class ExtractCallPosition(ast.NodeVisitor):
+
+    def __init__(self):
+        self.col = 50000
+
+    def generic_visit(self, node):  # Delegation, but collecting the current line number
+        try:
+            self.col = min(self.col, node.col_offset - 1)
+        except:
+            pass
+        ast.NodeVisitor.generic_visit(self, node)
+
+    def visit_list(self, node):
+        for arg in node:
+            self.visit(arg)
+
+    def visit_maybe(self, node):
+        if node:
+            self.visit(node)
+
+    def visit_Call(self, node):
+        self.visit_list(node.args)
+        self.visit_maybe(node.starargs)
+        self.visit_list(node.keywords)
+        self.visit_maybe(node.kwargs)
+        return (node.lineno, self.col)
+
+
+class FunctionCall(ast.NodeVisitor):
+
+    def __init__(self, visitor_class):
+        self.func = []
+        self.args = []
+        self.keywords = {}
+        self.starargs = []
+        self.kwargs = []
+        self.visitor_class = visitor_class
+
+
+    def use_visitor(self, node):
+        visitor = self.visitor_class()
+        visitor.visit(node)
+        return [x if isinstance(x, FunctionCall) else x[0] for x in visitor.names]
+
+
+    def visit_Call(self, node):
+        self.func = self.use_visitor(node.func)
+        self.args = [self.use_visitor(arg) for arg in node.args]
+        for keyword in node.keywords:
+            self.visit(keyword)
+        if node.starargs:
+            self.starargs = self.use_visitor(node.starargs)
+        if node.kwargs:
+            self.kwargs = self.use_visitor(node.kwargs)
+
+
+    def visit_keyword(self, node):
+        self.keywords[node.arg] = self.use_visitor(node.value)            
+
+    
+class AssignLeftVisitor(ast.NodeVisitor):   
 
     def __init__(self):
         self.names = []
@@ -193,14 +253,18 @@ class AssignRightVisitor(ast.NodeVisitor):
         for _if in node.ifs:
             self.visit(_if)
 
+    def visit_Call(self, node):
+        self.add(ExtractCallPosition().visit_Call(node), 'fn', node.lineno)
 
 
 def tuple_or_list(node):
     return isinstance(node, ast.Tuple) or isinstance(node, ast.List)
 
+
 def add_all_names(dest, origin):
     for name in origin:
         dest.append(name)
+
 
 def assign_dependencies(target, value, dependencies, conditions, loop, aug=False):
     left, right = AssignLeftVisitor(), AssignRightVisitor()
@@ -238,11 +302,13 @@ class SlicingVisitor(FunctionVisitor):
         self.path = path
         self.name_refs = {}
         self.dependencies = {}
+        self.function_calls = {}
         self.name_refs[path] = defaultdict(lambda: {
                 'Load': [], 'Store': [], 'Del': [],
                 'AugLoad': [], 'AugStore': [], 'Param': [],
             })
         self.dependencies[path] = defaultdict(lambda: defaultdict(list))
+        self.function_calls[path] = defaultdict(dict)
         self.condition = NamedContext()
         self.loop = NamedContext()
 
@@ -298,8 +364,25 @@ class SlicingVisitor(FunctionVisitor):
         self.generic_visit(node) 
 
     def visit_Call(self, node):
+        fn = FunctionCall(AssignRightVisitor)
+        fn.visit(node)
+        line, col = ExtractCallPosition().visit_Call(node)
+        self.function_calls[self.path][line][col] = fn
         self.call(node)
         self.generic_visit(node)
+
+    def visit_Return(self, node):
+        assign_dependencies(ast.Name('return', ast.Store(), lineno=node.lineno),
+                            node.value,
+                            self.dependencies[self.path],
+                            self.condition.flat(),
+                            self.loop.flat())
+        if node.value:
+            self.visit(node.value)
+
+    def visit_Yield(self, node):
+        self.visit_Return(node)
+
 
 def visit_ast(path, code):
     '''returns a visitor that visited the tree and filled the attributes:

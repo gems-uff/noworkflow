@@ -304,6 +304,9 @@ class Tracer(Profiler):
         super(Tracer, self).close_activation(event, arg)
 
 
+    def trace_call(self, frame, event, arg):
+        super(Tracer, self).trace_call(frame, event, arg)
+
     def trace_line(self, frame, event, arg):
         co = frame.f_code
         if not co.co_filename in self.dependencies:
