@@ -202,11 +202,11 @@ def store_function_defs(functions):
 def extract_function_activation(function_activation, caller_id, function_activation_id):
     return (
         function_activation_id,
-        function_activation['name'],
-        function_activation['line'],
-        function_activation['return'],
-        function_activation['start'],
-        function_activation['finish'],
+        function_activation.name,
+        function_activation.line,
+        function_activation.return_value,
+        function_activation.start,
+        function_activation.finish,
         caller_id,
         trial_id,
     )
@@ -245,18 +245,18 @@ def store_function_activation(function_activation, caller_id):
         d['activations'].append(
             extract_function_activation(function_activation, caller_id, fid)
         )
-        for object_value in extract_object_values(function_activation['arguments'], 'ARGUMENT', fid):
+        for object_value in extract_object_values(function_activation.arguments, 'ARGUMENT', fid):
             d['object_values'].append(object_value)
 
-        for object_value in extract_object_values(function_activation['globals'], 'GLOBAL', fid):
+        for object_value in extract_object_values(function_activation.globals, 'GLOBAL', fid):
             d['object_values'].append(object_value)
 
-        for file_access in extract_file_accesses(function_activation['file_accesses'], fid):
+        for file_access in extract_file_accesses(function_activation.file_accesses, fid):
             d['file_accesses'].append(file_access)
 
         d['fid'] += 1
         
-        for inner_function_activation in function_activation['function_activations']:
+        for inner_function_activation in function_activation.function_activations:
             add_activation(inner_function_activation, fid)
 
     add_activation(function_activation, caller_id)

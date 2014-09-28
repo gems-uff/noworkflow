@@ -15,6 +15,25 @@ import persistence
 
 provider = None
 
+class Activation(object):
+    __slots__ = (
+        'start', 'file_accesses', 'function_activations',
+        'finish', 'return_value', 
+        'name', 'line', 'arguments', 'globals',
+    )
+    
+    def __init__(self, name, line):
+        self.start = 0.0
+        self.file_accesses = []
+        self.function_activations = []
+        self.finish = 0.0
+        self.return_value = None
+        self.name = name
+        self.line = line
+        self.arguments = {}
+        self.globals = {}
+
+
 class ExecutionProvider(object):
 
     def __init__(self, script, depth_context, depth_threshold):
@@ -100,7 +119,7 @@ class Profiler(StoreOpenMixin):
         self.event_map['return'] = self.trace_return
         
     def add_file_access(self, file_access):
-        self.activation_stack[-1]['file_accesses'].append(file_access)
+        self.activation_stack[-1].file_accesses.append(file_access)
 
     def valid_depth(self):
         return ((self.depth_context == 'all' and self.depth_user + self.depth_non_user <= self.depth_threshold) or 
@@ -108,24 +127,22 @@ class Profiler(StoreOpenMixin):
 
     def add_activation(self, activation):
         if activation:
-            activation['start'] = datetime.now()
-            activation['file_accesses'] = []
-            activation['function_activations'] = []
+            activation.start = datetime.now()
             self.activation_stack.append(activation)
 
     def close_activation(self, event, arg):
         activation = self.activation_stack.pop()
-        activation['finish'] = datetime.now()
+        activation.finish = datetime.now()
         try:
-            activation['return'] = repr(arg) if event == 'return' else None
+            activation.return_value = repr(arg) if event == 'return' else None
         except:  # ignoring any exception during capture
-            activation['return'] = None
-        for file_access in activation['file_accesses']:  # Update content of accessed files
+            activation.return_value = None
+        for file_access in activation.file_accesses:  # Update content of accessed files
             if os.path.exists(file_access['name']):  # Checks if file still exists
                 with persistence.std_open(file_access['name'], 'rb') as f:
                     file_access['content_hash_after'] = persistence.put(f.read())
         if self.activation_stack:  # Store the current activation in the previous activation
-            self.activation_stack[-1]['function_activations'].append(activation)
+            self.activation_stack[-1].function_activations.append(activation)
         else:  # Store the current activation as the first activation
             self.function_activation = activation
             self.enabled = False
@@ -133,12 +150,10 @@ class Profiler(StoreOpenMixin):
     def trace_c_call(self, frame, event, arg):
         self.depth_non_user += 1
         if self.valid_depth():
-            self.add_activation({
-                'name': arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
-                'line': frame.f_lineno,
-                'arguments': {},
-                'globals': {}
-            })
+            self.add_activation(Activation(
+                arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
+                frame.f_lineno,
+            ))
 
     def capture_python_params(self, frame, activation):
         values = frame.f_locals
@@ -148,19 +163,19 @@ class Profiler(StoreOpenMixin):
         # Capture args
         for var in itertools.islice(names, 0, nargs):
             try:
-                activation['arguments'][var] = repr(values[var])
+                activation.arguments[var] = repr(values[var])
             except:  # ignoring any exception during capture
                 pass
         # Capture *args
         if co.co_flags & inspect.CO_VARARGS:
             varargs = names[nargs]
-            activation['arguments'][varargs] = repr(values[varargs])
+            activation.arguments[varargs] = repr(values[varargs])
             nargs += 1
         # Capture **kwargs
         if co.co_flags & inspect.CO_VARKEYWORDS:
             kwargs = values[names[nargs]]
             for key in kwargs:
-                activation['arguments'][key] = repr(kwargs[key])
+                activation.arguments[key] = repr(kwargs[key])
 
     def trace_call(self, frame, event, arg):
         #print("now", frame.f_back.f_lineno, frame.f_code.co_name)
@@ -170,19 +185,17 @@ class Profiler(StoreOpenMixin):
             self.depth_non_user += 1
 
         if self.valid_depth():
-            activation =  {
-                'name': frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
-                'line': frame.f_back.f_lineno,
-                'arguments': {},
-                'globals': {}
-            }
+            activation =  Activation(
+                frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
+                frame.f_back.f_lineno,
+            )
             # Capturing arguments
             self.capture_python_params(frame, activation)
 
             # Capturing globals
             function_def = persistence.load(
                 'function_def',
-                name = repr(activation['name']),
+                name = repr(activation.name),
                 trial_id = persistence.trial_id
             ).fetchone()
 
@@ -193,7 +206,7 @@ class Profiler(StoreOpenMixin):
                     function_def_id = function_def['id']
                 )
                 for global_var in global_vars:
-                    activation['globals'][global_var['name']] = frame.f_globals[global_var['name']]
+                    activation.globals[global_var['name']] = frame.f_globals[global_var['name']]
             
             self.add_activation(activation)
 
@@ -242,19 +255,15 @@ class InspectProfiler(Profiler):
         (args, varargs, keywords, values) = inspect.getargvalues(frame)
         for arg in args:
             try:
-                activation['arguments'][arg] = repr(values[arg])
+                activation.arguments[arg] = repr(values[arg])
             except:  # ignoring any exception during capture
                 pass
         if varargs:
-            activation['arguments'][varargs] = repr(values[varargs])
+            activation.arguments[varargs] = repr(values[varargs])
         if keywords:
             for key, value in values[keywords].iteritems():
-                activation['arguments'][key] = repr(value)
+                activation.arguments[key] = repr(value)
 
-
-import linecache
-import pprint
-pp = pprint.PrettyPrinter(indent=4)
 
 class Tracer(Profiler):
 
