@@ -1,10 +1,11 @@
 def x(a=1):
 	return a
 
-for i in range(5):
-	print i
-	i = i**2
-	i += 2
+for j in range(3):
+	for i in range(j):
+		print i
+		i = i**2
+		i += 2
 
 class A():
 	pass

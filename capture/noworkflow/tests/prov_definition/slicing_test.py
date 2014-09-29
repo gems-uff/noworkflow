@@ -191,3 +191,12 @@ class TestSlicingDependencies(unittest.TestCase):
             tree = ast.parse(code)
             self.visitor.visit(tree) 
             self.assertEqual(['a'], self.dependencies(2)['return'])
+
+        def test_return2(self):
+            code = ("def f(a):\n"
+                    "    if a:\n"
+                    "        return 2")
+            self.visitor.code = code
+            tree = ast.parse(code)
+            self.visitor.visit(tree) 
+            self.assertEqual(['a'], self.dependencies(3)['return'])

@@ -146,6 +146,7 @@ class FunctionCall(ast.NodeVisitor):
         self.keywords = {}
         self.starargs = []
         self.kwargs = []
+        self.result = None
         self.visitor_class = visitor_class
 
 

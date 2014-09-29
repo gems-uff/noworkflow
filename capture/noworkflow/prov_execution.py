@@ -279,29 +279,56 @@ class Tracer(Profiler):
         super(Tracer, self).__init__(*args)
         self.event_map['line'] = self.trace_line
         self.dependencies = self.definition_provenance.dependencies
+        self.function_calls = self.definition_provenance.function_calls
         self.variables = []
         self.current = -1
         self.return_stack = []
         self.last_event = None
-        
-    def slice_line(self, context, dependencies, lineno, filename):
+
+   
+    def function_call(self, dependency):
+        d = dependency
+        return self.function_calls[self.script][d[0]][d[1]]
+
+    def add_variable(self, name, dependencies, line):
+        self.current += 1
+        self.variables.append(
+            Variable(self.current, name, dependencies, line)
+        )
+        return self.current
+
+    def add_dependencies(self, variable, activation, dependencies):
+        for dependency in dependencies:
+            # Variable
+            if dependency in activation.context:
+                variable.dependencies.append(
+                    activation.context[dependency].id
+                )
+            # Function Call
+            if isinstance(dependency, tuple):
+                vid = self.add_variable('call', [], dependency[0])
+                call = self.function_call(dependency)
+                self.add_dependencies(self.variables[vid], activation, call.func)
+                    
+                if (call.result is None or (self.return_stack and 
+                        self.return_stack[-1].line == call.result[1])):
+                    return_var = self.return_stack.pop()
+                    call.result = (return_var.id, return_var.line)
+                    self.variables[vid].dependencies.append(call.result[0])
+                variable.dependencies.append(vid)
+
+
+
+    def slice_line(self, activation, dependencies, lineno, filename):
         print_msg('Slice [{}] -> {}'.format(lineno,
                 linecache.getline(filename, lineno).strip()))
         
         for name, others in dependencies.items():
-            self.current += 1
-            self.variables.append(Variable(self.current, name, [], lineno))
-            for dependency in others:
-                if dependency in context:
-                    self.variables[-1].dependencies.append(
-                        context[dependency][0])
-                #if isinstance(dependency, tuple):
-                #    self.variables[-1].dependencies.append(
-                #        self.return_stack.pop())
-
-            #if name == 'return':
-            #    self.return_stack.append(self.variables[-1])
-            context[name] = self.variables[-1]
+            vid = self.add_variable(name, [], lineno)
+            self.add_dependencies(self.variables[vid], activation, others)
+            if name == 'return':
+                self.return_stack.append(self.variables[vid])
+            activation.context[name] = self.variables[vid]
 
 
     def close_activation(self, event, arg):
@@ -309,10 +336,25 @@ class Tracer(Profiler):
             self.slice_line(*line)
         super(Tracer, self).close_activation(event, arg)
 
+
+    def add_return(self, frame, event, arg):
+        if frame.f_code.co_filename != self.script:
+            return
+        
+        dependencies = self.dependencies[self.script][frame.f_lineno]
+        # Artificial return condition
+        if not 'return' in dependencies:
+            activation = self.activation_stack[-1]
+            vid = self.add_variable('return', [], frame.f_lineno)
+            self.add_dependencies(self.variables[vid], activation, activation.arguments)
+            self.return_stack.append(self.variables[vid])
+
+
     def trace_c_call(self, frame, event, arg):
 
         print 'ccall'
         super(Tracer, self).trace_c_call(frame, event, arg)     
+
 
     def trace_call(self, frame, event, arg):
         print 'call', frame.f_lineno, frame.f_code
@@ -323,32 +365,31 @@ class Tracer(Profiler):
         # print frame.f_back.f_lineno, frame.f_code.co_name
         super(Tracer, self).trace_call(frame, event, arg)
 
-    def trace_c_return(self, frame, event, arg):
 
-        print 'c_return'
+    def trace_c_return(self, frame, event, arg):
+        self.add_return(frame, event, arg)
         super(Tracer, self).trace_c_return(frame, event, arg)     
 
+
     def trace_return(self, frame, event, arg):
-        print 'return', frame.f_lineno, frame.f_code
-        back = frame.f_back
-        code  = back.f_code
+        self.add_return(frame, event, arg)
         super(Tracer, self).trace_return(frame, event, arg)
 
+
     def trace_line(self, frame, event, arg):
-        co = frame.f_code
-        if not co.co_filename in self.dependencies:
-            # unmonitored file
+        # Different file
+        if frame.f_code.co_filename != self.script:
             return
 
         activation = self.activation_stack[-1]
-        dependencies = self.dependencies[co.co_filename][frame.f_lineno]
+        dependencies = self.dependencies[self.script][frame.f_lineno]
         #print_msg('[{}] -> {}'.format(frame.f_lineno,
         #        linecache.getline(co.co_filename, frame.f_lineno).strip()))
         
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
         activation.slice_stack.append([
-            activation.context, dependencies, frame.f_lineno, co.co_filename])
+            activation, dependencies, frame.f_lineno, self.script])
 
          
     def tracer(self, frame, event, arg):
@@ -357,6 +398,7 @@ class Tracer(Profiler):
             self.last_event = current_event
             return super(Tracer, self).tracer(frame, event, arg)
         return self.tracer
+
 
     def tearup(self):
         sys.settrace(self.tracer)
