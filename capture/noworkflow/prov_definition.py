@@ -201,6 +201,7 @@ class AssignRightVisitor(ast.NodeVisitor):
     def __init__(self):
         self.names = []
         self.special = NamedContext()
+        self.line = -1
 
     def add(self, name, ctx, lineno):
         if not self.special.use:
@@ -211,12 +212,20 @@ class AssignRightVisitor(ast.NodeVisitor):
     def in_special(self, node):
         return node.id in self.special.flat()
 
+    def max_line(self, node):  # Delegation, but collecting the current line number
+        try:
+            self.line = max(node.lineno, self.line)
+        except:
+            pass
+
     def visit_Name(self, node):
+        self.max_line(node)
         if not self.in_special(node):
             self.add(node.id, node.ctx, node.lineno)
         self.generic_visit(node)
 
     def visit_Lambda(self, node):
+        self.max_line(node)
         self.special.enable()
         self.visit(node.args)
         self.special.disable()
@@ -224,6 +233,7 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.special.pop()
 
     def visit_ListComp(self, node):
+        self.max_line(node)
         self.special.enable()
         self.special.disable()
         for gen in node.generators:
@@ -232,12 +242,15 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.special.pop()
 
     def visit_SetComp(self, node):
+        self.max_line(node)
         self.visit_ListComp(node)
 
     def visit_GeneratorExp(self, node):
+        self.max_line(node)
         self.visit_ListComp(node)
 
     def visit_DictComp(self, node):
+        self.max_line(node)
         self.special.enable()
         self.special.disable()
         for gen in node.generators:
@@ -247,6 +260,7 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.special.pop()
     
     def visit_comprehension(self, node):
+        self.max_line(node)
         self.special.use = True
         self.visit(node.target)
         self.special.disable()
@@ -255,6 +269,7 @@ class AssignRightVisitor(ast.NodeVisitor):
             self.visit(_if)
 
     def visit_Call(self, node):
+        self.max_line(node)
         self.add(ExtractCallPosition().visit_Call(node), 'fn', node.lineno)
 
 
@@ -279,6 +294,7 @@ def assign_dependencies(target, value, dependencies, conditions, loop, aug=False
     left.visit(target)
     right.visit(value)
     for name, ctx, lineno in left.names:
+        lineno = right.line if right.line != -1 else lineno
         self_reference = False
         dependencies[lineno][name]
         for value, ctx2, lineno2 in right.names:
