@@ -281,11 +281,12 @@ class Tracer(Profiler):
         self.dependencies = self.definition_provenance.dependencies
         self.variables = []
         self.current = -1
-
+        self.return_stack = []
+        self.last_event = None
         
     def slice_line(self, context, dependencies, lineno, filename):
-        #print_msg('Slice [{}] -> {}'.format(lineno,
-        #        linecache.getline(filename, lineno).strip()))
+        print_msg('Slice [{}] -> {}'.format(lineno,
+                linecache.getline(filename, lineno).strip()))
         
         for name, others in dependencies.items():
             self.current += 1
@@ -294,7 +295,12 @@ class Tracer(Profiler):
                 if dependency in context:
                     self.variables[-1].dependencies.append(
                         context[dependency][0])
+                #if isinstance(dependency, tuple):
+                #    self.variables[-1].dependencies.append(
+                #        self.return_stack.pop())
 
+            #if name == 'return':
+            #    self.return_stack.append(self.variables[-1])
             context[name] = self.variables[-1]
 
 
@@ -303,9 +309,30 @@ class Tracer(Profiler):
             self.slice_line(*line)
         super(Tracer, self).close_activation(event, arg)
 
+    def trace_c_call(self, frame, event, arg):
+
+        print 'ccall'
+        super(Tracer, self).trace_c_call(frame, event, arg)     
 
     def trace_call(self, frame, event, arg):
+        print 'call', frame.f_lineno, frame.f_code
+        back = frame.f_back
+        code  = back.f_code
+        # print dir(code)
+        # print back.f_code.co_name
+        # print frame.f_back.f_lineno, frame.f_code.co_name
         super(Tracer, self).trace_call(frame, event, arg)
+
+    def trace_c_return(self, frame, event, arg):
+
+        print 'c_return'
+        super(Tracer, self).trace_c_return(frame, event, arg)     
+
+    def trace_return(self, frame, event, arg):
+        print 'return', frame.f_lineno, frame.f_code
+        back = frame.f_back
+        code  = back.f_code
+        super(Tracer, self).trace_return(frame, event, arg)
 
     def trace_line(self, frame, event, arg):
         co = frame.f_code
@@ -324,8 +351,17 @@ class Tracer(Profiler):
             activation.context, dependencies, frame.f_lineno, co.co_filename])
 
          
+    def tracer(self, frame, event, arg):
+        current_event = (event, frame.f_lineno, frame.f_code)
+        if self.last_event != current_event:
+            self.last_event = current_event
+            return super(Tracer, self).tracer(frame, event, arg)
+        return self.tracer
+
     def tearup(self):
         sys.settrace(self.tracer)
+        sys.setprofile(self.tracer)
+
 
 
 def provenance_provider(execution_provenance):
@@ -345,6 +381,7 @@ def enable(args, definition_provenance):
 def disable():
     global provider
     sys.setprofile(None)
+    sys.settrace(None)
     provider.teardown()
 
 
