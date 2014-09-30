@@ -330,6 +330,7 @@ class Tracer(Profiler):
                 self.return_stack.append(self.variables[vid])
             activation.context[name] = self.variables[vid]
 
+        
 
     def close_activation(self, event, arg):
         for line in self.activation_stack[-1].slice_stack:
@@ -355,15 +356,24 @@ class Tracer(Profiler):
         print 'ccall'
         super(Tracer, self).trace_c_call(frame, event, arg)     
 
+    #def match_call(self, possible, )
 
     def trace_call(self, frame, event, arg):
-        print 'call', frame.f_lineno, frame.f_code
-        back = frame.f_back
-        code  = back.f_code
-        # print dir(code)
-        # print back.f_code.co_name
-        # print frame.f_back.f_lineno, frame.f_code.co_name
+        print 'call', frame.f_lineno, frame.f_back.f_lasti
         super(Tracer, self).trace_call(frame, event, arg)
+
+        possible = []
+        for col in self.function_calls[self.script][frame.f_back.f_lineno]:
+            call = self.function_calls[self.script][frame.f_back.f_lineno][col]
+            if frame.f_code.co_name in call.func:
+                possible.append(call)
+        print possible
+
+        activation = self.activation_stack[-1]
+        for arg in activation.arguments:
+            vid = self.add_variable(arg, [], frame.f_lineno)
+            activation.context[arg] = self.variables[vid]
+
 
 
     def trace_c_return(self, frame, event, arg):
@@ -383,8 +393,8 @@ class Tracer(Profiler):
 
         activation = self.activation_stack[-1]
         dependencies = self.dependencies[self.script][frame.f_lineno]
-        #print_msg('[{}] -> {}'.format(frame.f_lineno,
-        #        linecache.getline(co.co_filename, frame.f_lineno).strip()))
+        print_msg('[{}] -> {}'.format(frame.f_lineno,
+                linecache.getline(self.script, frame.f_lineno).strip()))
         
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
@@ -429,6 +439,8 @@ def disable():
 
 def store():
     global provider
+    for var in provider.variables:
+        print var
     provider.store()
 # TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()

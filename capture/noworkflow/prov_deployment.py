@@ -89,7 +89,7 @@ def get_version(module_name):
     return None
 
 
-def collect_provenance(args):
+def collect_provenance(args, metascript):
     print_msg('  registering environment attributes')
     environment = collect_environment_provenance()
     persistence.store_environment(environment)
@@ -99,7 +99,7 @@ def collect_provenance(args):
     else:
         print_msg('  searching for module dependencies')
         finder = modulefinder.ModuleFinder()
-        finder.run_script(args.script)
+        finder.run_script(metascript['path'])
 
         print_msg('  registering provenance from {} modules'.format(len(finder.modules) - 1))
         modules = collect_modules_provenance(finder.modules)

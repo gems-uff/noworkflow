@@ -1,7 +1,7 @@
 def x(a=1):
 	return a
 
-for j in range(3):
+for j in range(3):  
 	for i in range(j):
 		print i
 		i = i**2
