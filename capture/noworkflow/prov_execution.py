@@ -23,7 +23,7 @@ class Activation(object):
         'start', 'file_accesses', 'function_activations',
         'finish', 'return_value', 
         'name', 'line', 'arguments', 'globals',
-        'context', 'slice_stack'
+        'context', 'slice_stack', 'lasti'
     )
     
     def __init__(self, name, line):
@@ -39,17 +39,18 @@ class Activation(object):
         # Variable context. Used in the slicing lookup
         self.context = {} 
         # Line execution stack. Used to evaluate function calls before execution line 
-        self.slice_stack = [] 
+        self.slice_stack = []
+        self.lasti = -1
 
 
 class ExecutionProvider(object):
 
-    def __init__(self, script, depth_context, depth_threshold, def_prov):
+    def __init__(self, metascript, depth_context, depth_threshold):
         self.enabled = False  # Indicates when activations should be collected (only after the first call to the script)
-        self.script = script
+        self.script = metascript['path']
         self.depth_context = depth_context  # which function types ('non-user' or 'all') should be considered for the threshold
         self.depth_threshold = depth_threshold  # how deep we want to go when capturing function activations?
-        self.definition_provenance = def_prov        
+        self.metascript = metascript
         self.event_map = defaultdict(lambda: self.trace_empty, {})
    
     def trace_empty(self, frame, event, arg):
@@ -277,6 +278,10 @@ class Tracer(Profiler):
 
     def __init__(self, *args):
         super(Tracer, self).__init__(*args)
+        if not 'definition' in self.metascript:
+            print_msg('Tracer requires Slicing Definition Provenance')
+            raise "Slicing Definition Requered"
+        self.definition_provenance = self.metascript['definition']
         self.event_map['line'] = self.trace_line
         self.dependencies = self.definition_provenance.dependencies
         self.function_calls = self.definition_provenance.function_calls
@@ -305,16 +310,19 @@ class Tracer(Profiler):
                     activation.context[dependency].id
                 )
             # Function Call
-            if isinstance(dependency, tuple):
+            if isinstance(dependency, tuple) and self.return_stack:
                 vid = self.add_variable('call', [], dependency[0])
                 call = self.function_call(dependency)
                 self.add_dependencies(self.variables[vid], activation, call.func)
                     
-                if (call.result is None or (self.return_stack and 
-                        self.return_stack[-1].line == call.result[1])):
+                fn_activation, return_var = self.return_stack[-1]
+                if (fn_activation.lasti == call.lasti and
+                        ((call.result is None) or 
+                            (return_var.line == call.result[1]))):
                     return_var = self.return_stack.pop()
                     call.result = (return_var.id, return_var.line)
-                    self.variables[vid].dependencies.append(call.result[0])
+                    self.variables[vid].dependencies.append(call.result[0])    
+
                 variable.dependencies.append(vid)
 
 
@@ -327,7 +335,7 @@ class Tracer(Profiler):
             vid = self.add_variable(name, [], lineno)
             self.add_dependencies(self.variables[vid], activation, others)
             if name == 'return':
-                self.return_stack.append(self.variables[vid])
+                self.return_stack.append((activation, self.variables[vid]))
             activation.context[name] = self.variables[vid]
 
         
@@ -348,7 +356,7 @@ class Tracer(Profiler):
             activation = self.activation_stack[-1]
             vid = self.add_variable('return', [], frame.f_lineno)
             self.add_dependencies(self.variables[vid], activation, activation.arguments)
-            self.return_stack.append(self.variables[vid])
+            self.return_stack.append((activation, self.variables[vid]))
 
 
     def trace_c_call(self, frame, event, arg):
@@ -362,14 +370,8 @@ class Tracer(Profiler):
         print 'call', frame.f_lineno, frame.f_back.f_lasti
         super(Tracer, self).trace_call(frame, event, arg)
 
-        possible = []
-        for col in self.function_calls[self.script][frame.f_back.f_lineno]:
-            call = self.function_calls[self.script][frame.f_back.f_lineno][col]
-            if frame.f_code.co_name in call.func:
-                possible.append(call)
-        print possible
-
         activation = self.activation_stack[-1]
+        activation.lasti = frame.f_back.f_lasti
         for arg in activation.arguments:
             vid = self.add_variable(arg, [], frame.f_lineno)
             activation.context[arg] = self.variables[vid]
@@ -422,10 +424,10 @@ def provenance_provider(execution_provenance):
         return glob[execution_provenance]
     return Profiler
 
-def enable(args, definition_provenance):
+def enable(args, metascript):
     global provider
     provider = provenance_provider(args.execution_provenance)(
-        args.script, args.depth_context, args.depth, definition_provenance
+        metascript, args.depth_context, args.depth,
     )
     provider.tearup()    
 

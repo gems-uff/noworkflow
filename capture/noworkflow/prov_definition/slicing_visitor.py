@@ -1,177 +1,20 @@
-# Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
+# coding: utf-8
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+
+from __future__ import absolute_import
+
 import ast
 import sys
-from datetime import datetime
-
-import persistence
-from utils import print_msg
+import dis
+from cStringIO import StringIO
 from collections import defaultdict
 
-class Context(object):
+from .function_visitor import FunctionVisitor
+from .context import NamedContext
+from .util_visitor import ExtractCallPosition, FunctionCall, ClassDef
 
-    def __init__(self, name):
-        self.name = name
-        self.arguments = []
-        self.global_vars = []
-        self.calls = [] 
-
-    def to_tuple(self, code_hash):
-        return (
-            list(self.arguments),
-            list(self.global_vars), 
-            set(self.calls),
-            code_hash,
-        )
-
-
-class FunctionVisitor(ast.NodeVisitor):
-    'Identifies the function declarations and related data'
-    code = None
-    functions = {}
-    
-
-    # Temporary attributes for recursive data collection
-    contexts = [Context('(global)')]
-    names = None
-    lineno = None
-    
-    def __init__(self, code, path):
-        self.code = code.split('\n')
-
-    @property
-    def namespace(self):
-        return '.'.join(context.name for context in self.contexts[1:])
-    
-    def generic_visit(self, node):  # Delegation, but collecting the current line number
-        try:
-            self.lineno = node.lineno
-        except:
-            pass
-        ast.NodeVisitor.generic_visit(self, node)
-
-    def visit_ClassDef(self, node): # ignoring classes
-        self.contexts.append(Context(node.name))
-        self.generic_visit(node)
-        self.contexts.pop()
-    
-    def visit_FunctionDef(self, node):
-        self.contexts.append(Context(node.name))
-        self.generic_visit(node)
-        code_hash = persistence.put('\n'.join(self.code[node.lineno - 1:self.lineno]).encode('utf-8'))
-        self.functions[self.namespace] = self.contexts[-1].to_tuple(code_hash)
-        self.contexts.pop()
-
-    def visit_arguments(self, node):
-        self.names = []
-        self.generic_visit(node)
-        self.contexts[-1].arguments.extend(self.names)
-        
-    def visit_Global(self, node):
-        self.contexts[-1].global_vars.extend(node.names)
-        self.generic_visit(node)
-
-    def call(self, node):
-        func = node.func
-        if isinstance(func, ast.Name): # collecting only direct function call
-            self.contexts[-1].calls.append(func.id) 
-
-    def visit_Call(self, node):
-        self.call(node)
-        self.generic_visit(node)
-
-    def visit_Name(self, node):
-        if self.names != None:
-            self.names.append(node.id)
-        self.generic_visit(node)
-
-
-class NamedContext(object):
-
-    def __init__(self):
-        self._names = [set()]
-        self.use = False
-
-    def flat(self):
-        return reduce((lambda x, y: x.union(y)), self._names)
-
-    def enable(self):
-        self.use = True
-        self._names.append(set())
-
-    def disable(self):
-        self.use = False
-
-    def pop(self):
-        self._names.pop()
-
-    def add(self, name):
-        if self.use:
-            self._names[-1].add(name)
-
-
-class ExtractCallPosition(ast.NodeVisitor):
-
-    def __init__(self):
-        self.col = 50000
-
-    def generic_visit(self, node):  # Delegation, but collecting the current line number
-        try:
-            self.col = min(self.col, node.col_offset - 1)
-        except:
-            pass
-        ast.NodeVisitor.generic_visit(self, node)
-
-    def visit_list(self, node):
-        for arg in node:
-            self.visit(arg)
-
-    def visit_maybe(self, node):
-        if node:
-            self.visit(node)
-
-    def visit_Call(self, node):
-        self.visit_list(node.args)
-        self.visit_maybe(node.starargs)
-        self.visit_list(node.keywords)
-        self.visit_maybe(node.kwargs)
-        return (node.lineno, self.col)
-
-
-class FunctionCall(ast.NodeVisitor):
-
-    def __init__(self, visitor_class):
-        self.func = []
-        self.args = []
-        self.keywords = {}
-        self.starargs = []
-        self.kwargs = []
-        self.result = None
-        self.visitor_class = visitor_class
-
-
-    def use_visitor(self, node):
-        visitor = self.visitor_class()
-        visitor.visit(node)
-        return [x if isinstance(x, FunctionCall) else x[0] for x in visitor.names]
-
-
-    def visit_Call(self, node):
-        self.func = self.use_visitor(node.func)
-        self.args = [self.use_visitor(arg) for arg in node.args]
-        for keyword in node.keywords:
-            self.visit(keyword)
-        if node.starargs:
-            self.starargs = self.use_visitor(node.starargs)
-        if node.kwargs:
-            self.kwargs = self.use_visitor(node.kwargs)
-
-
-    def visit_keyword(self, node):
-        self.keywords[node.arg] = self.use_visitor(node.value)            
-
-    
-class AssignLeftVisitor(ast.NodeVisitor):   
+class AssignLeftVisitor(ast.NodeVisitor):
 
     def __init__(self):
         self.names = []
@@ -311,21 +154,26 @@ def assign_dependencies(target, value, dependencies, conditions, loop, aug=False
 
         add_all_names(dependencies[lineno][name], conditions)
 
-    
+
 class SlicingVisitor(FunctionVisitor):
 
-    def __init__(self, code, path):
-        super(SlicingVisitor, self).__init__(code, path)
+    def __init__(self, *args):
+        super(SlicingVisitor, self).__init__(*args)
+        path = self.metascript['path']
         self.path = path
         self.name_refs = {}
         self.dependencies = {}
         self.function_calls = {}
+        self.function_calls_by_lasti = {}
+        self.function_calls_by_line = {}
         self.name_refs[path] = defaultdict(lambda: {
                 'Load': [], 'Store': [], 'Del': [],
                 'AugLoad': [], 'AugStore': [], 'Param': [],
             })
         self.dependencies[path] = defaultdict(lambda: defaultdict(list))
         self.function_calls[path] = defaultdict(dict)
+        self.function_calls_by_lasti[path] = defaultdict(dict)
+        self.function_calls_by_line[path] = defaultdict(list)
         self.condition = NamedContext()
         self.loop = NamedContext()
 
@@ -383,10 +231,11 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Call(self, node):
         fn = FunctionCall(AssignRightVisitor)
         fn.visit(node)
-        line, col = ExtractCallPosition().visit_Call(node)
-        self.function_calls[self.path][line][col] = fn
+        fn.line, fn.col = line, col = ExtractCallPosition().visit_Call(node)
         self.call(node)
         self.generic_visit(node)
+        self.function_calls[self.path][line][col] = fn
+        self.function_calls_by_line[self.path][line].append(fn)
 
     def visit_Return(self, node):
         assign_dependencies(ast.Name('return', ast.Store(), lineno=node.lineno),
@@ -400,32 +249,42 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Yield(self, node):
         self.visit_Return(node)
 
+    def visit_ClassDef(self, node):
+        cls = ClassDef()
+        cls.visit(node)
+        cls.line, cls.col = node.lineno, node.col_offset
+        
+        self.function_calls_by_line[self.path][node.lineno].append(cls)
+        self.generic_visit(node)
 
-def visit_ast(path, code):
-    '''returns a visitor that visited the tree and filled the attributes:
-        functions: map of function in the form: name -> (arguments, global_vars, calls, code_hash)
-        name_refs[path]: map of identifiers in categories Load, Store
-        dependencies[path]: map of dependencies
-    '''
-    tree = ast.parse(code, path)
-    visitor = SlicingVisitor(code, path)
-    visitor.visit(tree)
-    return visitor
+    def teardown(self):
+        self.metascript['compiled'] = compile(
+            self.metascript['code'], self.metascript['path'], 'exec')
+        old_stdout = sys.stdout
+        sys.stdout = mystdout = StringIO()
+        dis.dis(self.metascript['compiled'])
+        sys.stdout = old_stdout
 
+        output = mystdout.getvalue().split('\n')
 
-def collect_provenance(args):
-    now = datetime.now()
-    with open(args.script) as f:
-        code = f.read()
-    
-    try:
-        persistence.store_trial(now, sys.argv[0], code, ' '.join(sys.argv[1:]), args.bypass_modules)
-    except TypeError:
-        print_msg('not able to bypass modules check because no previous trial was found', True)
-        print_msg('aborting execution', True)
-        sys.exit(1)
-
-    print_msg('  registering user-defined functions')
-    visitor = visit_ast(args.script, code)
-    persistence.store_function_defs(visitor.functions)
-    return visitor
+        line = -1
+        col = -1
+        for disasm in output:
+            num = disasm[:8].strip()
+            if num:
+                line = int(num)
+                calls_by_lasti = self.function_calls_by_lasti[self.path][line]
+                calls_by_line = self.function_calls_by_line[self.path][line]
+                col = 0
+            splitted = disasm.split()
+            try:
+                i = splitted.index('CALL_FUNCTION')
+                f_lasti = splitted[i-1]
+                calls_by_lasti[f_lasti] = calls_by_line[col]
+                calls_by_line[col].lasti = f_lasti
+                col += 1
+                print disasm, calls_by_lasti[f_lasti]
+            except ValueError:
+                print disasm
+            #except IndexError:
+            #    print 'Index---->', disasm

@@ -1,13 +1,16 @@
+def h(a):
+	return a
+
 def f(a):
-	return lambda a: a
+	return h
 g = f
 
 a = 1
 b = 2
-c = g(3)
+c = g(3)(2)
 d = (f(a) if a else g(a))(a)
 d = [
-	f(a) + f(b),
-	f(a), f(c)
+	h(a) + h(b),
+	h(a), h(c)
 ]
 print d

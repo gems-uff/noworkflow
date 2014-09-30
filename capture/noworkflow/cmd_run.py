@@ -36,23 +36,32 @@ def execute(args):
                               '__builtins__': __builtins__,
                              })
 
+    with open(args.script) as f:
+        metascript = {
+            'code': f.read(),
+            'path': args.script,
+            'compiled': None,
+        }
+
     utils.print_msg('setting up local provenance store')
     persistence.connect(script_dir)
 
     utils.print_msg('collecting definition provenance')
-    definition_provenance = prov_definition.collect_provenance(args)
+    prov_definition.collect_provenance(args, metascript)
 
     utils.print_msg('collecting deployment provenance')
-    prov_deployment.collect_provenance(args)
+    prov_deployment.collect_provenance(args, metascript)
 
     utils.print_msg('collection execution provenance')
-    prov_execution.enable(args, definition_provenance)
+    prov_execution.enable(args, metascript)
 
     utils.print_msg('  executing the script')
     try:
-        with open(args.script) as f:
-            code = compile(f.read(), args.script, 'exec')
-            exec(code, __main__.__dict__)
+        if metascript['compiled'] is None:
+            metascript['compiled'] = compile(
+                metascript['code'], metascript['path'], 'exec')
+        exec(metascript['compiled'], __main__.__dict__)        
+            
     except SystemExit as ex:
         prov_execution.disable()
         utils.print_msg('the execution exited via sys.exit(). Exit status: {}'.format(ex.code), ex.code > 0)
