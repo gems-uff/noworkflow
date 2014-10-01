@@ -10,7 +10,7 @@ class Activation(object):
         'args', 'kwargs', 'starargs', 
     )
     
-    def __init__(self, name, line):
+    def __init__(self, name, line, lasti):
         self.start = 0.0
         self.file_accesses = []
         self.function_activations = []
@@ -24,7 +24,7 @@ class Activation(object):
         self.context = {} 
         # Line execution stack. Used to evaluate function calls before execution line 
         self.slice_stack = []
-        self.lasti = -1
+        self.lasti = lasti
 
         self.args = []
         self.kwargs = []

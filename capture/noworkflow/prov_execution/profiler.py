@@ -62,7 +62,7 @@ class Profiler(StoreOpenMixin):
         if self.valid_depth():
             self.add_activation(Activation(
                 arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
-                frame.f_lineno,
+                frame.f_lineno, frame.f_back.f_lasti
             ))
 
     def capture_python_params(self, frame, activation):
@@ -100,7 +100,7 @@ class Profiler(StoreOpenMixin):
         if self.valid_depth():
             activation =  Activation(
                 frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
-                frame.f_back.f_lineno,
+                frame.f_back.f_lineno, frame.f_back.f_lasti
             )
             # Capturing arguments
             self.capture_python_params(frame, activation)
