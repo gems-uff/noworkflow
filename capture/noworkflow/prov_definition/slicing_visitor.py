@@ -5,9 +5,7 @@
 from __future__ import absolute_import
 
 import ast
-import sys
-import dis
-from cStringIO import StringIO
+
 from collections import defaultdict
 
 from .function_visitor import FunctionVisitor
@@ -268,14 +266,8 @@ class SlicingVisitor(FunctionVisitor):
         the matching will fail
             both visit_ClassDef and visit_Call generates CALL_FUNCTION
         """
-        self.metascript['compiled'] = compile(
-            self.metascript['code'], self.metascript['path'], 'exec')
-        old_stdout = sys.stdout
-        sys.stdout = mystdout = StringIO()
-        dis.dis(self.metascript['compiled'])
-        sys.stdout = old_stdout
-
-        output = mystdout.getvalue().split('\n')
+        output = self.disasm
+        self.disasm = []
 
         line = -1
         col = -1
@@ -293,6 +285,7 @@ class SlicingVisitor(FunctionVisitor):
                 calls_by_lasti[f_lasti] = calls_by_line[col]
                 calls_by_line[col].lasti = f_lasti
                 col += 1
-                print_msg("{}|{}".format(disasm, calls_by_lasti[f_lasti]))
+                self.disasm.append(
+                    "{} | {}".format(disasm, calls_by_lasti[f_lasti]))
             except ValueError:
-                print_msg(disasm)
+                self.disasm.append(disasm)

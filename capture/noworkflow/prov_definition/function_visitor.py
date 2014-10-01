@@ -4,16 +4,17 @@
 from __future__ import absolute_import
 
 import ast
-
-import persistence
+import sys
+import dis
+from cStringIO import StringIO
 from .context import Context
+import persistence
 
 class FunctionVisitor(ast.NodeVisitor):
     'Identifies the function declarations and related data'
     code = None
     functions = {}
     
-
     # Temporary attributes for recursive data collection
     contexts = [Context('(global)')]
     names = None
@@ -72,3 +73,13 @@ class FunctionVisitor(ast.NodeVisitor):
 
     def teardown(self):
         pass
+
+    def extract_disasm(self):
+        self.metascript['compiled'] = compile(
+            self.metascript['code'], self.metascript['path'], 'exec')
+        old_stdout = sys.stdout
+        sys.stdout = mystdout = StringIO()
+        dis.dis(self.metascript['compiled'])
+        sys.stdout = old_stdout
+
+        self.disasm = mystdout.getvalue().split('\n')

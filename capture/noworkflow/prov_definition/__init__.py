@@ -23,6 +23,7 @@ def visit_ast(metascript):
     tree = ast.parse(metascript['code'], metascript['path'])
     visitor = SlicingVisitor(metascript)
     visitor.result = visitor.visit(tree)
+    visitor.extract_disasm()
     visitor.teardown()
     return visitor
 
@@ -39,4 +40,6 @@ def collect_provenance(args, metascript):
     print_msg('  registering user-defined functions')
     visitor = visit_ast(metascript)
     persistence.store_function_defs(visitor.functions)
+    if args.disasm:
+        print('\n'.join(visitor.disasm))
     metascript['definition'] = visitor

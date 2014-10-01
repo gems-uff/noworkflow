@@ -25,8 +25,6 @@ def enable(args, metascript):
 
 def disable():
     global provider
-    sys.setprofile(None)
-    sys.settrace(None)
     provider.teardown()
 
 

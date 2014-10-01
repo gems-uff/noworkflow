@@ -8,6 +8,7 @@ import linecache
 from collections import namedtuple
 from utils import print_msg
 from .profiler import Profiler
+from prov_definition import SlicingVisitor
 
 
 Variable = namedtuple("Variable", "id name dependencies line")
@@ -16,9 +17,8 @@ class Tracer(Profiler):
 
     def __init__(self, *args):
         super(Tracer, self).__init__(*args)
-        if not 'definition' in self.metascript:
-            print_msg('Tracer requires Slicing Definition Provenance')
-            raise "Slicing Definition Required"
+        assert isinstance(self.metascript['definition'], SlicingVisitor), \
+        	"Slicing Definition Required"
         self.definition_provenance = self.metascript['definition']
         self.event_map['line'] = self.trace_line
         self.dependencies = self.definition_provenance.dependencies
@@ -107,7 +107,6 @@ class Tracer(Profiler):
         print 'ccall'
         super(Tracer, self).trace_c_call(frame, event, arg)     
 
-    #def match_call(self, possible, )
 
     def trace_call(self, frame, event, arg):
         print 'call', frame.f_lineno, frame.f_code.co_filename, frame.f_back.f_lasti
