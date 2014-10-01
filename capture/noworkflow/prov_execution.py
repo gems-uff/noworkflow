@@ -280,11 +280,12 @@ class Tracer(Profiler):
         super(Tracer, self).__init__(*args)
         if not 'definition' in self.metascript:
             print_msg('Tracer requires Slicing Definition Provenance')
-            raise "Slicing Definition Requered"
+            raise "Slicing Definition Required"
         self.definition_provenance = self.metascript['definition']
         self.event_map['line'] = self.trace_line
         self.dependencies = self.definition_provenance.dependencies
         self.function_calls = self.definition_provenance.function_calls
+        self.calls_by_lasti = self.definition_provenance.function_calls_by_lasti
         self.variables = []
         self.current = -1
         self.return_stack = []
@@ -294,6 +295,9 @@ class Tracer(Profiler):
     def function_call(self, dependency):
         d = dependency
         return self.function_calls[self.script][d[0]][d[1]]
+
+    def call_by_lasti(self, line, f_lasti):
+        return self.calls_by_lasti[self.script][line][f_lasti]
 
     def add_variable(self, name, dependencies, line):
         self.current += 1
@@ -311,19 +315,20 @@ class Tracer(Profiler):
                 )
             # Function Call
             if isinstance(dependency, tuple) and self.return_stack:
-                vid = self.add_variable('call', [], dependency[0])
                 call = self.function_call(dependency)
-                self.add_dependencies(self.variables[vid], activation, call.func)
-                    
-                fn_activation, return_var = self.return_stack[-1]
-                if (fn_activation.lasti == call.lasti and
-                        ((call.result is None) or 
-                            (return_var.line == call.result[1]))):
-                    return_var = self.return_stack.pop()
-                    call.result = (return_var.id, return_var.line)
-                    self.variables[vid].dependencies.append(call.result[0])    
+                for i, (fn_activation, return_var) in enumerate(self.return_stack):
+                    if fn_activation.lasti == call.lasti:
+                        vid = self.add_variable('call ' + fn_activation.name, [], dependency[0])
+                        if call.result is None or return_var.line == call.result[1]:
+                            return_var = self.return_stack.pop(i)[1]
+                            call.result = (return_var.id, return_var.line)
+                            self.variables[vid].dependencies.append(call.result[0])    
+                        
+                        self.add_dependencies(self.variables[vid], activation, call.func)
 
-                variable.dependencies.append(vid)
+                        variable.dependencies.append(vid)
+                        break
+
 
 
 
@@ -367,14 +372,17 @@ class Tracer(Profiler):
     #def match_call(self, possible, )
 
     def trace_call(self, frame, event, arg):
-        print 'call', frame.f_lineno, frame.f_back.f_lasti
+        print 'call', frame.f_lineno, frame.f_code.co_filename, frame.f_back.f_lasti
         super(Tracer, self).trace_call(frame, event, arg)
+        back = frame.f_back
+        if self.script == back.f_code.co_filename:
 
-        activation = self.activation_stack[-1]
-        activation.lasti = frame.f_back.f_lasti
-        for arg in activation.arguments:
-            vid = self.add_variable(arg, [], frame.f_lineno)
-            activation.context[arg] = self.variables[vid]
+            call = self.call_by_lasti(back.f_lineno, back.f_lasti)
+            activation = self.activation_stack[-1]
+            activation.lasti = frame.f_back.f_lasti
+            for arg in activation.arguments:
+                vid = self.add_variable(arg, [], frame.f_lineno)
+                activation.context[arg] = self.variables[vid]
 
 
 
@@ -417,6 +425,12 @@ class Tracer(Profiler):
         sys.setprofile(self.tracer)
 
 
+    def store(self):
+        super(Tracer, self).store()
+        for var in provider.variables:
+            print_msg(var)
+
+
 
 def provenance_provider(execution_provenance):
     glob = globals()
@@ -441,8 +455,6 @@ def disable():
 
 def store():
     global provider
-    for var in provider.variables:
-        print var
     provider.store()
 # TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()

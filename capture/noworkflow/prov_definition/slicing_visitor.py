@@ -13,6 +13,7 @@ from collections import defaultdict
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
 from .util_visitor import ExtractCallPosition, FunctionCall, ClassDef
+from utils import print_msg
 
 class AssignLeftVisitor(ast.NodeVisitor):
 
@@ -258,6 +259,15 @@ class SlicingVisitor(FunctionVisitor):
         self.generic_visit(node)
 
     def teardown(self):
+        """Matches AST call order to call order in disassembly
+        Possible issues:
+        1- The disassembly may be specific to cpython. It may not work on other
+        implementations
+        2- If the order in AST is not correct, the matching will fail
+        3- If there are other CALL_FUNCTION that are not considered in the AST
+        the matching will fail
+            both visit_ClassDef and visit_Call generates CALL_FUNCTION
+        """
         self.metascript['compiled'] = compile(
             self.metascript['code'], self.metascript['path'], 'exec')
         old_stdout = sys.stdout
@@ -279,12 +289,10 @@ class SlicingVisitor(FunctionVisitor):
             splitted = disasm.split()
             try:
                 i = splitted.index('CALL_FUNCTION')
-                f_lasti = splitted[i-1]
+                f_lasti = int(splitted[i-1])
                 calls_by_lasti[f_lasti] = calls_by_line[col]
                 calls_by_line[col].lasti = f_lasti
                 col += 1
-                print disasm, calls_by_lasti[f_lasti]
+                print_msg("{}|{}".format(disasm, calls_by_lasti[f_lasti]))
             except ValueError:
-                print disasm
-            #except IndexError:
-            #    print 'Index---->', disasm
+                print_msg(disasm)
