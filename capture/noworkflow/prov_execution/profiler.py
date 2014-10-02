@@ -88,7 +88,7 @@ class Profiler(StoreOpenMixin):
             kwargs = values[names[nargs]]
             for key in kwargs:
                 activation.arguments[key] = repr(kwargs[key])
-                activation.kwargs.append(key)
+            activation.kwargs.append(names[nargs])
 
     def trace_call(self, frame, event, arg):
         #print("now", frame.f_back.f_lineno, frame.f_code.co_name)

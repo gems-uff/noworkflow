@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
-from .util_visitor import ExtractCallPosition, FunctionCall, ClassDef
+from .utils import ExtractCallPosition, FunctionCall, ClassDef, index
 from utils import print_msg
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -256,6 +256,8 @@ class SlicingVisitor(FunctionVisitor):
         self.function_calls_by_line[self.path][node.lineno].append(cls)
         self.generic_visit(node)
 
+
+
     def teardown(self):
         """Matches AST call order to call order in disassembly
         Possible issues:
@@ -279,13 +281,15 @@ class SlicingVisitor(FunctionVisitor):
                 calls_by_line = self.function_calls_by_line[self.path][line]
                 col = 0
             splitted = disasm.split()
-            try:
-                i = splitted.index('CALL_FUNCTION')
+            i = index(splitted, ('CALL_FUNCTION', 'CALL_FUNCTION_VAR', 
+                                 'CALL_FUNCTION_KW', 'CALL_FUNCTION_VAR_KW'))
+            
+            if not i is None:
                 f_lasti = int(splitted[i-1])
                 calls_by_lasti[f_lasti] = calls_by_line[col]
                 calls_by_line[col].lasti = f_lasti
                 col += 1
                 self.disasm.append(
                     "{} | {}".format(disasm, calls_by_lasti[f_lasti]))
-            except ValueError:
+            else:
                 self.disasm.append(disasm)

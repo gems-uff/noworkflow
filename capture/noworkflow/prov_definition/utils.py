@@ -7,6 +7,7 @@ class ExtractCallPosition(ast.NodeVisitor):
 
     def __init__(self):
         self.col = 50000
+        self.first = True
 
     def generic_visit(self, node):
         try:
@@ -24,11 +25,14 @@ class ExtractCallPosition(ast.NodeVisitor):
             self.visit(node)
 
     def visit_Call(self, node):
-        self.visit_list(node.args)
-        self.visit_maybe(node.starargs)
-        self.visit_list(node.keywords)
-        self.visit_maybe(node.kwargs)
-        return (node.lineno, self.col)
+        if self.first:
+            self.first = False
+            self.visit_list(node.args)
+            self.visit_maybe(node.starargs)
+            self.visit_list(node.keywords)
+            self.visit_maybe(node.kwargs)
+            return (node.lineno, self.col)
+        self.generic_visit(node)
 
 
 class FunctionCall(ast.NodeVisitor):
@@ -84,3 +88,11 @@ class ClassDef(ast.NodeVisitor):
 
     def __repr__(self):
         return "Class()"
+
+def index(lis, alternatives):
+    for alt in alternatives:
+        try:
+            return lis.index(alt)
+        except ValueError:
+            pass
+    return None
