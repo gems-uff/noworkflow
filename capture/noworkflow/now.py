@@ -10,6 +10,7 @@ import cmd_export
 import cmd_list
 import cmd_run
 import cmd_show
+import cmd_checkout
 
 
 def non_negative(string):
@@ -61,6 +62,12 @@ def main():
     parser_export.add_argument('trial', type=int, nargs='?', help='trial id or none for last trial')
     parser_export.add_argument('-r', '--rules', help='also exports inference rules', action='store_true')
     parser_export.set_defaults(func=cmd_export.execute)
+
+    # checkout subcomand
+    parser_checkout = subparsers.add_parser('checkout', help='checkout the files of a trial')
+    parser_checkout.add_argument('trial', type=int, nargs='?', help='trial id or none for last trial')
+    parser_checkout.set_defaults(func=cmd_checkout.execute)
+
 
     args, _ = parser.parse_known_args()
     args.func(args)
