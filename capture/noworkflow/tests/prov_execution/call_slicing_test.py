@@ -10,8 +10,10 @@ import __main__
 from cmd_run import run
 import persistence
 
+
 persistence.put = lambda x: None
 persistence.store_trial = lambda a, b, c, d, e: None
+
 
 NAME = '<unknown>'
 
@@ -31,16 +33,16 @@ class TestCallSlicing(unittest.TestCase):
             import __main__
             __main__.__dict__.clear()
             __main__.__dict__.update({'__name__'    : '__main__',
-                                      '__file__'    : 'local.py',
+                                      '__file__'    : 'tests/.tests/local.py',
                                       '__builtins__': __builtins__,
                                      })
             metascript = {
                 'code': None,
-                'path': 'local.py',
+                'path': 'tests/.tests/local.py',
                 'compiled': None,
             }
 
-            self.run_args = ('./local.py', Args(), metascript, __main__)
+            self.run_args = ('tests/.tests', Args(), metascript, __main__)
 
         def extract(self, provider):
             result = set()
