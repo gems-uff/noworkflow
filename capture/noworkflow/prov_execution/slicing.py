@@ -156,7 +156,6 @@ class Tracer(Profiler):
         super(Tracer, self).trace_call(frame, event, arg)
         back = frame.f_back
         if self.script == back.f_code.co_filename:
-
             call = self.call_by_lasti(back.f_lineno, back.f_lasti)
             caller, act = self.activation_stack[-2:]
             line = frame.f_lineno

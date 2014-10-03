@@ -5,10 +5,12 @@ from __future__ import absolute_import
 
 import ast
 import sys
-import dis
 from cStringIO import StringIO
 from .context import Context
+from .utils import diss
 import persistence
+
+
 
 class FunctionVisitor(ast.NodeVisitor):
     'Identifies the function declarations and related data'
@@ -79,7 +81,10 @@ class FunctionVisitor(ast.NodeVisitor):
             self.metascript['code'], self.metascript['path'], 'exec')
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
-        dis.dis(self.metascript['compiled'])
+        diss(self.metascript['compiled'], recurse=True)
+        #dis.dis(self.metascript['compiled'])
+        #for fn in self.metascript['compiled'].co_consts:
+        #    dis.dis(fn)     
         sys.stdout = old_stdout
 
         self.disasm = mystdout.getvalue().split('\n')

@@ -249,7 +249,7 @@ class SlicingVisitor(FunctionVisitor):
         self.visit_Return(node)
 
     def visit_ClassDef(self, node):
-        cls = ClassDef()
+        cls = ClassDef(AssignRightVisitor)
         cls.visit(node)
         cls.line, cls.col = node.lineno, node.col_offset
         

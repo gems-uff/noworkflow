@@ -2,6 +2,8 @@
 # This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
 
 import ast
+import dis
+import types
 
 class ExtractCallPosition(ast.NodeVisitor):
 
@@ -31,6 +33,8 @@ class ExtractCallPosition(ast.NodeVisitor):
             self.visit_maybe(node.starargs)
             self.visit_list(node.keywords)
             self.visit_maybe(node.kwargs)
+            if self.col == 50000:
+                self.col =node.col_offset 
             return (node.lineno, self.col)
         self.generic_visit(node)
 
@@ -77,9 +81,10 @@ class FunctionCall(ast.NodeVisitor):
         )
 
 
-class ClassDef(ast.NodeVisitor):
+class ClassDef(FunctionCall):
 
-    def __init__(self):
+    def __init__(self, visitor):
+        super(ClassDef, self).__init__(visitor)
         self.result = None
         self.line = -1
         self.col = -1
@@ -96,3 +101,33 @@ def index(lis, alternatives):
         except ValueError:
             pass
     return None
+
+def get_code_object(obj, compilation_mode="exec"):
+    if isinstance(obj, types.CodeType):
+        return obj
+    elif isinstance(obj, types.FrameType):
+        return obj.f_code
+    elif isinstance(obj, types.FunctionType):
+        return obj.__code__
+    elif isinstance(obj, str):
+        try:
+            return compile(obj, "<string>", compilation_mode)
+        except SyntaxError as error:
+            raise ValueError("syntax error in passed string")
+    else:
+        raise TypeError("get_code_object() can not handle '%s' objects" %
+                        (type(obj).__name__,))
+
+def diss(obj, mode="exec", recurse=False):
+    _visit(obj, dis.dis, mode, recurse)
+
+def ssc(obj, mode="exec", recurse=False):
+    _visit(obj, dis.show_code, mode, recurse)
+
+def _visit(obj, visitor, mode="exec", recurse=False):
+    obj = get_code_object(obj, mode)
+    visitor(obj)
+    if recurse:
+        for constant in obj.co_consts:
+            if type(constant) is type(obj):
+                _visit(constant, visitor, mode, recurse)
