@@ -192,19 +192,6 @@ class Tracer(Profiler):
             for i, act_arg in args:
                 self.match_arg(None, act_arg, caller, act, line)
 
-            #else:
-            #    i = 0
-            #    for act_arg in act.args:
-            #        self.match_args(call.args[i], act_arg, caller, act, line)
-            #        i += 1
-            #    for j in range(i, len(call.args)):
-            #        for star in act.starargs:
-            #            self.match_args(call.args[j], star, caller, act, line)
-
-
-
-
-
     def trace_c_return(self, frame, event, arg):
         self.add_generic_return(frame, event, arg)
         super(Tracer, self).trace_c_return(frame, event, arg)     
@@ -243,6 +230,8 @@ class Tracer(Profiler):
 
 
     def store(self):
+        while self.activation_stack:
+            self.close_activation('store', None)
         super(Tracer, self).store()
         for var in self.variables:
             print_msg(var)
