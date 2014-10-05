@@ -3,7 +3,8 @@ from noworkflow import persistence
 from flask import render_template, jsonify, request
 from app import app
 from models.trials import load_trials, row_to_dict
-from models.trial import load_trial_activation_tree, get_modules, get_environment
+from models.trial import load_trial_activation_tree, get_modules
+from models.trial import get_environment, get_file_accesses
 from trial_visitors.trial_graph import TrialGraphVisitor, TrialGraphCombineVisitor
 
 
@@ -88,4 +89,24 @@ def all_environment(tid):
         trial = trial,
         env = env,
         info = "environment.html",
+    )
+
+@app.route('/trials/<tid>/file_accesses')
+def file_accesses(tid):
+    cwd = os.getcwd()
+    persistence.connect_existing(cwd)
+    result = get_file_accesses(tid)
+    return jsonify(file_accesses=result)
+
+@app.route('/trials/<tid>/all_file_accesses')
+def all_file_accesses(tid):
+    cwd = os.getcwd()
+    persistence.connect_existing(cwd)
+    trial = persistence.load_trial(tid).fetchone()
+    result = get_file_accesses(tid)
+    return render_template("trial.html", 
+        cwd = cwd,
+        trial = trial,
+        file_accesses = result,
+        info = "file_accesses.html",
     )

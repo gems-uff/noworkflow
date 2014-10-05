@@ -150,6 +150,53 @@ function load_environment(nid) {
     });
 }
 
+function load_file_accesses(nid) {
+    $.ajax({
+        type: "GET",
+        contentType: "application/json; charset=utf-8",
+        url: 'trials/' + nid + '/file_accesses',
+        dataType: 'json',
+        async: true,
+        data: {}, 
+        success: function (data) {
+            if (data.file_accesses.length > 0) {
+                $('#side-internal').append(
+                    '<div id="file_accesses">' +
+                        '<div class="fold">' +
+                            '<i class="fa fa-minus"></i><span> File Accesses </span>' +
+                            '<a href="trials/'+nid+'/all_file_accesses" title="Show all" class="show_all"><i class="fa fa-binoculars"></i></a>' +
+                        '</div>' +
+                        '<div class="foldable">' +
+                            '<ul class="fac-list">'+
+                            '</ul>'+
+                        '</div>' +
+                    '</div>'
+                );    
+                //data.local = data.all;
+                for (i = 0; i < data.file_accesses.length; i++) {
+                    $('#side-internal #file_accesses ul').append(
+                        '<li>' + 
+                            '<div class="name" title="Name">' + data.file_accesses[i].name + '</div>' + 
+                            '<div class="mode" title="Mode">' + data.file_accesses[i].mode + '</div>' + 
+                            '<div class="buffering" title="Buffering">' + data.file_accesses[i].buffering + '</div>' + 
+                            '<div class="clear"></div>' +
+                            '<div class="timestamp" title="Time">' + data.file_accesses[i].timestamp + '</div>' + 
+                            '<div class="content_hash_before hash" title="Content hash before">' + data.file_accesses[i].content_hash_before + '</div>' + 
+                            '<div class="content_hash_after hash" title="Content hash after">' + data.file_accesses[i].content_hash_after + '</div>' +
+                            '<div class="stack" title="Stack">' + data.file_accesses[i].stack + '</div>' +
+                        '</li>'
+                    );  
+                }
+               
+            }
+            
+        },
+        error: function (result, status) {
+        }
+    });
+}
+
+
 function select_node(n){
 
     $('#side-internal').html(
@@ -166,6 +213,7 @@ function select_node(n){
     load_graph(current_nid, selected_graph);
     load_dependencies(current_nid);
     load_environment(current_nid);
+    load_file_accesses(current_nid);
 }
 
 

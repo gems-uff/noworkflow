@@ -1,0 +1,18 @@
+ <div class="list">
+  <h2> File Accesses </h2>
+  <ul class="fac-list"> 
+      {% for element in file_accesses %}
+        <li>
+          <div class="name" title="Name"> {{ element.name }} </div> 
+          <div class="mode" title="Mode"> {{ element.mode }} </div> 
+          <div class="buffering" title="Buffering"> {{ element.buffering }} </div> 
+          <div class="clear"></div>
+          <div class="timestamp" title="Time"> {{ element.timestamp }} </div> 
+          <div class="content_hash_before hash" title="Content hash before">{{ element.content_hash_before }}</div>
+          <div class="content_hash_after hash" title="Content hash after">{{ element.content_hash_after }}</div>
+          <div class="stack" title="Stack">{{ element.stack }}</div>
+          
+        </li>
+      {% endfor %}
+  </ul>
+</div>

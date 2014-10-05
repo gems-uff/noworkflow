@@ -252,3 +252,29 @@ def get_environment(tid):
         attr['name']: attr['value'] for attr in persistence.load(
             'environment_attr', trial_id = tid)
     }
+
+def get_file_accesses(tid):
+    file_accesses = persistence.load('file_access', trial_id = tid)
+    
+    result = []
+    for file_access in file_accesses:
+        stack = []
+        function_activation = persistence.load('function_activation', id = file_access['function_activation_id']).fetchone()
+        while function_activation:
+            function_name = function_activation['name']
+            function_activation = persistence.load('function_activation', id = function_activation['caller_id']).fetchone()
+            if function_activation:
+                stack.insert(0, function_name)
+        if not stack or stack[-1] != 'open':
+            stack.append(' ... -> open')
+
+        result.append({
+            'name': file_access['name'],
+            'mode': file_access['mode'],
+            'buffering': file_access['buffering'],
+            'content_hash_before': file_access['content_hash_before'],
+            'content_hash_after': file_access['content_hash_after'],
+            'timestamp': file_access['timestamp'],
+            'stack': ' -> '.join(stack),
+        })
+    return result

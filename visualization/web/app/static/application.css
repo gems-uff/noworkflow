@@ -50,33 +50,32 @@ html, body {
   color: rgb(150, 188, 221);
 }
 
-ul.mod-list, ul.env-list {
+ul.mod-list, ul.env-list, ul.fac-list {
   padding: 0;
   margin: 0;
   list-style-type: none;
 }
 
-ul.mod-list li {
-  margin: 4px;
-  padding: 3px;
-  border-radius: 5px;
+ul.mod-list li, ul.fac-list li {
+  border-left: 3px solid black;
+  margin: 6px 4px;
+  padding: 1px 3px;
   max-width: 500px;
 }
 
-ul.mod-list li:hover {
-  background: rgb(200, 238, 241);
-}
 
 ul.mod-list li div {
 
 }
 
-ul.mod-list li .version {
+ul.mod-list li .version, ul.fac-list li .mode, ul.fac-list li .buffering {
   float: right;
+  margin-left: 20px;
 }
 
-ul.mod-list li .name {
+ul.mod-list li .name, ul.fac-list li .name  {
   float: left;
+  font-weight: bold;
 }
 
 .clear {
