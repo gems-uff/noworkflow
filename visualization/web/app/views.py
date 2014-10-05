@@ -1,6 +1,6 @@
 import os
 from noworkflow import persistence
-from flask import render_template, jsonify
+from flask import render_template, jsonify, request
 from app import app
 from models.trials import load_trials, row_to_dict
 from models.trial import load_trial_activation_tree, get_modules, get_environment
@@ -16,7 +16,8 @@ def static_proxy(path):
 def trials():
     cwd = os.getcwd()
     persistence.connect_existing(cwd)
-    return jsonify(**load_trials())
+    return jsonify(**load_trials(request.args.get('script'), 
+                                 request.args.get('execution')))
 
 @app.route('/trials/<tid>/independent')
 def independent_trial_graph(tid):
@@ -40,8 +41,12 @@ def combined_trial_graph(tid):
 @app.route('/')
 def index():
     cwd = os.getcwd()
+    persistence.connect_existing(cwd)
+    
+    scripts = {s[0].rsplit('/',1)[-1] for s in persistence.distinct_scripts()}
     return render_template("index.html", 
-        cwd = cwd
+        cwd = cwd,
+        scripts = scripts
     )
 
 @app.route('/trials/<tid>/dependencies')

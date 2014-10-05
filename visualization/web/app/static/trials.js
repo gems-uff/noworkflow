@@ -1,4 +1,5 @@
-var width, height;
+var width, height,
+    filter_width = 200;
 var history_graph, trial_svg, 
     selected_graph = "independent",
     current_nid = 0;
@@ -169,44 +170,54 @@ function select_node(n){
 
 
 
-$.ajax({
-    type: "GET",
-    contentType: "application/json; charset=utf-8",
-    url: 'trials',
-    dataType: 'json',
-    async: true,
-    success: function (data) {
-        var nodes = [];
-        var edges = [];
-        var id = 0;
-        for (var i = data.nodes.length - 1; i >= 0; i--) {
-            nodes.push({id: id, x:(width-30)-(60*id), y: 30, title: data.nodes[i].id, info: data.nodes[i]});        
-            id += 1;
+function reload() {
+    $.ajax({
+        type: "GET",
+        contentType: "application/json; charset=utf-8",
+        url: 'trials',
+        dataType: 'json',
+        data: {
+            'script': $("select[name='script']").val(),
+            'execution': $("select[name='execution']").val()   
+        },
+        async: true,
+        success: function (data) {
+            var nodes = [];
+            var edges = [];
+            w = width - filter_width;
+            var id = 0;
+            for (var i = data.nodes.length - 1; i >= 0; i--) {
+                nodes.push({id: id, x:(w-30)-(60*id), y: 30, title: data.nodes[i].id, info: data.nodes[i]});        
+                id += 1;
+            }
+            for (var i = 0; i < data.edges.length; i++) {
+                var edge = data.edges[i];
+                edge.source = nodes[edge.source];
+                edge.target = nodes[edge.target];
+                
+                edges.push(edge);        
+            }
+            $('#history').html('');
+            var svg = d3.select('#history')
+                .append('svg')
+                .attr("width", width)
+                .attr("height", HistoryGraph.consts.height);
+
+            history_graph = new HistoryGraph(svg, nodes, edges, {
+                select_node: select_node
+            });
+
+            history_graph.restart();
+            history_graph.select_node(nodes[0]);
+        },
+        error: function (result) {
+
         }
-        for (var i = 0; i < data.edges.length; i++) {
-            var edge = data.edges[i];
-            edge.source = nodes[edge.source];
-            edge.target = nodes[edge.target];
-            
-            edges.push(edge);        
-        }
-        $('#history').html('');
-        var svg = d3.select('#history')
-            .append('svg')
-            .attr("width", width)
-            .attr("height", HistoryGraph.consts.height);
+    });
+}
+reload();
 
-        history_graph = new HistoryGraph(svg, nodes, edges, {
-            select_node: select_node
-        });
-
-        history_graph.restart();
-        history_graph.select_node(nodes[0]);
-    },
-    error: function (result) {
-
-    }
-});
+$('#reload').click(reload);
 
 
 // Splitters
@@ -228,6 +239,17 @@ $('#show').split({
     }
 
 });
+
+$('#top').split({
+    orientation: 'vertical', limit: 20,
+    position: filter_width + "px",
+    onDrag: function(){
+        history_graph.updateWindow();
+        
+    }
+
+});
+
 
 // Graph type
 $( "[name='graphtype']" ).change(function() {

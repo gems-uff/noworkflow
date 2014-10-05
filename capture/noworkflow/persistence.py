@@ -122,6 +122,11 @@ def last_trial_id_without_iheritance():
         (an_id,) = db.execute("select id from trial where start in (select max(start) from trial where inherited_id is NULL)").fetchone()
     return an_id
 
+def distinct_scripts():
+    with db_conn as db:
+        return db.execute("select distinct script from trial")
+
+
 
 def function_activation_id_seq():
     try:

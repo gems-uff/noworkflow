@@ -272,7 +272,8 @@ HistoryGraph.prototype.updateWindow = function(){
     var docEl = document.documentElement,
         bodyEl = document.getElementsByTagName('body')[0];
     var x = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
-    this.svg.attr("width", x).attr("height", this.height);
+    this.svg.attr("width", x-$('#top .filter').width()).attr("height", this.height);
 };
 
 
+ 

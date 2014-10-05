@@ -4,7 +4,28 @@
 {% endblock %}
 {% block body %}
       <div id="splitter">
-        <div id="history" style="overflow: auto"></div>
+        <div id="top">
+          <div class="filter"> 
+            <div class="internal">
+              <select name="script"> 
+                <option value="*"> All Scripts </option>
+                {% for script in scripts %}
+                  <option value="{{ script }}">{{ script }}</option>
+                {% endfor %}
+              </select>
+              <select name="execution">
+                <option value="*"> All Statuses </option>
+                <option value="finished"> Finished Trials </option>
+                <option value="unfinished"> Unfinished Trials </option>
+              </select>
+
+              <a href="#" id="reload"><i class="fa fa-refresh"></i> Reload</a>
+            </div>
+          </div>
+          <div id="history" style="overflow: auto">
+            
+          </div>
+        </div>
         <div id="show">
           <div id="graphbox">
             <form class="toolbar">
