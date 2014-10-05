@@ -1,11 +1,8 @@
-<html>
-  <head>
-    <title>Nowviz - {{ cwd }}</title>
-    <link rel="stylesheet" href="trials.css">
-    <link rel="stylesheet" href="external/jquery.splitter.css">
-    <link rel="stylesheet" href="font-awesome-4.2.0/css/font-awesome.min.css">
-  </head>
-  <body>
+{% extends "base.html" %}
+{% block css %}
+<link rel="stylesheet" href="index.css">
+{% endblock %}
+{% block body %}
       <div id="splitter">
         <div id="history" style="overflow: auto"></div>
         <div id="show">
@@ -26,12 +23,10 @@
           </div>
         </div>
       </div>
-  </body>
-  <script src="external/jquery-1.11.1.min.js" charset="utf-8"></script>
-  <script src="external/jquery.splitter-0.14.0.js" charset="utf-8"></script>
-
+{% endblock %}
+{% block js %}
   <script src="d3-v3.4.11/d3.min.js" charset="utf-8"></script>
   <script src="history_graph.js" charset="utf-8"></script>
   <script src="trial_graph.js" charset="utf-8"></script>
   <script src="trials.js" charset="utf-8"></script>
-</html>
+{% endblock %}

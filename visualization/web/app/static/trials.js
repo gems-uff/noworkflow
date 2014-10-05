@@ -55,12 +55,106 @@ function load_graph(nid, url) {
     });
 }
 
+function load_dependencies(nid) {
+    $.ajax({
+        type: "GET",
+        contentType: "application/json; charset=utf-8",
+        url: 'trials/' + nid + '/dependencies',
+        dataType: 'json',
+        async: true,
+        data: {}, 
+        success: function (data) {
+            if (data.all.length > 0) {
+                $('#side-internal').append(
+                    '<div id="modules">' +
+                        '<div class="fold">' +
+                            '<i class="fa fa-minus"></i><span> Modules </span>' +
+                            '<a href="trials/'+nid+'/all_modules" title="Show all" class="show_all"><i class="fa fa-binoculars"></i></a>' +
+                        '</div>' +
+                        '<div class="foldable">' +
+                            '<ul class="mod-list">'+
+                            '</ul>'+
+                        '</div>' +
+                    '</div>'
+                );    
+                //data.local = data.all;
+                for (i = 0; i < data.local.length; i++) {
+                    $('#side-internal #modules ul').append(
+                        '<li>' + 
+                            '<div class="name">' + data.local[i].name + '</div>' + 
+                            '<div class="version">' + (data.local[i].version == null ? "" : data.local[i].version) + '</div>' + 
+                            '<div class="clear"></div>' +
+                            '<div class="hash" title="'+data.local[i].path  +'">' + data.local[i].code_hash + '</div>' + 
+                        '</li>'
+                    );  
+                }
+               
+            }
+            
+        },
+        error: function (result, status) {
+        }
+    });
+}
+
+function load_environment(nid) {
+    $.ajax({
+        type: "GET",
+        contentType: "application/json; charset=utf-8",
+        url: 'trials/' + nid + '/environment',
+        dataType: 'json',
+        async: true,
+        data: {}, 
+        success: function (data) {
+            function li(key) {
+                if (data.env[key]) {
+                    return '<li>' +
+                        '<span class="key"> '+key+' </span>' +
+                        '<span class="equal"> = </span>' +
+                        '<span class="value"> '+data.env[key] +' </span>' +
+                    '</li>';
+                }
+                return ''
+            }
+
+            $('#side-internal').append(
+                '<div id="environment">' +
+                    '<div class="fold">' +
+                        '<i class="fa fa-minus"></i><span> Environment </span>' +
+                        '<a href="trials/'+nid+'/all_environment" title="Show all" class="show_all"><i class="fa fa-binoculars"></i></a>' +
+                    '</div>' +
+                    '<div class="foldable">' +
+                        '<ul class="env-list">'+
+                            li('PYTHON_IMPLEMENTATION') +
+                            li('PYTHON_VERSION') +
+                            li('OS_NAME') +
+                            li('OS_RELEASE') +
+                            li('OS_VERSION') +
+                            li('OS_USER') +
+                            li('PWD') +
+                            li('PID') +
+                            li('HOSTNAME') +
+                            li('ARCH') +
+                            li('PROCESSOR') +
+                        '</ul>'+
+                    '</div>' +
+                '</div>'
+            );    
+               
+            
+            
+        },
+        error: function (result, status) {
+        }
+    });
+}
+
 function select_node(n){
 
     $('#side-internal').html(
         '<div id="main">'+
             '<h1>Trial ' + n.title + '</h1>'+
-            '<h3>' + n.info.code_hash + '</h1>'+
+            '<h3 class="hash">' + n.info.code_hash + '</h1>'+
             '<span class="attr"><span class="desc">Script: </span><span class="script">' + n.info.script + '</span></span>' +
             '<span class="attr"><span class="desc">Start: </span><span class="start">' + n.info.start + '</span></span>' +
             '<span class="attr"><span class="desc">Finish: </span><span class="finish">' + n.info.finish + '</span></span>' +
@@ -69,6 +163,8 @@ function select_node(n){
     );
     current_nid = n.title;
     load_graph(current_nid, selected_graph);
+    load_dependencies(current_nid);
+    load_environment(current_nid);
 }
 
 
@@ -137,4 +233,10 @@ $('#show').split({
 $( "[name='graphtype']" ).change(function() {
     selected_graph = $(this).attr('value');
     load_graph(current_nid, selected_graph);
+});
+
+$('#side-internal').on('click', '.fold', function(e){
+    $(this.nextSibling).slideToggle(200);
+    $(this.firstChild).toggleClass("fa-plus");
+    $(this.firstChild).toggleClass("fa-minus");
 });

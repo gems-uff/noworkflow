@@ -1,0 +1,19 @@
+<html>
+  <head>
+    <title>Nowviz - {{ cwd }}</title>
+    <link rel="stylesheet" href="/external/jquery.splitter.css">
+    <link rel="stylesheet" href="/font-awesome-4.2.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/application.css">
+    {% block css %}
+    {% endblock %}
+  </head>
+  <body>
+    {% block body %}
+    {% endblock %}
+  </body>
+  <script src="external/jquery-1.11.1.min.js" charset="utf-8"></script>
+  <script src="external/jquery.splitter-0.14.0.js" charset="utf-8"></script>
+
+  {% block js %}
+  {% endblock %}
+</html>

@@ -1,8 +1,7 @@
 from noworkflow import persistence
+from noworkflow.persistence import row_to_dict
 
 
-def row_to_dict(row):
-    return dict(zip(row.keys(), row))
 
 def load_trials():
     result = { 'nodes': [], 'edges': [] }
