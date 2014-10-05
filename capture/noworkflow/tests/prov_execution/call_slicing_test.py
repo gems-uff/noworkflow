@@ -7,8 +7,8 @@ from __future__ import absolute_import
 import unittest
 import ast
 import __main__
-from cmd_run import run
-import persistence
+from ...cmd_run import run
+from ... import persistence
 
 
 persistence.put = lambda x: None

@@ -5,8 +5,11 @@ use_setuptools()
 from setuptools import setup
 setup(
     name = "noworkflow",
-    version = "0.4.1-dev",
-    packages = ['noworkflow'],
+    version = "0.4.1-dev2",
+    packages = [
+        'noworkflow', 
+        'noworkflow.prov_definition',
+        'noworkflow.prov_execution'],
     package_data = {'noworkflow': ['resources/*']},
     entry_points = {'console_scripts': ['now = noworkflow.now:main']},
     author = "Leonardo Murta, Vanessa Braganholo, Fernando Chirigati, David Koop, and Juliana Freire",

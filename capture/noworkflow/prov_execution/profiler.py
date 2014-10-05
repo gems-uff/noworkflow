@@ -11,7 +11,7 @@ from datetime import datetime
 from .base import StoreOpenMixin
 from .activation import Activation
 
-import persistence
+from .. import persistence
 
 class Profiler(StoreOpenMixin):
 

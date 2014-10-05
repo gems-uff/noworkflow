@@ -6,9 +6,9 @@ from __future__ import absolute_import
 import sys
 import linecache
 from collections import namedtuple
-from utils import print_msg
 from .profiler import Profiler
-from prov_definition import SlicingVisitor
+from ..utils import print_msg
+from ..prov_definition import SlicingVisitor
 
 
 Variable = namedtuple("Variable", "id name line")

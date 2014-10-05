@@ -11,7 +11,7 @@ from collections import defaultdict
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
 from .utils import ExtractCallPosition, FunctionCall, ClassDef, index
-from utils import print_msg
+from ..utils import print_msg
 
 class AssignLeftVisitor(ast.NodeVisitor):
 

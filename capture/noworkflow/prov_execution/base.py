@@ -11,7 +11,7 @@ import os
 import sys
 from datetime import datetime
 from collections import defaultdict
-import persistence
+from .. import persistence
 
 
 class ExecutionProvider(object):
