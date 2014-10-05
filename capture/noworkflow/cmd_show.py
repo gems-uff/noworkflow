@@ -68,7 +68,7 @@ def print_file_accesses(file_accesses):
             function_activation = persistence.load('function_activation', id = function_activation['caller_id']).fetchone()
             if function_activation:
                 stack.insert(0, function_name)
-        if stack[-1] != 'open':
+        if not stack or stack[-1] != 'open':
             stack.append(' ... -> open')
         
         output.append('  Name: {name}\n  Mode: {mode}\n  Buffering: {buffering}\n  Content hash before: {content_hash_before}\n  Content hash after: {content_hash_after}\n  Timestamp: {timestamp}\n  Function: {stack}'.format(stack = ' -> '.join(stack), **file_access))

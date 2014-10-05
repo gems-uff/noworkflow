@@ -1,0 +1,15 @@
+ <div class="list">
+  <h2> Modules </h2>
+  <ul class="mod-list"> 
+      {% for element in modules %}
+        <li>
+          <div class="name"> {{ element.name }} </div>
+          <div class="version"> {{ element.version }} </div>
+          <div class="clear"></div>
+          <div class="hash" title="{{ element.path }}">
+            {{ element.code_hash }}
+          </div>
+        </li>
+      {% endfor %}
+  </ul>
+</div>

@@ -23,6 +23,9 @@ trial_id = None  # Id of the prospective provenance used in this trial
 std_open = open  # Original Python open function.
 
 
+def row_to_dict(row):
+    return dict(zip(row.keys(), row))
+
 def has_provenance(path):
     provenance_path = os.path.join(path, PROVENANCE_DIRNAME)
     return os.path.isdir(provenance_path)

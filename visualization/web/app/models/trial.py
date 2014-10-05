@@ -1,7 +1,7 @@
 from datetime import datetime
 from noworkflow import persistence
+from noworkflow.persistence import row_to_dict
 from collections import OrderedDict, Counter
-
 
 FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
@@ -239,3 +239,16 @@ def load_trial_activation_tree(tid):
         add_flow(stack, stack2, previous, next)
     
     return stack2.pop()
+
+def get_modules(cwd, tid):
+    trial = persistence.load_trial(tid).fetchone()
+    dependencies = persistence.load_dependencies()
+    result = [row_to_dict(d) for d in dependencies]
+    local = [d for d in result if d['path'] and cwd in d['path']]
+    return trial, local, result
+
+def get_environment(tid):
+    return {
+        attr['name']: attr['value'] for attr in persistence.load(
+            'environment_attr', trial_id = tid)
+    }

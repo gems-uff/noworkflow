@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block body %}
+  <div class="trial">
+    <div id="main">
+      <h1>Trial {{ trial.id }}</h1>
+      <h3 class="hash"> {{ trial.code_hash }} </h1>
+      <span class="attr">
+        <span class="desc">Script: </span>
+        <span class="script"> {{ trial.script }}</span>
+      </span>
+      <span class="attr">
+        <span class="desc">Start: </span>
+        <span class="start"> {{ trial.start }}</span>
+      </span>
+      <span class="attr">
+        <span class="desc">Finish: </span>
+        <span class="finish"> {{ trial.finish }}</span>
+      </span>
+      {% if trial.arguments %}
+        <span class="attr"><span class="desc">Arguments: </span><span class="arguments">{{ trial.arguments }} </span></span>
+      {% endif %}
+    </div>
+    {% include info %}
+  </div>
+{% endblock %}

@@ -1,0 +1,12 @@
+ <div class="list">
+  <h2> Environment </h2>
+  <ul class="env-list"> 
+      {% for key, value in env.items() %}
+        <li>
+          <span class="key"> {{ key }} </span>
+          <span class="equal"> = </span>
+          <span class="value"> {{ value }} </span>
+        </li>
+      {% endfor %}
+  </ul>
+</div>
