@@ -7,9 +7,10 @@ from __future__ import absolute_import
 import unittest
 import ast
 import __main__
-from ...cmd_run import run
-from ... import persistence
+from ...now.cmd import Run
+from ...now import persistence
 
+run = Run('run', 'run').run
 
 persistence.put = lambda x: None
 persistence.store_trial = lambda a, b, c, d, e: None

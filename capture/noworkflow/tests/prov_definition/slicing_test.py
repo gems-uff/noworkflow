@@ -6,9 +6,9 @@ from __future__ import absolute_import
 
 import unittest
 import ast
-from ... import persistence
-from ...prov_definition.slicing_visitor import SlicingVisitor
-from ...prov_definition.utils import FunctionCall
+from ...now import persistence
+from ...now.prov_definition.slicing_visitor import SlicingVisitor
+from ...now.prov_definition.utils import FunctionCall
 
 persistence.put = lambda x: None
 

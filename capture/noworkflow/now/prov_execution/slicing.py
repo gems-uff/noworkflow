@@ -134,6 +134,7 @@ class Tracer(Profiler):
             self.returns.add(activation, self.variables[vid])
 
     def trace_c_call(self, frame, event, arg):
+        
         super(Tracer, self).trace_c_call(frame, event, arg)     
 
     def match_arg(self, call_var, act_var_name, caller, activation, line):
