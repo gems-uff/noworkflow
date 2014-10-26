@@ -4,6 +4,7 @@
 import ast
 import dis
 import types
+import itertools
 
 class ExtractCallPosition(ast.NodeVisitor):
 
@@ -53,12 +54,18 @@ class FunctionCall(ast.NodeVisitor):
         self.col = -1
         self.lasti = -1
 
+    def all_args(self):
+        return [
+            itertools.chain.from_iterable(self.args), 
+            self.starargs, 
+            self.kwargs,
+            itertools.chain.from_iterable(self.keywords.values())
+        ]
 
     def use_visitor(self, node):
         visitor = self.visitor_class()
         visitor.visit(node)
         return [x if isinstance(x, FunctionCall) else x[0] for x in visitor.names]
-
 
     def visit_Call(self, node):
         self.func = self.use_visitor(node.func)
@@ -70,10 +77,8 @@ class FunctionCall(ast.NodeVisitor):
         if node.kwargs:
             self.kwargs = self.use_visitor(node.kwargs)
 
-
     def visit_keyword(self, node):
         self.keywords[node.arg] = self.use_visitor(node.value)
-
 
     def __repr__(self):
         return "F(func={}, args={}, keywords={}, *args={}, **kwargs={})".format(
@@ -90,9 +95,9 @@ class ClassDef(FunctionCall):
         self.col = -1
         self.lasti = -1
 
-
     def __repr__(self):
         return "Class()"
+
 
 def index(lis, alternatives):
     for alt in alternatives:
@@ -101,6 +106,7 @@ def index(lis, alternatives):
         except ValueError:
             pass
     return None
+
 
 def get_code_object(obj, compilation_mode="exec"):
     if isinstance(obj, types.CodeType):
@@ -118,11 +124,14 @@ def get_code_object(obj, compilation_mode="exec"):
         raise TypeError("get_code_object() can not handle '%s' objects" %
                         (type(obj).__name__,))
 
+
 def diss(obj, mode="exec", recurse=False):
     _visit(obj, dis.dis, mode, recurse)
 
+
 def ssc(obj, mode="exec", recurse=False):
     _visit(obj, dis.show_code, mode, recurse)
+
 
 def _visit(obj, visitor, mode="exec", recurse=False):
     obj = get_code_object(obj, mode)

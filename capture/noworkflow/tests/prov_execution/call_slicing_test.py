@@ -246,3 +246,16 @@ class TestCallSlicing(unittest.TestCase):
                 (("r", 4), ("call fn", 4)),
             }
             self.assertEqual(result, self.extract(provider))
+
+        def test_ccall(self):
+            self.run_args[2]['code'] = ("a, b = 1, 2\n"
+                                        "c = min(a, b)")
+            provider = run(*self.run_args)
+            result = {
+                (("return", 2), ("a", 1)),
+                (("return", 2), ("b", 1)),
+                (("call min", 2), ("return", 2)),
+                (("c", 2), ("call min", 2)),
+            }
+            self.assertEqual(result, self.extract(provider))
+
