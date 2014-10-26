@@ -102,6 +102,9 @@ class TestCallSlicing(unittest.TestCase):
                 (("return", 2), ("b", 1)),
                 (("return", 2), ("c", 1)),
                 (("call fn", 5), ("return", 2)),
+                (("z", 5), ("x", 3)),
+                (("z", 5), ("y", 3)),
+                (("z", 5), ("z", 4)),
                 (("r", 5), ("call fn", 5)),
             }
             self.assertEqual(result, self.extract(provider))
@@ -121,6 +124,8 @@ class TestCallSlicing(unittest.TestCase):
                 (("return", 2), ("b", 1)),
                 (("return", 2), ("c", 1)),
                 (("call fn", 5), ("return", 2)),
+                (("y", 5), ("y", 4)),
+                (("y", 5), ("x", 3)),
                 (("r", 5), ("call fn", 5)),
             }
             self.assertEqual(result, self.extract(provider))
@@ -154,6 +159,8 @@ class TestCallSlicing(unittest.TestCase):
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("args", 1)),
                 (("call fn", 4), ("return", 2)),
+                (("y", 4), ("y", 3)),
+                (("y", 4), ("x", 3)),
                 (("r", 4), ("call fn", 4)),
             }
             self.assertEqual(result, self.extract(provider))
@@ -169,6 +176,7 @@ class TestCallSlicing(unittest.TestCase):
                 (("args", 1), ("x", 3)), #ToDo: fix?
                 (("return", 2), ("a", 1)),
                 (("call fn", 4), ("return", 2)),
+                (("x", 4), ("x", 3)),
                 (("r", 4), ("call fn", 4)),
             }
             self.assertEqual(result, self.extract(provider))
@@ -201,6 +209,7 @@ class TestCallSlicing(unittest.TestCase):
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("kwargs", 1)),
                 (("call fn", 4), ("return", 2)),
+                (("x", 4), ("x", 3)),
                 (("r", 4), ("call fn", 4)),
             }
             self.assertEqual(result, self.extract(provider))
@@ -228,6 +237,18 @@ class TestCallSlicing(unittest.TestCase):
                 (("kwargs", 1), ("v", 4)), 
                 (("return", 2), ("a", 1)),
                 (("call fn", 5), ("return", 2)),
+                (("z", 5), ("x", 3)),
+                (("z", 5), ("y", 3)), 
+                (("z", 5), ("z", 3)),
+                (("z", 5), ("w", 3)),
+                (("z", 5), ("u", 3)),
+                (("z", 5), ("v", 4)),
+                (("v", 5), ("x", 3)),
+                (("v", 5), ("y", 3)),
+                (("v", 5), ("z", 3)), 
+                (("v", 5), ("w", 3)),
+                (("v", 5), ("u", 3)),
+                (("v", 5), ("v", 4)),
                 (("r", 5), ("call fn", 5)),
             }
             self.assertEqual(result, self.extract(provider))
@@ -269,5 +290,19 @@ class TestCallSlicing(unittest.TestCase):
                 (("a", 1), ("x", 3)),
                 (("call fn", 4), ("return", 2)),
                 (("r", 4), ("call fn", 4)),
+            }
+            self.assertEqual(result, self.extract(provider))
+
+        def test_ccall_inter_params(self):
+            self.run_args[2]['code'] = ("a, b = [1, 2, 3], True\n"
+                                        "c = sorted(a, reverse=b)")
+            provider = run(*self.run_args)
+            result = {
+                (("return", 2), ("a", 1)),
+                (("return", 2), ("b", 1)),
+                (("call sorted", 2), ("return", 2)),
+                (("a", 2), ("a", 1)),
+                (("a", 2), ("b", 1)),
+                (("c", 2), ("call sorted", 2)),
             }
             self.assertEqual(result, self.extract(provider))

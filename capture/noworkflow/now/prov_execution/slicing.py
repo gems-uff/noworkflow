@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import sys
 import linecache
 import itertools
+import numbers
 from collections import namedtuple
 from .profiler import Profiler
 from ..utils import print_msg
@@ -120,7 +121,6 @@ class Tracer(Profiler):
             self.slice_line(*line)
         super(Tracer, self).close_activation(event, arg)
 
-
     def add_generic_return(self, frame, event, arg, ccall=False):
         """ Add return that depends on all parameters """
         if frame.f_code.co_filename != self.script:
@@ -134,14 +134,12 @@ class Tracer(Profiler):
             self.returns.add(activation, self.variables[vid])
 
             if ccall:
-                self.add_dependencies(self.variables[vid], activation, activation.arguments)
+                caller = self.activation_stack[-2]
                 call = self.call_by_lasti(frame.f_lineno, frame.f_lasti)
-                self.add_dependencies(self.variables[vid], self.activation_stack[-2], 
-                    itertools.chain.from_iterable(call.all_args()))
-
-    def trace_c_call(self, frame, event, arg):
-        super(Tracer, self).trace_c_call(frame, event, arg)     
-       
+                self.add_dependencies(
+                    self.variables[vid], caller, 
+                    call.all_args())
+                self.add_inter_dependencies(frame, call.all_args(), caller)
 
     def match_arg(self, call_var, act_var_name, caller, activation, line):
         if act_var_name in activation.context:
@@ -158,6 +156,27 @@ class Tracer(Profiler):
         for arg in args:
             self.match_arg(arg, act_var_name, caller, activation, line)
 
+    def add_inter_dependencies(self, frame, args, activation):
+        immutable = (bool, numbers.Number, str, unicode)
+
+        added = {}
+        for arg in args:
+            try:
+                var = frame.f_locals[arg]
+                if not isinstance(var, immutable):
+                    vid = self.variables.add(arg, frame.f_lineno)
+                    self.add_dependencies(
+                        self.variables[vid], activation, args)
+                    added[arg] = vid
+            except KeyError:
+                pass
+
+        for arg, vid in added.items():
+            activation.context[arg] = self.variables[vid]
+
+    def trace_c_call(self, frame, event, arg):
+        super(Tracer, self).trace_c_call(frame, event, arg)     
+       
     def trace_call(self, frame, event, arg):
         """ Adds argument variables """
         super(Tracer, self).trace_call(frame, event, arg)
@@ -197,6 +216,9 @@ class Tracer(Profiler):
             args = [(i, order[i]) for i in range(len(used)) if not used[i]]
             for i, act_arg in args:
                 self.match_arg(None, act_arg, caller, act, line)
+
+            self.add_inter_dependencies(frame.f_back, call.all_args(), caller)
+            
 
     def trace_c_return(self, frame, event, arg):
         self.add_generic_return(frame, event, arg, ccall=True)

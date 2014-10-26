@@ -55,12 +55,12 @@ class FunctionCall(ast.NodeVisitor):
         self.lasti = -1
 
     def all_args(self):
-        return [
+        return list(itertools.chain(
             itertools.chain.from_iterable(self.args), 
             self.starargs, 
             self.kwargs,
             itertools.chain.from_iterable(self.keywords.values())
-        ]
+        ))
 
     def use_visitor(self, node):
         visitor = self.visitor_class()
