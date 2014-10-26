@@ -15,6 +15,7 @@ from ..prov_definition import SlicingVisitor
 
 Variable = namedtuple("Variable", "id name line")
 Dependency = namedtuple("Dependency", "id dependent supplier")
+Usage = namedtuple("Usage", "id vid name line")
 Return = namedtuple("Return", "id activation var")
 
 class ObjectStore(object):
@@ -51,6 +52,7 @@ class Tracer(Profiler):
         # Store slicing provenance
         self.variables = ObjectStore(Variable)
         self.dependencies = ObjectStore(Dependency)
+        self.usages = ObjectStore(Usage)
 
         # Returns
         self.returns = ObjectStore(Return)
@@ -60,6 +62,10 @@ class Tracer(Profiler):
     def line_dependencies(self, line):
         """ Returns the dependencies in the line """
         return self.definition.dependencies[self.script][line]
+
+    def line_usages(self, line):
+        """ Returns the variable usages in the line """
+        return self.definition.name_refs[self.script][line]['Load']
 
     def call_by_col(self, line, col):
         """ Returns the function call in the script position (line, col) """
@@ -103,11 +109,15 @@ class Tracer(Profiler):
         for dep in dependencies:
             self.add_dependency(var, dep, activation)
 
-    def slice_line(self, activation, dependencies, lineno, filename):
+    def slice_line(self, activation, dependencies, usages, lineno, filename):
         """ Generates dependencies from line """
         print_msg('Slice [{}] -> {}'.format(lineno,
                 linecache.getline(filename, lineno).strip()))
         
+        for name in usages:
+            if name in activation.context:
+                self.usages.add(activation.context[name].id, name, lineno)
+
         for name, others in dependencies.items():
             vid = self.variables.add(name, lineno)
             self.add_dependencies(self.variables[vid], activation, others)
@@ -218,7 +228,6 @@ class Tracer(Profiler):
                 self.match_arg(None, act_arg, caller, act, line)
 
             self.add_inter_dependencies(frame.f_back, call.all_args(), caller)
-            
 
     def trace_c_return(self, frame, event, arg):
         self.add_generic_return(frame, event, arg, ccall=True)
@@ -235,14 +244,14 @@ class Tracer(Profiler):
 
         activation = self.activation_stack[-1]
         dependencies = self.line_dependencies(frame.f_lineno)
+        usages = self.line_usages(frame.f_lineno)
         print_msg('[{}] -> {}'.format(frame.f_lineno,
                 linecache.getline(self.script, frame.f_lineno).strip()))
         
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
         activation.slice_stack.append([
-            activation, dependencies, frame.f_lineno, self.script])
-
+            activation, dependencies, usages, frame.f_lineno, self.script])
          
     def tracer(self, frame, event, arg):
         current_event = (event, frame.f_lineno, frame.f_code)
@@ -251,11 +260,9 @@ class Tracer(Profiler):
             return super(Tracer, self).tracer(frame, event, arg)
         return self.tracer
 
-
     def tearup(self):
         sys.settrace(self.tracer)
         sys.setprofile(self.tracer)
-
 
     def store(self):
         while self.activation_stack:
@@ -264,8 +271,9 @@ class Tracer(Profiler):
         for var in self.variables:
             print_msg(var)
 
-
         for dep in self.dependencies:
             print_msg("{}\t<-\t{}".format(self.variables[dep.dependent], 
                                         self.variables[dep.supplier]))
 
+        for var in self.usages:
+            print_msg(var)
