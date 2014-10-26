@@ -259,3 +259,15 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(provider))
 
+        def test_noreturn(self):
+            self.run_args[2]['code'] = ("def fn(a):\n"
+                                        "    a = 2\n"
+                                        "x = 1\n"
+                                        "r = fn(x)")
+            provider = run(*self.run_args)
+            result = {
+                (("a", 1), ("x", 3)),
+                (("call fn", 4), ("return", 2)),
+                (("r", 4), ("call fn", 4)),
+            }
+            self.assertEqual(result, self.extract(provider))

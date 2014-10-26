@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 import sys
 import linecache
+import itertools
 from collections import namedtuple
 from .profiler import Profiler
 from ..utils import print_msg
@@ -99,7 +100,7 @@ class Tracer(Profiler):
     def add_dependencies(self, var, activation, dependencies):
         """ Adds dependencies to var """
         for dep in dependencies:
-           self.add_dependency(var, dep, activation)
+            self.add_dependency(var, dep, activation)
 
     def slice_line(self, activation, dependencies, lineno, filename):
         """ Generates dependencies from line """
@@ -120,7 +121,7 @@ class Tracer(Profiler):
         super(Tracer, self).close_activation(event, arg)
 
 
-    def add_generic_return(self, frame, event, arg):
+    def add_generic_return(self, frame, event, arg, ccall=False):
         """ Add return that depends on all parameters """
         if frame.f_code.co_filename != self.script:
             return
@@ -130,12 +131,17 @@ class Tracer(Profiler):
         if not 'return' in dependencies:
             activation = self.activation_stack[-1]
             vid = self.variables.add('return', frame.f_lineno)
-            self.add_dependencies(self.variables[vid], activation, activation.arguments)
             self.returns.add(activation, self.variables[vid])
 
+            if ccall:
+                self.add_dependencies(self.variables[vid], activation, activation.arguments)
+                call = self.call_by_lasti(frame.f_lineno, frame.f_lasti)
+                self.add_dependencies(self.variables[vid], self.activation_stack[-2], 
+                    itertools.chain.from_iterable(call.all_args()))
+
     def trace_c_call(self, frame, event, arg):
-        
         super(Tracer, self).trace_c_call(frame, event, arg)     
+       
 
     def match_arg(self, call_var, act_var_name, caller, activation, line):
         if act_var_name in activation.context:
@@ -160,7 +166,6 @@ class Tracer(Profiler):
             call = self.call_by_lasti(back.f_lineno, back.f_lasti)
             caller, act = self.activation_stack[-2:]
             line = frame.f_lineno
-            #if len(call.args) <= len(act.args):
             sub = -[bool(act.starargs), bool(act.kwargs)].count(True)
 
             order = act.args + act.starargs + act.kwargs
@@ -194,7 +199,7 @@ class Tracer(Profiler):
                 self.match_arg(None, act_arg, caller, act, line)
 
     def trace_c_return(self, frame, event, arg):
-        self.add_generic_return(frame, event, arg)
+        self.add_generic_return(frame, event, arg, ccall=True)
         super(Tracer, self).trace_c_return(frame, event, arg)     
 
     def trace_return(self, frame, event, arg):
