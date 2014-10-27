@@ -283,3 +283,19 @@ def store_function_activation(function_activation, caller_id):
             "insert into file_access(name, mode, buffering, content_hash_before, content_hash_after, timestamp, function_activation_id, trial_id) values (?, ?, ?, ?, ?, ?, ?, ?)",
             file_accesses
         )
+
+def store_slicing(variables, dependencies, usages):
+    with db_conn as db:
+        db.executemany(
+            "insert into slicing_variable(trial_id, vid, name, line) values (?, ?, ?, ?)",
+            ((trial_id, v.id, v.name, v.line) for v in variables)
+        )
+        db.executemany(
+            "insert into slicing_dependency(trial_id, id, dependent, supplier) values (?, ?, ?, ?)",
+            ((trial_id, d.id, d.dependent, d.supplier) for d in dependencies)
+        )
+        db.executemany(
+            "insert into slicing_usage(trial_id, id, vid, name, line) values (?, ?, ?, ?, ?)",
+            ((trial_id, u.id, u.vid, u.name, u.line) for u in usages)
+        )
+        

@@ -11,6 +11,7 @@ from collections import namedtuple
 from .profiler import Profiler
 from ..utils import print_msg
 from ..prov_definition import SlicingVisitor
+from .. import persistence
 
 
 Variable = namedtuple("Variable", "id name line")
@@ -268,6 +269,7 @@ class Tracer(Profiler):
         while self.activation_stack:
             self.close_activation('store', None)
         super(Tracer, self).store()
+        persistence.store_slicing(self.variables, self.dependencies, self.usages)
         for var in self.variables:
             print_msg(var)
 

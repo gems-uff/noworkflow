@@ -103,3 +103,45 @@ create table file_access (
 
 CREATE INDEX file_access_function_activation_id on file_access(function_activation_id);
 CREATE INDEX file_access_trial_id on file_access(trial_id);
+
+-- Slicing
+
+create table slicing_variable (
+	trial_id INTEGER,
+	vid INTEGER,
+    name TEXT,
+	line INTEGER,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE,
+	PRIMARY KEY (trial_id, vid)
+);
+
+CREATE INDEX slicing_variable_trial_id on slicing_variable(trial_id);
+CREATE INDEX slicing_variable_vid on slicing_variable(vid);
+
+create table slicing_usage (
+	trial_id INTEGER,
+	id INTEGER,
+	vid INTEGER,
+    name TEXT,
+	line INTEGER,
+	FOREIGN KEY (trial_id, vid) REFERENCES slicing_variable(trial_id, vid) ON DELETE CASCADE,
+	PRIMARY KEY (trial_id, id)
+);
+
+CREATE INDEX slicing_usage_trial_id on slicing_usage(trial_id);
+CREATE INDEX slicing_usage_vid on slicing_usage(vid);
+
+create table slicing_dependency (
+	trial_id INTEGER,
+	id INTEGER,
+	dependent INTEGER,
+	supplier INTEGER,
+	FOREIGN KEY (trial_id, dependent) REFERENCES slicing_variable(trial_id, vid) ON DELETE CASCADE,
+	FOREIGN KEY (trial_id, supplier) REFERENCES slicing_variable(trial_id, vid) ON DELETE CASCADE,
+	PRIMARY KEY (trial_id, id)
+);
+
+CREATE INDEX slicing_dependency_trial_id on slicing_dependency(trial_id);
+CREATE INDEX slicing_dependency_dependent on slicing_dependency(dependent);
+CREATE INDEX slicing_dependency_supplier on slicing_dependency(supplier);
+

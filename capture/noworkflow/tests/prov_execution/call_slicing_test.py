@@ -14,7 +14,7 @@ run = Run('run', 'run').run
 
 persistence.put = lambda x: None
 persistence.store_trial = lambda a, b, c, d, e: None
-
+persistence.store_slicing = lambda a, b, c: None
 
 NAME = '<unknown>'
 
