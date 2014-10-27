@@ -10,7 +10,7 @@ import numbers
 from collections import namedtuple
 from datetime import datetime
 from .profiler import Profiler
-from ..utils import print_msg
+from ..utils import print_fn_msg
 from ..prov_definition import SlicingVisitor
 from .. import persistence
 
@@ -37,7 +37,7 @@ class Variable(object):
 #Variable = namedtuple("Variable", "id name line value time")
 Dependency = namedtuple("Dependency", "id dependent supplier")
 Usage = namedtuple("Usage", "id vid name line")
-Return = namedtuple("Return", "id activation var")
+Return = namedtuple("Return", "activation var")
 
 class ObjectStore(object):
 
@@ -67,7 +67,7 @@ class Tracer(Profiler):
         super(Tracer, self).__init__(*args)
         assert isinstance(self.metascript['definition'], SlicingVisitor), \
             "Slicing Definition Required"
-        self.definition = self.metascript['definition']
+        definition = self.metascript['definition']
         self.event_map['line'] = self.trace_line
 
         # Store slicing provenance
@@ -76,95 +76,90 @@ class Tracer(Profiler):
         self.usages = ObjectStore(Usage)
 
         # Returns
-        self.returns = ObjectStore(Return)
+        self.returns = {}
         # Avoid using the same event for tracer and profiler
         self.last_event = None
- 
-    def line_dependencies(self, line):
-        """ Returns the dependencies in the line """
-        return self.definition.dependencies[self.script][line]
 
-    def line_usages(self, line):
-        """ Returns the variable usages in the line """
-        return self.definition.name_refs[self.script][line]['Load']
+        # Useful maps
+        # Map of dependencies by line
+        self.line_dependencies = definition.dependencies[self.script]
+        # Map of name_refs by line
+        self.line_usages = definition.name_refs[self.script]
+        # Map of calls by line and col
+        self.call_by_col = definition.function_calls[self.script]
+        # Map of calls by line and lasti
+        self.call_by_lasti = definition.function_calls_by_lasti[self.script]
 
-    def call_by_col(self, line, col):
-        """ Returns the function call in the script position (line, col) """
-        return self.definition.function_calls[self.script][line][col]
-
-    def call_by_lasti(self, line, f_lasti):
-        """ Returns the function call in the disas, position (line, lasti) """
-        return self.definition.function_calls_by_lasti[self.script][line]\
-            [f_lasti]
-
-    def find_return_by_lasti(self, lasti):
-        for _return in self.returns:
-            if _return.activation.lasti == lasti:
-                return _return
-        return None
-
-    def add_variable(self, name, line, frame, value='--check--'):
-        try:
-            return self.variables.add(
-                    name, line,
-                    frame.f_locals[name] if value == '--check--' else value,
-                    datetime.now()
-                )
-        except KeyError:
-            print 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', value
-            return self.variables.add(
-                    name, line,
-                    'n/a',
-                    datetime.now()
-                )
-
+    def add_variable(self, name, line, f_locals, value='--check--'):
+        """ Adds variable """
+        if value == '--check--' and name in f_locals:
+            value = repr(f_locals[name])
+        else:
+            value = 'now(n/a)'
+        return self.variables.add(name, line, value, datetime.now())
 
     def add_dependency(self, var, dep, activation):
+        """ Adds dependency """
+        var_id, dependencies_add = var.id, self.dependencies.add
+        context = activation.context
+
         # Variable
-        if dep in activation.context:
-            self.dependencies.add(var.id, activation.context[dep].id)
+        if dep in context:
+            dependencies_add(var_id, context[dep].id)
         # Function Call
         if isinstance(dep, tuple):
-            call = self.call_by_col(*dep)
-            _return = self.find_return_by_lasti(call.lasti)
-            if _return is None:
-                return
+            call = self.call_by_col[dep[0]][dep[1]]
+            lasti, returns = call.lasti, self.returns
 
-            vid = self.add_variable(
-                'call {}'.format(_return.activation.name), dep[0], None, 'n/a')
+            if not lasti in returns:
+                return
+            _return = returns[lasti]
+
+            vid = self.add_variable('call {}'.format(_return.activation.name), 
+                                    dep[0], {}, 'now(n/a)')
             # Call was not evaluated before
             #if call.result is None or _return.var.line == call.result[1]:
-            self.returns.remove(_return)
+            del returns[lasti]
             call.result = (_return.var.id, _return.var.line)
-            self.dependencies.add(vid, _return.var.id)
+            dependencies_add(vid, _return.var.id)
             
             self.add_dependencies(self.variables[vid], activation, call.func)
-            self.dependencies.add(var.id, vid)
+            dependencies_add(var_id, vid)
 
     def add_dependencies(self, var, activation, dependencies):
         """ Adds dependencies to var """
+        add_dependency = self.add_dependency
         for dep in dependencies:
-            self.add_dependency(var, dep, activation)
+            add_dependency(var, dep, activation)
 
-    def slice_line(self, activation, dependencies, usages, frame, filename):
+    def slice_line(self, activation, lineno, f_locals, filename):
         """ Generates dependencies from line """
-        lineno = frame.f_lineno
-        print_msg('Slice [{}] -> {}'.format(lineno,
+        print_fn_msg(lambda: 'Slice [{}] -> {}'.format(lineno,
                 linecache.getline(filename, lineno).strip()))
         
+        context, variables = activation.context, self.variables
+        usages_add = self.usages.add
+        add_variable = self.add_variable
+        add_dependencies = self.add_dependencies
+
+        dependencies = self.line_dependencies[lineno]
+        usages = self.line_usages[lineno]['Load']
+
         for name in usages:
-            if name in activation.context:
-                self.usages.add(activation.context[name].id, name, lineno)
+            if name in context:
+                usages_add(context[name].id, name, lineno)
 
         for name, others in dependencies.items():
             if name == 'return':
-                vid = self.add_variable(name, lineno, frame, value=activation.return_value)
-                self.returns.add(activation, self.variables[vid])
+                vid = add_variable(name, lineno, f_locals, 
+                                   value=activation.return_value)
+                self.returns[activation.lasti] = Return(activation, 
+                                                        variables[vid])
             else:
-                vid = self.add_variable(name, lineno, frame)
-            self.add_dependencies(self.variables[vid], activation, others)
+                vid = add_variable(name, lineno, f_locals)
+            add_dependencies(variables[vid], activation, others)
                 
-            activation.context[name] = self.variables[vid]
+            context[name] = variables[vid]
 
     def close_activation(self, event, arg):
         """ Slice all lines from closing activation """
@@ -173,113 +168,128 @@ class Tracer(Profiler):
         super(Tracer, self).close_activation(event, arg)
 
     def add_generic_return(self, frame, event, arg, ccall=False):
-        """ Add return that depends on all parameters """
+        """ Add return to functions that do not have return 
+            For ccall, add dependency from all params
+        """
         if frame.f_code.co_filename != self.script:
             return
-        
-        dependencies = self.line_dependencies(frame.f_lineno)
+        lineno = frame.f_lineno
+        variables = self.variables
+
         # Artificial return condition
         activation = self.activation_stack[-1]
-        if not 'return' in dependencies:
-            vid = self.add_variable('return', frame.f_lineno, None, 
-                                     value=activation.return_value)
-            activation.context['return'] = self.variables[vid]
-            self.returns.add(activation, self.variables[vid])
+        lasti = activation.lasti
+        if not 'return' in self.line_dependencies[lineno]:
+            vid = self.add_variable('return', lineno, {}, 
+                                    value=activation.return_value)
+            activation.context['return'] = variables[vid]
+            self.returns[lasti] = Return(activation, variables[vid])
 
             if ccall:
                 caller = self.activation_stack[-2]
-                call = self.call_by_lasti(frame.f_lineno, frame.f_lasti)
-                self.add_dependencies(
-                    self.variables[vid], caller, 
-                    call.all_args())
-                self.add_inter_dependencies(frame, call.all_args(), caller)
+                call = self.call_by_lasti[lineno][lasti]
+                all_args = call.all_args()
+                self.add_dependencies(variables[vid], caller, all_args)
+                self.add_inter_dependencies(frame, all_args, caller)
 
+    def match_arg(self, passed, arg, caller, activation, line, f_locals):
+        """ Matches passed param with argument """ 
+        context = activation.context
 
-
-    def match_arg(self, call_var, act_var_name, caller, activation, line, frame):
-        if act_var_name in activation.context:
-            act_var = activation.context[act_var_name]
+        if arg in context:
+            act_var = context[arg]
         else:
-            vid = self.add_variable(act_var_name, line, frame)
+            vid = self.add_variable(arg, line, f_locals)
             act_var = self.variables[vid]
-            activation.context[act_var_name] = act_var
+            context[arg] = act_var
 
-        if call_var:
-            self.add_dependency(act_var, call_var, caller)
+        if passed:
+            self.add_dependency(act_var, passed, caller)
 
-    def match_args(self, args, act_var_name, caller, activation, line, frame):
+    def match_args(self, args, param, caller, activation, line, f_locals):
+        """ Matches passed param with arguments """ 
         for arg in args:
-            self.match_arg(arg, act_var_name, caller, activation, line, frame)
+            self.match_arg(arg, param, caller, activation, line, f_locals)
 
     def add_inter_dependencies(self, frame, args, activation):
+        """ Adds dependencies between params """
         immutable = (bool, numbers.Number, str, unicode)
+        f_locals, context = frame.f_locals, activation.context
+        lineno, variables = frame.f_lineno, self.variables
+        add_variable = self.add_variable
+        add_dependencies = self.add_dependencies
 
         added = {}
         for arg in args:
             try:
-                var = frame.f_locals[arg]
+                var = f_locals[arg]
                 if not isinstance(var, immutable):
-                    vid = self.add_variable(arg, frame.f_lineno, frame)
-                    self.add_dependencies(
-                        self.variables[vid], activation, args)
-                    added[arg] = vid
+                    vid = add_variable(arg, lineno, {}, value=var)
+                    variable = variables[vid]
+                    add_dependencies(variable, activation, args)
+                    added[arg] = variable
             except KeyError:
                 pass
 
-        for arg, vid in added.items():
-            activation.context[arg] = self.variables[vid]
+        for arg, variable in added.items():
+            context[arg] = variable
 
-    def trace_c_call(self, frame, event, arg):
-        super(Tracer, self).trace_c_call(frame, event, arg)     
-       
-    def trace_call(self, frame, event, arg):
+    def add_argument_variables(self, frame):
         """ Adds argument variables """
-        super(Tracer, self).trace_call(frame, event, arg)
         back = frame.f_back
-        if self.script == back.f_code.co_filename:
-            call = self.call_by_lasti(back.f_lineno, back.f_lasti)
-            caller, act = self.activation_stack[-2:]
-            line = frame.f_lineno
-            sub = -[bool(act.starargs), bool(act.kwargs)].count(True)
+        f_locals = frame.f_locals
+        match_args = self.match_args
+        match_arg = self.match_arg
 
-            order = act.args + act.starargs + act.kwargs
-            used = [0 for _ in order]
-            j = 0
-            for i, call_arg in enumerate(call.args):
-                j = i if i < len(order) + sub else sub
-                act_arg = order[j]
-                self.match_args(call_arg, act_arg, caller, act, line, frame)
-                used[j] += 1
-            for act_arg, call_arg in call.keywords.items():
-                try:
-                    i = act.args.index(act_arg)
-                    self.match_args(call_arg, act_arg, caller, act, line, frame)
-                    used[i] += 1
-                except ValueError:
-                    for kw in act.kwargs:
-                        self.match_args(call_arg, kw, caller, act, line, frame)
+        call = self.call_by_lasti[back.f_lineno][back.f_lasti]
+        caller, act = self.activation_stack[-2:]
+        act_args_index = act.args.index
+        line = frame.f_lineno
+        sub = -[bool(act.starargs), bool(act.kwargs)].count(True)
 
-            # ToDo: improve matching
-            #   Ignore default params
-            #   Do not match f(**kwargs) with def(*args)
-            args = [(i, order[i]) for i in range(len(used)) if not used[i]]
-            for star in call.kwargs + call.starargs:
-                for i, act_arg in args:
-                    self.match_args(star, act_arg, caller, act, line, frame)
-                    used[i] += 1
+        order = act.args + act.starargs + act.kwargs
+        used = [0 for _ in order]
+        j = 0
+        for i, call_arg in enumerate(call.args):
+            j = i if i < len(order) + sub else sub
+            act_arg = order[j]
+            match_args(call_arg, act_arg, caller, act, line, f_locals)
+            used[j] += 1
+        for act_arg, call_arg in call.keywords.items():
+            try:
+                i = act_args_index(act_arg)
+                match_args(call_arg, act_arg, caller, act, line, f_locals)
+                used[i] += 1
+            except ValueError:
+                for kw in act.kwargs:
+                    match_args(call_arg, kw, caller, act, line, f_locals)
 
-            args = [(i, order[i]) for i in range(len(used)) if not used[i]]
+        # ToDo: improve matching
+        #   Ignore default params
+        #   Do not match f(**kwargs) with def(*args)
+        args = [(i, order[i]) for i in range(len(used)) if not used[i]]
+        for star in call.kwargs + call.starargs:
             for i, act_arg in args:
-                self.match_arg(None, act_arg, caller, act, line, frame)
+                match_args(star, act_arg, caller, act, line, f_locals)
+                used[i] += 1
 
-            self.add_inter_dependencies(frame.f_back, call.all_args(), caller)
+        args = [(i, order[i]) for i in range(len(used)) if not used[i]]
+        for i, act_arg in args:
+            match_arg(None, act_arg, caller, act, line, frame)
+
+        self.add_inter_dependencies(back, call.all_args(), caller)
+
+    def trace_call(self, frame, event, arg):
+        super(Tracer, self).trace_call(frame, event, arg)
+        if self.script != frame.f_back.f_code.co_filename:
+            return
+        self.add_argument_variables(frame)
 
     def trace_c_return(self, frame, event, arg):
         activation = self.activation_stack[-1]
         self.add_generic_return(frame, event, arg, ccall=True)
         super(Tracer, self).trace_c_return(frame, event, arg)
         activation.context['return'].value = activation.return_value
-
 
     def trace_return(self, frame, event, arg):
         activation = self.activation_stack[-1]
@@ -292,16 +302,17 @@ class Tracer(Profiler):
         if frame.f_code.co_filename != self.script:
             return
 
+        lineno = frame.f_lineno
+
         activation = self.activation_stack[-1]
-        dependencies = self.line_dependencies(frame.f_lineno)
-        usages = self.line_usages(frame.f_lineno)
-        print_msg('[{}] -> {}'.format(frame.f_lineno,
-                linecache.getline(self.script, frame.f_lineno).strip()))
+        
+        print_fn_msg(lambda: '[{}] -> {}'.format(lineno,
+                linecache.getline(self.script, lineno).strip()))
         
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
         activation.slice_stack.append([
-            activation, dependencies, usages, frame, self.script])
+            activation, lineno, frame.f_locals, self.script])
          
     def tracer(self, frame, event, arg):
         current_event = (event, frame.f_lineno, frame.f_code)
@@ -320,11 +331,11 @@ class Tracer(Profiler):
         super(Tracer, self).store()
         persistence.store_slicing(self.variables, self.dependencies, self.usages)
         for var in self.variables:
-            print_msg(var)
+            print_fn_msg(lambda: var)
 
         for dep in self.dependencies:
-            print_msg("{}\t<-\t{}".format(self.variables[dep.dependent], 
+            print_fn_msg(lambda: "{}\t<-\t{}".format(self.variables[dep.dependent], 
                                         self.variables[dep.supplier]))
 
         for var in self.usages:
-            print_msg(var)
+            print_fn_msg(lambda: var)

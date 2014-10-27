@@ -6,8 +6,12 @@ verbose = False
 
 
 def print_msg(message, force = False):
-    if verbose or force: 
+    if verbose or force:
         print('{}{}'.format(LABEL, message))
+
+def print_fn_msg(message, force = False):
+    if verbose or force:
+        print('{}{}'.format(LABEL, message()))
 
 
 def print_map(title, a_map):
