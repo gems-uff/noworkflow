@@ -8,13 +8,33 @@ import linecache
 import itertools
 import numbers
 from collections import namedtuple
+from datetime import datetime
 from .profiler import Profiler
 from ..utils import print_msg
 from ..prov_definition import SlicingVisitor
 from .. import persistence
 
+class Variable(object):
+    __slots__ = (
+        'id',
+        'name',
+        'line',
+        'value',
+        'time',
+    )
 
-Variable = namedtuple("Variable", "id name line")
+    def __init__(self, id, name, line, value=None, time=None):
+        self.id = id
+        self.name = name
+        self.line = line
+        self.value = value
+        self.time = time
+
+    def __repr__(self):
+        return "Variable(id={}, name={}, line={}, value={})".format(
+            self.id, self.name, self.line, self.value)
+
+#Variable = namedtuple("Variable", "id name line value time")
 Dependency = namedtuple("Dependency", "id dependent supplier")
 Usage = namedtuple("Usage", "id vid name line")
 Return = namedtuple("Return", "id activation var")
@@ -83,6 +103,22 @@ class Tracer(Profiler):
                 return _return
         return None
 
+    def add_variable(self, name, line, frame, value='--check--'):
+        try:
+            return self.variables.add(
+                    name, line,
+                    frame.f_locals[name] if value == '--check--' else value,
+                    datetime.now()
+                )
+        except KeyError:
+            print 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', value
+            return self.variables.add(
+                    name, line,
+                    'n/a',
+                    datetime.now()
+                )
+
+
     def add_dependency(self, var, dep, activation):
         # Variable
         if dep in activation.context:
@@ -94,8 +130,8 @@ class Tracer(Profiler):
             if _return is None:
                 return
 
-            vid = self.variables.add(
-                'call {}'.format(_return.activation.name), dep[0])
+            vid = self.add_variable(
+                'call {}'.format(_return.activation.name), dep[0], None, 'n/a')
             # Call was not evaluated before
             #if call.result is None or _return.var.line == call.result[1]:
             self.returns.remove(_return)
@@ -110,8 +146,9 @@ class Tracer(Profiler):
         for dep in dependencies:
             self.add_dependency(var, dep, activation)
 
-    def slice_line(self, activation, dependencies, usages, lineno, filename):
+    def slice_line(self, activation, dependencies, usages, frame, filename):
         """ Generates dependencies from line """
+        lineno = frame.f_lineno
         print_msg('Slice [{}] -> {}'.format(lineno,
                 linecache.getline(filename, lineno).strip()))
         
@@ -120,10 +157,13 @@ class Tracer(Profiler):
                 self.usages.add(activation.context[name].id, name, lineno)
 
         for name, others in dependencies.items():
-            vid = self.variables.add(name, lineno)
-            self.add_dependencies(self.variables[vid], activation, others)
             if name == 'return':
+                vid = self.add_variable(name, lineno, frame, value=activation.return_value)
                 self.returns.add(activation, self.variables[vid])
+            else:
+                vid = self.add_variable(name, lineno, frame)
+            self.add_dependencies(self.variables[vid], activation, others)
+                
             activation.context[name] = self.variables[vid]
 
     def close_activation(self, event, arg):
@@ -139,9 +179,11 @@ class Tracer(Profiler):
         
         dependencies = self.line_dependencies(frame.f_lineno)
         # Artificial return condition
+        activation = self.activation_stack[-1]
         if not 'return' in dependencies:
-            activation = self.activation_stack[-1]
-            vid = self.variables.add('return', frame.f_lineno)
+            vid = self.add_variable('return', frame.f_lineno, None, 
+                                     value=activation.return_value)
+            activation.context['return'] = self.variables[vid]
             self.returns.add(activation, self.variables[vid])
 
             if ccall:
@@ -152,20 +194,22 @@ class Tracer(Profiler):
                     call.all_args())
                 self.add_inter_dependencies(frame, call.all_args(), caller)
 
-    def match_arg(self, call_var, act_var_name, caller, activation, line):
+
+
+    def match_arg(self, call_var, act_var_name, caller, activation, line, frame):
         if act_var_name in activation.context:
             act_var = activation.context[act_var_name]
         else:
-            vid = self.variables.add(act_var_name, line)
+            vid = self.add_variable(act_var_name, line, frame)
             act_var = self.variables[vid]
             activation.context[act_var_name] = act_var
 
         if call_var:
             self.add_dependency(act_var, call_var, caller)
 
-    def match_args(self, args, act_var_name, caller, activation, line):
+    def match_args(self, args, act_var_name, caller, activation, line, frame):
         for arg in args:
-            self.match_arg(arg, act_var_name, caller, activation, line)
+            self.match_arg(arg, act_var_name, caller, activation, line, frame)
 
     def add_inter_dependencies(self, frame, args, activation):
         immutable = (bool, numbers.Number, str, unicode)
@@ -175,7 +219,7 @@ class Tracer(Profiler):
             try:
                 var = frame.f_locals[arg]
                 if not isinstance(var, immutable):
-                    vid = self.variables.add(arg, frame.f_lineno)
+                    vid = self.add_variable(arg, frame.f_lineno, frame)
                     self.add_dependencies(
                         self.variables[vid], activation, args)
                     added[arg] = vid
@@ -204,16 +248,16 @@ class Tracer(Profiler):
             for i, call_arg in enumerate(call.args):
                 j = i if i < len(order) + sub else sub
                 act_arg = order[j]
-                self.match_args(call_arg, act_arg, caller, act, line)
+                self.match_args(call_arg, act_arg, caller, act, line, frame)
                 used[j] += 1
             for act_arg, call_arg in call.keywords.items():
                 try:
                     i = act.args.index(act_arg)
-                    self.match_args(call_arg, act_arg, caller, act, line)
+                    self.match_args(call_arg, act_arg, caller, act, line, frame)
                     used[i] += 1
                 except ValueError:
                     for kw in act.kwargs:
-                        self.match_args(call_arg, kw, caller, act, line)
+                        self.match_args(call_arg, kw, caller, act, line, frame)
 
             # ToDo: improve matching
             #   Ignore default params
@@ -221,22 +265,27 @@ class Tracer(Profiler):
             args = [(i, order[i]) for i in range(len(used)) if not used[i]]
             for star in call.kwargs + call.starargs:
                 for i, act_arg in args:
-                    self.match_args(star, act_arg, caller, act, line)
+                    self.match_args(star, act_arg, caller, act, line, frame)
                     used[i] += 1
 
             args = [(i, order[i]) for i in range(len(used)) if not used[i]]
             for i, act_arg in args:
-                self.match_arg(None, act_arg, caller, act, line)
+                self.match_arg(None, act_arg, caller, act, line, frame)
 
             self.add_inter_dependencies(frame.f_back, call.all_args(), caller)
 
     def trace_c_return(self, frame, event, arg):
+        activation = self.activation_stack[-1]
         self.add_generic_return(frame, event, arg, ccall=True)
-        super(Tracer, self).trace_c_return(frame, event, arg)     
+        super(Tracer, self).trace_c_return(frame, event, arg)
+        activation.context['return'].value = activation.return_value
+
 
     def trace_return(self, frame, event, arg):
+        activation = self.activation_stack[-1]
         self.add_generic_return(frame, event, arg)
         super(Tracer, self).trace_return(frame, event, arg)
+        activation.context['return'].value = activation.return_value
 
     def trace_line(self, frame, event, arg):
         # Different file
@@ -252,7 +301,7 @@ class Tracer(Profiler):
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
         activation.slice_stack.append([
-            activation, dependencies, usages, frame.f_lineno, self.script])
+            activation, dependencies, usages, frame, self.script])
          
     def tracer(self, frame, event, arg):
         current_event = (event, frame.f_lineno, frame.f_code)
