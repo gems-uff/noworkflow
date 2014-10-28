@@ -287,8 +287,8 @@ def store_function_activation(function_activation, caller_id):
 def store_slicing(variables, dependencies, usages):
     with db_conn as db:
         db.executemany(
-            "insert into slicing_variable(trial_id, vid, name, line) values (?, ?, ?, ?)",
-            ((trial_id, v.id, v.name, v.line) for v in variables)
+            "insert into slicing_variable(trial_id, vid, name, line, value, time) values (?, ?, ?, ?, ?, ?)",
+            ((trial_id, v.id, v.name, v.line, v.value, v.time) for v in variables)
         )
         db.executemany(
             "insert into slicing_dependency(trial_id, id, dependent, supplier) values (?, ?, ?, ?)",

@@ -111,6 +111,8 @@ create table slicing_variable (
 	vid INTEGER,
     name TEXT,
 	line INTEGER,
+	value TEXT,
+	time TIMESTAMP,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE,
 	PRIMARY KEY (trial_id, vid)
 );
