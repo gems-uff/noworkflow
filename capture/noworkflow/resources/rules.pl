@@ -70,3 +70,29 @@ activation_influence(Influencer, Influenced) :- activation_influence_id(Influenc
 access_stack(File, Functions) :- access_stack_id(File_id, Functions_id), name(File_id, File), name(Functions_id, Functions).
 indirect_access(Function, File) :- indirect_access_id(Function_id, File_id), name(Function_id, Function), name(File_id, File).
 access_influence(Influencer, Influenced) :- access_influence_id(Influencer_id, Influenced_id), name(Influencer_id, Influencer), name(Influenced_id, Influenced).
+
+%
+% SLICING-BASED ACCESSOR RULES
+%
+
+dep(Dependent, Supplier) :- dependency(_, Dependent, Supplier).
+usage_or_assign(Name, Line, Id) :- usage(_, Id, Name, Line).
+usage_or_assign(Name, Line, Id) :- variable(Id, Name, Line, _, _).
+
+var_name(Id, Name) :- variable(Id, Name, _, _, _).
+var_line(Id, Line) :- variable(Id, _, Line, _, _).
+var_info(Id, variable(Id, Name, Line, Value)) :- variable(Id, Name, Line, Value, _).
+
+
+%
+% SLICING-BASED INFERENCE RULES
+%
+
+slice([],[]).
+slice([Id|L1], L2) :- slice(Id,L3), slice(L1, L4), union(L3, L4, L2), !.
+slice(Id, [Id|L1]) :- bagof(X,dep(Id, X),L2), !, slice(L2, L1).
+slice(Id, [Id]).
+
+slice_name(Id, Names) :- slice(Id, X), maplist(var_name, X, Names).
+slice_line(Id, Lines) :- slice(Id, X), maplist(var_line, X, Lines).
+slice_info(Id, Infos) :- slice(Id, X), maplist(var_info, X, Infos).
