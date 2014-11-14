@@ -6,7 +6,10 @@ create table trial (
 	code_hash TEXT,
 	arguments TEXT,
 	inherited_id INTEGER, -- Id of the prospective tuple that we are inheriting module information (due to --bypass-modules)
-	FOREIGN KEY (inherited_id) REFERENCES trial ON DELETE RESTRICT  
+	parent_id INTEGER, -- Id of the parent trial that is used to create the history
+	run INTEGER, -- trial created through now run command
+	FOREIGN KEY (inherited_id) REFERENCES trial ON DELETE RESTRICT,
+	FOREIGN KEY (parent_id) REFERENCES trial ON DELETE SET NULL  
 );
 
 CREATE INDEX trial_inherited_id on trial(inherited_id);

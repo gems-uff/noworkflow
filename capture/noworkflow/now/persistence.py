@@ -5,6 +5,7 @@ import hashlib
 import os.path
 import sqlite3
 import sys
+import json
 from collections import deque
 from pkg_resources import resource_string #@UnresolvedImport
 
@@ -15,7 +16,9 @@ PROVENANCE_DIRNAME = '.noworkflow'
 CONTENT_DIRNAME = 'content'
 DB_FILENAME = 'db.sqlite'
 DB_SCRIPT = '../resources/noworkflow.sql'
+PARENT_TRIAL = '.parent_config.json'
 
+provenance_path = None # Base .noworflow path
 content_path = None  # Base path for storing content of files
 db_conn = None  # Connection to the database
 trial_id = None  # Id of the prospective provenance used in this trial
@@ -32,7 +35,7 @@ def has_provenance(path):
 
 
 def connect(path):
-    global content_path, db_conn
+    global content_path, db_conn, provenance_path
     provenance_path = os.path.join(path, PROVENANCE_DIRNAME)
 
     content_path = os.path.join(provenance_path, CONTENT_DIRNAME)
@@ -111,9 +114,19 @@ def insertmany(table_name, attrs_list, **extra_attrs):
         insert(table_name, attrs, **extra_attrs)
 
 
-def last_trial_id():
+def select_trial_by_sql(db, sql):
+    try:
+        (an_id,) = db.execute(sql).fetchone()
+    except TypeError:
+        an_id = None
+    return an_id
+
+
+def last_trial_id(script=None):
     with db_conn as db:
-        (an_id,) = db.execute("select id from trial where start in (select max(start) from trial)").fetchone()
+        an_id = select_trial_by_sql(db, "select id from trial where start in (select max(start) from trial where script='{}')".format(script))
+        if not an_id:
+            an_id = select_trial_by_sql(db, "select id from trial where start in (select max(start) from trial)".format(script)) 
     return an_id
 
 
@@ -121,6 +134,36 @@ def last_trial_id_without_iheritance():
     with db_conn as db:
         (an_id,) = db.execute("select id from trial where start in (select max(start) from trial where inherited_id is NULL)").fetchone()
     return an_id
+
+
+def load_parent_id(script, remove=True):
+    global provenance_path
+    config_path = os.path.join(provenance_path, PARENT_TRIAL)
+    an_id, parents = None, {}
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            parents = json.load(f)
+        if script in parents:
+            an_id = parents[script]
+        if remove and an_id:
+            del parents[script]
+            with open(config_path, 'w') as f:
+                json.dump(parents, f)
+    if not an_id:
+        an_id = last_trial_id(script=script)
+    return an_id
+
+def store_parent(script, trial_id):
+    global provenance_path
+    config_path = os.path.join(provenance_path, PARENT_TRIAL)
+    parents = {}
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            parents = json.load(f)
+    parents[script] = trial_id
+    with open(config_path, 'w') as f:
+        json.dump(parents, f)
+
 
 def distinct_scripts():
     with db_conn as db:
@@ -143,12 +186,15 @@ def iherited_id(an_id):
     return iherited_id
 
 
-def store_trial(start, script, code, arguments, bypass_modules):
+def store_trial(start, script, code, arguments, bypass_modules, run=True):
     global trial_id
     code_hash = put(code.encode('utf-8'))
+    parent_id = load_parent_id(script)
     iherited_id = last_trial_id_without_iheritance() if bypass_modules else None
     with db_conn as db:
-        trial_id = db.execute("insert into trial (start, script, code_hash, arguments, inherited_id) values (?, ?, ?, ?, ?)", (start, script, code_hash, arguments, iherited_id)).lastrowid
+        trial_id = db.execute("insert into trial (start, script, code_hash, arguments, inherited_id, parent_id, run) values (?, ?, ?, ?, ?, ?, ?)", 
+            (start, script, code_hash, arguments, iherited_id, parent_id, run)).lastrowid
+    return trial_id
 
 
 def update_trial(finish, function_activation):
