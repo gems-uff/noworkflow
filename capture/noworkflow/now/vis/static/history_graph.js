@@ -201,7 +201,7 @@ HistoryGraph.prototype._zoomed = function(){
       .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")"); 
 };
 
-HistoryGraph.prototype.load = function(data, width, height) {
+HistoryGraph.prototype.load = function(data, width) {
     var self = this,
         nodes = [],
         edges = [],
@@ -240,21 +240,26 @@ HistoryGraph.prototype.load = function(data, width, height) {
 
     self.nodes = nodes;
     self.edges = edges;
-
-    self.reset_zoom(width, height);
+    self.update_window();
+    self.reset_zoom();
     self.restart();
 
     return nodes;
 };
 
-HistoryGraph.prototype.reset_zoom = function(width, height) {
+HistoryGraph.prototype.reset_zoom = function() {
     var self = this,
-        scale = height/self.max;
+        scale = self.height/self.max;
     if (scale < 1.0) {
         self.drag_svg.scale(scale);
-        self.drag_svg.translate([width*(1-scale), 0]);
+        self.drag_svg.translate([self.width*(1-scale), 0]);
+        self.drag_svg.event(self.svg);
+    } else {
+        self.drag_svg.scale(1);
+        self.drag_svg.translate([0, 0]);
         self.drag_svg.event(self.svg);
     }
+    self.state.just_scale = false;
 };
 
 HistoryGraph.prototype.select_node = function(node) {
@@ -278,7 +283,7 @@ HistoryGraph.prototype.restart = function(){
 
     // add new paths
     path = self.path.enter().append("svg:path")
-        .attr('class', 'link')
+        .attr('class', 'link');
     
     self._update_path(path);
       
@@ -320,6 +325,8 @@ HistoryGraph.prototype.restart = function(){
 HistoryGraph.prototype.update_window = function(){
     var self = this,
         size = self.custom_size();
+    self.width = size[0];
+    self.height = size[1];
     this.svg
         .attr("width", size[0])
         .attr("height", size[1]);

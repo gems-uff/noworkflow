@@ -16,6 +16,19 @@ svg:not(.active):not(.ctrl) {
   cursor: crosshair;
 }
 
+#history .toolbar {
+  margin: 5px;
+}
+
+.toolbar a.toollink, .toolbar a.toollink:link, .toolbar a.toollink:visited  {
+  color: black;
+}
+
+.toolbar a.toollink:active  {
+  color: blue;
+}
+
+
 #history svg {
   background-color: #eee;
 }

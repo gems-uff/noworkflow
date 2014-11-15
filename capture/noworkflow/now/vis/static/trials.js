@@ -1,6 +1,6 @@
 var width, height,
     filter_width = 200;
-var history_graph, trial_svg, 
+var history_graph, trial_graph, 
     selected_graph = "independent",
     current_nid = 0;
 
@@ -17,14 +17,10 @@ function calculate_window_size() {
 };
 calculate_window_size();
 
-function resize_trial() {
-    trial_svg.attr("height", height).attr("width", width);
-}
-
 window.onresize = function() {
     calculate_window_size();
     history_graph.update_window();
-    resize_trial();
+    trial_graph.update_window();
 };
 
 
@@ -40,14 +36,16 @@ function load_graph(nid, url) {
         success: function (data) {
             $('#graph').html('');
 
-            trial_svg = d3.select('#graph')
+            var trial_svg = d3.select('#graph')
                 .append('svg')
                 .attr("width", 500)
                 .attr("height", 500);
-            trial_graph(trial_svg, data.nodes, data.edges,
-                        data.min_duration, data.max_duration);
-            
-            resize_trial();
+            trial_graph = new TrialGraph(trial_svg, {
+                custom_size: function() {
+                    return [width, height];
+                }
+            });
+            trial_graph.load(data);
            
         },
         error: function (result, status) {
@@ -229,10 +227,9 @@ function reload() {
         },
         async: true,
         success: function (data) {
-            $('#history').html('');
+            $('#historygraph').html('');
             var w =  width - filter_width, 
-                height = $('#history').height(),
-                svg = d3.select('#history')
+                svg = d3.select('#historygraph')
                 .append('svg')
                 .attr("width", w)
                 .attr("height", height);
@@ -247,7 +244,7 @@ function reload() {
                 }
             });
 
-            nodes = history_graph.load(data, w, height);
+            nodes = history_graph.load(data, w);
             
             history_graph.select_node(nodes[0]);
         },
@@ -268,7 +265,7 @@ var horizontal = $('#splitter').split({
     position: HistoryGraph.consts.height + 3,
     onDrag: function(){
         history_graph.update_window();
-        resize_trial();
+        trial_graph.update_window();
     }
 });
 
@@ -276,7 +273,7 @@ $('#show').split({
     orientation: 'vertical', limit: 20,
     position: "60%",
     onDrag: function(){
-        resize_trial();
+        trial_graph.update_window();
     }
 
 });
@@ -302,4 +299,8 @@ $('#side-internal').on('click', '.fold', function(e){
     $(this.nextSibling).slideToggle(200);
     $(this.firstChild).toggleClass("fa-plus");
     $(this.firstChild).toggleClass("fa-minus");
+});
+
+$('#restore-history-zoom').on('click', function(e){
+    history_graph.reset_zoom();
 });
