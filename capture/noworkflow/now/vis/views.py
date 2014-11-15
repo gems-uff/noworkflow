@@ -1,11 +1,13 @@
+from __future__ import absolute_import
+
 import os
-from noworkflow import persistence
+from .. import persistence
 from flask import render_template, jsonify, request
-from app import app
-from models.trials import load_trials, row_to_dict
-from models.trial import load_trial_activation_tree, get_modules
-from models.trial import get_environment, get_file_accesses
-from trial_visitors.trial_graph import TrialGraphVisitor, TrialGraphCombineVisitor
+from . import app
+from .models.trials import load_trials, row_to_dict
+from .models.trial import load_trial_activation_tree, get_modules
+from .models.trial import get_environment, get_file_accesses
+from .trial_visitors.trial_graph import TrialGraphVisitor, TrialGraphCombineVisitor
 
 
 

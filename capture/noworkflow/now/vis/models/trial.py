@@ -1,6 +1,8 @@
+from __future__ import absolute_import
+
 from datetime import datetime
-from noworkflow import persistence
-from noworkflow.persistence import row_to_dict
+from ... import persistence
+from ...persistence import row_to_dict
 from collections import OrderedDict, Counter
 
 FORMAT = '%Y-%m-%d %H:%M:%S.%f'

@@ -11,6 +11,7 @@ from .cmd_show import Show
 from .cmd_diff import Diff
 from .cmd_export import Export
 from .cmd_checkout import Checkout
+from .cmd_vis import Vis
 
 def main():
 
@@ -23,6 +24,7 @@ def main():
         Diff('diff', 'compares the collected provenance of two trials'),
         Export('export', 'exports the collected provenance of a trial to Prolog'),
         Checkout('checkout', 'checkout the files of a trial'),
+        Vis('vis', 'visualization tool'),
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
@@ -37,5 +39,6 @@ __all__ = [
     b'Diff',
     b'Export',
     b'Checkout',
+    b'Vis',
     b'main',
 ]

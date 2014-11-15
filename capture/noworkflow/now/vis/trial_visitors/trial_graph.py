@@ -1,6 +1,8 @@
+from __future__ import absolute_import
+
 from datetime import datetime
 from collections import namedtuple
-from noworkflow import persistence
+from ... import persistence
 from ..models.trial import calculate_duration, FORMAT
 
 Edge = namedtuple("Edge", "node count")

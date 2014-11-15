@@ -122,10 +122,10 @@ def select_trial_by_sql(db, sql):
     return an_id
 
 
-def last_trial_id(script=None):
+def last_trial_id(script=None, parent_required=False):
     with db_conn as db:
         an_id = select_trial_by_sql(db, "select id from trial where start in (select max(start) from trial where script='{}')".format(script))
-        if not an_id:
+        if not parent_required and not an_id:
             an_id = select_trial_by_sql(db, "select id from trial where start in (select max(start) from trial)".format(script)) 
     return an_id
 
@@ -136,7 +136,7 @@ def last_trial_id_without_iheritance():
     return an_id
 
 
-def load_parent_id(script, remove=True):
+def load_parent_id(script, remove=True, parent_required=False):
     global provenance_path
     config_path = os.path.join(provenance_path, PARENT_TRIAL)
     an_id, parents = None, {}
@@ -150,7 +150,7 @@ def load_parent_id(script, remove=True):
             with open(config_path, 'w') as f:
                 json.dump(parents, f)
     if not an_id:
-        an_id = last_trial_id(script=script)
+        an_id = last_trial_id(script=script, parent_required=parent_required)
     return an_id
 
 def store_parent(script, trial_id):
@@ -189,7 +189,7 @@ def iherited_id(an_id):
 def store_trial(start, script, code, arguments, bypass_modules, run=True):
     global trial_id
     code_hash = put(code.encode('utf-8'))
-    parent_id = load_parent_id(script)
+    parent_id = load_parent_id(script, parent_required=True)
     iherited_id = last_trial_id_without_iheritance() if bypass_modules else None
     with db_conn as db:
         trial_id = db.execute("insert into trial (start, script, code_hash, arguments, inherited_id, parent_id, run) values (?, ?, ?, ?, ?, ?, ?)", 
