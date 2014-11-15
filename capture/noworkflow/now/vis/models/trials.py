@@ -67,5 +67,6 @@ def load_trials(script, execution):
             else:
                 trial["level"] = level
                 level += 1
+                last += 1
 
     return result
