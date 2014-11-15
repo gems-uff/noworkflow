@@ -243,11 +243,7 @@ def load_trial_activation_tree(tid):
     return stack2.pop()
 
 def get_modules(cwd, tid):
-    trial = persistence.load_trial(tid).fetchone()
-    dependencies = persistence.load_dependencies()
-    result = [row_to_dict(d) for d in dependencies]
-    local = [d for d in result if d['path'] and cwd in d['path']]
-    return trial, local, result
+    return persistence.load_modules(tid)
 
 def get_environment(tid):
     return {

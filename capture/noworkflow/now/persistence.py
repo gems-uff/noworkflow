@@ -18,6 +18,7 @@ DB_FILENAME = 'db.sqlite'
 DB_SCRIPT = '../resources/noworkflow.sql'
 PARENT_TRIAL = '.parent_config.json'
 
+base_path = None
 provenance_path = None # Base .noworflow path
 content_path = None  # Base path for storing content of files
 db_conn = None  # Connection to the database
@@ -35,7 +36,8 @@ def has_provenance(path):
 
 
 def connect(path):
-    global content_path, db_conn, provenance_path
+    global content_path, db_conn, provenance_path, base_path
+    base_path = path
     provenance_path = os.path.join(path, PROVENANCE_DIRNAME)
 
     content_path = os.path.join(provenance_path, CONTENT_DIRNAME)
@@ -170,6 +172,15 @@ def distinct_scripts():
         return db.execute("select distinct script from trial")
 
 
+def load_modules(trial_id, map_fn=None):
+    global base_path
+    if not map_fn:
+        map_fn = row_to_dict
+    trial = load_trial(trial_id).fetchone()
+    dependencies = load_dependencies(trial_id)
+    result = map(map_fn, dependencies)
+    local = [d for d in result if d['path'] and base_path in d['path']]
+    return trial, local, result
 
 def function_activation_id_seq():
     try:
@@ -220,7 +231,7 @@ def store_dependencies(dependencies):
             db.execute("insert into dependency (trial_id, module_id) values (?, ?)", (trial_id, module_id))
 
 
-def load_dependencies():
+def load_dependencies(trial_id):
     an_id = iherited_id(trial_id)
     if not an_id:
         an_id = trial_id

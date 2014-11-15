@@ -28,11 +28,11 @@ class Diff(Command):
             sys.exit(1)
 
         trial_before = persistence.load_trial(args.trial[0]).fetchone()
-        modules_before = persistence.load_dependencies()
+        modules_before = persistence.load_dependencies(trial_before['id'])
         environment_before = persistence.load('environment_attr', ['name', 'value'], trial_id = trial_before['id'])
 
         trial_after = persistence.load_trial(args.trial[1]).fetchone()
-        modules_after = persistence.load_dependencies()
+        modules_after = persistence.load_dependencies(trial_after['id'])
         environment_after = persistence.load('environment_attr', ['name, value'], trial_id = trial_after['id'])
 
         self.diff_trials(trial_before, trial_after)

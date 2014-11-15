@@ -32,7 +32,7 @@ class Show(Command):
         self.print_trial(persistence.load_trial(trial_id).fetchone())
 
         if args.modules:
-            self.print_modules(persistence.load_dependencies())
+            self.print_modules(persistence.load_dependencies(trial_id))
         
         if args.function_defs:
             self.print_function_defs(persistence.load('function_def', trial_id = trial_id))
