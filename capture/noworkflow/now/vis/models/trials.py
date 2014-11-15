@@ -25,6 +25,12 @@ def load_trials(script, execution):
             continue 
         trial, trial_id = row_to_dict(trial), trial["id"]
         trial["level"] = 0
+        trial["status"] = "Unfinished"
+        if not trial['run']:
+            trial["status"] = "Backup"
+        if trial['finish']:
+            trial["status"] = 'Finished'
+        trial["tooltip"] = "<b>{script}</b><br>{status}".format(**trial)
         id_map[trial_id] = tid
         children[trial_id] = []
         scripts[trial['script']].append(trial)

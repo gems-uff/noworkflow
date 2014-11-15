@@ -3,6 +3,7 @@ function TrialGraph(svg, options) {
 
     self.state_mousedown_node = false;
     self.translate = false;
+    self.use_tooltip = false;
 
     self.custom_size = options.custom_size || function() {
         return [TrialGraph.consts.width, TrialGraph.consts.height];
@@ -199,8 +200,7 @@ TrialGraph.prototype._add_node = function(node) {
         }
         self.state_mousedown_node = false;
     }).on('mouseover',function(d) {
-        var use_tooltip = d3.select("#showtooltips").property("checked");
-        if (!self.state_mousedown_node && use_tooltip) {
+        if (!self.state_mousedown_node && self.use_tooltip) {
             self._close_tooltip();
             self._show_tooltip(d);
         }
@@ -349,6 +349,11 @@ TrialGraph.prototype.restart = function() {
         if (link.type == 'return') source.return_links.push([i, target]);
         (target.arrival_links || (target.arrival_links = [])).push([i, source, link.type]);
     });
+};
+
+TrialGraph.prototype.set_use_tooltip = function(use) {
+    var self = this;
+    self.use_tooltip = use;
 };
 
 TrialGraph.prototype.update_window = function(){

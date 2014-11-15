@@ -45,6 +45,7 @@ function load_graph(nid, url) {
                     return [width, height];
                 }
             });
+            trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
             trial_graph.load(data);
            
         },
@@ -293,6 +294,14 @@ $('#top').split({
 $( "[name='graphtype']" ).change(function() {
     selected_graph = $(this).attr('value');
     load_graph(current_nid, selected_graph);
+});
+
+$( "[name='showtooltips']" ).change(function() {
+    trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
+});
+
+$( "[name='show-history-tooltips']" ).change(function() {
+    history_graph.set_use_tooltip(d3.select("#show-history-tooltips").property("checked"));
 });
 
 $('#side-internal').on('click', '.fold', function(e){

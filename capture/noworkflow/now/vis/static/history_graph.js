@@ -15,6 +15,14 @@ function HistoryGraph(svg, options) {
         mousedown_node: null,
         just_scale: false
     };
+    self.use_tooltip = false;
+
+    self.div = d3.select("body").append("div")
+        .attr("class", "tooltip history-tooltip")
+        .style("opacity", 0)
+        .on("mouseout", function(){
+            self._close_tooltip();
+        })
 
     self.height = self.custom_size()[1];
 
@@ -100,6 +108,7 @@ HistoryGraph.prototype._node_mousedown = function(d3node, d){
         state = self.state;
     d3.event.stopPropagation();
     state.mousedown_node = d;
+    self._close_tooltip();
 };
 
 HistoryGraph.prototype._node_mouseup = function(d3node, d){
@@ -192,13 +201,40 @@ HistoryGraph.prototype._update_circle = function(circle) {
         return "translate(" + d.x + "," + d.y + ")";
     }).classed('reflexive', function(d) {
         return d.reflexive; 
+    }).classed('finished', function(d) {
+        return d.info.status == 'Finished';
+    }).classed('unfinished', function(d) {
+        return d.info.status == 'Unfinished';
+    }).classed('backup', function(d) {
+        return d.info.status == 'Backup';
     });
 };
 
 HistoryGraph.prototype._zoomed = function(){
-    this.state.just_scale = true;
+    var self = this;
+    self.state.just_scale = true;
+    self._close_tooltip();
     d3.select("." + HistoryGraph.consts.graph_class)
       .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")"); 
+};
+
+HistoryGraph.prototype._show_tooltip = function(d) {
+    var self = this;
+    self.div.classed("hidden", false);
+    self.div.transition()
+        .duration(200)
+        .style("opacity", .9)
+    self.div.html(d.tooltip)
+        .style("left", (d3.event.pageX - 3) + "px")
+        .style("top", (d3.event.pageY - 28) + "px");
+};
+
+HistoryGraph.prototype._close_tooltip = function() {
+    var self = this;
+    self.div.transition()
+        .duration(500)
+        .style("opacity", 0);
+    self.div.classed("hidden", true);
 };
 
 HistoryGraph.prototype.load = function(data, width) {
@@ -222,7 +258,8 @@ HistoryGraph.prototype.load = function(data, width) {
         nodes.push({
             id: id, x: x, y: y,
             title: node.id,
-            info: node
+            info: node,
+            tooltip: node.tooltip
         })
         max = Math.max(max, y);
         id += 1;
@@ -307,7 +344,13 @@ HistoryGraph.prototype.restart = function(){
             self._node_mousedown.call(self, d3.select(this), d);      
         }).on('mouseup', function(d) {
             self._node_mouseup.call(self, d3.select(this), d);     
-        }).call(self.drag);
+        }).on('mouseover', function(d) {
+            if (!self.state.mousedown_node && self.use_tooltip) {
+                self._close_tooltip();
+                self._show_tooltip(d);
+            }
+        })
+        .call(self.drag);
    
     g.append('svg:text')
         .attr('x', 0)
@@ -320,6 +363,11 @@ HistoryGraph.prototype.restart = function(){
 
     // remove old nodes
     self.circle.exit().remove();
+};
+
+HistoryGraph.prototype.set_use_tooltip = function(use) {
+    var self = this;
+    self.use_tooltip = use;
 };
 
 HistoryGraph.prototype.update_window = function(){
