@@ -9,6 +9,7 @@ import threading
 
 from ..vis import app
 from .command import Command
+from ..persistence import persistence
 
 class Vis(Command):
 

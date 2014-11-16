@@ -8,11 +8,11 @@ import sys
 import traceback
 import argparse
 
-from .. import persistence
 from .. import prov_definition
 from .. import prov_deployment
 from .. import prov_execution
 from .. import utils
+from ..persistence import persistence
 from .command import Command
 
 def non_negative(string):
@@ -60,9 +60,11 @@ class Run(Command):
 
         with open(args.script) as f:
             metascript = {
+                'trial_id': None,
                 'code': f.read(),
                 'path': args.script,
                 'compiled': None,
+                'definition': None,
             }
 
         self.run(script_dir, args, metascript, __main__)
@@ -98,6 +100,6 @@ class Run(Command):
         else:
             prov_execution.disable()
             prov_execution.store()  # TODO: exceptions should be registered as return from the activation and stored in the database. We are currently ignoring all the activation tree when exceptions are raised.
-            utils.print_msg('the execution of trial {} finished successfully'.format(persistence.trial_id))
+            utils.print_msg('the execution of trial {} finished successfully'.format(metascript['trial_id']))
 
         return prov_execution.provider

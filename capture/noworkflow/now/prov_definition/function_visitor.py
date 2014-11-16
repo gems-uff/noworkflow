@@ -8,7 +8,7 @@ import sys
 from cStringIO import StringIO
 from .context import Context
 from .utils import diss
-from .. import persistence
+from ..persistence import persistence
 
 
 

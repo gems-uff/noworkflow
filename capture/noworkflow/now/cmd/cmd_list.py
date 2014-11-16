@@ -5,7 +5,7 @@ from __future__ import print_function
 
 import os
 
-from .. import persistence
+from ..persistence import persistence
 from ..utils import print_msg
 from .command import Command
 

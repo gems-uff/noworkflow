@@ -7,7 +7,7 @@ import sys
 import ast
 from datetime import datetime
 
-from .. import persistence
+from ..persistence import persistence
 from ..utils import print_msg
 from .function_visitor import FunctionVisitor
 from .slicing_visitor import SlicingVisitor
@@ -31,7 +31,9 @@ def visit_ast(metascript):
 def collect_provenance(args, metascript):
     now = datetime.now()
     try:
-        persistence.store_trial(now, sys.argv[0], metascript['code'], ' '.join(sys.argv[1:]), args.bypass_modules)
+        metascript['trial_id'] = persistence.store_trial(
+            now, sys.argv[0], metascript['code'], ' '.join(sys.argv[1:]), 
+            args.bypass_modules)
     except TypeError:
         print_msg('not able to bypass modules check because no previous trial was found', True)
         print_msg('aborting execution', True)
@@ -39,7 +41,7 @@ def collect_provenance(args, metascript):
 
     print_msg('  registering user-defined functions')
     visitor = visit_ast(metascript)
-    persistence.store_function_defs(visitor.functions)
+    persistence.store_function_defs(metascript['trial_id'], visitor.functions)
     if args.disasm:
         print('\n'.join(visitor.disasm))
     metascript['definition'] = visitor

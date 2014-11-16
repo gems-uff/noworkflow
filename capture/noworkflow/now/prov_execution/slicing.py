@@ -12,7 +12,7 @@ from datetime import datetime
 from .profiler import Profiler
 from ..utils import print_fn_msg
 from ..prov_definition import SlicingVisitor
-from .. import persistence
+from ..persistence import persistence
 
 class Variable(object):
     __slots__ = (
@@ -171,8 +171,7 @@ class Tracer(Profiler):
         """ Add return to functions that do not have return 
             For ccall, add dependency from all params
         """
-        if frame.f_code.co_filename != self.script:
-            return
+
         lineno = frame.f_lineno
         variables = self.variables
 
@@ -185,7 +184,7 @@ class Tracer(Profiler):
             activation.context['return'] = variables[vid]
             self.returns[lasti] = Return(activation, variables[vid])
 
-            if ccall:
+            if ccall and frame.f_code.co_filename == self.script:
                 caller = self.activation_stack[-2]
                 call = self.call_by_lasti[lineno][lasti]
                 all_args = call.all_args()
@@ -240,7 +239,7 @@ class Tracer(Profiler):
         f_locals = frame.f_locals
         match_args = self.match_args
         match_arg = self.match_arg
-
+        print back.f_lineno, back.f_lasti, self.call_by_lasti
         call = self.call_by_lasti[back.f_lineno][back.f_lasti]
         caller, act = self.activation_stack[-2:]
         act_args_index = act.args.index
@@ -275,7 +274,7 @@ class Tracer(Profiler):
 
         args = [(i, order[i]) for i in range(len(used)) if not used[i]]
         for i, act_arg in args:
-            match_arg(None, act_arg, caller, act, line, frame)
+            match_arg(None, act_arg, caller, act, line, f_locals)
 
         self.add_inter_dependencies(back, call.all_args(), caller)
 
@@ -284,6 +283,7 @@ class Tracer(Profiler):
         if self.script != frame.f_back.f_code.co_filename:
             return
         self.add_argument_variables(frame)
+        activation = self.activation_stack[-1]
 
     def trace_c_return(self, frame, event, arg):
         activation = self.activation_stack[-1]
@@ -296,6 +296,8 @@ class Tracer(Profiler):
         self.add_generic_return(frame, event, arg)
         super(Tracer, self).trace_return(frame, event, arg)
         activation.context['return'].value = activation.return_value
+
+        
 
     def trace_line(self, frame, event, arg):
         # Different file
@@ -329,7 +331,7 @@ class Tracer(Profiler):
         while self.activation_stack:
             self.close_activation('store', None)
         super(Tracer, self).store()
-        persistence.store_slicing(self.variables, self.dependencies, self.usages)
+        persistence.store_slicing(self.trial_id, self.variables, self.dependencies, self.usages)
         for var in self.variables:
             print_fn_msg(lambda: var)
 

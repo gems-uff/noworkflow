@@ -1,9 +1,13 @@
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
+# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+
 from __future__ import absolute_import
 
 from datetime import datetime
 from collections import namedtuple
-from ... import persistence
-from ..models.trial import calculate_duration, FORMAT
+from ..persistence import persistence
+from .activation import calculate_duration, FORMAT
+
 
 Edge = namedtuple("Edge", "node count")
 

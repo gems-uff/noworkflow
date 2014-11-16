@@ -1,114 +1,104 @@
 from __future__ import absolute_import
 
 import os
-from .. import persistence
+import functools
+from ..persistence import persistence
 from flask import render_template, jsonify, request
 from . import app
-from .models.trials import load_trials, row_to_dict
-from .models.trial import load_trial_activation_tree, get_modules
-from .models.trial import get_environment, get_file_accesses
-from .trial_visitors.trial_graph import TrialGraphVisitor, TrialGraphCombineVisitor
+from ..models.history import History
+from ..models.trial import Trial
 
 
+def connection(func):
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        cwd = os.getcwd()
+        persistence.connect_existing(cwd)
+        return func(*args, **kwargs)
+    return inner
 
 @app.route('/<path:path>')
 def static_proxy(path):
     return app.send_static_file(path)
 
 @app.route('/trials')
+@connection
 def trials():
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    return jsonify(**load_trials(request.args.get('script'), 
-                                 request.args.get('execution')))
-
-@app.route('/trials/<tid>/independent')
-def independent_trial_graph(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    tree = load_trial_activation_tree(tid)
-    visitor = TrialGraphVisitor()
-    tree.visit(visitor)
-    return jsonify(**visitor.to_dict())
-
-@app.route('/trials/<tid>/combined')
-def combined_trial_graph(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    tree = load_trial_activation_tree(tid)
-    visitor = TrialGraphCombineVisitor()
-    tree.visit(visitor)
-    return jsonify(**visitor.to_dict())
-
-
+    history = History()
+    return jsonify(**history.graph_data(request.args.get('script'), 
+                                        request.args.get('execution')))
 @app.route('/')
+@connection
 def index():
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    
-    scripts = {s[0].rsplit('/',1)[-1] for s in persistence.distinct_scripts()}
+    history = History()
     return render_template("index.html", 
-        cwd = cwd,
-        scripts = scripts
+        cwd = os.getcwd(),
+        scripts = history.scripts()
     )
 
+@app.route('/trials/<tid>/independent')
+@connection
+def independent_trial_graph(tid):
+    trial = Trial(tid)
+    return jsonify(**trial.independent_activation_graph())
+
+@app.route('/trials/<tid>/combined')
+@connection
+def combined_trial_graph(tid):
+    trial = Trial(tid)
+    return jsonify(**trial.combined_activation_graph())
+
 @app.route('/trials/<tid>/dependencies')
+@connection
 def dependencies(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    trial, local, result = get_modules(cwd, tid)
+    trial = Trial(tid)
+    local, result = trial.modules()
     return jsonify(local=local, all=result)
 
 @app.route('/trials/<tid>/all_modules')
+@connection
 def all_modules(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    trial, local, result = get_modules(cwd, tid)
+    trial = Trial(tid)
+    local, result = trial.modules()
     result = sorted(result, key=lambda x:x not in local)
     return render_template("trial.html", 
-        cwd = cwd,
-        trial = trial,
+        cwd = os.getcwd(),
+        trial = trial.info(),
         modules = result,
         info = "modules.html",
     )
 
 @app.route('/trials/<tid>/environment')
+@connection
 def environment(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    env = get_environment(tid)
-    return jsonify(env=env)
+    trial = Trial(tid)
+    return jsonify(env=trial.environment())
 
 
 @app.route('/trials/<tid>/all_environment')
+@connection
 def all_environment(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    trial = persistence.load_trial(tid).fetchone()
-    env = get_environment(tid)
+    trial = Trial(tid)
     return render_template("trial.html", 
-        cwd = cwd,
-        trial = trial,
-        env = env,
+        cwd = os.getcwd(),
+        trial = trial.info(),
+        env = trial.environment(),
         info = "environment.html",
     )
 
 @app.route('/trials/<tid>/file_accesses')
+@connection
 def file_accesses(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    result = get_file_accesses(tid)
-    return jsonify(file_accesses=result)
+    trial = Trial(tid)
+    return jsonify(file_accesses=trial.file_accesses())
 
 @app.route('/trials/<tid>/all_file_accesses')
+@connection
 def all_file_accesses(tid):
-    cwd = os.getcwd()
-    persistence.connect_existing(cwd)
-    trial = persistence.load_trial(tid).fetchone()
-    result = get_file_accesses(tid)
+    trial = Trial(tid)
     return render_template("trial.html", 
-        cwd = cwd,
-        trial = trial,
-        file_accesses = result,
+        cwd = os.getcwd(),
+        trial = trial.info(),
+        file_accesses = trial.file_accesses(),
         info = "file_accesses.html",
     )

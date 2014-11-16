@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 from pkg_resources import resource_string #@UnresolvedImport
 
-from .. import persistence
+from ..persistence import persistence
 from .. import utils
 from .command import Command
 

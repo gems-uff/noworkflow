@@ -8,7 +8,7 @@ import socket
 import sys
 import pkg_resources
 
-import persistence
+from persistence import persistence
 from utils import print_msg
 
 
@@ -92,7 +92,7 @@ def get_version(module_name):
 def collect_provenance(args, metascript):
     print_msg('  registering environment attributes')
     environment = collect_environment_provenance()
-    persistence.store_environment(environment)
+    persistence.store_environment(metascript['trial_id'], environment)
         
     if args.bypass_modules:
         print_msg('  using previously detected module dependencies (--bypass-modules).')
@@ -103,4 +103,4 @@ def collect_provenance(args, metascript):
 
         print_msg('  registering provenance from {} modules'.format(len(finder.modules) - 1))
         modules = collect_modules_provenance(finder.modules)
-        persistence.store_dependencies(modules)
+        persistence.store_dependencies(metascript['trial_id'], modules)

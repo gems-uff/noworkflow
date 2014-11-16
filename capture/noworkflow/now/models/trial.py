@@ -1,17 +1,109 @@
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
+# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+
 from __future__ import absolute_import
 
 from datetime import datetime
-from ... import persistence
-from ...persistence import row_to_dict
-from collections import OrderedDict, Counter
+from collections import defaultdict, OrderedDict, Counter
+from ..persistence import row_to_dict, persistence
+from .trial_activation_visitors import TrialGraphVisitor
+from .trial_activation_visitors import TrialGraphCombineVisitor
+from .activation import calculate_duration, FORMAT
 
-FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
-def calculate_duration(activation):
-    return int((
-        datetime.strptime(activation['finish'], FORMAT) -
-        datetime.strptime(activation['start'], FORMAT)
-    ).total_seconds() * 1000000)
+class Trial(object):
+
+    def __init__(self, trial_id):
+        self.trial_id = trial_id
+
+    def info(self):
+        return row_to_dict(persistence.load_trial(self.trial_id).fetchone())
+
+    def function_defs(self):
+        return {
+            function['name']: row_to_dict(function)
+            for function in persistence.load('function_def', 
+                                             trial_id=self.trial_id)
+        }
+
+    def modules(self):
+        dependencies = persistence.load_dependencies(self.trial_id)
+        result = map(row_to_dict, dependencies)
+        local = [dep for dep in result 
+                 if dep['path'] and self.base_path in dep['path']]
+        return local, result
+
+    def environment(self):
+        return {
+            attr['name']: attr['value'] for attr in persistence.load(
+                'environment_attr', trial_id=self.trial_id)
+        }
+
+    def file_accesses(self):
+        file_accesses = persistence.load('file_access',
+                                         trial_id=self.trial_id)
+    
+        result = []
+        for file_access in file_accesses:
+            stack = []
+            function_activation = persistence.load('function_activation', id = file_access['function_activation_id']).fetchone()
+            while function_activation:
+                function_name = function_activation['name']
+                function_activation = persistence.load('function_activation', id = function_activation['caller_id']).fetchone()
+                if function_activation:
+                    stack.insert(0, function_name)
+            if not stack or stack[-1] != 'open':
+                stack.append(' ... -> open')
+
+            result.append({
+                'name': file_access['name'],
+                'mode': file_access['mode'],
+                'buffering': file_access['buffering'],
+                'content_hash_before': file_access['content_hash_before'],
+                'content_hash_after': file_access['content_hash_after'],
+                'timestamp': file_access['timestamp'],
+                'stack': ' -> '.join(stack),
+            })
+        return result
+
+    def activation_graph(self):
+        stack2 = []
+        stack = []
+
+        min_duration = 1000^10
+        max_duration = 0
+
+        raw_activations = persistence.load('function_activation', 
+                                           trial_id=self.trial_id,
+                                           order='start')
+        for raw_activation in raw_activations:
+            #activation = row_to_dict(raw_activation)
+            single = Single(raw_activation)
+            stack.append(single)
+
+
+        if not stack:
+            return TreeElement()
+
+        stack2.append(stack.pop())
+        while stack:
+            next = stack2.pop()
+            previous = stack.pop()
+            add_flow(stack, stack2, previous, next)
+        
+        return stack2.pop()
+
+    def independent_activation_graph(self):
+        graph = self.activation_graph()
+        visitor = TrialGraphVisitor()
+        graph.visit(visitor)
+        return visitor.to_dict()
+
+    def combined_activation_graph(self):
+        graph = self.activation_graph()
+        visitor = TrialGraphCombineVisitor()
+        graph.visit(visitor)
+        return visitor.to_dict()
 
 
 class OrderedCounter(OrderedDict, Counter):
@@ -208,71 +300,5 @@ def add_flow(stack, stack2, previous, next):
         stack2.append(previous)
 
 
-def load_function_defs(tid):
-    return {
-        function['name']: row_to_dict(function)
-        for function in persistence.load('function_def', trial_id=tid)
-    } 
 
 
-def load_trial_activation_tree(tid):
-
-    stack2 = []
-    stack = []
-
-    min_duration = 1000^10
-    max_duration = 0
-
-    raw_activations = persistence.load('function_activation', trial_id=tid,
-                                       order='start')
-    for raw_activation in raw_activations:
-        #activation = row_to_dict(raw_activation)
-        single = Single(raw_activation)
-        stack.append(single)
-
-
-    if not stack:
-        return TreeElement()
-
-    stack2.append(stack.pop())
-    while stack:
-        next = stack2.pop()
-        previous = stack.pop()
-        add_flow(stack, stack2, previous, next)
-    
-    return stack2.pop()
-
-def get_modules(cwd, tid):
-    return persistence.load_modules(tid)
-
-def get_environment(tid):
-    return {
-        attr['name']: attr['value'] for attr in persistence.load(
-            'environment_attr', trial_id = tid)
-    }
-
-def get_file_accesses(tid):
-    file_accesses = persistence.load('file_access', trial_id = tid)
-    
-    result = []
-    for file_access in file_accesses:
-        stack = []
-        function_activation = persistence.load('function_activation', id = file_access['function_activation_id']).fetchone()
-        while function_activation:
-            function_name = function_activation['name']
-            function_activation = persistence.load('function_activation', id = function_activation['caller_id']).fetchone()
-            if function_activation:
-                stack.insert(0, function_name)
-        if not stack or stack[-1] != 'open':
-            stack.append(' ... -> open')
-
-        result.append({
-            'name': file_access['name'],
-            'mode': file_access['mode'],
-            'buffering': file_access['buffering'],
-            'content_hash_before': file_access['content_hash_before'],
-            'content_hash_after': file_access['content_hash_after'],
-            'timestamp': file_access['timestamp'],
-            'stack': ' -> '.join(stack),
-        })
-    return result

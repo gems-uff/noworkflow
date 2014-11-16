@@ -8,7 +8,7 @@ import os
 import sys
 from datetime import datetime
 
-from .. import persistence
+from ..persistence import persistence
 from .. import utils
 from .. import prov_deployment
 from .command import Command
@@ -44,6 +44,7 @@ class Checkout(Command):
                     now, script_name, code, '<checkout {}>'.format(trial_id), 
                     args.bypass_modules, run=False)
                 prov_deployment.collect_provenance(args, {
+                    'trial_id': tid,
                     'code': code,
                     'path': script_name,
                     'compiled': None,

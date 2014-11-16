@@ -11,7 +11,7 @@ import os
 import sys
 from datetime import datetime
 from collections import defaultdict
-from .. import persistence
+from ..persistence import persistence
 
 
 class ExecutionProvider(object):
@@ -22,8 +22,11 @@ class ExecutionProvider(object):
         self.depth_context = depth_context  # which function types ('non-user' or 'all') should be considered for the threshold
         self.depth_threshold = depth_threshold  # how deep we want to go when capturing function activations?
         self.metascript = metascript
+        self.trial_id = metascript['trial_id']
         self.event_map = defaultdict(lambda: self.trace_empty, {})
-   
+        self.default_profile = sys.getprofile()
+        self.default_trace = sys.gettrace()
+
     def trace_empty(self, frame, event, arg):
         pass
 
@@ -34,8 +37,8 @@ class ExecutionProvider(object):
         pass
 
     def teardown(self):
-        sys.setprofile(None)
-        sys.settrace(None)
+        sys.setprofile(self.default_profile)
+        sys.settrace(self.default_trace)
 
     def tearup(self):
         pass
@@ -82,5 +85,5 @@ class StoreOpenMixin(ExecutionProvider):
 
     def teardown(self):
         'Restores default open'
-        super(StoreOpenMixin, self).teardown()
         builtins.open = persistence.std_open
+        super(StoreOpenMixin, self).teardown()

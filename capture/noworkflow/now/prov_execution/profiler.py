@@ -11,7 +11,7 @@ from datetime import datetime
 from .base import StoreOpenMixin
 from .activation import Activation
 
-from .. import persistence
+from ..persistence import persistence
 
 class Profiler(StoreOpenMixin):
 
@@ -153,7 +153,7 @@ class Profiler(StoreOpenMixin):
 
     def store(self):
         now = datetime.now()
-        persistence.update_trial(now, self.function_activation)
+        persistence.update_trial(self.trial_id, now, self.function_activation)
   
     def tearup(self):
         sys.setprofile(self.tracer)
