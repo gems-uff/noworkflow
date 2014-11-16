@@ -9,6 +9,7 @@ import sys
 from datetime import datetime
 
 from ..persistence import persistence
+from ..models.trial import Trial
 from .. import utils
 from .. import prov_deployment
 from .command import Command
@@ -20,43 +21,50 @@ class Checkout(Command):
         p.add_argument('trial', type=int, nargs='?', help='trial id or none for last trial')
         p.add_argument('-s', '--script', help='python script to be checked out')
         p.add_argument('-b', '--bypass-modules', help='bypass module dependencies analysis, assuming that no module changes occurred since last execution', action='store_true')
+        p.add_argument('-l', '--local', help='restore local modules', action='store_true')
+
+
+    def create_backup(self, trial, args):
+        if not os.path.isfile(trial.script):
+            return
+
+        head = trial.head_trial()
+        with open(trial.script, 'rb') as f:
+            code = f.read()
+            code_hash = persistence.put(code)
+        
+        if code_hash != head.code_hash:
+            now = datetime.now()
+            tid = persistence.store_trial(
+                now, trial.script, code, '<checkout {}>'.format(trial.trial_id), 
+                args.bypass_modules, run=False)
+            prov_deployment.collect_provenance(args, {
+                'trial_id': tid,
+                'code': code,
+                'path': trial.script,
+                'compiled': None,
+            })
+            utils.print_msg('Backup Trial {} created'.format(tid), True)
+
+
+    def restore(self, path, code_hash, trial_id):
+        load_file = persistence.get(code_hash)
+        with open(path, 'w') as f:
+            f.write(load_file)
+        utils.print_msg('File {} from trial {} restored'.format(
+            path, trial_id), True)
+            
 
     def execute(self, args):
         persistence.connect_existing(os.getcwd())
-        last_trial_id = persistence.last_trial_id(script=args.script)
-        trial_id = args.trial if args.trial != None else last_trial_id
-        if not 1 <= trial_id <= last_trial_id:
-            utils.print_msg('inexistent trial id', True)
-            sys.exit(1)
-        
-        trial = persistence.load_trial(trial_id).fetchone()
-        script_name = trial['script']
-        parent_id = persistence.load_parent_id(script_name, remove=False)
-        parent_trial = persistence.load_trial(parent_id).fetchone()
-        if os.path.isfile(script_name):
-            with open(script_name, 'rb') as f:
-                code = f.read()
-                code_hash = persistence.put(code)
-            
-            if code_hash != parent_trial['code_hash']:
-                now = datetime.now()
-                tid = persistence.store_trial(
-                    now, script_name, code, '<checkout {}>'.format(trial_id), 
-                    args.bypass_modules, run=False)
-                prov_deployment.collect_provenance(args, {
-                    'trial_id': tid,
-                    'code': code,
-                    'path': script_name,
-                    'compiled': None,
-                })
-                utils.print_msg('Backup Trial {} created'.format(tid), True)
+        trial = Trial(trial_id=args.trial, script=args.script, exit=True)
+        self.create_backup(trial, args)
                 
-
-        load_file = persistence.get(trial['code_hash'])
-        with open(script_name, 'w') as f:
-            f.write(load_file)
-        persistence.store_parent(script_name, trial_id)
-        utils.print_msg('File {} from trial {} restored'.format(
-            script_name, trial_id), True)
-
-        # ToDo: restore local modules
+        self.restore(trial.script, trial.code_hash, trial.trial_id)
+        
+        persistence.store_parent(trial.script, trial.trial_id)
+        if args.local:
+            local_modules, _ = trial.modules()
+            for module in local_modules:
+                self.restore(module['path'], module['code_hash'], 
+                             trial.trial_id)

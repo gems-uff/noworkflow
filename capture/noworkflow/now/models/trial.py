@@ -3,9 +3,12 @@
 
 from __future__ import absolute_import
 
+import sys
+
 from datetime import datetime
 from collections import defaultdict, OrderedDict, Counter
 from ..persistence import row_to_dict, persistence
+from .. import utils
 from .trial_activation_visitors import TrialGraphVisitor
 from .trial_activation_visitors import TrialGraphCombineVisitor
 from .activation import calculate_duration, FORMAT
@@ -13,11 +16,32 @@ from .activation import calculate_duration, FORMAT
 
 class Trial(object):
 
-    def __init__(self, trial_id):
-        self.trial_id = trial_id
+    def __init__(self, trial_id, script=None, exit=False):
+        if exit:
+            last_trial_id = persistence.last_trial_id(script=script)
+            trial_id = trial_id or last_trial_id
+            if not 1 <= trial_id <= last_trial_id:
+                utils.print_msg('inexistent trial id', True)
+                sys.exit(1)
 
+        self.trial_id = trial_id
+        self._info = None
+
+    @property
+    def script(self):
+        info = self.info()
+        return info['script']
+
+    @property
+    def code_hash(self):
+        info = self.info()
+        return info['code_hash']
+    
     def info(self):
-        return row_to_dict(persistence.load_trial(self.trial_id).fetchone())
+        if self._info is None:
+            self._info = row_to_dict(
+                persistence.load_trial(self.trial_id).fetchone())
+        return self._info
 
     def function_defs(self):
         return {
@@ -26,11 +50,15 @@ class Trial(object):
                                              trial_id=self.trial_id)
         }
 
+    def head_trial(self, remove=False):
+        parent_id = persistence.load_parent_id(self.script, remove=remove)
+        return Trial(parent_id)
+
     def modules(self):
         dependencies = persistence.load_dependencies(self.trial_id)
         result = map(row_to_dict, dependencies)
         local = [dep for dep in result 
-                 if dep['path'] and self.base_path in dep['path']]
+                 if dep['path'] and persistence.base_path in dep['path']]
         return local, result
 
     def environment(self):
