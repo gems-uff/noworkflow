@@ -46,7 +46,7 @@ function load_graph(nid, url) {
                 }
             });
             trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
-            trial_graph.load(data);
+            trial_graph.load(data, nid, nid);
            
         },
         error: function (result, status) {
@@ -195,27 +195,6 @@ function load_file_accesses(nid) {
 }
 
 
-function select_node(n){
-
-    $('#side-internal').html(
-        '<div id="main">'+
-            '<h1>Trial ' + n.title + '</h1>'+
-            '<h3 class="hash">' + n.info.code_hash + '</h1>'+
-            '<span class="attr"><span class="desc">Script: </span><span class="script">' + n.info.script + '</span></span>' +
-            '<span class="attr"><span class="desc">Start: </span><span class="start">' + n.info.start + '</span></span>' +
-            '<span class="attr"><span class="desc">Finish: </span><span class="finish">' + n.info.finish + '</span></span>' +
-            (n.info.arguments ? ('<span class="attr"><span class="desc">Arguments: </span><span class="arguments">' + n.info.arguments + '</span></span>') : "") +
-        '</div>'
-    );
-    current_nid = n.title;
-    load_graph(current_nid, selected_graph);
-    load_dependencies(current_nid);
-    load_environment(current_nid);
-    load_file_accesses(current_nid);
-}
-
-
-
 function reload() {
     $.ajax({
         type: "GET",
@@ -236,7 +215,26 @@ function reload() {
                 .attr("height", height);
 
             history_graph = new HistoryGraph(svg, {
-                select_node: select_node,
+                select_node: function(n){
+                    $('#side-internal').html(
+                        '<div id="main">'+
+                            '<h1>Trial ' + n.title + '</h1>'+
+                            '<h3 class="hash">' + n.info.code_hash + '</h3>'+
+                            '<span class="attr"><span class="desc">Script: </span><span class="script">' + n.info.script + '</span></span>' +
+                            '<span class="attr"><span class="desc">Start: </span><span class="start">' + n.info.start + '</span></span>' +
+                            '<span class="attr"><span class="desc">Finish: </span><span class="finish">' + n.info.finish + '</span></span>' +
+                            (n.info.arguments ? ('<span class="attr"><span class="desc">Arguments: </span><span class="arguments">' + n.info.arguments + '</span></span>') : "") +
+                        '</div>'
+                    );
+                    current_nid = n.title;
+                    load_graph(current_nid, selected_graph);
+                    load_dependencies(current_nid);
+                    load_environment(current_nid);
+                    load_file_accesses(current_nid);
+                },
+                ctrl_click: function(new_node, old_node) {
+                    window.open('diff/'+old_node.title+'/'+new_node.title);
+                },
                 custom_size: function(){
                     var docEl = document.documentElement,
                         bodyEl = document.getElementsByTagName('body')[0];

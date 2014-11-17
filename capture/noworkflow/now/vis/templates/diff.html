@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% macro mod_li(m, class) %}
+<li class="{{ class }}"> 
+  <div class="name"> {{ m.name }} </div> 
+  <div class="version"> {{ m.version }}</div>
+  <div class="clear"></div>
+  <div class="hash" title="{{ m.path }}">{{ m.code_hash }}</div>
+</li>
+{% endmacro %}
+
+{% macro env_field(name, value) %}
+  <span class="key"> {{ name }} </span>
+  <span class="equal"> = </span>
+  <span class="value"> {{ value }} </span>
+{% endmacro %}
+
+{% macro env_li(m, class) %}
+<li class="{{ class }}">
+  {{ env_field(m.name, m.value) }}
+</li>
+{% endmacro %}
+
+{% macro env_cli(rem, add) %}
+<li>
+  <div class="dbefore">{{ env_field(rem.name, rem.value) }}</div>
+  <div class="dafter">{{ env_field(add.name, add.value) }}</div>
+</li>
+{% endmacro %}
+
+
+{% macro fa_field(class, title, value) %}
+  <div class="{{ class }}" title="{{ title }}"> {{ value }}</div>
+{% endmacro %}
+{% macro fa_li(m, class) %}
+  <li class="{{ class }}">
+    {{ fa_field('name', 'Name', m.name) }}
+    {{ fa_field('mode', 'Mode', m.mode) }}
+    {{ fa_field('buffering', 'Buffering', m.buffering) }}
+    <div class="clear"></div>
+    {{ fa_field('timestamp', 'Time', m.timestamp) }}
+    {{ fa_field('content_hash_before hash', 'Content hash before', m.content_hash_before) }}
+    {{ fa_field('content_hash_after hash', 'Content hash after', m.content_hash_after) }}
+    {{ fa_field('stack', 'Stack', m.stack) }}
+  </li>
+{% endmacro %}
+{% macro fa_cfield(class, title, c1, c2) %}
+  {% if c1 == c2 %}
+    <div class="{{ class }}" title="{{ title }}"> {{ c1 }}</div> 
+  {% else %}
+    <div class="{{ class }} dbefore" title="{{ title }}"> {{ c1 }}</div> 
+    <div class="{{ class }} dafter" title="{{ title }}"> {{ c2 }}</div> 
+  {% endif %}
+{% endmacro %}
+
+{% block css %}
+<link rel="stylesheet" href="/index.css">
+<link rel="stylesheet" href="/diff.css">
+{% endblock %}
+
+{% block body %}
+  <div id="splitter">
+    <div id="top"></div>
+    <div id="show">
+      <div id="graphbox">
+        <form class="toolbar">
+          <input id="indgraph" type="radio" name="graphtype" value="independent" checked>
+          <label for="indgraph" title="Calls have counting independent from caller activations">Exact Match</label>
+          <input id="combgraph" type="radio" name="graphtype" value="combined">
+          <label for="combgraph" title="Calls are combined and a function may have more than one call workflow">Combined</label>
+          <input id="showtooltips" type="checkbox" name="showtooltips" value="show">
+          <label for="showtooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
+        </form>
+        <div id="graph"></div>
+      </div>
+      <div id="side">
+        <div id="side-internal">
+          <div id="main">
+            <h1><span class="dbefore">Trial <span id="trial1">{{ trial1.id }}</span></span> &lt;-&gt; <span class="dafter">Trial <span id="trial2">{{ trial2.id }}</span></span></h1>
+            {% if not 'code_hash' in trial %}
+              <h3 class="hash"> {{ trial1.code_hash }} </h3>
+            {% else %}
+              <h3 class="hash dbefore"> {{ trial1.code_hash }} </h3>
+              <h3 class="hash dafter"> {{ trial2.code_hash }} </h3>
+            {% endif %}
+            <span class="attr"><span class="desc">Script: </span><span class="script"> {{ trial1.script }}</span></span>
+            <span class="attr"><span class="desc dbefore">Start: </span><span class="start"> {{ trial1.start }} </span></span>
+            <span class="attr"><span class="desc dbefore">Finish: </span><span class="finish"> {{ trial1.finish }} </span></span>
+            <span class="attr"><span class="desc dafter">Start: </span><span class="start"> {{ trial2.start }} </span></span>
+            <span class="attr"><span class="desc dafter">Finish: </span><span class="finish"> {{ trial2.finish }} </span></span>
+            {% if not 'arguments' in trial %}
+              {% if trial1.arguments %}
+                <span class="attr"><span class="desc">Arguments: </span><span class="arguments"> {{ trial1.arguments }}</span></span>'
+              {% endif %}
+            {% else %}
+              {% if trial1.arguments %}
+                <span class="attr"><span class="desc dbefore">Arguments: </span><span class="arguments"> {{ trial1.arguments }}</span></span>
+              {% endif %}
+              {% if trial2.arguments %}
+                <span class="attr"><span class="desc dafter">Arguments: </span><span class="arguments"> {{ trial2.arguments }}</span></span>
+              {% endif %}
+            {% endif %}
+          </div>
+          {% if modules_added or modules_removed or modules_replaced %}
+            <div id="modules">
+              <div class="fold">
+                <i class="fa fa-minus"></i><span> Modules </span>
+              </div>
+              <div class="foldable">
+                <ul class="mod-list">
+                  {% for m in modules_removed %}
+                    {{ mod_li(m, 'libefore') }}
+                  {% endfor %}
+                  {% for m in modules_added %}
+                    {{ mod_li(m, 'liafter') }}
+                  {% endfor %}
+                  {% for rem, add in modules_replaced %}
+                    <li> 
+                      <div class="name"> {{ rem.name }} </div> 
+                      <div class="version"> <div class="dbefore"> {{ rem.version }}</div><div class="dafter"> {{ add.version }}</div></div>
+                      <div class="clear"></div>
+                      <div class="hash dbefore" title="{{ rem.path }}">{{ rem.code_hash }}</div>
+                      <div class="hash dafter" title="{{ add.path }}">{{ add.code_hash }}</div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+          {% if env_added or env_removed or env_replaced %}
+            <div id="environment">
+              <div class="fold">
+                <i class="fa fa-minus"></i><span> Environment </span>
+              </div>
+              <div class="foldable">
+                <ul class="env-list">
+                  {% for m in env_removed %}
+                    {{ env_li(m, 'libefore') }}
+                  {% endfor %}
+                  {% for m in env_added %}
+                    {{ env_li(m, 'liafter') }}
+                  {% endfor %}
+                  {% for rem, add in env_replaced %}
+                    {{ env_cli(rem, add) }}
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+          {% if fa_added or fa_removed or fa_replaced %}
+            <div id="file_accesses">
+              <div class="fold">
+                <i class="fa fa-minus"></i><span> File Accesses </span>
+              </div>
+              <div class="foldable">
+                <ul class="fac-list">
+                  {% for m in fa_removed %}
+                    {{ fa_li(m, "libefore") }}  
+                  {% endfor %}
+                  {% for m in fa_added %}
+                    {{ fa_li(m, "liafter") }}  
+                  {% endfor %}
+                  {% for rem, add in fa_replaced %}
+                    <li>
+                      {{ fa_cfield('name', 'Name', rem.name, add.name) }}
+                      {{ fa_cfield('mode', 'Mode', rem.mode, add.mode) }}
+                      {{ fa_cfield('buffering', 'Buffering', rem.buffering, add.buffering) }}
+                      <div class="clear"></div>
+                      {{ fa_cfield('timestamp', 'Time', rem.timestamp, add.timestamp) }}
+                      {{ fa_cfield('content_hash_before hash', 'Content hash before', rem.content_hash_before, add.content_hash_before) }}
+                      {{ fa_cfield('content_hash_after hash', 'Content hash after', rem.content_hash_after, add.content_hash_after) }}
+                      {{ fa_cfield('stack', 'Stack', rem.stack, add.stack) }}
+                    </li>
+
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block js %}
+  <script src="/d3-v3.4.11/d3.min.js" charset="utf-8"></script>
+  <script src="/trial_graph.js" charset="utf-8"></script>
+  <script src="/diff.js" charset="utf-8"></script>
+{% endblock %}

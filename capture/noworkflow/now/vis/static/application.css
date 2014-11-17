@@ -73,9 +73,8 @@ ul.mod-list li .version, ul.fac-list li .mode, ul.fac-list li .buffering {
   margin-left: 20px;
 }
 
-ul.mod-list li .name, ul.fac-list li .name  {
-  float: left;
-  font-weight: bold;
+ul.mod-list li .version {
+  text-align: left;
 }
 
 .clear {

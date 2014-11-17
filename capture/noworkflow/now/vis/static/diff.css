@@ -1,0 +1,30 @@
+.dbefore {
+  color: red !important;
+}
+
+.dafter {
+  color: green !important;
+}
+
+.dbefore:before {
+  color: red !important;
+  content: ' - ';
+  font-family: "Courier New", Courier, monospace;
+}
+
+
+.dafter:before {
+  color: green !important;
+  content: ' + ';
+  font-family: "Courier New", Courier, monospace;
+}
+
+.libefore {
+  border-left: 3px solid red !important;
+  color: red !important;
+}
+
+.liafter {
+  border-left: 3px solid green !important;
+  color: green !important;
+}

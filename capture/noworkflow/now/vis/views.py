@@ -7,7 +7,7 @@ from flask import render_template, jsonify, request
 from . import app
 from ..models.history import History
 from ..models.trial import Trial
-
+from ..models.diff import Diff
 
 def connection(func):
     @functools.wraps(func)
@@ -102,3 +102,40 @@ def all_file_accesses(tid):
         file_accesses = trial.file_accesses(),
         info = "file_accesses.html",
     )
+
+@app.route('/diff/<trial1>/<trial2>')
+@connection
+def diff(trial1, trial2):
+    diff = Diff(trial1, trial2)
+    modules_added, modules_removed, modules_replaced = diff.modules()
+    env_added, env_removed, env_replaced = diff.environment()
+    fa_added, fa_removed, fa_replaced = diff.file_accesses()
+    diff.naive_activation_graph()
+    return render_template("diff.html", 
+        cwd = os.getcwd(),
+        trial1 = diff.trial1.info(),
+        trial2 = diff.trial2.info(),
+        trial = diff.trial(),
+        modules_added = modules_added,
+        modules_removed = modules_removed,
+        modules_replaced = modules_replaced,
+        env_added = env_added,
+        env_removed = env_removed,
+        env_replaced = env_replaced,
+        fa_added = fa_added,
+        fa_removed = fa_removed,
+        fa_replaced = fa_replaced,
+
+    )
+
+@app.route('/diff/<trial1>/<trial2>/independent')
+@connection
+def independent_diff_graph(trial1, trial2):
+    diff = Diff(trial1, trial2)
+    return jsonify(**diff.independent_naive_activation_graph())
+
+@app.route('/diff/<trial1>/<trial2>/combined')
+@connection
+def combined_diff_graph(trial1, trial2):
+    diff = Diff(trial1, trial2)
+    return jsonify(**trial.combined_naive_activation_graph())

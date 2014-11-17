@@ -79,5 +79,4 @@ class History(object):
                     last += 1
 
         self.data[key] = result
-        print result
         return result

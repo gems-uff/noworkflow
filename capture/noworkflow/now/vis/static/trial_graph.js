@@ -35,10 +35,10 @@ function TrialGraph(svg, options) {
       .enter().append("svg:marker")
         .attr("id", String)
         .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 15)
-        .attr("refY", -1.5)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
+        .attr("refX", 10)
+        .attr("refY", 0)
+        .attr("markerWidth", TrialGraph.consts.marker_width)
+        .attr("markerHeight", TrialGraph.consts.marker_height)
         .attr("orient", "auto")
       .append("svg:path")
         .attr("d", "M0,-5L10,0L0,5");
@@ -67,7 +67,11 @@ function TrialGraph(svg, options) {
 TrialGraph.consts =  {
     graph_class: "trialgraph",
     height: 400,
-    width: 400
+    width: 400, 
+    radius: 10.0,
+    stroke_width: 2,
+    marker_width: 6,
+    marker_height: 6,
 };
 
 TrialGraph.prototype._zoomed = function(){
@@ -86,16 +90,29 @@ TrialGraph.prototype._tick = function(self) {
                 y1 = d.source.y,
                 x2 = d.target.x,
                 y2 = d.target.y,
-                dx = d.target.x - d.source.x,
-                dy = d.target.y - d.source.y,
+                dx = x2 - x1,
+                dy = y2 - y1,
+                theta = Math.atan(dx/dy),
+                phi = Math.atan(dy/dx),
+                r = TrialGraph.consts.radius + TrialGraph.consts.stroke_width,
+                sin_theta = r * Math.sin(theta),
+                cos_theta = r * Math.cos(theta),
+                sin_phi = r * Math.sin(phi),
+                cos_phi = r * Math.cos(phi),
+                m1 = (y2 > y1) ? 1 : -1,
+                m2 = (x2 > x1) ? -1 : 1,
                 dr = Math.sqrt(dx * dx + dy * dy),
                 drx = dr,
                 dry = dr,
                 rotation = 0,
                 large_arc = 0,
                 sweep = 1;
-            
+
+           //console.log(x1, x2, y1, y2, m1, m2, sin_theta, cos_theta)
+          
+
             if (dx == 0 && dy == 0 && d.type != 'initial') {
+                
                 rotation = -45;
                 large_arc = 1;
                 drx = 15;
@@ -103,10 +120,17 @@ TrialGraph.prototype._tick = function(self) {
                 x2 = x2 + 1;
                 y2 = y2 + 1;
             } else if (d.type == 'initial') {
+                x2 -= r/2.0;
+                y2 -= r/2.0;
                 x1 = x2 - 20;
                 y1 = y2 - 20;
                 large_arc = 1;
                 sweep = 0;
+            } else {
+                x1 += m1*sin_theta;
+                y1 += m1*cos_theta;
+                x2 += m2*cos_phi;
+                y2 += m2*sin_phi;
             }
 
             return "M" + x1 + "," + y1 + 
@@ -165,6 +189,12 @@ TrialGraph.prototype._add_label_path = function(label_path) {
         });
 };
 
+TrialGraph.prototype._calculate_color = function(node, pos) {
+    var self = this,
+        proportion = Math.round(510 * (node.mean - self.min_duration[pos]) / self.total_duration[pos]);
+    return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
+}
+
 TrialGraph.prototype._add_node = function(node) {
     var self = this;
     node = node.enter().append("g")
@@ -172,21 +202,56 @@ TrialGraph.prototype._add_node = function(node) {
             return "node-"+d.index;
         })
         .attr("class", "node")
+        .classed('nbefore', function(d){
+            return (d['node'] && d['node']['trial_id']==self.t1 && self.t1 != self.t2);
+        })
+        .classed('nafter', function(d){
+            return (d['node'] && d['node']['trial_id']==self.t2 && self.t1 != self.t2);
+        })
         .call(self.force.drag);
 
+    
     node.append("circle")
-        .attr("r", 5)
+        .attr("r", TrialGraph.consts.radius)
         .attr("data-clicked", "0")
-        
         .style('fill', function(d) {
-            proportion = Math.round(510 * (d.mean - self.min_duration) / self.total_duration);
-            return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
+            if (d['node']) {
+                return self._calculate_color(d.node, 1);
+            } else {
+                grad = self.svg.append("svg:defs")
+                  .append("linearGradient")
+                    .attr("id", "grad-"+d.index)
+                    .attr("x1", "100%")
+                    .attr("x2", "0%")
+                    .attr("y1", "0%")
+                    .attr("y2", "0%")
+                grad.append("stop")
+                    .attr("offset", "50%")
+                    .style("stop-color", self._calculate_color(d.node1, 1));
+                grad.append("stop")
+                    .attr("offset", "50%")
+                    .style("stop-color", self._calculate_color(d.node2, 2));
+                
+                return "url(#grad-"+d.index+")";
+            }
         }).on("click", self._toggle_nodes());
 
     node.append("text")
         .attr("x", 12)
         .attr("dy", ".35em")
         .text(function(d) { return d.name; });
+
+    p = node.append("path")
+        .attr("stroke", "#000")
+        //.attr("viewBox", "0 0 2 2")
+        .attr("d", function(d){
+            if (!d['node']) {
+                return "M0,"+(-TrialGraph.consts.radius)+
+                       "L0,"+TrialGraph.consts.radius;
+            }
+            console.log("a");
+            return "M0,0L0,0";
+        });
 
 
     node.on('mousedown', function(d) {
@@ -202,7 +267,16 @@ TrialGraph.prototype._add_node = function(node) {
     }).on('mouseover',function(d) {
         if (!self.state_mousedown_node && self.use_tooltip) {
             self._close_tooltip();
-            self._show_tooltip(d);
+            if (d['node']) {
+                self._show_tooltip(d.node);
+            } else {
+                var coordinates = d3.mouse(this);
+                if (coordinates[0] < 0) {
+                    self._show_tooltip(d.node1);
+                } else {
+                    self._show_tooltip(d.node2);
+                }
+            }
         }
     
     })
@@ -279,10 +353,11 @@ TrialGraph.prototype._show_tooltip = function(d) {
     self.div.classed("hidden", false);
     self.div.transition()
         .duration(200)
-        .style("opacity", .9)
+        .style("opacity", .9);
     self.div.html(d.info)
         .style("left", (d3.event.pageX - 3) + "px")
         .style("top", (d3.event.pageY - 28) + "px");
+    
 };
 
 TrialGraph.prototype._close_tooltip = function() {
@@ -293,17 +368,22 @@ TrialGraph.prototype._close_tooltip = function() {
     self.div.classed("hidden", true);
 };
 
-TrialGraph.prototype.load = function(data) {
+TrialGraph.prototype.load = function(data, t1, t2) {
     var self = this;
-    self.init(data.nodes, data.edges, data.min_duration, data.max_duration);
+    self.init(data.nodes, data.edges, data.min_duration, data.max_duration, t1, t2);
     self.update_window();
 };
 
-TrialGraph.prototype.init = function(nodes, edges, min_duration, max_duration) {
+TrialGraph.prototype.init = function(nodes, edges, min_duration, max_duration, t1, t2) {
     var self = this;
+    self.t1 = t1;
+    self.t2 = t2;
     self.min_duration = min_duration;
     self.max_duration = max_duration;
-    self.total_duration = max_duration - min_duration;
+    self.total_duration = {
+        1: max_duration[1] - min_duration[1],
+        2: max_duration[2] - min_duration[2]
+    };
     self.force = d3.layout.force()
         .nodes(nodes)
         .links(edges)

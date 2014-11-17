@@ -2,6 +2,7 @@ function HistoryGraph(svg, options) {
     var self = this;
 
     self.custom_select_node = options.select_node || function() {};
+    self.custom_ctrl_click = options.ctrl_click || function() {};
     self.custom_size = options.custom_size || function() {
         return [HistoryGraph.consts.width, HistoryGraph.consts.height];
     };
@@ -23,6 +24,11 @@ function HistoryGraph(svg, options) {
         .on("mouseout", function(){
             self._close_tooltip();
         })
+
+    svg.append("text")
+        .text("Ctrl-click to diff trials")
+        .attr("dx", 5)
+        .attr("dy", 45);
 
     self.height = self.custom_size()[1];
 
@@ -124,6 +130,10 @@ HistoryGraph.prototype._node_mouseup = function(d3node, d){
         // dragged, not clicked
         state.just_scale = false;
     } else{
+        if (d3.event.ctrlKey) {
+            self.custom_ctrl_click(d, state.selected_node);
+            return;
+        }
         if (state.selected_node) {
             self._unselect_node();
         }
