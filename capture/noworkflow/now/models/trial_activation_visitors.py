@@ -57,18 +57,10 @@ class TrialGraphVisitor(object):
                 edge['count'] = ''
 
     def add_node(self, node):
-        if self.keep is None:
-            self.nodes.append(node.to_dict(self.nid))
-            original = self.nid
-            self.nid += 1
-            return original
-        result = self.nodes[self.keep]
-        temp = node.to_dict(-1)
-        result['node1'] = result['node']
-        result['node2'] = temp['node']
-        del result['node']
-        self.keep = None
-        return result['index']
+        self.nodes.append(node.to_dict(self.nid))
+        original = self.nid
+        self.nid += 1
+        return original
 
 
     def add_edge(self, source, target, count, typ):
@@ -160,6 +152,8 @@ class TrialGraphVisitor(object):
         delegated = self.use_delegated()
         self.delegated = delegated
         a_id, a_node = branch.a.visit(self)
+        if 'initial' in delegated:
+            delegated['initial'] = Edge(self.nid, 1)
         self.delegated = delegated
         b_id, b_node = branch.b.visit(self)
         return (a_id, b_id), branch
@@ -173,11 +167,6 @@ class TrialGraphVisitor(object):
     def visit_dualmixed(self, mixed):
         mixed.mix_results()
         return mixed.merge.visit(self)
-        #self.keep = a_id
-        #b_id, b_node = mixed.b.elements[0].visit(self)
-        #self.nodes[a_id]['node1']['duration'] = mixed.duration[0]
-        #self.nodes[a_id]['node2']['duration'] = mixed.duration[1]
-        return a_id, dual_mixed
 
     def visit_default(self, empty):
     	return None, None
@@ -197,16 +186,24 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
     def namespace(self):
         return ' '.join(self.namestack)
 
+    def update_namespace_node(self, node, single):
+        node['count'] += single.count
+        node['duration'] += single.duration
+        node['info'].add_activation(single.activation)
+            
+
     def add_node(self, single):
         self.namestack.append(single.name_id())
         namespace = self.namespace()
         self.namestack.pop()
         if namespace in self.context:
-            self.context[namespace]['count'] += single.count
-            self.context[namespace]['duration'] += single.duration
-            
-            self.context[namespace]['info'].add_activation(single.activation)
-            
+            context = self.context[namespace]
+            if 'node' in context:
+                self.update_namespace_node(context['node'], single)
+            else:
+                self.update_namespace_node(context['node1'], single.a)
+                self.update_namespace_node(context['node2'], single.b)
+
 
             return self.context[namespace]['index']
 
@@ -224,7 +221,12 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
                                                            count, typ)
             self.context_edges[edge] = self.edges[-1]
         else:
-            self.context_edges[edge]['count'] += count
+            e = self.context_edges[edge]
+            if isinstance(count, tuple):
+                e['count'] = (e['count'][0] + count[0], 
+                              e['count'][1] + count[1])
+            else:
+                self.context_edges[edge]['count'] += count
 
     def visit_call(self, call):
         self.namestack.append(call.caller.name_id())

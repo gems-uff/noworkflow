@@ -40,9 +40,9 @@ function load_graph(nid, url) {
                 .append('svg')
                 .attr("width", 500)
                 .attr("height", 500);
-            trial_graph = new TrialGraph(trial_svg, {
+            trial_graph = new TrialGraph(0, trial_svg, {
                 custom_size: function() {
-                    return [width, height];
+                    return [$('#graph').width(), $('#graph').height()];
                 }
             });
             trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
@@ -267,6 +267,7 @@ var horizontal = $('#splitter').split({
         trial_graph.update_window();
     }
 });
+$('#show').width("100%");
 
 $('#show').split({
     orientation: 'vertical', limit: 20,
@@ -276,6 +277,8 @@ $('#show').split({
     }
 
 });
+$('#graph').height("100%");
+$('#graph').width("100%");
 
 $('#top').split({
     orientation: 'vertical', limit: 20,

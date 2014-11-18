@@ -28,3 +28,17 @@
   border-left: 3px solid green !important;
   color: green !important;
 }
+
+#graphA, #graphB {
+  overflow: hidden !important;
+}
+
+.hbefore {
+  fill: red !important;
+  font-size: 20px !important;
+}
+
+.hafter {
+  fill: green !important;
+  font-size: 20px !important;
+}

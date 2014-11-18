@@ -60,7 +60,6 @@
 
 {% block body %}
   <div id="splitter">
-    <div id="top"></div>
     <div id="show">
       <div id="graphbox">
         <form class="toolbar">
@@ -71,7 +70,14 @@
           <input id="showtooltips" type="checkbox" name="showtooltips" value="show">
           <label for="showtooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
         </form>
-        <div id="graph"></div>
+        <div id="graphs">
+          <div id="graph"></div>
+          <div id="bottom">
+            <div id="graphA"></div>
+            <div id="graphB"></div>
+
+          </div>
+        </div>
       </div>
       <div id="side">
         <div id="side-internal">
@@ -180,6 +186,7 @@
         </div>
       </div>
     </div>
+    
   </div>
 {% endblock %}
 

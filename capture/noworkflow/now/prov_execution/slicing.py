@@ -239,7 +239,6 @@ class Tracer(Profiler):
         f_locals = frame.f_locals
         match_args = self.match_args
         match_arg = self.match_arg
-        print back.f_lineno, back.f_lasti, self.call_by_lasti
         call = self.call_by_lasti[back.f_lineno][back.f_lasti]
         caller, act = self.activation_stack[-2:]
         act_args_index = act.args.index

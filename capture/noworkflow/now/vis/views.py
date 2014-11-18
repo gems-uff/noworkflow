@@ -132,10 +132,18 @@ def diff(trial1, trial2):
 @connection
 def independent_diff_graph(trial1, trial2):
     diff = Diff(trial1, trial2)
-    return jsonify(**diff.independent_naive_activation_graph())
+    return jsonify(
+        diff=diff.independent_naive_activation_graph(),
+        trial1=diff.trial1.independent_activation_graph(),
+        trial2=diff.trial2.independent_activation_graph(),
+    )
 
 @app.route('/diff/<trial1>/<trial2>/combined')
 @connection
 def combined_diff_graph(trial1, trial2):
     diff = Diff(trial1, trial2)
-    return jsonify(**trial.combined_naive_activation_graph())
+    return jsonify(
+        diff=diff.combined_naive_activation_graph(),
+        trial1=diff.trial1.combined_activation_graph(),
+        trial2=diff.trial2.combined_activation_graph(),
+    )

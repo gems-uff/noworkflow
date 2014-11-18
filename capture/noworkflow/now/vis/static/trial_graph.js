@@ -1,13 +1,17 @@
-function TrialGraph(svg, options) {
+function TrialGraph(id, svg, options) {
     var self = this;
 
     self.state_mousedown_node = false;
     self.translate = false;
     self.use_tooltip = false;
+    self.graph_id = id;
 
     self.custom_size = options.custom_size || function() {
         return [TrialGraph.consts.width, TrialGraph.consts.height];
     };
+    self.hint_message = options.hint_message || "Ctrl-click to toggle nodes";
+    self.hint_y = options.hint_y || 45;
+    self.hint_class = options.hint_class || "";
 
     self.nodes = [];
     self.edges = [];
@@ -19,15 +23,18 @@ function TrialGraph(svg, options) {
             self._close_tooltip();
         })
     
-    self.width = TrialGraph.consts.width;
-    self.height = TrialGraph.consts.height;
+    var d = self.custom_size();
+    self.width = d[0];
+    self.height = d[1];
 
     svg.append("text")
-        .text("Ctrl-click to toggle nodes")
+        .text(self.hint_message)
         .attr("dx", 5)
-        .attr("dy", 45);
+        .attr("dy",  self.hint_y)
+        .classed(self.hint_class, true);
 
     svg_g = svg.append("g")
+        .attr("id", self._graph_id())
         .classed(TrialGraph.consts.graph_class, true);
 
     svg.append("svg:defs").selectAll("marker")
@@ -74,11 +81,16 @@ TrialGraph.consts =  {
     marker_height: 6,
 };
 
+TrialGraph.prototype._graph_id = function(){
+    var self = this;
+    return "trial-graph-"+self.graph_id;
+};
+
 TrialGraph.prototype._zoomed = function(){
     var self = this;
     self._close_tooltip();
     if (!self.state_mousedown_node) {
-        d3.select(".trialgraph")
+        d3.select("#"+self._graph_id())
             .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")"); 
     } 
 };
@@ -107,9 +119,6 @@ TrialGraph.prototype._tick = function(self) {
                 rotation = 0,
                 large_arc = 0,
                 sweep = 1;
-
-           //console.log(x1, x2, y1, y2, m1, m2, sin_theta, cos_theta)
-          
 
             if (dx == 0 && dy == 0 && d.type != 'initial') {
                 
@@ -164,7 +173,7 @@ TrialGraph.prototype._add_path = function(path) {
     var self = this;
     path = path.enter().append("svg:path")
         .attr("id", function(d, i) {
-            return "pathId-"+i;
+            return "pathId-"+self.graph_id+"-"+i;
         })
         .attr("class", "link");
 
@@ -178,11 +187,11 @@ TrialGraph.prototype._add_label_path = function(label_path) {
         .attr("dx", 20)
         .attr("dy", -3)
         .attr("id", function(d, i) {
-            return "pathlabel-"+i;
+            return "pathlabel-"+self.graph_id+"-"+i;
         })
       .append("textPath")
         .attr("xlink:href", function(d, i){
-            return "#pathId-"+i;
+            return "#pathId-"+self.graph_id+"-"+i;
         })
         .text(function(d){
             return (d.type == 'initial') ? '' : d.count;
@@ -199,7 +208,7 @@ TrialGraph.prototype._add_node = function(node) {
     var self = this;
     node = node.enter().append("g")
         .attr("id", function(d) { 
-            return "node-"+d.index;
+            return "node-"+self.graph_id+"-"+d.index;
         })
         .attr("class", "node")
         .classed('nbefore', function(d){
@@ -220,7 +229,7 @@ TrialGraph.prototype._add_node = function(node) {
             } else {
                 grad = self.svg.append("svg:defs")
                   .append("linearGradient")
-                    .attr("id", "grad-"+d.index)
+                    .attr("id", "grad-"+self.graph_id+"-"+d.index)
                     .attr("x1", "100%")
                     .attr("x2", "0%")
                     .attr("y1", "0%")
@@ -232,7 +241,7 @@ TrialGraph.prototype._add_node = function(node) {
                     .attr("offset", "50%")
                     .style("stop-color", self._calculate_color(d.node2, 2));
                 
-                return "url(#grad-"+d.index+")";
+                return "url(#grad-"+self.graph_id+"-"+d.index+")";
             }
         }).on("click", self._toggle_nodes());
 
@@ -249,7 +258,6 @@ TrialGraph.prototype._add_node = function(node) {
                 return "M0,"+(-TrialGraph.consts.radius)+
                        "L0,"+TrialGraph.consts.radius;
             }
-            console.log("a");
             return "M0,0L0,0";
         });
 
@@ -284,6 +292,7 @@ TrialGraph.prototype._add_node = function(node) {
 };
 
 TrialGraph.prototype._toggle_nodes = function(){
+    var self = this;
     return function(node, i){
         if (!node.call_links.length || !d3.event.ctrlKey) {
             return;
@@ -316,10 +325,10 @@ TrialGraph.prototype._toggle_nodes = function(){
         while (queue.length) {
             var ln = queue.pop(),
                 l = ln[0], n = ln[1],
-                node_clicked = d3.select("#node-"+n.index +' circle')
+                node_clicked = d3.select("#node-"+self.graph_id+"-"+n.index +' circle')
                     .attr("data-clicked");
             
-            d3.select("#node-"+n.index).style('visibility', visibility);
+            d3.select("#node-"+self.graph_id+"-"+n.index).style('visibility', visibility);
             
             if (visibility == 'hidden' || node_clicked == data_clicked) { 
                 n.call_links.forEach(add_to_queue);  
@@ -335,8 +344,8 @@ TrialGraph.prototype._toggle_nodes = function(){
         }
 
         function hide_path(a) {
-            d3.select("#pathId-"+a[0]).style('visibility', visibility);  
-            d3.select("#pathlabel-"+a[0]).style('visibility', visibility);
+            d3.select("#pathId-"+self.graph_id+"-"+a[0]).style('visibility', visibility);  
+            d3.select("#pathlabel-"+self.graph_id+"-"+a[0]).style('visibility', visibility);
         }
 
         function add_to_queue(n2) {

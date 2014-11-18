@@ -356,6 +356,8 @@ class Dual(TreeElement):
     def visit(self, visitor):
         return visitor.visit_dual(self)
 
+    def name_id(self):
+        return "{0} {1}".format(self.a.line, self.a.name)
 
     def to_dict(self, nid):
         return {
@@ -444,6 +446,8 @@ class Info(object):
         self.title = "Trial {trial}<br>Function <b>{name}</b> called at line {line}".format(
             trial=single.trial_id, name=single.name, line=single.line)
         self.activations = []
+        self.duration = ""
+        self.mean = ""
         self.extract_activations(single)
 
     def update_by_node(self, node):
