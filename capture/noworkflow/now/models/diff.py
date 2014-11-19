@@ -26,6 +26,15 @@ class activationdict(dict):
     def __eq__(self, other):
         return self['name'] == other['name']
 
+class fadict(dict):
+    def __key(self):
+        return (self['name'], self['content_hash_before'], self['content_hash_after'])
+    def __hash__(self):
+        return hash(self.__key())
+    def __eq__(self, other):
+        return ((self['content_hash_before'] == other['content_hash_before'])
+            and (self['content_hash_after'] == other['content_hash_after']))
+
 
 class Diff(object):
 
@@ -49,8 +58,8 @@ class Diff(object):
 
     def file_accesses(self):
         return diff_set(
-            set(hashabledict(fa) for fa in self.trial1.file_accesses()), 
-            set(hashabledict(fa) for fa in self.trial2.file_accesses()))
+            set(fadict(fa) for fa in self.trial1.file_accesses()), 
+            set(fadict(fa) for fa in self.trial2.file_accesses()))
 
     def naive_activation_graph(self):
         g1 = self.trial1.activation_graph()

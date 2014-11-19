@@ -1,7 +1,7 @@
 var width, height,
 	t1, t2,
 	trial_graph, trial_a, trial_b,
-	selected_graph = "independent",
+	selected_graph = "combined",
 
 t1 = $("#trial1").text();
 t2 = $("#trial2").text();
@@ -131,7 +131,7 @@ $( "[name='graphtype']" ).change(function() {
     load_graph(t1, t2, selected_graph);
 });
 
-//$( "#combgraph" ).click();
+$( "#combgraph" ).click();
 $( "[name='showtooltips']" ).change(function() {
     trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
     trial_a.set_use_tooltip(d3.select("#showtooltips").property("checked"));
