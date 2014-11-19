@@ -31,7 +31,9 @@ class History(object):
                 continue
             if execution == 'finished' and not trial['finish']:
                 continue
-            if execution == 'unfinished' and trial['finish']:
+            if execution == 'unfinished' and (trial['finish'] or not trial['run']):
+                continue
+            if execution == 'backup' and (trial['finish'] or trial['run']):
                 continue
 
             trial, trial_id = row_to_dict(trial), trial["id"]

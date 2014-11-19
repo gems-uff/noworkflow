@@ -70,7 +70,6 @@ class Provider(object):
             print_msg('creating provenance database')
             # Accessing the content of a file via setuptools
             with self.db_conn as db:
-                print resource_string(__name__, DB_SCRIPT)
                 db.executescript(resource_string(__name__, DB_SCRIPT))
 
     def has_provenance(self, path=None):

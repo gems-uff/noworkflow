@@ -22,6 +22,7 @@ class Checkout(Command):
         p.add_argument('-s', '--script', help='python script to be checked out')
         p.add_argument('-b', '--bypass-modules', help='bypass module dependencies analysis, assuming that no module changes occurred since last execution', action='store_true')
         p.add_argument('-l', '--local', help='restore local modules', action='store_true')
+        p.add_argument('-i', '--input', help='restore input files', action='store_true')
 
 
     def create_backup(self, trial, args):
@@ -68,3 +69,13 @@ class Checkout(Command):
             for module in local_modules:
                 self.restore(module['path'], module['code_hash'], 
                              trial.trial_id)
+
+        if args.input:
+            file_accesses = trial.file_accesses()
+            fs = {}
+            for fa in reversed(file_accesses):
+                fs[fa['name']] = fa['content_hash_before']
+            for name, content_hash in fs.items():
+                self.restore(name, content_hash, trial.trial_id)
+
+

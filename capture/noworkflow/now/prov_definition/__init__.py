@@ -7,8 +7,8 @@ import sys
 import ast
 from datetime import datetime
 
-from ..persistence import persistence
 from ..utils import print_msg
+from ..persistence import persistence
 from .function_visitor import FunctionVisitor
 from .slicing_visitor import SlicingVisitor
 

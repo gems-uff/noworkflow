@@ -2,17 +2,28 @@
 from ez_setup import use_setuptools
 use_setuptools()
 
-from setuptools import setup
+from setuptools import setup, find_packages
+
+import fnmatch
+import os
+
+def recursive_path(pack, path):
+    matches = []
+    for root, dirnames, filenames in os.walk(os.path.join(pack, path)):
+        for filename in filenames:
+            matches.append(os.path.join(root, filename)[len(pack) + 1:])
+    return matches
+
 setup(
     name = "noworkflow",
-    version = "0.5.0",
-    packages = [
-        'noworkflow',
-        'noworkflow.now', 
-        'noworkflow.now.cmd',
-        'noworkflow.now.prov_definition',
-        'noworkflow.now.prov_execution'],
-    package_data = {'noworkflow': ['resources/*']},
+    version = "0.5.1",
+    packages = find_packages(),
+    package_data = {
+        'noworkflow': [
+            'resources/*', 
+        ] + recursive_path('noworkflow', 'now/vis/static') 
+          + recursive_path('noworkflow', 'now/vis/templates'),
+    },
     entry_points = {'console_scripts': ['now = noworkflow.main:main']},
     author = "Leonardo Murta, Vanessa Braganholo, Fernando Chirigati, David Koop, and Juliana Freire",
     author_email = "leomurta@ic.uff.br",

@@ -13,6 +13,16 @@ create table trial (
 );
 
 CREATE INDEX trial_inherited_id on trial(inherited_id);
+CREATE INDEX trial_parent_id on trial(parent_id);
+
+create table head (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	script TEXT,
+	trial_id INTEGER,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE SET NULL  
+);
+
+CREATE INDEX head_trial_id on head(trial_id);
 
 create table module (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
