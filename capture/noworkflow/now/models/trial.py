@@ -158,6 +158,7 @@ class TreeElement(object):
         pass
 
     def __hash__(self):
+        #return id(self)
         return hash(self.__repr__())
 
     def __repr__(self):
@@ -168,22 +169,36 @@ class Single(TreeElement):
 
     def __init__(self, activation):
         self.activation = activation
-        self.activations = [activation]
+        self.activations = {activation}
         self.parent = activation['caller_id']
-        self.count = 1
         self.id = activation['id']
         self.line = activation['line']
         self.name = activation['name']
         self.trial_id = activation['trial_id']
-        self.duration = 0
-        if activation['finish'] and activation['start']:
-            self.duration = calculate_duration(activation)
         self.repr = "S({0}-{1})".format(self.line, self.name)
+
+
+    @property
+    def count(self):
+        return sum(1 for a in self.activations)
+
+    @count.setter
+    def count(self, value):
+        pass
+
+    @property
+    def duration(self):
+        return sum(calculate_duration(a) for a in self.activations 
+                   if a['finish'] and a['start'])
+
+    @duration.setter
+    def duration(self, value):
+        pass
 
     def mix(self, other):
         self.count += other.count
         self.duration += other.duration
-        self.activations += other.activations
+        self.activations = self.activations.union(other.activations)
 
     def __eq__(self, other):
         if type(self) != type(other):
@@ -222,12 +237,30 @@ class Mixed(TreeElement):
         self.parent = activation.parent
         self.id = activation.id
         self.repr = activation.repr
-        self.count = 1
+
+    @property
+    def count(self):
+        return sum(e.count for e in self.elements)
+
+    @count.setter
+    def count(self, value):
+        pass
+
+    @property
+    def duration(self):
+        return sum(e.duration for e in self.elements)
+
+    @property
+    def first(self):
+        return next(iter(self.elements))
+
+    @duration.setter
+    def duration(self, value):
+        pass
+    
 
     def add_element(self, element):
         self.elements.append(element)
-        self.count += element.count
-        self.duration += element.duration
 
     def visit(self, visitor):
         return visitor.visit_mixed(self)
@@ -237,8 +270,9 @@ class Mixed(TreeElement):
         self.mix_results()
 
     def mix_results(self):
-        initial = self.elements[0]
-        for element in self.elements[1:]:
+        it = iter(self.elements)
+        initial = next(it)
+        for element in it:
             initial.mix(element)
 
 
@@ -445,7 +479,7 @@ class Info(object):
     def __init__(self, single):
         self.title = "Trial {trial}<br>Function <b>{name}</b> called at line {line}".format(
             trial=single.trial_id, name=single.name, line=single.line)
-        self.activations = []
+        self.activations = set()
         self.duration = ""
         self.mean = ""
         self.extract_activations(single)
@@ -453,10 +487,10 @@ class Info(object):
     def update_by_node(self, node):
         self.duration = self.duration_text(node['duration'], node['count'])
         self.mean = self.mean_text(node['mean'])
-        self.activations.sort(key=lambda a: a[0])
+        self.activation_list = sorted(self.activations, key=lambda a: a[0])
 
     def add_activation(self, activation):
-        self.activations.append(
+        self.activations.add(
             (datetime.strptime(activation['start'], FORMAT), activation))
 
     def extract_activations(self, single):
@@ -490,7 +524,7 @@ class Info(object):
 
     def __repr__(self):
         result = [self.title, self.duration, self.mean]
-        for activation in self.activations:
+        for activation in self.activation_list:
             result += self.activation_text(activation[1])
 
         return '<br/>'.join(result)

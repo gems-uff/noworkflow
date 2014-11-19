@@ -160,7 +160,7 @@ class TrialGraphVisitor(object):
 
     def visit_mixed(self, mixed):
         mixed.mix_results()
-        node_id, node = mixed.elements[0].visit(self)
+        node_id, node = mixed.first.visit(self)
         self.nodes[node_id]['duration'] = mixed.duration
         return node_id, node
 

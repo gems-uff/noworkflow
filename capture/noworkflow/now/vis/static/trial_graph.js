@@ -200,7 +200,7 @@ TrialGraph.prototype._add_label_path = function(label_path) {
 
 TrialGraph.prototype._calculate_color = function(node, pos) {
     var self = this,
-        proportion = Math.round(510 * (node.mean - self.min_duration[pos]) / self.total_duration[pos]);
+        proportion = Math.round(510 * (node.duration - self.min_duration[pos]) / self.total_duration[pos]);
     return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
 }
 
