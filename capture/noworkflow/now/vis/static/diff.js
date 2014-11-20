@@ -21,6 +21,17 @@ window.onresize = function() {
     
 };
 
+function trial_custom_mouseover(d, name, show_tooltip) {
+    d3.select('#node-'+trial_graph.graph_id+'-'+d.node.diff+' circle')
+        .classed('node-hover', true);
+}
+
+function trial_custom_mouseout(d) {
+    d3.selectAll('.node-hover')
+        .classed('node-hover', false);
+}
+
+
 // Graphs
 function load_graph(t1, t2, url) {
     $.ajax({
@@ -42,7 +53,24 @@ function load_graph(t1, t2, url) {
             trial_graph = new TrialGraph(0, trial_svg, {
                 custom_size: function() {
                     return [$('#graph').width(), $('#graph').height()];
-                }
+                },
+                custom_mouseover: function(d, name, show_tooltip) {
+                    if (name == 'node') {
+                        var tg = (d[name].trial_id == t1)? trial_a : trial_b
+                            selector = '#node-'+tg.graph_id+'-'+d[name].original+' circle';
+                        d3.select(selector)
+                            .classed('node-hover', true);
+                    } else {
+                        var selector1 = '#node-'+trial_a.graph_id+'-'+d['node1'].original+' circle',
+                            selector2 = '#node-'+trial_b.graph_id+'-'+d['node2'].original+' circle';              
+                        d3.select(selector1)     
+                            .classed('node-hover', true);
+                        d3.select(selector2)     
+                            .classed('node-hover', true);
+                    }
+
+                },
+                custom_mouseout: trial_custom_mouseout
             });
             trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
             trial_graph.load(data.diff, t1, t2);
@@ -57,7 +85,9 @@ function load_graph(t1, t2, url) {
                 hint_class: "hbefore",
                 custom_size: function() {
                     return [$('#graphA').width(), $('#graphA').height()];
-                }
+                },
+                custom_mouseover: trial_custom_mouseover,
+                custom_mouseout: trial_custom_mouseout
             });
             trial_a.set_use_tooltip(d3.select("#showtooltips").property("checked"));
             trial_a.load(data.trial1, t1, t1);
@@ -72,7 +102,9 @@ function load_graph(t1, t2, url) {
                 hint_class: "hafter",
                 custom_size: function() {
                     return [$('#graphB').width(), $('#graphB').height()];
-                }
+                },
+                custom_mouseover: trial_custom_mouseover,
+                custom_mouseout: trial_custom_mouseout
             });
             trial_b.set_use_tooltip(d3.select("#showtooltips").property("checked"));
             trial_b.load(data.trial2, t2, t2);

@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 from datetime import datetime
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from ..persistence import persistence
 from .activation import calculate_duration, FORMAT
 
@@ -19,17 +19,13 @@ class TrialGraphVisitor(object):
             'initial': Edge(0, 1)
         }
         self.nid = 0
-        self.min_duration = {'1': 1000^10, '2': 1000^10 }
-        self.max_duration = {'1': 0, '2': 0 }
+        self.min_duration = defaultdict(lambda: 1000^10)
+        self.max_duration = defaultdict(lambda: 0)
         self.keep = None
 
-    def update_durations(self, side, duration):
-        if not side:
-            self.update_durations('1', duration)
-            self.update_durations('2', duration)
-        else:
-            self.max_duration[side] = max(self.max_duration[side], duration)
-            self.min_duration[side] = min(self.min_duration[side], duration)
+    def update_durations(self, duration, tid):
+        self.max_duration[tid] = max(self.max_duration[tid], duration)
+        self.min_duration[tid] = min(self.min_duration[tid], duration)
 
     def update_node(self, node):
         node['mean'] = node['duration'] / node['count']
@@ -38,10 +34,9 @@ class TrialGraphVisitor(object):
 
     def to_dict(self):
         for node in self.nodes:
-            for name in ['node', 'node1', 'node2']:
-                if name in node:
-                    self.update_node(node[name])
-                    self.update_durations(name[4:], node[name]['duration'])
+            n = node['node']
+            self.update_node(n)
+            self.update_durations(n['duration'], n['trial_id'])
                     
         self.update_edges()
     	return {
@@ -64,23 +59,12 @@ class TrialGraphVisitor(object):
 
 
     def add_edge(self, source, target, count, typ):
-        if isinstance(count, tuple):
-            count0, count1 = count[0], count[1]
-        else:
-            count0, count1 = count, count
-        if isinstance(source, tuple):
-            self.add_edge(source[0], target, count0, typ)
-            self.add_edge(source[1], target, count1, typ)
-        elif isinstance(target, tuple):
-            self.add_edge(source, target[0], count0, typ)
-            self.add_edge(source, target[1], count1, typ)
-        else:
-            self.edges.append({
-                'source': source,
-                'target': target,
-                'count': count,
-                'type': typ
-            })
+        self.edges.append({
+            'source': source,
+            'target': target,
+            'count': count,
+            'type': typ
+        })
 
     def use_delegated(self):
         result = self.delegated
@@ -104,11 +88,10 @@ class TrialGraphVisitor(object):
             self.add_edge(node_id, edge.node, edge.count, 'return')
 
     def visit_call(self, call):
-    	#self.update_durations(call.caller.duration)
-        
         delegated = self.use_delegated()
         caller_id = self.add_node(call.caller)
-        
+        self.nodes[caller_id]['repr'] = repr(call)
+
         if delegated:
             self.solve_delegation(caller_id, 0, delegated)
 
@@ -137,36 +120,19 @@ class TrialGraphVisitor(object):
         return node_map[group.next], group.next
  
     def visit_single(self, single):
-    	#self.update_durations(single.duration)
         delegated = self.use_delegated()
         node_id = self.add_node(single)
-
+        self.nodes[node_id]['repr'] = repr(single)
+        
         if delegated:
             self.solve_delegation(node_id, single.count, delegated)
         return node_id, single
-
-    def visit_dual(self, dual):
-        return self.visit_single(dual)
-
-    def visit_branch(self, branch):
-        delegated = self.use_delegated()
-        self.delegated = delegated
-        a_id, a_node = branch.a.visit(self)
-        if 'initial' in delegated:
-            delegated['initial'] = Edge(self.nid, 1)
-        self.delegated = delegated
-        b_id, b_node = branch.b.visit(self)
-        return (a_id, b_id), branch
 
     def visit_mixed(self, mixed):
         mixed.mix_results()
         node_id, node = mixed.first.visit(self)
         self.nodes[node_id]['duration'] = mixed.duration
         return node_id, node
-
-    def visit_dualmixed(self, mixed):
-        mixed.mix_results()
-        return mixed.merge.visit(self)
 
     def visit_default(self, empty):
     	return None, None
@@ -198,12 +164,7 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
         self.namestack.pop()
         if namespace in self.context:
             context = self.context[namespace]
-            if 'node' in context:
-                self.update_namespace_node(context['node'], single)
-            else:
-                self.update_namespace_node(context['node1'], single.a)
-                self.update_namespace_node(context['node2'], single.b)
-
+            self.update_namespace_node(context['node'], single)
 
             return self.context[namespace]['index']
 
@@ -222,11 +183,7 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
             self.context_edges[edge] = self.edges[-1]
         else:
             e = self.context_edges[edge]
-            if isinstance(count, tuple):
-                e['count'] = (e['count'][0] + count[0], 
-                              e['count'][1] + count[1])
-            else:
-                self.context_edges[edge]['count'] += count
+            self.context_edges[edge]['count'] += count
 
     def visit_call(self, call):
         self.namestack.append(call.caller.name_id())

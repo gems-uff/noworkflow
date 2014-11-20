@@ -114,11 +114,11 @@ svg:not(.active):not(.ctrl) {
 }
 
 #show .node.nbefore circle {
-  stroke: red !important;
+  stroke: red;
 }
 
 #show .node.nafter circle {
-  stroke: green !important;
+  stroke: green;
 }
 
 #show .node circle[data-clicked="1"] {

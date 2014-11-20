@@ -9,6 +9,8 @@ function TrialGraph(id, svg, options) {
     self.custom_size = options.custom_size || function() {
         return [TrialGraph.consts.width, TrialGraph.consts.height];
     };
+    self.custom_mouseover = options.custom_mouseover || function(d, name, show_tooltip) {};
+    self.custom_mouseout = options.custom_mouseout || function(d) {};
     self.hint_message = options.hint_message || "Ctrl-click to toggle nodes";
     self.hint_y = options.hint_y || 45;
     self.hint_class = options.hint_class || "";
@@ -198,9 +200,9 @@ TrialGraph.prototype._add_label_path = function(label_path) {
         });
 };
 
-TrialGraph.prototype._calculate_color = function(node, pos) {
+TrialGraph.prototype._calculate_color = function(node) {
     var self = this,
-        proportion = Math.round(510 * (node.duration - self.min_duration[pos]) / self.total_duration[pos]);
+        proportion = Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
     return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
 }
 
@@ -225,7 +227,7 @@ TrialGraph.prototype._add_node = function(node) {
         .attr("data-clicked", "0")
         .style('fill', function(d) {
             if (d['node']) {
-                return self._calculate_color(d.node, 1);
+                return self._calculate_color(d.node);
             } else {
                 grad = self.svg.append("svg:defs")
                   .append("linearGradient")
@@ -236,10 +238,10 @@ TrialGraph.prototype._add_node = function(node) {
                     .attr("y2", "0%")
                 grad.append("stop")
                     .attr("offset", "50%")
-                    .style("stop-color", self._calculate_color(d.node1, 1));
+                    .style("stop-color", self._calculate_color(d.node2));
                 grad.append("stop")
                     .attr("offset", "50%")
-                    .style("stop-color", self._calculate_color(d.node2, 2));
+                    .style("stop-color", self._calculate_color(d.node1));
                 
                 return "url(#grad-"+self.graph_id+"-"+d.index+")";
             }
@@ -273,20 +275,21 @@ TrialGraph.prototype._add_node = function(node) {
         }
         self.state_mousedown_node = false;
     }).on('mouseover',function(d) {
-        if (!self.state_mousedown_node && self.use_tooltip) {
-            self._close_tooltip();
-            if (d['node']) {
-                self._show_tooltip(d.node);
-            } else {
-                var coordinates = d3.mouse(this);
-                if (coordinates[0] < 0) {
-                    self._show_tooltip(d.node1);
-                } else {
-                    self._show_tooltip(d.node2);
-                }
-            }
+        var show_tooltip = !self.state_mousedown_node && self.use_tooltip,
+            name;
+        if (d['node']) {
+            name = 'node';
+        } else {
+            name = (d3.mouse(this)[0] < 0) ? 'node1' : 'node2'; 
         }
+        if (show_tooltip) {
+            self._close_tooltip();
+            self._show_tooltip(d[name])
+        }
+        self.custom_mouseover(d, name, show_tooltip);
     
+    }).on('mouseout', function(d){
+        self.custom_mouseout(d);
     })
     .call(self.force.drag);
 };
@@ -389,10 +392,9 @@ TrialGraph.prototype.init = function(nodes, edges, min_duration, max_duration, t
     self.t2 = t2;
     self.min_duration = min_duration;
     self.max_duration = max_duration;
-    self.total_duration = {
-        1: max_duration[1] - min_duration[1],
-        2: max_duration[2] - min_duration[2]
-    };
+    self.total_duration = {};
+    self.total_duration[t1] = max_duration[t1] - min_duration[t1]
+    self.total_duration[t2] = max_duration[t2] - min_duration[t2]
     self.force = d3.layout.force()
         .nodes(nodes)
         .links(edges)

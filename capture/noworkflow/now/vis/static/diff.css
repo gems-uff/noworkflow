@@ -42,3 +42,7 @@
   fill: green !important;
   font-size: 20px !important;
 }
+
+.node-hover {
+  stroke: blue !important;
+}

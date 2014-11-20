@@ -4,14 +4,23 @@
 from __future__ import absolute_import
 
 from collections import namedtuple, OrderedDict
-from .trial import Trial, TreeElement, Single, Call, Branch, Dual
-from .trial import Mixed, Group, OrderedCounter, DualMixed
+from .trial import Trial, TreeElement, Single, Call
+from .trial import Mixed, Group, OrderedCounter
 from .trial_activation_visitors import TrialGraphVisitor
 from .trial_activation_visitors import TrialGraphCombineVisitor
 
+from copy import deepcopy
+from collections import defaultdict
+
 class hashabledict(dict):
+    def el(self, e):
+        if isinstance(e, dict):
+            return hashabledict(e)
+        else:
+            return e
+
     def __key(self):
-        return tuple((k,self[k]) for k in sorted(self))
+        return tuple((k,self.el(self[k])) for k in sorted(self))
     def __hash__(self):
         return hash(self.__key())
     def __eq__(self, other):
@@ -61,119 +70,135 @@ class Diff(object):
             set(fadict(fa) for fa in self.trial1.file_accesses()), 
             set(fadict(fa) for fa in self.trial2.file_accesses()))
 
-    def naive_activation_graph(self):
-        g1 = self.trial1.activation_graph()
-        g2 = self.trial2.activation_graph()
-        n = NaiveActivationGraph()
-        return n.visit(g1, g2)
-
     def independent_naive_activation_graph(self):
-        graph = self.naive_activation_graph()
-        visitor = TrialGraphVisitor()
-        graph.visit(visitor)
-        return visitor.to_dict()
+        g1 = self.trial1.independent_activation_graph()
+        g2 = self.trial2.independent_activation_graph()
+        return NaiveGraphDiff(g1, g2).to_dict(), g1, g2
 
     def combined_naive_activation_graph(self):
-        graph = self.naive_activation_graph()
-        visitor = TrialGraphCombineVisitor()
-        graph.visit(visitor)
-        return visitor.to_dict()
+        g1 = self.trial1.combined_activation_graph()
+        g2 = self.trial2.combined_activation_graph()
+        return NaiveGraphDiff(g1, g2).to_dict(), g1, g2
 
-class NaiveActivationGraph(object):
+class NaiveGraphDiff(object):
 
-    def eq(self, x, y):
-        if type(x) != type(y):
-            return False
-        if isinstance(x, Single):
-            return x.name == y.name
-        if isinstance(x, Call):
-            return x.caller.name == y.caller.name
-        return False
+    def __init__(self, g1, g2):
+        self.id = 0
+        self.nodes = []
+        self.edges = []
+        self.context_edges = {}
+        self.old_to_new = {}
+        self.max_duration = dict(g1['max_duration'].items() +
+                                 g2['max_duration'].items())
 
-    def visit_single(self, g1, g2):
-        if self.eq(g1, g2):
-            return Dual(g1, g2)
-        return Branch(g1, g2)
-
-    def visit_call(self, g1, g2):
-        if self.eq(g1.caller, g2.caller):
-            return Call(
-                Dual(g1.caller, g2.caller),
-                self.visit(g1.called, g2.called))
-        return Branch(g1, g2)
-
-    def visit_group(self, g1, g2):
-        if not self.eq(g1.next, g2.next) or not self.eq(g1.last, g2.last):
-            return Branch(g1, g2) 
-
-        common1, common2 = lcs(g1.nodes.keys(), g2.nodes.keys(), eq=self.eq)
-        map1, map2 = {}, {}
-        result = Group()
-        common_nodes = []
-        uncommon_nodes = []
-
-        for node1 in g1.nodes:
-            (common_nodes if node1 in common1 else uncommon_nodes).append(node1)
-
-        # Add common nodes
-        for node1 in common_nodes:
-            node2 = common1[node1]
-            merge = self.visit(node1, node2)
-            map1[node1] = map1[node2] = merge
-            map2[node1] = map2[node2] = merge
-            result.nodes[merge] = DualMixed(merge, g1.nodes[node1], g2.nodes[node2])
-            result.edges[merge] = OrderedCounter()
-            del g2.nodes[node2]
-
-        # Add different nodes
-        for node1 in uncommon_nodes:
-            map1[node1] = node1
-            result.nodes[node1] = g1.nodes[node1]
-
-        for node2 in g2.nodes:
-            map2[node2] = node2
-            result.nodes[node2] = g2.nodes[node2]
-
-        # Add common edges
-        for node1 in common_nodes:
-            merge = map1[node1]
-            node2 = common1[node1]
-            if node1 in g1.edges:
-                for edge, count in g1.edges[node1].items():
-                    result.edges[merge][map1[edge]] = (count, g2.edges[node2][common1[edge]])
-                    if common1[edge] in g2.edges[node2]:
-                        del g2.edges[node2][common1[edge]]
-            
-            if node2 in g2.edges:
-                for edge, count in g2.edges[node2].items():
-                    result.edges[merge][map2[edge]] = (0, count)
+        self.min_duration = dict(g1['min_duration'].items() +
+                                 g2['min_duration'].items())
         
-        # Add different edges
-        for node1 in uncommon_nodes:
-            for edge, count in g1.edges[node1].items():
-                result.edges[merge][map1[edge]] = (count, 0)
+        self.merge(g1, g2)
+
+    def fix_caller_id(self, graph):
+        called = {}
+        seq = defaultdict(list)
+        nodes = graph['nodes']
+        edges = [hashabledict(x) for x in graph['edges']]
+        for edge in edges:
+            if edge['type'] == 'call':
+                called[edge['target']] = edge['source']
+            if edge['type'] == 'sequence':
+                seq[edge['source']].append(edge)
+
+        visited = set()
+        while called:
+            t = {}
+            for nid, parent in called.items():
+                nodes[nid]['caller_id'] = parent
+                visited.add(nid)
+                for e in seq[nid]:
+                    if not e['target'] in visited:
+                        t[e['target']] = parent
+            called = t
+
+    def merge(self, g1, g2):
+        self.fix_caller_id(g1)
+        self.fix_caller_id(g2)
+        nodes1 = [hashabledict(x) for x in g1['nodes']]
+        nodes2 = [hashabledict(x) for x in g2['nodes']]
+        def cmp_node(x, y):
+            if x['name'] != y['name']:
+                return False
+            if x['caller_id'] is None and y['caller_id'] is not None:
+                return False
+            if x['caller_id'] is not None and y['caller_id'] is None:
+                return False
+            if x['caller_id'] is None and y['caller_id'] is None:
+                return True
+            caller1, caller2 = nodes1[x['caller_id']], nodes2[y['caller_id']]
+            return caller1['name'] == caller2['name'] 
+
+        res, _ = lcs(nodes1, nodes2, cmp_node)
         
-        for node2 in g2.nodes:
-            for edge, count in g2.edges[node2].items():
-                result.edges[merge][map2[edge]] = (0, count)
+        for a, b in res.items():
+            n = deepcopy(a)
+            del n['node']
+            n['node1'] = a['node']
+            n['node2'] = b['node']
+            n['node1']['original'] = a['index']
+            n['node2']['original'] = b['index']
+            n['index'] = self.id
+            a['node']['diff'] = self.id
+            b['node']['diff'] = self.id
+            self.old_to_new[(1, a['index'])] = self.id
+            self.old_to_new[(2, b['index'])] = self.id
+            self.id += 1
+            self.nodes.append(n)
 
-        result.next = map1[g1.next]
-        result.last = map1[g1.last]
+        self.add_nodes(nodes1, 1)
+        self.add_nodes(nodes2, 2)
+        self.add_edges(g1['edges'], 1)
+        self.add_edges(g2['edges'], 2)
 
-        return result
+    def add_nodes(self, nodes, ng):
+        for node in nodes:
+            if not (ng, node['index']) in self.old_to_new:
+                nid = self.add_node(node)
+                self.old_to_new[(ng, node['index'])] = nid
+                node['node']['diff'] = nid
 
+    def add_edges(self, edges, ng):
+        for edge in edges:
+            if (ng, edge['source']) in self.old_to_new:
+                self.add_edge(self.old_to_new[(ng, edge['source'])], 
+                              self.old_to_new[(ng, edge['target'])],
+                              edge)
 
-    def visit(self, g1, g2):
-        if type(g1) != type(g2):
-            return Branch(g1, g2)
-        if isinstance(g1, Single):
-            return self.visit_single(g1, g2)
-        if isinstance(g1, Call):
-            return self.visit_call(g1, g2)
-        if isinstance(g1, Group):
-            return self.visit_group(g1, g2)
+    def add_node(self, node):
+        n = deepcopy(node)
+        node_id = n['index'] = self.id
+        n['node']['original'] = node['index']
+        self.nodes.append(n)
+        self.id += 1
+        return node_id
 
-        return Branch(g1, g2)
+    def add_edge(self, source, target, edge):
+        edge_key = "{} {} {}".format(source, target, edge['type'])
+
+        if not edge_key in self.context_edges:
+            e = deepcopy(edge)
+            e['source'] = source
+            e['target'] = target
+            self.edges.append(e)
+            self.context_edges[edge_key] = e
+        else:
+            e = self.context_edges[edge_key]
+            e['count'] = (e['count'], edge['count'])
+
+    def to_dict(self):
+        return {
+            'max_duration': self.max_duration,
+            'min_duration': self.min_duration,
+            'nodes': self.nodes,
+            'edges': self.edges,
+        }
 
 
 def dict_to_set(d):

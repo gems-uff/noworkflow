@@ -110,7 +110,6 @@ def diff(trial1, trial2):
     modules_added, modules_removed, modules_replaced = diff.modules()
     env_added, env_removed, env_replaced = diff.environment()
     fa_added, fa_removed, fa_replaced = diff.file_accesses()
-    diff.naive_activation_graph()
     return render_template("diff.html", 
         cwd = os.getcwd(),
         trial1 = diff.trial1.info(),
@@ -132,18 +131,20 @@ def diff(trial1, trial2):
 @connection
 def independent_diff_graph(trial1, trial2):
     diff = Diff(trial1, trial2)
+    d, t1, t2 = diff.independent_naive_activation_graph()
     return jsonify(
-        diff=diff.independent_naive_activation_graph(),
-        trial1=diff.trial1.independent_activation_graph(),
-        trial2=diff.trial2.independent_activation_graph(),
+        diff=d,
+        trial1=t1,
+        trial2=t2,
     )
 
 @app.route('/diff/<trial1>/<trial2>/combined')
 @connection
 def combined_diff_graph(trial1, trial2):
     diff = Diff(trial1, trial2)
+    d, t1, t2 = diff.combined_naive_activation_graph()
     return jsonify(
-        diff=diff.combined_naive_activation_graph(),
-        trial1=diff.trial1.combined_activation_graph(),
-        trial2=diff.trial2.combined_activation_graph(),
+        diff=d,
+        trial1=t1,
+        trial2=t2,
     )
