@@ -1,10 +1,14 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 from collections import defaultdict, OrderedDict
-from ..persistence import row_to_dict, persistence
+from ..persistence import row_to_dict
+from ..persistence import persistence as pers
 
 class History(object):
 
@@ -12,7 +16,7 @@ class History(object):
         self.data = {}
 
     def scripts(self):
-        return {s[0].rsplit('/',1)[-1] for s in persistence.distinct_scripts()}
+        return {s[0].rsplit('/', 1)[-1] for s in pers.distinct_scripts()}
 
     def graph_data(self, script="*", execution="*"):
         key = (script, execution)
@@ -26,23 +30,28 @@ class History(object):
 
         # Filter nodes and adds to dicts
         tid = 0
-        for trial in persistence.load('trial', order="start"):
-            if script != '*' and trial['script'] != script:
+        for trial in map(row_to_dict, pers.load('trial', order="start")):
+            different_script = (trial['script'] != script)
+            finished = trial['finish']
+            unfinished = not finished and trial['run']
+            backup = not finished and not trial['run']
+
+            if script != '*' and different_script:
                 continue
-            if execution == 'finished' and not trial['finish']:
+            if execution == 'finished' and not finished:
                 continue
-            if execution == 'unfinished' and (trial['finish'] or not trial['run']):
+            if execution == 'unfinished' and not unfinished:
                 continue
-            if execution == 'backup' and (trial['finish'] or trial['run']):
+            if execution == 'backup' and not backup:
                 continue
 
-            trial, trial_id = row_to_dict(trial), trial["id"]
+            trial_id = trial["id"]
             trial["level"] = 0
             trial["status"] = "Finished" if trial["finish"] else "Unfinished"
             if not trial['run']:
                 trial["status"] = "Backup"
             trial["tooltip"] = "<b>{script}</b><br>{status}".format(**trial)
-            
+
             id_map[trial_id] = tid
             scripts[trial['script']].append(trial)
             nodes.append(trial)

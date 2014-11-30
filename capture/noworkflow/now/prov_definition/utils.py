@@ -1,5 +1,10 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
+
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import ast
 import dis
@@ -35,7 +40,7 @@ class ExtractCallPosition(ast.NodeVisitor):
             self.visit_list(node.keywords)
             self.visit_maybe(node.kwargs)
             if self.col == 50000:
-                self.col =node.col_offset 
+                self.col = node.col_offset
             return (node.lineno, self.col)
         self.generic_visit(node)
 
@@ -56,8 +61,8 @@ class FunctionCall(ast.NodeVisitor):
 
     def all_args(self):
         return list(itertools.chain(
-            itertools.chain.from_iterable(self.args), 
-            self.starargs, 
+            itertools.chain.from_iterable(self.args),
+            self.starargs,
             self.kwargs,
             itertools.chain.from_iterable(self.keywords.values())
         ))
@@ -65,7 +70,8 @@ class FunctionCall(ast.NodeVisitor):
     def use_visitor(self, node):
         visitor = self.visitor_class()
         visitor.visit(node)
-        return [x if isinstance(x, FunctionCall) else x[0] for x in visitor.names]
+        return [x if isinstance(x, FunctionCall) else x[0]
+                for x in visitor.names]
 
     def visit_Call(self, node):
         self.func = self.use_visitor(node.func)
@@ -81,9 +87,9 @@ class FunctionCall(ast.NodeVisitor):
         self.keywords[node.arg] = self.use_visitor(node.value)
 
     def __repr__(self):
-        return "F(func={}, args={}, keywords={}, *args={}, **kwargs={})".format(
-            self.func, self.args, self.keywords, self.starargs, self.kwargs
-        )
+        return "F(func={}, args={}, keywords={}, *args={}, **kwargs={})"\
+            .format(self.func, self.args, self.keywords,
+                    self.starargs, self.kwargs)
 
 
 class ClassDef(FunctionCall):

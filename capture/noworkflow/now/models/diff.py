@@ -1,16 +1,19 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
-from collections import namedtuple, OrderedDict
+from copy import deepcopy
+from collections import namedtuple, OrderedDict, defaultdict
+
 from .trial import Trial, TreeElement, Single, Call
 from .trial import Mixed, Group, OrderedCounter
 from .trial_activation_visitors import TrialGraphVisitor
 from .trial_activation_visitors import TrialGraphCombineVisitor
 
-from copy import deepcopy
-from collections import defaultdict
 
 class hashabledict(dict):
     def el(self, e):
@@ -37,7 +40,9 @@ class activationdict(dict):
 
 class fadict(dict):
     def __key(self):
-        return (self['name'], self['content_hash_before'], self['content_hash_after'])
+        return (self['name'],
+                self['content_hash_before'],
+                self['content_hash_after'])
     def __hash__(self):
         return hash(self.__key())
     def __eq__(self, other):
@@ -57,17 +62,17 @@ class Diff(object):
     def modules(self):
         fn = lambda x: hashabledict(x)
         return diff_set(
-            set(self.trial1.modules(fn)[1]), 
+            set(self.trial1.modules(fn)[1]),
             set(self.trial2.modules(fn)[1]))
 
     def environment(self):
         return diff_set(
-            dict_to_set(self.trial1.environment()), 
+            dict_to_set(self.trial1.environment()),
             dict_to_set(self.trial2.environment()))
 
     def file_accesses(self):
         return diff_set(
-            set(fadict(fa) for fa in self.trial1.file_accesses()), 
+            set(fadict(fa) for fa in self.trial1.file_accesses()),
             set(fadict(fa) for fa in self.trial2.file_accesses()))
 
     def independent_naive_activation_graph(self):
@@ -93,7 +98,7 @@ class NaiveGraphDiff(object):
 
         self.min_duration = dict(g1['min_duration'].items() +
                                  g2['min_duration'].items())
-        
+
         self.merge(g1, g2)
 
     def fix_caller_id(self, graph):
@@ -133,10 +138,10 @@ class NaiveGraphDiff(object):
             if x['caller_id'] is None and y['caller_id'] is None:
                 return True
             caller1, caller2 = nodes1[x['caller_id']], nodes2[y['caller_id']]
-            return caller1['name'] == caller2['name'] 
+            return caller1['name'] == caller2['name']
 
         res, _ = lcs(nodes1, nodes2, cmp_node)
-        
+
         for a, b in res.items():
             n = deepcopy(a)
             del n['node']
@@ -167,7 +172,7 @@ class NaiveGraphDiff(object):
     def add_edges(self, edges, ng):
         for edge in edges:
             if (ng, edge['source']) in self.old_to_new:
-                self.add_edge(self.old_to_new[(ng, edge['source'])], 
+                self.add_edge(self.old_to_new[(ng, edge['source'])],
                               self.old_to_new[(ng, edge['target'])],
                               edge)
 
@@ -214,11 +219,11 @@ def diff_dict(before, after):
             result[key] = [before[key], after[key]]
     return result
 
-def diff_set(before, after):                           
+def diff_set(before, after):
     removed = before - after
     added = after - before
     replaced = set()
-    
+
     removed_by_name = {}
     for element_removed in removed:
         removed_by_name[element_removed['name']] = element_removed
@@ -252,8 +257,7 @@ def lcs(a, b, eq=lambda x, y: x == y):
             y -= 1
         else:
             result_a[a[x-1]] = b[y-1]
-            result_b[b[y-1]] = a[x-1]            
+            result_b[b[y-1]] = a[x-1]
             x -= 1
             y -= 1
     return result_a, result_b
-    

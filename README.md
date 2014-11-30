@@ -7,9 +7,9 @@ All rights reserved.
 
 The noWorkflow project aims at allowing scientists to benefit from provenance data analysis even when they don't use a workflow system. Also, the goal is to allow them to avoid using naming conventions to store files originated in previous executions. Currently, when this is not done, the result and intermediate files are overwritten by every new execution of the pipeline.
 
-noWorkflow was developed in Python and it currently is able to capture provenance of Python scripts using Software Engineering techniques such as abstract syntax tree (AST) analysis, reflection, and profiling, to collect provenance without the need of a version control system or any other environment. 
+noWorkflow was developed in Python and it currently is able to capture provenance of Python scripts using Software Engineering techniques such as abstract syntax tree (AST) analysis, reflection, and profiling, to collect provenance without the need of a version control system or any other environment.
 
-Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below. 
+Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below.
 
 Team
 ----
@@ -22,7 +22,7 @@ The noWorkflow team is composed by researchers from Universidade Federal Flumine
 * David Koop (NYU)
 * Leonardo Murta (UFF)
 * João Felipe Pimentel (UFF)
- 
+
 Publications
 ------------
 
@@ -31,7 +31,7 @@ Publications
 Quick Installation
 ------------------
 
-To install noWorkflow, you should follow these basic instructions: 
+To install noWorkflow, you should follow these basic instructions:
 
 Precondition: Git (just to clone our repository) and Python
 ```bash
@@ -40,18 +40,18 @@ $ cd noworkflow/capture
 $ ./setup.py install
 ```
 
-This installs noWorkflow on your system. 
+This installs noWorkflow on your system.
 
 Basic Usage
 -----------
 
-noWorkflow is transparent in the sense that it requires neither changes to the script, nor any laborious configuration. Run 
+noWorkflow is transparent in the sense that it requires neither changes to the script, nor any laborious configuration. Run
 ```bash
 now --help
 ```
 to learn the usage options.
 
-To run noWorkflow with a script called *simulation.py* with input data *data1.dat* and *data2.dat*, you should run  
+To run noWorkflow with a script called *simulation.py* with input data *data1.dat* and *data2.dat*, you should run
 ```bash
 now run -v simulation.py data1.dat data2.dat
 ```
@@ -73,9 +73,9 @@ $ now run -v simulation.py data1.dat data2.dat
 ```
 Each new run produces a different trial that will be stored with a sequential identification number in the relational database.
 
-Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one. 
+Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.
 
-To list all trials, just run 
+To list all trials, just run
 
 ```bash
 now list
@@ -93,20 +93,20 @@ $ now list
          ran from 2014-03-04 17:59:02.917920 to 2014-03-04 18:00:10.383637
 ```
 
-To look at details of an specific trial, use 
+To look at details of an specific trial, use
 ```bash
 now show
 ```
-This command has several options, such as *-m* to show module dependencies; *-d* to show function definitions; *-e* to show the environment context; *-a* to show function activations; and *-f* to show file accesses. 
+This command has several options, such as *-m* to show module dependencies; *-d* to show function definitions; *-e* to show the environment context; *-a* to show function activations; and *-f* to show file accesses.
 
-Running 
+Running
 ```bash
 now show -a 1
 ```
-would show details of trial 1. Notice that the function name is preceded by the line number where the call was activated. 
+would show details of trial 1. Notice that the function name is preceded by the line number where the call was activated.
 
 ```bash
-$ now show -a 1 
+$ now show -a 1
 [now] trial information:
   Id: 1
   Inherited Id: None
@@ -115,16 +115,16 @@ $ now show -a 1
   Start: 2014-03-04 13:10:34.595995
   Finish: 2014-03-04 13:11:33.793083
 [now] this trial has the following function activation graph:
-  42: run_simulation (2014-03-04 13:11:30.969055 - 
+  42: run_simulation (2014-03-04 13:11:30.969055 -
                                 2014-03-04 13:11:32.978796)
       Arguments: data_b = 'data2.dat', data_a = 'data1.dat'
       Globals: wait = 2
-      Return value: [['0.0', '0.6'], ['1.0', '0.0'], ['1.0', '0.0'], 
+      Return value: [['0.0', '0.6'], ['1.0', '0.0'], ['1.0', '0.0'],
       ...
 ```
-The remaining options of noWorkflow are *diff* and *export*. The *diff* option compares two trials, and the *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.  
+The remaining options of noWorkflow are *diff* and *export*. The *diff* option compares two trials, and the *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.
 
-We have also a graph visualization implemented in Java, named noWorkflowVis, which connects to noWorkflow database and allows interactive analysis. 
+We have also a graph visualization implemented in Java, named noWorkflowVis, which connects to noWorkflow database and allows interactive analysis.
 
 Included Software
 -----------------

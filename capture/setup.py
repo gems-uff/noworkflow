@@ -16,19 +16,24 @@ def recursive_path(pack, path):
 
 setup(
     name = "noworkflow",
-    version = "0.5.1",
+    version = "0.6.0",
     packages = find_packages(),
     package_data = {
         'noworkflow': [
-            'resources/*', 
-        ] + recursive_path('noworkflow', 'now/vis/static') 
+            'resources/*',
+        ] + recursive_path('noworkflow', 'now/vis/static')
           + recursive_path('noworkflow', 'now/vis/templates'),
     },
     entry_points = {'console_scripts': ['now = noworkflow.main:main']},
-    author = "Leonardo Murta, Vanessa Braganholo, Fernando Chirigati, David Koop, and Juliana Freire",
+    author = ("Joao Pimentel, Leonardo Murta, Vanessa Braganholo, "
+              "Fernando Chirigati, David Koop, and Juliana Freire"),
     author_email = "leomurta@ic.uff.br",
-    description = "Supporting infrastructure to run scientific experiments without a scientific workflow management system.",
+    description = "Supporting infrastructure to run scientific experiments "
+                  "without a scientific workflow management system.",
     license = "MIT",
     keywords = "scientific experiments provenance python",
-    url = "https://github.com/gems-uff/noworkflow"
+    url = "https://github.com/gems-uff/noworkflow",
+    extras_require = {
+        'vis': ['flask']
+    }
 )

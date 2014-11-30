@@ -1,13 +1,33 @@
-from __future__ import absolute_import
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
+# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import os
 import functools
-from ..persistence import persistence
 from flask import render_template, jsonify, request
-from . import app
+from ..persistence import persistence
 from ..models.history import History
 from ..models.trial import Trial
 from ..models.diff import Diff
+
+class WebServer(object):
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(WebServer, cls).__new__(
+                                cls, *args, **kwargs)
+        return cls._instance
+
+    def __init__(self):
+        from flask import Flask
+
+        self.app = Flask(__name__)
+
+app = WebServer().app
 
 def connection(func):
     @functools.wraps(func)
@@ -25,13 +45,13 @@ def static_proxy(path):
 @connection
 def trials():
     history = History()
-    return jsonify(**history.graph_data(request.args.get('script'), 
+    return jsonify(**history.graph_data(request.args.get('script'),
                                         request.args.get('execution')))
 @app.route('/')
 @connection
 def index():
     history = History()
-    return render_template("index.html", 
+    return render_template("index.html",
         cwd = os.getcwd(),
         scripts = history.scripts()
     )
@@ -61,7 +81,7 @@ def all_modules(tid):
     trial = Trial(tid)
     local, result = trial.modules()
     result = sorted(result, key=lambda x:x not in local)
-    return render_template("trial.html", 
+    return render_template("trial.html",
         cwd = os.getcwd(),
         trial = trial.info(),
         modules = result,
@@ -79,7 +99,7 @@ def environment(tid):
 @connection
 def all_environment(tid):
     trial = Trial(tid)
-    return render_template("trial.html", 
+    return render_template("trial.html",
         cwd = os.getcwd(),
         trial = trial.info(),
         env = trial.environment(),
@@ -96,7 +116,7 @@ def file_accesses(tid):
 @connection
 def all_file_accesses(tid):
     trial = Trial(tid)
-    return render_template("trial.html", 
+    return render_template("trial.html",
         cwd = os.getcwd(),
         trial = trial.info(),
         file_accesses = trial.file_accesses(),
@@ -110,7 +130,7 @@ def diff(trial1, trial2):
     modules_added, modules_removed, modules_replaced = diff.modules()
     env_added, env_removed, env_replaced = diff.environment()
     fa_added, fa_removed, fa_replaced = diff.file_accesses()
-    return render_template("diff.html", 
+    return render_template("diff.html",
         cwd = os.getcwd(),
         trial1 = diff.trial1.info(),
         trial2 = diff.trial2.info(),

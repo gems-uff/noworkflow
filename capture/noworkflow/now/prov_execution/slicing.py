@@ -1,7 +1,10 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import sys
 import linecache
@@ -13,6 +16,11 @@ from .profiler import Profiler
 from ..utils import print_fn_msg
 from ..prov_definition import SlicingVisitor
 from ..persistence import persistence
+
+try:
+    immutable = (bool, numbers.Number, str, unicode)
+except NameError:
+    immutable = (bool, numbers.Number, str, bytes)
 
 class Variable(object):
     __slots__ = (
@@ -69,6 +77,7 @@ class Tracer(Profiler):
             "Slicing Definition Required"
         definition = self.metascript['definition']
         self.event_map['line'] = self.trace_line
+        self.imports = definition.imports
 
         # Store slicing provenance
         self.variables = ObjectStore(Variable)
@@ -115,14 +124,14 @@ class Tracer(Profiler):
                 return
             _return = returns[lasti]
 
-            vid = self.add_variable('call {}'.format(_return.activation.name), 
+            vid = self.add_variable('call {}'.format(_return.activation.name),
                                     dep[0], {}, 'now(n/a)')
             # Call was not evaluated before
             #if call.result is None or _return.var.line == call.result[1]:
             del returns[lasti]
             call.result = (_return.var.id, _return.var.line)
             dependencies_add(vid, _return.var.id)
-            
+
             self.add_dependencies(self.variables[vid], activation, call.func)
             dependencies_add(var_id, vid)
 
@@ -136,7 +145,7 @@ class Tracer(Profiler):
         """ Generates dependencies from line """
         print_fn_msg(lambda: 'Slice [{}] -> {}'.format(lineno,
                 linecache.getline(filename, lineno).strip()))
-        
+
         context, variables = activation.context, self.variables
         usages_add = self.usages.add
         add_variable = self.add_variable
@@ -151,14 +160,14 @@ class Tracer(Profiler):
 
         for name, others in dependencies.items():
             if name == 'return':
-                vid = add_variable(name, lineno, f_locals, 
+                vid = add_variable(name, lineno, f_locals,
                                    value=activation.return_value)
-                self.returns[activation.lasti] = Return(activation, 
+                self.returns[activation.lasti] = Return(activation,
                                                         variables[vid])
             else:
                 vid = add_variable(name, lineno, f_locals)
             add_dependencies(variables[vid], activation, others)
-                
+
             context[name] = variables[vid]
 
     def close_activation(self, event, arg):
@@ -168,7 +177,7 @@ class Tracer(Profiler):
         super(Tracer, self).close_activation(event, arg)
 
     def add_generic_return(self, frame, event, arg, ccall=False):
-        """ Add return to functions that do not have return 
+        """ Add return to functions that do not have return
             For ccall, add dependency from all params
         """
 
@@ -179,7 +188,7 @@ class Tracer(Profiler):
         activation = self.activation_stack[-1]
         lasti = activation.lasti
         if not 'return' in self.line_dependencies[lineno]:
-            vid = self.add_variable('return', lineno, {}, 
+            vid = self.add_variable('return', lineno, {},
                                     value=activation.return_value)
             activation.context['return'] = variables[vid]
             self.returns[lasti] = Return(activation, variables[vid])
@@ -192,7 +201,7 @@ class Tracer(Profiler):
                 self.add_inter_dependencies(frame, all_args, caller)
 
     def match_arg(self, passed, arg, caller, activation, line, f_locals):
-        """ Matches passed param with argument """ 
+        """ Matches passed param with argument """
         context = activation.context
 
         if arg in context:
@@ -206,13 +215,13 @@ class Tracer(Profiler):
             self.add_dependency(act_var, passed, caller)
 
     def match_args(self, args, param, caller, activation, line, f_locals):
-        """ Matches passed param with arguments """ 
+        """ Matches passed param with arguments """
         for arg in args:
             self.match_arg(arg, param, caller, activation, line, f_locals)
 
     def add_inter_dependencies(self, frame, args, activation):
         """ Adds dependencies between params """
-        immutable = (bool, numbers.Number, str, unicode)
+        global immutable
         f_locals, context = frame.f_locals, activation.context
         lineno, variables = frame.f_lineno, self.variables
         add_variable = self.add_variable
@@ -281,8 +290,9 @@ class Tracer(Profiler):
         super(Tracer, self).trace_call(frame, event, arg)
         if self.script != frame.f_back.f_code.co_filename:
             return
+        if frame.f_back.f_lineno in self.imports:
+            return
         self.add_argument_variables(frame)
-        activation = self.activation_stack[-1]
 
     def trace_c_return(self, frame, event, arg):
         activation = self.activation_stack[-1]
@@ -296,8 +306,6 @@ class Tracer(Profiler):
         super(Tracer, self).trace_return(frame, event, arg)
         activation.context['return'].value = activation.return_value
 
-        
-
     def trace_line(self, frame, event, arg):
         # Different file
         if frame.f_code.co_filename != self.script:
@@ -306,15 +314,15 @@ class Tracer(Profiler):
         lineno = frame.f_lineno
 
         activation = self.activation_stack[-1]
-        
+
         print_fn_msg(lambda: '[{}] -> {}'.format(lineno,
                 linecache.getline(self.script, lineno).strip()))
-        
+
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
         activation.slice_stack.append([
             activation, lineno, frame.f_locals, self.script])
-         
+
     def tracer(self, frame, event, arg):
         current_event = (event, frame.f_lineno, frame.f_code)
         if self.last_event != current_event:
@@ -330,12 +338,14 @@ class Tracer(Profiler):
         while self.activation_stack:
             self.close_activation('store', None)
         super(Tracer, self).store()
-        persistence.store_slicing(self.trial_id, self.variables, self.dependencies, self.usages)
+        persistence.store_slicing(self.trial_id, self.variables,
+                                  self.dependencies, self.usages)
         for var in self.variables:
             print_fn_msg(lambda: var)
 
         for dep in self.dependencies:
-            print_fn_msg(lambda: "{}\t<-\t{}".format(self.variables[dep.dependent], 
+            print_fn_msg(lambda: "{}\t<-\t{}".format(
+                                        self.variables[dep.dependent],
                                         self.variables[dep.supplier]))
 
         for var in self.usages:

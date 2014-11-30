@@ -1,7 +1,10 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import sqlite3
 
@@ -32,10 +35,8 @@ class Provider(object):
         self.parent_config_path = None # Base path for checkout references
         self.db_conn = None # Connection to the database
 
-        self.trial_id = None # Id of the prospective provenance used in this trial
-        
         self.std_open = open # Original Python open function.
-        
+
         if path:
             self.path = path
 
@@ -58,7 +59,7 @@ class Provider(object):
             self.path = path
 
         db_path = join(self.provenance_path, DB_FILENAME)
-        
+
         if not isdir(self.content_path):
             makedirs(self.content_path)
 

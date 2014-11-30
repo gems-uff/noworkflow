@@ -6,8 +6,14 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from .call_slicing_test import TestCallSlicing
+from datetime import datetime
 
-__all__ = [
-    b'TestCallSlicing',
-]
+
+FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+
+
+def calculate_duration(obj):
+    return int((
+        datetime.strptime(obj['finish'], FORMAT) -
+        datetime.strptime(obj['start'], FORMAT)
+    ).total_seconds() * 1000000)

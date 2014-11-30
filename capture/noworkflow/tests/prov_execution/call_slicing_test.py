@@ -1,32 +1,42 @@
-from __future__ import absolute_import
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-#if __name__ == '__main__' and __package__ is None:
-#    from os import sys, path
-#    sys.path.append(path.dirname(path.abspath('.')))
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import unittest
 import ast
 import __main__
 from ...now.cmd import Run
-from ...now import persistence
+from ...now.persistence import persistence
+
 
 run = Run('run', 'run').run
 
-persistence.put = lambda x: None
-persistence.store_trial = lambda a, b, c, d, e: None
-persistence.store_slicing = lambda a, b, c: None
 
+class Mock(object):
+
+    def __getattr__(self, name):
+        print(name)
+        return lambda *args, **kwargs: None
+
+
+persistence = Mock()
 NAME = '<unknown>'
+
 
 class Args(object):
 
     def __init__(self):
         self.verbose = False
-        self.bypass_modules = True
+        self.bypass_modules = False
         self.depth_context = 'non-user'
         self.depth = 1
         self.execution_provenance = 'Tracer'
         self.disasm = False
+
 
 class TestCallSlicing(unittest.TestCase):
 
@@ -39,7 +49,7 @@ class TestCallSlicing(unittest.TestCase):
                                      })
             metascript = {
                 'code': None,
-                'path': 'tests/.tests/local.py',
+                'path': 'noworkflow/tests/prov_execution/__init__.py',
                 'compiled': None,
             }
 
@@ -50,7 +60,8 @@ class TestCallSlicing(unittest.TestCase):
             for dep in provider.dependencies:
                 dependent = provider.variables[dep.dependent]
                 supplier = provider.variables[dep.supplier]
-                result.add(((dependent.name, dependent.line), (supplier.name, supplier.line)))
+                result.add(((dependent.name, dependent.line),
+                            (supplier.name, supplier.line)))
             return result
 
         def test_simple(self):
@@ -189,7 +200,7 @@ class TestCallSlicing(unittest.TestCase):
             provider = run(*self.run_args)
             result = {
                 (("a", 1), ("x", 3)),
-                (("kwargs", 1), ("y", 3)), 
+                (("kwargs", 1), ("y", 3)),
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("kwargs", 1)),
                 (("call fn", 4), ("return", 2)),
@@ -205,7 +216,7 @@ class TestCallSlicing(unittest.TestCase):
             provider = run(*self.run_args)
             result = {
                 (("a", 1), ("x", 3)),
-                (("kwargs", 1), ("x", 3)), 
+                (("kwargs", 1), ("x", 3)),
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("kwargs", 1)),
                 (("call fn", 4), ("return", 2)),
@@ -215,7 +226,7 @@ class TestCallSlicing(unittest.TestCase):
             self.assertEqual(result, self.extract(provider))
 
         def test_complex(self):
-            self.run_args[2]['code'] = ("def fn(a, b, c, d, " 
+            self.run_args[2]['code'] = ("def fn(a, b, c, d, "
                                                 "e=5, f=6, g=7, **kwargs):\n"
                                         "    return a\n"
                                         "x, y, z, w, u = 1, 2, [3, 4], 5, 7\n"
@@ -232,20 +243,20 @@ class TestCallSlicing(unittest.TestCase):
                 (("e", 1), ("w", 3)),
                 (("f", 1), ("z", 3)), #ToDo: fix?
                 (("f", 1), ("v", 4)), #ToDo: fix?
-                (("g", 1), ("u", 3)), 
-                (("kwargs", 1), ("z", 3)), #ToDo: fix? 
-                (("kwargs", 1), ("v", 4)), 
+                (("g", 1), ("u", 3)),
+                (("kwargs", 1), ("z", 3)), #ToDo: fix?
+                (("kwargs", 1), ("v", 4)),
                 (("return", 2), ("a", 1)),
                 (("call fn", 5), ("return", 2)),
                 (("z", 5), ("x", 3)),
-                (("z", 5), ("y", 3)), 
+                (("z", 5), ("y", 3)),
                 (("z", 5), ("z", 3)),
                 (("z", 5), ("w", 3)),
                 (("z", 5), ("u", 3)),
                 (("z", 5), ("v", 4)),
                 (("v", 5), ("x", 3)),
                 (("v", 5), ("y", 3)),
-                (("v", 5), ("z", 3)), 
+                (("v", 5), ("z", 3)),
                 (("v", 5), ("w", 3)),
                 (("v", 5), ("u", 3)),
                 (("v", 5), ("v", 4)),
@@ -261,7 +272,7 @@ class TestCallSlicing(unittest.TestCase):
             provider = run(*self.run_args)
             result = {
                 (("a", 1), ("x", 3)),
-                (("a", 1), ("call fn", 4)), 
+                (("a", 1), ("call fn", 4)),
                 (("return", 2), ("a", 1)),
                 (("call fn", 4), ("return", 2)),
                 (("r", 4), ("call fn", 4)),

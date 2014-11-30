@@ -1,14 +1,20 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import ast
 import sys
-from cStringIO import StringIO
 from .context import Context
 from .utils import diss
 from ..persistence import persistence
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 
 
@@ -16,22 +22,23 @@ class FunctionVisitor(ast.NodeVisitor):
     'Identifies the function declarations and related data'
     code = None
     functions = {}
-    
+
     # Temporary attributes for recursive data collection
     contexts = [Context('(global)')]
     names = None
     lineno = None
-    
+
     def __init__(self, metascript):
-        self.code = metascript['code'].split('\n')
+        self.code = metascript['code'].decode('utf-8').split('\n')
         self.metascript = metascript
         self.result = None
 
     @property
     def namespace(self):
         return '.'.join(context.name for context in self.contexts[1:])
-    
-    def generic_visit(self, node):  # Delegation, but collecting the current line number
+
+    def generic_visit(self, node):
+        # Delegation, but collecting the current line number
         try:
             self.lineno = node.lineno
         except:
@@ -42,11 +49,12 @@ class FunctionVisitor(ast.NodeVisitor):
         self.contexts.append(Context(node.name))
         self.generic_visit(node)
         self.contexts.pop()
-    
+
     def visit_FunctionDef(self, node):
         self.contexts.append(Context(node.name))
         self.generic_visit(node)
-        code_hash = persistence.put('\n'.join(self.code[node.lineno - 1:self.lineno]).encode('utf-8'))
+        code_hash = persistence.put(
+            '\n'.join(self.code[node.lineno - 1:self.lineno]).encode('utf-8'))
         self.functions[self.namespace] = self.contexts[-1].to_tuple(code_hash)
         self.contexts.pop()
 
@@ -54,7 +62,7 @@ class FunctionVisitor(ast.NodeVisitor):
         self.names = []
         self.generic_visit(node)
         self.contexts[-1].arguments.extend(self.names)
-        
+
     def visit_Global(self, node):
         self.contexts[-1].global_vars.extend(node.names)
         self.generic_visit(node)
@@ -62,7 +70,7 @@ class FunctionVisitor(ast.NodeVisitor):
     def call(self, node):
         func = node.func
         if isinstance(func, ast.Name): # collecting only direct function call
-            self.contexts[-1].calls.append(func.id) 
+            self.contexts[-1].calls.append(func.id)
 
     def visit_Call(self, node):
         self.call(node)
@@ -84,7 +92,7 @@ class FunctionVisitor(ast.NodeVisitor):
         diss(self.metascript['compiled'], recurse=True)
         #dis.dis(self.metascript['compiled'])
         #for fn in self.metascript['compiled'].co_consts:
-        #    dis.dis(fn)     
+        #    dis.dis(fn)
         sys.stdout = old_stdout
 
         self.disasm = mystdout.getvalue().split('\n')

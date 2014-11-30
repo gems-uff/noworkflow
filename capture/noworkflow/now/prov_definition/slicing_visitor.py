@@ -1,17 +1,20 @@
-# coding: utf-8
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import ast
 
 from collections import defaultdict
 
+from ..utils import print_msg
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
 from .utils import ExtractCallPosition, FunctionCall, ClassDef, index
-from ..utils import print_msg
+
 
 class AssignLeftVisitor(ast.NodeVisitor):
 
@@ -25,7 +28,7 @@ class AssignLeftVisitor(ast.NodeVisitor):
         if self.enable:
             self.last += '.' + node.attr
             self.names.append((self.last, node.ctx, node.lineno))
-        
+
     def visit_Subscript(self, node):
         self.visit(node.value)
         self.enable = False
@@ -47,14 +50,14 @@ class AssignRightVisitor(ast.NodeVisitor):
 
     def add(self, name, ctx, lineno):
         if not self.special.use:
-            self.names.append((name, ctx, lineno)) 
+            self.names.append((name, ctx, lineno))
         else:
-            self.special.add(name) 
+            self.special.add(name)
 
     def in_special(self, node):
         return node.id in self.special.flat()
 
-    def max_line(self, node):  # Delegation, but collecting the current line number
+    def max_line(self, node):
         try:
             self.line = max(node.lineno, self.line)
         except:
@@ -100,7 +103,7 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.visit(node.key)
         self.visit(node.value)
         self.special.pop()
-    
+
     def visit_comprehension(self, node):
         self.max_line(node)
         self.special.use = True
@@ -124,7 +127,8 @@ def add_all_names(dest, origin):
         dest.append(name)
 
 
-def assign_dependencies(target, value, dependencies, conditions, loop, aug=False):
+def assign_dependencies(target, value, dependencies, conditions, loop,
+                        aug=False):
     left, right = AssignLeftVisitor(), AssignRightVisitor()
 
     if tuple_or_list(target) and tuple_or_list(value):
@@ -132,7 +136,7 @@ def assign_dependencies(target, value, dependencies, conditions, loop, aug=False
             assign_dependencies(targ, value.elts[i], dependencies, conditions,
                                 loop)
         return
-    
+
     left.visit(target)
     right.visit(value)
     for name, ctx, lineno in left.names:
@@ -173,6 +177,7 @@ class SlicingVisitor(FunctionVisitor):
         self.function_calls[path] = defaultdict(dict)
         self.function_calls_by_lasti[path] = defaultdict(dict)
         self.function_calls_by_line[path] = defaultdict(list)
+        self.imports = set()
         self.condition = NamedContext()
         self.loop = NamedContext()
 
@@ -182,8 +187,8 @@ class SlicingVisitor(FunctionVisitor):
 
     def visit_AugAssign(self, node):
         assign_dependencies(node.target, node.value,
-                            self.dependencies[self.path], 
-                            self.condition.flat(), 
+                            self.dependencies[self.path],
+                            self.condition.flat(),
                             self.loop.flat(), aug=True)
         self.generic_visit(node)
 
@@ -193,7 +198,7 @@ class SlicingVisitor(FunctionVisitor):
                                 self.dependencies[self.path],
                                 self.condition.flat(),
                                 self.loop.flat())
-        
+
         self.generic_visit(node)
 
     def visit_For(self, node):
@@ -225,7 +230,7 @@ class SlicingVisitor(FunctionVisitor):
         self.loop.add(node.id)
         self.name_refs[self.path][node.lineno][type(node.ctx).__name__]\
             .append(node.id)
-        self.generic_visit(node) 
+        self.generic_visit(node)
 
     def visit_Call(self, node):
         fn = FunctionCall(AssignRightVisitor)
@@ -237,7 +242,8 @@ class SlicingVisitor(FunctionVisitor):
         self.function_calls_by_line[self.path][line].append(fn)
 
     def visit_Return(self, node):
-        assign_dependencies(ast.Name('return', ast.Store(), lineno=node.lineno),
+        assign_dependencies(ast.Name('return', ast.Store(),
+                                     lineno=node.lineno),
                             node.value,
                             self.dependencies[self.path],
                             self.condition.flat(),
@@ -252,7 +258,7 @@ class SlicingVisitor(FunctionVisitor):
         cls = ClassDef(AssignRightVisitor)
         cls.visit(node)
         cls.line, cls.col = node.lineno, node.col_offset
-        
+
         self.function_calls_by_line[self.path][node.lineno].append(cls)
         self.generic_visit(node)
 
@@ -281,9 +287,9 @@ class SlicingVisitor(FunctionVisitor):
                 calls_by_line = self.function_calls_by_line[self.path][line]
                 col = 0
             splitted = disasm.split()
-            i = index(splitted, ('CALL_FUNCTION', 'CALL_FUNCTION_VAR', 
+            i = index(splitted, ('CALL_FUNCTION', 'CALL_FUNCTION_VAR',
                                  'CALL_FUNCTION_KW', 'CALL_FUNCTION_VAR_KW'))
-            
+
             if not i is None:
                 f_lasti = int(splitted[i-1])
                 calls_by_lasti[f_lasti] = calls_by_line[col]
@@ -293,3 +299,7 @@ class SlicingVisitor(FunctionVisitor):
                     "{} | {}".format(disasm, calls_by_lasti[f_lasti]))
             else:
                 self.disasm.append(disasm)
+
+            if not index(splitted, ('IMPORT_NAME', 'IMPORT_FROM')) is None:
+                self.imports.add(line)
+

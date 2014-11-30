@@ -1,18 +1,21 @@
-from __future__ import absolute_import
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-#if __name__ == '__main__' and __package__ is None:
-#    from os import sys, path
-#    sys.path.append(path.dirname(path.abspath('.')))
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import unittest
 import ast
-from ...now import persistence
+from ...now.persistence import persistence
 from ...now.prov_definition.slicing_visitor import SlicingVisitor
 from ...now.prov_definition.utils import FunctionCall
 
-persistence.put = lambda x: None
 
+persistence.put = lambda x: None
 NAME = '<unknown>'
+
 
 class TestSlicingDependencies(unittest.TestCase):
 
@@ -93,8 +96,6 @@ class TestSlicingDependencies(unittest.TestCase):
         def test_lambda_assignment(self):
             tree = self.parse("a = (lambda x: x + b)(c)")
             self.visitor.visit(tree)
-            #self.assertTrue(isinstance(self.dependencies(1)['a'][0], FunctionCall))
-            #self.assertEqual([['c']], self.dependencies(1)['a'][0].args)
             self.assertEqual([(1, 21)], self.dependencies(1)['a'])
             self.assertEqual([['c']], self.call(1, 21).args)
 
@@ -104,7 +105,7 @@ class TestSlicingDependencies(unittest.TestCase):
             self.assertEqual([(1, 36)], self.dependencies(1)['a'])
             self.assertEqual([['c']], self.call(1, 36).args)
             self.assertEqual([(1, 33)], self.call(1, 36).func)
-            self.assertEqual([['b']], self.call(1, 33).args)      
+            self.assertEqual([['b']], self.call(1, 33).args)
 
         def test_list_comprehension_assignment(self):
             tree = self.parse("a = [i + b for i in c if i + d == b]")
@@ -187,21 +188,21 @@ class TestSlicingDependencies(unittest.TestCase):
         def test_for_dependent_augment(self):
             tree = self.parse("for i in a:\n"
                              "    b += c")
-            self.visitor.visit(tree) 
+            self.visitor.visit(tree)
             self.assertEqual(['c', 'b', 'i'], self.dependencies(2)['b'])
 
         def test_return(self):
             code = ("def f(a):\n"
                     "    return a")
             tree = self.parse(code)
-            self.visitor.visit(tree) 
+            self.visitor.visit(tree)
             self.assertEqual(['a'], self.dependencies(2)['return'])
 
         def test_yield(self):
             code = ("def f(a):\n"
                     "    yield a")
             tree = self.parse(code)
-            self.visitor.visit(tree) 
+            self.visitor.visit(tree)
             self.assertEqual(['a'], self.dependencies(2)['return'])
 
         def test_return2(self):
@@ -209,5 +210,5 @@ class TestSlicingDependencies(unittest.TestCase):
                     "    if a:\n"
                     "        return 2")
             tree = self.parse(code)
-            self.visitor.visit(tree) 
+            self.visitor.visit(tree)
             self.assertEqual(['a'], self.dependencies(3)['return'])

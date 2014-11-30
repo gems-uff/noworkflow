@@ -1,18 +1,21 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import sys
-
 from datetime import datetime
 from collections import defaultdict, OrderedDict, Counter
-from ..persistence import row_to_dict, persistence
+
 from .. import utils
+from ..persistence import row_to_dict, persistence
 from .trial_activation_visitors import TrialGraphVisitor
 from .trial_activation_visitors import TrialGraphCombineVisitor
-from .activation import calculate_duration, FORMAT
-
+from .utils import calculate_duration, FORMAT
+from .activation import Activation
 
 class Trial(object):
 
@@ -36,17 +39,19 @@ class Trial(object):
     def code_hash(self):
         info = self.info()
         return info['code_hash']
-    
+
     def info(self):
         if self._info is None:
             self._info = row_to_dict(
                 persistence.load_trial(self.trial_id).fetchone())
+            if self._info['finish']:
+                self._info['duration'] = calculate_duration(self._info)
         return self._info
 
     def function_defs(self):
         return {
             function['name']: row_to_dict(function)
-            for function in persistence.load('function_def', 
+            for function in persistence.load('function_def',
                                              trial_id=self.trial_id)
         }
 
@@ -57,47 +62,67 @@ class Trial(object):
     def modules(self, map_fn=row_to_dict):
         dependencies = persistence.load_dependencies(self.trial_id)
         result = map(map_fn, dependencies)
-        local = [dep for dep in result 
+        local = [dep for dep in result
                  if dep['path'] and persistence.base_path in dep['path']]
         return local, result
 
     def environment(self):
         return {
-            attr['name']: attr['value'] for attr in persistence.load(
-                'environment_attr', trial_id=self.trial_id)
+            attr['name']: attr['value'] for attr in map(row_to_dict,
+                persistence.load('environment_attr', trial_id=self.trial_id))
         }
 
     def file_accesses(self):
         file_accesses = persistence.load('file_access',
                                          trial_id=self.trial_id)
-    
+
         result = []
-        for file_access in file_accesses:
+        for fa in map(row_to_dict, file_accesses):
             stack = []
-            function_activation = persistence.load('function_activation', id = file_access['function_activation_id']).fetchone()
+            function_activation = next(iter(self.activations(
+                id=fa['function_activation_id'])))
             while function_activation:
                 function_name = function_activation['name']
-                function_activation = persistence.load('function_activation', id = function_activation['caller_id']).fetchone()
-                if function_activation:
+                try:
+                    function_activation = next(iter(self.activations(
+                        id=function_activation['caller_id'])))
                     stack.insert(0, function_name)
+                except StopIteration:
+                    function_activation = None
             if not stack or stack[-1] != 'open':
                 stack.append(' ... -> open')
 
             result.append({
-                'name': file_access['name'],
-                'mode': file_access['mode'],
-                'buffering': file_access['buffering'],
-                'content_hash_before': file_access['content_hash_before'],
-                'content_hash_after': file_access['content_hash_after'],
-                'timestamp': file_access['timestamp'],
+                'id': fa['id'],
+                'function_activation_id': fa['function_activation_id'],
+                'name': fa['name'],
+                'mode': fa['mode'],
+                'buffering': fa['buffering'],
+                'content_hash_before': fa['content_hash_before'],
+                'content_hash_after': fa['content_hash_after'],
+                'timestamp': fa['timestamp'],
                 'stack': ' -> '.join(stack),
             })
         return result
 
-    def activations(self):
-        return persistence.load('function_activation', 
+    def activations(self, **conditions):
+        return map(Activation, persistence.load('function_activation',
+                                                trial_id=self.trial_id,
+                                                order='start',
+                                                **conditions))
+
+    def slicing_variables(self):
+        return persistence.load('slicing_variable',
                                 trial_id=self.trial_id,
-                                order='start')
+                                order='vid ASC')
+
+    def slicing_usages(self):
+        return persistence.load('slicing_usage',
+                                trial_id=self.trial_id)
+
+    def slicing_dependencies(self):
+        return persistence.load('slicing_dependency',
+                                trial_id=self.trial_id)
 
     def activation_graph(self):
         result_stack = []
@@ -111,7 +136,7 @@ class Trial(object):
             next = result_stack.pop()
             previous = stack.pop()
             add_flow(stack, result_stack, previous, next)
-        
+
         return result_stack.pop()
 
     def independent_activation_graph(self):
@@ -136,7 +161,7 @@ class OrderedCounter(OrderedDict, Counter):
 
 
 class TreeElement(object):
-    
+
     def __init__(self):
         self.duration = 0
         self.count = 1
@@ -144,7 +169,7 @@ class TreeElement(object):
 
     def mean(self):
         if isinstance(self.duration, tuple):
-            return (self.a.duration / self.a.count, 
+            return (self.a.duration / self.a.count,
                     self.b.duration / self.b.count)
         return self.duration / self.count
 
@@ -177,7 +202,6 @@ class Single(TreeElement):
         self.trial_id = activation['trial_id']
         self.repr = "S({0}-{1})".format(self.line, self.name)
 
-
     @property
     def count(self):
         return sum(1 for a in self.activations)
@@ -188,7 +212,7 @@ class Single(TreeElement):
 
     @property
     def duration(self):
-        return sum(calculate_duration(a) for a in self.activations 
+        return sum(calculate_duration(a) for a in self.activations
                    if a['finish'] and a['start'])
 
     @duration.setter
@@ -229,6 +253,7 @@ class Single(TreeElement):
             }
         }
 
+
 class Mixed(TreeElement):
 
     def __init__(self, activation):
@@ -257,7 +282,6 @@ class Mixed(TreeElement):
     @duration.setter
     def duration(self, value):
         pass
-    
 
     def add_element(self, element):
         self.elements.append(element)
@@ -304,14 +328,14 @@ class Group(TreeElement):
         else:
             self.nodes[previous].add_element(previous)
         self.edges[previous][next] += 1
-        
+
     def calculate_repr(self):
         result = [
             "[{0}-{1}->{2}]".format(previous, count, next)
             for previous, edges in self.edges.items()
             for next, count in edges.items()
         ]
-      
+
         self.repr = "G({0})".format(', '.join(result))
 
     def __eq__(self, other):
@@ -361,7 +385,8 @@ class Call(TreeElement):
 class Info(object):
 
     def __init__(self, single):
-        self.title = "Trial {trial}<br>Function <b>{name}</b> called at line {line}".format(
+        self.title = ("Trial {trial}<br>"
+                      "Function <b>{name}</b> called at line {line}").format(
             trial=single.trial_id, name=single.name, line=single.line)
         self.activations = set()
         self.duration = ""
@@ -389,9 +414,8 @@ class Info(object):
         return "Mean: {} microseconds per activation".format(mean)
 
     def activation_text(self, activation):
-        values = persistence.load('object_value', 
-                                  function_activation_id=activation['id'],
-                                  order='id')
+        values = map(row_to_dict, persistence.load('object_value',
+            function_activation_id=activation['id'], order='id'))
         values = [value for value in values if value['type'] == 'ARGUMENT']
         result = [
             "",
@@ -414,11 +438,11 @@ class Info(object):
         return '<br/>'.join(result)
 
 
-
 def join(a, b):
     if a == b:
         return Dual(a, b)
     return Branch(a, b)
+
 
 def sequence(previous, next):
     if isinstance(next, Group):
@@ -427,22 +451,22 @@ def sequence(previous, next):
     return Group().initialize(previous, next)
 
 
-def add_flow(stack, result_stack, previous, next):
+def add_flow(stack, result, previous, next):
     if previous.parent == next.parent:
         # Same function level
-        result_stack.append(sequence(previous, next))
+        result.append(sequence(previous, next))
 
     elif previous.id == next.parent:
         # Previously called next
-        # if top of result_stack is in the same level of call: 
+        # if top of result is in the same level of call:
         #   create sequece or combine results
-        # if top of result_stack is in a higher level, put Call on top of pile
-        if result_stack:
-            add_flow(stack, result_stack, Call(previous, next), result_stack.pop())
-        else: 
-            result_stack.append(Call(previous, next))
+        # if top of result is in a higher level, put Call on top of pile
+        if result:
+            add_flow(stack, result, Call(previous, next), result.pop())
+        else:
+            result.append(Call(previous, next))
     else:
         # Next is in a higher level
-        # Put previous on top of result_stack
-        result_stack.append(next)
-        result_stack.append(previous)
+        # Put previous on top of result
+        result.append(next)
+        result.append(previous)

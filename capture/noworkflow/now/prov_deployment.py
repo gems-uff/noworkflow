@@ -1,5 +1,11 @@
-# Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
+
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
+
 import importlib
 import modulefinder
 import os
@@ -8,12 +14,13 @@ import socket
 import sys
 import pkg_resources
 
-from persistence import persistence
-from utils import print_msg
+from .persistence import persistence
+from .utils import print_msg
 
 
 def collect_environment_provenance():
     environment = {}
+    e = environment
 
     environment['OS_NAME'] = platform.system()
     # Unix environment
@@ -26,12 +33,12 @@ def collect_environment_provenance():
         for name in os.confstr_names:
             environment[name] = os.confstr(name)
         environment['USER'] = os.getlogin()
-        environment['OS_NAME'], _, environment['OS_RELEASE'], environment['OS_VERSION'], _ = os.uname()
+        e['OS_NAME'], _, e['OS_RELEASE'], e['OS_VERSION'], _ = os.uname()
     except:
         pass
     # Windows environment
     if environment['OS_NAME'] == 'Windows':
-        environment['OS_RELEASE'], environment['OS_VERSION'], _, _ = platform.win32_ver()
+        e['OS_RELEASE'], e['OS_VERSION'], _, _ = platform.win32_ver()
 
     # Both Unix and Windows
     environment.update(os.environ)
@@ -46,7 +53,8 @@ def collect_environment_provenance():
 
 
 def collect_modules_provenance(modules):
-    'returns a set of module dependencies in the form: (name, version, path, code_hash)'
+    '''returns a set of module dependencies in the form:
+        (name, version, path, code_hash)'''
     dependencies = []
     for name, module in modules.items():
         if name != '__main__':
@@ -68,7 +76,8 @@ def get_version(module_name):
 
     # Check package declared module version
     try:
-        return pkg_resources.get_distribution(module_name).version  # TODO: This is slow! Is there any alternative?
+        # TODO: This is slow! Is there any alternative?
+        return pkg_resources.get_distribution(module_name).version
     except:
         pass
 
@@ -93,14 +102,16 @@ def collect_provenance(args, metascript):
     print_msg('  registering environment attributes')
     environment = collect_environment_provenance()
     persistence.store_environment(metascript['trial_id'], environment)
-        
+
     if args.bypass_modules:
-        print_msg('  using previously detected module dependencies (--bypass-modules).')
+        print_msg('  using previously detected module dependencies '
+                  '(--bypass-modules).')
     else:
         print_msg('  searching for module dependencies')
         finder = modulefinder.ModuleFinder()
         finder.run_script(metascript['path'])
 
-        print_msg('  registering provenance from {} modules'.format(len(finder.modules) - 1))
+        print_msg('  registering provenance from {} modules'.format(
+            len(finder.modules) - 1))
         modules = collect_modules_provenance(finder.modules)
         persistence.store_dependencies(metascript['trial_id'], modules)

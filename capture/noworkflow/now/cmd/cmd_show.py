@@ -1,109 +1,151 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import os
 import sys
 
-from ..persistence import persistence
 from .. import utils
+from ..persistence import persistence
+from ..models.trial import Trial
 from .command import Command
 
 class Show(Command):
 
     def add_arguments(self):
-        p = self.parser
-        p.add_argument('trial', type=int, nargs='?', help='trial id or none for last trial')
-        p.add_argument('-m', '--modules', help='shows module dependencies', action='store_true')
-        p.add_argument('-d', '--function-defs', help='shows the user-defined functions', action='store_true')
-        p.add_argument('-e', '--environment', help='shows the environment conditions', action='store_true')
-        p.add_argument('-a', '--function-activations', help='shows function activations', action='store_true')
-        p.add_argument('-f', '--file-accesses', help='shows read/write access to files', action='store_true')
+        add_arg = self.parser.add_argument
+        add_arg('trial', type=int, nargs='?',
+                help='trial id or none for last trial')
+        add_arg('-m', '--modules', action='store_true',
+                help='shows module dependencies')
+        add_arg('-d', '--function-defs', action='store_true',
+                help='shows the user-defined functions')
+        add_arg('-e', '--environment', action='store_true',
+                help='shows the environment conditions')
+        add_arg('-a', '--function-activations', action='store_true',
+                help='shows function activations')
+        add_arg('-f', '--file-accesses', action='store_true',
+                help='shows read/write access to files')
+
+    def wrap(self, *args, **kwargs):
+        return utils.wrap(*args, **kwargs)
 
     def execute(self, args):
         persistence.connect_existing(os.getcwd())
-        last_trial_id = persistence.last_trial_id()
-        trial_id = args.trial if args.trial != None else last_trial_id
-        if not 1 <= trial_id <= last_trial_id:
-            utils.print_msg('inexistent trial id', True)
-            sys.exit(1)
-        self.print_trial(persistence.load_trial(trial_id).fetchone())
+        trial = Trial(trial_id=args.trial, exit=True)
+        self.print_trial(trial)
 
         if args.modules:
-            self.print_modules(persistence.load_dependencies(trial_id))
-        
+            self.print_modules(trial)
+
         if args.function_defs:
-            self.print_function_defs(persistence.load('function_def', trial_id = trial_id))
+            self.print_function_defs(trial)
 
         if args.environment:
-            environment = {attr['name']: attr['value'] for attr in persistence.load('environment_attr', trial_id = trial_id)}
-            utils.print_map('this trial has been executed under the following environment conditions', environment)
+            self.print_environment(trial)
 
         if args.function_activations:
-            self.print_function_activations(persistence.load('function_activation', caller_id = None, trial_id = trial_id).fetchone())
-      
+            self.print_function_activations(trial)
+
         if args.file_accesses:
-            self.print_file_accesses(persistence.load('file_access', trial_id = trial_id))
+            self.print_file_accesses(trial)
 
     def print_trial(self, trial):
         utils.print_msg('trial information:', True)
-        print('  Id: {id}\n  Inherited Id: {inherited_id}\n  Script: {script}\n  Code hash: {code_hash}\n  Start: {start}\n  Finish: {finish}'.format(**trial))
+        print(self.wrap("""\
+            Id: {id}
+            Inherited Id: {inherited_id}
+            Script: {script}
+            Code hash: {code_hash}
+            Start: {start}
+            Finish: {finish}\
+            """.format(**trial.info())))
 
-    def print_modules(self, modules):
+    def print_modules(self, trial):
+        a, b = trial.modules()
+        modules = a + list(b)
         utils.print_msg('this trial depends on the following modules:', True)
         output = []
         for module in modules:
-            output.append('  Name: {name}\n  Version: {version}\n  Path: {path}\n  Code hash: {code_hash}'.format(**module))
+            output.append(self.wrap("""\
+                Name: {name}
+                Version: {version}
+                Path: {path}
+                Code hash: {code_hash}\
+                """.format(**module), other="\n    "))
         print('\n\n'.join(output))
 
-    def print_function_defs(self, function_defs):
+    def print_function_defs(self, trial):
         utils.print_msg('this trial has the following functions:', True)
         output = []
-        for function_def in function_defs:
+        for function_def in trial.function_defs().values():
             objects = {'GLOBAL':[], 'ARGUMENT':[], 'FUNCTION_CALL':[]}
-            for obj in persistence.load('object', function_def_id = function_def['id']):
+            for obj in persistence.load('object',
+                                        function_def_id=function_def['id']):
                 objects[obj['type']].append(obj['name'])
-            output.append('  Name: {name}\n  Arguments: {arguments}\n  Globals: {globals}\n  Function calls: {calls}\n  Code hash: {code_hash}'.format(arguments = ', '.join(objects['ARGUMENT']), globals = ', '.join(objects['GLOBAL']), calls = ', '.join(objects['FUNCTION_CALL']), **function_def))
+            output.append(self.wrap("""\
+                Name: {name}
+                Arguments: {arguments}
+                Globals: {globals}
+                Function calls: {calls}
+                Code hash: {code_hash}\
+                """.format(arguments=', '.join(objects['ARGUMENT']),
+                           globals=', '.join(objects['GLOBAL']),
+                           calls=', '.join(objects['FUNCTION_CALL']),
+                           **function_def), other="\n    "))
         print('\n\n'.join(output))
 
-    def print_function_activation(self, function_activation, level = 1):
+    def print_environment(self, trial):
+        utils.print_map(
+            'this trial has been executed under the following environment '
+            'conditions', trial.environment())
+
+    def print_function_activation(self, trial, activation, level = 1):
         object_values = {'GLOBAL':[], 'ARGUMENT':[]}
-        for obj in persistence.load('object_value', function_activation_id = function_activation['id']):
-            object_values[obj['type']].append('{} = {}'.format(obj['name'], obj['value']))
-        text = '{indent}{line}: {name} ({start} - {finish})'.format(indent = '  ' * level, **function_activation)
+        name = {'GLOBAL':'Globals', 'ARGUMENT':'Arguments'}
+        for obj in activation.objects():
+            object_values[obj['type']].append(
+                '{} = {}'.format(obj['name'], obj['value']))
+        text = self.wrap(
+            '{line}: {name} ({start} - {finish})'.format(**activation),
+            initial='  ' * level)
         indent = text.index(': ') + 2
         print(text)
-        if object_values['ARGUMENT']:
-            print('{indent}Arguments: {arguments}'.format(indent = ' ' * indent, arguments = ', '.join(object_values['ARGUMENT'])))
-        if object_values['GLOBAL']:
-            print('{indent}Globals: {globals}'.format(indent = ' ' * indent, globals = ', '.join(object_values['GLOBAL'])))
-        if function_activation['return']:
-            print('{indent}Return value: {ret}'.format(indent = ' ' * indent, ret = function_activation['return']))
+        for typ, values in object_values.items():
+            print(self.wrap(
+                '{type}: {values}'.format(type=name[typ],
+                                          values=', '.join(values)),
+                initial=' ' * indent))
+        if activation['return']:
+            print(self.wrap(
+                'Return value: {ret}'.format(ret=activation['return']),
+                initial=' ' * indent))
 
-        for inner_function_activation in persistence.load('function_activation', caller_id = function_activation['id']):
-            self.print_function_activation(inner_function_activation, level + 1)    
+        for inner_activation in trial.activations(caller_id=activation['id']):
+            self.print_function_activation(trial, inner_activation, level + 1)
 
-    def print_function_activations(self, function_activation):
-        utils.print_msg('this trial has the following function activation graph:', True)
-        
-        for inner_function_activation in persistence.load('function_activation', caller_id = function_activation['id']):
-            self.print_function_activation(inner_function_activation)
+    def print_function_activations(self, trial):
+        utils.print_msg('this trial has the following function activation '
+                        'graph:', True)
 
-    def print_file_accesses(self, file_accesses):
+        for inner_function_activation in trial.activations(caller_id=None):
+            self.print_function_activation(trial, inner_function_activation)
+
+    def print_file_accesses(self, trial):
         utils.print_msg('this trial accessed the following files:', True)
         output = []
-        for file_access in file_accesses:
-            stack = []
-            function_activation = persistence.load('function_activation', id = file_access['function_activation_id']).fetchone()
-            while function_activation:
-                function_name = function_activation['name']
-                function_activation = persistence.load('function_activation', id = function_activation['caller_id']).fetchone()
-                if function_activation:
-                    stack.insert(0, function_name)
-            if not stack or stack[-1] != 'open':
-                stack.append(' ... -> open')
-            
-            output.append('  Name: {name}\n  Mode: {mode}\n  Buffering: {buffering}\n  Content hash before: {content_hash_before}\n  Content hash after: {content_hash_after}\n  Timestamp: {timestamp}\n  Function: {stack}'.format(stack = ' -> '.join(stack), **file_access))
+        for file_access in trial.file_accesses():
+            output.append(self.wrap("""\
+                Name: {name}
+                Mode: {mode}
+                Buffering: {buffering}
+                Content hash before: {content_hash_before}
+                Content hash after: {content_hash_after}
+                Timestamp: {timestamp}
+                Function: {stack}\
+                """.format(**file_access)))
         print('\n\n'.join(output))

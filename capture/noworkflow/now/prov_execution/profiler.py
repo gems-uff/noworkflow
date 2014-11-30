@@ -1,7 +1,11 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
+
 
 import sys
 import os
@@ -17,8 +21,11 @@ class Profiler(StoreOpenMixin):
 
     def __init__(self, *args):
         super(Profiler, self).__init__(*args)
-        self.depth_user = -1  # the number of user functions activated (starts with -1 to compensate the first call to the script itself)
-        self.depth_non_user = 0  # the number of non-user functions activated
+        # the number of user functions activated
+        #   (starts with -1 to compensate the first call to the script itself)
+        self.depth_user = -1
+        # the number of non-user functions activated
+        self.depth_non_user = 0
         self.activation_stack = []
         self.function_activation = None
 
@@ -27,13 +34,16 @@ class Profiler(StoreOpenMixin):
         self.event_map['c_return'] = self.trace_c_return
         self.event_map['c_exception'] = self.trace_c_exception
         self.event_map['return'] = self.trace_return
-        
+
     def add_file_access(self, file_access):
         self.activation_stack[-1].file_accesses.append(file_access)
 
     def valid_depth(self):
-        return ((self.depth_context == 'all' and self.depth_user + self.depth_non_user <= self.depth_threshold) or 
-               (self.depth_context == 'non-user' and self.depth_non_user <= self.depth_threshold))
+        depth = self.depth_user + self.depth_non_user
+        valid_all_threshold = depth <= self.depth_threshold
+        valid_non_user_threshold = self.depth_non_user <= self.depth_threshold
+        return ((self.depth_context == 'all' and valid_threshold) or
+               (self.depth_context == 'non-user' and valid_non_user_threshold))
 
     def add_activation(self, activation):
         if activation:
@@ -47,13 +57,19 @@ class Profiler(StoreOpenMixin):
             activation.return_value = repr(arg) if event == 'return' else None
         except:  # ignoring any exception during capture
             activation.return_value = None
-        for file_access in activation.file_accesses:  # Update content of accessed files
-            if os.path.exists(file_access['name']):  # Checks if file still exists
+        # Update content of accessed files
+        for file_access in activation.file_accesses:
+            # Checks if file still exists
+            if os.path.exists(file_access['name']):
                 with persistence.std_open(file_access['name'], 'rb') as f:
-                    file_access['content_hash_after'] = persistence.put(f.read())
-        if self.activation_stack:  # Store the current activation in the previous activation
+                    file_access['content_hash_after'] = persistence.put(
+                        f.read())
+
+        if self.activation_stack:
+            # Store the current activation in the previous activation
             self.activation_stack[-1].function_activations.append(activation)
-        else:  # Store the current activation as the first activation
+        else:
+            # Store the current activation as the first activation
             self.function_activation = activation
             self.enabled = False
 
@@ -61,7 +77,8 @@ class Profiler(StoreOpenMixin):
         self.depth_non_user += 1
         if self.valid_depth():
             self.add_activation(Activation(
-                arg.__name__ if arg.__self__ == None else '.'.join([type(arg.__self__).__name__, arg.__name__]),
+                arg.__name__ if arg.__self__ == None else '.'.join(
+                    [type(arg.__self__).__name__, arg.__name__]),
                 frame.f_lineno, frame.f_lasti
             ))
 
@@ -75,7 +92,8 @@ class Profiler(StoreOpenMixin):
             try:
                 activation.arguments[var] = repr(values[var])
                 activation.args.append(var)
-            except:  # ignoring any exception during capture
+            except:
+                # ignoring any exception during capture
                 pass
         # Capture *args
         if co.co_flags & inspect.CO_VARARGS:
@@ -92,14 +110,16 @@ class Profiler(StoreOpenMixin):
 
     def trace_call(self, frame, event, arg):
         #print("now", frame.f_back.f_lineno, frame.f_code.co_name)
-        if self.script == frame.f_code.co_filename:
+        co_name = frame.f_code.co_name
+        co_filename = frame.f_code.co_filename
+        if self.script == co_filename:
             self.depth_user += 1
         else:
             self.depth_non_user += 1
 
         if self.valid_depth():
             activation =  Activation(
-                frame.f_code.co_name if frame.f_code.co_name != '<module>' else frame.f_code.co_filename,
+                co_name if co_name != '<module>' else co_filename,
                 frame.f_back.f_lineno, frame.f_back.f_lasti
             )
             # Capturing arguments
@@ -109,18 +129,20 @@ class Profiler(StoreOpenMixin):
             function_def = persistence.load(
                 'function_def',
                 name = repr(activation.name),
-                trial_id = persistence.trial_id
+                trial_id = self.trial_id
             ).fetchone()
 
             if function_def:
                 global_vars = persistence.load(
                     'object',
-                    type = repr('GLOBAL'),
-                    function_def_id = function_def['id']
+                    type='"GLOBAL"',
+                    function_def_id = function_def[str('id')]
                 )
+                aglobals = activation.globals
+                fglobals = frame.f_globals
                 for global_var in global_vars:
-                    activation.globals[global_var['name']] = frame.f_globals[global_var['name']]
-            
+                    aglobals[global_var['name']] = fglobals[global_var['name']]
+
             self.add_activation(activation)
 
     def trace_c_return(self, frame, event, arg):
@@ -132,7 +154,7 @@ class Profiler(StoreOpenMixin):
         if self.valid_depth():
             self.close_activation(event, arg)
         self.depth_non_user -= 1
-        
+
     def trace_return(self, frame, event, arg):
         if self.valid_depth():
             self.close_activation(event, arg)
@@ -144,7 +166,8 @@ class Profiler(StoreOpenMixin):
 
     def tracer(self, frame, event, arg):
         # Only enable activations gathering after the first call to the script
-        if not self.enabled and event == 'call' and self.script == frame.f_code.co_filename:
+        co_filename = frame.f_code.co_filename
+        if not self.enabled and event == 'call' and self.script == co_filename:
             self.enabled = True
 
         if self.enabled:
@@ -154,14 +177,14 @@ class Profiler(StoreOpenMixin):
     def store(self):
         now = datetime.now()
         persistence.update_trial(self.trial_id, now, self.function_activation)
-  
+
     def tearup(self):
         sys.setprofile(self.tracer)
 
 
 class InspectProfiler(Profiler):
     """ This Profiler uses the inspect.getargvalues that is slower because
-    it considers the existence of anonymous tuple """ 
+    it considers the existence of anonymous tuple """
 
     def capture_python_params(self, frame, activation):
         (args, varargs, keywords, values) = inspect.getargvalues(frame)

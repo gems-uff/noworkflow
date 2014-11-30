@@ -1,34 +1,39 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 import os
 import sys
 
+from .. import utils
 from ..persistence import persistence
 from ..models.diff import Diff as DiffModel
-from .. import utils
 from .command import Command
 
 
 class Diff(Command):
 
     def add_arguments(self):
-        p = self.parser
-        p.add_argument('trial', type=int, nargs=2, help='trial id to be compared')
-        p.add_argument('-m', '--modules', help='compare module dependencies', action='store_true')
-        p.add_argument('-e', '--environment', help='compare environment conditions', action='store_true')
+        add_arg = self.parser.add_argument
+        add_arg('trial', type=int, nargs=2,
+                help='trial id to be compared')
+        add_arg('-m', '--modules', action='store_true',
+                help='compare module dependencies')
+        add_arg('-e', '--environment', action='store_true',
+                help='compare environment conditions')
 
     def execute(self, args):
         persistence.connect_existing(os.getcwd())
         diff = DiffModel(args.trial[0], args.trial[1], exit=True)
         self.diff_trials(diff)
-            
+
         if args.modules:
             self.diff_modules(diff)
-            
+
         if args.environment:
             self.diff_environment(diff)
 
@@ -73,6 +78,6 @@ class Diff(Command):
             len(replaced),), True)
         for (attr_removed, attr_added) in replaced:
             print('  Environment attribute {} changed from {} to {}'.format(
-                attr_removed['name'], 
-                attr_removed['value'], 
+                attr_removed['name'],
+                attr_removed['value'],
                 attr_added['value']))

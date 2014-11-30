@@ -9,7 +9,7 @@ create table trial (
 	parent_id INTEGER, -- Id of the parent trial that is used to create the history
 	run INTEGER, -- trial created through now run command
 	FOREIGN KEY (inherited_id) REFERENCES trial ON DELETE RESTRICT,
-	FOREIGN KEY (parent_id) REFERENCES trial ON DELETE SET NULL  
+	FOREIGN KEY (parent_id) REFERENCES trial ON DELETE SET NULL
 );
 
 CREATE INDEX trial_inherited_id on trial(inherited_id);
@@ -19,7 +19,7 @@ create table head (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	script TEXT,
 	trial_id INTEGER,
-	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE SET NULL  
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE SET NULL
 );
 
 CREATE INDEX head_trial_id on head(trial_id);
@@ -37,7 +37,7 @@ create table dependency (
     module_id INTEGER NOT NULL,
     PRIMARY KEY (trial_id, module_id),
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE,
-	FOREIGN KEY (module_id) REFERENCES module ON DELETE CASCADE    
+	FOREIGN KEY (module_id) REFERENCES module ON DELETE CASCADE
 );
 
 CREATE INDEX dependency_trial_id on dependency(trial_id);
@@ -83,7 +83,7 @@ create table function_activation (
 	caller_id INTEGER,
 	trial_id INTEGER,
 	FOREIGN KEY (caller_id) REFERENCES function_activation ON DELETE CASCADE,
-	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE	
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
 );
 
 CREATE INDEX function_activation_caller_id on function_activation(caller_id);
@@ -159,4 +159,3 @@ create table slicing_dependency (
 CREATE INDEX slicing_dependency_trial_id on slicing_dependency(trial_id);
 CREATE INDEX slicing_dependency_dependent on slicing_dependency(dependent);
 CREATE INDEX slicing_dependency_supplier on slicing_dependency(supplier);
-

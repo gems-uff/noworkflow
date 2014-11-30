@@ -1,26 +1,36 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 try:
     import __builtin__ as builtins
 except ImportError:
     import builtins
+
 import os
 import sys
 from datetime import datetime
 from collections import defaultdict
+
 from ..persistence import persistence
 
 
 class ExecutionProvider(object):
 
     def __init__(self, metascript, depth_context, depth_threshold):
-        self.enabled = False  # Indicates when activations should be collected (only after the first call to the script)
+        # Indicates when activations should be collected
+        #   (only after the first call to the script)
+        self.enabled = False
         self.script = metascript['path']
-        self.depth_context = depth_context  # which function types ('non-user' or 'all') should be considered for the threshold
-        self.depth_threshold = depth_threshold  # how deep we want to go when capturing function activations?
+        # which function types ('non-user' or 'all')
+        #   should be considered for the threshold
+        self.depth_context = depth_context
+        # how deep we want to go when capturing function activations?
+        self.depth_threshold = depth_threshold
         self.metascript = metascript
         self.trial_id = metascript['trial_id']
         self.event_map = defaultdict(lambda: self.trace_empty, {})
@@ -59,7 +69,8 @@ class StoreOpenMixin(ExecutionProvider):
         'Wraps the open buildin function to register file access'
         def open(name, *args, **kwargs):  # @ReservedAssignment
             if self.enabled:
-                file_access = {  # Create a file access object with default values
+                # Create a file access object with default values
+                file_access = {
                     'name': name,
                     'mode': 'r',
                     'buffering': 'default',
@@ -68,12 +79,16 @@ class StoreOpenMixin(ExecutionProvider):
                     'timestamp': datetime.now()
                 }
 
-                if os.path.exists(name):  # Read previous content if file exists
+                if os.path.exists(name):
+                    # Read previous content if file exists
                     with old_open(name, 'rb') as f:
-                        file_access['content_hash_before'] = persistence.put(f.read())
+                        file_access['content_hash_before'] = persistence.put(
+                            f.read())
 
-                file_access.update(kwargs)  # Update with the informed keyword arguments (mode and buffering)
-                if len(args) > 0:  # Update with the informed positional arguments
+                # Update with the informed keyword arguments (mode / buffering)
+                file_access.update(kwargs)
+                # Update with the informed positional arguments
+                if len(args) > 0:
                     file_access['mode'] = args[0]
                 elif len(args) > 1:
                     file_access['buffering'] = args[1]

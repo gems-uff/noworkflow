@@ -1,14 +1,20 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 from datetime import datetime
 from collections import namedtuple, defaultdict
+
 from ..persistence import persistence
-from .activation import calculate_duration, FORMAT
+from .utils import calculate_duration, FORMAT
+
 
 Edge = namedtuple("Edge", "node count")
+
 
 class TrialGraphVisitor(object):
 
@@ -37,14 +43,14 @@ class TrialGraphVisitor(object):
             n = node['node']
             self.update_node(n)
             self.update_durations(n['duration'], n['trial_id'])
-                    
+
         self.update_edges()
-    	return {
-    		'nodes': self.nodes,
-    		'edges': self.edges,
-    		'min_duration': self.min_duration,
-    		'max_duration': self.max_duration
-    	}
+        return {
+            'nodes': self.nodes,
+            'edges': self.edges,
+            'min_duration': self.min_duration,
+            'max_duration': self.max_duration
+        }
 
     def update_edges(self):
         for edge in self.edges:
@@ -97,10 +103,10 @@ class TrialGraphVisitor(object):
 
         self.delegated['call'] = Edge(caller_id, 1)
         self.delegated['return'] = Edge(caller_id, 1)
-        
+
         call.called.visit(self)
         return caller_id, call
-     
+
     def visit_group(self, group):
         delegated = self.use_delegated()
 
@@ -108,7 +114,7 @@ class TrialGraphVisitor(object):
         for element in group.nodes.values():
             node_id, node = element.visit(self)
             node_map[node] = node_id
-        
+
         self.solve_cis_delegation(node_map[group.next], group.count, delegated)
         self.solve_ret_delegation(node_map[group.last], group.count, delegated)
 
@@ -118,12 +124,12 @@ class TrialGraphVisitor(object):
                               count, 'sequence')
 
         return node_map[group.next], group.next
- 
+
     def visit_single(self, single):
         delegated = self.use_delegated()
         node_id = self.add_node(single)
         self.nodes[node_id]['repr'] = repr(single)
-        
+
         if delegated:
             self.solve_delegation(node_id, single.count, delegated)
         return node_id, single
@@ -135,7 +141,7 @@ class TrialGraphVisitor(object):
         return node_id, node
 
     def visit_default(self, empty):
-    	return None, None
+        return None, None
 
 
 class TrialGraphCombineVisitor(TrialGraphVisitor):
@@ -145,7 +151,7 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
         self.context = {}
         self.context_edges = {}
         self.namestack = []
-        
+
     def update_edges(self):
         pass
 
@@ -156,7 +162,6 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
         node['count'] += single.count
         node['duration'] += single.duration
         node['info'].add_activation(single.activation)
-            
 
     def add_node(self, single):
         self.namestack.append(single.name_id())

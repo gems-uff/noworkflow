@@ -32,7 +32,7 @@ access_id(Function, File) :- access(File, _, _, _, _, _, Function).
 % ID-BASED INFERENCE RULES
 %
 
-activation_stack_id(Called, []) :- activation_id(nil, Called). 
+activation_stack_id(Called, []) :- activation_id(nil, Called).
 activation_stack_id(Called, [Caller|Callers]) :- activation_id(Caller, Called), activation_stack_id(Caller, Callers).
 
 indirect_activation_id(Caller, Called) :- activation_stack_id(Called, Callers), member(Caller, Callers).
@@ -52,7 +52,7 @@ access_influence_id(Influencer, Influenced) :- file_read_id(Influencer), file_wr
 
 timestamp(Name, Timestamp, Moment) :- timestamp_id(Id, Timestamp, Moment), name(Id, Name).
 timestamp(Name, Timestamp) :- timestamp_id(Id, Timestamp), name(Id, Name).
-duration(Name, Duration) :- duration_id(Id, Duration), name(Id, Name). 
+duration(Name, Duration) :- duration_id(Id, Duration), name(Id, Name).
 successor(Before, After) :- successor_id(Before_id, After_id), name(Before_id, Before), name(After_id, After).
 mode(Name, Mode) :- mode(Id, Mode), name(Id, Name).
 file_read(Name) :- file_read_id(Id), name(Id, Name).

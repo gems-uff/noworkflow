@@ -1,7 +1,10 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
-# This file is part of noWorkflow. Please, consult the license terms in the LICENSE file.
+# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2014 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
 from .provider import Provider
 
@@ -17,12 +20,12 @@ class DatabaseProvider(Provider):
                 where += ' and {} = {}'.format(key, condition[key])
 
         with self.db_conn as db:
-            return db.execute('select {} from {} where {} order by {}'.format(
+            return db.execute('SELECT {} FROM {} WHERE {} ORDER BY {}'.format(
                 ','.join(selection), table_name, where, order))
 
     def insert(self, table_name, attrs, **extra_attrs):
         # Not in use, but can be useful in the future
-        query = 'insert into {}({}) values ({})'.format(
+        query = 'INSERT INTO {}({}) VALUES ({})'.format(
             table_name,
             ','.join(attrs.keys() + extra_attrs.keys()),
             ','.join(['?'] * (len(attrs) + len(extra_attrs)))
