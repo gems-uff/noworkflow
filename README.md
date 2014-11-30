@@ -1,8 +1,8 @@
 noWorkflow
 ==========
 
-Copyright (c) 2013 Universidade Federal Fluminense (UFF).
-Copyright (c) 2013 Polytechnic Institute of New York University.
+Copyright (c) 2014 Universidade Federal Fluminense (UFF).
+Copyright (c) 2014 Polytechnic Institute of New York University.
 All rights reserved.
 
 The noWorkflow project aims at allowing scientists to benefit from provenance data analysis even when they don't use a workflow system. Also, the goal is to allow them to avoid using naming conventions to store files originated in previous executions. Currently, when this is not done, the result and intermediate files are overwritten by every new execution of the pipeline.
@@ -33,14 +33,20 @@ Quick Installation
 
 To install noWorkflow, you should follow these basic instructions:
 
-Precondition: Git (just to clone our repository) and Python
+If you have pip, just run:
+```bash
+$ pip install noworkflow[vis]
+```
+This installs both noWorkflow and flask. Flask is the requirement of the visualization tool.
+
+
+If you do not have pip, but already have Git (to clone our repository) and Python:
 ```bash
 $ git clone git@github.com:gems-uff/noworkflow.git
 $ cd noworkflow/capture
 $ ./setup.py install
 ```
-
-This installs noWorkflow on your system.
+This installs noWorkflow on your system. You may need to install flask if you want to use our visualization tool.
 
 Basic Usage
 -----------
@@ -74,6 +80,12 @@ $ now run -v simulation.py data1.dat data2.dat
 Each new run produces a different trial that will be stored with a sequential identification number in the relational database.
 
 Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.
+
+It is possible to collect more information than what is collected by default, such as variable usages and dependencias.
+To perform a dynamic program slicing and capture those information, just run
+```bash
+now run -e Tracer simulation.py data1.dat data2.dat
+```
 
 To list all trials, just run
 
@@ -122,7 +134,23 @@ $ now show -a 1
       Return value: [['0.0', '0.6'], ['1.0', '0.0'], ['1.0', '0.0'],
       ...
 ```
-The remaining options of noWorkflow are *diff* and *export*. The *diff* option compares two trials, and the *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.
+
+To restore files used by trial 1, run
+```bash
+$ now checkout -l -i 1
+```
+
+By default, the checkout command only restores the script used for the trial ("simulation.py"), even when it has imports and read files as input. Use the option "-l" to restore imported modules and the option "-i" to restore input files.
+The checkout command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 2 is based on Trial 1). When you checkout a Trial, the next Trial will be based on the checked out Trial (e.g. Trial 3 based on Trial 1).
+
+
+The remaining options of noWorkflow are *diff*, *export* and *vis*. The *diff* option compares two trials, and the *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.
+
+The vis option starts a visualization tool that allows interactive analysis:
+```bash
+$ now vis -b
+```
+The visualization tool shows the evolotion history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool.
 
 We have also a graph visualization implemented in Java, named noWorkflowVis, which connects to noWorkflow database and allows interactive analysis.
 
