@@ -19,7 +19,7 @@ function HistoryGraph(svg, options) {
     self.use_tooltip = false;
 
     self.div = d3.select("body").append("div")
-        .attr("class", "tooltip history-tooltip")
+        .attr("class", "now-tooltip now-history-tooltip")
         .style("opacity", 0)
         .on("mouseout", function(){
             self._close_tooltip();

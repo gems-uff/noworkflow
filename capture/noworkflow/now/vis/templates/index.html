@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block css %}
+<link rel="stylesheet" href="shared_graph.css">
+<link rel="stylesheet" href="trial_graph.css">
+<link rel="stylesheet" href="history_graph.css">
 <link rel="stylesheet" href="index.css">
 {% endblock %}
 {% block body %}
@@ -23,17 +26,17 @@
               <a href="#" id="reload"><i class="fa fa-refresh"></i> Reload</a>
             </div>
           </div>
-          <div id="history" style="overflow: auto">
+          <div id="history" class="now-history now" style="overflow: auto">
             <div class="toolbar">
                <a class="toollink" id="restore-history-zoom" href="#" title="Restore zoom"><i class="fa fa-binoculars"></i></a>
                <input id="show-history-tooltips" type="checkbox" name="show-history-tooltips" value="show">
                <label for="show-history-tooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
             </div>
-            <div id="historygraph">
-            </div>  
+            <div id="historygraph" class="now-history-graph">
+            </div>
           </div>
         </div>
-        <div id="show">
+        <div id="show" class="now-trial now">
           <div id="graphbox">
             <form class="toolbar">
               <input id="indgraph" type="radio" name="graphtype" value="independent" checked>
@@ -43,7 +46,7 @@
               <input id="showtooltips" type="checkbox" name="showtooltips" value="show">
               <label for="showtooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
             </form>
-            <div id="graph"></div>
+            <div id="graph" class="now-trial-graph"></div>
           </div>
           <div id="side">
             <div id="side-internal"></div>

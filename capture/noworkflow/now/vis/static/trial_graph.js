@@ -19,12 +19,12 @@ function TrialGraph(id, svg, options) {
     self.edges = [];
 
     self.div = d3.select("body").append("div")
-        .attr("class", "tooltip")
+        .attr("class", "now-tooltip now-trial-tooltip")
         .style("opacity", 0)
         .on("mouseout", function(){
             self._close_tooltip();
         })
-    
+
     var d = self.custom_size();
     self.width = d[0];
     self.height = d[1];
@@ -76,7 +76,7 @@ function TrialGraph(id, svg, options) {
 TrialGraph.consts =  {
     graph_class: "trialgraph",
     height: 400,
-    width: 400, 
+    width: 400,
     radius: 10.0,
     stroke_width: 2,
     marker_width: 6,
@@ -93,8 +93,9 @@ TrialGraph.prototype._zoomed = function(){
     self._close_tooltip();
     if (!self.state_mousedown_node) {
         d3.select("#"+self._graph_id())
-            .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")"); 
-    } 
+            .attr("transform",
+                  "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")");
+    }
 };
 
 TrialGraph.prototype._tick = function(self) {
@@ -123,7 +124,7 @@ TrialGraph.prototype._tick = function(self) {
                 sweep = 1;
 
             if (dx == 0 && dy == 0 && d.type != 'initial') {
-                
+
                 rotation = -45;
                 large_arc = 1;
                 drx = 15;
@@ -144,14 +145,14 @@ TrialGraph.prototype._tick = function(self) {
                 y2 += m2*sin_phi;
             }
 
-            return "M" + x1 + "," + y1 + 
-                "A" + drx + "," + dry + 
-                " " + rotation + "," + large_arc + "," + sweep + 
+            return "M" + x1 + "," + y1 +
+                "A" + drx + "," + dry +
+                " " + rotation + "," + large_arc + "," + sweep +
                 " " + x2 + "," + y2;
         });
 
-        self.node.attr("transform", function(d) { 
-            return "translate(" + d.x + "," + d.y + ")"; 
+        self.node.attr("transform", function(d) {
+            return "translate(" + d.x + "," + d.y + ")";
         });
     }
 };
@@ -209,7 +210,7 @@ TrialGraph.prototype._calculate_color = function(node) {
 TrialGraph.prototype._add_node = function(node) {
     var self = this;
     node = node.enter().append("g")
-        .attr("id", function(d) { 
+        .attr("id", function(d) {
             return "node-"+self.graph_id+"-"+d.index;
         })
         .attr("class", "node")
@@ -221,7 +222,7 @@ TrialGraph.prototype._add_node = function(node) {
         })
         .call(self.force.drag);
 
-    
+
     node.append("circle")
         .attr("r", TrialGraph.consts.radius)
         .attr("data-clicked", "0")
@@ -242,7 +243,7 @@ TrialGraph.prototype._add_node = function(node) {
                 grad.append("stop")
                     .attr("offset", "50%")
                     .style("stop-color", self._calculate_color(d.node1));
-                
+
                 return "url(#grad-"+self.graph_id+"-"+d.index+")";
             }
         }).on("click", self._toggle_nodes());
@@ -270,7 +271,7 @@ TrialGraph.prototype._add_node = function(node) {
         self._close_tooltip();
     }).on('mouseup', function(d) {
         if (self.translate){
-            self.drag_svg.translate(self.translate);   
+            self.drag_svg.translate(self.translate);
             self.translate = false;
         }
         self.state_mousedown_node = false;
@@ -280,14 +281,14 @@ TrialGraph.prototype._add_node = function(node) {
         if (d['node']) {
             name = 'node';
         } else {
-            name = (d3.mouse(this)[0] < 0) ? 'node1' : 'node2'; 
+            name = (d3.mouse(this)[0] < 0) ? 'node1' : 'node2';
         }
         if (show_tooltip) {
             self._close_tooltip();
             self._show_tooltip(d[name])
         }
         self.custom_mouseover(d, name, show_tooltip);
-    
+
     }).on('mouseout', function(d){
         self.custom_mouseout(d);
     })
@@ -309,7 +310,7 @@ TrialGraph.prototype._toggle_nodes = function(){
             visibility = 'visible';
         } else {
             d3.select(this).attr("data-clicked", "1");
-            visibility = 'hidden';   
+            visibility = 'hidden';
             data_clicked = 1;
         }
 
@@ -330,24 +331,23 @@ TrialGraph.prototype._toggle_nodes = function(){
                 l = ln[0], n = ln[1],
                 node_clicked = d3.select("#node-"+self.graph_id+"-"+n.index +' circle')
                     .attr("data-clicked");
-            
+
             d3.select("#node-"+self.graph_id+"-"+n.index).style('visibility', visibility);
-            
-            if (visibility == 'hidden' || node_clicked == data_clicked) { 
-                n.call_links.forEach(add_to_queue);  
+
+            if (visibility == 'hidden' || node_clicked == data_clicked) {
+                n.call_links.forEach(add_to_queue);
                 n.arrival_links.forEach(hide_path);
             } else if (visibility != 'hidden' && node_clicked != data_clicked) {
                 n.arrival_links.forEach(function(a) {
                     if (a[2] != 'return') hide_path(a);
                 });
             }
-            
 
             n.sequence_links.forEach(add_to_queue);
         }
 
         function hide_path(a) {
-            d3.select("#pathId-"+self.graph_id+"-"+a[0]).style('visibility', visibility);  
+            d3.select("#pathId-"+self.graph_id+"-"+a[0]).style('visibility', visibility);
             d3.select("#pathlabel-"+self.graph_id+"-"+a[0]).style('visibility', visibility);
         }
 
@@ -369,7 +369,6 @@ TrialGraph.prototype._show_tooltip = function(d) {
     self.div.html(d.info)
         .style("left", (d3.event.pageX - 3) + "px")
         .style("top", (d3.event.pageY - 28) + "px");
-    
 };
 
 TrialGraph.prototype._close_tooltip = function() {
@@ -412,9 +411,9 @@ TrialGraph.prototype.restart = function() {
     var self = this;
     self.path = self.path.data(self.force_links); // path (link) group
     self._update_path(self.path); // update existing links
-    self._add_path(self.path); // add new paths    
+    self._add_path(self.path); // add new paths
     self.path.exit().remove(); // remove old links
-    
+
     self.label_path = self.label_path.data(self.force_links); // label path group
     self._add_label_path(self.label_path); // add new label paths
     self.label_path.exit().remove(); // remove old labels
@@ -422,7 +421,7 @@ TrialGraph.prototype.restart = function() {
     self.node = self.node.data(self.force.nodes()); // circle (node) group
     self._add_node(self.node); // add new nodes
     self.node.exit().remove(); // remove olf nodes
-    
+
     // Add links to nodes for navigation
     self.force_links.forEach(function(link, i) {
         var source = link.source, target = link.target;
@@ -433,7 +432,7 @@ TrialGraph.prototype.restart = function() {
         target.sequence_links || (target.sequence_links = []);
         target.call_links || (target.call_links = []);
         target.return_links || (target.return_links = []);
-        
+
 
         if (link.type == 'sequence') source.sequence_links.push([i, target]);
         if (link.type == 'call') source.call_links.push([i, target]);

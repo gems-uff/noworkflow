@@ -18,7 +18,6 @@ window.onresize = function() {
     trial_graph.update_window();
     trial_a.update_window();
     trial_b.update_window();
-    
 };
 
 function trial_custom_mouseover(d, name, show_tooltip) {
@@ -40,7 +39,7 @@ function load_graph(t1, t2, url) {
         url: '/diff/'+t1+'/'+t2+'/'+url,
         dataType: 'json',
         async: true,
-        data: {}, 
+        data: {},
         success: function (data) {
             $('#graph').html('');
             $('#graphA').html('');
@@ -63,9 +62,9 @@ function load_graph(t1, t2, url) {
                     } else {
                         var selector1 = '#node-'+trial_a.graph_id+'-'+d['node1'].original+' circle',
                             selector2 = '#node-'+trial_b.graph_id+'-'+d['node2'].original+' circle';              
-                        d3.select(selector1)     
+                        d3.select(selector1)
                             .classed('node-hover', true);
-                        d3.select(selector2)     
+                        d3.select(selector2)
                             .classed('node-hover', true);
                     }
 
@@ -74,7 +73,7 @@ function load_graph(t1, t2, url) {
             });
             trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
             trial_graph.load(data.diff, t1, t2);
-           
+
             var trialA_svg = d3.select('#graphA')
                 .append('svg')
                 .attr("width", $('#graphA').width())

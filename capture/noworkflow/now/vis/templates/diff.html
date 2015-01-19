@@ -64,6 +64,8 @@
 
 
 {% block css %}
+<link rel="stylesheet" href="/trial_graph.css">
+<link rel="stylesheet" href="/shared_graph.css">
 <link rel="stylesheet" href="/index.css">
 <link rel="stylesheet" href="/diff.css">
 {% endblock %}
@@ -71,7 +73,7 @@
 {% block body %}
   <div id="splitter">
     <div id="show">
-      <div id="graphbox">
+      <div id="graphbox" class="now-trial now">
         <form class="toolbar">
 
           <input id="indgraph" type="radio" name="graphtype" value="independent" checked>
@@ -83,10 +85,10 @@
           <label for="showtooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
         </form>
         <div id="graphs">
-          <div id="graph"></div>
+          <div id="graph" class="now-trial-graph"></div>
           <div id="bottom">
-            <div id="graphA"></div>
-            <div id="graphB"></div>
+            <div id="graphA" class="now-trial-graph"></div>
+            <div id="graphB" class="now-trial-graph"></div>
 
           </div>
         </div>

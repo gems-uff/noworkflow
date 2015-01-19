@@ -40,6 +40,32 @@ class Trial(object):
         info = self.info()
         return info['code_hash']
 
+    def _ipython_display_(self):
+        from IPython.display import (
+            display_png, display_html, display_latex,
+            display_javascript, display_svg
+        )
+        import json
+        import time
+
+        uid = str(int(time.time()*1000000))
+        display_html("<div id='graph-{}'></div>".format(uid), raw=True)
+        display_javascript("""var trial_svg = d3.select("#graph-{0}")
+                .append('svg')
+                .attr("width", 500)
+                .attr('height', 500);
+
+            var trial_graph = new TrialGraph({0}, trial_svg, {{
+                custom_size: function() {{
+                    return [500, 500];
+                }}
+            }});
+            trial_graph.load({1}, {2}, {2});
+            """.format(
+                uid,
+                json.dumps(self.independent_activation_graph()),
+                self.trial_id), raw=True)
+
     def info(self):
         if self._info is None:
             self._info = row_to_dict(

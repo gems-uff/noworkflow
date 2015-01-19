@@ -1,0 +1,66 @@
+.now-trial-graph path.link {
+  fill: none;
+  stroke-width: 1.5px;
+}
+
+.now-trial-graph circle {
+  fill: #ccc;
+  stroke: #000;
+  stroke-width: 3px;
+}
+
+.now-trial-graph .node.nbefore circle {
+  stroke: red;
+}
+
+.now-trial-graph .node.nafter circle {
+  stroke: green;
+}
+
+.now-trial-graph .node circle[data-clicked="1"] {
+  stroke: #00f;
+  stroke-width: 4px;
+}
+
+.now-trial-graph circle.selected {
+  stroke-dasharray: 2,2;
+}
+
+.now-trial-graph text {
+  fill: #000;
+  font: 10px sans-serif;
+  pointer-events: none;
+}
+
+.now-trial-graph .node {
+  cursor: pointer;
+}
+
+.now-trial-graph .node:hover {
+  cursor: pointer;
+}
+
+.now-trial-graph .node.hidden {
+  visibility: hidden;
+}
+
+.now-trial-graph .call-arrow {
+  stroke: #666;
+}
+
+.now-trial-graph .return-arrow {
+  stroke: #666;
+  stroke-dasharray: 10,2;
+}
+
+.now-trial-graph .sequence-arrow {
+  stroke: #F00;
+}
+
+.now-trial-graph .initial-arrow {
+  stroke: #666;
+}
+
+.now-trial-graph .label_text {
+  fill: #000;
+}
