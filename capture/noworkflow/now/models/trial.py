@@ -29,6 +29,12 @@ class Trial(object):
 
         self.trial_id = trial_id
         self._info = None
+        self._graph_types = {
+            0: self.independent_activation_graph,
+            1: self.combined_activation_graph
+        }
+        self.display_mode = 0
+
 
     @property
     def script(self):
@@ -49,7 +55,16 @@ class Trial(object):
         import time
 
         uid = str(int(time.time()*1000000))
-        display_html("<div id='graph-{}'></div>".format(uid), raw=True)
+        display_html("""
+            <div class="now-trial now">
+                <div>
+                    <form class="toolbar">
+                      <input id="showtooltips-{0}" type="checkbox" name="showtooltips" value="show">
+                      <label for="showtooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
+                    </form>
+                    <div id='graph-{0}' class="now-trial-graph"></div>
+                </div>
+            </div>""".format(uid), raw=True)
         display_javascript("""var trial_svg = d3.select("#graph-{0}")
                 .append('svg')
                 .attr("width", 500)
@@ -60,10 +75,14 @@ class Trial(object):
                     return [500, 500];
                 }}
             }});
+            trial_graph.set_use_tooltip(d3.select("#showtooltips-{0}").property("checked"));
             trial_graph.load({1}, {2}, {2});
+            $( "[name='showtooltips']" ).change(function() {{
+                trial_graph.set_use_tooltip(d3.select("#showtooltips-{0}").property("checked"));
+            }});
             """.format(
                 uid,
-                json.dumps(self.independent_activation_graph()),
+                json.dumps(self._graph_types[self.display_mode]()),
                 self.trial_id), raw=True)
 
     def info(self):

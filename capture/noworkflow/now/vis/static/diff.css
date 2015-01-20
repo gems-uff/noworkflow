@@ -46,3 +46,7 @@
 .node-hover {
   stroke: blue !important;
 }
+
+.now .toolbar {
+  margin: 5px;
+}

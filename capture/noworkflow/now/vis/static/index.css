@@ -75,23 +75,7 @@ body {
         background-color:#e0e0e0;
 }
 
-.toolbar input[type=checkbox] {
-    margin: 10px;
-    display: none
-}
 
-.toolbar input[type=checkbox] + label {
-    display:inline-block;
-    margin:-2px;
-    padding: 4px 12px;
-    color: black;
-    cursor: pointer;
-}
-
-
-.toolbar input[type=checkbox]:checked + label {
-    color: blue;
-}
 
 /* History filter */
 
@@ -145,3 +129,6 @@ body {
         background-color:#e0e0e0;
 }
 
+.now .toolbar {
+  margin: 5px;
+}

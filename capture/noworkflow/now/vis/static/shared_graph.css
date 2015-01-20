@@ -1,7 +1,7 @@
 /* Toolbar + graph */
 
 .now {
-  background: #ccc;
+  /*background: #ccc;*/
   overflow: hidden !important;
 }
 
@@ -28,6 +28,23 @@
   height: auto;
   z-index: 3;
   position: absolute;
+}
+
+.now .toolbar input[type=checkbox] {
+    margin: 10px;
+    display: none
+}
+
+.now .toolbar input[type=checkbox] + label {
+    display:inline-block;
+    margin:-2px;
+    padding: 4px 12px;
+    color: black;
+    cursor: pointer;
+}
+
+.now .toolbar input[type=checkbox]:checked + label {
+    color: blue;
 }
 
 /* Graph */
