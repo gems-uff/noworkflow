@@ -65,18 +65,12 @@ class Trial(object):
                     <div id='graph-{0}' class="now-trial-graph"></div>
                 </div>
             </div>""".format(uid), raw=True)
-        display_javascript("""var trial_svg = d3.select("#graph-{0}")
-                .append('svg')
-                .attr("width", 500)
-                .attr('height', 500);
-
-            var trial_graph = new TrialGraph({0}, trial_svg, {{
+        display_javascript("""
+            var trial_graph = now_trial_graph('#graph-{0}', {0}, {2}, {2}, {1}, 500, 500, "#showtooltips-{0}", {{
                 custom_size: function() {{
                     return [500, 500];
                 }}
             }});
-            trial_graph.set_use_tooltip(d3.select("#showtooltips-{0}").property("checked"));
-            trial_graph.load({1}, {2}, {2});
             $( "[name='showtooltips']" ).change(function() {{
                 trial_graph.set_use_tooltip(d3.select("#showtooltips-{0}").property("checked"));
             }});

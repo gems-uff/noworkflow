@@ -11,14 +11,48 @@ from ..persistence import row_to_dict
 from ..persistence import persistence as pers
 
 class History(object):
+    """ This model represents the workflow evolution history
+
+    It is possible to filter the evolution history by selecting the script:
+        history.script = "script1.py"
+
+    The list of scripts can be accessed by:
+        history.scripts()
+
+    It is also possible to filter the evolution history by selecting the
+    trial status:
+        history.execution = "finished"
+
+    The list of status are:
+        finished: show only finished trials
+        unfinished: show only unfinished trials
+        backup: show only backup trials
+
+    The default option for both filters is "*", which means that all trials
+    appear in the history
+        history.script = "*"
+        history.execution = "*"
+
+    """
 
     def __init__(self):
         self.data = {}
+        self.script = "*"
+        self.execution = "*"
+
+        self.execution_options = ["*", "finished", "unfinished", "backup"]
 
     def scripts(self):
+        """ Returns the list of scripts used for trials """
         return {s[0].rsplit('/', 1)[-1] for s in pers.distinct_scripts()}
 
     def graph_data(self, script="*", execution="*"):
+        """ Prepares evolution history as a dict """
+        if self.script != "*" and script == "*":
+            script = self.script
+        if self.execution != "*" and execution == "*":
+            execution = self.execution
+
         key = (script, execution)
         if key in self.data:
             return self.data[key]
@@ -91,3 +125,43 @@ class History(object):
 
         self.data[key] = result
         return result
+
+    def _ipython_display_(self):
+        """ Displays d3 graph on ipython notebook """
+        from IPython.display import (
+            display_png, display_html, display_latex,
+            display_javascript, display_svg
+        )
+        import json
+        import time
+
+        uid = str(int(time.time()*1000000))
+        display_html("""
+            <div class="now-history now">
+                <div>
+                    <div class="toolbar">
+                       <a class="toollink" id="restore-history-zoom-{0}" href="#" title="Restore zoom"><i class="fa fa-eye"></i></a>
+                       <input id="show-history-tooltips-{0}" type="checkbox" name="show-history-tooltips" value="show">
+                       <label for="show-history-tooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
+                    </div>
+                    <div id='history-{0}' class="now-history-graph"></div>
+                </div>
+            </div>""".format(uid), raw=True)
+        display_javascript("""
+            var hg = now_history_graph('#history-{0}', {0}, {1}, 700, 300, "#show-history-tooltips-{0}", {{
+                custom_size: function() {{
+                    return [700, 300];
+                }},
+                hint_message: "",
+            }});
+
+            $( "[name='show-history-tooltips']" ).change(function() {{
+                hg.graph.set_use_tooltip(d3.select("#show-history-tooltips-{0}").property("checked"));
+            }});
+
+            $('#restore-history-zoom-{0}').on('click', function(e){{
+                hg.graph.reset_zoom();
+            }});
+            """.format(
+                uid,
+                json.dumps(self.graph_data())), raw=True)

@@ -41,15 +41,7 @@ function load_graph(t1, t2, url) {
         async: true,
         data: {},
         success: function (data) {
-            $('#graph').html('');
-            $('#graphA').html('');
-            $('#graphB').html('');
-
-            var trial_svg = d3.select('#graph')
-                .append('svg')
-                .attr("width", 500)
-                .attr("height", 500);
-            trial_graph = new TrialGraph(0, trial_svg, {
+            trial_graph = now_trial_graph('#graph', 0, t1, t2, data.diff, 500, 500, "#showtooltips", {
                 custom_size: function() {
                     return [$('#graph').width(), $('#graph').height()];
                 },
@@ -61,7 +53,7 @@ function load_graph(t1, t2, url) {
                             .classed('node-hover', true);
                     } else {
                         var selector1 = '#node-'+trial_a.graph_id+'-'+d['node1'].original+' circle',
-                            selector2 = '#node-'+trial_b.graph_id+'-'+d['node2'].original+' circle';              
+                            selector2 = '#node-'+trial_b.graph_id+'-'+d['node2'].original+' circle';
                         d3.select(selector1)
                             .classed('node-hover', true);
                         d3.select(selector2)
@@ -71,14 +63,8 @@ function load_graph(t1, t2, url) {
                 },
                 custom_mouseout: trial_custom_mouseout
             });
-            trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
-            trial_graph.load(data.diff, t1, t2);
 
-            var trialA_svg = d3.select('#graphA')
-                .append('svg')
-                .attr("width", $('#graphA').width())
-                .attr("height", $('#graphA').height());
-            trial_a = new TrialGraph(1, trialA_svg, {
+            trial_a = now_trial_graph('#graphA', 1, t1, t1, data.trial1, $('#graphA').width(), $('#graphA').height(), "#showtooltips", {
                 hint_message: "Trial "+t1,
                 hint_y: 20,
                 hint_class: "hbefore",
@@ -88,14 +74,8 @@ function load_graph(t1, t2, url) {
                 custom_mouseover: trial_custom_mouseover,
                 custom_mouseout: trial_custom_mouseout
             });
-            trial_a.set_use_tooltip(d3.select("#showtooltips").property("checked"));
-            trial_a.load(data.trial1, t1, t1);
 
-             var trialB_svg = d3.select('#graphB')
-                .append('svg')
-                .attr("width", $('#graphB').width())
-                .attr("height", $('#graphB').height());
-            trial_b = new TrialGraph(2, trialB_svg, {
+            trial_b = now_trial_graph('#graphB', 2, t2, t2, data.trial2, $('#graphB').width(), $('#graphB').height(), "#showtooltips", {
                 hint_message: "Trial "+t2,
                 hint_y: 20,
                 hint_class: "hafter",
@@ -105,8 +85,6 @@ function load_graph(t1, t2, url) {
                 custom_mouseover: trial_custom_mouseover,
                 custom_mouseout: trial_custom_mouseout
             });
-            trial_b.set_use_tooltip(d3.select("#showtooltips").property("checked"));
-            trial_b.load(data.trial2, t2, t2);
 
         },
         error: function (result, status) {

@@ -1,4 +1,4 @@
-function HistoryGraph(svg, options) {
+function HistoryGraph(id, svg, options) {
     var self = this;
 
     self.custom_select_node = options.select_node || function() {};
@@ -6,6 +6,11 @@ function HistoryGraph(svg, options) {
     self.custom_size = options.custom_size || function() {
         return [HistoryGraph.consts.width, HistoryGraph.consts.height];
     };
+    self.hint_message = options.hint_message;
+    if (typeof options.hint_message === undefined) {
+        self.hint_message = "Ctrl-click to diff trials";
+    }
+    self.graph_id = id;
 
     self.nodes = [];
     self.edges = [];
@@ -26,7 +31,7 @@ function HistoryGraph(svg, options) {
         })
 
     svg.append("text")
-        .text("Ctrl-click to diff trials")
+        .text(self.hint_message)
         .attr("dx", 5)
         .attr("dy", 45);
 
@@ -57,6 +62,7 @@ function HistoryGraph(svg, options) {
 
     self.svg = svg;
     self.svg_g = svg.append("g")
+        .attr("id", self._graph_id())
         .classed(HistoryGraph.consts.graph_class, true);
 
     var svg_g = self.svg_g;
@@ -87,7 +93,7 @@ function HistoryGraph(svg, options) {
 
 HistoryGraph.consts =  {
     selected_class: "selected",
-    graph_class: "graph",
+    graph_class: "historygraph",
     move_x: 20,
     move_y: 25,
     move_y2: 10,
@@ -97,6 +103,12 @@ HistoryGraph.consts =  {
     height: 100,
     width: 200
 };
+
+HistoryGraph.prototype._graph_id = function(){
+    var self = this;
+    return "history-graph-"+self.graph_id;
+};
+
 
 HistoryGraph.prototype._unselect_node = function() {
     var self = this,
@@ -123,7 +135,7 @@ HistoryGraph.prototype._node_mouseup = function(d3node, d){
         consts = self.consts;
 
     var mousedown_node = state.mousedown_node;
-    
+
     if (!mousedown_node) return;
 
     if (state.just_scale) {
@@ -141,26 +153,25 @@ HistoryGraph.prototype._node_mouseup = function(d3node, d){
         d3node.classed(HistoryGraph.consts.selected_class, true);
         state.selected_node = d;
         self.custom_select_node(d);
-        
     }
-      
-    
+
     state.mousedown_node = null;
     return;
-}; 
+};
 
 HistoryGraph.prototype._svg_mouseup = function(){
     var state = this.state;
     if (state.just_scale) {
       // dragged not clicked
       state.just_scale = false;
-    } 
+    }
 };
 
 HistoryGraph.prototype._update_path = function(path){
     var self = this,
         consts = HistoryGraph.consts,
-        state = this.state;
+        state = this.state,
+        colors = d3.scale.category10();
 
     return path.attr("d", function(d){
         var deltaX = d.target.x - d.source.x,
@@ -187,18 +198,18 @@ HistoryGraph.prototype._update_path = function(path){
 
         result += 'L' + (sourceX - consts.move_x) + ',' + (sourceY + step);
         result += ',' + (targetX + consts.move_x) + ',' + (sourceY + step);
-        
+
         result += 'C' + (targetX + consts.move_x/2) + ',' + (sourceY + 3*step/4);
         result += ',' + (targetX + consts.move_x/2) + ',' + (sourceY);
         result += ',' + targetX + ',' + targetY;
 
         return result;
-    }).style('marker-start', function(d) { 
-        return d.left ? 'url(#start-arrow)' : ''; 
-    }).style('marker-end', function(d) { 
-        return d.right ? 'url(#end-arrow)' : ''; 
-    }).style('stroke', function(d) { 
-        return d3.rgb(colors(d.level)).darker().toString(); 
+    }).style('marker-start', function(d) {
+        return d.left ? 'url(#start-arrow)' : '';
+    }).style('marker-end', function(d) {
+        return d.right ? 'url(#end-arrow)' : '';
+    }).style('stroke', function(d) {
+        return d3.rgb(colors(d.level)).darker().toString();
     });
 };
 
@@ -206,11 +217,11 @@ HistoryGraph.prototype._update_circle = function(circle) {
     var self = this,
         consts = HistoryGraph.consts,
         state = this.state;
-    
+
     return circle.attr("transform", function(d) {
         return "translate(" + d.x + "," + d.y + ")";
     }).classed('reflexive', function(d) {
-        return d.reflexive; 
+        return d.reflexive;
     }).classed('finished', function(d) {
         return d.info.status == 'Finished';
     }).classed('unfinished', function(d) {
@@ -224,7 +235,7 @@ HistoryGraph.prototype._zoomed = function(){
     var self = this;
     self.state.just_scale = true;
     self._close_tooltip();
-    d3.select("." + HistoryGraph.consts.graph_class)
+    d3.select("#"+self._graph_id())
       .attr("transform", "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")"); 
 };
 
@@ -282,7 +293,7 @@ HistoryGraph.prototype.load = function(data, width) {
         edge.source = nodes[last - edge.source];
         edge.target = nodes[last - edge.target];
 
-        edges.push(edge);  
+        edges.push(edge);
     }
 
     self.nodes = nodes;
@@ -317,11 +328,11 @@ HistoryGraph.prototype.select_node = function(node) {
 };
 
 HistoryGraph.prototype.restart = function(){
-    
+
     var self = this,
         consts = HistoryGraph.consts,
         state = this.state;
-    
+
     // path (link) group
     self.path = self.path.data(self.edges)
 
@@ -331,18 +342,18 @@ HistoryGraph.prototype.restart = function(){
     // add new paths
     path = self.path.enter().append("svg:path")
         .attr('class', 'link');
-    
+
     self._update_path(path);
-      
+
     // remove old links
     self.path.exit().remove();
-    
+
     // circle (node) group
     self.circle = self.circle.data(self.nodes, function(d) { return d.id; });
-    
+
 
     self._update_circle(self.circle.selectAll('circle'));
-        
+
     // add new nodes
     var g = self.circle.enter().append("svg:g");
 
@@ -351,9 +362,9 @@ HistoryGraph.prototype.restart = function(){
             .attr('class', 'node')
             .attr('r', consts.radius)
         ).on('mousedown', function(d) {
-            self._node_mousedown.call(self, d3.select(this), d);      
+            self._node_mousedown.call(self, d3.select(this), d);
         }).on('mouseup', function(d) {
-            self._node_mouseup.call(self, d3.select(this), d);     
+            self._node_mouseup.call(self, d3.select(this), d);
         }).on('mouseover', function(d) {
             if (!self.state.mousedown_node && self.use_tooltip) {
                 self._close_tooltip();
@@ -361,7 +372,7 @@ HistoryGraph.prototype.restart = function(){
             }
         })
         .call(self.drag);
-   
+
     g.append('svg:text')
         .attr('x', 0)
         .attr('y', 4)
@@ -390,5 +401,18 @@ HistoryGraph.prototype.update_window = function(){
         .attr("height", size[1]);
 };
 
+function now_history_graph(div_selector, graph_id, data, width, height, tooltip_selector, options) {
+    $(div_selector).html('');
+    var svg = d3.select(div_selector)
+        .append('svg')
+        .attr("width", width)
+        .attr("height", height);
 
- 
+    var history_graph = new HistoryGraph(graph_id, svg, options);
+    history_graph.set_use_tooltip(d3.select(tooltip_selector).property("checked"));
+    var nodes = history_graph.load(data, width);
+    return {
+        'graph': history_graph,
+        'nodes': nodes
+    }
+}

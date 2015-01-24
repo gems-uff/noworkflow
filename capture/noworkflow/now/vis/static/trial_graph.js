@@ -453,3 +453,16 @@ TrialGraph.prototype.update_window = function(){
         .attr("width", size[0])
         .attr("height", size[1]);
 };
+
+function now_trial_graph(div_selector, graph_id, trial_id_1, trial_id_2, data, width, height, tooltip_selector, options) {
+    $(div_selector).html('');
+
+    var trial_svg = d3.select(div_selector)
+        .append('svg')
+        .attr("width", width)
+        .attr("height", height);
+    var trial_graph = new TrialGraph(graph_id, trial_svg, options);
+    trial_graph.set_use_tooltip(d3.select(tooltip_selector).property("checked"));
+    trial_graph.load(data, trial_id_1, trial_id_2);
+    return trial_graph;
+}

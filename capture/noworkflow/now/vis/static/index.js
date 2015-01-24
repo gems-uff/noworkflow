@@ -1,6 +1,6 @@
 var width, height,
     filter_width = 200;
-var history_graph, trial_graph, 
+var history_graph, trial_graph,
     selected_graph = "independent",
     current_nid = 0;
 
@@ -32,22 +32,13 @@ function load_graph(nid, url) {
         url: 'trials/' + nid + '/' + url,
         dataType: 'json',
         async: true,
-        data: {}, 
+        data: {},
         success: function (data) {
-            $('#graph').html('');
-
-            var trial_svg = d3.select('#graph')
-                .append('svg')
-                .attr("width", 500)
-                .attr("height", 500);
-            trial_graph = new TrialGraph(0, trial_svg, {
+            trial_graph = now_trial_graph('#graph', 0, nid, nid, data, 500, 500, "#showtooltips", {
                 custom_size: function() {
                     return [$('#graph').width(), $('#graph').height()];
                 }
             });
-            trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
-            trial_graph.load(data, nid, nid);
-           
         },
         error: function (result, status) {
         }
@@ -61,7 +52,7 @@ function load_dependencies(nid) {
         url: 'trials/' + nid + '/dependencies',
         dataType: 'json',
         async: true,
-        data: {}, 
+        data: {},
         success: function (data) {
             if (data.all.length > 0) {
                 $('#side-internal').append(
@@ -75,21 +66,21 @@ function load_dependencies(nid) {
                             '</ul>'+
                         '</div>' +
                     '</div>'
-                );    
+                );
                 //data.local = data.all;
                 for (i = 0; i < data.local.length; i++) {
                     $('#side-internal #modules ul').append(
-                        '<li>' + 
+                        '<li>' +
                             '<div class="name">' + data.local[i].name + '</div>' + 
                             '<div class="version">' + (data.local[i].version == null ? "" : data.local[i].version) + '</div>' + 
                             '<div class="clear"></div>' +
                             '<div class="hash" title="'+data.local[i].path  +'">' + data.local[i].code_hash + '</div>' + 
                         '</li>'
-                    );  
+                    );
                 }
-               
+
             }
-            
+
         },
         error: function (result, status) {
         }
@@ -103,7 +94,7 @@ function load_environment(nid) {
         url: 'trials/' + nid + '/environment',
         dataType: 'json',
         async: true,
-        data: {}, 
+        data: {},
         success: function (data) {
             function li(key) {
                 if (data.env[key]) {
@@ -138,10 +129,10 @@ function load_environment(nid) {
                         '</ul>'+
                     '</div>' +
                 '</div>'
-            );    
-               
-            
-            
+            );
+
+
+
         },
         error: function (result, status) {
         }
@@ -155,7 +146,7 @@ function load_file_accesses(nid) {
         url: 'trials/' + nid + '/file_accesses',
         dataType: 'json',
         async: true,
-        data: {}, 
+        data: {},
         success: function (data) {
             if (data.file_accesses.length > 0) {
                 $('#side-internal').append(
@@ -169,31 +160,30 @@ function load_file_accesses(nid) {
                             '</ul>'+
                         '</div>' +
                     '</div>'
-                );    
+                );
                 //data.local = data.all;
                 for (i = 0; i < data.file_accesses.length; i++) {
                     $('#side-internal #file_accesses ul').append(
-                        '<li>' + 
-                            '<div class="name" title="Name">' + data.file_accesses[i].name + '</div>' + 
-                            '<div class="mode" title="Mode">' + data.file_accesses[i].mode + '</div>' + 
-                            '<div class="buffering" title="Buffering">' + data.file_accesses[i].buffering + '</div>' + 
+                        '<li>' +
+                            '<div class="name" title="Name">' + data.file_accesses[i].name + '</div>' +
+                            '<div class="mode" title="Mode">' + data.file_accesses[i].mode + '</div>' +
+                            '<div class="buffering" title="Buffering">' + data.file_accesses[i].buffering + '</div>' +
                             '<div class="clear"></div>' +
-                            '<div class="timestamp" title="Time">' + data.file_accesses[i].timestamp + '</div>' + 
+                            '<div class="timestamp" title="Time">' + data.file_accesses[i].timestamp + '</div>' +
                             '<div class="content_hash_before hash" title="Content hash before">' + data.file_accesses[i].content_hash_before + '</div>' + 
                             '<div class="content_hash_after hash" title="Content hash after">' + data.file_accesses[i].content_hash_after + '</div>' +
                             '<div class="stack" title="Stack">' + data.file_accesses[i].stack + '</div>' +
                         '</li>'
-                    );  
+                    );
                 }
-               
+
             }
-            
+
         },
         error: function (result, status) {
         }
     });
 }
-
 
 function reload() {
     $.ajax({
@@ -203,18 +193,13 @@ function reload() {
         dataType: 'json',
         data: {
             'script': $("select[name='script']").val(),
-            'execution': $("select[name='execution']").val()   
+            'execution': $("select[name='execution']").val()
         },
         async: true,
         success: function (data) {
-            $('#historygraph').html('');
-            var w =  width - filter_width, 
-                svg = d3.select('#historygraph')
-                .append('svg')
-                .attr("width", w)
-                .attr("height", height);
-
-            history_graph = new HistoryGraph(svg, {
+            $("#historygraph").html('');
+            var w =  width - filter_width;
+            var hg = now_history_graph('#historygraph', 0, data, w, height, "#show-history-tooltips", {
                 select_node: function(n){
                     $('#side-internal').html(
                         '<div id="main">'+
@@ -243,8 +228,8 @@ function reload() {
                 }
             });
 
-            nodes = history_graph.load(data, w);
-            
+            history_graph = hg.graph;
+            nodes = hg.nodes;
             history_graph.select_node(nodes[0]);
         },
         error: function (result) {
@@ -285,7 +270,6 @@ $('#top').split({
     position: filter_width + "px",
     onDrag: function(){
         history_graph.update_window();
-        
     }
 
 });
