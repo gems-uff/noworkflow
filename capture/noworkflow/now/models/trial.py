@@ -18,6 +18,20 @@ from .utils import calculate_duration, FORMAT
 from .activation import Activation
 
 class Trial(object):
+    """ This model represents a trial
+    Initialize it by passing the trial id:
+        trial = Trial(2)
+
+    There are two visualization modes for the graph:
+        exact match: calls are only combined when all the sub-call match
+            trial.display_mode = 0
+        combined: calls are combined without considering the sub-calls
+            trial.display_mode = 1
+
+    You can change the graph width and height by the variables:
+        trial.graph_width = 600
+        trial.graph_height = 400
+    """
 
     def __init__(self, trial_id, script=None, exit=False):
         if exit:
@@ -33,20 +47,25 @@ class Trial(object):
             0: self.independent_activation_graph,
             1: self.combined_activation_graph
         }
+        self.graph_width = 500
+        self.graph_height = 500
         self.display_mode = 0
 
 
     @property
     def script(self):
+        """ Returns the "main" script of the trial """
         info = self.info()
         return info['script']
 
     @property
     def code_hash(self):
+        """ Returns the hash code of the main script """
         info = self.info()
         return info['code_hash']
 
     def _ipython_display_(self):
+        """ Displays d3 graph on ipython notebook """
         from IPython.display import (
             display_png, display_html, display_latex,
             display_javascript, display_svg
@@ -62,13 +81,13 @@ class Trial(object):
                       <input id="showtooltips-{0}" type="checkbox" name="showtooltips" value="show">
                       <label for="showtooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
                     </form>
-                    <div id='graph-{0}' class="now-trial-graph"></div>
+                    <div id='graph-{0}' class="now-trial-graph ipython-graph" style="width: {1}px; height: {2}px;"></div>
                 </div>
-            </div>""".format(uid), raw=True)
+            </div>""".format(uid, self.graph_width, self.graph_height), raw=True)
         display_javascript("""
-            var trial_graph = now_trial_graph('#graph-{0}', {0}, {2}, {2}, {1}, 500, 500, "#showtooltips-{0}", {{
+            var trial_graph = now_trial_graph('#graph-{0}', {0}, {2}, {2}, {1}, {3}, {4}, "#showtooltips-{0}", {{
                 custom_size: function() {{
-                    return [500, 500];
+                    return [{3}, {4}];
                 }}
             }});
             $( "[name='showtooltips']" ).change(function() {{
@@ -77,9 +96,10 @@ class Trial(object):
             """.format(
                 uid,
                 json.dumps(self._graph_types[self.display_mode]()),
-                self.trial_id), raw=True)
+                self.trial_id, self.graph_width, self.graph_height), raw=True)
 
     def info(self):
+        """ Returns dict with the trial information, considering the duration """
         if self._info is None:
             self._info = row_to_dict(
                 persistence.load_trial(self.trial_id).fetchone())
@@ -88,6 +108,7 @@ class Trial(object):
         return self._info
 
     def function_defs(self):
+        """ Returns a dict of function definitions """
         return {
             function['name']: row_to_dict(function)
             for function in persistence.load('function_def',
@@ -95,10 +116,15 @@ class Trial(object):
         }
 
     def head_trial(self, remove=False):
+        """ Returns the parent trial object """
         parent_id = persistence.load_parent_id(self.script, remove=remove)
         return Trial(parent_id)
 
     def modules(self, map_fn=row_to_dict):
+        """ Returns the modules imported during the trial
+            The first element is a list of local modules
+            The second element is a list of external modules
+        """
         dependencies = persistence.load_dependencies(self.trial_id)
         result = map(map_fn, dependencies)
         local = [dep for dep in result
@@ -106,12 +132,14 @@ class Trial(object):
         return local, result
 
     def environment(self):
+        """ Returns a dict of environment variables """
         return {
             attr['name']: attr['value'] for attr in map(row_to_dict,
                 persistence.load('environment_attr', trial_id=self.trial_id))
         }
 
     def file_accesses(self):
+        """ Returns a list of file accesses """
         file_accesses = persistence.load('file_access',
                                          trial_id=self.trial_id)
 
@@ -145,25 +173,30 @@ class Trial(object):
         return result
 
     def activations(self, **conditions):
+        """ Returns a list of activations """
         return map(Activation, persistence.load('function_activation',
                                                 trial_id=self.trial_id,
                                                 order='start',
                                                 **conditions))
 
     def slicing_variables(self):
+        """ Returns a list of slicing variables """
         return persistence.load('slicing_variable',
                                 trial_id=self.trial_id,
                                 order='vid ASC')
 
     def slicing_usages(self):
+        """ Returns a list of slicing usages """
         return persistence.load('slicing_usage',
                                 trial_id=self.trial_id)
 
     def slicing_dependencies(self):
+        """ Returns a list of slicing dependencies """
         return persistence.load('slicing_dependency',
                                 trial_id=self.trial_id)
 
     def activation_graph(self):
+        """ Generates an activation graph """
         result_stack = []
         stack = [Single(act) for act in self.activations()]
 
@@ -179,12 +212,16 @@ class Trial(object):
         return result_stack.pop()
 
     def independent_activation_graph(self):
+        """ Generates an activation graph and transforms it into an
+            exact match graph supported by d3 """
         graph = self.activation_graph()
         visitor = TrialGraphVisitor()
         graph.visit(visitor)
         return visitor.to_dict()
 
     def combined_activation_graph(self):
+        """ Generates an activation graph and transforms it into an
+            combined graph supported by d3 """
         graph = self.activation_graph()
         visitor = TrialGraphCombineVisitor()
         graph.visit(visitor)

@@ -84,3 +84,9 @@ div.now-tooltip {
 .now-tooltip.hidden {
     display: none;
 }
+
+.ipython-graph {
+}
+
+.ipython-graph:hover {
+}

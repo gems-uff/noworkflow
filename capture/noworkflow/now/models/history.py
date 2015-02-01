@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from collections import defaultdict, OrderedDict
+from .utils import calculate_duration, FORMAT
 from ..persistence import row_to_dict
 from ..persistence import persistence as pers
 
@@ -33,6 +34,9 @@ class History(object):
         history.script = "*"
         history.execution = "*"
 
+    You can change the graph width and height by the variables:
+        history.graph_width = 600
+        history.graph_height = 200
     """
 
     def __init__(self):
@@ -41,6 +45,8 @@ class History(object):
         self.execution = "*"
 
         self.execution_options = ["*", "finished", "unfinished", "backup"]
+        self.graph_width = 700
+        self.graph_height = 300
 
     def scripts(self):
         """ Returns the list of scripts used for trials """
@@ -84,8 +90,17 @@ class History(object):
             trial["status"] = "Finished" if trial["finish"] else "Unfinished"
             if not trial['run']:
                 trial["status"] = "Backup"
-            trial["tooltip"] = "<b>{script}</b><br>{status}".format(**trial)
-
+            trial["tooltip"] = """
+                <b>{script}</b><br>
+                {status}<br>
+                Start: {start}<br>
+                Finish: {finish}
+                """.format(**trial)
+            if trial['finish']:
+                trial["tooltip"] += """
+                <br>
+                Duration: {duration}ns
+                """.format(duration=calculate_duration(trial))
             id_map[trial_id] = tid
             scripts[trial['script']].append(trial)
             nodes.append(trial)
@@ -144,13 +159,13 @@ class History(object):
                        <input id="show-history-tooltips-{0}" type="checkbox" name="show-history-tooltips" value="show">
                        <label for="show-history-tooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
                     </div>
-                    <div id='history-{0}' class="now-history-graph"></div>
+                    <div id='history-{0}' class="now-history-graph ipython-graph" style="width: {1}px; height: {2}px;"></div>
                 </div>
-            </div>""".format(uid), raw=True)
+            </div>""".format(uid, self.graph_width, self.graph_height), raw=True)
         display_javascript("""
-            var hg = now_history_graph('#history-{0}', {0}, {1}, 700, 300, "#show-history-tooltips-{0}", {{
+            var hg = now_history_graph('#history-{0}', {0}, {1}, {2}, {3}, "#show-history-tooltips-{0}", {{
                 custom_size: function() {{
-                    return [700, 300];
+                    return [{2}, {3}];
                 }},
                 hint_message: "",
             }});
@@ -164,4 +179,5 @@ class History(object):
             }});
             """.format(
                 uid,
-                json.dumps(self.graph_data())), raw=True)
+                json.dumps(self.graph_data()),
+                self.graph_width, self.graph_height), raw=True)

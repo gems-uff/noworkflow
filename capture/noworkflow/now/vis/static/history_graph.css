@@ -1,9 +1,9 @@
 div.now-history-tooltip {
-    max-width: 150px;
+    max-width: 250px;
 }
 
 .now-history-graph svg {
-  background-color: #eee;
+
 }
 
 .now-history-graph path.link {
