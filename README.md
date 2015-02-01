@@ -154,6 +154,58 @@ The visualization tool shows the evolotion history, the trial information, an ac
 
 We have also a graph visualization implemented in Java, named noWorkflowVis, which connects to noWorkflow database and allows interactive analysis.
 
+IPython Interface
+-----------------
+
+Another way to visualize and query trials is to use IPython notebook.
+To install IPython notebook, you can run
+```bash
+$ pip install ipython[all]
+```
+
+Then, to run ipython notebook, go to the project directory and execute:
+```bash
+$ ipython notebook
+```
+
+It will start a local webserver where you can create notebooks and run python code.
+
+Before loading anything related to noworkflow on a notebook, you must initialize it:
+```python
+import noworkflow.now.ipython as nip
+nip.init()
+```
+
+After that, you can load either the history or a specific trial graph:
+```python
+In [1]:
+  trial = nip.Trial(2) # Loads trial with Id = 2
+  trial # Shows trial graph
+
+In [2]:
+  history = nip.History() # Loads history
+  history # Shows history graph
+```
+
+There are attributes on those objects to change the graph visualization, width, height and filter values. Please, check the documentation by running the following code on ipython notebook
+```python
+trial?
+history?
+```
+
+It is also possible to run prolog queries on IPython notebook. To do so, you will need to install SWI-Prolog with shared libraries and the pyswip module: http://code.google.com/p/pyswip/wiki/INSTALL
+
+To query a specific trial, you can do:
+```python
+trial.query("activation(1428, X, _, _, _)")
+```
+
+To check the existing rules, please do:
+```python
+trial.prolog_rules()
+```
+
+
 Included Software
 -----------------
 

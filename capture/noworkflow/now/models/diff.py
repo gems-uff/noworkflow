@@ -10,9 +10,10 @@ from copy import deepcopy
 from collections import namedtuple, OrderedDict, defaultdict
 
 from .trial import Trial, TreeElement, Single, Call
-from .trial import Mixed, Group, OrderedCounter
+from .trial import Mixed, Group
 from .trial_activation_visitors import TrialGraphVisitor
 from .trial_activation_visitors import TrialGraphCombineVisitor
+from ..utils import OrderedCounter
 
 
 class hashabledict(dict):

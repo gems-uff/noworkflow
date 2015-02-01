@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from textwrap import dedent
-
+from collections import OrderedDict, Counter
 
 LABEL = '[now] '
 verbose = False
@@ -52,3 +52,11 @@ def print_environment_attrs(environment_attrs):
     for environment_attr in environment_attrs:
         output.append('  {name}: {value}'.format(**environment_attr))
     print('\n'.join(output))
+
+
+class OrderedCounter(OrderedDict, Counter):
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__,
+                            OrderedDict(self))
+    def __reduce__(self):
+        return self.__class__, (OrderedDict(self),)
