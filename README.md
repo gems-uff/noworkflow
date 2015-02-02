@@ -193,7 +193,7 @@ trial?
 history?
 ```
 
-It is also possible to run prolog queries on IPython notebook. To do so, you will need to install SWI-Prolog with shared libraries and the pyswip module: http://code.google.com/p/pyswip/wiki/INSTALL
+It is also possible to run prolog queries on IPython notebook. To do so, you will need to install SWI-Prolog with shared libraries and the pyswip module: https://github.com/yuce/pyswip/blob/master/INSTALL
 
 To query a specific trial, you can do:
 ```python
