@@ -90,3 +90,21 @@ div.now-tooltip {
 
 .ipython-graph:hover {
 }
+
+.hbefore {
+  fill: red !important;
+  font-size: 20px !important;
+}
+
+.hafter {
+  fill: green !important;
+  font-size: 20px !important;
+}
+
+.bottom .ipython-graph {
+  display: inline-block;
+}
+
+.node-hover {
+  stroke: blue !important;
+}

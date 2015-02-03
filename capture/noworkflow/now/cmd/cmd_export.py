@@ -57,7 +57,7 @@ class Export(Command):
                 nb = nbf.reads((u"import noworkflow.now.ipython as nip\n"
                       u"nip.init()\n"
                       u"trial = nip.Trial({})\n"
-                      u"# trial.display_mode = 0\n"
+                      u"# trial.graph_type = 0\n"
                       u"# trial.graph_width = 500\n"
                       u"# trial.graph_height = 500\n"
                       u"trial").format(args.trial), 'py')

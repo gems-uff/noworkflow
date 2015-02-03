@@ -33,20 +33,6 @@
   overflow: hidden !important;
 }
 
-.hbefore {
-  fill: red !important;
-  font-size: 20px !important;
-}
-
-.hafter {
-  fill: green !important;
-  font-size: 20px !important;
-}
-
-.node-hover {
-  stroke: blue !important;
-}
-
 .now .toolbar {
   margin: 5px;
 }

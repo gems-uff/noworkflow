@@ -25,9 +25,9 @@ class Trial(object):
 
     There are two visualization modes for the graph:
         exact match: calls are only combined when all the sub-call match
-            trial.display_mode = 0
+            trial.graph_type = 0
         combined: calls are combined without considering the sub-calls
-            trial.display_mode = 1
+            trial.graph_type = 1
 
     You can change the graph width and height by the variables:
         trial.graph_width = 600
@@ -51,7 +51,7 @@ class Trial(object):
         }
         self.graph_width = 500
         self.graph_height = 500
-        self.display_mode = 0
+        self.graph_type = 0
 
     def init_prolog(self):
         # Todo: fix prolog
@@ -124,7 +124,7 @@ class Trial(object):
             }});
             """.format(
                 uid,
-                json.dumps(self._graph_types[self.display_mode]()),
+                json.dumps(self._graph_types[self.graph_type]()),
                 self.id, self.graph_width, self.graph_height), raw=True)
 
     def info(self):

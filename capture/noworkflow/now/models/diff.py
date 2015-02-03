@@ -6,6 +6,9 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import json
+import time
+
 from copy import deepcopy
 from collections import namedtuple, OrderedDict, defaultdict
 
@@ -56,6 +59,22 @@ class Diff(object):
     def __init__(self, trial_id1, trial_id2, exit=False):
         self.trial1 = Trial(trial_id1, exit=exit)
         self.trial2 = Trial(trial_id2, exit=exit)
+        self._graph_types = {
+            0: self.independent_naive_activation_graph,
+            1: self.combined_naive_activation_graph
+        }
+        self._display_modes = {
+            0: self._ipython_combined_,
+            1: self._ipython_side_by_side_,
+            2: self._ipython_both_,
+        }
+        self.graph_width = 500
+        self.graph_height = 500
+        self.graph_type = 0
+        self.display_mode = 0
+        self._independent_cache = None
+        self._combined_cache = None
+
 
     def trial(self):
         return diff_dict(self.trial1.info(), self.trial2.info())
@@ -77,14 +96,144 @@ class Diff(object):
             set(fadict(fa) for fa in self.trial2.file_accesses()))
 
     def independent_naive_activation_graph(self):
-        g1 = self.trial1.independent_activation_graph()
-        g2 = self.trial2.independent_activation_graph()
-        return NaiveGraphDiff(g1, g2).to_dict(), g1, g2
+        if not self._independent_cache:
+            g1 = self.trial1.independent_activation_graph()
+            g2 = self.trial2.independent_activation_graph()
+            self._independent_cache = NaiveGraphDiff(g1, g2).to_dict(), g1, g2
+        return self._independent_cache
 
     def combined_naive_activation_graph(self):
-        g1 = self.trial1.combined_activation_graph()
-        g2 = self.trial2.combined_activation_graph()
-        return NaiveGraphDiff(g1, g2).to_dict(), g1, g2
+        if not self._combined_cache:
+            g1 = self.trial1.combined_activation_graph()
+            g2 = self.trial2.combined_activation_graph()
+            self._combined_cache = NaiveGraphDiff(g1, g2).to_dict(), g1, g2
+        return self._combined_cache
+
+    def _ipython_combined_(self, uid):
+        graph = self._graph_types[self.graph_type]()[0]
+        result = {
+            'html': """
+                <div id="graph-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;">
+                </div>""".format(
+                    uid=uid,
+                    width=self.graph_width, height=self.graph_height),
+            'javascript': """
+                var trial_graph = now_trial_graph('#graph-{uid}', {uid}, {id1}, {id2}, {data}, {width}, {height}, "#showtooltips-{uid}", {{
+                    custom_size: function() {{
+                        return [{width}, {height}];
+                    }},
+                    custom_mouseout: trial_custom_mouseout
+                }});
+                $( "[name='showtooltips']" ).change(function() {{
+                    trial_graph.set_use_tooltip(d3.select("#showtooltips-{uid}").property("checked"));
+                }});
+            """.format(
+                uid=uid, data=json.dumps(graph),
+                id1=self.trial1.id, id2=self.trial2.id,
+                width=self.graph_width, height=self.graph_height)
+        }
+        return result
+
+    def _ipython_side_by_side_(self, uid):
+        graph, graph_a, graph_b = self._graph_types[self.graph_type]()
+        result = {
+            'html': """
+                <div class="bottom">
+                    <div id="graphA-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;"></div>
+                    <div id="graphB-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;"></div>
+                </div>""".format(
+                    uid=uid,
+                    width=self.graph_width / 2, height=self.graph_height),
+            'javascript': """
+                var trial_a = now_trial_graph('#graphA-{uid}', 1{uid}, {id1}, {id1}, {data1}, {width}, {height}, "#showtooltips-{uid}", {{
+                    custom_size: function() {{
+                        return [{width}, {height}];
+                    }},
+                    hint_message: "Trial "+ {id1},
+                    hint_class: "hbefore",
+                    custom_mouseover: trial_custom_mouseover,
+                    custom_mouseout: trial_custom_mouseout
+                }});
+                var trial_b = now_trial_graph('#graphB-{uid}', 2{uid}, {id2}, {id2}, {data2}, {width}, {height}, "#showtooltips-{uid}", {{
+                    custom_size: function() {{
+                        return [{width}, {height}];
+                    }},
+                    hint_message: "Trial "+ {id2},
+                    hint_class: "hafter",
+                    custom_mouseover: trial_custom_mouseover,
+                    custom_mouseout: trial_custom_mouseout
+                }});
+                $( "[name='showtooltips']" ).change(function() {{
+                    trial_a.set_use_tooltip(d3.select("#showtooltips-{uid}").property("checked"));
+                    trial_b.set_use_tooltip(d3.select("#showtooltips-{uid}").property("checked"));
+                }});
+            """.format(
+                uid=uid,
+                data1=json.dumps(graph_a), data2=json.dumps(graph_b),
+                id1=self.trial1.id, id2=self.trial2.id,
+                width=self.graph_width / 2, height=self.graph_height)
+        }
+        return result
+
+    def _ipython_both_(self, uid):
+        d1 = self._ipython_combined_(uid)
+        d2 = self._ipython_side_by_side_(uid)
+        result = {
+            'html': """
+                <div id="graph-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;"></div>
+                <div class="bottom">
+                    <div id="graphA-{uid}" class="now-trial-graph ipython-graph" style="width: {width2}px; height: {height}px;"></div>
+                    <div id="graphB-{uid}" class="now-trial-graph ipython-graph" style="width: {width2}px; height: {height}px;"></div>
+                </div>
+                """.format(
+                    uid=uid,
+                    width=self.graph_width, height=self.graph_height,
+                    width2=self.graph_width / 2),
+            'javascript': """
+                var trial_graph, trial_a, trial_b;
+                function trial_custom_mouseover(d, name, show_tooltip) {{
+                    console.log(trial_graph);
+                    d3.select('#node-'+trial_graph.graph_id+'-'+d.node.diff+' circle')
+                        .classed('node-hover', true);
+                }}
+
+                function trial_custom_mouseout(d) {{
+                    d3.selectAll('.node-hover')
+                        .classed('node-hover', false);
+                }}
+                {0}
+                {1}
+            """.format(d1['javascript'], d2['javascript'])
+        }
+        return result
+
+
+    def _ipython_display_(self):
+        """ Displays d3 graph on ipython notebook """
+        from IPython.display import (
+            display_png, display_html, display_latex,
+            display_javascript, display_svg
+        )
+
+        uid = str(int(time.time()*1000000))
+        disp = self._display_modes[self.display_mode](uid)
+        display_html("""
+            <div class="now-trial now">
+                <div>
+                    <form class="toolbar">
+                      <input id="showtooltips-{0}" type="checkbox" name="showtooltips" value="show">
+                      <label for="showtooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
+                    </form>
+                    {1}
+                </div>
+            </div>""".format(uid, disp['html']), raw=True)
+        display_javascript("""
+            function trial_custom_mouseover(d, name, show_tooltip) {{}}
+            function trial_custom_mouseout(d) {{}}
+
+            {0}
+        """.format(disp['javascript']), raw=True)
+
 
 class NaiveGraphDiff(object):
 

@@ -120,7 +120,7 @@ $('#graphs').split({
 
 });
 
-$('#graphs #bottom').split({
+$('#graphs .bottom').split({
     orientation: 'vertical', limit: 20,
     position: "50%",
     onDrag: function(){
