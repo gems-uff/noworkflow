@@ -42,7 +42,7 @@ class Trial(object):
                 utils.print_msg('inexistent trial id', True)
                 sys.exit(1)
 
-        self.trial_id = trial_id
+        self.id = trial_id
         self._info = None
         self.prolog = None
         self._graph_types = {
@@ -75,6 +75,11 @@ class Trial(object):
         self.init_prolog()
         return self.trial_prolog.export_rules().split('\n')
 
+    @property
+    def trial_id(self):
+        from warnings import warn
+        warn('trial_id propery deprecated. Please use id')
+        return self.id
 
     @property
     def script(self):
@@ -120,13 +125,13 @@ class Trial(object):
             """.format(
                 uid,
                 json.dumps(self._graph_types[self.display_mode]()),
-                self.trial_id, self.graph_width, self.graph_height), raw=True)
+                self.id, self.graph_width, self.graph_height), raw=True)
 
     def info(self):
         """ Returns dict with the trial information, considering the duration """
         if self._info is None:
             self._info = row_to_dict(
-                persistence.load_trial(self.trial_id).fetchone())
+                persistence.load_trial(self.id).fetchone())
             if self._info['finish']:
                 self._info['duration'] = calculate_duration(self._info)
         return self._info
@@ -136,7 +141,7 @@ class Trial(object):
         return {
             function['name']: row_to_dict(function)
             for function in persistence.load('function_def',
-                                             trial_id=self.trial_id)
+                                             trial_id=self.id)
         }
 
     def head_trial(self, remove=False):
@@ -149,7 +154,7 @@ class Trial(object):
             The first element is a list of local modules
             The second element is a list of external modules
         """
-        dependencies = persistence.load_dependencies(self.trial_id)
+        dependencies = persistence.load_dependencies(self.id)
         result = map(map_fn, dependencies)
         local = [dep for dep in result
                  if dep['path'] and persistence.base_path in dep['path']]
@@ -159,13 +164,13 @@ class Trial(object):
         """ Returns a dict of environment variables """
         return {
             attr['name']: attr['value'] for attr in map(row_to_dict,
-                persistence.load('environment_attr', trial_id=self.trial_id))
+                persistence.load('environment_attr', trial_id=self.id))
         }
 
     def file_accesses(self):
         """ Returns a list of file accesses """
         file_accesses = persistence.load('file_access',
-                                         trial_id=self.trial_id)
+                                         trial_id=self.id)
 
         result = []
         for fa in map(row_to_dict, file_accesses):
@@ -199,25 +204,25 @@ class Trial(object):
     def activations(self, **conditions):
         """ Returns a list of activations """
         return map(Activation, persistence.load('function_activation',
-                                                trial_id=self.trial_id,
+                                                trial_id=self.id,
                                                 order='start',
                                                 **conditions))
 
     def slicing_variables(self):
         """ Returns a list of slicing variables """
         return persistence.load('slicing_variable',
-                                trial_id=self.trial_id,
+                                trial_id=self.id,
                                 order='vid ASC')
 
     def slicing_usages(self):
         """ Returns a list of slicing usages """
         return persistence.load('slicing_usage',
-                                trial_id=self.trial_id)
+                                trial_id=self.id)
 
     def slicing_dependencies(self):
         """ Returns a list of slicing dependencies """
         return persistence.load('slicing_dependency',
-                                trial_id=self.trial_id)
+                                trial_id=self.id)
 
     def activation_graph(self):
         """ Generates an activation graph """

@@ -30,10 +30,10 @@ class TrialProlog(object):
         if with_doc:
             result.append(textwrap.dedent("""\
                 %
-                % FACT: activation(id, name, start, finish, caller_activation_id).
+                % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
                 %
                 """))
-        result.append(":- dynamic(activation/5).")
+        result.append(":- dynamic(activation/6).")
         for activation in self.trial.activations():
             activation = dict(activation)
             activation['name'] = str(activation['name'])
@@ -43,7 +43,7 @@ class TrialProlog(object):
                 activation['caller_id'] = 'nil'
             result.append(
                 'activation('
-                    '{id}, {name!r}, {start:-f}, {finish:-f}, '
+                    '{trial_id}, {id}, {name!r}, {start:-f}, {finish:-f}, '
                     '{caller_id}).'
                 ''.format(**activation))
 
@@ -51,12 +51,13 @@ class TrialProlog(object):
         if with_doc:
             result.append(textwrap.dedent("""
                 %
-                % FACT: access(id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).
+                % FACT: access(trial_id, id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).
                 %
                 """))
-        result.append(":- dynamic(access/7).")
+        result.append(":- dynamic(access/8).")
         for access in self.trial.file_accesses():
             access = dict(access)
+            access['trial_id'] = self.trial.id
             access['name'] = str(access['name'])
             access['mode'] = str(access['mode'])
             access['buffering'] = str(access['buffering'])
@@ -65,7 +66,7 @@ class TrialProlog(object):
             access['timestamp'] = timestamp(access['timestamp'])
             result.append(
                 'access('
-                    '{id}, {name!r}, {mode!r}, '
+                    '{trial_id}, {id}, {name!r}, {mode!r}, '
                     '{content_hash_before!r}, {content_hash_after!r}, '
                     '{timestamp:-f}, {function_activation_id}).'
                 ''.format(**access))
@@ -74,10 +75,10 @@ class TrialProlog(object):
         if with_doc:
             result.append(textwrap.dedent("""
                 %
-                % FACT: variable(vid, name, line, value, timestamp).
+                % FACT: variable(trial_id, vid, name, line, value, timestamp).
                 %
                 """))
-        result.append(":- dynamic(variable/5).")
+        result.append(":- dynamic(variable/6).")
         for var in self.trial.slicing_variables():
             var = dict(var)
             var['vid'] = str(var['vid'])
@@ -87,17 +88,18 @@ class TrialProlog(object):
             var['time'] = timestamp(var['time'])
             result.append(
                 'variable('
-                    '{vid}, {name!r}, {line}, {value!r}, {time:-f}).'
+                    '{trial_id}, {vid}, {name!r}, {line}, {value!r}, '
+                    '{time:-f}).'
                 ''.format(**var))
 
     def export_trial_slicing_usages(self, result, with_doc=True):
         if with_doc:
             result.append(textwrap.dedent("""
                 %
-                % FACT: usage(id, vid, name, line).
+                % FACT: usage(trial_id, id, vid, name, line).
                 %
                 """))
-        result.append(":- dynamic(usage/4).")
+        result.append(":- dynamic(usage/5).")
         for usage in self.trial.slicing_usages():
             usage = dict(usage)
             usage['id'] = str(usage['id'])
@@ -106,17 +108,17 @@ class TrialProlog(object):
             usage['line'] = str(usage['line'])
             result.append(
                 'usage('
-                    '{id}, {vid}, {name!r}, {line}).'
+                    '{trial_id}, {id}, {vid}, {name!r}, {line}).'
                 ''.format(**usage))
 
     def export_trial_slicing_dependencies(self, result, with_doc=True):
         if with_doc:
             result.append(textwrap.dedent("""
                 %
-                % FACT: dependency(id, dependent, supplier).
+                % FACT: dependency(trial_id, id, dependent, supplier).
                 %
                 """))
-        result.append(":- dynamic(dependency/3).")
+        result.append(":- dynamic(dependency/4).")
         for dep in self.trial.slicing_dependencies():
             dep = dict(dep)
             dep['id'] = str(dep['id'])
@@ -124,7 +126,7 @@ class TrialProlog(object):
             dep['supplier'] = str(dep['supplier'])
             result.append(
                 'dependency('
-                    '{id}, {dependent}, {supplier}).'
+                    '{trial_id}, {id}, {dependent}, {supplier}).'
                 ''.format(**dep))
 
     def export_facts(self, with_doc=True):

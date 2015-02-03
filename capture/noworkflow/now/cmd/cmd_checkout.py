@@ -45,7 +45,7 @@ class Checkout(Command):
             now = datetime.now()
             tid = persistence.store_trial(
                 now, trial.script, code,
-                '<checkout {}>'.format(trial.trial_id),
+                '<checkout {}>'.format(trial.id),
                 args.bypass_modules, run=False)
             prov_deployment.collect_provenance(args, {
                 'trial_id': tid,
@@ -69,14 +69,13 @@ class Checkout(Command):
         trial = Trial(trial_id=args.trial, script=args.script, exit=True)
         self.create_backup(trial, args)
 
-        self.restore(trial.script, trial.code_hash, trial.trial_id)
+        self.restore(trial.script, trial.code_hash, trial.id)
 
-        persistence.store_parent(trial.script, trial.trial_id)
+        persistence.store_parent(trial.script, trial.id)
         if args.local:
             local_modules, _ = trial.modules()
             for module in local_modules:
-                self.restore(module['path'], module['code_hash'],
-                             trial.trial_id)
+                self.restore(module['path'], module['code_hash'], trial.id)
 
         if args.input:
             file_accesses = trial.file_accesses()
@@ -84,4 +83,4 @@ class Checkout(Command):
             for fa in reversed(file_accesses):
                 fs[fa['name']] = fa['content_hash_before']
             for name, content_hash in fs.items():
-                self.restore(name, content_hash, trial.trial_id)
+                self.restore(name, content_hash, trial.id)
