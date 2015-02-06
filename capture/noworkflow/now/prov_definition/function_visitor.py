@@ -10,13 +10,8 @@ import ast
 import sys
 from .context import Context
 from .utils import diss
-from ..cross_version import cross_compile
+from ..cross_version import cross_compile, StringIO
 from ..persistence import persistence
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 
 
 class FunctionVisitor(ast.NodeVisitor):

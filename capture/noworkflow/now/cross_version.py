@@ -5,5 +5,12 @@
 
 # Do not add from __future__ imports here
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+
 def cross_compile(*args, **kwargs):
 	return compile(*args, **kwargs)
+

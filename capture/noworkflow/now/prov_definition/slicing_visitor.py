@@ -7,13 +7,15 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import ast
+import bisect
 
 from collections import defaultdict
 
 from ..utils import print_msg
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
-from .utils import ExtractCallPosition, FunctionCall, ClassDef, index
+from .utils import (ExtractCallPosition, FunctionCall, ClassDef, index,
+                    extract_matching_parenthesis)
 
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -163,6 +165,8 @@ class SlicingVisitor(FunctionVisitor):
     def __init__(self, *args):
         super(SlicingVisitor, self).__init__(*args)
         path = self.metascript['path']
+        self.matching_parenthesis = extract_matching_parenthesis(
+            self.metascript['code'])
         self.path = path
         self.name_refs = {}
         self.dependencies = {}
@@ -235,7 +239,14 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Call(self, node):
         fn = FunctionCall(AssignRightVisitor)
         fn.visit(node)
-        fn.line, fn.col = line, col = ExtractCallPosition().visit_Call(node)
+        position, index = ExtractCallPosition().visit_Call(node)
+        if not position in self.matching_parenthesis:
+            # ExtractCallPosition is not able to properly extract the position:
+            # f(x=y), instead of returning the position of (, it returns the position of =
+            keys = self.matching_parenthesis.keys()
+            ind = bisect.bisect_left(keys, position)
+            position = keys[ind + index]
+        fn.line, fn.col = line, col = self.matching_parenthesis[position]
         self.call(node)
         self.generic_visit(node)
         self.function_calls[self.path][line][col] = fn
@@ -257,6 +268,12 @@ class SlicingVisitor(FunctionVisitor):
     def visit_ClassDef(self, node):
         cls = ClassDef(AssignRightVisitor)
         cls.visit(node)
+
+        position = node.lineno, node.col_offset
+        if position in self.matching_parenthesis:
+            # Ignore classes without parenthesis
+            node.lineno, node.col_offset = self.matching_parenthesis[position]
+
         cls.line, cls.col = node.lineno, node.col_offset
 
         self.function_calls_by_line[self.path][node.lineno].append(cls)

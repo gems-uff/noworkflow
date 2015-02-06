@@ -10,8 +10,11 @@ import ast
 import dis
 import types
 import itertools
+import tokenize
 
-from ..cross_version import cross_compile
+from collections import OrderedDict
+
+from ..cross_version import cross_compile, StringIO
 
 
 class ExtractCallPosition(ast.NodeVisitor):
@@ -19,6 +22,7 @@ class ExtractCallPosition(ast.NodeVisitor):
     def __init__(self):
         self.col = 50000
         self.first = True
+        self.index = -1
 
     def generic_visit(self, node):
         try:
@@ -44,7 +48,8 @@ class ExtractCallPosition(ast.NodeVisitor):
             self.visit_maybe(node.kwargs)
             if self.col == 50000:
                 self.col = node.col_offset
-            return (node.lineno, self.col)
+                self.index = 0
+            return (node.lineno, self.col), self.index
         self.generic_visit(node)
 
 
@@ -149,3 +154,16 @@ def _visit(obj, visitor, mode="exec", recurse=False):
         for constant in obj.co_consts:
             if type(constant) is type(obj):
                 _visit(constant, visitor, mode, recurse)
+
+def extract_matching_parenthesis(code):
+    result = {}
+    stack = []
+    f = StringIO(code)
+    for tok in tokenize.generate_tokens(f.readline):
+        t_type, t_string, t_srow_scol, t_erow_ecol, t_line = tok
+        if t_type == tokenize.OP:
+            if t_string == '(':
+                stack.append(t_srow_scol)
+            elif t_string == ')':
+                result[stack.pop()] = t_srow_scol
+    return OrderedDict(sorted(result.items()))
