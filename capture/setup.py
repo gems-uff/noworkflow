@@ -16,7 +16,7 @@ def recursive_path(pack, path):
 
 setup(
     name = "noworkflow",
-    version = "0.6.0",
+    version = "0.7.0",
     packages = find_packages(),
     package_data = {
         'noworkflow': [
