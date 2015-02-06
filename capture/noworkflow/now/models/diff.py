@@ -55,6 +55,30 @@ class fadict(dict):
 
 
 class Diff(object):
+    """ This model represents a diff between two trials
+    Initialize it by passing both trials ids:
+        diff = Diff(2)
+
+    There are two visualization modes for the graph:
+        exact match: calls are only combined when all the sub-call match
+            diff.graph_type = 0
+        combined: calls are combined without considering the sub-calls
+            diff.graph_type = 1
+
+    There are also three visualization modes for the diff:
+        combine graphs: combines both trial graphs
+            diff.display_mode = 0
+        side by side: displays both graphs side by side
+            diff.display_mode = 1
+        combined and side by side: combine graphs and displays both separated graphs
+            diff.display_mode = 2
+
+
+    You can change the graph width and height by the variables:
+        diff.graph_width = 600
+        diff.graph_height = 400
+    """
+
 
     def __init__(self, trial_id1, trial_id2, exit=False):
         self.trial1 = Trial(trial_id1, exit=exit)
@@ -77,25 +101,31 @@ class Diff(object):
 
 
     def trial(self):
+        """ Returns a tuple with the information of both trials """
         return diff_dict(self.trial1.info(), self.trial2.info())
 
     def modules(self):
+        """ Diffs modules from trials """
         fn = lambda x: hashabledict(x)
         return diff_set(
             set(self.trial1.modules(fn)[1]),
             set(self.trial2.modules(fn)[1]))
 
     def environment(self):
+        """ Diffs environment variables """
         return diff_set(
             dict_to_set(self.trial1.environment()),
             dict_to_set(self.trial2.environment()))
 
     def file_accesses(self):
+        """ Diffs file accesses """
         return diff_set(
             set(fadict(fa) for fa in self.trial1.file_accesses()),
             set(fadict(fa) for fa in self.trial2.file_accesses()))
 
     def independent_naive_activation_graph(self):
+        """ Generates an activation graph for both trials and transforms it into an
+            exact match graph supported by d3 """
         if not self._independent_cache:
             g1 = self.trial1.independent_activation_graph()
             g2 = self.trial2.independent_activation_graph()
@@ -103,6 +133,8 @@ class Diff(object):
         return self._independent_cache
 
     def combined_naive_activation_graph(self):
+        """ Generates an activation graph for both trials and transforms it into an
+            combined graph supported by d3 """
         if not self._combined_cache:
             g1 = self.trial1.combined_activation_graph()
             g2 = self.trial2.combined_activation_graph()
