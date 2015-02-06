@@ -10,6 +10,7 @@ import ast
 import sys
 from .context import Context
 from .utils import diss
+from ..cross_version import cross_compile
 from ..persistence import persistence
 try:
     from cStringIO import StringIO
@@ -85,7 +86,7 @@ class FunctionVisitor(ast.NodeVisitor):
         pass
 
     def extract_disasm(self):
-        self.metascript['compiled'] = compile(
+        self.metascript['compiled'] = cross_compile(
             self.metascript['code'], self.metascript['path'], 'exec')
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()

@@ -11,6 +11,9 @@ import dis
 import types
 import itertools
 
+from ..cross_version import cross_compile
+
+
 class ExtractCallPosition(ast.NodeVisitor):
 
     def __init__(self):
@@ -123,7 +126,7 @@ def get_code_object(obj, compilation_mode="exec"):
         return obj.__code__
     elif isinstance(obj, str):
         try:
-            return compile(obj, "<string>", compilation_mode)
+            return cross_compile(obj, "<string>", compilation_mode)
         except SyntaxError as error:
             raise ValueError("syntax error in passed string")
     else:

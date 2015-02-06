@@ -16,6 +16,7 @@ from .. import prov_deployment
 from .. import prov_execution
 from .. import utils
 from ..persistence import persistence
+from ..cross_version import cross_compile
 from .command import Command
 
 def non_negative(string):
@@ -103,7 +104,7 @@ class Run(Command):
         utils.print_msg('  executing the script')
         try:
             if metascript['compiled'] is None:
-                metascript['compiled'] = compile(
+                metascript['compiled'] = cross_compile(
                     metascript['code'], metascript['path'], 'exec')
             exec(metascript['compiled'], __main__.__dict__)
 
