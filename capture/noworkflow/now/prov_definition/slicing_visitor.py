@@ -130,17 +130,19 @@ def add_all_names(dest, origin):
 
 
 def assign_dependencies(target, value, dependencies, conditions, loop,
-                        aug=False):
+                        aug=False, testlist_star_expr=True):
     left, right = AssignLeftVisitor(), AssignRightVisitor()
 
-    if tuple_or_list(target) and tuple_or_list(value):
+    if testlist_star_expr and tuple_or_list(target) and tuple_or_list(value):
         for i, targ in enumerate(target.elts):
             assign_dependencies(targ, value.elts[i], dependencies, conditions,
-                                loop)
+                                loop, testlist_star_expr=True)
         return
 
     left.visit(target)
-    right.visit(value)
+    if value:
+        right.visit(value)
+
     for name, ctx, lineno in left.names:
         lineno = right.line if right.line != -1 else lineno
         self_reference = False
@@ -198,7 +200,8 @@ class SlicingVisitor(FunctionVisitor):
         assign_dependencies(node.target, node.value,
                             self.dependencies,
                             self.condition.flat(),
-                            self.loop.flat(), aug=True)
+                            self.loop.flat(), aug=True,
+                            testlist_star_expr=False)
         self.generic_visit(node)
 
     def visit_Assign(self, node):
@@ -214,7 +217,8 @@ class SlicingVisitor(FunctionVisitor):
         assign_dependencies(node.target, node.iter,
                             self.dependencies,
                             self.condition.flat(),
-                            self.loop.flat())
+                            self.loop.flat(),
+                            testlist_star_expr=False)
         self.loop.enable()
         self.visit(node.target)
         self.loop.disable()
@@ -253,7 +257,8 @@ class SlicingVisitor(FunctionVisitor):
                             node.value,
                             self.dependencies,
                             self.condition.flat(),
-                            self.loop.flat())
+                            self.loop.flat(),
+                            testlist_star_expr=False)
         if node.value:
             self.visit(node.value)
 
@@ -293,7 +298,7 @@ class SlicingVisitor(FunctionVisitor):
         self.generic_visit(node)
         if node.msg:
             self.add_call_function(node, Assert, node.msg)
-            
+
         # ToDo: with msg self.function_calls_list.append(cls)
 
     def teardown(self):

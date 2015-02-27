@@ -14,9 +14,18 @@ def recursive_path(pack, path):
             matches.append(os.path.join(root, filename)[len(pack) + 1:])
     return matches
 
+try:
+   import pypandoc
+   long_description = pypandoc.convert('../README.md', 'rst')
+except (IOError, ImportError):
+   long_description = (
+        "Supporting infrastructure to run scientific experiments "
+        "without a scientific workflow management system.")
+
+
 setup(
     name = "noworkflow",
-    version = "0.7.1",
+    version = "0.7.2",
     packages = find_packages(),
     package_data = {
         'noworkflow': [
@@ -30,6 +39,7 @@ setup(
     author_email = "leomurta@ic.uff.br",
     description = "Supporting infrastructure to run scientific experiments "
                   "without a scientific workflow management system.",
+    long_description = long_description,
     license = "MIT",
     keywords = "scientific experiments provenance python",
     url = "https://github.com/gems-uff/noworkflow",

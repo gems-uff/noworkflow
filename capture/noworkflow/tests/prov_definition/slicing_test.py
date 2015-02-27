@@ -61,6 +61,14 @@ class TestSlicingDependencies(unittest.TestCase):
             self.visitor.visit(tree)
             self.assertEqual(['a', 'b', 'c'], self.dependencies(1)['i'])
 
+        def test_for2(self):
+            tree = self.parse("for i, j in [b, c]:\n"
+                             "    pass")
+            self.visitor.visit(tree)
+            self.assertEqual(['b', 'c'], self.dependencies(1)['i'])
+            self.assertEqual(['b', 'c'], self.dependencies(1)['j'])
+
+
         def test_augmented_assignment(self):
             tree = self.parse("a += 1\n"
                              "b += a")
@@ -209,6 +217,14 @@ class TestSlicingDependencies(unittest.TestCase):
             code = ("def f(a):\n"
                     "    if a:\n"
                     "        return 2")
+            tree = self.parse(code)
+            self.visitor.visit(tree)
+            self.assertEqual(['a'], self.dependencies(3)['return'])
+
+        def test_return3(self):
+            code = ("def f(a):\n"
+                    "    if a:\n"
+                    "        return")
             tree = self.parse(code)
             self.visitor.visit(tree)
             self.assertEqual(['a'], self.dependencies(3)['return'])
