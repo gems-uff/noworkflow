@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import ast
+import sys
 import dis
 import types
 import itertools
@@ -15,42 +16,6 @@ import tokenize
 from collections import OrderedDict
 
 from ..cross_version import cross_compile, StringIO
-
-
-class ExtractCallPosition(ast.NodeVisitor):
-
-    def __init__(self):
-        self.col = 50000
-        self.first = True
-        self.index = -1
-
-    def generic_visit(self, node):
-        try:
-            self.col = min(self.col, node.col_offset - 1)
-        except:
-            pass
-        ast.NodeVisitor.generic_visit(self, node)
-
-    def visit_list(self, node):
-        for arg in node:
-            self.visit(arg)
-
-    def visit_maybe(self, node):
-        if node:
-            self.visit(node)
-
-    def visit_Call(self, node):
-        if self.first:
-            self.first = False
-            self.visit_list(node.args)
-            self.visit_maybe(node.starargs)
-            self.visit_list(node.keywords)
-            self.visit_maybe(node.kwargs)
-            if self.col == 50000:
-                self.col = node.col_offset
-                self.index = 0
-            return (node.lineno, self.col), self.index
-        self.generic_visit(node)
 
 
 class FunctionCall(ast.NodeVisitor):
@@ -63,9 +28,6 @@ class FunctionCall(ast.NodeVisitor):
         self.kwargs = []
         self.result = None
         self.visitor_class = visitor_class
-        self.line = -1
-        self.col = -1
-        self.lasti = -1
 
     def all_args(self):
         return list(itertools.chain(
@@ -94,23 +56,70 @@ class FunctionCall(ast.NodeVisitor):
     def visit_keyword(self, node):
         self.keywords[node.arg] = self.use_visitor(node.value)
 
+    def info(self):
+        result = ("line={}, col={}, "
+                  "func={}, args={}, keywords={}, *args={}, **kwargs={}")
+        return result.format(self.line, self.col, self.func, self.args,
+                             self.keywords, self.starargs, self.kwargs)
+
     def __repr__(self):
-        return "F(func={}, args={}, keywords={}, *args={}, **kwargs={})"\
-            .format(self.func, self.args, self.keywords,
-                    self.starargs, self.kwargs)
+        return "F({})".format(self.info())
 
 
 class ClassDef(FunctionCall):
 
-    def __init__(self, visitor):
-        super(ClassDef, self).__init__(visitor)
-        self.result = None
-        self.line = -1
-        self.col = -1
-        self.lasti = -1
-
     def __repr__(self):
         return "Class()"
+
+
+class Decorator(FunctionCall):
+
+    def __init__(self, *args, **kwargs):
+        super(Decorator, self).__init__(*args, **kwargs)
+        self.fn = True
+
+    def __repr__(self):
+        return "Decorator({})".format(self.info())
+
+    def visit_Name(self, node):
+        self.func = self.use_visitor(node)
+        self.fn = False
+
+    def info(self):
+        if self.fn:
+            return super(Decorator, self).info()
+        return "line={}, col={}, name={}".format(
+            self.line, self.col, self.func)
+
+
+class Generator(FunctionCall):
+
+    def __init__(self, *args, **kwargs):
+        self.type = args[-1]
+        args = args[:-1]
+        super(Generator, self).__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return "Generator({})".format(self.info())
+
+    def info(self):
+        return "line={}, col={}, type={}".format(
+            self.line, self.col, self.type)
+
+
+class Assert(FunctionCall):
+
+    def __init__(self, *args, **kwargs):
+        self.msg = args[-1]
+        args = args[:-1]
+        super(Assert, self).__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return "Assert({})".format(self.info())
+
+    def info(self):
+        return "line={}, col={}, msg={}".format(
+            self.line, self.col, self.msg)
 
 
 def index(lis, alternatives):
@@ -155,15 +164,12 @@ def _visit(obj, visitor, mode="exec", recurse=False):
             if type(constant) is type(obj):
                 _visit(constant, visitor, mode, recurse)
 
-def extract_matching_parenthesis(code):
-    result = {}
-    stack = []
-    f = StringIO(code)
-    for tok in tokenize.generate_tokens(f.readline):
-        t_type, t_string, t_srow_scol, t_erow_ecol, t_line = tok
-        if t_type == tokenize.OP:
-            if t_string == '(':
-                stack.append(t_srow_scol)
-            elif t_string == ')':
-                result[stack.pop()] = t_srow_scol
-    return OrderedDict(sorted(result.items()))
+def safeget(container, index):
+    try:
+        return container[index]
+    except IndexError as err:
+        if not err.args:
+            err.args = ('',)
+        err.args = (err.args[0] + '\n Get\n  Index {}\n  Container {}'.format(
+            index, container),) + err.args[1:]
+        raise err

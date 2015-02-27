@@ -7,13 +7,15 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import sys
-import ast
+import pyposast
 from datetime import datetime
 
 from ..utils import print_msg
 from ..persistence import persistence
 from .function_visitor import FunctionVisitor
 from .slicing_visitor import SlicingVisitor
+from .definition import Definition
+from .utils import FunctionCall, ClassDef, Decorator, Generator, Assert
 
 
 
@@ -24,7 +26,7 @@ def visit_ast(metascript):
         name_refs[path]: map of identifiers in categories Load, Store
         dependencies[path]: map of dependencies
     '''
-    tree = ast.parse(metascript['code'], metascript['path'])
+    tree = pyposast.parse(metascript['code'], metascript['path'])
     visitor = SlicingVisitor(metascript)
     visitor.result = visitor.visit(tree)
     visitor.extract_disasm()
@@ -47,10 +49,11 @@ def collect_provenance(args, metascript):
             raise e
 
         sys.exit(1)
-
+    definition = Definition(metascript)
     print_msg('  registering user-defined functions')
     visitor = visit_ast(metascript)
     persistence.store_function_defs(metascript['trial_id'], visitor.functions)
     if args.disasm:
         print('\n'.join(visitor.disasm))
-    metascript['definition'] = visitor
+    definition.add_visitor(visitor)
+    metascript['definition'] = definition

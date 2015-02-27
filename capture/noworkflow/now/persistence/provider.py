@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import sqlite3
+import sys
 
 from os.path import join, isdir, exists
 from os import makedirs

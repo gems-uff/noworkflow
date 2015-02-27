@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import ast
 import sys
+from collections import defaultdict
 from .context import Context
 from .utils import diss
 from ..cross_version import cross_compile, StringIO
@@ -92,3 +93,17 @@ class FunctionVisitor(ast.NodeVisitor):
         sys.stdout = old_stdout
 
         self.disasm = mystdout.getvalue().split('\n')
+
+        # Sort lines
+        lines = defaultdict(list)
+        line = -1
+        for disasm in self.disasm:
+            num = disasm[:8].strip()
+            if num:
+                line = int(num)
+            lines[line].append(disasm)
+
+        keys = sorted(lines.keys())
+        self.disasm = []
+        for line in keys:
+            self.disasm.extend(lines[line])

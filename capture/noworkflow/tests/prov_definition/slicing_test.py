@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import unittest
-import ast
+import pyposast
 from ...now.persistence import persistence
 from ...now.prov_definition.slicing_visitor import SlicingVisitor
 from ...now.prov_definition.utils import FunctionCall
@@ -20,10 +20,10 @@ NAME = '<unknown>'
 class TestSlicingDependencies(unittest.TestCase):
 
         def dependencies(self, line):
-            return self.visitor.dependencies[NAME][line]
+            return self.visitor.dependencies[line]
 
         def call(self, line, col):
-            return self.visitor.function_calls[NAME][line][col]
+            return self.visitor.function_calls[line][col]
 
         def parse(self, code):
             metascript = {
@@ -33,7 +33,7 @@ class TestSlicingDependencies(unittest.TestCase):
             }
             self.visitor = SlicingVisitor(metascript)
             self.visitor.metascript['code'] = code
-            return ast.parse(code)
+            return pyposast.parse(code)
 
         def test_simple_assignment(self):
             tree = self.parse("a = 1\n"
@@ -96,16 +96,16 @@ class TestSlicingDependencies(unittest.TestCase):
         def test_lambda_assignment(self):
             tree = self.parse("a = (lambda x: x + b)(c)")
             self.visitor.visit(tree)
-            self.assertEqual([(1, 21)], self.dependencies(1)['a'])
-            self.assertEqual([['c']], self.call(1, 21).args)
+            self.assertEqual([(1, 24)], self.dependencies(1)['a'])
+            self.assertEqual([['c']], self.call(1, 24).args)
 
         def test_lambda2_assignment(self):
             tree = self.parse("a = (lambda x: (lambda y: x + y))(b)(c)")
             self.visitor.visit(tree)
-            self.assertEqual([(1, 36)], self.dependencies(1)['a'])
-            self.assertEqual([['c']], self.call(1, 36).args)
-            self.assertEqual([(1, 33)], self.call(1, 36).func)
-            self.assertEqual([['b']], self.call(1, 33).args)
+            self.assertEqual([(1, 39)], self.dependencies(1)['a'])
+            self.assertEqual([['c']], self.call(1, 39).args)
+            self.assertEqual([(1, 36)], self.call(1, 39).func)
+            self.assertEqual([['b']], self.call(1, 36).args)
 
         def test_list_comprehension_assignment(self):
             tree = self.parse("a = [i + b for i in c if i + d == b]")
@@ -125,7 +125,7 @@ class TestSlicingDependencies(unittest.TestCase):
         def test_generator_assignment(self):
             tree = self.parse("a = sum(i for i in c)")
             self.visitor.visit(tree)
-            self.assertEqual((1, 7), self.dependencies(1)['a'][0])
+            self.assertEqual((1, 21), self.dependencies(1)['a'][0])
 
         def test_dict_comprehension_assignment(self):
             tree = self.parse("a = {i:i**b for i in c}")
@@ -135,14 +135,14 @@ class TestSlicingDependencies(unittest.TestCase):
         def test_function_call_assignment(self):
             tree = self.parse("a = fn(b=c)")
             self.visitor.visit(tree)
-            self.assertEqual((1, 8), self.dependencies(1)['a'][0])
-            self.assertEqual({'b':['c']}, self.call(1, 8).keywords)
+            self.assertEqual((1, 11), self.dependencies(1)['a'][0])
+            self.assertEqual({'b':['c']}, self.call(1, 11).keywords)
 
         def test_nested_call(self):
             tree = self.parse("a = fn(fn(x))")
             self.visitor.visit(tree)
-            self.assertEqual((1, 6), self.dependencies(1)['a'][0])
-            self.assertEqual([[(1, 9)]], self.call(1, 6).args)
+            self.assertEqual((1, 13), self.dependencies(1)['a'][0])
+            self.assertEqual([[(1, 12)]], self.call(1, 13).args)
 
         def test_while(self):
             tree = self.parse("while i:\n"

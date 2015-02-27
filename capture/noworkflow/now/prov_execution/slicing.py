@@ -15,12 +15,17 @@ from datetime import datetime
 from .profiler import Profiler
 from ..utils import print_fn_msg
 from ..prov_definition import SlicingVisitor
+from ..prov_definition import (FunctionCall, ClassDef, Decorator,
+                               Generator, Assert)
+
 from ..persistence import persistence
 
 try:
     immutable = (bool, numbers.Number, str, unicode)
 except NameError:
     immutable = (bool, numbers.Number, str, bytes)
+
+WITHOUT_PARAMS = (ClassDef, Assert, Generator)
 
 class Variable(object):
     __slots__ = (
@@ -73,11 +78,8 @@ class Tracer(Profiler):
 
     def __init__(self, *args):
         super(Tracer, self).__init__(*args)
-        assert isinstance(self.metascript['definition'], SlicingVisitor), \
-            "Slicing Definition Required"
         definition = self.metascript['definition']
         self.event_map['line'] = self.trace_line
-        self.imports = definition.imports
 
         # Store slicing provenance
         self.variables = ObjectStore(Variable)
@@ -91,13 +93,15 @@ class Tracer(Profiler):
 
         # Useful maps
         # Map of dependencies by line
-        self.line_dependencies = definition.dependencies[self.script]
+        self.line_dependencies = definition.line_dependencies[self.script]
         # Map of name_refs by line
-        self.line_usages = definition.name_refs[self.script]
+        self.line_usages = definition.line_usages[self.script]
         # Map of calls by line and col
-        self.call_by_col = definition.function_calls[self.script]
+        self.call_by_col = definition.call_by_col[self.script]
         # Map of calls by line and lasti
-        self.call_by_lasti = definition.function_calls_by_lasti[self.script]
+        self.call_by_lasti = definition.call_by_lasti[self.script]
+        # Set of imports
+        self.imports = definition.imports[self.script]
 
     def add_variable(self, name, line, f_locals, value='--check--'):
         """ Adds variable """
@@ -245,10 +249,14 @@ class Tracer(Profiler):
     def add_argument_variables(self, frame):
         """ Adds argument variables """
         back = frame.f_back
+        call = self.call_by_lasti[back.f_lineno][back.f_lasti]
+        if isinstance(call, WITHOUT_PARAMS):
+            return
+        if isinstance(call, Decorator) and not call.fn:
+            return
         f_locals = frame.f_locals
         match_args = self.match_args
         match_arg = self.match_arg
-        call = self.call_by_lasti[back.f_lineno][back.f_lasti]
         caller, act = self.activation_stack[-2:]
         act_args_index = act.args.index
         line = frame.f_lineno

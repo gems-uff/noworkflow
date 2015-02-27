@@ -14,8 +14,8 @@ from collections import defaultdict
 from ..utils import print_msg
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
-from .utils import (ExtractCallPosition, FunctionCall, ClassDef, index,
-                    extract_matching_parenthesis)
+from .utils import (FunctionCall, ClassDef, Decorator, Generator, Assert,
+                    index, safeget)
 
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -117,7 +117,7 @@ class AssignRightVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node):
         self.max_line(node)
-        self.add(ExtractCallPosition().visit_Call(node), 'fn', node.lineno)
+        self.add(node.uid, 'fn', node.lineno)
 
 
 def tuple_or_list(node):
@@ -164,26 +164,31 @@ class SlicingVisitor(FunctionVisitor):
 
     def __init__(self, *args):
         super(SlicingVisitor, self).__init__(*args)
-        path = self.metascript['path']
-        self.matching_parenthesis = extract_matching_parenthesis(
-            self.metascript['code'])
-        self.path = path
-        self.name_refs = {}
-        self.dependencies = {}
-        self.function_calls = {}
-        self.function_calls_by_lasti = {}
-        self.function_calls_by_line = {}
-        self.name_refs[path] = defaultdict(lambda: {
-                'Load': [], 'Store': [], 'Del': [],
-                'AugLoad': [], 'AugStore': [], 'Param': [],
-            })
-        self.dependencies[path] = defaultdict(lambda: defaultdict(list))
-        self.function_calls[path] = defaultdict(dict)
-        self.function_calls_by_lasti[path] = defaultdict(dict)
-        self.function_calls_by_line[path] = defaultdict(list)
+        self.path = self.metascript['path']
+        self.name_refs = defaultdict(lambda: {
+            'Load': [], 'Store': [], 'Del': [],
+            'AugLoad': [], 'AugStore': [], 'Param': [],
+        })
+        self.dependencies = defaultdict(lambda: defaultdict(list))
+        self.function_calls = defaultdict(dict)
+        self.function_calls_by_lasti = defaultdict(dict)
+        self.function_calls_list = []
         self.imports = set()
         self.condition = NamedContext()
         self.loop = NamedContext()
+
+    def add_call_function(self, node, cls, *args):
+        function_call = cls(AssignRightVisitor, *args)
+        function_call.visit(node)
+        function_call.line, function_call.col = node.uid
+        self.function_calls_list.append(function_call)
+        return function_call
+
+    def add_decorator(self, node):
+        self.add_call_function(node, Decorator)
+
+    def add_generator(self, typ, node):
+        self.add_call_function(node, Generator, typ)
 
     def visit_stmts(self, stmts):
         for stmt in stmts:
@@ -191,7 +196,7 @@ class SlicingVisitor(FunctionVisitor):
 
     def visit_AugAssign(self, node):
         assign_dependencies(node.target, node.value,
-                            self.dependencies[self.path],
+                            self.dependencies,
                             self.condition.flat(),
                             self.loop.flat(), aug=True)
         self.generic_visit(node)
@@ -199,7 +204,7 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Assign(self, node):
         for target in node.targets:
             assign_dependencies(target, node.value,
-                                self.dependencies[self.path],
+                                self.dependencies,
                                 self.condition.flat(),
                                 self.loop.flat())
 
@@ -207,7 +212,7 @@ class SlicingVisitor(FunctionVisitor):
 
     def visit_For(self, node):
         assign_dependencies(node.target, node.iter,
-                            self.dependencies[self.path],
+                            self.dependencies,
                             self.condition.flat(),
                             self.loop.flat())
         self.loop.enable()
@@ -232,31 +237,21 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Name(self, node):
         self.condition.add(node.id)
         self.loop.add(node.id)
-        self.name_refs[self.path][node.lineno][type(node.ctx).__name__]\
+        self.name_refs[node.lineno][type(node.ctx).__name__]\
             .append(node.id)
         self.generic_visit(node)
 
     def visit_Call(self, node):
-        fn = FunctionCall(AssignRightVisitor)
-        fn.visit(node)
-        position, index = ExtractCallPosition().visit_Call(node)
-        if not position in self.matching_parenthesis:
-            # ExtractCallPosition is not able to properly extract the position:
-            # f(x=y), instead of returning the position of (, it returns the position of =
-            keys = self.matching_parenthesis.keys()
-            ind = bisect.bisect_left(keys, position)
-            position = keys[ind + index]
-        fn.line, fn.col = line, col = self.matching_parenthesis[position]
         self.call(node)
         self.generic_visit(node)
-        self.function_calls[self.path][line][col] = fn
-        self.function_calls_by_line[self.path][line].append(fn)
+        fn = self.add_call_function(node, FunctionCall)
+        self.function_calls[fn.line][fn.col] = fn
 
     def visit_Return(self, node):
         assign_dependencies(ast.Name('return', ast.Store(),
                                      lineno=node.lineno),
                             node.value,
-                            self.dependencies[self.path],
+                            self.dependencies,
                             self.condition.flat(),
                             self.loop.flat())
         if node.value:
@@ -265,21 +260,41 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Yield(self, node):
         self.visit_Return(node)
 
+
     def visit_ClassDef(self, node):
-        cls = ClassDef(AssignRightVisitor)
-        cls.visit(node)
+        self.generic_visit(node)
+        self.add_call_function(node, ClassDef)
 
-        position = node.lineno, node.col_offset
-        if position in self.matching_parenthesis:
-            # Ignore classes without parenthesis
-            node.lineno, node.col_offset = self.matching_parenthesis[position]
+        for dec_node in node.decorator_list:
+            self.add_decorator(dec_node)
 
-        cls.line, cls.col = node.lineno, node.col_offset
+    def visit_SetComp(self, node):
+        self.generic_visit(node)
+        for gen_node in node.generators:
+            self.add_generator('Set', gen_node)
 
-        self.function_calls_by_line[self.path][node.lineno].append(cls)
+    def visit_DictComp(self, node):
+        self.generic_visit(node)
+        for gen_node in node.generators:
+            self.add_generator('Dict', gen_node)
+
+    def visit_GeneratorExp(self, node):
+        self.generic_visit(node)
+        for gen_node in node.generators:
+            self.add_generator('Generator', gen_node)
+
+    def visit_FunctionDef(self, node):
         self.generic_visit(node)
 
+        for dec_node in node.decorator_list:
+            self.add_decorator(dec_node)
 
+    def visit_Assert(self, node):
+        self.generic_visit(node)
+        if node.msg:
+            self.add_call_function(node, Assert, node.msg)
+            
+        # ToDo: with msg self.function_calls_list.append(cls)
 
     def teardown(self):
         """Matches AST call order to call order in disassembly
@@ -295,25 +310,24 @@ class SlicingVisitor(FunctionVisitor):
         self.disasm = []
 
         line = -1
-        col = -1
+        col = 0
         for disasm in output:
             num = disasm[:8].strip()
             if num:
                 line = int(num)
-                calls_by_lasti = self.function_calls_by_lasti[self.path][line]
-                calls_by_line = self.function_calls_by_line[self.path][line]
-                col = 0
             splitted = disasm.split()
             i = index(splitted, ('CALL_FUNCTION', 'CALL_FUNCTION_VAR',
                                  'CALL_FUNCTION_KW', 'CALL_FUNCTION_VAR_KW'))
 
             if not i is None:
                 f_lasti = int(splitted[i-1])
-                calls_by_lasti[f_lasti] = calls_by_line[col]
-                calls_by_line[col].lasti = f_lasti
+                call = safeget(self.function_calls_list, col)
+                call.lasti = f_lasti
+                self.function_calls_by_lasti[line][f_lasti] = call
+
                 col += 1
                 self.disasm.append(
-                    "{} | {}".format(disasm, calls_by_lasti[f_lasti]))
+                    "{} | {}".format(disasm, call))
             else:
                 self.disasm.append(disasm)
 

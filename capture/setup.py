@@ -16,7 +16,7 @@ def recursive_path(pack, path):
 
 setup(
     name = "noworkflow",
-    version = "0.7.0",
+    version = "0.7.1",
     packages = find_packages(),
     package_data = {
         'noworkflow': [
@@ -33,6 +33,7 @@ setup(
     license = "MIT",
     keywords = "scientific experiments provenance python",
     url = "https://github.com/gems-uff/noworkflow",
+    install_requires=['pyposast'],
     extras_require = {
         'vis': ['flask']
     }
