@@ -33,7 +33,7 @@ class Provider(object):
         self.base_path = None # Exeution path
         self.provenance_path = None  # Base .noworflow path
         self.content_path = None # Base path for storing content of files
-        self.parent_config_path = None # Base path for checkout references
+        self.parent_config_path = None # Base path for restore references
         self.db_conn = None # Connection to the database
 
         self.std_open = open # Original Python open function.

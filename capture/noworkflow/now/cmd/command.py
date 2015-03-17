@@ -14,7 +14,11 @@ class Command(object):
         self.help = help
 
     def create_parser(self, subparsers):
-        self.parser = subparsers.add_parser(self.cmd, help=self.help)
+        kwargs = {}
+        if self.help:
+            kwargs['help'] = self.help
+        self.parser = subparsers.add_parser(self.cmd, **kwargs)
+    
         self.add_arguments()
         self.parser.set_defaults(func=self.execute)
 

@@ -16,14 +16,14 @@ from ..persistence import persistence
 from ..models.trial import Trial
 from .command import Command
 
-class Checkout(Command):
+class Restore(Command):
 
     def add_arguments(self):
         add_arg = self.parser.add_argument
         add_arg('trial', type=int, nargs='?',
                 help='trial id or none for last trial')
         add_arg('-s', '--script',
-                help='python script to be checked out')
+                help='python script to be restored')
         add_arg('-b', '--bypass-modules', action='store_true',
                 help='bypass module dependencies analysis, assuming that no '
                      'module changes occurred since last execution')
@@ -45,7 +45,7 @@ class Checkout(Command):
             now = datetime.now()
             tid = persistence.store_trial(
                 now, trial.script, code,
-                '<checkout {}>'.format(trial.id),
+                '<restore {}>'.format(trial.id),
                 args.bypass_modules, run=False)
             prov_deployment.collect_provenance(args, {
                 'trial_id': tid,

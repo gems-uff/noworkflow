@@ -13,7 +13,7 @@ from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
 from .cmd_export import Export
-from .cmd_checkout import Checkout
+from .cmd_restore import Restore
 from .cmd_vis import Vis
 
 def main():
@@ -26,7 +26,7 @@ def main():
         Show('shows the collected provenance of a trial'),
         Diff('compares the collected provenance of two trials'),
         Export('exports the collected provenance of a trial to Prolog'),
-        Checkout('checkout the files of a trial'),
+        Restore('restore the files of a trial'),
         Vis('visualization tool'),
     ]
     for cmd in commands:
@@ -41,7 +41,7 @@ __all__ = [
     b'Show',
     b'Diff',
     b'Export',
-    b'Checkout',
+    b'Restore',
     b'Vis',
     b'main',
 ]

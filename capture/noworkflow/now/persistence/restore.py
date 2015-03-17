@@ -12,7 +12,7 @@ import json
 from .provider import Provider, row_to_dict
 
 
-class CheckoutProvider(Provider):
+class RestoreProvider(Provider):
 
     def remove_head(self, trial_id):
         with self.db_conn as db:

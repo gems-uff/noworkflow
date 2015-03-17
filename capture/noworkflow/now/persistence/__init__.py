@@ -11,9 +11,9 @@ from .database import DatabaseProvider
 from .storage import StorageProvider
 from .trial import TrialProvider
 from .run import RunProvider
-from .checkout import CheckoutProvider
+from .restore import RestoreProvider
 
-class Persistence(CheckoutProvider, DatabaseProvider, TrialProvider,
+class Persistence(RestoreProvider, DatabaseProvider, TrialProvider,
 				  RunProvider, StorageProvider):
 	pass
 
