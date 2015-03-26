@@ -157,7 +157,7 @@ We have also a graph visualization implemented in Java, named noWorkflowVis, whi
 IPython Interface
 -----------------
 
-Another way to visualize and query trials is to use IPython notebook.
+Another way to run, visualize, and query trials is to use IPython notebook.
 To install IPython notebook, you can run
 ```bash
 $ pip install ipython[all]
@@ -172,38 +172,89 @@ It will start a local webserver where you can create notebooks and run python co
 
 Before loading anything related to noworkflow on a notebook, you must initialize it:
 ```python
-import noworkflow.now.ipython as nip
-nip.init()
+In  [1]: %load_ext noworkflow
+    ...: import noworkflow.now.ipython as nip
+```
+It is equivalent to:
+```python
+In  [1]: %load_ext noworkflow
+    ...: nip = %nowip
 ```
 
-After that, you can load either the history or a specific trial graph:
-```python
-In [1]:
-  trial = nip.Trial(2) # Loads trial with Id = 2
-  trial # Shows trial graph
+After that, you can either run a new trial or load an existing object (History,Trial,Diff).
 
-In [2]:
-  history = nip.History() # Loads history
-  history # Shows history graph
+There are two ways to run a new trial:
+1- Load an external file
+```python
+In  [1]: arg = 6
+
+In  [2]: trial = %now script1.py $arg
+    ...: trial
+Out [2]: <Trial 5> # Loads the trial object represented as a graph
+```
+2- Load the code inside a cell
+```python
+In  [3]: %%now --name script2 --out=out_var $arg
+    ...: import sys
+    ...: l = range(sys.argv[1])
+    ...: c = sum(l)
+    ...: print(c)
+         6
+Out [3]: <Trial 6> # Loads the trial object represented as a graph
+
+In  [4]: out_var
+Out [4]: "6\n"
+```
+Both modes supports all the `now run` parameters
+It is worth noticing that the noworkflow cannot access ipython variables and ipython cannot access noworkflow variables. To workaround this limitation, it is necessary to pass arguments to the program and parse the output. Pickle may be a good solution for serializing complex objects
+
+Loading existing trials, histories and diffs:
+```python
+In  [5]: trial = nip.Trial(2) # Loads trial with Id = 2
+    ...: trial # Shows trial graph
+Out [5]: <Trial 2>
+
+In  [6]: history = nip.History() # Loads history
+    ...: history # Shows history graph
+Out [6]: <History>
+
+In  [7]: diff = nip.Diff(1, 2) # Loads diff between trial 1 and 2
+    ...: diff # Shows diff graph
+Out [7]: <Diff 1 2>
 ```
 
 There are attributes on those objects to change the graph visualization, width, height and filter values. Please, check the documentation by running the following code on ipython notebook
 ```python
-trial?
-history?
+In  [8]: trial?
+
+In  [9]: history?
 ```
 
 It is also possible to run prolog queries on IPython notebook. To do so, you will need to install SWI-Prolog with shared libraries and the pyswip module: https://github.com/yuce/pyswip/blob/master/INSTALL
 
 To query a specific trial, you can do:
 ```python
-trial.query("activation(1428, X, _, _, _)")
+In  [10]: result = trial.query("activation(_, 550, X, _, _, _)")
+    ...: next(result) # The result is a generator
+Out [10]: {'X': 'range'}
 ```
 
 To check the existing rules, please do:
 ```python
-trial.prolog_rules()
+In  [11]: trial.prolog_rules()
+Out [11]: [...]
 ```
+
+Finally, it is possible to run the CLI commands inside ipython notebook:
+```python
+In  [12]: !now export ${trial.id}
+Out [12]: %
+     ...: % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
+     ...: %
+     ...: ...
+```
+
+Running
 
 
 Included Software

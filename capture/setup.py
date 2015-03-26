@@ -25,7 +25,7 @@ except (IOError, ImportError):
 
 setup(
     name = "noworkflow",
-    version = "0.7.2",
+    version = "0.8.0",
     packages = find_packages(),
     package_data = {
         'noworkflow': [
