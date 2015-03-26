@@ -55,7 +55,7 @@ class IpythonCommandMagic(Command):
         super(Command, self).execute(args)
 
 
-class IpythonExternalRun(IpythonCommandMagic, Run):
+class NowCellScript(IpythonCommandMagic, Run):
     """Run cells with noworkflow in a subprocess
 
     This uses the %%script magic.
@@ -72,6 +72,7 @@ class IpythonExternalRun(IpythonCommandMagic, Run):
            ...: print(sys.argv[2])
         2
         30
+        Out[2]: <Trial 1>
 
     ::
         In [3]: %%now --name script2 -v
@@ -90,11 +91,22 @@ class IpythonExternalRun(IpythonCommandMagic, Run):
         [now]   executing the script
         6
         [now] the execution of trial 2 finished successfully
+        Out[3]: <Trial 2>
+
+        In [4]: trial = _
+
+    ::
+        In [5]: %now script1.py $my_var 30
+        Out[5]: <Trial 1>
+
+    ::
+        In [6]: trial = %now --name script2 script2.py
+        6
 
     """
 
     def add_arguments(self):
-        super(IpythonExternalRun, self).add_arguments()
+        super(NowCellScript, self).add_arguments()
         add_arg = self.add_argument
         add_arg('--out', type=str,
                 help="""The variable in which to store stdout from the script.
@@ -126,27 +138,41 @@ class IpythonExternalRun(IpythonCommandMagic, Run):
         if params:
             argv = argv[:-len(params)]
         # Create tmp file
-        directory = os.path.abspath(os.path.curdir)
+        directory = args.dir or os.path.abspath(os.path.curdir)
         persistence.connect(directory)
-        cell = cell.encode('utf8', 'replace')
-        filename = magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
+        filename = ''
+        if cell:
+            cell = cell.encode('utf8', 'replace')
+            filename = magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
 
         # Set execution line
-        cmd = "now run --create_last --dir {directory} {args} {script} {params}".format(
-            directory=directory,
+        cmd = "now run --create_last {directory} {args} {script} {params}".format(
+            directory='' if args.dir else '--dir {0}'.format(directory),
             args=' '.join(argv),
             script=filename,
             params=' '.join(params)
         )
         script = magic_cls.shell.find_cell_magic('script').__self__
         result = script.shebang(cmd, "")
-        tmp_dir = os.path.dirname(filename)
+        tmp_dir = os.path.dirname(filename or params[0])
 
         try:
             with open(os.path.join(tmp_dir, LAST_TRIAL), 'r') as f:
                 return Trial(trial_id=int(f.read()))
-        except:
-            pass
+        except e:
+            print('Failed', e)
+
+
+class NowIpythonObject(IpythonCommandMagic):
+    """ Returns the noWorkflow IPython Module
+
+        Equivalent to:
+        In [1]: import noworkflow.now.ipython
+    """
+
+    def execute(self, func, line, cell, magic_cls):
+        import noworkflow.now.ipython as nip
+        return nip
 
 
 @magics_class
@@ -155,7 +181,8 @@ class NoworkflowMagics(Magics):
     def __init__(self, shell):
         super(NoworkflowMagics, self).__init__(shell=shell)
         self.commands = [
-            IpythonExternalRun('now', IpythonExternalRun.__doc__)
+            NowCellScript('now', NowCellScript.__doc__, magic_type='line_cell'),
+            NowIpythonObject('nowip', NowIpythonObject.__doc__, magic_type='line'),
         ]
         self._generate_magics()
 
@@ -165,8 +192,9 @@ class NoworkflowMagics(Magics):
     def _generate_magics(self):
         for command in self.commands:
             command.add_arguments()
-            def func(line, cell):
-                return command.execute(func, line, cell, self)
+            def func(line, cell=None, c=command):
+                return c.execute(c.func, line, cell, self)
 
-            func = command.create_magic(func)
-            self.magics[command.magic_type][command.magic] = func
+            command.func = command.create_magic(func)
+            for typ in command.magic_type.split('_'):
+                self.magics[typ][command.magic] = command.func

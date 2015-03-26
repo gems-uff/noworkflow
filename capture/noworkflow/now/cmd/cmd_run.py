@@ -54,10 +54,10 @@ class Run(Command):
                 help='show script disassembly')
         add_arg('--name', type=str,
                 help="set branch name used for tracking history")
-        add_cmd('--create_last', action='store_true')
-        add_cmd('--dir', type=str,
+        add_arg('--dir', type=str,
                 help='set project path. The noworkflow database folder will '
                      'be created in this path. Default to script directory')
+        add_cmd('--create_last', action='store_true')
         add_cmd('script', nargs=argparse.REMAINDER,
                 help='Python script to be executed')
 

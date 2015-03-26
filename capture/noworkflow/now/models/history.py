@@ -141,7 +141,7 @@ class History(object):
         self.data[key] = result
         return result
 
-    def _ipython_display_(self):
+    def _repr_html_(self):
         """ Displays d3 graph on ipython notebook """
         from IPython.display import (
             display_png, display_html, display_latex,
@@ -151,18 +151,8 @@ class History(object):
         import time
 
         uid = str(int(time.time()*1000000))
-        display_html("""
-            <div class="now-history now">
-                <div>
-                    <div class="toolbar">
-                       <a class="toollink" id="restore-history-zoom-{0}" href="#" title="Restore zoom"><i class="fa fa-eye"></i></a>
-                       <input id="show-history-tooltips-{0}" type="checkbox" name="show-history-tooltips" value="show">
-                       <label for="show-history-tooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
-                    </div>
-                    <div id='history-{0}' class="now-history-graph ipython-graph" style="width: {1}px; height: {2}px;"></div>
-                </div>
-            </div>""".format(uid, self.graph_width, self.graph_height), raw=True)
-        display_javascript("""
+
+        javascript = """
             var hg = now_history_graph('#history-{0}', {0}, {1}, {2}, {3}, "#show-history-tooltips-{0}", {{
                 custom_size: function() {{
                     return [{2}, {3}];
@@ -177,7 +167,25 @@ class History(object):
             $('#restore-history-zoom-{0}').on('click', function(e){{
                 hg.graph.reset_zoom();
             }});
-            """.format(
-                uid,
-                json.dumps(self.graph_data()),
-                self.graph_width, self.graph_height), raw=True)
+        """.format(
+            uid,
+            json.dumps(self.graph_data()),
+            self.graph_width, self.graph_height)
+
+        result = """
+            <div class="now-history now">
+                <div>
+                    <div class="toolbar">
+                       <a class="toollink" id="restore-history-zoom-{0}" href="#" title="Restore zoom"><i class="fa fa-eye"></i></a>
+                       <input id="show-history-tooltips-{0}" type="checkbox" name="show-history-tooltips" value="show">
+                       <label for="show-history-tooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
+                    </div>
+                    <div id='history-{0}' class="now-history-graph ipython-graph" style="width: {1}px; height: {2}px;"></div>
+                </div>
+            </div>
+
+            <script>
+            {3}
+            </script>
+        """.format(uid, self.graph_width, self.graph_height, javascript)
+        return result

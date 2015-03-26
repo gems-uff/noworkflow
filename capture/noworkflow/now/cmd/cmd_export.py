@@ -55,8 +55,8 @@ class Export(Command):
         else:
             import IPython.nbformat.current as nbf
             if args.trial == "history":
-                nb = nbf.reads((u"import noworkflow.now.ipython as nip\n"
-                                u"nip.init()\n"
+                nb = nbf.reads((u"%load_ext noworkflow\n"
+                                u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"history = nip.History()\n"
                                 u"# history.graph_width = 700\n"
@@ -68,8 +68,8 @@ class Export(Command):
                 with open('History.ipynb'.format(args.trial),'w') as ipynb:
                     nbf.write(nb, ipynb, 'ipynb')
             elif isinstance(args.trial, list):
-                nb = nbf.reads((u"import noworkflow.now.ipython as nip\n"
-                                u"nip.init()\n"
+                nb = nbf.reads((u"%load_ext noworkflow\n"
+                                u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"diff = nip.Diff({1}, {2})\n"
                                 u"# diff.graph_type = 0\n"
@@ -81,8 +81,8 @@ class Export(Command):
                 with open('Diff-{1}-{2}.ipynb'.format(*args.trial),'w') as ipynb:
                     nbf.write(nb, ipynb, 'ipynb')
             else:
-                nb = nbf.reads((u"import noworkflow.now.ipython as nip\n"
-                                u"nip.init()\n"
+                nb = nbf.reads((u"%load_ext noworkflow\n"
+                                u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"trial = nip.Trial({})\n"
                                 u"# trial.graph_type = 0\n"

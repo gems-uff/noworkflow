@@ -240,7 +240,7 @@ class Diff(object):
         return result
 
 
-    def _ipython_display_(self):
+    def _repr_html_(self):
         """ Displays d3 graph on ipython notebook """
         from IPython.display import (
             display_png, display_html, display_latex,
@@ -249,7 +249,7 @@ class Diff(object):
 
         uid = str(int(time.time()*1000000))
         disp = self._display_modes[self.display_mode](uid)
-        display_html("""
+        result = """
             <div class="now-trial now">
                 <div>
                     <form class="toolbar">
@@ -258,13 +258,16 @@ class Diff(object):
                     </form>
                     {1}
                 </div>
-            </div>""".format(uid, disp['html']), raw=True)
-        display_javascript("""
-            function trial_custom_mouseover(d, name, show_tooltip) {{}}
-            function trial_custom_mouseout(d) {{}}
+            </div>
 
-            {0}
-        """.format(disp['javascript']), raw=True)
+            <script>
+                function trial_custom_mouseover(d, name, show_tooltip) {{}}
+                function trial_custom_mouseout(d) {{}}
+
+                {2}
+            </script>
+            """.format(uid, disp['html'], disp['javascript'])
+        return result
 
 
 class NaiveGraphDiff(object):
