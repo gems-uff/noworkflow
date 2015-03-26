@@ -18,12 +18,18 @@ class Command(object):
         if self.help:
             kwargs['help'] = self.help
         self.parser = subparsers.add_parser(self.cmd, **kwargs)
-    
+
         self.add_arguments()
         self.parser.set_defaults(func=self.execute)
 
     def add_arguments(self):
         pass
+
+    def add_argument(self, *args, **kwargs):
+        return self.parser.add_argument(*args, **kwargs)
+
+    def add_argument_cmd(self, *args, **kwargs):
+        return self.parser.add_argument(*args, **kwargs)
 
     def execute(self, *args, **kwargs):
         abstract()

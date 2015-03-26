@@ -29,7 +29,8 @@ def non_negative(string):
 class Run(Command):
 
     def add_arguments(self):
-        add_arg = self.parser.add_argument
+        add_arg = self.add_argument
+        add_cmd = self.add_argument_cmd
         add_arg('-v', '--verbose', action='store_true',
                 help='increase output verbosity')
         add_arg('-b', '--bypass-modules', action='store_true',
@@ -47,12 +48,16 @@ class Run(Command):
                 help='execution provenance provider. (defaults to Profiler)')
         add_arg('--disasm', action='store_true',
                 help='show script disassembly')
-        add_arg('script', nargs=argparse.REMAINDER,
+        add_arg('--name', type=str,
+                help="set branch name used for tracking history")
+        add_cmd('--dir', type=str,
+                help='set project path. The noworkflow database folder will '
+                     'be created in this path. Default to script directory')
+        add_cmd('script', nargs=argparse.REMAINDER,
                 help='Python script to be executed')
 
     def execute(self, args):
         utils.verbose = args.verbose
-
         utils.print_msg('removing noWorkflow boilerplate')
 
         args_script = args.script
@@ -62,9 +67,10 @@ class Run(Command):
             utils.print_msg('the script does not exist', True)
             sys.exit(1)
 
+        script_dir = args.dir or os.path.dirname(args.script)
+
         # Replace now's dir with script's dir in front of module search path.
-        script_dir = os.path.dirname(args.script)
-        sys.path[0] = script_dir
+        sys.path[0] = os.path.dirname(args.script)
 
         # Clear argv
         sys.argv = args_script
@@ -83,6 +89,7 @@ class Run(Command):
                 'path': args.script,
                 'compiled': None,
                 'definition': None,
+                'name': args.name or os.path.basename(sys.argv[0])
             }
 
         self.run(script_dir, args, metascript, __main__)

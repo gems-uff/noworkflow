@@ -32,8 +32,7 @@ app = WebServer().app
 def connection(func):
     @functools.wraps(func)
     def inner(*args, **kwargs):
-        cwd = os.getcwd()
-        persistence.connect_existing(cwd)
+        persistence.connect_existing(app.dir)
         return func(*args, **kwargs)
     return inner
 

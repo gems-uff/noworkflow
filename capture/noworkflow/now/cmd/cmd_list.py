@@ -15,8 +15,14 @@ from .command import Command
 
 class List(Command):
 
+    def add_arguments(self):
+        add_arg = self.add_argument
+        add_arg('--dir', type=str,
+                help='set project path where is the database. Default to '
+                     'current directory')
+
     def execute(self, args):
-        persistence.connect_existing(os.getcwd())
+        persistence.connect_existing(args.dir or os.getcwd())
         print_msg('trials available in the provenance store:', True)
         for trial in persistence.load('trial'):
             text = '  Trial {id}: {script} {arguments}'.format(**trial)

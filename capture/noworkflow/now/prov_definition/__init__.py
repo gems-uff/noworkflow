@@ -38,7 +38,7 @@ def collect_provenance(args, metascript):
     now = datetime.now()
     try:
         metascript['trial_id'] = persistence.store_trial(
-            now, sys.argv[0], metascript['code'], ' '.join(sys.argv[1:]),
+            now, metascript['name'], metascript['code'], ' '.join(sys.argv[1:]),
             args.bypass_modules)
     except TypeError as e:
         if args.bypass_modules:

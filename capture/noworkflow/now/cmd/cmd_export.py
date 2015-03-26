@@ -31,7 +31,7 @@ def int_or_type(string):
 class Export(Command):
 
     def add_arguments(self):
-        add_arg = self.parser.add_argument
+        add_arg = self.add_argument
         add_arg('-r', '--rules', action='store_true',
                 help='also exports inference rules')
         add_arg('-i', '--ipython', action='store_true',
@@ -40,9 +40,12 @@ class Export(Command):
                 help='trial id or none for last trial. If you are generation '
                      'ipython notebook files, it is also possible to use "history"'
                      'or "diff:<trial_id_1>:<trial_id_2>"')
+        add_arg('--dir', type=str,
+                help='set project path where is the database. Default to '
+                     'current directory')
 
     def execute(self, args):
-        persistence.connect_existing(os.getcwd())
+        persistence.connect_existing(args.dir or os.getcwd())
         if not args.ipython:
             trial = Trial(trial_id=args.trial, exit=True)
             trial_prolog = TrialProlog(trial)

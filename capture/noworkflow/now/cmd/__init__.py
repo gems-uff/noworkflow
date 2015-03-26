@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import argparse
 
 from .cmd_run import Run
+from .command import Command
 from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
@@ -36,6 +37,7 @@ def main():
     args.func(args)
 
 __all__ = [
+    b'Command',
     b'Run',
     b'List',
     b'Show',

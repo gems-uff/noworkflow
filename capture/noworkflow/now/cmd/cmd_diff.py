@@ -18,16 +18,19 @@ from .command import Command
 class Diff(Command):
 
     def add_arguments(self):
-        add_arg = self.parser.add_argument
+        add_arg = self.add_argument
         add_arg('trial', type=int, nargs=2,
                 help='trial id to be compared')
         add_arg('-m', '--modules', action='store_true',
                 help='compare module dependencies')
         add_arg('-e', '--environment', action='store_true',
                 help='compare environment conditions')
+        add_arg('--dir', type=str,
+                help='set project path where is the database. Default to '
+                     'current directory')
 
     def execute(self, args):
-        persistence.connect_existing(os.getcwd())
+        persistence.connect_existing(args.dir or os.getcwd())
         diff = DiffModel(args.trial[0], args.trial[1], exit=True)
         self.diff_trials(diff)
 

@@ -19,7 +19,7 @@ from .command import Command
 class Restore(Command):
 
     def add_arguments(self):
-        add_arg = self.parser.add_argument
+        add_arg = self.add_argument
         add_arg('trial', type=int, nargs='?',
                 help='trial id or none for last trial')
         add_arg('-s', '--script',
@@ -31,6 +31,9 @@ class Restore(Command):
                 help='restore local modules')
         add_arg('-i', '--input', action='store_true',
                 help='restore input files')
+        add_arg('--dir', type=str,
+                help='set project path where is the database. Default to '
+                     'current directory')
 
     def create_backup(self, trial, args):
         if not os.path.isfile(trial.script):
@@ -55,7 +58,6 @@ class Restore(Command):
             })
             utils.print_msg('Backup Trial {} created'.format(tid), True)
 
-
     def restore(self, path, code_hash, trial_id):
         load_file = persistence.get(code_hash)
         with open(path, 'wb') as f:
@@ -63,9 +65,8 @@ class Restore(Command):
         utils.print_msg('File {} from trial {} restored'.format(
             path, trial_id), True)
 
-
     def execute(self, args):
-        persistence.connect_existing(os.getcwd())
+        persistence.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_id=args.trial, script=args.script, exit=True)
         self.create_backup(trial, args)
 

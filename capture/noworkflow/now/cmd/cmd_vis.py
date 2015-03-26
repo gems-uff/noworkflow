@@ -16,13 +16,16 @@ from .command import Command
 class Vis(Command):
 
     def add_arguments(self):
-        add_arg = self.parser.add_argument
+        add_arg = self.add_argument
         add_arg('-p', '--port', nargs='?', type=int, default=5000,
                 help='sets server port')
         add_arg('-d', '--debug', action='store_true',
                 help='debug mode')
         add_arg('-b', '--browser', action='store_true',
                 help='opens browser')
+        add_arg('--dir', type=str,
+                help='set project path where is the database. Default to '
+                     'current directory')
 
     def execute(self, args):
         if args.browser:
@@ -30,4 +33,5 @@ class Vis(Command):
             print(url)
             threading.Timer(1.25, lambda: webbrowser.open(url)).start()
         from ..vis.views import app
+        app.dir = args.dir or os.getcwd()
         app.run(port=args.port, debug=args.debug)

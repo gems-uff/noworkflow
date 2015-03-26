@@ -17,7 +17,7 @@ from .command import Command
 class Show(Command):
 
     def add_arguments(self):
-        add_arg = self.parser.add_argument
+        add_arg = self.add_argument
         add_arg('trial', type=int, nargs='?',
                 help='trial id or none for last trial')
         add_arg('-m', '--modules', action='store_true',
@@ -30,12 +30,15 @@ class Show(Command):
                 help='shows function activations')
         add_arg('-f', '--file-accesses', action='store_true',
                 help='shows read/write access to files')
+        add_arg('--dir', type=str,
+                help='set project path where is the database. Default to '
+                     'current directory')
 
     def wrap(self, *args, **kwargs):
         return utils.wrap(*args, **kwargs)
 
     def execute(self, args):
-        persistence.connect_existing(os.getcwd())
+        persistence.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_id=args.trial, exit=True)
         self.print_trial(trial)
 
