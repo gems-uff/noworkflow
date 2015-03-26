@@ -19,12 +19,16 @@ from ..persistence import persistence
 from ..cross_version import cross_compile
 from .command import Command
 
+LAST_TRIAL = '.last_trial'
+
+
 def non_negative(string):
     value = int(string)
     if value < 0:
         raise argparse.ArgumentTypeError(
             "%s is not a non-negative integer value" % string)
     return value
+
 
 class Run(Command):
 
@@ -50,6 +54,7 @@ class Run(Command):
                 help='show script disassembly')
         add_arg('--name', type=str,
                 help="set branch name used for tracking history")
+        add_cmd('--create_last', action='store_true')
         add_cmd('--dir', type=str,
                 help='set project path. The noworkflow database folder will '
                      'be created in this path. Default to script directory')
@@ -91,8 +96,13 @@ class Run(Command):
                 'definition': None,
                 'name': args.name or os.path.basename(sys.argv[0])
             }
-
-        self.run(script_dir, args, metascript, __main__)
+        try:
+            self.run(script_dir, args, metascript, __main__)
+        finally:
+            if args.create_last:
+                tmp = os.path.join(os.path.dirname(args.script), LAST_TRIAL)
+                with open(tmp, 'w') as f:
+                    f.write(str(metascript['trial_id']))
 
     def run(self, script_dir, args, metascript, __main__):
 

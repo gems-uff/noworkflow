@@ -31,7 +31,7 @@ class Provider(object):
 
     def __init__(self, path=None, connect=False):
         self.base_path = None # Exeution path
-        self.provenance_path = None  # Base .noworflow path
+        self.provenance_path = None  # Base .noworkflow path
         self.content_path = None # Base path for storing content of files
         self.parent_config_path = None # Base path for restore references
         self.db_conn = None # Connection to the database
