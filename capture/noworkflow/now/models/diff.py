@@ -1,17 +1,17 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import json
 import time
 
 from copy import deepcopy
 from collections import namedtuple, OrderedDict, defaultdict
 
+from .model import Model
 from .trial import Trial, TreeElement, Single, Call
 from .trial import Mixed, Group
 from .trial_activation_visitors import TrialGraphVisitor
@@ -42,6 +42,7 @@ class activationdict(dict):
     def __eq__(self, other):
         return self['name'] == other['name']
 
+
 class fadict(dict):
     def __key(self):
         return (self['name'],
@@ -54,7 +55,7 @@ class fadict(dict):
             and (self['content_hash_after'] == other['content_hash_after']))
 
 
-class Diff(object):
+class Diff(Model):
     """ This model represents a diff between two trials
     Initialize it by passing both trials ids:
         diff = Diff(2)
@@ -79,8 +80,17 @@ class Diff(object):
         diff.graph_height = 400
     """
 
+    DEFAULT = {
+        'graph_width': 500,
+        'graph_height': 500,
+        'graph_type': 0,
+        'display_mode': 0,
+    }
 
-    def __init__(self, trial_id1, trial_id2, exit=False):
+    def __init__(self, trial_id1, trial_id2, exit=False, **kwargs):
+        super(Diff, self).__init__(trial_id1, trial_id2, exit=exit, **kwargs)
+        self.initialize_default(kwargs)
+
         self.trial1 = Trial(trial_id1, exit=exit)
         self.trial2 = Trial(trial_id2, exit=exit)
         self._graph_types = {
@@ -88,14 +98,10 @@ class Diff(object):
             1: self.combined_naive_activation_graph
         }
         self._display_modes = {
-            0: self._ipython_combined_,
-            1: self._ipython_side_by_side_,
-            2: self._ipython_both_,
+            0: "combined",
+            1: "side by side",
+            2: "both",
         }
-        self.graph_width = 500
-        self.graph_height = 500
-        self.graph_type = 0
-        self.display_mode = 0
         self._independent_cache = None
         self._combined_cache = None
 
@@ -141,132 +147,21 @@ class Diff(object):
             self._combined_cache = NaiveGraphDiff(g1, g2).to_dict(), g1, g2
         return self._combined_cache
 
-    def _ipython_combined_(self, uid):
-        graph = self._graph_types[self.graph_type]()[0]
-        result = {
-            'html': """
-                <div id="graph-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;">
-                </div>""".format(
-                    uid=uid,
-                    width=self.graph_width, height=self.graph_height),
-            'javascript': """
-                var trial_graph = now_trial_graph('#graph-{uid}', {uid}, {id1}, {id2}, {data}, {width}, {height}, "#showtooltips-{uid}", {{
-                    custom_size: function() {{
-                        return [{width}, {height}];
-                    }},
-                    custom_mouseout: trial_custom_mouseout
-                }});
-                $( "[name='showtooltips']" ).change(function() {{
-                    trial_graph.set_use_tooltip(d3.select("#showtooltips-{uid}").property("checked"));
-                }});
-            """.format(
-                uid=uid, data=json.dumps(graph),
-                id1=self.trial1.id, id2=self.trial2.id,
-                width=self.graph_width, height=self.graph_height)
-        }
-        return result
-
-    def _ipython_side_by_side_(self, uid):
-        graph, graph_a, graph_b = self._graph_types[self.graph_type]()
-        result = {
-            'html': """
-                <div class="bottom">
-                    <div id="graphA-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;"></div>
-                    <div id="graphB-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;"></div>
-                </div>""".format(
-                    uid=uid,
-                    width=self.graph_width / 2, height=self.graph_height),
-            'javascript': """
-                var trial_a = now_trial_graph('#graphA-{uid}', 1{uid}, {id1}, {id1}, {data1}, {width}, {height}, "#showtooltips-{uid}", {{
-                    custom_size: function() {{
-                        return [{width}, {height}];
-                    }},
-                    hint_message: "Trial "+ {id1},
-                    hint_class: "hbefore",
-                    custom_mouseover: trial_custom_mouseover,
-                    custom_mouseout: trial_custom_mouseout
-                }});
-                var trial_b = now_trial_graph('#graphB-{uid}', 2{uid}, {id2}, {id2}, {data2}, {width}, {height}, "#showtooltips-{uid}", {{
-                    custom_size: function() {{
-                        return [{width}, {height}];
-                    }},
-                    hint_message: "Trial "+ {id2},
-                    hint_class: "hafter",
-                    custom_mouseover: trial_custom_mouseover,
-                    custom_mouseout: trial_custom_mouseout
-                }});
-                $( "[name='showtooltips']" ).change(function() {{
-                    trial_a.set_use_tooltip(d3.select("#showtooltips-{uid}").property("checked"));
-                    trial_b.set_use_tooltip(d3.select("#showtooltips-{uid}").property("checked"));
-                }});
-            """.format(
-                uid=uid,
-                data1=json.dumps(graph_a), data2=json.dumps(graph_b),
-                id1=self.trial1.id, id2=self.trial2.id,
-                width=self.graph_width / 2, height=self.graph_height)
-        }
-        return result
-
-    def _ipython_both_(self, uid):
-        d1 = self._ipython_combined_(uid)
-        d2 = self._ipython_side_by_side_(uid)
-        result = {
-            'html': """
-                <div id="graph-{uid}" class="now-trial-graph ipython-graph" style="width: {width}px; height: {height}px;"></div>
-                <div class="bottom">
-                    <div id="graphA-{uid}" class="now-trial-graph ipython-graph" style="width: {width2}px; height: {height}px;"></div>
-                    <div id="graphB-{uid}" class="now-trial-graph ipython-graph" style="width: {width2}px; height: {height}px;"></div>
-                </div>
-                """.format(
-                    uid=uid,
-                    width=self.graph_width, height=self.graph_height,
-                    width2=self.graph_width / 2),
-            'javascript': """
-                var trial_graph, trial_a, trial_b;
-                function trial_custom_mouseover(d, name, show_tooltip) {{
-                    console.log(trial_graph);
-                    d3.select('#node-'+trial_graph.graph_id+'-'+d.node.diff+' circle')
-                        .classed('node-hover', true);
-                }}
-
-                function trial_custom_mouseout(d) {{
-                    d3.selectAll('.node-hover')
-                        .classed('node-hover', false);
-                }}
-                {0}
-                {1}
-            """.format(d1['javascript'], d2['javascript'])
-        }
-        return result
-
-
     def _repr_html_(self):
         """ Displays d3 graph on ipython notebook """
-        from IPython.display import (
-            display_png, display_html, display_latex,
-            display_javascript, display_svg
-        )
-
         uid = str(int(time.time()*1000000))
-        disp = self._display_modes[self.display_mode](uid)
+
         result = """
-            <div class="now-trial now">
-                <div>
-                    <form class="toolbar">
-                      <input id="showtooltips-{0}" type="checkbox" name="showtooltips" value="show">
-                      <label for="showtooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
-                    </form>
-                    {1}
-                </div>
+            <div class="nowip-diff" data-width="{width}"
+                 data-height="{height}" data-uid="{uid}"
+                 data-id1="{id1}" data-id2="{id2}" data-mode="{mode}">
+                {data}
             </div>
-
-            <script>
-                function trial_custom_mouseover(d, name, show_tooltip) {{}}
-                function trial_custom_mouseout(d) {{}}
-
-                {2}
-            </script>
-            """.format(uid, disp['html'], disp['javascript'])
+        """.format(
+            uid=uid, id1=self.trial1.id, id2=self.trial2.id,
+            mode=self.display_mode,
+            data=self.escape_json(self._graph_types[self.graph_type]()),
+            width=self.graph_width, height=self.graph_height)
         return result
 
 

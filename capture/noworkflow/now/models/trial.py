@@ -1,5 +1,5 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -7,18 +7,21 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import sys
+import time
 from datetime import datetime
 from collections import defaultdict, OrderedDict, Counter
 
 from .. import utils
 from ..persistence import row_to_dict, persistence
+from .model import Model
 from .trial_activation_visitors import TrialGraphVisitor
 from .trial_activation_visitors import TrialGraphCombineVisitor
 from .trial_prolog import TrialProlog
 from .utils import calculate_duration, FORMAT
 from .activation import Activation
 
-class Trial(object):
+
+class Trial(Model):
     """ This model represents a trial
     Initialize it by passing the trial id:
         trial = Trial(2)
@@ -34,7 +37,17 @@ class Trial(object):
         trial.graph_height = 400
     """
 
-    def __init__(self, trial_id, script=None, exit=False):
+    DEFAULT = {
+        'graph_width': 500,
+        'graph_height': 500,
+        'graph_type': 0,
+    }
+
+    def __init__(self, trial_id, exit=False, script=None, **kwargs):
+        super(Trial, self).__init__(trial_id, exit=exit, script=script,
+                                    **kwargs)
+        self.initialize_default(kwargs)
+
         if exit:
             last_trial_id = persistence.last_trial_id(script=script)
             trial_id = trial_id or last_trial_id
@@ -49,12 +62,8 @@ class Trial(object):
             0: self.independent_activation_graph,
             1: self.combined_activation_graph
         }
-        self.graph_width = 500
-        self.graph_height = 500
-        self.graph_type = 0
 
     def init_prolog(self):
-        # Todo: fix prolog
         if not self.prolog:
             from pyswip import Prolog
             self.prolog = Prolog()
@@ -94,47 +103,20 @@ class Trial(object):
         return info['code_hash']
 
     def _repr_html_(self):
-        from IPython.display import (
-            display_png, display_html, display_latex,
-            display_javascript, display_svg, HTML
-        )
-        import json
-        import time
-
+        """ Displays d3 graph on ipython notebook """
         uid = str(int(time.time()*1000000))
 
-        javascript = """
-            var trial_graph = now_trial_graph('#graph-{0}', {0}, {2}, {2}, {1}, {3}, {4}, "#showtooltips-{0}", {{
-                custom_size: function() {{
-                    return [{3}, {4}];
-                }}
-            }});
-            $( "[name='showtooltips']" ).change(function() {{
-                trial_graph.set_use_tooltip(d3.select("#showtooltips-{0}").property("checked"));
-            }});
-        """.format(
-                uid,
-                json.dumps(self._graph_types[self.graph_type]()),
-                self.id, self.graph_width, self.graph_height)
-
         result = """
-            <div class="now-trial now">
-                <div>
-                    <form class="toolbar">
-                      <input id="showtooltips-{0}" type="checkbox" name="showtooltips" value="show">
-                      <label for="showtooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
-                    </form>
-                    <div id='graph-{0}' class="now-trial-graph ipython-graph" style="width: {1}px; height: {2}px;"></div>
-                </div>
+            <div class="nowip-trial" data-width="{width}"
+                 data-height="{height}" data-uid="{uid}"
+                 data-id="{id}">
+                {data}
             </div>
-
-            <script>
-            {3}
-            </script>
-
-            """.format(uid, self.graph_width, self.graph_height, javascript)
+        """.format(
+            uid=uid, id=self.id,
+            data=self.escape_json(self._graph_types[self.graph_type]()),
+            width=self.graph_width, height=self.graph_height)
         return result
-
 
     def info(self):
         """ Returns dict with the trial information, considering the duration """

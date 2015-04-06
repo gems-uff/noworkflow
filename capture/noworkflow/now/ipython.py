@@ -15,8 +15,12 @@ from IPython.display import (
 from .models.trial import Trial
 from .models.diff import Diff
 from .models.history import History
+from .models.model import Model
 from .persistence import persistence
 from .nowmagic import NoworkflowMagics
+
+models = [Trial, Diff, History]
+
 
 def resource(filename):
     return resource_string(__name__, filename).decode(encoding='UTF-8')
@@ -36,6 +40,7 @@ def init(path=None, ipython=None):
         #'vis/static/external/jquery-1.11.1.min.js',
         'vis/static/trial_graph.js',
         'vis/static/history_graph.js',
+        'vis/static/ipython.js',
     ]
 
     require_js = '''
@@ -68,3 +73,16 @@ def init(path=None, ipython=None):
     display_html('\n'.join(css_lines), raw=True)
 
     return "ok"
+
+
+def update_all(attribute, value):
+    for instance in Model.all_models():
+        setattr(instance, attribute, value)
+
+
+def set_default(attribute, value, all=False):
+    for cls in models:
+        if attribute in cls.DEFAULT:
+            cls.DEFAULT[attribute] = value
+    if all:
+        update_all(attribute, value)

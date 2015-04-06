@@ -1,17 +1,21 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import time
+
 from collections import defaultdict, OrderedDict
+from .model import Model
 from .utils import calculate_duration, FORMAT
 from ..persistence import row_to_dict
 from ..persistence import persistence as pers
 
-class History(object):
+
+class History(Model):
     """ This model represents the workflow evolution history
 
     It is possible to filter the evolution history by selecting the script:
@@ -39,14 +43,19 @@ class History(object):
         history.graph_height = 200
     """
 
-    def __init__(self):
-        self.data = {}
-        self.script = "*"
-        self.execution = "*"
+    DEFAULT = {
+        'graph_width': 700,
+        'graph_height': 300,
+        'script': '*',
+        'execution': '*',
+        'data': {},
+    }
+
+    def __init__(self, **kwargs):
+        super(History, self).__init__(**kwargs)
+        self.initialize_default(kwargs)
 
         self.execution_options = ["*", "finished", "unfinished", "backup"]
-        self.graph_width = 700
-        self.graph_height = 300
 
     def scripts(self):
         """ Returns the list of scripts used for trials """
@@ -143,49 +152,15 @@ class History(object):
 
     def _repr_html_(self):
         """ Displays d3 graph on ipython notebook """
-        from IPython.display import (
-            display_png, display_html, display_latex,
-            display_javascript, display_svg
-        )
-        import json
-        import time
-
         uid = str(int(time.time()*1000000))
 
-        javascript = """
-            var hg = now_history_graph('#history-{0}', {0}, {1}, {2}, {3}, "#show-history-tooltips-{0}", {{
-                custom_size: function() {{
-                    return [{2}, {3}];
-                }},
-                hint_message: "",
-            }});
-
-            $( "[name='show-history-tooltips']" ).change(function() {{
-                hg.graph.set_use_tooltip(d3.select("#show-history-tooltips-{0}").property("checked"));
-            }});
-
-            $('#restore-history-zoom-{0}').on('click', function(e){{
-                hg.graph.reset_zoom();
-            }});
-        """.format(
-            uid,
-            json.dumps(self.graph_data()),
-            self.graph_width, self.graph_height)
-
         result = """
-            <div class="now-history now">
-                <div>
-                    <div class="toolbar">
-                       <a class="toollink" id="restore-history-zoom-{0}" href="#" title="Restore zoom"><i class="fa fa-eye"></i></a>
-                       <input id="show-history-tooltips-{0}" type="checkbox" name="show-history-tooltips" value="show">
-                       <label for="show-history-tooltips-{0}" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
-                    </div>
-                    <div id='history-{0}' class="now-history-graph ipython-graph" style="width: {1}px; height: {2}px;"></div>
-                </div>
+            <div class="nowip-history" data-width="{width}"
+                 data-height="{height}" data-uid="{uid}">
+                {data}
             </div>
-
-            <script>
-            {3}
-            </script>
-        """.format(uid, self.graph_width, self.graph_height, javascript)
+        """.format(
+            uid=uid,
+            data=self.escape_json(self.graph_data()),
+            width=self.graph_width, height=self.graph_height)
         return result
