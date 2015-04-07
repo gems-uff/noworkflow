@@ -8,6 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 from textwrap import dedent
 from collections import OrderedDict, Counter
+from pkg_resources import resource_string
+
 
 LABEL = '[now] '
 verbose = False
@@ -52,6 +54,14 @@ def print_environment_attrs(environment_attrs):
     for environment_attr in environment_attrs:
         output.append('  {name}: {value}'.format(**environment_attr))
     print('\n'.join(output))
+
+
+def resource(filename, encoding=None):
+    # Accessing the content of a file via setuptools
+    content = resource_string(__name__, filename)
+    if encoding:
+        return content.decode(encoding=encoding)
+    return content
 
 
 class OrderedCounter(OrderedDict, Counter):

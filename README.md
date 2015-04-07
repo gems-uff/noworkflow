@@ -178,7 +178,7 @@ In  [1]: %load_ext noworkflow
 It is equivalent to:
 ```python
 In  [1]: %load_ext noworkflow
-    ...: nip = %nowip
+    ...: nip = %now_ip
 ```
 
 After that, you can either run a new trial or load an existing object (History,Trial,Diff).

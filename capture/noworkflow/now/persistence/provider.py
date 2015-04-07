@@ -12,6 +12,7 @@ import sys
 from os.path import join, isdir, exists
 from os import makedirs
 from pkg_resources import resource_string
+from collections import OrderedDict
 
 from ..utils import print_msg
 
@@ -24,7 +25,7 @@ PARENT_TRIAL = '.parent_config.json'
 
 
 def row_to_dict(row):
-    return dict(zip(row.keys(), row))
+    return OrderedDict(zip(row.keys(), row))
 
 
 class Provider(object):
@@ -87,3 +88,8 @@ class Provider(object):
                 True)
             sys.exit(1)
         self.connect()
+
+    def query(self, text):
+        with self.db_conn as db:
+            for row in db.execute(text):
+                yield row_to_dict(row)

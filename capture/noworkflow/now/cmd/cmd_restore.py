@@ -18,6 +18,10 @@ from .command import Command
 
 class Restore(Command):
 
+    def __init__(self, *args, **kwargs):
+        super(Restore, self).__init__(*args, **kwargs)
+        self.print_msg = True
+
     def add_arguments(self):
         add_arg = self.add_argument
         add_arg('trial', type=int, nargs='?',
@@ -56,14 +60,15 @@ class Restore(Command):
                 'path': trial.script,
                 'compiled': None,
             })
-            utils.print_msg('Backup Trial {} created'.format(tid), True)
+            utils.print_msg('Backup Trial {} created'.format(tid),
+                            self.print_msg)
 
     def restore(self, path, code_hash, trial_id):
         load_file = persistence.get(code_hash)
         with open(path, 'wb') as f:
             f.write(load_file)
         utils.print_msg('File {} from trial {} restored'.format(
-            path, trial_id), True)
+            path, trial_id), self.print_msg)
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())

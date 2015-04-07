@@ -9,10 +9,11 @@ from __future__ import (absolute_import, print_function,
 import textwrap
 
 from datetime import datetime
-from pkg_resources import resource_string
+
+from ..utils import resource
 
 
-RULES = '../../resources/rules.pl'
+RULES = '../resources/rules.pl'
 
 
 def timestamp(string):
@@ -23,8 +24,11 @@ def timestamp(string):
 
 class TrialProlog(object):
 
+    prolog_cli = None
+
     def __init__(self, trial):
         self.trial = trial
+        self.id = trial.id
 
     def export_trial_activations(self, result, with_doc=True):
         if with_doc:
@@ -144,5 +148,37 @@ class TrialProlog(object):
         return u'\n'.join(self.export_facts())
 
     def export_rules(self):
-        # Accessing the content of a file via setuptools
-        return resource_string(__name__, RULES).decode(encoding='UTF-8')
+        return resource(RULES, 'UTF-8')
+
+    def load_cli_facts(self):
+        self.init_cli()
+        load_trial = 'load_trial({})'.format(self.id)
+        if not list(self.prolog_cli.query(load_trial)):
+            for fact in self.export_facts(with_doc=False):
+                self.prolog_cli.assertz(fact[:-1])
+            self.prolog_cli.assertz(load_trial)
+        load_rules = 'load_rules(1)'
+        if not list(self.prolog_cli.query(load_rules)):
+            for rule in self.export_rules().split('\n'):
+                rule = rule.strip()
+                if not rule or rule[0] == '%':
+                    continue
+                self.prolog_cli.assertz(rule[:-1])
+            self.prolog_cli.assertz(load_rules)
+
+    def query(self, query):
+        self.load_cli_facts()
+        return self.prolog_query(query)
+
+    @classmethod
+    def init_cli(cls):
+        if not cls.prolog_cli:
+            from pyswip import Prolog
+            cls.prolog_cli = Prolog()
+            cls.prolog_cli.assertz('load_trial(0)')
+            cls.prolog_cli.assertz('load_rules(0)')
+
+    @classmethod
+    def prolog_query(cls, query):
+        cls.init_cli()
+        return cls.prolog_cli.query(query)

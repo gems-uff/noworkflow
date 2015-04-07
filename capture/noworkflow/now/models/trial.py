@@ -57,31 +57,16 @@ class Trial(Model):
 
         self.id = trial_id
         self._info = None
-        self.prolog = None
         self._graph_types = {
             0: self.independent_activation_graph,
             1: self.combined_activation_graph
         }
+        self.trial_prolog = TrialProlog(self)
 
-    def init_prolog(self):
-        if not self.prolog:
-            from pyswip import Prolog
-            self.prolog = Prolog()
-            self.trial_prolog = TrialProlog(self)
-            for fact in self.trial_prolog.export_facts(with_doc=False):
-                self.prolog.assertz(fact[:-1])
-            for rule in self.trial_prolog.export_rules().split('\n'):
-                rule = rule.strip()
-                if not rule or rule[0] == '%':
-                    continue
-                self.prolog.assertz(rule[:-1])
-
-    def query(self, prolog):
-        self.init_prolog()
-        return self.prolog.query(prolog)
+    def query(self, query):
+        return self.trial_prolog.query(query)
 
     def prolog_rules(self):
-        self.init_prolog()
         return self.trial_prolog.export_rules().split('\n')
 
     @property
@@ -95,6 +80,12 @@ class Trial(Model):
         """ Returns the "main" script of the trial """
         info = self.info()
         return info['script']
+
+    @property
+    def script_content(self):
+        """ Returns the "main" script content of the trial """
+        return persistence.get(self.code_hash)
+
 
     @property
     def code_hash(self):

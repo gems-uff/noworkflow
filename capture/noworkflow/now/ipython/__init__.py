@@ -8,36 +8,24 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from pkg_resources import resource_string
-from IPython.display import (
-    display_html, display_javascript
-)
-from .models.trial import Trial
-from .models.diff import Diff
-from .models.history import History
-from .models.model import Model
-from .persistence import persistence
-from .nowmagic import NoworkflowMagics
+from IPython.display import display_html, display_javascript
 
-models = [Trial, Diff, History]
+from ..persistence import persistence
+from ..utils import resource
 
-
-def resource(filename):
-    return resource_string(__name__, filename).decode(encoding='UTF-8')
+from .models import set_default, update_all, Trial, Diff, History
+from .magics import register_magics
 
 
 def init(path=None, ipython=None):
-    if not ipython:
-        ipython = get_ipython()
-    magics = NoworkflowMagics(ipython)
-    ipython.register_magics(magics)
+    register_magics(ipython)
+
     if path is None:
         path = os.getcwd()
     persistence.connect_existing(path)
 
     js_files = [
         'vis/static/d3-v3.4.11/d3.min.js',
-        #'vis/static/external/jquery-1.11.1.min.js',
         'vis/static/trial_graph.js',
         'vis/static/history_graph.js',
         'vis/static/ipython.js',
@@ -52,7 +40,7 @@ def init(path=None, ipython=None):
             </script>
         </body
     '''
-    js_text = [resource(js_file) for js_file in js_files]
+    js_text = [resource(js_file, 'UTF-8') for js_file in js_files]
 
     display_html(
         require_js.format(';\n'.join(js_text)),
@@ -73,16 +61,3 @@ def init(path=None, ipython=None):
     display_html('\n'.join(css_lines), raw=True)
 
     return "ok"
-
-
-def update_all(attribute, value):
-    for instance in Model.all_models():
-        setattr(instance, attribute, value)
-
-
-def set_default(attribute, value, all=False):
-    for cls in models:
-        if attribute in cls.DEFAULT:
-            cls.DEFAULT[attribute] = value
-    if all:
-        update_all(attribute, value)
