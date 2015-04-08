@@ -70,12 +70,15 @@ class Restore(Command):
         utils.print_msg('File {} from trial {} restored'.format(
             path, trial_id), self.print_msg)
 
-    def execute(self, args):
+    def restore_script(self, trial):
+        self.restore(trial.script, trial.code_hash, trial.id)
+
+    def do_restore(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_id=args.trial, script=args.script, exit=True)
         self.create_backup(trial, args)
 
-        self.restore(trial.script, trial.code_hash, trial.id)
+        self.restore_script(trial)
 
         persistence.store_parent(trial.script, trial.id)
         if args.local:
@@ -90,3 +93,6 @@ class Restore(Command):
                 fs[fa['name']] = fa['content_hash_before']
             for name, content_hash in fs.items():
                 self.restore(name, content_hash, trial.id)
+
+    def execute(self, args):
+        self.do_restore(self, args)

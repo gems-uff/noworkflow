@@ -13,6 +13,7 @@ from .now_ipython import NowIpython
 from .now_set_default import NowSetDefault
 from .now_sql import NowSQL
 from .now_prolog import NowProlog
+from .now_restore import NowRestore
 
 
 MAGICS = [
@@ -20,7 +21,8 @@ MAGICS = [
 	('now_ip', 'line', NowIpython),
 	('now_set_default', 'line', NowSetDefault),
     ('now_sql', 'cell', NowSQL),
-	('now_prolog', 'cell', NowProlog),
+    ('now_prolog', 'cell', NowProlog),
+	('now_restore', 'line', NowRestore),
 ]
 
 
