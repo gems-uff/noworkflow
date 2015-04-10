@@ -12,6 +12,7 @@ from datetime import datetime
 from collections import defaultdict, OrderedDict, Counter
 
 from .. import utils
+from ..formatter import PrettyLines
 from ..persistence import row_to_dict, persistence
 from .model import Model
 from .trial_activation_visitors import TrialGraphVisitor
@@ -84,8 +85,7 @@ class Trial(Model):
     @property
     def script_content(self):
         """ Returns the "main" script content of the trial """
-        return persistence.get(self.code_hash)
-
+        return PrettyLines(persistence.get(self.code_hash).split('/n'))
 
     @property
     def code_hash(self):

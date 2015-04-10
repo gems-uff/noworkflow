@@ -36,7 +36,10 @@ def init(path=None, ipython=None):
         <meta charset="utf-8">
         <body>
             <script charset="utf-8">
+            var now_temp = define;
+            define = undefined;
             {0}
+            define = now_temp;
             </script>
         </body
     '''

@@ -11,6 +11,7 @@ import argparse
 from IPython.core.display import display_javascript
 
 from ...persistence import persistence
+from ...formatter import Table
 from ..models import set_default
 from .command import IpythonCommandMagic
 
@@ -63,7 +64,7 @@ class NowSQL(IpythonCommandMagic):
             magic_cls.shell.user_ns[args.result] = result
         else:
             result = list(result)
-            table = []
+            table = Table()
             if result:
                 table.append(result[0].keys())
             for line in result:
