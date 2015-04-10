@@ -27,6 +27,7 @@ class TestSlicingDependencies(unittest.TestCase):
 
         def parse(self, code):
             metascript = {
+                'name': 'name',
                 'code': code,
                 'path': NAME,
                 'compiled': None,

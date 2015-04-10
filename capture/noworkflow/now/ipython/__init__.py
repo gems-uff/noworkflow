@@ -22,7 +22,7 @@ def init(path=None, ipython=None):
 
     if path is None:
         path = os.getcwd()
-    persistence.connect_existing(path)
+    persistence.connect(path)
 
     js_files = [
         'vis/static/d3-v3.4.11/d3.min.js',

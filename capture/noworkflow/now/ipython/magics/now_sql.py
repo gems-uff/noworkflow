@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import argparse
 
 from IPython.core.display import display_javascript
+from IPython.utils.text import DollarFormatter
 
 from ...persistence import persistence
 from ...formatter import Table
@@ -58,6 +59,8 @@ class NowSQL(IpythonCommandMagic):
                 help="""The variable in which the result will be stored""")
 
     def execute(self, func, line, cell, magic_cls):
+        f = DollarFormatter()
+        cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         result = persistence.query(cell)
         if args.result:

@@ -33,3 +33,7 @@ nosetests.xml
 .noworkflow
 /visualization/target/
 output.png
+
+# IPython Notebook
+.last_trial
+*-checkpoint.ipynb

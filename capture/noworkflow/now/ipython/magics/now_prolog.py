@@ -6,6 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from IPython.utils.text import DollarFormatter
+
 import argparse
 
 from ..models import TrialProlog, Trial
@@ -41,6 +43,8 @@ class NowProlog(IpythonCommandMagic):
                 help='export trial facts')
 
     def execute(self, func, line, cell, magic_cls):
+        f = DollarFormatter()
+        cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         for trial in args.trials:
             Trial(int(trial)).trial_prolog.load_cli_facts()

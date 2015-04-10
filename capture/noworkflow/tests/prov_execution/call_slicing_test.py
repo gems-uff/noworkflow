@@ -49,6 +49,7 @@ class TestCallSlicing(unittest.TestCase):
                                      })
             metascript = {
                 'code': None,
+                'name': 'name',
                 'path': 'noworkflow/tests/prov_execution/__init__.py',
                 'compiled': None,
             }
