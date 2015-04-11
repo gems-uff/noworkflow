@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import unittest
 import pyposast
+from ...now.cross_version import bytes_string
 from ...now.persistence import persistence
 from ...now.prov_definition.slicing_visitor import SlicingVisitor
 from ...now.prov_definition.utils import FunctionCall
@@ -28,7 +29,7 @@ class TestSlicingDependencies(unittest.TestCase):
         def parse(self, code):
             metascript = {
                 'name': 'name',
-                'code': code,
+                'code': bytes_string(code, 'utf-8'),
                 'path': NAME,
                 'compiled': None,
             }
@@ -178,7 +179,7 @@ class TestSlicingDependencies(unittest.TestCase):
                              "    b = y\n"
                              "c = z")
             self.visitor.visit(tree)
-            self.assertEqual(['x', 'i', 'j'], self.dependencies(3)['a'])
+            self.assertEqual({'x', 'i', 'j'}, set(self.dependencies(3)['a']))
             self.assertEqual(['y', 'i'], self.dependencies(4)['b'])
             self.assertEqual(['z'], self.dependencies(5)['c'])
 

@@ -8,12 +8,17 @@ from __future__ import (absolute_import, print_function,
 
 import unittest
 import ast
+import sys
 import __main__
-from ...now.cmd import Run
+from ...now.cross_version import bytes_string
 from ...now.persistence import persistence
+from ...now.cmd import Run
 
 
-run = Run('run', 'run').run
+def run(*args):
+    metascript = args[2]
+    metascript['code'] = bytes_string(metascript['code'])
+    return Run('run', 'run').run(*args)
 
 
 class Mock(object):
@@ -25,7 +30,7 @@ class Mock(object):
 
 persistence = Mock()
 NAME = '<unknown>'
-
+PY3_PREFIX = "" if sys.version_info < (3, 0) else "module."
 
 class Args(object):
 
@@ -287,8 +292,8 @@ class TestCallSlicing(unittest.TestCase):
             result = {
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("b", 1)),
-                (("call min", 2), ("return", 2)),
-                (("c", 2), ("call min", 2)),
+                (("call {}min".format(PY3_PREFIX), 2), ("return", 2)),
+                (("c", 2), ("call {}min".format(PY3_PREFIX), 2)),
             }
             self.assertEqual(result, self.extract(provider))
 
@@ -312,9 +317,9 @@ class TestCallSlicing(unittest.TestCase):
             result = {
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("b", 1)),
-                (("call sorted", 2), ("return", 2)),
+                (("call {}sorted".format(PY3_PREFIX), 2), ("return", 2)),
                 (("a", 2), ("a", 1)),
                 (("a", 2), ("b", 1)),
-                (("c", 2), ("call sorted", 2)),
+                (("c", 2), ("call {}sorted".format(PY3_PREFIX), 2)),
             }
             self.assertEqual(result, self.extract(provider))
