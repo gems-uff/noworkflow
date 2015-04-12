@@ -13,4 +13,4 @@ d = [
 	h(a) + h(b),
 	h(a), h(c)
 ]
-print d
+print(d)

@@ -1,4 +1,4 @@
 import sys
 
 def e(num):
-    print num
+    print(num)

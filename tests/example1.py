@@ -19,5 +19,5 @@ y = a(x)
 x = 5
 c()
 example2.e(x)
-print 40
+print(40)
 b()

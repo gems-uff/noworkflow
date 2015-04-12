@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import ast
+import sys
 import bisect
 
 from collections import defaultdict
@@ -273,6 +274,12 @@ class SlicingVisitor(FunctionVisitor):
         for dec_node in node.decorator_list:
             self.add_decorator(dec_node)
 
+    def visit_ListComp(self, node):
+        self.generic_visit(node)
+        if sys.version_info >= (3, 0):
+            for gen_node in node.generators:
+                self.add_generator('List', gen_node)
+
     def visit_SetComp(self, node):
         self.generic_visit(node)
         for gen_node in node.generators:
@@ -338,4 +345,3 @@ class SlicingVisitor(FunctionVisitor):
 
             if not index(splitted, ('IMPORT_NAME', 'IMPORT_FROM')) is None:
                 self.imports.add(line)
-

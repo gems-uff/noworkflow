@@ -137,7 +137,7 @@ class Trial(Model):
             The second element is a list of external modules
         """
         dependencies = persistence.load_dependencies(self.id)
-        result = map(map_fn, dependencies)
+        result = list(map(map_fn, dependencies))
         local = [dep for dep in result
                  if dep['path'] and persistence.base_path in dep['path']]
         return local, result
@@ -332,6 +332,9 @@ class Single(TreeElement):
             }
         }
 
+    def __hash__(self):
+        return super(Single, self).__hash__()
+
 
 class Mixed(TreeElement):
 
@@ -377,6 +380,9 @@ class Mixed(TreeElement):
         initial = next(it)
         for element in it:
             initial.mix(element)
+
+    def __hash__(self):
+        return super(Mixed, self).__hash__()
 
 
 class Group(TreeElement):
@@ -431,6 +437,9 @@ class Group(TreeElement):
         for node, value in self.nodes.items():
             value.mix(other.nodes[node])
 
+    def __hash__(self):
+        return super(Group, self).__hash__()
+
 
 class Call(TreeElement):
 
@@ -459,6 +468,9 @@ class Call(TreeElement):
     def mix(self, other):
         self.caller.mix(other.caller)
         self.called.mix(other.called)
+
+    def __hash__(self):
+        return super(Call, self).__hash__()
 
 
 class Info(object):

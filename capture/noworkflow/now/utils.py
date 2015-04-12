@@ -70,3 +70,9 @@ class OrderedCounter(OrderedDict, Counter):
                             OrderedDict(self))
     def __reduce__(self):
         return self.__class__, (OrderedDict(self),)
+
+
+def concat_iter(*iters):
+    for it in iters:
+        for x in it:
+            yield x

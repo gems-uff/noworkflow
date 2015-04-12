@@ -14,13 +14,13 @@ from os import makedirs
 from pkg_resources import resource_string
 from collections import OrderedDict
 
-from ..utils import print_msg
+from ..utils import print_msg, resource
 
 
 PROVENANCE_DIRNAME = '.noworkflow'
 CONTENT_DIRNAME = 'content'
 DB_FILENAME = 'db.sqlite'
-DB_SCRIPT = '../../resources/noworkflow.sql'
+DB_SCRIPT = '../resources/noworkflow.sql'
 PARENT_TRIAL = '.parent_config.json'
 
 
@@ -73,7 +73,7 @@ class Provider(object):
             print_msg('creating provenance database')
             # Accessing the content of a file via setuptools
             with self.db_conn as db:
-                db.executescript(resource_string(__name__, DB_SCRIPT))
+                db.executescript(resource(DB_SCRIPT, 'utf-8'))
 
     def has_provenance(self, path=None):
         if path:

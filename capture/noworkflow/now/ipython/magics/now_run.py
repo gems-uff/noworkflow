@@ -106,7 +106,7 @@ class NowRun(IpythonCommandMagic, Run):
             persistence.connect(directory)
             filename = ''
             if cell:
-                cell = cell.encode('utf8', 'replace')
+                #cell = cell.encode('utf8', 'replace')
                 filename = magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
 
             # Set execution line

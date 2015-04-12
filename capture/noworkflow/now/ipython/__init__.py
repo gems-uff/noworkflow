@@ -43,7 +43,7 @@ def init(path=None, ipython=None):
             </script>
         </body
     '''
-    js_text = [resource(js_file, 'UTF-8') for js_file in js_files]
+    js_text = [resource(js_file, 'utf-8') for js_file in js_files]
 
     display_html(
         require_js.format(';\n'.join(js_text)),
@@ -59,7 +59,7 @@ def init(path=None, ipython=None):
 
     css_lines = ['<style>']
     for css_file in css_files:
-        css_lines.append(resource(css_file))
+        css_lines.append(resource(css_file, 'utf-8'))
     css_lines.append('</style>')
     display_html('\n'.join(css_lines), raw=True)
 

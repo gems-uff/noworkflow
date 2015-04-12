@@ -4,8 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 
 import unittest
-
 from noworkflow.tests import *
 
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()

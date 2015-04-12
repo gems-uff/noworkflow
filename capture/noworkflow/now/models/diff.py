@@ -16,7 +16,7 @@ from .trial import Trial, TreeElement, Single, Call
 from .trial import Mixed, Group
 from .trial_activation_visitors import TrialGraphVisitor
 from .trial_activation_visitors import TrialGraphCombineVisitor
-from ..utils import OrderedCounter
+from ..utils import OrderedCounter, concat_iter
 
 
 class hashabledict(dict):
@@ -173,11 +173,11 @@ class NaiveGraphDiff(object):
         self.edges = []
         self.context_edges = {}
         self.old_to_new = {}
-        self.max_duration = dict(g1['max_duration'].items() +
-                                 g2['max_duration'].items())
+        self.max_duration = dict(concat_iter(
+            g1['max_duration'].items(), g2['max_duration'].items()))
 
-        self.min_duration = dict(g1['min_duration'].items() +
-                                 g2['min_duration'].items())
+        self.min_duration = dict(concat_iter(
+            g1['min_duration'].items(), g2['min_duration'].items()))
 
         self.merge(g1, g2)
 

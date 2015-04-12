@@ -1,9 +1,9 @@
 def x(a=1):
 	return a
 
-for j in range(3):  
+for j in range(3):
 	for i in range(j):
-		print i
+		print(i)
 		i = i**2
 		i += 2
 
@@ -28,8 +28,8 @@ d = [a, b, c]
 d[1] += 1
 
 
-print a
-print b
-print c
+print(a)
+print(b)
+print(c)
 
 a, b = 1, c
