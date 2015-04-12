@@ -1,8 +1,8 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Collect deployment provenance from Python script"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -19,6 +19,9 @@ from .utils import print_msg
 
 
 def collect_environment_provenance():
+    """Collect enviroment variables and operating system characteristics
+    Return dict
+    """
     environment = {}
     e = environment
 
@@ -28,7 +31,7 @@ def collect_environment_provenance():
         for name in os.sysconf_names:
             try:
                 environment[name] = os.sysconf(name)
-            except:
+            except ValueError:
                 pass
         for name in os.confstr_names:
             environment[name] = os.confstr(name)
@@ -53,8 +56,10 @@ def collect_environment_provenance():
 
 
 def collect_modules_provenance(modules):
-    '''returns a set of module dependencies in the form:
-        (name, version, path, code_hash)'''
+    """Return a set of module dependencies in the form:
+        (name, version, path, code_hash)
+    Store module provenance in the persistence database
+    """
     dependencies = []
     for name, module in modules.items():
         if name != '__main__':
@@ -70,6 +75,7 @@ def collect_modules_provenance(modules):
 
 
 def get_version(module_name):
+    """Get module version"""
     # Check built-in module
     if module_name in sys.builtin_module_names:
         return platform.python_version()
@@ -89,7 +95,7 @@ def get_version(module_name):
                 version = getattr(module, attr)
                 if isinstance(version, basestring):
                     return version
-            except:
+            except AttributeError:
                 pass
     except:
         pass
@@ -99,6 +105,12 @@ def get_version(module_name):
 
 
 def collect_provenance(args, metascript):
+    """Collect deployment provenance:
+        - environment variables
+        - modules dependencies
+
+    metascript should have 'trial_id' and 'path'
+    """
     print_msg('  registering environment attributes')
     environment = collect_environment_provenance()
     persistence.store_environment(metascript['trial_id'], environment)

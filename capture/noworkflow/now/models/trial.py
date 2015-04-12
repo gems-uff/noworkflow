@@ -10,6 +10,8 @@ import sys
 import time
 from datetime import datetime
 from collections import defaultdict, OrderedDict, Counter
+from pyposast.cross_version import buffered_str
+
 
 from .. import utils
 from ..formatter import PrettyLines
@@ -85,7 +87,8 @@ class Trial(Model):
     @property
     def script_content(self):
         """ Returns the "main" script content of the trial """
-        return PrettyLines(persistence.get(self.code_hash).split('/n'))
+        return PrettyLines(
+            buffered_str(persistence.get(self.code_hash)).split('/n'))
 
     @property
     def code_hash(self):

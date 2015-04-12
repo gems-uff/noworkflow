@@ -12,7 +12,7 @@ class A():
 
 a = x(a=2)
 a = b = c = 1
-a = range(5)
+a = list(range(5))
 A.a = c
 a[b] = b
 e = b, c = c, 1

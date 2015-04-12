@@ -35,18 +35,27 @@ To install noWorkflow, you should follow these basic instructions:
 
 If you have pip, just run:
 ```bash
-$ pip install noworkflow[vis]
+$ pip install noworkflow[all]
 ```
-This installs both noWorkflow and flask. Flask is the requirement of the visualization tool.
+This installs noWorkflow, PyPosAST, Flask, IPython Notebook and PySWIP.
+The only requirement for running noWorkflow is PyPosAST. The other libraries are only used for provenance analysis.
 
+If you only want to install noWorkflow and PyPosAST, please do:
+```bash
+$ pip install noworkflow
+```
 
 If you do not have pip, but already have Git (to clone our repository) and Python:
 ```bash
+$ git clone git@github.com:JoaoFelipe/pyposast.git
+$ cd pyposast
+$ ./setup.py install
+$ cd ..
 $ git clone git@github.com:gems-uff/noworkflow.git
 $ cd noworkflow/capture
 $ ./setup.py install
 ```
-This installs noWorkflow on your system. You may need to install flask if you want to use our visualization tool.
+This installs noWorkflow on your system.
 
 Basic Usage
 -----------
@@ -152,7 +161,11 @@ $ now vis -b
 ```
 The visualization tool shows the evolotion history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool.
 
-We have also a graph visualization implemented in Java, named noWorkflowVis, which connects to noWorkflow database and allows interactive analysis.
+The visualization tool requires Flask to be installed.
+To install Flask, you can run
+```bash
+$ pip install flask
+```
 
 IPython Interface
 -----------------
@@ -230,7 +243,16 @@ In  [8]: trial?
 In  [9]: history?
 ```
 
-It is also possible to run prolog queries on IPython notebook. To do so, you will need to install SWI-Prolog with shared libraries and the pyswip module: https://github.com/yuce/pyswip/blob/master/INSTALL
+It is also possible to run prolog queries on IPython notebook. To do so, you will need to install SWI-Prolog with shared libraries and the pyswip module.
+
+You can install pyswip module with the command:
+```bash
+$ pip install pyswip-alt
+```
+
+Check how to install SWI-Prolog with shared libraries at https://github.com/yuce/pyswip/blob/master/INSTALL
+
+You can install pyswip
 
 To query a specific trial, you can do:
 ```python

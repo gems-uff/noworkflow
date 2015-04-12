@@ -1,3 +1,3 @@
-"""This module is the main noWorkflow module
-It provides access to all features
+"""Main noWorkflow module
+Provide access to all features
 """

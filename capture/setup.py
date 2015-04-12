@@ -13,7 +13,7 @@ import platform
 from uuid import getnode
 
 
-VERSION = ("0", "9", "0")
+VERSION = ("0", "9", "2")
 
 
 def recursive_path(pack, path):
@@ -110,7 +110,9 @@ setup(
     url = "https://github.com/gems-uff/noworkflow",
     install_requires=['pyposast'],
     extras_require = {
-        'vis': ['flask']
+        'vis': ['pyposast', 'flask'],
+        'notebook': ['pyposast', 'ipython[notebook]'],
+        'all': ['pyposast', 'ipython[notebook]', 'flask', 'pyswip-alt'],
     },
     cmdclass={
         'install': CustomInstallCommand,

@@ -4,8 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 
 # Do not add from __future__ imports here
-"""This module provides support for both Python 2 and Python 3"""
-
+"""Provide support for both Python 2 and Python 3"""
 
 import sys
 

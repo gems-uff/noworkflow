@@ -13,19 +13,13 @@ import __main__
 from ...now.cross_version import bytes_string
 from ...now.persistence import persistence
 from ...now.cmd import Run
+from ..mock import Mock
 
 
 def run(*args):
     metascript = args[2]
     metascript['code'] = bytes_string(metascript['code'])
     return Run('run', 'run').run(*args)
-
-
-class Mock(object):
-
-    def __getattr__(self, name):
-        print(name)
-        return lambda *args, **kwargs: None
 
 
 persistence = Mock()
