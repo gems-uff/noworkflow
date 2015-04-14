@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from .now.ipython import init
 
 def load_ipython_extension(ipython):
+    from .now.ipython import init
     init(ipython=ipython)
