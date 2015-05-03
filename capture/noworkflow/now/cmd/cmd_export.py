@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 import argparse
+import json
 
 from .. import utils
 from ..persistence import persistence
@@ -26,6 +27,45 @@ def int_or_type(string):
                 raise argparse.ArgumentTypeError("you must diff two trials")
             return splitted
         return string
+
+
+def nbconvert(code):
+    cells = []
+    for cell in code.split('\n# <codecell>\n'):
+        cells.append({
+            'cell_type': 'code',
+            'execution_count': None,
+            'metadata': {
+                'collapsed': True,
+            },
+            'outputs': [],
+            'source': [cell]
+        })
+    result = {
+        'cells': cells,
+        'nbformat': 4,
+        'nbformat_minor': 0,
+        'metadata': {
+            "kernelspec": {
+                "display_name": "Python 2",
+                "language": "python",
+                "name": "python2"
+            },
+            "language_info": {
+                "codemirror_mode": {
+                    "name": "ipython",
+                    "version": 2
+                },
+                "file_extension": ".py",
+                "mimetype": "text/x-python",
+                "name": "python",
+                "nbconvert_exporter": "python",
+                "pygments_lexer": "ipython2",
+                "version": "2.7.6"
+            }
+        }
+    }
+    return result
 
 
 class Export(Command):
@@ -53,9 +93,8 @@ class Export(Command):
             if args.rules:
                 print(trial_prolog.export_rules())
         else:
-            import IPython.nbformat.current as nbf
             if args.trial == "history":
-                nb = nbf.reads((u"%load_ext noworkflow\n"
+                nb = nbconvert((u"%load_ext noworkflow\n"
                                 u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"history = nip.History()\n"
@@ -64,11 +103,11 @@ class Export(Command):
                                 u"# history.script = '*'\n"
                                 u"# history.execution = '*'\n"
                                 u"# <codecell>\n"
-                                u"history").format(args.trial), 'py')
+                                u"history").format(args.trial))
                 with open('History.ipynb'.format(args.trial),'w') as ipynb:
-                    nbf.write(nb, ipynb, 'ipynb')
+                    json.dump(nb, ipynb)
             elif isinstance(args.trial, list):
-                nb = nbf.reads((u"%load_ext noworkflow\n"
+                nb = nbconvert((u"%load_ext noworkflow\n"
                                 u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"diff = nip.Diff({1}, {2})\n"
@@ -77,11 +116,11 @@ class Export(Command):
                                 u"# diff.graph_width = 500\n"
                                 u"# diff.graph_height = 500\n"
                                 u"# <codecell>\n"
-                                u"diff").format(*args.trial), 'py')
+                                u"diff").format(*args.trial))
                 with open('Diff-{1}-{2}.ipynb'.format(*args.trial),'w') as ipynb:
-                    nbf.write(nb, ipynb, 'ipynb')
+                    json.dump(nb, ipynb)
             else:
-                nb = nbf.reads((u"%load_ext noworkflow\n"
+                nb = nbconvert((u"%load_ext noworkflow\n"
                                 u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"trial = nip.Trial({})\n"
@@ -89,6 +128,6 @@ class Export(Command):
                                 u"# trial.graph_width = 500\n"
                                 u"# trial.graph_height = 500\n"
                                 u"# <codecell>\n"
-                                u"trial").format(args.trial), 'py')
+                                u"trial").format(args.trial))
                 with open('Trial-{}.ipynb'.format(args.trial),'w') as ipynb:
-                    nbf.write(nb, ipynb, 'ipynb')
+                    json.dump(nb, ipynb)

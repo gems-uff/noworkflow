@@ -95,4 +95,4 @@ class Restore(Command):
                 self.restore(name, content_hash, trial.id)
 
     def execute(self, args):
-        self.do_restore(self, args)
+        self.do_restore(args)
