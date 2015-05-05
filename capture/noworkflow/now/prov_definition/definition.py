@@ -23,6 +23,8 @@ class Definition(object):
 		self.call_by_lasti = {}
 		# Set of imports
 		self.imports = {}
+		# Function definitions
+		self.functions = {}
 
 	def add_visitor(self, visitor):
 		self.paths.append(visitor.path)
@@ -31,3 +33,4 @@ class Definition(object):
 		self.call_by_col[visitor.path] = visitor.function_calls
 		self.call_by_lasti[visitor.path] = visitor.function_calls_by_lasti
 		self.imports[visitor.path] = visitor.imports
+		self.functions[visitor.path] = visitor.functions

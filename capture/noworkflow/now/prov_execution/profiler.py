@@ -29,6 +29,9 @@ class Profiler(StoreOpenMixin):
         self.activation_stack = []
         self.function_activation = None
 
+        self.definition = self.metascript['definition']
+        self.functions = self.definition.functions[self.script]
+
         self.event_map['c_call'] = self.trace_c_call
         self.event_map['call'] = self.trace_call
         self.event_map['c_return'] = self.trace_c_return
@@ -126,22 +129,13 @@ class Profiler(StoreOpenMixin):
             self.capture_python_params(frame, activation)
 
             # Capturing globals
-            function_def = persistence.load(
-                'function_def',
-                name = repr(activation.name),
-                trial_id = self.trial_id
-            ).fetchone()
+            function_def = self.functions.get(activation.name)
 
             if function_def:
-                global_vars = persistence.load(
-                    'object',
-                    type='"GLOBAL"',
-                    function_def_id = function_def[str('id')]
-                )
                 aglobals = activation.globals
                 fglobals = frame.f_globals
-                for global_var in global_vars:
-                    aglobals[global_var['name']] = fglobals[global_var['name']]
+                for global_var in function_def[1]:
+                    aglobals[global_var] = fglobals[global_var]
 
             self.add_activation(activation)
 

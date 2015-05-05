@@ -17,8 +17,6 @@ from ..persistence import persistence
 
 class FunctionVisitor(ast.NodeVisitor):
     'Identifies the function declarations and related data'
-    code = None
-    functions = {}
 
     # Temporary attributes for recursive data collection
     contexts = [Context('(global)')]
@@ -26,9 +24,11 @@ class FunctionVisitor(ast.NodeVisitor):
     lineno = None
 
     def __init__(self, metascript):
+        self.path = metascript['path']
         self.code = metascript['code'].decode('utf-8').split('\n')
         self.metascript = metascript
         self.result = None
+        self.functions = {}
 
     @property
     def namespace(self):

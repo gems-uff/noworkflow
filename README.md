@@ -159,7 +159,7 @@ The vis option starts a visualization tool that allows interactive analysis:
 ```bash
 $ now vis -b
 ```
-The visualization tool shows the evolotion history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool.
+The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool.
 
 The visualization tool requires Flask to be installed.
 To install Flask, you can run

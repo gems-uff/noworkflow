@@ -167,7 +167,6 @@ class SlicingVisitor(FunctionVisitor):
 
     def __init__(self, *args):
         super(SlicingVisitor, self).__init__(*args)
-        self.path = self.metascript['path']
         self.name_refs = defaultdict(lambda: {
             'Load': [], 'Store': [], 'Del': [],
             'AugLoad': [], 'AugStore': [], 'Param': [],
@@ -244,11 +243,10 @@ class SlicingVisitor(FunctionVisitor):
         self.loop.add(node.id)
         self.name_refs[node.lineno][type(node.ctx).__name__]\
             .append(node.id)
-        self.generic_visit(node)
+        super(SlicingVisitor, self).visit_Name(node)
 
     def visit_Call(self, node):
-        self.call(node)
-        self.generic_visit(node)
+        super(SlicingVisitor, self).visit_Call(node)
         fn = self.add_call_function(node, FunctionCall)
         self.function_calls[fn.line][fn.col] = fn
 
@@ -268,7 +266,7 @@ class SlicingVisitor(FunctionVisitor):
 
 
     def visit_ClassDef(self, node):
-        self.generic_visit(node)
+        super(SlicingVisitor, self).visit_ClassDef(node)
         self.add_call_function(node, ClassDef)
 
         for dec_node in node.decorator_list:
@@ -296,7 +294,7 @@ class SlicingVisitor(FunctionVisitor):
             self.add_generator('Generator', gen_node)
 
     def visit_FunctionDef(self, node):
-        self.generic_visit(node)
+        super(SlicingVisitor, self).visit_FunctionDef(node)
 
         for dec_node in node.decorator_list:
             self.add_decorator(dec_node)
