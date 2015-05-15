@@ -57,8 +57,8 @@
   {% if c1 == c2 %}
     <span class="attr"><span class="desc">{{ name }}: </span><span class="{{ class }}"> {{ c1 }} </span></span>
   {% else %}
-    <span class="attr"><span class="desc dbefore">{{ name }}: </span><span class="{{ class }}"> {{ c1 }} </span></span>
-    <span class="attr"><span class="desc dafter">{{ name }}: </span><span class="{{ class }}"> {{ c2 }} </span></span>
+    <span class="attr"><span class="desc dbefore">{{ name }}: <span class="{{ class }}"> {{ c1 }} </span></span></span>
+    <span class="attr"><span class="desc dafter">{{ name }}: <span class="{{ class }}"> {{ c2 }} </span></span></span>
   {% endif %}
 {% endmacro %}
 
@@ -109,14 +109,14 @@
             {{ info('duration', 'Duration', trial1.duration, trial2.duration)}}
             {% if not 'arguments' in trial %}
               {% if trial1.arguments %}
-                <span class="attr"><span class="desc">Arguments: </span><span class="arguments"> {{ trial1.arguments }}</span></span>'
+                <span class="attr"><span class="desc">Arguments: <span class="arguments"> {{ trial1.arguments }}</span></span></span>'
               {% endif %}
             {% else %}
               {% if trial1.arguments %}
-                <span class="attr"><span class="desc dbefore">Arguments: </span><span class="arguments"> {{ trial1.arguments }}</span></span>
+                <span class="attr"><span class="desc dbefore">Arguments: <span class="arguments"> {{ trial1.arguments }}</span></span></span>
               {% endif %}
               {% if trial2.arguments %}
-                <span class="attr"><span class="desc dafter">Arguments: </span><span class="arguments"> {{ trial2.arguments }}</span></span>
+                <span class="attr"><span class="desc dafter">Arguments: <span class="arguments"> {{ trial2.arguments }}</span></span></span>
               {% endif %}
             {% endif %}
           </div>
