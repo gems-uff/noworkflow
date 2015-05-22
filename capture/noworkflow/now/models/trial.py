@@ -212,10 +212,32 @@ class Trial(Model):
     def activation_graph(self):
         """ Generates an activation graph """
         result_stack = []
-        stack = [Single(act) for act in self.activations()]
+        activations = [Single(act) for act in self.activations()]
 
-        if not stack:
-            return TreeElement()
+        #level = OrderedDict()
+        #for act in stack:
+        #    level[act.id] = level[act.parent] + 1 if act.parent in level else 0
+        #    act.level = level[act.id]
+
+        if not activations:
+            return TreeElement(level=0)
+
+        current = activations[0]
+        stack = [[current]]
+        level = OrderedDict()
+        current.level = level[current.id] = 0
+        for i in range(1, len(activations)):
+            act = activations[i]
+            act.level = level[act.id] = level[act.parent] + 1
+            last = stack[-1][-1]
+            if act.level == last.level:
+                stack[-1].append(act)
+            elif act.level > last.level:
+                stack.append([act])
+            else:
+                list_to_call(stack)
+        print(stack)
+        stack = activations
 
         result_stack.append(stack.pop())
         while stack:
@@ -242,12 +264,25 @@ class Trial(Model):
         return visitor.to_dict()
 
 
+def list_to_call(stack):
+    group = stack.pop()
+    next = group.pop()
+    while group:
+        previous = group.pop()
+        next = sequence(previous, next)
+    caller = stack[-1].pop()
+    call = Call(caller, next)
+    call.level = caller.level
+    next.level = caller.level + 1
+    stack[-1].append(call)
+
 class TreeElement(object):
 
-    def __init__(self):
+    def __init__(self, level=-1):
         self.duration = 0
         self.count = 1
         self.repr = ""
+        self.level = level
 
     def mean(self):
         if isinstance(self.duration, tuple):
@@ -553,7 +588,7 @@ def add_flow(stack, result, previous, next):
     elif previous.id == next.parent:
         # Previously called next
         # if top of result is in the same level of call:
-        #   create sequece or combine results
+        #   create sequence or combine results
         # if top of result is in a higher level, put Call on top of pile
         if result:
             add_flow(stack, result, Call(previous, next), result.pop())
