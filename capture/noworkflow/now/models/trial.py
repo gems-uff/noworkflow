@@ -15,8 +15,8 @@ from pyposast.cross_version import buffered_str
 
 from ..formatter import PrettyLines
 from ..persistence import row_to_dict, persistence
-from ..graphs.trial_graph import TrialGraph
 from ..utils import calculate_duration, FORMAT, print_msg
+from ..graphs.trial_graph import TrialGraph
 from .model import Model
 from .trial_prolog import TrialProlog
 from .activation import Activation
@@ -62,7 +62,7 @@ class Trial(Model):
             0: self.independent_activation_graph,
             1: self.combined_activation_graph
         }
-        self.trial_graph = TrialGraph()
+        self.trial_graph = TrialGraph(trial_id)
         self.trial_prolog = TrialProlog(self)
 
     def query(self, query):

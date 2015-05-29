@@ -14,7 +14,7 @@ from ..utils import OrderedCounter
 Edge = namedtuple("Edge", "node count")
 
 
-class NoMatchVisitor(object):
+class TreeVisitor(object):
 
     def __init__(self):
         self.nodes = []
@@ -51,16 +51,13 @@ class NoMatchVisitor(object):
         }
 
     def update_edges(self):
-        for edge in self.edges:
-            if edge['type'] in ['return', 'call']:
-                edge['count'] = ''
+        pass
 
     def add_node(self, node):
         self.nodes.append(node.to_dict(self.nid))
         original = self.nid
         self.nid += 1
         return original
-
 
     def add_edge(self, source, target, count, typ):
         self.edges.append({
@@ -69,6 +66,39 @@ class NoMatchVisitor(object):
             'count': count,
             'type': typ
         })
+
+    def visit_call(self, call):
+        caller_id = self.add_node(call.caller)
+        self.nodes[caller_id]['repr'] = repr(call)
+        callees = call.called.visit(self)
+        pos = 1
+        for callee_id in callees:
+            self.add_edge(caller_id, callee_id, pos, 'call')
+            pos += 1
+        return [caller_id]
+
+    def visit_group(self, group):
+        result = []
+        for element in group.nodes.values():
+            result += element.visit(self)
+        return result
+
+    def visit_single(self, single):
+        return [self.add_node(single)]
+
+    def visit_mixed(self, mixed):
+        mixed.mix_results()
+        node_id = mixed.first.visit(self)
+        self.nodes[node_id[0]]['duration'] = mixed.duration
+        return node_id
+
+
+class NoMatchVisitor(TreeVisitor):
+
+    def update_edges(self):
+        for edge in self.edges:
+            if edge['type'] in ['return', 'call']:
+                edge['count'] = ''
 
     def use_delegated(self):
         result = self.delegated
@@ -138,22 +168,21 @@ class NoMatchVisitor(object):
         self.nodes[node_id]['duration'] = mixed.duration
         return node_id, node
 
-    def visit_default(self, empty):
-        return None, None
-
 
 class ExactMatchVisitor(NoMatchVisitor):
 
     def visit_single(self, single):
-        single = Single(single.activation)
-        single.use_id = False
-        return single
+        s = Single(single.activation)
+        s.level = single.level
+        s.use_id = False
+        return s
 
     def visit_mixed(self, mixed):
         mixed.use_id = False
         m = Mixed(mixed.elements[0].visit(self))
         for element in elements[1:]:
             m.add_element(element.visit(self))
+        m.level = mixed.level
         return m
 
     def visit_group(self, group):
@@ -163,14 +192,16 @@ class ExactMatchVisitor(NoMatchVisitor):
         g.initialize(nodes[1].visit(self),nodes[0].visit(self))
         for element in nodes[2:]:
             g.add_subelement(element.visit(self))
+        g.level = group.level
         return g
 
     def visit_call(self, call):
         caller = call.caller.visit(self)
         called = call.called.visit(self)
-        call = Call(caller, called)
-        call.use_id = False
-        return call
+        c = Call(caller, called)
+        c.use_id = False
+        c.level = call.level
+        return c
 
 
 class CombineVisitor(NoMatchVisitor):
@@ -288,31 +319,39 @@ def generate_graph(trial):
 
 class TrialGraph(object):
 
-    def __init__(self):
+    def __init__(self, trial_id):
         self._graph = None
+        self.trial_id = trial_id
 
-    def graph(self, trial):
+    def graph(self, trial=None):
+        if not trial:
+            from ..models import Trial
+            trial = Trial(self.trial_id)
         if self._graph == None:
             self._graph = generate_graph(trial)
         return self._graph
 
-    def no_match(self, trial):
+    def tree(self, trial=None):
+        graph = self.graph(trial)
+        visitor = TreeVisitor()
+        graph.visit(visitor)
+        return visitor.to_dict()
+
+    def no_match(self, trial=None):
         graph = self.graph(trial)
         visitor = NoMatchVisitor()
         graph.visit(visitor)
         return visitor.to_dict()
 
-    def exact_match(self, trial):
+    def exact_match(self, trial=None):
         graph = self.graph(trial)
         graph = graph.visit(ExactMatchVisitor())
         visitor = NoMatchVisitor()
         graph.visit(visitor)
         return visitor.to_dict()
 
-    def combine(self, trial):
+    def combine(self, trial=None):
         graph = self.graph(trial)
         visitor = CombineVisitor()
         graph.visit(visitor)
         return visitor.to_dict()
-
-

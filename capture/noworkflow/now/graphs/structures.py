@@ -58,6 +58,7 @@ class Single(TreeElement):
         self.trial_id = activation['trial_id']
         self.repr = "S({0}-{1})".format(self.line, self.name)
         self.use_id = True
+        self.level = 0
 
     @property
     def count(self):
@@ -101,7 +102,8 @@ class Single(TreeElement):
                 'line': self.line,
                 'count': self.count,
                 'duration': self.duration,
-                'info': Info(self)
+                'level': self.level,
+                'info': Info(self),
             }
         }
 
@@ -118,6 +120,7 @@ class Mixed(TreeElement):
         self.id = activation.id
         self.repr = activation.repr
         self.use_id = True
+        self.level = 0
 
     @property
     def count(self):
@@ -166,6 +169,7 @@ class Group(TreeElement):
         self.count = 1
         self.repr = ""
         self.use_id = True
+        self.level = 0
 
     def initialize(self, previous, next):
         self.nodes[next] = Mixed(next)
@@ -219,6 +223,7 @@ class Call(TreeElement):
         self.duration = self.caller.duration
         self.repr = 'C({0}, {1})'.format(self.caller, self.called)
         self.use_id = True
+        self.level = 0
 
     def __eq__(self, other):
         return all(fn(self) == fn(other) for fn in
