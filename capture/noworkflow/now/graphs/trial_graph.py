@@ -1,22 +1,20 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from datetime import datetime
-from collections import namedtuple, defaultdict
-
-from ..persistence import persistence
-from .utils import calculate_duration, FORMAT
+from collections import namedtuple, defaultdict, OrderedDict
+from .structures import Single, Call, Group, Mixed
+from ..utils import OrderedCounter
 
 
 Edge = namedtuple("Edge", "node count")
 
 
-class TrialGraphVisitor(object):
+class NoMatchVisitor(object):
 
     def __init__(self):
         self.nodes = []
@@ -144,10 +142,41 @@ class TrialGraphVisitor(object):
         return None, None
 
 
-class TrialGraphCombineVisitor(TrialGraphVisitor):
+class ExactMatchVisitor(NoMatchVisitor):
+
+    def visit_single(self, single):
+        single = Single(single.activation)
+        single.use_id = False
+        return single
+
+    def visit_mixed(self, mixed):
+        mixed.use_id = False
+        m = Mixed(mixed.elements[0].visit(self))
+        for element in elements[1:]:
+            m.add_element(element.visit(self))
+        return m
+
+    def visit_group(self, group):
+        nodes = group.nodes.keys()
+        g = Group()
+        g.use_id = False
+        g.initialize(nodes[1].visit(self),nodes[0].visit(self))
+        for element in nodes[2:]:
+            g.add_subelement(element.visit(self))
+        return g
+
+    def visit_call(self, call):
+        caller = call.caller.visit(self)
+        called = call.called.visit(self)
+        call = Call(caller, called)
+        call.use_id = False
+        return call
+
+
+class CombineVisitor(NoMatchVisitor):
 
     def __init__(self):
-        super(TrialGraphCombineVisitor, self).__init__()
+        super(CombineVisitor, self).__init__()
         self.context = {}
         self.context_edges = {}
         self.namestack = []
@@ -174,7 +203,7 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
             return self.context[namespace]['index']
 
         single.namespace = namespace
-        result = super(TrialGraphCombineVisitor, self).add_node(single)
+        result = super(CombineVisitor, self).add_node(single)
         self.context[namespace] = self.nodes[-1]
         return result
 
@@ -183,7 +212,7 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
         edge = "{} {} {}".format(source, target, typ)
 
         if not edge in self.context_edges:
-            super(TrialGraphCombineVisitor, self).add_edge(source, target,
+            super(CombineVisitor, self).add_edge(source, target,
                                                            count, typ)
             self.context_edges[edge] = self.edges[-1]
         else:
@@ -192,7 +221,7 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
 
     def visit_call(self, call):
         self.namestack.append(call.caller.name_id())
-        result = super(TrialGraphCombineVisitor, self).visit_call(call)
+        result = super(CombineVisitor, self).visit_call(call)
         self.namestack.pop()
         return result
 
@@ -201,3 +230,89 @@ class TrialGraphCombineVisitor(TrialGraphVisitor):
         for element in mixed.elements:
             node_id, node = element.visit(self)
         return node_id, node
+
+
+def sequence(previous, next):
+    if isinstance(next, Group):
+        next.add_subelement(previous)
+        return next
+    return Group().initialize(previous, next)
+
+
+def list_to_call(stack):
+    group = stack.pop()
+    next = group.pop()
+    while group:
+        previous = group.pop()
+        next = sequence(previous, next)
+    caller = stack[-1].pop()
+    call = Call(caller, next)
+    call.level = caller.level
+    next.level = caller.level + 1
+    stack[-1].append(call)
+
+
+def generate_graph(trial):
+    """ Returns activation graph """
+    activations = [Single(act) for act in trial.activations()]
+    if not activations:
+        return TreeElement(level=0)
+
+    current = activations[0]
+    stack = [[current]]
+    level = OrderedDict()
+    current.level = level[current.id] = 0
+
+    for i in range(1, len(activations)):
+        act = activations[i]
+        act.level = level[act.id] = level[act.parent] + 1
+        last = stack[-1][-1]
+        if act.level == last.level:
+            # act in the same level, add act to sequence
+            stack[-1].append(act)
+        elif act.level > last.level:
+            # last called act
+            stack.append([act])
+        else:
+            # act is in higher level than last
+            # create a call for last group
+            # add act to existing sequence
+            list_to_call(stack)
+            stack[-1].append(act)
+
+    while len(stack) > 1:
+        list_to_call(stack)
+
+    return(stack[-1][-1])
+
+
+class TrialGraph(object):
+
+    def __init__(self):
+        self._graph = None
+
+    def graph(self, trial):
+        if self._graph == None:
+            self._graph = generate_graph(trial)
+        return self._graph
+
+    def no_match(self, trial):
+        graph = self.graph(trial)
+        visitor = NoMatchVisitor()
+        graph.visit(visitor)
+        return visitor.to_dict()
+
+    def exact_match(self, trial):
+        graph = self.graph(trial)
+        graph = graph.visit(ExactMatchVisitor())
+        visitor = NoMatchVisitor()
+        graph.visit(visitor)
+        return visitor.to_dict()
+
+    def combine(self, trial):
+        graph = self.graph(trial)
+        visitor = CombineVisitor()
+        graph.visit(visitor)
+        return visitor.to_dict()
+
+

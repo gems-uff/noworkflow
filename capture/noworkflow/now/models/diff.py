@@ -12,10 +12,7 @@ from copy import deepcopy
 from collections import namedtuple, OrderedDict, defaultdict
 
 from .model import Model
-from .trial import Trial, TreeElement, Single, Call
-from .trial import Mixed, Group
-from .trial_activation_visitors import TrialGraphVisitor
-from .trial_activation_visitors import TrialGraphCombineVisitor
+from .trial import Trial
 from ..utils import OrderedCounter, concat_iter
 
 

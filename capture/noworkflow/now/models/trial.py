@@ -13,14 +13,12 @@ from collections import defaultdict, OrderedDict, Counter
 from pyposast.cross_version import buffered_str
 
 
-from .. import utils
 from ..formatter import PrettyLines
 from ..persistence import row_to_dict, persistence
+from ..graphs.trial_graph import TrialGraph
+from ..utils import calculate_duration, FORMAT, print_msg
 from .model import Model
-from .trial_activation_visitors import TrialGraphVisitor
-from .trial_activation_visitors import TrialGraphCombineVisitor
 from .trial_prolog import TrialProlog
-from .utils import calculate_duration, FORMAT
 from .activation import Activation
 
 
@@ -55,7 +53,7 @@ class Trial(Model):
             last_trial_id = persistence.last_trial_id(script=script)
             trial_id = trial_id or last_trial_id
             if not 1 <= trial_id <= last_trial_id:
-                utils.print_msg('inexistent trial id', True)
+                print_msg('inexistent trial id', True)
                 sys.exit(1)
 
         self.id = trial_id
@@ -64,6 +62,7 @@ class Trial(Model):
             0: self.independent_activation_graph,
             1: self.combined_activation_graph
         }
+        self.trial_graph = TrialGraph()
         self.trial_prolog = TrialProlog(self)
 
     def query(self, query):
@@ -211,391 +210,15 @@ class Trial(Model):
 
     def activation_graph(self):
         """ Generates an activation graph """
-        result_stack = []
-        activations = [Single(act) for act in self.activations()]
-
-        #level = OrderedDict()
-        #for act in stack:
-        #    level[act.id] = level[act.parent] + 1 if act.parent in level else 0
-        #    act.level = level[act.id]
-
-        if not activations:
-            return TreeElement(level=0)
-
-        current = activations[0]
-        stack = [[current]]
-        level = OrderedDict()
-        current.level = level[current.id] = 0
-        for i in range(1, len(activations)):
-            act = activations[i]
-            act.level = level[act.id] = level[act.parent] + 1
-            last = stack[-1][-1]
-            if act.level == last.level:
-                stack[-1].append(act)
-            elif act.level > last.level:
-                stack.append([act])
-            else:
-                list_to_call(stack)
-        print(stack)
-        stack = activations
-
-        result_stack.append(stack.pop())
-        while stack:
-            next = result_stack.pop()
-            previous = stack.pop()
-            add_flow(stack, result_stack, previous, next)
-
-        return result_stack.pop()
+        return self.trial_graph.graph(self)
 
     def independent_activation_graph(self):
         """ Generates an activation graph and transforms it into an
             exact match graph supported by d3 """
-        graph = self.activation_graph()
-        visitor = TrialGraphVisitor()
-        graph.visit(visitor)
-        return visitor.to_dict()
+        return self.trial_graph.exact_match(self)
 
     def combined_activation_graph(self):
         """ Generates an activation graph and transforms it into an
             combined graph supported by d3 """
-        graph = self.activation_graph()
-        visitor = TrialGraphCombineVisitor()
-        graph.visit(visitor)
-        return visitor.to_dict()
+        return self.trial_graph.combine(self)
 
-
-def list_to_call(stack):
-    group = stack.pop()
-    next = group.pop()
-    while group:
-        previous = group.pop()
-        next = sequence(previous, next)
-    caller = stack[-1].pop()
-    call = Call(caller, next)
-    call.level = caller.level
-    next.level = caller.level + 1
-    stack[-1].append(call)
-
-class TreeElement(object):
-
-    def __init__(self, level=-1):
-        self.duration = 0
-        self.count = 1
-        self.repr = ""
-        self.level = level
-
-    def mean(self):
-        if isinstance(self.duration, tuple):
-            return (self.a.duration / self.a.count,
-                    self.b.duration / self.b.count)
-        return self.duration / self.count
-
-    def visit(self, visitor):
-        return visitor.visit_default(self)
-
-    def calculate_repr(self):
-        pass
-
-    def mix(self, other):
-        pass
-
-    def __hash__(self):
-        #return id(self)
-        return hash(self.__repr__())
-
-    def __repr__(self):
-        return self.repr
-
-
-class Single(TreeElement):
-
-    def __init__(self, activation):
-        self.activation = activation
-        self.activations = {activation}
-        self.parent = activation['caller_id']
-        self.id = activation['id']
-        self.line = activation['line']
-        self.name = activation['name']
-        self.trial_id = activation['trial_id']
-        self.repr = "S({0}-{1})".format(self.line, self.name)
-
-    @property
-    def count(self):
-        return sum(1 for a in self.activations)
-
-    @count.setter
-    def count(self, value):
-        pass
-
-    @property
-    def duration(self):
-        return sum(calculate_duration(a) for a in self.activations
-                   if a['finish'] and a['start'])
-
-    @duration.setter
-    def duration(self, value):
-        pass
-
-    def mix(self, other):
-        self.count += other.count
-        self.duration += other.duration
-        self.activations = self.activations.union(other.activations)
-
-    def __eq__(self, other):
-        if type(self) != type(other):
-            return False
-        if self.line != other.line:
-            return False
-        if self.name != other.name:
-            return False
-        return True
-
-    def name_id(self):
-        return "{0} {1}".format(self.line, self.name)
-
-    def visit(self, visitor):
-        return visitor.visit_single(self)
-
-    def to_dict(self, nid):
-        return {
-            'index': nid,
-            'caller_id': self.parent,
-            'name': self.name,
-            'node': {
-                'trial_id': self.trial_id,
-                'line': self.line,
-                'count': self.count,
-                'duration': self.duration,
-                'info': Info(self)
-            }
-        }
-
-    def __hash__(self):
-        return super(Single, self).__hash__()
-
-
-class Mixed(TreeElement):
-
-    def __init__(self, activation):
-        self.duration = activation.duration
-        self.elements = [activation]
-        self.parent = activation.parent
-        self.id = activation.id
-        self.repr = activation.repr
-
-    @property
-    def count(self):
-        return sum(e.count for e in self.elements)
-
-    @count.setter
-    def count(self, value):
-        pass
-
-    @property
-    def duration(self):
-        return sum(e.duration for e in self.elements)
-
-    @property
-    def first(self):
-        return next(iter(self.elements))
-
-    @duration.setter
-    def duration(self, value):
-        pass
-
-    def add_element(self, element):
-        self.elements.append(element)
-
-    def visit(self, visitor):
-        return visitor.visit_mixed(self)
-
-    def mix(self, other):
-        self.elements += other.elements
-        self.mix_results()
-
-    def mix_results(self):
-        it = iter(self.elements)
-        initial = next(it)
-        for element in it:
-            initial.mix(element)
-
-    def __hash__(self):
-        return super(Mixed, self).__hash__()
-
-
-class Group(TreeElement):
-
-    def __init__(self):
-        self.nodes = OrderedDict()
-        self.edges = OrderedDict()
-        self.duration = 0
-        self.parent = None
-        self.count = 1
-        self.repr = ""
-
-    def initialize(self, previous, next):
-        self.nodes[next] = Mixed(next)
-        self.duration = next.duration
-        self.next = next
-        self.last = next
-        self.add_subelement(previous)
-        self.parent = next.parent
-        return self
-
-    def add_subelement(self, previous):
-        next, self.next = self.next, previous
-        if not previous in self.edges:
-            self.edges[previous] = utils.OrderedCounter()
-        if not previous in self.nodes:
-            self.nodes[previous] = Mixed(previous)
-        else:
-            self.nodes[previous].add_element(previous)
-        self.edges[previous][next] += 1
-
-    def calculate_repr(self):
-        result = [
-            "[{0}-{1}->{2}]".format(previous, count, next)
-            for previous, edges in self.edges.items()
-            for next, count in edges.items()
-        ]
-
-        self.repr = "G({0})".format(', '.join(result))
-
-    def __eq__(self, other):
-        if type(self) != type(other):
-            return False
-        if not self.edges == other.edges:
-            return False
-        return True
-
-    def visit(self, visitor):
-        return visitor.visit_group(self)
-
-    def mix(self, other):
-        for node, value in self.nodes.items():
-            value.mix(other.nodes[node])
-
-    def __hash__(self):
-        return super(Group, self).__hash__()
-
-
-class Call(TreeElement):
-
-    def __init__(self, caller, called):
-        self.caller = caller
-        self.called = called
-        self.called.calculate_repr()
-        self.parent = caller.parent
-        self.count = 1
-        self.id = self.caller.id
-        self.duration = self.caller.duration
-        self.repr = 'C({0}, {1})'.format(self.caller, self.called)
-
-    def __eq__(self, other):
-        if type(self) != type(other):
-            return False
-        if not self.caller == other.caller:
-            return False
-        if not self.called == other.called:
-            return False
-        return True
-
-    def visit(self, visitor):
-        return visitor.visit_call(self)
-
-    def mix(self, other):
-        self.caller.mix(other.caller)
-        self.called.mix(other.called)
-
-    def __hash__(self):
-        return super(Call, self).__hash__()
-
-
-class Info(object):
-
-    def __init__(self, single):
-        self.title = ("Trial {trial}<br>"
-                      "Function <b>{name}</b> called at line {line}").format(
-            trial=single.trial_id, name=single.name, line=single.line)
-        self.activations = set()
-        self.duration = ""
-        self.mean = ""
-        self.extract_activations(single)
-
-    def update_by_node(self, node):
-        self.duration = self.duration_text(node['duration'], node['count'])
-        self.mean = self.mean_text(node['mean'])
-        self.activation_list = sorted(self.activations, key=lambda a: a[0])
-
-    def add_activation(self, activation):
-        self.activations.add(
-            (datetime.strptime(activation['start'], FORMAT), activation))
-
-    def extract_activations(self, single):
-        for activation in single.activations:
-            self.add_activation(activation)
-
-    def duration_text(self, duration, count):
-        return "Total duration: {} microseconds for {} activations".format(
-            duration, count)
-
-    def mean_text(self, mean):
-        return "Mean: {} microseconds per activation".format(mean)
-
-    def activation_text(self, activation):
-        values = map(row_to_dict, persistence.load('object_value',
-            function_activation_id=activation['id'], order='id'))
-        values = [value for value in values if value['type'] == 'ARGUMENT']
-        result = [
-            "",
-            "Activation #{id} from {start} to {finish} ({dur} microseconds)"
-                .format(dur=calculate_duration(activation), **activation),
-        ]
-        if values:
-            result.append("Arguments: {}".format(
-                ", ".join("{}={}".format(value["name"], value["value"])
-                    for value in values)))
-        return result + [
-            "Returned {}".format(activation['return'])
-        ]
-
-    def __repr__(self):
-        result = [self.title, self.duration, self.mean]
-        for activation in self.activation_list:
-            result += self.activation_text(activation[1])
-
-        return '<br/>'.join(result)
-
-
-def join(a, b):
-    if a == b:
-        return Dual(a, b)
-    return Branch(a, b)
-
-
-def sequence(previous, next):
-    if isinstance(next, Group):
-        next.add_subelement(previous)
-        return next
-    return Group().initialize(previous, next)
-
-
-def add_flow(stack, result, previous, next):
-    if previous.parent == next.parent:
-        # Same function level
-        result.append(sequence(previous, next))
-
-    elif previous.id == next.parent:
-        # Previously called next
-        # if top of result is in the same level of call:
-        #   create sequence or combine results
-        # if top of result is in a higher level, put Call on top of pile
-        if result:
-            add_flow(stack, result, Call(previous, next), result.pop())
-        else:
-            result.append(Call(previous, next))
-    else:
-        # Next is in a higher level
-        # Put previous on top of result
-        result.append(next)
-        result.append(previous)

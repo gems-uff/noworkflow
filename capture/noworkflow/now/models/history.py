@@ -10,7 +10,7 @@ import time
 
 from collections import defaultdict, OrderedDict
 from .model import Model
-from .utils import calculate_duration, FORMAT
+from ..utils import calculate_duration, FORMAT
 from ..persistence import row_to_dict
 from ..persistence import persistence as pers
 

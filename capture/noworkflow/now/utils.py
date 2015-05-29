@@ -6,11 +6,13 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from datetime import datetime
 from textwrap import dedent
 from collections import OrderedDict, Counter
 from pkg_resources import resource_string
 
 
+FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 LABEL = '[now] '
 verbose = False
 
@@ -85,3 +87,11 @@ def concat_iter(*iters):
     for iterator in iters:
         for value in iterator:
             yield value
+
+
+def calculate_duration(obj):
+    return int((
+        datetime.strptime(obj['finish'], FORMAT) -
+        datetime.strptime(obj['start'], FORMAT)
+    ).total_seconds() * 1000000)
+
