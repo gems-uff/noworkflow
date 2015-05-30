@@ -6,7 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from copy import deepcopy
+import itertools
+from copy import deepcopy, copy
 from collections import namedtuple, defaultdict, OrderedDict
 from ..utils import OrderedCounter, concat_iter, hashabledict
 from .structures import prepare_cache
@@ -44,6 +45,18 @@ def prepare_graph(g1, g2):
     nodes2 = [hashabledict(x) for x in g2['nodes']]
     nodes1[0]['name'] = '<main>'
     nodes2[0]['name'] = '<main>'
+    g1['hnodes'], g2['hnodes'] = nodes1, nodes2
+    g1['node_indexes'] = set(range(len(nodes1)))
+    g2['node_indexes'] = set(range(len(nodes2)))
+    g1['levels'] = defaultdict(set)
+    g2['levels'] = defaultdict(set)
+    for n in nodes1:
+        g1['levels'][n['node']['level']].add(n['index'])
+    for n in nodes2:
+        g2['levels'][n['node']['level']].add(n['index'])
+    g1['max_level'] = max(g1['levels'].keys())
+    g2['max_level'] = max(g2['levels'].keys())
+
     return nodes1, nodes2
 
 
@@ -74,17 +87,19 @@ def lcs(a, b, eq=lambda x, y: x == y):
 
 
 def cmp_node_fn(nodes1, nodes2):
-    def cmp_node(x, y):
+    def cmp_node(x, y, check_caller=True):
         if x['name'] != y['name']:
             return False
-        if x['caller_id'] is None and y['caller_id'] is not None:
-            return False
-        if x['caller_id'] is not None and y['caller_id'] is None:
-            return False
-        if x['caller_id'] is None and y['caller_id'] is None:
-            return True
-        caller1, caller2 = nodes1[x['caller_id']], nodes2[y['caller_id']]
-        return caller1['name'] == caller2['name']
+        if check_caller:
+            if x['caller_id'] is None and y['caller_id'] is not None:
+                return False
+            if x['caller_id'] is not None and y['caller_id'] is None:
+                return False
+            if x['caller_id'] is None and y['caller_id'] is None:
+                return True
+            caller1, caller2 = nodes1[x['caller_id']], nodes2[y['caller_id']]
+            return caller1['name'] == caller2['name']
+        return True
     return cmp_node
 
 
@@ -109,7 +124,7 @@ def first_solution(nodes1, nodes2):
 
 class MappingToGraph(object):
 
-    def __init__(self, g1, g2, nodes1, nodes2, mapping):
+    def __init__(self, g1, g2, mapping):
         self.id = 0
         self.nodes = []
         self.edges = []
@@ -122,7 +137,11 @@ class MappingToGraph(object):
             g1['min_duration'].items(), g2['min_duration'].items()))
 
         self.g1, self.g2 = g1, g2
-        self.nodes1, self.nodes2 = nodes1, nodes2
+        self.nodes1, self.nodes2 = g1['hnodes'], g2['hnodes']
+        del g1['hnodes'], g2['hnodes']
+        del g1['node_indexes'], g2['node_indexes']
+        del g1['levels'], g2['levels']
+        del g1['max_level'], g2['max_level']
         self.mapping = mapping
         self.merge()
 
@@ -193,9 +212,9 @@ class MappingToGraph(object):
 
 class Similarity(object):
 
-    def __init__(self, g1, g2, nodes1, nodes2):
+    def __init__(self, g1, g2):
         self.g1, self.g2 = g1, g2
-        self.nodes1, self.nodes2 = nodes1, nodes2
+        self.nodes1, self.nodes2 = g1['hnodes'], g2['hnodes']
         self.total_nodes = float(self.count_union_nodes())
         self.total_edges = float(self.count_union_edges())
         self.edges1, self.edges2 = defaultdict(set), defaultdict(set)
@@ -247,20 +266,115 @@ class Similarity(object):
                     edges += 1
         return float(edges)
 
-    def similarity(self, mapping):
+    def __call__(self, mapping):
         node_sim = (float(len(mapping)) / self.total_nodes)
         edge_sim = self.edge_intersection(mapping) / self.total_edges
-        return node_sim + edge_sim
+        result = node_sim + edge_sim
+        return result
+
 
 def greedy(g1, g2):
     nodes1, nodes2 = prepare_graph(g1, g2)
     mapping = first_solution(nodes1, nodes2)
-    sim = Similarity(g1, g2, nodes1, nodes2)
-    print(sim.similarity(mapping))
-    print(list((i, node['name']) for i, node in enumerate(nodes2)))
-    mapping[nodes1[5]] = nodes2[3]
-    print(sim.similarity(mapping))
-    return MappingToGraph(g1, g2, nodes1, nodes2, mapping).to_dict()
+    return MappingToGraph(g1, g2, mapping).to_dict()
+
+
+def neighborhood(k, g1, g2, mapping):
+    nodes1, nodes2 = g1['hnodes'], g2['hnodes']
+    cmp_node = cmp_node_fn(nodes1, nodes2)
+    tried = set()
+    used1 = {n['index'] for n in mapping.keys()}
+    used2 = {n['index'] for n in mapping.values()}
+    reverse = {n2:n1 for n1, n2 in mapping.items()}
+    max_level = min(g1['max_level'], g2['max_level'])
+
+    def add_to_mapping(to_add, new_mapping, swapped):
+        added = []
+        for node_id1, node_id2 in to_add:
+            if swapped:
+                node_id1, node_id2 = node_id2, node_id1
+            node1, node2 = nodes1[node_id1], nodes2[node_id2]
+            if cmp_node(node1, node2):
+                added.append((node_id1, node_id2))
+                new_mapping[node1] = node2
+        return tuple(added)
+
+    def permutate(group1, group2, allow_different_caller):
+        for n1, n2 in itertools.product(group1, group2):
+            node1, node2 = nodes1[n1], nodes2[n2]
+            if id(mapping[node1]) == id(node2):
+                # already on mapping
+                continue
+            if not cmp_node(node1, node2, not allow_different_caller):
+                # different nodes
+                continue
+            new_mapping = copy(mapping)
+            if node2 in reverse:
+                del new_mapping[reverse[node2]]
+            new_mapping[node1] = node2
+            for m in neighborhood(1, g1, g2, new_mapping):
+                yield m
+
+    if k == 1:
+        not_mapped1 = g1['node_indexes'] - used1
+        not_mapped2 = g2['node_indexes'] - used2
+        swapped = False
+        if len(not_mapped2) > len(not_mapped1):
+            swapped = True
+            not_mapped1, not_mapped2 = not_mapped2, not_mapped1
+
+        possibilities = [zip(x, not_mapped2) for x in itertools.permutations(
+            not_mapped1, len(not_mapped2))]
+        result = []
+        for full_map in possibilities:
+            for i in range(1, len(not_mapped2) + 1):
+                for to_add in itertools.combinations(full_map, i):
+                    if to_add in tried:
+                        continue
+                    new_mapping = copy(mapping)
+                    to_add = add_to_mapping(to_add, new_mapping, swapped)
+                    if to_add in tried:
+                        continue
+                    tried.add(to_add)
+                    yield new_mapping
+
+    if k == 2:
+        for i in range(1, max_level + 1):
+            for m in permutate(g1['levels'][i], g2['levels'][i], False):
+                yield m
+
+    if k == 3:
+        for i in range(1, max_level + 1):
+            for m in permutate(g1['node_indexes'], g2['node_indexes'], True):
+                yield m
+
+    yield mapping
+
+
+def vnd(g1, g2, neighborhoods=3):
+    nodes1, nodes2 = prepare_graph(g1, g2)
+    sim = Similarity(g1, g2)
+
+    f = first_solution(nodes1, nodes2)
+    best = (f, sim(f))
+    k = 1
+    while k <= neighborhoods:
+        current = max(((n, sim(n)) for n in neighborhood(k, g1, g2, best[0])),
+                      key=lambda x: x[1])
+        if current[1] > best[1]:
+            best = current
+            k = 1
+        else:
+            k += 1
+    return MappingToGraph(g1, g2, best[0]).to_dict()
+
+
+def show_mapping(mapping):
+    return [(x['index'], y['index'], x['name']) for x,y in mapping.items()]
+
+
+def play(g1, g2):
+    return vnd(g1, g2)
 
 
 def trial_mirror(fn):
@@ -285,7 +399,7 @@ class DiffGraph(object):
     def __init__(self, trial1_id, trial2_id):
         self.trial1_id = trial1_id
         self.trial2_id = trial2_id
-        self.use_cache = True
+        self.use_cache = False
 
     @cache('tree')
     @trial_mirror
@@ -300,9 +414,9 @@ class DiffGraph(object):
     @cache('exact_match')
     @trial_mirror
     def exact_match(self, diff, g1, g2):
-        return greedy(g1, g2), g1, g2
+        return play(g1, g2), g1, g2
 
     @cache('combine')
     @trial_mirror
     def combine(self, diff, g1, g2):
-        return greedy(g1, g2), g1, g2
+        return play(g1, g2), g1, g2
