@@ -129,7 +129,7 @@ class NoMatchVisitor(TreeVisitor):
         self.nodes[caller_id]['repr'] = repr(call)
 
         if delegated:
-            self.solve_delegation(caller_id, 0, delegated)
+            self.solve_delegation(caller_id, call.count, delegated)
 
         self.delegated['call'] = Edge(caller_id, 1)
         self.delegated['return'] = Edge(caller_id, 1)
@@ -243,7 +243,6 @@ class CombineVisitor(NoMatchVisitor):
     def add_edge(self, source, target, count, typ):
 
         edge = "{} {} {}".format(source, target, typ)
-
         if not edge in self.context_edges:
             super(CombineVisitor, self).add_edge(source, target,
                                                            count, typ)
