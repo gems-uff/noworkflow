@@ -310,7 +310,9 @@ def generate_graph(trial):
             # act is in higher level than last
             # create a call for last group
             # add act to existing sequence
-            list_to_call(stack)
+            while last.level > act.level:
+                list_to_call(stack)
+                last = stack[-1][-1]
             stack[-1].append(act)
 
     while len(stack) > 1:
@@ -328,7 +330,7 @@ class TrialGraph(object):
     def __init__(self, trial_id):
         self._graph = None
         self.trial_id = trial_id
-        self.use_cache = True
+        self.use_cache = False
 
     @cache('graph')
     def graph(self, trial=None):
