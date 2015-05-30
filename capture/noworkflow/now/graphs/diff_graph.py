@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 from copy import deepcopy
 from collections import namedtuple, defaultdict, OrderedDict
 from ..utils import OrderedCounter, concat_iter, hashabledict
-
+from .structures import prepare_cache
 
 
 def fix_caller_id(graph):
@@ -275,24 +275,34 @@ def trial_mirror(fn):
     return calculate
 
 
+cache = prepare_cache(
+    lambda self, *args, **kwargs: 'diff {}:{}'.format(self.trial1_id,
+                                                      self.trial2_id))
+
+
 class DiffGraph(object):
 
     def __init__(self, trial1_id, trial2_id):
         self.trial1_id = trial1_id
         self.trial2_id = trial2_id
+        self.use_cache = True
 
+    @cache('tree')
     @trial_mirror
     def tree(self, diff, g1, g2):
         return greedy(g1, g2), g1, g2
 
+    @cache('no_match')
     @trial_mirror
     def no_match(self, diff, g1, g2):
         return greedy(g1, g2), g1, g2
 
+    @cache('exact_match')
     @trial_mirror
     def exact_match(self, diff, g1, g2):
         return greedy(g1, g2), g1, g2
 
+    @cache('combine')
     @trial_mirror
     def combine(self, diff, g1, g2):
         return greedy(g1, g2), g1, g2

@@ -8,8 +8,43 @@ from __future__ import (absolute_import, print_function,
 
 from datetime import datetime
 from collections import OrderedDict
-from ..utils import calculate_duration, FORMAT, OrderedCounter
+from ..utils import calculate_duration, FORMAT, OrderedCounter, print_msg
 from ..persistence import row_to_dict, persistence
+
+
+try:
+   import cPickle as pickle
+except:
+   import pickle
+
+
+def prepare_cache(get_type):
+    def cache(name):
+        def dec(fn):
+            def load(self, *args, **kwargs):
+                typ = get_type(self, *args, **kwargs)
+                if self.use_cache:
+                    try:
+                        for c in persistence.load('graph_cache',
+                                                  type='"{}"'.format(typ),
+                                                  name='"{}"'.format(name)):
+                            return pickle.loads(
+                                persistence.get(c[b'content_hash']))
+                    except:
+                        print_msg("Couldn't load graph cache", True)
+                graph = fn(self, *args, **kwargs)
+                try:
+                    persistence.insert('graph_cache', {
+                        'type': typ,
+                        'name': name,
+                        'content_hash': persistence.put(pickle.dumps(graph)),
+                    })
+                except:
+                    print_msg("Couldn't store graph cache", True)
+                return graph
+            return load
+        return dec
+    return cache
 
 
 class TreeElement(object):

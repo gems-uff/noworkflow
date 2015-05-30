@@ -7,8 +7,10 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from collections import namedtuple, defaultdict, OrderedDict
-from .structures import Single, Call, Group, Mixed
+from functools import partial
+from .structures import Single, Call, Group, Mixed, prepare_cache
 from ..utils import OrderedCounter
+from ..persistence import persistence
 
 
 Edge = namedtuple("Edge", "node count")
@@ -23,8 +25,8 @@ class TreeVisitor(object):
             'initial': Edge(0, 1)
         }
         self.nid = 0
-        self.min_duration = defaultdict(lambda: 1000^10)
-        self.max_duration = defaultdict(lambda: 0)
+        self.min_duration = defaultdict(partial(int, 1000^10))
+        self.max_duration = defaultdict(partial(int, 0))
         self.keep = None
 
     def update_durations(self, duration, tid):
@@ -317,12 +319,18 @@ def generate_graph(trial):
     return(stack[-1][-1])
 
 
+cache = prepare_cache(
+    lambda self, *args, **kwargs: 'trial {}'.format(self.trial_id))
+
+
 class TrialGraph(object):
 
     def __init__(self, trial_id):
         self._graph = None
         self.trial_id = trial_id
+        self.use_cache = True
 
+    @cache('graph')
     def graph(self, trial=None):
         if not trial:
             from ..models import Trial
@@ -331,18 +339,21 @@ class TrialGraph(object):
             self._graph = generate_graph(trial)
         return self._graph
 
+    @cache('tree')
     def tree(self, trial=None):
         graph = self.graph(trial)
         visitor = TreeVisitor()
         graph.visit(visitor)
         return visitor.to_dict()
 
+    @cache('no_match')
     def no_match(self, trial=None):
         graph = self.graph(trial)
         visitor = NoMatchVisitor()
         graph.visit(visitor)
         return visitor.to_dict()
 
+    @cache('exact_match')
     def exact_match(self, trial=None):
         graph = self.graph(trial)
         graph = graph.visit(ExactMatchVisitor())
@@ -350,6 +361,7 @@ class TrialGraph(object):
         graph.visit(visitor)
         return visitor.to_dict()
 
+    @cache('combine')
     def combine(self, trial=None):
         graph = self.graph(trial)
         visitor = CombineVisitor()

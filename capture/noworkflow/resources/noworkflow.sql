@@ -159,3 +159,15 @@ create table slicing_dependency (
 CREATE INDEX slicing_dependency_trial_id on slicing_dependency(trial_id);
 CREATE INDEX slicing_dependency_dependent on slicing_dependency(dependent);
 CREATE INDEX slicing_dependency_supplier on slicing_dependency(supplier);
+
+-- Cache
+
+create table graph_cache (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	type TEXT,
+	name TEXT,
+	attributes TEXT,
+	content_hash TEXT,
+	timestamp TIMESTAMP
+);
+
