@@ -98,8 +98,8 @@ class Export(Command):
                                 u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"history = nip.History()\n"
-                                u"# history.graph_width = 700\n"
-                                u"# history.graph_height = 300\n"
+                                u"# history.graph.width = 700\n"
+                                u"# history.graph.height = 300\n"
                                 u"# history.script = '*'\n"
                                 u"# history.execution = '*'\n"
                                 u"# <codecell>\n"
@@ -111,10 +111,10 @@ class Export(Command):
                                 u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"diff = nip.Diff({1}, {2})\n"
-                                u"# diff.graph_type = 0\n"
-                                u"# diff.display_mode = 0\n"
-                                u"# diff.graph_width = 500\n"
-                                u"# diff.graph_height = 500\n"
+                                u"# diff.graph.view = 0\n"
+                                u"# diff.graph.mode = 3\n"
+                                u"# diff.graph.width = 500\n"
+                                u"# diff.graph.height = 500\n"
                                 u"# <codecell>\n"
                                 u"diff").format(*args.trial))
                 with open('Diff-{1}-{2}.ipynb'.format(*args.trial),'w') as ipynb:
@@ -124,9 +124,9 @@ class Export(Command):
                                 u"import noworkflow.now.ipython as nip\n"
                                 u"# <codecell>\n"
                                 u"trial = nip.Trial({})\n"
-                                u"# trial.graph_type = 0\n"
-                                u"# trial.graph_width = 500\n"
-                                u"# trial.graph_height = 500\n"
+                                u"# trial.graph.mode = 3\n"
+                                u"# trial.graph.width = 500\n"
+                                u"# trial.graph.height = 500\n"
                                 u"# <codecell>\n"
                                 u"trial").format(args.trial))
                 with open('Trial-{}.ipynb'.format(args.trial),'w') as ipynb:

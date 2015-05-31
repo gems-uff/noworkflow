@@ -6,10 +6,11 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import time
+
 
 from collections import defaultdict, OrderedDict
 from .model import Model
+from ..graphs.history_graph import HistoryGraph
 from ..utils import calculate_duration, FORMAT
 from ..persistence import row_to_dict
 from ..persistence import persistence as pers
@@ -39,13 +40,13 @@ class History(Model):
         history.execution = "*"
 
     You can change the graph width and height by the variables:
-        history.graph_width = 600
-        history.graph_height = 200
+        history.graph.width = 600
+        history.graph.height = 200
     """
 
     DEFAULT = {
-        'graph_width': 700,
-        'graph_height': 300,
+        'graph.width': 700,
+        'graph.height': 300,
         'script': '*',
         'execution': '*',
         'data': {},
@@ -53,6 +54,7 @@ class History(Model):
 
     def __init__(self, **kwargs):
         super(History, self).__init__(**kwargs)
+        self.graph = HistoryGraph()
         self.initialize_default(kwargs)
 
         self.execution_options = ["*", "finished", "unfinished", "backup"]
@@ -106,10 +108,12 @@ class History(Model):
                 Finish: {finish}
                 """.format(**trial)
             if trial['finish']:
+                duration = calculate_duration(trial)
                 trial["tooltip"] += """
                 <br>
                 Duration: {duration}ns
-                """.format(duration=calculate_duration(trial))
+                """.format(duration=duration)
+                trial['duration'] = duration
             id_map[trial_id] = tid
             scripts[trial['script']].append(trial)
             nodes.append(trial)
@@ -151,16 +155,5 @@ class History(Model):
         return result
 
     def _repr_html_(self):
-        """ Displays d3 graph on ipython notebook """
-        uid = str(int(time.time()*1000000))
-
-        result = """
-            <div class="nowip-history" data-width="{width}"
-                 data-height="{height}" data-uid="{uid}">
-                {data}
-            </div>
-        """.format(
-            uid=uid,
-            data=self.escape_json(self.graph_data()),
-            width=self.graph_width, height=self.graph_height)
-        return result
+        """ Display d3 graph on ipython notebook """
+        return self.graph._repr_html_(history=self)

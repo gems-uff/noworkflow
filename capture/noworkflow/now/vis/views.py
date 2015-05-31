@@ -69,7 +69,7 @@ def index2(tid, graph_mode):
 @connection
 def trial_graph(tid, graph_mode, cache):
     trial = Trial(tid)
-    graph = trial.trial_graph
+    graph = trial.graph
     graph.use_cache = bool(int(cache))
     return jsonify(**getattr(graph, graph_mode)(trial))
 
@@ -157,7 +157,7 @@ def diff(trial1, trial2, tl=None, nh=None, graph_mode=None):
 @connection
 def diff_graph(trial1, trial2, graph_mode, tl, nh, cache):
     diff = Diff(trial1, trial2)
-    graph = diff.diff_graph
+    graph = diff.graph
     graph.use_cache = bool(int(cache))
     d, t1, t2 = getattr(graph, graph_mode)(
         diff, time_limit=int(tl), neighborhoods=int(nh))

@@ -6,6 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+
+import json
 from datetime import datetime
 from collections import OrderedDict
 from ..utils import calculate_duration, FORMAT, OrderedCounter, print_msg
@@ -16,6 +18,14 @@ try:
    import cPickle as pickle
 except:
    import pickle
+
+
+class Graph(object):
+    def escape_json(self, data):
+        data = json.dumps(data)
+        return (data.replace('&', '\\u0026')
+                    .replace('<', '\\u003c')
+                    .replace('>', '\\u003e'))
 
 
 def prepare_cache(get_type):
@@ -62,6 +72,7 @@ class TreeElement(object):
         self.repr = ""
         self.level = level
         self.use_id = use_id
+        self.trial_id = 0
 
     def mean(self):
         if isinstance(self.duration, tuple):
@@ -86,6 +97,9 @@ class TreeElement(object):
 
     def __repr__(self):
         return self.repr
+
+    def to_dict(self, nid):
+        return {}
 
 
 class Single(TreeElement):

@@ -7,7 +7,6 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import weakref
-import json
 from collections import defaultdict
 
 
@@ -19,15 +18,17 @@ class Model(object):
 
     def initialize_default(self, kwargs):
         for key, value in self.DEFAULT.items():
-            setattr(self, key, value)
+            obj = self
+            if '.' in key:
+                key0, key = key.split('.')
+                obj = getattr(self, key0)
+            setattr(obj, key, value)
         for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def escape_json(self, data):
-        data = json.dumps(data)
-        return (data.replace('&', '\\u0026')
-                    .replace('<', '\\u003c')
-                    .replace('>', '\\u003e'))
+            obj = self
+            if '.' in key:
+                key0, key = key.split('.')
+                obj = getattr(self, key0)
+            setattr(obj, key, value)
 
     @classmethod
     def get_instances(cls):

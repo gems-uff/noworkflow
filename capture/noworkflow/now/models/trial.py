@@ -27,26 +27,32 @@ class Trial(Model):
     Initialize it by passing the trial id:
         trial = Trial(2)
 
-    There are two visualization modes for the graph:
+    There are four visualization modes for the graph:
+        tree: activation tree without any filters
+            trial.graph.mode = 0
+        no match: tree transformed into a graph by the addition of sequence and
+                  return edges and removal of intermediate call edges
+            trial.graph.mode = 1
         exact match: calls are only combined when all the sub-call match
-            trial.graph_type = 0
-        combined: calls are combined without considering the sub-calls
-            trial.graph_type = 1
+            trial.graph.mode = 2
+        namesapce: calls are combined without considering the sub-calls
+            trial.graph.mode = 3
 
     You can change the graph width and height by the variables:
-        trial.graph_width = 600
-        trial.graph_height = 400
+        trial.graph.width = 600
+        trial.graph.height = 400
     """
 
     DEFAULT = {
-        'graph_width': 500,
-        'graph_height': 500,
-        'graph_type': 0,
+        'graph.width': 500,
+        'graph.height': 500,
+        'graph.mode': 3,
     }
 
     def __init__(self, trial_id, exit=False, script=None, **kwargs):
         super(Trial, self).__init__(trial_id, exit=exit, script=script,
                                     **kwargs)
+        self.graph = TrialGraph(trial_id)
         self.initialize_default(kwargs)
 
         if exit:
@@ -58,11 +64,6 @@ class Trial(Model):
 
         self.id = trial_id
         self._info = None
-        self._graph_types = {
-            0: self.independent_activation_graph,
-            1: self.combined_activation_graph
-        }
-        self.trial_graph = TrialGraph(trial_id)
         self.trial_prolog = TrialProlog(self)
 
     def query(self, query):
@@ -97,19 +98,7 @@ class Trial(Model):
 
     def _repr_html_(self):
         """ Displays d3 graph on ipython notebook """
-        uid = str(int(time.time()*1000000))
-
-        result = """
-            <div class="nowip-trial" data-width="{width}"
-                 data-height="{height}" data-uid="{uid}"
-                 data-id="{id}">
-                {data}
-            </div>
-        """.format(
-            uid=uid, id=self.id,
-            data=self.escape_json(self._graph_types[self.graph_type]()),
-            width=self.graph_width, height=self.graph_height)
-        return result
+        return self.graph._repr_html_(self)
 
     def info(self):
         """ Returns dict with the trial information, considering the duration """
@@ -118,6 +107,8 @@ class Trial(Model):
                 persistence.load_trial(self.id).fetchone())
             if self._info['finish']:
                 self._info['duration'] = calculate_duration(self._info)
+            else:
+                self._info['duration'] = 0
         return self._info
 
     def function_defs(self):
@@ -207,18 +198,3 @@ class Trial(Model):
         """ Returns a list of slicing dependencies """
         return persistence.load('slicing_dependency',
                                 trial_id=self.id)
-
-    def activation_graph(self):
-        """ Generates an activation graph """
-        return self.trial_graph.graph(self)
-
-    def independent_activation_graph(self):
-        """ Generates an activation graph and transforms it into an
-            exact match graph supported by d3 """
-        return self.trial_graph.exact_match(self)
-
-    def combined_activation_graph(self):
-        """ Generates an activation graph and transforms it into an
-            combined graph supported by d3 """
-        return self.trial_graph.combine(self)
-

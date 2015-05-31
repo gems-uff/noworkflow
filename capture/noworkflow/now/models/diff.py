@@ -42,52 +42,46 @@ class Diff(Model):
     Initialize it by passing both trials ids:
         diff = Diff(2)
 
-    There are two visualization modes for the graph:
+    There are four visualization modes for the graph:
+        tree: activation tree without any filters
+            diff.graph.mode = 0
+        no match: tree transformed into a graph by the addition of sequence and
+                  return edges and removal of intermediate call edges
+            diff.graph.mode = 1
         exact match: calls are only combined when all the sub-call match
-            diff.graph_type = 0
-        combined: calls are combined without considering the sub-calls
-            diff.graph_type = 1
+            diff.graph.mode = 2
+        namesapce: calls are combined without considering the sub-calls
+            diff.graph.mode = 3
+
 
     There are also three visualization modes for the diff:
         combine graphs: combines both trial graphs
-            diff.display_mode = 0
+            diff.graph.view = 0
         side by side: displays both graphs side by side
-            diff.display_mode = 1
+            diff.graph.view = 1
         combined and side by side: combine graphs and displays both separated graphs
-            diff.display_mode = 2
+            diff.graph.view = 2
 
 
     You can change the graph width and height by the variables:
-        diff.graph_width = 600
-        diff.graph_height = 400
+        diff.graph.width = 600
+        diff.graph.height = 400
     """
 
     DEFAULT = {
-        'graph_width': 500,
-        'graph_height': 500,
-        'graph_type': 0,
-        'display_mode': 0,
+        'graph.width': 500,
+        'graph.height': 500,
+        'graph.mode': 3,
+        'graph.view': 0,
     }
 
     def __init__(self, trial_id1, trial_id2, exit=False, **kwargs):
         super(Diff, self).__init__(trial_id1, trial_id2, exit=exit, **kwargs)
+        self.graph = DiffGraph(trial_id1, trial_id2)
         self.initialize_default(kwargs)
 
         self.trial1 = Trial(trial_id1, exit=exit)
         self.trial2 = Trial(trial_id2, exit=exit)
-        self._graph_types = {
-            0: self.independent_naive_activation_graph,
-            1: self.combined_naive_activation_graph
-        }
-        self._display_modes = {
-            0: "combined",
-            1: "side by side",
-            2: "both",
-        }
-        self._independent_cache = None
-        self._combined_cache = None
-        self.diff_graph = DiffGraph(trial_id1, trial_id2)
-
 
     def trial(self):
         """ Returns a tuple with the information of both trials """
@@ -112,42 +106,8 @@ class Diff(Model):
             set(fadict(fa) for fa in self.trial1.file_accesses()),
             set(fadict(fa) for fa in self.trial2.file_accesses()))
 
-    def independent_naive_activation_graph(self):
-        """ Generates an activation graph for both trials and transforms it into an
-            exact match graph supported by d3 """
-        return self.diff_graph.exact_match(self)
-        if not self._independent_cache:
-            g1 = self.trial1.independent_activation_graph()
-            g2 = self.trial2.independent_activation_graph()
-            self._independent_cache = NaiveGraphDiff(g1, g2).to_dict(), g1, g2
-        return self._independent_cache
-
-    def combined_naive_activation_graph(self):
-        """ Generates an activation graph for both trials and transforms it into an
-            combined graph supported by d3 """
-        return self.diff_graph.combine(self)
-        if not self._combined_cache:
-            g1 = self.trial1.combined_activation_graph()
-            g2 = self.trial2.combined_activation_graph()
-            self._combined_cache = NaiveGraphDiff(g1, g2).to_dict(), g1, g2
-        return self._combined_cache
-
     def _repr_html_(self):
-        """ Displays d3 graph on ipython notebook """
-        uid = str(int(time.time()*1000000))
-
-        result = """
-            <div class="nowip-diff" data-width="{width}"
-                 data-height="{height}" data-uid="{uid}"
-                 data-id1="{id1}" data-id2="{id2}" data-mode="{mode}">
-                {data}
-            </div>
-        """.format(
-            uid=uid, id1=self.trial1.id, id2=self.trial2.id,
-            mode=self.display_mode,
-            data=self.escape_json(self._graph_types[self.graph_type]()),
-            width=self.graph_width, height=self.graph_height)
-        return result
+        return self.graph._repr_html_(self)
 
 
 def dict_to_set(d):
@@ -180,4 +140,3 @@ def diff_set(before, after):
         added.discard(element_added)
 
     return (added, removed, replaced)
-

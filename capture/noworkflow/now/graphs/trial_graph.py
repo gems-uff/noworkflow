@@ -6,9 +6,12 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import time
+
 from collections import namedtuple, defaultdict, OrderedDict
 from functools import partial
-from .structures import Single, Call, Group, Mixed, prepare_cache
+from .structures import Single, Call, Group, Mixed, TreeElement, prepare_cache
+from .structures import Graph
 from ..utils import OrderedCounter
 from ..persistence import persistence
 
@@ -94,6 +97,9 @@ class TreeVisitor(object):
         self.nodes[node_id[0]]['duration'] = mixed.duration
         return node_id
 
+    def visit_treeelement(self, tree_element):
+        return []
+
 
 class NoMatchVisitor(TreeVisitor):
 
@@ -170,6 +176,9 @@ class NoMatchVisitor(TreeVisitor):
         self.nodes[node_id]['duration'] = mixed.duration
         return node_id, node
 
+    def visit_treeelement(self, tree_element):
+        return None, tree_element
+
 
 class ExactMatchVisitor(NoMatchVisitor):
 
@@ -204,6 +213,9 @@ class ExactMatchVisitor(NoMatchVisitor):
         c.use_id = False
         c.level = call.level
         return c
+
+    def visit_treeelement(self, tree_element):
+        return tree_element
 
 
 class NamespaceVisitor(NoMatchVisitor):
@@ -288,7 +300,9 @@ def generate_graph(trial):
     """ Returns activation graph """
     activations = [Single(act) for act in trial.activations()]
     if not activations:
-        return TreeElement(level=0)
+        t = TreeElement(level=0)
+        t.trial_id = trial.id
+        return t
 
     current = activations[0]
     stack = [[current]]
@@ -324,15 +338,27 @@ cache = prepare_cache(
     lambda self, *args, **kwargs: 'trial {}'.format(self.trial_id))
 
 
-class TrialGraph(object):
+class TrialGraph(Graph):
 
-    def __init__(self, trial_id):
+    def __init__(self, trial_id, use_cache=True,
+                 width=500, height=500, mode=3):
         self._graph = None
         self.trial_id = trial_id
-        self.use_cache = True
+        self.use_cache = use_cache
+
+        self.width = width
+        self.height = height
+        self.mode = mode
+        self._modes = {
+            0: self.tree,
+            1: self.no_match,
+            2: self.exact_match,
+            3: self.namespace_match
+        }
 
     @cache('graph')
     def graph(self, trial=None):
+        """Generate an activation tree structure"""
         if not trial:
             from ..models import Trial
             trial = Trial(self.trial_id)
@@ -342,6 +368,7 @@ class TrialGraph(object):
 
     @cache('tree')
     def tree(self, trial=None):
+        """Convert tree structure into dict tree structure"""
         graph = self.graph(trial)
         visitor = TreeVisitor()
         graph.visit(visitor)
@@ -349,6 +376,7 @@ class TrialGraph(object):
 
     @cache('no_match')
     def no_match(self, trial=None):
+        """Convert tree structure into dict graph without node matchings"""
         graph = self.graph(trial)
         visitor = NoMatchVisitor()
         graph.visit(visitor)
@@ -356,6 +384,7 @@ class TrialGraph(object):
 
     @cache('exact_match')
     def exact_match(self, trial=None):
+        """Convert tree structure into dict graph and match equal calls"""
         graph = self.graph(trial)
         graph = graph.visit(ExactMatchVisitor())
         visitor = NoMatchVisitor()
@@ -364,7 +393,24 @@ class TrialGraph(object):
 
     @cache('namespace_match')
     def namespace_match(self, trial=None):
+        """Convert tree structure into dict graph and match namespaces"""
         graph = self.graph(trial)
         visitor = NamespaceVisitor()
         graph.visit(visitor)
         return visitor.to_dict()
+
+    def _repr_html_(self, trial=None):
+        """ Display d3 graph on ipython notebook """
+        uid = str(int(time.time()*1000000))
+
+        result = """
+            <div class="nowip-trial" data-width="{width}"
+                 data-height="{height}" data-uid="{uid}"
+                 data-id="{id}">
+                {data}
+            </div>
+        """.format(
+            uid=uid, id=self.trial_id,
+            data=self.escape_json(self._modes[self.mode](trial)),
+            width=self.width, height=self.height)
+        return result

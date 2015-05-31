@@ -8,10 +8,11 @@ from __future__ import (absolute_import, print_function,
 
 import itertools
 import time
+
 from copy import deepcopy, copy
 from collections import namedtuple, defaultdict, OrderedDict
 from ..utils import OrderedCounter, concat_iter, hashabledict
-from .structures import prepare_cache
+from .structures import prepare_cache, Graph
 
 
 def fix_caller_id(graph):
@@ -44,8 +45,6 @@ def prepare_graph(g1, g2):
     fix_caller_id(g2)
     nodes1 = [hashabledict(x) for x in g1['nodes']]
     nodes2 = [hashabledict(x) for x in g2['nodes']]
-    nodes1[0]['name'] = '<main>'
-    nodes2[0]['name'] = '<main>'
     g1['hnodes'], g2['hnodes'] = nodes1, nodes2
     g1['node_indexes'] = set(range(len(nodes1)))
     g2['node_indexes'] = set(range(len(nodes2)))
@@ -55,8 +54,14 @@ def prepare_graph(g1, g2):
         g1['levels'][n['node']['level']].add(n['index'])
     for n in nodes2:
         g2['levels'][n['node']['level']].add(n['index'])
-    g1['max_level'] = max(g1['levels'].keys())
-    g2['max_level'] = max(g2['levels'].keys())
+    if nodes1 and nodes2:
+        nodes1[0]['name'] = '<main>'
+        nodes2[0]['name'] = '<main>'
+        g1['max_level'] = max(g1['levels'].keys())
+        g2['max_level'] = max(g2['levels'].keys())
+    else:
+        g1['max_level'] = -1
+        g2['max_level'] = -1
 
     return nodes1, nodes2
 
@@ -216,8 +221,8 @@ class Similarity(object):
     def __init__(self, g1, g2):
         self.g1, self.g2 = g1, g2
         self.nodes1, self.nodes2 = g1['hnodes'], g2['hnodes']
-        self.total_nodes = float(self.count_union_nodes())
-        self.total_edges = float(self.count_union_edges())
+        self.total_nodes = float(self.count_union_nodes()) or 1
+        self.total_edges = float(self.count_union_edges()) or 1
         self.edges1, self.edges2 = defaultdict(set), defaultdict(set)
         for e in g1['edges']:
             self.edges1[e['source']].add((e['target'], e['type']))
@@ -387,10 +392,23 @@ def trial_mirror(fn):
         if not diff:
             from ..models import Diff
             diff = Diff(self.trial1_id, self.trial2_id)
-        g1 = getattr(diff.trial1.trial_graph, name)(diff.trial1)
-        g2 = getattr(diff.trial2.trial_graph, name)(diff.trial2)
+        g1 = getattr(diff.trial1.graph, name)(diff.trial1)
+        g2 = getattr(diff.trial2.graph, name)(diff.trial2)
         return fn(self, diff, g1, g2, **kwargs)
     return calculate
+
+
+def class_param(params):
+    params = params.split()
+    def dec(fn):
+        def calculate(self, *args, **kwargs):
+            for param in params:
+                value = getattr(self, param)
+                if value is not None and not param in kwargs:
+                    kwargs[param] = value
+            return fn(self, *args, **kwargs)
+        return calculate
+    return dec
 
 
 cache = prepare_cache(
@@ -398,29 +416,77 @@ cache = prepare_cache(
                                                       self.trial2_id))
 
 
-class DiffGraph(object):
+class DiffGraph(Graph):
 
-    def __init__(self, trial1_id, trial2_id):
+    def __init__(self, trial1_id, trial2_id, use_cache=True,
+                 width=500, height=500, mode=3, view=0):
         self.trial1_id = trial1_id
         self.trial2_id = trial2_id
-        self.use_cache = True
+        self.use_cache = use_cache
 
-    @cache('tree', "neighborhoods time_limit")
+        self.width = width
+        self.height = height
+        self.mode = mode
+        self.view = view
+
+        self._modes = {
+            0: self.tree,
+            1: self.no_match,
+            2: self.exact_match,
+            3: self.namespace_match
+        }
+
+        self._views = {
+            0: "combined",
+            1: "side by side",
+            2: "both",
+        }
+
+        self.neighborhoods = None
+        self.time_limit = None
+
+
+    @class_param('neighborhoods time_limit')
+    @cache('tree', 'neighborhoods time_limit')
     @trial_mirror
     def tree(self, diff, g1, g2, **kwargs):
+        """Compare tree structures"""
         return vnd(g1, g2, **kwargs), g1, g2
 
-    @cache('no_match', "neighborhoods time_limit")
+    @class_param('neighborhoods time_limit')
+    @cache('no_match', 'neighborhoods time_limit')
     @trial_mirror
     def no_match(self, diff, g1, g2, **kwargs):
+        """Compare graphs without matches"""
         return vnd(g1, g2, **kwargs), g1, g2
 
-    @cache('exact_match', "neighborhoods time_limit")
+    @class_param('neighborhoods time_limit')
+    @cache('exact_match', 'neighborhoods time_limit')
     @trial_mirror
     def exact_match(self, diff, g1, g2, **kwargs):
+        """Compare graphs with call matches"""
         return vnd(g1, g2, **kwargs), g1, g2
 
-    @cache('combine', "neighborhoods time_limit")
+    @class_param('neighborhoods time_limit')
+    @cache('combine', 'neighborhoods time_limit')
     @trial_mirror
     def namespace_match(self, diff, g1, g2, **kwargs):
+        """Compare graphs with namespaces"""
         return vnd(g1, g2, **kwargs), g1, g2
+
+    def _repr_html_(self, diff=None):
+        """ Display d3 graph on ipython notebook """
+        uid = str(int(time.time()*1000000))
+
+        result = """
+            <div class="nowip-diff" data-width="{width}"
+                 data-height="{height}" data-uid="{uid}"
+                 data-id1="{id1}" data-id2="{id2}" data-mode="{view}">
+                {data}
+            </div>
+        """.format(
+            uid=uid, id1=self.trial1_id, id2=self.trial2_id,
+            view=self.view,
+            data=self.escape_json(self._modes[self.mode](diff)),
+            width=self.width, height=self.height)
+        return result
