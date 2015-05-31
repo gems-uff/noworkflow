@@ -3,9 +3,35 @@
 
 var width, height,
   trial_graph, trial_a, trial_b,
-  selected_graph = "combined",
+  selected_graph = "namespace_match",
+  neighborhoods = 2,
+  time_limit = 0,
   t1 = $("#trial1").text(),
   t2 = $("#trial2").text();
+
+function get_url() {
+  var arr = window.location.href.split('/');
+  arr = arr[arr.length - 1].split('-');
+  if (arr.length === 3) {
+    time_limit = parseInt(arr[0], 10);
+    neighborhoods = parseInt(arr[1], 10);
+    selected_graph = arr[2].split('#')[0];
+    return time_limit + "-" + neighborhoods + '-' + selected_graph;
+  }
+  return arr[0];
+}
+get_url();
+
+function update_graph_title() {
+  $('#graph-title').text(
+    $("#graphtype option[value='" + selected_graph + "']").text()
+  );
+  $("#graphtype").val(selected_graph);
+  $("#difflevel").val(neighborhoods);
+  $("#graphlimit").val(time_limit);
+}
+update_graph_title();
+
 
 // Resizing
 function calculate_window_size() {
@@ -33,11 +59,13 @@ function trial_custom_mouseout() {
 
 
 // Graphs
-function load_graph(t1, t2, url) {
+function load_graph(t1, t2, type, tl, nh) {
+  var cache = (($('#use_cache').is(":checked")) ? '1' : '0');
+
   $.ajax({
     type: "GET",
     contentType: "application/json; charset=utf-8",
-    url: '/diff/' + t1 + '/' + t2 + '/' + url,
+    url: '/diff/' + t1 + '/' + t2 + '/' + type + '/' + tl + '-' + nh + '-' + cache + '.json',
     dataType: 'json',
     async: true,
     data: {},
@@ -87,12 +115,32 @@ function load_graph(t1, t2, url) {
         custom_mouseout: trial_custom_mouseout
       });
 
+      var temp = tl + "-" + nh + '-' + type;
+      if (get_url() !== temp) {
+        window.history.pushState(temp, "Diff " + t1 + "-" + t2, "/diff/" + t1 + '/' + t2 + '/' + temp);
+      }
+      time_limit = tl;
+      neighborhoods = nh;
+      selected_graph = type;
+      update_graph_title();
+
     },
     error: function () {
       return null;
     }
   });
 }
+
+$('#show-graph-toolbar').click(function () {
+  var i = $('#show-graph-toolbar i');
+  i.toggleClass('fa-circle-o fa-circle');
+  $('#graphselector').slideToggle(400, function () {
+    trial_graph.update_window();
+    trial_a.update_window();
+    trial_b.update_window();
+  });
+
+});
 
 //Splitter
 $('#show').height("100%");
@@ -135,11 +183,12 @@ $('#graphs .bottom').split({
 
 });
 
-load_graph(t1, t2, selected_graph);
+load_graph(t1, t2, selected_graph, time_limit, neighborhoods);
 // Graph type
-$("[name='graphtype']").change(function () {
+$("#reload_graph").on('click', function () {
   selected_graph = $(this).attr('value');
-  load_graph(t1, t2, selected_graph);
+  load_graph(t1, t2, $('#graphtype').val(), $('#graphlimit').val(), $('#difflevel').val());
+  return false;
 });
 
 $("#combgraph").click();
@@ -157,3 +206,10 @@ $('#side-internal').on('click', '.fold', function () {
   $(first).toggleClass("fa-minus");
 });
 
+
+window.onpopstate = function (e) {
+  if (e.state) {
+    get_url();
+    load_graph(t1, t2, selected_graph, time_limit, neighborhoods);
+  }
+};

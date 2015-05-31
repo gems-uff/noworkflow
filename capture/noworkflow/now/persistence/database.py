@@ -37,3 +37,15 @@ class DatabaseProvider(Provider):
         # Not in use, but can be useful in the future
         for attrs in attrs_list:
             self.insert(table_name, attrs, **extra_attrs)
+
+    def delete(self, table_name, **condition):
+        where = '1'
+        for key in condition:
+            if condition[key] is None:
+                where += ' and {} is NULL'.format(key)
+            else:
+                where += ' and {} = {}'.format(key, condition[key])
+
+        with self.db_conn as db:
+            return db.execute('DELETE FROM {} WHERE {}'.format(
+                table_name, where))

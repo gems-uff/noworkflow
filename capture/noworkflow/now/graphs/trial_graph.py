@@ -206,10 +206,10 @@ class ExactMatchVisitor(NoMatchVisitor):
         return c
 
 
-class CombineVisitor(NoMatchVisitor):
+class NamespaceVisitor(NoMatchVisitor):
 
     def __init__(self):
-        super(CombineVisitor, self).__init__()
+        super(NamespaceVisitor, self).__init__()
         self.context = {}
         self.context_edges = {}
         self.namestack = []
@@ -236,7 +236,7 @@ class CombineVisitor(NoMatchVisitor):
             return self.context[namespace]['index']
 
         single.namespace = namespace
-        result = super(CombineVisitor, self).add_node(single)
+        result = super(NamespaceVisitor, self).add_node(single)
         self.context[namespace] = self.nodes[-1]
         return result
 
@@ -244,7 +244,7 @@ class CombineVisitor(NoMatchVisitor):
 
         edge = "{} {} {}".format(source, target, typ)
         if not edge in self.context_edges:
-            super(CombineVisitor, self).add_edge(source, target,
+            super(NamespaceVisitor, self).add_edge(source, target,
                                                            count, typ)
             self.context_edges[edge] = self.edges[-1]
         else:
@@ -253,7 +253,7 @@ class CombineVisitor(NoMatchVisitor):
 
     def visit_call(self, call):
         self.namestack.append(call.caller.name_id())
-        result = super(CombineVisitor, self).visit_call(call)
+        result = super(NamespaceVisitor, self).visit_call(call)
         self.namestack.pop()
         return result
 
@@ -329,7 +329,7 @@ class TrialGraph(object):
     def __init__(self, trial_id):
         self._graph = None
         self.trial_id = trial_id
-        self.use_cache = False
+        self.use_cache = True
 
     @cache('graph')
     def graph(self, trial=None):
@@ -362,9 +362,9 @@ class TrialGraph(object):
         graph.visit(visitor)
         return visitor.to_dict()
 
-    @cache('combine')
-    def combine(self, trial=None):
+    @cache('namespace_match')
+    def namespace_match(self, trial=None):
         graph = self.graph(trial)
-        visitor = CombineVisitor()
+        visitor = NamespaceVisitor()
         graph.visit(visitor)
         return visitor.to_dict()

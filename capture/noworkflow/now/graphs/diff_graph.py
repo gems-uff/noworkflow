@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import itertools
+import time
 from copy import deepcopy, copy
 from collections import namedtuple, defaultdict, OrderedDict
 from ..utils import OrderedCounter, concat_iter, hashabledict
@@ -351,16 +352,23 @@ def neighborhood(k, g1, g2, mapping):
     yield mapping
 
 
-def vnd(g1, g2, neighborhoods=3):
+def vnd(g1, g2, neighborhoods=3, time_limit=0):
+    if time_limit == 0:
+        time_limit = 315569000
+    time_limit *= 1000
     nodes1, nodes2 = prepare_graph(g1, g2)
     sim = Similarity(g1, g2)
-
+    start = time.time()
     f = first_solution(nodes1, nodes2)
     best = (f, sim(f))
     k = 1
-    while k <= neighborhoods:
-        current = max(((n, sim(n)) for n in neighborhood(k, g1, g2, best[0])),
-                      key=lambda x: x[1])
+    while k <= neighborhoods and (time.time() - start) < time_limit:
+        try:
+            current = max(((n, sim(n)) for n in neighborhood(k, g1, g2, best[0])
+                           if (time.time() - start) < time_limit),
+                          key=lambda x: x[1])
+        except ValueError:
+            current = best
         if current[1] > best[1]:
             best = current
             k = 1
@@ -371,10 +379,6 @@ def vnd(g1, g2, neighborhoods=3):
 
 def show_mapping(mapping):
     return [(x['index'], y['index'], x['name']) for x,y in mapping.items()]
-
-
-def play(g1, g2):
-    return vnd(g1, g2)
 
 
 def trial_mirror(fn):
@@ -399,24 +403,24 @@ class DiffGraph(object):
     def __init__(self, trial1_id, trial2_id):
         self.trial1_id = trial1_id
         self.trial2_id = trial2_id
-        self.use_cache = False
+        self.use_cache = True
 
-    @cache('tree')
+    @cache('tree', "neighborhoods time_limit")
     @trial_mirror
-    def tree(self, diff, g1, g2):
-        return greedy(g1, g2), g1, g2
+    def tree(self, diff, g1, g2, **kwargs):
+        return vnd(g1, g2, **kwargs), g1, g2
 
-    @cache('no_match')
+    @cache('no_match', "neighborhoods time_limit")
     @trial_mirror
-    def no_match(self, diff, g1, g2):
-        return greedy(g1, g2), g1, g2
+    def no_match(self, diff, g1, g2, **kwargs):
+        return vnd(g1, g2, **kwargs), g1, g2
 
-    @cache('exact_match')
+    @cache('exact_match', "neighborhoods time_limit")
     @trial_mirror
-    def exact_match(self, diff, g1, g2):
-        return play(g1, g2), g1, g2
+    def exact_match(self, diff, g1, g2, **kwargs):
+        return vnd(g1, g2, **kwargs), g1, g2
 
-    @cache('combine')
+    @cache('combine', "neighborhoods time_limit")
     @trial_mirror
-    def combine(self, diff, g1, g2):
-        return play(g1, g2), g1, g2
+    def namespace_match(self, diff, g1, g2, **kwargs):
+        return vnd(g1, g2, **kwargs), g1, g2

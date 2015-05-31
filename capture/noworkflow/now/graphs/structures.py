@@ -19,24 +19,31 @@ except:
 
 
 def prepare_cache(get_type):
-    def cache(name):
+    def cache(name, attrs=""):
         def dec(fn):
             def load(self, *args, **kwargs):
                 typ = get_type(self, *args, **kwargs)
+                attributes = ' '.join(
+                    [str(kwargs[a]) for a in attrs.split() if a in kwargs])
+                conditions = {
+                    'type': '"{}"'.format(typ),
+                    'name': '"{}"'.format(name),
+                    'attributes': '"{}"'.format(attributes),
+                }
                 if self.use_cache:
                     try:
-                        for c in persistence.load('graph_cache',
-                                                  type='"{}"'.format(typ),
-                                                  name='"{}"'.format(name)):
+                        for c in persistence.load('graph_cache', **conditions):
                             return pickle.loads(
                                 persistence.get(c[b'content_hash']))
                     except:
                         print_msg("Couldn't load graph cache", True)
                 graph = fn(self, *args, **kwargs)
                 try:
+                    persistence.delete('graph_cache', **conditions)
                     persistence.insert('graph_cache', {
                         'type': typ,
                         'name': name,
+                        'attributes': attributes,
                         'content_hash': persistence.put(pickle.dumps(graph)),
                     })
                 except:

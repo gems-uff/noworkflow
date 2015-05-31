@@ -46,6 +46,7 @@ def trials():
     history = History()
     return jsonify(**history.graph_data(request.args.get('script'),
                                         request.args.get('execution')))
+
 @app.route('/')
 @connection
 def index():
@@ -55,17 +56,22 @@ def index():
         scripts = history.scripts()
     )
 
-@app.route('/trials/<tid>/independent')
+@app.route('/<tid>-<graph_mode>')
 @connection
-def independent_trial_graph(tid):
-    trial = Trial(tid)
-    return jsonify(**trial.independent_activation_graph())
+def index2(tid, graph_mode):
+    history = History()
+    return render_template("index.html",
+        cwd = os.getcwd(),
+        scripts = history.scripts()
+    )
 
-@app.route('/trials/<tid>/combined')
+@app.route('/trials/<tid>/<graph_mode>/<cache>.json')
 @connection
-def combined_trial_graph(tid):
+def trial_graph(tid, graph_mode, cache):
     trial = Trial(tid)
-    return jsonify(**trial.combined_activation_graph())
+    graph = trial.trial_graph
+    graph.use_cache = bool(int(cache))
+    return jsonify(**getattr(graph, graph_mode)(trial))
 
 @app.route('/trials/<tid>/dependencies')
 @connection
@@ -122,9 +128,11 @@ def all_file_accesses(tid):
         info = "file_accesses.html",
     )
 
+
+@app.route('/diff/<trial1>/<trial2>/<tl>-<nh>-<graph_mode>')
 @app.route('/diff/<trial1>/<trial2>')
 @connection
-def diff(trial1, trial2):
+def diff(trial1, trial2, tl=None, nh=None, graph_mode=None):
     diff = Diff(trial1, trial2)
     modules_added, modules_removed, modules_replaced = diff.modules()
     env_added, env_removed, env_replaced = diff.environment()
@@ -143,25 +151,17 @@ def diff(trial1, trial2):
         fa_added = fa_added,
         fa_removed = fa_removed,
         fa_replaced = fa_replaced,
-
     )
 
-@app.route('/diff/<trial1>/<trial2>/independent')
+@app.route('/diff/<trial1>/<trial2>/<graph_mode>/<tl>-<nh>-<cache>.json')
 @connection
-def independent_diff_graph(trial1, trial2):
+def diff_graph(trial1, trial2, graph_mode, tl, nh, cache):
     diff = Diff(trial1, trial2)
-    d, t1, t2 = diff.independent_naive_activation_graph()
-    return jsonify(
-        diff=d,
-        trial1=t1,
-        trial2=t2,
-    )
-
-@app.route('/diff/<trial1>/<trial2>/combined')
-@connection
-def combined_diff_graph(trial1, trial2):
-    diff = Diff(trial1, trial2)
-    d, t1, t2 = diff.combined_naive_activation_graph()
+    graph = diff.diff_graph
+    graph.use_cache = bool(int(cache))
+    print(graph.use_cache)
+    d, t1, t2 = getattr(graph, graph_mode)(
+        diff, time_limit=int(tl), neighborhoods=int(nh))
     return jsonify(
         diff=d,
         trial1=t1,

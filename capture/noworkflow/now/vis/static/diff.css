@@ -29,10 +29,28 @@
   color: green !important;
 }
 
-#graphA, #graphB {
+#graphA, #graphB, #graph {
   overflow: hidden !important;
 }
 
 .now .toolbar {
   margin: 5px;
+}
+
+
+
+#graphselector .graph-attr:first-child {
+  margin-bottom: 5px;
+}
+
+.time-attr {
+  margin-top: 5px;
+}
+
+.time-attr label {
+  margin-right: 25px;
+}
+
+.time-attr input {
+  padding-left: 4px;
 }

@@ -74,13 +74,38 @@
   <div id="splitter">
     <div id="show">
       <div id="graphbox" class="now-trial now">
+        <div id="graphselector" style="display: none;">
+          <div class="graph-attr">
+            <label for="graphtype" title="Select the graph type">Graph Type:</label>
+            <select id="graphtype" class="select-style">
+              <option value="tree" data-description="Activation tree. Edges represent order of execution">Tree</option>
+              <option value="no_match" data-description="Activation tree presented as a Graph">No Match</option>
+              <option value="exact_match" data-description="Calls have counting independent from caller activations">Exact Match</option>
+              <option selected value="namespace_match" data-description="Calls are combined and a function may have more than one call workflow">Namespace Match</option>
+            </select>
+          </div>
+          <div class="graph-attr">
+            <label for="difflevel" title="Select the deepness of diff">Neighborhood:</label>
+            <select id="difflevel" class="select-style">
+              <option value="0" data-description="Use LCS for basic matching">0 - LCS</option>
+              <option value="1" data-description="Match remaining nodes">1 - Remaining nodes</option>
+              <option selected value="2" data-description="Permutate nodes on the same height">2 - Permutate on the same height</option>
+              <option value="3" data-description="Permutate any node">3 - Permutate anything</option>
+            </select>
+          </div>
+          <div class="graph-attr time-attr">
+            <label for="graphlimit" title="Limit the execution time (seconds)">Time Limit:</label>
+            <input id="graphlimit" type="number" name="graphlimit" value="0" class="select-style">
+          </div>
+          <div class="graph-attr">
+            <input type="checkbox" name="use_cache" value="on" checked id="use_cache">
+            <label for="use_cache" title="Select the graph type">Use Cache</label>
+          </div>
+          <a href="#" class="link-button" id="reload_graph"><i class="fa fa-refresh"></i> Reload Graph</a>
+        </div>
         <form class="toolbar">
-
-          <input id="indgraph" type="radio" name="graphtype" value="independent" checked>
-          <label for="indgraph" title="Calls have counting independent from caller activations">Exact Match</label>
-
-          <input id="combgraph" type="radio" name="graphtype" value="combined"> 
-          <label for="combgraph" title="Calls are combined and a function may have more than one call workflow">Combined</label>
+          <label title="Change graph type" id="show-graph-toolbar"><span id="graph-title">Namespace Match</span> <i class="fa fa-circle"></i></label>
+         
           <input id="showtooltips" type="checkbox" name="showtooltips" value="show">
           <label for="showtooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
         </form>

@@ -1,11 +1,44 @@
 /*global window, docEl, bodyEl, d3*/
 /*global now_history_graph, now_trial_graph, HistoryGraph, TrialGraph,*/
 
-var width, height,
-  filter_width = 200;
-var history_graph, trial_graph,
-  selected_graph = "independent",
+var width, height;
+var history_graph, trial_graph, nodes,
+  selected_graph = "namespace_match",
   current_nid = 0;
+
+function get_url() {
+  var arr = window.location.href.split('/');
+  arr = arr[arr.length - 1].split('-');
+  if (arr.length === 2) {
+    current_nid = parseInt(arr[0], 10);
+    selected_graph = arr[1].split('#')[0];
+    return current_nid + "-" + selected_graph;
+  }
+  return arr[0];
+
+}
+get_url();
+
+function update_graph_title() {
+  $('#graph-title').text(
+    $("#graphtype option[value='" + selected_graph + "']").text()
+  );
+  $("#graphtype").val(selected_graph);
+}
+update_graph_title();
+
+function select_trial(tid) {
+  var i;
+  if (tid === 0) {
+    history_graph.select_node(nodes[0]);
+  } else {
+    for (i = 0; i < nodes.length; i++) {
+      if (nodes[i].title === tid) {
+        history_graph.select_node(nodes[i]);
+      }
+    }
+  }
+}
 
 var docEl = document.documentElement,
   bodyEl = document.getElementsByTagName('body')[0],
@@ -29,10 +62,11 @@ window.onresize = function () {
 
 // Graphs
 function load_graph(nid, url) {
+  var cache = (($('#use_cache').is(":checked")) ? '1' : '0');
   $.ajax({
     type: "GET",
     contentType: "application/json; charset=utf-8",
-    url: 'trials/' + nid + '/' + url,
+    url: '/trials/' + nid + '/' + url + '/' + cache + '.json',
     dataType: 'json',
     async: true,
     data: {},
@@ -42,6 +76,14 @@ function load_graph(nid, url) {
           return [$('#graph').width(), $('#graph').height()];
         }
       });
+      var temp = nid + "-" + url;
+      if (get_url() !== temp) {
+        window.history.pushState(temp, "Trial " + current_nid, "/" + temp);
+      }
+      current_nid = nid;
+      selected_graph = url;
+      update_graph_title();
+
     },
     error: function () { return null; }
   });
@@ -51,7 +93,7 @@ function load_dependencies(nid) {
   $.ajax({
     type: "GET",
     contentType: "application/json; charset=utf-8",
-    url: 'trials/' + nid + '/dependencies',
+    url: '/trials/' + nid + '/dependencies',
     dataType: 'json',
     async: true,
     data: {},
@@ -89,7 +131,7 @@ function load_environment(nid) {
   $.ajax({
     type: "GET",
     contentType: "application/json; charset=utf-8",
-    url: 'trials/' + nid + '/environment',
+    url: '/trials/' + nid + '/environment',
     dataType: 'json',
     async: true,
     data: {},
@@ -135,7 +177,7 @@ function load_file_accesses(nid) {
   $.ajax({
     type: "GET",
     contentType: "application/json; charset=utf-8",
-    url: 'trials/' + nid + '/file_accesses',
+    url: '/trials/' + nid + '/file_accesses',
     dataType: 'json',
     async: true,
     data: {},
@@ -177,7 +219,7 @@ function reload() {
   $.ajax({
     type: "GET",
     contentType: "application/json; charset=utf-8",
-    url: 'trials',
+    url: '/trials',
     dataType: 'json',
     data: {
       'script': $("select[name='script']").val(),
@@ -186,7 +228,7 @@ function reload() {
     async: true,
     success: function (data) {
       $("#historygraph").html('');
-      var w =  width - filter_width;
+      var w =  width - $('.filter').width();
       var hg = now_history_graph('#historygraph', 0, data, w, height, "#show-history-tooltips", {
         select_node: function (n) {
           $('#side-internal').html('<div id="main">' +
@@ -198,33 +240,58 @@ function reload() {
               (n.info.arguments ? ('<span class="attr"><span class="desc">Arguments: </span><span class="arguments">' + n.info.arguments + '</span></span>') : "") +
             '</div>');
           current_nid = n.title;
-          load_graph(current_nid, selected_graph);
           load_dependencies(current_nid);
           load_environment(current_nid);
           load_file_accesses(current_nid);
+          load_graph(current_nid, selected_graph);
         },
         ctrl_click: function (new_node, old_node) {
-          window.open('diff/' + old_node.title + '/' + new_node.title);
+          window.open('diff/' + old_node.title + '/' + new_node.title + '/0-2-' + selected_graph);
         },
         custom_size: function () {
           var docEl = document.documentElement,
             bodyEl = document.getElementsByTagName('body')[0];
           var x = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
-          return [x - $('#top .filter').width(), $('#history').height()];
+          return [x, $('#history').height()];
         }
       });
 
       history_graph = hg.graph;
-      var nodes = hg.nodes;
-      history_graph.select_node(nodes[0]);
+      nodes = hg.nodes;
+      select_trial(current_nid);
     },
     error: function () { return null; }
   });
+  return false;
 }
 reload();
 
-$('#reload').click(reload);
+$('#reload').on('click', reload);
 
+$('#show-filter-toolbar').on('click', function () {
+  var i = $('#show-filter-toolbar i');
+  i.toggleClass('fa-circle-o fa-circle');
+  //i.hasClass('fa-circle-o')
+  $('.filter').toggle({
+    complete: function () {
+      history_graph.update_window();
+    },
+    direction: "left",
+    duration: 400,
+    effect: 'drop'
+  });
+
+});
+
+$('#show-graph-toolbar').click(function () {
+  var i = $('#show-graph-toolbar i');
+  i.toggleClass('fa-circle-o fa-circle');
+  //i.hasClass('fa-circle-o')
+  $('#graphselector').slideToggle(400, function () {
+    trial_graph.update_window();
+  });
+
+});
 
 // Splitters
 
@@ -251,21 +318,10 @@ $('#show').split({
 $('#graph').height("100%");
 $('#graph').width("100%");
 
-$('#top').split({
-  orientation: 'vertical',
-  limit: 20,
-  position: filter_width + "px",
-  onDrag: function () {
-    history_graph.update_window();
-  }
-
-});
-
-
 // Graph type
-$("[name='graphtype']").change(function () {
-  selected_graph = $(this).attr('value');
-  load_graph(current_nid, selected_graph);
+$("#reload_graph").on('click', function () {
+  load_graph(current_nid, $('#graphtype').val());
+  return false;
 });
 
 $("[name='showtooltips']").change(function () {
@@ -284,4 +340,13 @@ $('#side-internal').on('click', '.fold', function () {
 
 $('#restore-history-zoom').on('click', function () {
   history_graph.reset_zoom();
+  return false;
 });
+
+window.onpopstate = function (e) {
+  if (e.state) {
+    history_graph._unselect_node();
+    get_url();
+    select_trial(current_nid);
+  }
+};
