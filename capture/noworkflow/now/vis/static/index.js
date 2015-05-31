@@ -252,7 +252,7 @@ function reload() {
           var docEl = document.documentElement,
             bodyEl = document.getElementsByTagName('body')[0];
           var x = window.innerWidth || docEl.clientWidth || bodyEl.clientWidth;
-          return [x, $('#history').height()];
+          return [x, $('#top').height()];
         }
       });
 
@@ -350,3 +350,12 @@ window.onpopstate = function (e) {
     select_trial(current_nid);
   }
 };
+
+var $loading = $('#loadingDiv').hide();
+$(document)
+  .ajaxStart(function () {
+    $loading.show();
+  })
+  .ajaxStop(function () {
+    $loading.hide();
+  });

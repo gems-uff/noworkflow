@@ -159,7 +159,6 @@ def diff_graph(trial1, trial2, graph_mode, tl, nh, cache):
     diff = Diff(trial1, trial2)
     graph = diff.diff_graph
     graph.use_cache = bool(int(cache))
-    print(graph.use_cache)
     d, t1, t2 = getattr(graph, graph_mode)(
         diff, time_limit=int(tl), neighborhoods=int(nh))
     return jsonify(

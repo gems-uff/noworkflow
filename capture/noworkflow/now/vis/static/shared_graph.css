@@ -213,3 +213,11 @@ a.link-button:active {
 #graphselector .graph-attr:first-child label {
   margin-right: 17px;
 }
+
+#loadingDiv {
+  position:absolute;
+  top:0;
+  right:0;
+  font-size: 70px;
+  margin: 5px;
+}

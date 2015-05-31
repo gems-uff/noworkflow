@@ -61,7 +61,9 @@ function trial_custom_mouseout() {
 // Graphs
 function load_graph(t1, t2, type, tl, nh) {
   var cache = (($('#use_cache').is(":checked")) ? '1' : '0');
-
+ /* $('#graph').html('');
+  $('#graphA').html('');
+  $('#graphB').html('');*/
   $.ajax({
     type: "GET",
     contentType: "application/json; charset=utf-8",
@@ -213,3 +215,12 @@ window.onpopstate = function (e) {
     load_graph(t1, t2, selected_graph, time_limit, neighborhoods);
   }
 };
+
+var $loading = $('#loadingDiv').hide();
+$(document)
+  .ajaxStart(function () {
+    $loading.show();
+  })
+  .ajaxStop(function () {
+    $loading.hide();
+  });
