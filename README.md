@@ -1,8 +1,8 @@
 noWorkflow
 ==========
 
-Copyright (c) 2014 Universidade Federal Fluminense (UFF).
-Copyright (c) 2014 Polytechnic Institute of New York University.
+Copyright (c) 2015 Universidade Federal Fluminense (UFF).
+Copyright (c) 2015 Polytechnic Institute of New York University.
 All rights reserved.
 
 The noWorkflow project aims at allowing scientists to benefit from provenance data analysis even when they don't use a workflow system. Also, the goal is to allow them to avoid using naming conventions to store files originated in previous executions. Currently, when this is not done, the result and intermediate files are overwritten by every new execution of the pipeline.
@@ -201,13 +201,13 @@ There are two ways to run a new trial:
 ```python
 In  [1]: arg = 6
 
-In  [2]: trial = %now script1.py $arg
+In  [2]: trial = %now_run script1.py $arg
     ...: trial
 Out [2]: <Trial 5> # Loads the trial object represented as a graph
 ```
 2- Load the code inside a cell
 ```python
-In  [3]: %%now --name script2 --out=out_var $arg
+In  [3]: %%now_run --name script2 --out=out_var $arg
     ...: import sys
     ...: l = range(sys.argv[1])
     ...: c = sum(l)
