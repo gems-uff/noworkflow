@@ -75,6 +75,13 @@ class Diff(Model):
         'graph.view': 0,
     }
 
+    REPLACE = {
+        'graph_width': 'graph.width',
+        'graph_height': 'graph.height',
+        'graph_mode': 'graph.mode',
+        'graph_view': 'graph.view',
+    }
+
     def __init__(self, trial_id1, trial_id2, exit=False, **kwargs):
         super(Diff, self).__init__(trial_id1, trial_id2, exit=exit, **kwargs)
         self.graph = DiffGraph(trial_id1, trial_id2)

@@ -72,7 +72,7 @@ function load_graph(t1, t2, type, tl, nh) {
     async: true,
     data: {},
     success: function (data) {
-      trial_graph = now_trial_graph('#graph', 0, parseInt(t1, 10), parseInt(t2, 10), data.diff, 500, 500, "#showtooltips", {
+      trial_graph = now_trial_graph('#graph', 0, parseInt(t1, 10), parseInt(t2, 10), data.diff, 500, 500, "#trial-toolbar-tooltips", "#trial-toolbar-trial-fullname", {
         custom_size: function () {
           return [$('#graph').width(), $('#graph').height()];
         },
@@ -95,7 +95,7 @@ function load_graph(t1, t2, type, tl, nh) {
         custom_mouseout: trial_custom_mouseout
       });
 
-      trial_a = now_trial_graph('#graphA', 1, parseInt(t1, 10), parseInt(t1, 10), data.trial1, $('#graphA').width(), $('#graphA').height(), "#showtooltips", {
+      trial_a = now_trial_graph('#graphA', 1, parseInt(t1, 10), parseInt(t1, 10), data.trial1, $('#graphA').width(), $('#graphA').height(), "#trial-toolbar-tooltips", "#trial-toolbar-trial-fullname", {
         hint_message: "Trial " + t1,
         hint_y: 20,
         hint_class: "hbefore",
@@ -106,7 +106,7 @@ function load_graph(t1, t2, type, tl, nh) {
         custom_mouseout: trial_custom_mouseout
       });
 
-      trial_b = now_trial_graph('#graphB', 2, parseInt(t2, 10), parseInt(t2, 10), data.trial2, $('#graphB').width(), $('#graphB').height(), "#showtooltips", {
+      trial_b = now_trial_graph('#graphB', 2, parseInt(t2, 10), parseInt(t2, 10), data.trial2, $('#graphB').width(), $('#graphB').height(), "#trial-toolbar-tooltips", "#trial-toolbar-trial-fullname", {
         hint_message: "Trial " + t2,
         hint_y: 20,
         hint_class: "hafter",
@@ -194,10 +194,15 @@ $("#reload_graph").on('click', function () {
 });
 
 $("#combgraph").click();
-$("[name='showtooltips']").change(function () {
-  trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
-  trial_a.set_use_tooltip(d3.select("#showtooltips").property("checked"));
-  trial_b.set_use_tooltip(d3.select("#showtooltips").property("checked"));
+$("[name='trial-toolbar-tooltips']").change(function () {
+  trial_graph.set_use_tooltip(d3.select("#trial-toolbar-tooltips").property("checked"));
+  trial_a.set_use_tooltip(d3.select("#trial-toolbar-tooltips").property("checked"));
+  trial_b.set_use_tooltip(d3.select("#trial-toolbar-tooltips").property("checked"));
+});
+$("[name='trial-toolbar-trial-fullname']").change(function () {
+  trial_graph.set_hide_fullname(d3.select("#trial-toolbar-trial-fullname").property("checked"));
+  trial_a.set_hide_fullname(d3.select("#trial-toolbar-trial-fullname").property("checked"));
+  trial_b.set_hide_fullname(d3.select("#trial-toolbar-trial-fullname").property("checked"));
 });
 
 

@@ -168,6 +168,7 @@ create table graph_cache (
 	name TEXT,
 	attributes TEXT,
 	content_hash TEXT,
+	duration INTEGER,
 	timestamp TIMESTAMP
 );
 

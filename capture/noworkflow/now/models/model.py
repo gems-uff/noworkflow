@@ -17,6 +17,10 @@ class Model(object):
         self.__refs__[self.__class__].append(weakref.ref(self))
 
     def initialize_default(self, kwargs):
+        for key, value in self.REPLACE.items():
+            if key in kwargs:
+                kwargs[value] = kwargs[key]
+                del kwargs[key]
         for key, value in self.DEFAULT.items():
             obj = self
             if '.' in key:

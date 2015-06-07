@@ -52,6 +52,11 @@ class History(Model):
         'data': {},
     }
 
+    REPLACE = {
+        'graph_width': 'graph.width',
+        'graph_height': 'graph.height',
+    }
+
     def __init__(self, **kwargs):
         super(History, self).__init__(**kwargs)
         self.graph = HistoryGraph()

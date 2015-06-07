@@ -17,6 +17,15 @@
   stroke: green;
 }
 
+.now-trial-graph marker .ebefore {
+  fill: red;
+}
+
+.now-trial-graph marker .eafter {
+  fill: green;
+}
+
+
 .now-trial-graph .node circle[data-clicked="1"] {
   stroke: #00f;
   stroke-width: 4px;

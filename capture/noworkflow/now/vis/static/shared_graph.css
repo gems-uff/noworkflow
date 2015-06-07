@@ -31,14 +31,15 @@
 }
 
 .now .toolbar input[type=checkbox] {
-    margin: 10px;
     display: none
+}
+
+.now .toolbar label, .now .toolbar a {
+    margin-right: 8px;
 }
 
 .now .toolbar input[type=checkbox] + label {
     display:inline-block;
-    margin:-2px;
-    padding: 4px 12px;
     color: black;
     cursor: pointer;
 }

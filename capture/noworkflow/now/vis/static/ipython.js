@@ -18,13 +18,19 @@ function trial_graph_html(uid, width, height, modifier) {
   return "<div id='graph" + modifier + "-" + uid + "' class='now-trial-graph ipython-graph' style='width: " + width + "px; height: " + height + "px;'></div>";
 }
 
-function toolbar_html(uid, name, toollink) {
+function toolbar_html(uid, name, history) {
   var result = "<div class='toolbar'>";
-  if (toollink) {
+  if (history) {
     result += "<a class='toollink' id='restore-history-zoom-" + uid + "' href='#' title='Restore zoom'>" +
         "<i class='fa fa-eye'></i>" +
       "</a>";
+  } else {
+    result += "<input id='trial-toolbar-trial-fullname-" + uid + "' type='checkbox' name='trial-toolbar-trial-fullname' value='show'>" +
+        "<label for='trial-toolbar-trial-fullname-" + uid + "' title='Show tooltips on mouse hover'>" +
+          "<i class='fa fa-font'></i>" +
+        "</label>";
   }
+
   result += "<input id='" + name + "-" + uid + "' type='checkbox' name='" + name + "' value='show'>" +
       "<label for='" + name + "-" + uid + "' title='Show tooltips on mouse hover'>" +
         "<i class='fa fa-comment'></i>" +
@@ -36,6 +42,12 @@ function toolbar_html(uid, name, toollink) {
 function add_tooltips(graph, name, uid) {
   $("[name='" + name + "']").change(function () {
     graph.set_use_tooltip(d3.select("#" + name + "-" + uid).property("checked"));
+  });
+}
+
+function add_hide_fullname(graph, name, uid) {
+  $("[name='" + name + "']").change(function () {
+    graph.set_hide_fullname(d3.select("#" + name + "-" + uid).property("checked"));
   });
 }
 
@@ -79,16 +91,17 @@ function create_trial_graph(trial) {
     trial.parent().append(
       "<div class='now-trial now'>" +
         "<div>" +
-          toolbar_html(uid, "showtooltips", false) +
+          toolbar_html(uid, "trial-toolbar-tooltips", false) +
           trial_graph_html(uid, width, height) +
         "</div>" +
         "</div>"
     );
-    var trial_graph = now_trial_graph("#graph-" + uid, uid, id, id, data, width, height, "#showtooltips-" + uid, {
+    var trial_graph = now_trial_graph("#graph-" + uid, uid, id, id, data, width, height, "#trial-toolbar-tooltips-" + uid, "#trial-toolbar-trial-fullname-" + uid, {
       custom_size: custom_size(width, height),
       hint_message: "Trial " + id + ". Ctrl-click to toggle nodes"
     });
-    add_tooltips(trial_graph, "showtooltips", uid);
+    add_tooltips(trial_graph, "trial-toolbar-tooltips", uid);
+    add_hide_fullname(trial_graph, "trial-toolbar-trial-fullname", uid);
     trial.remove();
   }
 }
@@ -113,30 +126,33 @@ function create_diff_graph(diff) {
           "</div>";
       },
       combined_js = function (uid, id1, id2, data, width, height) {
-        trial_graph = now_trial_graph("#graph-" + uid, uid, id1, id2, data[0], width, height, "#showtooltips-" + uid, {
+        trial_graph = now_trial_graph("#graph-" + uid, uid, id1, id2, data[0], width, height, "#trial-toolbar-tooltips-" + uid, "#trial-toolbar-trial-fullname-" + uid, {
           custom_size: custom_size(width, height),
           custom_mouseout: trial_custom_mouseout,
           hint_message: "Diff " + id1 + "/" + id2 + ". Ctrl-click to toggle nodes"
         });
-        add_tooltips(trial_graph, "showtooltips", uid);
+        add_tooltips(trial_graph, "trial-toolbar-tooltips", uid);
+        add_hide_fullname(trial_graph, "trial-toolbar-trial-fullname", uid);
       },
       side_by_side_js = function (uid, id1, id2, data, width, height) {
-        trial_a = now_trial_graph("#graphA-" + uid, "1" + uid, id1, id1, data[1], width, height, "#showtooltips-" + uid, {
+        trial_a = now_trial_graph("#graphA-" + uid, "1" + uid, id1, id1, data[1], width, height, "#trial-toolbar-tooltips-" + uid, "#trial-toolbar-trial-fullname-" + uid, {
           custom_size: custom_size(width, height),
           hint_message: "Trial " + id1,
           hint_class: "hbefore",
           custom_mouseover: trial_custom_mouseover,
           custom_mouseout: trial_custom_mouseout
         });
-        trial_b = now_trial_graph("#graphB-" + uid, "2" + uid, id2, id2, data[2], width, height, "#showtooltips-" + uid, {
+        trial_b = now_trial_graph("#graphB-" + uid, "2" + uid, id2, id2, data[2], width, height, "#trial-toolbar-tooltips-" + uid, "#trial-toolbar-trial-fullname-" + uid, {
           custom_size: custom_size(width, height),
           hint_message: "Trial " + id2,
           hint_class: "hafter",
           custom_mouseover: trial_custom_mouseover,
           custom_mouseout: trial_custom_mouseout
         });
-        add_tooltips(trial_a, "showtooltips", uid);
-        add_tooltips(trial_b, "showtooltips", uid);
+        add_tooltips(trial_a, "trial-toolbar-tooltips", uid);
+        add_tooltips(trial_b, "trial-toolbar-tooltips", uid);
+        add_hide_fullname(trial_a, "trial-toolbar-trial-fullname", uid);
+        add_hide_fullname(trial_b, "trial-toolbar-trial-fullname", uid);
       },
       both_js = function (uid, id1, id2, data, width, height) {
         trial_custom_mouseover = function (d) {
@@ -167,7 +183,7 @@ function create_diff_graph(diff) {
     diff.parent().append(
       "<div class='now-trial now'>" +
         "<div>" +
-          toolbar_html(uid, "showtooltips", false) +
+          toolbar_html(uid, "trial-toolbar-tooltips", false) +
           diff_html[display_mode](uid, width, height) +
         "</div>" +
         "</div>"

@@ -49,6 +49,12 @@ class Trial(Model):
         'graph.mode': 3,
     }
 
+    REPLACE = {
+        'graph_width': 'graph.width',
+        'graph_height': 'graph.height',
+        'graph_mode': 'graph.mode',
+    }
+
     def __init__(self, trial_id, exit=False, script=None, **kwargs):
         super(Trial, self).__init__(trial_id, exit=exit, script=script,
                                     **kwargs)

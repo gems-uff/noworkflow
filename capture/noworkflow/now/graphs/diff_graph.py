@@ -184,7 +184,7 @@ class MappingToGraph(object):
             if (ng, edge['source']) in self.old_to_new:
                 self.add_edge(self.old_to_new[(ng, edge['source'])],
                               self.old_to_new[(ng, edge['target'])],
-                              edge)
+                              edge, ng)
 
     def add_node(self, node):
         n = deepcopy(node)
@@ -194,18 +194,20 @@ class MappingToGraph(object):
         self.id += 1
         return node_id
 
-    def add_edge(self, source, target, edge):
+    def add_edge(self, source, target, edge, ng):
         edge_key = "{} {} {}".format(source, target, edge['type'])
 
         if not edge_key in self.context_edges:
             e = deepcopy(edge)
             e['source'] = source
             e['target'] = target
+            e['trial'] = ng
             self.edges.append(e)
             self.context_edges[edge_key] = e
         else:
             e = self.context_edges[edge_key]
             e['count'] = (e['count'], edge['count'])
+            e['trial'] = 0
 
     def to_dict(self):
         return {

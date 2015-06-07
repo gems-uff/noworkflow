@@ -10,7 +10,7 @@ function HistoryGraph(id, svg, options) {
   };
   self.hint_message = options.hint_message;
   if (options.hint_message === undefined) {
-    self.hint_message = "Ctrl-click to diff trials";
+    self.hint_message = "Ctrl+Shift click or ⌘-click to diff trials";
   }
   self.graph_id = id;
 
@@ -147,7 +147,7 @@ HistoryGraph.prototype._node_mouseup = function (d3node, d) {
     // dragged, not clicked
     state.just_scale = false;
   } else {
-    if (d3.event.ctrlKey) {
+    if (d3.event.ctrlKey || d3.event.shiftKey || d3.event.altKey) {
       self.custom_ctrl_click(d, state.selected_node);
       return;
     }

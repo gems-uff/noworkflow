@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 
 import json
+import time
 from datetime import datetime
 from collections import OrderedDict
 from ..utils import calculate_duration, FORMAT, OrderedCounter, print_msg
@@ -47,12 +48,15 @@ def prepare_cache(get_type):
                                 persistence.get(c[b'content_hash']))
                     except:
                         print_msg("Couldn't load graph cache", True)
+                start = time.time()
                 graph = fn(self, *args, **kwargs)
+                duration = time.time() - start
                 try:
                     persistence.delete('graph_cache', **conditions)
                     persistence.insert('graph_cache', {
                         'type': typ,
                         'name': name,
+                        'duration': duration,
                         'attributes': attributes,
                         'content_hash': persistence.put(pickle.dumps(graph)),
                     })

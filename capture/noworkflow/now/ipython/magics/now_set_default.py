@@ -18,7 +18,7 @@ class NowSetDefault(IpythonCommandMagic):
     Examples
     --------
     ::
-        In [1]: %now_set_default graph_width=200 graph_height=200
+        In [1]: %now_set_default graph.width=200 graph.height=200
 
         In [2]: %now_set_default --model History graph_height=100
     """
@@ -33,7 +33,7 @@ class NowSetDefault(IpythonCommandMagic):
                 help='Default assingments. Use the format var=value')
 
     def execute(self, func, line, cell, magic_cls):
-        p = re.compile("\s*(?P<left>\w+)\s*=\s*(?P<right>\w+)\s*")
+        p = re.compile("\s*(?P<left>[\w\.]+)\s*=\s*(?P<right>\w+)\s*")
         _, args = self.arguments(func, line)
         for match in p.finditer(' '.join(args.defaults)):
             right = match.group('right')

@@ -71,7 +71,7 @@ function load_graph(nid, url) {
     async: true,
     data: {},
     success: function (data) {
-      trial_graph = now_trial_graph('#graph', 0, nid, nid, data, 500, 500, "#showtooltips", {
+      trial_graph = now_trial_graph('#graph', 0, nid, nid, data, 500, 500, "#trial-toolbar-tooltips", "#trial-toolbar-trial-fullname", {
         custom_size: function () {
           return [$('#graph').width(), $('#graph').height()];
         }
@@ -325,8 +325,12 @@ $("#reload_graph").on('click', function () {
   return false;
 });
 
-$("[name='showtooltips']").change(function () {
-  trial_graph.set_use_tooltip(d3.select("#showtooltips").property("checked"));
+$("[name='trial-toolbar-tooltips']").change(function () {
+  trial_graph.set_use_tooltip(d3.select("#trial-toolbar-tooltips").property("checked"));
+});
+
+$("[name='trial-toolbar-trial-fullname']").change(function () {
+  trial_graph.set_hide_fullname(d3.select("#trial-toolbar-trial-fullname").property("checked"));
 });
 
 $("[name='show-history-tooltips']").change(function () {
