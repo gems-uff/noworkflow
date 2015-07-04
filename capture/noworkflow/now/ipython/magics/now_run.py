@@ -90,6 +90,9 @@ class NowRun(IpythonCommandMagic, Run):
                 help="""The variable in which to store Popen instance.
                 This is used only when --bg option is given.
                 """)
+        add_arg('--interactive', action="store_true",
+                help="""Execute with the IPython context
+                """)
         add_arg('params', nargs=argparse.REMAINDER,
                 help='params to be passed to script')
 
@@ -108,22 +111,55 @@ class NowRun(IpythonCommandMagic, Run):
             if cell:
                 #cell = cell.encode('utf8', 'replace')
                 filename = magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
+            else:
+                filename = params[0]
+            if args.interactive:
+                from IPython.utils.py3compat import builtin_mod
+                save_argv = sys.argv
+                __name__save = magic_cls.shell.user_ns['__name__']
+                restore_main = sys.modules['__main__']
+                prog_ns = magic_cls.shell.user_ns
+                prog_ns['__name__'] = '__main__'
+                prog_ns['__file__'] = filename
+                main_mod_name = '__main__'
+                sys.modules['__main__'] = magic_cls.shell.user_module
 
-            # Set execution line
-            cmd = "now run --create_last {directory} {args} {script} {params}".format(
-                directory='' if args.dir else '--dir {0}'.format(directory),
-                args=' '.join(argv),
-                script=filename,
-                params=' '.join(params)
-            )
-            script = magic_cls.shell.find_cell_magic('script').__self__
-            result = script.shebang(cmd, "")
-            tmp_dir = os.path.dirname(filename or params[0])
+                with open(filename, 'rb') as f:
+                    metascript = {
+                        'trial_id': None,
+                        'code': f.read(),
+                        'path': filename,
+                        'compiled': None,
+                        'definition': None,
+                        'name': args.name or os.path.basename(filename)
+                    }
 
-            try:
-                with open(os.path.join(tmp_dir, LAST_TRIAL), 'r') as f:
-                    return Trial(trial_id=int(f.read()))
-            except e:
-                print('Failed', e)
+                self.run(directory, args, metascript, prog_ns)
+
+                magic_cls.shell.user_ns['__name__'] = __name__save
+                magic_cls.shell.user_ns['__builtins__'] = builtin_mod
+                sys.argv = save_argv
+                sys.modules['__main__'] = restore_main
+                try:
+                    return Trial(trial_id=metascript['trial_id'])
+                except e:
+                    print('Failed', e)
+            else:
+                # Set execution line
+                cmd = "now run --create_last {directory} {args} {script} {params}".format(
+                    directory='' if args.dir else '--dir {0}'.format(directory),
+                    args=' '.join(argv),
+                    script=filename,
+                    params=' '.join(params)
+                )
+                script = magic_cls.shell.find_cell_magic('script').__self__
+                result = script.shebang(cmd, "")
+                tmp_dir = os.path.dirname(filename)
+
+                try:
+                    with open(os.path.join(tmp_dir, LAST_TRIAL), 'r') as f:
+                        return Trial(trial_id=int(f.read()))
+                except e:
+                    print('Failed', e)
         finally:
             persistence.connect(original_path)

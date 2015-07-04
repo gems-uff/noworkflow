@@ -97,14 +97,14 @@ class Run(Command):
                 'name': args.name or os.path.basename(sys.argv[0])
             }
         try:
-            self.run(script_dir, args, metascript, __main__)
+            self.run(script_dir, args, metascript, __main__.__dict__)
         finally:
             if args.create_last:
                 tmp = os.path.join(os.path.dirname(args.script), LAST_TRIAL)
                 with open(tmp, 'w') as f:
                     f.write(str(metascript['trial_id']))
 
-    def run(self, script_dir, args, metascript, __main__):
+    def run(self, script_dir, args, metascript, ns):
 
         utils.print_msg('setting up local provenance store')
         persistence.connect(script_dir)
@@ -123,7 +123,7 @@ class Run(Command):
             if metascript['compiled'] is None:
                 metascript['compiled'] = cross_compile(
                     metascript['code'], metascript['path'], 'exec')
-            exec(metascript['compiled'], __main__.__dict__)
+            exec(metascript['compiled'], ns)
 
         except SystemExit as ex:
             prov_execution.disable()
