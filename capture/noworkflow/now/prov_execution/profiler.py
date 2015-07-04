@@ -39,13 +39,18 @@ class Profiler(StoreOpenMixin):
         self.event_map['return'] = self.trace_return
 
     def add_file_access(self, file_access):
-        self.activation_stack[-1].file_accesses.append(file_access)
+        # Wait activation that called open to finish
+        astack = self.activation_stack
+        index = -1
+        if len(astack) > 1 and astack[-1].name == 'open':
+            index = -2
+        self.activation_stack[index].file_accesses.append(file_access)
 
     def valid_depth(self):
         depth = self.depth_user + self.depth_non_user
         valid_all_threshold = depth <= self.depth_threshold
         valid_non_user_threshold = self.depth_non_user <= self.depth_threshold
-        return ((self.depth_context == 'all' and valid_threshold) or
+        return ((self.depth_context == 'all' and valid_all_threshold) or
                (self.depth_context == 'non-user' and valid_non_user_threshold))
 
     def add_activation(self, activation):
@@ -135,7 +140,7 @@ class Profiler(StoreOpenMixin):
                 aglobals = activation.globals
                 fglobals = frame.f_globals
                 for global_var in function_def[1]:
-                    aglobals[global_var] = fglobals[global_var]
+                    aglobals[global_var] = repr(fglobals[global_var])
 
             self.add_activation(activation)
 
