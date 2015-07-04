@@ -15,7 +15,7 @@ import sys
 import pkg_resources
 
 from .persistence import persistence
-from .utils import print_msg
+from .utils import print_msg, redirect_output
 
 
 def collect_environment_provenance():
@@ -120,10 +120,12 @@ def collect_provenance(args, metascript):
                   '(--bypass-modules).')
     else:
         print_msg('  searching for module dependencies')
-        finder = modulefinder.ModuleFinder()
-        finder.run_script(metascript['path'])
+        with redirect_output():
+            finder = modulefinder.ModuleFinder()
+            finder.run_script(metascript['path'])
 
-        print_msg('  registering provenance from {} modules'.format(
-            len(finder.modules) - 1))
-        modules = collect_modules_provenance(finder.modules)
+            print_msg('  registering provenance from {} modules'.format(
+                len(finder.modules) - 1))
+
+            modules = collect_modules_provenance(finder.modules)
         persistence.store_dependencies(metascript['trial_id'], modules)

@@ -6,15 +6,22 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import sys
+
 from datetime import datetime
 from textwrap import dedent
 from collections import OrderedDict, Counter
 from pkg_resources import resource_string
+from .cross_version import StringIO
 
 
 FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 LABEL = '[now] '
 verbose = False
+
+STDIN = sys.stdin
+STDOUT = sys.stdout
+STDERR = sys.stderr
 
 
 def wrap(string, initial="  ", other="\n  "):
@@ -22,28 +29,28 @@ def wrap(string, initial="  ", other="\n  "):
     return initial + other.join(dedent(string).split('\n'))
 
 
-def print_msg(message, force=False):
+def print_msg(message, force=False, file=STDOUT):
     """Print message with [now] prefix when in verbose mode"""
     if verbose or force:
-        print('{}{}'.format(LABEL, message))
+        print('{}{}'.format(LABEL, message), file=file)
 
 
-def print_fn_msg(message, force=False):
+def print_fn_msg(message, force=False, file=STDOUT):
     """Print lazy message with [now] prefix"""
     if verbose or force:
-        print('{}{}'.format(LABEL, message()))
+        print('{}{}'.format(LABEL, message()), file=file)
 
 
-def print_map(title, a_map):
+def print_map(title, a_map, file=STDOUT):
     """Print map"""
     print_msg(title, True)
     output = []
     for key in a_map:
         output.append('  {}: {}'.format(key, a_map[key]))
-    print('\n'.join(sorted(output)))
+    print('\n'.join(sorted(output)), file=file)
 
 
-def print_modules(modules):
+def print_modules(modules, file=STDOUT):
     """Print modules"""
     output = []
     for module in modules:
@@ -53,15 +60,15 @@ def print_modules(modules):
             Path: {path}
             Code hash: {code_hash}\
             '''.format(**module), other="\n    "))
-    print('\n\n'.join(output))
+    print('\n\n'.join(output), file=file)
 
 
-def print_environment_attrs(environment_attrs):
+def print_environment_attrs(environment_attrs, file=STDOUT):
     """Print environment variables"""
     output = []
     for environment_attr in environment_attrs:
         output.append('  {name}: {value}'.format(**environment_attr))
-    print('\n'.join(output))
+    print('\n'.join(output), file=file)
 
 
 def resource(filename, encoding=None):
@@ -109,3 +116,17 @@ class hashabledict(dict):
         return hash(self.__key())
     def __eq__(self, other):
         return self.__key() == other.__key()
+
+
+class redirect_output(object):
+
+    def __enter__(self, outputs=['stdout', 'stderr']):
+        self.old = {}
+        for out in outputs:
+            self.old[out] = getattr(sys, out)
+            setattr(sys, out, StringIO())
+        return [getattr(sys, out) for out in outputs]
+
+    def __exit__(self, type, value, traceback):
+        for out, old in self.old.items():
+            setattr(sys, out, old)

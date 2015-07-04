@@ -12,6 +12,7 @@ from collections import defaultdict
 from .context import Context
 from .utils import diss
 from ..cross_version import cross_compile, StringIO
+from ..utils import redirect_output
 from ..persistence import persistence
 
 
@@ -84,15 +85,11 @@ class FunctionVisitor(ast.NodeVisitor):
     def extract_disasm(self):
         self.metascript['compiled'] = cross_compile(
             self.metascript['code'], self.metascript['path'], 'exec')
-        old_stdout = sys.stdout
-        sys.stdout = mystdout = StringIO()
-        diss(self.metascript['compiled'], recurse=True)
-        #dis.dis(self.metascript['compiled'])
-        #for fn in self.metascript['compiled'].co_consts:
-        #    dis.dis(fn)
-        sys.stdout = old_stdout
 
-        self.disasm = mystdout.getvalue().split('\n')
+        with redirect_output() as outputs:
+            diss(self.metascript['compiled'], recurse=True)
+
+        self.disasm = outputs[0].getvalue().split('\n')
 
         # Sort lines
         lines = defaultdict(list)
