@@ -76,7 +76,7 @@ class Trial(Model):
         return self.trial_prolog.query(query)
 
     def prolog_rules(self):
-        return self.trial_prolog.export_rules().split('\n')
+        return self.trial_prolog.export_rules()
 
     @property
     def trial_id(self):

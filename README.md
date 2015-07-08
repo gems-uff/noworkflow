@@ -207,19 +207,18 @@ Out [2]: <Trial 5> # Loads the trial object represented as a graph
 ```
 2- Load the code inside a cell
 ```python
-In  [3]: %%now_run --name script2 --out=out_var $arg
-    ...: import sys
-    ...: l = range(sys.argv[1])
+In  [3]: %%now_run --name script2 --interactive
+    ...: l = range(arg)
     ...: c = sum(l)
     ...: print(c)
          6
 Out [3]: <Trial 6> # Loads the trial object represented as a graph
 
-In  [4]: out_var
-Out [4]: "6\n"
+In  [4]: c
+Out [4]: 6
 ```
 Both modes supports all the `now run` parameters
-It is worth noticing that the noworkflow cannot access ipython variables and ipython cannot access noworkflow variables. To workaround this limitation, it is necessary to pass arguments to the program and parse the output. Pickle may be a good solution for serializing complex objects
+The --interactive mode allows the cell to share variables with the notebook.
 
 Loading existing trials, histories and diffs:
 ```python

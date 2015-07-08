@@ -91,7 +91,7 @@ class Export(Command):
             trial_prolog = TrialProlog(trial)
             print(trial_prolog.export_text_facts())
             if args.rules:
-                print(trial_prolog.export_rules())
+                print('\n'.join(trial_prolog.export_rules()))
         else:
             if args.trial == "history":
                 nb = nbconvert((u"%load_ext noworkflow\n"

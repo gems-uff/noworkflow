@@ -30,13 +30,16 @@ class TrialProlog(object):
         self.trial = trial
         self.id = trial.id
 
+    def _trial_activations_fact(self, result):
+        result.append(textwrap.dedent("""\
+            %
+            % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
+            %
+            """))
+
     def export_trial_activations(self, result, with_doc=True):
         if with_doc:
-            result.append(textwrap.dedent("""\
-                %
-                % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
-                %
-                """))
+            self._trial_activations_fact(result)
         result.append(":- dynamic(activation/6).")
         for activation in self.trial.activations():
             activation = dict(activation)
@@ -51,13 +54,16 @@ class TrialProlog(object):
                     '{caller_id}).'
                 ''.format(**activation))
 
+    def _trial_file_accesses_fact(self, result):
+        result.append(textwrap.dedent("""
+            %
+            % FACT: access(trial_id, id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).
+            %
+            """))
+
     def export_trial_file_accesses(self, result, with_doc=True):
         if with_doc:
-            result.append(textwrap.dedent("""
-                %
-                % FACT: access(trial_id, id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).
-                %
-                """))
+            self._trial_file_accesses_fact(result)
         result.append(":- dynamic(access/8).")
         for access in self.trial.file_accesses():
             access = dict(access)
@@ -75,13 +81,16 @@ class TrialProlog(object):
                     '{timestamp:-f}, {function_activation_id}).'
                 ''.format(**access))
 
+    def _trial_slicing_variables_fact(self, result):
+        result.append(textwrap.dedent("""
+            %
+            % FACT: variable(trial_id, vid, name, line, value, timestamp).
+            %
+            """))
+
     def export_trial_slicing_variables(self, result, with_doc=True):
         if with_doc:
-            result.append(textwrap.dedent("""
-                %
-                % FACT: variable(trial_id, vid, name, line, value, timestamp).
-                %
-                """))
+            self._trial_slicing_variables_fact(result)
         result.append(":- dynamic(variable/6).")
         for var in self.trial.slicing_variables():
             var = dict(var)
@@ -96,13 +105,16 @@ class TrialProlog(object):
                     '{time:-f}).'
                 ''.format(**var))
 
+    def _trial_slicing_usages_fact(self, result):
+        result.append(textwrap.dedent("""
+            %
+            % FACT: usage(trial_id, id, vid, name, line).
+            %
+            """))
+
     def export_trial_slicing_usages(self, result, with_doc=True):
         if with_doc:
-            result.append(textwrap.dedent("""
-                %
-                % FACT: usage(trial_id, id, vid, name, line).
-                %
-                """))
+            self._trial_slicing_usages_fact(result)
         result.append(":- dynamic(usage/5).")
         for usage in self.trial.slicing_usages():
             usage = dict(usage)
@@ -115,13 +127,16 @@ class TrialProlog(object):
                     '{trial_id}, {id}, {vid}, {name!r}, {line}).'
                 ''.format(**usage))
 
-    def export_trial_slicing_dependencies(self, result, with_doc=True):
-        if with_doc:
-            result.append(textwrap.dedent("""
+    def _trial_slicing_dependencies_fact(self, result):
+        result.append(textwrap.dedent("""
                 %
                 % FACT: dependency(trial_id, id, dependent, supplier).
                 %
-                """))
+            """))
+
+    def export_trial_slicing_dependencies(self, result, with_doc=True):
+        if with_doc:
+            self._trial_slicing_dependencies_fact(result)
         result.append(":- dynamic(dependency/4).")
         for dep in self.trial.slicing_dependencies():
             dep = dict(dep)
@@ -147,8 +162,16 @@ class TrialProlog(object):
     def export_text_facts(self):
         return u'\n'.join(self.export_facts())
 
-    def export_rules(self):
-        return resource(RULES, 'UTF-8')
+    def export_rules(self, with_facts=False):
+        result = []
+        if with_facts:
+            self._trial_activations_fact(result)
+            self._trial_file_accesses_fact(result)
+            self._trial_slicing_variables_fact(result)
+            self._trial_slicing_usages_fact(result)
+            self._trial_slicing_dependencies_fact(result)
+        result += resource(RULES, 'UTF-8').split('\n')
+        return result
 
     def load_cli_facts(self):
         self.init_cli()
@@ -159,7 +182,7 @@ class TrialProlog(object):
             self.prolog_cli.assertz(load_trial)
         load_rules = 'load_rules(1)'
         if not list(self.prolog_cli.query(load_rules)):
-            for rule in self.export_rules().split('\n'):
+            for rule in self.export_rules():
                 rule = rule.strip()
                 if not rule or rule[0] == '%':
                     continue
