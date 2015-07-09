@@ -1,0 +1,8 @@
+#!/usr/bin/python2
+import json
+import sys
+
+
+with open(sys.argv[1]) as f:
+    result = json.load(f)
+    print(' '.join(str(result[v]) for v in sys.argv[2:]))
