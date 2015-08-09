@@ -76,7 +76,7 @@ class TrialProlog(object):
             access['timestamp'] = timestamp(access['timestamp'])
             result.append(
                 'access('
-                    '{trial_id}, {id}, {name!r}, {mode!r}, '
+                    '{trial_id}, f{id}, {name!r}, {mode!r}, '
                     '{content_hash_before!r}, {content_hash_after!r}, '
                     '{timestamp:-f}, {function_activation_id}).'
                 ''.format(**access))

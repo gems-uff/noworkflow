@@ -37,4 +37,3 @@ data_a = sys.argv[1]
 data_b = sys.argv[2]
 data = run_simulation(data_a, data_b)
 plot(data)
-
