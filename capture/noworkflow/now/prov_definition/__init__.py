@@ -10,7 +10,7 @@ import sys
 import pyposast
 from datetime import datetime
 
-from ..utils import print_msg
+from ..utils import print_msg, meta_profiler
 from ..persistence import persistence
 from .function_visitor import FunctionVisitor
 from .slicing_visitor import SlicingVisitor
@@ -33,7 +33,7 @@ def visit_ast(metascript):
     visitor.teardown()
     return visitor
 
-
+@meta_profiler("definition")
 def collect_provenance(args, metascript):
     now = datetime.now()
     try:

@@ -12,8 +12,7 @@ import platform
 
 from uuid import getnode
 
-
-VERSION = ("0", "11", "0")
+from noworkflow import __version__
 
 
 def recursive_path(pack, path):
@@ -51,7 +50,7 @@ def analytics(command_subclass):
 
             os_ver = platform.system()
             py_ver = '_'.join(str(x) for x in sys.version_info)
-            now_ver = '_'.join(VERSION)
+            now_ver = __version__.replace('.', '_')
 
             code = 'os:{0},py:{1},now:{2}'.format(os_ver, py_ver, now_ver)
             action = command_subclass.action
@@ -90,7 +89,7 @@ class CustomInstallCommand(install):
 
 setup(
     name = "noworkflow",
-    version = '.'.join(VERSION),
+    version = __version__,
     packages = find_packages(),
     package_data = {
         'noworkflow': [

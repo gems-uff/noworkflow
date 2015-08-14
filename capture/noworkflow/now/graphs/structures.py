@@ -8,10 +8,12 @@ from __future__ import (absolute_import, print_function,
 
 
 import json
+import traceback
 import time
 from datetime import datetime
 from collections import OrderedDict
 from ..utils import calculate_duration, FORMAT, OrderedCounter, print_msg
+from ..cross_version import default_string
 from ..persistence import row_to_dict, persistence
 
 
@@ -44,9 +46,10 @@ def prepare_cache(get_type):
                 if self.use_cache:
                     try:
                         for c in persistence.load('graph_cache', **conditions):
-                            return pickle.loads(
-                                persistence.get(c[b'content_hash']))
+                            return pickle.loads(persistence.get(
+                                c[default_string('content_hash')]))
                     except:
+                        traceback.print_exc()
                         print_msg("Couldn't load graph cache", True)
                 start = time.time()
                 graph = fn(self, *args, **kwargs)
@@ -61,6 +64,7 @@ def prepare_cache(get_type):
                         'content_hash': persistence.put(pickle.dumps(graph)),
                     })
                 except:
+                    traceback.print_exc()
                     print_msg("Couldn't store graph cache", True)
                 return graph
             return load

@@ -141,7 +141,10 @@ class Trial(Model):
                  if dep['path'] and persistence.base_path in dep['path']]
         if find is None:
             return local, result
-        return filter(lambda x: x['name'] == find, result)[0]
+        for x in result:
+            if x['name'] == find:
+                return x
+        return None
 
     def environment(self):
         """ Returns a dict of environment variables """

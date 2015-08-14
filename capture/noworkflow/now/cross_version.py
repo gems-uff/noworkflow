@@ -37,3 +37,18 @@ def bytes_string(text, encode='utf-8'):
         else:
             result = bytes(text, encode)
     return result
+
+
+def default_string(text, encode='utf-8'):
+    """Return a unicode object on Python 3 and a bytes object on Python 2"""
+    if sys.version_info < (3, 0):
+        if isinstance(text, unicode):
+            result = text.encode(encode)
+        else:
+            result = text
+    else:
+        if isinstance(text, bytes):
+            result = text.decode(encode)
+        else:
+            result = text
+    return result

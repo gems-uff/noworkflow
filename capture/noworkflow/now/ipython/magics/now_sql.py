@@ -13,6 +13,7 @@ from IPython.utils.text import DollarFormatter
 
 from ...persistence import persistence
 from ...formatter import Table
+from ...cross_version import default_string
 from ..models import set_default
 from .command import IpythonCommandMagic
 
@@ -62,7 +63,7 @@ class NowSQL(IpythonCommandMagic):
         f = DollarFormatter()
         cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
-        result = persistence.query(cell)
+        result = persistence.query(default_string(cell))
         if args.result:
             magic_cls.shell.user_ns[args.result] = result
         else:

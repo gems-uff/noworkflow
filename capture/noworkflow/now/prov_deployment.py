@@ -15,9 +15,9 @@ import sys
 import pkg_resources
 
 from .persistence import persistence
-from .utils import print_msg, redirect_output
+from .utils import print_msg, redirect_output, meta_profiler
 
-
+@meta_profiler("environment")
 def collect_environment_provenance():
     """Collect enviroment variables and operating system characteristics
     Return dict
@@ -54,7 +54,7 @@ def collect_environment_provenance():
     environment['PYTHON_VERSION'] = platform.python_version()
     return environment
 
-
+@meta_profiler("modules")
 def collect_modules_provenance(modules):
     """Return a set of module dependencies in the form:
         (name, version, path, code_hash)
@@ -103,7 +103,7 @@ def get_version(module_name):
     # If no other option work, return None
     return None
 
-
+@meta_profiler("deployment")
 def collect_provenance(args, metascript):
     """Collect deployment provenance:
         - environment variables

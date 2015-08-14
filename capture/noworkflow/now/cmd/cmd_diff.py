@@ -61,7 +61,12 @@ class Diff(Command):
         utils.print_msg('{} modules replaced:'.format(len(replaced),), True)
         for (module_removed, module_added) in replaced:
             print('  Name: {}'.format(module_removed['name'],))
-            self.diff_dict(module_removed, module_added)
+            output = []
+            for key in module_removed.keys():
+                if key != 'id' and module_removed[key] != module_added[key]:
+                    output.append('{}{} changed from {} to {}'.format(
+                        "    ", key, module_removed[key], module_added[key]))
+            print('\n'.join(output))
             print()
 
     def diff_environment(self, diff):

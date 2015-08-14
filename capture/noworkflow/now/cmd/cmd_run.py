@@ -8,7 +8,6 @@ from __future__ import (absolute_import, print_function,
 
 import os
 import sys
-import traceback
 import argparse
 
 from .. import prov_definition
@@ -16,7 +15,7 @@ from .. import prov_deployment
 from .. import prov_execution
 from .. import utils
 from ..persistence import persistence
-from ..cross_version import cross_compile
+
 from .command import Command
 
 LAST_TRIAL = '.last_trial'
@@ -52,6 +51,8 @@ class Run(Command):
                 help='execution provenance provider. (defaults to Profiler)')
         add_arg('--disasm', action='store_true',
                 help='show script disassembly')
+        add_arg('--meta', action='store_true',
+                help='exeute noWorkflow meta profiler')
         add_arg('--name', type=str,
                 help="set branch name used for tracking history")
         add_arg('--dir', type=str,
@@ -62,6 +63,11 @@ class Run(Command):
                 help='Python script to be executed')
 
     def execute(self, args):
+
+        if args.meta:
+            utils.meta_profiler.active = True
+            utils.meta_profiler.data['cmd'] = ' '.join(sys.argv)
+
         utils.verbose = args.verbose
         utils.print_msg('removing noWorkflow boilerplate')
 
@@ -116,34 +122,8 @@ class Run(Command):
         prov_deployment.collect_provenance(args, metascript)
 
         utils.print_msg('collection execution provenance')
-        prov_execution.enable(args, metascript)
+        prov_execution.collect_provenance(args, metascript, ns)
 
-        utils.print_msg('  executing the script')
-        try:
-            if metascript['compiled'] is None:
-                metascript['compiled'] = cross_compile(
-                    metascript['code'], metascript['path'], 'exec')
-            exec(metascript['compiled'], ns)
-
-        except SystemExit as ex:
-            prov_execution.disable()
-            utils.print_msg(
-                'the execution exited via sys.exit(). Exit status: {}'
-                ''.format(ex.code), ex.code > 0)
-        except Exception as e:
-            prov_execution.disable()
-            print(e)
-            utils.print_msg(
-                'the execution finished with an uncaught exception. {}'
-                ''.format(traceback.format_exc()), True)
-        else:
-            # TODO: exceptions should be registered as return from the
-            # activation and stored in the database. We are currently ignoring
-            # all the activation tree when exceptions are raised.
-            prov_execution.disable()
-            prov_execution.store()
-            utils.print_msg(
-                'the execution of trial {} finished successfully'
-                ''.format(metascript['trial_id']))
+        utils.meta_profiler.save()
 
         return prov_execution.provider

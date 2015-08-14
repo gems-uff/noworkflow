@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from .provider import Provider
+from ..utils import concat_iter
 
 
 class DatabaseProvider(Provider):
@@ -27,11 +28,12 @@ class DatabaseProvider(Provider):
         # Not in use, but can be useful in the future
         query = 'INSERT INTO {}({}) VALUES ({})'.format(
             table_name,
-            ','.join(attrs.keys() + extra_attrs.keys()),
+            ','.join(concat_iter(attrs.keys(), extra_attrs.keys())),
             ','.join(['?'] * (len(attrs) + len(extra_attrs)))
         )
         with self.db_conn as db:
-            db.execute(query, attrs.values() + extra_attrs.values())
+            db.execute(query,
+                tuple(concat_iter(attrs.values(), extra_attrs.values())))
 
     def insertmany(self, table_name, attrs_list, **extra_attrs):
         # Not in use, but can be useful in the future

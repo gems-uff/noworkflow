@@ -22,7 +22,7 @@ def prepare(series, months, names, plt, div=.1, colors=['b', 'g', 'r']):
     ax.set_xlabel('Month')
     ax.set_title('Precipitation by Month')
     ax.set_xticks(months + .5)
-    ax.set_xticklabels(map(str, months))
+    ax.set_xticklabels(list(map(str, months)))
 
     half_div = div / 2.0
     width = (1.0 - div) / len(series)
