@@ -69,8 +69,7 @@ class Show(Command):
             """.format(**trial.info())))
 
     def print_modules(self, trial):
-        a, b = trial.modules()
-        modules = a + list(b)
+        a, modules = trial.modules()
         utils.print_msg('this trial depends on the following modules:', True)
         output = []
         for module in modules:

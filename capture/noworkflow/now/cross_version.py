@@ -15,6 +15,13 @@ except ImportError:
     from io import StringIO
 
 
+PY3 = (sys.version_info >= (3, 0))
+if PY3:
+    string = (str, bytes)
+else:
+    string = (basestring,)
+
+
 def cross_compile(*args, **kwargs):
     """Compile the source string into a code object
 
@@ -26,7 +33,7 @@ def cross_compile(*args, **kwargs):
 
 def bytes_string(text, encode='utf-8'):
     """Return a bytes object on Python 3 and a str object on Python 2"""
-    if sys.version_info < (3, 0):
+    if not PY3:
         if isinstance(text, unicode):
             result = text.encode(encode)
         else:
@@ -41,7 +48,7 @@ def bytes_string(text, encode='utf-8'):
 
 def default_string(text, encode='utf-8'):
     """Return a unicode object on Python 3 and a bytes object on Python 2"""
-    if sys.version_info < (3, 0):
+    if not PY3:
         if isinstance(text, unicode):
             result = text.encode(encode)
         else:
@@ -52,3 +59,4 @@ def default_string(text, encode='utf-8'):
         else:
             result = text
     return result
+

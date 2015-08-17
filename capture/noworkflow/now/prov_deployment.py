@@ -16,6 +16,7 @@ import pkg_resources
 
 from .persistence import persistence
 from .utils import print_msg, redirect_output, meta_profiler
+from .cross_version import string, default_string
 
 @meta_profiler("environment")
 def collect_environment_provenance():
@@ -93,8 +94,11 @@ def get_version(module_name):
         for attr in ['__version__', 'version', '__VERSION__', 'VERSION']:
             try:
                 version = getattr(module, attr)
-                if isinstance(version, basestring):
-                    return version
+                if isinstance(version, string):
+                    return default_string(version)
+                if isinstance(version, tuple):
+                    return '.'.join(map(str, version))
+
             except AttributeError:
                 pass
     except:
