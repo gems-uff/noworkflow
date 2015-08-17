@@ -16,7 +16,8 @@ import pkg_resources
 
 from .persistence import persistence
 from .utils import print_msg, redirect_output, meta_profiler
-from .cross_version import string, default_string
+from .cross_version import string, default_string, items
+
 
 @meta_profiler("environment")
 def collect_environment_provenance():
@@ -62,7 +63,7 @@ def collect_modules_provenance(modules):
     Store module provenance in the persistence database
     """
     dependencies = []
-    for name, module in modules.items():
+    for name, module in items(modules):
         if name != '__main__':
             version = get_version(name)
             path = module.__file__

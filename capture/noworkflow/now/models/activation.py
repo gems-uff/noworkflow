@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from ..persistence import row_to_dict, persistence
+from ..cross_version import cvmap
 
 class Activation(dict):
 
@@ -24,5 +25,5 @@ class Activation(dict):
         return self.__key() == other.__key()
 
     def objects(self):
-        return map(row_to_dict, persistence.load(
+        return cvmap(row_to_dict, persistence.load(
             'object_value', function_activation_id=self['id']))

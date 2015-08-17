@@ -14,6 +14,7 @@ from .structures import Single, Call, Group, Mixed, TreeElement, prepare_cache
 from .structures import Graph
 from ..utils import OrderedCounter
 from ..persistence import persistence
+from ..cross_version import items, values, keys
 
 
 Edge = namedtuple("Edge", "node count")
@@ -84,7 +85,7 @@ class TreeVisitor(object):
 
     def visit_group(self, group):
         result = []
-        for element in group.nodes.values():
+        for element in values(group.nodes):
             result += element.visit(self)
         return result
 
@@ -147,19 +148,20 @@ class NoMatchVisitor(TreeVisitor):
         delegated = self.use_delegated()
 
         node_map = {}
-        for element in group.nodes.values():
+        for element in values(group.nodes):
             node_id, node = element.visit(self)
             node_map[node] = node_id
 
-        self.solve_cis_delegation(node_map[group.next], group.count, delegated)
+        self.solve_cis_delegation(node_map[group.next_element],
+                                  group.count, delegated)
         self.solve_ret_delegation(node_map[group.last], group.count, delegated)
 
-        for previous, edges in group.edges.items():
-            for next, count in edges.items():
+        for previous, edges in items(group.edges):
+            for next, count in items(edges):
                 self.add_edge(node_map[previous], node_map[next],
                               count, 'sequence')
 
-        return node_map[group.next], group.next
+        return node_map[group.next_element], group.next_element
 
     def visit_single(self, single):
         delegated = self.use_delegated()
@@ -197,7 +199,7 @@ class ExactMatchVisitor(NoMatchVisitor):
         return m
 
     def visit_group(self, group):
-        nodes = group.nodes.keys()
+        nodes = list(keys(group.nodes))
         g = Group()
         g.use_id = False
         g.initialize(nodes[1].visit(self),nodes[0].visit(self))

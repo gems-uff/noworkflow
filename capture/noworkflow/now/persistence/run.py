@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from .provider import Provider
+from ..cross_version import items
 
 class RunProvider(Provider):
 
@@ -44,7 +45,7 @@ class RunProvider(Provider):
 
     def store_function_defs(self, trial_id, functions):
         with self.db_conn as db:
-            for name, defs in functions.items():
+            for name, defs in items(functions):
                 arguments, global_vars, calls, code_hash = defs
                 function_def_id = db.execute(
                     """INSERT INTO function_def(name, code_hash, trial_id)

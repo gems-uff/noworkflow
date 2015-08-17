@@ -160,7 +160,7 @@ class TrialProlog(object):
         return result
 
     def export_text_facts(self):
-        return u'\n'.join(self.export_facts())
+        return '\n'.join(self.export_facts())
 
     def export_rules(self, with_facts=False):
         result = []

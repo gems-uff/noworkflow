@@ -197,6 +197,6 @@ class InspectProfiler(Profiler):
             activation.arguments[varargs] = repr(values[varargs])
             activation.starargs.append(varargs)
         if keywords:
-            for key, value in values[keywords].iteritems():
+            for key, value in items(values[keywords]):
                 activation.arguments[key] = repr(value)
                 activation.kwargs.append(key)

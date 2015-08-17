@@ -9,23 +9,21 @@ from __future__ import (absolute_import, print_function,
 import sys
 import linecache
 import itertools
-import numbers
+
 from collections import namedtuple
 from datetime import datetime
 from .profiler import Profiler
 from ..utils import print_fn_msg
+from ..cross_version import items, immutable
 from ..prov_definition import SlicingVisitor
 from ..prov_definition import (FunctionCall, ClassDef, Decorator,
                                Generator, Assert)
 
 from ..persistence import persistence
 
-try:
-    immutable = (bool, numbers.Number, str, unicode)
-except NameError:
-    immutable = (bool, numbers.Number, str, bytes)
 
 WITHOUT_PARAMS = (ClassDef, Assert, Generator)
+
 
 class Variable(object):
     __slots__ = (
@@ -162,7 +160,7 @@ class Tracer(Profiler):
             if name in context:
                 usages_add(context[name].id, name, lineno)
 
-        for name, others in dependencies.items():
+        for name, others in items(dependencies):
             if name == 'return':
                 vid = add_variable(name, lineno, f_locals,
                                    value=activation.return_value)
@@ -243,7 +241,7 @@ class Tracer(Profiler):
             except KeyError:
                 pass
 
-        for arg, variable in added.items():
+        for arg, variable in items(added):
             context[arg] = variable
 
     def add_argument_variables(self, frame):
@@ -270,7 +268,7 @@ class Tracer(Profiler):
             act_arg = order[j]
             match_args(call_arg, act_arg, caller, act, line, f_locals)
             used[j] += 1
-        for act_arg, call_arg in call.keywords.items():
+        for act_arg, call_arg in items(call.keywords):
             try:
                 i = act_args_index(act_arg)
                 match_args(call_arg, act_arg, caller, act, line, f_locals)

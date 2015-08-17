@@ -13,6 +13,8 @@ from .. import utils
 from ..persistence import persistence
 from ..models.trial import Trial
 from .command import Command
+from ..cross_version import items, values
+
 
 class Show(Command):
 
@@ -84,7 +86,7 @@ class Show(Command):
     def print_function_defs(self, trial):
         utils.print_msg('this trial has the following functions:', True)
         output = []
-        for function_def in trial.function_defs().values():
+        for function_def in values(trial.function_defs()):
             objects = {'GLOBAL':[], 'ARGUMENT':[], 'FUNCTION_CALL':[]}
             for obj in persistence.load('object',
                                         function_def_id=function_def['id']):
@@ -117,7 +119,7 @@ class Show(Command):
             initial='  ' * level)
         indent = text.index(': ') + 2
         print(text)
-        for typ, values in object_values.items():
+        for typ, values in items(object_values):
             print(self.wrap(
                 '{type}: {values}'.format(type=name[typ],
                                           values=', '.join(values)),

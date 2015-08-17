@@ -189,10 +189,10 @@ class Trial(Model):
 
     def activations(self, **conditions):
         """ Returns a list of activations """
-        return map(Activation, persistence.load('function_activation',
+        return list(map(Activation, persistence.load('function_activation',
                                                 trial_id=self.id,
                                                 order='start',
-                                                **conditions))
+                                                **conditions)))
 
     def slicing_variables(self):
         """ Returns a list of slicing variables """

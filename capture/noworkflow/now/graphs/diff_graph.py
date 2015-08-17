@@ -11,7 +11,10 @@ import time
 
 from copy import deepcopy, copy
 from collections import namedtuple, defaultdict, OrderedDict
+
 from ..utils import OrderedCounter, concat_iter, hashabledict
+from ..cross_version import items, keys, values
+
 from .structures import prepare_cache, Graph
 
 
@@ -29,7 +32,7 @@ def fix_caller_id(graph):
     visited = set()
     while called:
         t = {}
-        for nid, parent in called.items():
+        for nid, parent in items(called):
             nodes[nid]['caller_id'] = parent
             visited.add(nid)
             for e in seq[nid]:
@@ -137,10 +140,10 @@ class MappingToGraph(object):
         self.context_edges = {}
         self.old_to_new = {}
         self.max_duration = dict(concat_iter(
-            g1['max_duration'].items(), g2['max_duration'].items()))
+            items(g1['max_duration']), items(g2['max_duration'])))
 
         self.min_duration = dict(concat_iter(
-            g1['min_duration'].items(), g2['min_duration'].items()))
+            items(g1['min_duration']), items(g2['min_duration'])))
 
         self.g1, self.g2 = g1, g2
         self.nodes1, self.nodes2 = g1['hnodes'], g2['hnodes']
@@ -152,7 +155,7 @@ class MappingToGraph(object):
         self.merge()
 
     def merge(self):
-        for a, b in self.mapping.items():
+        for a, b in items(self.mapping):
             n = deepcopy(a)
             del n['node']
             n['node1'] = a['node']
@@ -263,7 +266,7 @@ class Similarity(object):
 
     def edge_intersection(self, mapping):
         edges = 0
-        for node1, node2 in mapping.items():
+        for node1, node2 in items(mapping):
             targets1 = self.edges1[node1['index']]
             targets2 = self.edges2[node2['index']]
             for target, typ in targets1:
@@ -291,9 +294,9 @@ def neighborhood(k, g1, g2, mapping):
     nodes1, nodes2 = g1['hnodes'], g2['hnodes']
     cmp_node = cmp_node_fn(nodes1, nodes2)
     tried = set()
-    used1 = {n['index'] for n in mapping.keys()}
-    used2 = {n['index'] for n in mapping.values()}
-    reverse = {n2:n1 for n1, n2 in mapping.items()}
+    used1 = {n['index'] for n in keys(mapping)}
+    used2 = {n['index'] for n in values(mapping)}
+    reverse = {n2:n1 for n1, n2 in items(mapping)}
     max_level = min(g1['max_level'], g2['max_level'])
 
     def add_to_mapping(to_add, new_mapping, swapped):
@@ -331,8 +334,8 @@ def neighborhood(k, g1, g2, mapping):
             swapped = True
             not_mapped1, not_mapped2 = not_mapped2, not_mapped1
 
-        possibilities = [zip(x, not_mapped2) for x in itertools.permutations(
-            not_mapped1, len(not_mapped2))]
+        possibilities = [list(zip(x, not_mapped2))
+            for x in itertools.permutations(not_mapped1, len(not_mapped2))]
         result = []
         for full_map in possibilities:
             for i in range(1, len(not_mapped2) + 1):
@@ -385,7 +388,7 @@ def vnd(g1, g2, neighborhoods=3, time_limit=0):
 
 
 def show_mapping(mapping):
-    return [(x['index'], y['index'], x['name']) for x,y in mapping.items()]
+    return [(x['index'], y['index'], x['name']) for x,y in items(mapping)]
 
 
 def trial_mirror(fn):

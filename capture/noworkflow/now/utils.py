@@ -15,7 +15,7 @@ from textwrap import dedent
 from functools import wraps
 from collections import OrderedDict, Counter, defaultdict
 from pkg_resources import resource_string
-from .cross_version import StringIO
+from .cross_version import StringIO, items
 
 
 FORMAT = '%Y-%m-%d %H:%M:%S.%f'
@@ -131,7 +131,7 @@ class redirect_output(object):
         return [getattr(sys, out) for out in outputs]
 
     def __exit__(self, type, value, traceback):
-        for out, old in self.old.items():
+        for out, old in items(self.old):
             setattr(sys, out, old)
 
 

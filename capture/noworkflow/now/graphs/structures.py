@@ -13,14 +13,8 @@ import time
 from datetime import datetime
 from collections import OrderedDict
 from ..utils import calculate_duration, FORMAT, OrderedCounter, print_msg
-from ..cross_version import default_string
+from ..cross_version import default_string, pickle, items, cvmap
 from ..persistence import row_to_dict, persistence
-
-
-try:
-   import cPickle as pickle
-except:
-   import pickle
 
 
 class Graph(object):
@@ -238,14 +232,14 @@ class Group(TreeElement):
     def initialize(self, previous, next):
         self.nodes[next] = Mixed(next)
         self.duration = next.duration
-        self.next = next
+        self.next_element = next
         self.last = next
         self.add_subelement(previous)
         self.parent = next.parent
         return self
 
     def add_subelement(self, previous):
-        next, self.next = self.next, previous
+        next, self.next_element = self.next_element, previous
         if not previous in self.edges:
             self.edges[previous] = OrderedCounter()
         if not previous in self.nodes:
@@ -257,8 +251,8 @@ class Group(TreeElement):
     def calculate_repr(self):
         result = [
             "[{0}-{1}->{2}]".format(previous, count, next)
-            for previous, edges in self.edges.items()
-            for next, count in edges.items()
+            for previous, edges in items(self.edges)
+            for next, count in items(edges)
         ]
 
         self.repr = "G({0})".format(', '.join(result))
@@ -268,7 +262,7 @@ class Group(TreeElement):
                    [type, lambda x: x.edges])
 
     def mix(self, other):
-        for node, value in self.nodes.items():
+        for node, value in items(self.nodes):
             value.mix(other.nodes[node])
 
     def __hash__(self):
@@ -333,7 +327,7 @@ class Info(object):
         return "Mean: {} microseconds per activation".format(mean)
 
     def activation_text(self, activation):
-        values = map(row_to_dict, persistence.load('object_value',
+        values = cvmap(row_to_dict, persistence.load('object_value',
             function_activation_id=activation['id'], order='id'))
         values = [value for value in values if value['type'] == 'ARGUMENT']
         result = [

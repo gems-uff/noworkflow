@@ -13,6 +13,7 @@ from .. import utils
 from ..persistence import persistence
 from ..models.diff import Diff as DiffModel
 from .command import Command
+from ..cross_version import items, keys
 
 
 class Diff(Command):
@@ -42,7 +43,7 @@ class Diff(Command):
 
     def diff_trials(self, diff):
         utils.print_msg('trial diff:', True)
-        for key, values in diff.trial().items():
+        for key, values in items(diff.trial()):
             print('  {} changed from {} to {}'.format(
                 key, values[0], values[1]))
         print()
@@ -62,7 +63,7 @@ class Diff(Command):
         for (module_removed, module_added) in replaced:
             print('  Name: {}'.format(module_removed['name'],))
             output = []
-            for key in module_removed.keys():
+            for key in keys(module_removed):
                 if key != 'id' and module_removed[key] != module_added[key]:
                     output.append('{}{} changed from {} to {}'.format(
                         "    ", key, module_removed[key], module_added[key]))

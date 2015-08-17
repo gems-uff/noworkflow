@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import weakref
 from collections import defaultdict
+from ..cross_version import items
 
 
 class Model(object):
@@ -17,17 +18,17 @@ class Model(object):
         self.__refs__[self.__class__].append(weakref.ref(self))
 
     def initialize_default(self, kwargs):
-        for key, value in self.REPLACE.items():
+        for key, value in items(self.REPLACE):
             if key in kwargs:
                 kwargs[value] = kwargs[key]
                 del kwargs[key]
-        for key, value in self.DEFAULT.items():
+        for key, value in items(self.DEFAULT):
             obj = self
             if '.' in key:
                 key0, key = key.split('.')
                 obj = getattr(self, key0)
             setattr(obj, key, value)
-        for key, value in kwargs.items():
+        for key, value in items(kwargs):
             obj = self
             if '.' in key:
                 key0, key = key.split('.')

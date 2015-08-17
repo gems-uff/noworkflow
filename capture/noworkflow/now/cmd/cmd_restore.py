@@ -15,6 +15,8 @@ from .. import prov_deployment
 from ..persistence import persistence
 from ..models.trial import Trial
 from .command import Command
+from ..cross_version import items
+
 
 class Restore(Command):
 
@@ -91,7 +93,7 @@ class Restore(Command):
             fs = {}
             for fa in reversed(file_accesses):
                 fs[fa['name']] = fa['content_hash_before']
-            for name, content_hash in fs.items():
+            for name, content_hash in items(fs):
                 self.restore(name, content_hash, trial.id)
 
     def execute(self, args):

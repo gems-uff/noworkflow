@@ -15,7 +15,7 @@ from pkg_resources import resource_string
 from collections import OrderedDict
 
 from ..utils import print_msg, resource
-
+from ..cross_version import cvzip, row_keys
 
 PROVENANCE_DIRNAME = '.noworkflow'
 CONTENT_DIRNAME = 'content'
@@ -25,7 +25,7 @@ PARENT_TRIAL = '.parent_config.json'
 
 
 def row_to_dict(row):
-    return OrderedDict(zip(row.keys(), row))
+    return OrderedDict(cvzip(row_keys(row), row))
 
 
 class Provider(object):

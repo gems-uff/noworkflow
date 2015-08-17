@@ -6,17 +6,13 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-try:
-    import __builtin__ as builtins
-except ImportError:
-    import builtins
-
 import os
 import sys
 from datetime import datetime
 from collections import defaultdict
 
 from ..persistence import persistence
+from ..cross_version import builtins
 
 
 class ExecutionProvider(object):

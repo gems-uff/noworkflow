@@ -11,6 +11,7 @@ import time
 from collections import namedtuple, OrderedDict, defaultdict
 
 from ..utils import OrderedCounter, concat_iter, hashabledict
+from ..cross_version import items, keys
 from ..graphs.diff_graph import DiffGraph
 from .model import Model
 from .trial import Trial
@@ -119,13 +120,13 @@ class Diff(Model):
 
 def dict_to_set(d):
     result = set()
-    for key, value in d.items():
+    for key, value in items(d):
         result.add(activationdict({'name': key, 'value': value}))
     return result
 
 def diff_dict(before, after):
     result = {}
-    for key in before.keys():
+    for key in keys(before):
         if key != 'id' and before[key] != after[key]:
             result[key] = [before[key], after[key]]
     return result

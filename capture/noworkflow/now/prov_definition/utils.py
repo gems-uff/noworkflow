@@ -15,7 +15,7 @@ import tokenize
 
 from collections import OrderedDict
 
-from ..cross_version import cross_compile, StringIO
+from ..cross_version import cross_compile, StringIO, values
 
 
 class FunctionCall(ast.NodeVisitor):
@@ -34,7 +34,7 @@ class FunctionCall(ast.NodeVisitor):
             itertools.chain.from_iterable(self.args),
             self.starargs,
             self.kwargs,
-            itertools.chain.from_iterable(self.keywords.values())
+            itertools.chain.from_iterable(values(self.keywords))
         ))
 
     def use_visitor(self, node):

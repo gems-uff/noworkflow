@@ -13,7 +13,7 @@ from IPython.utils.text import DollarFormatter
 
 from ...persistence import persistence
 from ...formatter import Table
-from ...cross_version import default_string
+from ...cross_version import default_string, values, keys
 from ..models import set_default
 from .command import IpythonCommandMagic
 
@@ -70,7 +70,7 @@ class NowSQL(IpythonCommandMagic):
             result = list(result)
             table = Table()
             if result:
-                table.append(result[0].keys())
+                table.append(list(keys(result[0])))
             for line in result:
-                table.append(line.values())
+                table.append(list(values(line)))
             return table

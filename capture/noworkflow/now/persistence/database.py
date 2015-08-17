@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 from .provider import Provider
 from ..utils import concat_iter
+from ..cross_version import keys, values
 
 
 class DatabaseProvider(Provider):
@@ -25,15 +26,14 @@ class DatabaseProvider(Provider):
                 ','.join(selection), table_name, where, order))
 
     def insert(self, table_name, attrs, **extra_attrs):
-        # Not in use, but can be useful in the future
         query = 'INSERT INTO {}({}) VALUES ({})'.format(
             table_name,
-            ','.join(concat_iter(attrs.keys(), extra_attrs.keys())),
+            ','.join(concat_iter(keys(attrs), keys(extra_attrs))),
             ','.join(['?'] * (len(attrs) + len(extra_attrs)))
         )
         with self.db_conn as db:
             db.execute(query,
-                tuple(concat_iter(attrs.values(), extra_attrs.values())))
+                tuple(concat_iter(values(attrs), values(extra_attrs))))
 
     def insertmany(self, table_name, attrs_list, **extra_attrs):
         # Not in use, but can be useful in the future

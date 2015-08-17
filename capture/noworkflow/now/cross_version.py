@@ -7,7 +7,7 @@
 """Provide support for both Python 2 and Python 3"""
 
 import sys
-
+import numbers
 
 try:
     from cStringIO import StringIO
@@ -17,9 +17,33 @@ except ImportError:
 
 PY3 = (sys.version_info >= (3, 0))
 if PY3:
+    import builtins
+    import pickle
+
+    immutable = (bool, numbers.Number, str, bytes)
     string = (str, bytes)
+    items = lambda x: x.items()
+    values = lambda x: x.values()
+    keys = lambda x: x.keys()
+    cvmap = lambda *args, **kwargs: map(*args, **kwargs)
+    cvzip = lambda *args, **kwargs: zip(*args, **kwargs)
 else:
+    import __builtin__ as builtins
+    try:
+       import cPickle as pickle
+    except ImportError:
+       import pickle
+    from itertools import imap, izip
+
+    immutable = (bool, numbers.Number, basestring)
     string = (basestring,)
+    items = lambda x: x.iteritems()
+    values = lambda x: x.itervalues()
+    keys = lambda x: x.iterkeys()
+    cvmap = imap
+    cvzip = izip
+row_keys = lambda x: x.keys()
+
 
 
 def cross_compile(*args, **kwargs):
@@ -59,4 +83,3 @@ def default_string(text, encode='utf-8'):
         else:
             result = text
     return result
-
