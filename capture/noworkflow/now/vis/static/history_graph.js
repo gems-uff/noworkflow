@@ -10,7 +10,7 @@ function HistoryGraph(id, svg, options) {
   };
   self.hint_message = options.hint_message;
   if (options.hint_message === undefined) {
-    self.hint_message = "Ctrl+Shift click or ⌘-click to diff trials";
+    self.hint_message = "Ctrl+Shift click or ⌘+Shift click to diff trials";
   }
   self.graph_id = id;
 

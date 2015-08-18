@@ -6,6 +6,15 @@ var history_graph, trial_graph, nodes,
   selected_graph = "namespace_match",
   current_nid = 0;
 
+var $loading = $('#loadingDiv').hide();
+$(document)
+  .ajaxStart(function () {
+    $loading.show();
+  })
+  .ajaxStop(function () {
+    $loading.hide();
+  });
+
 function get_url() {
   var arr = window.location.href.split('/');
   arr = arr[arr.length - 1].split('-');
@@ -356,11 +365,3 @@ window.onpopstate = function (e) {
   }
 };
 
-var $loading = $('#loadingDiv').hide();
-$(document)
-  .ajaxStart(function () {
-    $loading.show();
-  })
-  .ajaxStop(function () {
-    $loading.hide();
-  });
