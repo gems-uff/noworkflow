@@ -15,6 +15,15 @@ from ..persistence import persistence
 from ..cross_version import builtins
 
 
+ALL = 0
+NON_USER = 1
+
+DEPTHS = {
+    'all': ALL,
+    'non-user': NON_USER
+}
+
+
 class ExecutionProvider(object):
 
     def __init__(self, metascript, depth_context, depth_threshold):
@@ -24,7 +33,7 @@ class ExecutionProvider(object):
         self.script = metascript['path']
         # which function types ('non-user' or 'all')
         #   should be considered for the threshold
-        self.depth_context = depth_context
+        self.depth_context = DEPTHS[depth_context]
         # how deep we want to go when capturing function activations?
         self.depth_threshold = depth_threshold
         self.metascript = metascript

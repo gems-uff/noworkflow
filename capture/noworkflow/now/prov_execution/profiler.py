@@ -12,10 +12,10 @@ import os
 import itertools
 import inspect
 from datetime import datetime
-from .base import StoreOpenMixin
+from .base import StoreOpenMixin, ALL, NON_USER
 from .activation import Activation
-
 from ..persistence import persistence
+
 
 class Profiler(StoreOpenMixin):
 
@@ -29,6 +29,9 @@ class Profiler(StoreOpenMixin):
         self.activation_stack = []
         self.function_activation = None
 
+        # Avoid using the same event for tracer and profiler
+        self.last_event = None
+
         self.definition = self.metascript['definition']
         self.functions = self.definition.functions[self.script]
 
@@ -37,6 +40,8 @@ class Profiler(StoreOpenMixin):
         self.event_map['c_return'] = self.trace_c_return
         self.event_map['c_exception'] = self.trace_c_exception
         self.event_map['return'] = self.trace_return
+
+        self.history = []
 
     def add_file_access(self, file_access):
         # Wait activation that called open to finish
@@ -50,8 +55,8 @@ class Profiler(StoreOpenMixin):
         depth = self.depth_user + self.depth_non_user
         valid_all_threshold = depth <= self.depth_threshold
         valid_non_user_threshold = self.depth_non_user <= self.depth_threshold
-        return ((self.depth_context == 'all' and valid_all_threshold) or
-               (self.depth_context == 'non-user' and valid_non_user_threshold))
+        return ((self.depth_context == ALL and valid_all_threshold) or
+               (self.depth_context == NON_USER and valid_non_user_threshold))
 
     def add_activation(self, activation):
         if activation:
@@ -165,12 +170,20 @@ class Profiler(StoreOpenMixin):
 
     def tracer(self, frame, event, arg):
         # Only enable activations gathering after the first call to the script
-        co_filename = frame.f_code.co_filename
-        if not self.enabled and event == 'call' and self.script == co_filename:
+        if event == 'call' and self.script == frame.f_code.co_filename:
             self.enabled = True
 
         if self.enabled:
-            super(Profiler, self).tracer(frame, event, arg)
+            current_event = (event, frame.f_lineno, frame.f_code)
+            if self.last_event != current_event:
+                self.last_event = current_event
+
+                super(Profiler, self).tracer(frame, event, arg)
+
+                if self.valid_depth():
+                    t = (self.depth_user, self.depth_non_user, current_event[0], current_event[1],
+                         current_event[2].co_name)
+                    self.history.append(t)
         return self.tracer
 
     def store(self):

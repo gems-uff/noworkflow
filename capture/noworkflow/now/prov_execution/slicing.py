@@ -86,8 +86,6 @@ class Tracer(Profiler):
 
         # Returns
         self.returns = {}
-        # Avoid using the same event for tracer and profiler
-        self.last_event = None
 
         # Useful maps
         # Map of dependencies by line
@@ -98,6 +96,10 @@ class Tracer(Profiler):
         self.call_by_col = definition.call_by_col[self.script]
         # Map of calls by line and lasti
         self.call_by_lasti = definition.call_by_lasti[self.script]
+        self.call_by_lasti = {
+            key: value for values in definition.call_by_lasti[self.script].values()
+            for key, value in values.items()
+        }
         # Set of imports
         self.imports = definition.imports[self.script]
 
@@ -189,7 +191,7 @@ class Tracer(Profiler):
         # Artificial return condition
         activation = self.activation_stack[-1]
         lasti = activation.lasti
-        if not 'return' in self.line_dependencies[lineno]:
+        if 'return' not in activation.context:
             vid = self.add_variable('return', lineno, {},
                                     value=activation.return_value)
             activation.context['return'] = variables[vid]
@@ -197,7 +199,7 @@ class Tracer(Profiler):
 
             if ccall and frame.f_code.co_filename == self.script:
                 caller = self.activation_stack[-2]
-                call = self.call_by_lasti[lineno][lasti]
+                call = self.call_by_lasti[lasti]
                 all_args = call.all_args()
                 self.add_dependencies(variables[vid], caller, all_args)
                 self.add_inter_dependencies(frame, all_args, caller)
@@ -247,7 +249,7 @@ class Tracer(Profiler):
     def add_argument_variables(self, frame):
         """ Adds argument variables """
         back = frame.f_back
-        call = self.call_by_lasti[back.f_lineno][back.f_lasti]
+        call = self.call_by_lasti[back.f_lasti]
         if isinstance(call, WITHOUT_PARAMS):
             return
         if isinstance(call, Decorator) and not call.fn:
@@ -328,13 +330,6 @@ class Tracer(Profiler):
             self.slice_line(*activation.slice_stack.pop())
         activation.slice_stack.append([
             activation, lineno, frame.f_locals, self.script])
-
-    def tracer(self, frame, event, arg):
-        current_event = (event, frame.f_lineno, frame.f_code)
-        if self.last_event != current_event:
-            self.last_event = current_event
-            return super(Tracer, self).tracer(frame, event, arg)
-        return self.tracer
 
     def tearup(self):
         sys.settrace(self.tracer)

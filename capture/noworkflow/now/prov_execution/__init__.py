@@ -14,6 +14,7 @@ from ..utils import print_msg, meta_profiler
 
 from .profiler import Profiler, InspectProfiler
 from .slicing import Tracer
+from .debugger import create_debugger
 
 
 provider = None
@@ -46,8 +47,18 @@ def store():
 # TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()
 
+def set_trace(frame=None, pdb=None):
+    global provider
+    debugger = create_debugger(pdb)(provider)
+    debugger.set_trace(sys._getframe().f_back)
+
+def history():
+    global provider
+    return provider.history
+
 @meta_profiler("execution")
 def collect_provenance(args, metascript, ns):
+    global provider
     enable(args, metascript)
 
     print_msg('  executing the script')
@@ -55,6 +66,8 @@ def collect_provenance(args, metascript, ns):
         if metascript['compiled'] is None:
             metascript['compiled'] = cross_compile(
                 metascript['code'], metascript['path'], 'exec')
+        ns['__builtins__']['set_trace'] = set_trace
+        ns['__builtins__']['history'] = history
         exec(metascript['compiled'], ns)
 
     except SystemExit as ex:
