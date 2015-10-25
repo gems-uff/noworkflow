@@ -15,27 +15,34 @@ from ..persistence import persistence
 from ..cross_version import builtins
 
 
-ALL = 0
-NON_USER = 1
+MAIN = 0
+PACKAGE = 1
+ALL = 2
 
-DEPTHS = {
-    'all': ALL,
-    'non-user': NON_USER
+CONTEXTS = {
+    'main': MAIN,
+    'package': PACKAGE,
+    'all': ALL
 }
 
 
 class ExecutionProvider(object):
 
-    def __init__(self, metascript, depth_context, depth_threshold):
+    def __init__(self, metascript, context, depth_threshold, non_user_depth):
         # Indicates when activations should be collected
         #   (only after the first call to the script)
         self.enabled = False
+        # User files
         self.script = metascript['path']
-        # which function types ('non-user' or 'all')
+        self.paths = metascript['paths']
+        # Which function types ('main', 'package' or 'all')
         #   should be considered for the threshold
-        self.depth_context = DEPTHS[depth_context]
-        # how deep we want to go when capturing function activations?
+        self.context = CONTEXTS[context]
+        # How deep we want to go when capturing function activations?
         self.depth_threshold = depth_threshold
+        # How deep we want to go beyond our context
+        self.non_user_depth_threshold = non_user_depth
+
         self.metascript = metascript
         self.trial_id = metascript['trial_id']
         self.event_map = defaultdict(lambda: self.trace_empty, {})

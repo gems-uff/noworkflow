@@ -30,7 +30,7 @@ def provenance_provider(execution_provenance):
 def enable(args, metascript):
     global provider
     provider = provenance_provider(args.execution_provenance)(
-        metascript, args.depth_context, args.depth,
+        metascript, args.context, args.depth, args.non_user_depth
     )
     provider.tearup()
 

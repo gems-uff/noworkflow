@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 import sys
 import argparse
+import fnmatch
 
 from .. import prov_definition
 from .. import prov_deployment
@@ -39,13 +40,17 @@ class Run(Command):
         add_arg('-b', '--bypass-modules', action='store_true',
                 help='bypass module dependencies analysis, assuming that no '
                      'module changes occurred since last execution')
-        add_arg('-c', '--depth-context', choices=['non-user', 'all'],
-                default='non-user',
+        add_arg('-c', '--context', choices=['main', 'package', 'all'],
+                default='main',
                 help='functions subject to depth computation when capturing '
-                     'activations (defaults to non-user)')
-        add_arg('-d', '--depth', type=non_negative, default=1,
+                     'activations (defaults to main)')
+        add_arg('-d', '--depth', type=non_negative,
+                default=sys.getrecursionlimit(),
                 help='depth for capturing function activations (defaults to '
-                     '1)')
+                     'recursion limit)')
+        add_arg('-D', '--non-user-depth', type=non_negative, default=1,
+                help='depth for capturing function activations outside the '
+                     'selected context (defaults to 1)')
         add_arg('-e', '--execution-provenance', default="Profiler",
                 choices=['Profiler', 'InspectProfiler', 'Tracer'],
                 help='execution provenance provider. (defaults to Profiler)')
@@ -98,10 +103,18 @@ class Run(Command):
                 'trial_id': None,
                 'code': f.read(),
                 'path': args.script,
+                'paths': {args.script},
                 'compiled': None,
                 'definition': None,
                 'name': args.name or os.path.basename(sys.argv[0])
             }
+            if args.context in ('package', 'all'):
+                path = os.path.dirname(args.script)
+                for root, dirnames, filenames in os.walk(path):
+                    for filename in fnmatch.filter(filenames, '*.py'):
+                        metascript['paths'].add(os.path.join(root, filename))
+            if args.context == 'all':
+                args.non_user_depth = args.depth
         try:
             self.run(script_dir, args, metascript, __main__.__dict__)
         finally:

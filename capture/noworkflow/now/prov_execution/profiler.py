@@ -12,7 +12,7 @@ import os
 import itertools
 import inspect
 from datetime import datetime
-from .base import StoreOpenMixin, ALL, NON_USER
+from .base import StoreOpenMixin
 from .activation import Activation
 from ..persistence import persistence
 
@@ -33,7 +33,7 @@ class Profiler(StoreOpenMixin):
         self.last_event = None
 
         self.definition = self.metascript['definition']
-        self.functions = self.definition.functions[self.script]
+        self.functions = self.definition.functions
 
         self.event_map['c_call'] = self.trace_c_call
         self.event_map['call'] = self.trace_call
@@ -53,10 +53,9 @@ class Profiler(StoreOpenMixin):
 
     def valid_depth(self):
         depth = self.depth_user + self.depth_non_user
-        valid_all_threshold = depth <= self.depth_threshold
-        valid_non_user_threshold = self.depth_non_user <= self.depth_threshold
-        return ((self.depth_context == ALL and valid_all_threshold) or
-               (self.depth_context == NON_USER and valid_non_user_threshold))
+        if depth > self.depth_threshold:
+            return False
+        return self.depth_non_user <= self.non_user_depth_threshold
 
     def add_activation(self, activation):
         if activation:
@@ -125,7 +124,7 @@ class Profiler(StoreOpenMixin):
         #print("now", frame.f_back.f_lineno, frame.f_code.co_name)
         co_name = frame.f_code.co_name
         co_filename = frame.f_code.co_filename
-        if self.script == co_filename:
+        if co_filename in self.paths:
             self.depth_user += 1
         else:
             self.depth_non_user += 1
@@ -139,13 +138,15 @@ class Profiler(StoreOpenMixin):
             self.capture_python_params(frame, activation)
 
             # Capturing globals
-            function_def = self.functions.get(activation.name)
+            functions = self.functions.get(co_filename)
+            if functions:
+                function_def = functions.get(activation.name)
 
-            if function_def:
-                aglobals = activation.globals
-                fglobals = frame.f_globals
-                for global_var in function_def[1]:
-                    aglobals[global_var] = repr(fglobals[global_var])
+                if function_def:
+                    aglobals = activation.globals
+                    fglobals = frame.f_globals
+                    for global_var in function_def[1]:
+                        aglobals[global_var] = repr(fglobals[global_var])
 
             self.add_activation(activation)
 
@@ -163,7 +164,7 @@ class Profiler(StoreOpenMixin):
         if self.valid_depth():
             self.close_activation(event, arg)
 
-        if self.script == frame.f_code.co_filename:
+        if frame.f_code.co_filename in self.paths:
             self.depth_user -= 1
         else:
             self.depth_non_user -= 1

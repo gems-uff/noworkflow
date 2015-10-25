@@ -24,9 +24,10 @@ class FunctionVisitor(ast.NodeVisitor):
     names = None
     lineno = None
 
-    def __init__(self, metascript):
-        self.path = metascript['path']
-        self.code = metascript['code'].decode('utf-8').split('\n')
+    def __init__(self, metascript, code, path):
+        self.path = path
+        self.raw_code = code
+        self.code = code.decode('utf-8').split('\n')
         self.metascript = metascript
         self.result = None
         self.functions = {}
@@ -84,7 +85,7 @@ class FunctionVisitor(ast.NodeVisitor):
 
     def extract_disasm(self):
         self.metascript['compiled'] = cross_compile(
-            self.metascript['code'], self.metascript['path'], 'exec')
+            self.raw_code, self.path, 'exec')
 
         with redirect_output() as outputs:
             diss(self.metascript['compiled'], recurse=True)

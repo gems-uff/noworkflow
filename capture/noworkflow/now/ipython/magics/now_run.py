@@ -129,6 +129,7 @@ class NowRun(IpythonCommandMagic, Run):
                         'trial_id': None,
                         'code': f.read(),
                         'path': filename,
+                        'paths': [filename],
                         'compiled': None,
                         'definition': None,
                         'name': args.name or os.path.basename(filename)

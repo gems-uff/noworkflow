@@ -19,15 +19,23 @@ from .utils import FunctionCall, ClassDef, Decorator, Generator, Assert
 
 
 
-def visit_ast(metascript):
+def visit_ast(metascript, path):
     '''returns a visitor that visited the tree and filled the attributes:
         functions: map of function in the form:
             name -> (arguments, global_vars, calls, code_hash)
         name_refs[path]: map of identifiers in categories Load, Store
         dependencies[path]: map of dependencies
     '''
-    tree = pyposast.parse(metascript['code'], metascript['path'])
-    visitor = SlicingVisitor(metascript)
+    with open(path, 'rb') as f:
+        code = f.read()
+
+    try:
+        tree = pyposast.parse(code, path)
+    except SyntaxError:
+        print_msg('Syntax error on file {}. Skipping file.'.format(path))
+        return None
+
+    visitor = SlicingVisitor(metascript, code, path)
     visitor.result = visitor.visit(tree)
     visitor.extract_disasm()
     visitor.teardown()
@@ -51,9 +59,17 @@ def collect_provenance(args, metascript):
         sys.exit(1)
     definition = Definition(metascript)
     print_msg('  registering user-defined functions')
-    visitor = visit_ast(metascript)
-    persistence.store_function_defs(metascript['trial_id'], visitor.functions)
-    if args.disasm:
-        print('\n'.join(visitor.disasm))
-    definition.add_visitor(visitor)
+    for path in metascript['paths']:
+        visitor = visit_ast(metascript, path)
+        if visitor:
+            persistence.store_function_defs(metascript['trial_id'],
+                                            visitor.functions)
+            if args.disasm:
+                print('------------------------------------------------------')
+                print(path)
+                print('------------------------------------------------------')
+                print('\n'.join(visitor.disasm))
+                print('------------------------------------------------------')
+            definition.add_visitor(visitor)
+
     metascript['definition'] = definition
