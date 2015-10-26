@@ -84,11 +84,14 @@ class FunctionVisitor(ast.NodeVisitor):
         pass
 
     def extract_disasm(self):
-        self.metascript['compiled'] = cross_compile(
+
+        compiled = cross_compile(
             self.raw_code, self.path, 'exec')
+        if self.path == self.metascript['path']:
+            self.metascript['compiled'] = compiled
 
         with redirect_output() as outputs:
-            diss(self.metascript['compiled'], recurse=True)
+            diss(compiled, recurse=True)
 
         self.disasm = outputs[0].getvalue().split('\n')
 

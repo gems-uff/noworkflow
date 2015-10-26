@@ -122,6 +122,16 @@ class Assert(FunctionCall):
             self.line, self.col, self.msg)
 
 
+class With(FunctionCall):
+
+    def __repr__(self):
+        return "With({})".format(self.info())
+
+    def info(self):
+        return "line={}, col={}".format(
+            self.line, self.col)
+
+
 def index(lis, alternatives):
     for alt in alternatives:
         try:

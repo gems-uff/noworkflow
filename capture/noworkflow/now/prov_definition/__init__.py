@@ -15,7 +15,7 @@ from ..persistence import persistence
 from .function_visitor import FunctionVisitor
 from .slicing_visitor import SlicingVisitor
 from .definition import Definition
-from .utils import FunctionCall, ClassDef, Decorator, Generator, Assert
+from .utils import FunctionCall, ClassDef, Decorator, Generator, Assert, With
 
 
 

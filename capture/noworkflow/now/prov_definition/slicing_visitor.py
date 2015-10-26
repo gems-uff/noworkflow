@@ -16,7 +16,7 @@ from ..utils import print_msg
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
 from .utils import (FunctionCall, ClassDef, Decorator, Generator, Assert,
-                    index, safeget)
+                    index, safeget, With)
 
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -163,6 +163,19 @@ def assign_dependencies(target, value, dependencies, conditions, loop,
         add_all_names(dependencies[lineno][name], conditions)
 
 
+
+def assign_artificial_dependencies(target, artificial, dependencies, conditions, loop):
+    left = AssignLeftVisitor()
+
+    left.visit(target)
+
+    for name, ctx, lineno in left.names:
+        lineno = target.lineno
+        dependencies[lineno][name].append(artificial)
+
+        add_all_names(dependencies[lineno][name], conditions)
+
+
 class SlicingVisitor(FunctionVisitor):
 
     def __init__(self, *args):
@@ -172,9 +185,12 @@ class SlicingVisitor(FunctionVisitor):
             'AugLoad': [], 'AugStore': [], 'Param': [],
         })
         self.dependencies = defaultdict(lambda: defaultdict(list))
-        self.function_calls = defaultdict(dict)
+        self.call_by_col = defaultdict(dict)
         self.function_calls_by_lasti = defaultdict(dict)
+        self.with_enter_by_lasti = defaultdict(dict)
+        self.with_exit_by_lasti = defaultdict(dict)
         self.function_calls_list = []
+        self.with_list = []
         self.imports = set()
         self.condition = NamedContext()
         self.loop = NamedContext()
@@ -191,6 +207,20 @@ class SlicingVisitor(FunctionVisitor):
 
     def add_generator(self, typ, node):
         self.add_call_function(node, Generator, typ)
+
+    def add_with(self, withitem):
+        _with = With(AssignRightVisitor)
+        _with.visit(withitem)
+        _with.line, _with.col = withitem.context_expr.uid
+
+        if withitem.optional_vars:
+            assign_artificial_dependencies(withitem.optional_vars,
+                                           withitem.context_expr.uid,
+                                           self.dependencies,
+                                           self.condition.flat(),
+                                           self.loop.flat())
+        self.with_list.append(_with)
+        self.call_by_col[_with.line][_with.col] = _with
 
     def visit_stmts(self, stmts):
         for stmt in stmts:
@@ -248,7 +278,7 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Call(self, node):
         super(SlicingVisitor, self).visit_Call(node)
         fn = self.add_call_function(node, FunctionCall)
-        self.function_calls[fn.line][fn.col] = fn
+        self.call_by_col[fn.line][fn.col] = fn
 
     def visit_Return(self, node):
         assign_dependencies(ast.Name('return', ast.Store(),
@@ -306,6 +336,16 @@ class SlicingVisitor(FunctionVisitor):
 
         # ToDo: with msg self.function_calls_list.append(cls)
 
+    def visit_With(self, node):
+        self.generic_visit(node)
+        if sys.version_info < (3, 0):
+            self.add_with(node)
+
+    def visit_withitem(self, node):
+        self.generic_visit(node)
+        self.add_with(node)
+
+
     def teardown(self):
         """Matches AST call order to call order in disassembly
         Possible issues:
@@ -315,30 +355,67 @@ class SlicingVisitor(FunctionVisitor):
         3- If there are other CALL_FUNCTION that are not considered in the AST
         the matching will fail
             both visit_ClassDef and visit_Call generates CALL_FUNCTION
+        4- If some function is called without an explict CALL_FUNCTION
+            __enter__: SETUP_WITH
+            __exit__: WITH_CLEANUP
         """
         output = self.disasm
         self.disasm = []
 
+        self.with_list.sort(key=lambda x: (x.line, x.col))
+        end_with = {}
+
         line = -1
-        col = 0
+        call_index = 0
+        with_index = 0
         for disasm in output:
             num = disasm[:8].strip()
             if num:
                 line = int(num)
             splitted = disasm.split()
+            found = False
             i = index(splitted, ('CALL_FUNCTION', 'CALL_FUNCTION_VAR',
                                  'CALL_FUNCTION_KW', 'CALL_FUNCTION_VAR_KW'))
-
             if not i is None:
-                f_lasti = int(splitted[i-1])
-                call = safeget(self.function_calls_list, col)
+                f_lasti = int(splitted[i - 1])
+                call = safeget(self.function_calls_list, call_index)
                 call.lasti = f_lasti
                 self.function_calls_by_lasti[line][f_lasti] = call
 
-                col += 1
+                call_index += 1
                 self.disasm.append(
                     "{} | {}".format(disasm, call))
-            else:
+                found = True
+
+            i = index(splitted, ('SETUP_WITH',))
+            if not i is None:
+                f_lasti = int(splitted[i - 1])
+                end = int(splitted[i + 3][:-1])
+
+                _with = safeget(self.with_list, with_index)
+                _with.lasti = f_lasti
+                _with.end = end
+                self.with_enter_by_lasti[line][f_lasti] = _with
+                end_with[end] = _with
+
+                with_index += 1
+                self.disasm.append(
+                    "{} | {}".format(disasm, _with))
+                found = True
+
+            i = index(splitted, ('WITH_CLEANUP',))
+            if not i is None:
+                f_lasti = int(splitted[i - 1])
+                _with = end_with[f_lasti]
+                del end_with[f_lasti]
+                _with.end_line = line
+                self.with_exit_by_lasti[line][f_lasti] = _with
+
+                self.disasm.append(
+                    "{} | {}".format(disasm, _with))
+                found = True
+
+            if not found:
                 self.disasm.append(disasm)
 
             if not index(splitted, ('IMPORT_NAME', 'IMPORT_FROM')) is None:
