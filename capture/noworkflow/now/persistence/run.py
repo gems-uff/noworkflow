@@ -153,7 +153,9 @@ class RunProvider(Provider):
                     d.supplier) for d in dependencies)
             )
             db.executemany(
-                """INSERT INTO slicing_usage(trial_id, id, vid, name, line)
-                VALUES (?, ?, ?, ?, ?)""",
-                ((trial_id, u.id, u.vid, u.name, u.line) for u in usages)
+                """INSERT INTO slicing_usage(trial_id, id, vid, name, line,
+                    context)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                ((trial_id, u.id, u.vid, u.name, u.line, u.ctx)
+                    for u in usages)
             )

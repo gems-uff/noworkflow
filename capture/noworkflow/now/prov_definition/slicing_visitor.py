@@ -180,7 +180,7 @@ class SlicingVisitor(FunctionVisitor):
 
     def __init__(self, *args):
         super(SlicingVisitor, self).__init__(*args)
-        self.name_refs = defaultdict(lambda: {
+        self.line_usages = defaultdict(lambda: {
             'Load': [], 'Store': [], 'Del': [],
             'AugLoad': [], 'AugStore': [], 'Param': [],
         })
@@ -296,7 +296,7 @@ class SlicingVisitor(FunctionVisitor):
     def visit_Name(self, node):
         self.condition.add(node.id)
         self.loop.add(node.id)
-        self.name_refs[node.lineno][type(node.ctx).__name__]\
+        self.line_usages[node.lineno][type(node.ctx).__name__]\
             .append(node.id)
         super(SlicingVisitor, self).visit_Name(node)
 

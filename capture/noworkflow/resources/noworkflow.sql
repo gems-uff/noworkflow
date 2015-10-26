@@ -139,6 +139,7 @@ create table slicing_usage (
 	vid INTEGER,
     name TEXT,
 	line INTEGER,
+	context TEXT CHECK (context IN ('Load', 'Del')),
 	FOREIGN KEY (trial_id, vid) REFERENCES slicing_variable(trial_id, vid) ON DELETE CASCADE,
 	PRIMARY KEY (trial_id, id)
 );

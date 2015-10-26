@@ -38,7 +38,7 @@ class Definition(object):
         self.paths.append(visitor.path)
         self.line_dependencies[visitor.path] = visitor.dependencies
         self.line_gen_dependencies[visitor.path] = visitor.gen_dependencies
-        self.line_usages[visitor.path] = visitor.name_refs
+        self.line_usages[visitor.path] = visitor.line_usages
         self.call_by_col[visitor.path] = visitor.call_by_col
         self.call_by_lasti[visitor.path] = visitor.function_calls_by_lasti
         self.with_enter_by_lasti[visitor.path] = visitor.with_enter_by_lasti

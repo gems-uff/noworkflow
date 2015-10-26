@@ -47,7 +47,7 @@ class Variable(object):
 
 #Variable = namedtuple("Variable", "id name line value time")
 Dependency = namedtuple("Dependency", "id dependent supplier")
-Usage = namedtuple("Usage", "id vid name line")
+Usage = namedtuple("Usage", "id vid name line ctx")
 Return = namedtuple("Return", "activation var")
 
 class ObjectStore(object):
@@ -179,11 +179,12 @@ class Tracer(Profiler):
         add_dependencies = self.add_dependencies
 
         dependencies = line_dependencies[filename][lineno]
-        usages = self.line_usages[filename][lineno]['Load']
+        for ctx in ('Load', 'Del'):
+            usages = self.line_usages[filename][lineno][ctx]
+            for name in usages:
+                if name in context:
+                    usages_add(context[name].id, name, lineno, ctx)
 
-        for name in usages:
-            if name in context:
-                usages_add(context[name].id, name, lineno)
         lasti_set = set()
         set_last_iter = False
         for name, others in items(dependencies):
