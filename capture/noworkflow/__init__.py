@@ -10,5 +10,3 @@ from __future__ import (absolute_import, print_function,
 def load_ipython_extension(ipython):
     from .now.ipython import init
     init(ipython=ipython)
-
-__version__ = "0.11.1"

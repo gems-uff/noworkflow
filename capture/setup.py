@@ -12,7 +12,7 @@ import platform
 
 from uuid import getnode
 
-from noworkflow import __version__
+__version__ = "0.12.0dev"
 
 
 def recursive_path(pack, path):
