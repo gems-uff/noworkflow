@@ -185,6 +185,7 @@ class SlicingVisitor(FunctionVisitor):
             'AugLoad': [], 'AugStore': [], 'Param': [],
         })
         self.dependencies = defaultdict(lambda: defaultdict(list))
+        self.gen_dependencies = defaultdict(lambda: defaultdict(list))
         self.call_by_col = defaultdict(dict)
         self.function_calls_by_lasti = defaultdict(dict)
         self.with_enter_by_lasti = defaultdict(dict)
@@ -192,6 +193,7 @@ class SlicingVisitor(FunctionVisitor):
         self.function_calls_list = []
         self.with_list = []
         self.imports = set()
+        self.iters = defaultdict(set)
         self.condition = NamedContext()
         self.loop = NamedContext()
 
@@ -207,6 +209,16 @@ class SlicingVisitor(FunctionVisitor):
 
     def add_generator(self, typ, node):
         self.add_call_function(node, Generator, typ)
+        self.condition.enable()
+        for nif in node.ifs:
+            self.visit(nif)
+        self.condition.disable()
+        assign_dependencies(node.target, node.iter,
+                            self.gen_dependencies,
+                            self.condition.flat(),
+                            self.loop.flat(),
+                            testlist_star_expr=False)
+        self.condition.pop()
 
     def add_with(self, withitem):
         _with = With(AssignRightVisitor)
@@ -221,6 +233,15 @@ class SlicingVisitor(FunctionVisitor):
                                            self.loop.flat())
         self.with_list.append(_with)
         self.call_by_col[_with.line][_with.col] = _with
+
+    def add_return_yield(self, node, label):
+        assign_dependencies(ast.Name(label, ast.Store(),
+                                     lineno=node.lineno),
+                            node,
+                            self.dependencies,
+                            self.condition.flat(),
+                            self.loop.flat(),
+                            testlist_star_expr=False)
 
     def visit_stmts(self, stmts):
         for stmt in stmts:
@@ -249,6 +270,10 @@ class SlicingVisitor(FunctionVisitor):
                             self.condition.flat(),
                             self.loop.flat(),
                             testlist_star_expr=False)
+        assign_artificial_dependencies(node.target, 'now(iter)',
+                                       self.dependencies,
+                                       self.condition.flat(),
+                                       self.loop.flat())
         self.loop.enable()
         self.visit(node.target)
         self.loop.disable()
@@ -281,19 +306,14 @@ class SlicingVisitor(FunctionVisitor):
         self.call_by_col[fn.line][fn.col] = fn
 
     def visit_Return(self, node):
-        assign_dependencies(ast.Name('return', ast.Store(),
-                                     lineno=node.lineno),
-                            node.value,
-                            self.dependencies,
-                            self.condition.flat(),
-                            self.loop.flat(),
-                            testlist_star_expr=False)
+        self.add_return_yield(node.value, 'return')
         if node.value:
             self.visit(node.value)
 
     def visit_Yield(self, node):
-        self.visit_Return(node)
-
+        self.add_return_yield(node.value, 'yield')
+        if node.value:
+            self.visit(node.value)
 
     def visit_ClassDef(self, node):
         super(SlicingVisitor, self).visit_ClassDef(node)
@@ -383,9 +403,7 @@ class SlicingVisitor(FunctionVisitor):
                 self.function_calls_by_lasti[line][f_lasti] = call
 
                 call_index += 1
-                self.disasm.append(
-                    "{} | {}".format(disasm, call))
-                found = True
+                found = call
 
             i = index(splitted, ('SETUP_WITH',))
             if not i is None:
@@ -399,9 +417,7 @@ class SlicingVisitor(FunctionVisitor):
                 end_with[end] = _with
 
                 with_index += 1
-                self.disasm.append(
-                    "{} | {}".format(disasm, _with))
-                found = True
+                found = _with
 
             i = index(splitted, ('WITH_CLEANUP',))
             if not i is None:
@@ -410,13 +426,17 @@ class SlicingVisitor(FunctionVisitor):
                 del end_with[f_lasti]
                 _with.end_line = line
                 self.with_exit_by_lasti[line][f_lasti] = _with
-
-                self.disasm.append(
-                    "{} | {}".format(disasm, _with))
-                found = True
+                found = _with
 
             if not found:
                 self.disasm.append(disasm)
+            else:
+                self.disasm.append(
+                    "{} | {}".format(disasm, found))
 
             if not index(splitted, ('IMPORT_NAME', 'IMPORT_FROM')) is None:
                 self.imports.add(line)
+
+            i = index(splitted, ('GET_ITER', 'FOR_ITER'))
+            if not i is None:
+                self.iters[line].add(int(splitted[i - 1]))

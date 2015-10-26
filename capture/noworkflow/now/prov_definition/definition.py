@@ -15,6 +15,8 @@ class Definition(object):
         self.paths = []
         # Map of dependencies by line
         self.line_dependencies = {}
+        # Map of dependencies by line
+        self.line_gen_dependencies = {}
         # Map of name_refs by line
         self.line_usages = {}
         # Map of calls by line and col
@@ -27,16 +29,20 @@ class Definition(object):
         self.with_exit_by_lasti = {}
         # Set of imports
         self.imports = {}
+        # Set of GET_ITER and FOR_ITER lasti by line
+        self.iters = {}
         # Function definitions
         self.functions = {}
 
     def add_visitor(self, visitor):
         self.paths.append(visitor.path)
         self.line_dependencies[visitor.path] = visitor.dependencies
+        self.line_gen_dependencies[visitor.path] = visitor.gen_dependencies
         self.line_usages[visitor.path] = visitor.name_refs
         self.call_by_col[visitor.path] = visitor.call_by_col
         self.call_by_lasti[visitor.path] = visitor.function_calls_by_lasti
-        self.imports[visitor.path] = visitor.imports
-        self.functions[visitor.path] = visitor.functions
         self.with_enter_by_lasti[visitor.path] = visitor.with_enter_by_lasti
         self.with_exit_by_lasti[visitor.path] = visitor.with_exit_by_lasti
+        self.imports[visitor.path] = visitor.imports
+        self.iters[visitor.path] = visitor.iters
+        self.functions[visitor.path] = visitor.functions

@@ -22,7 +22,7 @@ from ..prov_definition import (FunctionCall, ClassDef, Decorator,
 from ..persistence import persistence
 
 
-WITHOUT_PARAMS = (ClassDef, Assert, Generator, With)
+WITHOUT_PARAMS = (ClassDef, Assert, With)
 
 
 class Variable(object):
@@ -86,10 +86,16 @@ class Tracer(Profiler):
 
         # Returns
         self.returns = {}
+        # Last iter
+        self.last_iter = None
+        # Next is iteration
+        self.next_is_iter = False
 
         # Useful maps
         # Map of dependencies by line
         self.line_dependencies = definition.line_dependencies
+        # Map of dependencies by line
+        self.line_gen_dependencies = definition.line_gen_dependencies
         # Map of name_refs by line
         self.line_usages = definition.line_usages
         # Map of calls by line and col
@@ -102,6 +108,8 @@ class Tracer(Profiler):
         self.with_exit_by_lasti = definition.with_exit_by_lasti
         # Set of imports
         self.imports = definition.imports
+        # Set of GET_ITER and FOR_ITER lasti by line
+        self.iters = definition.iters
 
     def remove_return_lasti(self, lasti_set):
         returns = self.returns
@@ -149,6 +157,9 @@ class Tracer(Profiler):
             self.add_dependencies(self.variables[vid], activation, call.func,
                                   filename, lasti_set)
             dependencies_add(var_id, vid)
+        # Iter
+        if dep == 'now(iter)' and self.last_iter:
+            dependencies_add(var_id, self.last_iter)
 
     def add_dependencies(self, var, activation, dependencies, filename, lasti_set):
         """ Adds dependencies to var """
@@ -156,8 +167,10 @@ class Tracer(Profiler):
         for dep in dependencies:
             add_dependency(var, dep, activation, filename, lasti_set)
 
-    def slice_line(self, activation, lineno, f_locals, filename):
+    def slice_line(self, activation, lineno, f_locals, filename, line_dependencies=None):
         """ Generates dependencies from line """
+        if line_dependencies is None:
+            line_dependencies = self.line_dependencies
         print_fn_msg(lambda: 'Slice [{}] -> {}'.format(lineno,
                 linecache.getline(filename, lineno).strip()))
         context, variables = activation.context, self.variables
@@ -165,19 +178,24 @@ class Tracer(Profiler):
         add_variable = self.add_variable
         add_dependencies = self.add_dependencies
 
-        dependencies = self.line_dependencies[filename][lineno]
+        dependencies = line_dependencies[filename][lineno]
         usages = self.line_usages[filename][lineno]['Load']
 
         for name in usages:
             if name in context:
                 usages_add(context[name].id, name, lineno)
         lasti_set = set()
+        set_last_iter = False
         for name, others in items(dependencies):
             if name == 'return':
                 vid = add_variable(name, lineno, f_locals,
                                    value=activation.return_value)
                 self.returns[activation.lasti] = Return(activation,
                                                         variables[vid])
+            elif name == 'yield':
+                vid = add_variable(name, lineno, f_locals)
+                self.last_iter = vid
+                set_last_iter = True
             else:
                 vid = add_variable(name, lineno, f_locals)
 
@@ -186,6 +204,8 @@ class Tracer(Profiler):
             context[name] = variables[vid]
 
         self.remove_return_lasti(lasti_set)
+        if not set_last_iter:
+            self.last_iter = None
 
     def close_activation(self, event, arg):
         """ Slice all lines from closing activation """
@@ -193,7 +213,7 @@ class Tracer(Profiler):
             self.slice_line(*line)
         super(Tracer, self).close_activation(event, arg)
 
-    def add_generic_return(self, frame, event, arg, ccall=False):
+    def add_generic_return(self, activation, frame, event, arg, ccall=False):
         """ Add return to functions that do not have return
             For ccall, add dependency from all params
         """
@@ -202,7 +222,6 @@ class Tracer(Profiler):
         variables = self.variables
 
         # Artificial return condition
-        activation = self.activation_stack[-1]
         lasti = activation.lasti
         if 'return' not in activation.context:
             vid = self.add_variable('return', lineno, {},
@@ -212,7 +231,7 @@ class Tracer(Profiler):
 
             filename = frame.f_code.co_filename
             if ccall and filename in self.paths:
-                caller = self.activation_stack[-2]
+                caller = self.activation_stack[-1]
                 call = self.call_by_lasti[filename][lineno][lasti]
                 all_args = call.all_args()
                 lasti_set = set()
@@ -273,12 +292,19 @@ class Tracer(Profiler):
         fname = frame.f_code.co_name
         filename = back.f_code.co_filename
         lineno = back.f_lineno
-        if fname == '__enter__':
-            call = self.with_enter_by_lasti[filename][lineno][back.f_lasti]
-        elif fname == '__exit__':
-            call = self.with_exit_by_lasti[filename][lineno][back.f_lasti]
-        else:
-            call = self.call_by_lasti[filename][lineno][back.f_lasti]
+        lasti = back.f_lasti
+        if (fname == '__enter__' and
+            lasti in self.with_enter_by_lasti[filename][lineno]):
+            return
+        if (fname == '__exit__' and
+            lasti in self.with_exit_by_lasti[filename][lineno]):
+            return
+        if lasti in self.iters[filename][lineno]:
+            self.next_is_iter = True
+            return
+
+        call = self.call_by_lasti[filename][lineno][lasti]
+
         if isinstance(call, WITHOUT_PARAMS):
             return
         if isinstance(call, Decorator) and not call.fn:
@@ -338,14 +364,14 @@ class Tracer(Profiler):
 
     def trace_c_return(self, frame, event, arg):
         activation = self.activation_stack[-1]
-        self.add_generic_return(frame, event, arg, ccall=True)
         super(Tracer, self).trace_c_return(frame, event, arg)
+        self.add_generic_return(activation, frame, event, arg, ccall=True)
         activation.context['return'].value = activation.return_value
 
     def trace_return(self, frame, event, arg):
         activation = self.activation_stack[-1]
-        self.add_generic_return(frame, event, arg)
         super(Tracer, self).trace_return(frame, event, arg)
+        self.add_generic_return(activation, frame, event, arg)
         activation.context['return'].value = activation.return_value
 
     def trace_line(self, frame, event, arg):
@@ -362,6 +388,10 @@ class Tracer(Profiler):
                 linecache.getline(filename, lineno).strip()))
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
+        if self.next_is_iter:
+            self.slice_line(activation, lineno, frame.f_locals, filename,
+                            line_dependencies=self.line_gen_dependencies)
+            self.next_is_iter = False
         activation.slice_stack.append([
             activation, lineno, frame.f_locals, filename])
 
