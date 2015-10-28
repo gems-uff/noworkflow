@@ -27,6 +27,7 @@ if PY3:
     keys = lambda x: x.keys()
     cvmap = lambda *args, **kwargs: map(*args, **kwargs)
     cvzip = lambda *args, **kwargs: zip(*args, **kwargs)
+    lmap = lambda *args, **kwargs: list(map(*args, **kwargs))
 else:
     import __builtin__ as builtins
     try:
@@ -42,6 +43,7 @@ else:
     keys = lambda x: x.iterkeys()
     cvmap = imap
     cvzip = izip
+    lmap = lambda *args, **kwargs: map(*args, **kwargs)
 row_keys = lambda x: x.keys()
 
 

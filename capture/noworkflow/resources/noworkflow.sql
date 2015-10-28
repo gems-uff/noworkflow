@@ -74,34 +74,38 @@ create table environment_attr (
 CREATE INDEX environment_attr_trial_id on environment_attr(trial_id);
 
 create table function_activation (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	trial_id INTEGER,
+	id INTEGER,
 	name TEXT,
 	line INTEGER,
 	return TEXT,
 	start TIMESTAMP,
 	finish TIMESTAMP,
 	caller_id INTEGER,
-	trial_id INTEGER,
 	FOREIGN KEY (caller_id) REFERENCES function_activation ON DELETE CASCADE,
-	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE,
+	PRIMARY KEY (trial_id, id)
 );
 
 CREATE INDEX function_activation_caller_id on function_activation(caller_id);
 CREATE INDEX function_activation_trial_id on function_activation(trial_id);
 
 create table object_value (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	trial_id INTEGER,
+	function_activation_id INTEGER,
+	id INTEGER,
 	name TEXT,
 	value TEXT,
 	type TEXT CHECK (type IN ('GLOBAL', 'ARGUMENT')),
-	function_activation_id INTEGER,
-	FOREIGN KEY (function_activation_id) REFERENCES function_activation ON DELETE CASCADE
+	FOREIGN KEY (function_activation_id) REFERENCES function_activation ON DELETE CASCADE,
+	PRIMARY KEY (trial_id, function_activation_id, id)
 );
 
 CREATE INDEX object_value_function_activation_id on object_value(function_activation_id);
 
 create table file_access (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	trial_id INTEGER,
+	id INTEGER,
 	name TEXT,
 	mode TEXT,
 	buffering TEXT,
@@ -109,9 +113,9 @@ create table file_access (
 	content_hash_after TEXT,
 	timestamp TIMESTAMP,
 	function_activation_id INTEGER,
-	trial_id INTEGER,
 	FOREIGN KEY (function_activation_id) REFERENCES function_activation ON DELETE CASCADE,
-	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE,
+	PRIMARY KEY (trial_id, id)
 );
 
 CREATE INDEX file_access_function_activation_id on file_access(function_activation_id);

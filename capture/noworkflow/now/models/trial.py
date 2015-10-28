@@ -17,9 +17,11 @@ from ..formatter import PrettyLines
 from ..persistence import row_to_dict, persistence
 from ..utils import calculate_duration, FORMAT, print_msg
 from ..graphs.trial_graph import TrialGraph
+from ..cross_version import lmap, cvmap
 from .model import Model
 from .trial_prolog import TrialProlog
 from .activation import Activation
+from .function_def import FunctionDef
 
 
 class Trial(Model):
@@ -120,9 +122,9 @@ class Trial(Model):
     def function_defs(self):
         """ Returns a dict of function definitions """
         return {
-            function['name']: row_to_dict(function)
-            for function in persistence.load('function_def',
-                                             trial_id=self.id)
+            function['name']: function
+            for function in cvmap(FunctionDef, persistence.load(
+                'function_def', trial_id=self.id))
         }
 
     def head_trial(self, remove=False):
@@ -136,7 +138,7 @@ class Trial(Model):
             The second element is a list of external modules
         """
         dependencies = persistence.load_dependencies(self.id)
-        result = list(map(map_fn, dependencies))
+        result = lmap(map_fn, dependencies)
         local = [dep for dep in result
                  if dep['path'] and persistence.base_path in dep['path']]
         if find is None:
@@ -149,7 +151,7 @@ class Trial(Model):
     def environment(self):
         """ Returns a dict of environment variables """
         return {
-            attr['name']: attr['value'] for attr in map(row_to_dict,
+            attr['name']: attr['value'] for attr in cvmap(row_to_dict,
                 persistence.load('environment_attr', trial_id=self.id))
         }
 
@@ -159,7 +161,7 @@ class Trial(Model):
                                          trial_id=self.id)
 
         result = []
-        for fa in map(row_to_dict, file_accesses):
+        for fa in cvmap(row_to_dict, file_accesses):
             stack = []
             function_activation = next(iter(self.activations(
                 id=fa['function_activation_id'])))
@@ -189,23 +191,21 @@ class Trial(Model):
 
     def activations(self, **conditions):
         """ Returns a list of activations """
-        return list(map(Activation, persistence.load('function_activation',
-                                                trial_id=self.id,
-                                                order='start',
-                                                **conditions)))
+        return lmap(Activation, persistence.load(
+            'function_activation', trial_id=self.id, order='start',
+            **conditions))
 
     def slicing_variables(self):
         """ Returns a list of slicing variables """
-        return persistence.load('slicing_variable',
-                                trial_id=self.id,
-                                order='vid ASC')
+        return lmap(row_to_dict, persistence.load(
+            'slicing_variable', trial_id=self.id, order='vid ASC'))
 
     def slicing_usages(self):
         """ Returns a list of slicing usages """
-        return persistence.load('slicing_usage',
-                                trial_id=self.id)
+        return lmap(row_to_dict, persistence.load(
+            'slicing_usage', trial_id=self.id))
 
     def slicing_dependencies(self):
         """ Returns a list of slicing dependencies """
-        return persistence.load('slicing_dependency',
-                                trial_id=self.id)
+        return lmap(row_to_dict, persistence.load(
+            'slicing_dependency', trial_id=self.id))

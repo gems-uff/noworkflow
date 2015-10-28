@@ -14,7 +14,7 @@ from ..utils import print_msg, meta_profiler
 
 from .profiler import Profiler, InspectProfiler
 from .slicing import Tracer
-from .debugger import create_debugger
+from .debugger import create_debugger, debugger_builtins
 
 
 provider = None
@@ -27,7 +27,7 @@ def provenance_provider(execution_provenance):
     return Profiler
 
 
-def enable(args, metascript):
+def ___now_enable(args, metascript):
     global provider
     provider = provenance_provider(args.execution_provenance)(
         metascript, args.context, args.depth, args.non_user_depth
@@ -35,48 +35,38 @@ def enable(args, metascript):
     provider.tearup()
 
 
-def disable():
+def ___now_disable():
     global provider
     provider.teardown()
 
 
 @meta_profiler("storage")
-def store():
+def ___now_store():
     global provider
     provider.store()
 # TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
 # print os.getloadavg()
 
-def set_trace(frame=None, pdb=None):
-    global provider
-    debugger = create_debugger(pdb)(provider)
-    debugger.set_trace(sys._getframe().f_back)
-
-def history():
-    global provider
-    return provider.history
-
 @meta_profiler("execution")
 def collect_provenance(args, metascript, ns):
     global provider
-    enable(args, metascript)
+    ___now_enable(args, metascript)
 
     print_msg('  executing the script')
     try:
         if metascript['compiled'] is None:
             metascript['compiled'] = cross_compile(
                 metascript['code'], metascript['path'], 'exec')
-        ns['__builtins__']['set_trace'] = set_trace
-        ns['__builtins__']['history'] = history
+        debugger_builtins(provider, ns['__builtins__'])
         exec(metascript['compiled'], ns)
 
     except SystemExit as ex:
-        disable()
+        ___now_disable()
         print_msg(
             'the execution exited via sys.exit(). Exit status: {}'
             ''.format(ex.code), ex.code > 0)
     except Exception as e:
-        disable()
+        ___now_disable()
         print(e)
         print_msg(
             'the execution finished with an uncaught exception. {}'
@@ -85,8 +75,8 @@ def collect_provenance(args, metascript, ns):
         # TODO: exceptions should be registered as return from the
         # activation and stored in the database. We are currently ignoring
         # all the activation tree when exceptions are raised.
-        disable()
-        store()
+        ___now_disable()
+        ___now_store()
         print_msg(
             'the execution of trial {} finished successfully'
             ''.format(metascript['trial_id']))

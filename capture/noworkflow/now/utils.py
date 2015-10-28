@@ -109,14 +109,16 @@ def calculate_duration(obj):
 class hashabledict(dict):
     def el(self, e):
         if isinstance(e, dict):
-            return hashabledict(e)
+            return self.__class__(e)
         else:
             return e
 
     def __key(self):
         return tuple((k,self.el(self[k])) for k in sorted(self))
+
     def __hash__(self):
         return hash(self.__key())
+
     def __eq__(self, other):
         return self.__key() == other.__key()
 

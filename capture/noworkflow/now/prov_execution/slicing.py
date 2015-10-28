@@ -12,7 +12,9 @@ import itertools
 
 from collections import namedtuple
 from datetime import datetime
+from .data_objects import ObjectStore, Variable, Dependency, Usage, Return
 from .profiler import Profiler
+from .. import utils
 from ..utils import print_fn_msg
 from ..cross_version import items, immutable
 from ..prov_definition import SlicingVisitor
@@ -23,53 +25,6 @@ from ..persistence import persistence
 
 
 WITHOUT_PARAMS = (ClassDef, Assert, With)
-
-
-class Variable(object):
-    __slots__ = (
-        'id',
-        'name',
-        'line',
-        'value',
-        'time',
-    )
-
-    def __init__(self, id, name, line, value=None, time=None):
-        self.id = id
-        self.name = name
-        self.line = line
-        self.value = value
-        self.time = time
-
-    def __repr__(self):
-        return "Variable(id={}, name={}, line={}, value={})".format(
-            self.id, self.name, self.line, self.value)
-
-#Variable = namedtuple("Variable", "id name line value time")
-Dependency = namedtuple("Dependency", "id dependent supplier")
-Usage = namedtuple("Usage", "id vid name line ctx")
-Return = namedtuple("Return", "activation var")
-
-class ObjectStore(object):
-
-    def __init__(self, cls):
-        self.cls = cls
-        self.store = []
-        self.id = -1
-
-    def __getitem__(self, index):
-        return self.store[index]
-
-    def add(self, *args):
-        self.id += 1
-        self.store.append(self.cls(self.id, *args))
-        return self.id
-
-    def remove(self, value):
-        self.store.remove(value)
-
-    def __iter__(self):
-        return self.store.__iter__()
 
 
 class Tracer(Profiler):
@@ -210,7 +165,7 @@ class Tracer(Profiler):
 
     def close_activation(self, event, arg):
         """ Slice all lines from closing activation """
-        for line in self.activation_stack[-1].slice_stack:
+        for line in self.current_activation.slice_stack:
             self.slice_line(*line)
         super(Tracer, self).close_activation(event, arg)
 
@@ -232,7 +187,7 @@ class Tracer(Profiler):
 
             filename = frame.f_code.co_filename
             if ccall and filename in self.paths:
-                caller = self.activation_stack[-1]
+                caller = self.current_activation
                 call = self.call_by_lasti[filename][lineno][lasti]
                 all_args = call.all_args()
                 lasti_set = set()
@@ -313,7 +268,7 @@ class Tracer(Profiler):
         f_locals = frame.f_locals
         match_args = self.match_args
         match_arg = self.match_arg
-        caller, act = self.activation_stack[-2:]
+        caller, act = self.parent_activation, self.current_activation
         act_args_index = act.args.index
         line = frame.f_lineno
         sub = -[bool(act.starargs), bool(act.kwargs)].count(True)
@@ -364,13 +319,13 @@ class Tracer(Profiler):
         self.add_argument_variables(frame)
 
     def trace_c_return(self, frame, event, arg):
-        activation = self.activation_stack[-1]
+        activation = self.current_activation
         super(Tracer, self).trace_c_return(frame, event, arg)
         self.add_generic_return(activation, frame, event, arg, ccall=True)
         activation.context['return'].value = activation.return_value
 
     def trace_return(self, frame, event, arg):
-        activation = self.activation_stack[-1]
+        activation = self.current_activation
         super(Tracer, self).trace_return(frame, event, arg)
         self.add_generic_return(activation, frame, event, arg)
         activation.context['return'].value = activation.return_value
@@ -382,8 +337,7 @@ class Tracer(Profiler):
         if filename not in self.paths:
             return
 
-
-        activation = self.activation_stack[-1]
+        activation = self.current_activation
 
         print_fn_msg(lambda: '[{}] -> {}'.format(lineno,
                 linecache.getline(filename, lineno).strip()))
@@ -400,19 +354,23 @@ class Tracer(Profiler):
         sys.settrace(self.tracer)
         sys.setprofile(self.tracer)
 
-    def store(self):
-        while self.activation_stack:
+    def store(self, partial=False):
+        while len(self.activation_stack) > 1:
             self.close_activation('store', None)
         super(Tracer, self).store()
         persistence.store_slicing(self.trial_id, self.variables,
                                   self.dependencies, self.usages)
-        for var in self.variables:
-            print_fn_msg(lambda: var)
+        self.view_slicing_data(utils.verbose)
 
-        for dep in self.dependencies:
-            print_fn_msg(lambda: "{}\t<-\t{}".format(
-                                        self.variables[dep.dependent],
-                                        self.variables[dep.supplier]))
+    def view_slicing_data(self, show=True):
+        if show:
+            for var in self.variables:
+                print_fn_msg(lambda: var)
 
-        for var in self.usages:
-            print_fn_msg(lambda: var)
+            for dep in self.dependencies:
+                print_fn_msg(lambda: "{}\t<-\t{}".format(
+                                            self.variables[dep.dependent],
+                                            self.variables[dep.supplier]))
+
+            for var in self.usages:
+                print_fn_msg(lambda: var)

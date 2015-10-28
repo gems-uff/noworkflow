@@ -27,13 +27,13 @@ class RunProvider(Provider):
                       inherited_id, parent_id, run)).lastrowid
         return trial_id
 
-    def update_trial(self, trial_id, finish, function_activation):
-        self.store_function_activation(trial_id, function_activation, None)
-        with self.db_conn as db:
-            db.execute(
-                """UPDATE trial
-                   SET finish = ?
-                   WHERE id = ?""", (finish, trial_id))
+    def update_trial(self, trial_id, finish, partial):
+        if not partial:
+            with self.db_conn as db:
+                db.execute(
+                    """UPDATE trial
+                       SET finish = ?
+                       WHERE id = ?""", (finish, trial_id))
 
     def store_objects(self, objects, obj_type, function_def_id):
         with self.db_conn as db:
@@ -63,77 +63,39 @@ class RunProvider(Provider):
             caller_id, trial_id,
         )
 
-    def extract_object_values(self, object_values, obj_type, activation_id):
-        for name in object_values:
-            yield (name, object_values[name], obj_type, activation_id)
-
-    def extract_file_accesses(self, trial_id, file_accesses, activation_id):
-        for file_access in file_accesses:
-            yield (
-                file_access['name'],
-                file_access['mode'],
-                file_access['buffering'],
-                file_access['content_hash_before'],
-                file_access['content_hash_after'],
-                file_access['timestamp'],
-                activation_id,
-                trial_id
-            )
-
-    def store_function_activation(self, trial_id, activation, caller_id):
-        function_activations, object_values, file_accesses = [], [], []
-        d = {
-            'fid': self.function_activation_id_seq(),
-            'activations': function_activations,
-            'object_values': object_values,
-            'file_accesses': file_accesses,
-        }
-
-        def add_activation(trial_id, act, caller_id):
-            fid = d['fid']
-            d['activations'].append(
-                self.extract_function_activation(trial_id, act, caller_id, fid)
-            )
-            for object_value in self.extract_object_values(act.arguments,
-                                                           'ARGUMENT', fid):
-                d['object_values'].append(object_value)
-
-            for object_value in self.extract_object_values(act.globals,
-                                                           'GLOBAL', fid):
-                d['object_values'].append(object_value)
-
-            for file_access in self.extract_file_accesses(trial_id,
-                                                          act.file_accesses,
-                                                          fid):
-                d['file_accesses'].append(file_access)
-
-            d['fid'] += 1
-
-            for inner_function_activation in act.function_activations:
-                add_activation(trial_id, inner_function_activation, fid)
-
-        add_activation(trial_id, activation, caller_id)
-
-
+    def store_activations(self, trial_id, activations):
         with self.db_conn as db:
             db.executemany(
-                """INSERT INTO function_activation(id, name, line, return,
-                    start, finish, caller_id, trial_id)
+                """INSERT INTO function_activation(trial_id, id, name, line,
+                    return, start, finish, caller_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                function_activations
+                ((trial_id, a.id, a.name, a.line,
+                    a.return_value, a.start, a.finish, a.caller_id)
+                    for a in activations)
             )
+
+    def store_object_values(self, trial_id, object_values):
+        with self.db_conn as db:
             db.executemany(
-                """INSERT INTO object_value(name, value, type,
-                    function_activation_id)
-                VALUES (?, ?, ?, ?)""",
-                object_values
+                """INSERT INTO object_value(trial_id, id,
+                    function_activation_id, name, value, type)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                ((trial_id, o.id,
+                    o.function_activation_id, o.name, o.value, o.type)
+                    for o in object_values)
             )
+
+    def store_file_accesses(self, trial_id, file_accesses):
+        with self.db_conn as db:
             db.executemany(
-                """INSERT INTO file_access(name, mode, buffering,
-                    content_hash_before, content_hash_after, timestamp,
-                    function_activation_id, trial_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                file_accesses
+                 """INSERT INTO file_access(trial_id, id, name, mode,
+                    buffering, timestamp, function_activation_id,
+                    content_hash_before, content_hash_after)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ((trial_id, f.id, f.name, f.mode,
+                    f.buffering, f.timestamp, f.function_activation_id,
+                    f.content_hash_before, f.content_hash_after)
+                    for f in file_accesses)
             )
 
     def store_slicing(self, trial_id, variables, dependencies, usages):

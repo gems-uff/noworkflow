@@ -11,6 +11,7 @@ import sys
 from datetime import datetime
 from collections import defaultdict
 
+from .data_objects import ObjectStore, FileAccess
 from ..persistence import persistence
 from ..cross_version import builtins
 
@@ -55,7 +56,7 @@ class ExecutionProvider(object):
     def tracer(self, frame, event, arg):
         self.event_map[event](frame, event, arg)
 
-    def store(self):
+    def store(self, partial=False):
         pass
 
     def teardown(self):
@@ -73,6 +74,9 @@ class StoreOpenMixin(ExecutionProvider):
         persistence.std_open = open
         builtins.open = self.new_open(open)
 
+        # Store provenance
+        self.file_accesses = ObjectStore(FileAccess)
+
     def add_file_access(self, file_access):
         'The class that uses this mixin must override this method'
         pass
@@ -82,28 +86,22 @@ class StoreOpenMixin(ExecutionProvider):
         def open(name, *args, **kwargs):  # @ReservedAssignment
             if self.enabled:
                 # Create a file access object with default values
-                file_access = {
-                    'name': name,
-                    'mode': 'r',
-                    'buffering': 'default',
-                    'content_hash_before': None,
-                    'content_hash_after': None,
-                    'timestamp': datetime.now()
-                }
+                fid = self.file_accesses.add(name)
+                file_access = self.file_accesses[fid]
 
                 if os.path.exists(name):
                     # Read previous content if file exists
                     with old_open(name, 'rb') as f:
-                        file_access['content_hash_before'] = persistence.put(
+                        file_access.content_hash_before = persistence.put(
                             f.read())
 
                 # Update with the informed keyword arguments (mode / buffering)
                 file_access.update(kwargs)
                 # Update with the informed positional arguments
                 if len(args) > 0:
-                    file_access['mode'] = args[0]
+                    file_access.mode = args[0]
                 elif len(args) > 1:
-                    file_access['buffering'] = args[1]
+                    file_access.buffering = args[1]
 
                 self.add_file_access(file_access)
             return old_open(name, *args, **kwargs)

@@ -13,7 +13,7 @@ from .. import utils
 from ..persistence import persistence
 from ..models.trial import Trial
 from .command import Command
-from ..cross_version import items, values
+from ..cross_version import items, values, cvmap
 
 
 class Show(Command):
@@ -84,22 +84,19 @@ class Show(Command):
         print('\n\n'.join(output))
 
     def print_function_defs(self, trial):
+        names = lambda lis: cvmap(lambda var: var['name'], lis)
         utils.print_msg('this trial has the following functions:', True)
         output = []
         for function_def in values(trial.function_defs()):
-            objects = {'GLOBAL':[], 'ARGUMENT':[], 'FUNCTION_CALL':[]}
-            for obj in persistence.load('object',
-                                        function_def_id=function_def['id']):
-                objects[obj['type']].append(obj['name'])
             output.append(self.wrap("""\
                 Name: {name}
                 Arguments: {arguments}
                 Globals: {globals}
                 Function calls: {calls}
                 Code hash: {code_hash}\
-                """.format(arguments=', '.join(objects['ARGUMENT']),
-                           globals=', '.join(objects['GLOBAL']),
-                           calls=', '.join(objects['FUNCTION_CALL']),
+                """.format(arguments=', '.join(names(function_def.arguments)),
+                           globals=', '.join(names(function_def.globals)),
+                           calls=', '.join(names(function_def.function_calls)),
                            **function_def), other="\n    "))
         print('\n\n'.join(output))
 
@@ -111,7 +108,7 @@ class Show(Command):
     def print_function_activation(self, trial, activation, level = 1):
         object_values = {'GLOBAL':[], 'ARGUMENT':[]}
         name = {'GLOBAL':'Globals', 'ARGUMENT':'Arguments'}
-        for obj in activation.objects():
+        for obj in activation.objects:
             object_values[obj['type']].append(
                 '{} = {}'.format(obj['name'], obj['value']))
         text = self.wrap(

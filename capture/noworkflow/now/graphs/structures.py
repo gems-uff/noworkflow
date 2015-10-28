@@ -327,9 +327,7 @@ class Info(object):
         return "Mean: {} microseconds per activation".format(mean)
 
     def activation_text(self, activation):
-        values = cvmap(row_to_dict, persistence.load('object_value',
-            function_activation_id=activation['id'], order='id'))
-        values = [value for value in values if value['type'] == 'ARGUMENT']
+        values = activation.arguments
         result = [
             "",
             "Activation #{id} from {start} to {finish} ({dur} microseconds)"

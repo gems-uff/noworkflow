@@ -11,15 +11,14 @@ from ..persistence import row_to_dict, persistence
 from ..cross_version import lmap
 from ..utils import hashabledict
 
-class Activation(hashabledict):
+class FunctionDef(hashabledict):
 
     @property
     def objects(self):
         if not hasattr(self, '_objects'):
             self._types = defaultdict(list)
             self._objects = lmap(row_to_dict, persistence.load(
-                'object_value', function_activation_id=self['id'],
-                trial_id=self['trial_id']))
+                'object', function_def_id=self['id']))
 
             for obj in self._objects:
                 self._types[obj['type']].append(obj)
@@ -37,3 +36,7 @@ class Activation(hashabledict):
     @property
     def arguments(self):
         return self.types['ARGUMENT']
+
+    @property
+    def function_calls(self):
+        return self.types['FUNCTION_CALL']

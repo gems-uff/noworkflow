@@ -6,6 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import sys
+
 def create_debugger(pdb=None):
     if pdb is None:
         from pdb import Pdb
@@ -23,3 +25,18 @@ def create_debugger(pdb=None):
             return self.trace_dispatch
 
     return NowDebugger
+
+
+def debugger_builtins(provider, ns):
+    def set_trace(frame=None, pdb=None):
+        debugger = create_debugger(pdb)(provider)
+        debugger.set_trace(sys._getframe().f_back)
+
+    def history():
+        return provider.history
+
+    def now_save():
+        provider.store(partial=True)
+
+    ns['set_trace'] = set_trace
+    ns['history'] = history
