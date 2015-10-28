@@ -96,7 +96,7 @@ class Profiler(StoreOpenMixin):
             if os.path.exists(file_access.name):
                 with persistence.std_open(file_access.name, 'rb') as f:
                     file_access.content_hash_after = persistence.put(f.read())
-
+            file_access.done = True
         activation.caller_id = self.activation_stack[-1]
 
     def trace_c_call(self, frame, event, arg):
@@ -212,9 +212,9 @@ class Profiler(StoreOpenMixin):
         now = datetime.now()
         tid = self.trial_id
         persistence.update_trial(tid, now, partial)
-        persistence.store_activations(tid, self.activations)
-        persistence.store_object_values(tid, self.object_values)
-        persistence.store_file_accesses(tid, self.file_accesses)
+        persistence.store_activations(tid, self.activations, partial)
+        persistence.store_object_values(tid, self.object_values, partial)
+        persistence.store_file_accesses(tid, self.file_accesses, partial)
 
     def tearup(self):
         sys.setprofile(self.tracer)

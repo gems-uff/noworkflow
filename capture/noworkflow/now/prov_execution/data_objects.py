@@ -8,48 +8,67 @@ from __future__ import (absolute_import, print_function,
 
 from datetime import datetime
 from collections import namedtuple
+from ..cross_version import items, values
 
 
 class ObjectStore(object):
 
     def __init__(self, cls):
         self.cls = cls
-        self.store = []
+        self.store = {}
         self.id = -1
 
     def __getitem__(self, index):
         return self.store[index]
 
+    def __delitem__(self, index):
+        self.store[index] = None
+
     def add(self, *args):
         self.id += 1
-        self.store.append(self.cls(self.id, *args))
+        self.store[self.id] = self.cls(self.id, *args)
         return self.id
 
     def remove(self, value):
-        self.store.remove(value)
+        for k, v in items(self.store):
+            if v == value:
+                del self.store[k]
 
     def __iter__(self):
-        return self.store.__iter__()
+        return values(self.store)
+
+    def items(self):
+        for k, v in items(self.store):
+            yield k, v
+
+    def iteritems(self):
+        for k, v in items(self.store):
+            yield k, v
+
+    def clear(self):
+        self.store = {k:v for k, v in items(self.store) if v}
 
 
 # Profiler
 
 class Activation(object):
     __slots__ = (
-        'id', 'start', 'finish', 'file_accesses', 'return_value',
-        'name', 'line', 'caller_id',
-        'context', 'slice_stack', 'lasti',
+        'id', 'name', 'line', 'start', 'finish',  'return_value', 'caller_id',
+        'file_accesses', 'context', 'slice_stack', 'lasti',
         'args', 'kwargs', 'starargs',
     )
 
     def __init__(self, aid, name, line, lasti):
         self.id = aid
-        self.start = datetime.now()
-        self.file_accesses = []
-        self.finish = 0.0
-        self.return_value = None
         self.name = name
         self.line = line
+        self.start = datetime.now()
+        self.finish = 0.0
+        self.caller_id = None
+        self.return_value = None
+
+        # File accesses. Used to get the content after the activation
+        self.file_accesses = []
         # Variable context. Used in the slicing lookup
         self.context = {}
         # Line execution stack.
@@ -61,11 +80,16 @@ class Activation(object):
         self.kwargs = []
         self.starargs = []
 
-        self.caller_id = None
+
+    def __repr__(self):
+        return ("Activation(id={}, line={}, name={}, start={}, finish={}, "
+            "return={}, caller_id={})").format(self.id, self.line, self.name,
+            self.start, self.finish, self.return_value, self.caller_id)
 
 class FileAccess(object):
     __slots__ = ('id', 'name', 'mode', 'buffering', 'content_hash_before',
-        'content_hash_after', 'timestamp', 'function_activation_id'
+        'content_hash_after', 'timestamp', 'function_activation_id',
+        'done'
     )
 
     def __init__(self, fid, name):
@@ -77,6 +101,7 @@ class FileAccess(object):
         self.content_hash_after = None
         self.timestamp = datetime.now()
         self.function_activation_id = None
+        self.done = False
 
     def update(self, variables):
         for key, value in variables.items():

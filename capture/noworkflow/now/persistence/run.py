@@ -9,6 +9,18 @@ from __future__ import (absolute_import, print_function,
 from .provider import Provider
 from ..cross_version import items
 
+
+def partial_save(is_complete, result_tuple):
+    def generator(object_store, partial):
+        for a in (v for k, v in items(object_store) if v):
+            if partial and is_complete(a):
+                del object_store[a.id]
+            yield result_tuple(a)
+        if partial:
+            object_store.clear()
+    return generator
+
+
 class RunProvider(Provider):
 
     def store_trial(self, start, script, code, arguments, bypass_modules,
@@ -63,39 +75,42 @@ class RunProvider(Provider):
             caller_id, trial_id,
         )
 
-    def store_activations(self, trial_id, activations):
+    def store_activations(self, trial_id, activations, partial):
+        generator = partial_save((lambda a: a.finish != 0.0), (lambda a: (
+            trial_id, a.id, a.name, a.line, a.return_value, a.start, a.finish,
+            a.caller_id)))
         with self.db_conn as db:
             db.executemany(
-                """INSERT INTO function_activation(trial_id, id, name, line,
-                    return, start, finish, caller_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                ((trial_id, a.id, a.name, a.line,
-                    a.return_value, a.start, a.finish, a.caller_id)
-                    for a in activations)
+                """REPLACE INTO function_activation(
+                    trial_id, id, name, line, return, start, finish, caller_id)
+                VALUES (:0, :1, :2, :3, :4, :5, :6, :7)""",
+                generator(activations, partial)
             )
 
-    def store_object_values(self, trial_id, object_values):
+    def store_object_values(self, trial_id, object_values, partial):
+        generator = partial_save((lambda o: True), (lambda o: (
+            trial_id, o.id, o.function_activation_id, o.name, o.value,
+            o.type)))
         with self.db_conn as db:
             db.executemany(
-                """INSERT INTO object_value(trial_id, id,
-                    function_activation_id, name, value, type)
-                VALUES (?, ?, ?, ?, ?, ?)""",
-                ((trial_id, o.id,
-                    o.function_activation_id, o.name, o.value, o.type)
-                    for o in object_values)
+                """REPLACE INTO object_value(
+                    trial_id, id, function_activation_id, name, value, type)
+                VALUES (:0, :1, :2, :3, :4, :5)""",
+                generator(object_values, partial)
             )
 
-    def store_file_accesses(self, trial_id, file_accesses):
+    def store_file_accesses(self, trial_id, file_accesses, partial):
+        generator = partial_save((lambda f: f.done), (lambda f: (
+            trial_id, f.id, f.name, f.mode, f.buffering, f.timestamp,
+            f.function_activation_id,f.content_hash_before,
+            f.content_hash_after)))
         with self.db_conn as db:
             db.executemany(
-                 """INSERT INTO file_access(trial_id, id, name, mode,
+                 """REPLACE INTO file_access(trial_id, id, name, mode,
                     buffering, timestamp, function_activation_id,
                     content_hash_before, content_hash_after)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                ((trial_id, f.id, f.name, f.mode,
-                    f.buffering, f.timestamp, f.function_activation_id,
-                    f.content_hash_before, f.content_hash_after)
-                    for f in file_accesses)
+                VALUES (:0, :1, :2, :3, :4, :5, :6, :7, :8)""",
+                generator(file_accesses, partial)
             )
 
     def store_slicing(self, trial_id, variables, dependencies, usages):

@@ -40,3 +40,4 @@ def debugger_builtins(provider, ns):
 
     ns['set_trace'] = set_trace
     ns['history'] = history
+    ns['now_save'] = now_save
