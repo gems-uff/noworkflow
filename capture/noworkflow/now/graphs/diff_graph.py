@@ -397,9 +397,10 @@ def trial_mirror(fn):
         if not diff:
             from ..models import Diff
             diff = Diff(self.trial1_id, self.trial2_id)
-        g1 = getattr(diff.trial1.graph, name)(diff.trial1)
-        g2 = getattr(diff.trial2.graph, name)(diff.trial2)
-        return fn(self, diff, g1, g2, **kwargs)
+        finished1, graph1 = getattr(diff.trial1.graph, name)(diff.trial1)
+        finished2, graph2 = getattr(diff.trial2.graph, name)(diff.trial2)
+        finished = finished1 and finished2
+        return fn(self, diff, graph1, graph2, finished, **kwargs)
     return calculate
 
 
@@ -454,30 +455,30 @@ class DiffGraph(Graph):
     @class_param('neighborhoods time_limit')
     @cache('tree', 'neighborhoods time_limit')
     @trial_mirror
-    def tree(self, diff, g1, g2, **kwargs):
+    def tree(self, diff, g1, g2, finished, **kwargs):
         """Compare tree structures"""
-        return vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(g1, g2, **kwargs), g1, g2
 
     @class_param('neighborhoods time_limit')
     @cache('no_match', 'neighborhoods time_limit')
     @trial_mirror
-    def no_match(self, diff, g1, g2, **kwargs):
+    def no_match(self, diff, g1, g2, finished, **kwargs):
         """Compare graphs without matches"""
-        return vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(g1, g2, **kwargs), g1, g2
 
     @class_param('neighborhoods time_limit')
     @cache('exact_match', 'neighborhoods time_limit')
     @trial_mirror
-    def exact_match(self, diff, g1, g2, **kwargs):
+    def exact_match(self, diff, g1, g2, finished, **kwargs):
         """Compare graphs with call matches"""
-        return vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(g1, g2, **kwargs), g1, g2
 
     @class_param('neighborhoods time_limit')
     @cache('combine', 'neighborhoods time_limit')
     @trial_mirror
-    def namespace_match(self, diff, g1, g2, **kwargs):
+    def namespace_match(self, diff, g1, g2, finished, **kwargs):
         """Compare graphs with namespaces"""
-        return vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(g1, g2, **kwargs), g1, g2
 
     def _repr_html_(self, diff=None):
         """ Display d3 graph on ipython notebook """
@@ -492,6 +493,6 @@ class DiffGraph(Graph):
         """.format(
             uid=uid, id1=self.trial1_id, id2=self.trial2_id,
             view=self.view,
-            data=self.escape_json(self._modes[self.mode](diff)),
+            data=self.escape_json(self._modes[self.mode](diff)[1:]),
             width=self.width, height=self.height)
         return result

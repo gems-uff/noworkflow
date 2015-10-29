@@ -28,10 +28,15 @@ class Vis(Command):
                      'current directory')
 
     def execute(self, args):
-        if args.browser:
-            url = "http://127.0.0.1:{0}".format(args.port)
+        self.run(path=args.dir, browser=args.browser, port=args.port,
+                 debug=args.debug)
+
+    def run(self, path=None, browser=False, port=5000, debug=False):
+        if browser:
+            url = "http://127.0.0.1:{0}".format(port)
             print(url)
             threading.Timer(1.25, lambda: webbrowser.open(url)).start()
         from ..vis.views import app
-        app.dir = args.dir or os.getcwd()
-        app.run(port=args.port, debug=args.debug)
+        app.dir = path or os.getcwd()
+        app.run(port=port, debug=debug, threaded=True)
+

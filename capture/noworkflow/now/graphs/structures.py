@@ -40,8 +40,11 @@ def prepare_cache(get_type):
                 if self.use_cache:
                     try:
                         for c in persistence.load('graph_cache', **conditions):
-                            return pickle.loads(persistence.get(
+                            result = pickle.loads(persistence.get(
                                 c[default_string('content_hash')]))
+                            if not result[0]:
+                                continue
+                            return result
                     except:
                         traceback.print_exc()
                         print_msg("Couldn't load graph cache", True)
@@ -182,6 +185,7 @@ class Mixed(TreeElement):
         self.repr = activation.repr
         self.use_id = True
         self.level = 0
+        self.finished = activation.finished
 
     @property
     def count(self):
@@ -204,6 +208,7 @@ class Mixed(TreeElement):
         pass
 
     def add_element(self, element):
+        self.finished &= element.finished
         self.elements.append(element)
 
     def mix(self, other):
@@ -231,6 +236,7 @@ class Group(TreeElement):
         self.repr = ""
         self.use_id = True
         self.level = 0
+        self.finished = True
 
     def initialize(self, previous, next):
         self.nodes[next] = Mixed(next)
@@ -239,9 +245,11 @@ class Group(TreeElement):
         self.last = next
         self.add_subelement(previous)
         self.parent = next.parent
+        self.finished = previous.finished and next.finished
         return self
 
     def add_subelement(self, previous):
+        self.finished &= previous.finished
         next, self.next_element = self.next_element, previous
         if not previous in self.edges:
             self.edges[previous] = OrderedCounter()
@@ -285,6 +293,7 @@ class Call(TreeElement):
         self.repr = 'C({0}, {1})'.format(self.caller, self.called)
         self.use_id = True
         self.level = 0
+        self.finished = self.caller.finished
 
     def __eq__(self, other):
         return all(fn(self) == fn(other) for fn in

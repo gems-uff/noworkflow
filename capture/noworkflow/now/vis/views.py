@@ -71,7 +71,8 @@ def trial_graph(tid, graph_mode, cache):
     trial = Trial(tid)
     graph = trial.graph
     graph.use_cache &= bool(int(cache))
-    return jsonify(**getattr(graph, graph_mode)(trial))
+    finished, g = getattr(graph, graph_mode)(trial)
+    return jsonify(**g)
 
 @app.route('/trials/<tid>/dependencies')
 @connection
@@ -159,7 +160,7 @@ def diff_graph(trial1, trial2, graph_mode, tl, nh, cache):
     diff = Diff(trial1, trial2)
     graph = diff.graph
     graph.use_cache &= bool(int(cache))
-    d, t1, t2 = getattr(graph, graph_mode)(
+    finished, d, t1, t2 = getattr(graph, graph_mode)(
         diff, time_limit=int(tl), neighborhoods=int(nh))
     return jsonify(
         diff=d,

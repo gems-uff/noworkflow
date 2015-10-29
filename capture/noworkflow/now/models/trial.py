@@ -104,6 +104,10 @@ class Trial(Model):
         info = self.info()
         return info['code_hash']
 
+    @property
+    def finished(self):
+        return bool(self.info()['finish'])
+
     def _repr_html_(self):
         """ Displays d3 graph on ipython notebook """
         return self.graph._repr_html_(self)

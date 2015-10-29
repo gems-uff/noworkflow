@@ -61,6 +61,8 @@ class History(Model):
         super(History, self).__init__(**kwargs)
         self.graph = HistoryGraph()
         self.initialize_default(kwargs)
+        if 'data' not in kwargs:
+            self.data = {}
 
         self.execution_options = ["*", "finished", "unfinished", "backup"]
 

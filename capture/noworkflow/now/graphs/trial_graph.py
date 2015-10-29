@@ -356,40 +356,40 @@ class TrialGraph(Graph):
             trial = Trial(self.trial_id)
         if self._graph == None:
             self._graph = generate_graph(trial)
-        return self._graph
+        return trial.finished, self._graph
 
     @cache('tree')
     def tree(self, trial=None):
         """Convert tree structure into dict tree structure"""
-        graph = self.graph(trial)
+        finished, graph = self.graph(trial)
         visitor = TreeVisitor()
         graph.visit(visitor)
-        return visitor.to_dict()
+        return finished, visitor.to_dict()
 
     @cache('no_match')
     def no_match(self, trial=None):
         """Convert tree structure into dict graph without node matchings"""
-        graph = self.graph(trial)
+        finished, graph = self.graph(trial)
         visitor = NoMatchVisitor()
         graph.visit(visitor)
-        return visitor.to_dict()
+        return finished, visitor.to_dict()
 
     @cache('exact_match')
     def exact_match(self, trial=None):
         """Convert tree structure into dict graph and match equal calls"""
-        graph = self.graph(trial)
+        finished, graph = self.graph(trial)
         graph = graph.visit(ExactMatchVisitor())
         visitor = NoMatchVisitor()
         graph.visit(visitor)
-        return visitor.to_dict()
+        return finished, visitor.to_dict()
 
     @cache('namespace_match')
     def namespace_match(self, trial=None):
         """Convert tree structure into dict graph and match namespaces"""
-        graph = self.graph(trial)
+        finished, graph = self.graph(trial)
         visitor = NamespaceVisitor()
         graph.visit(visitor)
-        return visitor.to_dict()
+        return finished, visitor.to_dict()
 
     def _repr_html_(self, trial=None):
         """ Display d3 graph on ipython notebook """
@@ -403,6 +403,6 @@ class TrialGraph(Graph):
             </div>
         """.format(
             uid=uid, id=self.trial_id,
-            data=self.escape_json(self._modes[self.mode](trial)),
+            data=self.escape_json(self._modes[self.mode](trial)[1]),
             width=self.width, height=self.height)
         return result
