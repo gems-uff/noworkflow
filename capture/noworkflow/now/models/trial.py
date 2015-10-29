@@ -209,3 +209,6 @@ class Trial(Model):
         """ Returns a list of slicing dependencies """
         return lmap(row_to_dict, persistence.load(
             'slicing_dependency', trial_id=self.id))
+
+    def __repr__(self):
+        return "Trial {}".format(self.id)

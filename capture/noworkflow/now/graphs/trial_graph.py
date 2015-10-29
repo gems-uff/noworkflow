@@ -126,6 +126,8 @@ class NoMatchVisitor(TreeVisitor):
                 self.add_edge(edge.node, node_id, node_count, typ)
 
     def solve_ret_delegation(self, node_id, node_count, delegated):
+        if not self.nodes[node_id]['node']['finished']:
+            return
         if 'return' in delegated:
             edge = delegated['return']
             self.add_edge(node_id, edge.node, edge.count, 'return')
@@ -285,55 +287,43 @@ def sequence(previous, next):
     return Group().initialize(previous, next)
 
 
-def list_to_call(stack):
-    group = stack.pop()
-    next = group.pop()
-    while group:
-        previous = group.pop()
-        next = sequence(previous, next)
-    caller = stack[-1].pop()
-    call = Call(caller, next)
-    call.level = caller.level
-    next.level = caller.level + 1
-    stack[-1].append(call)
+def create_group(group_list):
+    """ Transform a list of Single activations into a group """
+    _next = group_list.pop()
+    while group_list:
+        _previous = group_list.pop()
+        _next = sequence(_previous, _next)
+    return _next
 
 
-def generate_graph(trial):
+def recursive_generate_graph(trial, single, depth):
+    if not depth:
+        return single
+    children = []
+    for act in trial.activations(caller_id=single.id):
+        child = Single(act)
+        child.level = single.level + 1
+        children.append(recursive_generate_graph(trial, child, depth - 1))
+
+    if children:
+        group = create_group(children)
+        call = Call(single, group)
+        call.level = single.level
+        group.level = single.level + 1
+        return call
+
+    return single
+
+
+def generate_graph(trial, depth=1000):
     """ Returns activation graph """
-    activations = [Single(act) for act in trial.activations()]
+    activations = trial.activations(id=0)
     if not activations:
         t = TreeElement(level=0)
         t.trial_id = trial.id
         return t
 
-    current = activations[0]
-    stack = [[current]]
-    level = OrderedDict()
-    current.level = level[current.id] = 0
-
-    for i in range(1, len(activations)):
-        act = activations[i]
-        act.level = level[act.id] = level[act.parent] + 1
-        last = stack[-1][-1]
-        if act.level == last.level:
-            # act in the same level, add act to sequence
-            stack[-1].append(act)
-        elif act.level > last.level:
-            # last called act
-            stack.append([act])
-        else:
-            # act is in higher level than last
-            # create a call for last group
-            # add act to existing sequence
-            while last.level > act.level:
-                list_to_call(stack)
-                last = stack[-1][-1]
-            stack[-1].append(act)
-
-    while len(stack) > 1:
-        list_to_call(stack)
-
-    return(stack[-1][-1])
+    return recursive_generate_graph(trial, Single(activations[0]), depth - 1)
 
 
 cache = prepare_cache(

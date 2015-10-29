@@ -97,7 +97,6 @@ class Profiler(StoreOpenMixin):
                 with persistence.std_open(file_access.name, 'rb') as f:
                     file_access.content_hash_after = persistence.put(f.read())
             file_access.done = True
-        activation.caller_id = self.activation_stack[-1]
 
     def trace_c_call(self, frame, event, arg):
         self.depth_non_user += 1
@@ -105,7 +104,7 @@ class Profiler(StoreOpenMixin):
             self.add_activation(self.activations.add(
                 arg.__name__ if arg.__self__ == None else '.'.join(
                     [type(arg.__self__).__name__, arg.__name__]),
-                frame.f_lineno, frame.f_lasti
+                frame.f_lineno, frame.f_lasti, self.activation_stack[-1]
             ))
 
     def capture_python_params(self, frame, activation):
@@ -149,7 +148,8 @@ class Profiler(StoreOpenMixin):
         if self.valid_depth():
             aid = self.activations.add(
                 co_name if co_name != '<module>' else co_filename,
-                frame.f_back.f_lineno, frame.f_back.f_lasti
+                frame.f_back.f_lineno, frame.f_back.f_lasti,
+                self.activation_stack[-1]
             )
             activation = self.activations[aid]
             # Capturing arguments

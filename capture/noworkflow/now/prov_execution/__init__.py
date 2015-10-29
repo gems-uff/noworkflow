@@ -57,7 +57,7 @@ def collect_provenance(args, metascript, ns):
         if metascript['compiled'] is None:
             metascript['compiled'] = cross_compile(
                 metascript['code'], metascript['path'], 'exec')
-        debugger_builtins(provider, ns['__builtins__'])
+        debugger_builtins(provider, ns['__builtins__'], metascript)
         exec(metascript['compiled'], ns)
 
     except SystemExit as ex:

@@ -58,13 +58,13 @@ class Activation(object):
         'args', 'kwargs', 'starargs',
     )
 
-    def __init__(self, aid, name, line, lasti):
+    def __init__(self, aid, name, line, lasti, caller_id):
         self.id = aid
         self.name = name
         self.line = line
         self.start = datetime.now()
         self.finish = 0.0
-        self.caller_id = None
+        self.caller_id = caller_id
         self.return_value = None
 
         # File accesses. Used to get the content after the activation

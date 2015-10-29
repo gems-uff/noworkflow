@@ -116,6 +116,7 @@ class Single(TreeElement):
         self.trial_id = activation['trial_id']
         self.repr = "S({0}-{1})".format(self.line, self.name)
         self.use_id = True
+        self.finished = bool(activation['finish'])
         self.level = 0
 
     @property
@@ -136,6 +137,7 @@ class Single(TreeElement):
         pass
 
     def mix(self, other):
+        self.finished |= other.finished
         self.count += other.count
         self.duration += other.duration
         self.activations = self.activations.union(other.activations)
@@ -161,8 +163,9 @@ class Single(TreeElement):
                 'count': self.count,
                 'duration': self.duration,
                 'level': self.level,
+                'finished': self.finished,
                 'info': Info(self),
-            }
+            },
         }
 
     def __hash__(self):
@@ -328,18 +331,22 @@ class Info(object):
 
     def activation_text(self, activation):
         values = activation.arguments
+        extra = "(still running)"
+        if activation['finish']:
+            extra = "to {finish} ({d} microseconds)".format(
+                d=calculate_duration(activation), **activation)
         result = [
             "",
-            "Activation #{id} from {start} to {finish} ({dur} microseconds)"
-                .format(dur=calculate_duration(activation), **activation),
+            "Activation #{id} from {start} {extra}"
+                .format(extra=extra, **activation),
         ]
         if values:
             result.append("Arguments: {}".format(
                 ", ".join("{}={}".format(value["name"], value["value"])
-                    for value in values)))
-        return result + [
-            "Returned {}".format(activation['return'])
-        ]
+                          for value in values)))
+        if activation['return']:
+            result.append("Returned {}".format(activation['return']))
+        return result
 
     def __repr__(self):
         result = [self.title, self.duration, self.mean]
