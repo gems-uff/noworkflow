@@ -54,7 +54,7 @@ $ ./setup.py install
 $ cd ..
 $ git clone git@github.com:gems-uff/noworkflow.git
 $ cd noworkflow/capture
-$ ./setup.py install
+$ python setup.py install
 ```
 This installs noWorkflow on your system.
 
@@ -102,7 +102,7 @@ To list all trials, just run
 ```bash
 now list
 ```
-Assuming we run the experiment again and then run \texttt{now list}, the output would be as follows.
+Assuming we run the experiment again and then run `now list`, the output would be as follows.
 
 ```bash
 $ now list
@@ -150,7 +150,7 @@ To restore files used by trial 1, run
 $ now checkout -l -i 1
 ```
 
-By default, the checkout command only restores the script used for the trial ("simulation.py"), even when it has imports and read files as input. Use the option "-l" to restore imported modules and the option "-i" to restore input files.
+By default, the checkout command only restores the script used for the trial ("simulation.py"), even when it has imports and read files as input. Use the option *-l* to restore imported modules and the option *-i* to restore input files.
 The checkout command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 2 is based on Trial 1). When you checkout a Trial, the next Trial will be based on the checked out Trial (e.g. Trial 3 based on Trial 1).
 
 
@@ -195,9 +195,10 @@ In  [1]: %load_ext noworkflow
     ...: nip = %now_ip
 ```
 
-After that, you can either run a new trial or load an existing object (History,Trial,Diff).
+After that, you can either run a new trial or load an existing object (*History*, *Trial*, *Diff*).
 
 There are two ways to run a new trial:
+
 1- Load an external file
 ```python
 In  [1]: arg = 6
@@ -206,6 +207,7 @@ In  [2]: trial = %now_run script1.py $arg
     ...: trial
 Out [2]: <Trial 5> # Loads the trial object represented as a graph
 ```
+
 2- Load the code inside a cell
 ```python
 In  [3]: %%now_run --name script2 --interactive
@@ -218,8 +220,9 @@ Out [3]: <Trial 6> # Loads the trial object represented as a graph
 In  [4]: c
 Out [4]: 6
 ```
-Both modes supports all the `now run` parameters
-The --interactive mode allows the cell to share variables with the notebook.
+Both modes supports all the `now run` parameters.
+
+The *--interactive* mode allows the cell to share variables with the notebook.
 
 Loading existing trials, histories and diffs:
 ```python
@@ -236,7 +239,7 @@ In  [7]: diff = nip.Diff(1, 2) # Loads diff between trial 1 and 2
 Out [7]: <Diff 1 2>
 ```
 
-There are attributes on those objects to change the graph visualization, width, height and filter values. Please, check the documentation by running the following code on ipython notebook
+There are attributes on those objects to change the graph visualization, width, height and filter values. Please, check the documentation by running the following code on ipython notebook:
 ```python
 In  [8]: trial?
 
@@ -251,8 +254,6 @@ $ pip install pyswip-alt
 ```
 
 Check how to install SWI-Prolog with shared libraries at https://github.com/yuce/pyswip/blob/master/INSTALL
-
-You can install pyswip
 
 To query a specific trial, you can do:
 ```python
@@ -275,9 +276,6 @@ Out [12]: %
      ...: %
      ...: ...
 ```
-
-Running
-
 
 Included Software
 -----------------
@@ -312,4 +310,3 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
