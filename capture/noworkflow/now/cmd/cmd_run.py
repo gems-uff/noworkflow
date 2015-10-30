@@ -1,28 +1,29 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+""" 'now run' command """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import os
-import sys
 import argparse
 import fnmatch
+import os
+import sys
 
+from .command import Command
 from .. import prov_definition
 from .. import prov_deployment
 from .. import prov_execution
-from .. import utils
+from ..utils import io, metaprofiler
 from ..persistence import persistence
 
-from .command import Command
 
 LAST_TRIAL = '.last_trial'
 
 
 def non_negative(string):
+    """ Check if argument is >= 0 """
     value = int(string)
     if value < 0:
         raise argparse.ArgumentTypeError(
@@ -30,7 +31,28 @@ def non_negative(string):
     return value
 
 
+def run(script_dir, args, metascript, namespace):
+    """ Execute noWokflow to capture provenance from script """
+
+    io.print_msg('setting up local provenance store')
+    persistence.connect(script_dir)
+
+    io.print_msg('collecting definition provenance')
+    prov_definition.collect_provenance(args, metascript)
+
+    io.print_msg('collecting deployment provenance')
+    prov_deployment.collect_provenance(args, metascript)
+
+    io.print_msg('collection execution provenance')
+    prov_execution.collect_provenance(args, metascript, namespace)
+
+    metaprofiler.meta_profiler.save()
+
+    return prov_execution.provider
+
+
 class Run(Command):
+    """ Run a script collecting its provenance """
 
     def add_arguments(self):
         add_arg = self.add_argument
@@ -70,17 +92,18 @@ class Run(Command):
     def execute(self, args):
 
         if args.meta:
-            utils.meta_profiler.active = True
-            utils.meta_profiler.data['cmd'] = ' '.join(sys.argv)
+            metaprofiler.meta_profiler.active = True
+            metaprofiler.meta_profiler.data['cmd'] = ' '.join(sys.argv)
 
-        utils.verbose = args.verbose
-        utils.print_msg('removing noWorkflow boilerplate')
+        io.verbose = args.verbose
+        io.print_msg('removing noWorkflow boilerplate')
 
         args_script = args.script
         args.script = os.path.realpath(args.script[0])
 
-        if not os.path.exists(args.script):  # TODO: check this using argparse
-            utils.print_msg('the script does not exist', True)
+        if not os.path.exists(args.script):
+            # TODO: check this using argparse
+            io.print_msg('the script does not exist', True)
             sys.exit(1)
 
         script_dir = args.dir or os.path.dirname(args.script)
@@ -98,10 +121,10 @@ class Run(Command):
                                   '__builtins__': __builtins__,
                                  })
 
-        with open(args.script, 'rb') as f:
+        with open(args.script, 'rb') as script_file:
             metascript = {
                 'trial_id': None,
-                'code': f.read(),
+                'code': script_file.read(),
                 'path': args.script,
                 'paths': {args.script},
                 'compiled': None,
@@ -110,33 +133,15 @@ class Run(Command):
             }
             if args.context in ('package', 'all'):
                 path = os.path.dirname(args.script)
-                for root, dirnames, filenames in os.walk(path):
+                for root, _, filenames in os.walk(path):
                     for filename in fnmatch.filter(filenames, '*.py'):
                         metascript['paths'].add(os.path.join(root, filename))
             if args.context == 'all':
                 args.non_user_depth = args.depth
         try:
-            self.run(script_dir, args, metascript, __main__.__dict__)
+            run(script_dir, args, metascript, __main__.__dict__)
         finally:
             if args.create_last:
                 tmp = os.path.join(os.path.dirname(args.script), LAST_TRIAL)
-                with open(tmp, 'w') as f:
-                    f.write(str(metascript['trial_id']))
-
-    def run(self, script_dir, args, metascript, ns):
-
-        utils.print_msg('setting up local provenance store')
-        persistence.connect(script_dir)
-
-        utils.print_msg('collecting definition provenance')
-        prov_definition.collect_provenance(args, metascript)
-
-        utils.print_msg('collecting deployment provenance')
-        prov_deployment.collect_provenance(args, metascript)
-
-        utils.print_msg('collection execution provenance')
-        prov_execution.collect_provenance(args, metascript, ns)
-
-        utils.meta_profiler.save()
-
-        return prov_execution.provider
+                with open(tmp, 'w') as last:
+                    last.write(str(metascript['trial_id']))

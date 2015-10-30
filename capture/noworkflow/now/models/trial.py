@@ -136,7 +136,15 @@ class Trial(Model):
         parent_id = persistence.load_parent_id(self.script, remove=remove)
         return Trial(parent_id)
 
-    def modules(self, map_fn=row_to_dict, find=None):
+    def module(self, name, map_fn=row_to_dict):
+        """Return the module with specified name"""
+        _, result = self.modules(map_fn=map_fn)
+        for module in result:
+            if module['name'] == name:
+                return module
+        return None
+
+    def modules(self, map_fn=row_to_dict):
         """ Returns the modules imported during the trial
             The first element is a list of local modules
             The second element is a list of external modules
@@ -145,12 +153,7 @@ class Trial(Model):
         result = lmap(map_fn, dependencies)
         local = [dep for dep in result
                  if dep['path'] and persistence.base_path in dep['path']]
-        if find is None:
-            return local, result
-        for x in result:
-            if x['name'] == find:
-                return x
-        return None
+        return local, result
 
     def environment(self):
         """ Returns a dict of environment variables """

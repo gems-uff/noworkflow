@@ -1,19 +1,23 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+""" Command base """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..utils.functions import abstract
+
 
 class Command(object):
-
-    def __init__(self, help, cmd=None):
+    """ Command base """
+    def __init__(self, help_msg, cmd=None):
         self.cmd = cmd or type(self).__name__.lower()
-        self.help = help
+        self.help = help_msg
+        self.parser = None
 
     def create_parser(self, subparsers):
+        """ Create parser with arguments """
         kwargs = {}
         if self.help:
             kwargs['help'] = self.help
@@ -23,13 +27,18 @@ class Command(object):
         self.parser.set_defaults(func=self.execute)
 
     def add_arguments(self):
+        """ Add arguments to command. Override on subclass """
         pass
 
     def add_argument(self, *args, **kwargs):
+        """ Add argument to parser available for both IPython magic and cmd """
         return self.parser.add_argument(*args, **kwargs)
 
     def add_argument_cmd(self, *args, **kwargs):
+        """ Add argument to parser available only for cmd """
         return self.parser.add_argument(*args, **kwargs)
 
-    def execute(self, *args, **kwargs):
+    def execute(self, args):
+        """ Execute the command. Override on subclass """
         abstract()
+        print(self, args)

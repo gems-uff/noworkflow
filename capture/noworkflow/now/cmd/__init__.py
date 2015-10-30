@@ -1,8 +1,8 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+""" Commands and argument parsers for 'now' """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -17,9 +17,10 @@ from .cmd_export import Export
 from .cmd_restore import Restore
 from .cmd_vis import Vis
 
-def main():
 
-    parser = argparse.ArgumentParser(description = __doc__)
+def main():
+    """ Main function """
+    parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers()
     commands = [
         Run('runs a script collecting its provenance'),

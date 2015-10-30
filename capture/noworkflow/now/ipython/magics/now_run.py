@@ -2,7 +2,7 @@
 # Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+# pylint: disable=W0703
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -10,7 +10,7 @@ import os
 import sys
 import argparse
 
-from ...cmd import Run, LAST_TRIAL
+from ...cmd.cmd_run import Run, LAST_TRIAL, run
 from ...persistence import persistence
 from ...models.trial import Trial
 
@@ -121,13 +121,12 @@ class NowRun(IpythonCommandMagic, Run):
                 prog_ns = magic_cls.shell.user_ns
                 prog_ns['__name__'] = '__main__'
                 prog_ns['__file__'] = filename
-                main_mod_name = '__main__'
                 sys.modules['__main__'] = magic_cls.shell.user_module
 
-                with open(filename, 'rb') as f:
+                with open(filename, 'rb') as script_file:
                     metascript = {
                         'trial_id': None,
-                        'code': f.read(),
+                        'code': script_file.read(),
                         'path': filename,
                         'paths': [filename],
                         'compiled': None,
@@ -135,7 +134,7 @@ class NowRun(IpythonCommandMagic, Run):
                         'name': args.name or os.path.basename(filename)
                     }
 
-                self.run(directory, args, metascript, prog_ns)
+                run(directory, args, metascript, prog_ns)
 
                 magic_cls.shell.user_ns['__name__'] = __name__save
                 magic_cls.shell.user_ns['__builtins__'] = builtin_mod
@@ -143,8 +142,8 @@ class NowRun(IpythonCommandMagic, Run):
                 sys.modules['__main__'] = restore_main
                 try:
                     return Trial(trial_id=metascript['trial_id'])
-                except e:
-                    print('Failed', e)
+                except Exception as exc:
+                    print('Failed', exc)
             else:
                 # Set execution line
                 cmd = "now run --create_last {directory} {args} {script} {params}".format(
@@ -154,13 +153,13 @@ class NowRun(IpythonCommandMagic, Run):
                     params=' '.join(params)
                 )
                 script = magic_cls.shell.find_cell_magic('script').__self__
-                result = script.shebang(cmd, "")
+                script.shebang(cmd, "")
                 tmp_dir = os.path.dirname(filename)
 
                 try:
-                    with open(os.path.join(tmp_dir, LAST_TRIAL), 'r') as f:
-                        return Trial(trial_id=int(f.read()))
-                except e:
-                    print('Failed', e)
+                    with open(os.path.join(tmp_dir, LAST_TRIAL), 'r') as last:
+                        return Trial(trial_id=int(last.read()))
+                except Exception as exc:
+                    print('Failed', exc)
         finally:
             persistence.connect(original_path)

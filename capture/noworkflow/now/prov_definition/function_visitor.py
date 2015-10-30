@@ -90,10 +90,11 @@ class FunctionVisitor(ast.NodeVisitor):
         if self.path == self.metascript['path']:
             self.metascript['compiled'] = compiled
 
-        with redirect_output() as outputs:
+
+        with redirect_output() as (stdout, stderr):
             diss(compiled, recurse=True)
 
-        self.disasm = outputs[0].getvalue().split('\n')
+            self.disasm = stdout.read_content().split('\n')
 
         # Sort lines
         lines = defaultdict(list)

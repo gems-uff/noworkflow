@@ -2,18 +2,18 @@
 # Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+# pylint: disable=C0103
+""" Trial Graph Module """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import time
 
-from collections import namedtuple, defaultdict, OrderedDict
+from collections import namedtuple, defaultdict
 from functools import partial
+
 from .structures import Single, Call, Group, Mixed, TreeElement, prepare_cache
 from .structures import Graph
-from ..utils import OrderedCounter
-from ..persistence import persistence
 from ..cross_version import items, values, keys
 
 
@@ -21,6 +21,8 @@ Edge = namedtuple("Edge", "node count")
 
 
 class TreeVisitor(object):
+    """ Create Dict Tree from Intermediate Tree """
+    # pylint: disable=R0201
 
     def __init__(self):
         self.nodes = []
@@ -34,19 +36,22 @@ class TreeVisitor(object):
         self.keep = None
 
     def update_durations(self, duration, tid):
+        """ Update min and max duration """
         self.max_duration[tid] = max(self.max_duration[tid], duration)
         self.min_duration[tid] = min(self.min_duration[tid], duration)
 
     def update_node(self, node):
+        """ Update node with info and mean duration """
         node['mean'] = node['duration'] / node['count']
         node['info'].update_by_node(node)
         node['info'] = repr(node['info'])
 
     def to_dict(self):
+        """ Convert graph to dict """
         for node in self.nodes:
-            n = node['node']
-            self.update_node(n)
-            self.update_durations(n['duration'], n['trial_id'])
+            nnode = node['node']
+            self.update_node(nnode)
+            self.update_durations(nnode['duration'], nnode['trial_id'])
 
         self.update_edges()
         return {
@@ -57,15 +62,18 @@ class TreeVisitor(object):
         }
 
     def update_edges(self):
+        """ Update edges """
         pass
 
     def add_node(self, node):
+        """ Add node to result """
         self.nodes.append(node.to_dict(self.nid))
         original = self.nid
         self.nid += 1
         return original
 
     def add_edge(self, source, target, count, typ):
+        """ Add edge to result """
         self.edges.append({
             'source': source,
             'target': target,
@@ -74,6 +82,7 @@ class TreeVisitor(object):
         })
 
     def visit_call(self, call):
+        """ Visit Call Node (Visitor Pattern) """
         caller_id = self.add_node(call.caller)
         self.nodes[caller_id]['repr'] = repr(call)
         callees = call.called.visit(self)
@@ -84,41 +93,49 @@ class TreeVisitor(object):
         return [caller_id]
 
     def visit_group(self, group):
+        """ Visit Group Node (Visitor Pattern) """
         result = []
         for element in values(group.nodes):
             result += element.visit(self)
         return result
 
     def visit_single(self, single):
+        """ Visit Single Node (Visitor Pattern) """
         return [self.add_node(single)]
 
     def visit_mixed(self, mixed):
+        """ Visit Mixed Node (Visitor Pattern) """
         mixed.mix_results()
         node_id = mixed.first.visit(self)
         self.nodes[node_id[0]]['duration'] = mixed.duration
         return node_id
 
     def visit_treeelement(self, tree_element):
+        """ Visit TreeElement Node (Visitor Pattern) """
+        # pylint: disable=W0613
         return []
 
 
 class NoMatchVisitor(TreeVisitor):
-
+    """ Create Dict No Match from Intermediate Tree """
     def update_edges(self):
         for edge in self.edges:
             if edge['type'] in ['return', 'call']:
                 edge['count'] = ''
 
     def use_delegated(self):
+        """ Process delegated edge """
         result = self.delegated
         self.delegated = {}
         return result
 
     def solve_delegation(self, node_id, node_count, delegated):
+        """ Solve edge delegation """
         self.solve_cis_delegation(node_id, node_count, delegated)
         self.solve_ret_delegation(node_id, node_count, delegated)
 
     def solve_cis_delegation(self, node_id, node_count, delegated):
+        """ Solve edge (call, initial, sequence) delegation """
         # call initial sequence
         for typ in ['call', 'initial', 'sequence']:
             if typ in delegated:
@@ -126,6 +143,8 @@ class NoMatchVisitor(TreeVisitor):
                 self.add_edge(edge.node, node_id, node_count, typ)
 
     def solve_ret_delegation(self, node_id, node_count, delegated):
+        """ Solve edge (return) delegation """
+        # pylint: disable=W0613
         if not self.nodes[node_id]['node']['finished']:
             return
         if 'return' in delegated:
@@ -159,8 +178,8 @@ class NoMatchVisitor(TreeVisitor):
         self.solve_ret_delegation(node_map[group.last], group.count, delegated)
 
         for previous, edges in items(group.edges):
-            for next, count in items(edges):
-                self.add_edge(node_map[previous], node_map[next],
+            for nnext, count in items(edges):
+                self.add_edge(node_map[previous], node_map[nnext],
                               count, 'sequence')
 
         return node_map[group.next_element], group.next_element
@@ -185,44 +204,53 @@ class NoMatchVisitor(TreeVisitor):
 
 
 class ExactMatchVisitor(NoMatchVisitor):
+    """ Create Dict Exact Match from Intermediate Tree """
 
     def visit_single(self, single):
-        s = Single(single.activation)
-        s.level = single.level
-        s.use_id = False
-        return s
+        _single = Single(single.activation)
+        _single.level = single.level
+        _single.use_id = False
+        return _single
 
     def visit_mixed(self, mixed):
         mixed.use_id = False
-        m = Mixed(mixed.elements[0].visit(self))
-        for element in elements[1:]:
-            m.add_element(element.visit(self))
-        m.level = mixed.level
-        return m
+        _mixed = Mixed(mixed.elements[0].visit(self))
+        for element in mixed.elements[1:]:
+            _mixed.add_element(element.visit(self))
+        _mixed.level = mixed.level
+        return _mixed
 
     def visit_group(self, group):
         nodes = list(keys(group.nodes))
-        g = Group()
-        g.use_id = False
-        g.initialize(nodes[1].visit(self),nodes[0].visit(self))
+        _group = Group()
+        _group.use_id = False
+        _group.initialize(nodes[1].visit(self), nodes[0].visit(self))
         for element in nodes[2:]:
-            g.add_subelement(element.visit(self))
-        g.level = group.level
-        return g
+            _group.add_subelement(element.visit(self))
+        _group.level = group.level
+        return _group
 
     def visit_call(self, call):
         caller = call.caller.visit(self)
         called = call.called.visit(self)
-        c = Call(caller, called)
-        c.use_id = False
-        c.level = call.level
-        return c
+        _call = Call(caller, called)
+        _call.use_id = False
+        _call.level = call.level
+        return _call
 
     def visit_treeelement(self, tree_element):
         return tree_element
 
 
+def update_namespace_node(node, single):
+    """ Update node information """
+    node['count'] += single.count
+    node['duration'] += single.duration
+    node['info'].add_activation(single.activation)
+
+
 class NamespaceVisitor(NoMatchVisitor):
+    """ Create Dict Namespace from Intermediate Tree """
 
     def __init__(self):
         super(NamespaceVisitor, self).__init__()
@@ -234,12 +262,8 @@ class NamespaceVisitor(NoMatchVisitor):
         pass
 
     def namespace(self):
+        """ Return current namespace """
         return ' '.join(self.namestack)
-
-    def update_namespace_node(self, node, single):
-        node['count'] += single.count
-        node['duration'] += single.duration
-        node['info'].add_activation(single.activation)
 
     def add_node(self, single):
         self.namestack.append(single.name_id())
@@ -247,7 +271,7 @@ class NamespaceVisitor(NoMatchVisitor):
         self.namestack.pop()
         if namespace in self.context:
             context = self.context[namespace]
-            self.update_namespace_node(context['node'], single)
+            update_namespace_node(context['node'], single)
 
             return self.context[namespace]['index']
 
@@ -261,11 +285,11 @@ class NamespaceVisitor(NoMatchVisitor):
         edge = "{} {} {}".format(source, target, typ)
         if not edge in self.context_edges:
             super(NamespaceVisitor, self).add_edge(source, target,
-                                                           count, typ)
+                                                   count, typ)
             self.context_edges[edge] = self.edges[-1]
         else:
-            e = self.context_edges[edge]
-            self.context_edges[edge]['count'] += count
+            _edge = self.context_edges[edge]
+            _edge['count'] += count
 
     def visit_call(self, call):
         self.namestack.append(call.caller.name_id())
@@ -280,11 +304,12 @@ class NamespaceVisitor(NoMatchVisitor):
         return node_id, node
 
 
-def sequence(previous, next):
-    if isinstance(next, Group):
-        next.add_subelement(previous)
-        return next
-    return Group().initialize(previous, next)
+def sequence(previous, nnext):
+    """ Create Group or add Node to it """
+    if isinstance(nnext, Group):
+        nnext.add_subelement(previous)
+        return nnext
+    return Group().initialize(previous, nnext)
 
 
 def create_group(group_list):
@@ -297,6 +322,7 @@ def create_group(group_list):
 
 
 def recursive_generate_graph(trial, single, depth):
+    """ Generate Graph up to the depth """
     if not depth:
         return single
     children = []
@@ -316,12 +342,12 @@ def recursive_generate_graph(trial, single, depth):
 
 
 def generate_graph(trial, depth=1000):
-    """ Returns activation graph """
+    """ Return the activation graph """
     activations = trial.activations(id=0)
     if not activations:
-        t = TreeElement(level=0)
-        t.trial_id = trial.id
-        return t
+        tree = TreeElement(level=0)
+        tree.trial_id = trial.id
+        return tree
 
     return recursive_generate_graph(trial, Single(activations[0]), depth - 1)
 
@@ -331,16 +357,19 @@ cache = prepare_cache(
 
 
 class TrialGraph(Graph):
+    """ Trial Graph Class
+        Present trial graph on Jupyter """
+    # pylint: disable=R0201
+    # pylint: disable=R0902
 
-    def __init__(self, trial_id, use_cache=True,
-                 width=500, height=500, mode=3):
+    def __init__(self, trial_id):
         self._graph = None
         self.trial_id = trial_id
-        self.use_cache = use_cache
 
-        self.width = width
-        self.height = height
-        self.mode = mode
+        self.use_cache = True
+        self.width = 500
+        self.height = 500
+        self.mode = 3
         self._modes = {
             0: self.tree,
             1: self.no_match,

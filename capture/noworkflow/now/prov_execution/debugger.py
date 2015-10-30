@@ -29,7 +29,12 @@ atexit.register(kill_children)
 
 def create_debugger(pdb=None):
     if pdb is None:
-        from pdb import Pdb
+        with redirect_output() as outputs:
+            try:
+                from ipdb.__main__ import Pdb, def_colors
+                pdb = Pdb(def_colors)
+            except ImportError:
+                from pdb import Pdb
         pdb = Pdb
 
     class NowDebugger(pdb):

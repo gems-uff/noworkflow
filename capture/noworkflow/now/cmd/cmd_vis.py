@@ -1,19 +1,31 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+""" 'now vis' command """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-import webbrowser
 import threading
+import webbrowser
 
-from ..persistence import persistence
 from .command import Command
 
+
+def run(path=None, browser=False, port=5000, debug=False):
+    """ Open Flask server """
+    if browser:
+        url = "http://127.0.0.1:{0}".format(port)
+        print(url)
+        threading.Timer(1.25, lambda: webbrowser.open(url)).start()
+    from ..vis.views import app
+    app.dir = path or os.getcwd()
+    app.run(port=port, debug=debug, threaded=True)
+
+
 class Vis(Command):
+    """ Open visualization tool """
 
     def add_arguments(self):
         add_arg = self.add_argument
@@ -28,15 +40,5 @@ class Vis(Command):
                      'current directory')
 
     def execute(self, args):
-        self.run(path=args.dir, browser=args.browser, port=args.port,
-                 debug=args.debug)
-
-    def run(self, path=None, browser=False, port=5000, debug=False):
-        if browser:
-            url = "http://127.0.0.1:{0}".format(port)
-            print(url)
-            threading.Timer(1.25, lambda: webbrowser.open(url)).start()
-        from ..vis.views import app
-        app.dir = path or os.getcwd()
-        app.run(port=port, debug=debug, threaded=True)
-
+        run(path=args.dir, browser=args.browser, port=args.port,
+            debug=args.debug)

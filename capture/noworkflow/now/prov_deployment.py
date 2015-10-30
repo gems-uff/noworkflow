@@ -125,9 +125,27 @@ def collect_provenance(args, metascript):
                   '(--bypass-modules).')
     else:
         print_msg('  searching for module dependencies')
+        modules = []
         with redirect_output():
-            finder = modulefinder.ModuleFinder()
-            finder.run_script(metascript['path'])
+            excludes = set()
+            last_name = None
+            max_atemps = 1000
+            for i in range(max_atemps):
+                try:
+                    finder = modulefinder.ModuleFinder(excludes=excludes)
+                    finder.run_script(metascript['path'])
+                    break
+                except SyntaxError as e:
+                    name = e.filename.split('site-packages/')[-1]
+                    name = name.replace(os.sep, '.')
+                    name = name[:name.rfind('.')]
+                    if last_name is not None and last_name in name:
+                        last_name = last_name[last_name.find('.') + 1:]
+                    else:
+                        last_name = name
+                    excludes.add(last_name)
+                    print_msg('    skip module due syntax error: {} ({}/{})'
+                        .format(last_name, i+1, max_atemps))
 
             print_msg('  registering provenance from {} modules'.format(
                 len(finder.modules) - 1))
