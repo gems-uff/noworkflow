@@ -2,12 +2,15 @@
 # Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+""" Definition container. Handle multiple files/visitors """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
 class Definition(object):
+    """ Definition Class """
+    # pylint: disable=R0902
+    # pylint: disable=R0903
 
     def __init__(self, metascript):
         self.metascript = metascript
@@ -35,6 +38,7 @@ class Definition(object):
         self.functions = {}
 
     def add_visitor(self, visitor):
+        """ Add visitor data to Definition object """
         self.paths.append(visitor.path)
         self.line_dependencies[visitor.path] = visitor.dependencies
         self.line_gen_dependencies[visitor.path] = visitor.gen_dependencies

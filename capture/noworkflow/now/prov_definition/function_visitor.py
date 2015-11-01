@@ -1,18 +1,17 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+""" AST Visitors to capture definition provenance """
+# pylint: disable=C0103
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import ast
-import sys
 from collections import defaultdict
 from .context import Context
-from .utils import diss
-from ..cross_version import cross_compile, StringIO
-from ..utils import redirect_output
+from ..cross_version import cross_compile
+from ..utils.bytecode import get_dis
 from ..persistence import persistence
 
 
@@ -31,25 +30,31 @@ class FunctionVisitor(ast.NodeVisitor):
         self.metascript = metascript
         self.result = None
         self.functions = {}
+        self.disasm = []
 
     @property
     def namespace(self):
+        """ Return current namespace """
         return '.'.join(context.name for context in self.contexts[1:])
 
     def generic_visit(self, node):
-        # Delegation, but collecting the current line number
+        """ Delegate, but collect current line number """
+        # TODO: Use PyPosAST
         try:
             self.lineno = node.lineno
         except:
             pass
         ast.NodeVisitor.generic_visit(self, node)
 
-    def visit_ClassDef(self, node): # ignoring classes
+    def visit_ClassDef(self, node):
+        """ Visit ClassDef. Ignore Classes """
         self.contexts.append(Context(node.name))
         self.generic_visit(node)
         self.contexts.pop()
 
     def visit_FunctionDef(self, node):
+        """ Visit FunctionDef. Collect function code """
+        # TODO: Use PyPosAST
         self.contexts.append(Context(node.name))
         self.generic_visit(node)
         code_hash = persistence.put(
@@ -58,43 +63,45 @@ class FunctionVisitor(ast.NodeVisitor):
         self.contexts.pop()
 
     def visit_arguments(self, node):
+        """ Visit arguments. Collect arguments """
         self.names = []
         self.generic_visit(node)
         self.contexts[-1].arguments.extend(self.names)
 
     def visit_Global(self, node):
+        """ Visit Global. Collect globals """
         self.contexts[-1].global_vars.extend(node.names)
         self.generic_visit(node)
 
     def call(self, node):
+        """ Collect direct function call """
         func = node.func
-        if isinstance(func, ast.Name): # collecting only direct function call
+        if isinstance(func, ast.Name):
             self.contexts[-1].calls.append(func.id)
 
     def visit_Call(self, node):
+        """ Visit Call. Collect call """
         self.call(node)
         self.generic_visit(node)
 
     def visit_Name(self, node):
+        """ Visit Name. Get names """
         if self.names != None:
             self.names.append(node.id)
         self.generic_visit(node)
 
     def teardown(self):
+        """ Disable """
         pass
 
     def extract_disasm(self):
-
+        """ Extract disassembly code """
         compiled = cross_compile(
             self.raw_code, self.path, 'exec')
         if self.path == self.metascript['path']:
             self.metascript['compiled'] = compiled
 
-
-        with redirect_output() as (stdout, stderr):
-            diss(compiled, recurse=True)
-
-            self.disasm = stdout.read_content().split('\n')
+        self.disasm = get_dis(compiled, recurse=True)
 
         # Sort lines
         lines = defaultdict(list)

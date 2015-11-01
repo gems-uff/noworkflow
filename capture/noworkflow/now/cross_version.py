@@ -20,7 +20,7 @@ if PY3:
     import builtins
     import pickle
 
-    immutable = (bool, numbers.Number, str, bytes)
+    IMMUTABLE = (bool, numbers.Number, str, bytes)
     string = (str, bytes)
     items = lambda x: x.items()
     values = lambda x: x.values()
@@ -36,7 +36,7 @@ else:
        import pickle
     from itertools import imap, izip
 
-    immutable = (bool, numbers.Number, basestring)
+    IMMUTABLE = (bool, numbers.Number, basestring)
     string = (basestring,)
     items = lambda x: x.iteritems()
     values = lambda x: x.itervalues()
@@ -85,3 +85,9 @@ def default_string(text, encode='utf-8'):
         else:
             result = text
     return result
+
+
+def cord(value):
+    if isinstance(value, str):
+        return ord(value)
+    return value

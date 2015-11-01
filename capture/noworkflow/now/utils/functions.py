@@ -7,11 +7,14 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import inspect
-import traceback
+import types
 from datetime import datetime
 from pkg_resources import resource_string
 from textwrap import dedent
+
+from ..cross_version import cross_compile
 from .consts import FORMAT
+from .io import redirect_output
 
 
 def wrap(string, initial="  ", other="\n  "):

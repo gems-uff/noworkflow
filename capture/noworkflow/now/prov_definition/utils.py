@@ -7,15 +7,9 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import ast
-import sys
-import dis
-import types
 import itertools
-import tokenize
 
-from collections import OrderedDict
-
-from ..cross_version import cross_compile, StringIO, values
+from ..cross_version import values
 
 
 class FunctionCall(ast.NodeVisitor):
@@ -27,6 +21,8 @@ class FunctionCall(ast.NodeVisitor):
         self.starargs = []
         self.kwargs = []
         self.result = None
+        self.line = -1
+        self.col = -1
         self.visitor_class = visitor_class
 
     def all_args(self):
@@ -121,6 +117,13 @@ class Assert(FunctionCall):
         return "line={}, col={}, msg={}".format(
             self.line, self.col, self.msg)
 
+class Print(FunctionCall):
+
+    def __init__(self, *args, **kwargs):
+        super(Print, self).__init__(*args, **kwargs)
+
+    def __repr__(self):
+        return "Print({})".format(self.info())
 
 class With(FunctionCall):
 
@@ -133,6 +136,7 @@ class With(FunctionCall):
 
 
 def index(lis, alternatives):
+    """ Return index of one of the <alternatives> in <lis> """
     for alt in alternatives:
         try:
             return lis.index(alt)
@@ -141,45 +145,13 @@ def index(lis, alternatives):
     return None
 
 
-def get_code_object(obj, compilation_mode="exec"):
-    if isinstance(obj, types.CodeType):
-        return obj
-    elif isinstance(obj, types.FrameType):
-        return obj.f_code
-    elif isinstance(obj, types.FunctionType):
-        return obj.__code__
-    elif isinstance(obj, str):
-        try:
-            return cross_compile(obj, "<string>", compilation_mode)
-        except SyntaxError as error:
-            raise ValueError("syntax error in passed string")
-    else:
-        raise TypeError("get_code_object() can not handle '%s' objects" %
-                        (type(obj).__name__,))
-
-
-def diss(obj, mode="exec", recurse=False):
-    _visit(obj, dis.dis, mode, recurse)
-
-
-def ssc(obj, mode="exec", recurse=False):
-    _visit(obj, dis.show_code, mode, recurse)
-
-
-def _visit(obj, visitor, mode="exec", recurse=False):
-    obj = get_code_object(obj, mode)
-    visitor(obj)
-    if recurse:
-        for constant in obj.co_consts:
-            if type(constant) is type(obj):
-                _visit(constant, visitor, mode, recurse)
-
-def safeget(container, index):
+def safeget(container, ind):
+    """ Try to access element in container. If it fails, prints container """
     try:
-        return container[index]
+        return container[ind]
     except IndexError as err:
         if not err.args:
             err.args = ('',)
         err.args = (err.args[0] + '\n Get\n  Index {}\n  Container {}'.format(
-            index, container),) + err.args[1:]
+            ind, container),) + err.args[1:]
         raise err

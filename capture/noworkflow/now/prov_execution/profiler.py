@@ -11,6 +11,7 @@ import sys
 import os
 import itertools
 import inspect
+import traceback
 from datetime import datetime
 from .base import StoreOpenMixin
 from .data_objects import Activation, ObjectStore, FileAccess, ObjectValue
@@ -191,22 +192,26 @@ class Profiler(StoreOpenMixin):
 
     def tracer(self, frame, event, arg):
         # Only enable activations gathering after the first call to the script
-        if event == 'call' and self.script == frame.f_code.co_filename:
-            self.enabled = True
+        try:
+            if event == 'call' and self.script == frame.f_code.co_filename:
+                self.enabled = True
 
-        if self.enabled:
-            current_event = (event, frame.f_lineno, frame.f_code)
-            if self.last_event != current_event:
-                self.last_event = current_event
+            if self.enabled:
+                current_event = (event, frame.f_lineno, frame.f_code)
+                if self.last_event != current_event:
+                    self.last_event = current_event
 
-                super(Profiler, self).tracer(frame, event, arg)
+                    super(Profiler, self).tracer(frame, event, arg)
 
-                if self.valid_depth():
-                    t = (self.depth_user, self.depth_non_user,
-                         current_event[0], current_event[1],
-                         current_event[2].co_name)
-                    self.history.append(t)
-        return self.tracer
+                    if self.valid_depth():
+                        t = (self.depth_user, self.depth_non_user,
+                             current_event[0], current_event[1],
+                             current_event[2].co_name)
+                        self.history.append(t)
+        except:
+            traceback.print_exc()
+        finally:
+            return self.tracer
 
     def store(self, partial=False):
         now = datetime.now()

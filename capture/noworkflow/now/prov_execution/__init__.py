@@ -1,8 +1,8 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+""" Execution Provenance Module """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -17,10 +17,11 @@ from .slicing import Tracer
 from .debugger import create_debugger, debugger_builtins
 
 
-provider = None
+PROVIDER = None
 
 
 def provenance_provider(execution_provenance):
+    """ Get provider """
     glob = globals()
     if execution_provenance in glob:
         return glob[execution_provenance]
@@ -28,28 +29,28 @@ def provenance_provider(execution_provenance):
 
 
 def ___now_enable(args, metascript):
-    global provider
-    provider = provenance_provider(args.execution_provenance)(
+    """ Enable provider """
+    global PROVIDER
+    PROVIDER = provenance_provider(args.execution_provenance)(
         metascript, args.context, args.depth, args.non_user_depth
     )
-    provider.tearup()
-
-
-def ___now_disable():
-    global provider
-    provider.teardown()
+    PROVIDER.tearup()
 
 
 @meta_profiler("storage")
-def ___now_store():
-    global provider
-    provider.store()
-# TODO: Processor load. Should be collected from time to time (there are static and dynamic metadata)
+def ___now_disable(error=False):
+    """ Disable provider and store provenance """
+    PROVIDER.teardown()
+    PROVIDER.store(partial=error)
+
+
+# TODO: Processor load. Should be collected from time to time
+#                       (there are static and dynamic metadata)
 # print os.getloadavg()
 
 @meta_profiler("execution")
 def collect_provenance(args, metascript, ns):
-    global provider
+    global PROVIDER
     ___now_enable(args, metascript)
 
     print_msg('  executing the script')
@@ -57,16 +58,16 @@ def collect_provenance(args, metascript, ns):
         if metascript['compiled'] is None:
             metascript['compiled'] = cross_compile(
                 metascript['code'], metascript['path'], 'exec')
-        debugger_builtins(provider, ns['__builtins__'], metascript)
+        debugger_builtins(PROVIDER, ns['__builtins__'], metascript)
         exec(metascript['compiled'], ns)
 
     except SystemExit as ex:
-        ___now_disable()
+        ___now_disable(error=ex.code > 0)
         print_msg(
             'the execution exited via sys.exit(). Exit status: {}'
             ''.format(ex.code), ex.code > 0)
     except Exception as e:
-        ___now_disable()
+        ___now_disable(error=True)
         print(e)
         print_msg(
             'the execution finished with an uncaught exception. {}'
@@ -76,7 +77,6 @@ def collect_provenance(args, metascript, ns):
         # activation and stored in the database. We are currently ignoring
         # all the activation tree when exceptions are raised.
         ___now_disable()
-        ___now_store()
         print_msg(
             'the execution of trial {} finished successfully'
             ''.format(metascript['trial_id']))

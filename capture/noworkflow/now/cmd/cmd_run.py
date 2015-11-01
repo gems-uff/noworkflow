@@ -48,7 +48,7 @@ def run(script_dir, args, metascript, namespace):
 
     metaprofiler.meta_profiler.save()
 
-    return prov_execution.provider
+    return prov_execution.PROVIDER
 
 
 class Run(Command):
