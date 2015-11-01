@@ -12,6 +12,9 @@ import sys
 
 from collections import defaultdict
 
+from ..utils.bytecode.interpreter import (
+    CALL_FUNCTIONS, PRINT_ITEMS, PRINT_NEW_LINES, SETUP_WITH, WITH_CLEANUP,
+    IMPORTS, ITERS)
 from .function_visitor import FunctionVisitor
 from .context import NamedContext
 from .utils import (FunctionCall, ClassDef, Decorator, Generator, Assert,
@@ -454,84 +457,48 @@ class SlicingVisitor(FunctionVisitor):
             __enter__: SETUP_WITH
             __exit__: WITH_CLEANUP
         """
-        output = self.disasm
-        self.disasm = []
-
         self.with_list.sort(key=lambda x: (x.line, x.col))
         end_with = {}
-
         line = -1
         call_index = 0
         with_index = 0
         print_item_index = 0
         print_newline_index = 0
-        for disasm in output:
-            num = disasm[:8].strip()
-            if num:
-                line = int(num)
-            splitted = disasm.split()
-            found = False
-            i = index(splitted, ('CALL_FUNCTION', 'CALL_FUNCTION_VAR',
-                                 'CALL_FUNCTION_KW', 'CALL_FUNCTION_VAR_KW'))
-            if not i is None:
-                f_lasti = int(splitted[i - 1])
+        for inst in self.disasm:
+            if inst.opcode in CALL_FUNCTIONS:
                 call = safeget(self.function_calls_list, call_index)
-                call.lasti = f_lasti
-                self.function_calls_by_lasti[line][f_lasti] = call
-
+                call.lasti = inst.offset
+                self.function_calls_by_lasti[inst.line][inst.offset] = call
                 call_index += 1
-                found = call
-
-            i = index(splitted, ('PRINT_ITEM', 'PRINT_ITEM_TO'))
-            if not i is None:
-                f_lasti = int(splitted[i - 1])
+                inst.extra = call
+            if inst.opcode in PRINT_ITEMS:
                 _print = safeget(self.print_item_list, print_item_index)
-                _print.lasti = f_lasti
-                self.function_calls_by_lasti[line][f_lasti] = _print
+                _print.lasti = inst.offset
+                self.function_calls_by_lasti[inst.line][inst.offset] = _print
                 print_item_index += 1
-                found = _print
-
-            i = index(splitted, ('PRINT_NEWLINE', 'PRINT_NEWLINE_TO'))
-            if not i is None:
-                f_lasti = int(splitted[i - 1])
+                inst.extra = _print
+            if inst.opcode in PRINT_NEW_LINES:
                 _print = safeget(self.print_newline_list, print_newline_index)
-                _print.lasti = f_lasti
-                self.function_calls_by_lasti[line][f_lasti] = _print
+                _print.lasti = inst.offset
+                self.function_calls_by_lasti[inst.line][inst.offset] = _print
                 print_newline_index += 1
-                found = _print
-
-            i = index(splitted, ('SETUP_WITH',))
-            if not i is None:
-                f_lasti = int(splitted[i - 1])
-                end = int(splitted[i + 3][:-1])
-
+                inst.extra = _print
+            if inst.opcode in SETUP_WITH:
+                end = int(inst.argrepr[3:])
                 _with = safeget(self.with_list, with_index)
-                _with.lasti = f_lasti
+                _with.lasti = inst.offset
                 _with.end = end
-                self.with_enter_by_lasti[line][f_lasti] = _with
+                self.with_enter_by_lasti[inst.line][inst.offset] = _with
                 end_with[end] = _with
-
                 with_index += 1
-                found = _with
-
-            i = index(splitted, ('WITH_CLEANUP',))
-            if not i is None:
-                f_lasti = int(splitted[i - 1])
-                _with = end_with[f_lasti]
-                del end_with[f_lasti]
+                inst.extra = _with
+            if inst.opcode in WITH_CLEANUP:
+                _with = end_with[inst.offset]
+                del end_with[inst.offset]
                 _with.end_line = line
-                self.with_exit_by_lasti[line][f_lasti] = _with
-                found = _with
-
-            if not found:
-                self.disasm.append(disasm)
-            else:
-                self.disasm.append(
-                    "{} | {}".format(disasm, found))
-
-            if not index(splitted, ('IMPORT_NAME', 'IMPORT_FROM')) is None:
-                self.imports.add(line)
-
-            i = index(splitted, ('GET_ITER', 'FOR_ITER'))
-            if not i is None:
-                self.iters[line].add(int(splitted[i - 1]))
+                self.with_exit_by_lasti[inst.line][inst.offset] = _with
+                inst.extra = _with
+            if inst.opcode in IMPORTS:
+                self.imports.add(inst.line)
+            if inst.opcode in ITERS:
+                self.iters[inst.line].add(inst.offset)

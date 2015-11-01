@@ -22,6 +22,7 @@ if PY3:
 
     IMMUTABLE = (bool, numbers.Number, str, bytes)
     string = (str, bytes)
+    raw_bytes = (bytes, bytearray)
     items = lambda x: x.items()
     values = lambda x: x.values()
     keys = lambda x: x.keys()
@@ -38,6 +39,7 @@ else:
 
     IMMUTABLE = (bool, numbers.Number, basestring)
     string = (basestring,)
+    raw_bytes = (str,)
     items = lambda x: x.iteritems()
     values = lambda x: x.itervalues()
     keys = lambda x: x.iterkeys()
@@ -85,9 +87,3 @@ def default_string(text, encode='utf-8'):
         else:
             result = text
     return result
-
-
-def cord(value):
-    if isinstance(value, str):
-        return ord(value)
-    return value

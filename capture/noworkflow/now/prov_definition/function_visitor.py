@@ -11,7 +11,7 @@ import ast
 from collections import defaultdict
 from .context import Context
 from ..cross_version import cross_compile
-from ..utils.bytecode import get_dis
+from ..utils.bytecode.dis import instruction_dis_sorted_by_line
 from ..persistence import persistence
 
 
@@ -101,18 +101,4 @@ class FunctionVisitor(ast.NodeVisitor):
         if self.path == self.metascript['path']:
             self.metascript['compiled'] = compiled
 
-        self.disasm = get_dis(compiled, recurse=True)
-
-        # Sort lines
-        lines = defaultdict(list)
-        line = -1
-        for disasm in self.disasm:
-            num = disasm[:8].strip()
-            if num:
-                line = int(num)
-            lines[line].append(disasm)
-
-        keys = sorted(lines.keys())
-        self.disasm = []
-        for line in keys:
-            self.disasm.extend(lines[line])
+        self.disasm = instruction_dis_sorted_by_line(compiled, recurse=True)

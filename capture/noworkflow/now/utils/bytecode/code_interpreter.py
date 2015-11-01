@@ -2,64 +2,20 @@
 # Copyright (c) 2015 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Define bytecode functions"""
+"""Define executable bytecode interpreter """
+# pylint: disable=C0103
+# pylint: disable=R0904
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import dis
 import sys
 import types
-import weakref
-from bisect import bisect
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 from dis import opmap
-from opcode import HAVE_ARGUMENT, EXTENDED_ARG, cmp_op
+from opcode import cmp_op
 
-from ..cross_version import PY3, cord, default_string, items, keys
-from .io import redirect_output
-
-
-def get_code_object(obj, compilation_mode="exec"):
-    """ Return code object """
-    if isinstance(obj, types.CodeType):
-        return obj
-    elif isinstance(obj, types.FrameType):
-        return obj.f_code
-    elif isinstance(obj, types.FunctionType):
-        return obj.__code__
-    elif isinstance(obj, str):
-        try:
-            return cross_compile(obj, "<string>", compilation_mode)
-        except SyntaxError:
-            raise ValueError("syntax error in passed string")
-    else:
-        raise TypeError("get_code_object() can not handle '%s' objects" %
-                        (type(obj).__name__,))
-
-
-def diss(obj, mode="exec", recurse=False):
-    """ Disassemble code """
-    _visit(obj, dis.dis, mode, recurse)
-
-def ssc(obj, mode="exec", recurse=False):
-    _visit(obj, dis.show_code, recurse)
-
-
-def _visit(obj, visitor, mode="exec", recurse=False):
-    """ Recursively disassemble """
-    obj = get_code_object(obj, mode)
-    visitor(obj)
-    if recurse:
-        for constant in obj.co_consts:
-            if type(constant) is type(obj):
-                _visit(constant, visitor, mode, recurse)
-
-
-def get_dis(compiled, recurse=False):
-    """ Return dis of compiled code """
-    with redirect_output(['stdout']) as (stdout,):
-        diss(compiled, recurse=recurse)
-        return stdout.read_content().split('\n')
+from .interpreter import Interpreter
 
 
 CALL_FUNCTION = opmap['CALL_FUNCTION']
@@ -83,41 +39,41 @@ COMPARE = {
 }
 
 
-class Interpreter(object):
+class CodeInterpreter(Interpreter):
+    """ Code Interpreter.
+        Replace constructor to get code, locals and globals """
 
-    def __init__(self, code, f_locals, f_globals, check_line=False):
+    def __init__(self, code, f_locals, f_globals, line_offset=0):
+        super(CodeInterpreter, self).__init__(
+            code.co_code, varnames=code.co_varnames, names=code.co_names,
+            constants=code.co_consts,
+            cells=code.co_cellvars + code.co_freevars,
+            linestarts=OrderedDict(dis.findlinestarts(code)),
+            line_offset=line_offset)
 
         self._code = code
         self._locals = f_locals
         self._globals = f_globals
-        self.check_line = check_line
 
-        
-
-        self.lasti = 0
-        self.opi = 0
-        self._extended_arg = 0
-
-        self._co_code = code.co_code
-        self.names = code.co_names
-        self.varnames = code.co_varnames
-        self.consts = code.co_consts
-        self._size = len(self._co_code)
         self.stack = []
+        self.result = None
+
+    def execute(self):
+        """ Iterate through interpreter """
+        for _ in self:
+            pass
+
+    def _pop_last_n(self, number):
+        """ Pop last n objects from stack """
+        return reversed([self.stack.pop() for _ in range(number)])
 
 
-        self.opcode = None
-        self.oparg = 0
+class ExecInterpreter(CodeInterpreter):
+    """ Bytecode interpreter that executes it
+        Currently, it is working only for Expressions
+    """
 
-        self._stop = False
-        self._result = None
-
-        self._map = {}
-        self._extra = set()
-        self._missing = set()
-        self._supported = set()
-
-        # TODO: Implement the following
+    def __init__(self, code, f_locals, f_globals, line_offset=0):
         if not hasattr(self, '_known_missing'):
             self._known_missing = set()
         self._known_missing |= {
@@ -129,98 +85,8 @@ class Interpreter(object):
             "LOAD_CLASSDEREF", "STORE_DEREF", "DELETE_DEREF", "RAISE_VARARGS",
             "MAKE_CLOSURE", "UNPACK_SEQUENCE"
         }
-        self._create_map()
-
-
-    def __iter__(self):
-        """ Restart iterator """
-        self._stop = False
-        return self
-
-    def __call__(self, lasti=0, extended_arg=0):
-        self.lasti = lasti
-        self._extended_arg = extended_arg
-
-    def next(self):
-        """ Python 2 iterator """
-        if self._stop:
-            raise StopIteration
-        op = self._next_op()
-        self._map[op]()
-        return op
-
-    def __next__(self):
-        """ Python 3 iterator """
-        return self.next()
-
-    def _next_op(self):
-        """ Get next operation """
-        self.opcode = cord(self._co_code[self.lasti])
-        self.opi = self.lasti
-        self.lasti += 1
-        if self.opcode >= HAVE_ARGUMENT:
-            self._have_argument()
-
-        if self.lasti >= self._size:
-            self._stop = True
-
-        return self.opcode
-
-    def _pop_last_n(self, number):
-        """ Pop last n objects from stack """
-        return reversed([self.stack.pop() for _ in range(number)])
-
-    def _have_argument(self):
-        """ Read argument if op has argument """
-        cod = self._co_code
-        i = self.lasti
-        self.oparg = cord(cod[i]) + cord(cod[i + 1]) * 256 + self._extended_arg
-        self._extended_arg = 0
-        self.lasti += 2
-
-    def _create_map(self):
-        """ Create map of functions """
-        condition = lambda x, obj: (x[0] != '_' and
-            hasattr(obj, '__call__') and 'opcode' in obj.__doc__)
-        to_opcode = lambda x: x.upper().replace('__', '+')
-
-        self._map = defaultdict(lambda: self.nop)
-        self._extra = set()
-        self._missing = set()
-        self._supported = set()
-        for name in dir(self):
-            method = getattr(self, name)
-            if condition(name, method):
-                opcode = to_opcode(name)
-                if opcode not in opmap:
-                    self._extra.add(opcode)
-                else:
-                    self._map[opmap[opcode]] = method
-                    self._supported.add(opcode)
-        self._missing = (
-            set(opmap.keys()) - self._supported - self._known_missing)
-
-    @property
-    def extra_opcode(self):
-        """ Return opcode implemented by this class
-            but not supported by Python """
-        return self._extra
-
-    @property
-    def missing_opcode(self):
-        """ Return opcode supported by Python
-            but not implemented by this class """
-        return self._missing
-
-    def nop(self):
-        """ NOP opcode """
-        pass
-
-
-class ExecInterpreter(Interpreter):
-    """ Bytecode interpreter that executes it
-        Currently, it is working only for Expressions
-    """
+        super(ExecInterpreter, self).__init__(
+            code, f_locals, f_globals, line_offset=0)
 
     def _call(self, nargs, flags=0, nkw=0):
         """ Execute call """
@@ -229,7 +95,7 @@ class ExecInterpreter(Interpreter):
             kwargs = self.stack.pop()
         if flags & CALL_FLAG_VAR:
             var = self.stack.pop()
-        for i in range(nkw):
+        for _ in range(nkw):
             value = self.stack.pop()
             key = self.stack.pop()
             kwargs[key] = value
@@ -393,7 +259,7 @@ class ExecInterpreter(Interpreter):
 
     def binary_xor(self, func=lambda a, b: a ^ b):
         """ BINARY_XOR opcode """
-        self._binary()
+        self._binary(func)
 
     def inplace_add(self, func=lambda a, b: a + b):
         """ INPLACE_ADD opcode """
@@ -587,23 +453,25 @@ class ExecInterpreter(Interpreter):
 
     def print_expr(self):
         """ PRINT_EXPR opcode """
-        self._result = self.stack.pop()
+        self.result = self.stack.pop()
 
 
-class Py2Interpreter(ExecInterpreter):
+class Py2Codes(ExecInterpreter):
+    """ Bytecodes specific for Python 2 """
 
     def __init__(self, *args, **kwargs):
-        self._known_missing = {
+        if not hasattr(self, '_known_missing'):
+            self._known_missing = set()
+        self._known_missing |= {
             "BUILD_CLASS", "EXEC_STMT", "LOAD_LOCALS", "PRINT_ITEM",
             "PRINT_ITEM_TO", "PRINT_NEWLINE", "PRINT_NEWLINE_TO", "STOP_CODE"
         }
-        super(Py2Interpreter, self).__init__(*args, **kwargs)
-
+        super(Py2Codes, self).__init__(*args, **kwargs)
 
     def make_function(self):
         """ MAKE_FUNCTION opcode """
         tup = tuple(self._pop_last_n(self.oparg))
-        func = types.FunctionType(self.stack.pop(), f_globals)
+        func = types.FunctionType(self.stack.pop(), self._globals)
         func.func_defaults = tup
         self.stack.append(func)
 
@@ -611,8 +479,8 @@ class Py2Interpreter(ExecInterpreter):
         """ BINARY_DIVIDE opcode """
         self._binary(lambda a, b: a / b)
 
-    def binary_true_divide(self,
-            func=lambda a, b: (float(a) if isinstance(a, int) else a) / b):
+    def binary_true_divide(self, func=lambda a, b: (
+            float(a) if isinstance(a, int) else a) / b):
         """ BINARY_TRUE_DIVIDE opcode """
         self._binary(func)
 
@@ -620,12 +488,12 @@ class Py2Interpreter(ExecInterpreter):
         """ INPLACE_DIVIDE opcode """
         self._inplace(lambda a, b: a / b)
 
-    def inplace_true_divide(self,
-            func=lambda a, b: (float(a) if isinstance(a, int) else a) / b):
+    def inplace_true_divide(self, func=lambda a, b: (
+            float(a) if isinstance(a, int) else a) / b):
         """ INPLACE_TRUE_DIVIDE opcode """
         self._inplace(func)
 
-    def unary_positive(self, func=lambda a: repr(a)):
+    def unary_positive(self, func=repr):
         """ UNARY_CONVERT opcode """
         self._unary(func)
 
@@ -701,16 +569,19 @@ class Py2Interpreter(ExecInterpreter):
         del var[sli1:sli2]
 
 
-class Py3Interpreter(ExecInterpreter):
+class Py3Codes(ExecInterpreter):
+    """ Bytecodes specific for Python 3 """
 
     def __init__(self, *args, **kwargs):
-        self._known_missing = {
+        if not hasattr(self, '_known_missing'):
+            self._known_missing = set()
+        self._known_missing |= {
             "GET_YIELD_FROM_ITER", "BINARY_MATRIX_MULTIPLY", "GET_AWAITABLE",
             "GET_AITER", "GET_ANEXT", "BEFORE_ASYNC_WITH", "SETUP_ASYNC_WITH",
             "YIELD_FROM", "LOAD_BUILD_CLASS", "DELETE_DEREF",
             "LOAD_CLASSDEREF", "UNPACK_EX",
         }
-        super(Py3Interpreter, self).__init__(*args, **kwargs)
+        super(Py3Codes, self).__init__(*args, **kwargs)
 
 
     def dup_top_two(self):
@@ -719,92 +590,4 @@ class Py3Interpreter(ExecInterpreter):
         self.stack = self.stack + top2 + top2
 
 
-class AlmostReadOnlyDict(dict):
-    """ Use it to avoid changes on local variables """
-
-    def __init__(self, *args, **kwargs):
-        super(AlmostReadOnlyDict, self).__init__(*args, **kwargs)
-        self.other = {}
-
-    def __getitem__(self, item):
-        if item in self.other:
-            return self.other[item]
-        return super(AlmostReadOnlyDict, self).__getitem__(item)
-
-    def __setitem__(self, item, value):
-        self.other[item] = value
-
-    def __delitem__(self, item):
-        if item in self.other:
-            del self.other[item]
-
-class FindFTrace(Interpreter):
-
-    def __init__(self, *args, **kwargs):
-        # Disable operations that may cause effect
-        # Default
-        # self.store_fast = self.nop
-        self.store_subscr = self.nop
-        # self.store_name = self.nop
-        self.store_global = self.nop
-        # self.delete_fast = self.nop
-        self.delete_subscr = self.nop
-        # self.delete_name = self.nop
-        self.delete_attr = self.nop
-        self.delete_global = self.nop
-        self.print_expr = self.nop
-
-        # Python 2
-        self.store_slice__0 = self.nop
-        self.store_slice__0 = self.nop
-        self.store_slice__1 = self.nop
-        self.store_slice__2 = self.nop
-        self.store_slice__3 = self.nop
-        self.delete_slice__0 = self.nop
-        self.delete_slice__1 = self.nop
-        self.delete_slice__2 = self.nop
-        self.delete_slice__3 = self.nop
-
-        super(FindFTrace, self).__init__(*args, **kwargs)
-
-        self._locals = AlmostReadOnlyDict(self._locals)
-
-
-
-    def store_attr(self):
-        """ STORE_ATTR opcode """
-        if self.names[self.oparg] == 'f_trace':
-            self._stop = True
-            if self.stack:
-                self._result = self.stack.pop()
-            else:
-                self._result = True
-
-VersionInterpreter = Py3Interpreter if PY3 else Py2Interpreter
-FTraceExec = type(
-    default_string('FTraceExec'), (FindFTrace, VersionInterpreter), {})
-
-
-def get_f_trace(code, loc, glob):
-    interpreter = FTraceExec(code, loc, glob)
-    for operation in interpreter:
-        pass
-    return interpreter._result
-
-
-def find_f_trace(code, loc, glob, lasti):
-    if 'f_trace' not in code.co_names:
-        return False
-    interpreter = FindFTrace(code, loc, glob)
-    for operation in interpreter:
-        pass
-    if not interpreter._result:
-        return False
-
-    line_by_offset = OrderedDict(dis.findlinestarts(code))
-    last_line, last_offset = 0, 0
-    for offset, line in items(line_by_offset):
-        if offset >= interpreter.opi:
-            return lasti == last_offset
-        last_line, last_offset = line, offset
-    return False
+PyInterpreter = (Py2Codes if sys.version_info >= (3, 0) else Py3Codes)

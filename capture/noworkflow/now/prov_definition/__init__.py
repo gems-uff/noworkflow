@@ -16,6 +16,7 @@ from .function_visitor import FunctionVisitor
 from .slicing_visitor import SlicingVisitor
 from .definition import Definition
 from .utils import FunctionCall, ClassDef, Decorator, Generator, Assert, With
+from ..cross_version import cvmap
 
 
 
@@ -68,7 +69,7 @@ def collect_provenance(args, metascript):
                 print('------------------------------------------------------')
                 print(path)
                 print('------------------------------------------------------')
-                print('\n'.join(visitor.disasm))
+                print('\n'.join(cvmap(repr, visitor.disasm)))
                 print('------------------------------------------------------')
             definition.add_visitor(visitor)
 

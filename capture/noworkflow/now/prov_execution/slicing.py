@@ -9,16 +9,17 @@ from __future__ import (absolute_import, print_function,
 import sys
 import dis
 import linecache
+import traceback
+from datetime import datetime
+from functools import wraps, partial
+from opcode import HAVE_ARGUMENT, EXTENDED_ARG
 from inspect import ismethod
 
-from datetime import datetime
-from opcode import HAVE_ARGUMENT, EXTENDED_ARG
-from functools import wraps, partial
 from .data_objects import ObjectStore, Variable, Dependency, Usage, Return
 from .profiler import Profiler
 from ..utils import io
 from ..utils.io import print_fn_msg
-from ..utils.bytecode import find_f_trace, get_f_trace
+from ..utils.bytecode.f_trace import find_f_trace, get_f_trace
 from ..cross_version import items, IMMUTABLE
 from ..prov_definition import ClassDef, Assert, With, Decorator
 
@@ -48,11 +49,13 @@ def joint_tracer(first, second, frame, event, arg):
     """  Joint tracer used to combine noWorkflow tracer with other tracers """
     try:
         first = first(frame, event, arg)
-        second = second(frame, event, arg)
-        return create_joint_tracer(first, second)
     except:
         traceback.print_exc()
-        return first
+    try:
+        second = second(frame, event, arg)
+    except:
+        traceback.print_exc()
+    return create_joint_tracer(first, second)
 
 
 def create_joint_tracer(first, second):
@@ -449,7 +452,7 @@ class Tracer(Profiler):
         if self.f_trace_frames:
 
             for _frame in self.f_trace_frames:
-                _frame.f_trace = create_joint_tracer(self.tracer, _frame.f_trace)
+                _frame.f_trace = create_joint_tracer( _frame.f_trace, self.tracer)
 
             self.f_trace_frames = []
             return
@@ -459,8 +462,9 @@ class Tracer(Profiler):
         sys.setprofile(self.tracer)
 
     def store(self, partial=False):
-        while len(self.activation_stack) > 1:
-            self.close_activation('store', None)
+        if not partial:
+            while len(self.activation_stack) > 1:
+                self.close_activation('store', None)
         super(Tracer, self).store(partial=partial)
         tid = self.trial_id
         persistence.store_slicing_variables(tid, self.variables, partial)
