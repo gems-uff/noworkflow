@@ -41,5 +41,5 @@ class NowRestore(IpythonCommandMagic, Restore):
     def execute(self, func, line, cell, magic_cls):
         argv, args = self.arguments(func, line)
         self.args_file, self.trial = args.file, None
-        super(NowRestore, self).do_restore(args)
+        Restore.execute(self, args)
         return persistence.get(self.trial.code_hash)

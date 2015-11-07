@@ -10,7 +10,6 @@ from datetime import datetime
 from collections import namedtuple
 from ..cross_version import items, values
 
-
 class ObjectStore(object):
 
     def __init__(self, cls):

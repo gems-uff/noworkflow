@@ -68,7 +68,7 @@ def debugger_builtins(provider, ns, metascript):
         if save:
             now_save()
         if trial_id is None:
-            trial_id = metascript['trial_id']
+            trial_id = metascript.trial_id
         return Trial(trial_id)
 
     def now_vis(browser='maybe', port=5000, save=True, vis=vis):
@@ -103,6 +103,9 @@ def debugger_builtins(provider, ns, metascript):
             vis[1] = bool(browser)
             with redirect_output():
                 threading.Timer(1.25, webopen, args=[url]).start()
+
+    def now_ipython():
+        from IPython import embed
 
 
     ns['set_trace'] = set_trace

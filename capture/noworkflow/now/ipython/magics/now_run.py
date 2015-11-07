@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 # pylint: disable=W0703
+""" 'now run' magic """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -10,9 +11,11 @@ import os
 import sys
 import argparse
 
-from ...cmd.cmd_run import Run, LAST_TRIAL, run
+from ...cmd.cmd_run import Run, run
 from ...persistence import persistence
 from ...models.trial import Trial
+
+from ...metadata import RunMetascript, LAST_TRIAL
 
 
 from .command import IpythonCommandMagic
@@ -107,51 +110,41 @@ class NowRun(IpythonCommandMagic, Run):
         original_path = persistence.path
         try:
             persistence.connect(directory)
-            filename = ''
-            if cell:
-                #cell = cell.encode('utf8', 'replace')
-                filename = magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
-            else:
-                filename = params[0]
+
+            filename = (
+                magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
+                if cell else params[0])
+
+            metascript = RunMetascript().read_ipython_args(
+                args, directory, filename, [filename] + params,
+                not args.interactive)
+
             if args.interactive:
                 from IPython.utils.py3compat import builtin_mod
-                save_argv = sys.argv
-                __name__save = magic_cls.shell.user_ns['__name__']
-                restore_main = sys.modules['__main__']
-                prog_ns = magic_cls.shell.user_ns
-                prog_ns['__name__'] = '__main__'
-                prog_ns['__file__'] = filename
+                save__name__ = magic_cls.shell.user_ns['__name__']
+                save__main__ = sys.modules['__main__']
+
+                metascript.namespace = magic_cls.shell.user_ns
+                metascript.clear_namespace(erase=False)
                 sys.modules['__main__'] = magic_cls.shell.user_module
 
-                with open(filename, 'rb') as script_file:
-                    metascript = {
-                        'trial_id': None,
-                        'code': script_file.read(),
-                        'path': filename,
-                        'paths': [filename],
-                        'compiled': None,
-                        'definition': None,
-                        'name': args.name or os.path.basename(filename)
-                    }
+                run(metascript)
 
-                run(directory, args, metascript, prog_ns)
-
-                magic_cls.shell.user_ns['__name__'] = __name__save
+                magic_cls.shell.user_ns['__name__'] = save__name__
                 magic_cls.shell.user_ns['__builtins__'] = builtin_mod
-                sys.argv = save_argv
-                sys.modules['__main__'] = restore_main
+                sys.modules['__main__'] = save__main__
                 try:
-                    return Trial(trial_id=metascript['trial_id'])
+                    return Trial(trial_id=metascript.trial_id)
                 except Exception as exc:
                     print('Failed', exc)
             else:
                 # Set execution line
-                cmd = "now run --create_last {directory} {args} {script} {params}".format(
-                    directory='' if args.dir else '--dir {0}'.format(directory),
+                cmd = ("now run --create_last {dir} {args} {script} "
+                       "{params}").format(
+                    directory='' if args.dir else '--dir {}'.format(directory),
                     args=' '.join(argv),
                     script=filename,
-                    params=' '.join(params)
-                )
+                    params=' '.join(params))
                 script = magic_cls.shell.find_cell_magic('script').__self__
                 script.shebang(cmd, "")
                 tmp_dir = os.path.dirname(filename)

@@ -109,7 +109,7 @@ def get_version(module_name):
     return None
 
 @meta_profiler("deployment")
-def collect_provenance(args, metascript):
+def collect_provenance(metascript):
     """Collect deployment provenance:
         - environment variables
         - modules dependencies
@@ -120,7 +120,7 @@ def collect_provenance(args, metascript):
     environment = collect_environment_provenance()
     persistence.store_environment(metascript['trial_id'], environment)
 
-    if args.bypass_modules:
+    if metascript.bypass_modules:
         print_msg('  using previously detected module dependencies '
                   '(--bypass-modules).')
     else:

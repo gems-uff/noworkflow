@@ -14,38 +14,28 @@ from collections import defaultdict
 from .data_objects import ObjectStore, FileAccess
 from ..persistence import persistence
 from ..cross_version import builtins
-
-
-MAIN = 0
-PACKAGE = 1
-ALL = 2
-
-CONTEXTS = {
-    'main': MAIN,
-    'package': PACKAGE,
-    'all': ALL
-}
+from ..prov_definition.definition import Definition
 
 
 class ExecutionProvider(object):
 
-    def __init__(self, metascript, context, depth_threshold, non_user_depth):
+    def __init__(self, metascript):
         # Indicates when activations should be collected
         #   (only after the first call to the script)
         self.enabled = False
         # User files
-        self.script = metascript['path']
-        self.paths = metascript['paths']
+        self.script = metascript.path
+        self.paths = metascript.paths
         # Which function types ('main', 'package' or 'all')
         #   should be considered for the threshold
-        self.context = CONTEXTS[context]
+        self.context = metascript.context
         # How deep we want to go when capturing function activations?
-        self.depth_threshold = depth_threshold
+        self.depth_threshold = metascript.depth
         # How deep we want to go beyond our context
-        self.non_user_depth_threshold = non_user_depth
+        self.non_user_depth_threshold = metascript.non_user_depth
 
         self.metascript = metascript
-        self.trial_id = metascript['trial_id']
+        self.trial_id = metascript.trial_id
         self.event_map = defaultdict(lambda: self.trace_empty, {})
         self.default_profile = sys.getprofile()
         self.default_trace = sys.gettrace()
@@ -60,8 +50,7 @@ class ExecutionProvider(object):
         pass
 
     def teardown(self):
-        sys.setprofile(self.default_profile)
-        sys.settrace(self.default_trace)
+        self.enabled = False
 
     def tearup(self):
         pass

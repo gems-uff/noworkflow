@@ -98,7 +98,7 @@ class FunctionVisitor(ast.NodeVisitor):
         """ Extract disassembly code """
         compiled = cross_compile(
             self.raw_code, self.path, 'exec')
-        if self.path == self.metascript['path']:
-            self.metascript['compiled'] = compiled
+        if self.path == self.metascript.path:
+            self.metascript.compiled = compiled
 
         self.disasm = instruction_dis_sorted_by_line(compiled, recurse=True)

@@ -31,8 +31,8 @@ WITHOUT_PARAMS = (ClassDef, Assert, With)
 
 class JointPartial(partial):
 
-    def __init__(self, *args, **kwargs):
-        super(JointPartial, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(JointPartial, self).__init__()
         self._joint_tracer = True
 
     def __repr__(self):
@@ -66,7 +66,8 @@ def create_joint_tracer(first, second):
         return first
     if first == second:
         return first
-    joint = JointPartial(joint_tracer, first, second)
+    joint = partial(joint_tracer, first, second)
+    joint._joint_tracer = True
     #joint.__str__ = lambda x: "Joint<{}, {}>".format(first, second)
 
     return joint
@@ -77,8 +78,10 @@ def joint_settrace(tracer):
     current = sys.gettrace()
     if hasattr(current, '_joint_tracer'):
         new = create_joint_tracer(current.args[0], tracer)
-    else:
+    elif current:
         new = create_joint_tracer(current, tracer)
+    else:
+        new = tracer
     _sys_settrace(new)
 
 sys.settrace = joint_settrace
@@ -90,7 +93,7 @@ class Tracer(Profiler):
 
     def __init__(self, *args):
         super(Tracer, self).__init__(*args)
-        definition = self.metascript['definition']
+        definition = self.metascript.definition
         self.event_map['line'] = self.trace_line
         self.event_map['exception'] = self.trace_exception
 
@@ -460,6 +463,10 @@ class Tracer(Profiler):
     def tearup(self):
         _sys_settrace(self.tracer)
         sys.setprofile(self.tracer)
+
+    def teardown(self):
+        super(Tracer, self).teardown()
+        _sys_settrace(self.default_trace)
 
     def store(self, partial=False):
         if not partial:

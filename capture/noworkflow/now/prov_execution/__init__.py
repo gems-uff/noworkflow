@@ -28,12 +28,10 @@ def provenance_provider(execution_provenance):
     return Profiler
 
 
-def ___now_enable(args, metascript):
+def ___now_enable(metascript):
     """ Enable provider """
     global PROVIDER
-    PROVIDER = provenance_provider(args.execution_provenance)(
-        metascript, args.context, args.depth, args.non_user_depth
-    )
+    PROVIDER = provenance_provider(metascript.execution_provenance)(metascript)
     PROVIDER.tearup()
 
 
@@ -49,17 +47,18 @@ def ___now_disable(error=False):
 # print os.getloadavg()
 
 @meta_profiler("execution")
-def collect_provenance(args, metascript, ns):
+def collect_provenance(metascript):
     global PROVIDER
-    ___now_enable(args, metascript)
+    ___now_enable(metascript)
 
     print_msg('  executing the script')
     try:
-        if metascript['compiled'] is None:
-            metascript['compiled'] = cross_compile(
-                metascript['code'], metascript['path'], 'exec')
-        debugger_builtins(PROVIDER, ns['__builtins__'], metascript)
-        exec(metascript['compiled'], ns)
+        if metascript.compiled is None:
+            metascript.compiled = cross_compile(
+                metascript.code, metascript.path, 'exec')
+        debugger_builtins(
+            PROVIDER, metascript.namespace['__builtins__'], metascript)
+        exec(metascript.compiled, metascript.namespace)
 
     except SystemExit as ex:
         ___now_disable(error=ex.code > 0)

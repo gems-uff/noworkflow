@@ -12,9 +12,7 @@ class Definition(object):
     # pylint: disable=R0902
     # pylint: disable=R0903
 
-    def __init__(self, metascript):
-        self.metascript = metascript
-
+    def __init__(self):
         self.paths = []
         # Map of dependencies by line
         self.line_dependencies = {}

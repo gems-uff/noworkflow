@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import argparse
 
 from .command import Command
-from .cmd_run import Run, LAST_TRIAL
+from .cmd_run import Run
 from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
@@ -38,7 +38,6 @@ def main():
     args.func(args)
 
 __all__ = [
-    b'LAST_TRIAL',
     b'Command',
     b'Run',
     b'List',

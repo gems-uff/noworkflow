@@ -46,12 +46,11 @@ class RunProvider(Provider):
 
     def update_trial(self, trial_id, finish, partial):
         """ Update basic Trial data """
-        if not partial:
-            with self.db_conn as db:
-                db.execute(
-                    """UPDATE trial
-                       SET finish = ?
-                       WHERE id = ?""", (finish, trial_id))
+        with self.db_conn as db:
+            db.execute(
+                """UPDATE trial
+                   SET finish = ?
+                   WHERE id = ?""", (finish, trial_id))
 
     def store_objects(self, objects, obj_type, function_def_id):
         """ Store Function Definition objects (param, global, call) """

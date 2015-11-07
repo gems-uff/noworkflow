@@ -12,6 +12,7 @@ import os
 import itertools
 import inspect
 import traceback
+import time
 from datetime import datetime
 from .base import StoreOpenMixin
 from .data_objects import Activation, ObjectStore, FileAccess, ObjectValue
@@ -37,7 +38,7 @@ class Profiler(StoreOpenMixin):
         # Avoid using the same event for tracer and profiler
         self.last_event = None
 
-        self.definition = self.metascript['definition']
+        self.definition = self.metascript.definition
         self.functions = self.definition.functions
 
         self.event_map['c_call'] = self.trace_c_call
@@ -46,8 +47,11 @@ class Profiler(StoreOpenMixin):
         self.event_map['c_exception'] = self.trace_c_exception
         self.event_map['return'] = self.trace_return
 
+        # Partial save
+        self.save_frequency = self.metascript.save_frequency / 1000.0
+        self.save_per_activation = self.metascript.save_per_activation
+        self.last_time = time.time()
 
-        self.history = []
 
     @property
     def current_activation(self):
@@ -59,11 +63,13 @@ class Profiler(StoreOpenMixin):
 
     def _current_activation(self, ignore_open=False):
         astack = self.activation_stack
-        activation = self.activations[astack[-1]]
-        if ignore_open and len(astack) > 1 and activation.name == 'open':
-            # get open's parent activation
-            return self.activations[astack[-2]]
-        return activation
+        if astack[-1]:
+            activation = self.activations[astack[-1]]
+            if ignore_open and len(astack) > 1 and activation.name == 'open':
+                # get open's parent activation
+                return self.activations[astack[-2]]
+            return activation
+        return Activation(-1, 'empty', 0, 0, -1)
 
     def add_file_access(self, file_access):
         # Wait activation that called open to finish
@@ -98,6 +104,8 @@ class Profiler(StoreOpenMixin):
                 with persistence.std_open(file_access.name, 'rb') as f:
                     file_access.content_hash_after = persistence.put(f.read())
             file_access.done = True
+        if self.save_per_activation:
+            self.store(partial=True)
 
     def trace_c_call(self, frame, event, arg):
         self.depth_non_user += 1
@@ -138,7 +146,6 @@ class Profiler(StoreOpenMixin):
             activation.kwargs.append(names[nargs])
 
     def trace_call(self, frame, event, arg):
-        #print("now", frame.f_back.f_lineno, frame.f_code.co_name)
         co_name = frame.f_code.co_name
         co_filename = frame.f_code.co_filename
         if co_filename in self.paths:
@@ -203,26 +210,29 @@ class Profiler(StoreOpenMixin):
 
                     super(Profiler, self).tracer(frame, event, arg)
 
-                    if self.valid_depth():
-                        t = (self.depth_user, self.depth_non_user,
-                             current_event[0], current_event[1],
-                             current_event[2].co_name)
-                        self.history.append(t)
+                if time.time() - self.last_time > self.save_frequency:
+                    self.store(partial=True)
+                    self.last_time = time.time()
         except:
             traceback.print_exc()
         finally:
             return self.tracer
 
     def store(self, partial=False):
-        now = datetime.now()
         tid = self.trial_id
-        persistence.update_trial(tid, now, partial)
+        if not partial:
+            now = datetime.now()
+            persistence.update_trial(tid, now, partial)
         persistence.store_activations(tid, self.activations, partial)
         persistence.store_object_values(tid, self.object_values, partial)
         persistence.store_file_accesses(tid, self.file_accesses, partial)
 
     def tearup(self):
         sys.setprofile(self.tracer)
+
+    def teardown(self):
+        super(Profiler, self).teardown()
+        sys.setprofile(self.default_profile)
 
 
 class InspectProfiler(Profiler):

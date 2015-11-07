@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import inspect
+import os
 import types
 from datetime import datetime
 from pkg_resources import resource_string
@@ -17,6 +18,11 @@ from .consts import FORMAT
 from .io import redirect_output
 
 
+MODULE = __name__
+MODULE = MODULE[:MODULE.rfind('.')]
+MODULE = MODULE[:MODULE.rfind('.')]
+
+
 def wrap(string, initial="  ", other="\n  "):
     """Re-indent indented text"""
     return initial + other.join(dedent(string).split('\n'))
@@ -24,7 +30,7 @@ def wrap(string, initial="  ", other="\n  "):
 
 def resource(filename, encoding=None):
     """Access resource content via setuptools"""
-    content = resource_string(__name__, filename)
+    content = resource_string(MODULE, filename)
     if encoding:
         return content.decode(encoding=encoding)
     return content

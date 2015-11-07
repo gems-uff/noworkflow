@@ -43,34 +43,17 @@ def visit_ast(metascript, path):
     return visitor
 
 @meta_profiler("definition")
-def collect_provenance(args, metascript):
-    now = datetime.now()
-    try:
-        metascript['trial_id'] = persistence.store_trial(
-            now, metascript['name'], metascript['code'], ' '.join(sys.argv[1:]),
-            args.bypass_modules)
-    except TypeError as e:
-        if args.bypass_modules:
-            print_msg('not able to bypass modules check because no previous '
-                      'trial was found', True)
-            print_msg('aborting execution', True)
-        else:
-            raise e
-
-        sys.exit(1)
-    definition = Definition(metascript)
+def collect_provenance(metascript):
     print_msg('  registering user-defined functions')
-    for path in metascript['paths']:
+    for path in metascript.paths:
         visitor = visit_ast(metascript, path)
         if visitor:
-            persistence.store_function_defs(metascript['trial_id'],
+            persistence.store_function_defs(metascript.trial_id,
                                             visitor.functions)
-            if args.disasm:
+            if metascript.disasm:
                 print('------------------------------------------------------')
                 print(path)
                 print('------------------------------------------------------')
                 print('\n'.join(cvmap(repr, visitor.disasm)))
                 print('------------------------------------------------------')
-            definition.add_visitor(visitor)
-
-    metascript['definition'] = definition
+            metascript.definition.add_visitor(visitor)
