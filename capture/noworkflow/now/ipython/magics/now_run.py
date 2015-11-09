@@ -139,7 +139,7 @@ class NowRun(IpythonCommandMagic, Run):
                     print('Failed', exc)
             else:
                 # Set execution line
-                cmd = ("now run --create_last {dir} {args} {script} "
+                cmd = ("now run --create_last {directory} {args} {script} "
                        "{params}").format(
                     directory='' if args.dir else '--dir {}'.format(directory),
                     args=' '.join(argv),

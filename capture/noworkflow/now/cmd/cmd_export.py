@@ -69,6 +69,60 @@ def nbconvert(code):
     return result
 
 
+def export_notebook(trial):
+    if trial == "history":
+        inb = nbconvert(("%load_ext noworkflow\n"
+                         "import noworkflow.now.ipython as nip\n"
+                         "# <codecell>\n"
+                         "history = nip.History()\n"
+                         "# history.graph.width = 700\n"
+                         "# history.graph.height = 300\n"
+                         "# history.script = '*'\n"
+                         "# history.execution = '*'\n"
+                         "# <codecell>\n"
+                         "history"))
+        with open('History.ipynb', 'w') as ipynb:
+            json.dump(inb, ipynb)
+    elif trial == "current":
+        inb = nbconvert(("%load_ext noworkflow\n"
+                         "import noworkflow.now.ipython as nip\n"
+                         "# <codecell>\n"
+                         "trial = nip.Trial()\n"
+                         "trial\n"
+                         "# <codecell>\n"
+                         "%now_ls_magic\n"
+                         "# <codecell>\n"
+                         "%%now_prolog {trial.id}\n"
+                         "activation({trial.id}, 0, X, _, _, _)"))
+        with open('Current Trial.ipynb', 'w') as ipynb:
+            json.dump(inb, ipynb)
+    elif isinstance(trial, list):
+        inb = nbconvert(("%load_ext noworkflow\n"
+                         "import noworkflow.now.ipython as nip\n"
+                         "# <codecell>\n"
+                         "diff = nip.Diff({1}, {2})\n"
+                         "# diff.graph.view = 0\n"
+                         "# diff.graph.mode = 3\n"
+                         "# diff.graph.width = 500\n"
+                         "# diff.graph.height = 500\n"
+                         "# <codecell>\n"
+                         "diff").format(*trial))
+        with open('Diff-{1}-{2}.ipynb'.format(*trial), 'w') as ipynb:
+            json.dump(inb, ipynb)
+    else:
+        inb = nbconvert(("%load_ext noworkflow\n"
+                         "import noworkflow.now.ipython as nip\n"
+                         "# <codecell>\n"
+                         "trial = nip.Trial({})\n"
+                         "# trial.graph.mode = 3\n"
+                         "# trial.graph.width = 500\n"
+                         "# trial.graph.height = 500\n"
+                         "# <codecell>\n"
+                         "trial").format(trial))
+        with open('Trial-{}.ipynb'.format(trial), 'w') as ipynb:
+            json.dump(inb, ipynb)
+
+
 class Export(Command):
     """ Export the collected provenance of a trial to Prolog or Notebook """
 
@@ -95,41 +149,4 @@ class Export(Command):
             if args.rules:
                 print('\n'.join(trial_prolog.export_rules()))
         else:
-            if args.trial == "history":
-                inb = nbconvert(("%load_ext noworkflow\n"
-                                 "import noworkflow.now.ipython as nip\n"
-                                 "# <codecell>\n"
-                                 "history = nip.History()\n"
-                                 "# history.graph.width = 700\n"
-                                 "# history.graph.height = 300\n"
-                                 "# history.script = '*'\n"
-                                 "# history.execution = '*'\n"
-                                 "# <codecell>\n"
-                                 "history"))
-                with open('History.ipynb', 'w') as ipynb:
-                    json.dump(inb, ipynb)
-            elif isinstance(args.trial, list):
-                inb = nbconvert(("%load_ext noworkflow\n"
-                                 "import noworkflow.now.ipython as nip\n"
-                                 "# <codecell>\n"
-                                 "diff = nip.Diff({1}, {2})\n"
-                                 "# diff.graph.view = 0\n"
-                                 "# diff.graph.mode = 3\n"
-                                 "# diff.graph.width = 500\n"
-                                 "# diff.graph.height = 500\n"
-                                 "# <codecell>\n"
-                                 "diff").format(*args.trial))
-                with open('Diff-{1}-{2}.ipynb'.format(*args.trial), 'w') as ipynb:
-                    json.dump(inb, ipynb)
-            else:
-                inb = nbconvert(("%load_ext noworkflow\n"
-                                 "import noworkflow.now.ipython as nip\n"
-                                 "# <codecell>\n"
-                                 "trial = nip.Trial({})\n"
-                                 "# trial.graph.mode = 3\n"
-                                 "# trial.graph.width = 500\n"
-                                 "# trial.graph.height = 500\n"
-                                 "# <codecell>\n"
-                                 "trial").format(args.trial))
-                with open('Trial-{}.ipynb'.format(args.trial), 'w') as ipynb:
-                    json.dump(inb, ipynb)
+            export_notebook(args.trial)

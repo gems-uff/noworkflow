@@ -33,7 +33,8 @@ class Model(object):
             if '.' in key:
                 key0, key = key.split('.')
                 obj = getattr(self, key0)
-            setattr(obj, key, value)
+            if not hasattr(obj, key):
+                setattr(obj, key, value)
 
     @classmethod
     def get_instances(cls):

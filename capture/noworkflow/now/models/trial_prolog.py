@@ -9,26 +9,45 @@ from __future__ import (absolute_import, print_function,
 import textwrap
 
 from datetime import datetime
-
 from ..utils import resource
+from .model import Model
 
 
 RULES = '../resources/rules.pl'
 
 
 def timestamp(string):
+    if not string:
+        return -1
     epoch = datetime(1970,1,1)
     time = datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
     return (time - epoch).total_seconds()
 
 
-class TrialProlog(object):
+class TrialProlog(Model):
 
+    DEFAULT = {}
+    REPLACE = {}
     prolog_cli = None
 
     def __init__(self, trial):
+        # TODO: check memory leak?
         self.trial = trial
         self.id = trial.id
+
+    def retract(self):
+        list(cls.prolog_cli.query(
+            'retract(activation({}, _, _, _, _, _))'.format(self.id)))
+        list(cls.prolog_cli.query(
+            'retract(access({}, _, _, _, _, _, _, _))'.format(self.id)))
+        list(cls.prolog_cli.query(
+            'retract(variable({}, _, _, _, _, _))'.format(self.id)))
+        list(cls.prolog_cli.query(
+            'retract(usage({}, _, _, _, _))'.format(self.id)))
+        list(cls.prolog_cli.query(
+            'retract(dependency({}, _, _, _))'.format(self.id)))
+        list(cls.prolog_cli.query(
+            'retract(load_trial({})'.format(self.id)))
 
     def _trial_activations_fact(self, result):
         result.append(textwrap.dedent("""\
@@ -193,6 +212,12 @@ class TrialProlog(object):
         self.load_cli_facts()
         return self.prolog_query(query)
 
+    def retract(self):
+        self.retract_trial(self.id)
+
+    def __hash__(self):
+        return self.id
+
     @classmethod
     def init_cli(cls):
         if not cls.prolog_cli:
@@ -204,4 +229,13 @@ class TrialProlog(object):
     @classmethod
     def prolog_query(cls, query):
         cls.init_cli()
+
+        cache = set()
+        no_cache = set()
+        for inst in cls.get_instances():
+            (cache if inst.trial.use_cache else no_cache).add(inst)
+        for inst in (no_cache - cache):
+            inst.retract()
+
+
         return cls.prolog_cli.query(query)

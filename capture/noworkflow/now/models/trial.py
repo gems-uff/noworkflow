@@ -49,6 +49,7 @@ class Trial(Model):
         'graph.width': 500,
         'graph.height': 500,
         'graph.mode': 3,
+        'use_cache': True,
     }
 
     REPLACE = {
@@ -57,18 +58,25 @@ class Trial(Model):
         'graph_mode': 'graph.mode',
     }
 
-    def __init__(self, trial_id, exit=False, script=None, **kwargs):
-        super(Trial, self).__init__(trial_id, exit=exit, script=script,
+    def __init__(self, trial_id=None, exit=False, script=None, **kwargs):
+        super(Trial, self).__init__(trial_id=trial_id, exit=exit, script=script,
                                     **kwargs)
+
+        last_trial_id = persistence.last_trial_id(script=script)
+
+        if not trial_id:
+            trial_id = last_trial_id
+            self.use_cache = False
+
         self.graph = TrialGraph(trial_id)
+
         self.initialize_default(kwargs)
 
-        if exit:
-            last_trial_id = persistence.last_trial_id(script=script)
-            trial_id = trial_id or last_trial_id
-            if not 1 <= trial_id <= last_trial_id:
-                print_msg('inexistent trial id', True)
-                sys.exit(1)
+        self.graph.use_cache = self.use_cache
+
+        if exit and not 1 <= trial_id <= last_trial_id:
+            print_msg('inexistent trial id', True)
+            sys.exit(1)
 
         self.id = trial_id
         self._info = None
@@ -114,7 +122,7 @@ class Trial(Model):
 
     def info(self):
         """ Returns dict with the trial information, considering the duration """
-        if self._info is None:
+        if self._info is None or not self.use_cache:
             self._info = row_to_dict(
                 persistence.load_trial(self.id).fetchone())
             if self._info['finish']:
@@ -164,22 +172,24 @@ class Trial(Model):
 
     def file_accesses(self):
         """ Returns a list of file accesses """
+        def get(activation_id):
+            """ Get activation by id """
+            try:
+                return next(iter(self.activations(id=activation_id)))
+            except StopIteration:
+                return None
         file_accesses = persistence.load('file_access',
                                          trial_id=self.id)
 
         result = []
         for fa in cvmap(row_to_dict, file_accesses):
             stack = []
-            function_activation = next(iter(self.activations(
-                id=fa['function_activation_id'])))
+            function_activation = get(fa['function_activation_id'])
             while function_activation:
                 function_name = function_activation['name']
-                try:
-                    function_activation = next(iter(self.activations(
-                        id=function_activation['caller_id'])))
+                function_activation = get(function_activation['caller_id'])
+                if function_activation:
                     stack.insert(0, function_name)
-                except StopIteration:
-                    function_activation = None
             if not stack or stack[-1] != 'open':
                 stack.append(' ... -> open')
 

@@ -479,7 +479,7 @@ class Tracer(Profiler):
         persistence.store_slicing_usages(tid, self.usages, partial)
 
 
-        self.view_slicing_data(io.verbose)
+        #self.view_slicing_data(io.verbose)
 
     def view_slicing_data(self, show=True):
         """ View captured slicing """

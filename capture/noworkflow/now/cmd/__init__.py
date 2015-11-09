@@ -10,6 +10,7 @@ import argparse
 
 from .command import Command
 from .cmd_run import Run
+from .cmd_debug import Debug
 from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
@@ -23,13 +24,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers()
     commands = [
-        Run('runs a script collecting its provenance'),
-        List('lists all trials registered in the current directory'),
-        Show('shows the collected provenance of a trial'),
-        Diff('compares the collected provenance of two trials'),
-        Export('exports the collected provenance of a trial to Prolog'),
-        Restore('restore the files of a trial'),
-        Vis('visualization tool'),
+        Run(),
+        Debug(),
+        List(),
+        Show(),
+        Diff(),
+        Export(),
+        Restore(),
+        Vis(),
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
@@ -40,6 +42,7 @@ def main():
 __all__ = [
     b'Command',
     b'Run',
+    b'Debug',
     b'List',
     b'Show',
     b'Diff',

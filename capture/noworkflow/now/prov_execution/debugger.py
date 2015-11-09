@@ -15,6 +15,7 @@ import atexit
 
 from ..models.trial import Trial
 from ..utils import redirect_output
+from ..cmd.cmd_export import export_notebook
 
 children_pid = []
 
@@ -58,9 +59,6 @@ def debugger_builtins(provider, ns, metascript):
         debugger = create_debugger(pdb)(provider)
         debugger.set_trace(sys._getframe().f_back)
 
-    def history():
-        return provider.history
-
     def now_save():
         provider.store(partial=True)
 
@@ -69,7 +67,7 @@ def debugger_builtins(provider, ns, metascript):
             now_save()
         if trial_id is None:
             trial_id = metascript.trial_id
-        return Trial(trial_id)
+        return Trial()
 
     def now_vis(browser='maybe', port=5000, save=True, vis=vis):
         global children_pid
@@ -104,12 +102,27 @@ def debugger_builtins(provider, ns, metascript):
             with redirect_output():
                 threading.Timer(1.25, webopen, args=[url]).start()
 
-    def now_ipython():
-        from IPython import embed
-
+    def now_notebook(start=True):
+        try:
+            import IPython
+            global children_pid
+            export_notebook("current")
+            if start:
+                params = ['ipython', 'notebook', 'Current Trial.ipynb']
+                FNULL = open(os.devnull, 'w')
+                p = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
+                children_pid.append(p)
+        except ImportError:
+            return "IPython not found"
 
     ns['set_trace'] = set_trace
-    ns['history'] = history
     ns['now_save'] = now_save
     ns['now_trial'] = now_trial
     ns['now_vis'] = now_vis
+    ns['now_notebook'] = now_notebook
+
+    try:
+        from IPython import embed
+        ns['now_ipython'] = embed
+    except ImportError:
+        ns['now_ipython'] = lambda: "IPython not found"

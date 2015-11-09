@@ -73,6 +73,12 @@ def run(metascript):
 class Run(Command):
     """ Run a script collecting its provenance """
 
+    def __init__(self, *args, **kwargs):
+        super(Run, self).__init__(*args, **kwargs)
+        self.default_context = 'main'
+        self.default_save_per_activation = False
+        self.default_execution_provenance = "Profiler"
+
     def add_arguments(self):
         add_arg = self.add_argument
         add_cmd = self.add_argument_cmd
@@ -108,16 +114,18 @@ class Run(Command):
         add_arg('-D', '--non-user-depth', type=non_negative, default=1,
                 help='depth for capturing function activations outside the '
                      'selected context (defaults to 1)')
-        add_arg('-e', '--execution-provenance', default="Profiler",
+        add_arg('-e', '--execution-provenance',
+                default=self.default_execution_provenance,
                 choices=['Profiler', 'InspectProfiler', 'Tracer'],
                 help='execution provenance provider. (defaults to Profiler)')
         add_arg('-c', '--context', choices=['main', 'package', 'all'],
-                default='main',
+                default=self.default_context,
                 help='functions subject to depth computation when capturing '
                      'activations (defaults to main)')
         add_arg('-s', '--save-frequency', type=non_negative, default=1000,
                 help='frequency (in ms) to save partial provenance')
-        add_arg('--save-per-activation', action='store_true', default=False,
+        add_arg('--save-per-activation', action='store_true',
+                default=self.default_save_per_activation,
                 help='save partial execution provenance after closing each '
                      'activation')
 
