@@ -28,6 +28,8 @@ class Profiler(StoreOpenMixin):
         self.depth_user = -1
         # the number of non-user functions activated
         self.depth_non_user = 0
+        # the number of non-user c functions activated
+        self.c_depth = 0
         # The first caller is None
         self.activation_stack = [None]
 
@@ -78,13 +80,14 @@ class Profiler(StoreOpenMixin):
         activation.file_accesses.append(file_access)
 
     def valid_depth(self):
-        depth = self.depth_user + self.depth_non_user
+        non_user = self.depth_non_user + self.c_depth
+        depth = self.depth_user + non_user
         if depth < 0:
             self.enabled = False
             return False
         if depth > self.depth_threshold:
             return False
-        return self.depth_non_user <= self.non_user_depth_threshold
+        return non_user<= self.non_user_depth_threshold
 
     def add_activation(self, aid):
         self.activation_stack.append(aid)
@@ -108,7 +111,7 @@ class Profiler(StoreOpenMixin):
             self.store(partial=True)
 
     def trace_c_call(self, frame, event, arg):
-        self.depth_non_user += 1
+        self.c_depth += 1
         if self.valid_depth():
             self.add_activation(self.activations.add(
                 arg.__name__ if arg.__self__ == None else '.'.join(
@@ -181,12 +184,12 @@ class Profiler(StoreOpenMixin):
     def trace_c_return(self, frame, event, arg):
         if self.valid_depth():
             self.close_activation(event, arg)
-        self.depth_non_user -= 1
+        self.c_depth -= 1
 
     def trace_c_exception(self, frame, event, arg):
         if self.valid_depth():
             self.close_activation(event, arg)
-        self.depth_non_user -= 1
+        self.c_depth -= 1
 
     def trace_return(self, frame, event, arg):
         if self.valid_depth():
@@ -204,7 +207,7 @@ class Profiler(StoreOpenMixin):
                 self.enabled = True
 
             if self.enabled:
-                current_event = (event, frame.f_lineno, frame.f_code)
+                current_event = (event, frame.f_lineno, id(frame))
                 if self.last_event != current_event:
                     self.last_event = current_event
 
