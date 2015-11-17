@@ -10,7 +10,7 @@ from __future__ import (absolute_import, print_function,
 import ast
 from collections import defaultdict
 from .context import Context
-from ..cross_version import cross_compile
+from ..cross_version import cross_compile, cvmap
 from ..utils.bytecode.dis import instruction_dis_sorted_by_line
 from ..persistence import persistence
 
@@ -102,3 +102,10 @@ class FunctionVisitor(ast.NodeVisitor):
             self.metascript.compiled = compiled
 
         self.disasm = instruction_dis_sorted_by_line(compiled, recurse=True)
+        if self.metascript.disasm0:
+                print('------------------------------------------------------')
+                print(self.path)
+                print('------------------------------------------------------')
+                print('\n'.join(cvmap(repr, self.disasm)))
+                print('------------------------------------------------------')
+

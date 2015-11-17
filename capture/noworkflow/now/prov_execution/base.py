@@ -33,6 +33,9 @@ class ExecutionProvider(object):
         self.depth_threshold = metascript.depth
         # How deep we want to go beyond our context
         self.non_user_depth_threshold = metascript.non_user_depth
+       
+        # Object serializer function
+        self.serialize = metascript.serializer.serialize
 
         self.metascript = metascript
         self.trial_id = metascript.trial_id

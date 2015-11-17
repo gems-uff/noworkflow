@@ -49,3 +49,5 @@ def abstract():
     frame = inspect.currentframe().f_back
     name = frame.f_code.co_name
     raise Exception("Abstract method: {}".format(name))
+
+

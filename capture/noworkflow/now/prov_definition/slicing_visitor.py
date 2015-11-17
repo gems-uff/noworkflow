@@ -368,8 +368,9 @@ class SlicingVisitor(FunctionVisitor):
             Python 2 Only"""
         self.generic_visit(node)
         _print = self.add_call_function(node, Print,
-                                        call_list=self.print_item_list)
-        self.print_newline_list.append(_print)
+                                        call_list=self.print_newline_list)
+        for _ in node.values:
+            self.print_item_list.append(_print)
         self.call_by_col[_print.line][_print.col] = _print
 
     def visit_Return(self, node):

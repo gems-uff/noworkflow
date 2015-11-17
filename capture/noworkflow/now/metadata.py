@@ -11,7 +11,7 @@ import os
 import sys
 
 from datetime import datetime
-from .persistence import persistence
+from .persistence import persistence, get_serializer
 from .prov_definition.definition import Definition
 from .utils.io import print_msg
 
@@ -49,6 +49,8 @@ class RunMetascript(object):
         self.namespace = None
         # Argv
         self.argv = None
+        # Object Serializer
+        self.serializer = None
 
         # Verbose print
         self.verbose = False
@@ -59,8 +61,10 @@ class RunMetascript(object):
 
         # Definition object : Definition
         self.definition = Definition()
-        # Show script disassemble : bool
+        # Show script disassembly : bool
         self.disasm = False
+        # Show script disassembly before changes : bool
+        self.disasm0 = False
 
         # Bypass module check : bool
         self.bypass_modules = False
@@ -161,11 +165,12 @@ class RunMetascript(object):
 
     def _read_args(self, args):
         """ Read cmd line argument object """
-
+        self.serializer = get_serializer(args) # ToDo: add serializer param
         self.verbose = args.verbose
         self.meta = args.meta
 
         self.disasm = args.disasm
+        self.disasm0 = args.disasm0
         self.bypass_modules = args.bypass_modules
 
         self.depth = args.depth

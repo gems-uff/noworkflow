@@ -97,7 +97,8 @@ class Profiler(StoreOpenMixin):
         self.activation_stack.pop()
         activation.finish = datetime.now()
         try:
-            activation.return_value = repr(arg) if event == 'return' else None
+            if event == 'return':
+                activation.return_value = self.serialize(arg)
         except:  # ignoring any exception during capture
             activation.return_value = None
         # Update content of accessed files
@@ -128,7 +129,7 @@ class Profiler(StoreOpenMixin):
         for var in itertools.islice(names, 0, nargs):
             try:
                 self.object_values.add(
-                    var, repr(values[var]), 'ARGUMENT', activation.id)
+                    var, self.serialize(values[var]), 'ARGUMENT', activation.id)
                 activation.args.append(var)
             except Exception:
                 # ignoring any exception during capture
@@ -137,7 +138,7 @@ class Profiler(StoreOpenMixin):
         if co.co_flags & inspect.CO_VARARGS:
             varargs = names[nargs]
             self.object_values.add(
-                varargs, repr(values[varargs]), 'ARGUMENT', activation.id)
+                varargs, self.serialize(values[varargs]), 'ARGUMENT', activation.id)
             activation.starargs.append(varargs)
             nargs += 1
         # Capture **kwargs
@@ -145,7 +146,7 @@ class Profiler(StoreOpenMixin):
             kwargs = values[names[nargs]]
             for key in kwargs:
                 self.object_values.add(
-                    key, repr(kwargs[key]), 'ARGUMENT', activation.id)
+                    key, self.serialize(kwargs[key]), 'ARGUMENT', activation.id)
             activation.kwargs.append(names[nargs])
 
     def trace_call(self, frame, event, arg):
@@ -175,7 +176,7 @@ class Profiler(StoreOpenMixin):
                     fglobals = frame.f_globals
                     for global_var in function_def[1]:
                         self.object_values.add(
-                            global_var, repr(fglobals[global_var]),
+                            global_var, self.serialize(fglobals[global_var]),
                             'GLOBAL', aid)
 
             activation.start = datetime.now()
@@ -247,16 +248,16 @@ class InspectProfiler(Profiler):
         for arg in args:
             try:
                 self.object_values.add(
-                    arg, repr(values[arg]), 'ARGUMENT', activation.id)
+                    arg, self.serialize(values[arg]), 'ARGUMENT', activation.id)
                 activation.args.append(arg)
             except:  # ignoring any exception during capture
                 pass
         if varargs:
             self.object_values.add(
-                varargs, repr(values[varargs]), 'ARGUMENT', activation.id)
+                varargs, self.serialize(values[varargs]), 'ARGUMENT', activation.id)
             activation.starargs.append(varargs)
         if keywords:
             for key, value in items(values[keywords]):
                 self.object_values.add(
-                    key, repr(value), 'ARGUMENT', activation.id)
+                    key, self.serialize(value), 'ARGUMENT', activation.id)
                 activation.kwargs.append(key)

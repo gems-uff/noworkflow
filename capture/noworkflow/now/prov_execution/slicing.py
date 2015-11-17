@@ -141,7 +141,7 @@ class Tracer(Profiler):
     def add_variable(self, name, line, f_locals, value='--check--'):
         """ Adds variable """
         if value == '--check--' and name in f_locals:
-            value = repr(f_locals[name])
+            value = self.serialize(f_locals[name])
         else:
             value = 'now(n/a)'
         return self.variables.add(name, line, value, datetime.now())

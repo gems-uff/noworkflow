@@ -107,7 +107,7 @@ setup(
     license = "MIT",
     keywords = "scientific experiments provenance python",
     url = "https://github.com/gems-uff/noworkflow",
-    install_requires=['pyposast'],
+    install_requires=['pyposast', 'jsonpickle'],
     extras_require = {
         'vis': ['pyposast', 'flask'],
         'notebook': ['pyposast', 'ipython[notebook]'],

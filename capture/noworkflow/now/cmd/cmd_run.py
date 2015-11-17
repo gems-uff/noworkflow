@@ -103,6 +103,8 @@ class Run(Command):
                      'module changes occurred since last execution')
 
         # Definition
+        add_arg('--disasm0', action='store_true',
+                help='show script disassembly before noWorkflow change it')
         add_arg('--disasm', action='store_true',
                 help='show script disassembly')
 
