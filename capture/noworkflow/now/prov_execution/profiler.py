@@ -28,8 +28,6 @@ class Profiler(StoreOpenMixin):
         self.depth_user = -1
         # the number of non-user functions activated
         self.depth_non_user = 0
-        # the number of non-user c functions activated
-        self.c_depth = 0
         # The first caller is None
         self.activation_stack = [None]
 
@@ -54,6 +52,12 @@ class Profiler(StoreOpenMixin):
         self.save_per_activation = self.metascript.save_per_activation
         self.last_time = time.time()
 
+        # Events are unique
+        self.unique_events = True
+
+        # Skip tear_up return
+        self.skip_first_return = True
+        self.enabled = True
 
     @property
     def current_activation(self):
@@ -80,14 +84,13 @@ class Profiler(StoreOpenMixin):
         activation.file_accesses.append(file_access)
 
     def valid_depth(self):
-        non_user = self.depth_non_user + self.c_depth
-        depth = self.depth_user + non_user
+        depth = self.depth_user + self.depth_non_user
         if depth < 0:
             self.enabled = False
             return False
         if depth > self.depth_threshold:
             return False
-        return non_user<= self.non_user_depth_threshold
+        return self.depth_non_user <= self.non_user_depth_threshold
 
     def add_activation(self, aid):
         self.activation_stack.append(aid)
@@ -112,7 +115,7 @@ class Profiler(StoreOpenMixin):
             self.store(partial=True)
 
     def trace_c_call(self, frame, event, arg):
-        self.c_depth += 1
+        self.depth_non_user += 1
         if self.valid_depth():
             self.add_activation(self.activations.add(
                 arg.__name__ if arg.__self__ == None else '.'.join(
@@ -185,14 +188,19 @@ class Profiler(StoreOpenMixin):
     def trace_c_return(self, frame, event, arg):
         if self.valid_depth():
             self.close_activation(event, arg)
-        self.c_depth -= 1
+        self.depth_non_user -= 1
 
     def trace_c_exception(self, frame, event, arg):
         if self.valid_depth():
             self.close_activation(event, arg)
-        self.c_depth -= 1
+        self.depth_non_user -= 1
 
     def trace_return(self, frame, event, arg):
+        # Only enable activations gathering after the first call to the script
+        if self.skip_first_return:
+            self.skip_first_return = False
+            return
+
         if self.valid_depth():
             self.close_activation(event, arg)
 
@@ -201,20 +209,19 @@ class Profiler(StoreOpenMixin):
         else:
             self.depth_non_user -= 1
 
+    def new_event(self, frame, event, arg):
+        current_event = (event, frame.f_lineno, id(frame))
+        if self.last_event != current_event:
+            self.last_event = current_event
+            return True
+        return False
+
     def tracer(self, frame, event, arg):
-        # Only enable activations gathering after the first call to the script
         try:
-            if event == 'call' and self.script == frame.f_code.co_filename:
-                self.enabled = True
-
             if self.enabled:
-                current_event = (event, frame.f_lineno, id(frame))
-                if self.last_event != current_event:
-                    self.last_event = current_event
-
+                if self.unique_events or self.new_event(frame, event, arg):
                     super(Profiler, self).tracer(frame, event, arg)
-
-                if time.time() - self.last_time > self.save_frequency:
+                if self.save_frequency and time.time() - self.last_time > self.save_frequency:
                     self.store(partial=True)
                     self.last_time = time.time()
         except:

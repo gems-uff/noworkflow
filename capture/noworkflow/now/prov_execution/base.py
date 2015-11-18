@@ -35,7 +35,7 @@ class ExecutionProvider(object):
         self.non_user_depth_threshold = metascript.non_user_depth
        
         # Object serializer function
-        self.serialize = metascript.serializer.serialize
+        self.serialize = metascript.serialize
 
         self.metascript = metascript
         self.trial_id = metascript.trial_id

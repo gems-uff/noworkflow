@@ -19,8 +19,9 @@ PY3 = (sys.version_info >= (3, 0))
 if PY3:
     import builtins
     import pickle
+    import reprlib
 
-    IMMUTABLE = (bool, numbers.Number, str, bytes)
+    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes)
     string = (str, bytes)
     raw_bytes = (bytes, bytearray)
     items = lambda x: x.items()
@@ -36,8 +37,9 @@ else:
     except ImportError:
        import pickle
     from itertools import imap, izip
-
-    IMMUTABLE = (bool, numbers.Number, basestring)
+    import repr as reprlib
+    
+    IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)
     string = (basestring,)
     raw_bytes = (str,)
     items = lambda x: x.iteritems()

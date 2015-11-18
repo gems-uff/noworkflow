@@ -288,7 +288,7 @@ class SlicingVisitor(FunctionVisitor):
             Use for return and yield dependencies """
         assign_dependencies(ast.Name(label, ast.Store(),
                                      lineno=node.lineno),
-                            node,
+                            node.value,
                             self.dependencies,
                             self.condition.flat(),
                             self.loop.flat(),
@@ -375,13 +375,14 @@ class SlicingVisitor(FunctionVisitor):
 
     def visit_Return(self, node):
         """ Visit Return. Create special variable """
-        self.add_return_yield(node.value, 'return')
+
+        self.add_return_yield(node, 'return')
         if node.value:
             self.visit(node.value)
 
     def visit_Yield(self, node):
         """ Visit Yield. Create special variable """
-        self.add_return_yield(node.value, 'yield')
+        self.add_return_yield(node, 'yield')
         if node.value:
             self.visit(node.value)
 

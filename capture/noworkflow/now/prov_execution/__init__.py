@@ -28,15 +28,8 @@ def provenance_provider(execution_provenance):
     return Profiler
 
 
-def ___now_enable(metascript):
-    """ Enable provider """
-    global PROVIDER
-    PROVIDER = provenance_provider(metascript.execution_provenance)(metascript)
-    PROVIDER.tearup()
-
-
 @meta_profiler("storage")
-def ___now_disable(error=False):
+def _now_disable(error=False):
     """ Disable provider and store provenance """
     PROVIDER.teardown()
     PROVIDER.store(partial=error)
@@ -49,24 +42,23 @@ def ___now_disable(error=False):
 @meta_profiler("execution")
 def collect_provenance(metascript):
     global PROVIDER
-    ___now_enable(metascript)
+    PROVIDER = provenance_provider(metascript.execution_provenance)(metascript)
+    
+    if metascript.compiled is None:
+        metascript.compiled = cross_compile(metascript.code, metascript.path, 'exec')
+    debugger_builtins(PROVIDER, metascript.namespace['__builtins__'], metascript)
 
     print_msg('  executing the script')
+    PROVIDER.tearup() # It must be right before exec
     try:
-        if metascript.compiled is None:
-            metascript.compiled = cross_compile(
-                metascript.code, metascript.path, 'exec')
-        debugger_builtins(
-            PROVIDER, metascript.namespace['__builtins__'], metascript)
         exec(metascript.compiled, metascript.namespace)
-
     except SystemExit as ex:
-        ___now_disable(error=ex.code > 0)
+        _now_disable(error=ex.code > 0)
         print_msg(
             'the execution exited via sys.exit(). Exit status: {}'
             ''.format(ex.code), ex.code > 0)
     except Exception as e:
-        ___now_disable(error=True)
+        _now_disable(error=True)
         print(e)
         print_msg(
             'the execution finished with an uncaught exception. {}'
@@ -75,7 +67,7 @@ def collect_provenance(metascript):
         # TODO: exceptions should be registered as return from the
         # activation and stored in the database. We are currently ignoring
         # all the activation tree when exceptions are raised.
-        ___now_disable()
+        _now_disable()
         print_msg(
             'the execution of trial {} finished successfully'
             ''.format(metascript['trial_id']))

@@ -77,6 +77,7 @@ class Run(Command):
         super(Run, self).__init__(*args, **kwargs)
         self.default_context = 'main'
         self.default_save_per_activation = False
+        self.default_save_frequency = 0
         self.default_execution_provenance = "Profiler"
 
     def add_arguments(self):
@@ -124,7 +125,8 @@ class Run(Command):
                 default=self.default_context,
                 help='functions subject to depth computation when capturing '
                      'activations (defaults to main)')
-        add_arg('-s', '--save-frequency', type=non_negative, default=1000,
+        add_arg('-s', '--save-frequency', type=non_negative,
+                default=self.default_save_frequency,
                 help='frequency (in ms) to save partial provenance')
         add_arg('--save-per-activation', action='store_true',
                 default=self.default_save_per_activation,

@@ -132,6 +132,9 @@ class Tracer(Profiler):
         # Allow debuggers:
         self.f_trace_frames = []
 
+        # Events are not unique. Profiler and Tracer have same events
+        self.unique_events = False
+
     def remove_return_lasti(self, lasti_set):
         """ Remove lasti from list of returns """
         returns = self.returns

@@ -21,12 +21,14 @@ class Persistence(RestoreProvider, DatabaseProvider, TrialProvider,
 persistence = Persistence()
 
 
-def get_serializer(arg):
-    # ToDo: use arg to select serializer
-    from .serializers import ReprSerializer, JsonPickleSerializer
-    from .serializers import JsonPickleContentSerializer
-    return JsonPickleContentSerializer()
-
+def get_serialize(arg):
+    # ToDo: use arg to select serialize
+    #from .serializers import jsonpickle_serializer, jsonpickle_content
+    #from .serializers import SimpleSerializer
+    # return SimpleSerializer().serialize
+    # return jsonpickle_serializer
+    # return jsonpickle_content
+    return repr
 
 
 __all__ = [

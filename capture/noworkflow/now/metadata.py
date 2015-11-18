@@ -11,7 +11,7 @@ import os
 import sys
 
 from datetime import datetime
-from .persistence import persistence, get_serializer
+from .persistence import persistence, get_serialize
 from .prov_definition.definition import Definition
 from .utils.io import print_msg
 
@@ -49,8 +49,8 @@ class RunMetascript(object):
         self.namespace = None
         # Argv
         self.argv = None
-        # Object Serializer
-        self.serializer = None
+        # Object Serialize function
+        self.serialize = None
 
         # Verbose print
         self.verbose = False
@@ -165,7 +165,7 @@ class RunMetascript(object):
 
     def _read_args(self, args):
         """ Read cmd line argument object """
-        self.serializer = get_serializer(args) # ToDo: add serializer param
+        self.serialize = get_serialize(args) # ToDo: add serializer param
         self.verbose = args.verbose
         self.meta = args.meta
 
