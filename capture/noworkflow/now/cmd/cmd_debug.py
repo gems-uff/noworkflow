@@ -16,6 +16,6 @@ class Debug(Run):
     def __init__(self, *args, **kwargs):
         super(Run, self).__init__(*args, **kwargs)
         self.default_context = 'package'
-        self.default_save_per_activation = True
+        self.default_call_storage_frequency = 1
         self.default_save_frequency = 1000
         self.default_execution_provenance = "Tracer"

@@ -76,7 +76,7 @@ class Run(Command):
     def __init__(self, *args, **kwargs):
         super(Run, self).__init__(*args, **kwargs)
         self.default_context = 'main'
-        self.default_save_per_activation = False
+        self.default_call_storage_frequency = 10000
         self.default_save_frequency = 0
         self.default_execution_provenance = "Profiler"
 
@@ -128,10 +128,9 @@ class Run(Command):
         add_arg('-s', '--save-frequency', type=non_negative,
                 default=self.default_save_frequency,
                 help='frequency (in ms) to save partial provenance')
-        add_arg('--save-per-activation', action='store_true',
-                default=self.default_save_per_activation,
-                help='save partial execution provenance after closing each '
-                     'activation')
+        add_arg('-S', '--call-storage-frequency', type=non_negative,
+                default=self.default_call_storage_frequency,
+                help='frequency (in calls) to save partial provenance')
 
 
     def execute(self, args):

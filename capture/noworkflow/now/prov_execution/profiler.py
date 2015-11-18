@@ -13,6 +13,7 @@ import itertools
 import inspect
 import traceback
 import time
+from profile import Profile
 from datetime import datetime
 from .base import StoreOpenMixin
 from .data_objects import Activation, ObjectStore, FileAccess, ObjectValue
@@ -49,8 +50,11 @@ class Profiler(StoreOpenMixin):
 
         # Partial save
         self.save_frequency = self.metascript.save_frequency / 1000.0
-        self.save_per_activation = self.metascript.save_per_activation
-        self.last_time = time.time()
+        self.call_storage_frequency = self.metascript.call_storage_frequency
+        self.closed_activations = 0
+        
+        self.timer = time.time
+        self.last_time = self.timer()
 
         # Events are unique
         self.unique_events = True
@@ -111,7 +115,8 @@ class Profiler(StoreOpenMixin):
                 with persistence.std_open(file_access.name, 'rb') as f:
                     file_access.content_hash_after = persistence.put(f.read())
             file_access.done = True
-        if self.save_per_activation:
+        self.closed_activations += 1
+        if self.call_storage_frequency and self.closed_activations % self.call_storage_frequency == 0:
             self.store(partial=True)
 
     def trace_c_call(self, frame, event, arg):
@@ -221,9 +226,9 @@ class Profiler(StoreOpenMixin):
             if self.enabled:
                 if self.unique_events or self.new_event(frame, event, arg):
                     super(Profiler, self).tracer(frame, event, arg)
-                if self.save_frequency and time.time() - self.last_time > self.save_frequency:
+                if self.save_frequency and self.timer() - self.last_time > self.save_frequency:
                     self.store(partial=True)
-                    self.last_time = time.time()
+                    self.last_time = self.timer()
         except:
             traceback.print_exc()
         finally:

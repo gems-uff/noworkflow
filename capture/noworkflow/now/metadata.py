@@ -79,8 +79,8 @@ class RunMetascript(object):
         self._context = MAIN
         # Save every X ms : int
         self.save_frequency = 1000
-        # Save after closing an activation
-        self.save_per_activation = False
+        # Save after closing X activations
+        self.call_storage_frequency = 0
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -178,7 +178,7 @@ class RunMetascript(object):
         self.execution_provenance = args.execution_provenance
         self.context = args.context
         self.save_frequency = args.save_frequency
-        self.save_per_activation = args.save_per_activation
+        self.call_storage_frequency = args.call_storage_frequency
         return self
 
     def create_last(self):

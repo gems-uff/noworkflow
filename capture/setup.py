@@ -110,8 +110,8 @@ setup(
     install_requires=['pyposast', 'jsonpickle'],
     extras_require = {
         'vis': ['pyposast', 'flask'],
-        'notebook': ['pyposast', 'ipython[notebook]'],
-        'all': ['pyposast', 'ipython[notebook]', 'flask', 'pyswip-alt'],
+        'notebook': ['pyposast', 'ipython', 'jupyter'],
+        'all': ['pyposast', 'ipython', 'jupyter', 'flask', 'pyswip-alt'],
     },
     cmdclass={
         'install': CustomInstallCommand,
