@@ -41,11 +41,11 @@ class TrialProlog(Model):
         list(cls.prolog_cli.query(
             'retract(access({}, _, _, _, _, _, _, _))'.format(self.id)))
         list(cls.prolog_cli.query(
-            'retract(variable({}, _, _, _, _, _))'.format(self.id)))
+            'retract(variable({}, _, _, _, _, _, _))'.format(self.id)))
         list(cls.prolog_cli.query(
-            'retract(usage({}, _, _, _, _))'.format(self.id)))
+            'retract(usage({}, _, _, _, _, _))'.format(self.id)))
         list(cls.prolog_cli.query(
-            'retract(dependency({}, _, _, _))'.format(self.id)))
+            'retract(dependency({}, _, _, _, _, _))'.format(self.id)))
         list(cls.prolog_cli.query(
             'retract(load_trial({})'.format(self.id)))
 
