@@ -382,22 +382,20 @@ def activation_text(activation):
     if activation['return']:
         result.append("Returned {}".format(activation['return']))
     if activation['slicing_variables']:
-        result.append("Variables: {}".format(
-            ", ".join("(L{}, {}, {})".format(
-                      var['line'], var['name'], var['value'])
-                      for var in activation['slicing_variables'])))
+        result.append("Variables: <br>&nbsp; {}".format(
+            "<br>&nbsp; ".join("(L{line}, {name}, {value})".format(**var)
+                          for var in activation['slicing_variables'])))
     if activation['slicing_usages']:
-        result.append("Usages: {}".format(
-            ", ".join("(L{}, {}, {})".format(
-                      var['line'], var['name'], var['context'])
-                      for var in activation['slicing_usages'])))
+        result.append("Usages: <br>&nbsp; {}".format(
+            "<br>&nbsp; ".join("(L{line}, {name}, <{context}>)".format(**var)
+                               for var in activation['slicing_usages'])))
     if activation['slicing_dependencies']:
-        result.append("Dependencies: {}".format(
-            "<br> ".join("(L{}, {}, {}) <- (L{}, {}, {})".format(
-                      dep['dependent']['line'], dep['dependent']['name'],
-                      dep['dependent']['value'], dep['supplier']['line'],
-                      dep['supplier']['name'], dep['supplier']['value'])
-                      for dep in activation['slicing_dependencies'])))
+        result.append("Dependencies: <br>&nbsp; {}".format(
+            "<br>&nbsp; ".join(
+                ('(L{dependent[line]}, {dependent[name]}, {dependent[value]}) '
+                '<- (L{supplier[line]}, {supplier[name]}, {supplier[value]})'
+                ).format(**dep)
+                for dep in activation['slicing_dependencies'])))
     return result
 
 

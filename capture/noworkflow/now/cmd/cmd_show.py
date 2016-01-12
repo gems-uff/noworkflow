@@ -80,14 +80,32 @@ def print_function_activation(trial, activation, level=1):
     indent = text.index(': ') + 2
     print(text)
     for typ, vals in items(object_values):
-        print(wrap(
-            '{type}: {values}'.format(type=name[typ],
-                                      values=', '.join(vals)),
-            initial=' ' * indent))
+        if vals:
+            print(wrap(
+                '{type}: {values}'.format(type=name[typ],
+                                          values=', '.join(vals)),
+                initial=' ' * indent))
     if activation['return']:
         print(wrap(
             'Return value: {ret}'.format(ret=activation['return']),
             initial=' ' * indent))
+    if activation['slicing_variables']:
+        print(wrap('Variables:', initial=' ' * indent))
+        for var in activation['slicing_variables']:
+            print(wrap('(L{line}, {name}, {value})'.format(**var),
+                  initial=' ' * (indent+1)))
+    if activation['slicing_usages']:
+        print(wrap('Usages:', initial=' ' * indent))
+        for use in activation['slicing_usages']:
+            print(wrap('(L{line}, {name}, <{context}>)'.format(**use),
+                  initial=' ' * (indent+1)))
+    if activation['slicing_dependencies']:
+        print(wrap('Dependencies:', initial=' ' * indent))
+        for dep in activation['slicing_dependencies']:
+            print(wrap(
+                ('(L{dependent[line]}, {dependent[name]}, {dependent[value]}) '
+                '<- (L{supplier[line]}, {supplier[name]}, {supplier[value]})'
+                ).format(**dep), initial=' ' * (indent+1)))
 
     for inner_activation in trial.activations(caller_id=activation['id']):
         print_function_activation(trial, inner_activation, level + 1)
