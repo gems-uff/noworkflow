@@ -75,13 +75,13 @@ access_influence(Trial_id, Influencer, Influenced) :- access_influence_id(Trial_
 % SLICING-BASED ACCESSOR RULES
 %
 
-dep(Trial_id, Dependent, Supplier) :- dependency(Trial_id, _, Dependent, Supplier).
-usage_or_assign(Trial_id, Name, Line, Id) :- usage(Trial_id, _, Id, Name, Line).
-usage_or_assign(Trial_id, Name, Line, Id) :- variable(Trial_id, Id, Name, Line, _, _).
+dep(Trial_id, Dependent, Supplier) :- dependency(Trial_id, _, _, Dependent, _, Supplier).
+usage_or_assign(Trial_id, Name, Line, Id) :- usage(Trial_id, _, Id, _, Name, Line).
+usage_or_assign(Trial_id, Name, Line, Id) :- variable(Trial_id, _, Id, Name, Line, _, _).
 
-var_name(Trial_id, Id, Name) :- variable(Trial_id, Id, Name, _, _, _).
-var_line(Trial_id, Id, Line) :- variable(Trial_id, Id, _, Line, _, _).
-var_info(Trial_id, Id, variable(Trial_id, Id, Name, Line, Value)) :- variable(Trial_id, Id, Name, Line, Value, _).
+var_name(Trial_id, Id, Name) :- variable(Trial_id, _, Id, Name, _, _, _).
+var_line(Trial_id, Id, Line) :- variable(Trial_id, _, Id, _, Line, _, _).
+var_info(Trial_id, Id, variable(Trial_id, Activation, Id, Name, Line, Value)) :- variable(Trial_id, Activation, Id, Name, Line, Value, _).
 
 
 %

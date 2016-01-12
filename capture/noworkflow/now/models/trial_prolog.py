@@ -103,68 +103,75 @@ class TrialProlog(Model):
     def _trial_slicing_variables_fact(self, result):
         result.append(textwrap.dedent("""
             %
-            % FACT: variable(trial_id, vid, name, line, value, timestamp).
+            % FACT: variable(trial_id, activation_id, id, name, line, value, timestamp).
             %
             """))
 
     def export_trial_slicing_variables(self, result, with_doc=True):
         if with_doc:
             self._trial_slicing_variables_fact(result)
-        result.append(":- dynamic(variable/6).")
+        result.append(":- dynamic(variable/7).")
         for var in self.trial.slicing_variables():
             var = dict(var)
-            var['vid'] = str(var['vid'])
+            var['activation_id'] = str(var['activation_id'])
+            var['id'] = str(var['id'])
             var['name'] = str(var['name'])
             var['line'] = str(var['line'])
             var['value'] = str(var['value'])
             var['time'] = timestamp(var['time'])
             result.append(
                 'variable('
-                    '{trial_id}, {vid}, {name!r}, {line}, {value!r}, '
-                    '{time:-f}).'
+                    '{trial_id}, {activation_id}, {id}, '
+                    '{name!r}, {line}, {value!r}, {time:-f}).'
                 ''.format(**var))
 
     def _trial_slicing_usages_fact(self, result):
         result.append(textwrap.dedent("""
-            %
-            % FACT: usage(trial_id, id, vid, name, line).
+            %-
+            % FACT: usage(trial_id, activation_id, variable_id, id, name, line).
             %
             """))
 
     def export_trial_slicing_usages(self, result, with_doc=True):
         if with_doc:
             self._trial_slicing_usages_fact(result)
-        result.append(":- dynamic(usage/5).")
+        result.append(":- dynamic(usage/6).")
         for usage in self.trial.slicing_usages():
             usage = dict(usage)
             usage['id'] = str(usage['id'])
-            usage['vid'] = str(usage['vid'])
+            usage['activation_id'] = str(usage['activation_id'])
+            usage['variable_id'] = str(usage['variable_id'])
             usage['name'] = str(usage['name'])
             usage['line'] = str(usage['line'])
             result.append(
                 'usage('
-                    '{trial_id}, {id}, {vid}, {name!r}, {line}).'
+                    '{trial_id}, {activation_id}, {variable_id}, {id}, '
+                    '{name!r}, {line}).'
                 ''.format(**usage))
 
     def _trial_slicing_dependencies_fact(self, result):
         result.append(textwrap.dedent("""
                 %
-                % FACT: dependency(trial_id, id, dependent, supplier).
+                % FACT: dependency(trial_id, id, dependent_activation_id, dependent, supplier_activation_id, supplier).
                 %
             """))
 
     def export_trial_slicing_dependencies(self, result, with_doc=True):
         if with_doc:
             self._trial_slicing_dependencies_fact(result)
-        result.append(":- dynamic(dependency/4).")
+        result.append(":- dynamic(dependency/6).")
         for dep in self.trial.slicing_dependencies():
             dep = dict(dep)
             dep['id'] = str(dep['id'])
+            dep['dependent_activation_id'] = str(dep['dependent_activation_id'])
             dep['dependent'] = str(dep['dependent'])
+            dep['supplier_activation_id'] = str(dep['supplier_activation_id'])
             dep['supplier'] = str(dep['supplier'])
             result.append(
                 'dependency('
-                    '{trial_id}, {id}, {dependent}, {supplier}).'
+                    '{trial_id}, {id}, '
+                    '{dependent_activation_id}, {dependent}, '
+                    '{supplier_activation_id}, {supplier}).'
                 ''.format(**dep))
 
     def export_facts(self, with_doc=True):
