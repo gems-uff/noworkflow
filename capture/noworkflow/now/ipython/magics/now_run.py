@@ -117,7 +117,7 @@ class NowRun(IpythonCommandMagic, Run):
 
             metascript = RunMetascript().read_ipython_args(
                 args, directory, filename, [filename] + params,
-                not args.interactive)
+                not args.interactive, cmd=line)
 
             if args.interactive:
                 from IPython.utils.py3compat import builtin_mod

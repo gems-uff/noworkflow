@@ -53,6 +53,7 @@ def run(metascript):
         persistence.connect(metascript.dir)
 
         metascript.create_trial()
+        metascript.auto_tag()
 
         io.print_msg('collecting definition provenance')
         prov_definition.collect_provenance(metascript)

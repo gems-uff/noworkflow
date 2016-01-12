@@ -6,8 +6,10 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from itertools import chain
+from datetime import datetime
 from .provider import Provider
-from ..cross_version import items
+from ..cross_version import items, lmap
 
 
 def partial_save(is_complete, result_tuple):
@@ -28,7 +30,7 @@ class RunProvider(Provider):
         Store <run> provenance """
 
     def store_trial(self, start, script, code, arguments, bypass_modules,
-                    run=True):
+                    command, run=True):
         """ Store basic Trial data """
         code_hash = self.put(code)
         parent_id = self.load_parent_id(script, parent_required=True)
@@ -38,10 +40,10 @@ class RunProvider(Provider):
         with self.db_conn as db:
             trial_id = db.execute(
                 """INSERT INTO trial (start, script, code_hash, arguments,
-                                      inherited_id, parent_id, run)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)
+                                      command, inherited_id, parent_id, run)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (start, script, code_hash, arguments,
-                      inherited_id, parent_id, run)).lastrowid
+                      command, inherited_id, parent_id, run)).lastrowid
         return trial_id
 
     def update_trial(self, trial_id, finish, partial):
@@ -51,6 +53,51 @@ class RunProvider(Provider):
                 """UPDATE trial
                    SET finish = ?
                    WHERE id = ?""", (finish, trial_id))
+
+    def find_tag(self, trial_id, code_hash, command):
+        query = """SELECT Tag.name
+                   FROM tag Tag, trial Trial
+                   WHERE Trial.id <> :1
+                     AND Tag.trial_id = Trial.id
+                     AND type = 'AUTO'
+                """
+        conditions = [
+            (1, """AND Trial.code_hash = :2
+                   AND Trial.command = :3""", [code_hash, command]),
+            (2, """AND Trial.code_hash = :2""", [code_hash]),
+            (3, "", [])
+        ]
+
+        for typ, condition, args in conditions:
+            with self.db_conn as db:
+                results = db.execute(query + condition,
+                                     [trial_id] + args)
+                tags = [lmap(int, tag[0].split('.')) for tag in results]
+                if tags:
+                    return typ, max(tags)
+
+        return 0, [1, 1, 1]
+
+    def auto_tag(self, trial_id, code, command):
+        code_hash = self.put(code)
+        tag_typ, tag = self.find_tag(trial_id, code_hash, command)
+        new_tag = ''
+        if tag_typ == 1:
+            tag[2] += 1
+        elif tag_typ == 2:
+            tag[1] += 1
+            tag[2] = 1
+        elif tag_typ == 3:
+            tag[0] += 1
+            tag[1] = 1
+            tag[2] = 1
+        new_tag = '.'.join(map(str, tag))
+        with self.db_conn as db:
+            db.execute(
+                """INSERT INTO tag(trial_id, type, name, timestamp)
+                   VALUES (?, ?, ?, ?)""",
+                (trial_id, 'AUTO', new_tag, datetime.now())
+            )
 
     def store_objects(self, objects, obj_type, function_def_id):
         """ Store Function Definition objects (param, global, call) """

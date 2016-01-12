@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
+import sys
 from datetime import datetime
 
 from .command import Command
@@ -56,13 +57,14 @@ class Restore(Command):
             tid = persistence.store_trial(
                 now, trial.script, code,
                 '<restore {}>'.format(trial.id),
-                args.bypass_modules, run=False)
-            prov_deployment.collect_provenance(args, {
+                args.bypass_modules, ' '.join(sys.argv[1:]), run=False)
+            metascript = {
                 'trial_id': tid,
                 'code': code,
                 'path': trial.script,
                 'compiled': None,
-            })
+            }
+            prov_deployment.collect_provenance(metascript)
             print_msg('Backup Trial {} created'.format(tid), self.print_msg)
 
     def restore(self, path, code_hash, trial_id):

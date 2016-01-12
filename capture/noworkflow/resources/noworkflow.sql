@@ -5,6 +5,7 @@ create table trial (
 	script TEXT,
 	code_hash TEXT,
 	arguments TEXT,
+	command TEXT,
 	inherited_id INTEGER, -- Id of the prospective tuple that we are inheriting module information (due to --bypass-modules)
 	parent_id INTEGER, -- Id of the parent trial that is used to create the history
 	run INTEGER, -- trial created through now run command
@@ -187,3 +188,15 @@ create table graph_cache (
 	timestamp TIMESTAMP
 );
 
+-- Tag
+
+create table tag (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	trial_id INTEGER,
+	type TEXT,
+	name TEXT,
+	timestamp TIMESTAMP,
+	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE
+);
+
+CREATE INDEX tag_trial_id on tag(trial_id);

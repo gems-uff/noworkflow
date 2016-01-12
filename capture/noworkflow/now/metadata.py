@@ -82,6 +82,9 @@ class RunMetascript(object):
         # Save after closing X activations
         self.call_storage_frequency = 0
 
+        # Passed arguments : str
+        self.command = ""
+
     def __getitem__(self, item):
         return getattr(self, item)
 
@@ -145,8 +148,11 @@ class RunMetascript(object):
         # Clear argv
         sys.argv = self.argv
 
-    def read_cmd_args(self, args):
+    def read_cmd_args(self, args, cmd=None):
         """ Read cmd line argument object """
+        if not cmd:
+            cmd = ' '.join(sys.argv[1:])
+        self.command = cmd
         self.dir = args.dir
         self.argv = args.argv
         self.path = args.script
@@ -154,8 +160,12 @@ class RunMetascript(object):
         self.name = args.name or os.path.basename(args.argv[0])
         return self._read_args(args)
 
-    def read_ipython_args(self, args, directory, filename, argv, create_last):
+    def read_ipython_args(self, args, directory, filename, argv, create_last,
+                          cmd=None):
         """ Read magic line argument object """
+        if not cmd:
+            cmd = 'run ' + ' '.join(args)
+        self.command = cmd
         self.dir = directory
         self.argv = argv
         self.path = filename
@@ -194,7 +204,7 @@ class RunMetascript(object):
         try:
             self.trial_id = persistence.store_trial(
                 now, self.name, self.code, " ".join(sys.argv[1:]),
-                self.bypass_modules)
+                self.bypass_modules, self.command)
         except TypeError as e:
             if self.bypass_modules:
                 print_msg("not able to bypass modules check because no "
@@ -204,3 +214,6 @@ class RunMetascript(object):
                 raise e
 
             sys.exit(1)
+
+    def auto_tag(self):
+        persistence.auto_tag(self.trial_id, self.code, self.command)
