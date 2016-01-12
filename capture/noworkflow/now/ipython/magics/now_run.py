@@ -134,7 +134,7 @@ class NowRun(IpythonCommandMagic, Run):
                 magic_cls.shell.user_ns['__builtins__'] = builtin_mod
                 sys.modules['__main__'] = save__main__
                 try:
-                    return Trial(trial_id=metascript.trial_id)
+                    return Trial(trial_ref=metascript.trial_id)
                 except Exception as exc:
                     print('Failed', exc)
             else:
@@ -151,7 +151,7 @@ class NowRun(IpythonCommandMagic, Run):
 
                 try:
                     with open(os.path.join(tmp_dir, LAST_TRIAL), 'r') as last:
-                        return Trial(trial_id=int(last.read()))
+                        return Trial(trial_ref=int(last.read()))
                 except Exception as exc:
                     print('Failed', exc)
         finally:

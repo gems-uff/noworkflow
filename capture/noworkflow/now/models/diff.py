@@ -13,6 +13,7 @@ from collections import namedtuple, OrderedDict, defaultdict
 from ..utils import OrderedCounter, concat_iter, hashabledict
 from ..cross_version import items, keys
 from ..graphs.diff_graph import DiffGraph
+from ..persistence import persistence
 from .model import Model
 from .trial import Trial
 
@@ -83,8 +84,11 @@ class Diff(Model):
         'graph_view': 'graph.view',
     }
 
-    def __init__(self, trial_id1, trial_id2, exit=False, **kwargs):
-        super(Diff, self).__init__(trial_id1, trial_id2, exit=exit, **kwargs)
+    def __init__(self, trial_ref1, trial_ref2, exit=False, **kwargs):
+        super(Diff, self).__init__(trial_ref1, trial_ref2, exit=exit, **kwargs)
+        trial_id1 = persistence.load_trial_id(trial_ref1)
+        trial_id2 = persistence.load_trial_id(trial_ref2)
+
         self.graph = DiffGraph(trial_id1, trial_id2)
         self.initialize_default(kwargs)
 

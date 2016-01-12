@@ -59,15 +59,22 @@ class Trial(Model):
         'graph_mode': 'graph.mode',
     }
 
-    def __init__(self, trial_id=None, exit=False, script=None, **kwargs):
-        super(Trial, self).__init__(trial_id=trial_id, exit=exit, script=script,
+    def __init__(self, trial_ref=None, exit=False, script=None, **kwargs):
+        super(Trial, self).__init__(trial_id=trial_ref, exit=exit, script=script,
                                     **kwargs)
 
-        last_trial_id = persistence.last_trial_id(script=script)
-
-        if not trial_id:
-            trial_id = last_trial_id
+        if not trial_ref:
+            trial_ref = persistence.last_trial_id(script=script)
             self.use_cache = False
+
+        trial_id = persistence.load_trial_id(trial_ref)
+
+        if exit and trial_id is None:
+            print_msg('inexistent trial id', True)
+            sys.exit(1)
+
+        self.id = trial_id
+        self._info = None
 
         self.graph = TrialGraph(trial_id)
 
@@ -75,12 +82,6 @@ class Trial(Model):
 
         self.graph.use_cache = self.use_cache
 
-        if exit and not 1 <= trial_id <= last_trial_id:
-            print_msg('inexistent trial id', True)
-            sys.exit(1)
-
-        self.id = trial_id
-        self._info = None
         self.trial_prolog = TrialProlog(self)
 
     def query(self, query):

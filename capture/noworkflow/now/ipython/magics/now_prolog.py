@@ -10,6 +10,7 @@ from IPython.utils.text import DollarFormatter
 
 import argparse
 
+from ...cmd.types import trial_reference
 from ..models import TrialProlog, Trial
 from .command import IpythonCommandMagic
 
@@ -47,7 +48,7 @@ class NowProlog(IpythonCommandMagic):
         cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         for trial in args.trials:
-            Trial(int(trial)).trial_prolog.load_cli_facts()
+            Trial(trial_reference(trial)).trial_prolog.load_cli_facts()
         result = TrialProlog.prolog_query(cell)
         if args.result:
             magic_cls.shell.user_ns[args.result] = result

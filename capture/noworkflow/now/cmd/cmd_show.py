@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from .command import Command
+from .types import trial_reference
 from ..cross_version import items, values, cvmap
 from ..models.trial import Trial
 from ..persistence import persistence
@@ -138,7 +139,7 @@ class Show(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg('trial', type=int, nargs='?',
+        add_arg('trial', type=str, nargs='?',
                 help='trial id or none for last trial')
         add_arg('-m', '--modules', action='store_true',
                 help='shows module dependencies')
@@ -156,7 +157,8 @@ class Show(Command):
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
-        trial = Trial(trial_id=args.trial, exit=True)
+        args.trial = trial_reference(args.trial)
+        trial = Trial(trial_ref=args.trial, exit=True)
         print_msg('trial information:', True)
         print_trial(trial)
 

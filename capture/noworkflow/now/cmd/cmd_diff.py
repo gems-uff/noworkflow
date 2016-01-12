@@ -10,6 +10,7 @@ import os
 
 from .cmd_show import print_modules
 from .command import Command
+from .types import trial_reference
 from ..cross_version import items, keys
 from ..models.diff import Diff as DiffModel
 from ..persistence import persistence
@@ -63,7 +64,7 @@ class Diff(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg('trial', type=int, nargs=2,
+        add_arg('trial', type=str, nargs=2,
                 help='trial id to be compared')
         add_arg('-m', '--modules', action='store_true',
                 help='compare module dependencies')
@@ -75,6 +76,9 @@ class Diff(Command):
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
+        args.trial = list(args.trial)
+        args.trial[0] = trial_reference(args.trial[0])
+        args.trial[1] = trial_reference(args.trial[1])
         diff = DiffModel(args.trial[0], args.trial[1], exit=True)
         print_msg('trial diff:', True)
         print_diff_trials(diff)

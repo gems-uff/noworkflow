@@ -11,22 +11,25 @@ import json
 import os
 
 from .command import Command
+from .types import trial_reference
 from ..models.trial import Trial
 from ..models.trial_prolog import TrialProlog
 from ..persistence import persistence
 
 
-def int_or_type(string):
+def export_type(string):
     """ Check if argument is an integer or a diff """
-    try:
-        return int(string)
-    except ValueError:
-        if "diff" in string:
-            splitted = string.split(':')
-            if len(splitted) < 3:
-                raise argparse.ArgumentTypeError("you must diff two trials")
-            return splitted
+    if 'diff:' in string:
+        splitted = string.split(':')
+        if len(splitted) < 3:
+            raise argparse.ArgumentTypeError("you must diff two trials")
+        trial_reference(splitted[1])
+        trial_reference(splitted[2])
+        return splitted
+    elif string in ('history', 'current'):
         return string
+    trial_reference(string)
+    return string
 
 
 def nbconvert(code):
@@ -100,7 +103,7 @@ def export_notebook(trial):
         inb = nbconvert(("%load_ext noworkflow\n"
                          "import noworkflow.now.ipython as nip\n"
                          "# <codecell>\n"
-                         "diff = nip.Diff({1}, {2})\n"
+                         "diff = nip.Diff('{1}', '{2}')\n"
                          "# diff.graph.view = 0\n"
                          "# diff.graph.mode = 3\n"
                          "# diff.graph.width = 500\n"
@@ -113,7 +116,7 @@ def export_notebook(trial):
         inb = nbconvert(("%load_ext noworkflow\n"
                          "import noworkflow.now.ipython as nip\n"
                          "# <codecell>\n"
-                         "trial = nip.Trial({})\n"
+                         "trial = nip.Trial('{}')\n"
                          "# trial.graph.mode = 3\n"
                          "# trial.graph.width = 500\n"
                          "# trial.graph.height = 500\n"
@@ -132,7 +135,7 @@ class Export(Command):
                 help='also exports inference rules')
         add_arg('-i', '--ipython', action='store_true',
                 help='export ipython notebook file')
-        add_arg('trial', type=int_or_type, nargs='?',
+        add_arg('trial', type=str, nargs='?',
                 help='trial id or none for last trial. If you are generation '
                      'ipython notebook files, it is also possible to use "history"'
                      'or "diff:<trial_id_1>:<trial_id_2>"')
@@ -142,8 +145,9 @@ class Export(Command):
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
+        args.trial = export_type(args.trial)
         if not args.ipython:
-            trial = Trial(trial_id=args.trial, exit=True)
+            trial = Trial(trial_ref=args.trial, exit=True)
             trial_prolog = TrialProlog(trial)
             print(trial_prolog.export_text_facts())
             if args.rules:

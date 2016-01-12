@@ -108,3 +108,15 @@ class TrialProvider(Provider):
                    VALUES (?, ?, ?)""",
                 ((name, env_attrs[name], trial_id) for name in env_attrs)
             )
+
+    def load_trial_id(self, trial_ref):
+        try:
+            with self.db_conn as db:
+              (an_id,) = db.execute(
+                  """SELECT trial.id
+                     FROM trial LEFT OUTER JOIN tag ON trial.id = tag.trial_id
+                     WHERE trial.id = :1
+                        OR tag.name = :1""", (trial_ref,)).fetchone()
+        except TypeError:
+            an_id = None
+        return an_id

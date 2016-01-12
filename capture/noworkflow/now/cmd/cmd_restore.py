@@ -11,6 +11,7 @@ import sys
 from datetime import datetime
 
 from .command import Command
+from .types import trial_reference
 from .. import prov_deployment
 from ..cross_version import items
 from ..models.trial import Trial
@@ -27,7 +28,7 @@ class Restore(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg('trial', type=int, nargs='?',
+        add_arg('trial', type=str, nargs='?',
                 help='trial id or none for last trial')
         add_arg('-s', '--script',
                 help='python script to be restored')
@@ -81,7 +82,8 @@ class Restore(Command):
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
-        trial = Trial(trial_id=args.trial, script=args.script, exit=True)
+        args.trial = trial_reference(args.trial)
+        trial = Trial(trial_ref=args.trial, script=args.script, exit=True)
         self.create_backup(trial, args)
 
         self.restore_script(trial)
