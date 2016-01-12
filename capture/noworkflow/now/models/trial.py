@@ -16,6 +16,7 @@ from pyposast.cross_version import buffered_str
 from ..formatter import PrettyLines
 from ..persistence import row_to_dict, persistence
 from ..utils import calculate_duration, FORMAT, print_msg
+from ..utils.data import HashableDict
 from ..graphs.trial_graph import TrialGraph
 from ..cross_version import lmap, cvmap
 from .model import Model
@@ -208,14 +209,41 @@ class Trial(Model):
 
     def activations(self, **conditions):
         """ Returns a list of activations """
-        return lmap(Activation, persistence.load(
+        _vars = cvmap(row_to_dict, persistence.load(
+            'slicing_variable', trial_id=self.id, order='id ASC'))
+        _variables = OrderedDict()
+        for var in _vars:
+            _variables[var['id']] = var
+        _activations = lmap(Activation, persistence.load(
             'function_activation', trial_id=self.id, order='start',
             **conditions))
+        for act in _activations:
+            act['slicing_variables'] = tuple(cvmap(HashableDict,
+                persistence.load('slicing_variable', activation_id=act['id'],
+                    trial_id=self.id)))
+
+            act['slicing_usages'] = tuple(cvmap(HashableDict, persistence.load(
+                'slicing_usage', activation_id=act['id'], trial_id=self.id)))
+
+            for usage in act['slicing_usages']:
+                usage['variable'] = _variables[usage['variable_id']]
+
+            act['slicing_dependencies'] = tuple(cvmap(HashableDict,
+                persistence.load('slicing_dependency',
+                    dependent_activation_id=act['id'],
+                    trial_id=self.id)))
+
+            for dep in act['slicing_dependencies']:
+                dep['dependent_id'] = dep['dependent']
+                dep['dependent'] = _variables[dep['dependent']]
+                dep['supplier_id'] = dep['supplier']
+                dep['supplier'] = _variables[dep['supplier']]
+        return _activations
 
     def slicing_variables(self):
         """ Returns a list of slicing variables """
         return lmap(row_to_dict, persistence.load(
-            'slicing_variable', trial_id=self.id, order='vid ASC'))
+            'slicing_variable', trial_id=self.id, order='id ASC'))
 
     def slicing_usages(self):
         """ Returns a list of slicing usages """

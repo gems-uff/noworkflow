@@ -381,6 +381,23 @@ def activation_text(activation):
                       for value in values)))
     if activation['return']:
         result.append("Returned {}".format(activation['return']))
+    if activation['slicing_variables']:
+        result.append("Variables: {}".format(
+            ", ".join("(L{}, {}, {})".format(
+                      var['line'], var['name'], var['value'])
+                      for var in activation['slicing_variables'])))
+    if activation['slicing_usages']:
+        result.append("Usages: {}".format(
+            ", ".join("(L{}, {}, {})".format(
+                      var['line'], var['name'], var['context'])
+                      for var in activation['slicing_usages'])))
+    if activation['slicing_dependencies']:
+        result.append("Dependencies: {}".format(
+            "<br> ".join("(L{}, {}, {}) <- (L{}, {}, {})".format(
+                      dep['dependent']['line'], dep['dependent']['name'],
+                      dep['dependent']['value'], dep['supplier']['line'],
+                      dep['supplier']['name'], dep['supplier']['value'])
+                      for dep in activation['slicing_dependencies'])))
     return result
 
 
