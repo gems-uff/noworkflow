@@ -17,16 +17,12 @@ from inspect import ismethod
 
 from .data_objects import ObjectStore, Variable, Dependency, Usage, Return
 from .profiler import Profiler
+from .argument_captors import SlicingArgumentCaptor
 from ..utils import io
 from ..utils.io import print_fn_msg
 from ..utils.bytecode.f_trace import find_f_trace, get_f_trace
 from ..cross_version import items, IMMUTABLE
-from ..prov_definition import ClassDef, Assert, With, Decorator
-
 from ..persistence import persistence
-
-
-WITHOUT_PARAMS = (ClassDef, Assert, With)
 
 
 class JointPartial(partial):
@@ -95,7 +91,6 @@ class Tracer(Profiler):
         super(Tracer, self).__init__(*args)
         definition = self.metascript.definition
         self.event_map['line'] = self.trace_line
-        self.event_map['exception'] = self.trace_exception
 
         # Store slicing provenance
         self.variables = ObjectStore(Variable)
@@ -135,32 +130,61 @@ class Tracer(Profiler):
         # Events are not unique. Profiler and Tracer have same events
         self.unique_events = False
 
+        self.argument_captor = SlicingArgumentCaptor(self)
+
     def remove_return_lasti(self, lasti_set):
-        """ Remove lasti from list of returns """
+        """Remove lasti from list of returns"""
         returns = self.returns
         for lasti in lasti_set:
             del returns[lasti]
 
-    def add_variable(self, name, line, f_locals, value='--check--'):
-        """ Adds variable """
+    def add_variable(self, act_id, name, line, f_locals, value='--check--'):
+        """Add variable
+
+
+        Arguments:
+        act_id -- Activation object id
+        name -- Variable name
+        line -- Variable line
+        f_locals -- Local Variables Dict in variable frame
+
+        Keyword argument:
+        value -- override variable value (default '--check--')
+        """
         if value == '--check--' and name in f_locals:
             value = self.serialize(f_locals[name])
         else:
             value = 'now(n/a)'
-        return self.variables.add(name, line, value, datetime.now())
+        return self.variables.add(act_id, name, line, value, datetime.now())
 
-    def add_dependency(self, var, dep, activation, filename, lasti_set):
-        """ Adds dependency """
+    def add_dependency(self, dep_act, dep_var, sup_act, sup,
+                       filename, lasti_set):
+        """Create dependency: dep_var depends on sup
+
+
+        Arguments:
+        self -- Tracer object
+        dep_act -- Dependent Activation object
+        dep_var -- Dependent Variable object
+        sup_act -- Supplier Activation object
+        sup -- Supplier Variable (string/tuple/'now(iter)')
+
+
+        If <sup> is 'now(iter)', create dependency to iter object
+        If <sup> is a tuple in the form (line, col), create dependency to call
+        If <sup> is a string, create dependency to variable
+        """
         # pylint: disable=R0913
-        var_id, dependencies_add = var.id, self.dependencies.add
-        context = activation.context
+        dep_var_id, dependencies_add = dep_var.id, self.dependencies.add
+        context = sup_act.context
 
         # Variable
-        if dep in context:
-            dependencies_add(var_id, context[dep].id)
+        if sup in context:
+            dependencies_add(dep_act.id, dep_var_id,
+                             sup_act.id, context[sup].id)
         # Function Call
-        if isinstance(dep, tuple):
-            call = self.call_by_col[filename][dep[0]][dep[1]]
+        if isinstance(sup, tuple):
+            call = self.call_by_col[filename][sup[0]][sup[1]]
             lasti, returns = call.lasti, self.returns
 
             if not lasti in returns:
@@ -169,34 +193,50 @@ class Tracer(Profiler):
 
             if isinstance(_return, Return):
                 # Call was not evaluated before
-                vid = self.add_variable('call {}'.format(
-                    _return.activation.name), dep[0], {}, 'now(n/a)')
+                vid = self.add_variable(sup_act.id, 'call {}'.format(
+                    _return.activation.name), sup[0], {}, 'now(n/a)')
                 returns[lasti] = (_return, vid)
                 call.result = (_return.var.id, _return.var.line)
-                dependencies_add(vid, _return.var.id)
+                dependencies_add(dep_act.id, vid, sup_act.id, _return.var.id)
 
                 # Remove lasti from returns list to avoid conflict
                 lasti_set.add(lasti)
             else:
                 _return, vid = _return
 
-            self.add_dependencies(self.variables[vid], activation, call.func,
+            self.add_dependencies(dep_act, self.variables[vid],
+                                  sup_act, call.func,
                                   filename, lasti_set)
-            dependencies_add(var_id, vid)
+            dependencies_add(dep_act.id, dep_var_id, sup_act.id, vid)
         # Iter
-        if dep == 'now(iter)' and self.last_iter:
-            dependencies_add(var_id, self.last_iter)
+        if sup == 'now(iter)' and self.last_iter:
+            dependencies_add(dep_act.id, dep_var_id,
+                             sup_act.id, self.last_iter)
 
-    def add_dependencies(self, var, activation, dependencies, filename,
-                         lasti_set):
-        """ Adds dependencies to var """
+    def add_dependencies(self, dep_act, dep_var, sup_act, sups,
+                         filename, lasti_set):
+        """ Create dependencies: dep_var depends on sups
+
+
+        Arguments:
+        self -- Tracer object
+        dep_act -- Dependent Activation object
+        dep_var -- Dependent Variable object
+        sup_act -- Supplier Activation object
+        sups -- List of Supplier Variables [(string/tuple/'now(iter)')]
+
+
+        If <sup> is 'now(iter)', create dependency to iter object
+        If <sup> is a tuple in the form (line, col), create dependency to call
+        If <sup> is a string, create dependency to variable
+        """
         # pylint: disable=R0913
         add_dependency = self.add_dependency
-        for dep in dependencies:
-            add_dependency(var, dep, activation, filename, lasti_set)
+        for sup in sups:
+            add_dependency(dep_act, dep_var, sup_act, sup,
+                           filename, lasti_set)
 
-    def slice_line(self, activation, lineno, f_locals, filename,
-                   line_dependencies=None):
+    def slice_line(self, activation, lineno, f_locals, filename, line_dependencies=None):
         """ Generates dependencies from line """
         # pylint: disable=R0913
         # pylint: disable=R0914
@@ -214,25 +254,26 @@ class Tracer(Profiler):
             usages = self.line_usages[filename][lineno][ctx]
             for name in usages:
                 if name in context:
-                    usages_add(context[name].id, name, lineno, ctx)
+                    usages_add(activation.id, context[name].id, name,
+                               lineno, ctx)
 
         lasti_set = set()
         set_last_iter = False
         for name, others in items(dependencies):
             if name == 'return':
-                vid = add_variable(name, lineno, f_locals,
+                vid = add_variable(activation.id, name, lineno, f_locals,
                                    value=activation.return_value)
                 self.returns[activation.lasti] = Return(activation,
                                                         variables[vid])
             elif name == 'yield':
-                vid = add_variable(name, lineno, f_locals)
+                vid = add_variable(activation.id, name, lineno, f_locals)
                 self.last_iter = vid
                 set_last_iter = True
             else:
-                vid = add_variable(name, lineno, f_locals)
+                vid = add_variable(activation.id, name, lineno, f_locals)
 
-            add_dependencies(
-                variables[vid], activation, others, filename, lasti_set)
+            add_dependencies(activation, variables[vid],
+                             activation, others, filename, lasti_set)
 
             context[name] = variables[vid]
 
@@ -240,15 +281,29 @@ class Tracer(Profiler):
         if not set_last_iter:
             self.last_iter = None
 
-    def close_activation(self, event, arg):
-        """ Slice all lines from closing activation """
-        for line in self.current_activation.slice_stack:
+    def close_activation(self, frame, event, arg, ccall=False):
+        """Slice all lines from closing activation
+        Add generic return if frame is not None
+        """
+        activation = self.current_activation
+        for line in activation.slice_stack:
             self.slice_line(*line)
-        super(Tracer, self).close_activation(event, arg)
+        super(Tracer, self).close_activation(frame, event, arg)
+        if frame:
+            self.add_generic_return(activation, frame, ccall=ccall)
+            activation.context['return'].value = activation.return_value
 
     def add_generic_return(self, activation, frame, ccall=False):
-        """ Add return to functions that do not have return
-            For ccall, add dependency from all params
+        """Add return to functions that do not have return
+        For ccall, add dependency from all params
+
+
+        Arguments:
+        activation -- closing Activation
+        frame -- parent Frame
+
+        Keyword Arguments:
+        ccall -- indicates if it is a ccall (default=False)
         """
 
         lineno = frame.f_lineno
@@ -257,7 +312,7 @@ class Tracer(Profiler):
         # Artificial return condition
         lasti = activation.lasti
         if 'return' not in activation.context:
-            vid = self.add_variable('return', lineno, {},
+            vid = self.add_variable(activation.id, 'return', lineno, {},
                                     value=activation.return_value)
             activation.context['return'] = variables[vid]
             self.returns[lasti] = Return(activation, variables[vid])
@@ -268,54 +323,37 @@ class Tracer(Profiler):
                 call = self.call_by_lasti[filename][lineno][lasti]
                 all_args = call.all_args()
                 lasti_set = set()
-                self.add_dependencies(variables[vid], caller, all_args,
-                                      filename, lasti_set)
+                self.add_dependencies(activation, variables[vid], caller,
+                                      all_args, filename, lasti_set)
                 self.add_inter_dependencies(frame, all_args, caller, lasti_set)
                 self.remove_return_lasti(lasti_set)
 
-    def match_arg(self, passed, arg, caller, activation, line, f_locals,
-                  filename):
-        """ Matches passed param with argument """
-        # pylint: disable=R0913
-        context = activation.context
-
-        if arg in context:
-            act_var = context[arg]
-        else:
-            vid = self.add_variable(arg, line, f_locals)
-            act_var = self.variables[vid]
-            context[arg] = act_var
-
-        if passed:
-            lasti_set = []
-            self.add_dependency(act_var, passed, caller, filename, lasti_set)
-            self.remove_return_lasti(lasti_set)
-
-    def match_args(self, args, param, caller, activation, line, f_locals,
-                   filename):
-        """ Matches passed param with arguments """
-        # pylint: disable=R0913
-        for arg in args:
-            self.match_arg(arg, param, caller, activation, line, f_locals,
-                           filename)
-
     def add_inter_dependencies(self, frame, args, activation, lasti_set):
-        """ Adds dependencies between params """
+        """Add dependencies between all parameters in a call
+
+
+        Arguments:
+        frame -- parent Frame
+        args -- Parameter Variables
+        activation -- parent Activation
+        lasti_set -- Set of lasti
+        """
         # pylint: disable=R0914
         f_locals, context = frame.f_locals, activation.context
         lineno, variables = frame.f_lineno, self.variables
-        add_variable = self.add_variable
+        filename = frame.f_code.co_filename
         add_dependencies = self.add_dependencies
+        add_variable = self.add_variable
 
         added = {}
         for arg in args:
             try:
                 var = f_locals[arg]
                 if not isinstance(var, IMMUTABLE):
-                    vid = add_variable(arg, lineno, {}, value=var)
+                    vid = add_variable(activation, arg, lineno, {}, value=var)
                     variable = variables[vid]
-                    add_dependencies(variable, activation, args,
-                                     frame.f_code.co_filename, lasti_set)
+                    add_dependencies(activation, variable, activation, args,
+                                     filename, lasti_set)
                     added[arg] = variable
             except KeyError:
                 pass
@@ -323,102 +361,9 @@ class Tracer(Profiler):
         for arg, variable in items(added):
             context[arg] = variable
 
-    def add_argument_variables(self, frame):
-        """ Adds argument variables """
-        # pylint: disable=R0914
-        back = frame.f_back
-        fname = frame.f_code.co_name
-        filename = back.f_code.co_filename
-        lineno = back.f_lineno
-        lasti = back.f_lasti
-        if (fname == '__enter__' and
-                lasti in self.with_enter_by_lasti[filename][lineno]):
-            return
-        if (fname == '__exit__' and
-                lasti in self.with_exit_by_lasti[filename][lineno]):
-            return
-        if lasti in self.iters[filename][lineno]:
-            self.next_is_iter = True
-            return
-
-        call = self.call_by_lasti[filename][lineno][lasti]
-        if isinstance(call, WITHOUT_PARAMS):
-            return
-        if isinstance(call, Decorator) and not call.fn:
-            return
-        f_locals = frame.f_locals
-        match_args = self.match_args
-        match_arg = self.match_arg
-        caller, act = self.parent_activation, self.current_activation
-        act_args_index = act.args.index
-        line = frame.f_lineno
-        sub = -[bool(act.starargs), bool(act.kwargs)].count(True)
-
-        order = act.args + act.starargs + act.kwargs
-        used = [0 for _ in order]
-        j = 0
-        for i, call_arg in enumerate(call.args):
-            j = i if i < len(order) + sub else sub
-            act_arg = order[j]
-            match_args(call_arg, act_arg, caller, act, line, f_locals,
-                       filename)
-            used[j] += 1
-        for act_arg, call_arg in items(call.keywords):
-            try:
-                i = act_args_index(act_arg)
-                match_args(call_arg, act_arg, caller, act, line, f_locals,
-                           filename)
-                used[i] += 1
-            except ValueError:
-                for kwargs in act.kwargs:
-                    match_args(call_arg, kwargs, caller, act, line, f_locals,
-                               filename)
-
-        # ToDo: improve matching
-        #   Ignore default params
-        #   Do not match f(**kwargs) with def(*args)
-        args = [(i, order[i]) for i in range(len(used)) if not used[i]]
-        for star in call.kwargs + call.starargs:
-            for i, act_arg in args:
-                match_args(star, act_arg, caller, act, line, f_locals,
-                           filename)
-                used[i] += 1
-
-        args = [(i, order[i]) for i in range(len(used)) if not used[i]]
-        for i, act_arg in args:
-            match_arg(None, act_arg, caller, act, line, f_locals, filename)
-
-        lasti_set = set()
-        self.add_inter_dependencies(back, call.all_args(), caller, lasti_set)
-        self.remove_return_lasti(lasti_set)
-
-    def trace_call(self, frame, event, arg):
-        self.check_f_trace(frame, event)
-        super(Tracer, self).trace_call(frame, event, arg)
-        filename = frame.f_back.f_code.co_filename
-        if (filename not in self.paths or not self.valid_depth() or
-                frame.f_back.f_lineno in self.imports[filename]):
-            return
-        self.add_argument_variables(frame)
-
-    def trace_c_return(self, frame, event, arg):
-        self.check_f_trace(frame, event)
-        activation = self.current_activation
-        super(Tracer, self).trace_c_return(frame, event, arg)
-        self.add_generic_return(activation, frame, ccall=True)
-        activation.context['return'].value = activation.return_value
-
-    def trace_return(self, frame, event, arg):
-        self.check_f_trace(frame, event)
-        activation = self.current_activation
-        super(Tracer, self).trace_return(frame, event, arg)
-        self.add_generic_return(activation, frame)
-        activation.context['return'].value = activation.return_value
-
     def trace_line(self, frame, event, arg):
-        """ Trace Line event """
+        """Trace Line event"""
         # pylint: disable=W0613
-        self.check_f_trace(frame, event)
         code = frame.f_code
         filename = frame.f_code.co_filename
         lineno = frame.f_lineno
@@ -447,14 +392,13 @@ class Tracer(Profiler):
         activation.slice_stack.append([
             activation, lineno, frame.f_locals, filename])
 
-    def trace_c_exception(self, frame, event, arg):
-        self.check_f_trace(frame, event)
-        super(Tracer, self).trace_c_exception(frame, event, arg)
-
-    def trace_exception(self, frame, event, arg):
+    def trace_pre_tracer(self, frame, event, arg):
         self.check_f_trace(frame, event)
 
     def check_f_trace(self, frame, event):
+        """Check if frame changes current tracer
+        Replace the new tracer to a joint tracer
+        """
         if self.f_trace_frames:
 
             for _frame in self.f_trace_frames:
@@ -474,7 +418,7 @@ class Tracer(Profiler):
     def store(self, partial=False):
         if not partial:
             while len(self.activation_stack) > 1:
-                self.close_activation('store', None)
+                self.close_activation(None, 'store', None)
         super(Tracer, self).store(partial=partial)
         tid = self.trial_id
         persistence.store_slicing_variables(tid, self.variables, partial)
@@ -485,7 +429,7 @@ class Tracer(Profiler):
         #self.view_slicing_data(io.verbose)
 
     def view_slicing_data(self, show=True):
-        """ View captured slicing """
+        """View captured slicing"""
         # pylint: disable=W0640
         # pylint: disable=W0631
         if show:

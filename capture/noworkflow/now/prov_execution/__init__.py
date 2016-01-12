@@ -12,7 +12,7 @@ import sys
 from ..cross_version import cross_compile
 from ..utils import print_msg, meta_profiler
 
-from .profiler import Profiler, InspectProfiler
+from .profiler import Profiler
 from .slicing import Tracer
 from .debugger import create_debugger, debugger_builtins
 

@@ -118,35 +118,37 @@ class RunProvider(Provider):
     def store_slicing_variables(self, trial_id, variables, partial):
         """ Store Slicing Variables """
         generator = partial_save((lambda v: False), (lambda v: (
-            trial_id, v.id, v.name, v.line, v.value, v.time)))
+            trial_id, v.id, v.activation_id, v.name, v.line, v.value, v.time)))
         with self.db_conn as db:
             db.executemany(
-                 """REPLACE INTO slicing_variable(trial_id, vid, name, line,
-                    value, time)
-                VALUES (:0, :1, :2, :3, :4, :5)""",
+                 """REPLACE INTO slicing_variable(trial_id, id, activation_id,
+                    name, line, value, time)
+                VALUES (:0, :1, :2, :3, :4, :5, :6)""",
                 generator(variables, partial)
             )
 
     def store_slicing_dependencies(self, trial_id, dependencies, partial):
         """ Store Slicing Dependencies """
         generator = partial_save((lambda d: True), (lambda d: (
-            trial_id, d.id, d.dependent, d.supplier)))
+            trial_id, d.id, d.dependent_activation, d.dependent,
+            d.supplier_activation, d.supplier)))
         with self.db_conn as db:
             db.executemany(
-                 """REPLACE INTO slicing_dependency(trial_id, id, dependent,
-                    supplier)
-                VALUES (:0, :1, :2, :3)""",
+                 """REPLACE INTO slicing_dependency(trial_id, id,
+                    dependent_activation_id, dependent,
+                    supplier_activation_id, supplier)
+                VALUES (:0, :1, :2, :3, :4, :5)""",
                 generator(dependencies, partial)
             )
 
     def store_slicing_usages(self, trial_id, usages, partial):
         """ Store Slicing Usages """
         generator = partial_save((lambda u: True), (lambda u: (
-            trial_id, u.id, u.vid, u.name, u.line, u.ctx)))
+            trial_id, u.id, u.activation_id, u.variable_id, u.name, u.line, u.ctx)))
         with self.db_conn as db:
             db.executemany(
-                 """REPLACE INTO slicing_usage(trial_id, id, vid, name,
-                    line, context)
-                VALUES (:0, :1, :2, :3, :4, :5)""",
+                 """REPLACE INTO slicing_usage(trial_id, id, activation_id,
+                    variable_id, name, line, context)
+                VALUES (:0, :1, :2, :3, :4, :5, :6)""",
                 generator(usages, partial)
             )

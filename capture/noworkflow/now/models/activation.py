@@ -9,9 +9,10 @@ from __future__ import (absolute_import, print_function,
 from collections import defaultdict
 from ..persistence import row_to_dict, persistence
 from ..cross_version import lmap
-from ..utils import hashabledict
+from ..utils.data import HashableDict
 
-class Activation(hashabledict):
+
+class Activation(HashableDict):
 
     @property
     def objects(self):

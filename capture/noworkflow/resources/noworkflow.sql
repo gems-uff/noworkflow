@@ -125,45 +125,55 @@ CREATE INDEX file_access_trial_id on file_access(trial_id);
 
 create table slicing_variable (
 	trial_id INTEGER,
-	vid INTEGER,
+	id INTEGER,
+	activation_id INTEGER,
     name TEXT,
 	line INTEGER,
 	value TEXT,
 	time TIMESTAMP,
 	FOREIGN KEY (trial_id) REFERENCES trial ON DELETE CASCADE,
-	PRIMARY KEY (trial_id, vid)
+	FOREIGN KEY (activation_id) REFERENCES function_activation ON DELETE CASCADE,
+	PRIMARY KEY (trial_id, activation_id, id)
 );
 
 CREATE INDEX slicing_variable_trial_id on slicing_variable(trial_id);
-CREATE INDEX slicing_variable_vid on slicing_variable(vid);
+CREATE INDEX slicing_variable_activation_id on slicing_variable(activation_id);
+CREATE INDEX slicing_variable_variable_id on slicing_variable(id);
 
 create table slicing_usage (
 	trial_id INTEGER,
+	activation_id INTEGER,
+	variable_id INTEGER,
 	id INTEGER,
-	vid INTEGER,
     name TEXT,
 	line INTEGER,
 	context TEXT CHECK (context IN ('Load', 'Del')),
-	FOREIGN KEY (trial_id, vid) REFERENCES slicing_variable(trial_id, vid) ON DELETE CASCADE,
+	FOREIGN KEY (trial_id, activation_id, variable_id) REFERENCES slicing_variable(trial_id, activation_id, id) ON DELETE CASCADE,
 	PRIMARY KEY (trial_id, id)
 );
 
 CREATE INDEX slicing_usage_trial_id on slicing_usage(trial_id);
-CREATE INDEX slicing_usage_vid on slicing_usage(vid);
+CREATE INDEX slicing_usage_activation_id on slicing_usage(activation_id);
+CREATE INDEX slicing_usage_variable_id on slicing_usage(variable_id);
+CREATE INDEX slicing_usage_id on slicing_usage(id);
 
 create table slicing_dependency (
 	trial_id INTEGER,
 	id INTEGER,
+	dependent_activation_id INTEGER,
 	dependent INTEGER,
+	supplier_activation_id INTEGER,
 	supplier INTEGER,
-	FOREIGN KEY (trial_id, dependent) REFERENCES slicing_variable(trial_id, vid) ON DELETE CASCADE,
-	FOREIGN KEY (trial_id, supplier) REFERENCES slicing_variable(trial_id, vid) ON DELETE CASCADE,
+	FOREIGN KEY (trial_id, dependent_activation_id, dependent) REFERENCES slicing_variable(trial_id, activation_id, id) ON DELETE CASCADE,
+	FOREIGN KEY (trial_id, supplier_activation_id, supplier) REFERENCES slicing_variable(trial_id, activation_id, id) ON DELETE CASCADE,
 	PRIMARY KEY (trial_id, id)
 );
 
 CREATE INDEX slicing_dependency_trial_id on slicing_dependency(trial_id);
 CREATE INDEX slicing_dependency_dependent on slicing_dependency(dependent);
+CREATE INDEX slicing_dependency_dependent_activation_id on slicing_dependency(dependent_activation_id);
 CREATE INDEX slicing_dependency_supplier on slicing_dependency(supplier);
+CREATE INDEX slicing_dependency_supplier_activation_id on slicing_dependency(supplier_activation_id);
 
 -- Cache
 

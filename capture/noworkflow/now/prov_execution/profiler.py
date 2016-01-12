@@ -9,14 +9,13 @@ from __future__ import (absolute_import, print_function,
 
 import sys
 import os
-import itertools
-import inspect
 import traceback
 import time
 from profile import Profile
 from datetime import datetime
 from .base import StoreOpenMixin
 from .data_objects import Activation, ObjectStore, FileAccess, ObjectValue
+from .argument_captors import ProfilerArgumentCaptor
 from ..persistence import persistence
 
 
@@ -52,7 +51,7 @@ class Profiler(StoreOpenMixin):
         self.save_frequency = self.metascript.save_frequency / 1000.0
         self.call_storage_frequency = self.metascript.call_storage_frequency
         self.closed_activations = 0
-        
+
         self.timer = time.time
         self.last_time = self.timer()
 
@@ -62,6 +61,9 @@ class Profiler(StoreOpenMixin):
         # Skip tear_up return
         self.skip_first_return = True
         self.enabled = True
+
+        # Capture arguments
+        self.argument_captor = ProfilerArgumentCaptor(self)
 
     @property
     def current_activation(self):
@@ -73,7 +75,7 @@ class Profiler(StoreOpenMixin):
 
     def _current_activation(self, ignore_open=False):
         astack = self.activation_stack
-        if astack[-1]:
+        if astack[-1] is not None:
             activation = self.activations[astack[-1]]
             if ignore_open and len(astack) > 1 and activation.name == 'open':
                 # get open's parent activation
@@ -99,7 +101,7 @@ class Profiler(StoreOpenMixin):
     def add_activation(self, aid):
         self.activation_stack.append(aid)
 
-    def close_activation(self, event, arg):
+    def close_activation(self, frame, event, arg, ccall=False):
         activation = self.current_activation
         self.activation_stack.pop()
         activation.finish = datetime.now()
@@ -128,35 +130,6 @@ class Profiler(StoreOpenMixin):
                 frame.f_lineno, frame.f_lasti, self.activation_stack[-1]
             ))
 
-    def capture_python_params(self, frame, activation):
-        values = frame.f_locals
-        co = frame.f_code
-        names = co.co_varnames
-        nargs = co.co_argcount
-        # Capture args
-        for var in itertools.islice(names, 0, nargs):
-            try:
-                self.object_values.add(
-                    var, self.serialize(values[var]), 'ARGUMENT', activation.id)
-                activation.args.append(var)
-            except Exception:
-                # ignoring any exception during capture
-                pass
-        # Capture *args
-        if co.co_flags & inspect.CO_VARARGS:
-            varargs = names[nargs]
-            self.object_values.add(
-                varargs, self.serialize(values[varargs]), 'ARGUMENT', activation.id)
-            activation.starargs.append(varargs)
-            nargs += 1
-        # Capture **kwargs
-        if co.co_flags & inspect.CO_VARKEYWORDS:
-            kwargs = values[names[nargs]]
-            for key in kwargs:
-                self.object_values.add(
-                    key, self.serialize(kwargs[key]), 'ARGUMENT', activation.id)
-            activation.kwargs.append(names[nargs])
-
     def trace_call(self, frame, event, arg):
         co_name = frame.f_code.co_name
         co_filename = frame.f_code.co_filename
@@ -173,7 +146,7 @@ class Profiler(StoreOpenMixin):
             )
             activation = self.activations[aid]
             # Capturing arguments
-            self.capture_python_params(frame, activation)
+            self.argument_captor.capture(frame, activation)
 
             # Capturing globals
             functions = self.functions.get(co_filename)
@@ -192,12 +165,12 @@ class Profiler(StoreOpenMixin):
 
     def trace_c_return(self, frame, event, arg):
         if self.valid_depth():
-            self.close_activation(event, arg)
+            self.close_activation(frame, event, arg, ccall=True)
         self.depth_non_user -= 1
 
     def trace_c_exception(self, frame, event, arg):
         if self.valid_depth():
-            self.close_activation(event, arg)
+            self.close_activation(frame, event, arg)
         self.depth_non_user -= 1
 
     def trace_return(self, frame, event, arg):
@@ -205,9 +178,8 @@ class Profiler(StoreOpenMixin):
         if self.skip_first_return:
             self.skip_first_return = False
             return
-
         if self.valid_depth():
-            self.close_activation(event, arg)
+            self.close_activation(frame, event, arg)
 
         if frame.f_code.co_filename in self.paths:
             self.depth_user -= 1
@@ -225,6 +197,7 @@ class Profiler(StoreOpenMixin):
         try:
             if self.enabled:
                 if self.unique_events or self.new_event(frame, event, arg):
+                    self.pre_tracer(frame, event, arg)
                     super(Profiler, self).tracer(frame, event, arg)
                 if self.save_frequency and self.timer() - self.last_time > self.save_frequency:
                     self.store(partial=True)
@@ -233,6 +206,9 @@ class Profiler(StoreOpenMixin):
             traceback.print_exc()
         finally:
             return self.tracer
+
+    def pre_tracer(self, frame, event, arg):
+        pass
 
     def store(self, partial=False):
         tid = self.trial_id
@@ -249,27 +225,3 @@ class Profiler(StoreOpenMixin):
     def teardown(self):
         super(Profiler, self).teardown()
         sys.setprofile(self.default_profile)
-
-
-class InspectProfiler(Profiler):
-    """ This Profiler uses the inspect.getargvalues that is slower because
-    it considers the existence of anonymous tuple """
-
-    def capture_python_params(self, frame, activation):
-        (args, varargs, keywords, values) = inspect.getargvalues(frame)
-        for arg in args:
-            try:
-                self.object_values.add(
-                    arg, self.serialize(values[arg]), 'ARGUMENT', activation.id)
-                activation.args.append(arg)
-            except:  # ignoring any exception during capture
-                pass
-        if varargs:
-            self.object_values.add(
-                varargs, self.serialize(values[varargs]), 'ARGUMENT', activation.id)
-            activation.starargs.append(varargs)
-        if keywords:
-            for key, value in items(values[keywords]):
-                self.object_values.add(
-                    key, self.serialize(value), 'ARGUMENT', activation.id)
-                activation.kwargs.append(key)

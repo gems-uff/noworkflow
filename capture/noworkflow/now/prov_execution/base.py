@@ -12,6 +12,7 @@ from datetime import datetime
 from collections import defaultdict
 
 from .data_objects import ObjectStore, FileAccess
+from .argument_captors import ArgumentCaptor
 from ..persistence import persistence
 from ..cross_version import builtins
 from ..prov_definition.definition import Definition
@@ -33,7 +34,7 @@ class ExecutionProvider(object):
         self.depth_threshold = metascript.depth
         # How deep we want to go beyond our context
         self.non_user_depth_threshold = metascript.non_user_depth
-       
+
         # Object serializer function
         self.serialize = metascript.serialize
 
@@ -42,6 +43,8 @@ class ExecutionProvider(object):
         self.event_map = defaultdict(lambda: self.trace_empty, {})
         self.default_profile = sys.getprofile()
         self.default_trace = sys.gettrace()
+
+        self.argument_captor = ArgumentCaptor(self)
 
     def trace_empty(self, frame, event, arg):
         pass

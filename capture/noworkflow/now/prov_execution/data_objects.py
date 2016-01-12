@@ -113,19 +113,22 @@ ObjectValue = namedtuple('ObjectValue', ('id name value type '
 # Slicing
 
 class Variable(object):
-    __slots__ = ('id', 'name', 'line', 'value', 'time')
+    __slots__ = ('id', 'activation_id', 'name', 'line', 'value', 'time')
 
-    def __init__(self, vid, name, line, value, time):
+    def __init__(self, vid, activation_id, name, line, value, time):
         self.id = vid
+        self.activation_id = activation_id
         self.name = name
         self.line = line
         self.value = value
         self.time = time
 
     def __repr__(self):
-        return "Variable(id={}, name={}, line={}, value={})".format(
-            self.id, self.name, self.line, self.value)
+        return ("Variable(id={}, activation_id={}, name={}, line={}, "
+                "value={})").format(self.id, self.activation_id, self.name,
+                                    self.line, self.value)
 
-Dependency = namedtuple('Dependency', 'id dependent supplier')
-Usage = namedtuple('Usage', 'id vid name line ctx')
+Dependency = namedtuple('Dependency', ('id dependent_activation dependent '
+                                       'supplier_activation supplier'))
+Usage = namedtuple('Usage', 'id activation_id variable_id name line ctx')
 Return = namedtuple('Return', 'activation var')
