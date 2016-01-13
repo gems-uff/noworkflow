@@ -17,6 +17,7 @@ from ..cross_version import items
 from ..models.trial import Trial
 from ..persistence import persistence
 from ..utils.io import print_msg
+from ..metadata import Metascript
 
 
 class Restore(Command):
@@ -43,30 +44,22 @@ class Restore(Command):
                 help='set project path where is the database. Default to '
                      'current directory')
 
-    def create_backup(self, trial, args):
+    def create_backup(self, metascript):
         """ Create a backup trial if the script were changed """
+        trial = metascript.trial
         if not os.path.isfile(trial.script):
             return
 
         head = trial.head_trial()
-        with open(trial.script, 'rb') as fil:
-            code = fil.read()
-            code_hash = persistence.put(code)
+        code_hash = persistence.put(metascript.code)
 
         if code_hash != head.code_hash:
             now = datetime.now()
-            tid = persistence.store_trial(
-                now, trial.script, code,
-                '<restore {}>'.format(trial.id),
-                args.bypass_modules, ' '.join(sys.argv[1:]), run=False)
-            metascript = {
-                'trial_id': tid,
-                'code': code,
-                'path': trial.script,
-                'compiled': None,
-            }
+            metascript.create_trial(args='<restore {}>'.format(trial.id),
+                                    run=False)
             prov_deployment.collect_provenance(metascript)
-            print_msg('Backup Trial {} created'.format(tid), self.print_msg)
+            print_msg('Backup Trial {} created'.format(metascript.trial_id),
+                      self.print_msg)
 
     def restore(self, path, code_hash, trial_id):
         """ Restore file with <code_hash> from <trial_id> """
@@ -82,9 +75,14 @@ class Restore(Command):
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
-        args.trial = trial_reference(args.trial)
-        trial = Trial(trial_ref=args.trial, script=args.script, exit=True)
-        self.create_backup(trial, args)
+        metascript = Metascript().read_restore_args(args)
+        trial = metascript.trial = Trial(trial_ref=metascript.trial_id,
+                                         script=metascript.name,
+                                         exit=True)
+        metascript.path = trial.script
+        metascript.name = trial.script
+
+        self.create_backup(metascript)
 
         self.restore_script(trial)
 

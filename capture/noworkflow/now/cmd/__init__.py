@@ -17,6 +17,7 @@ from .cmd_diff import Diff
 from .cmd_export import Export
 from .cmd_restore import Restore
 from .cmd_vis import Vis
+from .cmd_demo import Demo
 
 
 def main():
@@ -32,6 +33,7 @@ def main():
         Export(),
         Restore(),
         Vis(),
+        Demo(),
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
@@ -49,5 +51,6 @@ __all__ = [
     b'Export',
     b'Restore',
     b'Vis',
+    b'Demo',
     b'main',
 ]

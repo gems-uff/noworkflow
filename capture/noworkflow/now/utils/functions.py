@@ -10,7 +10,7 @@ import inspect
 import os
 import types
 from datetime import datetime
-from pkg_resources import resource_string
+from pkg_resources import resource_string, resource_listdir, resource_isdir
 from textwrap import dedent
 
 from ..cross_version import cross_compile
@@ -34,6 +34,14 @@ def resource(filename, encoding=None):
     if encoding:
         return content.decode(encoding=encoding)
     return content
+
+def resource_ls(path):
+    """Access resource directory via setuptools"""
+    return resource_listdir(MODULE, path)
+
+def resource_is_dir(path):
+    """Access resource directory via setuptools"""
+    return resource_isdir(MODULE, path)
 
 
 def calculate_duration(obj):

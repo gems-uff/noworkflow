@@ -12,6 +12,7 @@ import sys
 
 from datetime import datetime
 from .persistence import persistence, get_serialize
+from .cmd.types import trial_reference
 from .prov_definition.definition import Definition
 from .utils.io import print_msg
 
@@ -28,7 +29,7 @@ CONTEXTS = {
 }
 
 
-class RunMetascript(object):
+class Metascript(object):
 
     def __init__(self):
         # Trial id read from Database : int
@@ -191,6 +192,17 @@ class RunMetascript(object):
         self.call_storage_frequency = args.call_storage_frequency
         return self
 
+    def read_restore_args(self, args):
+        self.name = args.script
+        self.bypass_modules = args.bypass_modules
+        self.command = ' '.join(sys.argv[1:])
+
+        self.trial_id = trial_reference(args.trial)
+        self.local = args.local
+        self.input = args.input
+        self.dir = args.dir
+        return self
+
     def create_last(self):
         """ Create file indicating last trial id """
         if self.should_create_last_file:
@@ -198,13 +210,15 @@ class RunMetascript(object):
             with open(lastname, "w") as lastfile:
                 lastfile.write(str(self.trial_id))
 
-    def create_trial(self):
-        """ Create trial and assign a new id to it """
+    def create_trial(self, args=None, run=True):
+        """Create trial and assign a new id to it"""
+        if args is None:
+            args = " ".join(sys.argv[1:])
         now = datetime.now()
         try:
             self.trial_id = persistence.store_trial(
-                now, self.name, self.code, " ".join(sys.argv[1:]),
-                self.bypass_modules, self.command)
+                now, self.name, self.code, args,
+                self.bypass_modules, self.command, run=run)
         except TypeError as e:
             if self.bypass_modules:
                 print_msg("not able to bypass modules check because no "

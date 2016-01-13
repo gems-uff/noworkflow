@@ -16,7 +16,7 @@ from .. import prov_deployment
 from .. import prov_execution
 from ..utils import io, metaprofiler
 from ..persistence import persistence
-from ..metadata import RunMetascript
+from ..metadata import Metascript
 
 
 def non_negative(string):
@@ -143,7 +143,7 @@ class Run(Command):
         io.print_msg('removing noWorkflow boilerplate')
 
         # Create Metascript with params
-        metascript = RunMetascript().read_cmd_args(args)
+        metascript = Metascript().read_cmd_args(args)
 
         # Set __main__ namespace
         import __main__

@@ -1,0 +1,13 @@
+>ERASE_ALL
+>LOAD step1
+$now run experiment.py
+>LOAD step2
+$now run experiment.py
+>LOAD step3
+$now restore 1
+>LOAD step4
+$now run experiment.py
+$now restore 3
+$now run experiment.py
+>LOAD step5
+$now run experiment.py

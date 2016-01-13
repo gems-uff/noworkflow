@@ -15,7 +15,7 @@ from ...cmd.cmd_run import Run, run
 from ...persistence import persistence
 from ...models.trial import Trial
 
-from ...metadata import RunMetascript, LAST_TRIAL
+from ...metadata import Metascript, LAST_TRIAL
 
 
 from .command import IpythonCommandMagic
@@ -115,7 +115,7 @@ class NowRun(IpythonCommandMagic, Run):
                 magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
                 if cell else params[0])
 
-            metascript = RunMetascript().read_ipython_args(
+            metascript = Metascript().read_ipython_args(
                 args, directory, filename, [filename] + params,
                 not args.interactive, cmd=line)
 
