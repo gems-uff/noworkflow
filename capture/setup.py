@@ -12,7 +12,7 @@ import platform
 
 from uuid import getnode
 
-__version__ = "0.14.0"
+__version__ = "0.15.0"
 
 
 def recursive_path(pack, path):
@@ -92,12 +92,13 @@ setup(
     version = __version__,
     packages = find_packages(),
     package_data = {
-        'noworkflow': [
-            'resources/*',
-        ] + recursive_path('noworkflow', 'now/vis/static')
+        'noworkflow': recursive_path('noworkflow', 'resources')
+          + recursive_path('noworkflow', 'now/vis/static')
           + recursive_path('noworkflow', 'now/vis/templates'),
     },
-    entry_points = {'console_scripts': ['now = noworkflow.main:main']},
+    entry_points = {
+        'console_scripts': ['now=noworkflow:main']
+    },
     author = ("Joao Pimentel, Leonardo Murta, Vanessa Braganholo, "
               "Fernando Chirigati, David Koop, and Juliana Freire"),
     author_email = "leomurta@ic.uff.br",
@@ -107,11 +108,12 @@ setup(
     license = "MIT",
     keywords = "scientific experiments provenance python",
     url = "https://github.com/gems-uff/noworkflow",
-    install_requires=['pyposast', 'jsonpickle'],
+    install_requires=['pyposast'],
     extras_require = {
         'vis': ['pyposast', 'flask'],
         'notebook': ['pyposast', 'ipython', 'jupyter'],
-        'all': ['pyposast', 'ipython', 'jupyter', 'flask', 'pyswip-alt'],
+        'all': ['pyposast', 'ipython', 'jupyter', 'flask', 'pyswip-alt',
+                'jsonpickle'],
     },
     cmdclass={
         'install': CustomInstallCommand,

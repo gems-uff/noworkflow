@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import jsonpickle
+
 from array import array
 from collections import deque
 from . import persistence
@@ -16,6 +16,7 @@ from ..utils.functions import abstract
 
 
 def jsonpickle_content(obj):
+    import jsonpickle
     return "now-content:" + persistence.put(jsonpickle.encode(obj))
 
 

@@ -350,7 +350,7 @@ class Tracer(Profiler):
             try:
                 var = f_locals[arg]
                 if not isinstance(var, IMMUTABLE):
-                    vid = add_variable(activation, arg, lineno, {}, value=var)
+                    vid = add_variable(activation.id, arg, lineno, {}, value=var)
                     variable = variables[vid]
                     add_dependencies(activation, variable, activation, args,
                                      filename, lasti_set)

@@ -111,9 +111,12 @@ class NowRun(IpythonCommandMagic, Run):
         try:
             persistence.connect(directory)
 
-            filename = (
-                magic_cls.shell.mktempfile(data=cell, prefix='now_run_')
-                if cell else params[0])
+            if cell:
+                filename = magic_cls.shell.mktempfile(data=cell,
+                                                      prefix='now_run_')
+            else:
+                filename = params[0]
+                params = params[1:]
 
             metascript = Metascript().read_ipython_args(
                 args, directory, filename, [filename] + params,
@@ -123,15 +126,20 @@ class NowRun(IpythonCommandMagic, Run):
                 from IPython.utils.py3compat import builtin_mod
                 save__name__ = magic_cls.shell.user_ns['__name__']
                 save__main__ = sys.modules['__main__']
+                save__argv__ = sys.argv
+                save__path__ = sys.path[0]
 
                 metascript.namespace = magic_cls.shell.user_ns
-                metascript.clear_namespace(erase=False)
-                sys.modules['__main__'] = magic_cls.shell.user_module
 
+                metascript.clear_namespace(erase=False)
+                metascript.clear_sys()
+                sys.modules['__main__'] = magic_cls.shell.user_module
                 run(metascript)
 
                 magic_cls.shell.user_ns['__name__'] = save__name__
                 magic_cls.shell.user_ns['__builtins__'] = builtin_mod
+                sys.argv = save__argv__
+                sys.path[0] = save__path__
                 sys.modules['__main__'] = save__main__
                 try:
                     return Trial(trial_ref=metascript.trial_id)
