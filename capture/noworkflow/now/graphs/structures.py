@@ -16,7 +16,7 @@ from sqlite3 import OperationalError
 
 from ..cross_version import default_string, pickle, items
 from ..persistence import persistence
-from ..utils import calculate_duration, FORMAT, OrderedCounter, print_msg
+from ..utils import FORMAT, OrderedCounter, print_msg
 
 
 class Graph(object):
@@ -132,13 +132,13 @@ class Single(TreeElement):
         super(Single, self).__init__(level=0, use_id=True)
         self.activation = activation
         self.activations = {activation}
-        self.parent = activation['caller_id']
-        self.id = activation['id']
-        self.line = activation['line']
-        self.name = activation['name']
-        self.trial_id = activation['trial_id']
+        self.parent = activation.caller_id
+        self.id = activation.id
+        self.line = activation.line
+        self.name = activation.name
+        self.trial_id = activation.trial_id
         self.repr = "S({0}-{1})".format(self.line, self.name)
-        self.finished = bool(activation['finish'])
+        self.finished = bool(activation.finish)
 
     @property
     def count(self):
@@ -153,8 +153,8 @@ class Single(TreeElement):
     @property
     def duration(self):
         """ Calculate total duration """
-        return sum(calculate_duration(a) for a in self.activations
-                   if a['finish'] and a['start'])
+        return sum(a.duration for a in self.activations
+                   if a.finish and a.start)
 
     @duration.setter
     def duration(self, value):
@@ -367,35 +367,18 @@ def activation_text(activation):
     """ Return single activation text """
     values = activation.arguments
     extra = "(still running)"
-    if activation['finish']:
-        extra = "to {finish} ({d} microseconds)".format(
-            d=calculate_duration(activation), **activation)
+    if activation.finish:
+        extra = "to {a.finish} ({d} microseconds)".format(
+            d=activation.duration, a=activation)
     result = [
         "",
-        "Activation #{id} from {start} {extra}".format(
-            extra=extra, **activation),
+        "Activation #{a.id} from {a.start} {extra}".format(
+            extra=extra, a=activation),
     ]
-    if values:
-        result.append("Arguments: {}".format(
-            ", ".join("{}={}".format(value["name"], value["value"])
-                      for value in values)))
-    if activation['return']:
-        result.append("Returned {}".format(activation['return']))
-    if activation['slicing_variables']:
-        result.append("Variables: <br>&nbsp; {}".format(
-            "<br>&nbsp; ".join("(L{line}, {name}, {value})".format(**var)
-                          for var in activation['slicing_variables'])))
-    if activation['slicing_usages']:
-        result.append("Usages: <br>&nbsp; {}".format(
-            "<br>&nbsp; ".join("(L{line}, {name}, <{context}>)".format(**var)
-                               for var in activation['slicing_usages'])))
-    if activation['slicing_dependencies']:
-        result.append("Dependencies: <br>&nbsp; {}".format(
-            "<br>&nbsp; ".join(
-                ('(L{dependent[line]}, {dependent[name]}, {dependent[value]}) '
-                '<- (L{supplier[line]}, {supplier[name]}, {supplier[value]})'
-                ).format(**dep)
-                for dep in activation['slicing_dependencies'])))
+
+    activation.show(
+        _print=lambda x, offset=0: result.append(offset*'&nbsp;' + x))
+
     return result
 
 
@@ -422,8 +405,7 @@ class Info(object):
 
     def add_activation(self, activation):
         """ Add activation information """
-        self.activations.add(
-            (datetime.strptime(activation['start'], FORMAT), activation))
+        self.activations.add((activation.start, activation))
 
     def extract_activations(self, single):
         """ Add activations information """

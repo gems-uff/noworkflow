@@ -14,6 +14,7 @@ from functools import partial
 
 from .structures import Single, Call, Group, Mixed, TreeElement, prepare_cache
 from .structures import Graph
+from ..models.activation import Activation
 from ..cross_version import items, values, keys
 
 
@@ -326,7 +327,7 @@ def recursive_generate_graph(trial, single, depth):
     if not depth:
         return single
     children = []
-    for act in trial.activations(caller_id=single.id):
+    for act in trial.activations(Activation.caller_id == single.id):
         child = Single(act)
         child.level = single.level + 1
         children.append(recursive_generate_graph(trial, child, depth - 1))
@@ -343,7 +344,7 @@ def recursive_generate_graph(trial, single, depth):
 
 def generate_graph(trial, depth=1000):
     """ Return the activation graph """
-    activations = trial.activations(id=0)
+    activations = trial.activations(Activation.id == 0)
     if not activations:
         tree = TreeElement(level=0)
         tree.trial_id = trial.id

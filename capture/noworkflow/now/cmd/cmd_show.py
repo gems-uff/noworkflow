@@ -12,6 +12,7 @@ from .command import Command
 from .types import trial_reference
 from ..cross_version import items, values, cvmap
 from ..models.trial import Trial
+from ..models.activation import Activation
 from ..persistence import persistence
 from ..utils.functions import wrap
 from ..utils.io import print_msg
@@ -48,15 +49,15 @@ def print_function_defs(function_defs):
     output = []
     for function_def in function_defs:
         output.append(wrap("""\
-            Name: {name}
+            Name: {fd.name}
             Arguments: {arguments}
             Globals: {globals}
             Function calls: {calls}
-            Code hash: {code_hash}\
+            Code hash: {fd.code_hash}\
             """.format(arguments=', '.join(names(function_def.arguments)),
                        globals=', '.join(names(function_def.globals)),
                        calls=', '.join(names(function_def.function_calls)),
-                       **function_def), other="\n    "))
+                       fd=function_def), other="\n    "))
     print('\n\n'.join(output))
 
 
@@ -70,51 +71,22 @@ def print_environment(environments):
 
 def print_function_activation(trial, activation, level=1):
     """ Print function activation recursively """
-    object_values = {'GLOBAL':[], 'ARGUMENT':[]}
-    name = {'GLOBAL':'Globals', 'ARGUMENT':'Arguments'}
-    for obj in activation.objects:
-        object_values[obj['type']].append(
-            '{} = {}'.format(obj['name'], obj['value']))
     text = wrap(
-        '{line}: {name} ({start} - {finish})'.format(**activation),
+        '{0.line}: {0.name} ({0.start} - {0.finish})'.format(activation),
         initial='  ' * level)
     indent = text.index(': ') + 2
     print(text)
-    for typ, vals in items(object_values):
-        if vals:
-            print(wrap(
-                '{type}: {values}'.format(type=name[typ],
-                                          values=', '.join(vals)),
-                initial=' ' * indent))
-    if activation['return']:
-        print(wrap(
-            'Return value: {ret}'.format(ret=activation['return']),
-            initial=' ' * indent))
-    if activation['slicing_variables']:
-        print(wrap('Variables:', initial=' ' * indent))
-        for var in activation['slicing_variables']:
-            print(wrap('(L{line}, {name}, {value})'.format(**var),
-                  initial=' ' * (indent+1)))
-    if activation['slicing_usages']:
-        print(wrap('Usages:', initial=' ' * indent))
-        for use in activation['slicing_usages']:
-            print(wrap('(L{line}, {name}, <{context}>)'.format(**use),
-                  initial=' ' * (indent+1)))
-    if activation['slicing_dependencies']:
-        print(wrap('Dependencies:', initial=' ' * indent))
-        for dep in activation['slicing_dependencies']:
-            print(wrap(
-                ('(L{dependent[line]}, {dependent[name]}, {dependent[value]}) '
-                '<- (L{supplier[line]}, {supplier[name]}, {supplier[value]})'
-                ).format(**dep), initial=' ' * (indent+1)))
+    activation.show(_print=lambda x, offset=0: print(
+        wrap(x, initial=' ' * (indent + offset))))
 
-    for inner_activation in trial.activations(caller_id=activation['id']):
+    for inner_activation in trial.activations(
+            Activation.caller_id==activation.id):
         print_function_activation(trial, inner_activation, level + 1)
 
 
 def print_function_activations(trial):
     """ Print function activations """
-    for inner_function_activation in trial.activations(caller_id=None):
+    for inner_function_activation in trial.activations():
         print_function_activation(trial, inner_function_activation)
 
 

@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -12,6 +12,9 @@ from datetime import datetime
 from collections import defaultdict, OrderedDict, Counter
 from pyposast.cross_version import buffered_str
 
+from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from sqlalchemy import ForeignKeyConstraint
+
 
 from ..formatter import PrettyLines
 from ..persistence import row_to_dict, persistence
@@ -20,15 +23,17 @@ from ..utils.data import HashableDict
 from ..graphs.trial_graph import TrialGraph
 from ..cross_version import lmap, cvmap
 from .model import Model
+from .function_def import FunctionDef
 from .trial_prolog import TrialProlog
 from .activation import Activation
 from .function_def import FunctionDef
 
 
-class Trial(Model):
-    """ This model represents a trial
+class Trial(Model, persistence.base):
+    """This model represents a trial
     Initialize it by passing the trial id:
         trial = Trial(2)
+
 
     There are four visualization modes for the graph:
         tree: activation tree without any filters
@@ -41,10 +46,28 @@ class Trial(Model):
         namesapce: calls are combined without considering the sub-calls
             trial.graph.mode = 3
 
+
     You can change the graph width and height by the variables:
         trial.graph.width = 600
         trial.graph.height = 400
     """
+    __tablename__ = 'trial'
+    __table_args__ = (
+        ForeignKeyConstraint(['inherited_id'], ['trial.id'],
+                             ondelete='RESTRICT'),
+        ForeignKeyConstraint(['parent_id'], ['trial.id'], ondelete='SET NULL'),
+        {'sqlite_autoincrement': True},
+    )
+    id = Column(Integer, primary_key=True)
+    start = Column(TIMESTAMP)
+    finish = Column(TIMESTAMP)
+    _script = Column('script', Text)
+    _code_hash = Column('code_hash', Text)
+    arguments = Column(Text)
+    command = Column(Text)
+    inherited_id = Column(Integer, index=True)
+    parent_id = Column(Integer, index=True)
+    run = Column(Integer)
 
     DEFAULT = {
         'graph.width': 500,
@@ -96,6 +119,7 @@ class Trial(Model):
         warn('trial_id propery deprecated. Please use id')
         return self.id
 
+    # ToDo: rename column
     @property
     def script(self):
         """ Returns the "main" script of the trial """
@@ -108,6 +132,7 @@ class Trial(Model):
         return PrettyLines(
             buffered_str(persistence.get(self.code_hash)).split('/n'))
 
+    # ToDo: rename column
     @property
     def code_hash(self):
         """ Returns the hash code of the main script """
@@ -134,11 +159,11 @@ class Trial(Model):
         return self._info
 
     def function_defs(self):
-        """ Returns a dict of function definitions """
+        """Return a dict of function definitions"""
         return {
-            function['name']: function
-            for function in cvmap(FunctionDef, persistence.load(
-                'function_def', trial_id=self.id))
+            function.name: function
+            for function in persistence.session.query(FunctionDef).filter(
+                FunctionDef.trial_id==self.id).all()
         }
 
     def head_trial(self, remove=False):
@@ -208,33 +233,37 @@ class Trial(Model):
             })
         return result
 
-    def activations(self, **conditions):
+    def activations(self, *conditions):
         """ Returns a list of activations """
         _vars = cvmap(row_to_dict, persistence.load(
             'slicing_variable', trial_id=self.id, order='id ASC'))
         _variables = OrderedDict()
         for var in _vars:
             _variables[var['id']] = var
-        _activations = lmap(Activation, persistence.load(
-            'function_activation', trial_id=self.id, order='start',
-            **conditions))
+        # ToDo: **conditions
+        query = persistence.session.query(Activation).\
+            filter(Activation.trial_id==self.id).\
+            order_by(Activation.start)
+        for condition in conditions:
+            query = query.filter(condition)
+        _activations = query.all()
         for act in _activations:
-            act['slicing_variables'] = tuple(cvmap(HashableDict,
-                persistence.load('slicing_variable', activation_id=act['id'],
+            act.slicing_variables = tuple(cvmap(HashableDict,
+                persistence.load('slicing_variable', activation_id=act.id,
                     trial_id=self.id)))
 
-            act['slicing_usages'] = tuple(cvmap(HashableDict, persistence.load(
-                'slicing_usage', activation_id=act['id'], trial_id=self.id)))
+            act.slicing_usages = tuple(cvmap(HashableDict, persistence.load(
+                'slicing_usage', activation_id=act.id, trial_id=self.id)))
 
-            for usage in act['slicing_usages']:
+            for usage in act.slicing_usages:
                 usage['variable'] = _variables[usage['variable_id']]
 
-            act['slicing_dependencies'] = tuple(cvmap(HashableDict,
+            act.slicing_dependencies = tuple(cvmap(HashableDict,
                 persistence.load('slicing_dependency',
-                    dependent_activation_id=act['id'],
+                    dependent_activation_id=act.id,
                     trial_id=self.id)))
 
-            for dep in act['slicing_dependencies']:
+            for dep in act.slicing_dependencies:
                 dep['dependent_id'] = dep['dependent']
                 dep['dependent'] = _variables[dep['dependent']]
                 dep['supplier_id'] = dep['supplier']

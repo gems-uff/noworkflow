@@ -14,6 +14,10 @@ from os import makedirs
 from pkg_resources import resource_string
 from collections import OrderedDict
 
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy import create_engine
+
 from ..utils import print_msg, resource
 from ..cross_version import cvzip, row_keys
 
@@ -39,6 +43,8 @@ class Provider(object):
 
         self.std_open = open # Original Python open function.
 
+        self.base = declarative_base()
+        
         if path:
             self.path = path
 
@@ -57,6 +63,7 @@ class Provider(object):
         self.parent_config_path = join(self.provenance_path, PARENT_TRIAL)
 
     def connect(self, path=None):
+        from .. import models
         if path:
             self.path = path
 
@@ -69,11 +76,19 @@ class Provider(object):
         self.db_conn = sqlite3.connect(db_path)
         self.db_conn.row_factory = sqlite3.Row
 
+        self.engine = create_engine('sqlite:///' + db_path, echo=False)
+        self.session = scoped_session(sessionmaker())
+        self.session.remove()
+        self.session.configure(bind=self.engine, autoflush=False,
+                               expire_on_commit=False)
+
+
         if new_db:
             print_msg('creating provenance database')
+            self.base.metadata.create_all(self.engine)
             # Accessing the content of a file via setuptools
-            with self.db_conn as db:
-                db.executescript(resource(DB_SCRIPT, 'utf-8'))
+            #with self.db_conn as db:
+            #    db.executescript(resource(DB_SCRIPT, 'utf-8'))
 
     def has_provenance(self, path=None):
         if path:
