@@ -12,7 +12,7 @@ import platform
 
 from uuid import getnode
 
-__version__ = "0.15.2"
+__version__ = "0.15.3"
 
 
 def recursive_path(pack, path):

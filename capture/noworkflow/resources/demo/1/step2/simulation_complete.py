@@ -14,7 +14,7 @@ class TabularData:
 ###############################################################
 
 def simulation(dataA, dataB):
-    time.sleep(0.2)
+    time.sleep(2)
 
     all_data = dataA.data + dataB.data
 
