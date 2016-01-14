@@ -9,6 +9,6 @@ from __future__ import (absolute_import, print_function,
 
 from .consts import FORMAT
 from .data import concat_iter, OrderedCounter, hashabledict
-from .functions import wrap, resource, calculate_duration
+from .functions import wrap, resource, calculate_duration, strptime
 from .io import redirect_output, print_msg, print_fn_msg, verbose
 from .metaprofiler import meta_profiler

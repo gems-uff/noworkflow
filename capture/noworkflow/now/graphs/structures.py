@@ -16,7 +16,7 @@ from sqlite3 import OperationalError
 
 from ..cross_version import default_string, pickle, items
 from ..persistence import persistence
-from ..utils import calculate_duration, FORMAT, OrderedCounter, print_msg
+from ..utils import calculate_duration, strptime, OrderedCounter, print_msg
 
 
 class Graph(object):
@@ -422,8 +422,7 @@ class Info(object):
 
     def add_activation(self, activation):
         """ Add activation information """
-        self.activations.add(
-            (datetime.strptime(activation['start'], FORMAT), activation))
+        self.activations.add((strptime(activation['start']), activation))
 
     def extract_activations(self, single):
         """ Add activations information """

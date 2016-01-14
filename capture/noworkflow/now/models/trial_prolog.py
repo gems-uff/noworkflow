@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import textwrap
 
 from datetime import datetime
-from ..utils import resource
+from ..utils import resource, strptime
 from .model import Model
 
 
@@ -20,7 +20,7 @@ def timestamp(string):
     if not string:
         return -1
     epoch = datetime(1970,1,1)
-    time = datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
+    time = strptime(string)
     return (time - epoch).total_seconds()
 
 

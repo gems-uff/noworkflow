@@ -14,7 +14,7 @@ from pkg_resources import resource_string, resource_listdir, resource_isdir
 from textwrap import dedent
 
 from ..cross_version import cross_compile
-from .consts import FORMAT
+from .consts import FORMAT, FORMAT2
 from .io import redirect_output
 
 
@@ -43,14 +43,17 @@ def resource_is_dir(path):
     """Access resource directory via setuptools"""
     return resource_isdir(MODULE, path)
 
+def strptime(time):
+    try:
+        return datetime.strptime(time, FORMAT)
+    except ValueError:
+        return datetime.strptime(time, FORMAT2)
 
 def calculate_duration(obj):
     """Calculate duration of dict object that has 'finish' and 'start'"""
-    return int((
-        datetime.strptime(obj['finish'], FORMAT) -
-        datetime.strptime(obj['start'], FORMAT)
+    return int(
+        (strptime(obj['finish']) - strptime(obj['start'])
     ).total_seconds() * 1000000)
-
 
 def abstract():
     """Raise abstract Exception"""

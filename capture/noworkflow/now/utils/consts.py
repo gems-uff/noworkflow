@@ -5,3 +5,4 @@
 """Define constants"""
 
 FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+FORMAT2 = '%Y-%m-%d %H:%M:%S'
