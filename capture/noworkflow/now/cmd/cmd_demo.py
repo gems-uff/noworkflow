@@ -11,7 +11,6 @@ import subprocess
 import sys
 
 from .command import Command
-from ..persistence import persistence
 from ..utils.io import print_msg
 from ..utils.functions import resource, resource_ls, resource_is_dir
 

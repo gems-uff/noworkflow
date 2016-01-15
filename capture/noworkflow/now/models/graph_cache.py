@@ -2,6 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
+"""Graph Cache Model"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -15,9 +16,9 @@ class GraphCache(Model, persistence.base):
     """Graph Cache Table
     Cache graph results on database
     """
-    __tablename__ = 'graph_cache'
+    __tablename__ = "graph_cache"
     __table_args__ = (
-        {'sqlite_autoincrement': True},
+        {"sqlite_autoincrement": True},
     )
     id = Column(Integer, primary_key=True)
     type = Column(Text)
@@ -29,3 +30,7 @@ class GraphCache(Model, persistence.base):
 
     DEFAULT = {}
     REPLACE = {}
+
+    def __repr__(self):
+        return "Cache({0.id}, {0.type}, {0.name})".format(self)
+

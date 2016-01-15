@@ -147,10 +147,12 @@ class Export(Command):
         persistence.connect_existing(args.dir or os.getcwd())
         args.trial = export_type(args.trial)
         if not args.ipython:
-            trial = Trial(trial_ref=args.trial, exit=True)
-            trial_prolog = TrialProlog(trial)
-            print(trial_prolog.export_text_facts())
+            trial = Trial(trial_ref=args.trial)
+            if not trial:
+                print_msg("inexistent trial id", True)
+                sys.exit(1)
+            print(trial.trial_prolog.export_text_facts())
             if args.rules:
-                print('\n'.join(trial_prolog.export_rules()))
+                print('\n'.join(trial.trial_prolog.export_rules()))
         else:
             export_notebook(args.trial)

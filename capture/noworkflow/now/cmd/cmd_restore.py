@@ -50,7 +50,8 @@ class Restore(Command):
         if not os.path.isfile(trial.script):
             return
 
-        head = trial.head_trial()
+        head_id = persistence.load_parent_id(trial.script, remove=False)
+        head = Trial(trial_ref=head_id)
         code_hash = persistence.put(metascript.code)
 
         if code_hash != head.code_hash:
@@ -77,8 +78,11 @@ class Restore(Command):
         persistence.connect_existing(args.dir or os.getcwd())
         metascript = Metascript().read_restore_args(args)
         trial = metascript.trial = Trial(trial_ref=metascript.trial_id,
-                                         script=metascript.name,
-                                         exit=True)
+                                         script=metascript.name)
+        if not trial:
+            print_msg("inexistent trial id", True)
+            sys.exit(1)
+
         metascript.path = trial.script
         metascript.name = trial.script
 
@@ -88,14 +92,13 @@ class Restore(Command):
 
         persistence.store_parent(trial.script, trial.id)
         if args.local:
-            local_modules, _ = trial.modules()
-            for module in local_modules:
-                self.restore(module['path'], module['code_hash'], trial.id)
+            for module in trial.local_modules:
+                self.restore(module.path, module.code_hash, trial.id)
 
         if args.input:
-            file_accesses = trial.file_accesses()
+            file_accesses = trial.file_accesses[:]
             files = {}
             for faccess in reversed(file_accesses):
-                files[faccess['name']] = faccess['content_hash_before']
+                files[faccess.name] = faccess.content_hash_before
             for name, content_hash in items(files):
                 self.restore(name, content_hash, trial.id)

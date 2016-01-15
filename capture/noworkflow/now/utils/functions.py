@@ -43,19 +43,14 @@ def resource_is_dir(path):
     """Access resource directory via setuptools"""
     return resource_isdir(MODULE, path)
 
-
-def calculate_duration(obj):
-    """Calculate duration of dict object that has 'finish' and 'start'"""
-    return int((
-        datetime.strptime(obj['finish'], FORMAT) -
-        datetime.strptime(obj['start'], FORMAT)
-    ).total_seconds() * 1000000)
-
-
 def abstract():
     """Raise abstract Exception"""
     frame = inspect.currentframe().f_back
     name = frame.f_code.co_name
     raise Exception("Abstract method: {}".format(name))
 
-
+def timestamp(time):
+    if not string:
+        return -1
+    epoch = datetime(1970,1,1)
+    return (time - epoch).total_seconds()

@@ -1,46 +1,24 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Diff Object"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import time
 
-from collections import namedtuple, OrderedDict, defaultdict
+from collections import OrderedDict
 
-from ..utils import OrderedCounter, concat_iter, hashabledict
-from ..cross_version import items, keys
+from ..cross_version import keys
 from ..graphs.diff_graph import DiffGraph
 from ..persistence import persistence
 from .model import Model
 from .trial import Trial
 
 
-class activationdict(dict):
-    def __key(self):
-        return tuple((k,self[k]) for k in sorted(self))
-    def __hash__(self):
-        return hash(self.__key())
-    def __eq__(self, other):
-        return self['name'] == other['name']
-
-
-class fadict(dict):
-    def __key(self):
-        return (self['name'],
-                self['content_hash_before'],
-                self['content_hash_after'])
-    def __hash__(self):
-        return hash(self.__key())
-    def __eq__(self, other):
-        return ((self['content_hash_before'] == other['content_hash_before'])
-            and (self['content_hash_after'] == other['content_hash_after']))
-
-
 class Diff(Model):
-    """ This model represents a diff between two trials
+    """This model represents a diff between two trials
     Initialize it by passing both trials ids:
         diff = Diff(2)
 
@@ -71,67 +49,68 @@ class Diff(Model):
     """
 
     DEFAULT = {
-        'graph.width': 500,
-        'graph.height': 500,
-        'graph.mode': 3,
-        'graph.view': 0,
+        "graph.width": 500,
+        "graph.height": 500,
+        "graph.mode": 3,
+        "graph.view": 0,
     }
 
     REPLACE = {
-        'graph_width': 'graph.width',
-        'graph_height': 'graph.height',
-        'graph_mode': 'graph.mode',
-        'graph_view': 'graph.view',
+        "graph_width": "graph.width",
+        "graph_height": "graph.height",
+        "graph_mode": "graph.mode",
+        "graph_view": "graph.view",
     }
 
-    def __init__(self, trial_ref1, trial_ref2, exit=False, **kwargs):
-        super(Diff, self).__init__(trial_ref1, trial_ref2, exit=exit, **kwargs)
+    def __init__(self, trial_ref1, trial_ref2, **kwargs):
+        super(Diff, self).__init__(trial_ref1, trial_ref2, **kwargs)
         trial_id1 = persistence.load_trial_id(trial_ref1)
         trial_id2 = persistence.load_trial_id(trial_ref2)
 
         self.graph = DiffGraph(trial_id1, trial_id2)
         self.initialize_default(kwargs)
 
-        self.trial1 = Trial(trial_id1, exit=exit)
-        self.trial2 = Trial(trial_id2, exit=exit)
+        self.trial1 = Trial(trial_id1)
+        if not self.trial1:
+            raise RuntimeError("Trial {} not found".format(trial_id1))
+        self.trial2 = Trial(trial_id2)
+        if not self.trial2:
+            raise RuntimeError("Trial {} not found".format(trial_id2))
 
     def trial(self):
-        """ Returns a tuple with the information of both trials """
-        return diff_dict(self.trial1.info(), self.trial2.info())
+        """Return a tuple with information from both trials """
+        extra=("start", "finish", "duration")
+        ignore=("id",)
+        return diff_dict(
+            self.trial1.to_dict(ignore=ignore, extra=extra),
+            self.trial2.to_dict(ignore=ignore, extra=extra))
 
     def modules(self):
-        """ Diffs modules from trials """
-        fn = lambda x: hashabledict(x)
+        """Diff modules from trials"""
         return diff_set(
-            set(self.trial1.modules(fn)[1]),
-            set(self.trial2.modules(fn)[1]))
+            set(self.trial1.modules),
+            set(self.trial2.modules))
 
     def environment(self):
-        """ Diffs environment variables """
+        """Diff environment variables"""
         return diff_set(
-            dict_to_set(self.trial1.environment()),
-            dict_to_set(self.trial2.environment()))
+            set(self.trial1.environment_attrs),
+            set(self.trial2.environment_attrs))
 
     def file_accesses(self):
-        """ Diffs file accesses """
+        """Diff file accesses"""
         return diff_set(
-            set(fadict(fa) for fa in self.trial1.file_accesses()),
-            set(fadict(fa) for fa in self.trial2.file_accesses()))
+            set(self.trial1.file_accesses),
+            set(self.trial2.file_accesses))
 
     def _repr_html_(self):
         return self.graph._repr_html_(self)
 
 
-def dict_to_set(d):
-    result = set()
-    for key, value in items(d):
-        result.add(activationdict({'name': key, 'value': value}))
-    return result
-
 def diff_dict(before, after):
-    result = {}
+    result = OrderedDict()
     for key in keys(before):
-        if key != 'id' and before[key] != after[key]:
+        if key != "id" and before[key] != after[key]:
             result[key] = [before[key], after[key]]
     return result
 
@@ -142,9 +121,9 @@ def diff_set(before, after):
 
     removed_by_name = {}
     for element_removed in removed:
-        removed_by_name[element_removed['name']] = element_removed
+        removed_by_name[element_removed.name] = element_removed
     for element_added in added:
-        element_removed = removed_by_name.get(element_added['name'])
+        element_removed = removed_by_name.get(element_added.name)
         if element_removed:
             replaced.add((element_removed, element_added))
     for (element_removed, element_added) in replaced:

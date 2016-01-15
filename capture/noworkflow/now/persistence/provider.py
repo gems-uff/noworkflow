@@ -32,6 +32,19 @@ def row_to_dict(row):
     return OrderedDict(cvzip(row_keys(row), row))
 
 
+class DeclarativeBase(object):
+
+    def to_dict(self, ignore=tuple(), extra=tuple()):
+        result = OrderedDict(
+            (attr, getattr(self, attr)) for attr in extra
+        )
+        for column in self.__mapper__.columns:
+            key = column.key
+            if key not in ignore and key not in extra:
+                result[key] = getattr(self, key)
+
+        return result
+
 class Provider(object):
 
     def __init__(self, path=None, connect=False):
@@ -43,8 +56,8 @@ class Provider(object):
 
         self.std_open = open # Original Python open function.
 
-        self.base = declarative_base()
-        
+        self.base = declarative_base(cls=DeclarativeBase)
+
         if path:
             self.path = path
 

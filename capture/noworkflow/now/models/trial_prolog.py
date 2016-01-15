@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Trial Prolog Object"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -11,17 +11,14 @@ import textwrap
 from datetime import datetime
 from ..utils import resource
 from .model import Model
+from .activation import Activation
+from .file_access import FileAccess
+from .slicing_variable import SlicingVariable
+from .slicing_usage import SlicingUsage
+from .slicing_dependency import SlicingDependency
 
 
 RULES = '../resources/rules.pl'
-
-
-def timestamp(string):
-    if not string:
-        return -1
-    epoch = datetime(1970,1,1)
-    time = datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
-    return (time - epoch).total_seconds()
 
 
 class TrialProlog(Model):
@@ -36,143 +33,63 @@ class TrialProlog(Model):
         self.id = trial.id
 
     def retract(self):
-        list(cls.prolog_cli.query(
-            'retract(activation({}, _, _, _, _, _))'.format(self.id)))
-        list(cls.prolog_cli.query(
-            'retract(access({}, _, _, _, _, _, _, _))'.format(self.id)))
-        list(cls.prolog_cli.query(
-            'retract(variable({}, _, _, _, _, _, _))'.format(self.id)))
-        list(cls.prolog_cli.query(
-            'retract(usage({}, _, _, _, _, _))'.format(self.id)))
-        list(cls.prolog_cli.query(
-            'retract(dependency({}, _, _, _, _, _))'.format(self.id)))
+        list(cls.prolog_cli.query(Activation.to_prolog_retract(self.id)))
+        list(cls.prolog_cli.query(FileAccess.to_prolog_retract(self.id)))
+        list(cls.prolog_cli.query(SlicingVariable.to_prolog_retract(self.id)))
+        list(cls.prolog_cli.query(SlicingUsage.to_prolog_retract(self.id)))
+        list(cls.prolog_cli.query(SlicingDependency.to_prolog_retract(self.id)))
         list(cls.prolog_cli.query(
             'retract(load_trial({})'.format(self.id)))
 
     def _trial_activations_fact(self, result):
-        result.append(textwrap.dedent("""\
-            %
-            % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
-            %
-            """))
+        result.append(Activation.to_prolog_fact())
 
     def export_trial_activations(self, result, with_doc=True):
         if with_doc:
             self._trial_activations_fact(result)
-        result.append(":- dynamic(activation/6).")
+        result.append(Activation.to_prolog_dynamic())
         for activation in self.trial.activations():
-            activation = dict(activation)
-            activation['name'] = str(activation['name'])
-            activation['start'] = timestamp(activation['start'])
-            activation['finish'] = timestamp(activation['finish'])
-            if not activation['caller_id']:
-                activation['caller_id'] = 'nil'
-            result.append(
-                'activation('
-                    '{trial_id}, {id}, {name!r}, {start:-f}, {finish:-f}, '
-                    '{caller_id}).'
-                ''.format(**activation))
+            result.append(activation.to_prolog())
 
     def _trial_file_accesses_fact(self, result):
-        result.append(textwrap.dedent("""
-            %
-            % FACT: access(trial_id, id, name, mode, content_hash_before, content_hash_after, timestamp, activation_id).
-            %
-            """))
+        result.append(FileAccess.to_prolog_fact())
 
     def export_trial_file_accesses(self, result, with_doc=True):
         if with_doc:
             self._trial_file_accesses_fact(result)
-        result.append(":- dynamic(access/8).")
+        result.append(access.to_prolog_dynamic())
         for access in self.trial.file_accesses():
-            access = dict(access)
-            access['trial_id'] = self.trial.id
-            access['name'] = str(access['name'])
-            access['mode'] = str(access['mode'])
-            access['buffering'] = str(access['buffering'])
-            access['content_hash_before'] = str(access['content_hash_before'])
-            access['content_hash_after'] = str(access['content_hash_after'])
-            access['timestamp'] = timestamp(access['timestamp'])
-            result.append(
-                'access('
-                    '{trial_id}, f{id}, {name!r}, {mode!r}, '
-                    '{content_hash_before!r}, {content_hash_after!r}, '
-                    '{timestamp:-f}, {function_activation_id}).'
-                ''.format(**access))
+            result.append(access.to_prolog())
 
     def _trial_slicing_variables_fact(self, result):
-        result.append(textwrap.dedent("""
-            %
-            % FACT: variable(trial_id, activation_id, id, name, line, value, timestamp).
-            %
-            """))
+        result.append(SlicingVariable.to_prolog_fact())
 
     def export_trial_slicing_variables(self, result, with_doc=True):
         if with_doc:
             self._trial_slicing_variables_fact(result)
-        result.append(":- dynamic(variable/7).")
-        for var in self.trial.slicing_variables():
-            var = dict(var)
-            var['activation_id'] = str(var['activation_id'])
-            var['id'] = str(var['id'])
-            var['name'] = str(var['name'])
-            var['line'] = str(var['line'])
-            var['value'] = str(var['value'])
-            var['time'] = timestamp(var['time'])
-            result.append(
-                'variable('
-                    '{trial_id}, {activation_id}, {id}, '
-                    '{name!r}, {line}, {value!r}, {time:-f}).'
-                ''.format(**var))
+        result.append(SlicingVariable.to_prolog_dynamic())
+        for var in self.trial.slicing_variables:
+            result.append(var.to_prolog())
 
     def _trial_slicing_usages_fact(self, result):
-        result.append(textwrap.dedent("""
-            %-
-            % FACT: usage(trial_id, activation_id, variable_id, id, name, line).
-            %
-            """))
+        result.append(SlicingUsage.to_prolog_fact())
 
     def export_trial_slicing_usages(self, result, with_doc=True):
         if with_doc:
             self._trial_slicing_usages_fact(result)
-        result.append(":- dynamic(usage/6).")
+        result.append(SlicingUsage.to_prolog_dynamic())
         for usage in self.trial.slicing_usages():
-            usage = dict(usage)
-            usage['id'] = str(usage['id'])
-            usage['activation_id'] = str(usage['activation_id'])
-            usage['variable_id'] = str(usage['variable_id'])
-            usage['name'] = str(usage['name'])
-            usage['line'] = str(usage['line'])
-            result.append(
-                'usage('
-                    '{trial_id}, {activation_id}, {variable_id}, {id}, '
-                    '{name!r}, {line}).'
-                ''.format(**usage))
+            result.append(usage.to_prolog())
 
     def _trial_slicing_dependencies_fact(self, result):
-        result.append(textwrap.dedent("""
-                %
-                % FACT: dependency(trial_id, id, dependent_activation_id, dependent, supplier_activation_id, supplier).
-                %
-            """))
+        result.append(SlicingDependency.to_prolog_fact())
 
     def export_trial_slicing_dependencies(self, result, with_doc=True):
         if with_doc:
             self._trial_slicing_dependencies_fact(result)
-        result.append(":- dynamic(dependency/6).")
+        result.append(SlicingDependency.to_prolog_dynamic())
         for dep in self.trial.slicing_dependencies():
-            dep = dict(dep)
-            dep['id'] = str(dep['id'])
-            dep['dependent_activation_id'] = str(dep['dependent_activation_id'])
-            dep['dependent'] = str(dep['dependent'])
-            dep['supplier_activation_id'] = str(dep['supplier_activation_id'])
-            dep['supplier'] = str(dep['supplier'])
-            result.append(
-                'dependency('
-                    '{trial_id}, {id}, '
-                    '{dependent_activation_id}, {dependent}, '
-                    '{supplier_activation_id}, {supplier}).'
-                ''.format(**dep))
+            result.append(dep.to_prolog())
 
     def export_facts(self, with_doc=True):
         # TODO: export remaining data

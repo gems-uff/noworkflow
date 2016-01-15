@@ -78,14 +78,16 @@ def trial_graph(tid, graph_mode, cache):
 @connection
 def dependencies(tid):
     trial = Trial(tid)
-    local, result = trial.modules()
+    local = trial.local_modules
+    result = trial.modules
     return jsonify(local=local, all=result)
 
 @app.route('/trials/<tid>/all_modules')
 @connection
 def all_modules(tid):
     trial = Trial(tid)
-    local, result = trial.modules()
+    local = trial.local_modules
+    result = trial.modules
     result = sorted(result, key=lambda x:x not in local)
     return render_template("trial.html",
         cwd = os.getcwd(),

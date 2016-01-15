@@ -2,108 +2,76 @@
 # Copyright (c) 2014 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Activation Model"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from collections import defaultdict
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
-from sqlalchemy import ForeignKeyConstraint
+from collections import OrderedDict
 
-from ..persistence import row_to_dict, persistence
+from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from sqlalchemy.orm import relationship, backref
+
+from ..persistence import persistence
 from ..cross_version import lmap, items
+from ..utils.functions import timestamp
 from .model import Model
+
+from .object_value import ObjectValue
+from .slicing_usage import SlicingUsage
+from .slicing_dependency import SlicingDependency
 
 
 class Activation(Model, persistence.base):
     """Activation Table
     Store function activations from execution provenance
     """
-
-    DEFAULT = {}
-    REPLACE = {}
-
-    __tablename__ = 'function_activation'
+    __tablename__ = "function_activation"
     __table_args__ = (
-        ForeignKeyConstraint(['trial_id'], ['trial.id'], ondelete='CASCADE'),
-        ForeignKeyConstraint(['caller_id'],
-                             ['function_activation.id'], ondelete='CASCADE'),
-        {'sqlite_autoincrement': True},
+        PrimaryKeyConstraint("trial_id", "id"),
+        ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id", "caller_id"],
+                             ["function_activation.trial_id",
+                              "function_activation.id"], ondelete="CASCADE"),
+        {"sqlite_autoincrement": True},
     )
     trial_id = Column(Integer, index=True)
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer)
     name = Column(Text)
     line = Column(Integer)
-    _return = Column('return', Text)
+    _return = Column("return", Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
     caller_id = Column(Integer, index=True)
 
-    def __getitem__(self, item):
-        # ToDo: fix structures to use only getattr
-        if item in ('start', 'finish'):
-            return getattr(self, item)
+    _children = backref("children", order_by="Activation.start")
+    caller = relationship(
+        "Activation", remote_side=[trial_id, id],
+        backref=_children, viewonly=True)
 
-    @property
-    def objects(self):
-        if not hasattr(self, '_objects'):
-            self._types = defaultdict(list)
-            self._objects = lmap(row_to_dict, persistence.load(
-                'object_value', function_activation_id=self.id,
-                trial_id=self.trial_id))
+    object_values = relationship(
+        "ObjectValue", lazy="dynamic", backref="activation")
+    file_accesses = relationship(
+        "FileAccess", lazy="dynamic", backref="activation")
 
-            for obj in self._objects:
-                self._types[obj['type']].append(obj)
-        return self._objects
+    slicing_variables = relationship(
+        "SlicingVariable", backref="activation")
+    slicing_usages = relationship(
+        "SlicingUsage", backref="activation", viewonly=True)
+    slicing_dependents = relationship(
+        "SlicingDependency", backref="dependent_activation", viewonly=True,
+        primaryjoin=((id == SlicingDependency.dependent_activation_id) &
+                     (trial_id == SlicingDependency.trial_id)))
+    slicing_suppliers = relationship(
+        "SlicingDependency", backref="supplier_activation", viewonly=True,
+        primaryjoin=((id == SlicingDependency.supplier_activation_id) &
+                     (trial_id == SlicingDependency.trial_id)))
 
-    @property
-    def types(self):
-        self.objects
-        return self._types
+    # trial: Trial.activations backref
+    # children: Activation.caller backref
 
-    @property
-    def globals(self):
-        return self.types['GLOBAL']
-
-    @property
-    def arguments(self):
-        return self.types['ARGUMENT']
-
-    @property
-    def duration(self):
-        return  int((self.finish - self.start).total_seconds() * 1000000)
-
-    def show(self, _print=lambda x, offset=0: print):
-        object_values = {'GLOBAL':[], 'ARGUMENT':[]}
-        name = {'GLOBAL':'Globals', 'ARGUMENT':'Arguments'}
-        for obj in self.objects:
-            object_values[obj['type']].append(
-                '{} = {}'.format(obj['name'], obj['value']))
-
-        for typ, vals in items(object_values):
-            if vals:
-                _print('{type}: {values}'.format(type=name[typ],
-                                                 values=', '.join(vals)))
-        if self._return:
-            _print('Return value: {ret}'.format(ret=self._return))
-
-        if self.slicing_variables:
-            _print('Variables:')
-            for var in self.slicing_variables:
-                _print('(L{line}, {name}, {value})'.format(**var), 1)
-
-        if self.slicing_usages:
-            _print('Usages:')
-            for use in self.slicing_usages:
-                _print('(L{line}, {name}, <{context}>)'.format(**use), 1)
-
-        if self.slicing_dependencies:
-            _print('Dependencies:')
-            for dep in self.slicing_dependencies:
-                _print(
-                    ('(L{dependent[line]}, {dependent[name]}, {dependent[value]}) '
-                    '<- (L{supplier[line]}, {supplier[name]}, {supplier[value]})'
-                    ).format(**dep), 1)
+    DEFAULT = {}
+    REPLACE = {}
 
     # ToDo: Improve hash
     def __hash__(self):
@@ -111,3 +79,79 @@ class Activation(Model, persistence.base):
 
     def __eq__(self, other):
         return self.id == other.id
+
+    @property
+    def globals(self):
+        """Return activation globals as a SQLAlchemy query"""
+        return self.object_values.filter(ObjectValue.type == "GLOBAL")
+
+    @property
+    def arguments(self):
+        """Return activation arguments as a SQLAlchemy query"""
+        return self.object_values.filter(ObjectValue.type == "ARGUMENT")
+
+    @property
+    def duration(self):
+        """Calculate activation duration"""
+        return  int((self.finish - self.start).total_seconds() * 1000000)
+
+    @classmethod
+    def to_prolog_fact(cls):
+        """Return prolog comment"""
+        return textwrap.dedent("""
+            %
+            % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
+            %
+            """)
+
+    @classmethod
+    def to_prolog_dynamic(cls):
+        """Return prolog dynamic clause"""
+        return ":- dynamic(activation/6)."
+
+    @classmethod
+    def to_prolog_retract(cls, trial_id):
+        """Return prolog retract for trial"""
+        return "retract(activation({}, _, _, _, _, _))".format(trial_id)
+
+    def to_prolog(self):
+        """Convert to prolog fact"""
+        start = timestamp(self.start)
+        finish = timestamp(self.finish)
+        caller_id = self.caller_id if self.caller_id else "nil"
+        return (
+            "activation("
+            "{a.trial_id}, {a.id}, {a.name!r}, {start:-f}, {finish:-f}, "
+            "{caller_id})."
+        ).format(a=self, start=start, finish=finish, caller_id=caller_id)
+
+    def show(self, _print=lambda x, offset=0: print(x)):
+        """Show object
+
+        Keyword arguments:
+        _print -- custom print function (default=print)
+        """
+        name = OrderedDict([("GLOBAL", "Globals"), ("ARGUMENT", "Arguments")])
+        for name, typ in items(name):
+            objects = self.object_values.filter(ObjectValue.type == typ)[:]
+            if objects:
+                _print("{name}: {values}".format(
+                    name=name, values=", ".join(map(str, objects))))
+
+        if self._return:
+            _print("Return value: {ret}".format(ret=self._return))
+
+        self._show_slicing("Variables:", self.slicing_variables, _print)
+        self._show_slicing("Usages:", self.slicing_usages, _print)
+        self._show_slicing("Dependencies:", self.slicing_dependents, _print)
+
+    def _show_slicing(self, name, query, _print):
+        """Show slicing objects"""
+        objects = query[:]
+        if objects:
+            _print(name)
+            for obj in objects:
+                _print(str(obj), 1)
+
+    def __repr__(self):
+        return "Activation({0.trial_id}, {0.id}, {0.name})".format(self)

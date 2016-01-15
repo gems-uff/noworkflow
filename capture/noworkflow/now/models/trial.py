@@ -2,36 +2,32 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Trial Model"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import sys
-import time
-from datetime import datetime
-from collections import defaultdict, OrderedDict, Counter
 from pyposast.cross_version import buffered_str
 
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint
-
+from sqlalchemy.orm import relationship
 
 from ..formatter import PrettyLines
-from ..persistence import row_to_dict, persistence
-from ..utils import calculate_duration, FORMAT, print_msg
-from ..utils.data import HashableDict
+from ..utils import print_msg
 from ..graphs.trial_graph import TrialGraph
-from ..cross_version import lmap, cvmap
+from ..persistence import persistence
 from .model import Model
-from .function_def import FunctionDef
 from .trial_prolog import TrialProlog
+
+from .module import Module
+from .dependency import Dependency
 from .activation import Activation
-from .function_def import FunctionDef
 
 
 class Trial(Model, persistence.base):
     """This model represents a trial
-    Initialize it by passing the trial id:
+    Initialize it by passing a trial reference:
         trial = Trial(2)
 
 
@@ -51,239 +47,172 @@ class Trial(Model, persistence.base):
         trial.graph.width = 600
         trial.graph.height = 400
     """
-    __tablename__ = 'trial'
+    __tablename__ = "trial"
     __table_args__ = (
-        ForeignKeyConstraint(['inherited_id'], ['trial.id'],
-                             ondelete='RESTRICT'),
-        ForeignKeyConstraint(['parent_id'], ['trial.id'], ondelete='SET NULL'),
-        {'sqlite_autoincrement': True},
+        ForeignKeyConstraint(["inherited_id"], ["trial.id"],
+                             ondelete="RESTRICT"),
+        ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
+        {"sqlite_autoincrement": True},
     )
     id = Column(Integer, primary_key=True)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
-    _script = Column('script', Text)
-    _code_hash = Column('code_hash', Text)
+    script = Column("script", Text)
+    code_hash = Column("code_hash", Text)
     arguments = Column(Text)
     command = Column(Text)
     inherited_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
     run = Column(Integer)
 
+    inherited = relationship(
+        "Trial", backref="bypass_children", viewonly=True,
+        remote_side=[id], primaryjoin=(id == inherited_id))
+
+
+    parent = relationship(
+        "Trial", backref="children", viewonly=True,
+        remote_side=[id], primaryjoin=(id == parent_id))
+
+    #ToDo: check bypass
+    function_defs = relationship(
+        "FunctionDef", lazy="dynamic", backref="trial")
+    module_dependencies = relationship(
+        "Dependency", lazy="dynamic", backref="trials")
+    _modules = relationship(
+        "Module", secondary=Dependency.__table__, lazy="dynamic",
+        backref="trials")
+    environment_attrs = relationship(
+        "EnvironmentAttr", lazy="dynamic", backref="trial")
+    activations = relationship(
+        "Activation", lazy="dynamic", order_by=Activation.start,
+        backref="trial")
+    file_accesses = relationship(
+        "FileAccess", lazy="dynamic", backref="trial", viewonly=True)
+    object_values = relationship(
+        "ObjectValue", lazy="dynamic", backref="trial", viewonly=True)
+
+    slicing_variables = relationship(
+        "SlicingVariable", lazy="dynamic", backref="trial", viewonly=True)
+    slicing_usages = relationship(
+        "SlicingUsage", lazy="dynamic", viewonly=True, backref="trial")
+    slicing_dependencies = relationship(
+        "SlicingDependency", lazy="dynamic", viewonly=True, backref="trial")
+
+    tags = relationship(
+        "Tag", lazy="dynamic", backref="trial")
+
+    # bypass_children: Trial.inherited backref
+    # children: Trial.parent backref
+
     DEFAULT = {
-        'graph.width': 500,
-        'graph.height': 500,
-        'graph.mode': 3,
-        'use_cache': True,
+        "graph.width": 500,
+        "graph.height": 500,
+        "graph.mode": 3,
+        "use_cache": True,
     }
 
     REPLACE = {
-        'graph_width': 'graph.width',
-        'graph_height': 'graph.height',
-        'graph_mode': 'graph.mode',
+        "graph_width": "graph.width",
+        "graph_height": "graph.height",
+        "graph_mode": "graph.mode",
     }
 
-    def __init__(self, trial_ref=None, exit=False, script=None, **kwargs):
-        super(Trial, self).__init__(trial_id=trial_ref, exit=exit, script=script,
-                                    **kwargs)
+    def __new__(cls, *args, **kwargs):
+        # Check if it is a new trial or a query
+        trial_ref = kwargs.get("trial_ref", None)
+        script = kwargs.get("script", None)
+        if args and not trial_ref:
+            trial_ref = args[0]
 
-        if not trial_ref:
-            trial_ref = persistence.last_trial_id(script=script)
-            self.use_cache = False
+        if trial_ref or script:
+            use_cache = True
+            if not trial_ref:
+                trial_ref = persistence.last_trial_id(script=script)
+                use_cache = False
 
-        trial_id = persistence.load_trial_id(trial_ref)
+            trial_id = persistence.load_trial_id(trial_ref)
 
-        if exit and trial_id is None:
-            print_msg('inexistent trial id', True)
-            sys.exit(1)
+            if trial_id is None:
+                return None
 
-        self.id = trial_id
-        self._info = None
+            trial = persistence.session.query(cls).get(trial_id)
 
-        self.graph = TrialGraph(trial_id)
+            trial.use_cache = use_cache
+            trial._info = None
+            trial.graph = TrialGraph(trial_id)
+            trial.initialize_default(kwargs)
+            trial.graph.use_cache = trial.use_cache
+            trial.trial_prolog = TrialProlog(trial)
 
-        self.initialize_default(kwargs)
+            return trial
 
-        self.graph.use_cache = self.use_cache
-
-        self.trial_prolog = TrialProlog(self)
+        return super(Trial, cls).__new__(cls, *args, **kwargs)
 
     def query(self, query):
+        """Run prolog query"""
         return self.trial_prolog.query(query)
 
     def prolog_rules(self):
+        """Return prolog rules"""
         return self.trial_prolog.export_rules()
 
     @property
-    def trial_id(self):
-        from warnings import warn
-        warn('trial_id propery deprecated. Please use id')
-        return self.id
-
-    # ToDo: rename column
-    @property
-    def script(self):
-        """ Returns the "main" script of the trial """
-        info = self.info()
-        return info['script']
-
-    @property
     def script_content(self):
-        """ Returns the "main" script content of the trial """
+        """Return the "main" script content of the trial"""
         return PrettyLines(
-            buffered_str(persistence.get(self.code_hash)).split('/n'))
-
-    # ToDo: rename column
-    @property
-    def code_hash(self):
-        """ Returns the hash code of the main script """
-        info = self.info()
-        return info['code_hash']
+            buffered_str(persistence.get(self.code_hash)).split("/n"))
 
     @property
     def finished(self):
-        return bool(self.info()['finish'])
+        """Check if trial has finished"""
+        return bool(self.finish)
+
+    @property
+    def status(self):
+        """Check trial status
+        Possible statuses: Finished, Unfinished, Backup"""
+        if not self.run:
+            return "Backup"
+        return "Finished" if self.finished else "Unfinished"
 
     def _repr_html_(self):
-        """ Displays d3 graph on ipython notebook """
+        """Display d3 graph on ipython notebook"""
         return self.graph._repr_html_(self)
 
-    def info(self):
-        """ Returns dict with the trial information, considering the duration """
-        if self._info is None or not self.use_cache:
-            self._info = row_to_dict(
-                persistence.load_trial(self.id).fetchone())
-            if self._info['finish']:
-                self._info['duration'] = calculate_duration(self._info)
-            else:
-                self._info['duration'] = 0
-        return self._info
+    @property
+    def duration(self):
+        """Calculate trial duration"""
+        if self.finish:
+            return int((self.finish - self.start).total_seconds() * 1000000)
+        return 0
 
-    def function_defs(self):
-        """Return a dict of function definitions"""
-        return {
-            function.name: function
-            for function in persistence.session.query(FunctionDef).filter(
-                FunctionDef.trial_id==self.id).all()
-        }
+    @property
+    def local_modules(self):
+        """Load local modules
+        Return SQLAlchemy query"""
+        return self.modules.filter(
+            Module.path.like("%{}%".format(persistence.base_path)))
 
-    def head_trial(self, remove=False):
-        """ Returns the parent trial object """
-        parent_id = persistence.load_parent_id(self.script, remove=remove)
-        return Trial(parent_id)
+    @property
+    def modules(self):
+        """Load modules
+        Return SQLAlchemy query"""
+        if self.inherited:
+            return self.inherited.modules
+        return self._modules
 
-    def module(self, name, map_fn=row_to_dict):
-        """Return the module with specified name"""
-        _, result = self.modules(map_fn=map_fn)
-        for module in result:
-            if module['name'] == name:
-                return module
-        return None
-
-    def modules(self, map_fn=row_to_dict):
-        """ Returns the modules imported during the trial
-            The first element is a list of local modules
-            The second element is a list of external modules
-        """
-        dependencies = persistence.load_dependencies(self.id)
-        result = lmap(map_fn, dependencies)
-        local = [dep for dep in result
-                 if dep['path'] and persistence.base_path in dep['path']]
-        return local, result
-
-    def environment(self):
-        """ Returns a dict of environment variables """
-        return {
-            attr['name']: attr['value'] for attr in cvmap(row_to_dict,
-                persistence.load('environment_attr', trial_id=self.id))
-        }
-
-    def file_accesses(self):
-        """ Returns a list of file accesses """
-        def get(activation_id):
-            """ Get activation by id """
-            try:
-                return next(iter(self.activations(id=activation_id)))
-            except StopIteration:
-                return None
-        file_accesses = persistence.load('file_access',
-                                         trial_id=self.id)
-
-        result = []
-        for fa in cvmap(row_to_dict, file_accesses):
-            stack = []
-            function_activation = get(fa['function_activation_id'])
-            while function_activation:
-                function_name = function_activation['name']
-                function_activation = get(function_activation['caller_id'])
-                if function_activation:
-                    stack.insert(0, function_name)
-            if not stack or stack[-1] != 'open':
-                stack.append(' ... -> open')
-
-            result.append({
-                'id': fa['id'],
-                'function_activation_id': fa['function_activation_id'],
-                'name': fa['name'],
-                'mode': fa['mode'],
-                'buffering': fa['buffering'],
-                'content_hash_before': fa['content_hash_before'],
-                'content_hash_after': fa['content_hash_after'],
-                'timestamp': fa['timestamp'],
-                'stack': ' -> '.join(stack),
-            })
-        return result
-
-    def activations(self, *conditions):
-        """ Returns a list of activations """
-        _vars = cvmap(row_to_dict, persistence.load(
-            'slicing_variable', trial_id=self.id, order='id ASC'))
-        _variables = OrderedDict()
-        for var in _vars:
-            _variables[var['id']] = var
-        # ToDo: **conditions
-        query = persistence.session.query(Activation).\
-            filter(Activation.trial_id==self.id).\
-            order_by(Activation.start)
-        for condition in conditions:
-            query = query.filter(condition)
-        _activations = query.all()
-        for act in _activations:
-            act.slicing_variables = tuple(cvmap(HashableDict,
-                persistence.load('slicing_variable', activation_id=act.id,
-                    trial_id=self.id)))
-
-            act.slicing_usages = tuple(cvmap(HashableDict, persistence.load(
-                'slicing_usage', activation_id=act.id, trial_id=self.id)))
-
-            for usage in act.slicing_usages:
-                usage['variable'] = _variables[usage['variable_id']]
-
-            act.slicing_dependencies = tuple(cvmap(HashableDict,
-                persistence.load('slicing_dependency',
-                    dependent_activation_id=act.id,
-                    trial_id=self.id)))
-
-            for dep in act.slicing_dependencies:
-                dep['dependent_id'] = dep['dependent']
-                dep['dependent'] = _variables[dep['dependent']]
-                dep['supplier_id'] = dep['supplier']
-                dep['supplier'] = _variables[dep['supplier']]
-        return _activations
-
-    def slicing_variables(self):
-        """ Returns a list of slicing variables """
-        return lmap(row_to_dict, persistence.load(
-            'slicing_variable', trial_id=self.id, order='id ASC'))
-
-    def slicing_usages(self):
-        """ Returns a list of slicing usages """
-        return lmap(row_to_dict, persistence.load(
-            'slicing_usage', trial_id=self.id))
-
-    def slicing_dependencies(self):
-        """ Returns a list of slicing dependencies """
-        return lmap(row_to_dict, persistence.load(
-            'slicing_dependency', trial_id=self.id))
+    def show(self, _print=lambda x: print(x)):
+        """Print trial information"""
+        _print("""\
+            Id: {t.id}
+            Inherited Id: {t.inherited_id}
+            Script: {t.script}
+            Code hash: {t.code_hash}
+            Start: {t.start}
+            Finish: {t.finish}
+            Duration: {t.duration} ms\
+            """.format(t=self))
 
     def __repr__(self):
-        return "Trial {}".format(self.id)
+        return "Trial({})".format(self.id)
