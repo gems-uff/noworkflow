@@ -222,11 +222,11 @@ HistoryGraph.prototype._update_circle = function (circle) {
   }).classed('reflexive', function (d) {
     return d.reflexive;
   }).classed('finished', function (d) {
-    return d.info.status === 'Finished';
+    return d.info.status === 'finished';
   }).classed('unfinished', function (d) {
-    return d.info.status === 'Unfinished';
+    return d.info.status === 'unfinished';
   }).classed('backup', function (d) {
-    return d.info.status === 'Backup';
+    return d.info.status === 'backup';
   });
 };
 

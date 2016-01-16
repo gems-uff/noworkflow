@@ -43,9 +43,8 @@ def static_proxy(path):
 @app.route('/trials')
 @connection
 def trials():
-    history = History()
-    return jsonify(**history.graph_data(request.args.get('script'),
-                                        request.args.get('execution')))
+    return jsonify(**History(script=request.args.get('script'),
+                             status=request.args.get('execution')).graph())
 
 @app.route('/')
 @connection
@@ -53,7 +52,7 @@ def index():
     history = History()
     return render_template("index.html",
         cwd = os.getcwd(),
-        scripts = history.scripts()
+        scripts = history.scripts
     )
 
 @app.route('/<tid>-<graph_mode>')
@@ -62,7 +61,7 @@ def index2(tid, graph_mode):
     history = History()
     return render_template("index.html",
         cwd = os.getcwd(),
-        scripts = history.scripts()
+        scripts = history.scripts
     )
 
 @app.route('/trials/<tid>/<graph_mode>/<cache>.json')

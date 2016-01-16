@@ -44,7 +44,7 @@ class Model(object):
             if '.' in key:
                 key0, key = key.split('.')
                 obj = getattr(self, key0)
-            if not hasattr(obj, key):
+            if hasattr(obj, key):
                 setattr(obj, key, value)
 
     @classmethod

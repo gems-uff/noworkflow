@@ -171,10 +171,10 @@ class Trial(Model, persistence.base):
     @property
     def status(self):
         """Check trial status
-        Possible statuses: Finished, Unfinished, Backup"""
+        Possible statuses: finished, unfinished, backup"""
         if not self.run:
-            return "Backup"
-        return "Finished" if self.finished else "Unfinished"
+            return "backup"
+        return "finished" if self.finished else "unfinished"
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""

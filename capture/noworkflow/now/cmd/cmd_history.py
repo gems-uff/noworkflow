@@ -23,7 +23,7 @@ class History(Command):
         add_arg = self.add_argument
         add_arg('-s', '--script', type=str, default="*",
                 help='show history of specific script')
-        add_arg('-e', '--execution', type=str, default="*",
+        add_arg('-e', '--status', type=str, default="*",
                 choices=["*", "finished", "unfinished", "backup"],
                 help='show only trials in a specific status')
 
@@ -33,5 +33,5 @@ class History(Command):
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
-        history = HistoryModel()
-        print(history.show(script=args.script, execution=args.execution))
+        history = HistoryModel(script=args.script, status=args.status)
+        print(history)
