@@ -50,17 +50,17 @@ class History(Model):
     """
 
     DEFAULT = {
-        'graph.width': 700,
-        'graph.height': 300,
-        'graph.use_cache': True,
-        'script': '*',
-        'status': '*',
+        "graph.width": 700,
+        "graph.height": 300,
+        "graph.use_cache": True,
+        "script": "*",
+        "status": "*",
     }
 
     REPLACE = {
-        'graph_width': 'graph.width',
-        'graph_height': 'graph.height',
-        'graph_use_cache': 'graph.use_cache',
+        "graph_width": "graph.width",
+        "graph_height": "graph.height",
+        "graph_use_cache": "graph.use_cache",
     }
 
     def __init__(self, **kwargs):
@@ -74,7 +74,7 @@ class History(Model):
     @property
     def scripts(self):
         """Return a set of scripts used for trials"""
-        return {s[0].rsplit('/', 1)[-1]
+        return {s[0].rsplit("/", 1)[-1]
                 for s in persistence.session.query(distinct(Trial.script))}
 
     @property

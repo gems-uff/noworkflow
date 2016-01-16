@@ -16,7 +16,7 @@ from ..models.trial import Trial
 
 
 MAX_TRIALS = 1000000
-MAX_IN_GRAPH = float('inf')
+MAX_IN_GRAPH = float("inf")
 
 
 class HistoryGraph(Graph):
@@ -124,8 +124,8 @@ class HistoryGraph(Graph):
         status = self.history.status.lower()
         script = self.history.script
         for trial in reversed(trials):
-            if ((status != '*' and trial.status != status) or
-                    (script != '*' and trial.script != script)):
+            if ((status != "*" and trial.status != status) or
+                    (script != "*" and trial.script != script)):
                 for tid in ids:
                     graph[tid][trial.id] = MAX_IN_GRAPH
             else:
@@ -154,7 +154,7 @@ class HistoryGraph(Graph):
             tid = trial.id
             target = min(
                 graph[tid],
-                key=lambda x: float('inf') if x == tid else graph[tid][x]
+                key=lambda x: float("inf") if x == tid else graph[tid][x]
             )
             if graph[tid][target] != MAX_IN_GRAPH:
                 yield (tid, target)
@@ -183,10 +183,10 @@ class HistoryGraph(Graph):
 
         for source, target in self._edges(graph, nodes, script_order=order):
             edges.append({
-                'source': id_map[source],
-                'target': id_map[target],
-                'right': 1,
-                'level': 0
+                "source": id_map[source],
+                "target": id_map[target],
+                "right": 1,
+                "level": 0
             })
             actual_graph[source] = target
             children[target].append(source)
@@ -233,7 +233,7 @@ class HistoryGraph(Graph):
         """Create history data for presenting graphs
 
         Return:
-        {'nodes': nodes, 'edges': edges}
+        {"nodes": nodes, "edges": edges}
         nodes -- list of trials in filtered history
         edges -- list of edges dicts with keys source and target referencing nodes
         """
@@ -255,7 +255,7 @@ class HistoryGraph(Graph):
             tmap, scripts, order, children, actual_graph
         )
 
-        result = {'nodes': nodes, 'edges': edges}
+        result = {"nodes": nodes, "edges": edges}
         if self.use_cache:
             self.cache[key] = result
 
@@ -267,32 +267,32 @@ class HistoryGraph(Graph):
 
         # To JSON
         final = []
-        for trial in result['nodes']:
+        for trial in result["nodes"]:
             dic = trial.to_dict(
                 ignore=tuple(), extra=("level", "status", "tooltip"))
-            dic['start'] = str(dic['start'])
-            dic['finish'] = str(dic['finish'])
+            dic["start"] = str(dic["start"])
+            dic["finish"] = str(dic["finish"])
             final.append(dic)
-        return {'edges': result['edges'], 'nodes': final}
+        return {"edges": result["edges"], "nodes": final}
 
     def _line_text(self, active, trial, current, moving=False, width=25):
         """Return text for line history"""
         text = []
         for i, value in enumerate(active):
             if i == current:
-                text.append('/ ' if moving else
-                            ' b' if not trial.run else
-                            ' *' if trial.finished else
-                            ' f')
+                text.append("/ " if moving else
+                            " b" if not trial.run else
+                            " *" if trial.finished else
+                            " f")
             elif value:
-                text.append(' |')
+                text.append(" |")
             else:
-                text.append('  ')
+                text.append("  ")
         if moving:
-            return ''.join(text)
+            return "".join(text)
         return "{line}  {id: <4} {script: <{width}} {tags}".format(
-            line=''.join(text), id=trial.id, script=trial.script,
-            tags=', '.join(tag.name for tag in trial.tags), width=width
+            line="".join(text), id=trial.id, script=trial.script,
+            tags=", ".join(tag.name for tag in trial.tags), width=width
         )
 
     def _repr_html_(self):
@@ -313,14 +313,14 @@ class HistoryGraph(Graph):
     def __repr__(self):
         width = max(len(s) for s in self.history.scripts)
         history = self.history_data()
-        nodes = history['nodes']
+        nodes = history["nodes"]
 
         if not nodes:
             return ""
 
         to_level = {
-            nodes[edge['source']].id: nodes[edge['target']].level
-            for edge in history['edges']
+            nodes[edge["source"]].id: nodes[edge["target"]].level
+            for edge in history["edges"]
         }
 
         max_level = max(t.level for t in nodes)
@@ -348,4 +348,4 @@ class HistoryGraph(Graph):
 
             last = trial.level
 
-        return '\n'.join(lines)
+        return "\n".join(lines)

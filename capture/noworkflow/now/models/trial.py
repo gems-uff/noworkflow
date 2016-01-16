@@ -6,19 +6,18 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import sys
 from pyposast.cross_version import buffered_str
 
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
-from sqlalchemy import ForeignKeyConstraint
+from sqlalchemy import ForeignKeyConstraint, select, func
 from sqlalchemy.orm import relationship
 
 from ..formatter import PrettyLines
-from ..utils import print_msg
 from ..graphs.trial_graph import TrialGraph
 from ..persistence import persistence
 from .model import Model
 from .trial_prolog import TrialProlog
+from .tag import Tag
 
 from .module import Module
 from .dependency import Dependency
@@ -125,22 +124,20 @@ class Trial(Model, persistence.base):
         if args and not trial_ref:
             trial_ref = args[0]
 
-        if trial_ref or script:
+        if trial_ref or script or "trial_ref" in kwargs:
             use_cache = True
-            if not trial_ref:
-                trial_ref = persistence.last_trial_id(script=script)
+            if not trial_ref or trial_ref == -1:
+                trial = cls.last_trial(script=script)
                 use_cache = False
+            else:
+                trial = cls.load_trial(trial_ref)
 
-            trial_id = persistence.load_trial_id(trial_ref)
-
-            if trial_id is None:
+            if trial is None:
                 return None
-
-            trial = persistence.session.query(cls).get(trial_id)
 
             trial.use_cache = use_cache
             trial._info = None
-            trial.graph = TrialGraph(trial_id)
+            trial.graph = TrialGraph(trial.id)
             trial.initialize_default(kwargs)
             trial.graph.use_cache = trial.use_cache
             trial.trial_prolog = TrialProlog(trial)
@@ -156,6 +153,32 @@ class Trial(Model, persistence.base):
     def prolog_rules(self):
         """Return prolog rules"""
         return self.trial_prolog.export_rules()
+
+    @classmethod
+    def last_trial(cls, script=None, parent_required=False):
+        trial = (
+            persistence.session.query(cls)
+            .filter(cls.start.in_(
+                select([func.max(cls.start)])
+                .where(nip.Trial.script == script)
+            ))
+        ).first()
+        if trial or parent_required:
+            return trial
+        return (
+            persistence.session.query(cls)
+            .filter(cls.start.in_(
+                select([func.max(cls.start)])
+            ))
+        ).first()
+
+    @classmethod
+    def load_trial(cls, trial_ref):
+        return (
+            persistence.session.query(cls)
+            .outerjoin(Tag)
+            .filter((cls.id == trial_ref) | (Tag.name == trial_ref))
+        ).first()
 
     @property
     def script_content(self):
@@ -178,7 +201,9 @@ class Trial(Model, persistence.base):
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""
-        return self.graph._repr_html_(self)
+        if hasattr(self, "graph"):
+            return self.graph._repr_html_(self)
+        return repr(self)
 
     @property
     def duration(self):
