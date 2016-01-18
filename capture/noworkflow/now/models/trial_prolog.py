@@ -10,7 +10,7 @@ import weakref
 
 from ..utils import resource
 
-from .base import proxy_gen
+from .base import proxy_gen, Model
 from .activation import Activation
 from .file_access import FileAccess
 from .slicing_variable import SlicingVariable
@@ -21,11 +21,13 @@ from .slicing_dependency import SlicingDependency
 RULES = "../resources/rules.pl"
 
 
-class TrialProlog(object):
+class TrialProlog(Model):
 
+    __modelname__ = "TrialProlog"
     prolog_cli = None
 
     def __init__(self, trial):
+        self.use_cache = True
         self.trial = weakref.proxy(trial)
 
         # TODO: export remaining data
@@ -119,7 +121,7 @@ class TrialProlog(object):
         cache = set()
         no_cache = set()
         for inst in cls.get_instances():
-            (cache if inst.trial.use_cache else no_cache).add(inst)
+            (cache if inst.use_cache else no_cache).add(inst)
         for inst in (no_cache - cache):
             inst.retract()
 

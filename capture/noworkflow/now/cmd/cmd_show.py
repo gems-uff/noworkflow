@@ -8,9 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..models import Trial
-from ..models.activation import Activation
-from ..models.model import proxy_gen
+from ..models import Trial, Activation, proxy_gen
 from ..persistence import persistence
 from ..utils.functions import wrap
 from ..utils.io import print_msg

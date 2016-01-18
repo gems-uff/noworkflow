@@ -10,7 +10,7 @@ from .command import IpythonCommandMagic
 
 
 class NowIpython(IpythonCommandMagic):
-    """Returns the noWorkflow IPython Module
+    """Return the noWorkflow IPython Module
 
        Equivalent to:
        In [1]: import noworkflow.now.ipython as now_ip
@@ -20,6 +20,3 @@ class NowIpython(IpythonCommandMagic):
     def execute(self, func, line, cell, magic_cls):
         from ... import ipython as nip
         return nip
-
-
-

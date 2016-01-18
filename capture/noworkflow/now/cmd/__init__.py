@@ -4,7 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 """Commands and argument parsers for 'now'"""
 from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+                        division)
 
 import argparse
 
@@ -22,7 +22,7 @@ from .cmd_history import History
 
 
 def main():
-    """ Main function """
+    """Main function"""
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers()
     commands = [
@@ -44,16 +44,16 @@ def main():
     args.func(args)
 
 __all__ = [
-    b"Command",
-    b"Run",
-    b"Debug",
-    b"List",
-    b"Show",
-    b"Diff",
-    b"Export",
-    b"Restore",
-    b"Vis",
-    b"Demo",
-    b"History",
-    b"main",
+    "Command",
+    "Run",
+    "Debug",
+    "List",
+    "Show",
+    "Diff",
+    "Export",
+    "Restore",
+    "Vis",
+    "Demo",
+    "History",
+    "main",
 ]

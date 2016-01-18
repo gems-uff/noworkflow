@@ -82,6 +82,8 @@ class MetaModel(type):
         instances -- update instances too (default=False)
         """
         cls = meta.__classes__[model]
+        if attr in cls.REPLACE:
+            attr = cls.REPLACE[attr]
         if attr in cls.DEFAULT:
             cls.DEFAULT[attr] = value
         if instances:

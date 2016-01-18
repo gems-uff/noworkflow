@@ -165,7 +165,7 @@ class Metascript(object):
                           cmd=None):
         """ Read magic line argument object """
         if not cmd:
-            cmd = 'run ' + ' '.join(args)
+            cmd = 'run ' + ' '.join(argv)
         self.command = cmd
         self.dir = directory
         self.argv = argv

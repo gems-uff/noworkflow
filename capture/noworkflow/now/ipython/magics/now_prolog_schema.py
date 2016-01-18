@@ -8,8 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 from ...formatter import PrettyLines
 
-from ..models import Trial
-from ..models import TrialProlog
+from ...models import Trial, TrialProlog
 
 from .command import IpythonCommandMagic
 

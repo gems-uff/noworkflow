@@ -11,6 +11,7 @@ from ..utils.functions import abstract
 
 class Command(object):
     """Command base"""
+
     def __init__(self, cmd=None):
         self.cmd = cmd or type(self).__name__.lower()
         self.help = self.__doc__.split("\n")[0].strip()

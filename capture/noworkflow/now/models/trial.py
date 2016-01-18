@@ -279,6 +279,7 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         "graph.height": 500,
         "graph.mode": 3,
         "graph.use_cache": True,
+        "prolog.use_cache": True,
     }
 
     REPLACE = {
@@ -286,6 +287,7 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         "graph_height": "graph.height",
         "graph_mode": "graph.mode",
         "graph_use_cache": "graph.use_cache",
+        "prolog_use_cache": "prolog.use_cache",
     }
 
     def __init__(self, *args, **kwargs):
@@ -300,14 +302,22 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
 
         # Check if it is a new trial or a query
         script = kwargs.get("trial_script", None)
+        if 'use_cache' in kwargs:
+            cache = kwargs['use_cache']
+            kwargs['graph_use_cache'] = kwargs.get('graph_use_cache', cache)
+            kwargs['prolog_use_cache'] = kwargs.get('graph_use_cache', cache)
+
 
         session = persistence.session
         if not trial_ref or trial_ref == -1:
             self._alchemy = Trial.last_trial(script=script, session=session)
-            if not 'graph_use_cache' in kwargs:
+            if 'graph_use_cache' not in kwargs:
                 kwargs['graph_use_cache'] = False
+            if 'prolog_use_cache' not in kwargs:
+                kwargs['prolog_use_cache'] = False
         else:
             self._alchemy = Trial.load_trial(trial_ref, session=session)
+
 
         if self._alchemy is None:
             raise RuntimeError("Trial {} not found".format(trial_ref))

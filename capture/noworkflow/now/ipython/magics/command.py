@@ -23,6 +23,7 @@ MAGIC_TYPES = {
 
 
 class IpythonCommandMagic(Command):
+    """IPython Command base"""
 
     def __init__(self, magic, docstring, magic_type="cell"):
         self.__doc__ = docstring
@@ -33,14 +34,17 @@ class IpythonCommandMagic(Command):
         self.args = []
 
     def add_argument_cmd(self, *args, **kwargs):
+        """Ignore commands added by add_argument_cmd"""
         pass
 
     def add_argument(self, *args, **kwargs):
+        """Add argument to parser available for both IPython magic and cmd"""
         self.args.append(
             magic_arguments.argument(*args, **kwargs)
         )
 
     def create_magic(self, f):
+        """Create magic for command"""
         f.__name__ = str(self.magic)
         f.__doc__ = self.docstring
         f = MAGIC_TYPES[self.magic_type](self.magic)(f)
@@ -50,9 +54,11 @@ class IpythonCommandMagic(Command):
         return f
 
     def execute(self, func, line, cell, magic_cls):
+        """Execute the command. Override on subclass"""
         super(Command, self).execute(args)
 
     def arguments(self, func, line):
+        """Get arguments from magic"""
         argv = arg_split(line, posix = not sys.platform.startswith("win"))
         args = magic_arguments.parse_argstring(func, line)
         return argv, args

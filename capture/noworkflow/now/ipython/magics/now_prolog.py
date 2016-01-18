@@ -16,7 +16,7 @@ from .command import IpythonCommandMagic
 
 
 class NowProlog(IpythonCommandMagic):
-    """Queries the provenance database with Prolog
+    """Query the provenance database with Prolog
 
     Examples
     --------
@@ -29,7 +29,7 @@ class NowProlog(IpythonCommandMagic):
             ...:  {'X': 0.10217714309692383}]
 
         In  [2]: %%now_prolog --result tupleit
-            ...: SELECT * FROM trial
+            ...: duration(1, z, X)
 
         In  [3]: duration(1, z, X)
         Out [3]: <generator object __call__ at 0x7f79ed329f50>

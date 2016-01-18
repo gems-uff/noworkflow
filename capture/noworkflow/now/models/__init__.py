@@ -4,12 +4,13 @@
 # Please, consult the license terms in the LICENSE file.
 
 from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+                        division)
+
+from future.utils import text_to_native_str as n
 
 # Database Models
-
 from .activation import ActivationProxy as Activation
-from .base import proxy, proxy_gen, Model
+from .base import proxy, proxy_gen, Model, MetaModel
 from .dependency import DependencyProxy as Dependency
 from .environment_attr import EnvironmentAttrProxy as EnvironmentAttr
 from .file_access import FileAccessProxy as FileAccess
@@ -31,28 +32,26 @@ from .diff import Diff
 from .trial_prolog import TrialProlog
 
 
+order = [
+    Trial, Head, Tag, GraphCache, # Trial
+    Module, Dependency, EnvironmentAttr, # Deployment
+    FunctionDef, Object, # Definition
+    Activation, ObjectValue, FileAccess, # Execution
+    SlicingVariable, SlicingUsage, SlicingDependency # Slicing
+]
+
+
+
 __all__ = [
-    b"Activation",
-    b"Dependency",
-    b"Trial",
-    b"Head",
-    b"Module",
-    b"FunctionDef",
-    b"Object",
-    b"EnvironmentAttr",
-    b"ObjectValue",
-    b"FileAccess",
-    b"SlicingVariable",
-    b"SlicingUsage",
-    b"SlicingDependency",
-    b"GraphCache",
-    b"Tag",
+    n(x.__modelname__) for x in order
+] + [
+    "History",
+    "Diff",
+    "TrialProlog",
 
-    b"History",
-    b"Diff",
-    b"TrialProlog",
-
-    b"Model",
-    b"proxy",
-    b"proxy_gen",
+    "MetaModel",
+    "Model",
+    "proxy",
+    "proxy_gen",
+    "order"
 ]

@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -13,7 +13,7 @@ from .command import IpythonCommandMagic
 
 
 class NowRestore(IpythonCommandMagic, Restore):
-    """Restores trial and returns the script content
+    """Restore trial and return the script content
 
     Examples
     --------
@@ -24,13 +24,12 @@ class NowRestore(IpythonCommandMagic, Restore):
         l = range(4)
         c = sum(l)
         print(c)
-
     """
 
     def add_arguments(self):
         super(NowRestore, self).add_arguments()
         add_arg = self.add_argument
-        add_arg('--file', action="store_true",
+        add_arg("--file", action="store_true",
                 help="""Restores the original script file""")
 
     def restore_script(self, trial):

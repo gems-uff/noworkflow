@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -8,18 +8,18 @@ from __future__ import (absolute_import, print_function,
 
 import argparse
 
+from future.utils import viewkeys, viewvalues, text_to_native_str
 from IPython.core.display import display_javascript
 from IPython.utils.text import DollarFormatter
 
 from ...persistence import persistence
 from ...formatter import Table
-from ...cross_version import default_string, values, keys
-from ..models import set_default
+
 from .command import IpythonCommandMagic
 
 
 class NowSQL(IpythonCommandMagic):
-    """Queries the provenance database with SQL
+    """Query the provenance database with SQL
 
     Examples
     --------
@@ -56,21 +56,21 @@ class NowSQL(IpythonCommandMagic):
     def add_arguments(self):
         super(NowSQL, self).add_arguments()
         add_arg = self.add_argument
-        add_arg('--result', type=str,
+        add_arg("--result", type=str,
                 help="""The variable in which the result will be stored""")
 
     def execute(self, func, line, cell, magic_cls):
         f = DollarFormatter()
         cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
-        result = persistence.query(default_string(cell))
+        result = persistence.query(text_to_native_str(cell))
         if args.result:
             magic_cls.shell.user_ns[args.result] = result
         else:
             result = list(result)
             table = Table()
             if result:
-                table.append(list(keys(result[0])))
+                table.append(list(viewkeys(result[0])))
             for line in result:
-                table.append(list(values(line)))
+                table.append(list(viewvalues(line)))
             return table
