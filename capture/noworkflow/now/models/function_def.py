@@ -6,20 +6,21 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 
-from collections import defaultdict
-from ..persistence import row_to_dict, persistence
-from ..cross_version import lmap
-from ..utils import hashabledict
-from .model import Model
+from ..persistence import persistence
+from ..utils.functions import prolog_repr
 
+from .base import set_proxy
 from .object import Object
 
 
-class FunctionDef(Model, persistence.base):
+class FunctionDef(persistence.base):
     """Function Definition Table
     Store function definitions from the definion provenance
     """
@@ -37,9 +38,6 @@ class FunctionDef(Model, persistence.base):
         Object, lazy="dynamic", backref="function_def")
 
     # trial: Trial.function_def backref
-
-    DEFAULT = {}
-    REPLACE = {}
 
     @property
     def globals(self):
@@ -77,10 +75,12 @@ class FunctionDef(Model, persistence.base):
 
     def to_prolog(self):
         """Convert to prolog fact"""
+        name = prolog_repr(self.name)
+        code_hash = prolog_repr(self.code_hash)
         return (
             "function_def("
-            "{f.trial_id}, {f.id}, {f.name!r}, {f.code_hash!r})."
-        ).format(f=self)
+            "{self.trial_id}, {self.id}, {name}, {code_hash})."
+        ).format(**locals())
 
     def show(self, _print=lambda x, offset=0: print(x)):
         """Show object
@@ -101,3 +101,11 @@ class FunctionDef(Model, persistence.base):
 
     def __repr__(self):
         return "FunctionDef({0.trial_id}, {0.id}, {0.name})".format(self)
+
+
+class FunctionDefProxy(with_metaclass(set_proxy(FunctionDef))):
+    """FunctionDef proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

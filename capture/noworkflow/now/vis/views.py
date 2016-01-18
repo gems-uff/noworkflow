@@ -125,7 +125,7 @@ def all_file_accesses(tid):
     trial = Trial(tid)
     return render_template("trial.html",
         cwd = os.getcwd(),
-        trial = trial.info(),
+        trial = trial.to_dict(extra=("duration",)),
         file_accesses = trial.file_accesses(),
         info = "file_accesses.html",
     )
@@ -141,8 +141,8 @@ def diff(trial1, trial2, tl=None, nh=None, graph_mode=None):
     fa_added, fa_removed, fa_replaced = diff.file_accesses()
     return render_template("diff.html",
         cwd = os.getcwd(),
-        trial1 = diff.trial1.info(),
-        trial2 = diff.trial2.info(),
+        trial1 = diff.trial1.to_dict(extra=("duration",)),
+        trial2 = diff.trial2.to_dict(extra=("duration",)),
         trial = diff.trial(),
         modules_added = modules_added,
         modules_removed = modules_removed,

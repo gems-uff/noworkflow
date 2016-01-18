@@ -13,8 +13,9 @@ from collections import OrderedDict
 from ..cross_version import keys
 from ..graphs.diff_graph import DiffGraph
 from ..persistence import persistence
-from .model import Model
-from .trial import Trial
+
+from .base import Model, proxy_gen
+from .trial import TrialProxy
 
 
 class Diff(Model):
@@ -48,6 +49,8 @@ class Diff(Model):
         diff.graph.height = 400
     """
 
+    __modelname__ = "Diff"
+
     DEFAULT = {
         "graph.width": 500,
         "graph.height": 500,
@@ -64,18 +67,11 @@ class Diff(Model):
 
     def __init__(self, trial_ref1, trial_ref2, **kwargs):
         super(Diff, self).__init__(trial_ref1, trial_ref2, **kwargs)
-        trial_id1 = persistence.load_trial_id(trial_ref1)
-        trial_id2 = persistence.load_trial_id(trial_ref2)
+        self.trial1 = TrialProxy(trial_ref1)
+        self.trial2 = TrialProxy(trial_ref2)
 
-        self.graph = DiffGraph(trial_id1, trial_id2)
+        self.graph = DiffGraph(self)
         self.initialize_default(kwargs)
-
-        self.trial1 = Trial(trial_id1)
-        if not self.trial1:
-            raise RuntimeError("Trial {} not found".format(trial_id1))
-        self.trial2 = Trial(trial_id2)
-        if not self.trial2:
-            raise RuntimeError("Trial {} not found".format(trial_id2))
 
     def trial(self):
         """Return a tuple with information from both trials """
@@ -88,23 +84,23 @@ class Diff(Model):
     def modules(self):
         """Diff modules from trials"""
         return diff_set(
-            set(self.trial1.modules),
-            set(self.trial2.modules))
+            set(proxy_gen(self.trial1.modules)),
+            set(proxy_gen(self.trial2.modules)))
 
     def environment(self):
         """Diff environment variables"""
         return diff_set(
-            set(self.trial1.environment_attrs),
-            set(self.trial2.environment_attrs))
+            set(proxy_gen(self.trial1.environment_attrs)),
+            set(proxy_gen(self.trial2.environment_attrs)))
 
     def file_accesses(self):
         """Diff file accesses"""
         return diff_set(
-            set(self.trial1.file_accesses),
-            set(self.trial2.file_accesses))
+            set(proxy_gen(self.trial1.file_accesses)),
+            set(proxy_gen(self.trial2.file_accesses)))
 
     def _repr_html_(self):
-        return self.graph._repr_html_(self)
+        return self.graph._repr_html_()
 
 
 def diff_dict(before, after):

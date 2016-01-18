@@ -1,31 +1,35 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Activation Model"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
 from collections import OrderedDict
 
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import relationship, backref
 
 from ..persistence import persistence
 from ..cross_version import lmap, items
-from ..utils.functions import timestamp
-from .model import Model
+from ..utils.functions import timestamp, prolog_repr
 
+from .base import set_proxy
 from .object_value import ObjectValue
 from .slicing_usage import SlicingUsage
 from .slicing_dependency import SlicingDependency
 
 
-class Activation(Model, persistence.base):
+class Activation(persistence.base):
     """Activation Table
     Store function activations from execution provenance
     """
+
     __tablename__ = "function_activation"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
@@ -39,7 +43,7 @@ class Activation(Model, persistence.base):
     id = Column(Integer)
     name = Column(Text)
     line = Column(Integer)
-    _return = Column("return", Text)
+    return_value = Column("return", Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
     caller_id = Column(Integer, index=True)
@@ -70,16 +74,6 @@ class Activation(Model, persistence.base):
     # trial: Trial.activations backref
     # children: Activation.caller backref
 
-    DEFAULT = {}
-    REPLACE = {}
-
-    # ToDo: Improve hash
-    def __hash__(self):
-        return hash(self.id)
-
-    def __eq__(self, other):
-        return self.id == other.id
-
     @property
     def globals(self):
         """Return activation globals as a SQLAlchemy query"""
@@ -93,7 +87,7 @@ class Activation(Model, persistence.base):
     @property
     def duration(self):
         """Calculate activation duration"""
-        return  int((self.finish - self.start).total_seconds() * 1000000)
+        return int((self.finish - self.start).total_seconds() * 1000000)
 
     @classmethod
     def to_prolog_fact(cls):
@@ -116,14 +110,15 @@ class Activation(Model, persistence.base):
 
     def to_prolog(self):
         """Convert to prolog fact"""
+        name = prolog_repr(self.name)
         start = timestamp(self.start)
         finish = timestamp(self.finish)
         caller_id = self.caller_id if self.caller_id else "nil"
         return (
             "activation("
-            "{a.trial_id}, {a.id}, {a.name!r}, {start:-f}, {finish:-f}, "
+            "{self.trial_id}, {self.id}, {name}, {start:-f}, {finish:-f}, "
             "{caller_id})."
-        ).format(a=self, start=start, finish=finish, caller_id=caller_id)
+        ).format(**locals())
 
     def show(self, _print=lambda x, offset=0: print(x)):
         """Show object
@@ -138,8 +133,8 @@ class Activation(Model, persistence.base):
                 _print("{name}: {values}".format(
                     name=name, values=", ".join(map(str, objects))))
 
-        if self._return:
-            _print("Return value: {ret}".format(ret=self._return))
+        if self.return_value:
+            _print("Return value: {ret}".format(ret=self.return_value))
 
         self._show_slicing("Variables:", self.slicing_variables, _print)
         self._show_slicing("Usages:", self.slicing_usages, _print)
@@ -155,3 +150,22 @@ class Activation(Model, persistence.base):
 
     def __repr__(self):
         return "Activation({0.trial_id}, {0.id}, {0.name})".format(self)
+
+
+class ActivationProxy(with_metaclass(set_proxy(Activation))):
+    """Activation proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    # ToDo: Improve hash
+
+    def __key(self):
+        return (self.trial_id, self.name, self.line)
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        return self.__key() == other.__key()

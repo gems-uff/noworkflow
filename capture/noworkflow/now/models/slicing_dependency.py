@@ -6,14 +6,18 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ..persistence import persistence
-from .model import Model
+
+from .base import set_proxy
 
 
-class SlicingDependency(Model, persistence.base):
+class SlicingDependency(persistence.base):
     """Slicing Dependency Table
     Store slicing dependencies between variables from execution provenance
     """
@@ -54,9 +58,6 @@ class SlicingDependency(Model, persistence.base):
     # dependent: SlicingVariable.suppliers_dependencies backref
     # supplier: SlicingVariable.dependents_dependencies backref
 
-    DEFAULT = {}
-    REPLACE = {}
-
     @classmethod
     def to_prolog_fact(cls):
         return textwrap.dedent("""
@@ -76,10 +77,10 @@ class SlicingDependency(Model, persistence.base):
     def to_prolog(self):
         return (
             "dependency("
-            "{d.trial_id}, {d.id}, "
-            "{d.dependent_activation_id}, {d.dependent_id}, "
-            "{d.supplier_activation_id}, {d.supplier_id})."
-        ).format(d=self)
+            "{self.trial_id}, {self.id}, "
+            "{self.dependent_activation_id}, {self.dependent_id}, "
+            "{self.supplier_activation_id}, {self.supplier_id})."
+        ).format(**locals())
 
     def __str__(self):
         return "{0.dependent} <- {0.supplier}".format(self)
@@ -89,3 +90,11 @@ class SlicingDependency(Model, persistence.base):
             "SlicingDependency({0.trial_id}, {0.id}, "
             "{0.dependent}, {0.supplier})"
         ).format(self)
+
+
+class SlicingDependencyProxy(with_metaclass(set_proxy(SlicingDependency))):
+    """SlicingDependency proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

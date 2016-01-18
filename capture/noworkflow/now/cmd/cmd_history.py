@@ -10,10 +10,11 @@ import os
 import subprocess
 import sys
 
-from .command import Command
 from ..persistence import persistence
 from ..utils.io import print_msg
 from ..models.history import History as HistoryModel
+
+from .command import Command
 
 
 class History(Command):
@@ -21,15 +22,15 @@ class History(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg('-s', '--script', type=str, default="*",
-                help='show history of specific script')
-        add_arg('-e', '--status', type=str, default="*",
+        add_arg("-s", "--script", type=str, default="*",
+                help="show history of specific script")
+        add_arg("-e", "--status", type=str, default="*",
                 choices=["*", "finished", "unfinished", "backup"],
-                help='show only trials in a specific status')
+                help="show only trials in a specific status")
 
-        add_arg('--dir', type=str,
-                help='set demo path. Default to CWD/demo<number>'
-                     'where <number> is the demo identification')
+        add_arg("--dir", type=str,
+                help="set demo path. Default to CWD/demo<number>"
+                     "where <number> is the demo identification")
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())

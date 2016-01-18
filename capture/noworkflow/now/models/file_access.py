@@ -6,16 +6,21 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
 from sqlalchemy.orm import relationship
 
 from ..persistence import persistence
-from .model import Model
+from ..utils.functions import timestamp, prolog_repr
+
+from .base import set_proxy
 
 
-class FileAccess(Model, persistence.base):
+class FileAccess(persistence.base):
     """File Access Table
     Store file accesses from execution provenance
     """
@@ -39,19 +44,6 @@ class FileAccess(Model, persistence.base):
 
     # trial: Trial.file_accesses backref
     # activation: Activation.file_accesses backref
-
-    DEFAULT = {}
-    REPLACE = {}
-
-    def __key(self):
-        return (self.name, self.content_hash_before, self.content_hash_after)
-
-    def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        return ((self.content_hash_before == other.content_hash_before)
-            and (self.content_hash_after == other.content_hash_after))
 
     @property
     def stack(self):
@@ -89,12 +81,16 @@ class FileAccess(Model, persistence.base):
     def to_prolog(self):
         """Convert to prolog fact"""
         time = timestamp(self.timestamp)
+        name = prolog_repr(self.name)
+        mode = prolog_repr(self.mode)
+        content_hash_before = prolog_repr(self.content_hash_before)
+        content_hash_after = prolog_repr(self.content_hash_after)
         return (
             "access("
-            "{a.trial_id}, f{a.id}, {a.name!r}, {a.mode!r}, "
-            "{a.content_hash_before!r}, {a.content_hash_after!r}, "
-            "{time:-f}, {a.function_activation_id})."
-        ).format(a=self, time=time)
+            "{self.trial_id}, f{self.id}, {name}, {mode}, "
+            "{content_hash_before}, {content_hash_after}, "
+            "{time:-f}, {self.function_activation_id})."
+        ).format(**locals())
 
     def show(self, _print=lambda x: print(x)):
         """Show object
@@ -115,3 +111,21 @@ class FileAccess(Model, persistence.base):
     def __repr__(self):
         return "FileAccess({0.trial_id}, {0.id}, {0.name}, {0.mode})".format(
             self)
+
+
+class FileAccessProxy(with_metaclass(set_proxy(FileAccess))):
+    """FileAccess proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    def __key(self):
+        return (self.name, self.content_hash_before, self.content_hash_after)
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        return ((self.content_hash_before == other.content_hash_before)
+            and (self.content_hash_after == other.content_hash_after))

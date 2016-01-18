@@ -8,17 +8,19 @@ from __future__ import (absolute_import, print_function,
 
 import textwrap
 
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 
 from ..persistence import persistence
-from ..utils.functions import timestamp
-from .model import Model
+from ..utils.functions import timestamp, prolog_repr
+
+from .base import set_proxy
 from .slicing_dependency import SlicingDependency
 
 
-class SlicingVariable(Model, persistence.base):
+class SlicingVariable(persistence.base):
     """Slicing Variable Table
     Store slicing variables from execution provenance
     """
@@ -72,9 +74,6 @@ class SlicingVariable(Model, persistence.base):
     # activation: Activation.slicing_variables backref
     # dependents: SlicingVariable.suppliers backref
 
-    DEFAULT = {}
-    REPLACE = {}
-
     @classmethod
     def to_prolog_fact(cls):
         return textwrap.dedent("""
@@ -93,11 +92,13 @@ class SlicingVariable(Model, persistence.base):
 
     def to_prolog(self):
         time = timestamp(self.time)
+        name = prolog_repr(self.name)
+        value = prolog_repr(self.value)
         return (
             "variable("
-            "{v.trial_id}, {v.activation_id}, {v.id}, "
-            "{v.name!r}, {v.line}, {v.value!r}, {time:-f})."
-        ).format(v=self, time=time)
+            "{self.trial_id}, {self.activation_id}, {self.id}, "
+            "{name}, {self.line}, {value}, {time:-f})."
+        ).format(**locals())
 
     def __str__(self):
         return "(L{0.line}, {0.name}, {0.value})".format(self)
@@ -107,3 +108,11 @@ class SlicingVariable(Model, persistence.base):
             "SlicingVariable({0.trial_id}, {0.activation_id}, "
             "{0.id}, {0.name}, {0.line})"
         ).format(self)
+
+
+class SlicingVariableProxy(with_metaclass(set_proxy(SlicingVariable))):
+    """SlicingVariable proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

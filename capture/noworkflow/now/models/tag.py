@@ -6,14 +6,19 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint
 
 from ..persistence import persistence
-from .model import Model
+from ..utils.functions import prolog_repr
+
+from .base import set_proxy
 
 
-class Tag(Model, persistence.base):
+class Tag(persistence.base):
     """Tag Table
     Store trial tags
     """
@@ -29,9 +34,6 @@ class Tag(Model, persistence.base):
     timestamp = Column(TIMESTAMP)
 
     # trial: Trial.tags backref
-
-    DEFAULT = {}
-    REPLACE = {}
 
     @classmethod
     def to_prolog_fact(cls):
@@ -55,9 +57,17 @@ class Tag(Model, persistence.base):
     def to_prolog(self):
         """Convert to prolog fact"""
         time = timestamp(self.timestamp)
+        name = prolog_repr(self.name)
         return (
-            "tag({t.trial_id}, {t.type}, {t.name!r}, {time})."
-        ).format(t=self, time=time)
+            "tag({t.trial_id}, {t.type}, {name}, {time})."
+        ).format(**locals())
 
     def __repr__(self):
         return "Tag({0.trial_id}, {0.type}, {0.name})".format(self)
+
+class TagProxy(with_metaclass(set_proxy(Tag))):
+    """Tag proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

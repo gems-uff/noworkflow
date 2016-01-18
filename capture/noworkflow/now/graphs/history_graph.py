@@ -11,8 +11,9 @@ import weakref
 
 from collections import OrderedDict, defaultdict
 
+from ..models import Trial
+
 from .structures import Graph
-from ..models.trial import Trial
 
 
 MAX_TRIALS = 1000000

@@ -8,17 +8,18 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from .command import Command
-from .types import trial_reference
-from ..cross_version import items, values, cvmap
-from ..models.trial import Trial
+from ..models import Trial
 from ..models.activation import Activation
+from ..models.model import proxy_gen
 from ..persistence import persistence
 from ..utils.functions import wrap
 from ..utils.io import print_msg
 
+from .command import Command
+from .types import trial_reference
 
-def print_trial_relationship(relation, breakline='\n\n', other="\n    "):
+
+def print_trial_relationship(relation, breakline="\n\n", other="\n    "):
     """Print trial relationship"""
     output = []
     for obj in relation:
@@ -29,12 +30,12 @@ def print_trial_relationship(relation, breakline='\n\n', other="\n    "):
 def print_function_activation(trial, activation, level=1):
     """Print function activation recursively"""
     text = wrap(
-        '{0.line}: {0.name} ({0.start} - {0.finish})'.format(activation),
-        initial='  ' * level)
-    indent = text.index(': ') + 2
+        "{0.line}: {0.name} ({0.start} - {0.finish})".format(activation),
+        initial="  " * level)
+    indent = text.index(": ") + 2
     print(text)
     activation.show(_print=lambda x, offset=0: print(
-        wrap(x, initial=' ' * (indent + offset))))
+        wrap(x, initial=" " * (indent + offset))))
 
     for inner_activation in activation.children:
         print_function_activation(trial, inner_activation, level + 1)
@@ -45,21 +46,21 @@ class Show(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg('trial', type=str, nargs='?',
-                help='trial id or none for last trial')
-        add_arg('-m', '--modules', action='store_true',
-                help='shows module dependencies')
-        add_arg('-d', '--function-defs', action='store_true',
-                help='shows the user-defined functions')
-        add_arg('-e', '--environment', action='store_true',
-                help='shows the environment conditions')
-        add_arg('-a', '--function-activations', action='store_true',
-                help='shows function activations')
-        add_arg('-f', '--file-accesses', action='store_true',
-                help='shows read/write access to files')
-        add_arg('--dir', type=str,
-                help='set project path where is the database. Default to '
-                     'current directory')
+        add_arg("trial", type=str, nargs="?",
+                help="trial id or none for last trial")
+        add_arg("-m", "--modules", action="store_true",
+                help="shows module dependencies")
+        add_arg("-d", "--function-defs", action="store_true",
+                help="shows the user-defined functions")
+        add_arg("-e", "--environment", action="store_true",
+                help="shows the environment conditions")
+        add_arg("-a", "--function-activations", action="store_true",
+                help="shows function activations")
+        add_arg("-f", "--file-accesses", action="store_true",
+                help="shows read/write access to files")
+        add_arg("--dir", type=str,
+                help="set project path where is the database. Default to "
+                     "current directory")
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
@@ -70,30 +71,31 @@ class Show(Command):
             print_msg("inexistent trial id", True)
             sys.exit(1)
 
-        print_msg('trial information:', True)
+        print_msg("trial information:", True)
         trial.show(_print=lambda x: print(wrap(x)))
 
         if args.modules:
-            print_msg('this trial depends on the following modules:', True)
+            print_msg("this trial depends on the following modules:", True)
             print_trial_relationship(trial.modules)
 
         if args.function_defs:
-            print_msg('this trial has the following functions:', True)
+            print_msg("this trial has the following functions:", True)
             print_trial_relationship(trial.function_defs)
 
         if args.environment:
-            print_msg('this trial has been executed under the following'
-                      ' environment conditions', True)
-            print_trial_relationship(trial.environment_attrs, breakline='\n',
+            print_msg("this trial has been executed under the following"
+                      " environment conditions", True)
+            print_trial_relationship(trial.environment_attrs, breakline="\n",
                                      other="\n  ")
 
         if args.function_activations:
-            print_msg('this trial has the following function activation '
-                      'graph:', True)
-            for act in trial.activations.filter(Activation.caller_id == None):
+            print_msg("this trial has the following function activation "
+                      "graphF:", True)
+            query = trial.activations.filter(Activation.caller_id == None)
+            for act in proxy_gen(query):
                 print_function_activation(trial, act)
 
         if args.file_accesses:
-            print_msg('this trial accessed the following files:', True)
-            print_trial_relationship(trial.environment_attrs, breakline='\n',
+            print_msg("this trial accessed the following files:", True)
+            print_trial_relationship(trial.environment_attrs, breakline="\n",
                                      other="\n  ")

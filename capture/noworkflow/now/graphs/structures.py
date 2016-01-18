@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Intermediate Tree Structures and Graph Structures """
+"""Intermediate Tree Structures and Graph Structures"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -10,70 +10,85 @@ from __future__ import (absolute_import, print_function,
 import json
 import time
 import traceback
+
 from collections import OrderedDict
 from datetime import datetime
-from sqlite3 import OperationalError
 
-from ..cross_version import default_string, pickle, items
+from future.utils import viewitems
+from sqlalchemy import exc
+
+from ..models import GraphCache
 from ..persistence import persistence
 from ..utils import FORMAT, OrderedCounter, print_msg
+from ..cross_version import pickle
 
 
 class Graph(object):
-    """ Graph superclass
-        Handle json transformation"""
+    """Graph superclass
+       Handle json transformation"""
     # pylint: disable=R0201
     # pylint: disable=R0903
     def escape_json(self, data):
-        """ Escape JSON """
+        """Escape JSON"""
         data = json.dumps(data)
-        return (data.replace('&', '\\u0026')
-                .replace('<', '\\u003c')
-                .replace('>', '\\u003e'))
+        return (data.replace("&", "\\u0026")
+                .replace("<", "\\u003c")
+                .replace(">", "\\u003e"))
 
 
 def prepare_cache(get_type):
-    """ Decorator: Load graph from cache """
+    """Decorator: Load graph from cache"""
     def cache(name, attrs=""):
-        """ Decorator: Load graph from cache """
+        """Decorator: Load graph from cache"""
         def dec(func):
-            """ Decorator: Load graph from cache """
+            """Decorator: Load graph from cache"""
             def load(self, *args, **kwargs):
-                """ Load graph from cache """
+                """Load graph from cache
+
+                Find graph by type, name and attributes
+                If graph is cached, return it
+
+                Return:
+                finished -- trial has finished
+                graph -- cached trial graph
+                """
+                cache_session = persistence.make_session()
+
                 typ = get_type(self, *args, **kwargs)
-                attributes = ' '.join(
-                    [str(kwargs[a]) for a in attrs.split() if a in kwargs])
-                conditions = {
-                    'type': '"{}"'.format(typ),
-                    'name': '"{}"'.format(name),
-                    'attributes': '"{}"'.format(attributes),
-                }
+                attributes = " ".join(str(kwargs[a])
+                                      for a in attrs.split() if a in kwargs)
+
+                caches = GraphCache.select_cache(typ, name, attributes,
+                                                 session=cache_session)
                 if self.use_cache:
                     try:
-                        graph_cache = persistence.load('graph_cache',
-                                                       **conditions)
-                        for cache in graph_cache:
-                            result = pickle.loads(persistence.get(
-                                cache[default_string('content_hash')]))
+                        for cache in caches.all():
+                            result = pickle.loads(
+                                persistence.get(cache.content_hash))
                             if not result[0]:
                                 continue
                             return result
-                    except OperationalError:
+                    except exc.SQLAlchemyError:
                         traceback.print_exc()
                         print_msg("Couldn't load graph cache", True)
                 start = time.time()
                 graph = func(self, *args, **kwargs)
                 duration = time.time() - start
                 try:
-                    persistence.delete('graph_cache', **conditions)
-                    persistence.insert('graph_cache', {
-                        'type': typ,
-                        'name': name,
-                        'duration': duration,
-                        'attributes': attributes,
-                        'content_hash': persistence.put(pickle.dumps(graph)),
-                    })
-                except OperationalError:
+                    caches.delete()
+                    cache = GraphCache.__model__(
+                        type=typ, name=name, duration=duration,
+                        attributes=attributes,
+                        content_hash=persistence.put(pickle.dumps(graph))
+                    )
+                    #cache.type = typ
+                    #cache.name = name
+                    #cache.duration = duration
+                    #cache.attributes = attributes
+                    #cache.content_hash = persistence.put(pickle.dumps(graph))
+                    cache_session.add(cache)
+                    cache_session.commit()
+                except exc.SQLAlchemyError:
                     traceback.print_exc()
                     print_msg("Couldn't store graph cache", True)
                 return graph
@@ -83,7 +98,7 @@ def prepare_cache(get_type):
 
 
 class TreeElement(object):
-    """ Base class for Intermediate Tree """
+    """Base class for Intermediate Tree"""
 
     def __init__(self, level=-1, use_id=True):
         self.duration = 0
@@ -94,20 +109,20 @@ class TreeElement(object):
         self.trial_id = 0
 
     def mean(self):
-        """ Mean duration of Tree Node """
+        """Mean duration of Tree Node"""
         return self.duration / self.count
 
     def visit(self, visitor):
-        """ Visitor pattern """
+        """Visitor pattern"""
         name = "visit_{}".format(self.__class__.__name__.lower())
         return getattr(visitor, name)(self)
 
     def calculate_repr(self):
-        """ Calculate Representation of Node """
+        """Calculate Representation of Node"""
         pass
 
     def mix(self, other):
-        """ Combine Nodes """
+        """Combine Nodes"""
         pass
 
     def __hash__(self):
@@ -119,13 +134,13 @@ class TreeElement(object):
         return self.repr
 
     def to_dict(self, nid):
-        """ Convert element to dict """
+        """Convert element to dict"""
         return {}
 
 
 class Single(TreeElement):
-    """ Single Node
-        Represent an activation or a group of merged activations """
+    """Single Node
+       Represent an activation or a group of merged activations"""
     # pylint: disable=R0902
     # pylint: disable=C0103
     def __init__(self, activation):
@@ -142,27 +157,27 @@ class Single(TreeElement):
 
     @property
     def count(self):
-        """ Count activations """
+        """Count activations"""
         return sum(1 for a in self.activations)
 
     @count.setter
     def count(self, value):
-        """ Ignore set count """
+        """Ignore set count"""
         pass
 
     @property
     def duration(self):
-        """ Calculate total duration """
+        """Calculate total duration"""
         return sum(a.duration for a in self.activations
                    if a.finish and a.start)
 
     @duration.setter
     def duration(self, value):
-        """ Ignore set duration """
+        """Ignore set duration"""
         pass
 
     def mix(self, other):
-        """ Combine activations """
+        """Combine activations"""
         self.finished &= other.finished
         self.count += other.count
         self.duration += other.duration
@@ -173,7 +188,7 @@ class Single(TreeElement):
                    [type, lambda x: x.line, lambda x: x.name])
 
     def name_id(self):
-        """ Return name that identifies node """
+        """Return name that identifies node"""
         return "{0} {1}".format(self.line, self.name)
 
     def visit(self, visitor):
@@ -181,17 +196,17 @@ class Single(TreeElement):
 
     def to_dict(self, nid):
         return {
-            'index': nid,
-            'caller_id': self.parent,
-            'name': self.name,
-            'node': {
-                'trial_id': self.trial_id,
-                'line': self.line,
-                'count': self.count,
-                'duration': self.duration,
-                'level': self.level,
-                'finished': self.finished,
-                'info': Info(self),
+            "index": nid,
+            "caller_id": self.parent,
+            "name": self.name,
+            "node": {
+                "trial_id": self.trial_id,
+                "line": self.line,
+                "count": self.count,
+                "duration": self.duration,
+                "level": self.level,
+                "finished": self.finished,
+                "info": Info(self),
             },
         }
 
@@ -200,8 +215,8 @@ class Single(TreeElement):
 
 
 class Mixed(TreeElement):
-    """ Single Node
-        Represent complex Mixed Node """
+    """Mixed Node
+       Represent complex Mixed Node"""
     # pylint: disable=R0902
     # pylint: disable=C0103
     def __init__(self, activation):
@@ -215,37 +230,37 @@ class Mixed(TreeElement):
 
     @property
     def count(self):
-        """ Count activations """
+        """Count activations"""
         return sum(e.count for e in self.elements)
 
     @count.setter
     def count(self, value):
-        """ Ignore set count """
+        """Ignore set count"""
         pass
 
     @property
     def duration(self):
-        """ Calculate total duration """
+        """Calculate total duration"""
         return sum(e.duration for e in self.elements)
 
     @duration.setter
     def duration(self, value):
-        """ Ignore set duration """
+        """Ignore set duration"""
         pass
 
     @property
     def first(self):
-        """ Get first node """
+        """Get first node"""
         return next(iter(self.elements))
 
 
     def add_element(self, element):
-        """ Add node """
+        """Add node"""
         self.finished &= element.finished
         self.elements.append(element)
 
     def mix(self, other):
-        """ Add nodes """
+        """Add nodes"""
         for element in other.elements:
             self.finished &= element.finished
 
@@ -253,7 +268,7 @@ class Mixed(TreeElement):
         self.mix_results()
 
     def mix_results(self):
-        """ Combine results """
+        """Combine results"""
         it = iter(self.elements)
         initial = next(it)
         for element in it:
@@ -264,8 +279,8 @@ class Mixed(TreeElement):
 
 
 class Group(TreeElement):
-    """ Group Node
-        Represent a group of called nodes """
+    """Group Node
+       Represent a group of called nodes"""
     # pylint: disable=R0902
     def __init__(self):
         super(Group, self).__init__(level=0, use_id=True)
@@ -280,7 +295,7 @@ class Group(TreeElement):
         self.last = None
 
     def initialize(self, previous, nnext):
-        """ Initialize the group node by two nodes """
+        """Initialize the group node by two nodes"""
         self.nodes[nnext] = Mixed(nnext)
         self.duration = nnext.duration
         self.next_element = nnext
@@ -291,7 +306,7 @@ class Group(TreeElement):
         return self
 
     def add_subelement(self, previous):
-        """ Add new node in sequence to group """
+        """Add new node in sequence to group"""
         self.finished &= previous.finished
         nnext, self.next_element = self.next_element, previous
         if not previous in self.edges:
@@ -305,18 +320,18 @@ class Group(TreeElement):
     def calculate_repr(self):
         result = [
             "[{0}-{1}->{2}]".format(previous, count, nnext)
-            for previous, edges in items(self.edges)
-            for nnext, count in items(edges)
+            for previous, edges in viewitems(self.edges)
+            for nnext, count in viewitems(edges)
         ]
 
-        self.repr = "G({0})".format(', '.join(result))
+        self.repr = "G({0})".format(", ".join(result))
 
     def __eq__(self, other):
         return all(fn(self) == fn(other) for fn in
                    [type, lambda x: x.edges])
 
     def mix(self, other):
-        for node, value in items(self.nodes):
+        for node, value in viewitems(self.nodes):
             value.mix(other.nodes[node])
 
     def __hash__(self):
@@ -324,8 +339,8 @@ class Group(TreeElement):
 
 
 class Call(TreeElement):
-    """ Call Node
-        Represent a call from a Node to a Group """
+    """Call Node
+       Represent a call from a Node to a Group"""
     # pylint: disable=R0902
     # pylint: disable=C0103
     def __init__(self, caller, called):
@@ -337,7 +352,7 @@ class Call(TreeElement):
         self.count = 1
         self.id = self.caller.id
         self.duration = self.caller.duration
-        self.repr = 'C({0}, {1})'.format(self.caller, self.called)
+        self.repr = "C({0}, {1})".format(self.caller, self.called)
         self.finished = self.caller.finished
 
     def __eq__(self, other):
@@ -353,18 +368,18 @@ class Call(TreeElement):
 
 
 def duration_text(duration, count):
-    """ Return duration text """
+    """Return duration text"""
     return "Total duration: {} microseconds for {} activations".format(
         duration, count)
 
 
 def mean_text(mean):
-    """ Return mean text """
+    """Return mean text"""
     return "Mean: {} microseconds per activation".format(mean)
 
 
 def activation_text(activation):
-    """ Return single activation text """
+    """Return single activation text"""
     values = activation.arguments
     extra = "(still running)"
     if activation.finish:
@@ -377,14 +392,14 @@ def activation_text(activation):
     ]
 
     activation.show(
-        _print=lambda x, offset=0: result.append(offset*'&nbsp;' + x))
+        _print=lambda x, offset=0: result.append(offset*"&nbsp;" + x))
 
     return result
 
 
 class Info(object):
-    """ Info class
-        Represent the information of a node """
+    """Info class
+       Represent the information of a node"""
 
     def __init__(self, single):
         self.title = (
@@ -398,17 +413,17 @@ class Info(object):
         self.activation_list = None
 
     def update_by_node(self, node):
-        """ Update information by node """
-        self.duration = duration_text(node['duration'], node['count'])
-        self.mean = mean_text(node['mean'])
+        """Update information by node"""
+        self.duration = duration_text(node["duration"], node["count"])
+        self.mean = mean_text(node["mean"])
         self.activation_list = sorted(self.activations, key=lambda a: a[0])
 
     def add_activation(self, activation):
-        """ Add activation information """
+        """Add activation information"""
         self.activations.add((activation.start, activation))
 
     def extract_activations(self, single):
-        """ Add activations information """
+        """Add activations information"""
         for activation in single.activations:
             self.add_activation(activation)
 
@@ -417,5 +432,4 @@ class Info(object):
         for activation in self.activation_list:
             result += activation_text(activation[1])
 
-        return '<br/>'.join(result)
-
+        return "<br/>".join(result)

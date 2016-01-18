@@ -6,15 +6,20 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship
 
 from ..persistence import persistence
-from .model import Model
+from ..utils.functions import prolog_repr
+
+from .base import set_proxy
 
 
-class Dependency(Model, persistence.base):
+class Dependency(persistence.base):
     """Dependency Table
     Store the many to many relationship between trial and modules
     """
@@ -30,9 +35,6 @@ class Dependency(Model, persistence.base):
     module = relationship("Module")
 
     # trial: Trial.module_dependencies backref
-
-    DEFAULT = {}
-    REPLACE = {}
 
     @classmethod
     def to_prolog_fact(cls):
@@ -55,11 +57,23 @@ class Dependency(Model, persistence.base):
 
     def to_prolog(self):
         """Convert to prolog fact"""
+        module = self.module
+        name = prolog_repr(module.name)
+        version = prolog_repr(module.version)
+        path = prolog_repr(self.module.path)
         return (
             "module("
-            "{d.trial_id}, {m.id}, {m.name!r}, {m.version!r}, {m.path!r}, "
-            "{m.code_hash})."
-        ).format(d=self, m=self.module)
+            "{self.trial_id}, {module.id}, {name}, {version}, {path}, "
+            "{module.code_hash})."
+        ).format(**locals())
 
     def __repr__(self):
         return "Dependency({0.trial_id}, {0.module})".format(self)
+
+
+class DependencyProxy(with_metaclass(set_proxy(Dependency))):
+    """Dependency proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

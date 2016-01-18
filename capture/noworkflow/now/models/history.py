@@ -6,18 +6,12 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import json
-
-from collections import defaultdict,  deque
-from itertools import groupby
-
 from sqlalchemy import distinct
 
 from ..graphs.history_graph import HistoryGraph
-from ..persistence import row_to_dict
 from ..persistence import persistence
-from ..cross_version import keys, values, items
-from .model import Model
+
+from .base import Model
 from .trial import Trial
 
 
@@ -48,6 +42,7 @@ class History(Model):
         history.graph.width = 600
         history.graph.height = 200
     """
+    __modelname__ = "History"
 
     DEFAULT = {
         "graph.width": 700,

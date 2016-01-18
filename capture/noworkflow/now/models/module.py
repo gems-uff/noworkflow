@@ -6,13 +6,15 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 
 from ..persistence import persistence
-from .model import Model
+
+from .base import set_proxy
 
 
-class Module(Model, persistence.base):
+class Module(persistence.base):
     """Module Table
     Store modules extracted during deployment provenance collection
     """
@@ -28,9 +30,6 @@ class Module(Model, persistence.base):
 
     # trials: Trial.modules backref
 
-    DEFAULT = {}
-    REPLACE = {}
-
     def show(self, _print=lambda x: print(x)):
         """Show module"""
         _print("""\
@@ -43,3 +42,18 @@ class Module(Model, persistence.base):
     def __repr__(self):
         return "Module({0.id}, {0.name}, {0.version})".format(self)
 
+class ModuleProxy(with_metaclass(set_proxy(Module))):
+    """Module proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    def __key(self):
+        return (self.name, self.version, self.path, self.code_hash)
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        return (self.__key() == other.__key())

@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Commands and argument parsers for 'now' """
+"""Commands and argument parsers for 'now'"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -44,16 +44,16 @@ def main():
     args.func(args)
 
 __all__ = [
-    b'Command',
-    b'Run',
-    b'Debug',
-    b'List',
-    b'Show',
-    b'Diff',
-    b'Export',
-    b'Restore',
-    b'Vis',
-    b'Demo',
-    b'History',
-    b'main',
+    b"Command",
+    b"Run",
+    b"Debug",
+    b"List",
+    b"Show",
+    b"Diff",
+    b"Export",
+    b"Restore",
+    b"Vis",
+    b"Demo",
+    b"History",
+    b"main",
 ]

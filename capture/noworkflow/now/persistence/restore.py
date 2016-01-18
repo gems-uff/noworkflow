@@ -39,13 +39,3 @@ class RestoreProvider(Provider):
                                        parent_required=parent_required)
         return an_id
 
-    def store_parent(self, script, trial_id):
-        an_id = self.load_head(script)
-        with self.db_conn as db:
-            if an_id:
-                db.execute('''UPDATE head
-                              SET trial_id=?
-                              WHERE script=?''', (trial_id, script))
-            else:
-                db.execute("""INSERT INTO head(trial_id, script)
-                              VALUES(?,?)""", [trial_id, script])

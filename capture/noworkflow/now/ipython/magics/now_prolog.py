@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -11,7 +11,7 @@ from IPython.utils.text import DollarFormatter
 import argparse
 
 from ...cmd.types import trial_reference
-from ..models import TrialProlog, Trial
+from ...models import TrialProlog, Trial
 from .command import IpythonCommandMagic
 
 
@@ -38,17 +38,17 @@ class NowProlog(IpythonCommandMagic):
     def add_arguments(self):
         super(NowProlog, self).add_arguments()
         add_arg = self.add_argument
-        add_arg('--result', type=str,
+        add_arg("--result", type=str,
                 help="""The variable in which the result will be stored""")
-        add_arg('trials', nargs=argparse.REMAINDER,
-                help='export trial facts')
+        add_arg("trials", nargs=argparse.REMAINDER,
+                help="export trial facts")
 
     def execute(self, func, line, cell, magic_cls):
         f = DollarFormatter()
         cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         for trial in args.trials:
-            Trial(trial_reference(trial)).trial_prolog.load_cli_facts()
+            Trial(trial_reference(trial)).prolog.load_cli_facts()
         result = TrialProlog.prolog_query(cell)
         if args.result:
             magic_cls.shell.user_ns[args.result] = result

@@ -10,7 +10,6 @@ import re
 import argparse
 
 from ...formatter import PrettyLines
-from ..models import set_default
 from .command import IpythonCommandMagic
 
 

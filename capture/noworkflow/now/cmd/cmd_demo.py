@@ -10,12 +10,13 @@ import os
 import subprocess
 import sys
 
-from .command import Command
 from ..utils.io import print_msg
 from ..utils.functions import resource, resource_ls, resource_is_dir
 
+from .command import Command
 
-DEMO = '../resources/demo'
+
+DEMO = "../resources/demo"
 
 
 def recursive_copy(origin, destiny):
@@ -27,18 +28,18 @@ def recursive_copy(origin, destiny):
         if resource_is_dir(origin_element):
             recursive_copy(origin_element, destiny_element)
         else:
-            with open(destiny_element, 'wb') as fil:
+            with open(destiny_element, "wb") as fil:
                 fil.write(resource(origin_element))
 
 def erase(directory, everything=False):
     for root, dirs, files in os.walk(directory, topdown=False):
         for name in files:
             path = os.path.join(root, name)
-            if everything or '.noworkflow' not in path:
+            if everything or ".noworkflow" not in path:
                 os.remove(os.path.join(root, name))
         for name in dirs:
             path = os.path.join(root, name)
-            if everything or '.noworkflow' not in path:
+            if everything or ".noworkflow" not in path:
                 os.rmdir(path)
 
 
@@ -48,32 +49,32 @@ class Demo(Command):
     def add_arguments(self):
         add_arg = self.add_argument
         choices = sorted(list(resource_ls(DEMO)))
-        add_arg('number', type=str, nargs='?', choices=choices,
-                help='demo identification')
-        add_arg('--dir', type=str,
-                help='set demo path. Default to CWD/demo<number>'
-                     'where <number> is the demo identification')
+        add_arg("number", type=str, nargs="?", choices=choices,
+                help="demo identification")
+        add_arg("--dir", type=str,
+                help="set demo path. Default to CWD/demo<number>"
+                     "where <number> is the demo identification")
 
     def execute(self, args):
-        directory = 'demo{}'.format(args.number)
+        directory = "demo{}".format(args.number)
         if args.dir:
             directory = args.dir
-        print('Creating Demo {}'.format(args.number))
+        print("Creating Demo {}".format(args.number))
         demo_path = os.path.join(DEMO, args.number)
-        steps = resource(os.path.join(demo_path, 'steps.txt'))
-        steps = steps.split('\n')
+        steps = resource(os.path.join(demo_path, "steps.txt"))
+        steps = steps.split("\n")
         for step in steps:
             print(step)
-            words = step.split(' ')
-            param = ' '.join(words[1:])
-            if words[0] == '>LOAD':
+            words = step.split(" ")
+            param = " ".join(words[1:])
+            if words[0] == ">LOAD":
                 recursive_copy(os.path.join(demo_path, param),
                                directory)
-            if words[0] == '>ERASE':
+            if words[0] == ">ERASE":
                 erase(directory)
-            if words[0] == '>ERASE_ALL':
+            if words[0] == ">ERASE_ALL":
                 erase(directory, everything=True)
-            if words[0] == '$now':
+            if words[0] == "$now":
                 cwd = os.getcwd()
                 os.chdir(directory)
                 subprocess.call("{} {}".format(sys.argv[0], param),

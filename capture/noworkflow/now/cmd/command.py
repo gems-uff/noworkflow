@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Command base """
+"""Command base"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -10,35 +10,35 @@ from ..utils.functions import abstract
 
 
 class Command(object):
-    """ Command base """
+    """Command base"""
     def __init__(self, cmd=None):
         self.cmd = cmd or type(self).__name__.lower()
-        self.help = self.__doc__.split('\n')[0].strip()
+        self.help = self.__doc__.split("\n")[0].strip()
         self.parser = None
 
     def create_parser(self, subparsers):
-        """ Create parser with arguments """
+        """Create parser with arguments"""
         kwargs = {}
         if self.help:
-            kwargs['help'] = self.help
+            kwargs["help"] = self.help
         self.parser = subparsers.add_parser(self.cmd, **kwargs)
 
         self.add_arguments()
         self.parser.set_defaults(func=self.execute)
 
     def add_arguments(self):
-        """ Add arguments to command. Override on subclass """
+        """Add arguments to command. Override on subclass"""
         pass
 
     def add_argument(self, *args, **kwargs):
-        """ Add argument to parser available for both IPython magic and cmd """
+        """Add argument to parser available for both IPython magic and cmd"""
         return self.parser.add_argument(*args, **kwargs)
 
     def add_argument_cmd(self, *args, **kwargs):
-        """ Add argument to parser available only for cmd """
+        """Add argument to parser available only for cmd"""
         return self.parser.add_argument(*args, **kwargs)
 
     def execute(self, args):
-        """ Execute the command. Override on subclass """
+        """Execute the command. Override on subclass"""
         abstract()
         print(self, args)

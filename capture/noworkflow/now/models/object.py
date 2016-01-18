@@ -6,14 +6,19 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import ForeignKeyConstraint, CheckConstraint
 
 from ..persistence import persistence
-from .model import Model
+from ..utils.functions import prolog_repr
+
+from .base import set_proxy
 
 
-class Object(Model, persistence.base):
+class Object(persistence.base):
     """Object Table
     Store function calls, global variables and arguments
     from definition provenance
@@ -32,9 +37,6 @@ class Object(Model, persistence.base):
         CheckConstraint("type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION_CALL')"))
 
     # function_def: FunctionDef.objects backref
-
-    DEFAULT = {}
-    REPLACE = {}
 
     @classmethod
     def to_prolog_fact(cls):
@@ -57,14 +59,23 @@ class Object(Model, persistence.base):
 
     def to_prolog(self):
         """Convert to prolog fact"""
+        name = prolog_repr(self.name)
         return (
             "object("
-            "{o.trial_id}, {o.function_def_id}, {o.id}, {o.name!r}, "
-            "{o.type})."
-        ).format(o=self)
+            "{self.trial_id}, {self.function_def_id}, {self.id}, "
+            "{name}, {self.type})."
+        ).format(**locals())
 
     def __repr__(self):
         return (
             "Object({0.trial_id}, {0.function_def_id}, "
             "{0.id}, {0.name}, {0.type})"
         ).format(self)
+
+
+class ObjectProxy(with_metaclass(set_proxy(Object))):
+    """Object proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" 'now vis' command """
+"""'now vis' command"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -14,7 +14,7 @@ from .command import Command
 
 
 def run(path=None, browser=False, port=5000, debug=False):
-    """ Open Flask server """
+    """Open Flask server"""
     if browser:
         url = "http://127.0.0.1:{0}".format(port)
         print(url)
@@ -29,15 +29,15 @@ class Vis(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg('-p', '--port', nargs='?', type=int, default=5000,
-                help='sets server port')
-        add_arg('-d', '--debug', action='store_true',
-                help='debug mode')
-        add_arg('-b', '--browser', action='store_true',
-                help='opens browser')
-        add_arg('--dir', type=str,
-                help='set project path where is the database. Default to '
-                     'current directory')
+        add_arg("-p", "--port", nargs="?", type=int, default=5000,
+                help="sets server port")
+        add_arg("-d", "--debug", action="store_true",
+                help="debug mode")
+        add_arg("-b", "--browser", action="store_true",
+                help="opens browser")
+        add_arg("--dir", type=str,
+                help="set project path where is the database. Default to "
+                     "current directory")
 
     def execute(self, args):
         run(path=args.dir, browser=args.browser, port=args.port,

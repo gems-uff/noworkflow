@@ -50,7 +50,14 @@ def abstract():
     raise Exception("Abstract method: {}".format(name))
 
 def timestamp(time):
-    if not string:
+    if not time:
         return -1
     epoch = datetime(1970,1,1)
     return (time - epoch).total_seconds()
+
+def prolog_repr(var):
+    """Return repr from var without string prefix"""
+    result = repr(var)
+    if result[1] in ('"', "'"):
+        result = result[1:]
+    return result

@@ -18,7 +18,7 @@ except ImportError:
 PY3 = (sys.version_info >= (3, 0))
 if PY3:
     import builtins
-    import pickle
+    import pickle #keep
     import reprlib
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes)
@@ -33,9 +33,9 @@ if PY3:
 else:
     import __builtin__ as builtins
     try:
-       import cPickle as pickle
+       import cPickle as pickle #keep
     except ImportError:
-       import pickle
+       import pickle #keep
     from itertools import imap, izip
     import repr as reprlib
     

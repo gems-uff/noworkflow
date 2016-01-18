@@ -1,47 +1,50 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 # pylint: disable=C0103
-""" Diff Graph Module """
+"""Diff Graph Module"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import itertools
 import time
-from copy import deepcopy, copy
-from collections import defaultdict, namedtuple
+import weakref
 
+from collections import defaultdict, namedtuple
+from copy import deepcopy, copy
+
+from future.utils import viewitems, viewkeys, viewvalues
+
+from ..utils.data import OrderedCounter, concat_iter, HashableDict
 
 from .structures import prepare_cache, Graph
-from ..utils.data import OrderedCounter, concat_iter, HashableDict
-from ..cross_version import items, keys, values
 
 
 NeighborhoodConfig = namedtuple("NeighborhoodConfig", "check_caller getter")
 
 
 def fix_caller_id(graph):
-    """ Fix IDs on graph """
+    """Fix IDs on graph"""
     called = {}
     seq = defaultdict(list)
-    nodes = graph['nodes']
-    edges = [HashableDict(x) for x in graph['edges']]
+    nodes = graph["nodes"]
+    edges = [HashableDict(x) for x in graph["edges"]]
     for edge in edges:
-        if edge['type'] == 'call':
-            called[edge['target']] = edge['source']
-        if edge['type'] == 'sequence':
-            seq[edge['source']].append(edge)
+        if edge["type"] == "call":
+            called[edge["target"]] = edge["source"]
+        if edge["type"] == "sequence":
+            seq[edge["source"]].append(edge)
 
     visited = set()
     while called:
         new_called = {}
-        for nid, parent in items(called):
-            nodes[nid]['caller_id'] = parent
+        for nid, parent in viewitems(called):
+            nodes[nid]["caller_id"] = parent
             visited.add(nid)
             for edge in seq[nid]:
-                if not edge['target'] in visited:
-                    new_called[edge['target']] = parent
+                if not edge["target"] in visited:
+                    new_called[edge["target"]] = parent
         called = new_called
 
 
@@ -50,25 +53,25 @@ def prepare_graph(graph1, graph2):
         Return hashable nodes1 and nodes2 from g1 and g2, respectively """
     fix_caller_id(graph1)
     fix_caller_id(graph2)
-    nodes1 = [HashableDict(x) for x in graph1['nodes']]
-    nodes2 = [HashableDict(x) for x in graph2['nodes']]
-    graph1['hnodes'], graph2['hnodes'] = nodes1, nodes2
-    graph1['node_indexes'] = set(range(len(nodes1)))
-    graph2['node_indexes'] = set(range(len(nodes2)))
-    graph1['levels'] = defaultdict(set)
-    graph2['levels'] = defaultdict(set)
+    nodes1 = [HashableDict(x) for x in graph1["nodes"]]
+    nodes2 = [HashableDict(x) for x in graph2["nodes"]]
+    graph1["hnodes"], graph2["hnodes"] = nodes1, nodes2
+    graph1["node_indexes"] = set(range(len(nodes1)))
+    graph2["node_indexes"] = set(range(len(nodes2)))
+    graph1["levels"] = defaultdict(set)
+    graph2["levels"] = defaultdict(set)
     for node in nodes1:
-        graph1['levels'][node['node']['level']].add(node['index'])
+        graph1["levels"][node["node"]["level"]].add(node["index"])
     for node in nodes2:
-        graph2['levels'][node['node']['level']].add(node['index'])
+        graph2["levels"][node["node"]["level"]].add(node["index"])
     if nodes1 and nodes2:
-        nodes1[0]['name'] = '<main>'
-        nodes2[0]['name'] = '<main>'
-        graph1['max_level'] = max(graph1['levels'].keys())
-        graph2['max_level'] = max(graph2['levels'].keys())
+        nodes1[0]["name"] = "<main>"
+        nodes2[0]["name"] = "<main>"
+        graph1["max_level"] = max(viewkeys(graph1["levels"]))
+        graph2["max_level"] = max(viewkeys(graph2["levels"]))
     else:
-        graph1['max_level'] = -1
-        graph2['max_level'] = -1
+        graph1["max_level"] = -1
+        graph2["max_level"] = -1
 
     return nodes1, nodes2
 
@@ -105,18 +108,18 @@ def cmp_node_fn(nodes1, nodes2):
     """ Return a node comparing function for the two graphs """
     def cmp_node(node1, node2, check_caller=True):
         """Compare two nodes"""
-        if node1['name'] != node2['name']:
+        if node1["name"] != node2["name"]:
             return False
         if check_caller:
-            if node1['caller_id'] is None and node2['caller_id'] is not None:
+            if node1["caller_id"] is None and node2["caller_id"] is not None:
                 return False
-            if node1['caller_id'] is not None and node2['caller_id'] is None:
+            if node1["caller_id"] is not None and node2["caller_id"] is None:
                 return False
-            if node1['caller_id'] is None and node2['caller_id'] is None:
+            if node1["caller_id"] is None and node2["caller_id"] is None:
                 return True
-            caller1 = nodes1[node1['caller_id']]
-            caller2 = nodes2[node2['caller_id']]
-            return caller1['name'] == caller2['name']
+            caller1 = nodes1[node1["caller_id"]]
+            caller2 = nodes2[node2["caller_id"]]
+            return caller1["name"] == caller2["name"]
         return True
     return cmp_node
 
@@ -126,11 +129,11 @@ def cmp_edge_fn(nodes1, nodes2):
     cmp_node = cmp_node_fn(nodes1, nodes2)
     def cmp_edge(node1, node2):
         """Compare two edges"""
-        if node1['type'] != node2['type']:
+        if node1["type"] != node2["type"]:
             return False
-        if not cmp_node(nodes1[node1['source']], nodes2[node2['source']]):
+        if not cmp_node(nodes1[node1["source"]], nodes2[node2["source"]]):
             return False
-        if not cmp_node(nodes1[node1['target']], nodes2[node2['target']]):
+        if not cmp_node(nodes1[node1["target"]], nodes2[node2["target"]]):
             return False
         return True
     return cmp_edge
@@ -148,95 +151,95 @@ class MappingToGraph(object):
     def __init__(self, g1, g2, mapping):
         self.nid = 0
         self._result = {
-            'max_duration': dict(concat_iter(
-                items(g1['max_duration']), items(g2['max_duration']))),
-            'min_duration': dict(concat_iter(
-                items(g1['min_duration']), items(g2['min_duration']))),
-            'nodes': [],
-            'edges': [],
+            "max_duration": dict(concat_iter(
+                viewitems(g1["max_duration"]), viewitems(g2["max_duration"]))),
+            "min_duration": dict(concat_iter(
+                viewitems(g1["min_duration"]), viewitems(g2["min_duration"]))),
+            "nodes": [],
+            "edges": [],
         }
         self.context_edges = {}
         self.old_to_new = {}
 
-        self.nodes1, self.nodes2 = g1['hnodes'], g2['hnodes']
-        del g1['hnodes'], g2['hnodes']
-        del g1['node_indexes'], g2['node_indexes']
-        del g1['levels'], g2['levels']
-        del g1['max_level'], g2['max_level']
+        self.nodes1, self.nodes2 = g1["hnodes"], g2["hnodes"]
+        del g1["hnodes"], g2["hnodes"]
+        del g1["node_indexes"], g2["node_indexes"]
+        del g1["levels"], g2["levels"]
+        del g1["max_level"], g2["max_level"]
         self.merge(g1, g2, mapping)
 
     @property
     def nodes(self):
         """Return list of nodes"""
-        return self._result['nodes']
+        return self._result["nodes"]
 
     @property
     def edges(self):
         """Return list of edges"""
-        return self._result['edges']
+        return self._result["edges"]
 
     def merge(self, graph1, graph2, mapping):
         """Merge matched graphs"""
-        for node1, node2 in items(mapping):
+        for node1, node2 in viewitems(mapping):
             cnode = deepcopy(node1)
-            del cnode['node']
-            cnode['node1'] = node1['node']
-            cnode['node2'] = node2['node']
-            cnode['node1']['original'] = node1['index']
-            cnode['node2']['original'] = node2['index']
-            cnode['index'] = self.nid
-            node1['node']['diff'] = self.nid
-            node2['node']['diff'] = self.nid
-            self.old_to_new[(1, node1['index'])] = self.nid
-            self.old_to_new[(2, node2['index'])] = self.nid
+            del cnode["node"]
+            cnode["node1"] = node1["node"]
+            cnode["node2"] = node2["node"]
+            cnode["node1"]["original"] = node1["index"]
+            cnode["node2"]["original"] = node2["index"]
+            cnode["index"] = self.nid
+            node1["node"]["diff"] = self.nid
+            node2["node"]["diff"] = self.nid
+            self.old_to_new[(1, node1["index"])] = self.nid
+            self.old_to_new[(2, node2["index"])] = self.nid
             self.nid += 1
             self.nodes.append(cnode)
 
         self.add_nodes(self.nodes1, 1)
         self.add_nodes(self.nodes2, 2)
-        self.add_edges(graph1['edges'], 1)
-        self.add_edges(graph2['edges'], 2)
+        self.add_edges(graph1["edges"], 1)
+        self.add_edges(graph2["edges"], 2)
 
     def add_nodes(self, nodes, trial_number):
         """Convert matched nodes to graph"""
         for node in nodes:
-            if not (trial_number, node['index']) in self.old_to_new:
+            if not (trial_number, node["index"]) in self.old_to_new:
                 nid = self.add_node(node)
-                self.old_to_new[(trial_number, node['index'])] = nid
-                node['node']['diff'] = nid
+                self.old_to_new[(trial_number, node["index"])] = nid
+                node["node"]["diff"] = nid
 
     def add_edges(self, edges, trial_number):
         """Convert matched edges to graph"""
         for edge in edges:
-            if (trial_number, edge['source']) in self.old_to_new:
-                self.add_edge(self.old_to_new[(trial_number, edge['source'])],
-                              self.old_to_new[(trial_number, edge['target'])],
+            if (trial_number, edge["source"]) in self.old_to_new:
+                self.add_edge(self.old_to_new[(trial_number, edge["source"])],
+                              self.old_to_new[(trial_number, edge["target"])],
                               edge, trial_number)
 
     def add_node(self, node):
         """Convert matched node to graph"""
         cnode = deepcopy(node)
-        node_id = cnode['index'] = self.nid
-        cnode['node']['original'] = node['index']
+        node_id = cnode["index"] = self.nid
+        cnode["node"]["original"] = node["index"]
         self.nodes.append(cnode)
         self.nid += 1
         return node_id
 
     def add_edge(self, source, target, edge, trial_number):
         """Convert matched edge to graph"""
-        edge_key = "{} {} {}".format(source, target, edge['type'])
+        edge_key = "{} {} {}".format(source, target, edge["type"])
 
         if not edge_key in self.context_edges:
             cedge = deepcopy(edge)
-            cedge['source'] = source
-            cedge['target'] = target
-            cedge['trial'] = trial_number
+            cedge["source"] = source
+            cedge["target"] = target
+            cedge["trial"] = trial_number
             self.edges.append(cedge)
             self.context_edges[edge_key] = cedge
         else:
             cedge = self.context_edges[edge_key]
-            cedge['count'] = (cedge['count'], edge['count'])
-            cedge['trial'] = 0
+            cedge["count"] = (cedge["count"], edge["count"])
+            cedge["trial"] = 0
 
     def to_dict(self):
         """Create resulting dict"""
@@ -244,21 +247,21 @@ class MappingToGraph(object):
 
 
 class Similarity(object):
-    """ Calculate similarity of a mapping between two graphs """
+    """Calculate similarity of a mapping between two graphs"""
 
     def __init__(self, g1, g2):
         self.graph1, self.graph2 = g1, g2
         self.total_nodes = float(self.count_union_nodes()) or 1.0
         self.total_edges = float(self.count_union_edges()) or 1.0
         self.edges1, self.edges2 = defaultdict(set), defaultdict(set)
-        for edge in g1['edges']:
-            self.edges1[edge['source']].add((edge['target'], edge['type']))
-        for edge in g2['edges']:
-            self.edges2[edge['source']].add((edge['target'], edge['type']))
+        for edge in g1["edges"]:
+            self.edges1[edge["source"]].add((edge["target"], edge["type"]))
+        for edge in g2["edges"]:
+            self.edges2[edge["source"]].add((edge["target"], edge["type"]))
 
     def count_union_nodes(self):
-        """ Count |A v B| where A and B are sets of nodes from the graphs """
-        nodes1, nodes2 = self.graph1['hnodes'], self.graph2['hnodes']
+        """Count |A v B| where A and B are sets of nodes from the graphs"""
+        nodes1, nodes2 = self.graph1["hnodes"], self.graph2["hnodes"]
         if len(nodes2) < len(nodes1):
             nodes2, nodes1 = nodes1, nodes2
         cmp_node = cmp_node_fn(nodes1, nodes2)
@@ -273,8 +276,8 @@ class Similarity(object):
 
     def count_union_edges(self):
         """Count |A v B| where A and B are sets of edges from the graphs"""
-        nodes1, nodes2 = self.graph1['hnodes'], self.graph2['hnodes']
-        edges1, edges2 = self.graph1['edges'], self.graph2['edges']
+        nodes1, nodes2 = self.graph1["hnodes"], self.graph2["hnodes"]
+        edges1, edges2 = self.graph1["edges"], self.graph2["edges"]
         if len(edges2) < len(edges1):
             edges2, edges1 = edges1, edges2
             nodes2, nodes1 = nodes1, nodes2
@@ -290,16 +293,16 @@ class Similarity(object):
 
     def edge_intersection(self, mapping):
         """Count |A ^ B| where A and B are sets of edges from the graphs"""
-        nodes1 = self.graph1['hnodes']
+        nodes1 = self.graph1["hnodes"]
         edges = 0
-        for node1, node2 in items(mapping):
-            targets1 = self.edges1[node1['index']]
-            targets2 = self.edges2[node2['index']]
+        for node1, node2 in viewitems(mapping):
+            targets1 = self.edges1[node1["index"]]
+            targets2 = self.edges2[node2["index"]]
             for target, typ in targets1:
                 target1 = nodes1[target]
                 if not target1 in mapping:
                     continue
-                if (mapping[target1]['index'], typ) in targets2:
+                if (mapping[target1]["index"], typ) in targets2:
                     edges += 1
         return float(edges)
 
@@ -323,7 +326,7 @@ def neighborhood1(graph1, graph2, mapping, cmp_node):
 
     def add_to_mapping(to_add, new_mapping, swapped):
         """ Add combination to mapping """
-        nodes1, nodes2 = graph1['hnodes'], graph2['hnodes']
+        nodes1, nodes2 = graph1["hnodes"], graph2["hnodes"]
         added = []
         for node_id1, node_id2 in to_add:
             if swapped:
@@ -334,10 +337,10 @@ def neighborhood1(graph1, graph2, mapping, cmp_node):
                 new_mapping[node1] = node2
         return tuple(added)
 
-    not_mapped1 = (graph1['node_indexes'] -
-                   {n['index'] for n in keys(mapping)})
-    not_mapped2 = (graph2['node_indexes'] -
-                   {n['index'] for n in values(mapping)})
+    not_mapped1 = (graph1["node_indexes"] -
+                   {n["index"] for n in viewkeys(mapping)})
+    not_mapped2 = (graph2["node_indexes"] -
+                   {n["index"] for n in viewvalues(mapping)})
     swapped = False
     if len(not_mapped2) > len(not_mapped1):
         swapped = True
@@ -362,9 +365,9 @@ def neighborhood1(graph1, graph2, mapping, cmp_node):
 
 def neighborhood2or3(graph1, graph2, mapping, cmp_node, config):
     """ Second and Third neighborhoods of VND. Permutate matches """
-    nodes1, nodes2 = graph1['hnodes'], graph2['hnodes']
-    max_level = min(graph1['max_level'], graph2['max_level'])
-    reverse = {n2:n1 for n1, n2 in items(mapping)}
+    nodes1, nodes2 = graph1["hnodes"], graph2["hnodes"]
+    max_level = min(graph1["max_level"], graph2["max_level"])
+    reverse = {n2:n1 for n1, n2 in viewitems(mapping)}
 
     def permutate(group1, group2, check_caller):
         """ Permutate results in mapping """
@@ -392,7 +395,7 @@ def neighborhood2or3(graph1, graph2, mapping, cmp_node, config):
 
 def neighborhood(k, graph1, graph2, mapping):
     """ Match nodes in the same neighborhood for VND """
-    nodes1, nodes2 = graph1['hnodes'], graph2['hnodes']
+    nodes1, nodes2 = graph1["hnodes"], graph2["hnodes"]
     cmp_node = cmp_node_fn(nodes1, nodes2)
 
 
@@ -400,11 +403,11 @@ def neighborhood(k, graph1, graph2, mapping):
         generator = neighborhood1(graph1, graph2, mapping, cmp_node)
 
     if k == 2:
-        config = NeighborhoodConfig(True, lambda x, i: x['levels'][i])
+        config = NeighborhoodConfig(True, lambda x, i: x["levels"][i])
         generator = neighborhood2or3(graph1, graph2, mapping, cmp_node, config)
 
     if k == 3:
-        config = NeighborhoodConfig(False, lambda x, i: x['node_indexes'])
+        config = NeighborhoodConfig(False, lambda x, i: x["node_indexes"])
         generator = neighborhood2or3(graph1, graph2, mapping, cmp_node, config)
 
     for match in generator:
@@ -414,7 +417,7 @@ def neighborhood(k, graph1, graph2, mapping):
 
 
 def vnd(graph1, graph2, neighborhoods=3, time_limit=0):
-    """ Calculate graph matching through VND algorithm """
+    """Calculate graph matching through VND algorithm"""
     if time_limit == 0:
         time_limit = 315569000
     time_limit *= 1000
@@ -442,25 +445,22 @@ def vnd(graph1, graph2, neighborhoods=3, time_limit=0):
 
 
 def trial_mirror(func):
-    """ Decorator: Compute graphs for each trial before diff """
+    """Decorator: Compute graphs for each trial before diff"""
     name = func.__name__
-    def calculate(self, diff=None, **kwargs):
-        """ Compute graphs for each trial before diff """
-        if not diff:
-            from ..models import Diff
-            diff = Diff(self.trial1_id, self.trial2_id)
-        finished1, graph1 = getattr(diff.trial1.graph, name)(diff.trial1)
-        finished2, graph2 = getattr(diff.trial2.graph, name)(diff.trial2)
+    def calculate(self, **kwargs):
+        """Compute graphs for each trial before diff"""
+        finished1, graph1 = getattr(self.diff.trial1.graph, name)()
+        finished2, graph2 = getattr(self.diff.trial2.graph, name)()
         finished = finished1 and finished2
         return func(self, graph1, graph2, finished, **kwargs)
     return calculate
 
 
 def class_param(params):
-    """ Decorator: Add extra params for cache """
+    """Decorator: Add extra params for cache"""
     params = params.split()
     def dec(func):
-        """ Decorator: Add extra params for cache """
+        """Decorator: Add extra params for cache"""
         def calculate(self, *args, **kwargs):
             """Add extra params for cache"""
             for param in params:
@@ -473,19 +473,18 @@ def class_param(params):
 
 
 cache = prepare_cache(
-    lambda self, *args, **kwargs: 'diff {}:{}'.format(self.trial1_id,
-                                                      self.trial2_id))
+    lambda self, *args, **kwargs: "diff {}:{}".format(self.diff.trial1.id,
+                                                      self.diff.trial2.id))
 
 
 class DiffGraph(Graph):
-    """ Diff Graph Class
-        Present diff graph on Jupyter """
+    """Diff Graph Class
+       Present diff graph on Jupyter"""
     # pylint: disable=R0201
     # pylint: disable=R0902
 
-    def __init__(self, trial1_id, trial2_id):
-        self.trial1_id = trial1_id
-        self.trial2_id = trial2_id
+    def __init__(self, diff):
+        self.diff = weakref.proxy(diff)
 
         self.use_cache = True
         self.width = 500
@@ -510,35 +509,35 @@ class DiffGraph(Graph):
         self.time_limit = None
 
 
-    @class_param('neighborhoods time_limit')
-    @cache('tree', 'neighborhoods time_limit')
+    @class_param("neighborhoods time_limit")
+    @cache("tree", "neighborhoods time_limit")
     @trial_mirror
     def tree(self, g1, g2, finished, **kwargs):
         """ Compare tree structures """
         return finished, vnd(g1, g2, **kwargs), g1, g2
 
-    @class_param('neighborhoods time_limit')
-    @cache('no_match', 'neighborhoods time_limit')
+    @class_param("neighborhoods time_limit")
+    @cache("no_match", "neighborhoods time_limit")
     @trial_mirror
     def no_match(self, g1, g2, finished, **kwargs):
         """ Compare graphs without matches """
         return finished, vnd(g1, g2, **kwargs), g1, g2
 
-    @class_param('neighborhoods time_limit')
-    @cache('exact_match', 'neighborhoods time_limit')
+    @class_param("neighborhoods time_limit")
+    @cache("exact_match", "neighborhoods time_limit")
     @trial_mirror
     def exact_match(self, g1, g2, finished, **kwargs):
         """ Compare graphs with call matches """
         return finished, vnd(g1, g2, **kwargs), g1, g2
 
-    @class_param('neighborhoods time_limit')
-    @cache('combine', 'neighborhoods time_limit')
+    @class_param("neighborhoods time_limit")
+    @cache("combine", "neighborhoods time_limit")
     @trial_mirror
     def namespace_match(self, g1, g2, finished, **kwargs):
         """ Compare graphs with namespaces """
         return finished, vnd(g1, g2, **kwargs), g1, g2
 
-    def _repr_html_(self, diff=None):
+    def _repr_html_(self):
         """ Display d3 graph on ipython notebook """
         uid = str(int(time.time()*1000000))
 
@@ -549,8 +548,8 @@ class DiffGraph(Graph):
                 {data}
             </div>
         """.format(
-            uid=uid, id1=self.trial1_id, id2=self.trial2_id,
+            uid=uid, id1=self.diff.trial1.id, id2=self.diff.trial2.id,
             view=self.view,
-            data=self.escape_json(self._modes[self.mode](diff)[1:]),
+            data=self.escape_json(self._modes[self.mode]()[1:]),
             width=self.width, height=self.height)
         return result

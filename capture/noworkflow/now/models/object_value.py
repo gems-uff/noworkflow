@@ -6,15 +6,20 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
 
 from ..persistence import persistence
-from .model import Model
+from ..utils.functions import prolog_repr
+
+from .base import set_proxy
 
 
-class ObjectValue(Model, persistence.base):
+class ObjectValue(persistence.base):
     """Object Value Table
     Store global variables and arguments
     from execution provenance
@@ -37,9 +42,6 @@ class ObjectValue(Model, persistence.base):
     # trial: Trial.object_values backref
     # activation: Ativation.object_values backref
 
-    DEFAULT = {}
-    REPLACE = {}
-
     @classmethod
     def to_prolog_fact(cls):
         """Return prolog comment"""
@@ -61,9 +63,11 @@ class ObjectValue(Model, persistence.base):
 
     def to_prolog(self):
         """Convert to prolog fact"""
+        name = prolog_repr(self.name)
+        value = prolog_repr(self.value)
         return (
-            "object_value({o.trial_id}, {o.function_activation_id}, {o.id}, "
-            "{o.name!r}, {o.value!r}, {o.type})."
+            "object_value({self.trial_id}, {self.function_activation_id}, "
+            "{self.id}, {name}, {value}, {self.type})."
         ).format(e=self)
 
     def __str__(self):
@@ -74,3 +78,10 @@ class ObjectValue(Model, persistence.base):
             "ObjectValue({0.trial_id}, {0.function_activation_id}, {0.id}, "
             "{0.name}, {0.value}, {0.type})"
         ).format(self)
+
+class ObjectValueProxy(with_metaclass(set_proxy(ObjectValue))):
+    """ObjectValue proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

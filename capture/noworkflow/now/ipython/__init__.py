@@ -13,7 +13,7 @@ from IPython.display import display_html, display_javascript
 from ..persistence import persistence
 from ..utils import resource
 
-from .models import set_default, update_all, Trial, Diff, History
+from ..models import *
 from .magics import register_magics
 
 

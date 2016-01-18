@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -16,15 +16,15 @@ from ...cmd import Command
 
 
 MAGIC_TYPES = {
-    'cell': cell_magic,
-    'line': line_magic,
-    'line_cell': line_cell_magic
+    "cell": cell_magic,
+    "line": line_magic,
+    "line_cell": line_cell_magic
 }
 
 
 class IpythonCommandMagic(Command):
 
-    def __init__(self, magic, docstring, magic_type='cell'):
+    def __init__(self, magic, docstring, magic_type="cell"):
         self.__doc__ = docstring
         super(IpythonCommandMagic, self).__init__()
         self.magic = magic
@@ -53,6 +53,6 @@ class IpythonCommandMagic(Command):
         super(Command, self).execute(args)
 
     def arguments(self, func, line):
-        argv = arg_split(line, posix = not sys.platform.startswith('win'))
+        argv = arg_split(line, posix = not sys.platform.startswith("win"))
         args = magic_arguments.parse_argstring(func, line)
         return argv, args

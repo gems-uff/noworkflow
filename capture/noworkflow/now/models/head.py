@@ -6,15 +6,20 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 
 from ..persistence import persistence
-from .model import Model
-from .trial import Trial
+from ..utils.functions import prolog_repr
 
-class Head(Model, persistence.base):
+from .base import set_proxy
+
+
+class Head(persistence.base):
     """Head Table
     Store the current head trial_id for a script name
     """
@@ -27,10 +32,17 @@ class Head(Model, persistence.base):
     script = Column(Text)
     trial_id = Column(Integer, index=True)
 
-    trial = relationship(Trial)
+    trial = relationship("Trial")
 
-    DEFAULT = {}
-    REPLACE = {}
+    @classmethod
+    def load_head(cls, script, session=None):
+        """Load head by script"""
+        session = session or persistence.session
+        return (
+            session.query(cls)
+            .filter((cls.script == script))
+        ).first()
+
 
     @classmethod
     def to_prolog_fact(cls):
@@ -53,10 +65,18 @@ class Head(Model, persistence.base):
 
     def to_prolog(self):
         """Convert to prolog fact"""
+        script = prolog_repr(self.script)
         return (
-            "head("
-            "{h.script!r}, {h.trial_id})."
-        ).format(h=self)
+            "head({script}, {self.trial_id})."
+        ).format(**locals())
 
     def __repr__(self):
         return "Head({0.id}, {0.script}, {0.trial_id})".format(self)
+
+
+class HeadProxy(with_metaclass(set_proxy(Head))):
+    """Head proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

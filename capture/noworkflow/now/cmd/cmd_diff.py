@@ -8,20 +8,22 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from .cmd_show import print_trial_relationship
-from .command import Command
-from .types import trial_reference
-from ..cross_version import items, keys
+from future.utils import viewitems, viewkeys
+
 from ..models.diff import Diff as DiffModel
 from ..persistence import persistence
 from ..utils.io import print_msg
 
+from .cmd_show import print_trial_relationship
+from .command import Command
+from .types import trial_reference
+
 
 def print_diff_trials(diff):
     """Print diff of basic trial information"""
-    for key, values in items(diff.trial()):
-        print('  {} changed from {} to {}'.format(
-            key.capitalize().replace('_', ' '),
+    for key, values in viewitems(diff.trial()):
+        print("  {} changed from {} to {}".format(
+            key.capitalize().replace("_", " "),
             values[0] or "<None>", values[1] or "<None>"))
     print()
 
@@ -30,23 +32,23 @@ def print_replaced_attributes(replaced, ignore=("id",), extra=tuple(),
                               names={}):
     """Print attributes diff"""
     for (module_removed, module_added) in replaced:
-        print('  Name: {}'.format(module_removed.name))
+        print("  Name: {}".format(module_removed.name))
         output = []
-        for key in keys(module_removed.to_dict(ignore=ignore, extra=extra)):
+        for key in viewkeys(module_removed.to_dict(ignore=ignore, extra=extra)):
             removed = getattr(module_removed, key)
             added = getattr(module_added, key)
             if removed != added:
-                output.append('    {} changed from {} to {}'.format(
-                    names.get(key, key.capitalize().replace('_', ' ')),
+                output.append("    {} changed from {} to {}".format(
+                    names.get(key, key.capitalize().replace("_", " ")),
                     removed or "<None>", added or "<None>"))
-        print('\n'.join(output))
+        print("\n".join(output))
         print()
 
 
 def print_replaced_environment(replaced):
     """Print environment diff"""
     for (attr_removed, attr_added) in replaced:
-        print('  Environment attribute {} changed from {} to {}'.format(
+        print("  Environment attribute {} changed from {} to {}".format(
             attr_removed.name,
             attr_removed.value or "<None>",
             attr_added.value or "<None>"))
@@ -57,17 +59,17 @@ class Diff(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg('trial', type=str, nargs=2,
-                help='trial id to be compared')
-        add_arg('-m', '--modules', action='store_true',
-                help='compare module dependencies')
-        add_arg('-e', '--environment', action='store_true',
-                help='compare environment conditions')
-        add_arg('-f', '--file-accesses', action='store_true',
-                help='compare read/write access to files')
-        add_arg('--dir', type=str,
-                help='set project path where is the database. Default to '
-                     'current directory')
+        add_arg("trial", type=str, nargs=2,
+                help="trial id to be compared")
+        add_arg("-m", "--modules", action="store_true",
+                help="compare module dependencies")
+        add_arg("-e", "--environment", action="store_true",
+                help="compare environment conditions")
+        add_arg("-f", "--file-accesses", action="store_true",
+                help="compare read/write access to files")
+        add_arg("--dir", type=str,
+                help="set project path where is the database. Default to "
+                     "current directory")
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
@@ -81,54 +83,54 @@ class Diff(Command):
             print_msg("inexistent trial id", True)
             sys.exit(1)
 
-        print_msg('trial diff:', True)
+        print_msg("trial diff:", True)
         print_diff_trials(diff)
 
         if args.modules:
             (added, removed, replaced) = diff.modules()
-            print_msg('{} modules added:'.format(len(added)), True)
+            print_msg("{} modules added:".format(len(added)), True)
             print_trial_relationship(added)
             print()
 
-            print_msg('{} modules removed:'.format(len(removed)), True)
+            print_msg("{} modules removed:".format(len(removed)), True)
             print_trial_relationship(removed)
             print()
 
-            print_msg('{} modules replaced:'.format(len(replaced)), True)
+            print_msg("{} modules replaced:".format(len(replaced)), True)
             print_replaced_attributes(replaced)
 
         if args.environment:
             (added, removed, replaced) = diff.environment()
-            print_msg('{} environment attributes added:'.format(
+            print_msg("{} environment attributes added:".format(
                 len(added)), True)
-            print_trial_relationship(added, breakline='\n', other="\n  ")
+            print_trial_relationship(added, breakline="\n", other="\n  ")
             print()
 
-            print_msg('{} environment attributes removed:'.format(
+            print_msg("{} environment attributes removed:".format(
                 len(removed)), True)
-            print_trial_relationship(removed, breakline='\n', other="\n  ")
+            print_trial_relationship(removed, breakline="\n", other="\n  ")
             print()
 
-            print_msg('{} environment attributes replaced:'.format(
+            print_msg("{} environment attributes replaced:".format(
                 len(replaced)), True)
             print_replaced_environment(replaced)
 
         if args.file_accesses:
             (added, removed, replaced) = diff.file_accesses()
-            print_msg('{} file accesses added:'.format(
+            print_msg("{} file accesses added:".format(
                 len(added)), True)
             print_trial_relationship(added)
             print()
 
-            print_msg('{} file accesses removed:'.format(
+            print_msg("{} file accesses removed:".format(
                 len(removed)), True)
             print_trial_relationship(removed)
             print()
 
-            print_msg('{} file accesses replaced:'.format(
+            print_msg("{} file accesses replaced:".format(
                 len(replaced)), True)
             print_replaced_attributes(replaced,
                 extra=("mode", "buffering", "content_hash_before",
                        "content_hash_after", "timestamp", "stack"),
                 ignore=("id", "trial_id", "function_activation_id"),
-                names={'stack': 'Function'})
+                names={"stack": "Function"})

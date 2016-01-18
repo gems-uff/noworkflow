@@ -6,14 +6,19 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import textwrap
+
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import ForeignKeyConstraint, CheckConstraint
 
 from ..persistence import persistence
-from .model import Model
+from ..utils.functions import prolog_repr
+
+from .base import set_proxy
 
 
-class EnvironmentAttr(Model, persistence.base):
+class EnvironmentAttr(persistence.base):
     """Environment Attributes Table
     Store Environment Attributes from deployment provenance
     """
@@ -28,15 +33,6 @@ class EnvironmentAttr(Model, persistence.base):
     trial_id = Column(Integer, index=True)
 
     # trial: Trial.environment_attrs backref
-
-    DEFAULT = {}
-    REPLACE = {}
-
-    def __hash__(self):
-        return hash((self.name, self.value))
-
-    def __eq__(self, other):
-        return self.name == other.name
 
     @classmethod
     def to_prolog_fact(cls):
@@ -59,9 +55,11 @@ class EnvironmentAttr(Model, persistence.base):
 
     def to_prolog(self):
         """Convert to prolog fact"""
+        name = prolog_repr(self.name)
+        value = prolog_repr(self.value)
         return (
-            "environment({e.trial_id}, {e.name!r}, {e.value!r})."
-        ).format(e=self)
+            "environment({self.trial_id}, {name}, {e.value})."
+        ).format(**locals())
 
     def show(self, _print=lambda x, offset=0: print(x)):
         """Show object
@@ -73,3 +71,17 @@ class EnvironmentAttr(Model, persistence.base):
 
     def __repr__(self):
         return "Environment({0.trial_id}, {0.name}, {0.value})".format(self)
+
+
+class EnvironmentAttrProxy(with_metaclass(set_proxy(EnvironmentAttr))):
+    """EnvironmentAttr proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    def __hash__(self):
+        return hash((self.name, self.value))
+
+    def __eq__(self, other):
+        return self.name == other.name

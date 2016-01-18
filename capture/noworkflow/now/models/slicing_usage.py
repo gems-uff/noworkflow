@@ -8,15 +8,18 @@ from __future__ import (absolute_import, print_function,
 
 import textwrap
 
+from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
 
 from ..persistence import persistence
-from .model import Model
+from ..utils.functions import prolog_repr
+
+from .base import set_proxy
 
 
-class SlicingUsage(Model, persistence.base):
+class SlicingUsage(persistence.base):
     """Slicing Usage Table
     Store slicing variable usages from execution provenance
     """
@@ -45,9 +48,6 @@ class SlicingUsage(Model, persistence.base):
     # activation: Activation.slicing_usages backref
     # variable: SlicinVariable.slicing_usages backref
 
-    DEFAULT = {}
-    REPLACE = {}
-
     @classmethod
     def to_prolog_fact(cls):
         return textwrap.dedent("""
@@ -65,11 +65,12 @@ class SlicingUsage(Model, persistence.base):
         return "retract(usage({}, _, _, _, _, _))".format(trial_id)
 
     def to_prolog(self):
+        name = prolog_repr(self.name)
         return (
             "usage("
-            "{u.trial_id}, {u.activation_id}, {u.variable_id}, {u.id}, "
-            "{u.name!r}, {u.line})."
-        ).format(u=self)
+            "{self.trial_id}, {self.activation_id}, {self.variable_id}, "
+            "{self.id}, {name}, {self.line})."
+        ).format(**locals())
 
     def __str__(self):
         return "(L{0.line}, {0.name}, <{0.context}>)".format(self)
@@ -79,3 +80,11 @@ class SlicingUsage(Model, persistence.base):
             "SlicingUsage({0.trial_id}, {0.activation_id}, "
             "{0.variable_id}, {0.id}, {0.name}, {0.line}, {0.context})"
         ).format(self)
+
+
+class SlicingUsageProxy(with_metaclass(set_proxy(SlicingUsage))):
+    """SlicingUsage proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """

@@ -8,15 +8,16 @@ from __future__ import (absolute_import, print_function,
 
 import sqlite3
 import sys
+import weakref
 
 from os.path import join, isdir, exists
 from os import makedirs
 from pkg_resources import resource_string
 from collections import OrderedDict
 
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy import create_engine
 
 from ..utils import print_msg, resource
 from ..cross_version import cvzip, row_keys
@@ -45,6 +46,7 @@ class DeclarativeBase(object):
 
         return result
 
+
 class Provider(object):
 
     def __init__(self, path=None, connect=False):
@@ -57,6 +59,7 @@ class Provider(object):
         self.std_open = open # Original Python open function.
 
         self.base = declarative_base(cls=DeclarativeBase)
+        self.base._persistence = weakref.proxy(self)
 
         if path:
             self.path = path
@@ -75,6 +78,9 @@ class Provider(object):
         self.content_path = join(self.provenance_path, CONTENT_DIRNAME)
         self.parent_config_path = join(self.provenance_path, PARENT_TRIAL)
 
+    def make_session(self):
+        return scoped_session(self.session_factory)
+
     def connect(self, path=None):
         from .. import models
         if path:
@@ -90,11 +96,11 @@ class Provider(object):
         self.db_conn.row_factory = sqlite3.Row
 
         self.engine = create_engine('sqlite:///' + db_path, echo=False)
-        self.session = scoped_session(sessionmaker())
-        self.session.remove()
-        self.session.configure(bind=self.engine, autoflush=False,
-                               expire_on_commit=False)
-
+        self.session_factory = sessionmaker()
+        self.session_factory.configure(bind=self.engine, autoflush=False,
+                                       expire_on_commit=True)
+        self.session = self.make_session()
+        self.session.configure(expire_on_commit=False)
 
         if new_db:
             print_msg('creating provenance database')
