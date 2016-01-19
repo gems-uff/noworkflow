@@ -194,7 +194,7 @@ class Tracer(Profiler):
             if isinstance(_return, Return):
                 # Call was not evaluated before
                 vid = self.add_variable(sup_act.id, 'call {}'.format(
-                    _return.activation.name), sup[0], {}, 'now(n/a)')
+                    _return.activation['name']), sup[0], {}, 'now(n/a)')
                 returns[lasti] = (_return, vid)
                 call.result = (_return.var.id, _return.var.line)
                 dependencies_add(dep_act.id, vid, sup_act.id, _return.var.id)
@@ -262,7 +262,7 @@ class Tracer(Profiler):
         for name, others in items(dependencies):
             if name == 'return':
                 vid = add_variable(activation.id, name, lineno, f_locals,
-                                   value=activation.return_value)
+                                   value=activation['return_value'])
                 self.returns[activation.lasti] = Return(activation,
                                                         variables[vid])
             elif name == 'yield':
@@ -291,7 +291,7 @@ class Tracer(Profiler):
         super(Tracer, self).close_activation(frame, event, arg)
         if frame:
             self.add_generic_return(activation, frame, ccall=ccall)
-            activation.context['return'].value = activation.return_value
+            activation.context['return'].value = activation['return_value']
 
     def add_generic_return(self, activation, frame, ccall=False):
         """Add return to functions that do not have return
@@ -313,7 +313,7 @@ class Tracer(Profiler):
         lasti = activation.lasti
         if 'return' not in activation.context:
             vid = self.add_variable(activation.id, 'return', lineno, {},
-                                    value=activation.return_value)
+                                    value=activation['return_value'])
             activation.context['return'] = variables[vid]
             self.returns[lasti] = Return(activation, variables[vid])
 

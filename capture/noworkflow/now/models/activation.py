@@ -43,7 +43,7 @@ class Activation(persistence.base):
     id = Column(Integer)
     name = Column(Text)
     line = Column(Integer)
-    return_value = Column("return", Text)
+    return_value = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
     caller_id = Column(Integer, index=True)

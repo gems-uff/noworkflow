@@ -7,14 +7,12 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from .provider import Provider, row_to_dict
-from .database import DatabaseProvider
 from .storage import StorageProvider
 from .trial import TrialProvider
 from .run import RunProvider
-from .restore import RestoreProvider
 
 
-class Persistence(RestoreProvider, DatabaseProvider, TrialProvider,
+class Persistence(TrialProvider,
 				  RunProvider, StorageProvider):
 	pass
 

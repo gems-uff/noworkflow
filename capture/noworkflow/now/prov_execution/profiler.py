@@ -77,7 +77,7 @@ class Profiler(StoreOpenMixin):
         astack = self.activation_stack
         if astack[-1] is not None:
             activation = self.activations[astack[-1]]
-            if ignore_open and len(astack) > 1 and activation.name == 'open':
+            if ignore_open and len(astack) > 1 and activation['name'] == 'open':
                 # get open's parent activation
                 return self.activations[astack[-2]]
             return activation
@@ -104,12 +104,12 @@ class Profiler(StoreOpenMixin):
     def close_activation(self, frame, event, arg, ccall=False):
         activation = self.current_activation
         self.activation_stack.pop()
-        activation.finish = datetime.now()
+        activation['finish'] = datetime.now()
         try:
             if event == 'return':
-                activation.return_value = self.serialize(arg)
+                activation['return_value'] = self.serialize(arg)
         except:  # ignoring any exception during capture
-            activation.return_value = None
+            activation['return_value'] = None
         # Update content of accessed files
         for file_access in activation.file_accesses:
             # Checks if file still exists
@@ -151,7 +151,7 @@ class Profiler(StoreOpenMixin):
             # Capturing globals
             functions = self.functions.get(co_filename)
             if functions:
-                function_def = functions.get(activation.name)
+                function_def = functions.get(activation['name'])
 
                 if function_def:
                     fglobals = frame.f_globals
@@ -160,7 +160,7 @@ class Profiler(StoreOpenMixin):
                             global_var, self.serialize(fglobals[global_var]),
                             'GLOBAL', aid)
 
-            activation.start = datetime.now()
+            activation['start'] = datetime.now()
             self.add_activation(aid)
 
     def trace_c_return(self, frame, event, arg):

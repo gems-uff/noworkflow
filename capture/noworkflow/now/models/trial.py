@@ -42,8 +42,8 @@ class Trial(persistence.base):
     id = Column(Integer, primary_key=True)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
-    script = Column("script", Text)
-    code_hash = Column("code_hash", Text)
+    script = Column(Text)
+    code_hash = Column(Text)
     arguments = Column(Text)
     command = Column(Text)
     inherited_id = Column(Integer, index=True)
@@ -155,6 +155,33 @@ class Trial(persistence.base):
                 session=session)
         return trial
 
+    @classmethod
+    def fast_last_trial_id_without_inheritance(cls, session=None):
+        """Load last trial id that did not bypass modules
+
+
+        Compile SQLAlchemy core query into string for optimization
+
+        Keyword arguments:
+        session -- specify session for loading (default=persistence.session)
+        """
+        session = session or persistence.session
+        if not hasattr(cls, '_last_trial_id_without_inheritance'):
+            ttrial = Trial.__table__
+            _query = (
+                select([ttrial.c.id]).where(ttrial.c.start.in_(
+                    select([func.max(ttrial.c.start)])
+                    .select_from(ttrial)
+                    .where(ttrial.c.inherited_id == None)
+                ))
+            )
+            cls._last_trial_id_without_inheritance = str(_query)
+        an_id = session.execute(
+            cls._last_trial_id_without_inheritance).fetchone()
+        if not an_id:
+            raise TypeError
+        return an_id[0]
+
     def create_head(self):
         """Create head for this trial"""
         session = persistence.make_session()
@@ -226,7 +253,6 @@ class Trial(persistence.base):
     def empty_prolog(self):
         """Return empty prolog fact"""
         return "trial(0)."
-
 
     def to_prolog(self):
         """Convert to prolog fact"""
@@ -302,19 +328,19 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
 
         # Check if it is a new trial or a query
         script = kwargs.get("trial_script", None)
-        if 'use_cache' in kwargs:
-            cache = kwargs['use_cache']
-            kwargs['graph_use_cache'] = kwargs.get('graph_use_cache', cache)
-            kwargs['prolog_use_cache'] = kwargs.get('graph_use_cache', cache)
+        if "use_cache" in kwargs:
+            cache = kwargs["use_cache"]
+            kwargs["graph_use_cache"] = kwargs.get("graph_use_cache", cache)
+            kwargs["prolog_use_cache"] = kwargs.get("graph_use_cache", cache)
 
 
         session = persistence.session
         if not trial_ref or trial_ref == -1:
             self._alchemy = Trial.last_trial(script=script, session=session)
-            if 'graph_use_cache' not in kwargs:
-                kwargs['graph_use_cache'] = False
-            if 'prolog_use_cache' not in kwargs:
-                kwargs['prolog_use_cache'] = False
+            if "graph_use_cache" not in kwargs:
+                kwargs["graph_use_cache"] = False
+            if "prolog_use_cache" not in kwargs:
+                kwargs["prolog_use_cache"] = False
         else:
             self._alchemy = Trial.load_trial(trial_ref, session=session)
 

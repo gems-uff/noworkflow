@@ -8,8 +8,10 @@ from __future__ import (absolute_import, print_function,
 
 from itertools import chain
 from datetime import datetime
-from .provider import Provider
+
 from ..cross_version import items, lmap
+
+from .provider import Provider
 
 
 def partial_save(is_complete, result_tuple):
@@ -32,11 +34,16 @@ class RunProvider(Provider):
     def store_trial(self, start, script, code, arguments, bypass_modules,
                     command, run=True):
         """ Store basic Trial data """
+        from ..models import Trial
         code_hash = self.put(code)
-        parent_id = self.load_parent_id(script, parent_required=True)
+
+        # ToDo: use core query
+        parent = Trial.load_parent(script, parent_required=True)
+        parent_id = parent.id if parent else None
+
         inherited_id = None
         if bypass_modules:
-            inherited_id = self.last_trial_id_without_inheritance()
+            inherited_id = Trial.fast_last_trial_id_without_inheritance()
         with self.db_conn as db:
             trial_id = db.execute(
                 """INSERT INTO trial (start, script, code_hash, arguments,
@@ -123,13 +130,13 @@ class RunProvider(Provider):
 
     def store_activations(self, trial_id, activations, partial):
         """ Store Function Activations """
-        generator = partial_save((lambda a: a.finish != 0.0), (lambda a: (
-            trial_id, a.id, a.name, a.line, a.return_value, a.start, a.finish,
-            a.caller_id)))
+        generator = partial_save((lambda a: a['finish'] is not None), (lambda a: (
+            trial_id, a['id'], a['name'], a['line'], a['return_value'], a['start'], a['finish'],
+            a['caller_id'])))
         with self.db_conn as db:
             db.executemany(
                 """REPLACE INTO function_activation(
-                    trial_id, id, name, line, return, start, finish, caller_id)
+                    trial_id, id, name, line, return_value, start, finish, caller_id)
                 VALUES (:0, :1, :2, :3, :4, :5, :6, :7)""",
                 generator(activations, partial)
             )

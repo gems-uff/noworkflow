@@ -50,22 +50,19 @@ class ObjectStore(object):
 
 # Profiler
 
-class Activation(object):
-    __slots__ = (
-        'id', 'name', 'line', 'start', 'finish',  'return_value', 'caller_id',
-        'file_accesses', 'context', 'slice_stack', 'lasti',
-        'args', 'kwargs', 'starargs',
-    )
+class Activation(dict):
 
     def __init__(self, aid, name, line, lasti, caller_id):
-        self.id = aid
-        self.name = name
-        self.line = line
-        self.start = datetime.now()
-        self.finish = 0.0
-        self.caller_id = caller_id
-        self.return_value = None
+        super(Activation, self).__init__()
+        self['id'] = aid
+        self['name'] = name
+        self['line'] = line
+        self['start'] = datetime.now()
+        self['finish'] = None
+        self['caller_id'] = caller_id
+        self['return_value'] = None
 
+        self.id = aid
         # File accesses. Used to get the content after the activation
         self.file_accesses = []
         # Variable context. Used in the slicing lookup
@@ -79,11 +76,12 @@ class Activation(object):
         self.kwargs = []
         self.starargs = []
 
-
     def __repr__(self):
-        return ("Activation(id={}, line={}, name={}, start={}, finish={}, "
-            "return={}, caller_id={})").format(self.id, self.line, self.name,
-            self.start, self.finish, self.return_value, self.caller_id)
+        return (
+            "Activation(id={id}, line={line}, name={name}, "
+                "start={start}, finish={finish}, "
+                "return={return_value}, caller_id={caller_id})"
+        ).format(**self)
 
 class FileAccess(object):
     __slots__ = ('id', 'name', 'mode', 'buffering', 'content_hash_before',
