@@ -120,7 +120,7 @@ class Run(Command):
                      'selected context (defaults to 1)')
         add_arg('-e', '--execution-provenance',
                 default=self.default_execution_provenance,
-                choices=['Profiler', 'InspectProfiler', 'Tracer'],
+                choices=['Profiler', 'Tracer'],
                 help='execution provenance provider. (defaults to Profiler)')
         add_arg('-c', '--context', choices=['main', 'package', 'all'],
                 default=self.default_context,

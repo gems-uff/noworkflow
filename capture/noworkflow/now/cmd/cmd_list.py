@@ -11,6 +11,7 @@ import os
 from .command import Command
 from ..persistence import persistence
 from ..utils.io import print_msg
+from ..utils import calculate_duration
 
 
 class List(Command):
@@ -33,3 +34,6 @@ class List(Command):
                 indent=' ' * indent, **trial))
             print('{indent}ran from {start} to {finish}'.format(
                 indent=' ' * indent, **trial))
+            if trial['finish']:
+                print('{indent}duration: {duration} ms'.format(
+                    indent=' ' * indent, duration=calculate_duration(trial)))
