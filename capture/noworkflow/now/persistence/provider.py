@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import sqlite3
 import sys
 import weakref
+import threading
 
 from os.path import join, isdir, exists
 from os import makedirs
@@ -81,6 +82,14 @@ class Provider(object):
     def make_session(self):
         return scoped_session(self.session_factory)
 
+    @property
+    def session(self):
+        ident = threading.current_thread().ident
+        if ident not in self._session_map:
+            self._session_map[ident] = self.make_session()
+            self._session_map[ident].configure(expire_on_commit=False)
+        return self._session_map[ident]
+
     def connect(self, path=None):
         from .. import models
         if path:
@@ -99,8 +108,7 @@ class Provider(object):
         self.session_factory = sessionmaker()
         self.session_factory.configure(bind=self.engine, autoflush=False,
                                        expire_on_commit=True)
-        self.session = self.make_session()
-        self.session.configure(expire_on_commit=False)
+        self._session_map = {}
 
         if new_db:
             print_msg('creating provenance database')
