@@ -124,7 +124,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
 
         if passed:
             caller = self.caller
-            lasti_set = []
+            lasti_set = set()
             provider.add_dependency(activation, act_var, caller, passed,
                                     self.filename, lasti_set)
             provider.remove_return_lasti(lasti_set)

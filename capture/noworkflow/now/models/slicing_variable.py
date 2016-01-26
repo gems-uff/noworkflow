@@ -39,27 +39,27 @@ class SlicingVariable(persistence.base):
     value = Column(Text)
     time = Column(TIMESTAMP)
 
-    slicing_usages = relationship(
-        "SlicingUsage", backref="variable")
+    _slicing_usages = relationship(
+        "SlicingUsage", backref="_variable")
 
     # dependencies in which this variable is the dependent
-    suppliers_dependencies = relationship(
-        "SlicingDependency", backref="dependent", viewonly=True,
+    _suppliers_dependencies = relationship(
+        "SlicingDependency", backref="_dependent", viewonly=True,
         primaryjoin=(
             (id == SlicingDependency.dependent_id) &
             (activation_id == SlicingDependency.dependent_activation_id) &
             (trial_id == SlicingDependency.trial_id)))
 
     # dependencies in which this variable is the supplier
-    dependents_dependencies = relationship(
-        "SlicingDependency", backref="supplier", viewonly=True,
+    _dependents_dependencies = relationship(
+        "SlicingDependency", backref="_supplier", viewonly=True,
         primaryjoin=(
             (id == SlicingDependency.supplier_id) &
             (activation_id == SlicingDependency.supplier_activation_id) &
             (trial_id == SlicingDependency.trial_id)))
 
-    suppliers = relationship(
-        "SlicingVariable", backref="dependents", viewonly=True,
+    _suppliers = relationship(
+        "SlicingVariable", backref="_dependents", viewonly=True,
         secondary=SlicingDependency.__table__,
         primaryjoin=(
             (id == SlicingDependency.dependent_id) &
@@ -70,9 +70,9 @@ class SlicingVariable(persistence.base):
             (activation_id == SlicingDependency.supplier_activation_id) &
             (trial_id == SlicingDependency.trial_id)))
 
-    # trial: Trial.slicing_variables backref
-    # activation: Activation.slicing_variables backref
-    # dependents: SlicingVariable.suppliers backref
+    # _trial: Trial._slicing_variables backref
+    # _activation: Activation._slicing_variables backref
+    # _dependents: SlicingVariable._suppliers backref
 
     @classmethod
     def to_prolog_fact(cls):
@@ -100,9 +100,6 @@ class SlicingVariable(persistence.base):
             "{name}, {self.line}, {value}, {time:-f})."
         ).format(**locals())
 
-    def __str__(self):
-        return "(L{0.line}, {0.name}, {0.value})".format(self)
-
     def __repr__(self):
         return (
             "SlicingVariable({0.trial_id}, {0.activation_id}, "
@@ -116,3 +113,6 @@ class SlicingVariableProxy(with_metaclass(set_proxy(SlicingVariable))):
     Use it to have different objects with the same primary keys
     Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
     """
+
+    def __str__(self):
+        return "(L{0.line}, {0.name}, {0.value})".format(self)

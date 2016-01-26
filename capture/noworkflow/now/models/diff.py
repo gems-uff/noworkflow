@@ -73,6 +73,7 @@ class Diff(Model):
         self.graph = DiffGraph(self)
         self.initialize_default(kwargs)
 
+    @property
     def trial(self):
         """Return a tuple with information from both trials """
         extra=("start", "finish", "duration")
@@ -81,23 +82,26 @@ class Diff(Model):
             self.trial1.to_dict(ignore=ignore, extra=extra),
             self.trial2.to_dict(ignore=ignore, extra=extra))
 
+    @property
     def modules(self):
         """Diff modules from trials"""
         return diff_set(
             set(proxy_gen(self.trial1.modules)),
             set(proxy_gen(self.trial2.modules)))
 
+    @property
     def environment(self):
         """Diff environment variables"""
         return diff_set(
-            set(proxy_gen(self.trial1.environment_attrs)),
-            set(proxy_gen(self.trial2.environment_attrs)))
+            set(self.trial1.environment_attrs),
+            set(self.trial2.environment_attrs))
 
+    @property
     def file_accesses(self):
         """Diff file accesses"""
         return diff_set(
-            set(proxy_gen(self.trial1.file_accesses)),
-            set(proxy_gen(self.trial2.file_accesses)))
+            set(self.trial1.file_accesses),
+            set(self.trial2.file_accesses))
 
     def _repr_html_(self):
         return self.graph._repr_html_()

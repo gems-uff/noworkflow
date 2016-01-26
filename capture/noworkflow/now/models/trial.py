@@ -19,7 +19,7 @@ from ..formatter import PrettyLines
 from ..graphs.trial_graph import TrialGraph
 from ..persistence import persistence
 
-from .base import set_proxy
+from .base import set_proxy, proxy_gen
 from .trial_prolog import TrialProlog
 from .tag import Tag
 from .module import Module
@@ -50,45 +50,45 @@ class Trial(persistence.base):
     parent_id = Column(Integer, index=True)
     run = Column(Integer)
 
-    inherited = relationship(
-        "Trial", backref="bypass_children", viewonly=True,
+    _inherited = relationship(
+        "Trial", backref="_bypass_children", viewonly=True,
         remote_side=[id], primaryjoin=(id == inherited_id))
 
 
-    parent = relationship(
-        "Trial", backref="children", viewonly=True,
+    _parent = relationship(
+        "Trial", backref="_children", viewonly=True,
         remote_side=[id], primaryjoin=(id == parent_id))
 
     #ToDo: check bypass
-    function_defs = relationship(
-        "FunctionDef", lazy="dynamic", backref="trial")
-    module_dependencies = relationship(
-        "Dependency", lazy="dynamic", backref="trials")
+    _function_defs = relationship(
+        "FunctionDef", lazy="dynamic", backref="_trial")
+    _module_dependencies = relationship(
+        "Dependency", lazy="dynamic", backref="_trials")
     _modules = relationship(
         "Module", secondary=Dependency.__table__, lazy="dynamic",
-        backref="trials")
-    environment_attrs = relationship(
-        "EnvironmentAttr", lazy="dynamic", backref="trial")
-    activations = relationship(
+        backref="_trials")
+    _environment_attrs = relationship(
+        "EnvironmentAttr", lazy="dynamic", backref="_trial")
+    _activations = relationship(
         "Activation", lazy="dynamic", order_by=Activation.start,
-        backref="trial")
-    file_accesses = relationship(
-        "FileAccess", lazy="dynamic", backref="trial", viewonly=True)
-    object_values = relationship(
-        "ObjectValue", lazy="dynamic", backref="trial", viewonly=True)
+        backref="_trial")
+    _file_accesses = relationship(
+        "FileAccess", lazy="dynamic", backref="_trial", viewonly=True)
+    _object_values = relationship(
+        "ObjectValue", lazy="dynamic", backref="_trial", viewonly=True)
 
-    slicing_variables = relationship(
-        "SlicingVariable", lazy="dynamic", backref="trial", viewonly=True)
-    slicing_usages = relationship(
-        "SlicingUsage", lazy="dynamic", viewonly=True, backref="trial")
-    slicing_dependencies = relationship(
-        "SlicingDependency", lazy="dynamic", viewonly=True, backref="trial")
+    _slicing_variables = relationship(
+        "SlicingVariable", lazy="dynamic", backref="_trial", viewonly=True)
+    _slicing_usages = relationship(
+        "SlicingUsage", lazy="dynamic", viewonly=True, backref="_trial")
+    _slicing_dependencies = relationship(
+        "SlicingDependency", lazy="dynamic", viewonly=True, backref="_trial")
 
-    tags = relationship(
-        "Tag", lazy="dynamic", backref="trial")
+    _tags = relationship(
+        "Tag", lazy="dynamic", backref="_trial")
 
-    # bypass_children: Trial.inherited backref
-    # children: Trial.parent backref
+    # _bypass_children: Trial._inherited backref
+    # _children: Trial._parent backref
 
     @classmethod
     def last_trial(cls, script=None, parent_required=False, session=None):
@@ -216,19 +216,80 @@ class Trial(persistence.base):
         return 0
 
     @property
-    def local_modules(self):
+    def _query_local_modules(self):
         """Load local modules
         Return SQLAlchemy query"""
-        return self.modules.filter(
+        return self._query_modules.filter(
             Module.path.like("%{}%".format(persistence.base_path)))
 
     @property
-    def modules(self):
+    def local_modules(self):
+        return proxy_gen(self._query_local_modules)
+
+    @property
+    def _query_modules(self):
         """Load modules
         Return SQLAlchemy query"""
-        if self.inherited:
-            return self.inherited.modules
+        if self._inherited:
+            return self._inherited._query_modules
         return self._modules
+
+    @property
+    def activations(self):
+        """Return file accesses"""
+        return proxy_gen(self._activations)
+
+    @property
+    def modules(self):
+        return proxy_gen(self._query_modules)
+
+    @property
+    def environment(self):
+        """Return dict: environment variables -> value"""
+        return {e.name:e.value for e in self.environment_attrs}
+
+    @property
+    def environment_attrs(self):
+        """Return environment attributes"""
+        return proxy_gen(self._environment_attrs)
+
+    @property
+    def file_accesses(self):
+        """Return file accesses"""
+        return proxy_gen(self._file_accesses)
+
+    @property
+    def function_defs(self):
+        """Return function definitions"""
+        return proxy_gen(self._function_defs)
+
+    @property
+    def slicing_variables(self):
+        """Return slicing variables"""
+        return proxy_gen(self._slicing_variables)
+
+    @property
+    def slicing_usages(self):
+        """Return slicing usages"""
+        return proxy_gen(self._slicing_usages)
+
+    @property
+    def slicing_dependencies(self):
+        """Return slicing dependencies"""
+        return proxy_gen(self._slicing_dependencies)
+
+    @property
+    def _query_initial_activations(self):
+        """Return initial activation as a SQLAlchemy query"""
+        return self._activations.filter(Activation.caller_id == None)
+
+    @property
+    def initial_activations(self):
+        """Return generator for activations without parent
+
+        It should return the script activation"""
+        return proxy_gen(self._query_initial_activations)
+
 
     @classmethod
     def to_prolog_fact(cls):

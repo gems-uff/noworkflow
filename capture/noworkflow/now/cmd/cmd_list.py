@@ -10,7 +10,7 @@ import os
 
 from ..persistence import persistence
 from ..utils.io import print_msg
-from ..models import Trial, proxy_gen
+from ..models import Trial
 
 from .command import Command
 

@@ -17,7 +17,7 @@ from sqlalchemy.orm import relationship
 from ..persistence import persistence
 from ..utils.functions import timestamp, prolog_repr
 
-from .base import set_proxy
+from .base import set_proxy, proxy
 
 
 class FileAccess(persistence.base):
@@ -42,8 +42,12 @@ class FileAccess(persistence.base):
     timestamp = Column(TIMESTAMP)
     function_activation_id = Column(Integer, index=True)
 
-    # trial: Trial.file_accesses backref
-    # activation: Activation.file_accesses backref
+    # _trial: Trial._file_accesses backref
+    # _activation: Activation._file_accesses backref
+
+    @property
+    def activation(self):
+        return proxy(self._activation)
 
     @property
     def stack(self):

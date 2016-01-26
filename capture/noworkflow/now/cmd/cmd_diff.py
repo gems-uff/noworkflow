@@ -21,7 +21,7 @@ from .types import trial_reference
 
 def print_diff_trials(diff):
     """Print diff of basic trial information"""
-    for key, values in viewitems(diff.trial()):
+    for key, values in viewitems(diff.trial):
         print("  {} changed from {} to {}".format(
             key.capitalize().replace("_", " "),
             values[0] or "<None>", values[1] or "<None>"))
@@ -116,7 +116,7 @@ class Diff(Command):
             print_replaced_environment(replaced)
 
         if args.file_accesses:
-            (added, removed, replaced) = diff.file_accesses()
+            (added, removed, replaced) = diff.file_accesses
             print_msg("{} file accesses added:".format(
                 len(added)), True)
             print_trial_relationship(added)

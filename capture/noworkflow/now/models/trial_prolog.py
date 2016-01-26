@@ -34,12 +34,12 @@ class TrialProlog(Model):
         # (now focusing only on activation, file access and slices)
         Trial = trial.__class__
         self.models = [
-            (Trial, [trial]),
-            (Activation, trial.activations),
-            (FileAccess, trial.file_accesses),
-            (SlicingVariable, trial.slicing_variables),
-            (SlicingUsage, trial.slicing_usages),
-            (SlicingDependency, trial.slicing_dependencies),
+            (Trial, lambda: [trial]),
+            (Activation, lambda: trial.activations),
+            (FileAccess, lambda: trial.file_accesses),
+            (SlicingVariable, lambda: trial.slicing_variables),
+            (SlicingUsage, lambda: trial.slicing_usages),
+            (SlicingDependency, lambda: trial.slicing_dependencies),
         ]
 
     def retract(self):
@@ -50,12 +50,11 @@ class TrialProlog(Model):
     def _export_facts(self, with_doc=True):
         """Export facts from trial as a list"""
         result = []
-        for model in self.models:
-            cls, query = model
+        for cls, query in self.models:
             if with_doc:
                 result.append(cls.to_prolog_fact())
             result.append(cls.to_prolog_dynamic())
-            for obj in proxy_gen(query):
+            for obj in query():
                 result.append(obj.to_prolog())
         return result
 

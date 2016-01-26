@@ -10,12 +10,14 @@ import sys
 import dis
 import linecache
 import traceback
+from collections import namedtuple
 from datetime import datetime
 from functools import wraps, partial
 from opcode import HAVE_ARGUMENT, EXTENDED_ARG
 from inspect import ismethod
 
-from .data_objects import ObjectStore, Variable, Dependency, Usage, Return
+from .data_objects import ObjectStore
+from .data_objects import VariableLW, VariableDependencyLW, VariableUsageLW
 from .profiler import Profiler
 from .argument_captors import SlicingArgumentCaptor
 from ..utils import io
@@ -23,6 +25,10 @@ from ..utils.io import print_fn_msg
 from ..utils.bytecode.f_trace import find_f_trace, get_f_trace
 from ..cross_version import items, IMMUTABLE
 from ..persistence import persistence
+from ..models import SlicingVariable, SlicingDependency, SlicingUsage
+
+
+Return = namedtuple('Return', 'activation var')
 
 
 class JointPartial(partial):
@@ -93,9 +99,9 @@ class Tracer(Profiler):
         self.event_map['line'] = self.trace_line
 
         # Store slicing provenance
-        self.variables = ObjectStore(Variable)
-        self.dependencies = ObjectStore(Dependency)
-        self.usages = ObjectStore(Usage)
+        self.variables = ObjectStore(VariableLW)
+        self.dependencies = ObjectStore(VariableDependencyLW)
+        self.usages = ObjectStore(VariableUsageLW)
 
         # Returns
         self.returns = {}
@@ -194,7 +200,7 @@ class Tracer(Profiler):
             if isinstance(_return, Return):
                 # Call was not evaluated before
                 vid = self.add_variable(sup_act.id, 'call {}'.format(
-                    _return.activation['name']), sup[0], {}, 'now(n/a)')
+                    _return.activation.name), sup[0], {}, 'now(n/a)')
                 returns[lasti] = (_return, vid)
                 call.result = (_return.var.id, _return.var.line)
                 dependencies_add(dep_act.id, vid, sup_act.id, _return.var.id)
@@ -262,7 +268,7 @@ class Tracer(Profiler):
         for name, others in items(dependencies):
             if name == 'return':
                 vid = add_variable(activation.id, name, lineno, f_locals,
-                                   value=activation['return_value'])
+                                   value=activation.return_value)
                 self.returns[activation.lasti] = Return(activation,
                                                         variables[vid])
             elif name == 'yield':
@@ -291,7 +297,7 @@ class Tracer(Profiler):
         super(Tracer, self).close_activation(frame, event, arg)
         if frame:
             self.add_generic_return(activation, frame, ccall=ccall)
-            activation.context['return'].value = activation['return_value']
+            activation.context['return'].value = activation.return_value
 
     def add_generic_return(self, activation, frame, ccall=False):
         """Add return to functions that do not have return
@@ -313,7 +319,7 @@ class Tracer(Profiler):
         lasti = activation.lasti
         if 'return' not in activation.context:
             vid = self.add_variable(activation.id, 'return', lineno, {},
-                                    value=activation['return_value'])
+                                    value=activation.return_value)
             activation.context['return'] = variables[vid]
             self.returns[lasti] = Return(activation, variables[vid])
 
@@ -402,7 +408,7 @@ class Tracer(Profiler):
         if self.f_trace_frames:
 
             for _frame in self.f_trace_frames:
-                _frame.f_trace = create_joint_tracer( _frame.f_trace, self.tracer)
+                _frame.f_trace = create_joint_tracer(_frame.f_trace, self.tracer)
 
             self.f_trace_frames = []
             return
@@ -421,10 +427,9 @@ class Tracer(Profiler):
                 self.close_activation(None, 'store', None)
         super(Tracer, self).store(partial=partial)
         tid = self.trial_id
-        persistence.store_slicing_variables(tid, self.variables, partial)
-        persistence.store_slicing_dependencies(tid, self.dependencies, partial)
-        persistence.store_slicing_usages(tid, self.usages, partial)
-
+        SlicingVariable.fast_store(tid, self.variables, partial)
+        SlicingDependency.fast_store(tid, self.dependencies, partial)
+        SlicingUsage.fast_store(tid, self.usages, partial)
 
         #self.view_slicing_data(io.verbose)
 

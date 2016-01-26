@@ -94,7 +94,7 @@ class Restore(Command):
                 self.restore(module.path, module.code_hash, trial.id)
 
         if args.input:
-            file_accesses = trial.file_accesses[:]
+            file_accesses = list(trial.file_accesses)
             files = {}
             for faccess in reversed(file_accesses):
                 if faccess.content_hash_before:

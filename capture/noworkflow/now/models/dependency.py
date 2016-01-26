@@ -16,7 +16,7 @@ from sqlalchemy.orm import relationship
 from ..persistence import persistence
 from ..utils.functions import prolog_repr
 
-from .base import set_proxy
+from .base import set_proxy, proxy
 
 
 class Dependency(persistence.base):
@@ -32,9 +32,9 @@ class Dependency(persistence.base):
     trial_id = Column(Integer, nullable=False, index=True)
     module_id = Column(Integer, nullable=False, index=True)
 
-    module = relationship("Module")
+    _module = relationship("Module")
 
-    # trial: Trial.module_dependencies backref
+    # _trial: Trial._module_dependencies backref
 
     @classmethod
     def to_prolog_fact(cls):
@@ -54,6 +54,10 @@ class Dependency(persistence.base):
     def to_prolog_retract(cls, trial_id):
         """Return prolog retract for trial"""
         return "retract(module({}, _, _, _, _, _))".format(trial_id)
+
+    @property
+    def module(self):
+        return proxy(self._module)
 
     def to_prolog(self):
         """Convert to prolog fact"""

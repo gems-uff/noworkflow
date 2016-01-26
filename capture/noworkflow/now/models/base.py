@@ -242,7 +242,7 @@ def set_proxy(model):
             if not "__modelname__" in attrs:
                 attrs["__modelname__"] = model.__name__
             for attr in model.__dict__:
-                if not attr.startswith("_") or attr == "__repr__":
+                if not attr.startswith("_") or attr in ("__repr__", '__str__'):
                     attrs[attr] = RedirectProxy(model, attr)
             cls = super(MetaProxy, meta).__new__(meta, name, bases, attrs)
             cls.__model__ = model
@@ -257,5 +257,15 @@ def set_proxy(model):
         @property
         def query(cls):
             return persistence.session.query(cls.__model__)
+
+        def fast_store(cls, trial_id, object_store, partial, conn=None):
+            """Bulk insert lightweight objects from ObjectStore"""
+            _conn = conn if conn else persistence.engine.connect()
+            _conn.execute(
+                cls.__model__.__table__.insert().prefix_with("OR REPLACE"),
+                *object_store.generator(trial_id, partial)
+            )
+            if conn is None:
+                _conn.close()
 
     return MetaProxy

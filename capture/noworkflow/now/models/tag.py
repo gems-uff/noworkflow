@@ -33,7 +33,7 @@ class Tag(persistence.base):
     name = Column(Text)
     timestamp = Column(TIMESTAMP)
 
-    # trial: Trial.tags backref
+    # _trial: Trial._tags backref
 
     @classmethod
     def to_prolog_fact(cls):

@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
 import os
 import functools
 from flask import render_template, jsonify, request
-from ..models import History, Diff, Trial
+from ..models import History, Diff, Trial, proxy_gen
 
 class WebServer(object):
 
@@ -59,7 +59,7 @@ def trial_graph(tid, graph_mode, cache):
     trial = Trial(tid)
     graph = trial.graph
     graph.use_cache &= bool(int(cache))
-    finished, g = getattr(graph, graph_mode)(trial)
+    finished, g = getattr(graph, graph_mode)()
     return jsonify(**g)
 
 @app.route('/trials/<tid>/dependencies')
@@ -85,7 +85,7 @@ def all_modules(tid):
 @app.route('/trials/<tid>/environment')
 def environment(tid):
     trial = Trial(tid)
-    return jsonify(env=[x.to_dict() for x in trial.environment_attrs])
+    return jsonify(env=trial.environment)
 
 
 @app.route('/trials/<tid>/all_environment')
@@ -94,7 +94,7 @@ def all_environment(tid):
     return render_template("trial.html",
         cwd=os.getcwd(),
         trial=trial.to_dict(extra=("duration",)),
-        env=[x.to_dict() for x in trial.environment_attrs],
+        env=trial.environment,
         info="environment.html",
     )
 

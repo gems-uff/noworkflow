@@ -36,7 +36,7 @@ class Object(persistence.base):
         Text,
         CheckConstraint("type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION_CALL')"))
 
-    # function_def: FunctionDef.objects backref
+    # _function_def: FunctionDef._objects backref
 
     @classmethod
     def to_prolog_fact(cls):

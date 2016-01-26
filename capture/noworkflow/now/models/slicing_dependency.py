@@ -14,7 +14,7 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ..persistence import persistence
 
-from .base import set_proxy
+from .base import set_proxy, proxy
 
 
 class SlicingDependency(persistence.base):
@@ -34,13 +34,13 @@ class SlicingDependency(persistence.base):
                               "function_activation.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id",
                               "dependent_activation_id",
-                              "dependent"],
+                              "dependent_id"],
                              ["slicing_variable.trial_id",
                               "slicing_variable.activation_id",
                               "slicing_variable.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id",
                               "supplier_activation_id",
-                              "supplier"],
+                              "supplier_id"],
                              ["slicing_variable.trial_id",
                               "slicing_variable.activation_id",
                               "slicing_variable.id"], ondelete="CASCADE"),
@@ -48,15 +48,25 @@ class SlicingDependency(persistence.base):
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)
     dependent_activation_id = Column(Integer, index=True)
-    dependent_id = Column("dependent", Integer, index=True)
+    dependent_id = Column(Integer, index=True)
     supplier_activation_id = Column(Integer, index=True)
-    supplier_id = Column("supplier", Integer, index=True)
+    supplier_id = Column(Integer, index=True)
 
-    # trial: Trial backref
-    # dependent_activation: Activation.slicing_dependents backref
-    # supplier_activation: Activation.slicing_suppliers backref
-    # dependent: SlicingVariable.suppliers_dependencies backref
-    # supplier: SlicingVariable.dependents_dependencies backref
+    # _trial: Trial._slicing_dependencies backref
+    # _dependent_activation: Activation._slicing_dependents backref
+    # _supplier_activation: Activation._slicing_suppliers backref
+    # _dependent: SlicingVariable._suppliers_dependencies backref
+    # _supplier: SlicingVariable._dependents_dependencies backref
+
+    @property
+    def dependent(self):
+        """Return dependent variable"""
+        return proxy(self._dependent)
+
+    @property
+    def supplier(self):
+        """Return supplier variable"""
+        return proxy(self._supplier)
 
     @classmethod
     def to_prolog_fact(cls):
@@ -82,9 +92,6 @@ class SlicingDependency(persistence.base):
             "{self.supplier_activation_id}, {self.supplier_id})."
         ).format(**locals())
 
-    def __str__(self):
-        return "{0.dependent} <- {0.supplier}".format(self)
-
     def __repr__(self):
         return (
             "SlicingDependency({0.trial_id}, {0.id}, "
@@ -98,3 +105,6 @@ class SlicingDependencyProxy(with_metaclass(set_proxy(SlicingDependency))):
     Use it to have different objects with the same primary keys
     Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
     """
+
+    def __str__(self):
+        return "{0.dependent} <- {0.supplier}".format(self)

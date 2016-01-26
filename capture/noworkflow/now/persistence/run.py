@@ -14,19 +14,6 @@ from ..cross_version import items, lmap
 from .provider import Provider
 
 
-def partial_save(is_complete, result_tuple):
-    """ Iterate at ObjectStore and remove objects if <partial> """
-    def generator(object_store, partial):
-        """ Generator """
-        for a in (v for k, v in items(object_store) if v):
-            if partial and is_complete(a):
-                del object_store[a.id]
-            yield result_tuple(a)
-        if partial:
-            object_store.clear()
-    return generator
-
-
 class RunProvider(Provider):
     """ Subclass of Persistence Provider
         Store <run> provenance """
@@ -127,82 +114,3 @@ class RunProvider(Provider):
                 self.store_objects(arguments, 'ARGUMENT', function_def_id)
                 self.store_objects(global_vars, 'GLOBAL', function_def_id)
                 self.store_objects(calls, 'FUNCTION_CALL', function_def_id)
-
-    def store_activations(self, trial_id, activations, partial):
-        """ Store Function Activations """
-        generator = partial_save((lambda a: a['finish'] is not None), (lambda a: (
-            trial_id, a['id'], a['name'], a['line'], a['return_value'], a['start'], a['finish'],
-            a['caller_id'])))
-        with self.db_conn as db:
-            db.executemany(
-                """REPLACE INTO function_activation(
-                    trial_id, id, name, line, return_value, start, finish, caller_id)
-                VALUES (:0, :1, :2, :3, :4, :5, :6, :7)""",
-                generator(activations, partial)
-            )
-
-    def store_object_values(self, trial_id, object_values, partial):
-        """ Store Function Activation object values (arg, global) """
-        generator = partial_save((lambda o: True), (lambda o: (
-            trial_id, o.id, o.function_activation_id, o.name, o.value,
-            o.type)))
-        with self.db_conn as db:
-            db.executemany(
-                """REPLACE INTO object_value(
-                    trial_id, id, function_activation_id, name, value, type)
-                VALUES (:0, :1, :2, :3, :4, :5)""",
-                generator(object_values, partial)
-            )
-
-    def store_file_accesses(self, trial_id, file_accesses, partial):
-        """ Store File Accesses """
-        generator = partial_save((lambda f: f.done), (lambda f: (
-            trial_id, f.id, f.name, f.mode, f.buffering, f.timestamp,
-            f.function_activation_id,f.content_hash_before,
-            f.content_hash_after)))
-        with self.db_conn as db:
-            db.executemany(
-                 """REPLACE INTO file_access(trial_id, id, name, mode,
-                    buffering, timestamp, function_activation_id,
-                    content_hash_before, content_hash_after)
-                VALUES (:0, :1, :2, :3, :4, :5, :6, :7, :8)""",
-                generator(file_accesses, partial)
-            )
-
-    def store_slicing_variables(self, trial_id, variables, partial):
-        """ Store Slicing Variables """
-        generator = partial_save((lambda v: False), (lambda v: (
-            trial_id, v.id, v.activation_id, v.name, v.line, v.value, v.time)))
-        with self.db_conn as db:
-            db.executemany(
-                 """REPLACE INTO slicing_variable(trial_id, id, activation_id,
-                    name, line, value, time)
-                VALUES (:0, :1, :2, :3, :4, :5, :6)""",
-                generator(variables, partial)
-            )
-
-    def store_slicing_dependencies(self, trial_id, dependencies, partial):
-        """ Store Slicing Dependencies """
-        generator = partial_save((lambda d: True), (lambda d: (
-            trial_id, d.id, d.dependent_activation, d.dependent,
-            d.supplier_activation, d.supplier)))
-        with self.db_conn as db:
-            db.executemany(
-                 """REPLACE INTO slicing_dependency(trial_id, id,
-                    dependent_activation_id, dependent,
-                    supplier_activation_id, supplier)
-                VALUES (:0, :1, :2, :3, :4, :5)""",
-                generator(dependencies, partial)
-            )
-
-    def store_slicing_usages(self, trial_id, usages, partial):
-        """ Store Slicing Usages """
-        generator = partial_save((lambda u: True), (lambda u: (
-            trial_id, u.id, u.activation_id, u.variable_id, u.name, u.line, u.ctx)))
-        with self.db_conn as db:
-            db.executemany(
-                 """REPLACE INTO slicing_usage(trial_id, id, activation_id,
-                    variable_id, name, line, context)
-                VALUES (:0, :1, :2, :3, :4, :5, :6)""",
-                generator(usages, partial)
-            )

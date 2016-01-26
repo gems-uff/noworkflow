@@ -32,7 +32,7 @@ class EnvironmentAttr(persistence.base):
     value = Column(Text)
     trial_id = Column(Integer, index=True)
 
-    # trial: Trial.environment_attrs backref
+    # _trial: Trial._environment_attrs backref
 
     @classmethod
     def to_prolog_fact(cls):

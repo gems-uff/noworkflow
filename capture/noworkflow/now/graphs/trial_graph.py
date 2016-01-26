@@ -330,7 +330,7 @@ def recursive_generate_graph(trial, single, depth):
     if not depth:
         return single
     children = []
-    for act in proxy_gen(single.activation.children):
+    for act in single.activation.children:
         child = Single(act)
         child.level = single.level + 1
         children.append(recursive_generate_graph(trial, child, depth - 1))
@@ -347,8 +347,7 @@ def recursive_generate_graph(trial, single, depth):
 
 def generate_graph(trial, depth=1000):
     """Return the activation graph"""
-    query = trial.activations.filter(Activation.id == 0).all()
-    activations = list(proxy_gen(query))
+    activations = list(trial.initial_activations)
     if not activations:
         tree = TreeElement(level=0)
         tree.trial_id = trial.id

@@ -39,8 +39,8 @@ class ObjectValue(persistence.base):
     value = Column(Text)
     type = Column(Text, CheckConstraint("type IN ('GLOBAL', 'ARGUMENT')"))
 
-    # trial: Trial.object_values backref
-    # activation: Ativation.object_values backref
+    # _trial: Trial._object_values backref
+    # _activation: Ativation._object_values backref
 
     @classmethod
     def to_prolog_fact(cls):
@@ -70,9 +70,6 @@ class ObjectValue(persistence.base):
             "{self.id}, {name}, {value}, {self.type})."
         ).format(e=self)
 
-    def __str__(self):
-        return "{0.name} = {0.value}".format(self)
-
     def __repr__(self):
         return (
             "ObjectValue({0.trial_id}, {0.function_activation_id}, {0.id}, "
@@ -85,3 +82,6 @@ class ObjectValueProxy(with_metaclass(set_proxy(ObjectValue))):
     Use it to have different objects with the same primary keys
     Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
     """
+
+    def __str__(self):
+        return "{0.name} = {0.value}".format(self)

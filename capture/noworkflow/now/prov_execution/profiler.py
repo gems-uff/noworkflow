@@ -13,16 +13,23 @@ import traceback
 import time
 from profile import Profile
 from datetime import datetime
-from .base import StoreOpenMixin
-from .data_objects import Activation, ObjectStore, FileAccess, ObjectValue
+from .base import ExecutionProvider
+from .data_objects import ActivationLW, ObjectValueLW, FileAccessLW
+from .data_objects import ObjectStore
 from .argument_captors import ProfilerArgumentCaptor
 from ..persistence import persistence
+from ..cross_version import builtins
+from ..models import Activation, ObjectValue, FileAccess
 
 
-class Profiler(StoreOpenMixin):
+class Profiler(ExecutionProvider):
 
     def __init__(self, *args):
         super(Profiler, self).__init__(*args)
+        # Open
+        persistence.std_open = open
+        builtins.open = self.new_open(open)
+
         # the number of user functions activated
         #   (starts with -1 to compensate the first call to the script itself)
         self.depth_user = -1
@@ -32,8 +39,9 @@ class Profiler(StoreOpenMixin):
         self.activation_stack = [None]
 
         # Store provenance
-        self.activations = ObjectStore(Activation)
-        self.object_values = ObjectStore(ObjectValue)
+        self.activations = ObjectStore(ActivationLW)
+        self.object_values = ObjectStore(ObjectValueLW)
+        self.file_accesses = ObjectStore(FileAccessLW)
 
         # Avoid using the same event for tracer and profiler
         self.last_event = None
@@ -77,11 +85,38 @@ class Profiler(StoreOpenMixin):
         astack = self.activation_stack
         if astack[-1] is not None:
             activation = self.activations[astack[-1]]
-            if ignore_open and len(astack) > 1 and activation['name'] == 'open':
+            if ignore_open and len(astack) > 1 and activation.name == 'open':
                 # get open's parent activation
                 return self.activations[astack[-2]]
             return activation
-        return Activation(-1, 'empty', 0, 0, -1)
+        return ActivationLW(-1, 'empty', 0, 0, -1)
+
+    def new_open(self, old_open):
+        """Wraps the open builtin function to register file access"""
+        def open(name, *args, **kwargs):  # @ReservedAssignment
+            if self.enabled:
+                # Create a file access object with default values
+                fid = self.file_accesses.add(name)
+                file_access = self.file_accesses[fid]
+
+                if os.path.exists(name):
+                    # Read previous content if file exists
+                    with old_open(name, 'rb') as f:
+                        file_access.content_hash_before = persistence.put(
+                            f.read())
+
+                # Update with the informed keyword arguments (mode / buffering)
+                file_access.update(kwargs)
+                # Update with the informed positional arguments
+                if len(args) > 0:
+                    file_access.mode = args[0]
+                elif len(args) > 1:
+                    file_access.buffering = args[1]
+
+                self.add_file_access(file_access)
+            return old_open(name, *args, **kwargs)
+
+        return open
 
     def add_file_access(self, file_access):
         # Wait activation that called open to finish
@@ -104,12 +139,12 @@ class Profiler(StoreOpenMixin):
     def close_activation(self, frame, event, arg, ccall=False):
         activation = self.current_activation
         self.activation_stack.pop()
-        activation['finish'] = datetime.now()
+        activation.finish = datetime.now()
         try:
             if event == 'return':
-                activation['return_value'] = self.serialize(arg)
+                activation.return_value = self.serialize(arg)
         except:  # ignoring any exception during capture
-            activation['return_value'] = None
+            activation.return_value = None
         # Update content of accessed files
         for file_access in activation.file_accesses:
             # Checks if file still exists
@@ -151,7 +186,7 @@ class Profiler(StoreOpenMixin):
             # Capturing globals
             functions = self.functions.get(co_filename)
             if functions:
-                function_def = functions.get(activation['name'])
+                function_def = functions.get(activation.name)
 
                 if function_def:
                     fglobals = frame.f_globals
@@ -160,7 +195,7 @@ class Profiler(StoreOpenMixin):
                             global_var, self.serialize(fglobals[global_var]),
                             'GLOBAL', aid)
 
-            activation['start'] = datetime.now()
+            activation.start = datetime.now()
             self.add_activation(aid)
 
     def trace_c_return(self, frame, event, arg):
@@ -215,13 +250,15 @@ class Profiler(StoreOpenMixin):
         if not partial:
             now = datetime.now()
             persistence.update_trial(tid, now, partial)
-        persistence.store_activations(tid, self.activations, partial)
-        persistence.store_object_values(tid, self.object_values, partial)
-        persistence.store_file_accesses(tid, self.file_accesses, partial)
+
+        Activation.fast_store(tid, self.activations, partial)
+        ObjectValue.fast_store(tid, self.object_values, partial)
+        FileAccess.fast_store(tid, self.file_accesses, partial)
 
     def tearup(self):
         sys.setprofile(self.tracer)
 
     def teardown(self):
+        builtins.open = persistence.std_open
         super(Profiler, self).teardown()
         sys.setprofile(self.default_profile)

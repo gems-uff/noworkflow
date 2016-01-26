@@ -8,7 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..models import Trial, Activation, proxy_gen
+from ..models import Trial, Activation
 from ..persistence import persistence
 from ..utils.functions import wrap
 from ..utils.io import print_msg
@@ -89,11 +89,9 @@ class Show(Command):
         if args.function_activations:
             print_msg("this trial has the following function activation "
                       "graphF:", True)
-            query = trial.activations.filter(Activation.caller_id == None)
-            for act in proxy_gen(query):
+            for act in trial.initial_activations:
                 print_function_activation(trial, act)
 
         if args.file_accesses:
             print_msg("this trial accessed the following files:", True)
-            print_trial_relationship(trial.environment_attrs, breakline="\n",
-                                     other="\n  ")
+            print_trial_relationship(trial.file_accesses)

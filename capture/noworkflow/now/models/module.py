@@ -28,7 +28,7 @@ class Module(persistence.base):
     path = Column(Text)
     code_hash = Column(Text)
 
-    # trials: Trial.modules backref
+    # _trials: Trial._modules backref
 
     def show(self, _print=lambda x: print(x)):
         """Show module"""

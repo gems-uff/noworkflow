@@ -32,7 +32,7 @@ class Head(persistence.base):
     script = Column(Text)
     trial_id = Column(Integer, index=True)
 
-    trial = relationship("Trial")
+    _trial = relationship("Trial")
 
     @classmethod
     def load_head(cls, script, session=None):
@@ -43,6 +43,9 @@ class Head(persistence.base):
             .filter((cls.script == script))
         ).first()
 
+    @property
+    def trial(self):
+        return self._trial
 
     @classmethod
     def to_prolog_fact(cls):

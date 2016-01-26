@@ -11,7 +11,6 @@ import sys
 from datetime import datetime
 from collections import defaultdict
 
-from .data_objects import ObjectStore, FileAccess
 from .argument_captors import ArgumentCaptor
 from ..persistence import persistence
 from ..cross_version import builtins
@@ -60,50 +59,3 @@ class ExecutionProvider(object):
 
     def tearup(self):
         pass
-
-
-class StoreOpenMixin(ExecutionProvider):
-
-    def __init__(self, *args):
-        super(StoreOpenMixin, self).__init__(*args)
-        persistence.std_open = open
-        builtins.open = self.new_open(open)
-
-        # Store provenance
-        self.file_accesses = ObjectStore(FileAccess)
-
-    def add_file_access(self, file_access):
-        'The class that uses this mixin must override this method'
-        pass
-
-    def new_open(self, old_open):
-        'Wraps the open buildin function to register file access'
-        def open(name, *args, **kwargs):  # @ReservedAssignment
-            if self.enabled:
-                # Create a file access object with default values
-                fid = self.file_accesses.add(name)
-                file_access = self.file_accesses[fid]
-
-                if os.path.exists(name):
-                    # Read previous content if file exists
-                    with old_open(name, 'rb') as f:
-                        file_access.content_hash_before = persistence.put(
-                            f.read())
-
-                # Update with the informed keyword arguments (mode / buffering)
-                file_access.update(kwargs)
-                # Update with the informed positional arguments
-                if len(args) > 0:
-                    file_access.mode = args[0]
-                elif len(args) > 1:
-                    file_access.buffering = args[1]
-
-                self.add_file_access(file_access)
-            return old_open(name, *args, **kwargs)
-
-        return open
-
-    def teardown(self):
-        'Restores default open'
-        builtins.open = persistence.std_open
-        super(StoreOpenMixin, self).teardown()

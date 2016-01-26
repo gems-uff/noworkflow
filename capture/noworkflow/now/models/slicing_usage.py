@@ -44,9 +44,9 @@ class SlicingUsage(persistence.base):
     line = Column(Integer)
     context = Column(Text, CheckConstraint("context IN ('Load', 'Del')"))
 
-    # trial: Trial.slicing_usages backref
-    # activation: Activation.slicing_usages backref
-    # variable: SlicinVariable.slicing_usages backref
+    # _trial: Trial._slicing_usages backref
+    # _activation: Activation._slicing_usages backref
+    # _variable: SlicinVariable._slicing_usages backref
 
     @classmethod
     def to_prolog_fact(cls):
@@ -72,9 +72,6 @@ class SlicingUsage(persistence.base):
             "{self.id}, {name}, {self.line})."
         ).format(**locals())
 
-    def __str__(self):
-        return "(L{0.line}, {0.name}, <{0.context}>)".format(self)
-
     def __repr__(self):
         return (
             "SlicingUsage({0.trial_id}, {0.activation_id}, "
@@ -88,3 +85,6 @@ class SlicingUsageProxy(with_metaclass(set_proxy(SlicingUsage))):
     Use it to have different objects with the same primary keys
     Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
     """
+
+    def __str__(self):
+        return "(L{0.line}, {0.name}, <{0.context}>)".format(self)

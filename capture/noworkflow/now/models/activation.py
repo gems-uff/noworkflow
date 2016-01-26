@@ -19,7 +19,7 @@ from ..persistence import persistence
 from ..cross_version import lmap, items
 from ..utils.functions import timestamp, prolog_repr
 
-from .base import set_proxy
+from .base import set_proxy, proxy_gen, proxy
 from .object_value import ObjectValue
 from .slicing_usage import SlicingUsage
 from .slicing_dependency import SlicingDependency
@@ -48,41 +48,81 @@ class Activation(persistence.base):
     finish = Column(TIMESTAMP)
     caller_id = Column(Integer, index=True)
 
-    _children = backref("children", order_by="Activation.start")
-    caller = relationship(
+    _children = backref("_children", order_by="Activation.start")
+    _caller = relationship(
         "Activation", remote_side=[trial_id, id],
         backref=_children, viewonly=True)
 
-    object_values = relationship(
-        "ObjectValue", lazy="dynamic", backref="activation")
-    file_accesses = relationship(
-        "FileAccess", lazy="dynamic", backref="activation")
+    _object_values = relationship(
+        "ObjectValue", lazy="dynamic", backref="_activation")
+    _file_accesses = relationship(
+        "FileAccess", lazy="dynamic", backref="_activation")
 
-    slicing_variables = relationship(
-        "SlicingVariable", backref="activation")
-    slicing_usages = relationship(
-        "SlicingUsage", backref="activation", viewonly=True)
-    slicing_dependents = relationship(
-        "SlicingDependency", backref="dependent_activation", viewonly=True,
+    _slicing_variables = relationship(
+        "SlicingVariable", backref="_activation")
+    _slicing_usages = relationship(
+        "SlicingUsage", backref="_activation", viewonly=True)
+    _slicing_dependents = relationship(
+        "SlicingDependency", backref="_dependent_activation", viewonly=True,
         primaryjoin=((id == SlicingDependency.dependent_activation_id) &
                      (trial_id == SlicingDependency.trial_id)))
-    slicing_suppliers = relationship(
-        "SlicingDependency", backref="supplier_activation", viewonly=True,
+    _slicing_suppliers = relationship(
+        "SlicingDependency", backref="_supplier_activation", viewonly=True,
         primaryjoin=((id == SlicingDependency.supplier_activation_id) &
                      (trial_id == SlicingDependency.trial_id)))
 
-    # trial: Trial.activations backref
-    # children: Activation.caller backref
+    # _trial: Trial._activations backref
+    # _children: Activation._caller backref
+
+    @property
+    def caller(self):
+        return proxy(self._caller)
+
+    @property
+    def _query_globals(self):
+        """Return activation globals as a SQLAlchemy query"""
+        return self._object_values.filter(ObjectValue.type == "GLOBAL")
 
     @property
     def globals(self):
-        """Return activation globals as a SQLAlchemy query"""
-        return self.object_values.filter(ObjectValue.type == "GLOBAL")
+        """Return activation globals"""
+        return proxy_gen(self._query_globals)
+
+    @property
+    def _query_arguments(self):
+        """Return activation arguments as a SQLAlchemy query"""
+        return self._object_values.filter(ObjectValue.type == "ARGUMENT")
 
     @property
     def arguments(self):
-        """Return activation arguments as a SQLAlchemy query"""
-        return self.object_values.filter(ObjectValue.type == "ARGUMENT")
+        """Return activation arguments"""
+        return proxy_gen(self._query_arguments)
+
+    @property
+    def variables(self):
+        """Return activation variables"""
+        return proxy_gen(self._slicing_variables)
+
+    @property
+    def variables_usages(self):
+        """Return activation variables usages"""
+        return proxy_gen(self._slicing_usages)
+
+    @property
+    def supplier_variables(self):
+        """Return variable dependencies
+        Supplier variable belongs to this activation"""
+        return proxy_gen(self._slicing_suppliers)
+
+    @property
+    def dependent_variables(self):
+        """Return variable dependencies
+        Dependent variable belongs to this activation"""
+        return proxy_gen(self._slicing_dependents)
+
+    @property
+    def children(self):
+        return proxy_gen(self._children)
 
     @property
     def duration(self):
@@ -127,22 +167,26 @@ class Activation(persistence.base):
         _print -- custom print function (default=print)
         """
         name = OrderedDict([("GLOBAL", "Globals"), ("ARGUMENT", "Arguments")])
-        for name, typ in items(name):
-            objects = self.object_values.filter(ObjectValue.type == typ)[:]
-            if objects:
-                _print("{name}: {values}".format(
-                    name=name, values=", ".join(map(str, objects))))
+        global_vars = list(self.globals)
+        if global_vars:
+            _print("{name}: {values}".format(
+                name="Globals", values=", ".join(map(str, global_vars))))
+
+        arg_vars = list(self.arguments)
+        if arg_vars:
+            _print("{name}: {values}".format(
+                name="Arguments", values=", ".join(map(str, arg_vars))))
 
         if self.return_value:
             _print("Return value: {ret}".format(ret=self.return_value))
 
-        self._show_slicing("Variables:", self.slicing_variables, _print)
-        self._show_slicing("Usages:", self.slicing_usages, _print)
-        self._show_slicing("Dependencies:", self.slicing_dependents, _print)
+        self._show_slicing("Variables:", self.variables, _print)
+        self._show_slicing("Usages:", self.variables_usages, _print)
+        self._show_slicing("Dependencies:", self.dependent_variables, _print)
 
     def _show_slicing(self, name, query, _print):
         """Show slicing objects"""
-        objects = query[:]
+        objects = list(query)
         if objects:
             _print(name)
             for obj in objects:
