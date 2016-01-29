@@ -8,12 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 from .provider import Provider, row_to_dict
 from .storage import StorageProvider
-from .trial import TrialProvider
-from .run import RunProvider
 
-
-class Persistence(TrialProvider,
-				  RunProvider, StorageProvider):
+class Persistence(StorageProvider):
 	pass
 
 persistence = Persistence()

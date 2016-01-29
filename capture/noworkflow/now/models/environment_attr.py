@@ -10,7 +10,8 @@ import textwrap
 
 from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
-from sqlalchemy import ForeignKeyConstraint, CheckConstraint
+from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from sqlalchemy import CheckConstraint
 
 from ..persistence import persistence
 from ..utils.functions import prolog_repr
@@ -24,13 +25,13 @@ class EnvironmentAttr(persistence.base):
     """
     __tablename__ = "environment_attr"
     __table_args__ = (
+        PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        {"sqlite_autoincrement": True},
     )
-    id = Column(Integer, primary_key=True)
+    trial_id = Column(Integer, index=True)
+    id = Column(Integer, index=True)
     name = Column(Text)
     value = Column(Text)
-    trial_id = Column(Integer, index=True)
 
     # _trial: Trial._environment_attrs backref
 

@@ -16,8 +16,6 @@ from functools import wraps, partial
 from opcode import HAVE_ARGUMENT, EXTENDED_ARG
 from inspect import ismethod
 
-from .data_objects import ObjectStore
-from .data_objects import VariableLW, VariableDependencyLW, VariableUsageLW
 from .profiler import Profiler
 from .argument_captors import SlicingArgumentCaptor
 from ..utils import io
@@ -25,6 +23,8 @@ from ..utils.io import print_fn_msg
 from ..utils.bytecode.f_trace import find_f_trace, get_f_trace
 from ..cross_version import items, IMMUTABLE
 from ..persistence import persistence
+from ..persistence.data_objects import ObjectStore, VariableUsageLW
+from ..persistence.data_objects import VariableLW, VariableDependencyLW
 from ..models import SlicingVariable, SlicingDependency, SlicingUsage
 
 

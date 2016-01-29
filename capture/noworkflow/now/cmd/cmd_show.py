@@ -14,7 +14,6 @@ from ..utils.functions import wrap
 from ..utils.io import print_msg
 
 from .command import Command
-from .types import trial_reference
 
 
 def print_trial_relationship(relation, breakline="\n\n", other="\n    "):
@@ -62,7 +61,6 @@ class Show(Command):
 
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
-        args.trial = trial_reference(args.trial)
         trial = Trial(trial_ref=args.trial)
 
         if not trial:

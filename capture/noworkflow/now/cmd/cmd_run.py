@@ -16,6 +16,7 @@ from .. import prov_execution
 from ..utils import io, metaprofiler
 from ..persistence import persistence
 from ..metadata import Metascript
+from ..models import Tag
 
 from .command import Command
 
@@ -50,11 +51,10 @@ class ScriptArgs(argparse.Action):
 def run(metascript):
     """Execute noWokflow to capture provenance from script"""
     try:
-        io.print_msg("setting up local provenance store")
-        persistence.connect(metascript.dir)
-
         metascript.create_trial()
-        metascript.auto_tag()
+        Tag.create_automatic_tag(
+            metascript.trial_id, metascript.code_hash, metascript.command
+        )
 
         io.print_msg("collecting definition provenance")
         prov_definition.collect_provenance(metascript)

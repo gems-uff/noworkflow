@@ -37,10 +37,9 @@ class Activation(persistence.base):
         ForeignKeyConstraint(["trial_id", "caller_id"],
                              ["function_activation.trial_id",
                               "function_activation.id"], ondelete="CASCADE"),
-        {"sqlite_autoincrement": True},
     )
     trial_id = Column(Integer, index=True)
-    id = Column(Integer)
+    id = Column(Integer, index=True)
     name = Column(Text)
     line = Column(Integer)
     return_value = Column(Text)

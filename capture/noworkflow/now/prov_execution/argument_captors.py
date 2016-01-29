@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import weakref
 import itertools
 import inspect
-from ..prov_definition import ClassDef, Assert, With, Decorator
+from ..prov_definition.utils import ClassDef, Assert, With, Decorator
 from ..cross_version import items
 
 WITHOUT_PARAMS = (ClassDef, Assert, With)

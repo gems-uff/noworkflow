@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
+import sys
 
 from future.utils import viewitems, viewkeys
 
@@ -16,7 +17,6 @@ from ..utils.io import print_msg
 
 from .cmd_show import print_trial_relationship
 from .command import Command
-from .types import trial_reference
 
 
 def print_diff_trials(diff):
@@ -74,14 +74,8 @@ class Diff(Command):
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
         args.trial = list(args.trial)
-        args.trial[0] = trial_reference(args.trial[0])
-        args.trial[1] = trial_reference(args.trial[1])
 
-        try:
-            diff = DiffModel(args.trial[0], args.trial[1])
-        except RuntimeError:
-            print_msg("inexistent trial id", True)
-            sys.exit(1)
+        diff = DiffModel(args.trial[0], args.trial[1])
 
         print_msg("trial diff:", True)
         print_diff_trials(diff)

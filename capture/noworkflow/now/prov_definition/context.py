@@ -1,30 +1,15 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
+"""Track namespace and context of AST node"""
 
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-class Context(object):
-
-    def __init__(self, name):
-        self.name = name
-        self.arguments = []
-        self.global_vars = []
-        self.calls = []
-
-    def to_tuple(self, code_hash):
-        return (
-            list(self.arguments),
-            list(self.global_vars),
-            set(self.calls),
-            code_hash,
-        )
-
-
 class NamedContext(object):
+    """Store variable visibility context"""
 
     def __init__(self):
         self._names = [set()]

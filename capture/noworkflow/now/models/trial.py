@@ -74,6 +74,8 @@ class Trial(persistence.base):
         backref="_trial")
     _file_accesses = relationship(
         "FileAccess", lazy="dynamic", backref="_trial", viewonly=True)
+    _objects = relationship(
+        "Object", lazy="dynamic", backref="_trial", viewonly=True)
     _object_values = relationship(
         "ObjectValue", lazy="dynamic", backref="_trial", viewonly=True)
 
@@ -167,7 +169,7 @@ class Trial(persistence.base):
         """
         session = session or persistence.session
         if not hasattr(cls, '_last_trial_id_without_inheritance'):
-            ttrial = Trial.__table__
+            ttrial = cls.__table__
             _query = (
                 select([ttrial.c.id]).where(ttrial.c.start.in_(
                     select([func.max(ttrial.c.start)])
@@ -181,6 +183,66 @@ class Trial(persistence.base):
         if not an_id:
             raise TypeError
         return an_id[0]
+
+    @classmethod
+    def fast_update(cls, trial_id, finish, session=None):
+        """Update finish time of trial
+
+        Use core sqlalchemy
+
+        Arguments:
+        trial_id -- trial id
+        finish -- finish time as a datetime object
+
+
+        Keyword arguments:
+        session -- specify session for loading (default=persistence.session)
+        """
+        session = session or persistence.session
+        ttrial = cls.__table__
+        session.execute(ttrial.update()
+            .values(finish=finish)
+            .where(ttrial.c.id == trial_id)
+        )
+        session.commit()
+
+    @classmethod
+    def fast_store(cls, start, script, code_hash, arguments, bypass_modules,
+                   command, run=True, session=None):
+        """Create trial
+
+        Use core sqlalchemy
+
+        Arguments:
+        start -- trial start time
+        script -- script name
+        code_hash -- script hash code
+        arguments -- trial arguments
+        bypass_modules -- whether it captured modules or not
+        command -- the full command line with noWorkflow parametes
+
+        Keyword arguments:
+        run -- trial created by the run command
+        session -- specify session for loading (default=persistence.session)
+        """
+        session = session or persistence.session
+
+        # ToDo: use core query
+        parent = cls.load_parent(script, parent_required=True)
+        parent_id = parent.id if parent else None
+
+        inherited_id = None
+        if bypass_modules:
+            inherited_id = cls.fast_last_trial_id_without_inheritance()
+        ttrial = cls.__table__
+        result = session.execute(
+            ttrial.insert(),
+            {"start": start, "script": script, "code_hash": code_hash,
+             "arguments": arguments, "command": command, "run": run,
+             "inherited_id": inherited_id, "parent_id": parent_id})
+        tid = result.lastrowid
+        session.commit()
+        return tid
 
     def create_head(self):
         """Create head for this trial"""
@@ -290,6 +352,10 @@ class Trial(persistence.base):
         It should return the script activation"""
         return proxy_gen(self._query_initial_activations)
 
+    @property
+    def tags(self):
+        """Return trial tags"""
+        return proxy_gen(self._tags)
 
     @classmethod
     def to_prolog_fact(cls):

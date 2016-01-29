@@ -12,9 +12,12 @@ import sys
 
 from datetime import datetime
 from .persistence import persistence, get_serialize
-from .cmd.types import trial_reference
+from .persistence.data_objects import ObjectStore
+from .persistence.data_objects import DefinitionLW, ObjectLW
+from .persistence.data_objects import EnvironmentAttrLW, ModuleLW, DependencyLW
 from .prov_definition.definition import Definition
-from .utils.io import print_msg
+from .models import Tag, Trial
+from .utils import io
 
 
 LAST_TRIAL = ".last_trial"
@@ -32,6 +35,16 @@ CONTEXTS = {
 class Metascript(object):
 
     def __init__(self):
+        # Storage
+        self.definitions_store = ObjectStore(DefinitionLW)
+        self.objects_store = ObjectStore(ObjectLW)
+
+        self.environment_attrs_store = ObjectStore(EnvironmentAttrLW)
+        self.modules_store = ObjectStore(ModuleLW)
+        self.dependencies_store = ObjectStore(DependencyLW)
+
+
+
         # Trial id read from Database : int
         self.trial_id = None
         # Trial name : str
@@ -44,8 +57,8 @@ class Metascript(object):
         self.dir = None
         # Main path : str
         self._path = None
-        # List of paths considered : set(str)
-        self.paths = set(str())
+        # Map of paths considered to their def : dict(str -> DefinitionLW)
+        self.paths = {}
         # Main namespace : dict
         self.namespace = None
         # Argv
@@ -94,26 +107,36 @@ class Metascript(object):
 
     @property
     def path(self):
-        """ Return path """
+        """Return path"""
         return self._path
+
+    @property
+    def code_hash(self):
+        return self.paths[self.path].code_hash
 
     @path.setter
     def path(self, path):
-        """ Set _path.
-            Remove old path from paths list and add new one to it """
+        """Set _path.
+        Remove old path from paths list and add new one to it
+        """
+
         if self._path:
-            self.paths.remove(self._path)
+            self.definitions_store.delete(self.paths[self._path])
+            del self.paths[self._path]
         self._path = path
         if not path:
             return
-        with open(path, "rb") as script_file:
-            self.code = script_file.read()
-        self.paths.add(path)
-        self.dir = self.dir or os.path.dirname(path)
+        self.add_path(path, set_code=True)
 
-    def add_path(self, path):
-        """ Add path to paths list """
-        self.paths.add(path)
+    def add_path(self, path, set_code=False):
+        """Add path to paths list"""
+        with open(path, "rb") as script_file:
+            code = script_file.read()
+            if set_code:
+                self.code = code
+            self.paths[path] = self.definitions_store.dry_add(
+                "", path, code, "FILE", None)
+
 
     @property
     def context(self):
@@ -154,12 +177,13 @@ class Metascript(object):
         if not cmd:
             cmd = ' '.join(sys.argv[1:])
         self.command = cmd
-        self.dir = args.dir
+        self.dir = args.dir or os.path.dirname(args.script)
         self.argv = args.argv
-        self.path = args.script
         self.should_create_last_file = args.create_last
         self.name = args.name or os.path.basename(args.argv[0])
-        return self._read_args(args)
+        self._read_args(args)
+        self.path = args.script
+        return self
 
     def read_ipython_args(self, args, directory, filename, argv, create_last,
                           cmd=None):
@@ -167,12 +191,13 @@ class Metascript(object):
         if not cmd:
             cmd = 'run ' + ' '.join(argv)
         self.command = cmd
-        self.dir = directory
+        self.dir = directory or os.path.dirname(filename)
         self.argv = argv
-        self.path = filename
         self.should_create_last_file = create_last
         self.name = args.name or os.path.basename(filename)
-        return self._read_args(args)
+        self._read_args(args)
+        self.path = filename
+        return self
 
     def _read_args(self, args):
         """ Read cmd line argument object """
@@ -190,6 +215,9 @@ class Metascript(object):
         self.context = args.context
         self.save_frequency = args.save_frequency
         self.call_storage_frequency = args.call_storage_frequency
+
+        io.print_msg("setting up local provenance store")
+        persistence.connect(self.dir)
         return self
 
     def read_restore_args(self, args):
@@ -197,7 +225,6 @@ class Metascript(object):
         self.bypass_modules = args.bypass_modules
         self.command = ' '.join(sys.argv[1:])
 
-        self.trial_id = trial_reference(args.trial)
         self.local = args.local
         self.input = args.input
         self.dir = args.dir
@@ -216,18 +243,15 @@ class Metascript(object):
             args = " ".join(sys.argv[1:])
         now = datetime.now()
         try:
-            self.trial_id = persistence.store_trial(
-                now, self.name, self.code, args,
+            self.trial_id = Trial.fast_store(
+                now, self.name, self.code_hash, args,
                 self.bypass_modules, self.command, run=run)
         except TypeError as e:
             if self.bypass_modules:
-                print_msg("not able to bypass modules check because no "
+                io.print_msg("not able to bypass modules check because no "
                           "previous trial was found", True)
-                print_msg("aborting execution", True)
+                io.print_msg("aborting execution", True)
             else:
                 raise e
 
             sys.exit(1)
-
-    def auto_tag(self):
-        persistence.auto_tag(self.trial_id, self.code, self.command)

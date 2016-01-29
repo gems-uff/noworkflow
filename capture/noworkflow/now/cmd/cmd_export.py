@@ -15,7 +15,6 @@ from ..models import Trial
 from ..persistence import persistence
 
 from .command import Command
-from .types import trial_reference
 
 
 def export_type(string):
@@ -24,12 +23,12 @@ def export_type(string):
         splitted = string.split(":")
         if len(splitted) < 3:
             raise argparse.ArgumentTypeError("you must diff two trials")
-        trial_reference(splitted[1])
-        trial_reference(splitted[2])
+        Trial(trial_ref=splitted[1])
+        Trial(trial_ref=splitted[2])
         return splitted
     elif string in ("history", "current"):
         return string
-    trial_reference(string)
+    Trial(trial_ref=string)
     return string
 
 

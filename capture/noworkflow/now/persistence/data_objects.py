@@ -1,5 +1,5 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -8,14 +8,25 @@ from __future__ import (absolute_import, print_function,
 
 from datetime import datetime
 from collections import namedtuple
+
+from . import persistence
+
 from ..cross_version import items, values
 
+
 class ObjectStore(object):
+    """Temporary storage for LW objects"""
 
     def __init__(self, cls):
+        """Initialize Object Store
+
+
+        Arguments:
+        cls -- LW object class
+        """
         self.cls = cls
         self.store = {}
-        self.id = -1
+        self.id = 0
 
     def __getitem__(self, index):
         return self.store[index]
@@ -24,32 +35,51 @@ class ObjectStore(object):
         self.store[index] = None
 
     def add(self, *args):
+        """Add object using its __init__ arguments and return id"""
         self.id += 1
         self.store[self.id] = self.cls(self.id, *args)
         return self.id
 
+    def add_object(self, *args):
+        """Add object using its __init__ arguments and return object"""
+        self.id += 1
+        self.store[self.id] = self.cls(self.id, *args)
+        return self.store[self.id]
+
+    def dry_add(self, *args):
+        """Return object that would be added by add_object
+        Do not add it to storage
+        """
+        return self.cls(-1, *args)
+
     def remove(self, value):
+        """Remove object from storage"""
         for k, v in items(self.store):
             if v == value:
                 del self.store[k]
 
     def __iter__(self):
+        """Iterate on objects, and not ids"""
         return values(self.store)
 
     def items(self):
+        """Iterate on both ids and objects"""
         for k, v in items(self.store):
             yield k, v
 
     def iteritems(self):
+        """Iterate on both ids and objects"""
         for k, v in items(self.store):
             yield k, v
 
     def values(self):
+        """Iterate on objects if they exist"""
         for v in values(self.store):
             if v is not None:
                 yield v
 
     def clear(self):
+        """Remove deleted objects from storage"""
         self.store = {k:v for k, v in items(self.store) if v}
 
     def generator(self, trial_id, partial=False):
@@ -64,6 +94,7 @@ class ObjectStore(object):
 
 
 def define_attrs(required, extra=[]):
+    """Create __slots__ by adding extra attributes to required ones"""
     slots = tuple(required + extra)
     attributes = tuple(required)
 
@@ -84,6 +115,146 @@ class BaseLW:
             return None
         return getattr(self, key)
 
+# Deployment
+
+class ModuleLW(BaseLW):
+    """Module lightweight object
+    There are type definitions on data_objects.pxd
+    """
+
+    __slots__, attributes = define_attrs(
+        ["id", "name", "path", "version", "code_hash"],
+        ["trial_id", "attributes"]
+    )
+    special = set()
+
+    def __init__(self, oid, name, version, path, code_hash):
+        self.trial_id = -1
+        self.id = oid
+        self.name = name
+        self.version = version
+        self.path = path
+        self.code_hash = code_hash
+
+    def is_complete(self):
+        """Module can always be removed from object store"""
+        return True
+
+    def __repr__(self):
+        return ("Module(id={}, name={}, version={})").format(
+            self.id, self.name, self.version)
+
+class DependencyLW(BaseLW):
+    """Dependency lightweight object
+    There are type definitions on data_objects.pxd
+    """
+
+    __slots__, attributes = define_attrs(
+        ["trial_id", "module_id"], ["id"]
+    )
+    special = set()
+
+    def __init__(self, oid, module_id):
+        self.trial_id = -1
+        self.id = oid
+        self.module_id = module_id
+
+    def is_complete(self):
+        """Dependency can always be removed from object store"""
+        return True
+
+    def __repr__(self):
+        return ("Dependency(module_id={})").format(self.module_id)
+
+class EnvironmentAttrLW(BaseLW):
+    """EnvironmentAttr lightweight object
+    There are type definitions on data_objects.pxd
+    """
+
+    __slots__, attributes = define_attrs(
+        ["trial_id", "id", "name", "value"]
+    )
+    special = set()
+
+    def __init__(self, oid, name, value):
+        self.trial_id = -1
+        self.id = oid
+        self.name = name
+        self.value = value
+
+    def is_complete(self):
+        """EnvironmentAttr can always be removed from object store"""
+        return True
+
+    def __repr__(self):
+        return ("EnvironmentAttr(id={}, name={}, value={})").format(
+            self.id, self.name, self.value)
+
+
+# Definition
+
+class DefinitionLW(BaseLW):
+    """Definition lightweight object
+    May represent files, classes and function definitions
+    There are type definitions on data_objects.pxd
+    """
+
+    __slots__, attributes = define_attrs(
+        ["id", "name", "code_hash", "trial_id"],
+        ["type", "code", "parent", "attributes", "namespace"],
+    )
+    special = set()
+
+    def __init__(self, aid, previous_namespace, name, code, dtype, parent):
+        self.trial_id = -1
+        self.id = aid
+        self.namespace = (
+            previous_namespace +
+            ('.' if previous_namespace else "") +
+            name
+        )
+        # ToDo: save parent instead of full namespace
+        self.name = self.namespace
+        self.parent = (parent if parent is not None else -1)
+        self.type = dtype
+        self.code = code
+        self.code_hash = persistence.put(code)
+
+    def is_complete(self):
+        """DefinitionLW can always be removed from object store"""
+        return True
+
+    def __repr__(self):
+        return ("DefinitionLW(id={}, name={}, type={})").format(
+            self.id, self.name, self.type)
+
+
+class ObjectLW(BaseLW):
+    """Object lightweight object
+    There are type definitions on data_objects.pxd
+    """
+
+    __slots__, attributes = define_attrs(
+        ["trial_id", "id", "name", "type", "function_def_id"]
+    )
+    special = set()
+
+    def __init__(self, oid, name, otype, function_def_id):
+        self.trial_id = -1
+        self.id = oid
+        self.name = name
+        self.type = otype
+        self.function_def_id = function_def_id
+
+    def is_complete(self):
+        """Object can always be removed from object store"""
+        return True
+
+    def __repr__(self):
+        return ("Object(id={}, name={}, type={}, "
+            "function_def={})").format(self.id, self.name,
+            self.type, self.function_def_id)
+
 # Profiler
 
 class ActivationLW(BaseLW):
@@ -92,11 +263,11 @@ class ActivationLW(BaseLW):
     """
 
     __slots__, attributes = define_attrs(
-        ['id', 'name', 'line', 'return_value', 'start', 'finish', 'caller_id',
-         'trial_id'], ['file_accesses', 'context', 'slice_stack', 'lasti',
-         'args', 'kwargs', 'starargs', 'attributes']
+        ["id", "name", "line", "return_value", "start", "finish", "caller_id",
+         "trial_id"], ["file_accesses", "context", "slice_stack", "lasti",
+         "args", "kwargs", "starargs", "attributes"]
     )
-    special = {'caller_id'}
+    special = {"caller_id"}
 
     def __init__(self, aid, name, line, lasti, caller_id):
         self.trial_id = aid
@@ -137,7 +308,7 @@ class ObjectValueLW(BaseLW):
     """
 
     __slots__, attributes = define_attrs(
-        ['trial_id', 'id', 'name', 'value', 'type', 'function_activation_id']
+        ["trial_id", "id", "name", "value", "type", "function_activation_id"]
     )
     special = set()
 
@@ -165,18 +336,18 @@ class FileAccessLW(BaseLW):
     """
 
     __slots__, attributes = define_attrs(
-        ['id', 'name', 'mode', 'buffering', 'timestamp', 'trial_id',
-         'content_hash_before', 'content_hash_after','function_activation_id'],
-        ['done', 'attributes']
+        ["id", "name", "mode", "buffering", "timestamp", "trial_id",
+         "content_hash_before", "content_hash_after","function_activation_id"],
+        ["done", "attributes"]
     )
-    special = {'function_activation_id'}
+    special = {"function_activation_id"}
 
     def __init__(self, fid, name):
         self.trial_id = -1
         self.id = fid
         self.name = name
-        self.mode = 'r'
-        self.buffering = 'default'
+        self.mode = "r"
+        self.buffering = "default"
         self.content_hash_before = None
         self.content_hash_after = None
         self.timestamp = datetime.now()
@@ -199,7 +370,7 @@ class FileAccessLW(BaseLW):
 
 class VariableLW(BaseLW):
     __slots__, attributes = define_attrs(
-        ['id', 'activation_id', 'name', 'line', 'value', 'time', 'trial_id']
+        ["id", "activation_id", "name", "line", "value", "time", "trial_id"]
     )
     special = set()
 
@@ -223,8 +394,8 @@ class VariableLW(BaseLW):
 
 class VariableDependencyLW(BaseLW):
     __slots__, attributes = define_attrs(
-        ['id', 'dependent_activation', 'dependent_id',
-         'supplier_activation', 'supplier_id', 'trial_id']
+        ["id", "dependent_activation", "dependent_id",
+         "supplier_activation", "supplier_id", "trial_id"]
     )
     special = set()
 
@@ -249,8 +420,8 @@ class VariableDependencyLW(BaseLW):
 class VariableUsageLW(BaseLW):
 
     __slots__, attributes = define_attrs(
-        ['id', 'activation_id', 'variable_id',
-         'name', 'line', 'ctx', 'trial_id']
+        ["id", "activation_id", "variable_id",
+         "name", "line", "ctx", "trial_id"]
     )
     special = set()
 

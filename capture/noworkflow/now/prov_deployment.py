@@ -15,55 +15,60 @@ import sys
 import pkg_resources
 
 from .persistence import persistence
+from .models import EnvironmentAttr, Module, Dependency
 from .utils import print_msg, redirect_output, meta_profiler
 from .cross_version import string, default_string, items
 
 
 @meta_profiler("environment")
-def collect_environment_provenance():
+def collect_environment_provenance(metascript):
     """Collect enviroment variables and operating system characteristics
     Return dict
     """
-    environment = {}
-    e = environment
+    attrs = metascript.environment_attrs_store
 
-    environment['OS_NAME'] = platform.system()
+    attrs.add("OS_NAME", platform.system())
     # Unix environment
     try:
         for name in os.sysconf_names:
             try:
-                environment[name] = os.sysconf(name)
+                attrs.add(name, os.sysconf(name))
             except ValueError:
                 pass
         for name in os.confstr_names:
-            environment[name] = os.confstr(name)
-        environment['USER'] = os.getlogin()
-        e['OS_NAME'], _, e['OS_RELEASE'], e['OS_VERSION'], _ = os.uname()
+            attrs.add(name, os.confstr(name))
+        attrs.add("USER", os.getlogin())
     except:
         pass
-    # Windows environment
-    if environment['OS_NAME'] == 'Windows':
-        e['OS_RELEASE'], e['OS_VERSION'], _, _ = platform.win32_ver()
+
+    os_name, _, os_release, os_version, _, _ = platform.uname()
+    attrs.add("OS_NAME", os_name)
+    attrs.add("OS_RELEASE", os_release)
+    attrs.add("OS_VERSION", os_version)
 
     # Both Unix and Windows
-    environment.update(os.environ)
-    environment['PWD'] = os.getcwd()
-    environment['PID'] = os.getpid()
-    environment['HOSTNAME'] = socket.gethostname()
-    environment['ARCH'] = platform.architecture()[0]
-    environment['PROCESSOR'] = platform.processor()
-    environment['PYTHON_IMPLEMENTATION'] = platform.python_implementation()
-    environment['PYTHON_VERSION'] = platform.python_version()
-    return environment
+    for attr, value in items(os.environ):
+        attrs.add(attr, value)
+
+    attrs.add("PWD", os.getcwd())
+    attrs.add("PID", os.getpid())
+    attrs.add("HOSTNAME", socket.gethostname())
+    attrs.add("ARCH", platform.architecture()[0])
+    attrs.add("PROCESSOR", platform.processor())
+    attrs.add("PYTHON_IMPLEMENTATION", platform.python_implementation())
+    attrs.add("PYTHON_VERSION", platform.python_version())
+
 
 @meta_profiler("modules")
-def collect_modules_provenance(modules):
+def collect_modules_provenance(metascript, python_modules):
     """Return a set of module dependencies in the form:
         (name, version, path, code_hash)
     Store module provenance in the persistence database
     """
-    dependencies = []
-    for name, module in items(modules):
+    modules = metascript.modules_store
+    dependencies = metascript.dependencies_store
+    modules.id = Module.id_seq()
+    for name, module in items(python_modules):
         if name != '__main__':
             version = get_version(name)
             path = module.__file__
@@ -72,9 +77,9 @@ def collect_modules_provenance(modules):
             else:
                 with open(path, 'rb') as f:
                     code_hash = persistence.put(f.read())
-            dependencies.append((name, version, path, code_hash))
-    return sorted(dependencies)
-
+            info = (name, version, path, code_hash)
+            mid = Module.fast_load_module_id(*info) or modules.add(*info)
+            dependencies.add(mid)
 
 def get_version(module_name):
     """Get module version"""
@@ -117,8 +122,9 @@ def collect_provenance(metascript):
     metascript should have 'trial_id' and 'path'
     """
     print_msg('  registering environment attributes')
-    environment = collect_environment_provenance()
-    persistence.store_environment(metascript['trial_id'], environment)
+    collect_environment_provenance(metascript)
+    tid = metascript.trial_id
+    EnvironmentAttr.fast_store(tid, metascript.environment_attrs_store, True)
 
     if metascript.bypass_modules:
         print_msg('  using previously detected module dependencies '
@@ -133,7 +139,7 @@ def collect_provenance(metascript):
             for i in range(max_atemps):
                 try:
                     finder = modulefinder.ModuleFinder(excludes=excludes)
-                    finder.run_script(metascript['path'])
+                    finder.run_script(metascript.path)
                     break
                 except SyntaxError as e:
                     name = e.filename.split('site-packages/')[-1]
@@ -150,5 +156,7 @@ def collect_provenance(metascript):
             print_msg('  registering provenance from {} modules'.format(
                 len(finder.modules) - 1))
 
-            modules = collect_modules_provenance(finder.modules)
-        persistence.store_dependencies(metascript['trial_id'], modules)
+            collect_modules_provenance(metascript, finder.modules)
+
+        Module.fast_store(tid, metascript.modules_store, True)
+        Dependency.fast_store(tid, metascript.dependencies_store, True)

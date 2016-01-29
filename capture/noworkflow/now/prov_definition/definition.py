@@ -1,14 +1,28 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Definition container. Handle multiple files/visitors """
+"""Definition container. Handle multiple files/visitors"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
+import pyposast
+
+from collections import defaultdict
+
+from future.builtins import map as cvmap
+from future.utils import viewitems
+
+from .slicing_visitor import SlicingVisitor
+
+from ..persistence import persistence
+from ..utils import print_msg
+from ..models import FunctionDef, Object
+
+
 class Definition(object):
-    """ Definition Class """
+    """Definition Class"""
     # pylint: disable=R0902
     # pylint: disable=R0903
 
@@ -33,10 +47,49 @@ class Definition(object):
         # Set of GET_ITER and FOR_ITER lasti by line
         self.iters = {}
         # Function definitions
-        self.functions = {}
+        self.function_globals = defaultdict(lambda: defaultdict(list))
 
-    def add_visitor(self, visitor):
-        """ Add visitor data to Definition object """
+
+    def collect_provenance(self, metascript):
+        """Collect definition provenance from scripts in metascript.paths"""
+        print_msg("  registering user-defined functions")
+        for path, file_definition in viewitems(metascript.paths):
+            visitor = self._visit_ast(metascript, file_definition)
+            if visitor:
+                if metascript.disasm:
+                    print("--------------------------------------------------")
+                    print(path)
+                    print("--------------------------------------------------")
+                    print("\n".join(cvmap(repr, visitor.disasm)))
+                    print("--------------------------------------------------")
+                self._add_visitor(visitor)
+        self.store_provenance(metascript)
+
+    def store_provenance(self, metascript):
+        tid = metascript.trial_id
+        # Remove after save
+        partial = True
+        FunctionDef.fast_store(tid, metascript.definitions_store, partial)
+        Object.fast_store(tid, metascript.objects_store, partial)
+
+    def _visit_ast(self, metascript, file_definition):
+        """Return a visitor that visited the tree"""
+        try:
+            tree = pyposast.parse(file_definition.code, file_definition.name)
+        except SyntaxError:
+            print_msg("Syntax error on file {}. Skipping file.".format(
+                file_definition.name))
+            return None
+
+        visitor = SlicingVisitor(metascript, file_definition)
+        visitor.result = visitor.visit(tree)
+        visitor.extract_disasm()
+        visitor.teardown()
+        return visitor
+
+
+    def _add_visitor(self, visitor):
+        """Add visitor data to Definition object"""
         self.paths.append(visitor.path)
         self.line_dependencies[visitor.path] = visitor.dependencies
         self.line_gen_dependencies[visitor.path] = visitor.gen_dependencies
@@ -47,4 +100,4 @@ class Definition(object):
         self.with_exit_by_lasti[visitor.path] = visitor.with_exit_by_lasti
         self.imports[visitor.path] = visitor.imports
         self.iters[visitor.path] = visitor.iters
-        self.functions[visitor.path] = visitor.functions
+        self.function_globals[visitor.path] = visitor.function_globals

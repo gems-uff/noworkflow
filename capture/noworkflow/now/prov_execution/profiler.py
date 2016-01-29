@@ -14,12 +14,12 @@ import time
 from profile import Profile
 from datetime import datetime
 from .base import ExecutionProvider
-from .data_objects import ActivationLW, ObjectValueLW, FileAccessLW
-from .data_objects import ObjectStore
 from .argument_captors import ProfilerArgumentCaptor
 from ..persistence import persistence
+from ..persistence.data_objects import ActivationLW, ObjectValueLW
+from ..persistence.data_objects import ObjectStore, FileAccessLW
 from ..cross_version import builtins
-from ..models import Activation, ObjectValue, FileAccess
+from ..models import Activation, ObjectValue, FileAccess, Trial
 
 
 class Profiler(ExecutionProvider):
@@ -47,7 +47,7 @@ class Profiler(ExecutionProvider):
         self.last_event = None
 
         self.definition = self.metascript.definition
-        self.functions = self.definition.functions
+        self.function_globals = self.definition.function_globals
 
         self.event_map['c_call'] = self.trace_c_call
         self.event_map['call'] = self.trace_call
@@ -184,16 +184,12 @@ class Profiler(ExecutionProvider):
             self.argument_captor.capture(frame, activation)
 
             # Capturing globals
-            functions = self.functions.get(co_filename)
-            if functions:
-                function_def = functions.get(activation.name)
-
-                if function_def:
-                    fglobals = frame.f_globals
-                    for global_var in function_def[1]:
-                        self.object_values.add(
-                            global_var, self.serialize(fglobals[global_var]),
-                            'GLOBAL', aid)
+            def_globals = self.function_globals[co_filename][activation.name]
+            fglobals = frame.f_globals
+            for global_var in def_globals:
+                self.object_values.add(
+                    global_var, self.serialize(fglobals[global_var]),
+                    'GLOBAL', aid)
 
             activation.start = datetime.now()
             self.add_activation(aid)
@@ -249,7 +245,7 @@ class Profiler(ExecutionProvider):
         tid = self.trial_id
         if not partial:
             now = datetime.now()
-            persistence.update_trial(tid, now, partial)
+            Trial.fast_update(tid, now)
 
         Activation.fast_store(tid, self.activations, partial)
         ObjectValue.fast_store(tid, self.object_values, partial)

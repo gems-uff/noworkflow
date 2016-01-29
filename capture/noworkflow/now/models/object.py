@@ -10,7 +10,8 @@ import textwrap
 
 from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
-from sqlalchemy import ForeignKeyConstraint, CheckConstraint
+from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from sqlalchemy import CheckConstraint
 
 from ..persistence import persistence
 from ..utils.functions import prolog_repr
@@ -25,17 +26,21 @@ class Object(persistence.base):
     """
     __tablename__ = "object"
     __table_args__ = (
-        ForeignKeyConstraint(["function_def_id"], ["function_def.id"],
-                             ondelete="CASCADE"),
-        {"sqlite_autoincrement": True},
+        PrimaryKeyConstraint("trial_id", "function_def_id", "id"),
+        ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id", "function_def_id"],
+                             ["function_def.trial_id",
+                              "function_def.id"], ondelete="CASCADE"),
     )
+    trial_id = Column(Integer, index=True)
     function_def_id = Column(Integer, index=True)
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, index=True)
     name = Column(Text)
     type = Column(
         Text,
         CheckConstraint("type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION_CALL')"))
 
+    # _trial: Trial._objects backref
     # _function_def: FunctionDef._objects backref
 
     @classmethod

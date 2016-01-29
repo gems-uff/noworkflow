@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from future.utils import with_metaclass
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, Text, select, bindparam, func
 
 from ..persistence import persistence
 
@@ -26,9 +26,52 @@ class Module(persistence.base):
     name = Column(Text)
     version = Column(Text)
     path = Column(Text)
-    code_hash = Column(Text)
+    code_hash = Column(Text, index=True)
 
     # _trials: Trial._modules backref
+
+    @classmethod
+    def id_seq(cls, session=None):
+        """Load next module id
+
+        Keyword arguments:
+        session -- specify session for loading (default=persistence.session)
+        """
+        session = session or persistence.session
+        an_id = session.execute(
+            """SELECT seq
+               FROM SQLITE_SEQUENCE
+               WHERE name='module'"""
+        ).fetchone()
+        if an_id:
+            return an_id[0]
+        return 0
+
+    @classmethod
+    def fast_load_module_id(cls, name, version, path, code_hash, session=None):
+        """Load module id by name, version and code_hash
+
+        Compile SQLAlchemy core query into string for optimization
+
+        Keyword arguments:
+        session -- specify session for loading (default=persistence.session)
+        """
+        session = session or persistence.session
+        if not hasattr(cls, '_load_or_create_module_id'):
+            tmodule = cls.__table__
+            _query = select([tmodule.c.id]).where(
+                (tmodule.c.name == bindparam("name")) &
+                ((tmodule.c.version == None) |
+                    (tmodule.c.version == bindparam("version"))) &
+                ((tmodule.c.code_hash == None) |
+                    (tmodule.c.code_hash == bindparam("code_hash")))
+            )
+            cls._load_or_create_module_id = str(_query)
+
+        info = dict(name=name, path=path, version=version, code_hash=code_hash)
+        an_id = session.execute(cls._load_or_create_module_id, info).fetchone()
+        if an_id:
+            return an_id[0]
 
     def show(self, _print=lambda x: print(x)):
         """Show module"""

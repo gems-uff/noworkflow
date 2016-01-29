@@ -1,13 +1,24 @@
 cdef class BaseLW:
     pass
 
+cdef class EnvironmentAttrLW(BaseLW):
+    cdef public int trial_id, id;
+    cdef public str name, value;
+
+cdef class DefinitionLW(BaseLW):
+    cdef public int trial_id, id, parent;
+    cdef public str namespace, name, type, code, code_hash;
+
+cdef class ObjectLW(BaseLW):
+    cdef public int trial_id, id, function_def_id;
+    cdef public str name, type;
+
 cdef class ActivationLW(BaseLW):
     cdef public int trial_id, id, line, caller_id, lasti;
     cdef public str name, return_value;
     cdef public object start, finish;
     cdef public list file_accesses, slice_stack, args, kwargs, starargs;
     cdef public dict context;
-
 
 cdef class ObjectValueLW(BaseLW):
     cdef public int trial_id, id, function_activation_id;

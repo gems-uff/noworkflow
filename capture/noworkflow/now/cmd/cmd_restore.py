@@ -19,7 +19,6 @@ from ..utils.io import print_msg
 from ..metadata import Metascript
 
 from .command import Command
-from .types import trial_reference
 
 
 class Restore(Command):
@@ -78,8 +77,9 @@ class Restore(Command):
     def execute(self, args):
         persistence.connect_existing(args.dir or os.getcwd())
         metascript = Metascript().read_restore_args(args)
-        trial = metascript.trial = Trial(trial_ref=metascript.trial_id,
+        trial = metascript.trial = Trial(trial_ref=args.trial,
                                          trial_script=metascript.name)
+        metascript.trial_id = trial.id
 
         metascript.path = trial.script
         metascript.name = trial.script
