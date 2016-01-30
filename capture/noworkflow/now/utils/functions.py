@@ -45,6 +45,9 @@ def resource_is_dir(path):
     """Access resource directory via setuptools"""
     return resource_isdir(MODULE, path)
 
+def version():
+    return resource("../resources/version.txt", encoding="utf-8").strip()
+
 
 def abstract():
     """Raise abstract Exception"""

@@ -21,6 +21,7 @@ from ...persistence import content
 from ...utils.io import print_msg, redirect_output
 from ...utils.metaprofiler import meta_profiler
 from ...utils.cross_version import string, default_string
+from ...utils.functions import version
 
 
 class Deployment(object):
@@ -62,6 +63,8 @@ class Deployment(object):
         attrs.add("PROCESSOR", platform.processor())
         attrs.add("PYTHON_IMPLEMENTATION", platform.python_implementation())
         attrs.add("PYTHON_VERSION", platform.python_version())
+
+        attrs.add("NOWORKFLOW_VERSION", version())
 
     @meta_profiler("modules")
     def _collect_modules_provenance(self, metascript, python_modules):

@@ -21,9 +21,13 @@ from .cmd_demo import Demo
 from .cmd_history import History
 
 
+
 def main():
     """Main function"""
+    from ..utils.functions import version
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-v", "--version", action="version",
+                        version="noWorkflow {}".format(version()))
     subparsers = parser.add_subparsers()
     commands = [
         Run(),

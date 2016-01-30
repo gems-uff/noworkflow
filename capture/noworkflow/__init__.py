@@ -10,7 +10,7 @@ Supporting infrastructure to run scientific experiments without a
 scientific workflow management system.
 """
 from noworkflow.now.cmd import main
-from noworkflow.now.utils.functions import resource
+from noworkflow.now.utils.functions import version
 
 def load_ipython_extension(ipython):
     from .now.ipython import init
@@ -20,4 +20,4 @@ def load_ipython_extension(ipython):
 if __name__ == '__main__':
     main()
 
-__version__ = resource("../resources/version.txt", encoding="utf-8").strip()
+__version__ = version()
