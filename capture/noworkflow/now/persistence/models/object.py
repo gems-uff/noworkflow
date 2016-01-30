@@ -44,6 +44,14 @@ class Object(relational.base):
     # _trial: Trial._objects backref
     # _function_def: FunctionDef._objects backref
 
+
+class ObjectProxy(with_metaclass(set_proxy(Object))):
+    """Object proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
     @classmethod
     def to_prolog_fact(cls):
         """Return prolog comment"""
@@ -77,11 +85,3 @@ class Object(relational.base):
             "Object({0.trial_id}, {0.function_def_id}, "
             "{0.id}, {0.name}, {0.type})"
         ).format(self)
-
-
-class ObjectProxy(with_metaclass(set_proxy(Object))):
-    """Object proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """

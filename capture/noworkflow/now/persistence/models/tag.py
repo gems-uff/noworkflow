@@ -18,7 +18,7 @@ from ...utils.functions import prolog_repr
 
 from .. import relational
 
-from .base import set_proxy
+from .base import set_proxy, proxy_method
 
 
 class Tag(relational.base):
@@ -38,8 +38,46 @@ class Tag(relational.base):
 
     # _trial: Trial._tags backref
 
+
+class TagProxy(with_metaclass(set_proxy(Tag))):
+    """Tag proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
     @classmethod
-    def fast_load_auto_tag(cls, trial_id, code_hash, command, session=None):
+    def to_prolog_fact(cls):
+        """Return prolog comment"""
+        return textwrap.dedent("""
+            %
+            % FACT: tag(trial_id, type, name, timestamp).
+            %
+            """)
+
+    @classmethod
+    def to_prolog_dynamic(cls):
+        """Return prolog dynamic clause"""
+        return ":- dynamic(tag/4)."
+
+    @classmethod
+    def to_prolog_retract(cls, trial_id):
+        """Return prolog retract for trial"""
+        return "retract(tag({}, _, _, _))".format(trial_id)
+
+    def to_prolog(self):
+        """Convert to prolog fact"""
+        time = timestamp(self.timestamp)
+        name = prolog_repr(self.name)
+        return (
+            "tag({t.trial_id}, {t.type}, {name}, {time})."
+        ).format(**locals())
+
+    def __repr__(self):
+        return "Tag({0.trial_id}, {0.type}, {0.name})".format(self)
+
+    @proxy_method
+    def fast_load_auto_tag(model, cls, trial_id, code_hash, command, session=None):
         """Find automatic by code_hash and command.
         Ignore tags on the same trial_id
 
@@ -64,7 +102,7 @@ class Tag(relational.base):
         """
         from .trial import Trial
         session = session or relational.session
-        ttag = cls.__table__
+        ttag = model.__table__
         ttrial = Trial.__table__
         _query = select([ttag.c.name]).where(
             (ttrial.c.id == ttag.c.trial_id) &
@@ -93,8 +131,8 @@ class Tag(relational.base):
 
         return 0, [1, 1, 1]
 
-    @classmethod
-    def create_automatic_tag(cls, trial_id, code_hash, command, session=None):
+    @proxy_method
+    def create_automatic_tag(model, cls, trial_id, code_hash, command, session=None):
         """Create automatic tag for trial id
 
         Find maximum automatic tag by code_hash and command
@@ -127,46 +165,9 @@ class Tag(relational.base):
             tag[2] = 1
         new_tag = ".".join(map(str, tag))
 
-        session.execute(cls.__table__.insert(), dict(
+        session.execute(model.__table__.insert(), dict(
             trial_id=trial_id, type="AUTO",
             name=new_tag, timestamp=datetime.now()
         ))
         session.commit()
 
-
-    @classmethod
-    def to_prolog_fact(cls):
-        """Return prolog comment"""
-        return textwrap.dedent("""
-            %
-            % FACT: tag(trial_id, type, name, timestamp).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        """Return prolog dynamic clause"""
-        return ":- dynamic(tag/4)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        """Return prolog retract for trial"""
-        return "retract(tag({}, _, _, _))".format(trial_id)
-
-    def to_prolog(self):
-        """Convert to prolog fact"""
-        time = timestamp(self.timestamp)
-        name = prolog_repr(self.name)
-        return (
-            "tag({t.trial_id}, {t.type}, {name}, {time})."
-        ).format(**locals())
-
-    def __repr__(self):
-        return "Tag({0.trial_id}, {0.type}, {0.name})".format(self)
-
-class TagProxy(with_metaclass(set_proxy(Tag))):
-    """Tag proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """

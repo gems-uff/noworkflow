@@ -76,6 +76,14 @@ class SlicingVariable(relational.base):
     # _activation: Activation._slicing_variables backref
     # _dependents: SlicingVariable._suppliers backref
 
+
+class SlicingVariableProxy(with_metaclass(set_proxy(SlicingVariable))):
+    """SlicingVariable proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
     @classmethod
     def to_prolog_fact(cls):
         return textwrap.dedent("""
@@ -107,14 +115,6 @@ class SlicingVariable(relational.base):
             "SlicingVariable({0.trial_id}, {0.activation_id}, "
             "{0.id}, {0.name}, {0.line})"
         ).format(self)
-
-
-class SlicingVariableProxy(with_metaclass(set_proxy(SlicingVariable))):
-    """SlicingVariable proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
 
     def __str__(self):
         return "(L{0.line}, {0.name}, {0.value})".format(self)

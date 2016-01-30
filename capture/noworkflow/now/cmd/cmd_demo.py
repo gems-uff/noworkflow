@@ -69,7 +69,8 @@ class Demo(Command):
             directory = args.dir
         print("Creating Demo {}".format(args.number))
         demo_path = os.path.join(DEMO, args.number)
-        steps = resource(os.path.join(demo_path, "steps.txt"))
+        steps = resource(os.path.join(demo_path, "steps.txt"),
+                         encoding="utf-8")
         steps = steps.split("\n")
         for step in steps:
             print(step)

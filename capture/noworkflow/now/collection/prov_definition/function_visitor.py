@@ -65,7 +65,7 @@ class FunctionVisitor(ast.NodeVisitor):
             # ToDo: include filename on namespace
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
             node.name,
-            "", #ToDo: capture class -> self.node_code(node),
+            "".encode("utf-8"), #ToDo: capture class -> self.node_code(node),
             "CLASS",
             self.contexts[-1].id
         ))

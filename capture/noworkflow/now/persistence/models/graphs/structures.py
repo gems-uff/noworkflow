@@ -69,6 +69,7 @@ def prepare_cache(get_type):
                                 content.get(cache.content_hash))
                             if not result[0]:
                                 continue
+                            cache_session.close()
                             return result
                     except (ValueError, exc.SQLAlchemyError):
                         traceback.print_exc()
@@ -86,6 +87,7 @@ def prepare_cache(get_type):
                 except exc.SQLAlchemyError:
                     traceback.print_exc()
                     print_msg("Couldn't store graph cache", True)
+                cache_session.close()
                 return graph
             return load
         return dec

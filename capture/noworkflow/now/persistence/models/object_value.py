@@ -43,6 +43,14 @@ class ObjectValue(relational.base):
     # _trial: Trial._object_values backref
     # _activation: Ativation._object_values backref
 
+
+class ObjectValueProxy(with_metaclass(set_proxy(ObjectValue))):
+    """ObjectValue proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
     @classmethod
     def to_prolog_fact(cls):
         """Return prolog comment"""
@@ -76,13 +84,6 @@ class ObjectValue(relational.base):
             "ObjectValue({0.trial_id}, {0.function_activation_id}, {0.id}, "
             "{0.name}, {0.value}, {0.type})"
         ).format(self)
-
-class ObjectValueProxy(with_metaclass(set_proxy(ObjectValue))):
-    """ObjectValue proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
 
     def __str__(self):
         return "{0.name} = {0.value}".format(self)

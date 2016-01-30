@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import weakref
 
 from collections import defaultdict, OrderedDict
+from functools import wraps
 
 from future.utils import with_metaclass, iteritems
 from sqlalchemy import inspect
@@ -158,13 +159,32 @@ def proxy_gen(query):
         yield proxy(element)
 
 
+def proxy_property(func, proxy=proxy):
+    @wraps(func)
+    def prop(self, *args, **kwargs):
+        obj = self._get_instance()
+        result = func(obj, *args, **kwargs)
+        return proxy(result)
+    return property(prop)
+
+def proxy_attr(name, proxy=proxy):
+    def func(self):
+        """Return {}""".format(name)
+        return getattr(self, name)
+    return proxy_property(func, proxy=proxy)
+
+def proxy_method(func):
+    @wraps(func)
+    def method(cls, *args, **kwargs):
+        model = cls.__model__
+        return func(model, cls, *args, **kwargs)
+    return classmethod(method)
+
+
 class AlchemyProxy(Model):
     """Alchemy Proxy super class.
 
-    Store _alchemy instance and _alchemy_pk primary key
-    Reset _alchemy if it is detached
-
-    Define proxy for instance attributes
+    Store _alchemy_pk primary key and other columns from table
     """
 
     __alchemy_refs__ = {}
@@ -172,52 +192,40 @@ class AlchemyProxy(Model):
     def __init__(self, obj):
         #self.__alchemy_refs__[self.__model__] = self.__class__
         if isinstance(obj, relational.base):
-            self._alchemy = obj
-            self._store_pk()
+            self._store_pk(obj)
         else:
             self._alchemy_pk = obj
-            self._restore_instance(do_inspection=False)
+        self._restore_instance()
 
-    def _store_pk(self):
-        obj = self._alchemy
+    def _store_pk(self, obj):
         self._alchemy_pk = obj.__mapper__.primary_key_from_instance(obj)
 
-    def _restore_instance(self, do_inspection=True):
+    def _restore_instance(self):
         """Restore instance with new session"""
-        if do_inspection:
-            insp = inspect(self._alchemy)
-            if not insp.detached:
-                return
-        if self._alchemy_pk:
-            self._alchemy = (
-                relational.session.query(type(self._alchemy))
-                .get(self._alchemy_pk)
-            )
+        obj = self._get_instance()
+        for column in self.__columns__:
+            setattr(self, column, getattr(obj, column))
+
+    def _get_instance(self):
+        return relational.session.query(self.__model__).get(self._alchemy_pk)
 
     def __getstate__(self):
         return (self._alchemy_pk,)
 
     def __setstate__(self, state):
         (self._alchemy_pk,) = state
-        self._restore_instance(do_inspection=False)
+        self._restore_instance()
 
     def to_dict(self, ignore=tuple(), extra=tuple()):
         """Return object as dict"""
         result = OrderedDict(
             (attr, getattr(self, attr)) for attr in extra
         )
-        for column in self.__mapper__.columns:
-            key = column.key
+        for key in self.__columns__:
             if key not in ignore and key not in extra:
                 result[key] = getattr(self, key)
 
         return result
-
-    def __getattr__(self, attr):
-        if attr == '_alchemy' or attr in self.__dict__:
-            super(AlchemyProxy, self).__getattr__(self, attr)
-        self._restore_instance()
-        return getattr(self._alchemy, attr)
 
 
 class RedirectProxy(object):
@@ -260,11 +268,11 @@ def set_proxy(model):
             bases = (AlchemyProxy,)
             if not "__modelname__" in attrs:
                 attrs["__modelname__"] = model.__name__
-            for attr in model.__dict__:
-                if not attr.startswith("_") or attr in ("__repr__", '__str__'):
-                    attrs[attr] = RedirectProxy(model, attr)
+
             cls = super(MetaProxy, meta).__new__(meta, name, bases, attrs)
             cls.__model__ = model
+            cls.__columns__ = model.__table__.columns.keys()
+            cls.__table__ = model.__table__
             AlchemyProxy.__alchemy_refs__[model] = cls
             return cls
 

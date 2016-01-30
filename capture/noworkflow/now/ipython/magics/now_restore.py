@@ -41,4 +41,4 @@ class NowRestore(IpythonCommandMagic, Restore):
         argv, args = self.arguments(func, line)
         self.args_file, self.trial = args.file, None
         Restore.execute(self, args)
-        return content.get(self.trial.code_hash)
+        return content.get(self.trial.code_hash).decode("utf-8")

@@ -10,7 +10,7 @@ from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 
 from .. import relational
-from .base import set_proxy, proxy_gen
+from .base import set_proxy, proxy_gen, proxy_method
 
 
 class GraphCache(relational.base):
@@ -29,20 +29,31 @@ class GraphCache(relational.base):
     duration = Column(Integer)
     timestamp = Column(TIMESTAMP)
 
-    @classmethod
-    def _query_select_cache(cls, type, name, attributes, session=None):
+
+class GraphCacheProxy(with_metaclass(set_proxy(GraphCache))):
+    """GraphCache proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    def __repr__(self):
+        return "Cache({0.id}, {0.type}, {0.name})".format(self)
+
+    @proxy_method
+    def _query_select_cache(model, cls, type, name, attributes, session=None):
         """Find caches query by type, name and attributes
         Return sqlalchemy query
         """
         session = session or relational.session
-        return session.query(cls).filter(
-            (cls.type == type) &
-            (cls.name == name) &
-            (cls.attributes == attributes)
+        return session.query(model).filter(
+            (model.type == type) &
+            (model.name == name) &
+            (model.attributes == attributes)
         )
 
-    @classmethod
-    def select_cache(cls, type, name, attributes, session=None):
+    @proxy_method
+    def select_cache(model, cls, type, name, attributes, session=None):
         """Find caches query by type, name and attributes
 
 
@@ -58,8 +69,8 @@ class GraphCache(relational.base):
         return proxy_gen(cls._query_select_cache(
             type, name, attributes, session=session or relational.session))
 
-    @classmethod
-    def remove(cls, type, name, attributes, session=None, commit=False):
+    @proxy_method
+    def remove(model, cls, type, name, attributes, session=None, commit=False):
         """Remove caches query by type, name and attributes
 
 
@@ -79,8 +90,8 @@ class GraphCache(relational.base):
         if commit:
             session.commit()
 
-    @classmethod
-    def create(cls, type, name, duration, attributes, content_hash,
+    @proxy_method
+    def create(model, cls, type, name, duration, attributes, content_hash,
                session=None, commit=False):
         """Create Cache
 
@@ -98,21 +109,10 @@ class GraphCache(relational.base):
         commit -- commit insertion (default=False)
         """
         session = session or relational.session
-        cache = cls(
+        cache = model(
             type=type, name=name, duration=duration,
             attributes=attributes, content_hash=content_hash
         )
         session.add(cache)
         if commit:
             session.commit()
-
-    def __repr__(self):
-        return "Cache({0.id}, {0.type}, {0.name})".format(self)
-
-
-class GraphCacheProxy(with_metaclass(set_proxy(GraphCache))):
-    """GraphCache proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """

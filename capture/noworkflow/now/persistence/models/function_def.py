@@ -18,7 +18,7 @@ from ...utils.functions import prolog_repr
 
 from .. import relational
 
-from .base import set_proxy, proxy_gen
+from .base import set_proxy, proxy_gen, proxy_attr
 from .object import Object
 
 
@@ -47,29 +47,26 @@ class FunctionDef(relational.base):
         return self._objects.filter(Object.type == "GLOBAL")
 
     @property
-    def globals(self):
-        """Return function definition globals"""
-        return proxy_gen(self._query_globals)
-
-    @property
     def _query_arguments(self):
         """Return function definition arguments as a SQLAlchemy query"""
         return self._objects.filter(Object.type == "ARGUMENT")
-
-    @property
-    def arguments(self):
-        """Return function definition arguments"""
-        return proxy_gen(self._query_arguments)
 
     @property
     def _query_function_calls(self):
         """Return function definition calls as a SQLAlchemy query"""
         return self._objects.filter(Object.type == "FUNCTION_CALL")
 
-    @property
-    def function_calls(self):
-        """Return function definition calls"""
-        return proxy_gen(self._query_function_calls)
+
+class FunctionDefProxy(with_metaclass(set_proxy(FunctionDef))):
+    """FunctionDef proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    globals = proxy_attr("_query_globals", proxy=proxy_gen)
+    arguments = proxy_attr("_query_arguments", proxy=proxy_gen)
+    function_calls = proxy_attr("_query_function_calls", proxy=proxy_gen)
 
     @classmethod
     def to_prolog_fact(cls):
@@ -118,11 +115,3 @@ class FunctionDef(relational.base):
 
     def __repr__(self):
         return "FunctionDef({0.trial_id}, {0.id}, {0.name})".format(self)
-
-
-class FunctionDefProxy(with_metaclass(set_proxy(FunctionDef))):
-    """FunctionDef proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """

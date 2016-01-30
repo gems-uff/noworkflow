@@ -19,9 +19,8 @@ from ...utils.functions import timestamp, prolog_repr
 
 from .. import relational
 
-from .base import set_proxy, proxy_gen, proxy
+from .base import set_proxy, proxy_attr, proxy_gen
 from .object_value import ObjectValue
-from .slicing_usage import SlicingUsage
 from .slicing_dependency import SlicingDependency
 
 
@@ -74,54 +73,41 @@ class Activation(relational.base):
     # _children: Activation._caller backref
 
     @property
-    def caller(self):
-        return proxy(self._caller)
-
-    @property
     def _query_globals(self):
         """Return activation globals as a SQLAlchemy query"""
         return self._object_values.filter(ObjectValue.type == "GLOBAL")
-
-    @property
-    def globals(self):
-        """Return activation globals"""
-        return proxy_gen(self._query_globals)
 
     @property
     def _query_arguments(self):
         """Return activation arguments as a SQLAlchemy query"""
         return self._object_values.filter(ObjectValue.type == "ARGUMENT")
 
-    @property
-    def arguments(self):
-        """Return activation arguments"""
-        return proxy_gen(self._query_arguments)
 
-    @property
-    def variables(self):
-        """Return activation variables"""
-        return proxy_gen(self._slicing_variables)
+class ActivationProxy(with_metaclass(set_proxy(Activation))):
+    """Activation proxy
 
-    @property
-    def variables_usages(self):
-        """Return activation variables usages"""
-        return proxy_gen(self._slicing_usages)
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+    caller = proxy_attr("_caller")
+    children = proxy_attr("_children", proxy=proxy_gen)
+    globals = proxy_attr("_query_globals", proxy=proxy_gen)
+    arguments = proxy_attr("_query_arguments", proxy=proxy_gen)
+    variables = proxy_attr("_slicing_variables", proxy=proxy_gen)
+    variables_usages = proxy_attr("_slicing_usages", proxy=proxy_gen)
+    supplier_variables = proxy_attr("_slicing_suppliers", proxy=proxy_gen)
+    dependent_variables = proxy_attr("_slicing_dependents", proxy=proxy_gen)
 
-    @property
-    def supplier_variables(self):
-        """Return variable dependencies
-        Supplier variable belongs to this activation"""
-        return proxy_gen(self._slicing_suppliers)
+    # ToDo: Improve hash
 
-    @property
-    def dependent_variables(self):
-        """Return variable dependencies
-        Dependent variable belongs to this activation"""
-        return proxy_gen(self._slicing_dependents)
+    def __key(self):
+        return (self.trial_id, self.name, self.line)
 
-    @property
-    def children(self):
-        return proxy_gen(self._children)
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        return self.__key() == other.__key()
 
     @property
     def duration(self):
@@ -193,22 +179,3 @@ class Activation(relational.base):
 
     def __repr__(self):
         return "Activation({0.trial_id}, {0.id}, {0.name})".format(self)
-
-
-class ActivationProxy(with_metaclass(set_proxy(Activation))):
-    """Activation proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    # ToDo: Improve hash
-
-    def __key(self):
-        return (self.trial_id, self.name, self.line)
-
-    def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        return self.__key() == other.__key()

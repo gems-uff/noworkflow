@@ -17,7 +17,7 @@ from ...utils.functions import prolog_repr
 
 from .. import relational
 
-from .base import set_proxy, proxy
+from .base import set_proxy, proxy_attr
 
 
 class Dependency(relational.base):
@@ -36,6 +36,16 @@ class Dependency(relational.base):
     _module = relationship("Module")
 
     # _trial: Trial._module_dependencies backref
+
+
+class DependencyProxy(with_metaclass(set_proxy(Dependency))):
+    """Dependency proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    module = proxy_attr('_module')
 
     @classmethod
     def to_prolog_fact(cls):
@@ -56,10 +66,6 @@ class Dependency(relational.base):
         """Return prolog retract for trial"""
         return "retract(module({}, _, _, _, _, _))".format(trial_id)
 
-    @property
-    def module(self):
-        return proxy(self._module)
-
     def to_prolog(self):
         """Convert to prolog fact"""
         module = self.module
@@ -74,11 +80,3 @@ class Dependency(relational.base):
 
     def __repr__(self):
         return "Dependency({0.trial_id}, {0.module})".format(self)
-
-
-class DependencyProxy(with_metaclass(set_proxy(Dependency))):
-    """Dependency proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """

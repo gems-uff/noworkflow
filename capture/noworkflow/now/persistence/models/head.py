@@ -17,7 +17,7 @@ from ...utils.functions import prolog_repr
 
 from .. import relational
 
-from .base import set_proxy
+from .base import set_proxy, proxy_attr, proxy_method, proxy
 
 
 class Head(relational.base):
@@ -35,18 +35,15 @@ class Head(relational.base):
 
     _trial = relationship("Trial")
 
-    @classmethod
-    def load_head(cls, script, session=None):
-        """Load head by script"""
-        session = session or relational.session
-        return (
-            session.query(cls)
-            .filter((cls.script == script))
-        ).first()
 
-    @property
-    def trial(self):
-        return self._trial
+class HeadProxy(with_metaclass(set_proxy(Head))):
+    """Head proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    trial = proxy_attr("_trial")
 
     @classmethod
     def to_prolog_fact(cls):
@@ -77,10 +74,20 @@ class Head(relational.base):
     def __repr__(self):
         return "Head({0.id}, {0.script}, {0.trial_id})".format(self)
 
+    @proxy_method
+    def load_head(model, cls, script, session=None):
+        """Load head by script"""
+        session = session or relational.session
+        return proxy(
+            session.query(model)
+            .filter((model.script == script))
+            .first()
+        )
 
-class HeadProxy(with_metaclass(set_proxy(Head))):
-    """Head proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
+    @proxy_method
+    def remove(model, cls, hid, session=None):
+        """Remove head by id"""
+        session = session or relational.session
+        head = session.query(Head).get(hid)
+        session.delete(head)
+        session.commit()

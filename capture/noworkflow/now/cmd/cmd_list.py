@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from ..persistence.models import Trial
-from ..persistence import persistence_config
+from ..persistence import persistence_config, relational
 from ..utils.io import print_msg
 
 from .command import Command
@@ -27,7 +27,7 @@ class List(Command):
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
         print_msg("trials available in the provenance store:", True)
-        for trial in Trial.query:
+        for trial in Trial.all():
             text = "  Trial {0.id}: {0.command}".format(trial)
             indent = text.index(": ") + 2
             print(text)

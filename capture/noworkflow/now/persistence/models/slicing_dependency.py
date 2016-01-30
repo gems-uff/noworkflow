@@ -14,7 +14,7 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from .. import relational
 
-from .base import set_proxy, proxy
+from .base import set_proxy, proxy_attr
 
 
 class SlicingDependency(relational.base):
@@ -58,15 +58,16 @@ class SlicingDependency(relational.base):
     # _dependent: SlicingVariable._suppliers_dependencies backref
     # _supplier: SlicingVariable._dependents_dependencies backref
 
-    @property
-    def dependent(self):
-        """Return dependent variable"""
-        return proxy(self._dependent)
 
-    @property
-    def supplier(self):
-        """Return supplier variable"""
-        return proxy(self._supplier)
+class SlicingDependencyProxy(with_metaclass(set_proxy(SlicingDependency))):
+    """SlicingDependency proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    dependent = proxy_attr("_dependent")
+    supplier = proxy_attr("_supplier")
 
     @classmethod
     def to_prolog_fact(cls):
@@ -97,14 +98,6 @@ class SlicingDependency(relational.base):
             "SlicingDependency({0.trial_id}, {0.id}, "
             "{0.dependent}, {0.supplier})"
         ).format(self)
-
-
-class SlicingDependencyProxy(with_metaclass(set_proxy(SlicingDependency))):
-    """SlicingDependency proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
 
     def __str__(self):
         return "{0.dependent} <- {0.supplier}".format(self)

@@ -11,11 +11,8 @@ import weakref
 from ...utils.functions import resource
 
 from .base import proxy_gen, Model
-from .activation import Activation
-from .file_access import FileAccess
-from .slicing_variable import SlicingVariable
-from .slicing_usage import SlicingUsage
-from .slicing_dependency import SlicingDependency
+from . import Activation, FileAccess
+from . import SlicingVariable, SlicingUsage, SlicingDependency
 
 
 RULES = "../resources/rules.pl"
@@ -103,7 +100,7 @@ class TrialProlog(Model):
     def init_cli(cls):
         """Initialize swipl if it was not initialized yet"""
         # Avoid import loop
-        from .trial import Trial
+        from . import Trial
 
         if not cls.prolog_cli:
             from pyswip import Prolog

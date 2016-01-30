@@ -11,6 +11,7 @@ import functools
 from flask import render_template, jsonify, request
 
 from ..persistence.models import History, Diff, Trial, proxy_gen
+from ..persistence import relational
 
 
 class WebServer(object):
@@ -67,6 +68,7 @@ def trial_graph(tid, graph_mode, cache):
     trial = Trial(tid)
     graph = trial.graph
     graph.use_cache &= bool(int(cache))
+    #graph.use_cache = False
     finished, g = getattr(graph, graph_mode)()
     return jsonify(**g)
 
@@ -166,3 +168,8 @@ def diff_graph(trial1, trial2, graph_mode, tl, nh, cache):
         trial1=t1,
         trial2=t2,
     )
+
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    relational.session.remove()

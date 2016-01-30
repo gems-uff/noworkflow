@@ -18,7 +18,7 @@ from ...utils.functions import timestamp, prolog_repr
 
 from .. import relational
 
-from .base import set_proxy, proxy
+from .base import set_proxy, proxy_attr
 
 
 class FileAccess(relational.base):
@@ -46,9 +46,15 @@ class FileAccess(relational.base):
     # _trial: Trial._file_accesses backref
     # _activation: Activation._file_accesses backref
 
-    @property
-    def activation(self):
-        return proxy(self._activation)
+
+class FileAccessProxy(with_metaclass(set_proxy(FileAccess))):
+    """FileAccess proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    activation = proxy_attr("_activation")
 
     @property
     def stack(self):
@@ -63,6 +69,16 @@ class FileAccess(relational.base):
         if not stack or stack[-1] != "open":
             stack.append(" ... -> open")
         return " -> ".join(stack)
+
+    def __key(self):
+        return (self.name, self.content_hash_before, self.content_hash_after)
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        return ((self.content_hash_before == other.content_hash_before)
+            and (self.content_hash_after == other.content_hash_after))
 
     @classmethod
     def to_prolog_fact(cls):
@@ -116,21 +132,3 @@ class FileAccess(relational.base):
     def __repr__(self):
         return "FileAccess({0.trial_id}, {0.id}, {0.name}, {0.mode})".format(
             self)
-
-
-class FileAccessProxy(with_metaclass(set_proxy(FileAccess))):
-    """FileAccess proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    def __key(self):
-        return (self.name, self.content_hash_before, self.content_hash_after)
-
-    def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        return ((self.content_hash_before == other.content_hash_before)
-            and (self.content_hash_after == other.content_hash_after))

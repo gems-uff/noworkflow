@@ -28,6 +28,7 @@ class RelationalDatabase(object):
     def __init__(self, persistence_config):
         self.db_path = None # Database path
         self._session_map = {}
+        self.session_factory = sessionmaker()
 
         self.base = declarative_base()
         self.base._persistence = weakref.proxy(self)
@@ -45,7 +46,6 @@ class RelationalDatabase(object):
         new_db = not exists(self.db_path)
 
         self.engine = create_engine('sqlite:///' + self.db_path, echo=False)
-        self.session_factory = sessionmaker()
         self.session_factory.configure(bind=self.engine, autoflush=False,
                                        expire_on_commit=True)
         self._session_map = {}

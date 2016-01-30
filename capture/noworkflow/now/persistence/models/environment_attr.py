@@ -36,6 +36,20 @@ class EnvironmentAttr(relational.base):
 
     # _trial: Trial._environment_attrs backref
 
+
+class EnvironmentAttrProxy(with_metaclass(set_proxy(EnvironmentAttr))):
+    """EnvironmentAttr proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
+    """
+
+    def __hash__(self):
+        return hash((self.name, self.value))
+
+    def __eq__(self, other):
+        return self.name == other.name
+
     @classmethod
     def to_prolog_fact(cls):
         """Return prolog comment"""
@@ -73,17 +87,3 @@ class EnvironmentAttr(relational.base):
 
     def __repr__(self):
         return "Environment({0.trial_id}, {0.name}, {0.value})".format(self)
-
-
-class EnvironmentAttrProxy(with_metaclass(set_proxy(EnvironmentAttr))):
-    """EnvironmentAttr proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    def __hash__(self):
-        return hash((self.name, self.value))
-
-    def __eq__(self, other):
-        return self.name == other.name
