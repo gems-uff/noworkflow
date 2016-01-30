@@ -11,8 +11,8 @@ import json
 import os
 
 
-from ..models import Trial
-from ..persistence import persistence
+from ..persistence.models import Trial
+from ..persistence import persistence_config
 
 from .command import Command
 
@@ -96,7 +96,7 @@ def export_notebook(trial):
                          "%now_ls_magic\n"
                          "# <codecell>\n"
                          "%%now_prolog {trial.id}\n"
-                         "activation({trial.id}, 0, X, _, _, _)"))
+                         "activation({trial.id}, 1, X, _, _, _)"))
         with open("Current Trial.ipynb", "w") as ipynb:
             json.dump(inb, ipynb)
     elif isinstance(trial, list):
@@ -144,7 +144,7 @@ class Export(Command):
                      "current directory")
 
     def execute(self, args):
-        persistence.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect_existing(args.dir or os.getcwd())
         args.trial = export_type(args.trial)
         if not args.ipython:
             trial = Trial(trial_ref=args.trial)

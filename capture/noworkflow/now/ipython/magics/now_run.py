@@ -3,7 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 # pylint: disable=W0703
-"""'now run' magic"""
+"""'(%)%now run' magics"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -12,11 +12,9 @@ import sys
 import argparse
 
 from ...cmd.cmd_run import Run, run
-from ...persistence import persistence
-from ...models import Trial
-
-from ...metadata import Metascript, LAST_TRIAL
-
+from ...collection.metadata import Metascript, LAST_TRIAL
+from ...persistence.models import Trial
+from ...persistence import persistence_config
 
 from .command import IpythonCommandMagic
 
@@ -109,9 +107,9 @@ class NowRun(IpythonCommandMagic, Run):
             argv = argv[:-len(params)]
         # Create tmp file
         directory = args.dir or os.path.abspath(os.path.curdir)
-        original_path = persistence.path
+        original_path = persistence_config.path
         try:
-            persistence.connect(directory)
+            persistence_config.connect(directory)
 
             if cell:
                 filename = magic_cls.shell.mktempfile(data=cell,
@@ -165,4 +163,4 @@ class NowRun(IpythonCommandMagic, Run):
                 except Exception as exc:
                     print("Failed", exc)
         finally:
-            persistence.connect(original_path)
+            persistence_config.connect(original_path)

@@ -2,13 +2,12 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""'%now_prolog_schema' magic"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from ...formatter import PrettyLines
-
-from ...models import Trial, TrialProlog
+from ...persistence.models import Trial, TrialProlog
+from ...utils.formatter import PrettyLines
 
 from .command import IpythonCommandMagic
 

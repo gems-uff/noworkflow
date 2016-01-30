@@ -7,16 +7,15 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-import sys
 from datetime import datetime
 
 from future.utils import viewitems
 
-from .. import prov_deployment
-from ..models import Trial
-from ..persistence import persistence
+from ..collection.metadata import Metascript
+from ..collection import prov_deployment
+from ..persistence.models import Trial
+from ..persistence import persistence_config, content
 from ..utils.io import print_msg
-from ..metadata import Metascript
 
 from .command import Command
 
@@ -52,19 +51,20 @@ class Restore(Command):
             return
 
         head = Trial.load_parent(trial.script, remove=False)
-        code_hash = persistence.put(metascript.code)
+        code_hash = content.put(metascript.code)
 
         if code_hash != head.code_hash:
-            now = datetime.now()
-            metascript.create_trial(args="<restore {}>".format(trial.id),
-                                    run=False)
+            metascript.trial_id = Trial.fast_store(
+                *metascript.create_trial_args(
+                    args="<restore {}>".format(trial.id), run=False
+                ))
             prov_deployment.collect_provenance(metascript)
             print_msg("Backup Trial {} created".format(metascript.trial_id),
                       self.print_msg)
 
     def restore(self, path, code_hash, trial_id):
         """Restore file with <code_hash> from <trial_id>"""
-        load_file = persistence.get(code_hash)
+        load_file = content.get(code_hash)
         with open(path, "wb") as fil:
             fil.write(load_file)
         print_msg("File {} from trial {} restored".format(path, trial_id),
@@ -75,7 +75,7 @@ class Restore(Command):
         self.restore(trial.script, trial.code_hash, trial.id)
 
     def execute(self, args):
-        persistence.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect_existing(args.dir or os.getcwd())
         metascript = Metascript().read_restore_args(args)
         trial = metascript.trial = Trial(trial_ref=args.trial,
                                          trial_script=metascript.name)

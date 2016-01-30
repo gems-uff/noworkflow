@@ -2,27 +2,26 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""IPython Module"""
 from __future__ import (absolute_import, print_function,
                         division)
 
-import os
 
-from IPython.display import display_html, display_javascript
-
-from ..models import *
-from ..persistence import persistence
-from ..utils import resource
-
-from .magics import register_magics
+from ..persistence.models import *
+from ..persistence import persistence_config, relational, content
 
 
 def init(path=None, ipython=None):
+    import os
+    from IPython.display import display_html, display_javascript
+    from ..utils.functions import resource
+    from .magics import register_magics
+
     register_magics(ipython)
 
     if path is None:
         path = os.getcwd()
-    persistence.connect(path)
+    persistence_config.connect(path)
 
     js_files = [
         u"vis/static/d3-v3.4.11/d3.min.js",

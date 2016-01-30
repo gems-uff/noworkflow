@@ -7,12 +7,9 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-import subprocess
-import sys
 
-from ..persistence import persistence
-from ..utils.io import print_msg
-from ..models.history import History as HistoryModel
+from ..persistence.models.history import History as HistoryModel
+from ..persistence import persistence_config
 
 from .command import Command
 
@@ -33,6 +30,6 @@ class History(Command):
                      "where <number> is the demo identification")
 
     def execute(self, args):
-        persistence.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect_existing(args.dir or os.getcwd())
         history = HistoryModel(script=args.script, status=args.status)
         print(history)

@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""'%now_set_default' magic"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -11,7 +11,7 @@ import argparse
 
 from future.utils import viewkeys
 
-from ...models import MetaModel
+from ...persistence.models import MetaModel
 
 from .command import IpythonCommandMagic
 

@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define utility functions"""
@@ -9,12 +9,12 @@ from __future__ import (absolute_import, print_function,
 import inspect
 import os
 import types
+
 from datetime import datetime
 from pkg_resources import resource_string, resource_listdir, resource_isdir
 from textwrap import dedent
 
-from ..cross_version import cross_compile
-from .consts import FORMAT
+from .cross_version import cross_compile
 from .io import redirect_output
 
 
@@ -35,13 +35,16 @@ def resource(filename, encoding=None):
         return content.decode(encoding=encoding)
     return content
 
+
 def resource_ls(path):
     """Access resource directory via setuptools"""
     return resource_listdir(MODULE, path)
 
+
 def resource_is_dir(path):
     """Access resource directory via setuptools"""
     return resource_isdir(MODULE, path)
+
 
 def abstract():
     """Raise abstract Exception"""
@@ -49,11 +52,13 @@ def abstract():
     name = frame.f_code.co_name
     raise Exception("Abstract method: {}".format(name))
 
+
 def timestamp(time):
     if not time:
         return -1
     epoch = datetime(1970,1,1)
     return (time - epoch).total_seconds()
+
 
 def prolog_repr(var):
     """Return repr from var without string prefix"""

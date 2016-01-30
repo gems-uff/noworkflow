@@ -8,8 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..models import Trial, Activation
-from ..persistence import persistence
+from ..persistence.models import Trial, Activation
+from ..persistence import persistence_config
 from ..utils.functions import wrap
 from ..utils.io import print_msg
 
@@ -60,7 +60,7 @@ class Show(Command):
                      "current directory")
 
     def execute(self, args):
-        persistence.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_ref=args.trial)
 
         if not trial:

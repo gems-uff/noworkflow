@@ -12,8 +12,8 @@ import platform
 
 from uuid import getnode
 
-__version__ = "0.15.0"
-
+with open("./noworkflow/resources/version.txt", "r") as f:
+    __version__ = f.read().strip()
 
 def recursive_path(pack, path):
     matches = []

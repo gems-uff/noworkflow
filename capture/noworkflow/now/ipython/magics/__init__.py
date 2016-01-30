@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from collections import defaultdict
+from functools import wraps
 
 from IPython.core.magic import Magics, magics_class
 

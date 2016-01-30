@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""'%%now_sql' magic"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -12,8 +12,8 @@ from future.utils import viewkeys, viewvalues, text_to_native_str
 from IPython.core.display import display_javascript
 from IPython.utils.text import DollarFormatter
 
-from ...persistence import persistence
-from ...formatter import Table
+from ...persistence import relational
+from ...utils.formatter import Table
 
 from .command import IpythonCommandMagic
 
@@ -63,7 +63,7 @@ class NowSQL(IpythonCommandMagic):
         f = DollarFormatter()
         cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
-        result = persistence.query(text_to_native_str(cell))
+        result = relational.query(text_to_native_str(cell))
         if args.result:
             magic_cls.shell.user_ns[args.result] = result
         else:

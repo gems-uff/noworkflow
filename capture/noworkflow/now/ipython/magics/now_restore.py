@@ -2,12 +2,12 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""'%%now_restore' magic"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from ...cmd import Restore
-from ...persistence import persistence
+from ...persistence import content
 
 from .command import IpythonCommandMagic
 
@@ -18,8 +18,8 @@ class NowRestore(IpythonCommandMagic, Restore):
     Examples
     --------
     ::
-        In [1]: content = %now_restore 2 --file
-           ...: print(content)
+        In [1]: script_content = %now_restore 2 --file
+           ...: print(script_content)
         [now] File script2.py from trial 2 restored
         l = range(4)
         c = sum(l)
@@ -41,4 +41,4 @@ class NowRestore(IpythonCommandMagic, Restore):
         argv, args = self.arguments(func, line)
         self.args_file, self.trial = args.file, None
         Restore.execute(self, args)
-        return persistence.get(self.trial.code_hash)
+        return content.get(self.trial.code_hash)

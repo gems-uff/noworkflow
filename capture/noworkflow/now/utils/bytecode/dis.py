@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Cross version dis """
+"""Cross version dis"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -19,9 +19,9 @@ PY3 = sys.version_info >= (3, 0)
 
 
 def _try_compile(source, name, tries=None, compiler=None):
-    """ Atempt to compile with <compiler> for <tries> modes """
+    """Atempt to compile with <compiler> for <tries> modes"""
     if tries is None:
-        tries = ['eval', 'exec']
+        tries = ["eval", "exec"]
     if not tries:
         raise ValueError("syntax error in passed string")
     try:
@@ -34,37 +34,37 @@ def _try_compile(source, name, tries=None, compiler=None):
 
 
 def _get_code_object(obj, compiler=None):
-    """ Return code object """
+    """Return code object"""
     if isinstance(obj, types.FrameType): # Frame
-        return ('code', obj.f_code)
+        return ("code", obj.f_code)
     if not PY3 and isinstance(obj, types.InstanceType): # Instance
         obj = obj.__class__
-    if hasattr(obj, '__func__'): # Method
+    if hasattr(obj, "__func__"): # Method
         obj = obj.__func__
-    if hasattr(obj, 'gi_code'): # Generator
+    if hasattr(obj, "gi_code"): # Generator
         obj = obj.gi_code
-    if hasattr(obj, 'im_func'): # Function Python 2
+    if hasattr(obj, "im_func"): # Function Python 2
         obj = obj.im_func
-    if hasattr(obj, 'func_code'): # Function Python 2
+    if hasattr(obj, "func_code"): # Function Python 2
         obj = obj.func_code
-    if hasattr(obj, '__code__'): # Function
+    if hasattr(obj, "__code__"): # Function
         obj = obj.__code__
     if isinstance(obj, str): # Soruce code
         obj = _try_compile(obj, "<string>", compiler=compiler)
-    if hasattr(obj, 'co_code'): # Code
-        return ('code', obj)
-    if hasattr(obj, '__dict__'): # Class or module
-        return ('dict', obj)
+    if hasattr(obj, "co_code"): # Code
+        return ("code", obj)
+    if hasattr(obj, "__dict__"): # Class or module
+        return ("dict", obj)
     if PY3 and isinstance(obj, (bytes, bytearray)): # Raw bytecode
-        return ('bytes', obj)
+        return ("bytes", obj)
     raise TypeError("get_code_object() can not handle '{}' objects".format(
         type(obj).__name__))
 
 
 def _byte_instructions(code, lasti=-1, varsn=None, names=None, consts=None,
                        cells=None, linestarts=None, line_offset=0):
-    """ Generator for byte code instructions
-        Check if it starts a line
+    """Generator for byte code instructions
+    Check if it starts a line
     """
     interpreter = InstructionInterpreter(code, varsn, names, consts,
                                          cells, linestarts, line_offset)
@@ -82,7 +82,7 @@ def _byte_instructions(code, lasti=-1, varsn=None, names=None, consts=None,
 
 
 def _instructions(code, lasti=-1):
-    """ Generator for code instructions """
+    """Generator for code instructions"""
     cell_names = code.co_cellvars + code.co_freevars
     linestarts = OrderedDict(_dis.findlinestarts(code))
     insts = _byte_instructions(
@@ -94,15 +94,15 @@ def _instructions(code, lasti=-1):
 
 
 def idis(obj=None, compiler=None, outfile=None):
-    """ Disassemble objects """
+    """Disassemble objects"""
     typ, code = _get_code_object(obj, compiler)
-    if typ == 'code':
+    if typ == "code":
         for inst in _instructions(code):
             yield inst
-    elif typ == 'bytes':
+    elif typ == "bytes":
         for inst in _byte_instructions(code,):
             yield inst
-    elif typ == 'dict':
+    elif typ == "dict":
         items = sorted(code.__dict__.items())
         for name, attr in items:
             if isinstance(attr, HAVE_CODE):
@@ -116,11 +116,11 @@ def idis(obj=None, compiler=None, outfile=None):
 
 
 def _visit(obj, visitor, compiler=None, recurse=False):
-    """ Recursively disassemble """
+    """Recursively disassemble"""
     typ, obj = _get_code_object(obj, compiler)
     for inst in visitor(obj, compiler=compiler):
         yield inst
-    if typ == 'code' and recurse:
+    if typ == "code" and recurse:
         for constant in obj.co_consts:
             if type(constant) is type(obj):
                 for inst in _visit(constant, visitor, compiler, recurse):
@@ -128,10 +128,10 @@ def _visit(obj, visitor, compiler=None, recurse=False):
 
 
 def instruction_dis(compiled, compiler=None, recurse=False):
-    """ Return dis of compiled code """
+    """Return dis of compiled code"""
     return  list(_visit(compiled, idis, compiler, recurse))
 
 def instruction_dis_sorted_by_line(compiled, compiler=None, recurse=False):
-    """ Return dis sorted by line of compiled code """
+    """Return dis sorted by line of compiled code"""
     instructions = instruction_dis(compiled, compiler, recurse)
     return sorted(instructions, key=lambda x: (x.line, x.offset))

@@ -1,29 +1,32 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Object serializers """
+"""Object serializers"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
 from array import array
 from collections import deque
-from . import persistence
-from ..cross_version import items, IMMUTABLE
+
+from future.utils import viewitems
+
+from ..utils.cross_version import IMMUTABLE
 from ..utils.functions import abstract
 
+from . import content
 
 
 def jsonpickle_content(obj):
     import jsonpickle
-    return "now-content:" + persistence.put(jsonpickle.encode(obj))
+    return "now-content:" + content.put(jsonpickle.encode(obj))
 
 
 class SimpleSerializer(object):
 
     def _iter(self, obj, maxlevel):
-        return ", ".join(self.serialize(x, maxlevel=maxlevel - 1) 
+        return ", ".join(self.serialize(x, maxlevel=maxlevel - 1)
                         for x in obj)
 
     def _default(self, obj):
@@ -31,7 +34,8 @@ class SimpleSerializer(object):
             return repr(obj)
 
         if hasattr(obj, '__class__'):
-            return "<{} instance at 0x{:x}".format(obj.__class__.__name__, id(obj))
+            return "<{} instance at 0x{:x}".format(
+                obj.__class__.__name__, id(obj))
 
         if hasattr(obj, '__name__'):
             return "<{} at 0x{:x}".format(obj.__name__, id(obj))
@@ -70,14 +74,14 @@ class SimpleSerializer(object):
                 '({}, {})'.format(
                     self.serialize(key, maxlevel - 1),
                     self.serialize(value, maxlevel - 1)
-                ) for key, value in items(obj))
+                ) for key, value in viewitems(obj))
 
         if not typ:
             return self._default(obj)
 
         cls = obj.__class__ if hasattr(obj, '__class__') else type(obj)
         cls_name = '_'.join(cls.__name__.split())
-        
+
         if typ == "array":
             return "{}({})".format(cls_name, result)
         return "{}([{}])".format(cls_name, result)

@@ -8,9 +8,9 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..persistence import persistence
+from ..persistence.models import Trial
+from ..persistence import persistence_config
 from ..utils.io import print_msg
-from ..models import Trial
 
 from .command import Command
 
@@ -25,7 +25,7 @@ class List(Command):
                      "current directory")
 
     def execute(self, args):
-        persistence.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect_existing(args.dir or os.getcwd())
         print_msg("trials available in the provenance store:", True)
         for trial in Trial.query:
             text = "  Trial {0.id}: {0.command}".format(trial)

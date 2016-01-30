@@ -2,15 +2,16 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""'%%now_prolog' magic"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from IPython.utils.text import DollarFormatter
-
 import argparse
 
-from ...models import TrialProlog, Trial
+from IPython.utils.text import DollarFormatter
+
+from ...persistence.models import TrialProlog, Trial
+
 from .command import IpythonCommandMagic
 
 

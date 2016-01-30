@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Define bytecode interpreter that supports iteration on bytecode """
+"""Define bytecode interpreter that supports iteration on bytecode"""
 # pylint: disable=R0902
 # pylint: disable=R0903
 # pylint: disable=R0913
@@ -18,37 +18,37 @@ from .instructions import Instruction
 
 
 CALL_FUNCTIONS = {
-    opmap['CALL_FUNCTION'], opmap['CALL_FUNCTION_VAR'],
-    opmap['CALL_FUNCTION_KW'], opmap['CALL_FUNCTION_VAR_KW']
+    opmap["CALL_FUNCTION"], opmap["CALL_FUNCTION_VAR"],
+    opmap["CALL_FUNCTION_KW"], opmap["CALL_FUNCTION_VAR_KW"]
 }
 
 PRINT_ITEMS = set()
-if 'PRINT_ITEM' in opmap:
-    PRINT_ITEMS.add(opmap['PRINT_ITEM'])
-    PRINT_ITEMS.add(opmap['PRINT_ITEM_TO'])
+if "PRINT_ITEM" in opmap:
+    PRINT_ITEMS.add(opmap["PRINT_ITEM"])
+    PRINT_ITEMS.add(opmap["PRINT_ITEM_TO"])
 
 PRINT_NEW_LINES = set()
-if 'PRINT_NEWLINE' in opmap:
-    PRINT_NEW_LINES.add(opmap['PRINT_NEWLINE'])
-    PRINT_NEW_LINES.add(opmap['PRINT_NEWLINE_TO'])
+if "PRINT_NEWLINE" in opmap:
+    PRINT_NEW_LINES.add(opmap["PRINT_NEWLINE"])
+    PRINT_NEW_LINES.add(opmap["PRINT_NEWLINE_TO"])
 
-SETUP_WITH = {opmap['SETUP_WITH'],}
-WITH_CLEANUP = {opmap['WITH_CLEANUP'],}
+SETUP_WITH = {opmap["SETUP_WITH"],}
+WITH_CLEANUP = {opmap["WITH_CLEANUP"],}
 
-IMPORTS = {opmap['IMPORT_NAME'], opmap['IMPORT_FROM']}
+IMPORTS = {opmap["IMPORT_NAME"], opmap["IMPORT_FROM"]}
 
-ITERS = {opmap['GET_ITER'], opmap['FOR_ITER']}
+ITERS = {opmap["GET_ITER"], opmap["FOR_ITER"]}
 
 
 def cord(value):
-    """ Convert (str or int) to ord """
+    """Convert (str or int) to ord"""
     if isinstance(value, str):
         return ord(value)
     return value
 
 
 class ListAccessor(object):
-    """ List Proxy. Return value on x[i] and tuple on x(i) """
+    """List Proxy. Return value on x[i] and tuple on x(i)"""
 
     def __init__(self, values, repr_is_val=True):
         self.values = values
@@ -69,7 +69,7 @@ class ListAccessor(object):
 
 
 class Interpreter(object):
-    """ Bytecode iterator """
+    """Bytecode iterator"""
 
     def __init__(self, co_code, varnames=None, names=None, constants=None,
                  cells=None, linestarts=None, line_offset=0):
@@ -96,13 +96,13 @@ class Interpreter(object):
         self._extra = set()
         self._missing = set()
         self._supported = set()
-        if not hasattr(self, '_known_missing'):
+        if not hasattr(self, "_known_missing"):
             self._known_missing = set()
 
         self._create_map()
 
     def __iter__(self):
-        """ Restart iterator """
+        """Restart iterator"""
         self._stop = False
         return self
 
@@ -111,7 +111,7 @@ class Interpreter(object):
         self._extended_arg = extended_arg
 
     def next(self):
-        """ Python 2 iterator """
+        """Python 2 iterator"""
         if self._stop:
             raise StopIteration
         opcode = self._next_op()
@@ -119,11 +119,11 @@ class Interpreter(object):
         return opcode
 
     def __next__(self):
-        """ Python 3 iterator """
+        """Python 3 iterator"""
         return self.next()
 
     def _next_op(self):
-        """ Get next operation """
+        """Get next operation"""
         self._set_opcode()
         if self.opcode >= HAVE_ARGUMENT:
             self._have_argument()
@@ -134,14 +134,14 @@ class Interpreter(object):
         return self.opcode
 
     def _set_opcode(self):
-        """ Get op from code """
+        """Get op from code"""
         self.oparg = None
         self.opcode = cord(self._co_code[self.lasti])
         self.opi = self.lasti
         self.lasti += 1
 
     def _have_argument(self):
-        """ Read argument if op has argument """
+        """Read argument if op has argument"""
         cod = self._co_code
         i = self.lasti
         self.oparg = cord(cod[i]) + cord(cod[i + 1]) * 256 + self._extended_arg
@@ -149,11 +149,11 @@ class Interpreter(object):
         self.lasti += 2
 
     def _create_map(self):
-        """ Create map of functions """
+        """Create map of functions"""
         condition = lambda x, obj: (
-            x[0] != '_' and hasattr(obj, '__call__') and
-            obj.__doc__ is not None and 'opcode' in obj.__doc__)
-        to_opcode = lambda x: x.upper().replace('__', '+')
+            x[0] != "_" and hasattr(obj, "__call__") and
+            obj.__doc__ is not None and "opcode" in obj.__doc__)
+        to_opcode = lambda x: x.upper().replace("__", "+")
 
         self._map = defaultdict(lambda: self.nop)
         self._extra = set()
@@ -173,23 +173,24 @@ class Interpreter(object):
 
     @property
     def extra_opcode(self):
-        """ Return opcode implemented by this class
-            but not supported by Python """
+        """Return opcode implemented by this class
+        but not supported by Python
+        """
         return self._extra
 
     @property
     def missing_opcode(self):
-        """ Return opcode supported by Python
-            but not implemented by this class """
+        """Return opcode supported by Python
+        but not implemented by this class"""
         return self._missing
 
     def nop(self):
-        """ NOP opcode """
+        """NOP opcode"""
         pass
 
 
 class InstructionInterpreter(Interpreter):
-    """ Mix Python 3 dis._get_instructions_bytes with Python 2 dis.disassemble """
+    """Mix Python3 dis._get_instructions_bytes with Python2 dis.disassemble"""
 
     def __init__(self, *args, **kwargs):
         super(InstructionInterpreter, self).__init__(*args, **kwargs)
@@ -215,7 +216,7 @@ class InstructionInterpreter(Interpreter):
         super(InstructionInterpreter, self)._have_argument()
         opcode = self.opcode
         arg = argval = self.oparg
-        argrepr = ''
+        argrepr = ""
         if opcode in dis.hasconst:
             argval, argrepr = self.consts(arg)
         elif opcode in dis.hasname:

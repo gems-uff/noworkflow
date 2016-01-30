@@ -11,8 +11,8 @@ import sys
 
 from future.utils import viewitems, viewkeys
 
-from ..models.diff import Diff as DiffModel
-from ..persistence import persistence
+from ..persistence.models.diff import Diff as DiffModel
+from ..persistence import persistence_config
 from ..utils.io import print_msg
 
 from .cmd_show import print_trial_relationship
@@ -31,16 +31,16 @@ def print_diff_trials(diff):
 def print_replaced_attributes(replaced, ignore=("id",), extra=tuple(),
                               names={}):
     """Print attributes diff"""
-    for (module_removed, module_added) in replaced:
-        print("  Name: {}".format(module_removed.name))
+    for (removed, added) in replaced:
+        print("  Name: {}".format(removed.name))
         output = []
-        for key in viewkeys(module_removed.to_dict(ignore=ignore, extra=extra)):
-            removed = getattr(module_removed, key)
-            added = getattr(module_added, key)
-            if removed != added:
+        for key in viewkeys(removed.to_dict(ignore=ignore, extra=extra)):
+            removed_attr = getattr(removed, key)
+            added_attr = getattr(added, key)
+            if removed_attr != added_attr:
                 output.append("    {} changed from {} to {}".format(
                     names.get(key, key.capitalize().replace("_", " ")),
-                    removed or "<None>", added or "<None>"))
+                    removed_attr or "<None>", added_attr or "<None>"))
         print("\n".join(output))
         print()
 
@@ -72,7 +72,7 @@ class Diff(Command):
                      "current directory")
 
     def execute(self, args):
-        persistence.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect_existing(args.dir or os.getcwd())
         args.trial = list(args.trial)
 
         diff = DiffModel(args.trial[0], args.trial[1])
@@ -81,7 +81,7 @@ class Diff(Command):
         print_diff_trials(diff)
 
         if args.modules:
-            (added, removed, replaced) = diff.modules()
+            (added, removed, replaced) = diff.modules
             print_msg("{} modules added:".format(len(added)), True)
             print_trial_relationship(added)
             print()
@@ -94,7 +94,7 @@ class Diff(Command):
             print_replaced_attributes(replaced)
 
         if args.environment:
-            (added, removed, replaced) = diff.environment()
+            (added, removed, replaced) = diff.environment
             print_msg("{} environment attributes added:".format(
                 len(added)), True)
             print_trial_relationship(added, breakline="\n", other="\n  ")

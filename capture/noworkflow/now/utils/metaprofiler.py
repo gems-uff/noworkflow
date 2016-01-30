@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define MetaProfiler
@@ -12,6 +12,7 @@ from __future__ import (absolute_import, print_function,
 
 import csv
 import os
+
 from collections import defaultdict
 from datetime import datetime
 from functools import wraps
@@ -20,7 +21,7 @@ from functools import wraps
 class MetaProfiler(object):
 
     def __init__(self, active=False):
-        self.file = 'nowtime.csv'
+        self.file = "nowtime.csv"
         self.active = active
         self.order = [
             "cmd",
@@ -53,7 +54,7 @@ class MetaProfiler(object):
                 rows.append(self.order)
             rows.append(row)
 
-            with open(self.file, 'a') as f:
+            with open(self.file, "a") as f:
                 a = csv.writer(f)
                 a.writerows(rows)
 

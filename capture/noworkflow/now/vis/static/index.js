@@ -246,6 +246,7 @@ function reload() {
               '<span class="attr"><span class="desc">Script: </span><span class="script">' + n.info.script + '</span></span>' +
               '<span class="attr"><span class="desc">Start: </span><span class="start">' + n.info.start + '</span></span>' +
               '<span class="attr"><span class="desc">Finish: </span><span class="finish">' + n.info.finish + '</span></span>' +
+              '<span class="attr"><span class="desc">Duration: </span><span class="duration">' + n.info.duration_text + '</span></span>' +
               (n.info.arguments ? ('<span class="attr"><span class="desc">Arguments: </span><span class="arguments">' + n.info.arguments + '</span></span>') : "") +
               (n.info.duration ? ('<span class="attr"><span class="desc">Duration: </span><span class="duration">' + n.info.duration + '</span></span>') : "") +
             '</div>');

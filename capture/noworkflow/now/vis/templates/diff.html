@@ -137,10 +137,10 @@
             <span class="attr"><span class="desc">Script: </span><span class="script"> {{ trial1.script }}</span></span>
             {{ info('start', 'Start', trial1.start, trial2.start)}}
             {{ info('finish', 'Finish', trial1.finish, trial2.finish)}}
-            {{ info('duration', 'Duration', trial1.duration, trial2.duration)}}
+            {{ info('duration', 'Duration', trial1.duration_text, trial2.duration_text)}}
             {% if not 'arguments' in trial %}
               {% if trial1.arguments %}
-                <span class="attr"><span class="desc">Arguments: <span class="arguments"> {{ trial1.arguments }}</span></span></span>'
+                <span class="attr"><span class="desc">Arguments: <span class="arguments"> {{ trial1.arguments }}</span></span></span>
               {% endif %}
             {% else %}
               {% if trial1.arguments %}

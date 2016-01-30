@@ -10,8 +10,8 @@ import os
 import subprocess
 import sys
 
+from ..utils.functions import resource, resource_is_dir, resource_ls
 from ..utils.io import print_msg
-from ..utils.functions import resource, resource_ls, resource_is_dir
 
 from .command import Command
 
@@ -20,6 +20,7 @@ DEMO = "../resources/demo"
 
 
 def recursive_copy(origin, destiny):
+    """Copy directory from resource to destiny folder"""
     if not os.path.exists(destiny):
         os.makedirs(destiny)
     for element in resource_ls(origin):
@@ -31,7 +32,14 @@ def recursive_copy(origin, destiny):
             with open(destiny_element, "wb") as fil:
                 fil.write(resource(origin_element))
 
+
 def erase(directory, everything=False):
+    """Remove all files from directory
+
+
+    Keyword Arguments:
+    everything -- should delete .noworkflow too (default=False)
+    """
     for root, dirs, files in os.walk(directory, topdown=False):
         for name in files:
             path = os.path.join(root, name)

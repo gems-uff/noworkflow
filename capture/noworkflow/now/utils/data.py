@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define data structures and data access functions"""
@@ -44,6 +44,3 @@ class HashableDict(dict):
 
     def __eq__(self, other):
         return self.key() == other.key()
-
-
-hashabledict = HashableDict

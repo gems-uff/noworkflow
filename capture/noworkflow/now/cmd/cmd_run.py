@@ -10,13 +10,12 @@ import argparse
 import os
 import sys
 
-from .. import prov_definition
-from .. import prov_deployment
-from .. import prov_execution
+from ..collection.metadata import Metascript
+from ..collection import prov_definition
+from ..collection import prov_deployment
+from ..collection import prov_execution
+from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
-from ..persistence import persistence
-from ..metadata import Metascript
-from ..models import Tag
 
 from .command import Command
 
@@ -51,10 +50,8 @@ class ScriptArgs(argparse.Action):
 def run(metascript):
     """Execute noWokflow to capture provenance from script"""
     try:
-        metascript.create_trial()
-        Tag.create_automatic_tag(
-            metascript.trial_id, metascript.code_hash, metascript.command
-        )
+        metascript.trial_id = Trial.fast_store(*metascript.create_trial_args())
+        Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
 
         io.print_msg("collecting definition provenance")
         prov_definition.collect_provenance(metascript)
@@ -67,7 +64,6 @@ def run(metascript):
 
         metaprofiler.meta_profiler.save()
 
-        return prov_execution.PROVIDER
     finally:
         metascript.create_last()
 
@@ -98,7 +94,7 @@ class Run(Command):
         add_arg("-v", "--verbose", action="store_true",
                 help="increase output verbosity")
         add_arg("--meta", action="store_true",
-                help="exeute noWorkflow meta profiler")
+                help="execute noWorkflow meta profiler")
 
         # Deployment
         add_arg("-b", "--bypass-modules", action="store_true",
@@ -121,7 +117,7 @@ class Run(Command):
                      "selected context (defaults to 1)")
         add_arg("-e", "--execution-provenance",
                 default=self.default_execution_provenance,
-                choices=["Profiler", "InspectProfiler", "Tracer"],
+                choices=["Profiler", "Tracer"],
                 help="execution provenance provider. (defaults to Profiler)")
         add_arg("-c", "--context", choices=["main", "package", "all"],
                 default=self.default_context,

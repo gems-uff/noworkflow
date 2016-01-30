@@ -1,18 +1,19 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Define f_trace related interpreters and functions """
+"""Define f_trace related interpreters and functions"""
 # pylint: disable=R0902
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import sys
+
 from .code_interpreter import CodeInterpreter, PyInterpreter
 
 
 class AlmostReadOnlyDict(dict):
-    """ Use it to avoid changes on the original dict """
+    """Use it to avoid changes on the original dict"""
 
     def __init__(self, *args, **kwargs):
         super(AlmostReadOnlyDict, self).__init__(*args, **kwargs)
@@ -32,7 +33,7 @@ class AlmostReadOnlyDict(dict):
 
 
 class FindFTrace(CodeInterpreter):
-    """ Find <expr>.f_trace attribution """
+    """Find <expr>.f_trace attribution"""
 
     def __init__(self, *args, **kwargs):
         # Disable operations that may cause effect
@@ -65,26 +66,26 @@ class FindFTrace(CodeInterpreter):
         self._globals = AlmostReadOnlyDict(self._globals)
 
     def store_attr(self):
-        """ STORE_ATTR opcode """
-        if self.names[self.oparg] == 'f_trace':
+        """STORE_ATTR opcode"""
+        if self.names[self.oparg] == "f_trace":
             self._stop = True
             self.result = self.stack.pop() if self.stack else True
 
 
-f_trace_name = u'FTraceExe' if sys.version_info >= (3, 0) else b'FTraceExe'
+f_trace_name = u"FTraceExe" if sys.version_info >= (3, 0) else b"FTraceExe"
 FTraceExe = type(f_trace_name, (FindFTrace, PyInterpreter), {})
 
 
 def get_f_trace(code, loc, glob):
-    """ Get frame from frame.f_trace attribution """
+    """Get frame from frame.f_trace attribution"""
     interpreter = FTraceExe(code, loc, glob)
     interpreter.execute()
     return interpreter.result
 
 
 def find_f_trace(code, loc, glob, lasti):
-    """ Check if code has frame.f_trace attribution """
-    if 'f_trace' not in code.co_names:
+    """Check if code has frame.f_trace attribution"""
+    if "f_trace" not in code.co_names:
         return False
     interpreter = FindFTrace(code, loc, glob)
     interpreter.execute()

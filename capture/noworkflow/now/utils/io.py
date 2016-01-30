@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define io utility functions"""
@@ -8,9 +8,12 @@ from __future__ import (absolute_import, print_function,
 
 import sys
 
-from ..cross_version import StringIO, items
+from future.utils import viewitems
 
-LABEL = '[now] '
+from .cross_version import StringIO
+
+
+LABEL = "[now] "
 verbose = False
 
 STDIN = sys.stdin
@@ -22,7 +25,7 @@ class redirect_output(object):
 
     def __init__(self, outputs=None):
         if outputs is None:
-            outputs = ['stdout', 'stderr']
+            outputs = ["stdout", "stderr"]
         self.outputs = outputs
         self.old = {}
 
@@ -35,17 +38,17 @@ class redirect_output(object):
         return result
 
     def __exit__(self, exc_type, value, traceback):
-        for out, old in items(self.old):
+        for out, old in viewitems(self.old):
             setattr(sys, out, old)
 
 
 def print_msg(message, force=False, file=STDOUT):
     """Print message with [now] prefix when in verbose mode"""
     if verbose or force:
-        print('{}{}'.format(LABEL, message), file=file)
+        print("{}{}".format(LABEL, message), file=file)
 
 
 def print_fn_msg(message, force=False, file=STDOUT):
     """Print lazy message with [now] prefix"""
     if verbose or force:
-        print('{}{}'.format(LABEL, message()), file=file)
+        print("{}{}".format(LABEL, message()), file=file)

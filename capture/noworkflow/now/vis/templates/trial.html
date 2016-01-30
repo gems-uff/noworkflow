@@ -16,6 +16,10 @@
         <span class="desc">Finish: </span>
         <span class="finish"> {{ trial.finish }}</span>
       </span>
+      <span class="attr">
+        <span class="desc">Duration: </span>
+        <span class="duration"> {{ trial.duration_text }}</span>
+      </span>
       {% if trial.arguments %}
         <span class="attr"><span class="desc">Arguments: </span><span class="arguments">{{ trial.arguments }} </span></span>
       {% endif %}

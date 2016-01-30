@@ -10,7 +10,7 @@ import os
 import threading
 import webbrowser
 
-from ..persistence import persistence
+from ..persistence import persistence_config
 
 from .command import Command
 
@@ -42,6 +42,6 @@ class Vis(Command):
                      "current directory")
 
     def execute(self, args):
-        persistence.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect_existing(args.dir or os.getcwd())
         run(path=args.dir, browser=args.browser, port=args.port,
             debug=args.debug)

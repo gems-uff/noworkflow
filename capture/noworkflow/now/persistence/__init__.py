@@ -1,18 +1,18 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from .provider import Provider, row_to_dict
-from .storage import StorageProvider
+from .config import PersistenceConfig
+from .content_database import ContentDatabase
+from .relational_database import RelationalDatabase
 
-class Persistence(StorageProvider):
-	pass
-
-persistence = Persistence()
+persistence_config = PersistenceConfig()
+content = ContentDatabase(persistence_config)
+relational = RelationalDatabase(persistence_config)
 
 
 def get_serialize(arg):
@@ -26,7 +26,8 @@ def get_serialize(arg):
 
 
 __all__ = [
-    b'persistence',
-    b'row_to_dict',
-    b'get_serializer',
+    b"persistence_config",
+    b"content",
+    b"relational",
+    b"get_serializer",
 ]
