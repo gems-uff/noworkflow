@@ -1,5 +1,5 @@
-# Copyright (c) 2014 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2014 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
@@ -8,14 +8,12 @@ from __future__ import (absolute_import, print_function,
 
 import unittest
 import pyposast
-from ...now.cross_version import bytes_string
-from ...now.persistence import persistence
-from ...now.prov_definition.slicing_visitor import SlicingVisitor
-from ...now.prov_definition.utils import FunctionCall
+from ...now.utils.cross_version import bytes_string
+from ...now.collection.prov_definition.slicing_visitor import SlicingVisitor
+from ...now.collection.prov_definition.utils import FunctionCall
+from ...now.collection.metadata import Metascript
 
-
-persistence.put = lambda x: None
-NAME = '<unknown>'
+NAME = "<unknown>"
 
 
 class TestSlicingDependencies(unittest.TestCase):
@@ -24,17 +22,19 @@ class TestSlicingDependencies(unittest.TestCase):
             return self.visitor.dependencies[line]
 
         def call(self, line, col):
-            return self.visitor.function_calls[line][col]
+            return self.visitor.call_by_col[line][col]
 
         def parse(self, code):
-            metascript = {
-                'name': 'name',
-                'code': bytes_string(code, 'utf-8'),
-                'path': NAME,
-                'compiled': None,
-            }
-            self.visitor = SlicingVisitor(metascript)
-            self.visitor.metascript['code'] = code
+            metascript = Metascript()
+            metascript.name = "name"
+            metascript.code = bytes_string(code, "utf-8")
+            metascript._path = NAME
+            metascript.paths[NAME] = metascript.definitions_store.dry_add(
+                "", NAME, metascript.code, "FILE", None
+            )
+            metascript.compiled = None
+            self.visitor = SlicingVisitor(metascript, metascript.paths[NAME])
+            #self.visitor.metascript.code = code
             return pyposast.parse(code)
 
         def test_simple_assignment(self):
@@ -61,14 +61,16 @@ class TestSlicingDependencies(unittest.TestCase):
             tree = self.parse("for i in a + [b, c]:\n"
                              "    pass")
             self.visitor.visit(tree)
-            self.assertEqual(['a', 'b', 'c'], self.dependencies(1)['i'])
+            deps = ['a', 'b', 'c', 'now(iter)']
+            self.assertEqual(deps, self.dependencies(1)['i'])
 
         def test_for2(self):
             tree = self.parse("for i, j in [b, c]:\n"
                              "    pass")
             self.visitor.visit(tree)
-            self.assertEqual(['b', 'c'], self.dependencies(1)['i'])
-            self.assertEqual(['b', 'c'], self.dependencies(1)['j'])
+            deps = ['b', 'c', 'now(iter)']
+            self.assertEqual(deps, self.dependencies(1)['i'])
+            self.assertEqual(deps, self.dependencies(1)['j'])
 
 
         def test_augmented_assignment(self):
@@ -213,7 +215,7 @@ class TestSlicingDependencies(unittest.TestCase):
                     "    yield a")
             tree = self.parse(code)
             self.visitor.visit(tree)
-            self.assertEqual(['a'], self.dependencies(2)['return'])
+            self.assertEqual(['a'], self.dependencies(2)['yield'])
 
         def test_return2(self):
             code = ("def f(a):\n"

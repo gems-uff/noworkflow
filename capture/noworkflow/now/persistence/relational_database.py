@@ -19,7 +19,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from ..utils.io import print_msg
 
 
-DB_FILENAME = 'db.sqlite'
+DB_FILENAME = "db.sqlite"
 
 
 class RelationalDatabase(object):
@@ -39,19 +39,27 @@ class RelationalDatabase(object):
         """Set content_path"""
         self.db_path = join(config.provenance_path, DB_FILENAME)
 
+    def mock(self, config):
+        self.db_path = ""
+
     def connect(self, config):
         """Create database connection
         If database does not exist, create it as well
         """
         new_db = not exists(self.db_path)
 
-        self.engine = create_engine('sqlite:///' + self.db_path, echo=False)
+        if config.should_mock:
+            new_db, self.db_path = True, ""
+
+        self.engine = create_engine(
+            "sqlite://" + ("/" if self.db_path else "") + self.db_path,
+            echo=False)
         self.session_factory.configure(bind=self.engine, autoflush=False,
                                        expire_on_commit=True)
         self._session_map = {}
 
         if new_db:
-            print_msg('creating provenance database')
+            print_msg("creating provenance database")
             self.base.metadata.create_all(self.engine)
 
 

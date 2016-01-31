@@ -145,6 +145,7 @@ class Deployment(object):
                     try:
                         finder = modulefinder.ModuleFinder(excludes=excludes)
                         finder.run_script(metascript.path)
+                        print(metascript.path)
                         break
                     except SyntaxError as e:
                         name = e.filename.split("site-packages/")[-1]

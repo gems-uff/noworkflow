@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import unittest
-from ..now.formatter import PrettyLines, Table
+from ..now.utils.formatter import PrettyLines, Table
 
 
 class PrettyMock(object):

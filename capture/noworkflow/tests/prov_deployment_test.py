@@ -1,5 +1,5 @@
-# Copyright (c) 2015 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2015 Polytechnic Institute of New York University.
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test now.prov_deployment module"""
@@ -10,36 +10,42 @@ import unittest
 import modulefinder
 import platform
 import os
-from ..now.persistence import persistence
-from ..now.prov_deployment import collect_environment_provenance
-from ..now.prov_deployment import collect_modules_provenance
-from ..now.prov_deployment import get_version
-from . import mock
 
-persistence = mock.Mock()
+from future.utils import viewvalues
+
+from ..now.collection.metadata import Metascript
 
 
 class TestProvDeployment(unittest.TestCase):
     """TestCase for now.prov_deployment module"""
 
     def test_collect_environment_provenance(self):
-        env = collect_environment_provenance()
-        self.assertIn('PWD', env)
-        self.assertIn('PYTHON_VERSION', env)
-        self.assertIn('PYTHON_IMPLEMENTATION', env)
+        meta = Metascript()
+        meta.deployment._collect_environment_provenance(meta)
+        env = {e.name:e.value
+               for e in viewvalues(meta.environment_attrs_store.store)}
+        self.assertIn("PWD", env)
+        self.assertIn("PYTHON_VERSION", env)
+        self.assertIn("PYTHON_IMPLEMENTATION", env)
 
     def _test_collect_modules_provenance(self):
         finder = modulefinder.ModuleFinder()
         finder.run_script(__file__)
-        modules = collect_modules_provenance(finder.modules)
-        modules = {m[0] for m in modules}
-        self.assertIn('modulefinder', modules)
+        meta = Metascript()
+        meta.deployment._collect_modules_provenance(meta, finder.modules)
+        modules = {m.name
+                   for m in viewvalues(meta.modules_store.store)}
+        self.assertIn("modulefinder", modules)
 
     def test_get_version_system_module(self):
-        self.assertEqual(platform.python_version(), get_version('sys'))
+        meta = Metascript()
+        self.assertEqual(
+            platform.python_version(), meta.deployment._get_version("sys"))
 
     def test_get_version_distribution(self):
-        self.assertEqual('1.0.2', get_version('pyposast'))
+        meta = Metascript()
+        self.assertEqual("1.1.0", meta.deployment._get_version("pyposast"))
 
     def test_get_version_other(self):
-        self.assertEqual(None, get_version('other'))
+        meta = Metascript()
+        self.assertEqual(None, meta.deployment._get_version("other"))

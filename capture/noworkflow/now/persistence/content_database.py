@@ -28,9 +28,13 @@ class ContentDatabase(object):
         """Set content_path"""
         self.content_path = join(config.provenance_path, CONTENT_DIRNAME)
 
+    def mock(self, config):
+        ContentDatabase.put = lambda s, c: hashlib.sha1(c).hexdigest()
+        ContentDatabase.get = lambda s, c: "".encode("utf-8")
+
     def connect(self, config):
         """Create content directory"""
-        if not isdir(self.content_path):
+        if not config.should_mock and not isdir(self.content_path):
             os.makedirs(self.content_path)
 
     def put(self, content):

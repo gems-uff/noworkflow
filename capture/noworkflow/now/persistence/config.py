@@ -23,6 +23,7 @@ class PersistenceConfig(object):
         self.base_path = None # Exeution path
         self.provenance_path = None  # Base .noworkflow path
         self.db_conn = None # Connection to the database
+        self.should_mock = False
 
         if path:
             self.path = path
@@ -49,6 +50,12 @@ class PersistenceConfig(object):
         if path:
             return isdir(join(path, PROVENANCE_DIRNAME))
         return isdir(self.provenance_path)
+
+    def mock(self):
+        """Mock database access"""
+        self.should_mock = True
+        for obj in self.delegate:
+            obj.mock(self)
 
     def connect(self, path=None):
         """Connect to persistence"""
