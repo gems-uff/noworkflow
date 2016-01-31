@@ -38,25 +38,21 @@ If you have pip, just run:
 ```bash
 $ pip install noworkflow[all]
 ```
-This installs noWorkflow, PyPosAST, Flask, IPython Notebook and PySWIP.
-The only requirement for running noWorkflow is PyPosAST. The other libraries are only used for provenance analysis.
+This installs noWorkflow, PyPosAST, SQLAlchemy, python-future, flask, IPython, Jupyter and PySWIP.
+The only requirements for running noWorkflow are PyPosAST, SQLAlchemy and python-future. The other libraries are only used for provenance analysis.
 
-If you only want to install noWorkflow and PyPosAST, please do:
+If you only want to install noWorkflow, PyPosAST, SQLAlchemy and python-future please do:
 ```bash
 $ pip install noworkflow
 ```
 
 If you do not have pip, but already have Git (to clone our repository) and Python:
 ```bash
-$ git clone git@github.com:JoaoFelipe/pyposast.git
-$ cd pyposast
-$ ./setup.py install
-$ cd ..
 $ git clone git@github.com:gems-uff/noworkflow.git
 $ cd noworkflow/capture
 $ python setup.py install
 ```
-This installs noWorkflow on your system.
+This installs noWorkflow on your system. It will download the dependencies from PyPI
 
 Basic Usage
 -----------

@@ -404,17 +404,17 @@ class VariableLW(BaseLW):
 
 class VariableDependencyLW(BaseLW):
     __slots__, attributes = define_attrs(
-        ["id", "dependent_activation", "dependent_id",
-         "supplier_activation", "supplier_id", "trial_id"]
+        ["id", "dependent_activation_id", "dependent_id",
+         "supplier_activation_id", "supplier_id", "trial_id"]
     )
     special = set()
 
-    def __init__(self, vid, dependent_activation, dependent_id,
-                 supplier_activation, supplier_id):
+    def __init__(self, vid, dependent_activation_id, dependent_id,
+                 supplier_activation_id, supplier_id):
         self.id = vid
-        self.dependent_activation = dependent_activation
+        self.dependent_activation_id = dependent_activation_id
         self.dependent_id = dependent_id
-        self.supplier_activation = supplier_activation
+        self.supplier_activation_id = supplier_activation_id
         self.supplier_id = supplier_id
         self.trial_id = -1
 
@@ -423,8 +423,15 @@ class VariableDependencyLW(BaseLW):
         return True
 
     def __repr__(self):
-        return ("Dependent(id={}, dependent_id={}, supplier_id={})").format(
-            self.id, self.dependent_id, self.supplier_id)
+        return (
+            "Dependent(id={}, "
+            "dact_id={}, dependent_id={}, "
+            "sact_id={}, supplier_id={})"
+        ).format(
+            self.id,
+            self.dependent_activation_id, self.dependent_id,
+            self.supplier_activation_id, self.supplier_id
+        )
 
 
 class VariableUsageLW(BaseLW):

@@ -80,6 +80,10 @@ class Profiler(ExecutionProvider):
         # Capture arguments
         self.argument_captor = ProfilerArgumentCaptor(self)
 
+        if (sys.version_info >= (3, 0)):
+        
+            Profiler.add_activation = Profiler.initial_add_activation
+
     @property
     def current_activation(self):
         """Return current activation"""
@@ -155,17 +159,16 @@ class Profiler(ExecutionProvider):
         """Add activation to activation stack"""
         self.activation_stack.append(aid)
 
-    if (sys.version_info >= (3, 0)):
-        """Ignore first module.exec"""
-        _old_add_activation = add_activation
-        @wraps(add_activation)
-        def add_activation(self, aid):
-            Profiler.add_activation = Profiler._old_add_activation
-            if aid == 1 and self.activations[aid].name == "module.exec":
-                self.depth_non_user -= 1
-                self.activations.id = 0
-                return
-            return Profiler._old_add_activation(self, aid)
+    _old_add_activation = add_activation
+    def initial_add_activation(self, aid):
+        """Add activation to activation stack.
+        Ignore first module.exec on Python 3"""
+        Profiler.add_activation = Profiler._old_add_activation
+        if aid == 1 and self.activations[aid].name == "module.exec":
+            self.depth_non_user -= 1
+            self.activations.id = 0
+            return
+        return Profiler._old_add_activation(self, aid)
 
     def close_activation(self, frame, event, arg, ccall=False):
         """Remove activation from stack, set finish time and add accesses"""

@@ -84,6 +84,8 @@ class InspectProfilerArgumentCaptor(ArgumentCaptor):
         activation -- current activation
         """
         provider = self.provider
+        # ToDo: inspect.getargvalues was deprecated on Python 3.5
+        # ToDo: use inspect.signature instead
         (args, varargs, keywords, values) = inspect.getargvalues(frame)
         for arg in args:
             try:
@@ -228,6 +230,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
                     match_args(call_arg, kwargs)
 
         # Match kwargs, starargs
+        # ToDo: Python 3.5 supports multiple keyword arguments and starargs
         # ToDo: improve matching
         #   Ignore default params
         #   Do not match f(**kwargs) with def(*args)

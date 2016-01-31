@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import ast
+import sys
 import itertools
 
 from future.utils import viewvalues
@@ -69,16 +70,30 @@ class FunctionCall(ast.NodeVisitor):
 
     def visit_Call(self, node):
         self.func = self.use_visitor(node.func)
-        self.args = [self.use_visitor(arg) for arg in node.args]
+        self.args = []
+        for arg in node.args:
+            if sys.version_info <= (3, 4) or not isinstance(arg, ast.Starred):
+                self.args.append(self.use_visitor(arg))
         for keyword in node.keywords:
             self.visit(keyword)
-        if node.starargs:
-            self.starargs = self.use_visitor(node.starargs)
-        if node.kwargs:
-            self.kwargs = self.use_visitor(node.kwargs)
+        if hasattr(node, 'starargs'):
+            # Python <= 3.4
+            if node.starargs:
+                self.starargs = self.use_visitor(node.starargs)
+            if node.kwargs:
+                self.kwargs = self.use_visitor(node.kwargs)
+
+    def visit_Starred(self, node):
+        # Python 3.5
+        self.starargs += self.use_visitor(node)
+
 
     def visit_keyword(self, node):
-        self.keywords[node.arg] = self.use_visitor(node.value)
+        if node.arg:
+            self.keywords[node.arg] = self.use_visitor(node.value)
+        else:
+            # Python 3.5
+            self.kwargs += self.use_visitor(node.value)
 
     def info(self):
         result = ("line={}, col={}, "
