@@ -230,7 +230,7 @@ class DefinitionLW(BaseLW):
         self.parent = (parent if parent is not None else -1)
         self.type = dtype
         self.code = code
-        self.code_hash = content.put(code)
+        self.code_hash = content.put(code.encode("utf-8"))
 
     def is_complete(self):
         """DefinitionLW can always be removed from object store"""

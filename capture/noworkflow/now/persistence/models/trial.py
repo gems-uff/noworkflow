@@ -8,8 +8,6 @@ from __future__ import (absolute_import, print_function,
 
 import textwrap
 
-from pyposast import native_decode_source
-
 from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func
@@ -203,7 +201,8 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
     def script_content(self):
         """Return the "main" script content of the trial"""
         return PrettyLines(
-            native_decode_source(content.get(self.code_hash)).split("/n"))
+            content.get(self.code_hash)
+            .encode("utf-8").split("/n"))
 
     @property
     def finished(self):

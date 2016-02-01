@@ -35,3 +35,6 @@ class List(Command):
                 indent=" " * indent, t=trial))
             print("{indent}ran from {t.start} to {t.finish}".format(
                 indent=" " * indent, t=trial))
+            if trial.finish:
+                print('{indent}duration: {t.duration_text}'.format(
+                    indent=" " * indent, t=trial))

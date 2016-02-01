@@ -24,8 +24,8 @@ class FunctionVisitor(ast.NodeVisitor):
 
     def __init__(self, metascript, file_definition):
         self.path = file_definition.name
-        self.raw_code = file_definition.code
-        self.code = self.raw_code.decode("utf-8").split("\n")
+        self.code = file_definition.code
+        self.lcode = self.code.split("\n")
         self.metascript = metascript
         self.result = None
 
@@ -40,12 +40,12 @@ class FunctionVisitor(ast.NodeVisitor):
     def node_code(self, node):
         """Use PyPosAST positions to extract node text"""
         return extract_code(
-            self.code, node, lstrip=" \t", ljoin="", strip="() \t"
+            self.lcode, node, lstrip=" \t", ljoin="", strip="() \t"
         )
 
     def extract_code(self, node):
         """Use PyPosAST to extract node text without strips"""
-        return extract_code(self.code, node).encode("utf-8")
+        return extract_code(self.lcode, node)
 
     def visit_ClassDef(self, node):
         """Visit ClassDef. Ignore Classes"""
@@ -55,7 +55,7 @@ class FunctionVisitor(ast.NodeVisitor):
             # ToDo: include filename on namespace
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
             node.name,
-            "".encode("utf-8"),
+            "",
             "CLASS",
             self.contexts[-1].id
         ))
@@ -115,7 +115,7 @@ class FunctionVisitor(ast.NodeVisitor):
     def extract_disasm(self):
         """Extract disassembly code"""
         compiled = cross_compile(
-            self.raw_code, self.path, "exec")
+            self.code, self.path, "exec")
         if self.path == self.metascript.path:
             self.metascript.compiled = compiled
 

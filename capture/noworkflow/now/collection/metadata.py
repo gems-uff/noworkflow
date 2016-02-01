@@ -12,6 +12,8 @@ import sys
 
 from datetime import datetime
 
+from pyposast import native_decode_source
+
 from ..persistence import persistence_config, get_serializer
 from ..persistence.lightweight import ObjectStore
 from ..persistence.lightweight import DefinitionLW, ObjectLW
@@ -148,7 +150,7 @@ class Metascript(object):
     def add_path(self, path, set_code=False):
         """Add path to paths list"""
         with open(path, "rb") as script_file:
-            code = script_file.read()
+            code = native_decode_source(script_file.read())
             if set_code:
                 self.code = code
             self.paths[path] = self.definitions_store.dry_add(
@@ -158,9 +160,9 @@ class Metascript(object):
         """Fake configuration for tests"""
         self.name = path
         self._path = path
-        self.code = code
+        self.code = native_decode_source(code)
         self.paths[path] = self.definitions_store.dry_add(
-            "", path, code, "FILE", None)
+            "", path, self.code, "FILE", None)
 
     @property
     def context(self):

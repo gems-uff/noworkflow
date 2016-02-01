@@ -79,7 +79,7 @@ class Deployment(object):
     def _find_modules(self, metascript):
         """Use modulefinder to find modules
 
-        Return finder.modules
+        Return finder.modules dict
         """
         excludes = set()
         last_name = None
@@ -101,7 +101,7 @@ class Deployment(object):
                 excludes.add(last_name)
                 print_msg("   skip module due syntax error: {} ({}/{})"
                           .format(last_name, i + 1, max_atemps))
-        return []
+        return {}
 
     @meta_profiler("extract_modules")
     def _extract_modules_provenance(self, metascript, python_modules):

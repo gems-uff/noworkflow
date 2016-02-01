@@ -9,7 +9,7 @@ The noWorkflow project aims at allowing scientists to benefit from provenance da
 
 noWorkflow was developed in Python and it currently is able to capture provenance of Python scripts using Software Engineering techniques such as abstract syntax tree (AST) analysis, reflection, and profiling, to collect provenance without the need of a version control system or any other environment.
 
-Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below.
+Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below, and the [tutorial videos at our Wiki page](https://github.com/gems-uff/noworkflow/wiki/Videos).
 
 Team
 ----

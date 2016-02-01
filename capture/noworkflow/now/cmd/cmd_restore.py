@@ -50,7 +50,7 @@ class Restore(Command):
             return
 
         head = Trial.load_parent(trial.script, remove=False)
-        code_hash = content.put(metascript.code)
+        code_hash = metascript.code_hash
 
         if code_hash != head.code_hash:
             metascript.trial_id = Trial.fast_store(
