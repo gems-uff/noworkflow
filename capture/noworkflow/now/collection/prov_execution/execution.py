@@ -12,7 +12,7 @@ from ...utils.cross_version import cross_compile
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
 
-from .debugger import create_debugger, debugger_builtins
+from .debugger import debugger_builtins
 from .profiler import Profiler
 from .slicing import Tracer
 

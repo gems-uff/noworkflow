@@ -10,9 +10,10 @@ import sys
 
 from IPython.utils.process import arg_split
 from IPython.core import magic_arguments
-from IPython.core.magic import  line_magic, cell_magic, line_cell_magic
+from IPython.core.magic import line_magic, cell_magic, line_cell_magic
 
 from ...cmd import Command
+from ...utils.functions import abstract
 
 
 MAGIC_TYPES = {
@@ -55,10 +56,10 @@ class IpythonCommandMagic(Command):
 
     def execute(self, func, line, cell, magic_cls):
         """Execute the command. Override on subclass"""
-        super(Command, self).execute(args)
+        abstract()
 
     def arguments(self, func, line):
         """Get arguments from magic"""
-        argv = arg_split(line, posix = not sys.platform.startswith("win"))
+        argv = arg_split(line, posix=not sys.platform.startswith("win"))
         args = magic_arguments.parse_argstring(func, line)
         return argv, args

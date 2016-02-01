@@ -13,7 +13,7 @@ from ..persistence import persistence_config, relational, content
 
 def init(path=None, ipython=None):
     import os
-    from IPython.display import display_html, display_javascript
+    from IPython.display import display_html
     from ..utils.functions import resource
     from .magics import register_magics
 
@@ -47,7 +47,7 @@ def init(path=None, ipython=None):
     display_html(
         require_js.format(";\n".join(js_text)),
         raw=True
-        )
+    )
 
     css_files = [
         u"vis/static/font-awesome-4.3.0/css/font-awesome-ip.css",

@@ -19,8 +19,9 @@ def concat_iter(*iters):
 class OrderedCounter(OrderedDict, Counter):
     """OrderedDict with default value 0"""
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__,
+        return "%s(%r)" % (self.__class__.__name__,
                            OrderedDict(self))
+
     def __reduce__(self):
         return self.__class__, (OrderedDict(self),)
 

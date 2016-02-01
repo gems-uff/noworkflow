@@ -6,7 +6,6 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 from setuptools.command.develop import develop
 
-import fnmatch
 import os
 import platform
 
@@ -14,6 +13,7 @@ from uuid import getnode
 
 with open("./noworkflow/resources/version.txt", "r") as f:
     __version__ = f.read().strip()
+
 
 def recursive_path(pack, path):
     matches = []
@@ -24,10 +24,10 @@ def recursive_path(pack, path):
 
 
 try:
-   import pypandoc
-   long_description = pypandoc.convert('../README.md', 'rst')
+    import pypandoc
+    long_description = pypandoc.convert("../README.md", "rst")
 except (IOError, ImportError):
-   long_description = (
+    long_description = (
         "Supporting infrastructure to run scientific experiments "
         "without a scientific workflow management system.")
 
@@ -40,35 +40,33 @@ def analytics(command_subclass):
         import sys
         try:
             try:
-                from urllib2 import HTTPHandler, build_opener
                 from urllib2 import urlopen, Request
                 from urllib import urlencode
             except ImportError:
-                from urllib.request import HTTPHandler, build_opener
                 from urllib.request import urlopen, Request
                 from urllib.parse import urlencode
 
             os_ver = platform.system()
-            py_ver = '_'.join(str(x) for x in sys.version_info)
-            now_ver = __version__.replace('.', '_')
+            py_ver = "_".join(str(x) for x in sys.version_info)
+            now_ver = __version__.replace(".", "_")
 
-            code = 'os:{0},py:{1},now:{2}'.format(os_ver, py_ver, now_ver)
+            code = "os:{0},py:{1},now:{2}".format(os_ver, py_ver, now_ver)
             action = command_subclass.action
             cid = getnode()
             payload = {
-                'v': '1',
-                'tid': 'UA-61791314-1',
-                'cid': str(cid),
-                't': 'event',
-                'ec': action,
-                'ea': code,
+                "v": "1",
+                "tid": "UA-61791314-1",
+                "cid": str(cid),
+                "t": "event",
+                "ec": action,
+                "ea": code,
             }
 
-            url = 'http://www.google-analytics.com/collect'
-            data = urlencode(payload).encode('utf-8')
+            url = "http://www.google-analytics.com/collect"
+            data = urlencode(payload).encode("utf-8")
             request = Request(url, data=data)
             request.get_method = lambda: "POST"
-            connection = urlopen(request)
+            urlopen(request)
         except:
             pass
         orig_run(self)
@@ -79,44 +77,46 @@ def analytics(command_subclass):
 
 @analytics
 class CustomDevelopCommand(develop):
-    action = 'develop'
+    action = "develop"
 
 
 @analytics
 class CustomInstallCommand(install):
-    action = 'install'
+    action = "install"
 
 
 setup(
-    name = "noworkflow",
-    version = __version__,
-    packages = find_packages(),
-    package_data = {
-        'noworkflow': recursive_path('noworkflow', 'resources')
-          + recursive_path('noworkflow', 'now/vis/static')
-          + recursive_path('noworkflow', 'now/vis/templates'),
+    name="noworkflow",
+    version=__version__,
+    packages=find_packages(),
+    package_data={
+        "noworkflow": (
+            recursive_path("noworkflow", "resources")
+            + recursive_path("noworkflow", "now/vis/static")
+            + recursive_path("noworkflow", "now/vis/templates")
+        ),
     },
-    entry_points = {
-        'console_scripts': ['now=noworkflow:main']
+    entry_points={
+        "console_scripts": ["now=noworkflow:main"]
     },
-    author = ("Joao Pimentel, Leonardo Murta, Vanessa Braganholo, "
-              "Fernando Chirigati, David Koop, and Juliana Freire"),
-    author_email = "leomurta@ic.uff.br",
-    description = "Supporting infrastructure to run scientific experiments "
-                  "without a scientific workflow management system.",
-    long_description = long_description,
-    license = "MIT",
-    keywords = "scientific experiments provenance python",
-    url = "https://github.com/gems-uff/noworkflow",
-    install_requires=['pyposast>=1.1.0', 'future', 'SQLAlchemy'],
-    extras_require = {
-        'vis': ['pyposast', 'flask'],
-        'notebook': ['pyposast', 'ipython', 'jupyter'],
-        'all': ['pyposast', 'ipython', 'jupyter', 'flask', 'pyswip-alt',
-                'jsonpickle'],
+    author=("Joao Pimentel, Leonardo Murta, Vanessa Braganholo, "
+            "Fernando Chirigati, David Koop, and Juliana Freire"),
+    author_email="leomurta@ic.uff.br",
+    description="Supporting infrastructure to run scientific experiments "
+                "without a scientific workflow management system.",
+    long_description=long_description,
+    license="MIT",
+    keywords="scientific experiments provenance python",
+    url="https://github.com/gems-uff/noworkflow",
+    install_requires=["pyposast>=1.1.3", "future", "SQLAlchemy"],
+    extras_require={
+        "vis": ["pyposast", "flask"],
+        "notebook": ["pyposast", "ipython", "jupyter"],
+        "all": ["pyposast", "ipython", "jupyter", "flask", "pyswip-alt",
+                "jsonpickle"],
     },
     cmdclass={
-        'install': CustomInstallCommand,
-        'develop': CustomDevelopCommand,
+        "install": CustomInstallCommand,
+        "develop": CustomDevelopCommand,
     },
 )

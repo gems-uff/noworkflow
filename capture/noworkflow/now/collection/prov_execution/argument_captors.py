@@ -24,7 +24,7 @@ class ArgumentCaptor(object):
     def __init__(self, provider):
         self.provider = weakref.proxy(provider)
 
-    def capture(frame, activation):
+    def capture(self, frame, activation):
         pass
 
 
@@ -48,7 +48,7 @@ class ProfilerArgumentCaptor(ArgumentCaptor):
             try:
                 provider.object_values.add(
                     var,
-                    provider.serialize(values[var]), 'ARGUMENT', activation.id)
+                    provider.serialize(values[var]), "ARGUMENT", activation.id)
                 activation.args.append(var)
             except Exception:
                 # ignoring any exception during capture
@@ -58,7 +58,7 @@ class ProfilerArgumentCaptor(ArgumentCaptor):
             varargs = names[nargs]
             provider.object_values.add(
                 varargs,
-                provider.serialize(values[varargs]), 'ARGUMENT', activation.id)
+                provider.serialize(values[varargs]), "ARGUMENT", activation.id)
             activation.starargs.append(varargs)
             nargs += 1
         # Capture **kwargs
@@ -66,7 +66,8 @@ class ProfilerArgumentCaptor(ArgumentCaptor):
             kwargs = values[names[nargs]]
             for key in kwargs:
                 provider.object_values.add(
-                    key, provider.serialize(kwargs[key]), 'ARGUMENT', activation.id)
+                    key, provider.serialize(kwargs[key]), "ARGUMENT",
+                    activation.id)
             activation.kwargs.append(names[nargs])
 
 
@@ -90,18 +91,20 @@ class InspectProfilerArgumentCaptor(ArgumentCaptor):
         for arg in args:
             try:
                 provider.object_values.add(
-                    arg, provider.serialize(values[arg]), 'ARGUMENT', activation.id)
+                    arg, provider.serialize(values[arg]), "ARGUMENT",
+                    activation.id)
                 activation.args.append(arg)
             except:  # ignoring any exception during capture
                 pass
         if varargs:
             provider.object_values.add(
-                varargs, provider.serialize(values[varargs]), 'ARGUMENT', activation.id)
+                varargs, provider.serialize(values[varargs]), "ARGUMENT",
+                activation.id)
             activation.starargs.append(varargs)
         if keywords:
             for key, value in viewitems(values[keywords]):
                 provider.object_values.add(
-                    key, provider.serialize(value), 'ARGUMENT', activation.id)
+                    key, provider.serialize(value), "ARGUMENT", activation.id)
                 activation.kwargs.append(key)
 
 
@@ -163,10 +166,10 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         if (filename not in provider.paths
                 or lineno in provider.imports[filename]):
             return
-        if (function_name == '__enter__' and
+        if (function_name == "__enter__" and
                 lasti in provider.with_enter_by_lasti[filename][lineno]):
             return
-        if (function_name == '__exit__' and
+        if (function_name == "__exit__" and
                 lasti in provider.with_exit_by_lasti[filename][lineno]):
             return
         if lasti in provider.iters[filename][lineno]:
@@ -226,7 +229,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
                 match_args(call_arg, act_arg)
                 used[i] += 1
             except ValueError:
-                for kwargs in act.kwargs:
+                for kwargs in activation.kwargs:
                     match_args(call_arg, kwargs)
 
         # Match kwargs, starargs
@@ -234,14 +237,14 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         # ToDo: improve matching
         #   Ignore default params
         #   Do not match f(**kwargs) with def(*args)
-        args = [(i, order[i]) for i in range(len(used)) if not used[i]]
+        args = [(k, order[k]) for k in range(len(used)) if not used[k]]
         for star in call.kwargs + call.starargs:
             for i, act_arg in args:
                 match_args(star, act_arg)
                 used[i] += 1
 
         # Create variables for unmatched arguments
-        args = [(i, order[i]) for i in range(len(used)) if not used[i]]
+        args = [(k, order[k]) for k in range(len(used)) if not used[k]]
         for i, act_arg in args:
             match_arg(None, act_arg)
 
@@ -249,5 +252,6 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         # ToDo: improve dependencies to use references.
         #   Do not create dependencies between all parameters
         lasti_set = set()
-        provider.add_inter_dependencies(back, call.all_args(), self.caller, lasti_set)
+        provider.add_inter_dependencies(back, call.all_args(), self.caller,
+                                        lasti_set)
         provider.remove_return_lasti(lasti_set)

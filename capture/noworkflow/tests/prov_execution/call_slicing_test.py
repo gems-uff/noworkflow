@@ -7,17 +7,13 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import unittest
-import ast
 import sys
 
-from future.utils import viewvalues
-
-from ...now.utils.cross_version import bytes_string
 from ...now.cmd.cmd_run import run
 from ...now.collection.metadata import Metascript
 
 
-NAME = "noworkflow/tests/prov_execution/__init__.py"
+NAME = "noworkflow/tests/examples/script.py"
 PY3_PREFIX = "" if sys.version_info < (3, 0) else "module."
 
 
@@ -26,10 +22,10 @@ class Args(object):
     def __init__(self):
         self.verbose = False
         self.bypass_modules = False
-        self.context = 'main'
+        self.context = "main"
         self.depth = sys.getrecursionlimit()
         self.non_user_depth = 1
-        self.execution_provenance = 'Tracer'
+        self.execution_provenance = "Tracer"
         self.disasm = False
         self.dir = None
         self.script = NAME
@@ -43,19 +39,12 @@ class Args(object):
         self.call_storage_frequency = 10000
 
 
-
 class TestCallSlicing(unittest.TestCase):
 
         def prepare(self, code):
             sys.argv = ["now", "run", "-e", "Tracer", "__init__.py"]
             metascript = Metascript().read_cmd_args(Args())
-
-            metascript.code = code.encode("utf-8")
-            metascript._path = NAME
-            metascript.paths[NAME] = metascript.definitions_store.dry_add(
-                "", NAME, metascript.code, "FILE", None
-            )
-            metascript.compiled = None
+            metascript.fake_path(NAME, code.encode("utf-8"))
 
             # Set __main__ namespace
             import __main__
@@ -92,7 +81,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_call_keyword(self):
+        def test_call_keyword(self):
             metascript = self.prepare("def fn(a, b, c=3):\n"
                                       "    return a + b + c\n"
                                       "x = y = 1\n"
@@ -110,7 +99,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_call_keyword_kw(self):
+        def test_call_keyword_kw(self):
             metascript = self.prepare("def fn(a, b, c=3):\n"
                                       "    return a + b + c\n"
                                       "x = y = 1\n"
@@ -132,7 +121,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_call_args(self):
+        def test_call_args(self):
             metascript = self.prepare("def fn(a, b, c=3):\n"
                                       "    return a + b + c\n"
                                       "x = 1\n"
@@ -142,7 +131,7 @@ class TestCallSlicing(unittest.TestCase):
             result = {
                 (("a", 1), ("x", 3)),
                 (("b", 1), ("y", 4)),
-                (("c", 1), ("y", 4)), #ToDo: fix?
+                (("c", 1), ("y", 4)),  # ToDo: fix?
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("b", 1)),
                 (("return", 2), ("c", 1)),
@@ -153,7 +142,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_def_args(self):
+        def test_def_args(self):
             metascript = self.prepare("def fn(a, *args):\n"
                                       "    return a + args[0]\n"
                                       "x, y, z = 1, 2, 3\n"
@@ -162,7 +151,7 @@ class TestCallSlicing(unittest.TestCase):
             result = {
                 (("a", 1), ("x", 3)),
                 (("args", 1), ("y", 3)),
-                (("args", 1), ("z", 3)), #ToDo: fix?
+                (("args", 1), ("z", 3)),  # ToDo: fix?
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("args", 1)),
                 (("call fn", 4), ("return", 2)),
@@ -170,7 +159,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_def_args_call_args(self):
+        def test_def_args_call_args(self):
             metascript = self.prepare("def fn(a, *args):\n"
                                       "    return a + args[0]\n"
                                       "x, y = 1, [2, 3]\n"
@@ -188,7 +177,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_def_args_call_kw(self):
+        def test_def_args_call_kw(self):
             metascript = self.prepare("def fn(a, *args):\n"
                                       "    return a\n"
                                       "x = {'a': 1}\n"
@@ -196,7 +185,7 @@ class TestCallSlicing(unittest.TestCase):
             run(metascript)
             result = {
                 (("a", 1), ("x", 3)),
-                (("args", 1), ("x", 3)), #ToDo: fix?
+                (("args", 1), ("x", 3)),  # ToDo: fix?
                 (("return", 2), ("a", 1)),
                 (("call fn", 4), ("return", 2)),
                 (("x", 4), ("x", 3)),
@@ -204,7 +193,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_def_kwargs_call_keywords(self):
+        def test_def_kwargs_call_keywords(self):
             metascript = self.prepare("def fn(a, **kwargs):\n"
                                       "    return a + kwargs['b']\n"
                                       "x, y = 1, 1\n"
@@ -220,7 +209,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_def_kwargs_call_kwargs(self):
+        def test_def_kwargs_call_kwargs(self):
             metascript = self.prepare("def fn(a, **kwargs):\n"
                                       "    return a + kwargs['b']\n"
                                       "x = {'a': 1, 'b': 2}\n"
@@ -237,9 +226,9 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_complex(self):
+        def test_complex(self):
             metascript = self.prepare("def fn(a, b, c, d, "
-                                             "e=5, f=6, g=7, **kwargs):\n"
+                                      "e=5, f=6, g=7, **kwargs):\n"
                                       "    return a\n"
                                       "x, y, z, w, u = 1, 2, [3, 4], 5, 7\n"
                                       "v = {'h': 8}\n"
@@ -249,14 +238,14 @@ class TestCallSlicing(unittest.TestCase):
                 (("a", 1), ("x", 3)),
                 (("b", 1), ("y", 3)),
                 (("c", 1), ("z", 3)),
-                (("c", 1), ("v", 4)), #ToDo: fix?
+                (("c", 1), ("v", 4)),  # ToDo: fix?
                 (("d", 1), ("z", 3)),
-                (("d", 1), ("v", 4)), #ToDo: fix?
+                (("d", 1), ("v", 4)),  # ToDo: fix?
                 (("e", 1), ("w", 3)),
-                (("f", 1), ("z", 3)), #ToDo: fix?
-                (("f", 1), ("v", 4)), #ToDo: fix?
+                (("f", 1), ("z", 3)),  # ToDo: fix?
+                (("f", 1), ("v", 4)),  # ToDo: fix?
                 (("g", 1), ("u", 3)),
-                (("kwargs", 1), ("z", 3)), #ToDo: fix?
+                (("kwargs", 1), ("z", 3)),  # ToDo: fix?
                 (("kwargs", 1), ("v", 4)),
                 (("return", 2), ("a", 1)),
                 (("call fn", 5), ("return", 2)),
@@ -276,7 +265,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_nested(self):
+        def test_nested(self):
             metascript = self.prepare("def fn(a):\n"
                                       "    return a\n"
                                       "x = 1\n"
@@ -291,7 +280,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_ccall(self):
+        def test_ccall(self):
             metascript = self.prepare("a, b = 1, 2\n"
                                       "c = min(a, b)")
             run(metascript)
@@ -303,7 +292,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_noreturn(self):
+        def test_noreturn(self):
             metascript = self.prepare("def fn(a):\n"
                                       "    a = 2\n"
                                       "x = 1\n"
@@ -316,7 +305,7 @@ class TestCallSlicing(unittest.TestCase):
             }
             self.assertEqual(result, self.extract(metascript))
 
-        def _test_ccall_inter_params(self):
+        def test_ccall_inter_params(self):
             metascript = self.prepare("a, b = [1, 2, 3], True\n"
                                       "c = sorted(a, reverse=b)")
             run(metascript)

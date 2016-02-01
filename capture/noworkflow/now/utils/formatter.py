@@ -26,7 +26,7 @@ class PrettyLines(PrettyStr):
 
     def __str__(self):
         """Default str repr"""
-        return '\n'.join(self.lines)
+        return "\n".join(self.lines)
 
 
 class Table(list, PrettyStr):
@@ -39,22 +39,22 @@ class Table(list, PrettyStr):
 
     def _repr_html_(self):
         """HTML repr for IPython"""
-        result = '<table>'
+        result = "<table>"
         try:
             iterator = iter(self)
             if self.has_header:
                 header = next(iterator)
                 if self.show_header:
-                    result += '<tr>'
-                    result += ''.join('<th>{}</th>'.format(x) for x in header)
-                    result += '</tr>'
+                    result += "<tr>"
+                    result += "".join("<th>{}</th>".format(x) for x in header)
+                    result += "</tr>"
             for row in iterator:
-                result += '<tr>'
-                result += ''.join('<td>{}</td>'.format(x) for x in row)
-                result += '</tr>'
+                result += "<tr>"
+                result += "".join("<td>{}</td>".format(x) for x in row)
+                result += "</tr>"
         except StopIteration:
             pass
-        result += '</table><br>'
+        result += "</table><br>"
         return result
 
     def __str__(self):
@@ -69,13 +69,13 @@ class Table(list, PrettyStr):
             if self.has_header:
                 header = next(iterator)
                 if self.show_header:
-                    result += ' '.join('{0:>{1}}'.format(x, size[i])
+                    result += " ".join("{0:>{1}}".format(x, size[i])
                                        for i, x in enumerate(header))
-                    result += '\n'
+                    result += "\n"
             for row in iterator:
-                result += ' '.join('{0:>{1}}'.format(x, size[i])
+                result += " ".join("{0:>{1}}".format(x, size[i])
                                    for i, x in enumerate(row))
-                result += '\n'
+                result += "\n"
         except StopIteration:
             pass
         return result

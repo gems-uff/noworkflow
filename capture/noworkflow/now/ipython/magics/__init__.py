@@ -7,7 +7,6 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from collections import defaultdict
-from functools import wraps
 
 from IPython.core.magic import Magics, magics_class
 
@@ -52,6 +51,7 @@ class NoworkflowMagics(Magics):
         """Generate noWorkflow magics"""
         for command in self.commands:
             command.add_arguments()
+
             def func(line, cell=None, command=command):
                 """Magic"""
                 return command.execute(command.func, line, cell, self)

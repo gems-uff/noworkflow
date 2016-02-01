@@ -18,6 +18,9 @@ from ...persistence.models.trial import Trial
 from ...utils.io import redirect_output
 
 
+FNULL = open(os.devnull, "w")
+atexit.register(FNULL.close)
+
 children_pid = []
 
 
@@ -34,7 +37,7 @@ atexit.register(kill_children)
 def create_debugger(pdb=None):
     """Create debugger"""
     if pdb is None:
-        with redirect_output() as outputs:
+        with redirect_output():
             try:
                 from ipdb.__main__ import Pdb, def_colors
                 pdb = Pdb(def_colors)
@@ -77,26 +80,25 @@ def debugger_builtins(provider, ns, metascript):
             trial_id = metascript.trial_id
         return Trial(trial_ref=trial_id)
 
-    def now_vis(browser='maybe', port=5000, save=True, vis=vis):
+    def now_vis(browser="maybe", port=5000, save=True, vis=vis):
         """Invoke now vis"""
         global children_pid
         vis_open, browser_open = vis
         if save:
             now_save()
-        url = 'http://127.0.0.1:{0}'.format(port)
+        url = "http://127.0.0.1:{0}".format(port)
         if vis_open:
             kill_children()
             vis[0] = vis_open = False
         if not vis_open:
-            params = ['now', 'vis', '-p', str(port)]
-            print('now vis: {}'.format(url))
+            params = ["now", "vis", "-p", str(port)]
+            print("now vis: {}".format(url))
             with redirect_output():
                 vis[0] = True
-                FNULL = open(os.devnull, 'w')
                 p = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
                 children_pid.append(p)
 
-        if browser and (browser_open ^ (browser == 'maybe')):
+        if browser and (browser_open ^ (browser == "maybe")):
             def webopen(url):
                 """Workaround to redirect browser output"""
                 savout = os.dup(1)
@@ -118,21 +120,21 @@ def debugger_builtins(provider, ns, metascript):
             global children_pid
             export_notebook("current")
             if start:
-                params = ['ipython', 'notebook', 'Current Trial.ipynb']
-                FNULL = open(os.devnull, 'w')
+                params = ["ipython", "notebook", "Current Trial.ipynb"]
                 p = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
                 children_pid.append(p)
         except ImportError:
             return "IPython not found"
 
-    ns['set_trace'] = set_trace
-    ns['now_save'] = now_save
-    ns['now_trial'] = now_trial
-    ns['now_vis'] = now_vis
-    ns['now_notebook'] = now_notebook
+    ns["set_trace"] = set_trace
+    ns["now_save"] = now_save
+    ns["now_trial"] = now_trial
+    ns["now_vis"] = now_vis
+    ns["now_notebook"] = now_notebook
 
     try:
-        from IPython import embed
-        ns['now_ipython'] = embed
+        with redirect_output():
+            from IPython import embed
+            ns["now_ipython"] = embed
     except ImportError:
-        ns['now_ipython'] = lambda: "IPython not found"
+        ns["now_ipython"] = lambda: "IPython not found"

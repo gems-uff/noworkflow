@@ -585,7 +585,6 @@ class Py3Codes(ExecInterpreter):
         }
         super(Py3Codes, self).__init__(*args, **kwargs)
 
-
     def dup_top_two(self):
         """DUP_TOP_TWO opcode"""
         top2 = list(self._pop_last_n(2))

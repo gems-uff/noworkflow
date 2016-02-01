@@ -20,9 +20,9 @@ class PersistenceConfig(object):
     """Config persistence. Interface for connecting to directory"""
 
     def __init__(self, path=None, connect=False):
-        self.base_path = None # Exeution path
+        self.base_path = None  # Exeution path
         self.provenance_path = None  # Base .noworkflow path
-        self.db_conn = None # Connection to the database
+        self.db_conn = None  # Connection to the database
         self.should_mock = False
 
         if path:
@@ -71,7 +71,7 @@ class PersistenceConfig(object):
             self.path = path
         if not self._has_provenance():
             print_msg("there is no provenance store in the current directory",
-                True)
+                      True)
             sys.exit(1)
         self.connect()
 

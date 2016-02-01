@@ -137,8 +137,8 @@ class Export(Command):
                 help="export ipython notebook file")
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial. If you are generation "
-                     "ipython notebook files, it is also possible to use 'history'"
-                     "or 'diff:<trial_id_1>:<trial_id_2>'")
+                     "ipython notebook files, it is also possible to use "
+                     "'history' or 'diff:<trial_id_1>:<trial_id_2>'")
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
@@ -148,9 +148,6 @@ class Export(Command):
         args.trial = export_type(args.trial)
         if not args.ipython:
             trial = Trial(trial_ref=args.trial)
-            if not trial:
-                print_msg("inexistent trial id", True)
-                sys.exit(1)
             print(trial.prolog.export_text_facts())
             if args.rules:
                 print("\n".join(trial.prolog.export_rules()))

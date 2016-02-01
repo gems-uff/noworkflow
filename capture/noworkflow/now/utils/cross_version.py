@@ -18,7 +18,7 @@ except ImportError:
 PY3 = (sys.version_info >= (3, 0))
 if PY3:
     import builtins
-    import pickle #keep
+    import pickle
     import reprlib
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes)
@@ -27,10 +27,9 @@ if PY3:
 else:
     import __builtin__ as builtins
     try:
-       import cPickle as pickle #keep
+        import cPickle as pickle
     except ImportError:
-       import pickle #keep
-    from itertools import imap, izip
+        import pickle
     import repr as reprlib
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)
@@ -47,7 +46,7 @@ def cross_compile(*args, **kwargs):
     return compile(*args, **kwargs)
 
 
-def bytes_string(text, encode='utf-8'):
+def bytes_string(text, encode="utf-8"):
     """Return a bytes object on Python 3 and a str object on Python 2"""
     if not PY3:
         if isinstance(text, unicode):
@@ -62,7 +61,7 @@ def bytes_string(text, encode='utf-8'):
     return result
 
 
-def default_string(text, encode='utf-8'):
+def default_string(text, encode="utf-8"):
     """Return a unicode object on Python 3 and a bytes object on Python 2"""
     if not PY3:
         if isinstance(text, unicode):

@@ -15,8 +15,6 @@ from functools import partial
 
 from future.utils import viewitems, viewvalues, viewkeys
 
-from .. import Activation, proxy_gen
-
 from .structures import Single, Call, Group, Mixed, TreeElement, prepare_cache
 from .structures import Graph
 
@@ -35,7 +33,7 @@ class TreeVisitor(object):
             "initial": Edge(0, 1)
         }
         self.nid = 0
-        self.min_duration = defaultdict(partial(int, 1000^10))
+        self.min_duration = defaultdict(partial(int, 1000 ** 10))
         self.max_duration = defaultdict(partial(int, 0))
         self.keep = None
 
@@ -287,7 +285,7 @@ class NamespaceVisitor(NoMatchVisitor):
     def add_edge(self, source, target, count, typ):
 
         edge = "{} {} {}".format(source, target, typ)
-        if not edge in self.context_edges:
+        if edge not in self.context_edges:
             super(NamespaceVisitor, self).add_edge(source, target,
                                                    count, typ)
             self.context_edges[edge] = self.edges[-1]
@@ -384,7 +382,7 @@ class TrialGraph(Graph):
     @cache("graph")
     def graph(self):
         """Generate an activation tree structure"""
-        if self._graph == None:
+        if self._graph is None:
             self._graph = generate_graph(self.trial)
         return self.trial.finished, self._graph
 
@@ -423,7 +421,7 @@ class TrialGraph(Graph):
 
     def _repr_html_(self):
         """Display d3 graph on jupyter notebook"""
-        uid = str(int(time.time()*1000000))
+        uid = str(int(time.time() * 1000000))
 
         result = """
             <div class="nowip-trial" data-width="{width}"

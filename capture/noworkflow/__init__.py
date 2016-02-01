@@ -12,12 +12,13 @@ scientific workflow management system.
 from noworkflow.now.cmd import main
 from noworkflow.now.utils.functions import version
 
+
 def load_ipython_extension(ipython):
     from .now.ipython import init
     init(ipython=ipython)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 __version__ = version()

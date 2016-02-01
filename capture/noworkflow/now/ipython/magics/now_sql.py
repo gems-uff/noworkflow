@@ -6,7 +6,6 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import argparse
 
 from future.utils import viewkeys, viewvalues, text_to_native_str
 from IPython.core.display import display_javascript
@@ -49,9 +48,8 @@ class NowSQL(IpythonCommandMagic):
             IPython.CodeCell.config_defaults.highlight_modes[mode].reg.push(
                 /^%%now_sql/
             );
-        """;
+        """
         display_javascript(js, raw=True)
-
 
     def add_arguments(self):
         super(NowSQL, self).add_arguments()

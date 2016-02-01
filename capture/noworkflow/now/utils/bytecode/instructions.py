@@ -7,7 +7,6 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-
 class Instruction(object):
     """Bytecode Instruction"""
 
@@ -25,7 +24,6 @@ class Instruction(object):
         self.mark_as_current = False
         self.line = line
         self.extra = None
-
 
     def __repr__(self):
         fields = []

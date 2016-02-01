@@ -6,8 +6,6 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import time
-
 from collections import OrderedDict
 
 from future.utils import viewkeys
@@ -75,8 +73,8 @@ class Diff(Model):
     @property
     def trial(self):
         """Return a tuple with information from both trials """
-        extra=("start", "finish", "duration_text")
-        ignore=("id",)
+        extra = ("start", "finish", "duration_text")
+        ignore = ("id",)
         return diff_dict(
             self.trial1.to_dict(ignore=ignore, extra=extra),
             self.trial2.to_dict(ignore=ignore, extra=extra))
@@ -112,6 +110,7 @@ def diff_dict(before, after):
         if key != "id" and before[key] != after[key]:
             result[key] = [before[key], after[key]]
     return result
+
 
 def diff_set(before, after):
     removed = before - after

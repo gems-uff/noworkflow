@@ -70,7 +70,7 @@ def create_joint_tracer(first, second):
         return first
     joint = partial(joint_tracer, first, second)
     joint._joint_tracer = True
-    #joint.__str__ = lambda x: "Joint<{}, {}>".format(first, second)
+    # joint.__str__ = lambda x: "Joint<{}, {}>".format(first, second)
 
     return joint
 
@@ -195,7 +195,7 @@ class Tracer(Profiler):
             call = self.call_by_col[filename][sup[0]][sup[1]]
             lasti, returns = call.lasti, self.returns
 
-            if not lasti in returns:
+            if lasti not in returns:
                 return
             _return = returns[lasti]
 
@@ -359,7 +359,8 @@ class Tracer(Profiler):
             try:
                 var = f_locals[arg]
                 if not isinstance(var, IMMUTABLE):
-                    vid = add_variable(activation.id, arg, lineno, {}, value=var)
+                    vid = add_variable(activation.id, arg, lineno, {},
+                                       value=var)
                     variable = variables[vid]
                     add_dependencies(activation, variable, activation, args,
                                      filename, lasti_set)
@@ -382,7 +383,6 @@ class Tracer(Profiler):
             _frame = get_f_trace(code, loc, glob)
             if _frame.f_trace:
                 self.f_trace_frames.append(_frame)
-
 
         # Different file
         if filename not in self.paths:
@@ -411,7 +411,8 @@ class Tracer(Profiler):
         if self.f_trace_frames:
 
             for _frame in self.f_trace_frames:
-                _frame.f_trace = create_joint_tracer(_frame.f_trace, self.tracer)
+                _frame.f_trace = create_joint_tracer(_frame.f_trace,
+                                                     self.tracer)
 
             self.f_trace_frames = []
             return

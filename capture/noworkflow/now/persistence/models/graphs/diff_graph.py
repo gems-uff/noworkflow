@@ -81,26 +81,26 @@ def lcs(lis1, lis2, equals=lambda x, y: x == y):
     """Longest common subsequence for generic lists lis1, lis2
     Return two OrderedCounters representing the matches
     """
-    lengths = [[0 for _ in range(len(lis2)+1)] for _ in range(len(lis1)+1)]
+    lengths = [[0 for _ in range(len(lis2) + 1)] for _ in range(len(lis1) + 1)]
     # row 0 and column 0 are initialized to 0 already
     for in1, element1 in enumerate(lis1):
         for in2, element2 in enumerate(lis2):
             if equals(element1, element2):
-                lengths[in1+1][in2+1] = lengths[in1][in2] + 1
+                lengths[in1 + 1][in2 + 1] = lengths[in1][in2] + 1
             else:
-                lengths[in1+1][in2+1] = \
-                    max(lengths[in1+1][in2], lengths[in1][in2+1])
+                lengths[in1 + 1][in2 + 1] = \
+                    max(lengths[in1 + 1][in2], lengths[in1][in2 + 1])
     # read the substring out from the matrix
     matches1, matches2 = OrderedCounter(), OrderedCounter()
     len1, len2 = len(lis1), len(lis2)
     while len1 != 0 and len2 != 0:
-        if lengths[len1][len2] == lengths[len1-1][len2]:
+        if lengths[len1][len2] == lengths[len1 - 1][len2]:
             len1 -= 1
-        elif lengths[len1][len2] == lengths[len1][len2-1]:
+        elif lengths[len1][len2] == lengths[len1][len2 - 1]:
             len2 -= 1
         else:
-            matches1[lis1[len1-1]] = lis2[len2-1]
-            matches2[lis2[len2-1]] = lis1[len1-1]
+            matches1[lis1[len1 - 1]] = lis2[len2 - 1]
+            matches2[lis2[len2 - 1]] = lis1[len1 - 1]
             len1 -= 1
             len2 -= 1
     return matches1, matches2
@@ -129,6 +129,7 @@ def cmp_node_fn(nodes1, nodes2):
 def cmp_edge_fn(nodes1, nodes2):
     """Return a edge comparing function for the two graphs"""
     cmp_node = cmp_node_fn(nodes1, nodes2)
+
     def cmp_edge(node1, node2):
         """Compare two edges"""
         if node1["type"] != node2["type"]:
@@ -231,7 +232,7 @@ class MappingToGraph(object):
         """Convert matched edge to graph"""
         edge_key = "{} {} {}".format(source, target, edge["type"])
 
-        if not edge_key in self.context_edges:
+        if edge_key not in self.context_edges:
             cedge = deepcopy(edge)
             cedge["source"] = source
             cedge["target"] = target
@@ -302,7 +303,7 @@ class Similarity(object):
             targets2 = self.edges2[node2["index"]]
             for target, typ in targets1:
                 target1 = nodes1[target]
-                if not target1 in mapping:
+                if target1 not in mapping:
                     continue
                 if (mapping[target1]["index"], typ) in targets2:
                     edges += 1
@@ -369,7 +370,7 @@ def neighborhood2or3(graph1, graph2, mapping, cmp_node, config):
     """Second and Third neighborhoods of VND. Permutate matches"""
     nodes1, nodes2 = graph1["hnodes"], graph2["hnodes"]
     max_level = min(graph1["max_level"], graph2["max_level"])
-    reverse = {n2:n1 for n1, n2 in viewitems(mapping)}
+    reverse = {n2: n1 for n1, n2 in viewitems(mapping)}
 
     def permutate(group1, group2, check_caller):
         """Permutate results in mapping"""
@@ -399,7 +400,6 @@ def neighborhood(k, graph1, graph2, mapping):
     """Match nodes in the same neighborhood for VND"""
     nodes1, nodes2 = graph1["hnodes"], graph2["hnodes"]
     cmp_node = cmp_node_fn(nodes1, nodes2)
-
 
     if k == 1:
         generator = neighborhood1(graph1, graph2, mapping, cmp_node)
@@ -445,10 +445,10 @@ def vnd(graph1, graph2, neighborhoods=3, time_limit=0):
     return MappingToGraph(graph1, graph2, best[0]).to_dict()
 
 
-
 def trial_mirror(func):
     """Decorator: Compute graphs for each trial before diff"""
     name = func.__name__
+
     def calculate(self, **kwargs):
         """Compute graphs for each trial before diff"""
         finished1, graph1 = getattr(self.diff.trial1.graph, name)()
@@ -461,13 +461,14 @@ def trial_mirror(func):
 def class_param(params):
     """Decorator: Add extra params for cache"""
     params = params.split()
+
     def dec(func):
         """Decorator: Add extra params for cache"""
         def calculate(self, *args, **kwargs):
             """Add extra params for cache"""
             for param in params:
                 value = getattr(self, param)
-                if value is not None and not param in kwargs:
+                if value is not None and param not in kwargs:
                     kwargs[param] = value
             return func(self, *args, **kwargs)
         return calculate
@@ -509,7 +510,6 @@ class DiffGraph(Graph):
         self.neighborhoods = None
         self.time_limit = None
 
-
     @class_param("neighborhoods time_limit")
     @cache("tree", "neighborhoods time_limit")
     @trial_mirror
@@ -540,7 +540,7 @@ class DiffGraph(Graph):
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""
-        uid = str(int(time.time()*1000000))
+        uid = str(int(time.time() * 1000000))
 
         return """
             <div class="nowip-diff" data-width="{width}"

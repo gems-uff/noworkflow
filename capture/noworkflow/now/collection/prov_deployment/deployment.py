@@ -67,7 +67,44 @@ class Deployment(object):
         attrs.add("NOWORKFLOW_VERSION", version())
 
     @meta_profiler("modules")
-    def _collect_modules_provenance(self, metascript, python_modules):
+    def _collect_modules_provenance(self, metascript):
+        with redirect_output():
+            modules = self._find_modules(metascript)
+
+            print_msg("  registering provenance from {} modules".format(
+                len(modules) - 1))
+            self._extract_modules_provenance(metascript, modules)
+
+    @meta_profiler("find_modules")
+    def _find_modules(self, metascript):
+        """Use modulefinder to find modules
+
+        Return finder.modules
+        """
+        excludes = set()
+        last_name = None
+        max_atemps = 1000
+        for i in range(max_atemps):
+            try:
+                finder = modulefinder.ModuleFinder(excludes=excludes)
+                finder.run_script(metascript.path)
+                print(metascript.path)
+                return finder.modules
+            except SyntaxError as e:
+                name = e.filename.split("site-packages/")[-1]
+                name = name.replace(os.sep, ".")
+                name = name[:name.rfind(".")]
+                if last_name is not None and last_name in name:
+                    last_name = last_name[last_name.find(".") + 1:]
+                else:
+                    last_name = name
+                excludes.add(last_name)
+                print_msg("   skip module due syntax error: {} ({}/{})"
+                          .format(last_name, i + 1, max_atemps))
+        return []
+
+    @meta_profiler("extract_modules")
+    def _extract_modules_provenance(self, metascript, python_modules):
         """Return a set of module dependencies in the form:
             (name, version, path, code_hash)
         Store module provenance in the content database
@@ -79,7 +116,7 @@ class Deployment(object):
             if name != "__main__":
                 version = self._get_version(name)
                 path = module.__file__
-                if path == None:
+                if path is None:
                     code_hash = None
                 else:
                     with open(path, "rb") as f:
@@ -110,7 +147,7 @@ class Deployment(object):
                     if isinstance(version, string):
                         return default_string(version)
                     if isinstance(version, tuple):
-                        return '.'.join(map(str, version))
+                        return ".".join(map(str, version))
 
                 except AttributeError:
                     pass
@@ -136,33 +173,7 @@ class Deployment(object):
                       "(--bypass-modules).")
         else:
             print_msg("  searching for module dependencies")
-            modules = []
-            with redirect_output():
-                excludes = set()
-                last_name = None
-                max_atemps = 1000
-                for i in range(max_atemps):
-                    try:
-                        finder = modulefinder.ModuleFinder(excludes=excludes)
-                        finder.run_script(metascript.path)
-                        print(metascript.path)
-                        break
-                    except SyntaxError as e:
-                        name = e.filename.split("site-packages/")[-1]
-                        name = name.replace(os.sep, ".")
-                        name = name[:name.rfind(".")]
-                        if last_name is not None and last_name in name:
-                            last_name = last_name[last_name.find(".") + 1:]
-                        else:
-                            last_name = name
-                        excludes.add(last_name)
-                        print_msg("   skip module due syntax error: {} ({}/{})"
-                            .format(last_name, i + 1, max_atemps))
-
-                print_msg("  registering provenance from {} modules".format(
-                    len(finder.modules) - 1))
-
-                self._collect_modules_provenance(metascript, finder.modules)
+            self._collect_modules_provenance(metascript)
         self.store_provenance(metascript)
 
     def store_provenance(self, metascript):

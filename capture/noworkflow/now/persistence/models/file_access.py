@@ -11,8 +11,6 @@ import textwrap
 from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy import CheckConstraint
-from sqlalchemy.orm import relationship
 
 from ...utils.functions import timestamp, prolog_repr
 
@@ -77,8 +75,10 @@ class FileAccessProxy(with_metaclass(set_proxy(FileAccess))):
         return hash(self.__key())
 
     def __eq__(self, other):
-        return ((self.content_hash_before == other.content_hash_before)
-            and (self.content_hash_after == other.content_hash_after))
+        return (
+            (self.content_hash_before == other.content_hash_before)
+            and (self.content_hash_after == other.content_hash_after)
+        )
 
     @classmethod
     def to_prolog_fact(cls):

@@ -9,7 +9,6 @@ from __future__ import (absolute_import, print_function,
 import weakref
 import threading
 
-from collections import OrderedDict
 from os.path import join, exists
 
 from sqlalchemy import create_engine
@@ -26,7 +25,7 @@ class RelationalDatabase(object):
     """Relational Database deal with SQLite connection"""
 
     def __init__(self, persistence_config):
-        self.db_path = None # Database path
+        self.db_path = None  # Database path
         self._session_map = {}
         self.session_factory = sessionmaker()
 
@@ -61,7 +60,6 @@ class RelationalDatabase(object):
         if new_db:
             print_msg("creating provenance database")
             self.base.metadata.create_all(self.engine)
-
 
     def make_session(self):
         """Create thread safe session"""

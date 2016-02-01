@@ -1,8 +1,10 @@
 def y():
-  pass
+    pass
+
 
 def x():
-  y()
+    y()
+
 
 x()
 x()

@@ -45,7 +45,7 @@ class DependencyProxy(with_metaclass(set_proxy(Dependency))):
     Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
     """
 
-    module = proxy_attr('_module')
+    module = proxy_attr("_module")
 
     @classmethod
     def to_prolog_fact(cls):

@@ -12,9 +12,7 @@ import os
 import traceback
 import time
 
-from profile import Profile
 from datetime import datetime
-from functools import wraps
 
 from ...persistence import content
 from ...persistence.models import Activation, ObjectValue, FileAccess, Trial
@@ -81,7 +79,6 @@ class Profiler(ExecutionProvider):
         self.argument_captor = ProfilerArgumentCaptor(self)
 
         if (sys.version_info >= (3, 0)):
-        
             Profiler.add_activation = Profiler.initial_add_activation
 
     @property
@@ -160,6 +157,7 @@ class Profiler(ExecutionProvider):
         self.activation_stack.append(aid)
 
     _old_add_activation = add_activation
+
     def initial_add_activation(self, aid):
         """Add activation to activation stack.
         Ignore first module.exec on Python 3"""
@@ -197,7 +195,7 @@ class Profiler(ExecutionProvider):
         self.depth_non_user += 1
         if self.valid_depth():
             self.add_activation(self.activations.add(
-                arg.__name__ if arg.__self__ == None else ".".join(
+                arg.__name__ if arg.__self__ is None else ".".join(
                     [type(arg.__self__).__name__, arg.__name__]),
                 frame.f_lineno, frame.f_lasti, self.activation_stack[-1]
             ))
@@ -260,7 +258,6 @@ class Profiler(ExecutionProvider):
         else:
             self.depth_non_user -= 1
 
-
     def new_event(self, frame, event, arg):
         """Check if event is new to avoid Profiler and Tracer overlap"""
         current_event = (event, frame.f_lineno, id(frame))
@@ -294,9 +291,6 @@ class Profiler(ExecutionProvider):
         if not partial:
             now = datetime.now()
             Trial.fast_update(tid, now)
-
-        #for a in self.activations.values():
-        #    print(a.id, a.name)
 
         Activation.fast_store(tid, self.activations, partial)
         ObjectValue.fast_store(tid, self.object_values, partial)

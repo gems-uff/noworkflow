@@ -28,7 +28,6 @@ class HistoryGraph(Graph):
 
     cache = {}
 
-
     def __init__(self, history, width=500, height=500):
         self.history = weakref.proxy(history)
         self.use_cache = True
@@ -236,7 +235,7 @@ class HistoryGraph(Graph):
         Return:
         {"nodes": nodes, "edges": edges}
         nodes -- list of trials in filtered history
-        edges -- list of edges dicts with keys source and target referencing nodes
+        edges -- list of edges dicts with keys source and target as node index
         """
 
         key = (self.history.script, self.history.status)
@@ -299,7 +298,7 @@ class HistoryGraph(Graph):
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""
-        uid = str(int(time.time()*1000000))
+        uid = str(int(time.time() * 1000000))
 
         result = """
             <div class="nowip-history" data-width="{width}"
@@ -327,7 +326,6 @@ class HistoryGraph(Graph):
 
         max_level = max(t.level for t in nodes)
         active_levels = [0] * (max_level + 1)
-        last = nodes[-1].level
         lines = []
 
         for trial in reversed(nodes):
@@ -336,7 +334,7 @@ class HistoryGraph(Graph):
                 active_levels, trial, trial.level, width=width
             ))
 
-            if not trial.id in to_level:
+            if trial.id not in to_level:
                 # First trial for script
                 active_levels[trial.level] = 0
 
@@ -347,7 +345,5 @@ class HistoryGraph(Graph):
                     lines.append(self._line_text(
                         active_levels, trial, i, moving=True, width=width
                     ))
-
-            last = trial.level
 
         return "\n".join(lines)

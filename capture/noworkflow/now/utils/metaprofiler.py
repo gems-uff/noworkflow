@@ -36,6 +36,7 @@ class MetaProfiler(object):
         def dec(f):
             if typ not in self.order:
                 self.order.append(typ)
+
             @wraps(f)
             def wrapper(*args, **kwargs):
                 before = datetime.now()

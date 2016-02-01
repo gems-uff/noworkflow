@@ -35,27 +35,27 @@ def _try_compile(source, name, tries=None, compiler=None):
 
 def _get_code_object(obj, compiler=None):
     """Return code object"""
-    if isinstance(obj, types.FrameType): # Frame
+    if isinstance(obj, types.FrameType):  # Frame
         return ("code", obj.f_code)
-    if not PY3 and isinstance(obj, types.InstanceType): # Instance
+    if not PY3 and isinstance(obj, types.InstanceType):  # Instance
         obj = obj.__class__
-    if hasattr(obj, "__func__"): # Method
+    if hasattr(obj, "__func__"):  # Method
         obj = obj.__func__
-    if hasattr(obj, "gi_code"): # Generator
+    if hasattr(obj, "gi_code"):  # Generator
         obj = obj.gi_code
-    if hasattr(obj, "im_func"): # Function Python 2
+    if hasattr(obj, "im_func"):  # Function Python 2
         obj = obj.im_func
-    if hasattr(obj, "func_code"): # Function Python 2
+    if hasattr(obj, "func_code"):  # Function Python 2
         obj = obj.func_code
-    if hasattr(obj, "__code__"): # Function
+    if hasattr(obj, "__code__"):  # Function
         obj = obj.__code__
-    if isinstance(obj, str): # Soruce code
+    if isinstance(obj, str):  # Soruce code
         obj = _try_compile(obj, "<string>", compiler=compiler)
-    if hasattr(obj, "co_code"): # Code
+    if hasattr(obj, "co_code"):  # Code
         return ("code", obj)
-    if hasattr(obj, "__dict__"): # Class or module
+    if hasattr(obj, "__dict__"):  # Class or module
         return ("dict", obj)
-    if PY3 and isinstance(obj, (bytes, bytearray)): # Raw bytecode
+    if PY3 and isinstance(obj, (bytes, bytearray)):  # Raw bytecode
         return ("bytes", obj)
     raise TypeError("get_code_object() can not handle '{}' objects".format(
         type(obj).__name__))
@@ -129,7 +129,8 @@ def _visit(obj, visitor, compiler=None, recurse=False):
 
 def instruction_dis(compiled, compiler=None, recurse=False):
     """Return dis of compiled code"""
-    return  list(_visit(compiled, idis, compiler, recurse))
+    return list(_visit(compiled, idis, compiler, recurse))
+
 
 def instruction_dis_sorted_by_line(compiled, compiler=None, recurse=False):
     """Return dis sorted by line of compiled code"""

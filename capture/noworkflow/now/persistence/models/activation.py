@@ -8,8 +8,6 @@ from __future__ import (absolute_import, print_function,
 
 import textwrap
 
-from collections import OrderedDict
-
 from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
@@ -151,7 +149,6 @@ class ActivationProxy(with_metaclass(set_proxy(Activation))):
         Keyword arguments:
         _print -- custom print function (default=print)
         """
-        name = OrderedDict([("GLOBAL", "Globals"), ("ARGUMENT", "Arguments")])
         global_vars = list(self.globals)
         if global_vars:
             _print("{name}: {values}".format(

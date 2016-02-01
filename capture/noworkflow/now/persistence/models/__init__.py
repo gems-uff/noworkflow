@@ -33,13 +33,12 @@ from .trial_prolog import TrialProlog
 
 
 order = [
-    Trial, Head, Tag, GraphCache, # Trial
-    Module, Dependency, EnvironmentAttr, # Deployment
-    FunctionDef, Object, # Definition
-    Activation, ObjectValue, FileAccess, # Execution
-    SlicingVariable, SlicingUsage, SlicingDependency # Slicing
+    Trial, Head, Tag, GraphCache,  # Trial
+    Module, Dependency, EnvironmentAttr,  # Deployment
+    FunctionDef, Object,  # Definition
+    Activation, ObjectValue, FileAccess,  # Execution
+    SlicingVariable, SlicingUsage, SlicingDependency  # Slicing
 ]
-
 
 
 __all__ = [

@@ -15,10 +15,10 @@ content = ContentDatabase(persistence_config)
 relational = RelationalDatabase(persistence_config)
 
 
-def get_serialize(arg):
+def get_serializer(arg):
     # ToDo: use arg to select serialize
-    #from .serializers import jsonpickle_serializer, jsonpickle_content
-    #from .serializers import SimpleSerializer
+    # from .serializers import jsonpickle_serializer, jsonpickle_content
+    # from .serializers import SimpleSerializer
     # return SimpleSerializer().serialize
     # return jsonpickle_serializer
     # return jsonpickle_content

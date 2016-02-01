@@ -7,7 +7,6 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-import sys
 
 from future.utils import viewitems, viewkeys
 
@@ -123,7 +122,8 @@ class Diff(Command):
 
             print_msg("{} file accesses replaced:".format(
                 len(replaced)), True)
-            print_replaced_attributes(replaced,
+            print_replaced_attributes(
+                replaced,
                 extra=("mode", "buffering", "content_hash_before",
                        "content_hash_after", "timestamp", "stack"),
                 ignore=("id", "trial_id", "function_activation_id"),

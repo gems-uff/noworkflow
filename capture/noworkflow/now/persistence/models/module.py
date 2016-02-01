@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from future.utils import with_metaclass
-from sqlalchemy import Column, Integer, Text, select, bindparam, func
+from sqlalchemy import Column, Integer, Text, select, bindparam
 
 from .. import relational
 
@@ -29,8 +29,6 @@ class Module(relational.base):
     code_hash = Column(Text, index=True)
 
     # _trials: Trial._modules backref
-
-
 
 
 class ModuleProxy(with_metaclass(set_proxy(Module))):
@@ -89,7 +87,7 @@ class ModuleProxy(with_metaclass(set_proxy(Module))):
         session -- specify session for loading (default=relational.session)
         """
         session = session or relational.session
-        if not hasattr(model, '_load_or_create_module_id'):
+        if not hasattr(model, "_load_or_create_module_id"):
             tmodule = model.__table__
             _query = select([tmodule.c.id]).where(
                 (tmodule.c.name == bindparam("name")) &

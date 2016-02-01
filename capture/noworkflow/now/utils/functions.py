@@ -7,25 +7,20 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import inspect
-import os
-import types
 
 from datetime import datetime
 from pkg_resources import resource_string, resource_listdir, resource_isdir
 from textwrap import dedent
 
-from .cross_version import cross_compile
-from .io import redirect_output
-
 
 MODULE = __name__
-MODULE = MODULE[:MODULE.rfind('.')]
-MODULE = MODULE[:MODULE.rfind('.')]
+MODULE = MODULE[:MODULE.rfind(".")]
+MODULE = MODULE[:MODULE.rfind(".")]
 
 
 def wrap(string, initial="  ", other="\n  "):
     """Re-indent indented text"""
-    return initial + other.join(dedent(string).split('\n'))
+    return initial + other.join(dedent(string).split("\n"))
 
 
 def resource(filename, encoding=None):
@@ -45,6 +40,7 @@ def resource_is_dir(path):
     """Access resource directory via setuptools"""
     return resource_isdir(MODULE, path)
 
+
 def version():
     return resource("../resources/version.txt", encoding="utf-8").strip()
 
@@ -59,7 +55,7 @@ def abstract():
 def timestamp(time):
     if not time:
         return -1
-    epoch = datetime(1970,1,1)
+    epoch = datetime(1970, 1, 1)
     return (time - epoch).total_seconds()
 
 

@@ -12,7 +12,6 @@ import time
 import traceback
 
 from collections import OrderedDict
-from datetime import datetime
 
 from future.utils import viewitems
 from sqlalchemy import exc
@@ -250,7 +249,6 @@ class Mixed(TreeElement):
         """Get first node"""
         return next(iter(self.elements))
 
-
     def add_element(self, element):
         """Add node"""
         self.finished &= element.finished
@@ -306,9 +304,9 @@ class Group(TreeElement):
         """Add new node in sequence to group"""
         self.finished &= previous.finished
         nnext, self.next_element = self.next_element, previous
-        if not previous in self.edges:
+        if previous not in self.edges:
             self.edges[previous] = OrderedCounter()
-        if not previous in self.nodes:
+        if previous not in self.nodes:
             self.nodes[previous] = Mixed(previous)
         else:
             self.nodes[previous].add_element(previous)
@@ -377,7 +375,6 @@ def mean_text(mean):
 
 def activation_text(activation):
     """Return single activation text"""
-    values = activation.arguments
     extra = "(still running)"
     if activation.finish:
         extra = "to {a.finish} ({d} microseconds)".format(
@@ -389,7 +386,7 @@ def activation_text(activation):
     ]
 
     activation.show(
-        _print=lambda x, offset=0: result.append(offset*"&nbsp;" + x))
+        _print=lambda x, offset=0: result.append(offset * "&nbsp;" + x))
 
     return result
 

@@ -32,8 +32,8 @@ if "PRINT_NEWLINE" in opmap:
     PRINT_NEW_LINES.add(opmap["PRINT_NEWLINE"])
     PRINT_NEW_LINES.add(opmap["PRINT_NEWLINE_TO"])
 
-SETUP_WITH = {opmap["SETUP_WITH"],}
-WITH_CLEANUP = {opmap.get("WITH_CLEANUP") or opmap.get("WITH_CLEANUP_START"),}
+SETUP_WITH = {opmap["SETUP_WITH"], }
+WITH_CLEANUP = {opmap.get("WITH_CLEANUP") or opmap.get("WITH_CLEANUP_START"), }
 
 IMPORTS = {opmap["IMPORT_NAME"], opmap["IMPORT_FROM"]}
 

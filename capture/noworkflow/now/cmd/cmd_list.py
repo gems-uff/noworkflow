@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from ..persistence.models import Trial
-from ..persistence import persistence_config, relational
+from ..persistence import persistence_config
 from ..utils.io import print_msg
 
 from .command import Command

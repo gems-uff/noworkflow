@@ -79,7 +79,8 @@ class History(Model):
 
     def reverse_trials(self, limit):
         """Return a generator with <limit> trials ordered by start time desc"""
-        return proxy_gen(self._query_trials
+        return proxy_gen(
+            self._query_trials
             .order_by(Trial.start.desc())
             .limit(limit)
         )

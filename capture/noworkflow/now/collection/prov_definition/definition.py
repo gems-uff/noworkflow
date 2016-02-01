@@ -88,7 +88,6 @@ class Definition(object):
         visitor.teardown()
         return visitor
 
-
     def _add_visitor(self, visitor):
         """Add visitor data to Definition object"""
         self.paths.append(visitor.path)

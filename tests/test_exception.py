@@ -1,10 +1,12 @@
 def y():
-	raise TypeError
+    raise TypeError
+
 
 def x():
-	y()
+    y()
+
 
 try:
     x()
 except TypeError:
-	print('x')
+    print("x")

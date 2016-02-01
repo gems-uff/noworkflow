@@ -1,6 +1,7 @@
 import example2
 import re
 
+
 def a(var1):
     def x():
         pass
@@ -8,11 +9,14 @@ def a(var1):
         b()
         c()
 
+
 def b():
     c()
 
+
 def c():
     a(0)
+
 
 x = 10
 y = a(x)

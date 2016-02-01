@@ -10,7 +10,7 @@ import weakref
 
 from ...utils.functions import resource
 
-from .base import proxy_gen, Model
+from .base import Model
 from . import Activation, FileAccess
 from . import SlicingVariable, SlicingUsage, SlicingDependency
 
@@ -29,9 +29,8 @@ class TrialProlog(Model):
 
         # TODO: export remaining data
         # (now focusing only on activation, file access and slices)
-        Trial = trial.__class__
         self.models = [
-            (Trial, lambda: [trial]),
+            (trial.__class__, lambda: [trial]),
             (Activation, lambda: trial.activations),
             (FileAccess, lambda: trial.file_accesses),
             (SlicingVariable, lambda: trial.slicing_variables),

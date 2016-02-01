@@ -8,7 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..persistence.models import Trial, Activation
+from ..persistence.models import Trial
 from ..persistence import persistence_config
 from ..utils.functions import wrap
 from ..utils.io import print_msg
@@ -20,7 +20,7 @@ def print_trial_relationship(relation, breakline="\n\n", other="\n    "):
     """Print trial relationship"""
     output = []
     for obj in relation:
-        obj.show(_print=lambda x:output.append(wrap(x, other=other)))
+        obj.show(_print=lambda x: output.append(wrap(x, other=other)))
     print(breakline.join(output))
 
 
@@ -62,10 +62,6 @@ class Show(Command):
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_ref=args.trial)
-
-        if not trial:
-            print_msg("inexistent trial id", True)
-            sys.exit(1)
 
         print_msg("trial information:", True)
         trial.show(_print=lambda x: print(wrap(x)))

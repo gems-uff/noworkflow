@@ -6,9 +6,6 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import re
-import argparse
-
 from ...utils.formatter import PrettyLines
 from .command import IpythonCommandMagic
 

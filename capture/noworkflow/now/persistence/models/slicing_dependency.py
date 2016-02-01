@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import textwrap
 
 from future.utils import with_metaclass
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from .. import relational

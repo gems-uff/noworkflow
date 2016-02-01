@@ -1,14 +1,16 @@
 def x(a=1):
-	return a
+    return a
 
 for j in range(3):
-	for i in range(j):
-		print(i)
-		i = i**2
-		i += 2
+    for i in range(j):
+        print(i)
+        i = i ** 2
+        i += 2
+
 
 class A():
-	pass
+    pass
+
 
 a = x(a=2)
 a = b = c = 1
@@ -21,8 +23,8 @@ a += (lambda b: b)(a)
 b = a
 a = 2
 c = {
-	'a': a,
-	'b': b
+    "a": a,
+    "b": b
 }
 d = [a, b, c]
 d[1] += 1

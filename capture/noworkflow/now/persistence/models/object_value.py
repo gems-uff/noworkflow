@@ -77,7 +77,7 @@ class ObjectValueProxy(with_metaclass(set_proxy(ObjectValue))):
         return (
             "object_value({self.trial_id}, {self.function_activation_id}, "
             "{self.id}, {name}, {value}, {self.type})."
-        ).format(e=self)
+        ).format(**locals())
 
     def __repr__(self):
         return (

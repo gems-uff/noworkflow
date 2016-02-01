@@ -8,12 +8,10 @@ from __future__ import (absolute_import, print_function,
 
 import weakref
 
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 from functools import wraps
 
 from future.utils import with_metaclass, iteritems
-from sqlalchemy import inspect
-from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from .. import relational
 
@@ -40,7 +38,6 @@ class MetaModel(type):
         instance = super(MetaModel, meta).__call__(*args, **kwargs)
         instance.__class__.__refs__.append(weakref.ref(instance))
         return instance
-
 
     def get_instances(cls):
         """Return all instances from Model class"""
@@ -111,8 +108,6 @@ class MetaModel(type):
             meta.set_class_default(model, attr, value, instances=instances)
 
 
-
-
 class Model(with_metaclass(MetaModel)):
     """Model base"""
 
@@ -167,11 +162,13 @@ def proxy_property(func, proxy=proxy):
         return proxy(result)
     return property(prop)
 
+
 def proxy_attr(name, proxy=proxy):
     def func(self):
         """Return {}""".format(name)
         return getattr(self, name)
     return proxy_property(func, proxy=proxy)
+
 
 def proxy_method(func):
     @wraps(func)
@@ -190,7 +187,6 @@ class AlchemyProxy(Model):
     __alchemy_refs__ = {}
 
     def __init__(self, obj):
-        #self.__alchemy_refs__[self.__model__] = self.__class__
         if isinstance(obj, relational.base):
             self._store_pk(obj)
         else:
@@ -266,7 +262,7 @@ def set_proxy(model):
 
         def __new__(meta, name, bases, attrs):
             bases = (AlchemyProxy,)
-            if not "__modelname__" in attrs:
+            if "__modelname__" not in attrs:
                 attrs["__modelname__"] = model.__name__
 
             cls = super(MetaProxy, meta).__new__(meta, name, bases, attrs)

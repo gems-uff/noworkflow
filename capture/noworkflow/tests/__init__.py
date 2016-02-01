@@ -9,11 +9,11 @@ from __future__ import (absolute_import, print_function,
 from ..now.persistence import persistence_config
 
 persistence_config.mock()
-persistence_config.connect('.')
+persistence_config.connect(".")
 
 
 from .prov_definition import TestSlicingDependencies
 from .prov_execution import TestCallSlicing
+from .prov_deployment import TestProvDeployment
 from .cross_version_test import TestCrossVersion
 from .formatter_test import TestFormatter
-from .prov_deployment_test import TestProvDeployment

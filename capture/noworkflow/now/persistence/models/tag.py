@@ -14,7 +14,7 @@ from future.utils import with_metaclass, lmap
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, bindparam
 
-from ...utils.functions import prolog_repr
+from ...utils.functions import prolog_repr, timestamp
 
 from .. import relational
 
@@ -125,14 +125,15 @@ class TagProxy(with_metaclass(set_proxy(Tag))):
 
         for typ, condition in conditions:
             results = session.execute(_query.where(condition), info).fetchall()
-            tags = [lmap(int, tag[0].split('.')) for tag in results]
+            tags = [lmap(int, tag[0].split(".")) for tag in results]
             if tags:
                 return typ, max(tags)
 
         return 0, [1, 1, 1]
 
     @proxy_method
-    def create_automatic_tag(model, cls, trial_id, code_hash, command, session=None):
+    def create_automatic_tag(model, cls, trial_id, code_hash, command,
+                             session=None):
         """Create automatic tag for trial id
 
         Find maximum automatic tag by code_hash and command
@@ -170,4 +171,3 @@ class TagProxy(with_metaclass(set_proxy(Tag))):
             name=new_tag, timestamp=datetime.now()
         ))
         session.commit()
-

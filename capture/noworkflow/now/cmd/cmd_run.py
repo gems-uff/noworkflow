@@ -130,7 +130,6 @@ class Run(Command):
                 default=self.default_call_storage_frequency,
                 help="frequency (in calls) to save partial provenance")
 
-
     def execute(self, args):
         if args.meta:
             metaprofiler.meta_profiler.active = True

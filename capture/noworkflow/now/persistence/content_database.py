@@ -19,8 +19,8 @@ class ContentDatabase(object):
     """Content Database deal with storage of file content in disk"""
 
     def __init__(self, persistence_config):
-        self.content_path = None # Base path for storing content of files
-        self.std_open = open # Original Python open function.
+        self.content_path = None  # Base path for storing content of files
+        self.std_open = open  # Original Python open function.
 
         persistence_config.add(self)
 

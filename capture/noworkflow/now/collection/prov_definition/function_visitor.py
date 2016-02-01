@@ -4,6 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 """AST Visitors to capture definition provenance"""
 # pylint: disable=C0103
+
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -12,6 +13,7 @@ import ast
 from collections import defaultdict
 
 from future.builtins import map as cvmap
+from pyposast import extract_code
 
 from ...utils.cross_version import cross_compile
 from ...utils.bytecode.dis import instruction_dis_sorted_by_line
@@ -35,37 +37,25 @@ class FunctionVisitor(ast.NodeVisitor):
 
         self.disasm = []
 
-    def extract_code(self, node, lstrip=" \t", ljoin="", strip="() \t"):
-        """Use PyPosAST positions to extract node text"""
-        code = self.code
-        first_line, first_col = node.first_line - 1, node.first_col
-        last_line, last_col = node.last_line - 1, node.last_col
-        if first_line == last_line:
-            return code[first_line][first_col:last_col].strip(strip)
-
-        result = []
-        # Add first line
-        result.append(code[first_line][first_col:].strip(lstrip))
-        # Add middle lines
-        if first_line + 1 != last_line:
-            for line in range(first_line + 1, last_line):
-                result.append(code[line].strip(lstrip))
-        # Add last line
-        result.append(code[last_line][:last_col].strip(lstrip))
-        return ljoin.join(result).strip(strip)
-
     def node_code(self, node):
+        """Use PyPosAST positions to extract node text"""
+        return extract_code(
+            self.code, node, lstrip=" \t", ljoin="", strip="() \t"
+        )
+
+    def extract_code(self, node):
         """Use PyPosAST to extract node text without strips"""
-        return self.extract_code(
-            node, lstrip="", ljoin="\n", strip="").encode("utf-8")
+        return extract_code(self.code, node).encode("utf-8")
 
     def visit_ClassDef(self, node):
         """Visit ClassDef. Ignore Classes"""
-        self.contexts.append(self.definitions.dry_add( #ToDo: capture class -> add_object
+        # ToDo: capture class dry_add -> add_object
+        # ToDo: capture class "".encode("utf-8") -> self.extract_code(node),
+        self.contexts.append(self.definitions.dry_add(
             # ToDo: include filename on namespace
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
             node.name,
-            "".encode("utf-8"), #ToDo: capture class -> self.node_code(node),
+            "".encode("utf-8"),
             "CLASS",
             self.contexts[-1].id
         ))
@@ -78,11 +68,10 @@ class FunctionVisitor(ast.NodeVisitor):
             # ToDo: include filename on namespace
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
             node.name,
-            self.node_code(node),
+            self.extract_code(node),
             "FUNCTION",
             self.contexts[-1].id
         ))
-        code_hash = self.contexts[-1].code_hash
 
         self.generic_visit(node)
         self.contexts.pop()
@@ -106,7 +95,7 @@ class FunctionVisitor(ast.NodeVisitor):
         """Collect direct function call"""
         func = node.func
         self.objects.add(
-            self.extract_code(func), "FUNCTION_CALL", self.contexts[-1].id)
+            self.node_code(func), "FUNCTION_CALL", self.contexts[-1].id)
 
     def visit_Call(self, node):
         """Visit Call. Collect call"""

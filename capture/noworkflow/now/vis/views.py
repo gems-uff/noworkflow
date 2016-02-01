@@ -6,11 +6,10 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-import functools
 
 from flask import render_template, jsonify, request
 
-from ..persistence.models import History, Diff, Trial, proxy_gen
+from ..persistence.models import History, Diff, Trial
 from ..persistence import relational
 
 
@@ -21,7 +20,7 @@ class WebServer(object):
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(WebServer, cls).__new__(
-                                cls, *args, **kwargs)
+                cls, *args, **kwargs)
         return cls._instance
 
     def __init__(self):
@@ -48,7 +47,8 @@ def trials():
 @app.route("/")
 def index():
     history = History()
-    return render_template("index.html",
+    return render_template(
+        "index.html",
         cwd=os.getcwd(),
         scripts=history.scripts
     )
@@ -57,7 +57,8 @@ def index():
 @app.route("/<tid>-<graph_mode>")
 def index2(tid, graph_mode):
     history = History()
-    return render_template("index.html",
+    return render_template(
+        "index.html",
         cwd=os.getcwd(),
         scripts=history.scripts
     )
@@ -68,7 +69,6 @@ def trial_graph(tid, graph_mode, cache):
     trial = Trial(tid)
     graph = trial.graph
     graph.use_cache &= bool(int(cache))
-    #graph.use_cache = False
     finished, g = getattr(graph, graph_mode)()
     return jsonify(**g)
 
@@ -86,8 +86,9 @@ def all_modules(tid):
     trial = Trial(tid)
     local = trial.local_modules
     result = trial.modules
-    result = sorted(result, key=lambda x:x not in local)
-    return render_template("trial.html",
+    result = sorted(result, key=lambda x: x not in local)
+    return render_template(
+        "trial.html",
         cwd=os.getcwd(),
         trial=trial.to_dict(extra=("duration_text",)),
         modules=result,
@@ -104,7 +105,8 @@ def environment(tid):
 @app.route("/trials/<tid>/all_environment")
 def all_environment(tid):
     trial = Trial(tid)
-    return render_template("trial.html",
+    return render_template(
+        "trial.html",
         cwd=os.getcwd(),
         trial=trial.to_dict(extra=("duration_text",)),
         env=trial.environment,
@@ -122,7 +124,8 @@ def file_accesses(tid):
 @app.route("/trials/<tid>/all_file_accesses")
 def all_file_accesses(tid):
     trial = Trial(tid)
-    return render_template("trial.html",
+    return render_template(
+        "trial.html",
         cwd=os.getcwd(),
         trial=trial.to_dict(extra=("duration_text",)),
         file_accesses=[x.to_dict(extra=("stack",))
@@ -138,7 +141,8 @@ def diff(trial1, trial2, tl=None, nh=None, graph_mode=None):
     modules_added, modules_removed, modules_replaced = diff.modules
     env_added, env_removed, env_replaced = diff.environment
     fa_added, fa_removed, fa_replaced = diff.file_accesses
-    return render_template("diff.html",
+    return render_template(
+        "diff.html",
         cwd=os.getcwd(),
         trial1=diff.trial1.to_dict(extra=("duration_text",)),
         trial2=diff.trial2.to_dict(extra=("duration_text",)),

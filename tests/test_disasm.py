@@ -4,16 +4,16 @@ def f(x=2):
 
 lis = [1]
 dic = {
-    'x': 2
+    "x": 2
 }
 
-f(1) # call_function
-f(*lis) # call_function_var
-f(**dic) # call_function_kw
-f(*[], **dic) # call_function_var_kw
+f(1)  # call_function
+f(*lis)  # call_function_var
+f(**dic)  # call_function_kw
+f(*[], **dic)  # call_function_var_kw
 
 
-class c(object): # call_function
+class C(object):  # call_function
 
     def __enter__(self):
         x = 1
@@ -28,25 +28,27 @@ def fn_dec(*args):
         return fn
     return dec
 
-dec1 = fn_dec('1')
+dec1 = fn_dec("1")
 
-@fn_dec('2') # call_function
-@dec1 # call_function
+
+@fn_dec("2")  # call_function
+@dec1  # call_function
 def fw(x):
     return x
 
-@fn_dec('2') # call_function
-@dec1 # call_function
-class d(object):
+
+@fn_dec("2")  # call_function
+@dec1  # call_function
+class D(object):
     pass
 
-[a for a in lis] # nothing
-{a for a in lis} # call_function
-{a:a for a in lis} # call_function
-f(a for a in lis) # call_function gen, call_function
+[a for a in lis]  # nothing
+{a for a in lis}  # call_function
+{a: a for a in lis}  # call_function
+f(a for a in lis)  # call_function gen, call_function
 
-with c() as r: # WITH_CLEANUP
+with C() as r:  # WITH_CLEANUP
     pass
 
-assert True # nothing
-assert True, "wat" # call_function
+assert True  # nothing
+assert True, "wat"  # call_function

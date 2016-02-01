@@ -23,6 +23,6 @@ class NowSQLSchema(IpythonCommandMagic):
         for model in order:
             lines += (
                 str(CreateTable(model.__model__.__table__)
-                .compile(relational.engine)).split('\n')
+                    .compile(relational.engine)).split("\n")
             )
         return PrettyLines(lines)

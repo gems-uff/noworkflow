@@ -1,13 +1,16 @@
 def y():
-  pass
+    pass
+
 
 def z():
-  pass
+    pass
+
 
 def x(i):
-  if i % 2:
-  	return y()
-  return z()
+    if i % 2:
+        return y()
+    return z()
+
 
 for i in range(10):
-  x(i)
+    x(i)

@@ -9,7 +9,6 @@ from __future__ import (absolute_import, print_function,
 import textwrap
 
 from future.utils import with_metaclass
-from future.utils import bytes_to_native_str as n
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import relationship

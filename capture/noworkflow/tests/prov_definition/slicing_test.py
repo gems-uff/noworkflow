@@ -10,10 +10,10 @@ import unittest
 import pyposast
 from ...now.utils.cross_version import bytes_string
 from ...now.collection.prov_definition.slicing_visitor import SlicingVisitor
-from ...now.collection.prov_definition.utils import FunctionCall
 from ...now.collection.metadata import Metascript
 
-NAME = "<unknown>"
+
+NAME = "noworkflow/tests/examples/script.py"
 
 
 class TestSlicingDependencies(unittest.TestCase):
@@ -26,196 +26,188 @@ class TestSlicingDependencies(unittest.TestCase):
 
         def parse(self, code):
             metascript = Metascript()
-            metascript.name = "name"
-            metascript.code = bytes_string(code, "utf-8")
-            metascript._path = NAME
-            metascript.paths[NAME] = metascript.definitions_store.dry_add(
-                "", NAME, metascript.code, "FILE", None
-            )
-            metascript.compiled = None
+            metascript.fake_path(NAME, bytes_string(code, "utf-8"))
             self.visitor = SlicingVisitor(metascript, metascript.paths[NAME])
-            #self.visitor.metascript.code = code
             return pyposast.parse(code)
 
         def test_simple_assignment(self):
             tree = self.parse("a = 1\n"
-                             "b = a")
+                              "b = a")
             self.visitor.visit(tree)
-            self.assertIn('a', self.dependencies(1))
-            self.assertEqual(['a'], self.dependencies(2)['b'])
+            self.assertIn("a", self.dependencies(1))
+            self.assertEqual(["a"], self.dependencies(2)["b"])
 
         def test_unpack_assignment(self):
             tree = self.parse("a, b = (a + c), d")
             self.visitor.visit(tree)
-            self.assertEqual(['a', 'c'], self.dependencies(1)['a'])
-            self.assertEqual(['d'], self.dependencies(1)['b'])
+            self.assertEqual(["a", "c"], self.dependencies(1)["a"])
+            self.assertEqual(["d"], self.dependencies(1)["b"])
 
         def test_multiple_assignment(self):
             tree = self.parse("c = a, b = d, e")
             self.visitor.visit(tree)
-            self.assertEqual(['d'], self.dependencies(1)['a'])
-            self.assertEqual(['e'], self.dependencies(1)['b'])
-            self.assertEqual(['d', 'e'], self.dependencies(1)['c'])
+            self.assertEqual(["d"], self.dependencies(1)["a"])
+            self.assertEqual(["e"], self.dependencies(1)["b"])
+            self.assertEqual(["d", "e"], self.dependencies(1)["c"])
 
         def test_for(self):
             tree = self.parse("for i in a + [b, c]:\n"
-                             "    pass")
+                              "    pass")
             self.visitor.visit(tree)
-            deps = ['a', 'b', 'c', 'now(iter)']
-            self.assertEqual(deps, self.dependencies(1)['i'])
+            deps = ["a", "b", "c", "now(iter)"]
+            self.assertEqual(deps, self.dependencies(1)["i"])
 
         def test_for2(self):
             tree = self.parse("for i, j in [b, c]:\n"
-                             "    pass")
+                              "    pass")
             self.visitor.visit(tree)
-            deps = ['b', 'c', 'now(iter)']
-            self.assertEqual(deps, self.dependencies(1)['i'])
-            self.assertEqual(deps, self.dependencies(1)['j'])
-
+            deps = ["b", "c", "now(iter)"]
+            self.assertEqual(deps, self.dependencies(1)["i"])
+            self.assertEqual(deps, self.dependencies(1)["j"])
 
         def test_augmented_assignment(self):
             tree = self.parse("a += 1\n"
-                             "b += a")
+                              "b += a")
             self.visitor.visit(tree)
-            self.assertEqual(['a'], self.dependencies(1)['a'])
-            self.assertEqual(['a', 'b'], self.dependencies(2)['b'])
+            self.assertEqual(["a"], self.dependencies(1)["a"])
+            self.assertEqual(["a", "b"], self.dependencies(2)["b"])
 
         def test_attribute_assignment(self):
             tree = self.parse("a.attr.attr2 = b")
             self.visitor.visit(tree)
-            self.assertEqual(['b'], self.dependencies(1)['a'])
-            self.assertEqual(['b'], self.dependencies(1)['a.attr'])
-            self.assertEqual(['b'], self.dependencies(1)['a.attr.attr2'])
+            self.assertEqual(["b"], self.dependencies(1)["a"])
+            self.assertEqual(["b"], self.dependencies(1)["a.attr"])
+            self.assertEqual(["b"], self.dependencies(1)["a.attr.attr2"])
 
         def test_subscript_assignment(self):
             tree = self.parse("a[c] = b")
             self.visitor.visit(tree)
-            self.assertEqual(['b'], self.dependencies(1)['a'])
-            self.assertFalse(self.dependencies(1)['c'])
+            self.assertEqual(["b"], self.dependencies(1)["a"])
+            self.assertFalse(self.dependencies(1)["c"])
 
         def test_complex_subscript_assignment(self):
             tree = self.parse("a.attr.attr5[c.attr2[d.attr3]].attr4 = b")
             self.visitor.visit(tree)
-            self.assertEqual(['b'], self.dependencies(1)['a'])
-            self.assertEqual(['b'], self.dependencies(1)['a.attr'])
-            self.assertEqual(['b'], self.dependencies(1)['a.attr.attr5'])
-            self.assertFalse(self.dependencies(1)['a.attr.attr5.attr4'])
-            self.assertFalse(self.dependencies(1)['c'])
-            self.assertFalse(self.dependencies(1)['c.attr2'])
-            self.assertFalse(self.dependencies(1)['d'])
-            self.assertFalse(self.dependencies(1)['d.attr3'])
+            self.assertEqual(["b"], self.dependencies(1)["a"])
+            self.assertEqual(["b"], self.dependencies(1)["a.attr"])
+            self.assertEqual(["b"], self.dependencies(1)["a.attr.attr5"])
+            self.assertFalse(self.dependencies(1)["a.attr.attr5.attr4"])
+            self.assertFalse(self.dependencies(1)["c"])
+            self.assertFalse(self.dependencies(1)["c.attr2"])
+            self.assertFalse(self.dependencies(1)["d"])
+            self.assertFalse(self.dependencies(1)["d.attr3"])
 
         def test_lambda_assignment(self):
             tree = self.parse("a = (lambda x: x + b)(c)")
             self.visitor.visit(tree)
-            self.assertEqual([(1, 24)], self.dependencies(1)['a'])
-            self.assertEqual([['c']], self.call(1, 24).args)
+            self.assertEqual([(1, 24)], self.dependencies(1)["a"])
+            self.assertEqual([["c"]], self.call(1, 24).args)
 
         def test_lambda2_assignment(self):
             tree = self.parse("a = (lambda x: (lambda y: x + y))(b)(c)")
             self.visitor.visit(tree)
-            self.assertEqual([(1, 39)], self.dependencies(1)['a'])
-            self.assertEqual([['c']], self.call(1, 39).args)
+            self.assertEqual([(1, 39)], self.dependencies(1)["a"])
+            self.assertEqual([["c"]], self.call(1, 39).args)
             self.assertEqual([(1, 36)], self.call(1, 39).func)
-            self.assertEqual([['b']], self.call(1, 36).args)
+            self.assertEqual([["b"]], self.call(1, 36).args)
 
         def test_list_comprehension_assignment(self):
             tree = self.parse("a = [i + b for i in c if i + d == b]")
             self.visitor.visit(tree)
-            self.assertEqual(['c', 'd', 'b', 'b'], self.dependencies(1)['a'])
+            self.assertEqual(["c", "d", "b", "b"], self.dependencies(1)["a"])
 
         def test_list_comprehension2_assignment(self):
             tree = self.parse("a = [i + j for i in c for j in d]")
             self.visitor.visit(tree)
-            self.assertEqual(['c', 'd'], self.dependencies(1)['a'])
+            self.assertEqual(["c", "d"], self.dependencies(1)["a"])
 
         def test_set_comprehension_assignment(self):
             tree = self.parse("a = {i for i in c}")
             self.visitor.visit(tree)
-            self.assertEqual(['c'], self.dependencies(1)['a'])
+            self.assertEqual(["c"], self.dependencies(1)["a"])
 
         def test_generator_assignment(self):
             tree = self.parse("a = sum(i for i in c)")
             self.visitor.visit(tree)
-            self.assertEqual((1, 21), self.dependencies(1)['a'][0])
+            self.assertEqual((1, 21), self.dependencies(1)["a"][0])
 
         def test_dict_comprehension_assignment(self):
             tree = self.parse("a = {i:i**b for i in c}")
             self.visitor.visit(tree)
-            self.assertEqual(['c', 'b'], self.dependencies(1)['a'])
+            self.assertEqual(["c", "b"], self.dependencies(1)["a"])
 
         def test_function_call_assignment(self):
             tree = self.parse("a = fn(b=c)")
             self.visitor.visit(tree)
-            self.assertEqual((1, 11), self.dependencies(1)['a'][0])
-            self.assertEqual({'b':['c']}, self.call(1, 11).keywords)
+            self.assertEqual((1, 11), self.dependencies(1)["a"][0])
+            self.assertEqual({"b": ["c"]}, self.call(1, 11).keywords)
 
         def test_nested_call(self):
             tree = self.parse("a = fn(fn(x))")
             self.visitor.visit(tree)
-            self.assertEqual((1, 13), self.dependencies(1)['a'][0])
+            self.assertEqual((1, 13), self.dependencies(1)["a"][0])
             self.assertEqual([[(1, 12)]], self.call(1, 13).args)
 
         def test_while(self):
             tree = self.parse("while i:\n"
-                             "    b = c\n"
-                             "else:\n"
-                             "    c = d")
+                              "    b = c\n"
+                              "else:\n"
+                              "    c = d")
             self.visitor.visit(tree)
-            self.assertEqual(['c', 'i'], self.dependencies(2)['b'])
-            self.assertEqual(['d', 'i'], self.dependencies(4)['c'])
+            self.assertEqual(["c", "i"], self.dependencies(2)["b"])
+            self.assertEqual(["d", "i"], self.dependencies(4)["c"])
 
         def test_if(self):
             tree = self.parse("if i:\n"
-                             "    b = c\n"
-                             "else:\n"
-                             "    c = d")
+                              "    b = c\n"
+                              "else:\n"
+                              "    c = d")
             self.visitor.visit(tree)
-            self.assertEqual(['c', 'i'], self.dependencies(2)['b'])
-            self.assertEqual(['d', 'i'], self.dependencies(4)['c'])
+            self.assertEqual(["c", "i"], self.dependencies(2)["b"])
+            self.assertEqual(["d", "i"], self.dependencies(4)["c"])
 
         def test_nested(self):
             tree = self.parse("if i:\n"
-                             "    if j:\n"
-                             "        a = x\n"
-                             "    b = y\n"
-                             "c = z")
+                              "    if j:\n"
+                              "        a = x\n"
+                              "    b = y\n"
+                              "c = z")
             self.visitor.visit(tree)
-            self.assertEqual({'x', 'i', 'j'}, set(self.dependencies(3)['a']))
-            self.assertEqual(['y', 'i'], self.dependencies(4)['b'])
-            self.assertEqual(['z'], self.dependencies(5)['c'])
+            self.assertEqual({"x", "i", "j"}, set(self.dependencies(3)["a"]))
+            self.assertEqual(["y", "i"], self.dependencies(4)["b"])
+            self.assertEqual(["z"], self.dependencies(5)["c"])
 
         def test_for_independent(self):
             tree = self.parse("for i in a:\n"
-                             "    b = c")
+                              "    b = c")
             self.visitor.visit(tree)
-            self.assertEqual(['c'], self.dependencies(2)['b'])
+            self.assertEqual(["c"], self.dependencies(2)["b"])
 
         def test_for_dependent(self):
             tree = self.parse("for i in a:\n"
-                             "    b = b + c")
+                              "    b = b + c")
             self.visitor.visit(tree)
-            self.assertEqual(['b', 'c', 'i'], self.dependencies(2)['b'])
+            self.assertEqual(["b", "c", "i"], self.dependencies(2)["b"])
 
         def test_for_dependent_augment(self):
             tree = self.parse("for i in a:\n"
-                             "    b += c")
+                              "    b += c")
             self.visitor.visit(tree)
-            self.assertEqual(['c', 'b', 'i'], self.dependencies(2)['b'])
+            self.assertEqual(["c", "b", "i"], self.dependencies(2)["b"])
 
         def test_return(self):
             code = ("def f(a):\n"
                     "    return a")
             tree = self.parse(code)
             self.visitor.visit(tree)
-            self.assertEqual(['a'], self.dependencies(2)['return'])
+            self.assertEqual(["a"], self.dependencies(2)["return"])
 
         def test_yield(self):
             code = ("def f(a):\n"
                     "    yield a")
             tree = self.parse(code)
             self.visitor.visit(tree)
-            self.assertEqual(['a'], self.dependencies(2)['yield'])
+            self.assertEqual(["a"], self.dependencies(2)["yield"])
 
         def test_return2(self):
             code = ("def f(a):\n"
@@ -223,7 +215,7 @@ class TestSlicingDependencies(unittest.TestCase):
                     "        return 2")
             tree = self.parse(code)
             self.visitor.visit(tree)
-            self.assertEqual(['a'], self.dependencies(3)['return'])
+            self.assertEqual(["a"], self.dependencies(3)["return"])
 
         def test_return3(self):
             code = ("def f(a):\n"
@@ -231,4 +223,4 @@ class TestSlicingDependencies(unittest.TestCase):
                     "        return")
             tree = self.parse(code)
             self.visitor.visit(tree)
-            self.assertEqual(['a'], self.dependencies(3)['return'])
+            self.assertEqual(["a"], self.dependencies(3)["return"])

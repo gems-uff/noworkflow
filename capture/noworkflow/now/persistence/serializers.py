@@ -13,7 +13,6 @@ from collections import deque
 from future.utils import viewitems
 
 from ..utils.cross_version import IMMUTABLE
-from ..utils.functions import abstract
 
 from . import content
 
@@ -27,20 +26,20 @@ class SimpleSerializer(object):
 
     def _iter(self, obj, maxlevel):
         return ", ".join(self.serialize(x, maxlevel=maxlevel - 1)
-                        for x in obj)
+                         for x in obj)
 
     def _default(self, obj):
         if isinstance(obj, IMMUTABLE):
             return repr(obj)
 
-        if hasattr(obj, '__class__'):
+        if hasattr(obj, "__class__"):
             return "<{} instance at 0x{:x}".format(
                 obj.__class__.__name__, id(obj))
 
-        if hasattr(obj, '__name__'):
+        if hasattr(obj, "__name__"):
             return "<{} at 0x{:x}".format(obj.__name__, id(obj))
 
-        if hasattr(obj, '__call__'):
+        if hasattr(obj, "__call__"):
             return "<callable at 0x{:x}>".format(id(obj))
 
         return "<unsupported type at 0x{:x}>".format(id(obj))
@@ -71,7 +70,7 @@ class SimpleSerializer(object):
         elif isinstance(obj, dict):
             typ = "dict"
             result = ", ".join(
-                '({}, {})'.format(
+                "({}, {})".format(
                     self.serialize(key, maxlevel - 1),
                     self.serialize(value, maxlevel - 1)
                 ) for key, value in viewitems(obj))
@@ -79,8 +78,8 @@ class SimpleSerializer(object):
         if not typ:
             return self._default(obj)
 
-        cls = obj.__class__ if hasattr(obj, '__class__') else type(obj)
-        cls_name = '_'.join(cls.__name__.split())
+        cls = obj.__class__ if hasattr(obj, "__class__") else type(obj)
+        cls_name = "_".join(cls.__name__.split())
 
         if typ == "array":
             return "{}({})".format(cls_name, result)

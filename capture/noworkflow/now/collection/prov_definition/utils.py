@@ -74,9 +74,11 @@ class FunctionCall(ast.NodeVisitor):
         for arg in node.args:
             if sys.version_info <= (3, 4) or not isinstance(arg, ast.Starred):
                 self.args.append(self.use_visitor(arg))
+            else:
+                self.visit(arg)
         for keyword in node.keywords:
             self.visit(keyword)
-        if hasattr(node, 'starargs'):
+        if hasattr(node, "starargs"):
             # Python <= 3.4
             if node.starargs:
                 self.starargs = self.use_visitor(node.starargs)
@@ -86,7 +88,6 @@ class FunctionCall(ast.NodeVisitor):
     def visit_Starred(self, node):
         # Python 3.5
         self.starargs += self.use_visitor(node)
-
 
     def visit_keyword(self, node):
         if node.arg:
@@ -160,6 +161,7 @@ class Assert(FunctionCall):
         return "line={}, col={}, msg={}".format(
             self.line, self.col, self.msg)
 
+
 class Print(FunctionCall):
 
     def __init__(self, *args, **kwargs):
@@ -167,6 +169,7 @@ class Print(FunctionCall):
 
     def __repr__(self):
         return "Print({})".format(self.info())
+
 
 class With(FunctionCall):
 
@@ -194,7 +197,7 @@ def safeget(container, ind):
         return container[ind]
     except IndexError as err:
         if not err.args:
-            err.args = ('',)
-        err.args = (err.args[0] + '\n Get\n  Index {}\n  Container {}'.format(
+            err.args = ("",)
+        err.args = (err.args[0] + "\n Get\n  Index {}\n  Container {}".format(
             ind, container),) + err.args[1:]
         raise err

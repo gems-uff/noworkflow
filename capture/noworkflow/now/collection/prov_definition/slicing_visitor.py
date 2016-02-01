@@ -18,7 +18,7 @@ from ...utils.bytecode.interpreter import WITH_CLEANUP, IMPORTS, ITERS
 
 from .function_visitor import FunctionVisitor
 from .utils import NamedContext, FunctionCall, ClassDef, Decorator, Generator
-from .utils import Assert, index, safeget, With, Print
+from .utils import Assert, safeget, With, Print
 
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -141,7 +141,6 @@ class AssignRightVisitor(ast.NodeVisitor):
         """Create special dependency for calls"""
         self.max_line(node)
         self.add(node.uid, "fn print", node.lineno)
-
 
 
 def tuple_or_list(node):
@@ -449,7 +448,6 @@ class SlicingVisitor(FunctionVisitor):
         """Visit Assert. Create special With enter/exit on Python 3"""
         self.generic_visit(node)
         self.add_with(node)
-
 
     def teardown(self):
         """Matches AST call order to call order in disassembly

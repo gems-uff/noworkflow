@@ -8,7 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import textwrap
 
-from pyposast.cross_version import buffered_str
+from pyposast import native_decode_source
 
 from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
@@ -55,12 +55,10 @@ class Trial(relational.base):
         "Trial", backref="_bypass_children", viewonly=True,
         remote_side=[id], primaryjoin=(id == inherited_id))
 
-
     _parent = relationship(
         "Trial", backref="_children", viewonly=True,
         remote_side=[id], primaryjoin=(id == parent_id))
 
-    #ToDo: check bypass
     _function_defs = relationship(
         "FunctionDef", lazy="dynamic", backref="_trial")
     _module_dependencies = relationship(
@@ -182,7 +180,6 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
             kwargs["graph_use_cache"] = kwargs.get("graph_use_cache", cache)
             kwargs["prolog_use_cache"] = kwargs.get("graph_use_cache", cache)
 
-
         session = relational.session
         if not trial_ref or trial_ref == -1:
             obj = TrialProxy.last_trial(script=script, session=session)
@@ -192,7 +189,6 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
                 kwargs["prolog_use_cache"] = False
         else:
             obj = TrialProxy.load_trial(trial_ref, session=session)
-
 
         if obj is None:
             raise RuntimeError("Trial {} not found".format(trial_ref))
@@ -207,7 +203,7 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
     def script_content(self):
         """Return the "main" script content of the trial"""
         return PrettyLines(
-            buffered_str(content.get(self.code_hash)).split("/n"))
+            native_decode_source(content.get(self.code_hash)).split("/n"))
 
     @property
     def finished(self):
@@ -239,7 +235,7 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
     @property
     def environment(self):
         """Return dict: environment variables -> value"""
-        return {e.name:e.value for e in self.environment_attrs}
+        return {e.name: e.value for e in self.environment_attrs}
 
     def create_head(self):
         """Create head for this trial"""
@@ -308,7 +304,8 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         return "Trial({})".format(self.id)
 
     @proxy_method
-    def last_trial(model, cls, script=None, parent_required=False, session=None):
+    def last_trial(model, cls, script=None, parent_required=False,
+                   session=None):
         """Return last trial according to start time
 
         Keyword arguments:
@@ -379,7 +376,7 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         session -- specify session for loading (default=relational.session)
         """
         session = session or relational.session
-        if not hasattr(model, '_last_trial_id_without_inheritance'):
+        if not hasattr(model, "_last_trial_id_without_inheritance"):
             ttrial = model.__table__
             _query = (
                 select([ttrial.c.id]).where(ttrial.c.start.in_(
@@ -414,15 +411,16 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         """
         session = session or relational.session
         ttrial = model.__table__
-        session.execute(ttrial.update()
+        session.execute(
+            ttrial.update()
             .values(finish=finish)
             .where(ttrial.c.id == trial_id)
         )
         session.commit()
 
     @proxy_method
-    def fast_store(model, cls, start, script, code_hash, arguments, bypass_modules,
-                   command, run, session=None):
+    def fast_store(model, cls, start, script, code_hash, arguments,
+                   bypass_modules, command, run, session=None):
         """Create trial and assign a new id to it
 
         Use core sqlalchemy

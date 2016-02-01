@@ -12,7 +12,7 @@ import sys
 
 from datetime import datetime
 
-from ..persistence import persistence_config, get_serialize
+from ..persistence import persistence_config, get_serializer
 from ..persistence.lightweight import ObjectStore
 from ..persistence.lightweight import DefinitionLW, ObjectLW
 from ..persistence.lightweight import EnvironmentAttrLW
@@ -20,7 +20,6 @@ from ..persistence.lightweight import ModuleLW, DependencyLW
 from ..persistence.lightweight import ActivationLW, ObjectValueLW
 from ..persistence.lightweight import FileAccessLW, VariableLW
 from ..persistence.lightweight import VariableUsageLW, VariableDependencyLW
-from ..persistence.models import Tag, Trial
 from ..utils import io
 
 from .prov_definition.definition import Definition
@@ -63,7 +62,6 @@ class Metascript(object):
         self.definition = Definition()
         self.execution = Execution()
         self.deployment = Deployment()
-
 
         # Trial id read from Database : int
         self.trial_id = None
@@ -156,6 +154,14 @@ class Metascript(object):
             self.paths[path] = self.definitions_store.dry_add(
                 "", path, code, "FILE", None)
 
+    def fake_path(self, path, code):
+        """Fake configuration for tests"""
+        self.name = path
+        self._path = path
+        self.code = code
+        self.paths[path] = self.definitions_store.dry_add(
+            "", path, code, "FILE", None)
+
     @property
     def context(self):
         """Return context"""
@@ -179,10 +185,11 @@ class Metascript(object):
         """Clear namespace dict"""
         if erase:
             self.namespace.clear()
-        self.namespace.update({"__name__"    : "__main__",
-                               "__file__"    : self.path,
-                               "__builtins__": __builtins__,
-                              })
+        self.namespace.update({
+            "__name__": "__main__",
+            "__file__": self.path,
+            "__builtins__": __builtins__,
+        })
 
     def clear_sys(self):
         """Clear sys variables"""
@@ -222,7 +229,8 @@ class Metascript(object):
 
     def _read_args(self, args):
         """Read cmd line argument object"""
-        self.serialize = get_serialize(args) # ToDo: add serializer param
+        # ToDo: add serializer param
+        self.serialize = get_serializer(args)
         self.verbose = args.verbose
         self.meta = args.meta
 

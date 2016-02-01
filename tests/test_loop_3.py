@@ -1,8 +1,10 @@
 def y():
-  pass
+    pass
+
 
 def x():
-  y()
+    y()
+
 
 for i in range(10):
-  x()
+    x()

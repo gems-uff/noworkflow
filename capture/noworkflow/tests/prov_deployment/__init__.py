@@ -3,8 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
-import unittest
-from noworkflow.tests import *
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
 
-if __name__ == "__main__":
-    unittest.main()
+from .prov_deployment_test import TestProvDeployment
+
+__all__ = [
+    b"TestProvDeployment",
+]

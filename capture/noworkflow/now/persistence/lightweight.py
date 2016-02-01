@@ -7,7 +7,6 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from datetime import datetime
-from collections import namedtuple
 
 from future.utils import viewitems, viewvalues
 
@@ -85,7 +84,7 @@ class ObjectStore(object):
 
     def clear(self):
         """Remove deleted objects from storage"""
-        self.store = {k:v for k, v in viewitems(self.store) if v}
+        self.store = {k: v for k, v in viewitems(self.store) if v}
         self.count = len(self.store)
 
     def generator(self, trial_id, partial=False):
@@ -125,6 +124,7 @@ class BaseLW:
             return None
         return getattr(self, key)
 
+
 # Deployment
 
 class ModuleLW(BaseLW):
@@ -154,6 +154,7 @@ class ModuleLW(BaseLW):
         return ("Module(id={}, name={}, version={})").format(
             self.id, self.name, self.version)
 
+
 class DependencyLW(BaseLW):
     """Dependency lightweight object
     There are type definitions on lightweight.pxd
@@ -175,6 +176,7 @@ class DependencyLW(BaseLW):
 
     def __repr__(self):
         return ("Dependency(module_id={})").format(self.module_id)
+
 
 class EnvironmentAttrLW(BaseLW):
     """EnvironmentAttr lightweight object
@@ -261,9 +263,11 @@ class ObjectLW(BaseLW):
         return True
 
     def __repr__(self):
-        return ("Object(id={}, name={}, type={}, "
-            "function_def={})").format(self.id, self.name,
-            self.type, self.function_def_id)
+        return (
+            "Object(id={}, name={}, type={}, "
+            "function_def={})"
+        ).format(self.id, self.name, self.type, self.function_def_id)
+
 
 # Profiler
 
@@ -274,7 +278,8 @@ class ActivationLW(BaseLW):
 
     __slots__, attributes = define_attrs(
         ["id", "name", "line", "return_value", "start", "finish", "caller_id",
-         "trial_id"], ["file_accesses", "context", "slice_stack", "lasti",
+         "trial_id"],
+        ["file_accesses", "context", "slice_stack", "lasti",
          "args", "kwargs", "starargs"]
     )
     special = {"caller_id"}
@@ -307,9 +312,13 @@ class ActivationLW(BaseLW):
         return self.finish is not None
 
     def __repr__(self):
-        return ("Activation(id={}, line={}, name={}, start={}, finish={}, "
-            "return={}, caller_id={})").format(self.id, self.line, self.name,
-            self.start, self.finish, self.return_value, self.caller_id)
+        return (
+            "Activation(id={}, line={}, name={}, start={}, finish={}, "
+            "return={}, caller_id={})"
+        ).format(
+            self.id, self.line, self.name,
+            self.start, self.finish, self.return_value, self.caller_id
+        )
 
 
 class ObjectValueLW(BaseLW):
@@ -335,9 +344,13 @@ class ObjectValueLW(BaseLW):
         return True
 
     def __repr__(self):
-        return ("ObjectValue(id={}, name={}, value={}, type={}, "
-            "activation={})").format(self.id, self.name,
-            self.value, self.type, self.function_activation_id)
+        return (
+            "ObjectValue(id={}, name={}, value={}, type={}, "
+            "activation={})"
+        ).format(
+            self.id, self.name,
+            self.value, self.type, self.function_activation_id
+        )
 
 
 class FileAccessLW(BaseLW):
@@ -347,7 +360,8 @@ class FileAccessLW(BaseLW):
 
     __slots__, attributes = define_attrs(
         ["id", "name", "mode", "buffering", "timestamp", "trial_id",
-         "content_hash_before", "content_hash_after","function_activation_id"],
+         "content_hash_before", "content_hash_after",
+         "function_activation_id"],
         ["done"]
     )
     special = {"function_activation_id"}
@@ -456,5 +470,6 @@ class VariableUsageLW(BaseLW):
         return True
 
     def __repr__(self):
-        return ("Usage(id={}, variable_id={}, name={}, line={}, ctx={})").format(
-            self.id, self.variable_id, self.name, self.line, self.ctx)
+        return (
+            "Usage(id={}, variable_id={}, name={}, line={}, ctx={})"
+        ).format(self.id, self.variable_id, self.name, self.line, self.ctx)
