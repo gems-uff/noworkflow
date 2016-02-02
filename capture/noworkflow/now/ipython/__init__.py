@@ -7,11 +7,20 @@ from __future__ import (absolute_import, print_function,
                         division)
 
 
-from ..persistence.models import *
+from ..persistence.models import *                                               # pylint: disable=wildcard-import
 from ..persistence import persistence_config, relational, content
 
 
 def init(path=None, ipython=None):
+    """Initiate noWorkflow extension.
+    Load D3, IPython magics, and connect to database
+
+
+    Keyword Arguments:
+    path -- database path (default=current directory)
+    ipython -- IPython object (default=None)
+    """
+
     import os
     from IPython.display import display_html
     from ..utils.functions import resource

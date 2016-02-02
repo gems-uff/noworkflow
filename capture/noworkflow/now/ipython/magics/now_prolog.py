@@ -44,8 +44,9 @@ class NowProlog(IpythonCommandMagic):
                 help="export trial facts")
 
     def execute(self, func, line, cell, magic_cls):
-        f = DollarFormatter()
-        cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
+        formatter = DollarFormatter()
+        cell = formatter.vformat(cell, args=[],
+                                 kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         for trial_ref in args.trials:
             trial = Trial(trial_ref=trial_ref)

@@ -2,7 +2,6 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-# pylint: disable=W0703
 """'(%)%now run' magics"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
@@ -99,7 +98,7 @@ class NowRun(IpythonCommandMagic, Run):
         add_arg("params", nargs=argparse.REMAINDER,
                 help="params to be passed to script")
 
-    def execute(self, func, line, cell, magic_cls):
+    def execute(self, func, line, cell, magic_cls):                              # pylint: disable=too-many-locals
         # Calculate noworkflow params and script params
         argv, args = self.arguments(func, line)
         params = args.params
@@ -143,16 +142,19 @@ class NowRun(IpythonCommandMagic, Run):
                 sys.modules["__main__"] = save__main__
                 try:
                     return Trial(metascript.trial_id)
-                except Exception as exc:
+                except Exception as exc:                                         # pylint: disable=broad-except
                     print("Failed", exc)
             else:
                 # Set execution line
-                cmd = ("now run --create_last {directory} {args} {script} "
-                       "{params}").format(
+                cmd = (
+                    "now run --create_last {directory} {args} {script} "
+                    "{params}"
+                ).format(
                     directory="" if args.dir else "--dir {}".format(directory),
                     args=" ".join(argv),
                     script=filename,
-                    params=" ".join(params))
+                    params=" ".join(params)
+                )
                 script = magic_cls.shell.find_cell_magic("script").__self__
                 script.shebang(cmd, "")
                 tmp_dir = os.path.dirname(filename)
@@ -160,7 +162,7 @@ class NowRun(IpythonCommandMagic, Run):
                 try:
                     with open(os.path.join(tmp_dir, LAST_TRIAL), "r") as last:
                         return Trial(int(last.read()))
-                except Exception as exc:
+                except Exception as exc:                                         # pylint: disable=broad-except
                     print("Failed", exc)
         finally:
             persistence_config.connect(original_path)

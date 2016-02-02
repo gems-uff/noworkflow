@@ -26,6 +26,11 @@ class NowRestore(IpythonCommandMagic, Restore):
         print(c)
     """
 
+    def __init__(self, *args, **kwargs):
+        super(NowRestore, self).__init__(*args, **kwargs)
+        self.args_file = None
+        self.trial = None
+
     def add_arguments(self):
         super(NowRestore, self).add_arguments()
         add_arg = self.add_argument
@@ -38,7 +43,7 @@ class NowRestore(IpythonCommandMagic, Restore):
         self.trial = trial
 
     def execute(self, func, line, cell, magic_cls):
-        argv, args = self.arguments(func, line)
+        _, args = self.arguments(func, line)
         self.args_file, self.trial = args.file, None
         Restore.execute(self, args)
         return content.get(self.trial.code_hash).decode("utf-8")

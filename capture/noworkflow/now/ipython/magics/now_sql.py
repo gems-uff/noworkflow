@@ -38,7 +38,7 @@ class NowSQL(IpythonCommandMagic):
 
     def __init__(self, *args, **kwargs):
         super(NowSQL, self).__init__(*args, **kwargs)
-        js = """
+        javascript = """
             var mode = 'magic_text/x-sql';
             if (!IPython.CodeCell.config_defaults.highlight_modes[mode]) {
                 IPython.CodeCell.config_defaults.highlight_modes[mode] = {
@@ -49,7 +49,7 @@ class NowSQL(IpythonCommandMagic):
                 /^%%now_sql/
             );
         """
-        display_javascript(js, raw=True)
+        display_javascript(javascript, raw=True)
 
     def add_arguments(self):
         super(NowSQL, self).add_arguments()
@@ -58,8 +58,9 @@ class NowSQL(IpythonCommandMagic):
                 help="""The variable in which the result will be stored""")
 
     def execute(self, func, line, cell, magic_cls):
-        f = DollarFormatter()
-        cell = f.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
+        formatter = DollarFormatter()
+        cell = formatter.vformat(cell, args=[],
+                                 kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         result = relational.query(text_to_native_str(cell))
         if args.result:

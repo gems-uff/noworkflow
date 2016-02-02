@@ -44,21 +44,21 @@ class IpythonCommandMagic(Command):
             magic_arguments.argument(*args, **kwargs)
         )
 
-    def create_magic(self, f):
+    def create_magic(self, func):
         """Create magic for command"""
-        f.__name__ = str(self.magic)
-        f.__doc__ = self.docstring
-        f = MAGIC_TYPES[self.magic_type](self.magic)(f)
+        func.__name__ = str(self.magic)
+        func.__doc__ = self.docstring
+        func = MAGIC_TYPES[self.magic_type](self.magic)(func)
         for arg in self.args:
-            f = arg(f)
-        f = magic_arguments.magic_arguments()(f)
-        return f
+            func = arg(func)
+        func = magic_arguments.magic_arguments()(func)
+        return func
 
-    def execute(self, func, line, cell, magic_cls):
+    def execute(self, func, line, cell, magic_cls):                              # pylint: disable=unused-argument, no-self-use, arguments-differ
         """Execute the command. Override on subclass"""
         abstract()
 
-    def arguments(self, func, line):
+    def arguments(self, func, line):                                             # pylint: disable=no-self-use
         """Get arguments from magic"""
         argv = arg_split(line, posix=not sys.platform.startswith("win"))
         args = magic_arguments.parse_argstring(func, line)

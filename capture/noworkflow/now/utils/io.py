@@ -22,6 +22,7 @@ STDERR = sys.stderr
 
 
 class redirect_output(object):
+    """Redirect output to stream"""
 
     def __init__(self, outputs=None):
         if outputs is None:

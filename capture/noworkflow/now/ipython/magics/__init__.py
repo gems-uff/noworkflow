@@ -67,6 +67,6 @@ class NoworkflowMagics(Magics):
 def register_magics(ipython):
     """Register IPython magics"""
     if not ipython:
-        ipython = get_ipython()
+        ipython = get_ipython()                                                  # pylint: disable=undefined-variable
     magics = NoworkflowMagics(ipython)
     ipython.register_magics(magics)
