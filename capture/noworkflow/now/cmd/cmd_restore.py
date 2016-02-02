@@ -57,7 +57,7 @@ class Restore(Command):
                 *metascript.create_trial_args(
                     args="<restore {}>".format(trial.id), run=False
                 ))
-            prov_deployment.collect_provenance(metascript)
+            metascript.deployment.collect_provenance()
             print_msg("Backup Trial {} created".format(metascript.trial_id),
                       self.print_msg)
 

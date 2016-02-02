@@ -30,7 +30,7 @@ from .profiler import Profiler
 Return = namedtuple("Return", "activation var")
 
 
-class JointPartial(partial):
+class JointPartial(partial):                                                     # pylint: disable=inherit-non-class, too-few-public-methods
     """Combine noWorkflow Tracer with debugger Tracer"""
 
     def __init__(self):
@@ -39,8 +39,8 @@ class JointPartial(partial):
 
     def __repr__(self):
         return "Joint<{}>".format(", ".join("{}.{}".format(
-            (a.im_self if ismethod(a) else a).__class__.__name__, a.__name__)
-            for a in self.args))
+            (a.im_self if ismethod(a) else a).__class__.__name__, a.__name__
+            ) for a in self.args))
 
     @property
     def __name__(self):
@@ -51,11 +51,11 @@ def joint_tracer(first, second, frame, event, arg):
     """Joint tracer used to combine noWorkflow tracer with other tracers"""
     try:
         first = first(frame, event, arg)
-    except:
+    except Exception:                                                            # pylint: disable=broad-except
         traceback.print_exc()
     try:
         second = second(frame, event, arg)
-    except:
+    except Exception:                                                            # pylint: disable=broad-except
         traceback.print_exc()
     return create_joint_tracer(first, second)
 
@@ -69,12 +69,12 @@ def create_joint_tracer(first, second):
     if first == second:
         return first
     joint = partial(joint_tracer, first, second)
-    joint._joint_tracer = True
+    joint._joint_tracer = True                                                   # pylint: disable=protected-access
     # joint.__str__ = lambda x: "Joint<{}, {}>".format(first, second)
 
     return joint
 
-_sys_settrace = sys.settrace
+_sys_settrace = sys.settrace                                                     # pylint: disable=invalid-name
 
 
 def joint_settrace(tracer):
@@ -91,9 +91,8 @@ def joint_settrace(tracer):
 sys.settrace = joint_settrace
 
 
-class Tracer(Profiler):
+class Tracer(Profiler):                                                          # pylint: disable=too-many-instance-attributes
     """Tracer used for program slicing"""
-    # pylint: disable=R0902
 
     def __init__(self, *args):
         super(Tracer, self).__init__(*args)
@@ -146,7 +145,7 @@ class Tracer(Profiler):
         for lasti in lasti_set:
             del returns[lasti]
 
-    def add_variable(self, act_id, name, line, f_locals, value="--check--"):
+    def add_variable(self, act_id, name, line, f_locals, value="--check--"):     # pylint: disable=too-many-arguments
         """Add variable
 
 
@@ -165,8 +164,8 @@ class Tracer(Profiler):
             value = "now(n/a)"
         return self.variables.add(act_id, name, line, value, datetime.now())
 
-    def add_dependency(self, dep_act, dep_var, sup_act, sup,
-                       filename, lasti_set):
+    def add_dependency(self, dep_act, dep_var, sup_act, sup, filename,           # pylint: disable=too-many-arguments
+                       lasti_set):
         """Create dependency: dep_var depends on sup
 
 
@@ -182,7 +181,6 @@ class Tracer(Profiler):
         If <sup> is a tuple in the form (line, col), create dependency to call
         If <sup> is a string, create dependency to variable
         """
-        # pylint: disable=R0913
         dep_var_id, dependencies_add = dep_var.id, self.dependencies.add
         context = sup_act.context
 
@@ -221,8 +219,8 @@ class Tracer(Profiler):
             dependencies_add(dep_act.id, dep_var_id,
                              sup_act.id, self.last_iter)
 
-    def add_dependencies(self, dep_act, dep_var, sup_act, sups,
-                         filename, lasti_set):
+    def add_dependencies(self, dep_act, dep_var, sup_act, sups, filename,        # pylint: disable=too-many-arguments
+                         lasti_set):
         """ Create dependencies: dep_var depends on sups
 
 
@@ -238,17 +236,13 @@ class Tracer(Profiler):
         If <sup> is a tuple in the form (line, col), create dependency to call
         If <sup> is a string, create dependency to variable
         """
-        # pylint: disable=R0913
         add_dependency = self.add_dependency
         for sup in sups:
-            add_dependency(dep_act, dep_var, sup_act, sup,
-                           filename, lasti_set)
+            add_dependency(dep_act, dep_var, sup_act, sup, filename, lasti_set)
 
-    def slice_line(self, activation, lineno, f_locals, filename,
+    def slice_line(self, activation, lineno, f_locals, filename,                 # pylint: disable=too-many-arguments, too-many-locals
                    line_dependencies=None):
         """Generates dependencies from line"""
-        # pylint: disable=R0913
-        # pylint: disable=R0914
         if line_dependencies is None:
             line_dependencies = self.line_dependencies
         print_fn_msg(lambda: "Slice [{}] -> {}".format(
@@ -337,7 +331,7 @@ class Tracer(Profiler):
                 self.add_inter_dependencies(frame, all_args, caller, lasti_set)
                 self.remove_return_lasti(lasti_set)
 
-    def add_inter_dependencies(self, frame, args, activation, lasti_set):
+    def add_inter_dependencies(self, frame, args, activation, lasti_set):        # pylint: disable=too-many-locals
         """Add dependencies between all parameters in a call
 
 
@@ -347,7 +341,6 @@ class Tracer(Profiler):
         activation -- parent Activation
         lasti_set -- Set of lasti
         """
-        # pylint: disable=R0914
         f_locals, context = frame.f_locals, activation.context
         lineno, variables = frame.f_lineno, self.variables
         filename = frame.f_code.co_filename
@@ -371,9 +364,8 @@ class Tracer(Profiler):
         for arg, variable in viewitems(added):
             context[arg] = variable
 
-    def trace_line(self, frame, event, arg):
+    def trace_line(self, frame, event, arg):                                     # pylint: disable=unused-argument
         """Trace Line event"""
-        # pylint: disable=W0613
         code = frame.f_code
         filename = frame.f_code.co_filename
         lineno = frame.f_lineno
@@ -401,10 +393,11 @@ class Tracer(Profiler):
         activation.slice_stack.append([
             activation, lineno, frame.f_locals, filename])
 
-    def trace_pre_tracer(self, frame, event, arg):
+    def trace_pre_tracer(self, frame, event, arg):                               # pylint: disable=unused-argument
+        """It is executed before the tracing event. Check f_trace is set"""
         self.check_f_trace(frame, event)
 
-    def check_f_trace(self, frame, event):
+    def check_f_trace(self, frame, event):                                       # pylint: disable=unused-argument
         """Check if frame changes current tracer
         Replace the new tracer to a joint tracer
         """
@@ -427,7 +420,7 @@ class Tracer(Profiler):
         super(Tracer, self).teardown()
         _sys_settrace(self.default_trace)
 
-    def store(self, partial=False):
+    def store(self, partial=False):                                              # pylint: disable=redefined-outer-name
         """Store provenance"""
         if not partial:
             while len(self.activation_stack) > 1:
@@ -440,16 +433,14 @@ class Tracer(Profiler):
 
     def view_slicing_data(self, show=True):
         """View captured slicing"""
-        # pylint: disable=W0640
-        # pylint: disable=W0631
         if show:
             for var in self.variables:
-                print_fn_msg(lambda: var)
+                print_fn_msg(lambda v=var: v)
 
             for dep in self.dependencies:
-                print_fn_msg(lambda: "{}\t<-\t{}".format(
-                    self.variables[dep.dependent],
-                    self.variables[dep.supplier]))
+                print_fn_msg(lambda d=dep: "{}\t<-\t{}".format(
+                    self.variables[d.dependent],
+                    self.variables[d.supplier]))
 
             for var in self.usages:
                 print_fn_msg(lambda: var)

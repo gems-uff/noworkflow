@@ -22,7 +22,7 @@ from .base import ExecutionProvider
 from .argument_captors import ProfilerArgumentCaptor
 
 
-class Profiler(ExecutionProvider):
+class Profiler(ExecutionProvider):                                               # pylint: disable=too-many-instance-attributes
     """Profiler
 
     Collect:
@@ -78,7 +78,7 @@ class Profiler(ExecutionProvider):
         # Capture arguments
         self.argument_captor = ProfilerArgumentCaptor(self)
 
-        if (sys.version_info >= (3, 0)):
+        if sys.version_info >= (3, 0):
             Profiler.add_activation = Profiler.initial_add_activation
 
     @property
@@ -110,7 +110,8 @@ class Profiler(ExecutionProvider):
 
     def new_open(self, old_open):
         """Wrap the open builtin function to register file access"""
-        def open(name, *args, **kwargs):  # @ReservedAssignment
+        def open(name, *args, **kwargs):                                         # pylint: disable=redefined-builtin
+            """Open file and add it to file_accesses"""
             if self.enabled:
                 # Create a file access object with default values
                 fid = self.file_accesses.add(name)
@@ -118,8 +119,10 @@ class Profiler(ExecutionProvider):
 
                 if os.path.exists(name):
                     # Read previous content if file exists
-                    with old_open(name, "rb") as f:
-                        file_access.content_hash_before = content.put(f.read())
+                    with old_open(name, "rb") as fil:
+                        file_access.content_hash_before = content.put(
+                            fil.read()
+                        )
 
                 # Update with the informed keyword arguments (mode / buffering)
                 file_access.update(kwargs)
@@ -152,7 +155,7 @@ class Profiler(ExecutionProvider):
             return False
         return self.depth_non_user <= self.non_user_depth_threshold
 
-    def add_activation(self, aid):
+    def add_activation(self, aid):                                               # pylint: disable=function-redefined
         """Add activation to activation stack"""
         self.activation_stack.append(aid)
 
@@ -168,7 +171,7 @@ class Profiler(ExecutionProvider):
             return
         return Profiler._old_add_activation(self, aid)
 
-    def close_activation(self, frame, event, arg, ccall=False):
+    def close_activation(self, frame, event, arg, ccall=False):                  # pylint: disable=unused-argument
         """Remove activation from stack, set finish time and add accesses"""
         activation = self.current_activation
         self.activation_stack.pop()
@@ -176,21 +179,21 @@ class Profiler(ExecutionProvider):
         try:
             if event == "return":
                 activation.return_value = self.serialize(arg)
-        except:  # ignoring any exception during capture
+        except Exception:  # ignoring any exception during capture               # pylint: disable=broad-except
             activation.return_value = None
         # Update content of accessed files
         for file_access in activation.file_accesses:
             # Checks if file still exists
             if os.path.exists(file_access.name):
-                with content.std_open(file_access.name, "rb") as f:
-                    file_access.content_hash_after = content.put(f.read())
+                with content.std_open(file_access.name, "rb") as fil:
+                    file_access.content_hash_after = content.put(fil.read())
             file_access.done = True
         self.closed_activations += 1
         if (self.call_storage_frequency and
                 (self.closed_activations % self.call_storage_frequency == 0)):
             self.store(partial=True)
 
-    def trace_c_call(self, frame, event, arg):
+    def trace_c_call(self, frame, event, arg):                                   # pylint: disable=unused-argument
         """Trace c_call. Increase non_user depth"""
         self.depth_non_user += 1
         if self.valid_depth():
@@ -200,7 +203,7 @@ class Profiler(ExecutionProvider):
                 frame.f_lineno, frame.f_lasti, self.activation_stack[-1]
             ))
 
-    def trace_call(self, frame, event, arg):
+    def trace_call(self, frame, event, arg):                                     # pylint: disable=unused-argument
         """Trace call. Increase depth and create activation"""
         co_name = frame.f_code.co_name
         co_filename = frame.f_code.co_filename
@@ -230,7 +233,7 @@ class Profiler(ExecutionProvider):
             activation.start = datetime.now()
             self.add_activation(aid)
 
-    def trace_c_return(self, frame, event, arg):
+    def trace_c_return(self, frame, event, arg):                                 # pylint: disable=unused-argument
         """Trace c_return. Decrease non_user depth"""
         if self.valid_depth():
             self.close_activation(frame, event, arg, ccall=True)
@@ -258,7 +261,7 @@ class Profiler(ExecutionProvider):
         else:
             self.depth_non_user -= 1
 
-    def new_event(self, frame, event, arg):
+    def new_event(self, frame, event, arg):                                      # pylint: disable=unused-argument
         """Check if event is new to avoid Profiler and Tracer overlap"""
         current_event = (event, frame.f_lineno, id(frame))
         if self.last_event != current_event:
@@ -277,12 +280,13 @@ class Profiler(ExecutionProvider):
                         (self.timer() - self.last_time > self.save_frequency)):
                     self.store(partial=True)
                     self.last_time = self.timer()
-        except:
+        except Exception:                                                        # pylint: disable=broad-except
             traceback.print_exc()
         finally:
-            return self.tracer
+            return self.tracer                                                   # pylint: disable=lost-exception
 
-    def pre_tracer(self, frame, event, arg):
+    def pre_tracer(self, frame, event, arg):                                     # pylint: disable=unused-argument, no-self-use
+        """It is executed before the tracing event"""
         pass
 
     def store(self, partial=False):

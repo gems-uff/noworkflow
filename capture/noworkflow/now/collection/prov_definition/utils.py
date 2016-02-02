@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Helpers for AST analysis"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -21,27 +21,33 @@ class NamedContext(object):
         self.use = False
 
     def flat(self):
+        """Return available variable in the current context"""
         result = set()
         for name in self._names:
             result = result.union(name)
         return result
 
     def enable(self):
+        """Enable variable collection"""
         self.use = True
         self._names.append(set())
 
     def disable(self):
+        """Disable variable collection"""
         self.use = False
 
     def pop(self):
+        """Remove sub-context from stack"""
         self._names.pop()
 
     def add(self, name):
+        """Add variable to context"""
         if self.use:
             self._names[-1].add(name)
 
 
-class FunctionCall(ast.NodeVisitor):
+class FunctionCall(ast.NodeVisitor):                                             # pylint: disable=too-many-instance-attributes
+    """Represent a function call"""
 
     def __init__(self, visitor_class):
         self.func = []
@@ -55,6 +61,7 @@ class FunctionCall(ast.NodeVisitor):
         self.visitor_class = visitor_class
 
     def all_args(self):
+        """List arguments of function call"""
         return list(itertools.chain(
             itertools.chain.from_iterable(self.args),
             self.starargs,
@@ -63,12 +70,14 @@ class FunctionCall(ast.NodeVisitor):
         ))
 
     def use_visitor(self, node):
+        """Use configured visitor to visit sub node"""
         visitor = self.visitor_class()
         visitor.visit(node)
         return [x if isinstance(x, FunctionCall) else x[0]
                 for x in visitor.names]
 
-    def visit_Call(self, node):
+    def visit_Call(self, node):                                                  # pylint: disable=invalid-name
+        """Visit Call"""
         self.func = self.use_visitor(node.func)
         self.args = []
         for arg in node.args:
@@ -85,11 +94,13 @@ class FunctionCall(ast.NodeVisitor):
             if node.kwargs:
                 self.kwargs = self.use_visitor(node.kwargs)
 
-    def visit_Starred(self, node):
+    def visit_Starred(self, node):                                               # pylint: disable=invalid-name
+        """Visit Starred. Only valid in Call context after Python 3.5"""
         # Python 3.5
         self.starargs += self.use_visitor(node)
 
     def visit_keyword(self, node):
+        """Visit keyword"""
         if node.arg:
             self.keywords[node.arg] = self.use_visitor(node.value)
         else:
@@ -97,6 +108,7 @@ class FunctionCall(ast.NodeVisitor):
             self.kwargs += self.use_visitor(node.value)
 
     def info(self):
+        """Return call information"""
         result = ("line={}, col={}, "
                   "func={}, args={}, keywords={}, *args={}, **kwargs={}")
         return result.format(self.line, self.col, self.func, self.args,
@@ -107,32 +119,37 @@ class FunctionCall(ast.NodeVisitor):
 
 
 class ClassDef(FunctionCall):
+    """Represent a class definition"""
 
     def __repr__(self):
         return "Class()"
 
 
 class Decorator(FunctionCall):
+    """Represent a decorator"""
 
     def __init__(self, *args, **kwargs):
         super(Decorator, self).__init__(*args, **kwargs)
-        self.fn = True
+        self.is_fn = True
 
     def __repr__(self):
         return "Decorator({})".format(self.info())
 
-    def visit_Name(self, node):
+    def visit_Name(self, node):                                                  # pylint: disable=invalid-name
+        """Visit Name"""
         self.func = self.use_visitor(node)
-        self.fn = False
+        self.is_fn = False
 
     def info(self):
-        if self.fn:
+        """Return decorator information"""
+        if self.is_fn:
             return super(Decorator, self).info()
         return "line={}, col={}, name={}".format(
             self.line, self.col, self.func)
 
 
 class Generator(FunctionCall):
+    """Represent a generator"""
 
     def __init__(self, *args, **kwargs):
         self.type = args[-1]
@@ -143,11 +160,13 @@ class Generator(FunctionCall):
         return "Generator({})".format(self.info())
 
     def info(self):
+        """Return generator information"""
         return "line={}, col={}, type={}".format(
             self.line, self.col, self.type)
 
 
 class Assert(FunctionCall):
+    """Represent an assert"""
 
     def __init__(self, *args, **kwargs):
         self.msg = args[-1]
@@ -158,11 +177,13 @@ class Assert(FunctionCall):
         return "Assert({})".format(self.info())
 
     def info(self):
+        """Return assert information"""
         return "line={}, col={}, msg={}".format(
             self.line, self.col, self.msg)
 
 
 class Print(FunctionCall):
+    """Represent a print statement"""
 
     def __init__(self, *args, **kwargs):
         super(Print, self).__init__(*args, **kwargs)
@@ -172,11 +193,13 @@ class Print(FunctionCall):
 
 
 class With(FunctionCall):
+    """Represent a with"""
 
     def __repr__(self):
         return "With({})".format(self.info())
 
     def info(self):
+        """Return with information"""
         return "line={}, col={}".format(
             self.line, self.col)
 

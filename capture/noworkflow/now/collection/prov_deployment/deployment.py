@@ -12,9 +12,12 @@ import os
 import platform
 import socket
 import sys
+import weakref
+import getpass
 import pkg_resources
 
 from future.utils import viewitems
+from future.builtins import map as cvmap
 
 from ...persistence.models import EnvironmentAttr, Module, Dependency
 from ...persistence import content
@@ -25,13 +28,17 @@ from ...utils.functions import version
 
 
 class Deployment(object):
+    """Collect deployment provenance"""
+
+    def __init__(self, metascript):
+        self.metascript = weakref.proxy(metascript)
 
     @meta_profiler("environment")
-    def _collect_environment_provenance(self, metascript):
+    def _collect_environment_provenance(self):
         """Collect enviroment variables and operating system characteristics
         Return dict
         """
-        attrs = metascript.environment_attrs_store
+        attrs = self.metascript.environment_attrs_store
 
         attrs.add("OS_NAME", platform.system())
         # Unix environment
@@ -39,12 +46,11 @@ class Deployment(object):
             for name in os.sysconf_names:
                 try:
                     attrs.add(name, os.sysconf(name))
-                except ValueError:
+                except (ValueError, OSError):
                     pass
             for name in os.confstr_names:
                 attrs.add(name, os.confstr(name))
-            attrs.add("USER", os.getlogin())
-        except:
+        except AttributeError:
             pass
 
         os_name, _, os_release, os_version, _, _ = platform.uname()
@@ -56,6 +62,7 @@ class Deployment(object):
         for attr, value in viewitems(os.environ):
             attrs.add(attr, value)
 
+        attrs.add("USER", getpass.getuser())
         attrs.add("PWD", os.getcwd())
         attrs.add("PID", os.getpid())
         attrs.add("HOSTNAME", socket.gethostname())
@@ -67,22 +74,23 @@ class Deployment(object):
         attrs.add("NOWORKFLOW_VERSION", version())
 
     @meta_profiler("modules")
-    def _collect_modules_provenance(self, metascript):
+    def _collect_modules_provenance(self):
         with redirect_output():
-            modules = self._find_modules(metascript)
+            modules = self._find_modules()
 
             print_msg("  registering provenance from {} modules".format(
                 len(modules) - 1))
-            self._extract_modules_provenance(metascript, modules)
+            self._extract_modules_provenance(modules)
 
     @meta_profiler("find_modules")
-    def _find_modules(self, metascript):
+    def _find_modules(self):
         """Use modulefinder to find modules
 
         Return finder.modules dict
         """
+        metascript = self.metascript
         excludes = set()
-        last_name = None
+        last_name = "A" * 255  # invalid name
         max_atemps = 1000
         for i in range(max_atemps):
             try:
@@ -90,11 +98,11 @@ class Deployment(object):
                 finder.run_script(metascript.path)
                 print(metascript.path)
                 return finder.modules
-            except SyntaxError as e:
-                name = e.filename.split("site-packages/")[-1]
+            except SyntaxError as exc:
+                name = exc.filename.split("site-packages/")[-1]                  # pylint: disable=no-member
                 name = name.replace(os.sep, ".")
                 name = name[:name.rfind(".")]
-                if last_name is not None and last_name in name:
+                if last_name in name:
                     last_name = last_name[last_name.find(".") + 1:]
                 else:
                     last_name = name
@@ -104,28 +112,29 @@ class Deployment(object):
         return {}
 
     @meta_profiler("extract_modules")
-    def _extract_modules_provenance(self, metascript, python_modules):
+    def _extract_modules_provenance(self, python_modules):
         """Return a set of module dependencies in the form:
             (name, version, path, code_hash)
         Store module provenance in the content database
         """
+        metascript = self.metascript
         modules = metascript.modules_store
         dependencies = metascript.dependencies_store
         modules.id = Module.id_seq()
         for name, module in viewitems(python_modules):
             if name != "__main__":
-                version = self._get_version(name)
+                module_version = self._get_version(name)
                 path = module.__file__
                 if path is None:
                     code_hash = None
                 else:
-                    with open(path, "rb") as f:
-                        code_hash = content.put(f.read())
-                info = (name, version, path, code_hash)
+                    with open(path, "rb") as fil:
+                        code_hash = content.put(fil.read())
+                info = (name, module_version, path, code_hash)
                 mid = Module.fast_load_module_id(*info) or modules.add(*info)
                 dependencies.add(mid)
 
-    def _get_version(self, module_name):
+    def _get_version(self, module_name):                                         # pylint: disable=no-self-use
         """Get module version"""
         # Check built-in module
         if module_name in sys.builtin_module_names:
@@ -133,9 +142,9 @@ class Deployment(object):
 
         # Check package declared module version
         try:
-            # TODO: This is slow! Is there any alternative?
+            # ToDo: This is slow! Is there any alternative?
             return pkg_resources.get_distribution(module_name).version
-        except:
+        except Exception:                                                        # pylint: disable=broad-except
             pass
 
         # Check explicitly declared module version
@@ -143,22 +152,22 @@ class Deployment(object):
             module = importlib.import_module(module_name)
             for attr in ["__version__", "version", "__VERSION__", "VERSION"]:
                 try:
-                    version = getattr(module, attr)
-                    if isinstance(version, string):
-                        return default_string(version)
-                    if isinstance(version, tuple):
-                        return ".".join(map(str, version))
+                    module_version = getattr(module, attr)
+                    if isinstance(module_version, string):
+                        return default_string(module_version)
+                    if isinstance(module_version, tuple):
+                        return ".".join(cvmap(str, module_version))
 
                 except AttributeError:
                     pass
-        except:
+        except Exception:                                                        # pylint: disable=broad-except
             pass
 
         # If no other option work, return None
         return None
 
     @meta_profiler("deployment")
-    def collect_provenance(self, metascript):
+    def collect_provenance(self):
         """Collect deployment provenance:
         - environment variables
         - modules dependencies
@@ -166,18 +175,19 @@ class Deployment(object):
         metascript should have "trial_id" and "path"
         """
         print_msg("  registering environment attributes")
-        self._collect_environment_provenance(metascript)
+        self._collect_environment_provenance()
 
-        if metascript.bypass_modules:
+        if self.metascript.bypass_modules:
             print_msg("  using previously detected module dependencies "
                       "(--bypass-modules).")
         else:
             print_msg("  searching for module dependencies")
-            self._collect_modules_provenance(metascript)
-        self.store_provenance(metascript)
+            self._collect_modules_provenance()
+        self.store_provenance()
 
-    def store_provenance(self, metascript):
+    def store_provenance(self):
         """Store deployment provenance"""
+        metascript = self.metascript
         tid = metascript.trial_id
         # Remove after save
         partial = True

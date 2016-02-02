@@ -13,22 +13,31 @@ import inspect
 
 from future.utils import viewitems
 
+from ...utils.functions import abstract
+
 from ..prov_definition.utils import ClassDef, Assert, With, Decorator
 
 
 WITHOUT_PARAMS = (ClassDef, Assert, With)
 
 
-class ArgumentCaptor(object):
+class ArgumentCaptor(object):                                                    # pylint: disable=too-few-public-methods
+    """Collect arguments during calls"""
 
     def __init__(self, provider):
         self.provider = weakref.proxy(provider)
 
-    def capture(self, frame, activation):
-        pass
+    def capture(self, frame, activation):                                        # pylint: disable=unused-argument, no-self-use
+        """Abstract method for capture"""
+        abstract()
 
 
-class ProfilerArgumentCaptor(ArgumentCaptor):
+class ProfilerArgumentCaptor(ArgumentCaptor):                                    # pylint: disable=too-few-public-methods
+    """Collect arguments for profiler"""
+
+    def __init__(self, *args, **kwargs):
+        super(ProfilerArgumentCaptor, self).__init__(*args, **kwargs)
+        self.f_locals = {}
 
     def capture(self, frame, activation):
         """Store argument object values
@@ -40,9 +49,9 @@ class ProfilerArgumentCaptor(ArgumentCaptor):
         """
         provider = self.provider
         self.f_locals = values = frame.f_locals
-        co = frame.f_code
-        names = co.co_varnames
-        nargs = co.co_argcount
+        code = frame.f_code
+        names = code.co_varnames
+        nargs = code.co_argcount
         # Capture args
         for var in itertools.islice(names, 0, nargs):
             try:
@@ -50,11 +59,11 @@ class ProfilerArgumentCaptor(ArgumentCaptor):
                     var,
                     provider.serialize(values[var]), "ARGUMENT", activation.id)
                 activation.args.append(var)
-            except Exception:
+            except Exception:                                                    # pylint: disable=broad-except
                 # ignoring any exception during capture
                 pass
         # Capture *args
-        if co.co_flags & inspect.CO_VARARGS:
+        if code.co_flags & inspect.CO_VARARGS:                                   # pylint: disable=no-member
             varargs = names[nargs]
             provider.object_values.add(
                 varargs,
@@ -62,7 +71,7 @@ class ProfilerArgumentCaptor(ArgumentCaptor):
             activation.starargs.append(varargs)
             nargs += 1
         # Capture **kwargs
-        if co.co_flags & inspect.CO_VARKEYWORDS:
+        if code.co_flags & inspect.CO_VARKEYWORDS:                               # pylint: disable=no-member
             kwargs = values[names[nargs]]
             for key in kwargs:
                 provider.object_values.add(
@@ -71,7 +80,7 @@ class ProfilerArgumentCaptor(ArgumentCaptor):
             activation.kwargs.append(names[nargs])
 
 
-class InspectProfilerArgumentCaptor(ArgumentCaptor):
+class InspectProfilerArgumentCaptor(ArgumentCaptor):                             # pylint: disable=too-few-public-methods
     """This Argument Captor uses the inspect.getargvalues that is slower
     because it considers the existence of anonymous tuple
     """
@@ -94,7 +103,7 @@ class InspectProfilerArgumentCaptor(ArgumentCaptor):
                     arg, provider.serialize(values[arg]), "ARGUMENT",
                     activation.id)
                 activation.args.append(arg)
-            except:  # ignoring any exception during capture
+            except Exception:  # ignoring any exception during capture           # pylint: disable=broad-except
                 pass
         if varargs:
             provider.object_values.add(
@@ -109,6 +118,14 @@ class InspectProfilerArgumentCaptor(ArgumentCaptor):
 
 
 class SlicingArgumentCaptor(ProfilerArgumentCaptor):
+    """Create Slicing Variables for Arguments and dependencies between
+    Parameters and Arguments"""
+
+
+    def __init__(self, *args, **kwargs):
+        super(SlicingArgumentCaptor, self).__init__(*args, **kwargs)
+        self.caller, self.activation = None, None
+        self.filename, self.line = "", 0
 
     def match_arg(self, passed, arg):
         """Match passed param with argument
@@ -118,7 +135,6 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         passed -- Call Variable name
         arg -- Argument name
         """
-        # pylint: disable=R0913
         provider = self.provider
         activation = self.activation
         context = activation.context
@@ -146,7 +162,6 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         params -- Call Variable names
         arg -- Argument name
         """
-        # pylint: disable=R0913
         for param in params:
             self.match_arg(param, arg)
 
@@ -177,14 +192,13 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
             return
 
         call = provider.call_by_lasti[filename][lineno][lasti]
-        if isinstance(call, WITHOUT_PARAMS):
-            return
-        if isinstance(call, Decorator) and not call.fn:
+        if (isinstance(call, WITHOUT_PARAMS) or
+                (isinstance(call, Decorator) and not call.fn)):
             return
 
         return call
 
-    def capture(self, frame, activation):
+    def capture(self, frame, activation):                                        # pylint: disable=too-many-locals
         """Match call parameters to function arguments
 
 
@@ -192,7 +206,6 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         frame -- current frame, after trace call
         activation -- current activation
         """
-        # pylint: disable=R0914
         super(SlicingArgumentCaptor, self).capture(frame, activation)
         provider = self.provider
         back = frame.f_back

@@ -11,9 +11,6 @@ import os
 import sys
 
 from ..collection.metadata import Metascript
-from ..collection import prov_definition
-from ..collection import prov_deployment
-from ..collection import prov_execution
 from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
 
@@ -54,13 +51,13 @@ def run(metascript):
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
 
         io.print_msg("collecting definition provenance")
-        prov_definition.collect_provenance(metascript)
+        metascript.definition.collect_provenance()
 
         io.print_msg("collecting deployment provenance")
-        prov_deployment.collect_provenance(metascript)
+        metascript.deployment.collect_provenance()
 
         io.print_msg("collection execution provenance")
-        prov_execution.collect_provenance(metascript)
+        metascript.execution.collect_provenance()
 
         metaprofiler.meta_profiler.save()
 

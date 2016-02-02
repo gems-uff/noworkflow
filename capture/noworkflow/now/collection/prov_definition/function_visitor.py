@@ -3,7 +3,6 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """AST Visitors to capture definition provenance"""
-# pylint: disable=C0103
 
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
@@ -19,7 +18,7 @@ from ...utils.cross_version import cross_compile
 from ...utils.bytecode.dis import instruction_dis_sorted_by_line
 
 
-class FunctionVisitor(ast.NodeVisitor):
+class FunctionVisitor(ast.NodeVisitor):                                          # pylint: disable=too-many-instance-attributes
     """Identifies the function declarations and related data"""
 
     def __init__(self, metascript, file_definition):
@@ -47,7 +46,7 @@ class FunctionVisitor(ast.NodeVisitor):
         """Use PyPosAST to extract node text without strips"""
         return extract_code(self.lcode, node)
 
-    def visit_ClassDef(self, node):
+    def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
         """Visit ClassDef. Ignore Classes"""
         # ToDo #74: capture class dry_add -> add_object
         # ToDo #74: "".encode("utf-8") -> self.extract_code(node),
@@ -61,7 +60,7 @@ class FunctionVisitor(ast.NodeVisitor):
         self.generic_visit(node)
         self.contexts.pop()
 
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node):                                           # pylint: disable=invalid-name
         """Visit FunctionDef. Collect function code"""
         self.contexts.append(self.definitions.add_object(
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
@@ -80,7 +79,7 @@ class FunctionVisitor(ast.NodeVisitor):
         self.generic_visit(node)
         self.collecting_arguments = False
 
-    def visit_Global(self, node):
+    def visit_Global(self, node):                                                # pylint: disable=invalid-name
         """Visit Global. Collect globals"""
         definition = self.contexts[-1]
         for name in node.names:
@@ -95,12 +94,12 @@ class FunctionVisitor(ast.NodeVisitor):
         self.objects.add(
             self.node_code(func), "FUNCTION_CALL", self.contexts[-1].id)
 
-    def visit_Call(self, node):
+    def visit_Call(self, node):                                                  # pylint: disable=invalid-name
         """Visit Call. Collect call"""
         self.call(node)
         self.generic_visit(node)
 
-    def visit_Name(self, node):
+    def visit_Name(self, node):                                                  # pylint: disable=invalid-name
         """Visit Name. Get names"""
         if self.collecting_arguments:
             self.objects.add(node.id, "ARGUMENT", self.contexts[-1].id)
@@ -119,8 +118,8 @@ class FunctionVisitor(ast.NodeVisitor):
 
         self.disasm = instruction_dis_sorted_by_line(compiled, recurse=True)
         if self.metascript.disasm0:
-                print("------------------------------------------------------")
-                print(self.path)
-                print("------------------------------------------------------")
-                print("\n".join(cvmap(repr, self.disasm)))
-                print("------------------------------------------------------")
+            print("------------------------------------------------------")
+            print(self.path)
+            print("------------------------------------------------------")
+            print("\n".join(cvmap(repr, self.disasm)))
+            print("------------------------------------------------------")

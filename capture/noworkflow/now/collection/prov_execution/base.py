@@ -13,7 +13,8 @@ from collections import defaultdict
 from .argument_captors import ArgumentCaptor
 
 
-class ExecutionProvider(object):
+class ExecutionProvider(object):                                                 # pylint: disable=too-many-instance-attributes
+    """Execution provider base class"""
 
     def __init__(self, metascript):
         # Indicates when activations should be collected
@@ -42,16 +43,21 @@ class ExecutionProvider(object):
         self.argument_captor = ArgumentCaptor(self)
 
     def trace_empty(self, frame, event, arg):
+        """Call this function when trace event is not defined"""
         pass
 
     def tracer(self, frame, event, arg):
+        """Call event function from event_map"""
         self.event_map[event](frame, event, arg)
 
     def store(self, partial=False):
+        """Store provenance. Override it on subclasses"""
         pass
 
     def teardown(self):
+        """Disable collection"""
         self.enabled = False
 
     def tearup(self):
+        """Enable collection"""
         pass

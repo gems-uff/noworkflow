@@ -41,7 +41,8 @@ CONTEXTS = {
 }
 
 
-class Metascript(object):
+class Metascript(object):                                                        # pylint: disable=too-many-instance-attributes
+    """Metascript object. Contain storages and arguments"""
 
     def __init__(self):
         # Storage
@@ -61,9 +62,9 @@ class Metascript(object):
         self.usages_store = ObjectStore(VariableUsageLW)
 
         # Definition object : Definition
-        self.definition = Definition()
-        self.execution = Execution()
-        self.deployment = Deployment()
+        self.definition = Definition(self)
+        self.execution = Execution(self)
+        self.deployment = Deployment(self)
 
         # Trial id read from Database : int
         self.trial_id = None
@@ -117,6 +118,13 @@ class Metascript(object):
         # Passed arguments : str
         self.command = ""
 
+        # Restore arguments
+
+        # Restore local modules : bool
+        self.local = False
+        # Restore input files : bool
+        self.input = False
+
     def __getitem__(self, item):
         return getattr(self, item)
 
@@ -140,7 +148,7 @@ class Metascript(object):
         """
 
         if self._path:
-            self.definitions_store.delete(self.paths[self._path])
+            self.definitions_store.remove(self.paths[self._path])
             del self.paths[self._path]
         self._path = path
         if not path:
@@ -214,7 +222,7 @@ class Metascript(object):
         self.context = args.context
         return self
 
-    def read_ipython_args(self, args, directory, filename, argv, create_last,
+    def read_ipython_args(self, args, directory, filename, argv, create_last,   # pylint: disable=too-many-arguments
                           cmd=None):
         """Read magic line argument object"""
         if not cmd:
@@ -251,6 +259,7 @@ class Metascript(object):
         return self
 
     def read_restore_args(self, args):
+        """Read cmd line argument object for 'now restore'"""
         self.name = args.script
         self.bypass_modules = args.bypass_modules
         self.command = " ".join(sys.argv[1:])

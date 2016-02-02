@@ -30,7 +30,7 @@ class TestProvDeployment(unittest.TestCase):
 
     def test_collect_environment_provenance(self):
         metascript = self.prepare()
-        metascript.deployment._collect_environment_provenance(metascript)
+        metascript.deployment._collect_environment_provenance()
         env = {e.name: e.value
                for e in viewvalues(metascript.environment_attrs_store.store)}
         self.assertIn("PWD", env)
@@ -39,7 +39,7 @@ class TestProvDeployment(unittest.TestCase):
 
     def test_collect_modules_provenance(self):
         metascript = self.prepare(name=MODULES)
-        metascript.deployment._collect_modules_provenance(metascript)
+        metascript.deployment._collect_modules_provenance()
         modules = {m.name
                    for m in viewvalues(metascript.modules_store.store)}
         self.assertIn("ast", modules)

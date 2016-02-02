@@ -7,12 +7,14 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-import pyposast
+import weakref
 
 from collections import defaultdict
 
 from future.builtins import map as cvmap
 from future.utils import viewitems
+
+import pyposast
 
 from .slicing_visitor import SlicingVisitor
 
@@ -21,12 +23,11 @@ from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
 
 
-class Definition(object):
-    """Definition Class"""
-    # pylint: disable=R0902
-    # pylint: disable=R0903
+class Definition(object):                                                        # pylint: disable=too-many-instance-attributes
+    """Collect definition provenance"""
 
-    def __init__(self):
+    def __init__(self, metascript):
+        self.metascript = weakref.proxy(metascript)
         self.paths = []
         # Map of dependencies by line
         self.line_dependencies = {}
@@ -50,11 +51,12 @@ class Definition(object):
         self.function_globals = defaultdict(lambda: defaultdict(list))
 
     @meta_profiler("definition")
-    def collect_provenance(self, metascript):
+    def collect_provenance(self):
         """Collect definition provenance from scripts in metascript.paths"""
+        metascript = self.metascript
         print_msg("  registering user-defined functions")
         for path, file_definition in viewitems(metascript.paths):
-            visitor = self._visit_ast(metascript, file_definition)
+            visitor = self._visit_ast(file_definition)
             if visitor:
                 if metascript.disasm:
                     print("--------------------------------------------------")
@@ -63,18 +65,20 @@ class Definition(object):
                     print("\n".join(cvmap(repr, visitor.disasm)))
                     print("--------------------------------------------------")
                 self._add_visitor(visitor)
-        self.store_provenance(metascript)
+        self.store_provenance()
 
-    def store_provenance(self, metascript):
+    def store_provenance(self):
         """Store definition provenance"""
+        metascript = self.metascript
         tid = metascript.trial_id
         # Remove after save
         partial = True
         FunctionDef.fast_store(tid, metascript.definitions_store, partial)
         Object.fast_store(tid, metascript.objects_store, partial)
 
-    def _visit_ast(self, metascript, file_definition):
+    def _visit_ast(self, file_definition):
         """Return a visitor that visited the tree"""
+        metascript = self.metascript
         try:
             tree = pyposast.parse(file_definition.code, file_definition.name)
         except SyntaxError:

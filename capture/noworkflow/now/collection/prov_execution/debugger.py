@@ -21,15 +21,15 @@ from ...utils.io import redirect_output
 FNULL = open(os.devnull, "w")
 atexit.register(FNULL.close)
 
-children_pid = []
+CHILDREN_PID = []
 
 
 def kill_children():
     """Kill debugger processes"""
-    global children_pid
-    for child in children_pid:
+    global CHILDREN_PID                                                          # pylint: disable=global-statement
+    for child in CHILDREN_PID:
         child.kill()
-    children_pid = []
+    CHILDREN_PID = []
 
 atexit.register(kill_children)
 
@@ -46,10 +46,11 @@ def create_debugger(pdb=None):
         pdb = Pdb
 
     class NowDebugger(pdb):
+        """Debugger that invokes both pdb tracer and noWorkflow"""
 
         def __init__(self, provider, *args, **kwargs):
+            super(NowDebugger, self).__init__(*args, **kwargs)
             self.provider = provider
-            pdb.__init__(self, *args, **kwargs)
 
         def trace_dispatch(self, frame, event, arg):
             pdb.trace_dispatch(self, frame, event, arg)
@@ -59,14 +60,14 @@ def create_debugger(pdb=None):
     return NowDebugger
 
 
-def debugger_builtins(provider, ns, metascript):
+def debugger_builtins(provider, namespace, metascript):
     """Define debugging functions"""
-    vis = vis_open, browser_open = [False, False]
+    vis = vis_open, browser_open = [False, False]                                # pylint: disable=unused-variable
 
-    def set_trace(frame=None, pdb=None):
+    def set_trace(frame=None, pdb=None):                                         # pylint: disable=unused-argument
         """Invoke pdb"""
         debugger = create_debugger(pdb)(provider)
-        debugger.set_trace(sys._getframe().f_back)
+        debugger.set_trace(sys._getframe().f_back)                               # pylint: disable=protected-access
 
     def now_save():
         """Save partial provenance"""
@@ -80,9 +81,8 @@ def debugger_builtins(provider, ns, metascript):
             trial_id = metascript.trial_id
         return Trial(trial_ref=trial_id)
 
-    def now_vis(browser="maybe", port=5000, save=True, vis=vis):
+    def now_vis(browser="maybe", port=5000, save=True, vis=vis):                 # pylint: disable=dangerous-default-value
         """Invoke now vis"""
-        global children_pid
         vis_open, browser_open = vis
         if save:
             now_save()
@@ -95,8 +95,8 @@ def debugger_builtins(provider, ns, metascript):
             print("now vis: {}".format(url))
             with redirect_output():
                 vis[0] = True
-                p = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
-                children_pid.append(p)
+                proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
+                CHILDREN_PID.append(proc)
 
         if browser and (browser_open ^ (browser == "maybe")):
             def webopen(url):
@@ -117,24 +117,23 @@ def debugger_builtins(provider, ns, metascript):
         """Start Jupyter Notebook"""
         try:
             import IPython
-            global children_pid
             export_notebook("current")
             if start:
                 params = ["ipython", "notebook", "Current Trial.ipynb"]
-                p = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
-                children_pid.append(p)
+                proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
+                CHILDREN_PID.append(proc)
         except ImportError:
             return "IPython not found"
 
-    ns["set_trace"] = set_trace
-    ns["now_save"] = now_save
-    ns["now_trial"] = now_trial
-    ns["now_vis"] = now_vis
-    ns["now_notebook"] = now_notebook
+    namespace["set_trace"] = set_trace
+    namespace["now_save"] = now_save
+    namespace["now_trial"] = now_trial
+    namespace["now_vis"] = now_vis
+    namespace["now_notebook"] = now_notebook
 
     try:
         with redirect_output():
             from IPython import embed
-            ns["now_ipython"] = embed
+            namespace["now_ipython"] = embed
     except ImportError:
-        ns["now_ipython"] = lambda: "IPython not found"
+        namespace["now_ipython"] = lambda: "IPython not found"
