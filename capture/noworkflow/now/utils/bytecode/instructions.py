@@ -7,10 +7,10 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-class Instruction(object):
+class Instruction(object):                                                       # pylint: disable=too-many-instance-attributes, too-few-public-methods
     """Bytecode Instruction"""
 
-    def __init__(self, opname, opcode, arg, argval, argrepr, offset,
+    def __init__(self, opname, opcode, arg, argval, argrepr, offset,             # pylint: disable=too-many-arguments
                  starts_line, is_jump_target, line):
         self.opname = opname
         self.opcode = opcode

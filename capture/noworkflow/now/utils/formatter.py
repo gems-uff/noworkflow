@@ -9,15 +9,15 @@ from __future__ import (absolute_import, print_function,
 from collections import Counter
 
 
-class PrettyStr(object):
+class PrettyStr(object):                                                         # pylint: disable=too-few-public-methods
     """Display lines with line breaks"""
 
-    def _repr_pretty_(self, p, cycle):
+    def _repr_pretty_(self, pretty, cycle):                                      # pylint: disable=unused-argument
         """Pretty repr for IPython"""
-        p.text(str(self))
+        pretty.text(str(self))
 
 
-class PrettyLines(PrettyStr):
+class PrettyLines(PrettyStr):                                                    # pylint: disable=too-few-public-methods
     """Display lines with line breaks"""
 
     def __init__(self, lines):

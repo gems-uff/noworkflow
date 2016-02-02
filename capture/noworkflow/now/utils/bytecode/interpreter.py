@@ -3,15 +3,13 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define bytecode interpreter that supports iteration on bytecode"""
-# pylint: disable=R0902
-# pylint: disable=R0903
-# pylint: disable=R0913
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import dis
-from collections import defaultdict
 from dis import opmap
+
+from collections import defaultdict
 from opcode import HAVE_ARGUMENT, cmp_op
 
 from .instructions import Instruction
@@ -47,7 +45,7 @@ def cord(value):
     return value
 
 
-class ListAccessor(object):
+class ListAccessor(object):                                                      # pylint: disable=too-few-public-methods
     """List Proxy. Return value on x[i] and tuple on x(i)"""
 
     def __init__(self, values, repr_is_val=True):
@@ -68,10 +66,10 @@ class ListAccessor(object):
         return argval, argrepr
 
 
-class Interpreter(object):
+class Interpreter(object):                                                       # pylint: disable=too-many-instance-attributes
     """Bytecode iterator"""
 
-    def __init__(self, co_code, varnames=None, names=None, constants=None,
+    def __init__(self, co_code, varnames=None, names=None, constants=None,       # pylint: disable=too-many-arguments
                  cells=None, linestarts=None, line_offset=0):
         self.lasti = 0
         self.opi = 0

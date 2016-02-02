@@ -18,7 +18,8 @@ from datetime import datetime
 from functools import wraps
 
 
-class MetaProfiler(object):
+class MetaProfiler(object):                                                      # pylint: disable=too-few-public-methods
+    """Profile noWorkflow itself"""
 
     def __init__(self, active=False):
         self.file = "nowtime.csv"
@@ -33,14 +34,16 @@ class MetaProfiler(object):
         self.data = defaultdict(float)
 
     def __call__(self, typ):
-        def dec(f):
+        def dec(func):
+            """Return decorator that stores the duration in typ"""
             if typ not in self.order:
                 self.order.append(typ)
 
-            @wraps(f)
+            @wraps(func)
             def wrapper(*args, **kwargs):
+                """Capture duration of function"""
                 before = datetime.now()
-                result = f(*args, **kwargs)
+                result = func(*args, **kwargs)
                 after = datetime.now()
                 self.data[typ] += (after - before).total_seconds()
                 return result
@@ -48,6 +51,7 @@ class MetaProfiler(object):
         return dec
 
     def save(self):
+        """Save durations"""
         if self.active:
             row = [self.data[name] for name in self.order]
             rows = []
@@ -55,8 +59,8 @@ class MetaProfiler(object):
                 rows.append(self.order)
             rows.append(row)
 
-            with open(self.file, "a") as f:
-                a = csv.writer(f)
-                a.writerows(rows)
+            with open(self.file, "a") as fil:
+                writter = csv.writer(fil)
+                writter.writerows(rows)
 
-meta_profiler = MetaProfiler(active=False)
+meta_profiler = MetaProfiler(active=False)                                       # pylint: disable=invalid-name

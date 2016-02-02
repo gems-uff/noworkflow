@@ -3,17 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define executable bytecode interpreter"""
-# pylint: disable=C0103
-# pylint: disable=R0904
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import dis
 import sys
 import types
+import dis
+
+from dis import opmap
 
 from collections import OrderedDict
-from dis import opmap
 from opcode import cmp_op
 
 from .interpreter import Interpreter
@@ -70,7 +69,7 @@ class CodeInterpreter(Interpreter):
         return reversed([self.stack.pop() for _ in range(number)])
 
 
-class ExecInterpreter(CodeInterpreter):
+class ExecInterpreter(CodeInterpreter):                                          # pylint: disable=too-many-public-methods
     """Bytecode interpreter that executes it
     Currently, it is working only for Expressions
     """
@@ -591,4 +590,4 @@ class Py3Codes(ExecInterpreter):
         self.stack = self.stack + top2 + top2
 
 
-PyInterpreter = (Py2Codes if sys.version_info >= (3, 0) else Py3Codes)
+PyInterpreter = (Py2Codes if sys.version_info >= (3, 0) else Py3Codes)           # pylint: disable=invalid-name

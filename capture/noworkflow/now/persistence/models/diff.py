@@ -53,6 +53,8 @@ class Diff(Model):
         "graph.height": 500,
         "graph.mode": 3,
         "graph.view": 0,
+        "graph.neighborhoods": 3,
+        "graph.time_limit": None,
     }
 
     REPLACE = {
@@ -60,6 +62,8 @@ class Diff(Model):
         "graph_height": "graph.height",
         "graph_mode": "graph.mode",
         "graph_view": "graph.view",
+        "graph_neighborhoods": "graph.neighborhoods",
+        "graph_time_limit": "graph.time_limit",
     }
 
     def __init__(self, trial_ref1, trial_ref2, **kwargs):

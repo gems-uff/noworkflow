@@ -37,7 +37,7 @@ def _get_code_object(obj, compiler=None):
     """Return code object"""
     if isinstance(obj, types.FrameType):  # Frame
         return ("code", obj.f_code)
-    if not PY3 and isinstance(obj, types.InstanceType):  # Instance
+    if not PY3 and isinstance(obj, types.InstanceType):  # Instance              # pylint: disable=no-member
         obj = obj.__class__
     if hasattr(obj, "__func__"):  # Method
         obj = obj.__func__
@@ -61,7 +61,7 @@ def _get_code_object(obj, compiler=None):
         type(obj).__name__))
 
 
-def _byte_instructions(code, lasti=-1, varsn=None, names=None, consts=None,
+def _byte_instructions(code, lasti=-1, varsn=None, names=None, consts=None,      # pylint: disable=too-many-arguments
                        cells=None, linestarts=None, line_offset=0):
     """Generator for byte code instructions
     Check if it starts a line

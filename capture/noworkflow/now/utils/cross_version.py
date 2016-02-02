@@ -10,31 +10,31 @@ import sys
 import numbers
 
 try:
-    from cStringIO import StringIO
+    from cStringIO import StringIO                                               # pylint: disable=unused-import
 except ImportError:
     from io import StringIO
 
 
 PY3 = (sys.version_info >= (3, 0))
 if PY3:
-    import builtins
-    import pickle
-    import reprlib
+    import builtins                                                              # pylint: disable=wrong-import-position, unused-import
+    import pickle                                                                # pylint: disable=wrong-import-position, unused-import
+    import reprlib                                                               # pylint: disable=wrong-import-position, unused-import
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes)
-    string = (str, bytes)
-    raw_bytes = (bytes, bytearray)
+    string = (str, bytes)                                                        # pylint: disable=invalid-name
+    raw_bytes = (bytes, bytearray)                                               # pylint: disable=invalid-name
 else:
-    import __builtin__ as builtins
+    import __builtin__ as builtins                                               # pylint: disable=wrong-import-position, unused-import, import-error
     try:
-        import cPickle as pickle
+        import cPickle as pickle                                                 # pylint: disable=wrong-import-position, unused-import
     except ImportError:
-        import pickle
-    import repr as reprlib
+        import pickle                                                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports
+    import repr as reprlib                                                       # pylint: disable=wrong-import-position, unused-import, import-error
 
-    IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)
-    string = (basestring,)
-    raw_bytes = (str,)
+    IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)               # pylint: disable=invalid-name, undefined-variable
+    string = (basestring,)                                                       # pylint: disable=invalid-name, undefined-variable
+    raw_bytes = (str,)                                                           # pylint: disable=invalid-name
 
 
 def cross_compile(*args, **kwargs):
@@ -49,7 +49,7 @@ def cross_compile(*args, **kwargs):
 def bytes_string(text, encode="utf-8"):
     """Return a bytes object on Python 3 and a str object on Python 2"""
     if not PY3:
-        if isinstance(text, unicode):
+        if isinstance(text, unicode):                                            # pylint: disable=undefined-variable
             result = text.encode(encode)
         else:
             result = text
@@ -64,7 +64,7 @@ def bytes_string(text, encode="utf-8"):
 def default_string(text, encode="utf-8"):
     """Return a unicode object on Python 3 and a bytes object on Python 2"""
     if not PY3:
-        if isinstance(text, unicode):
+        if isinstance(text, unicode):                                            # pylint: disable=undefined-variable
             result = text.encode(encode)
         else:
             result = text

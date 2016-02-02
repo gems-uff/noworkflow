@@ -14,14 +14,14 @@ from .cross_version import StringIO
 
 
 LABEL = "[now] "
-verbose = False
+verbose = False                                                                  # pylint: disable=invalid-name
 
 STDIN = sys.stdin
 STDOUT = sys.stdout
 STDERR = sys.stderr
 
 
-class redirect_output(object):
+class redirect_output(object):                                                   # pylint: disable=invalid-name, too-few-public-methods
     """Redirect output to stream"""
 
     def __init__(self, outputs=None):

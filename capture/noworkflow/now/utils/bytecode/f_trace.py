@@ -3,11 +3,10 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define f_trace related interpreters and functions"""
-# pylint: disable=R0902
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import sys
+from future.utils import bytes_to_native_str as n
 
 from .code_interpreter import CodeInterpreter, PyInterpreter
 
@@ -32,7 +31,7 @@ class AlmostReadOnlyDict(dict):
             del self.other[item]
 
 
-class FindFTrace(CodeInterpreter):
+class FindFTrace(CodeInterpreter):                                               # pylint: disable=too-many-instance-attributes
     """Find <expr>.f_trace attribution"""
 
     def __init__(self, *args, **kwargs):
@@ -72,8 +71,7 @@ class FindFTrace(CodeInterpreter):
             self.result = self.stack.pop() if self.stack else True
 
 
-f_trace_name = u"FTraceExe" if sys.version_info >= (3, 0) else b"FTraceExe"
-FTraceExe = type(f_trace_name, (FindFTrace, PyInterpreter), {})
+FTraceExe = type(n(b"FTraceExe"), (FindFTrace, PyInterpreter), {})               # pylint: disable=invalid-name
 
 
 def get_f_trace(code, loc, glob):

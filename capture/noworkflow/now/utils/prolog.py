@@ -10,6 +10,7 @@ from datetime import datetime
 
 
 class PrologDescription(object):
+    """Prolog Description. Generate comments, facts, dynamic, and retract"""
 
     def __init__(self, name, attributes):
         self.name = name
@@ -54,23 +55,24 @@ class PrologDescription(object):
 
 
 class PrologAttribute(object):
+    """Represent a single attribute"""
 
     def __init__(self, name, fn=None, attr_name=None):
         self.name = name
         self.attr_name = self.name if attr_name is None else attr_name
-        self.fn = fn
+        self.func = fn
 
     def value(self, obj):
         """Return attribute self.attr_name of obj"""
-        if self.fn:
-            return self.fn(obj)
+        if self.func:
+            return self.func(obj)
         attr = self.attr_name
         while "." in attr:
             attr0, attr = attr.split(".", 1)
             obj = getattr(self, attr0)
         return getattr(obj, attr)
 
-    def retract(self, trial_id):
+    def retract(self, trial_id):                                                 # pylint: disable=unused-argument, no-self-use
         """Attribute does not identify fact. Retrun _"""
         return "_"
 
@@ -78,12 +80,13 @@ class PrologAttribute(object):
         """Return attribute self.attr_name of obj as str"""
         return str(self.value(obj))
 
-    def empty(self):
+    def empty(self):                                                             # pylint: disable=no-self-use
         """Represent empty attribute"""
         return "0"
 
 
 class PrologTrial(PrologAttribute):
+    """Represent Trial id attribute, used for retract"""
 
     def retract(self, trial_id):
         """Trial Attribute identifies fact. Retrun trial_id"""
@@ -91,6 +94,7 @@ class PrologTrial(PrologAttribute):
 
 
 class PrologRepr(PrologAttribute):
+    """Represent an attribute that should be written with quotes"""
 
     def fact(self, obj):
         """Return attribute self.attr_name of obj as escaped repr"""
@@ -101,6 +105,7 @@ class PrologRepr(PrologAttribute):
 
 
 class PrologTimestamp(PrologAttribute):
+    """Represent a timestamp"""
 
     def fact(self, obj):
         """Return attribute self.attr_name of obj as formatted timestamp"""
@@ -112,6 +117,7 @@ class PrologTimestamp(PrologAttribute):
 
 
 class PrologNullable(PrologAttribute):
+    """Represent an attribute that accepts nil as value"""
 
     def fact(self, obj):
         """Replace None by nil if attribute self.attr_name of obj"""
@@ -120,6 +126,7 @@ class PrologNullable(PrologAttribute):
 
 
 class PrologNullableRepr(PrologRepr):
+    """Represent an attribute that accepts nil as value and requires quotes"""
 
     def fact(self, obj):
         """Return attribute self.attr_name of obj as escaped repr"""

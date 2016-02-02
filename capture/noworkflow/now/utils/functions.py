@@ -8,9 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 import inspect
 
-from datetime import datetime
-from pkg_resources import resource_string, resource_listdir, resource_isdir
 from textwrap import dedent
+from pkg_resources import resource_string, resource_listdir, resource_isdir
 
 
 MODULE = __name__

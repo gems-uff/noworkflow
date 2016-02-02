@@ -11,7 +11,6 @@ import os
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
-from ..collection import prov_deployment
 from ..persistence.models import Trial
 from ..persistence import persistence_config, content
 from ..utils.io import print_msg
