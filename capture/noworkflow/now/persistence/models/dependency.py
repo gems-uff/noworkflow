@@ -6,24 +6,23 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import textwrap
-
-from future.utils import with_metaclass
 from sqlalchemy import Column, Integer
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
-from sqlalchemy.orm import relationship
 
-from ...utils.functions import prolog_repr
+from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
+from ...utils.prolog import PrologRepr
 
-from .. import relational
-
-from .base import set_proxy, proxy_attr
+from .base import AlchemyProxy, proxy_class, one, backref_one
 
 
-class Dependency(relational.base):
-    """Dependency Table
-    Store the many to many relationship between trial and modules
+@proxy_class
+class Dependency(AlchemyProxy):
+    """Dependency proxy
+
+    Use it to have different objects with the same primary keys
+    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
     """
+
     __tablename__ = "dependency"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "module_id"),
@@ -33,50 +32,18 @@ class Dependency(relational.base):
     trial_id = Column(Integer, nullable=False, index=True)
     module_id = Column(Integer, nullable=False, index=True)
 
-    _module = relationship("Module")
+    module = one("Module")
 
-    # _trial: Trial._module_dependencies backref
+    trial = backref_one("_trial")  # Trial._module_dependencies
 
-
-class DependencyProxy(with_metaclass(set_proxy(Dependency))):
-    """Dependency proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    module = proxy_attr("_module")
-
-    @classmethod
-    def to_prolog_fact(cls):
-        """Return prolog comment"""
-        return textwrap.dedent("""
-            %
-            % FACT: module(trial_id, id, name, version, path, code_hash).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        """Return prolog dynamic clause"""
-        return ":- dynamic(module/6)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        """Return prolog retract for trial"""
-        return "retract(module({}, _, _, _, _, _))".format(trial_id)
-
-    def to_prolog(self):
-        """Convert to prolog fact"""
-        module = self.module
-        name = prolog_repr(module.name)
-        version = prolog_repr(module.version)
-        path = prolog_repr(self.module.path)
-        return (
-            "module("
-            "{self.trial_id}, {module.id}, {name}, {version}, {path}, "
-            "{module.code_hash})."
-        ).format(**locals())
+    prolog_description = PrologDescription("module", (
+        PrologTrial("trial_id"),
+        PrologAttribute("id", attr_name="module.id"),
+        PrologRepr("name", attr_name="module.name"),
+        PrologRepr("version", attr_name="module.version"),
+        PrologRepr("path", attr_name="module.path"),
+        PrologAttribute("code_hash", attr_name="module.code_hash"),
+    ))
 
     def __repr__(self):
         return "Dependency({0.trial_id}, {0.module})".format(self)

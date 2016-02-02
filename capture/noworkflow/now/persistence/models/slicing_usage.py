@@ -6,24 +6,20 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import textwrap
-
-from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
 
-from ...utils.functions import prolog_repr
+from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
+from ...utils.prolog import PrologRepr
 
-from .. import relational
-
-from .base import set_proxy
+from .base import AlchemyProxy, proxy_class, backref_one
 
 
-class SlicingUsage(relational.base):
-    """Slicing Usage Table
-    Store slicing variable usages from execution provenance
-    """
+@proxy_class
+class SlicingUsage(AlchemyProxy):
+    """Represent a variable usage during program slicing"""
+
     __tablename__ = "slicing_usage"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
@@ -40,46 +36,22 @@ class SlicingUsage(relational.base):
     trial_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
     variable_id = Column(Integer, index=True)
-    id = Column(Integer, index=True)
+    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     line = Column(Integer)
     context = Column(Text, CheckConstraint("context IN ('Load', 'Del')"))
 
-    # _trial: Trial._slicing_usages backref
-    # _activation: Activation._slicing_usages backref
-    # _variable: SlicinVariable._slicing_usages backref
+    trial = backref_one("_trial")  # Trial._slicing_usages
+    activation = backref_one("_activation")  # Activation._variables_usages
+    variable = backref_one("_variable")  # SlicinVariable._slicing_usages
 
-
-class SlicingUsageProxy(with_metaclass(set_proxy(SlicingUsage))):
-    """SlicingUsage proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    @classmethod
-    def to_prolog_fact(cls):
-        return textwrap.dedent("""
-            %
-            % FACT: usage(trial_id, activation_id, variable_id, id, name, line).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        return ":- dynamic(usage/6)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        return "retract(usage({}, _, _, _, _, _))".format(trial_id)
-
-    def to_prolog(self):
-        name = prolog_repr(self.name)
-        return (
-            "usage("
-            "{self.trial_id}, {self.activation_id}, {self.variable_id}, "
-            "{self.id}, {name}, {self.line})."
-        ).format(**locals())
+    prolog_description = PrologDescription("usage", (
+        PrologTrial("trial_id"),
+        PrologAttribute("activation_id"),
+        PrologAttribute("id"),
+        PrologRepr("name"),
+        PrologAttribute("line"),
+    ))
 
     def __repr__(self):
         return (

@@ -16,7 +16,7 @@ relational = RelationalDatabase(persistence_config)
 
 
 def get_serializer(arg):
-    # ToDo: use arg to select serialize
+    # ToDo #54: use arg to select serialize
     # from .serializers import jsonpickle_serializer, jsonpickle_content
     # from .serializers import SimpleSerializer
     # return SimpleSerializer().serialize

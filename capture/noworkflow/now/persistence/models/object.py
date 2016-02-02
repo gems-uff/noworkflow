@@ -6,25 +6,20 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import textwrap
-
-from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
 
-from ...utils.functions import prolog_repr
+from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
+from ...utils.prolog import PrologRepr
 
-from .. import relational
-
-from .base import set_proxy
+from .base import AlchemyProxy, proxy_class, backref_one
 
 
-class Object(relational.base):
-    """Object Table
-    Store function calls, global variables and arguments
-    from definition provenance
-    """
+@proxy_class
+class Object(AlchemyProxy):
+    """Represent an object (global, argument, function call)"""
+
     __tablename__ = "object"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "function_def_id", "id"),
@@ -35,50 +30,22 @@ class Object(relational.base):
     )
     trial_id = Column(Integer, index=True)
     function_def_id = Column(Integer, index=True)
-    id = Column(Integer, index=True)
+    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
-    type = Column(
+    type = Column(                                                               # pylint: disable=invalid-name
         Text,
         CheckConstraint("type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION_CALL')"))
 
-    # _trial: Trial._objects backref
-    # _function_def: FunctionDef._objects backref
+    trial = backref_one("_trial")  # Trial._objects
+    function_def = backref_one("_function_def")  # FunctionDef._objects
 
-
-class ObjectProxy(with_metaclass(set_proxy(Object))):
-    """Object proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    @classmethod
-    def to_prolog_fact(cls):
-        """Return prolog comment"""
-        return textwrap.dedent("""
-            %
-            % FACT: object(trial_id, function_def_id, id, name, type).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        """Return prolog dynamic clause"""
-        return ":- dynamic(object/5)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        """Return prolog retract for trial"""
-        return "retract(object({}, _, _, _, _))".format(trial_id)
-
-    def to_prolog(self):
-        """Convert to prolog fact"""
-        name = prolog_repr(self.name)
-        return (
-            "object("
-            "{self.trial_id}, {self.function_def_id}, {self.id}, "
-            "{name}, {self.type})."
-        ).format(**locals())
+    prolog_description = PrologDescription("object", (
+        PrologTrial("trial_id"),
+        PrologAttribute("function_def_id"),
+        PrologAttribute("id"),
+        PrologRepr("name"),
+        PrologAttribute("type"),
+    ))
 
     def __repr__(self):
         return (

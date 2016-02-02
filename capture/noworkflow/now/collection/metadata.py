@@ -231,7 +231,7 @@ class Metascript(object):
 
     def _read_args(self, args):
         """Read cmd line argument object"""
-        # ToDo: add serializer param
+        # ToDo #54: add serializer param
         self.serialize = get_serializer(args)
         self.verbose = args.verbose
         self.meta = args.meta
@@ -268,7 +268,7 @@ class Metascript(object):
                 lastfile.write(str(self.trial_id))
 
     def create_trial_args(self, args=None, run=True):
-        """Return arguments for Trial.fast_store"""
+        """Return arguments for Trial.store"""
         if args is None:
             args = " ".join(sys.argv[1:])
         now = datetime.now()

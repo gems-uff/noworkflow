@@ -6,12 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import distinct
-
-from .. import relational
-
 from .graphs.history_graph import HistoryGraph
-from .base import Model, proxy_gen
+from .base import Model
 from .trial import Trial
 
 
@@ -69,29 +65,11 @@ class History(Model):
     @property
     def scripts(self):
         """Return a set of scripts used for trials"""
-        return {s[0].rsplit("/", 1)[-1]
-                for s in relational.session.query(distinct(Trial.script))}
-
-    @property
-    def _query_trials(self):
-        """Return a SQLAlchemy query of trials"""
-        return relational.session.query(Trial)
-
-    def reverse_trials(self, limit):
-        """Return a generator with <limit> trials ordered by start time desc"""
-        return proxy_gen(
-            self._query_trials
-            .order_by(Trial.start.desc())
-            .limit(limit)
-        )
-
-    def load_trials(self, limit):
-        """Return a SQLAlchemy query of trials"""
-        return relational.session.query(Trial)
+        return Trial.distinct_scripts()
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""
-        return self.graph._repr_html_()
+        return self.graph._repr_html_()                                          # pylint: disable=protected-access
 
     def __repr__(self):
         return repr(self.graph)

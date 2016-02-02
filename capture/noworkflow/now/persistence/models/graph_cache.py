@@ -6,54 +6,46 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 
 from .. import relational
-from .base import set_proxy, proxy_gen, proxy_method
+from .base import AlchemyProxy, proxy_class, proxy_gen
 
 
-class GraphCache(relational.base):
-    """Graph Cache Table
-    Cache graph results on database
-    """
+@proxy_class
+class GraphCache(AlchemyProxy):
+    """Represent a Graph Cache"""
+
     __tablename__ = "graph_cache"
     __table_args__ = (
         {"sqlite_autoincrement": True},
     )
-    id = Column(Integer, primary_key=True)
-    type = Column(Text)
+    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
+    type = Column(Text)                                                          # pylint: disable=invalid-name
     name = Column(Text)
     attributes = Column(Text)
     content_hash = Column(Text)
     duration = Column(Integer)
     timestamp = Column(TIMESTAMP)
 
-
-class GraphCacheProxy(with_metaclass(set_proxy(GraphCache))):
-    """GraphCache proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
     def __repr__(self):
         return "Cache({0.id}, {0.type}, {0.name})".format(self)
 
-    @proxy_method
-    def _query_select_cache(model, cls, type, name, attributes, session=None):
+    @classmethod  # query
+    def _query_select_cache(cls, gtype, name, attributes, session=None):
         """Find caches query by type, name and attributes
         Return sqlalchemy query
         """
+        model = cls.m
         session = session or relational.session
         return session.query(model).filter(
-            (model.type == type) &
+            (model.type == gtype) &
             (model.name == name) &
             (model.attributes == attributes)
         )
 
-    @proxy_method
-    def select_cache(model, cls, type, name, attributes, session=None):
+    @classmethod  # query
+    def select_cache(cls, gtype, name, attributes, session=None):
         """Find caches query by type, name and attributes
 
 
@@ -67,10 +59,10 @@ class GraphCacheProxy(with_metaclass(set_proxy(GraphCache))):
         session -- desired session
         """
         return proxy_gen(cls._query_select_cache(
-            type, name, attributes, session=session or relational.session))
+            gtype, name, attributes, session=session or relational.session))
 
-    @proxy_method
-    def remove(model, cls, type, name, attributes, session=None, commit=False):
+    @classmethod  # query
+    def remove(cls, gtype, name, attributes, session=None, commit=False):        # pylint: disable=too-many-arguments
         """Remove caches query by type, name and attributes
 
 
@@ -85,13 +77,13 @@ class GraphCacheProxy(with_metaclass(set_proxy(GraphCache))):
         commit -- commit deletion (default=False)
         """
         cls._query_select_cache(
-            type, name, attributes, session=session or relational.session
+            gtype, name, attributes, session=session or relational.session
         ).delete()
         if commit:
             session.commit()
 
-    @proxy_method
-    def create(model, cls, type, name, duration, attributes, content_hash,
+    @classmethod  # query
+    def create(cls, gtype, name, duration, attributes, content_hash,             # pylint: disable=too-many-arguments
                session=None, commit=False):
         """Create Cache
 
@@ -109,8 +101,8 @@ class GraphCacheProxy(with_metaclass(set_proxy(GraphCache))):
         commit -- commit insertion (default=False)
         """
         session = session or relational.session
-        cache = model(
-            type=type, name=name, duration=duration,
+        cache = cls.m(                                                           # pylint: disable=not-callable
+            type=gtype, name=name, duration=duration,
             attributes=attributes, content_hash=content_hash
         )
         session.add(cache)

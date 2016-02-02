@@ -6,26 +6,23 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import textwrap
-
-from future.utils import with_metaclass
+from future.builtins import map as cvmap
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import backref
 
-from ...utils.functions import timestamp, prolog_repr
+from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
+from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 
-from .. import relational
-
-from .base import set_proxy, proxy_attr, proxy_gen
+from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref, many_ref
+from .base import backref_one, backref_many, query_many_property
 from .object_value import ObjectValue
 from .slicing_dependency import SlicingDependency
 
 
-class Activation(relational.base):
-    """Activation Table
-    Store function activations from execution provenance
-    """
+@proxy_class
+class Activation(AlchemyProxy):
+    """Represent a function activation"""
 
     __tablename__ = "function_activation"
     __table_args__ = (
@@ -36,7 +33,7 @@ class Activation(relational.base):
                               "function_activation.id"], ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
-    id = Column(Integer, index=True)
+    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     line = Column(Integer)
     return_value = Column(Text)
@@ -45,56 +42,46 @@ class Activation(relational.base):
     caller_id = Column(Integer, index=True)
 
     _children = backref("_children", order_by="Activation.start")
-    _caller = relationship(
+    caller = one(
         "Activation", remote_side=[trial_id, id],
-        backref=_children, viewonly=True)
+        backref=_children, viewonly=True
+    )
 
-    _object_values = relationship(
-        "ObjectValue", lazy="dynamic", backref="_activation")
-    _file_accesses = relationship(
-        "FileAccess", lazy="dynamic", backref="_activation")
+    object_values = many_viewonly_ref("_activation", "ObjectValue")
+    file_accesses = many_viewonly_ref("_activation", "FileAccess")
 
-    _slicing_variables = relationship(
-        "SlicingVariable", backref="_activation")
-    _slicing_usages = relationship(
-        "SlicingUsage", backref="_activation", viewonly=True)
-    _slicing_dependents = relationship(
-        "SlicingDependency", backref="_dependent_activation", viewonly=True,
-        primaryjoin=((id == SlicingDependency.dependent_activation_id) &
-                     (trial_id == SlicingDependency.trial_id)))
-    _slicing_suppliers = relationship(
-        "SlicingDependency", backref="_supplier_activation", viewonly=True,
-        primaryjoin=((id == SlicingDependency.supplier_activation_id) &
-                     (trial_id == SlicingDependency.trial_id)))
+    variables = many_ref("_activation", "SlicingVariable")
+    variables_usages = many_viewonly_ref("_activation", "SlicingUsage")
+    dependent_variables = many_viewonly_ref(
+        "_dependent_activation", "SlicingDependency",
+        primaryjoin=((id == SlicingDependency.m.dependent_activation_id) &
+                     (trial_id == SlicingDependency.m.trial_id)))
+    supplier_variables = many_viewonly_ref(
+        "_supplier_activation", "SlicingDependency",
+        primaryjoin=((id == SlicingDependency.m.supplier_activation_id) &
+                     (trial_id == SlicingDependency.m.trial_id)))
 
-    # _trial: Trial._activations backref
-    # _children: Activation._caller backref
+    trial = backref_one("_trial")  # Trial._activations
+    children = backref_many("_children")  # Activation._caller
 
-    @property
-    def _query_globals(self):
+    @query_many_property
+    def globals(self):
         """Return activation globals as a SQLAlchemy query"""
-        return self._object_values.filter(ObjectValue.type == "GLOBAL")
+        return self._object_values.filter(ObjectValue.m.type == "GLOBAL")        # pylint: disable=no-member
 
-    @property
-    def _query_arguments(self):
+    @query_many_property
+    def arguments(self):
         """Return activation arguments as a SQLAlchemy query"""
-        return self._object_values.filter(ObjectValue.type == "ARGUMENT")
+        return self._object_values.filter(ObjectValue.m.type == "ARGUMENT")      # pylint: disable=no-member
 
-
-class ActivationProxy(with_metaclass(set_proxy(Activation))):
-    """Activation proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-    caller = proxy_attr("_caller")
-    children = proxy_attr("_children", proxy=proxy_gen)
-    globals = proxy_attr("_query_globals", proxy=proxy_gen)
-    arguments = proxy_attr("_query_arguments", proxy=proxy_gen)
-    variables = proxy_attr("_slicing_variables", proxy=proxy_gen)
-    variables_usages = proxy_attr("_slicing_usages", proxy=proxy_gen)
-    supplier_variables = proxy_attr("_slicing_suppliers", proxy=proxy_gen)
-    dependent_variables = proxy_attr("_slicing_dependents", proxy=proxy_gen)
+    prolog_description = PrologDescription("activation", (
+        PrologTrial("trial_id"),
+        PrologAttribute("id"),
+        PrologRepr("name"),
+        PrologTimestamp("start"),
+        PrologTimestamp("finish"),
+        PrologNullable("caller_activation_id", attr_name="caller_id"),
+    ))
 
     # ToDo: Improve hash
 
@@ -105,43 +92,12 @@ class ActivationProxy(with_metaclass(set_proxy(Activation))):
         return hash(self.__key())
 
     def __eq__(self, other):
-        return self.__key() == other.__key()
+        return self.__key() == other.__key()                                     # pylint: disable=protected-access
 
     @property
     def duration(self):
         """Calculate activation duration"""
         return int((self.finish - self.start).total_seconds() * 1000000)
-
-    @classmethod
-    def to_prolog_fact(cls):
-        """Return prolog comment"""
-        return textwrap.dedent("""
-            %
-            % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        """Return prolog dynamic clause"""
-        return ":- dynamic(activation/6)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        """Return prolog retract for trial"""
-        return "retract(activation({}, _, _, _, _, _))".format(trial_id)
-
-    def to_prolog(self):
-        """Convert to prolog fact"""
-        name = prolog_repr(self.name)
-        start = timestamp(self.start)
-        finish = timestamp(self.finish)
-        caller_id = self.caller_id if self.caller_id else "nil"
-        return (
-            "activation("
-            "{self.trial_id}, {self.id}, {name}, {start:-f}, {finish:-f}, "
-            "{caller_id})."
-        ).format(**locals())
 
     def show(self, _print=lambda x, offset=0: print(x)):
         """Show object
@@ -152,27 +108,28 @@ class ActivationProxy(with_metaclass(set_proxy(Activation))):
         global_vars = list(self.globals)
         if global_vars:
             _print("{name}: {values}".format(
-                name="Globals", values=", ".join(map(str, global_vars))))
+                name="Globals", values=", ".join(cvmap(str, global_vars))))
 
         arg_vars = list(self.arguments)
         if arg_vars:
             _print("{name}: {values}".format(
-                name="Arguments", values=", ".join(map(str, arg_vars))))
+                name="Arguments", values=", ".join(cvmap(str, arg_vars))))
 
         if self.return_value:
             _print("Return value: {ret}".format(ret=self.return_value))
 
-        self._show_slicing("Variables:", self.variables, _print)
-        self._show_slicing("Usages:", self.variables_usages, _print)
-        self._show_slicing("Dependencies:", self.dependent_variables, _print)
-
-    def _show_slicing(self, name, query, _print):
-        """Show slicing objects"""
-        objects = list(query)
-        if objects:
-            _print(name)
-            for obj in objects:
-                _print(str(obj), 1)
+        _show_slicing("Variables:", self.variables, _print)
+        _show_slicing("Usages:", self.variables_usages, _print)
+        _show_slicing("Dependencies:", self.dependent_variables, _print)
 
     def __repr__(self):
         return "Activation({0.trial_id}, {0.id}, {0.name})".format(self)
+
+
+def _show_slicing(name, query, _print):
+    """Show slicing objects"""
+    objects = list(query)
+    if objects:
+        _print(name)
+        for obj in objects:
+            _print(str(obj), 1)

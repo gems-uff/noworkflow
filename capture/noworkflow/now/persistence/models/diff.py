@@ -12,7 +12,7 @@ from future.utils import viewkeys
 
 from .base import Model, proxy_gen
 from .graphs.diff_graph import DiffGraph
-from .trial import TrialProxy
+from .trial import Trial
 
 
 class Diff(Model):
@@ -37,7 +37,7 @@ class Diff(Model):
             diff.graph.view = 0
         side by side: displays both graphs side by side
             diff.graph.view = 1
-        combined and side by side: combine graphs and displays both separated graphs
+        combined and side by side: combine graphs and displays both separated
             diff.graph.view = 2
 
 
@@ -64,8 +64,8 @@ class Diff(Model):
 
     def __init__(self, trial_ref1, trial_ref2, **kwargs):
         super(Diff, self).__init__(trial_ref1, trial_ref2, **kwargs)
-        self.trial1 = TrialProxy(trial_ref1)
-        self.trial2 = TrialProxy(trial_ref2)
+        self.trial1 = Trial(trial_ref1)
+        self.trial2 = Trial(trial_ref2)
 
         self.graph = DiffGraph(self)
         self.initialize_default(kwargs)
@@ -76,8 +76,8 @@ class Diff(Model):
         extra = ("start", "finish", "duration_text")
         ignore = ("id",)
         return diff_dict(
-            self.trial1.to_dict(ignore=ignore, extra=extra),
-            self.trial2.to_dict(ignore=ignore, extra=extra))
+            self.trial1.to_dict(ignore=ignore, extra=extra),                     # pylint: disable=no-member
+            self.trial2.to_dict(ignore=ignore, extra=extra))                     # pylint: disable=no-member
 
     @property
     def modules(self):
@@ -101,10 +101,14 @@ class Diff(Model):
             set(self.trial2.file_accesses))
 
     def _repr_html_(self):
-        return self.graph._repr_html_()
+        return self.graph._repr_html_()                                          # pylint: disable=protected-access
 
 
 def diff_dict(before, after):
+    """Compare dicts.
+    Return a dict with keys shared by both dicts that have different values
+        key -> [before[key], after[key]]
+    """
     result = OrderedDict()
     for key in viewkeys(before):
         if key != "id" and before[key] != after[key]:
@@ -113,6 +117,13 @@ def diff_dict(before, after):
 
 
 def diff_set(before, after):
+    """Compare sets to get additions, removals and replacements
+
+    Return 3 sets:
+    added -- objects present in second set, but not present in first set
+    removed -- objects present in first set, but not present in second set
+    replaced -- objects that have the same name in both sets, but are different
+    """
     removed = before - after
     added = after - before
     replaced = set()

@@ -14,7 +14,7 @@ class Debug(Run):
        This command is similar to Run, but defines different variables"""
 
     def __init__(self, *args, **kwargs):
-        super(Run, self).__init__(*args, **kwargs)
+        super(Debug, self).__init__(*args, **kwargs)
         self.default_context = "package"
         self.default_call_storage_frequency = 1
         self.default_save_frequency = 1000

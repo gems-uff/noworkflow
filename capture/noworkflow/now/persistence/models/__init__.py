@@ -2,29 +2,29 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Persistence Models"""
 from __future__ import (absolute_import, print_function,
                         division)
 
 from future.utils import text_to_native_str as n
 
 # Database Models
-from .activation import ActivationProxy as Activation
+from .activation import Activation
 from .base import proxy, proxy_gen, Model, MetaModel
-from .dependency import DependencyProxy as Dependency
-from .environment_attr import EnvironmentAttrProxy as EnvironmentAttr
-from .file_access import FileAccessProxy as FileAccess
-from .function_def import FunctionDefProxy as FunctionDef
-from .graph_cache import GraphCacheProxy as GraphCache
-from .head import HeadProxy as Head
-from .module import ModuleProxy as Module
-from .object import ObjectProxy as Object
-from .object_value import ObjectValueProxy as ObjectValue
-from .slicing_dependency import SlicingDependencyProxy as SlicingDependency
-from .slicing_usage import SlicingUsageProxy as SlicingUsage
-from .slicing_variable import SlicingVariableProxy as SlicingVariable
-from .tag import TagProxy as Tag
-from .trial import TrialProxy as Trial
+from .dependency import Dependency
+from .environment_attr import EnvironmentAttr
+from .file_access import FileAccess
+from .function_def import FunctionDef
+from .graph_cache import GraphCache
+from .head import Head
+from .module import Module
+from .object import Object
+from .object_value import ObjectValue
+from .slicing_dependency import SlicingDependency
+from .slicing_usage import SlicingUsage
+from .slicing_variable import SlicingVariable
+from .tag import Tag
+from .trial import Trial
 
 # Other models
 from .history import History
@@ -32,7 +32,7 @@ from .diff import Diff
 from .trial_prolog import TrialProlog
 
 
-order = [
+ORDER = [
     Trial, Head, Tag, GraphCache,  # Trial
     Module, Dependency, EnvironmentAttr,  # Deployment
     FunctionDef, Object,  # Definition
@@ -42,7 +42,7 @@ order = [
 
 
 __all__ = [
-    n(x.__modelname__) for x in order
+    n(x.__modelname__) for x in ORDER                                            # pylint: disable=no-member
 ] + [
     "History",
     "Diff",

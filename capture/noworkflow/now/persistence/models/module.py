@@ -6,37 +6,28 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, select, bindparam
 
 from .. import relational
 
-from .base import set_proxy, proxy_method
+from .base import AlchemyProxy, proxy_class, backref_many
 
 
-class Module(relational.base):
-    """Module Table
-    Store modules extracted during deployment provenance collection
-    """
+@proxy_class
+class Module(AlchemyProxy):
+    """Represent a module"""
+
     __tablename__ = "module"
     __table_args__ = (
         {"sqlite_autoincrement": True},
     )
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
     name = Column(Text)
     version = Column(Text)
     path = Column(Text)
     code_hash = Column(Text, index=True)
 
-    # _trials: Trial._modules backref
-
-
-class ModuleProxy(with_metaclass(set_proxy(Module))):
-    """Module proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
+    trials = backref_many("_trials")  # Trial._dmodules
 
     def __key(self):
         return (self.name, self.version, self.path, self.code_hash)
@@ -45,9 +36,9 @@ class ModuleProxy(with_metaclass(set_proxy(Module))):
         return hash(self.__key())
 
     def __eq__(self, other):
-        return (self.__key() == other.__key())
+        return self.__key() == other.__key()                                     # pylint: disable=protected-access
 
-    def show(self, _print=lambda x: print(x)):
+    def show(self, _print=print):
         """Show module"""
         _print("""\
             Name: {0.name}
@@ -59,8 +50,8 @@ class ModuleProxy(with_metaclass(set_proxy(Module))):
     def __repr__(self):
         return "Module({0.id}, {0.name}, {0.version})".format(self)
 
-    @proxy_method
-    def id_seq(model, cls, session=None):
+    @classmethod  # query
+    def id_seq(cls, session=None):
         """Load next module id
 
         Keyword arguments:
@@ -76,8 +67,8 @@ class ModuleProxy(with_metaclass(set_proxy(Module))):
             return an_id[0]
         return 0
 
-    @proxy_method
-    def fast_load_module_id(model, cls, name, version, path, code_hash,
+    @classmethod  # query
+    def fast_load_module_id(cls, name, version, path, code_hash,                 # pylint: disable=too-many-arguments
                             session=None):
         """Load module id by name, version and code_hash
 
@@ -87,19 +78,19 @@ class ModuleProxy(with_metaclass(set_proxy(Module))):
         session -- specify session for loading (default=relational.session)
         """
         session = session or relational.session
-        if not hasattr(model, "_load_or_create_module_id"):
-            tmodule = model.__table__
+        if not hasattr(cls, "_load_or_create_module_id"):
+            tmodule = cls.t
             _query = select([tmodule.c.id]).where(
                 (tmodule.c.name == bindparam("name")) &
-                ((tmodule.c.version == None) |
-                    (tmodule.c.version == bindparam("version"))) &
-                ((tmodule.c.code_hash == None) |
-                    (tmodule.c.code_hash == bindparam("code_hash")))
+                ((tmodule.c.version == None) |                                   # pylint: disable=singleton-comparison
+                 (tmodule.c.version == bindparam("version"))) &
+                ((tmodule.c.code_hash == None) |                                 # pylint: disable=singleton-comparison
+                 (tmodule.c.code_hash == bindparam("code_hash")))
             )
-            model._load_or_create_module_id = str(_query)
+            cls._load_or_create_module_id = str(_query)
 
         info = dict(name=name, path=path, version=version, code_hash=code_hash)
         an_id = session.execute(
-            model._load_or_create_module_id, info).fetchone()
+            cls._load_or_create_module_id, info).fetchone()
         if an_id:
             return an_id[0]

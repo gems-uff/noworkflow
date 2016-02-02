@@ -53,7 +53,7 @@ class Restore(Command):
         code_hash = metascript.code_hash
 
         if code_hash != head.code_hash:
-            metascript.trial_id = Trial.fast_store(
+            metascript.trial_id = Trial.store(
                 *metascript.create_trial_args(
                     args="<restore {}>".format(trial.id), run=False
                 ))

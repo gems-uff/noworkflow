@@ -24,11 +24,9 @@ from ....utils.io import print_msg
 from .. import GraphCache
 
 
-class Graph(object):
+class Graph(object):                                                             # pylint: disable=too-few-public-methods
     """Graph superclass. Handle json transformation"""
-    # pylint: disable=R0201
-    # pylint: disable=R0903
-    def escape_json(self, data):
+    def escape_json(self, data):                                                 # pylint: disable=no-self-use
         """Escape JSON"""
         data = json.dumps(data)
         return (data.replace("&", "\\u0026")
@@ -68,7 +66,7 @@ def prepare_cache(get_type):
                                 content.get(cache.content_hash))
                             if not result[0]:
                                 continue
-                            cache_session.close()
+                            cache_session.close()                                # pylint: disable=no-member
                             return result
                     except (ValueError, exc.SQLAlchemyError):
                         traceback.print_exc()
@@ -86,7 +84,7 @@ def prepare_cache(get_type):
                 except exc.SQLAlchemyError:
                     traceback.print_exc()
                     print_msg("Couldn't store graph cache", True)
-                cache_session.close()
+                cache_session.close()                                            # pylint: disable=no-member
                 return graph
             return load
         return dec
@@ -129,22 +127,20 @@ class TreeElement(object):
     def __repr__(self):
         return self.repr
 
-    def to_dict(self, nid):
+    def to_dict(self, nid):                                                      # pylint: disable=unused-argument, no-self-use
         """Convert element to dict"""
         return {}
 
 
-class Single(TreeElement):
+class Single(TreeElement):                                                       # pylint: disable=too-many-instance-attributes
     """Single Node
        Represent an activation or a group of merged activations"""
-    # pylint: disable=R0902
-    # pylint: disable=C0103
     def __init__(self, activation):
         super(Single, self).__init__(level=0, use_id=True)
         self.activation = activation
         self.activations = {activation}
         self.parent = activation.caller_id
-        self.id = activation.id
+        self.id = activation.id                                                  # pylint: disable=invalid-name
         self.line = activation.line
         self.name = activation.name
         self.trial_id = activation.trial_id
@@ -213,14 +209,12 @@ class Single(TreeElement):
 class Mixed(TreeElement):
     """Mixed Node
        Represent complex Mixed Node"""
-    # pylint: disable=R0902
-    # pylint: disable=C0103
     def __init__(self, activation):
         super(Mixed, self).__init__(level=0, use_id=True)
         self.duration = activation.duration
         self.elements = [activation]
         self.parent = activation.parent
-        self.id = activation.id
+        self.id = activation.id                                                  # pylint: disable=invalid-name
         self.repr = activation.repr
         self.finished = activation.finished
 
@@ -264,19 +258,18 @@ class Mixed(TreeElement):
 
     def mix_results(self):
         """Combine results"""
-        it = iter(self.elements)
-        initial = next(it)
-        for element in it:
+        iterator = iter(self.elements)
+        initial = next(iterator)
+        for element in iterator:
             initial.mix(element)
 
     def __hash__(self):
         return super(Mixed, self).__hash__()
 
 
-class Group(TreeElement):
+class Group(TreeElement):                                                        # pylint: disable=too-many-instance-attributes
     """Group Node
        Represent a group of called nodes"""
-    # pylint: disable=R0902
     def __init__(self):
         super(Group, self).__init__(level=0, use_id=True)
         self.nodes = OrderedDict()
@@ -333,11 +326,9 @@ class Group(TreeElement):
         return super(Group, self).__hash__()
 
 
-class Call(TreeElement):
+class Call(TreeElement):                                                         # pylint: disable=too-many-instance-attributes
     """Call Node
        Represent a call from a Node to a Group"""
-    # pylint: disable=R0902
-    # pylint: disable=C0103
     def __init__(self, caller, called):
         super(Call, self).__init__(level=0, use_id=True)
         self.caller = caller
@@ -345,7 +336,7 @@ class Call(TreeElement):
         self.called.calculate_repr()
         self.parent = caller.parent
         self.count = 1
-        self.id = self.caller.id
+        self.id = self.caller.id                                                 # pylint: disable=invalid-name
         self.duration = self.caller.duration
         self.repr = "C({0}, {1})".format(self.caller, self.called)
         self.finished = self.caller.finished

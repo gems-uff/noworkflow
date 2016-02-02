@@ -28,8 +28,9 @@ def print_diff_trials(diff):
 
 
 def print_replaced_attributes(replaced, ignore=("id",), extra=tuple(),
-                              names={}):
+                              names=None):
     """Print attributes diff"""
+    names = names or {}
     for (removed, added) in replaced:
         print("  Name: {}".format(removed.name))
         output = []

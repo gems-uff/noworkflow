@@ -2,7 +2,6 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-# pylint: disable=C0103
 """Trial Graph Module"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
@@ -24,7 +23,6 @@ Edge = namedtuple("Edge", "node count")
 
 class TreeVisitor(object):
     """Create Dict Tree from Intermediate Tree"""
-    # pylint: disable=R0201
 
     def __init__(self):
         self.nodes = []
@@ -42,7 +40,7 @@ class TreeVisitor(object):
         self.max_duration[tid] = max(self.max_duration[tid], duration)
         self.min_duration[tid] = min(self.min_duration[tid], duration)
 
-    def update_node(self, node):
+    def update_node(self, node):                                                 # pylint: disable=no-self-use
         """Update node with info and mean duration"""
         node["mean"] = node["duration"] / node["count"]
         node["info"].update_by_node(node)
@@ -112,9 +110,8 @@ class TreeVisitor(object):
         self.nodes[node_id[0]]["duration"] = mixed.duration
         return node_id
 
-    def visit_treeelement(self, tree_element):
+    def visit_treeelement(self, tree_element):                                   # pylint: disable=no-self-use, unused-argument
         """Visit TreeElement Node (Visitor Pattern)"""
-        # pylint: disable=W0613
         return []
 
 
@@ -144,9 +141,8 @@ class NoMatchVisitor(TreeVisitor):
                 edge = delegated[typ]
                 self.add_edge(edge.node, node_id, node_count, typ)
 
-    def solve_ret_delegation(self, node_id, node_count, delegated):
+    def solve_ret_delegation(self, node_id, node_count, delegated):              # pylint: disable=unused-argument
         """Solve edge (return) delegation"""
-        # pylint: disable=W0613
         if not self.nodes[node_id]["node"]["finished"]:
             return
         if "return" in delegated:
@@ -354,15 +350,13 @@ def generate_graph(trial, depth=1000):
     return recursive_generate_graph(trial, Single(activations[0]), depth - 1)
 
 
-cache = prepare_cache(
+cache = prepare_cache(                                                           # pylint: disable=invalid-name
     lambda self, *args, **kwargs: "trial {}".format(self.trial.id))
 
 
 class TrialGraph(Graph):
     """Trial Graph Class
        Present trial graph on Jupyter"""
-    # pylint: disable=R0201
-    # pylint: disable=R0902
 
     def __init__(self, trial):
         self._graph = None

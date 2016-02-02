@@ -2,7 +2,6 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-# pylint: disable=C0103
 """Diff Graph Module"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
@@ -206,7 +205,7 @@ class MappingToGraph(object):
     def add_nodes(self, nodes, trial_number):
         """Convert matched nodes to graph"""
         for node in nodes:
-            if not (trial_number, node["index"]) in self.old_to_new:
+            if (trial_number, node["index"]) not in self.old_to_new:
                 nid = self.add_node(node)
                 self.old_to_new[(trial_number, node["index"])] = nid
                 node["node"]["diff"] = nid
@@ -475,15 +474,13 @@ def class_param(params):
     return dec
 
 
-cache = prepare_cache(
+cache = prepare_cache(                                                           # pylint: disable=invalid-name
     lambda self, *args, **kwargs: "diff {}:{}".format(self.diff.trial1.id,
                                                       self.diff.trial2.id))
 
 
-class DiffGraph(Graph):
+class DiffGraph(Graph):                                                          # pylint: disable=too-many-instance-attributes
     """Diff Graph Class. Present diff graph on Jupyter"""
-    # pylint: disable=R0201
-    # pylint: disable=R0902
 
     def __init__(self, diff):
         self.diff = weakref.proxy(diff)
@@ -513,30 +510,30 @@ class DiffGraph(Graph):
     @class_param("neighborhoods time_limit")
     @cache("tree", "neighborhoods time_limit")
     @trial_mirror
-    def tree(self, g1, g2, finished, **kwargs):
+    def tree(self, graph1, graph2, finished, **kwargs):                          # pylint: disable=no-self-use
         """Compare tree structures"""
-        return finished, vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(graph1, graph2, **kwargs), graph1, graph2
 
     @class_param("neighborhoods time_limit")
     @cache("no_match", "neighborhoods time_limit")
     @trial_mirror
-    def no_match(self, g1, g2, finished, **kwargs):
+    def no_match(self, graph1, graph2, finished, **kwargs):                      # pylint: disable=no-self-use
         """Compare graphs without matches"""
-        return finished, vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(graph1, graph2, **kwargs), graph1, graph2
 
     @class_param("neighborhoods time_limit")
     @cache("exact_match", "neighborhoods time_limit")
     @trial_mirror
-    def exact_match(self, g1, g2, finished, **kwargs):
+    def exact_match(self, graph1, graph2, finished, **kwargs):                   # pylint: disable=no-self-use
         """Compare graphs with call matches"""
-        return finished, vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(graph1, graph2, **kwargs), graph1, graph2
 
     @class_param("neighborhoods time_limit")
     @cache("combine", "neighborhoods time_limit")
     @trial_mirror
-    def namespace_match(self, g1, g2, finished, **kwargs):
+    def namespace_match(self, graph1, graph2, finished, **kwargs):               # pylint: disable=no-self-use
         """Compare graphs with namespaces"""
-        return finished, vnd(g1, g2, **kwargs), g1, g2
+        return finished, vnd(graph1, graph2, **kwargs), graph1, graph2
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""

@@ -6,78 +6,51 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import textwrap
-
 from datetime import datetime
 
-from future.utils import with_metaclass, lmap
+from future.utils import lmap
+from future.builtins import map as cvmap
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, bindparam
 
-from ...utils.functions import prolog_repr, timestamp
+from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
+from ...utils.prolog import PrologRepr, PrologTimestamp
 
 from .. import relational
 
-from .base import set_proxy, proxy_method
+from .base import AlchemyProxy, proxy_class, backref_one
 
 
-class Tag(relational.base):
-    """Tag Table
-    Store trial tags
-    """
+@proxy_class
+class Tag(AlchemyProxy):
+    """Represent a tag"""
+
     __tablename__ = "tag"
     __table_args__ = (
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
         {"sqlite_autoincrement": True},
     )
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
     trial_id = Column(Integer, index=True)
-    type = Column(Text)
+    type = Column(Text)                                                          # pylint: disable=invalid-name
     name = Column(Text)
     timestamp = Column(TIMESTAMP)
 
-    # _trial: Trial._tags backref
+    trial = backref_one("_trial")  # Trial._inherited
 
-
-class TagProxy(with_metaclass(set_proxy(Tag))):
-    """Tag proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    @classmethod
-    def to_prolog_fact(cls):
-        """Return prolog comment"""
-        return textwrap.dedent("""
-            %
-            % FACT: tag(trial_id, type, name, timestamp).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        """Return prolog dynamic clause"""
-        return ":- dynamic(tag/4)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        """Return prolog retract for trial"""
-        return "retract(tag({}, _, _, _))".format(trial_id)
-
-    def to_prolog(self):
-        """Convert to prolog fact"""
-        time = timestamp(self.timestamp)
-        name = prolog_repr(self.name)
-        return (
-            "tag({t.trial_id}, {t.type}, {name}, {time})."
-        ).format(**locals())
+    prolog_description = PrologDescription("tag", (
+        PrologTrial("trial_id"),
+        PrologAttribute("type"),
+        PrologRepr("name"),
+        PrologTimestamp("timestamp"),
+    ))
 
     def __repr__(self):
         return "Tag({0.trial_id}, {0.type}, {0.name})".format(self)
 
-    @proxy_method
-    def fast_load_auto_tag(model, cls, trial_id, code_hash, command, session=None):
+    @classmethod  # query
+    def fast_load_auto_tag(cls, trial_id, code_hash, command,
+                           session=None):
         """Find automatic by code_hash and command.
         Ignore tags on the same trial_id
 
@@ -102,7 +75,7 @@ class TagProxy(with_metaclass(set_proxy(Tag))):
         """
         from .trial import Trial
         session = session or relational.session
-        ttag = model.__table__
+        ttag = cls.__table__
         ttrial = Trial.__table__
         _query = select([ttag.c.name]).where(
             (ttrial.c.id == ttag.c.trial_id) &
@@ -131,8 +104,8 @@ class TagProxy(with_metaclass(set_proxy(Tag))):
 
         return 0, [1, 1, 1]
 
-    @proxy_method
-    def create_automatic_tag(model, cls, trial_id, code_hash, command,
+    @classmethod  # query
+    def create_automatic_tag(cls, trial_id, code_hash, command,
                              session=None):
         """Create automatic tag for trial id
 
@@ -164,9 +137,9 @@ class TagProxy(with_metaclass(set_proxy(Tag))):
             tag[0] += 1
             tag[1] = 1
             tag[2] = 1
-        new_tag = ".".join(map(str, tag))
+        new_tag = ".".join(cvmap(str, tag))
 
-        session.execute(model.__table__.insert(), dict(
+        session.execute(cls.t.insert(), dict(
             trial_id=trial_id, type="AUTO",
             name=new_tag, timestamp=datetime.now()
         ))

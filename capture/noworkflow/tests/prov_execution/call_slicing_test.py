@@ -131,7 +131,7 @@ class TestCallSlicing(unittest.TestCase):
             result = {
                 (("a", 1), ("x", 3)),
                 (("b", 1), ("y", 4)),
-                (("c", 1), ("y", 4)),  # ToDo: fix?
+                (("c", 1), ("y", 4)),  # ToDo #75: fix?
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("b", 1)),
                 (("return", 2), ("c", 1)),
@@ -151,7 +151,7 @@ class TestCallSlicing(unittest.TestCase):
             result = {
                 (("a", 1), ("x", 3)),
                 (("args", 1), ("y", 3)),
-                (("args", 1), ("z", 3)),  # ToDo: fix?
+                (("args", 1), ("z", 3)),  # ToDo #75: fix?
                 (("return", 2), ("a", 1)),
                 (("return", 2), ("args", 1)),
                 (("call fn", 4), ("return", 2)),
@@ -185,7 +185,7 @@ class TestCallSlicing(unittest.TestCase):
             run(metascript)
             result = {
                 (("a", 1), ("x", 3)),
-                (("args", 1), ("x", 3)),  # ToDo: fix?
+                (("args", 1), ("x", 3)),  # ToDo #75: fix?
                 (("return", 2), ("a", 1)),
                 (("call fn", 4), ("return", 2)),
                 (("x", 4), ("x", 3)),
@@ -238,14 +238,14 @@ class TestCallSlicing(unittest.TestCase):
                 (("a", 1), ("x", 3)),
                 (("b", 1), ("y", 3)),
                 (("c", 1), ("z", 3)),
-                (("c", 1), ("v", 4)),  # ToDo: fix?
+                (("c", 1), ("v", 4)),  # ToDo #75: fix?
                 (("d", 1), ("z", 3)),
-                (("d", 1), ("v", 4)),  # ToDo: fix?
+                (("d", 1), ("v", 4)),  # ToDo #75: fix?
                 (("e", 1), ("w", 3)),
-                (("f", 1), ("z", 3)),  # ToDo: fix?
-                (("f", 1), ("v", 4)),  # ToDo: fix?
+                (("f", 1), ("z", 3)),  # ToDo #75: fix?
+                (("f", 1), ("v", 4)),  # ToDo #75: fix?
                 (("g", 1), ("u", 3)),
-                (("kwargs", 1), ("z", 3)),  # ToDo: fix?
+                (("kwargs", 1), ("z", 3)),  # ToDo #75: fix?
                 (("kwargs", 1), ("v", 4)),
                 (("return", 2), ("a", 1)),
                 (("call fn", 5), ("return", 2)),

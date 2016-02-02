@@ -17,4 +17,4 @@ class NowPrologSchema(IpythonCommandMagic):
 
     def execute(self, func, line, cell, magic_cls):
         trial_prolog = TrialProlog(Trial())
-        return PrettyLines(trial_prolog.export_rules(with_facts=True))
+        return PrettyLines(trial_prolog.rules(with_facts=True))

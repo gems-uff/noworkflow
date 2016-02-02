@@ -6,75 +6,41 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import textwrap
-
-from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
-from ...utils.functions import prolog_repr
+from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
 
-from .. import relational
-
-from .base import set_proxy
+from .base import AlchemyProxy, proxy_class, backref_one
 
 
-class EnvironmentAttr(relational.base):
-    """Environment Attributes Table
-    Store Environment Attributes from deployment provenance
-    """
+@proxy_class
+class EnvironmentAttr(AlchemyProxy):
+    """Represent an environment attribute"""
+
     __tablename__ = "environment_attr"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
-    id = Column(Integer, index=True)
+    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     value = Column(Text)
 
-    # _trial: Trial._environment_attrs backref
+    trial = backref_one("_trial")  # Trial._environment_attrs
 
-
-class EnvironmentAttrProxy(with_metaclass(set_proxy(EnvironmentAttr))):
-    """EnvironmentAttr proxy
-
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
+    prolog_description = PrologDescription("environment", (
+        PrologTrial("trial_id"),
+        PrologRepr("name"),
+        PrologRepr("value"),
+    ))
 
     def __hash__(self):
         return hash((self.name, self.value))
 
     def __eq__(self, other):
         return self.name == other.name
-
-    @classmethod
-    def to_prolog_fact(cls):
-        """Return prolog comment"""
-        return textwrap.dedent("""
-            %
-            % FACT: environment(trial_id, name, value).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        """Return prolog dynamic clause"""
-        return ":- dynamic(environment/3)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        """Return prolog retract for trial"""
-        return "retract(environment({}, _, _))".format(trial_id)
-
-    def to_prolog(self):
-        """Convert to prolog fact"""
-        name = prolog_repr(self.name)
-        value = prolog_repr(self.value)
-        return (
-            "environment({self.trial_id}, {name}, {e.value})."
-        ).format(**locals())
 
     def show(self, _print=lambda x, offset=0: print(x)):
         """Show object

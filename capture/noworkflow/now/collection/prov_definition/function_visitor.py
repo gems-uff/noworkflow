@@ -49,10 +49,9 @@ class FunctionVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node):
         """Visit ClassDef. Ignore Classes"""
-        # ToDo: capture class dry_add -> add_object
-        # ToDo: capture class "".encode("utf-8") -> self.extract_code(node),
+        # ToDo #74: capture class dry_add -> add_object
+        # ToDo #74: "".encode("utf-8") -> self.extract_code(node),
         self.contexts.append(self.definitions.dry_add(
-            # ToDo: include filename on namespace
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
             node.name,
             "",
@@ -65,7 +64,6 @@ class FunctionVisitor(ast.NodeVisitor):
     def visit_FunctionDef(self, node):
         """Visit FunctionDef. Collect function code"""
         self.contexts.append(self.definitions.add_object(
-            # ToDo: include filename on namespace
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
             node.name,
             self.extract_code(node),

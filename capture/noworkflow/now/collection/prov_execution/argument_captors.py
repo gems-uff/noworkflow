@@ -85,8 +85,8 @@ class InspectProfilerArgumentCaptor(ArgumentCaptor):
         activation -- current activation
         """
         provider = self.provider
-        # ToDo: inspect.getargvalues was deprecated on Python 3.5
-        # ToDo: use inspect.signature instead
+        # ToDo #75: inspect.getargvalues was deprecated on Python 3.5
+        # ToDo #75: use inspect.signature instead
         (args, varargs, keywords, values) = inspect.getargvalues(frame)
         for arg in args:
             try:
@@ -233,8 +233,8 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
                     match_args(call_arg, kwargs)
 
         # Match kwargs, starargs
-        # ToDo: Python 3.5 supports multiple keyword arguments and starargs
-        # ToDo: improve matching
+        # ToDo #75: Python 3.5 supports multiple keyword arguments and starargs
+        # ToDo #75: improve matching
         #   Ignore default params
         #   Do not match f(**kwargs) with def(*args)
         args = [(k, order[k]) for k in range(len(used)) if not used[k]]
@@ -249,7 +249,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
             match_arg(None, act_arg)
 
         # Create dependencies between all parameters
-        # ToDo: improve dependencies to use references.
+        # ToDo #35: improve dependencies to use references.
         #   Do not create dependencies between all parameters
         lasti_set = set()
         provider.add_inter_dependencies(back, call.all_args(), self.caller,

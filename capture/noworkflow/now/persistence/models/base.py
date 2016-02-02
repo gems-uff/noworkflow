@@ -8,10 +8,12 @@ from __future__ import (absolute_import, print_function,
 
 import weakref
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from functools import wraps
 
-from future.utils import with_metaclass, iteritems
+from future.utils import with_metaclass, viewitems, viewvalues, viewkeys
+from sqlalchemy import Column
+from sqlalchemy.orm import relationship
 
 from .. import relational
 
@@ -24,18 +26,18 @@ class MetaModel(type):
     """
     __classes__ = {}
 
-    def __new__(meta, name, bases, attrs):
+    def __new__(mcs, name, bases, attrs):
         attrs["__refs__"] = []
         attrs["REPLACE"] = attrs.get("REPLACE", {})
         attrs["DEFAULT"] = attrs.get("DEFAULT", {})
 
-        cls = super(MetaModel, meta).__new__(meta, name, bases, attrs)
+        cls = super(MetaModel, mcs).__new__(mcs, name, bases, attrs)
         if "__modelname__" in attrs:
-            meta.__classes__[attrs["__modelname__"]] = cls
+            mcs.__classes__[attrs["__modelname__"]] = cls
         return cls
 
-    def __call__(meta, *args, **kwargs):
-        instance = super(MetaModel, meta).__call__(*args, **kwargs)
+    def __call__(cls, *args, **kwargs):
+        instance = super(MetaModel, cls).__call__(*args, **kwargs)
         instance.__class__.__refs__.append(weakref.ref(instance))
         return instance
 
@@ -46,13 +48,12 @@ class MetaModel(type):
             if inst is not None:
                 yield inst
 
-    def set_instances_default(cls, model, attr, value):
+    def set_instances_default(cls, attr, value):
         """Set DEFAULT attribute for instances of classes created
         by this metaclass
 
 
         Arguments:
-        model -- name of model class
         attr -- attribute name
         value -- new attribute value
         """
@@ -60,14 +61,14 @@ class MetaModel(type):
             instance.set_instance_attr(attr, value)
 
     @classmethod
-    def all_models(meta):
+    def all_models(mcs):
         """Return all instances from all models"""
-        for name, cls in iteritems(meta.__classes__):
+        for cls in viewvalues(mcs.__classes__):
             for instance in cls.get_instances():
                 yield instance
 
     @classmethod
-    def set_class_default(meta, model, attr, value, instances=False):
+    def set_class_default(mcs, model, attr, value, instances=False):
         """Set DEFAULT attribute for Model class
 
         Arguments:
@@ -79,16 +80,16 @@ class MetaModel(type):
         Keyword arguments:
         instances -- update instances too (default=False)
         """
-        cls = meta.__classes__[model]
+        cls = mcs.__classes__[model]
         if attr in cls.REPLACE:
             attr = cls.REPLACE[attr]
         if attr in cls.DEFAULT:
             cls.DEFAULT[attr] = value
         if instances:
-            cls.set_instances_default(model, attr, value)
+            cls.set_instances_default(attr, value)
 
     @classmethod
-    def set_classes_default(meta, attr, value, instances=False, model="*"):
+    def set_classes_default(mcs, attr, value, instances=False, model="*"):
         """Set DEFAULT attribute for Model classes that match model filter
 
         Arguments:
@@ -102,14 +103,17 @@ class MetaModel(type):
         model -- filter model (default="*")
         """
         if model == "*":
-            for name, cls in iteritems(meta.__classes__):
-                meta.set_class_default(name, attr, value, instances=instances)
+            for name in viewkeys(mcs.__classes__):
+                mcs.set_class_default(name, attr, value, instances=instances)
         else:
-            meta.set_class_default(model, attr, value, instances=instances)
+            mcs.set_class_default(model, attr, value, instances=instances)
 
 
 class Model(with_metaclass(MetaModel)):
     """Model base"""
+
+    REPLACE = {}
+    DEFAULT = {}
 
     def __init__(self, *args, **kwargs):
         pass
@@ -131,9 +135,9 @@ class Model(with_metaclass(MetaModel)):
 
     def initialize_default(self, kwargs):
         """Initialize DEFAULT and kwargs parameters to instance"""
-        for key, value in iteritems(self.DEFAULT):
+        for key, value in viewitems(self.DEFAULT):
             self.set_instance_attr(key, value, check=False)
-        for key, value in iteritems(kwargs):
+        for key, value in viewitems(kwargs):
             self.set_instance_attr(key, value)
 
 
@@ -154,28 +158,23 @@ def proxy_gen(query):
         yield proxy(element)
 
 
-def proxy_property(func, proxy=proxy):
+def proxy_property(func, proxy_func=proxy):
+    """Return a proxy property to a __model__ function"""
     @wraps(func)
     def prop(self, *args, **kwargs):
-        obj = self._get_instance()
+        """Proxy property"""
+        obj = self._get_instance()                                               # pylint: disable=protected-access
         result = func(obj, *args, **kwargs)
-        return proxy(result)
+        return proxy_func(result)
     return property(prop)
 
 
-def proxy_attr(name, proxy=proxy):
+def proxy_attr(name, proxy_func=proxy):
+    """Return a proxy property to a __model__ attribute"""
     def func(self):
         """Return {}""".format(name)
         return getattr(self, name)
-    return proxy_property(func, proxy=proxy)
-
-
-def proxy_method(func):
-    @wraps(func)
-    def method(cls, *args, **kwargs):
-        model = cls.__model__
-        return func(model, cls, *args, **kwargs)
-    return classmethod(method)
+    return proxy_property(func, proxy_func=proxy_func)
 
 
 class AlchemyProxy(Model):
@@ -186,7 +185,12 @@ class AlchemyProxy(Model):
 
     __alchemy_refs__ = {}
 
+    m = __model__ = None                                                         # pylint: disable=invalid-name
+    t = __table__ = None                                                         # pylint: disable=invalid-name
+    __modelname__, __columns__ = None, []
+
     def __init__(self, obj):
+        super(AlchemyProxy, self).__init__(obj)
         if isinstance(obj, relational.base):
             self._store_pk(obj)
         else:
@@ -223,73 +227,118 @@ class AlchemyProxy(Model):
 
         return result
 
+    @classmethod
+    def fast_store(cls, trial_id, object_store, partial, conn=None):
+        """Bulk insert lightweight objects from ObjectStore"""
+        if object_store.has_items():
+            _conn = conn if conn else relational.engine.connect()
+            _conn.execute(
+                cls.__model__.__table__.insert().prefix_with("OR REPLACE"),
+                *object_store.generator(trial_id, partial)
+            )
+            if conn is None:
+                _conn.close()
 
-class RedirectProxy(object):
-    """Proxy for class attributes"""
-    def __init__(self, model, name):
-        self.model = model
-        self.name = name
-
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return getattr(self.model, self.name)
-        self._restore_instance()
-        return getattr(obj._alchemy, self.name)
-
-    def __set__(self, obj, value):
-        if obj is None:
-            setattr(self.model, self.name, value)
-        setattr(obj._alchemy, self.name, value)
-
-    def __delete__(self, obj):
-        if obj is None:
-            delattr(self.model, self.name)
-        delattr(obj._alchemy, self.name)
-
-
-def set_proxy(model):
-    """Create proxy metaclass for specific SQLAlchemy Model"""
-
-    class MetaProxy(MetaModel):
-        """Proxy Metaclass
-
-        Store __model__ class attribute
-        Map SQLAlchemy Model to Proxy
-
-        Define proxy for class attributes
-        It will ignore attributes starting with '_'
+def create_relationship(proxy_func):
+    """Create proxy descriptor"""
+    class Relationship(object):                                                  # pylint: disable=too-few-public-methods
+        """Create a proxy for relationship
+        Relationship on Model class will be prepended by _
         """
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+            self.name = None
 
-        def __new__(meta, name, bases, attrs):
-            bases = (AlchemyProxy,)
-            if "__modelname__" not in attrs:
-                attrs["__modelname__"] = model.__name__
+        def __get__(self, obj, objtype=None):
+            if obj is None:
+                return self
+            alchemy = obj._get_instance()                                        # pylint: disable=protected-access
+            return proxy_func(getattr(alchemy, self.name))
+    return Relationship
 
-            cls = super(MetaProxy, meta).__new__(meta, name, bases, attrs)
-            cls.__model__ = model
-            cls.__columns__ = model.__table__.columns.keys()
-            cls.__table__ = model.__table__
-            AlchemyProxy.__alchemy_refs__[model] = cls
-            return cls
 
-        def __getattr__(cls, attr):
-            if attr in cls.__model__.__dict__:
-                return getattr(cls.__model__, attr)
-            return super(MetaProxy, cls).__getattr__(cls, attr)
+ModelMethod = namedtuple("ModelMethod", "func proxy")
 
-        @property
-        def query(cls):
-            return relational.session.query(cls.__model__)
 
-        def fast_store(cls, trial_id, object_store, partial, conn=None):
-            """Bulk insert lightweight objects from ObjectStore"""
-            if object_store.has_items():
-                _conn = conn if conn else relational.engine.connect()
-                _conn.execute(
-                    cls.__model__.__table__.insert().prefix_with("OR REPLACE"),
-                    *object_store.generator(trial_id, partial)
-                )
-                if conn is None:
-                    _conn.close()
+def query_many_property(func):
+    """Property is part of the Model class. It should return a generator"""
+    return ModelMethod(func, proxy_gen)
 
-    return MetaProxy
+
+Many = create_relationship(proxy_gen)
+One = create_relationship(proxy)
+
+
+def one(*args, **kwargs):
+    """Create One relationship"""
+    return One(*args, **kwargs)
+
+
+def many(*args, **kwargs):
+    """Create Many relationship"""
+    if "lazy" not in kwargs:
+        kwargs["lazy"] = "dynamic"
+    return Many(*args, **kwargs)
+
+
+def many_ref(backref, *args, **kwargs):
+    """Create Many relationship with backref"""
+    kwargs["backref"] = backref
+    return many(*args, **kwargs)
+
+
+def many_viewonly_ref(backref, *args, **kwargs):
+    """Create Many relationship with backref and viewonly"""
+    kwargs["backref"] = backref
+    kwargs["viewonly"] = True
+    return many(*args, **kwargs)
+
+
+def backref_many(name):
+    """Create property for backref generator"""
+    return proxy_attr(name, proxy_func=proxy_gen)
+
+
+def backref_one(name):
+    """Create property for backref object"""
+    return proxy_attr(name)
+
+
+def proxy_class(cls):
+    """Proxy decorator
+
+
+    Use it for classes that define SQLAlchemy attributes
+    This decorator creates __model__, __table__, __columns__ attributes
+    It will also register the class in the proxy list
+    """
+    description = cls.__dict__
+    attributes = {}
+    to_remove = set()
+    for name, var in viewitems(description):
+        if isinstance(var, Column):
+            to_remove.add(name)
+            #description[name] = None
+            attributes[name] = var
+        elif isinstance(var, (Many, One)):
+            var.name = "_" + name
+            attributes[var.name] = relationship(*var.args, **var.kwargs)
+        elif isinstance(var, ModelMethod):
+            new_name = "_query_" + name
+            setattr(cls, name, proxy_attr(new_name, proxy_func=var.proxy))
+            attributes[new_name] = property(var.func)
+        elif name in ('__tablename__', '__table_args__'):
+            attributes[name] = var
+
+    for name in to_remove:
+        delattr(cls, name)
+
+    cls.__modelname__ = cls.__name__
+    cls.m = cls.__model__ = type(cls.__name__, (relational.base,), attributes)
+    cls.t = cls.__table__ = cls.__model__.__table__
+    cls.__columns__ = cls.__table__.columns.keys()
+
+    AlchemyProxy.__alchemy_refs__[cls.__model__] = cls
+
+    return cls

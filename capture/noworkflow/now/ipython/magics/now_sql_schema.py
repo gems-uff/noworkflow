@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 from sqlalchemy.schema import CreateTable
 
 from ...utils.formatter import PrettyLines
-from ...persistence.models import order
+from ...persistence.models import ORDER
 from ...persistence import relational
 
 from .command import IpythonCommandMagic
@@ -20,9 +20,9 @@ class NowSQLSchema(IpythonCommandMagic):
 
     def execute(self, func, line, cell, magic_cls):
         lines = []
-        for model in order:
+        for model in ORDER:
             lines += (
-                str(CreateTable(model.__model__.__table__)
+                str(CreateTable(model.t)
                     .compile(relational.engine)).split("\n")
             )
         return PrettyLines(lines)

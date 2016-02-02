@@ -225,7 +225,6 @@ class DefinitionLW(BaseLW):
             ("." if previous_namespace else "") +
             name
         )
-        # ToDo: save parent instead of full namespace
         self.name = self.namespace
         self.parent = (parent if parent is not None else -1)
         self.type = dtype

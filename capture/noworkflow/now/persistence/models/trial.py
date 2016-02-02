@@ -6,112 +6,30 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import textwrap
 
-from future.utils import with_metaclass
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
-from sqlalchemy import ForeignKeyConstraint, select, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKeyConstraint, select, func, distinct
 
 from ...utils.formatter import PrettyLines
+from ...utils.prolog import PrologDescription, PrologTrial
 
 from .. import relational, content, persistence_config
 
-from .base import set_proxy, proxy_gen, proxy_attr, proxy_method
+from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
+from .base import one, many_ref, many_viewonly_ref, backref_many
+
 from .trial_prolog import TrialProlog
-from .tag import Tag
+
 from .module import Module
 from .dependency import Dependency
 from .activation import Activation
-from .head import Head, HeadProxy
+from .head import Head
 from .graphs.trial_graph import TrialGraph
 
 
-class Trial(relational.base):
-    """Trial Table
-    Store trials
-    """
-    __tablename__ = "trial"
-    __table_args__ = (
-        ForeignKeyConstraint(["inherited_id"], ["trial.id"],
-                             ondelete="RESTRICT"),
-        ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
-        {"sqlite_autoincrement": True},
-    )
-    id = Column(Integer, primary_key=True)
-    start = Column(TIMESTAMP)
-    finish = Column(TIMESTAMP)
-    script = Column(Text)
-    code_hash = Column(Text)
-    arguments = Column(Text)
-    command = Column(Text)
-    inherited_id = Column(Integer, index=True)
-    parent_id = Column(Integer, index=True)
-    run = Column(Integer)
-
-    _inherited = relationship(
-        "Trial", backref="_bypass_children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == inherited_id))
-
-    _parent = relationship(
-        "Trial", backref="_children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == parent_id))
-
-    _function_defs = relationship(
-        "FunctionDef", lazy="dynamic", backref="_trial")
-    _module_dependencies = relationship(
-        "Dependency", lazy="dynamic", backref="_trials")
-    _modules = relationship(
-        "Module", secondary=Dependency.__table__, lazy="dynamic",
-        backref="_trials")
-    _environment_attrs = relationship(
-        "EnvironmentAttr", lazy="dynamic", backref="_trial")
-    _activations = relationship(
-        "Activation", lazy="dynamic", order_by=Activation.start,
-        backref="_trial")
-    _file_accesses = relationship(
-        "FileAccess", lazy="dynamic", backref="_trial", viewonly=True)
-    _objects = relationship(
-        "Object", lazy="dynamic", backref="_trial", viewonly=True)
-    _object_values = relationship(
-        "ObjectValue", lazy="dynamic", backref="_trial", viewonly=True)
-
-    _slicing_variables = relationship(
-        "SlicingVariable", lazy="dynamic", backref="_trial", viewonly=True)
-    _slicing_usages = relationship(
-        "SlicingUsage", lazy="dynamic", viewonly=True, backref="_trial")
-    _slicing_dependencies = relationship(
-        "SlicingDependency", lazy="dynamic", viewonly=True, backref="_trial")
-
-    _tags = relationship(
-        "Tag", lazy="dynamic", backref="_trial")
-
-    # _bypass_children: Trial._inherited backref
-    # _children: Trial._parent backref
-
-    @property
-    def _query_local_modules(self):
-        """Load local modules
-        Return SQLAlchemy query"""
-        return self._query_modules.filter(
-            Module.path.like("%{}%".format(persistence_config.base_path)))
-
-    @property
-    def _query_modules(self):
-        """Load modules
-        Return SQLAlchemy query"""
-        if self._inherited:
-            return self._inherited._query_modules
-        return self._modules
-
-    @property
-    def _query_initial_activations(self):
-        """Return initial activation as a SQLAlchemy query"""
-        return self._activations.filter(Activation.caller_id == None)
-
-
-class TrialProxy(with_metaclass(set_proxy(Trial))):
-    """This model represents a trial
+@proxy_class                                                                     # pylint: disable=too-many-public-methods
+class Trial(AlchemyProxy):
+    """Represent a trial
     Initialize it by passing a trial reference:
         trial = Trial(2)
 
@@ -133,18 +51,68 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         trial.graph.height = 400
     """
 
-    local_modules = proxy_attr("_query_local_modules", proxy=proxy_gen)
-    activations = proxy_attr("_activations", proxy=proxy_gen)
-    modules = proxy_attr("_query_modules", proxy=proxy_gen)
-    environment_attrs = proxy_attr("_environment_attrs", proxy=proxy_gen)
-    file_accesses = proxy_attr("_file_accesses", proxy=proxy_gen)
-    function_defs = proxy_attr("_function_defs", proxy=proxy_gen)
-    slicing_variables = proxy_attr("_slicing_variables", proxy=proxy_gen)
-    slicing_usages = proxy_attr("_slicing_usages", proxy=proxy_gen)
-    slicing_dependencies = proxy_attr("_slicing_dependencies", proxy=proxy_gen)
-    initial_activations = proxy_attr("_query_initial_activations",
-                                     proxy=proxy_gen)
-    tags = proxy_attr("_tags", proxy=proxy_gen)
+    __tablename__ = "trial"
+    __table_args__ = (
+        ForeignKeyConstraint(["inherited_id"], ["trial.id"],
+                             ondelete="RESTRICT"),
+        ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
+        {"sqlite_autoincrement": True},
+    )
+
+    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
+    start = Column(TIMESTAMP)
+    finish = Column(TIMESTAMP)
+    script = Column(Text)
+    code_hash = Column(Text)
+    arguments = Column(Text)
+    command = Column(Text)
+    inherited_id = Column(Integer, index=True)
+    parent_id = Column(Integer, index=True)
+    run = Column(Integer)
+
+    inherited = one(
+        "Trial", backref="_bypass_children", viewonly=True,
+        remote_side=[id], primaryjoin=(id == inherited_id)
+    )
+    parent = one(
+        "Trial", backref="_children", viewonly=True,
+        remote_side=[id], primaryjoin=(id == parent_id)
+    )
+
+    function_defs = many_ref("_trial", "FunctionDef")
+    module_dependencies = many_ref("_trials", "Dependency")
+    dmodules = many_ref("_trials", "Module", secondary=Dependency.t)             # pylint: disable=no-member
+    environment_attrs = many_ref("_trial", "EnvironmentAttr")
+    activations = many_ref("_trial", "Activation",
+                           order_by=Activation.m.start)
+    file_accesses = many_viewonly_ref("_trial", "FileAccess")
+    objects = many_viewonly_ref("_trial", "Object")
+    object_values = many_viewonly_ref("_trial", "ObjectValue")
+    slicing_variables = many_viewonly_ref("_trial", "SlicingVariable")
+    slicing_usages = many_viewonly_ref("_trial", "SlicingUsage")
+    slicing_dependencies = many_viewonly_ref("_trial", "SlicingDependency")
+    tags = many_ref("_trial", "Tag")
+
+    bypass_children = backref_many("_bypass_children")  # Trial._inherited
+    children = backref_many("_children")  # Trial._parent
+
+    @query_many_property
+    def local_modules(self):
+        """Load local modules. Return SQLAlchemy query"""
+        return self._query_modules.filter(                                       # pylint: disable=no-member
+            Module.m.path.like("%{}%".format(persistence_config.base_path)))
+
+    @query_many_property
+    def modules(self):
+        """Load modules. Return SQLAlchemy query"""
+        if self._inherited:                                                      # pylint: disable=no-member
+            return self._inherited._query_modules                                # pylint: disable=no-member, protected-access
+        return self._dmodules                                                    # pylint: disable=no-member
+
+    @query_many_property
+    def initial_activations(self):
+        """Return initial activation as a SQLAlchemy query"""
+        return self._activations.filter(Activation.m.caller_id == None)          # pylint: disable=no-member, singleton-comparison
 
     DEFAULT = {
         "graph.width": 500,
@@ -161,6 +129,10 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         "graph_use_cache": "graph.use_cache",
         "prolog_use_cache": "prolog.use_cache",
     }
+
+    prolog_description = PrologDescription("trial", (
+        PrologTrial("id"),
+    ))
 
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], relational.base):
@@ -180,18 +152,19 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
 
         session = relational.session
         if not trial_ref or trial_ref == -1:
-            obj = TrialProxy.last_trial(script=script, session=session)
+            obj = Trial.last_trial(script=script, session=session)
             if "graph_use_cache" not in kwargs:
                 kwargs["graph_use_cache"] = False
             if "prolog_use_cache" not in kwargs:
                 kwargs["prolog_use_cache"] = False
         else:
-            obj = TrialProxy.load_trial(trial_ref, session=session)
+            obj = Trial.load_trial(trial_ref, session=session)
 
         if obj is None:
             raise RuntimeError("Trial {} not found".format(trial_ref))
-        self._store_pk(obj)
-        self._restore_instance()
+        super(Trial, self).__init__(obj)
+        #self._store_pk(obj)
+        #self._restore_instance()
 
         self.graph = TrialGraph(self)
         self.prolog = TrialProlog(self)
@@ -239,55 +212,21 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
     def create_head(self):
         """Create head for this trial"""
         session = relational.make_session()
-        session.query(Head).filter(Head.script == self.script).delete()
-        session.add(Head(trial_id=self.id, script=self.script))
-        session.commit()
+        session.query(Head.m).filter(Head.m.script == self.script).delete()      # pylint: disable=no-member
+        session.add(Head.m(trial_id=self.id, script=self.script))                # pylint: disable=no-member, not-callable
+        session.commit()                                                         # pylint: disable=no-member
 
     def query(self, query):
         """Run prolog query"""
         return self.prolog.query(query)
 
-    def prolog_rules(self):
-        """Return prolog rules"""
-        return self.prolog.export_rules()
-
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""
         if hasattr(self, "graph"):
-            return self.graph._repr_html_()
+            return self.graph._repr_html_()                                      # pylint: disable=protected-access
         return repr(self)
 
-    @classmethod
-    def to_prolog_fact(cls):
-        """Return prolog comment"""
-        return textwrap.dedent("""
-            %
-            % FACT: trial(trial_id).
-            %
-            """)
-
-    @classmethod
-    def to_prolog_dynamic(cls):
-        """Return prolog dynamic clause"""
-        return ":- dynamic(trial/1)."
-
-    @classmethod
-    def to_prolog_retract(cls, trial_id):
-        """Return prolog retract for trial"""
-        return "retract(trial({}))".format(trial_id)
-
-    @classmethod
-    def empty_prolog(self):
-        """Return empty prolog fact"""
-        return "trial(0)."
-
-    def to_prolog(self):
-        """Convert to prolog fact"""
-        return (
-            "trial({t.id})."
-        ).format(t=self)
-
-    def show(self, _print=lambda x: print(x)):
+    def show(self, _print=print):
         """Print trial information"""
         _print("""\
             Id: {t.id}
@@ -302,8 +241,24 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
     def __repr__(self):
         return "Trial({})".format(self.id)
 
-    @proxy_method
-    def last_trial(model, cls, script=None, parent_required=False,
+    @classmethod  # query
+    def distinct_scripts(cls):
+        """Return a set with distinct scripts"""
+        return {s[0].rsplit("/", 1)[-1]
+                for s in relational.session.query(distinct(cls.m.script))}
+
+    @classmethod  # query
+    def reverse_trials(cls, limit, session=None):
+        """Return a generator with <limit> trials ordered by start time desc"""
+        session = session or relational.session
+        return proxy_gen(
+            session.query(cls.m)
+            .order_by(cls.m.start.desc())
+            .limit(limit)
+        )
+
+    @classmethod  # query
+    def last_trial(cls, script=None, parent_required=False,
                    session=None):
         """Return last trial according to start time
 
@@ -311,6 +266,7 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         script -- specify the desired script (default=None)
         parent_required -- valid only if script exists (default=False)
         """
+        model = cls.m
         session = session or relational.session
         trial = (
             session.query(model)
@@ -328,21 +284,22 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
             ))
         ).first()
 
-    @proxy_method
-    def load_trial(model, cls, trial_ref, session=None):
+    @classmethod  # query
+    def load_trial(cls, trial_ref, session=None):
         """Load trial by trial reference
 
         Find reference on trials id and tags name
         """
+        from .tag import Tag  # avoid circular import
         session = session or relational.session
         return (
-            session.query(model)
-            .outerjoin(Tag)
-            .filter((model.id == trial_ref) | (Tag.name == trial_ref))
+            session.query(cls.m)
+            .outerjoin(Tag.m)
+            .filter((cls.m.id == trial_ref) | (Tag.m.name == trial_ref))
         ).first()
 
-    @proxy_method
-    def load_parent(model, cls, script, remove=True, parent_required=False,
+    @classmethod  # query
+    def load_parent(cls, script, remove=True, parent_required=False,
                     session=None):
         """Load head trial by script
 
@@ -353,19 +310,19 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         session -- specify session for loading (default=relational.session)
         """
         session = session or relational.session
-        head = HeadProxy.load_head(script, session=session)
+        head = Head.load_head(script, session=session)
         if head:
             trial = head.trial
             if remove:
-                HeadProxy.remove(head.id, session=relational.make_session())
+                Head.remove(head.id, session=relational.make_session())
         elif not head:
             trial = cls.last_trial(
                 script=script, parent_required=parent_required,
                 session=session)
         return trial
 
-    @proxy_method
-    def fast_last_trial_id_without_inheritance(model, cls, session=None):
+    @classmethod  # query
+    def fast_last_trial_id(cls, session=None):
         """Load last trial id that did not bypass modules
 
 
@@ -375,18 +332,18 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         session -- specify session for loading (default=relational.session)
         """
         session = session or relational.session
-        if not hasattr(model, "_last_trial_id_without_inheritance"):
-            ttrial = model.__table__
+        if not hasattr(cls, "_last_trial_id"):
+            ttrial = cls.t
             _query = (
                 select([ttrial.c.id]).where(ttrial.c.start.in_(
                     select([func.max(ttrial.c.start)])
                     .select_from(ttrial)
-                    .where(ttrial.c.inherited_id == None)
+                    .where(ttrial.c.inherited_id == None)                        # pylint: disable=singleton-comparison
                 ))
             )
-            model._last_trial_id_without_inheritance = str(_query)
+            cls.last_trial_id = str(_query)
         an_id = session.execute(
-            model._last_trial_id_without_inheritance).fetchone()
+            cls.last_trial_id).fetchone()
         if not an_id:
             raise RuntimeError(
                 "Not able to bypass modules check because no previous trial "
@@ -394,8 +351,8 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
             )
         return an_id[0]
 
-    @proxy_method
-    def fast_update(model, cls, trial_id, finish, session=None):
+    @classmethod  # query
+    def fast_update(cls, trial_id, finish, session=None):
         """Update finish time of trial
 
         Use core sqlalchemy
@@ -409,7 +366,7 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         session -- specify session for loading (default=relational.session)
         """
         session = session or relational.session
-        ttrial = model.__table__
+        ttrial = cls.t
         session.execute(
             ttrial.update()
             .values(finish=finish)
@@ -417,9 +374,9 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         )
         session.commit()
 
-    @proxy_method
-    def fast_store(model, cls, start, script, code_hash, arguments,
-                   bypass_modules, command, run, session=None):
+    @classmethod  # query
+    def store(cls, start, script, code_hash, arguments, bypass_modules,          # pylint: disable=too-many-arguments
+              command, run, session=None):
         """Create trial and assign a new id to it
 
         Use core sqlalchemy
@@ -444,8 +401,8 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
 
         inherited_id = None
         if bypass_modules:
-            inherited_id = cls.fast_last_trial_id_without_inheritance()
-        ttrial = model.__table__
+            inherited_id = cls.fast_last_trial_id()
+        ttrial = cls.__table__
         result = session.execute(
             ttrial.insert(),
             {"start": start, "script": script, "code_hash": code_hash,
@@ -455,12 +412,12 @@ class TrialProxy(with_metaclass(set_proxy(Trial))):
         session.commit()
         return tid
 
-    @proxy_method
-    def all(model, cls, session=None):
+    @classmethod  # query
+    def all(cls, session=None):
         """Return all trials
 
         Keyword arguments:
         session -- specify session for loading (default=relational.session)
         """
         session = session or relational.session
-        return proxy_gen(session.query(model))
+        return proxy_gen(session.query(cls.m))

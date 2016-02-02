@@ -31,8 +31,8 @@ class Execution(object):
         provider_cls = glob.get(metascript.execution_provenance, Profiler)
         self.provider = provider_cls(metascript)
 
-    # TODO: Processor load. Should be collected from time to time
-    #                       (there are static and dynamic metadata)
+    # ToDo #76: Processor load. Should be collected from time to time
+    #                         (there are static and dynamic metadata)
     # print os.getloadavg()
     @meta_profiler("execution")
     def collect_provenance(self, metascript):
@@ -48,7 +48,7 @@ class Execution(object):
         )
 
         print_msg("  executing the script")
-        self.provider.tearup() # It must be right before exec
+        self.provider.tearup()  # It must be right before exec
         try:
             exec(metascript.compiled, metascript.namespace)
         except SystemExit as ex:
@@ -56,7 +56,7 @@ class Execution(object):
             self.msg = ("the execution exited via sys.exit(). Exit status: {}"
                         "".format(ex.code))
         except Exception as e:
-            # TODO: exceptions should be registered as return from the
+            # ToDo #77: exceptions should be registered as return from the
             # activation and stored in the database. We are currently ignoring
             # all the activation tree when exceptions are raised.
             self.force_msg = self.partial = True

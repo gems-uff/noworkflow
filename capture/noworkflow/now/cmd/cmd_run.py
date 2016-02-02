@@ -50,7 +50,7 @@ class ScriptArgs(argparse.Action):
 def run(metascript):
     """Execute noWokflow to capture provenance from script"""
     try:
-        metascript.trial_id = Trial.fast_store(*metascript.create_trial_args())
+        metascript.trial_id = Trial.store(*metascript.create_trial_args())
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
 
         io.print_msg("collecting definition provenance")
