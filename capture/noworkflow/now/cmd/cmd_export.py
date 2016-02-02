@@ -73,6 +73,7 @@ def nbconvert(code):
 
 
 def export_notebook(trial):
+    """Create notebook in the desired format and save it"""
     if trial == "history":
         inb = nbconvert(("%load_ext noworkflow\n"
                          "import noworkflow.now.ipython as nip\n"
@@ -150,6 +151,6 @@ class Export(Command):
             trial = Trial(trial_ref=args.trial)
             print(trial.prolog.export_text_facts())
             if args.rules:
-                print("\n".join(trial.prolog.export_rules()))
+                print("\n".join(trial.prolog.rules()))
         else:
             export_notebook(args.trial)

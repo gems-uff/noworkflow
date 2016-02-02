@@ -89,7 +89,7 @@ class Restore(Command):
 
         trial.create_head()
         if args.local:
-            for module in trial.local_modules:
+            for module in trial.local_modules:                                   # pylint: disable=not-an-iterable
                 self.restore(module.path, module.code_hash, trial.id)
 
         if args.input:

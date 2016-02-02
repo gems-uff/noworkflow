@@ -29,7 +29,7 @@ def non_negative(string):
     return value
 
 
-class ScriptArgs(argparse.Action):
+class ScriptArgs(argparse.Action):                                               # pylint: disable=too-few-public-methods
     """Action to create script attribute"""
     def __call__(self, parser, namespace, values, option_string=None):
         if not values:

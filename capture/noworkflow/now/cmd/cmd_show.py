@@ -83,7 +83,7 @@ class Show(Command):
         if args.function_activations:
             print_msg("this trial has the following function activation "
                       "graphF:", True)
-            for act in trial.initial_activations:
+            for act in trial.initial_activations:                                # pylint: disable=not-an-iterable
                 print_function_activation(trial, act)
 
         if args.file_accesses:
