@@ -30,10 +30,11 @@ class MetaModel(type):
         attrs["__refs__"] = []
         attrs["REPLACE"] = attrs.get("REPLACE", {})
         attrs["DEFAULT"] = attrs.get("DEFAULT", {})
+        if "__modelname__" not in attrs:
+            attrs["__modelname__"] = name
 
         cls = super(MetaModel, mcs).__new__(mcs, name, bases, attrs)
-        if "__modelname__" in attrs:
-            mcs.__classes__[attrs["__modelname__"]] = cls
+        mcs.__classes__[attrs["__modelname__"]] = cls
         return cls
 
     def __call__(cls, *args, **kwargs):
@@ -322,10 +323,10 @@ def proxy_class(cls):
             #description[name] = None
             attributes[name] = var
         elif isinstance(var, (Many, One)):
-            var.name = "_" + name
+            var.name = name
             attributes[var.name] = relationship(*var.args, **var.kwargs)
         elif isinstance(var, ModelMethod):
-            new_name = "_query_" + name
+            new_name = name
             setattr(cls, name, proxy_attr(new_name, proxy_func=var.proxy))
             attributes[new_name] = property(var.func)
         elif name in ('__tablename__', '__table_args__'):
@@ -342,3 +343,8 @@ def proxy_class(cls):
     AlchemyProxy.__alchemy_refs__[cls.__model__] = cls
 
     return cls
+
+
+def is_none(attribute):
+    """Filter SQLAlchemy attribute is None"""
+    return attribute == None                                                     # pylint: disable=singleton-comparison

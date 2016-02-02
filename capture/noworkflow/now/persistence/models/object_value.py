@@ -35,8 +35,8 @@ class ObjectValue(AlchemyProxy):
     value = Column(Text)
     type = Column(Text, CheckConstraint("type IN ('GLOBAL', 'ARGUMENT')"))       # pylint: disable=invalid-name
 
-    trial = backref_one("_trial")  # Trial._object_values
-    activation = backref_one("_activation")  # Ativation._object_values
+    trial = backref_one("trial")  # Trial.object_values
+    activation = backref_one("activation")  # Ativation.object_values
 
     prolog_description = PrologDescription("object_value", (
         PrologTrial("trial_id"),

@@ -6,7 +6,6 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import weakref
 import threading
 
 from os.path import join, exists
@@ -26,11 +25,11 @@ class RelationalDatabase(object):
 
     def __init__(self, persistence_config):
         self.db_path = None  # Database path
+        self.engine = None
         self._session_map = {}
         self.session_factory = sessionmaker()
 
         self.base = declarative_base()
-        self.base._persistence = weakref.proxy(self)
 
         persistence_config.add(self)
 
@@ -38,7 +37,8 @@ class RelationalDatabase(object):
         """Set content_path"""
         self.db_path = join(config.provenance_path, DB_FILENAME)
 
-    def mock(self, config):
+    def mock(self, config):                                                      # pylint: disable=unused-argument
+        """Mock path for tests"""
         self.db_path = ""
 
     def connect(self, config):
@@ -75,4 +75,5 @@ class RelationalDatabase(object):
         return self._session_map[ident]
 
     def query(self, text):
+        """Perform SQL query"""
         return self.session.execute(text).fetchall()

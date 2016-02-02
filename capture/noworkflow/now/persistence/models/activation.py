@@ -23,7 +23,6 @@ from .slicing_dependency import SlicingDependency
 @proxy_class
 class Activation(AlchemyProxy):
     """Represent a function activation"""
-
     __tablename__ = "function_activation"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
@@ -41,38 +40,38 @@ class Activation(AlchemyProxy):
     finish = Column(TIMESTAMP)
     caller_id = Column(Integer, index=True)
 
-    _children = backref("_children", order_by="Activation.start")
+    _children = backref("children", order_by="Activation.start")
     caller = one(
         "Activation", remote_side=[trial_id, id],
         backref=_children, viewonly=True
     )
 
-    object_values = many_viewonly_ref("_activation", "ObjectValue")
-    file_accesses = many_viewonly_ref("_activation", "FileAccess")
+    object_values = many_viewonly_ref("activation", "ObjectValue")
+    file_accesses = many_viewonly_ref("activation", "FileAccess")
 
-    variables = many_ref("_activation", "SlicingVariable")
-    variables_usages = many_viewonly_ref("_activation", "SlicingUsage")
+    variables = many_ref("activation", "SlicingVariable")
+    variables_usages = many_viewonly_ref("activation", "SlicingUsage")
     dependent_variables = many_viewonly_ref(
-        "_dependent_activation", "SlicingDependency",
+        "dependent_activation", "SlicingDependency",
         primaryjoin=((id == SlicingDependency.m.dependent_activation_id) &
                      (trial_id == SlicingDependency.m.trial_id)))
     supplier_variables = many_viewonly_ref(
-        "_supplier_activation", "SlicingDependency",
+        "supplier_activation", "SlicingDependency",
         primaryjoin=((id == SlicingDependency.m.supplier_activation_id) &
                      (trial_id == SlicingDependency.m.trial_id)))
 
-    trial = backref_one("_trial")  # Trial._activations
-    children = backref_many("_children")  # Activation._caller
+    trial = backref_one("trial")  # Trial.activations
+    children = backref_many("children")  # Activation.caller
 
     @query_many_property
     def globals(self):
         """Return activation globals as a SQLAlchemy query"""
-        return self._object_values.filter(ObjectValue.m.type == "GLOBAL")        # pylint: disable=no-member
+        return self.object_values.filter(ObjectValue.m.type == "GLOBAL")
 
     @query_many_property
     def arguments(self):
         """Return activation arguments as a SQLAlchemy query"""
-        return self._object_values.filter(ObjectValue.m.type == "ARGUMENT")      # pylint: disable=no-member
+        return self.object_values.filter(ObjectValue.m.type == "ARGUMENT")
 
     prolog_description = PrologDescription("activation", (
         PrologTrial("trial_id"),

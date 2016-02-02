@@ -8,9 +8,11 @@ from __future__ import (absolute_import, print_function,
 
 from future.utils import text_to_native_str as n
 
+# Base
+from .base import Model, MetaModel
+
 # Database Models
 from .activation import Activation
-from .base import proxy, proxy_gen, Model, MetaModel
 from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
 from .file_access import FileAccess
@@ -42,7 +44,7 @@ ORDER = [
 
 
 __all__ = [
-    n(x.__modelname__) for x in ORDER                                            # pylint: disable=no-member
+    n(x.__modelname__) for x in ORDER
 ] + [
     "History",
     "Diff",
@@ -50,7 +52,5 @@ __all__ = [
 
     "MetaModel",
     "Model",
-    "proxy",
-    "proxy_gen",
-    "order"
+    "ORDER"
 ]

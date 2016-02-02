@@ -38,8 +38,8 @@ class FileAccess(AlchemyProxy):
     timestamp = Column(TIMESTAMP)
     function_activation_id = Column(Integer, index=True)
 
-    trial = backref_one("_trial")  # Trial._file_accesses
-    activation = backref_one("_activation")  # Activation._file_accesses
+    trial = backref_one("trial")  # Trial.file_accesses
+    activation = backref_one("activation")  # Activation.file_accesses
 
     prolog_description = PrologDescription("access", (
         PrologTrial("trial_id"),

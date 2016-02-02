@@ -41,9 +41,9 @@ class SlicingUsage(AlchemyProxy):
     line = Column(Integer)
     context = Column(Text, CheckConstraint("context IN ('Load', 'Del')"))
 
-    trial = backref_one("_trial")  # Trial._slicing_usages
-    activation = backref_one("_activation")  # Activation._variables_usages
-    variable = backref_one("_variable")  # SlicinVariable._slicing_usages
+    trial = backref_one("trial")  # Trial.slicing_usages
+    activation = backref_one("activation")  # Activation.variables_usages
+    variable = backref_one("variable")  # SlicinVariable.slicing_usages
 
     prolog_description = PrologDescription("usage", (
         PrologTrial("trial_id"),

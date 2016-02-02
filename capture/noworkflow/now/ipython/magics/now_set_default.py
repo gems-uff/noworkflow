@@ -37,9 +37,9 @@ class NowSetDefault(IpythonCommandMagic):
                 help="Default assingments. Use the format var=value")
 
     def execute(self, func, line, cell, magic_cls):
-        p = re.compile("\s*(?P<left>[\w\.]+)\s*=\s*(?P<right>\w+)\s*")
+        pattern = re.compile(r"\s*(?P<left>[\w\.]+)\s*=\s*(?P<right>\w+)\s*")
         _, args = self.arguments(func, line)
-        for match in p.finditer(" ".join(args.defaults)):
+        for match in pattern.finditer(" ".join(args.defaults)):
             right = match.group("right")
             if right.isdigit():
                 right = int(right)

@@ -37,11 +37,11 @@ class SlicingVariable(AlchemyProxy):
     value = Column(Text)
     time = Column(TIMESTAMP)
 
-    slicing_usages = many_ref("_variable", "SlicingUsage")
+    slicing_usages = many_ref("variable", "SlicingUsage")
 
     # dependencies in which this variable is the dependent
     suppliers_dependencies = many_viewonly_ref(
-        "_dependent", "SlicingDependency",
+        "dependent", "SlicingDependency",
         primaryjoin=(
             (id == SlicingDependency.m.dependent_id) &
             (activation_id == SlicingDependency.m.dependent_activation_id) &
@@ -50,14 +50,14 @@ class SlicingVariable(AlchemyProxy):
 
     # dependencies in which this variable is the supplier
     dependents_dependencies = many_viewonly_ref(
-        "_supplier", "SlicingDependency",
+        "supplier", "SlicingDependency",
         primaryjoin=(
             (id == SlicingDependency.m.supplier_id) &
             (activation_id == SlicingDependency.m.supplier_activation_id) &
             (trial_id == SlicingDependency.m.trial_id)))
 
     suppliers = many_viewonly_ref(
-        "_dependents", "SlicingVariable",
+        "dependents", "SlicingVariable",
         secondary=SlicingDependency.__table__,
         primaryjoin=(
             (id == SlicingDependency.m.dependent_id) &
@@ -68,9 +68,9 @@ class SlicingVariable(AlchemyProxy):
             (activation_id == SlicingDependency.m.supplier_activation_id) &
             (trial_id == SlicingDependency.m.trial_id)))
 
-    trial = backref_one("_trial")  # Trial._slicing_variables
-    activation = backref_one("_activation")  # Activation._variables
-    dependents = backref_many("_dependents")  # SlicingVariable._suppliers
+    trial = backref_one("trial")  # Trial.slicing_variables
+    activation = backref_one("activation")  # Activation.variables
+    dependents = backref_many("dependents")  # SlicingVariable.suppliers
 
     prolog_description = PrologDescription("variable", (
         PrologTrial("trial_id"),

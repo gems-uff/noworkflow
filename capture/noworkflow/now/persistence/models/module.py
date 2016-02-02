@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, Text, select, bindparam
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_many
+from .base import AlchemyProxy, proxy_class, backref_many, is_none
 
 
 @proxy_class
@@ -27,7 +27,7 @@ class Module(AlchemyProxy):
     path = Column(Text)
     code_hash = Column(Text, index=True)
 
-    trials = backref_many("_trials")  # Trial._dmodules
+    trials = backref_many("trials")  # Trial.dmodules
 
     def __key(self):
         return (self.name, self.version, self.path, self.code_hash)
@@ -82,9 +82,9 @@ class Module(AlchemyProxy):
             tmodule = cls.t
             _query = select([tmodule.c.id]).where(
                 (tmodule.c.name == bindparam("name")) &
-                ((tmodule.c.version == None) |                                   # pylint: disable=singleton-comparison
+                ((is_none(tmodule.c.version)) |
                  (tmodule.c.version == bindparam("version"))) &
-                ((tmodule.c.code_hash == None) |                                 # pylint: disable=singleton-comparison
+                ((is_none(tmodule.c.code_hash)) |
                  (tmodule.c.code_hash == bindparam("code_hash")))
             )
             cls._load_or_create_module_id = str(_query)

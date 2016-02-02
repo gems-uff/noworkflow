@@ -2,20 +2,21 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Persistence Module. Perform database connection, and queries"""
 from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+                        division)
 
 from .config import PersistenceConfig
 from .content_database import ContentDatabase
 from .relational_database import RelationalDatabase
 
-persistence_config = PersistenceConfig()
-content = ContentDatabase(persistence_config)
-relational = RelationalDatabase(persistence_config)
+persistence_config = PersistenceConfig()                                         # pylint: disable=invalid-name
+content = ContentDatabase(persistence_config)                                    # pylint: disable=invalid-name
+relational = RelationalDatabase(persistence_config)                              # pylint: disable=invalid-name
 
 
-def get_serializer(arg):
+def get_serializer(arg):                                                         # pylint: disable=unused-argument
+    """Select serializer according to argument"""
     # ToDo #54: use arg to select serialize
     # from .serializers import jsonpickle_serializer, jsonpickle_content
     # from .serializers import SimpleSerializer
@@ -26,8 +27,8 @@ def get_serializer(arg):
 
 
 __all__ = [
-    b"persistence_config",
-    b"content",
-    b"relational",
-    b"get_serializer",
+    "persistence_config",
+    "content",
+    "relational",
+    "get_serializer",
 ]

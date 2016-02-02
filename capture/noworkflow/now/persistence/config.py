@@ -35,6 +35,7 @@ class PersistenceConfig(object):
 
     @property
     def path(self):
+        """Return database path"""
         return self.base_path
 
     @path.setter
@@ -76,4 +77,5 @@ class PersistenceConfig(object):
         self.connect()
 
     def add(self, obj):
+        """Add database manager to config for delegation"""
         self.delegate.append(obj)

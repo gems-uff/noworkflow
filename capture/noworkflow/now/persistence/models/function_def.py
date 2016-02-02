@@ -31,24 +31,24 @@ class FunctionDef(AlchemyProxy):
     code_hash = Column(Text)
     trial_id = Column(Integer, index=True)
 
-    objects = many_ref("_function_def", "Object")
+    objects = many_ref("function_def", "Object")
 
-    trial = backref_one("_trial")  #  Trial.function_defs
+    trial = backref_one("trial")  #  Trial.function_defs
 
     @query_many_property
     def globals(self):
         """Return function definition globals as a SQLAlchemy query"""
-        return self._objects.filter(Object.m.type == "GLOBAL")                   # pylint: disable=no-member
+        return self.objects.filter(Object.m.type == "GLOBAL")
 
     @query_many_property
     def arguments(self):
         """Return function definition arguments as a SQLAlchemy query"""
-        return self._objects.filter(Object.m.type == "ARGUMENT")                 # pylint: disable=no-member
+        return self.objects.filter(Object.m.type == "ARGUMENT")
 
     @query_many_property
     def function_calls(self):
         """Return function definition calls as a SQLAlchemy query"""
-        return self._objects.filter(Object.m.type == "FUNCTION_CALL")            # pylint: disable=no-member
+        return self.objects.filter(Object.m.type == "FUNCTION_CALL")
 
     prolog_description = PrologDescription("function_def", (
         PrologTrial("trial_id"),

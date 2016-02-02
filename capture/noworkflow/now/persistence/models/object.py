@@ -36,8 +36,8 @@ class Object(AlchemyProxy):
         Text,
         CheckConstraint("type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION_CALL')"))
 
-    trial = backref_one("_trial")  # Trial._objects
-    function_def = backref_one("_function_def")  # FunctionDef._objects
+    trial = backref_one("trial")  # Trial.objects
+    function_def = backref_one("function_def")  # FunctionDef.objects
 
     prolog_description = PrologDescription("object", (
         PrologTrial("trial_id"),

@@ -28,7 +28,8 @@ class ContentDatabase(object):
         """Set content_path"""
         self.content_path = join(config.provenance_path, CONTENT_DIRNAME)
 
-    def mock(self, config):
+    def mock(self, config):                                                      # pylint: disable=unused-argument, no-self-use
+        """Mock storage for tests"""
         ContentDatabase.put = lambda s, c: hashlib.sha1(c).hexdigest()
         ContentDatabase.get = lambda s, c: "".encode("utf-8")
 

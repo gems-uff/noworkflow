@@ -16,7 +16,7 @@ from ...utils.prolog import PrologDescription, PrologTrial
 from .. import relational, content, persistence_config
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
-from .base import one, many_ref, many_viewonly_ref, backref_many
+from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
 
 from .trial_prolog import TrialProlog
 
@@ -71,48 +71,48 @@ class Trial(AlchemyProxy):
     run = Column(Integer)
 
     inherited = one(
-        "Trial", backref="_bypass_children", viewonly=True,
+        "Trial", backref="bypass_children", viewonly=True,
         remote_side=[id], primaryjoin=(id == inherited_id)
     )
     parent = one(
-        "Trial", backref="_children", viewonly=True,
+        "Trial", backref="children", viewonly=True,
         remote_side=[id], primaryjoin=(id == parent_id)
     )
 
-    function_defs = many_ref("_trial", "FunctionDef")
-    module_dependencies = many_ref("_trials", "Dependency")
-    dmodules = many_ref("_trials", "Module", secondary=Dependency.t)             # pylint: disable=no-member
-    environment_attrs = many_ref("_trial", "EnvironmentAttr")
-    activations = many_ref("_trial", "Activation",
+    function_defs = many_ref("trial", "FunctionDef")
+    module_dependencies = many_ref("trials", "Dependency")
+    dmodules = many_ref("trials", "Module", secondary=Dependency.t)
+    environment_attrs = many_ref("trial", "EnvironmentAttr")
+    activations = many_ref("trial", "Activation",
                            order_by=Activation.m.start)
-    file_accesses = many_viewonly_ref("_trial", "FileAccess")
-    objects = many_viewonly_ref("_trial", "Object")
-    object_values = many_viewonly_ref("_trial", "ObjectValue")
-    slicing_variables = many_viewonly_ref("_trial", "SlicingVariable")
-    slicing_usages = many_viewonly_ref("_trial", "SlicingUsage")
-    slicing_dependencies = many_viewonly_ref("_trial", "SlicingDependency")
-    tags = many_ref("_trial", "Tag")
+    file_accesses = many_viewonly_ref("trial", "FileAccess")
+    objects = many_viewonly_ref("trial", "Object")
+    object_values = many_viewonly_ref("trial", "ObjectValue")
+    slicing_variables = many_viewonly_ref("trial", "SlicingVariable")
+    slicing_usages = many_viewonly_ref("trial", "SlicingUsage")
+    slicing_dependencies = many_viewonly_ref("trial", "SlicingDependency")
+    tags = many_ref("trial", "Tag")
 
-    bypass_children = backref_many("_bypass_children")  # Trial._inherited
-    children = backref_many("_children")  # Trial._parent
+    bypass_children = backref_many("bypass_children")  # Trial.inherited
+    children = backref_many("children")  # Trial.parent
 
     @query_many_property
     def local_modules(self):
         """Load local modules. Return SQLAlchemy query"""
-        return self._query_modules.filter(                                       # pylint: disable=no-member
+        return self.modules.filter(                                              # pylint: disable=no-member
             Module.m.path.like("%{}%".format(persistence_config.base_path)))
 
     @query_many_property
     def modules(self):
         """Load modules. Return SQLAlchemy query"""
-        if self._inherited:                                                      # pylint: disable=no-member
-            return self._inherited._query_modules                                # pylint: disable=no-member, protected-access
-        return self._dmodules                                                    # pylint: disable=no-member
+        if self.inherited:
+            return self.inherited.modules
+        return self.dmodules
 
     @query_many_property
     def initial_activations(self):
         """Return initial activation as a SQLAlchemy query"""
-        return self._activations.filter(Activation.m.caller_id == None)          # pylint: disable=no-member, singleton-comparison
+        return self.activations.filter(is_none(Activation.m.caller_id))
 
     DEFAULT = {
         "graph.width": 500,
@@ -175,7 +175,7 @@ class Trial(AlchemyProxy):
         """Return the "main" script content of the trial"""
         return PrettyLines(
             content.get(self.code_hash)
-            .encode("utf-8").split("/n"))
+            .decode("utf-8").split("/n"))
 
     @property
     def finished(self):
@@ -338,7 +338,7 @@ class Trial(AlchemyProxy):
                 select([ttrial.c.id]).where(ttrial.c.start.in_(
                     select([func.max(ttrial.c.start)])
                     .select_from(ttrial)
-                    .where(ttrial.c.inherited_id == None)                        # pylint: disable=singleton-comparison
+                    .where(is_none(ttrial.c.inherited_id))
                 ))
             )
             cls.last_trial_id = str(_query)

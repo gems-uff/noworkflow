@@ -49,13 +49,13 @@ class SlicingDependency(AlchemyProxy):
     supplier_activation_id = Column(Integer, index=True)
     supplier_id = Column(Integer, index=True)
 
-    trial = backref_one("_trial")  # Trial._slicing_dependencies
-    # Activation._dependent_variables, SlicingVariable._suppliers_dependencies
-    dependent_activation = backref_one("_dependent_activation")
-    dependent = backref_one("_dependent")
-    # Activation._supplier_variables, SlicingVariable._dependents_dependencies
-    supplier_activation = backref_one("_supplier_activation")
-    supplier = backref_one("_supplier")
+    trial = backref_one("trial")  # Trial.slicing_dependencies
+    # Activation.dependent_variables, SlicingVariable.suppliers_dependencies
+    dependent_activation = backref_one("dependent_activation")
+    dependent = backref_one("dependent")
+    # Activation.supplier_variables, SlicingVariable.dependents_dependencies
+    supplier_activation = backref_one("supplier_activation")
+    supplier = backref_one("supplier")
 
     prolog_description = PrologDescription("dependency", (
         PrologTrial("trial_id"),

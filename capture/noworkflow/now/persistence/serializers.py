@@ -18,17 +18,22 @@ from . import content
 
 
 def jsonpickle_content(obj):
+    """Use jsonpickle to get objects representation
+    Store representation in the content database"""
     import jsonpickle
     return "now-content:" + content.put(jsonpickle.encode(obj))
 
 
-class SimpleSerializer(object):
+class SimpleSerializer(object):                                                  # pylint: disable=too-few-public-methods
+    """Simple serializer. Get objects representations without repr"""
 
     def _iter(self, obj, maxlevel):
+        """Default serialization for iterables"""
         return ", ".join(self.serialize(x, maxlevel=maxlevel - 1)
                          for x in obj)
 
-    def _default(self, obj):
+    def _default(self, obj):                                                     # pylint: disable=no-self-use
+        """Default serialization for non iterables"""
         if isinstance(obj, IMMUTABLE):
             return repr(obj)
 
@@ -45,6 +50,7 @@ class SimpleSerializer(object):
         return "<unsupported type at 0x{:x}>".format(id(obj))
 
     def serialize(self, obj, maxlevel=5):
+        """Serialize obj"""
         if isinstance(obj, IMMUTABLE) or not maxlevel:
             return self._default(obj)
 

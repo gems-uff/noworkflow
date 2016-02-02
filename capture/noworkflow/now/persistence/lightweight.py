@@ -25,7 +25,7 @@ class ObjectStore(object):
         """
         self.cls = cls
         self.store = {}
-        self.id = 0
+        self.id = 0                                                              # pylint: disable=invalid-name
         self.count = 0
 
     def __getitem__(self, index):
@@ -57,9 +57,9 @@ class ObjectStore(object):
 
     def remove(self, value):
         """Remove object from storage"""
-        for k, v in viewitems(self.store):
-            if v == value:
-                del self.store[k]
+        for key, val in viewitems(self.store):
+            if val == value:
+                del self.store[key]
                 self.count -= 1
 
     def __iter__(self):
@@ -68,32 +68,32 @@ class ObjectStore(object):
 
     def items(self):
         """Iterate on both ids and objects"""
-        for k, v in viewitems(self.store):
-            yield k, v
+        for key, value in viewitems(self.store):
+            yield key, value
 
     def iteritems(self):
         """Iterate on both ids and objects"""
-        for k, v in viewitems(self.store):
-            yield k, v
+        for key, value in viewitems(self.store):
+            yield key, value
 
     def values(self):
         """Iterate on objects if they exist"""
-        for v in viewvalues(self.store):
-            if v is not None:
-                yield v
+        for value in viewvalues(self.store):
+            if value is not None:
+                yield value
 
     def clear(self):
         """Remove deleted objects from storage"""
-        self.store = {k: v for k, v in viewitems(self.store) if v}
+        self.store = {key: val for key, val in viewitems(self.store) if val}
         self.count = len(self.store)
 
     def generator(self, trial_id, partial=False):
         """Generator used for storing objects in database"""
-        for o in self.values():
-            if partial and o.is_complete():
-                del self[o.id]
-            o.trial_id = trial_id
-            yield o
+        for obj in self.values():
+            if partial and obj.is_complete():
+                del self[obj.id]
+            obj.trial_id = trial_id
+            yield obj
         if partial:
             self.clear()
 
@@ -102,7 +102,7 @@ class ObjectStore(object):
         return bool(self.count)
 
 
-def define_attrs(required, extra=[]):
+def define_attrs(required, extra=[]):                                            # pylint: disable=dangerous-default-value
     """Create __slots__ by adding extra attributes to required ones"""
     slots = tuple(required + extra)
     attributes = tuple(required)
@@ -110,17 +110,18 @@ def define_attrs(required, extra=[]):
     return slots, attributes
 
 
-class BaseLW:
+class BaseLW:                                                                    # pylint: disable=too-few-public-methods
+    """Lightweight modules base class"""
 
     def keys(self):
         """Return attributes that should be saved"""
-        return self.attributes
+        return self.attributes                                                   # pylint: disable=no-member
 
     def __iter__(self):
-        return iter(self.attributes)
+        return iter(self.attributes)                                             # pylint: disable=no-member
 
     def __getitem__(self, key):
-        if key in self.special and getattr(self, key) == -1:
+        if key in self.special and getattr(self, key) == -1:                     # pylint: disable=no-member
             return None
         return getattr(self, key)
 
@@ -138,15 +139,15 @@ class ModuleLW(BaseLW):
     )
     special = set()
 
-    def __init__(self, oid, name, version, path, code_hash):
+    def __init__(self, oid, name, version, path, code_hash):                     # pylint: disable=too-many-arguments
         self.trial_id = -1
-        self.id = oid
+        self.id = oid                                                            # pylint: disable=invalid-name
         self.name = name
         self.version = version
         self.path = path
         self.code_hash = code_hash
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """Module can always be removed from object store"""
         return True
 
@@ -167,10 +168,10 @@ class DependencyLW(BaseLW):
 
     def __init__(self, oid, module_id):
         self.trial_id = -1
-        self.id = oid
+        self.id = oid                                                            # pylint: disable=invalid-name
         self.module_id = module_id
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """Dependency can always be removed from object store"""
         return True
 
@@ -190,11 +191,11 @@ class EnvironmentAttrLW(BaseLW):
 
     def __init__(self, oid, name, value):
         self.trial_id = -1
-        self.id = oid
+        self.id = oid                                                            # pylint: disable=invalid-name
         self.name = name
         self.value = value
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """EnvironmentAttr can always be removed from object store"""
         return True
 
@@ -205,7 +206,7 @@ class EnvironmentAttrLW(BaseLW):
 
 # Definition
 
-class DefinitionLW(BaseLW):
+class DefinitionLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
     """Definition lightweight object
     May represent files, classes and function definitions
     There are type definitions on lightweight.pxd
@@ -217,9 +218,9 @@ class DefinitionLW(BaseLW):
     )
     special = set()
 
-    def __init__(self, aid, previous_namespace, name, code, dtype, parent):
+    def __init__(self, aid, previous_namespace, name, code, dtype, parent):      # pylint: disable=too-many-arguments
         self.trial_id = -1
-        self.id = aid
+        self.id = aid                                                            # pylint: disable=invalid-name
         self.namespace = (
             previous_namespace +
             ("." if previous_namespace else "") +
@@ -231,7 +232,7 @@ class DefinitionLW(BaseLW):
         self.code = code
         self.code_hash = content.put(code.encode("utf-8"))
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """DefinitionLW can always be removed from object store"""
         return True
 
@@ -252,12 +253,12 @@ class ObjectLW(BaseLW):
 
     def __init__(self, oid, name, otype, function_def_id):
         self.trial_id = -1
-        self.id = oid
+        self.id = oid                                                            # pylint: disable=invalid-name
         self.name = name
         self.type = otype
         self.function_def_id = function_def_id
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """Object can always be removed from object store"""
         return True
 
@@ -270,7 +271,7 @@ class ObjectLW(BaseLW):
 
 # Profiler
 
-class ActivationLW(BaseLW):
+class ActivationLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
     """Activation lightweight object
     There are type definitions on lightweight.pxd
     """
@@ -283,9 +284,9 @@ class ActivationLW(BaseLW):
     )
     special = {"caller_id"}
 
-    def __init__(self, aid, name, line, lasti, caller_id):
+    def __init__(self, aid, name, line, lasti, caller_id):                       # pylint: disable=too-many-arguments
         self.trial_id = aid
-        self.id = aid
+        self.id = aid                                                            # pylint: disable=invalid-name
         self.name = name
         self.line = line
         self.start = datetime.now()
@@ -330,15 +331,15 @@ class ObjectValueLW(BaseLW):
     )
     special = set()
 
-    def __init__(self, oid, name, value, otype, function_activation_id):
+    def __init__(self, oid, name, value, otype, function_activation_id):         # pylint: disable=too-many-arguments
         self.trial_id = -1
-        self.id = oid
+        self.id = oid                                                            # pylint: disable=invalid-name
         self.name = name
         self.value = value
         self.type = otype
         self.function_activation_id = function_activation_id
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """ObjectValue can always be removed"""
         return True
 
@@ -352,7 +353,7 @@ class ObjectValueLW(BaseLW):
         )
 
 
-class FileAccessLW(BaseLW):
+class FileAccessLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
     """FileAccess lightweight object
     There are type definitions on lightweight.pxd
     """
@@ -367,7 +368,7 @@ class FileAccessLW(BaseLW):
 
     def __init__(self, fid, name):
         self.trial_id = -1
-        self.id = fid
+        self.id = fid                                                            # pylint: disable=invalid-name
         self.name = name
         self.mode = "r"
         self.buffering = "default"
@@ -378,6 +379,7 @@ class FileAccessLW(BaseLW):
         self.done = False
 
     def update(self, variables):
+        """Update file access with dict"""
         for key, value in viewitems(variables):
             setattr(self, key, value)
 
@@ -392,20 +394,23 @@ class FileAccessLW(BaseLW):
 # Slicing
 
 class VariableLW(BaseLW):
+    """Variable lightweight object
+    There are type definitions on lightweight.pxd
+    """
     __slots__, attributes = define_attrs(
         ["id", "activation_id", "name", "line", "value", "time", "trial_id"]
     )
     special = set()
 
-    def __init__(self, vid, activation_id, name, line, value, time):
-        self.id = vid
+    def __init__(self, vid, activation_id, name, line, value, time):             # pylint: disable=too-many-arguments
+        self.id = vid                                                            # pylint: disable=invalid-name
         self.activation_id = activation_id
         self.name = name
         self.line = line
         self.value = value
         self.time = time
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """Variable can never be removed"""
         return False
 
@@ -416,22 +421,25 @@ class VariableLW(BaseLW):
 
 
 class VariableDependencyLW(BaseLW):
+    """Variable Dependency lightweight object
+    There are type definitions on lightweight.pxd
+    """
     __slots__, attributes = define_attrs(
         ["id", "dependent_activation_id", "dependent_id",
          "supplier_activation_id", "supplier_id", "trial_id"]
     )
     special = set()
 
-    def __init__(self, vid, dependent_activation_id, dependent_id,
+    def __init__(self, vid, dependent_activation_id, dependent_id,               # pylint: disable=too-many-arguments
                  supplier_activation_id, supplier_id):
-        self.id = vid
+        self.id = vid                                                            # pylint: disable=invalid-name
         self.dependent_activation_id = dependent_activation_id
         self.dependent_id = dependent_id
         self.supplier_activation_id = supplier_activation_id
         self.supplier_id = supplier_id
         self.trial_id = -1
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """Variable Dependency can always be removed"""
         return True
 
@@ -448,15 +456,17 @@ class VariableDependencyLW(BaseLW):
 
 
 class VariableUsageLW(BaseLW):
-
+    """Variable Usage lightweight object
+    There are type definitions on lightweight.pxd
+    """
     __slots__, attributes = define_attrs(
         ["id", "activation_id", "variable_id",
          "name", "line", "ctx", "trial_id"]
     )
     special = set()
 
-    def __init__(self, vid, activation_id, variable_id, name, line, ctx):
-        self.id = vid
+    def __init__(self, vid, activation_id, variable_id, name, line, ctx):        # pylint: disable=too-many-arguments
+        self.id = vid                                                            # pylint: disable=invalid-name
         self.activation_id = activation_id
         self.variable_id = variable_id
         self.name = name
@@ -464,7 +474,7 @@ class VariableUsageLW(BaseLW):
         self.ctx = ctx
         self.trial_id = -1
 
-    def is_complete(self):
+    def is_complete(self):                                                       # pylint: disable=no-self-use
         """Variable Usage can always be removed"""
         return True
 
