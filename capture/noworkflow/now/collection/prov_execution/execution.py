@@ -72,7 +72,6 @@ class Execution(object):
             self.force_msg = self.partial = False
             self.msg = ("the execution of trial {} finished successfully"
                         "".format(metascript.trial_id))
-        self.store_provenance()
 
     @meta_profiler("storage")
     def store_provenance(self):

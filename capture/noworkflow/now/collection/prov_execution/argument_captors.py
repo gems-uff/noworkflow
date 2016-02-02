@@ -193,7 +193,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
 
         call = provider.call_by_lasti[filename][lineno][lasti]
         if (isinstance(call, WITHOUT_PARAMS) or
-                (isinstance(call, Decorator) and not call.fn)):
+                (isinstance(call, Decorator) and not call.is_fn)):
             return
 
         return call

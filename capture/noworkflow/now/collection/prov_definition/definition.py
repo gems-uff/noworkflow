@@ -65,7 +65,6 @@ class Definition(object):                                                       
                     print("\n".join(cvmap(repr, visitor.disasm)))
                     print("--------------------------------------------------")
                 self._add_visitor(visitor)
-        self.store_provenance()
 
     def store_provenance(self):
         """Store definition provenance"""

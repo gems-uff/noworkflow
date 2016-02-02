@@ -52,12 +52,15 @@ def run(metascript):
 
         io.print_msg("collecting definition provenance")
         metascript.definition.collect_provenance()
+        metascript.definition.store_provenance()
 
         io.print_msg("collecting deployment provenance")
         metascript.deployment.collect_provenance()
+        metascript.deployment.store_provenance()
 
         io.print_msg("collection execution provenance")
         metascript.execution.collect_provenance()
+        metascript.execution.store_provenance()
 
         metaprofiler.meta_profiler.save()
 

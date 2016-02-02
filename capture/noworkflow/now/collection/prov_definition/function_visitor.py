@@ -46,10 +46,24 @@ class FunctionVisitor(ast.NodeVisitor):                                         
         """Use PyPosAST to extract node text without strips"""
         return extract_code(self.lcode, node)
 
+    def new_definition_context(self, node, typ="FUNCTION"):
+        """Visit node, open context. Collect code"""
+        self.contexts.append(self.definitions.add_object(
+            self.contexts[-1].namespace if len(self.contexts) > 1 else "",
+            node.name,
+            self.extract_code(node),
+            typ,
+            self.contexts[-1].id
+        ))
+
+        self.generic_visit(node)
+        self.contexts.pop()
+
     def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
         """Visit ClassDef. Ignore Classes"""
         # ToDo #74: capture class dry_add -> add_object
         # ToDo #74: "".encode("utf-8") -> self.extract_code(node),
+        # self.new_definition_context(node, typ="CLASS")
         self.contexts.append(self.definitions.dry_add(
             self.contexts[-1].namespace if len(self.contexts) > 1 else "",
             node.name,
@@ -62,16 +76,11 @@ class FunctionVisitor(ast.NodeVisitor):                                         
 
     def visit_FunctionDef(self, node):                                           # pylint: disable=invalid-name
         """Visit FunctionDef. Collect function code"""
-        self.contexts.append(self.definitions.add_object(
-            self.contexts[-1].namespace if len(self.contexts) > 1 else "",
-            node.name,
-            self.extract_code(node),
-            "FUNCTION",
-            self.contexts[-1].id
-        ))
+        self.new_definition_context(node, typ="FUNCTION")
 
-        self.generic_visit(node)
-        self.contexts.pop()
+    def visit_AsyncFunctionDef(self, node):                                      # pylint: disable=invalid-name
+        """Visit AsyncFunctionDef. Collect function code. Python 3.5"""
+        self.new_definition_context(node, typ="FUNCTION")
 
     def visit_arguments(self, node):
         """Visit arguments. Collect arguments"""

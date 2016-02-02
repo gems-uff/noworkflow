@@ -14,6 +14,7 @@ from collections import defaultdict
 from ...utils.bytecode.interpreter import CALL_FUNCTIONS, PRINT_ITEMS
 from ...utils.bytecode.interpreter import PRINT_NEW_LINES, SETUP_WITH
 from ...utils.bytecode.interpreter import WITH_CLEANUP, IMPORTS, ITERS
+from ...utils.bytecode.interpreter import SETUP_ASYNC_WITH
 
 from .function_visitor import FunctionVisitor
 from .utils import NamedContext, FunctionCall, ClassDef, Decorator, Generator
@@ -333,6 +334,10 @@ class SlicingVisitor(FunctionVisitor):                                          
         self.visit_stmts(node.orelse)
         self.loop.pop()
 
+    def visit_AsyncFor(self, node):                                              # pylint: disable=invalid-name
+        """Visit For. Create dependencies. Python 3.5"""
+        self.visit_For(node)
+
     def visit_While(self, node):                                                 # pylint: disable=invalid-name
         """Visit With. Create conditional dependencies"""
         self.condition.enable()
@@ -386,11 +391,11 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
         """Visit ClassDef. Create special function call"""
-        super(SlicingVisitor, self).visit_ClassDef(node)
         self.add_call_function(node, ClassDef)
 
         for dec_node in node.decorator_list:
             self.add_decorator(dec_node)
+        super(SlicingVisitor, self).visit_ClassDef(node)
 
     def visit_ListComp(self, node):                                              # pylint: disable=invalid-name
         """Visit ListComp. Create special function call on Python 3"""
@@ -419,10 +424,15 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_FunctionDef(self, node):                                           # pylint: disable=invalid-name
         """Visit FunctionDef"""
-        super(SlicingVisitor, self).visit_FunctionDef(node)
-
         for dec_node in node.decorator_list:
             self.add_decorator(dec_node)
+        super(SlicingVisitor, self).visit_FunctionDef(node)
+
+    def visit_AsyncFunctionDef(self, node):                                      # pylint: disable=invalid-name
+        """Visit AsyncFunctionDef. Python 3.5"""
+        for dec_node in node.decorator_list:
+            self.add_decorator(dec_node)
+        super(SlicingVisitor, self).visit_AsyncFunctionDef(node)
 
     def visit_Assert(self, node):                                                # pylint: disable=invalid-name
         """Visit Assert. Create special function call"""
@@ -482,7 +492,7 @@ class SlicingVisitor(FunctionVisitor):                                          
                 self.function_calls_by_lasti[inst.line][inst.offset] = _print
                 print_newline_index += 1
                 inst.extra = _print
-            if inst.opcode in SETUP_WITH:
+            if inst.opcode in SETUP_WITH or inst.opcode in SETUP_ASYNC_WITH:
                 end = int(inst.argrepr[3:])
                 _with = safeget(self.with_list, with_index)
                 _with.lasti = inst.offset

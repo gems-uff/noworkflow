@@ -32,6 +32,9 @@ if "PRINT_NEWLINE" in opmap:
 
 SETUP_WITH = {opmap["SETUP_WITH"], }
 WITH_CLEANUP = {opmap.get("WITH_CLEANUP") or opmap.get("WITH_CLEANUP_START"), }
+SETUP_ASYNC_WITH = set()
+if "SETUP_ASYNC_WITH" in opmap:
+    SETUP_ASYNC_WITH.add(opmap["SETUP_ASYNC_WITH"])
 
 IMPORTS = {opmap["IMPORT_NAME"], opmap["IMPORT_FROM"]}
 

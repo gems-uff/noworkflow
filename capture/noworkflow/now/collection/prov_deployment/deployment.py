@@ -183,7 +183,6 @@ class Deployment(object):
         else:
             print_msg("  searching for module dependencies")
             self._collect_modules_provenance()
-        self.store_provenance()
 
     def store_provenance(self):
         """Store deployment provenance"""

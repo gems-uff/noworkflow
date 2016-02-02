@@ -122,7 +122,7 @@ class ClassDef(FunctionCall):
     """Represent a class definition"""
 
     def __repr__(self):
-        return "Class()"
+        return "Class(line={})".format(self.line)
 
 
 class Decorator(FunctionCall):
