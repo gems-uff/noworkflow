@@ -195,8 +195,12 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
             activation.has_parameters = False
             provider.next_is_iter = True
             return
-
-        call = provider.call_by_lasti[filename][lineno][lasti]
+        try:
+            call = provider.call_by_lasti[filename][lineno][lasti]
+        except (IndexError, KeyError):
+            # call not found
+            # ToDo: show in dev-mode
+            return
         if (isinstance(call, WITHOUT_PARAMS) or
                 (isinstance(call, Decorator) and not call.is_fn)):
             activation.has_parameters = False
@@ -215,6 +219,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         super(SlicingArgumentCaptor, self).capture(frame, activation)
         provider = self.provider
 
+        self.frame = frame
         call = self._defined_call(activation)
         if not call:
             return

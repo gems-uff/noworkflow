@@ -11,6 +11,8 @@ noWorkflow was developed in Python and it currently is able to capture provenanc
 
 Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below, and the [tutorial videos at our Wiki page](https://github.com/gems-uff/noworkflow/wiki/Videos).
 
+noWorkflow supports Python 2.7 and Python 3.5.
+
 Team
 ----
 

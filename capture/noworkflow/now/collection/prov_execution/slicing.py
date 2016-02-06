@@ -120,6 +120,7 @@ class Tracer(Profiler):                                                         
         self.with_enter_by_lasti = definition.with_enter_by_lasti
         # Map of with __exit__ by line and lasti
         self.with_exit_by_lasti = definition.with_exit_by_lasti
+
         # Set of imports
         self.imports = definition.imports
         # Set of GET_ITER and FOR_ITER lasti by line
@@ -303,15 +304,22 @@ class Tracer(Profiler):                                                         
         if caller.with_definition:
             filename = activation.filename
             line, lasti = activation.line, activation.lasti
-            call = self.call_by_lasti[filename][line][lasti]
-            uid = (call.line, call.col)
-            if uid in caller.context and line in self.imports[filename]:
-                # Two calls in the same lasti: create dependencies for import
-                variable = caller.context[uid].call_var
-                dependencies_add(activation.id, _return.id,
-                                 variable.activation_id, variable.id)
-            caller.context[uid] = ActivationSlicing(
-                self.variables[vid], _return, caller.id, vid)
+            try:
+                call = self.call_by_lasti[filename][line][lasti]
+            except (IndexError, KeyError):
+                call = None
+                # call not found
+                # ToDo: show in dev-mode
+            if call is not None:
+                uid = (call.line, call.col)
+                if uid in caller.context and line in self.imports[filename]:
+                    # Two calls in the same lasti: create dependencies import
+                    variable = caller.context[uid].call_var
+                    dependencies_add(activation.id, _return.id,
+                                     variable.activation_id, variable.id)
+                caller.context[uid] = ActivationSlicing(
+                    self.variables[vid], _return, caller.id, vid)
+
 
         if self.comprehension_dependencies is not None:
             if activation.is_comprehension():
@@ -374,12 +382,17 @@ class Tracer(Profiler):                                                         
 
         # Artificial return depends on all parameters
         filename = activation.filename
-        call = self.call_by_lasti[filename][activation.line][activation.lasti]
-        all_args = list(self.find_variables(caller, call.all_args(),
-                                            activation.filename))
+        line, lasti = activation.line, activation.lasti
+        try:
+            call = self.call_by_lasti[filename][line][lasti]
+        except (IndexError, KeyError):
+            # call not found
+            # ToDo: show in dev-mode
+            return
+
+        all_args = list(self.find_variables(caller, call.all_args(), filename))
         self.add_dependencies(_return, all_args)
-        self.add_inter_dependencies(frame.f_locals, all_args,
-                                    caller, activation.line)
+        self.add_inter_dependencies(frame.f_locals, all_args, caller, line)
         return _return
 
     def add_inter_dependencies(self, f_locals, args, caller, lineno):            # pylint: disable=too-many-locals
