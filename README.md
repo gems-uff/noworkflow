@@ -54,6 +54,15 @@ $ python setup.py install
 ```
 This installs noWorkflow on your system. It will download the dependencies from PyPI
 
+Upgrade
+-------
+
+To upgrade the version of a previously installed noWorkflow using pip, you should run the following command:
+
+```bash
+$ pip install --upgrade noworkflow[all]
+```
+
 Basic Usage
 -----------
 
