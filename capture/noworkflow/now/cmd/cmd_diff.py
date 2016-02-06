@@ -59,8 +59,10 @@ class Diff(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("trial", type=str, nargs=2,
-                help="trial id to be compared")
+        add_arg("trial1", type=str,
+                help="first trial id to be compared")
+        add_arg("trial2", type=str,
+                help="second trial id to be compared")
         add_arg("-m", "--modules", action="store_true",
                 help="compare module dependencies")
         add_arg("-e", "--environment", action="store_true",
@@ -73,9 +75,8 @@ class Diff(Command):
 
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
-        args.trial = list(args.trial)
 
-        diff = DiffModel(args.trial[0], args.trial[1])
+        diff = DiffModel(args.trial1, args.trial2)
 
         print_msg("trial diff:", True)
         print_diff_trials(diff)

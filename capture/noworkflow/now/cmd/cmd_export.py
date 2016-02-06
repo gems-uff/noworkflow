@@ -14,11 +14,16 @@ import os
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 
+
 from .command import Command
 
 
 def export_type(string):
     """Check if argument is an integer or a diff"""
+    if string is None:
+        trial = Trial()
+        string = str(trial.id)
+
     if "diff:" in string:
         splitted = string.split(":")
         if len(splitted) < 3:

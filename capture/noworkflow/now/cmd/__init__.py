@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division)
 
 import argparse
+import sys
 
 from .command import Command
 from .cmd_run import Run
@@ -19,7 +20,7 @@ from .cmd_restore import Restore
 from .cmd_vis import Vis
 from .cmd_demo import Demo
 from .cmd_history import History
-
+from ..utils.io import print_msg
 
 def main():
     """Main function"""
@@ -43,8 +44,15 @@ def main():
     for cmd in commands:
         cmd.create_parser(subparsers)
 
-    args, _ = parser.parse_known_args()
-    args.func(args)
+    if len(sys.argv) == 1:
+        sys.argv.append("-h")
+
+    try:
+        args, _ = parser.parse_known_args()
+        args.func(args)
+    except RuntimeError as exc:
+        print_msg(exc, True)
+
 
 __all__ = [
     "Command",
