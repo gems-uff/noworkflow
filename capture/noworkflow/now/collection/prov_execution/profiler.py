@@ -71,6 +71,11 @@ class Profiler(ExecutionProvider):                                              
         # Events are unique
         self.unique_events = True
 
+        # Global activations
+        self.globals = {}
+        # Main activation
+        self.main_activation = None
+
         # Skip tear_up return
         self.skip_first_return = True
         self.enabled = True
@@ -106,7 +111,7 @@ class Profiler(ExecutionProvider):                                              
                 # get open"s parent activation
                 return self.activations[astack[-2]]
             return activation
-        return self.activations.dry_add("empty", 0, 0, -1)
+        return self.activations.dry_add("", "", "empty", 0, 0, -1, False)
 
     def new_open(self, old_open):
         """Wrap the open builtin function to register file access"""
@@ -171,7 +176,7 @@ class Profiler(ExecutionProvider):                                              
             return
         return Profiler._old_add_activation(self, aid)
 
-    def close_activation(self, frame, event, arg, ccall=False):                  # pylint: disable=unused-argument
+    def close_activation(self, frame, event, arg):                               # pylint: disable=unused-argument
         """Remove activation from stack, set finish time and add accesses"""
         activation = self.current_activation
         self.activation_stack.pop()
@@ -198,9 +203,12 @@ class Profiler(ExecutionProvider):                                              
         self.depth_non_user += 1
         if self.valid_depth():
             self.add_activation(self.activations.add(
+                frame.f_code.co_filename,
+                frame.f_code.co_filename,
                 arg.__name__ if arg.__self__ is None else ".".join(
                     [type(arg.__self__).__name__, arg.__name__]),
-                frame.f_lineno, frame.f_lasti, self.activation_stack[-1]
+                frame.f_lineno, frame.f_lasti, self.activation_stack[-1],
+                False
             ))
 
     def trace_call(self, frame, event, arg):                                     # pylint: disable=unused-argument
@@ -209,16 +217,25 @@ class Profiler(ExecutionProvider):                                              
         co_filename = frame.f_code.co_filename
         if co_filename in self.paths:
             self.depth_user += 1
+            in_paths = True
         else:
             self.depth_non_user += 1
+            in_paths = False
 
         if self.valid_depth():
             aid = self.activations.add(
+                co_filename,
+                frame.f_back.f_code.co_filename,
                 co_name if co_name != "<module>" else co_filename,
                 frame.f_back.f_lineno, frame.f_back.f_lasti,
-                self.activation_stack[-1]
+                self.activation_stack[-1], in_paths
             )
             activation = self.activations[aid]
+
+            if activation.is_main:
+                self.main_activation = activation
+            if co_name == "<module>":
+                self.globals[co_filename] = activation
             # Capturing arguments
             self.argument_captor.capture(frame, activation)
 
@@ -236,7 +253,7 @@ class Profiler(ExecutionProvider):                                              
     def trace_c_return(self, frame, event, arg):                                 # pylint: disable=unused-argument
         """Trace c_return. Decrease non_user depth"""
         if self.valid_depth():
-            self.close_activation(frame, event, arg, ccall=True)
+            self.close_activation(frame, event, arg)
         self.depth_non_user -= 1
 
     def trace_c_exception(self, frame, event, arg):

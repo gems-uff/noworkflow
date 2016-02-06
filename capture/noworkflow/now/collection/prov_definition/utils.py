@@ -10,7 +10,13 @@ import ast
 import sys
 import itertools
 
+from collections import namedtuple
+
 from future.utils import viewvalues
+
+
+CallDependency = namedtuple("Call", "line col")
+ReturnDependency = namedtuple("Return", "line col")
 
 
 class NamedContext(object):
@@ -46,6 +52,28 @@ class NamedContext(object):
             self._names[-1].add(name)
 
 
+class Loop(object):                                                              # pylint: disable=too-few-public-methods
+    """Loop class. Used for For and While nodes"""
+
+    def __init__(self, node):
+        self.node = node
+        self.first_line = node.first_line
+        self.last_line = node.last_line
+        self.remove = []
+
+    def __contains__(self, line):
+        """Check if line is in loop"""
+        return self.first_line <= line <= self.last_line
+
+    def info(self):
+        """Return call information"""
+        result = ("first_line={}, last_line={}")
+        return result.format(self.first_line, self.last_line)
+
+    def __repr__(self):
+        return "Loop({})".format(self.info())
+
+
 class FunctionCall(ast.NodeVisitor):                                             # pylint: disable=too-many-instance-attributes
     """Represent a function call"""
 
@@ -59,6 +87,8 @@ class FunctionCall(ast.NodeVisitor):                                            
         self.line = -1
         self.col = -1
         self.visitor_class = visitor_class
+        self.name = ""
+        self.prefix = "call"
 
     def all_args(self):
         """List arguments of function call"""
@@ -122,7 +152,7 @@ class ClassDef(FunctionCall):
     """Represent a class definition"""
 
     def __repr__(self):
-        return "Class(line={})".format(self.line)
+        return "Class(line={}, col={})".format(self.line, self.col)
 
 
 class Decorator(FunctionCall):
@@ -165,6 +195,16 @@ class Generator(FunctionCall):
             self.line, self.col, self.type)
 
 
+class GeneratorCall(Generator):
+    """Represent a generator call
+    CALL_FUNCTION for set and dict comprehension on Python 2 and Python 3
+    CALL_FUNCTION for list comprehension on Python 3
+    """
+
+    def __repr__(self):
+        return "GeneratorCall({})".format(self.info())
+
+
 class Assert(FunctionCall):
     """Represent an assert"""
 
@@ -200,6 +240,29 @@ class With(FunctionCall):
 
     def info(self):
         """Return with information"""
+        return "line={}, col={}".format(
+            self.line, self.col)
+
+
+class Import(FunctionCall):
+    """Represent an import statement"""
+
+    def __repr__(self):
+        return "Import(line={})".format(self.line)
+
+
+class ForIter(FunctionCall):
+    """Represent a for iter"""
+
+    def __init__(self, *args, **kwargs):
+        super(ForIter, self).__init__(*args, **kwargs)
+        self.prefix = "iterator"
+
+    def __repr__(self):
+        return "ForIter({})".format(self.info())
+
+    def info(self):
+        """Return ForIter information"""
         return "line={}, col={}".format(
             self.line, self.col)
 

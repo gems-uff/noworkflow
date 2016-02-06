@@ -99,7 +99,7 @@ class PrologRepr(PrologAttribute):
     def fact(self, obj):
         """Return attribute self.attr_name of obj as escaped repr"""
         result = repr(self.value(obj))
-        if result[1] in ('"', "'"):
+        if result[0] not in ('"', "'") and result[1] in ('"', "'"):
             result = result[1:]
         return result
 

@@ -279,12 +279,14 @@ class ActivationLW(BaseLW):                                                     
     __slots__, attributes = define_attrs(
         ["id", "name", "line", "return_value", "start", "finish", "caller_id",
          "trial_id"],
-        ["file_accesses", "context", "slice_stack", "lasti",
-         "args", "kwargs", "starargs"]
+        ["file_accesses", "context", "slice_stack", "lasti", "definition_file",
+         "args", "kwargs", "starargs", "with_definition", "filename",
+         "is_main", "has_parameters", "current_loop"]
     )
     special = {"caller_id"}
 
-    def __init__(self, aid, name, line, lasti, caller_id):                       # pylint: disable=too-many-arguments
+    def __init__(self, aid, definition_file, filename, name, line, lasti,        # pylint: disable=too-many-arguments
+                 caller_id, with_definition):
         self.trial_id = aid
         self.id = aid                                                            # pylint: disable=invalid-name
         self.name = name
@@ -293,6 +295,17 @@ class ActivationLW(BaseLW):                                                     
         self.finish = None
         self.caller_id = (caller_id if caller_id else -1)
         self.return_value = None
+
+        # Name of the script with the call
+        self.filename = filename
+        # Name of the script with the function definition
+        self.definition_file = definition_file
+        # Activation has definition or not
+        self.with_definition = with_definition
+        # Activation is __main__
+        self.is_main = aid == 1
+        # Activation has parameters. Use only for slicing!
+        self.has_parameters = True
 
         # File accesses. Used to get the content after the activation
         self.file_accesses = []
@@ -307,16 +320,24 @@ class ActivationLW(BaseLW):                                                     
         self.kwargs = []
         self.starargs = []
 
+        self.current_loop = []
+
     def is_complete(self):
         """Activation can be removed from object store after setting finish"""
         return self.finish is not None
 
+    def is_comprehension(self):
+        """Check if activation is comprehension"""
+        return self.name in [
+            "<setcomp>", "<dictcomp>", "<genexpr>", "<listcomp>"
+        ]
+
     def __repr__(self):
         return (
-            "Activation(id={}, line={}, name={}, start={}, finish={}, "
-            "return={}, caller_id={})"
+            "Activation(id={}, line={}, lasti={}, filename={}, "
+            " name={}, start={}, finish={}, return={}, caller_id={})"
         ).format(
-            self.id, self.line, self.name,
+            self.id, self.line, self.lasti, self.filename, self.name,
             self.start, self.finish, self.return_value, self.caller_id
         )
 

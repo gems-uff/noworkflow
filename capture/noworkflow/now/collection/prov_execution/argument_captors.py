@@ -149,10 +149,12 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
 
         if passed:
             caller = self.caller
-            lasti_set = set()
-            provider.add_dependency(activation, act_var, caller, passed,
-                                    self.filename, lasti_set)
-            provider.remove_return_lasti(lasti_set)
+            supplier = provider.find_variable(caller, passed, self.filename)
+            if supplier is not None:
+                provider.dependencies.add(
+                    act_var.activation_id, act_var.id,
+                    supplier[0].id, supplier[1].id
+                )
 
     def match_args(self, params, arg):
         """Match passed param with argument
@@ -165,35 +167,39 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         for param in params:
             self.match_arg(param, arg)
 
-    def _defined_call(self, back, function_name):
+    def _defined_call(self, activation):
         """Return a call extracted from AST if it has arguments
         or None, otherwise
 
 
         Arguments:
-        back -- parent call frame
-        function_name -- current call name
+        activation -- current activation
         """
-        lineno, lasti = back.f_lineno, back.f_lasti
-        filename = self.filename
-        provider = self.provider
-
-        if (filename not in provider.paths
-                or lineno in provider.imports[filename]):
+        if not activation.with_definition or activation.is_main:
             return
+        if activation.is_comprehension():
+            return
+        provider = self.provider
+        lineno, lasti = activation.line, activation.lasti
+        filename = activation.filename
+        function_name = activation.name
         if (function_name == "__enter__" and
                 lasti in provider.with_enter_by_lasti[filename][lineno]):
+            activation.has_parameters = False
             return
         if (function_name == "__exit__" and
                 lasti in provider.with_exit_by_lasti[filename][lineno]):
+            activation.has_parameters = False
             return
         if lasti in provider.iters[filename][lineno]:
+            activation.has_parameters = False
             provider.next_is_iter = True
             return
 
         call = provider.call_by_lasti[filename][lineno][lasti]
         if (isinstance(call, WITHOUT_PARAMS) or
                 (isinstance(call, Decorator) and not call.is_fn)):
+            activation.has_parameters = False
             return
 
         return call
@@ -208,12 +214,11 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         """
         super(SlicingArgumentCaptor, self).capture(frame, activation)
         provider = self.provider
-        back = frame.f_back
-        self.filename = back.f_code.co_filename
 
-        call = self._defined_call(back, frame.f_code.co_name)
+        call = self._defined_call(activation)
         if not call:
             return
+        self.filename = activation.filename
 
         self.line = frame.f_lineno
         self.caller, self.activation = provider.current_activation, activation
@@ -264,7 +269,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         # Create dependencies between all parameters
         # ToDo #35: improve dependencies to use references.
         #   Do not create dependencies between all parameters
-        lasti_set = set()
-        provider.add_inter_dependencies(back, call.all_args(), self.caller,
-                                        lasti_set)
-        provider.remove_return_lasti(lasti_set)
+        all_args = list(provider.find_variables(
+            self.caller, call.all_args(), activation.filename))
+        provider.add_inter_dependencies(frame.f_back.f_locals, all_args,
+                                        self.caller, activation.line)

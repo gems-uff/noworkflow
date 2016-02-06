@@ -22,10 +22,12 @@ cdef class ObjectLW(BaseLW):
 
 cdef class ActivationLW(BaseLW):
     cdef public int trial_id, id, line, caller_id, lasti;
-    cdef public str name, return_value;
+    cdef public str definition_file, filename, name, return_value;
     cdef public object start, finish;
     cdef public list file_accesses, slice_stack, args, kwargs, starargs;
+    cdef public list current_loop;
     cdef public dict context;
+    cdef public bint with_definition, is_main, has_parameters;
 
 cdef class ObjectValueLW(BaseLW):
     cdef public int trial_id, id, function_activation_id;

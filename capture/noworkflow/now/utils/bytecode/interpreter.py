@@ -38,7 +38,10 @@ if "SETUP_ASYNC_WITH" in opmap:
 
 IMPORTS = {opmap["IMPORT_NAME"], opmap["IMPORT_FROM"]}
 
-ITERS = {opmap["GET_ITER"], opmap["FOR_ITER"]}
+IMPORT_NAMES = {opmap["IMPORT_NAME"],}
+
+FOR_ITERS = {opmap["FOR_ITER"],}
+GET_ITERS = {opmap["GET_ITER"],}
 
 
 def cord(value):

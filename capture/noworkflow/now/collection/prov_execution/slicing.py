@@ -21,13 +21,16 @@ from ...persistence.models import SlicingVariable, SlicingDependency
 from ...persistence.models import SlicingUsage
 from ...utils.io import print_fn_msg
 from ...utils.bytecode.f_trace import find_f_trace, get_f_trace
-from ...utils.cross_version import IMMUTABLE
+from ...utils.cross_version import IMMUTABLE, builtins
+
+from ..prov_definition.utils import CallDependency
 
 from .argument_captors import SlicingArgumentCaptor
 from .profiler import Profiler
 
 
-Return = namedtuple("Return", "activation var")
+ActivationSlicing = namedtuple("ActivationSlicing",
+                               "call_var return_var activation_id id")
 
 
 class JointPartial(partial):                                                     # pylint: disable=inherit-non-class, too-few-public-methods
@@ -104,18 +107,9 @@ class Tracer(Profiler):                                                         
         self.dependencies = self.metascript.variables_dependencies_store
         self.usages = self.metascript.usages_store
 
-        # Returns
-        self.returns = {}
-        # Last iter
-        self.last_iter = None
-        # Next is iteration
-        self.next_is_iter = False
-
         # Useful maps
         # Map of dependencies by line
         self.line_dependencies = definition.line_dependencies
-        # Map of dependencies by line
-        self.line_gen_dependencies = definition.line_gen_dependencies
         # Map of name_refs by line
         self.line_usages = definition.line_usages
         # Map of calls by line and col
@@ -130,6 +124,8 @@ class Tracer(Profiler):                                                         
         self.imports = definition.imports
         # Set of GET_ITER and FOR_ITER lasti by line
         self.iters = definition.iters
+        # Map of For and While loops
+        self.loops = definition.loops
 
         # Allow debuggers:
         self.f_trace_frames = []
@@ -137,13 +133,15 @@ class Tracer(Profiler):                                                         
         # Events are not unique. Profiler and Tracer have same events
         self.unique_events = False
 
+        # Created builtins
+        self.created_builtins = {}
+        self.builtins = builtins.__dict__
+
         self.argument_captor = SlicingArgumentCaptor(self)
 
-    def remove_return_lasti(self, lasti_set):
-        """Remove lasti from list of returns"""
-        returns = self.returns
-        for lasti in lasti_set:
-            del returns[lasti]
+        # List of calls in comprehension
+        self.comprehension_dependencies = None
+
 
     def add_variable(self, act_id, name, line, f_locals, value="--check--"):     # pylint: disable=too-many-arguments
         """Add variable
@@ -164,83 +162,69 @@ class Tracer(Profiler):                                                         
             value = "now(n/a)"
         return self.variables.add(act_id, name, line, value, datetime.now())
 
-    def add_dependency(self, dep_act, dep_var, sup_act, sup, filename,           # pylint: disable=too-many-arguments
-                       lasti_set):
-        """Create dependency: dep_var depends on sup
+
+    def find_variable(self, activation, name, definition):
+        """Find variable in activation context by name
 
 
         Arguments:
-        self -- Tracer object
-        dep_act -- Dependent Activation object
-        dep_var -- Dependent Variable object
-        sup_act -- Supplier Activation object
-        sup -- Supplier Variable (string/tuple/"now(iter)")
-
-
-        If <sup> is "now(iter)", create dependency to iter object
-        If <sup> is a tuple in the form (line, col), create dependency to call
-        If <sup> is a string, create dependency to variable
+        activation -- current activation
+        name -- variable name or tuple
+        definition -- definition filename
         """
-        dep_var_id, dependencies_add = dep_var.id, self.dependencies.add
-        context = sup_act.context
+        activation, name = get_call_var(activation, name)
 
-        # Variable
-        if sup in context:
-            dependencies_add(dep_act.id, dep_var_id,
-                             sup_act.id, context[sup].id)
-        # Function Call
-        if isinstance(sup, tuple):
-            call = self.call_by_col[filename][sup[0]][sup[1]]
-            lasti, returns = call.lasti, self.returns
+        if name in activation.context:
+            # Local context
+            return get_call_var(activation, activation.context[name])
+        elif name in self.globals[definition].context:
+            # Global contex
+            activation = self.globals[definition]
+            return get_call_var(activation, activation.context[name])
+        elif name in self.created_builtins:
+            # Buitins
+            activation = self.main_activation
+            return get_call_var(activation, self.created_builtins[name])
+        elif name in self.builtins:
+            # New Builtins
+            activation = self.main_activation
+            vid = self.add_variable(activation.id, name, 0, self.builtins)
+            variable = self.variables[vid]
+            self.created_builtins[name] = variable
+            return get_call_var(activation, variable)
 
-            if lasti not in returns:
-                return
-            _return = returns[lasti]
-
-            if isinstance(_return, Return):
-                # Call was not evaluated before
-                vid = self.add_variable(sup_act.id, "call {}".format(
-                    _return.activation.name), sup[0], {}, "now(n/a)")
-                returns[lasti] = (_return, vid)
-                call.result = (_return.var.id, _return.var.line)
-                dependencies_add(dep_act.id, vid, sup_act.id, _return.var.id)
-
-                # Remove lasti from returns list to avoid conflict
-                lasti_set.add(lasti)
-            else:
-                _return, vid = _return
-
-            self.add_dependencies(dep_act, self.variables[vid],
-                                  sup_act, call.func,
-                                  filename, lasti_set)
-            dependencies_add(dep_act.id, dep_var_id, sup_act.id, vid)
-        # Iter
-        if sup == "now(iter)" and self.last_iter:
-            dependencies_add(dep_act.id, dep_var_id,
-                             sup_act.id, self.last_iter)
-
-    def add_dependencies(self, dep_act, dep_var, sup_act, sups, filename,        # pylint: disable=too-many-arguments
-                         lasti_set):
-        """ Create dependencies: dep_var depends on sups
+    def find_variables(self, activation, names, filename):
+        """Find variables in activation context by names
 
 
         Arguments:
-        self -- Tracer object
-        dep_act -- Dependent Activation object
-        dep_var -- Dependent Variable object
-        sup_act -- Supplier Activation object
-        sups -- List of Supplier Variables [(string/tuple/"now(iter)")]
-
-
-        If <sup> is "now(iter)", create dependency to iter object
-        If <sup> is a tuple in the form (line, col), create dependency to call
-        If <sup> is a string, create dependency to variable
+        activation -- current activation
+        name -- variable name or tuple
+        definition -- definition filename
         """
-        add_dependency = self.add_dependency
-        for sup in sups:
-            add_dependency(dep_act, dep_var, sup_act, sup, filename, lasti_set)
+        for name in names:
+            a_v = self.find_variable(activation, name, filename)
+            if a_v is None and isinstance(name, tuple):
+                a_v = self.add_fake_call(activation, name)
+            if a_v:
+                yield a_v
 
-    def slice_line(self, activation, lineno, f_locals, filename,                 # pylint: disable=too-many-arguments, too-many-locals
+
+    def add_dependencies(self, dependent, suppliers):
+        """ Create dependencies: dependent depends on suppliers
+
+        Arguments:
+        self -- Tracer object
+        dependent -- Dependent Variable object
+        suppliers -- List of supplier variables
+        """
+        dependencies_add = self.dependencies.add
+        for supplier in suppliers:
+            dependencies_add(dependent.activation_id, dependent.id,
+                             supplier[0].id, supplier[1].id)
+
+
+    def slice_line(self, activation, lineno, f_locals, filename,                 # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
                    line_dependencies=None):
         """Generates dependencies from line"""
         if line_dependencies is None:
@@ -260,43 +244,98 @@ class Tracer(Profiler):                                                         
                     usages_add(activation.id, context[name].id, name,
                                lineno, ctx)
 
-        lasti_set = set()
-        set_last_iter = False
         for name, others in viewitems(dependencies):
+            vid = None
+            suppliers_gen = self.find_variables(activation, others, filename)
+
             if name == "return":
                 vid = add_variable(activation.id, name, lineno, f_locals,
                                    value=activation.return_value)
-                self.returns[activation.lasti] = Return(activation,
-                                                        variables[vid])
             elif name == "yield":
                 vid = add_variable(activation.id, name, lineno, f_locals)
-                self.last_iter = vid
-                set_last_iter = True
-            else:
+            elif not isinstance(name, tuple):
                 vid = add_variable(activation.id, name, lineno, f_locals)
 
-            add_dependencies(activation, variables[vid],
-                             activation, others, filename, lasti_set)
+            if vid is not None:
+                add_dependencies(variables[vid], suppliers_gen)
+                context[name] = variables[vid]
+                if name == "yield":
+                    context["return"] = context[name]
+            elif name in context:
+                # name is a tuple representing a call.
+                if isinstance(name, CallDependency):
+                    variable = context[name].call_var
+                else:
+                    variable = context[name].return_var
+                add_dependencies(variable, suppliers_gen)
+            else:
+                # Python skips tracing calls to builtins (float, int...)
+                # create artificial variables for them
+                _, variable = self.add_fake_call(activation, name)
+                add_dependencies(variable, suppliers_gen)
 
-            context[name] = variables[vid]
 
-        self.remove_return_lasti(lasti_set)
-        if not set_last_iter:
-            self.last_iter = None
+    def add_fake_call(self, activation, call_uid):
+        """Create fake call for builtins"""
+        line, col = call_uid
+        call = self.call_by_col[activation.definition_file][line][col]
+        vid = self.add_variable(activation.id,
+                                "{} {}".format(call.prefix, call.name),
+                                line, {}, "now(n/a)")
+        variable = self.variables[vid]
+        activation.context[call_uid] = ActivationSlicing(
+            variable, variable, activation.id, variable.id)
 
-    def close_activation(self, frame, event, arg, ccall=False):
+        args = self.find_variables(activation, call.all_args(),
+                                   activation.definition_file)
+
+        self.add_dependencies(variable, args)
+        return (activation, variable)
+
+    def create_call(self, activation, _return):
+        """Create call variable and dependency"""
+        caller = self.current_activation
+        dependencies_add = self.dependencies.add
+        vid = self.add_variable(caller.id, "call {}".format(activation.name),
+                                activation.line, {}, "now(n/a)")
+        dependencies_add(caller.id, vid, activation.id, _return.id)
+
+        if caller.with_definition:
+            filename = activation.filename
+            line, lasti = activation.line, activation.lasti
+            call = self.call_by_lasti[filename][line][lasti]
+            uid = (call.line, call.col)
+            if uid in caller.context and line in self.imports[filename]:
+                # Two calls in the same lasti: create dependencies for import
+                variable = caller.context[uid].call_var
+                dependencies_add(activation.id, _return.id,
+                                 variable.activation_id, variable.id)
+            caller.context[uid] = ActivationSlicing(
+                self.variables[vid], _return, caller.id, vid)
+
+        if self.comprehension_dependencies is not None:
+            if activation.is_comprehension():
+                for dependency in self.comprehension_dependencies:
+                    dependencies_add(activation.id, _return.id,
+                                     dependency[0], dependency[1])
+                self.comprehension_dependencies = None
+            else:
+                self.comprehension_dependencies.append((caller.id, vid))
+
+    def close_activation(self, frame, event, arg):
         """Slice all lines from closing activation
-        Add generic return if frame is not None
+        Create Call variable and Add generic return if frame is not None
         """
         activation = self.current_activation
         for line in activation.slice_stack:
             self.slice_line(*line)
         super(Tracer, self).close_activation(frame, event, arg)
-        if frame:
-            self.add_generic_return(activation, frame, ccall=ccall)
-            activation.context["return"].value = activation.return_value
+        if frame and not activation.is_main:
+            _return = self.add_generic_return(activation, frame)
+            _return.value = activation.return_value
+            self.create_call(activation, _return)
 
-    def add_generic_return(self, activation, frame, ccall=False):
+    def add_generic_return(self, activation, frame):
         """Add return to functions that do not have return
         For ccall, add dependency from all params
 
@@ -304,65 +343,75 @@ class Tracer(Profiler):                                                         
         Arguments:
         activation -- closing Activation
         frame -- parent Frame
-
-        Keyword Arguments:
-        ccall -- indicates if it is a ccall (default=False)
         """
-
         lineno = frame.f_lineno
         variables = self.variables
 
         # Artificial return condition
-        lasti = activation.lasti
-        if "return" not in activation.context:
-            vid = self.add_variable(activation.id, "return", lineno, {},
-                                    value=activation.return_value)
-            activation.context["return"] = variables[vid]
-            self.returns[lasti] = Return(activation, variables[vid])
+        if "return" in activation.context:
+            return activation.context["return"] # call has return
 
-            filename = frame.f_code.co_filename
-            if ccall and filename in self.paths:
-                caller = self.current_activation
-                call = self.call_by_lasti[filename][lineno][lasti]
-                all_args = call.all_args()
-                lasti_set = set()
-                self.add_dependencies(activation, variables[vid], caller,
-                                      all_args, filename, lasti_set)
-                self.add_inter_dependencies(frame, all_args, caller, lasti_set)
-                self.remove_return_lasti(lasti_set)
+        vid = self.add_variable(activation.id, "return", lineno, {},
+                                value=activation.return_value)
+        _return = variables[vid]
 
-    def add_inter_dependencies(self, frame, args, activation, lasti_set):        # pylint: disable=too-many-locals
+        activation.context["return"] = _return
+
+        if activation.with_definition:
+            # we captured the slicing already
+            # return does not depend on parameters
+            return _return
+
+        if not activation.has_parameters:
+            # activation does not have parameters
+            return _return
+
+        caller = self.current_activation
+        if not caller.with_definition:
+            # we do not have caller definition
+            # thus, we do not know activation parameters
+            return _return
+
+        # Artificial return depends on all parameters
+        filename = activation.filename
+        call = self.call_by_lasti[filename][activation.line][activation.lasti]
+        all_args = list(self.find_variables(caller, call.all_args(),
+                                            activation.filename))
+        self.add_dependencies(_return, all_args)
+        self.add_inter_dependencies(frame.f_locals, all_args,
+                                    caller, activation.line)
+        return _return
+
+    def add_inter_dependencies(self, f_locals, args, caller, lineno):            # pylint: disable=too-many-locals
         """Add dependencies between all parameters in a call
 
 
         Arguments:
-        frame -- parent Frame
+        f_locals -- Frame local variables
         args -- Parameter Variables
-        activation -- parent Activation
-        lasti_set -- Set of lasti
+        caller -- parent Activation
+        lineno -- Activation lineno
         """
-        f_locals, context = frame.f_locals, activation.context
-        lineno, variables = frame.f_lineno, self.variables
-        filename = frame.f_code.co_filename
+        context = caller.context
+        variables = self.variables
         add_dependencies = self.add_dependencies
         add_variable = self.add_variable
 
         added = {}
-        for arg in args:
+        for _, arg in args:
             try:
-                var = f_locals[arg]
+                name = arg.name
+                var = f_locals[name]
                 if not isinstance(var, IMMUTABLE):
-                    vid = add_variable(activation.id, arg, lineno, {},
-                                       value=var)
+                    vid = add_variable(caller.id, name, lineno, {}, value=var)
                     variable = variables[vid]
-                    add_dependencies(activation, variable, activation, args,
-                                     filename, lasti_set)
-                    added[arg] = variable
+                    add_dependencies(variable, args)
+                    added[name] = variable
             except KeyError:
                 pass
 
-        for arg, variable in viewitems(added):
-            context[arg] = variable
+        for name, variable in viewitems(added):
+            context[name] = variable
 
     def trace_line(self, frame, event, arg):                                     # pylint: disable=unused-argument
         """Trace Line event"""
@@ -376,20 +425,35 @@ class Tracer(Profiler):                                                         
             if _frame.f_trace:
                 self.f_trace_frames.append(_frame)
 
-        # Different file
-        if filename not in self.paths:
-            return
-
         activation = self.current_activation
+
+        if not activation.with_definition:
+            return  # different file
+
+        if activation.is_comprehension():
+            self.comprehension_dependencies = []
+            return  # ignore comprehension
+
+        activation_loops = activation.current_loop
+        if activation_loops and lineno not in activation_loops[-1]:
+            # Remove last trace line
+            for variable in activation_loops[-1].remove:
+                if variable in activation.context:
+                    del activation.context[variable]
+            activation.slice_stack.pop()
+            activation_loops.pop()
+
+        loop = self.loops[filename].get(lineno)
+        if loop is not None and loop.first_line == lineno:
+            if not activation_loops:
+                activation_loops.append(loop)
+            elif activation_loops[-1] != loop:
+                activation_loops.append(loop)
 
         print_fn_msg(lambda: "[{}] -> {}".format(
             lineno, linecache.getline(filename, lineno).strip()))
         if activation.slice_stack:
             self.slice_line(*activation.slice_stack.pop())
-        if self.next_is_iter:
-            self.slice_line(activation, lineno, frame.f_locals, filename,
-                            line_dependencies=self.line_gen_dependencies)
-            self.next_is_iter = False
         activation.slice_stack.append([
             activation, lineno, frame.f_locals, filename])
 
@@ -444,3 +508,10 @@ class Tracer(Profiler):                                                         
 
             for var in self.usages:
                 print_fn_msg(lambda: var)
+
+
+def get_call_var(activation, name):
+    """Return Call Var if is instance of ActivationSlicing"""
+    if isinstance(name, ActivationSlicing):
+        return activation, name.call_var
+    return activation, name

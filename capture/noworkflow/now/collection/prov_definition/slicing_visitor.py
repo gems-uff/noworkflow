@@ -9,16 +9,18 @@ from __future__ import (absolute_import, print_function,
 import ast
 import sys
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from ...utils.bytecode.interpreter import CALL_FUNCTIONS, PRINT_ITEMS
 from ...utils.bytecode.interpreter import PRINT_NEW_LINES, SETUP_WITH
-from ...utils.bytecode.interpreter import WITH_CLEANUP, IMPORTS, ITERS
-from ...utils.bytecode.interpreter import SETUP_ASYNC_WITH
+from ...utils.bytecode.interpreter import WITH_CLEANUP, SETUP_ASYNC_WITH
+from ...utils.bytecode.interpreter import IMPORT_NAMES
+from ...utils.bytecode.interpreter import FOR_ITERS, GET_ITERS
 
 from .function_visitor import FunctionVisitor
 from .utils import NamedContext, FunctionCall, ClassDef, Decorator, Generator
-from .utils import Assert, safeget, With, Print
+from .utils import Assert, safeget, With, Print, Import, ForIter, GeneratorCall
+from .utils import CallDependency, ReturnDependency, Loop
 
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -75,6 +77,11 @@ class AssignRightVisitor(ast.NodeVisitor):
         except (TypeError, AttributeError):
             pass
 
+    def new_comprehension(self, node):
+        """Add call to comprehension"""
+        self.max_line(node)
+        self.add(CallDependency(*node.uid), "fn", node.lineno)
+
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name
         """Collect names"""
         self.max_line(node)
@@ -91,9 +98,10 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.visit(node.body)
         self.special.pop()
 
-    def visit_ListComp(self, node):                                              # pylint: disable=invalid-name
+    def _visit_ListComp(self, node):                                             # pylint: disable=invalid-name
         """Create special context for ListComp"""
         self.max_line(node)
+        #self.add(node.uid, "fn", node.lineno)
         self.special.enable()
         self.special.disable()
         for gen in node.generators:
@@ -101,26 +109,24 @@ class AssignRightVisitor(ast.NodeVisitor):
         self.visit(node.elt)
         self.special.pop()
 
+    def visit_ListComp(self, node):                                              # pylint: disable=invalid-name
+        """Visit LiComp"""
+        self.new_comprehension(node)
+
+    if sys.version_info < (3, 0):
+        visit_ListComp = _visit_ListComp                                         # pylint: disable=invalid-name
+
     def visit_SetComp(self, node):                                               # pylint: disable=invalid-name
         """Visit SetComp"""
-        self.max_line(node)
-        self.visit_ListComp(node)
+        self.new_comprehension(node)
 
     def visit_GeneratorExp(self, node):                                          # pylint: disable=invalid-name
         """Visit GeneratorExp"""
-        self.max_line(node)
-        self.visit_ListComp(node)
+        self.new_comprehension(node)
 
     def visit_DictComp(self, node):                                              # pylint: disable=invalid-name
         """Create special context for DictComp"""
-        self.max_line(node)
-        self.special.enable()
-        self.special.disable()
-        for gen in node.generators:
-            self.visit(gen)
-        self.visit(node.key)
-        self.visit(node.value)
-        self.special.pop()
+        self.new_comprehension(node)
 
     def visit_comprehension(self, node):
         """Create special context for comprehension"""
@@ -135,12 +141,54 @@ class AssignRightVisitor(ast.NodeVisitor):
     def visit_Call(self, node):                                                  # pylint: disable=invalid-name
         """Create special dependency for calls"""
         self.max_line(node)
-        self.add(node.uid, "fn", node.lineno)
+        self.add(CallDependency(*node.uid), "fn", node.lineno)
 
     def visit_Print(self, node):                                                 # pylint: disable=invalid-name
         """Create special dependency for calls"""
         self.max_line(node)
-        self.add(node.uid, "fn print", node.lineno)
+        self.add(CallDependency(*node.uid), "fn print", node.lineno)
+
+    def visit_Import(self, node):                                                # pylint: disable=invalid-name
+        """Create special dependency for imports"""
+        self.max_line(node)
+        self.add(CallDependency(*node.uid), "import", node.lineno)
+
+    def visit_ImportFrom(self, node):                                            # pylint: disable=invalid-name
+        """Create special dependency for imports"""
+        self.max_line(node)
+        self.add(CallDependency(*node.uid), "import from", node.lineno)
+
+
+class ComprehensionVisitor(AssignRightVisitor):
+    """Dependency of variables in comprehension"""
+
+    def visit_ListComp(self, node):
+        """Visit ListComp"""
+        self._visit_ListComp(node)
+
+    def visit_SetComp(self, node):                                               # pylint: disable=invalid-name
+        """Visit SetComp"""
+        self._visit_ListComp(node)
+
+    def visit_GeneratorExp(self, node):                                          # pylint: disable=invalid-name
+        """Visit GeneratorExp"""
+        self._visit_ListComp(node)
+
+    def visit_DictComp(self, node):                                              # pylint: disable=invalid-name
+        """Create special context for DictComp"""
+        self.max_line(node)
+        self.special.enable()
+        self.special.disable()
+        for gen in node.generators:
+            self.visit(gen)
+        self.visit(node.key)
+        self.visit(node.value)
+        self.special.pop()
+
+    def visit_Call(self, node):                                                  # pylint: disable=invalid-name
+        """Create special dependency for calls"""
+        self.max_line(node)
+        self.generic_visit(node)
 
 
 def tuple_or_list(node):
@@ -203,11 +251,27 @@ def assign_artificial_dependencies(target, artificial, dependencies,
 
     left.visit(target)
 
-    for name, _, lineno in left.names:
+    for name, _, _ in left.names:
         lineno = target.lineno
         dependencies[lineno][name].append(artificial)
 
         add_all_names(dependencies[lineno][name], conditions)
+
+
+def assign_right(lineno, target, value, dependencies, conditions):
+    """Add dependencies to <dependencies>
+    <target> depends on <value>
+    <target> also depends on <conditions>
+    """
+
+    right = AssignRightVisitor()
+    if value:
+        right.visit(value)
+
+    for name, _, _ in right.names:
+        dependencies[lineno][target].append(name)
+
+    add_all_names(dependencies[lineno][target], conditions)
 
 
 class SlicingVisitor(FunctionVisitor):                                           # pylint: disable=too-many-instance-attributes, too-many-public-methods
@@ -227,10 +291,13 @@ class SlicingVisitor(FunctionVisitor):                                          
         self.with_exit_by_lasti = defaultdict(dict)
         self.function_calls_list = []
         self.with_list = []
+        self.imports_list = []
         self.imports = set()
+        self.iters_list = []
         self.iters = defaultdict(set)
         self.condition = NamedContext()
         self.loop = NamedContext()
+        self.loops = {}
         self.disasm = []
 
         # Python 2
@@ -246,18 +313,58 @@ class SlicingVisitor(FunctionVisitor):                                          
         if "call_list" in kwargs and kwargs["call_list"] is not None:
             call_list = kwargs["call_list"]
         function_call = cls(AssignRightVisitor, *args)
+        function_call.name = self.extract_code(node)
         function_call.visit(node)
         function_call.line, function_call.col = node.uid
         call_list.append(function_call)
         return function_call
 
+    def add_decorators(self, node, original_name):
+        """Add special function calls for decorators"""
+        decorators = [self.add_decorator(dec_node)
+                      for dec_node in node.decorator_list]
+        lineno = node.lineno
+        name = original_name
+        for dec in reversed(decorators):
+            uid = (dec.line, dec.col)
+            self.dependencies[lineno][name].append(uid)
+            #dec.args.append([name])
+            name = uid
+
     def add_decorator(self, node):
         """Add special function call for decorator"""
-        self.add_call_function(node, Decorator)
+        dec_node = ast.Call()
+        dec_node.func = node
+        dec_node.args = []
+        dec_node.keywords = []
+        if sys.version_info < (3, 5):
+            dec_node.starargs = None
+            dec_node.kwargs = None
+        dec_node.first_col = node.first_col
+        dec_node.first_line = node.first_line
+        dec_node.last_col, dec_node.last_line = node.last_col, node.last_line
+        dec_node.uid = (dec_node.first_line, dec_node.first_col)
+        dec = self.add_call_function(dec_node, Decorator)
+        self.call_by_col[dec.line][dec.col] = dec
+        self.add_func_dependency(dec)
+        return dec
+
+    def add_new_comprehension(self, typ, node, add_call=True):
+        """Create comprehension call and generators"""
+        if add_call:
+            call = self.add_call_function(node, GeneratorCall, typ)
+            self.call_by_col[call.line][call.col] = call
+            right = ComprehensionVisitor()
+            right.visit(node)
+            line, uid = call.line, ReturnDependency(call.line, call.col)
+            for name, _, _ in right.names:
+                self.dependencies[line][uid].append(name)
+        for gen_node in node.generators:
+            self.add_generator(typ, gen_node)
 
     def add_generator(self, typ, node):
         """Add special function call for generator"""
-        self.add_call_function(node, Generator, typ)
+        self.add_call_function(node, Generator, typ, call_list=self.iters_list)
         self.condition.enable()
         for nif in node.ifs:
             self.visit(nif)
@@ -284,13 +391,23 @@ class SlicingVisitor(FunctionVisitor):                                          
         """Create special <label> variable
         Use for return and yield dependencies
         """
-        assign_dependencies(ast.Name(label, ast.Store(),
-                                     lineno=node.lineno),
-                            node.value,
+        self.new_var(ast.Name(label, ast.Store(), lineno=node.lineno),
+                     value=node.value)
+
+    def new_var(self, name, value=None, **kwargs):
+        """Create new variable"""
+        assign_dependencies(name,
+                            value,
                             self.dependencies,
                             self.condition.flat(),
                             self.loop.flat(),
-                            testlist_star_expr=False)
+                            testlist_star_expr=False, **kwargs)
+
+    def add_func_dependency(self, call):
+        """Create dependency for call nodes that accept expr as func"""
+        for name in call.func:
+            uid = CallDependency(call.line, call.col)
+            self.dependencies[call.line][uid].append(name)
 
     def visit_stmts(self, stmts):
         """Visit stmts"""
@@ -299,11 +416,7 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_AugAssign(self, node):                                             # pylint: disable=invalid-name
         """Visit AugAssign. Create dependencies"""
-        assign_dependencies(node.target, node.value,
-                            self.dependencies,
-                            self.condition.flat(),
-                            self.loop.flat(), aug=True,
-                            testlist_star_expr=False)
+        self.new_var(node.target, value=node.value, aug=True)
         self.generic_visit(node)
 
     def visit_Assign(self, node):                                                # pylint: disable=invalid-name
@@ -318,14 +431,22 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_For(self, node):                                                   # pylint: disable=invalid-name
         """Visit For. Create dependencies"""
-        assign_dependencies(node.target, node.iter,
-                            self.dependencies,
-                            self.condition.flat(),
-                            self.loop.flat(),
-                            testlist_star_expr=False)
-        assign_artificial_dependencies(node.target, "now(iter)",
+        loop = Loop(node)
+        self.loops[loop.first_line] = loop
+        _iter = self.add_call_function(node.iter, ForIter,
+                                       call_list=self.iters_list)
+        _iter.col += 1
+        self.call_by_col[_iter.line][_iter.col] = _iter
+        uid = (_iter.line, _iter.col)
+        loop.remove.append(uid)
+        lineno = node.lineno
+        assign_artificial_dependencies(node.target, uid,
                                        self.dependencies,
                                        self.condition.flat())
+
+        assign_right(lineno, CallDependency(*uid), node.iter,
+                     self.dependencies, self.condition.flat())
+
         self.loop.enable()
         self.visit(node.target)
         self.loop.disable()
@@ -340,6 +461,8 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_While(self, node):                                                 # pylint: disable=invalid-name
         """Visit With. Create conditional dependencies"""
+        loop = Loop(node)
+        self.loops[loop.first_line] = loop
         self.condition.enable()
         self.visit(node.test)
         self.condition.disable()
@@ -363,6 +486,7 @@ class SlicingVisitor(FunctionVisitor):                                          
         """Visit Call. Create special function call"""
         super(SlicingVisitor, self).visit_Call(node)
         call = self.add_call_function(node, FunctionCall)
+        self.add_func_dependency(call)
         self.call_by_col[call.line][call.col] = call
 
     def visit_Print(self, node):                                                 # pylint: disable=invalid-name
@@ -389,49 +513,91 @@ class SlicingVisitor(FunctionVisitor):                                          
         if node.value:
             self.visit(node.value)
 
-    def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
-        """Visit ClassDef. Create special function call"""
-        self.add_call_function(node, ClassDef)
+    def visit_Import(self, node):                                                # pylint: disable=invalid-name
+        """Visit Import"""
+        self.generic_visit(node)
 
-        for dec_node in node.decorator_list:
-            self.add_decorator(dec_node)
-        super(SlicingVisitor, self).visit_ClassDef(node)
+        for alias in node.names:
+            _import = self.add_call_function(node, Import,
+                                             call_list=self.imports_list)
+            self.call_by_col[_import.line][_import.col] = _import
+
+            name = ast.Name(alias.asname if alias.asname else alias.name,
+                            ast.Store(), lineno=node.lineno)
+            self.new_var(name, value=node)
+
+    def visit_ImportFrom(self, node):                                            # pylint: disable=invalid-name
+        """Visit ImportFrom"""
+        self.generic_visit(node)
+
+        _import = self.add_call_function(node, Import,
+                                         call_list=self.imports_list)
+        self.call_by_col[_import.line][_import.col] = _import
+
+        for alias in node.names:
+            name = ast.Name(alias.asname if alias.asname else alias.name,
+                            ast.Store(), lineno=node.lineno)
+            self.new_var(name, value=node)
 
     def visit_ListComp(self, node):                                              # pylint: disable=invalid-name
         """Visit ListComp. Create special function call on Python 3"""
+        self.add_new_comprehension("List", node, sys.version_info >= (3, 0))
         self.generic_visit(node)
-        if sys.version_info >= (3, 0):
-            for gen_node in node.generators:
-                self.add_generator("List", gen_node)
 
     def visit_SetComp(self, node):                                               # pylint: disable=invalid-name
         """Visit SetComp. Create special function call"""
+        self.add_new_comprehension("Set", node)
         self.generic_visit(node)
-        for gen_node in node.generators:
-            self.add_generator("Set", gen_node)
 
     def visit_DictComp(self, node):                                              # pylint: disable=invalid-name
         """Visit DictComp. Create special function call"""
+        self.add_new_comprehension("Dict", node)
         self.generic_visit(node)
-        for gen_node in node.generators:
-            self.add_generator("Dict", gen_node)
 
     def visit_GeneratorExp(self, node):                                          # pylint: disable=invalid-name
         """Visit GeneratorExp. Create special function call"""
+        self.add_new_comprehension("Generator", node)
         self.generic_visit(node)
-        for gen_node in node.generators:
-            self.add_generator("Generator", gen_node)
+
+    def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
+        """Visit ClassDef. Create special function call"""
+        name = ast.Name(node.name, ast.Store(), lineno=node.lineno)
+        name.first_line, name.first_col = name.uid = node.uid
+        name.first_col += 1
+        name.last_line = name.first_line
+        name.last_col = name.first_col + len(node.name)
+        _class = self.add_call_function(name, ClassDef)
+        self.call_by_col[_class.line][_class.col] = _class
+
+        lineno = node.lineno
+        uid = (_class.line, _class.col)
+        if not node.bases:
+            assign_right(lineno, uid, None,
+                         self.dependencies, self.condition.flat())
+
+
+        for base in node.bases:
+            assign_right(lineno, uid, base,
+                         self.dependencies, self.condition.flat())
+
+
+        self.add_decorators(node, uid)
+        super(SlicingVisitor, self).visit_ClassDef(node)
 
     def visit_FunctionDef(self, node):                                           # pylint: disable=invalid-name
         """Visit FunctionDef"""
-        for dec_node in node.decorator_list:
-            self.add_decorator(dec_node)
+        name = ast.Name(node.name, ast.Store(), lineno=node.lineno)
+        self.new_var(name, None)
+
+        self.add_decorators(node, node.name)
         super(SlicingVisitor, self).visit_FunctionDef(node)
 
     def visit_AsyncFunctionDef(self, node):                                      # pylint: disable=invalid-name
         """Visit AsyncFunctionDef. Python 3.5"""
-        for dec_node in node.decorator_list:
-            self.add_decorator(dec_node)
+        name = ast.Name(node.name, ast.Store(), lineno=node.lineno)
+        self.new_var(name, None)
+
+        self.add_decorators(node, node.name)
         super(SlicingVisitor, self).visit_AsyncFunctionDef(node)
 
     def visit_Assert(self, node):                                                # pylint: disable=invalid-name
@@ -468,46 +634,118 @@ class SlicingVisitor(FunctionVisitor):                                          
         """
         self.with_list.sort(key=lambda x: (x.line, x.col))
         end_with = {}
-        line = -1
-        call_index = 0
-        with_index = 0
-        print_item_index = 0
-        print_newline_index = 0
+        operations = [
+            AddCall(CALL_FUNCTIONS,
+                    self.function_calls_list, self.function_calls_by_lasti),
+            AddCall(PRINT_ITEMS,
+                    self.print_item_list, self.function_calls_by_lasti),
+            AddCall(PRINT_NEW_LINES,
+                    self.print_newline_list, self.function_calls_by_lasti),
+            AddImport(IMPORT_NAMES, self.imports,
+                      self.imports_list, self.function_calls_by_lasti),
+            AddWith(SETUP_WITH | SETUP_ASYNC_WITH, self.with_enter_by_lasti,
+                    end_with, self.with_list, self.function_calls_by_lasti),
+            AddWithCleanup(WITH_CLEANUP,  self.with_exit_by_lasti,
+                           end_with, self.function_calls_by_lasti),
+            AddForIter(FOR_ITERS, self.iters,
+                       self.iters_list, self.function_calls_by_lasti),
+            AddGetIter(GET_ITERS, self.iters,
+                       self.iters_list, self.function_calls_by_lasti),
+        ]
         for inst in self.disasm:
-            if inst.opcode in CALL_FUNCTIONS:
-                call = safeget(self.function_calls_list, call_index)
-                call.lasti = inst.offset
-                self.function_calls_by_lasti[inst.line][inst.offset] = call
-                call_index += 1
-                inst.extra = call
-            if inst.opcode in PRINT_ITEMS:
-                _print = safeget(self.print_item_list, print_item_index)
-                _print.lasti = inst.offset
-                self.function_calls_by_lasti[inst.line][inst.offset] = _print
-                print_item_index += 1
-                inst.extra = _print
-            if inst.opcode in PRINT_NEW_LINES:
-                _print = safeget(self.print_newline_list, print_newline_index)
-                _print.lasti = inst.offset
-                self.function_calls_by_lasti[inst.line][inst.offset] = _print
-                print_newline_index += 1
-                inst.extra = _print
-            if inst.opcode in SETUP_WITH or inst.opcode in SETUP_ASYNC_WITH:
-                end = int(inst.argrepr[3:])
-                _with = safeget(self.with_list, with_index)
-                _with.lasti = inst.offset
-                _with.end = end
-                self.with_enter_by_lasti[inst.line][inst.offset] = _with
-                end_with[end] = _with
-                with_index += 1
-                inst.extra = _with
-            if inst.opcode in WITH_CLEANUP:
-                _with = end_with[inst.offset]
-                del end_with[inst.offset]
-                _with.end_line = line
-                self.with_exit_by_lasti[inst.line][inst.offset] = _with
-                inst.extra = _with
-            if inst.opcode in IMPORTS:
-                self.imports.add(inst.line)
-            if inst.opcode in ITERS:
+            for operation in operations:
+                operation.process(inst)
+
+
+class AddCall(object):                                                           # pylint: disable=too-few-public-methods
+    """Enrich disasm with calls and other instructions that cause calls"""
+
+    def __init__(self, opcodes, clist, by_lasti):
+        self.opcodes = opcodes
+        self.clist = clist
+        self.by_lasti = by_lasti
+        self.index = 0
+
+    def process(self, inst):
+        """Process disasm instruction"""
+        if inst.opcode in self.opcodes:
+            call = safeget(self.clist, self.index)
+            call.lasti = inst.offset
+            self.by_lasti[inst.line][inst.offset] = call
+            self.index += 1
+            inst.extra = call
+            return call
+
+
+class AddImport(AddCall):                                                        # pylint: disable=too-few-public-methods
+    """Enrich disasm with Imports"""
+
+    def __init__(self, opcodes, imports, *args, **kwargs):
+        super(AddImport, self).__init__(opcodes, *args, **kwargs)
+        self.imports = imports
+
+    def process(self, inst):
+        """Process disasm instruction"""
+        _import = super(AddImport, self).process(inst)
+        if _import:
+            self.imports.add(inst.line)
+
+
+class AddWith(AddCall):                                                          # pylint: disable=too-few-public-methods
+    """Enrich disasm with With statements"""
+
+    def __init__(self, opcodes, with_enter_lasti, end_with, *args, **kwargs):
+        super(AddWith, self).__init__(opcodes, *args, **kwargs)
+        self.with_enter_by_lasti = with_enter_lasti
+        self.end_with = end_with
+
+    def process(self, inst):
+        """Process disasm instruction"""
+        _with = super(AddWith, self).process(inst)
+        if _with:
+            self.with_enter_by_lasti[inst.line][inst.offset] = _with
+            end = int(inst.argrepr[3:])
+            _with.end = end
+            self.end_with[end] = _with
+            return _with
+
+
+class AddWithCleanup(namedtuple(
+        "WithCleanup", "opcodes with_exit_by_lasti end_with by_lasti")):
+    """Enrich disasm with With cleanups"""
+    def process(self, inst):
+        """Process disasm instruction"""
+        if inst.opcode in self.opcodes:
+            _with = self.end_with[inst.offset]
+            del self.end_with[inst.offset]
+            _with.end_line = inst.line
+            self.by_lasti[inst.line][inst.offset] = _with
+            self.with_exit_by_lasti[inst.line][inst.offset] = _with
+            inst.extra = _with
+            return _with
+
+
+class AddForIter(AddCall):                                                        # pylint: disable=too-few-public-methods
+    """Enrich disasm with ForIters"""
+
+    def __init__(self, opcodes, iters, *args, **kwargs):
+        super(AddForIter, self).__init__(opcodes, *args, **kwargs)
+        self.iters = iters
+
+    def process(self, inst):
+        """Process disasm instruction"""
+        _for = super(AddForIter, self).process(inst)
+        if _for:
+            self.iters[inst.line].add(inst.offset)
+
+
+class AddGetIter(AddForIter):                                                     # pylint: disable=too-few-public-methods
+    """Enrich disasm with GetIters"""
+
+    def process(self, inst):
+        """Process disasm instruction"""
+        if sys.version_info < (3, 0):
+            super(AddGetIter, self).process(inst)
+        else:
+            if inst.opcode in self.opcodes:
                 self.iters[inst.line].add(inst.offset)
