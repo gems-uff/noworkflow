@@ -19,6 +19,7 @@ from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
 from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
 
 from .trial_prolog import TrialProlog
+from .trial_dot import TrialDot
 
 from .module import Module
 from .dependency import Dependency
@@ -132,7 +133,7 @@ class Trial(AlchemyProxy):
 
     prolog_description = PrologDescription("trial", (
         PrologTrial("id"),
-    ))
+    ), description="informs all trials.")
 
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], relational.base):
@@ -168,6 +169,7 @@ class Trial(AlchemyProxy):
 
         self.graph = TrialGraph(self)
         self.prolog = TrialProlog(self)
+        self.dot = TrialDot(self)
         self.initialize_default(kwargs)
 
     @property

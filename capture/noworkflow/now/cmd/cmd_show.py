@@ -8,12 +8,13 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
+from ..ipython.converter import create_ipynb
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 from ..utils.functions import wrap
 from ..utils.io import print_msg
 
-from .command import Command
+from .command import NotebookCommand
 
 
 def print_trial_relationship(relation, breakline="\n\n", other="\n    "):
@@ -38,7 +39,7 @@ def print_function_activation(trial, activation, level=1):
         print_function_activation(trial, inner_activation, level + 1)
 
 
-class Show(Command):
+class Show(NotebookCommand):
     """Show the collected provenance of a trial"""
 
     def add_arguments(self):
@@ -89,3 +90,29 @@ class Show(Command):
         if args.file_accesses:
             print_msg("this trial accessed the following files:", True)
             print_trial_relationship(trial.file_accesses)
+
+    def execute_export(self, args):
+        persistence_config.connect_existing(args.dir or os.getcwd())
+        Trial(trial_ref=args.trial)
+        name = "Trial-{}.ipynb".format(args.trial)
+        code = ("%load_ext noworkflow\n"
+                "import noworkflow.now.ipython as nip\n"
+                "# <codecell>\n"
+                "trial = nip.Trial({})\n"
+                "# trial.graph.mode = 3\n"
+                "# trial.graph.width = 500\n"
+                "# trial.graph.height = 500\n"
+                "# <codecell>\n"
+                "trial").format(repr(args.trial) if args.trial else '')
+        if not args.trial:
+            name = "Current Trial.ipynb"
+            code += (
+                "\n"
+                "# <codecell>\n"
+                "%now_ls_magic\n"
+                "# <codecell>\n"
+                "%%now_prolog {trial.id}\n"
+                "activation({trial.id}, 1, X, _, _, _)"
+            )
+
+        create_ipynb(name, code)

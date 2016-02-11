@@ -80,6 +80,12 @@ class Activation(AlchemyProxy):
         PrologTimestamp("start"),
         PrologTimestamp("finish"),
         PrologNullable("caller_activation_id", attr_name="caller_id"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "a function *name* was activated\n"
+        "by another function (*caller_activation_id*)\n"
+        "and executed during a time period from *start*\n"
+        "to *finish*."
     ))
 
     # ToDo: Improve hash

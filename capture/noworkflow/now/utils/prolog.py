@@ -4,7 +4,6 @@
 # Please, consult the license terms in the LICENSE file.
 """Helpers for Prolog Extraction"""
 
-import textwrap
 
 from datetime import datetime
 
@@ -12,19 +11,24 @@ from datetime import datetime
 class PrologDescription(object):
     """Prolog Description. Generate comments, facts, dynamic, and retract"""
 
-    def __init__(self, name, attributes):
+    def __init__(self, name, attributes, description=""):
         self.name = name
         self.attributes = attributes
+        self.description = description.split("\n")
 
     def comment(self):
         """Return prolog comment"""
-        return textwrap.dedent(
-            """
-            %
-            % FACT: {}
-            %
-            """
-        ).format(repr(self))
+        result = []
+        result.append("")
+        result.append("%")
+        result.append("% FACT DEFINITION: {}".format(repr(self)))
+        if len(self.description) > 1 or self.description[0]:
+            result.append("% DESCRIPTION: {}".format(self.description[0]))
+            for desc in self.description[1:]:
+                result.append("%              {}".format(desc))
+        result.append("%")
+        result.append("")
+        return "\n".join(result)
 
     def dynamic(self):
         """Return prolog dynamic clause"""

@@ -64,6 +64,16 @@ class SlicingDependency(AlchemyProxy):
         PrologAttribute("dependent_id"),
         PrologAttribute("supplier_activation_id"),
         PrologAttribute("supplier_id"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "the value of a variable (*supplier_id*)\n"
+        "in a specific function activation (*supplier_activation_id*),\n"
+        "influenced somehow the value of another variable (*dependent_id*)\n"
+        "in another function activation (*dependent_activation_id*).\n"
+        "This influence can occur due to direct assignment,\n"
+        "matching of arguments in function activations,\n"
+        "changes in mutable arguments of function activations,\n"
+        "assignment within control flow structure, and function return."
     ))
 
     def __repr__(self):

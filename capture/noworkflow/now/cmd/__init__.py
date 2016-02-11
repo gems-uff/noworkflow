@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import argparse
 import sys
+import sqlalchemy
 
 from .command import Command
 from .cmd_run import Run
@@ -52,6 +53,9 @@ def main():
         args.func(args)
     except RuntimeError as exc:
         print_msg(exc, True)
+    except sqlalchemy.exc.OperationalError as exc:
+        print_msg("invalid noWorkflow database", True)
+        print_msg("it is probably outdated", True)
 
 
 __all__ = [

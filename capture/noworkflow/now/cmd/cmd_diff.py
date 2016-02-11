@@ -10,12 +10,13 @@ import os
 
 from future.utils import viewitems, viewkeys
 
+from ..ipython.converter import create_ipynb
 from ..persistence.models.diff import Diff as DiffModel
 from ..persistence import persistence_config
 from ..utils.io import print_msg
 
 from .cmd_show import print_trial_relationship
-from .command import Command
+from .command import NotebookCommand
 
 
 def print_diff_trials(diff):
@@ -54,7 +55,7 @@ def print_replaced_environment(replaced):
             attr_added.value or "<None>"))
 
 
-class Diff(Command):
+class Diff(NotebookCommand):
     """Compare the collected provenance of two trials"""
 
     def add_arguments(self):
@@ -130,3 +131,19 @@ class Diff(Command):
                        "content_hash_after", "timestamp", "stack"),
                 ignore=("id", "trial_id", "function_activation_id"),
                 names={"stack": "Function"})
+
+    def execute_export(self, args):
+        persistence_config.connect_existing(args.dir or os.getcwd())
+        DiffModel(args.trial1, args.trial2)
+        name = "Diff-{0}-{1}.ipynb".format(args.trial1, args.trial2)
+        code = ("%load_ext noworkflow\n"
+                "import noworkflow.now.ipython as nip\n"
+                "# <codecell>\n"
+                "diff = nip.Diff('{0}', '{1}')\n"
+                "# diff.graph.view = 0\n"
+                "# diff.graph.mode = 3\n"
+                "# diff.graph.width = 500\n"
+                "# diff.graph.height = 500\n"
+                "# <codecell>\n"
+                "diff").format(args.trial1, args.trial2)
+        create_ipynb(name, code)

@@ -13,7 +13,9 @@ import sys
 import threading
 import webbrowser
 
-from ...cmd.cmd_export import export_notebook
+from argparse import Namespace
+
+from ...cmd.cmd_show import Show
 from ...persistence.models.trial import Trial
 from ...utils.io import redirect_output
 
@@ -117,7 +119,7 @@ def debugger_builtins(provider, namespace, metascript):
         """Start Jupyter Notebook"""
         try:
             import IPython
-            export_notebook("current")
+            Show().execute_export(Namespace(ipynb=True, dir=None))
             if start:
                 params = ["ipython", "notebook", "Current Trial.ipynb"]
                 proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)

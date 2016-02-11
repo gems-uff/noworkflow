@@ -50,6 +50,15 @@ class FileAccess(AlchemyProxy):
         PrologNullableRepr("content_hash_after"),
         PrologTimestamp("timestamp"),
         PrologNullable("activation_id", attr_name="function_activation_id"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "a file *name*\n"
+        "was accessed by a function activation (*activation_id*)\n"
+        "in a specific read or write *mode*\n"
+        "at a specific *timestamp*.\n"
+        "The content of the file\n"
+        "was captured before (*content_hash_before*)\n"
+        "and after (*content_hash_after*) the access."
     ))
 
     @property

@@ -51,6 +51,11 @@ class SlicingUsage(AlchemyProxy):
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologAttribute("line"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "during a specific function activation (*activation_id*),\n"
+        "in a specific *line* of code,\n"
+        "a variable *name* was accessed (read, delete)."
     ))
 
     def __repr__(self):

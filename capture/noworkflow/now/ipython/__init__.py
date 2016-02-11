@@ -25,8 +25,10 @@ def init(path=None, ipython=None):
     from IPython.display import display_html
     from ..utils.functions import resource
     from .magics import register_magics
+    from .hierarchymagic import load_ipython_extension as load_hierarchy
 
     register_magics(ipython)
+    load_hierarchy(ipython)
 
     if path is None:
         path = os.getcwd()

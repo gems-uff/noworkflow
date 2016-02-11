@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologTimestamp
+from ...utils.prolog import PrologRepr, PrologTimestamp, PrologNullableRepr
 
 from .base import AlchemyProxy, proxy_class, many_ref, many_viewonly_ref
 from .base import backref_one, backref_many
@@ -78,8 +78,15 @@ class SlicingVariable(AlchemyProxy):
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologAttribute("line"),
-        PrologRepr("value"),
+        PrologNullableRepr("value"),
         PrologTimestamp("timestamp", attr_name="time"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "during a specific function activation (*activation_id*),\n"
+        "in a specific *line* of code,\n"
+        "and in a specific *timestamp*,\n"
+        "a variable *name* was updated\n"
+        "to a new *value*."
     ))
 
     def __repr__(self):
