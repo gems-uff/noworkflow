@@ -116,6 +116,7 @@ class Trial(AlchemyProxy):
         return self.activations.filter(is_none(Activation.m.caller_id))
 
     DEFAULT = {
+        "dot.show_blackbox_dependencies": False,
         "graph.width": 500,
         "graph.height": 500,
         "graph.mode": 3,
@@ -124,6 +125,7 @@ class Trial(AlchemyProxy):
     }
 
     REPLACE = {
+        "dot_show_blackbox_dependencies": "dot.show_blackbox_dependencies",
         "graph_width": "graph.width",
         "graph_height": "graph.height",
         "graph_mode": "graph.mode",

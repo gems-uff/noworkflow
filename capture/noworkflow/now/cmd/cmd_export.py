@@ -28,6 +28,8 @@ class Export(NotebookCommand):
         add_arg = self.add_argument
         add_arg("-r", "--rules", action="store_true",
                 help="also exports inference rules")
+        add_arg("-b", "--explict-black-box-dependencies", action="store_true",
+                help="show black-box dependencies when exporting dot file")
         add_arg("-d", "--dot", action="store_true",
                 help="export dependency graph in graphviz format")
         add_arg("trial", type=str, nargs="?",
@@ -46,6 +48,8 @@ class Export(NotebookCommand):
             if args.rules:
                 print("\n".join(trial.prolog.rules()))
         else:
+            if args.explict_black_box_dependencies:
+                trial.dot.show_blackbox_dependencies = True
             print(trial.dot.export_text())
 
     def execute_export(self, args):

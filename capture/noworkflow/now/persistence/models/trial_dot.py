@@ -26,10 +26,12 @@ class TrialDot(Model):
     def __init__(self, trial):
         super(TrialDot, self).__init__()
         self.trial = weakref.proxy(trial)
+        self.show_blackbox_dependencies = False
 
 
     def _export_text(self):
         result = []
+        blackbox = set()
         result.append("digraph dependency {")
         for variable in self.trial.slicing_variables:
             act_id = variable.activation_id
@@ -45,9 +47,13 @@ class TrialDot(Model):
             if name.startswith("iterator "):
                 name = name[9:]
                 color, shape, fontcolor = "#1B2881", "box", "#7AC5F9"
-            if name.startswith("call "):
+            elif name.startswith("call "):
                 name = name[5:]
                 color, shape, fontcolor = "#3A85B9", "box", "black"
+            elif name == "--blackbox--":
+                name = "black-box"
+                color, shape, fontcolor = "black", "box", "grey"
+                blackbox.add((act_id, variable.id))
             result.append(('    v_{act_id}_{variable.id} '
                            '[label="{variable.line} {name}"'
                            ' fillcolor="{color}" fontcolor="{fontcolor}"'
@@ -59,6 +65,11 @@ class TrialDot(Model):
             dep_act_id = "global" if dep_act_id == -1 else dep_act_id
             sup_act_id = dependency.supplier_activation_id
             sup_act_id = "global" if sup_act_id == -1 else sup_act_id
+
+            if ((not self.show_blackbox_dependencies) and
+                    ((dep_act_id, dependency.dependent_id) in blackbox) and
+                    ((sup_act_id, dependency.supplier_id) in blackbox)):
+                continue
 
             result.append(('    v_{0}_{1} -> v_{2}_{3};').format(
                 dep_act_id, dependency.dependent_id,

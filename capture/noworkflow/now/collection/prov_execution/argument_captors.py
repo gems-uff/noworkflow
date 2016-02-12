@@ -153,7 +153,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
             if supplier is not None:
                 provider.dependencies.add(
                     act_var.activation_id, act_var.id,
-                    supplier[0].id, supplier[1].id
+                    supplier.activation_id, supplier.id
                 )
 
     def match_args(self, params, arg):

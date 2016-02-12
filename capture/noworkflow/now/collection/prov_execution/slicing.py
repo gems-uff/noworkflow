@@ -138,6 +138,10 @@ class Tracer(Profiler):                                                         
         self.created_builtins = {}
         self.builtins = builtins.__dict__
 
+        # Blackbox
+        self.blackbox = None
+        self.blackbox_index = 1
+
         self.argument_captor = SlicingArgumentCaptor(self)
 
         # List of calls in comprehension
@@ -173,26 +177,26 @@ class Tracer(Profiler):                                                         
         name -- variable name or tuple
         definition -- definition filename
         """
-        activation, name = get_call_var(activation, name)
+        name = get_call_var(name)
 
         if name in activation.context:
             # Local context
-            return get_call_var(activation, activation.context[name])
+            return get_call_var(activation.context[name])
         elif name in self.globals[definition].context:
             # Global contex
             activation = self.globals[definition]
-            return get_call_var(activation, activation.context[name])
+            return get_call_var(activation.context[name])
         elif name in self.created_builtins:
             # Buitins
             activation = self.main_activation
-            return get_call_var(activation, self.created_builtins[name])
+            return get_call_var(self.created_builtins[name])
         elif name in self.builtins:
             # New Builtins
             activation = self.main_activation
             vid = self.add_variable(activation.id, name, 0, self.builtins)
             variable = self.variables[vid]
             self.created_builtins[name] = variable
-            return get_call_var(activation, variable)
+            return get_call_var(variable)
 
     def find_variables(self, activation, names, filename):
         """Find variables in activation context by names
@@ -204,12 +208,11 @@ class Tracer(Profiler):                                                         
         definition -- definition filename
         """
         for name in names:
-            a_v = self.find_variable(activation, name, filename)
-            if a_v is None and isinstance(name, tuple):
-                a_v = self.add_fake_call(activation, name)
-            if a_v:
-                yield a_v
-
+            variable = self.find_variable(activation, name, filename)
+            if variable is None and isinstance(name, tuple):
+                variable = self.add_fake_call(activation, name)
+            if variable:
+                yield variable
 
     def add_dependencies(self, dependent, suppliers):
         """ Create dependencies: dependent depends on suppliers
@@ -222,7 +225,7 @@ class Tracer(Profiler):                                                         
         dependencies_add = self.dependencies.add
         for supplier in suppliers:
             dependencies_add(dependent.activation_id, dependent.id,
-                             supplier[0].id, supplier[1].id)
+                             supplier.activation_id, supplier.id)
 
 
     def slice_line(self, activation, lineno, f_locals, filename,                 # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
@@ -272,7 +275,7 @@ class Tracer(Profiler):                                                         
             else:
                 # Python skips tracing calls to builtins (float, int...)
                 # create artificial variables for them
-                _, variable = self.add_fake_call(activation, name)
+                variable = self.add_fake_call(activation, name)
                 add_dependencies(variable, suppliers_gen)
 
 
@@ -284,14 +287,19 @@ class Tracer(Profiler):                                                         
                                 "{} {}".format(call.prefix, call.name),
                                 line, {}, "now(n/a)")
         variable = self.variables[vid]
+
+        blackbox = self.create_blackbox()
+        self.dependencies.add(variable.activation_id, variable.id,
+                              blackbox.activation_id, blackbox.id)
+
         activation.context[call_uid] = ActivationSlicing(
             variable, variable, activation.id, variable.id)
 
         args = self.find_variables(activation, call.all_args(),
                                    activation.definition_file)
 
-        self.add_dependencies(variable, args)
-        return (activation, variable)
+        self.add_dependencies(blackbox, args)
+        return variable
 
     def create_call(self, activation, _return):
         """Create call variable and dependency"""
@@ -343,6 +351,20 @@ class Tracer(Profiler):                                                         
             _return.value = activation.return_value
             self.create_call(activation, _return)
 
+    def create_blackbox(self):
+        """Create a blackbox object with dependency to the previous one"""
+        vid = self.add_variable(0, "--blackbox--", self.blackbox_index,
+                                {}, value="now(n/a)")
+        blackbox = self.variables[vid]
+        old_blackbox = self.blackbox
+        if old_blackbox is not None:
+            self.dependencies.add(blackbox.activation_id, blackbox.id,
+                                  old_blackbox.activation_id, old_blackbox.id)
+        self.blackbox = blackbox
+        self.blackbox_index += 1
+        return blackbox
+
+
     def add_generic_return(self, activation, frame):
         """Add return to functions that do not have return
         For ccall, add dependency from all params
@@ -370,6 +392,11 @@ class Tracer(Profiler):                                                         
             # return does not depend on parameters
             return _return
 
+        # Artificial return depends on blackbox
+        blackbox = self.create_blackbox()
+        self.dependencies.add(_return.activation_id, _return.id,
+                              blackbox.activation_id, blackbox.id)
+
         if not activation.has_parameters:
             # activation does not have parameters
             return _return
@@ -391,9 +418,42 @@ class Tracer(Profiler):                                                         
             return
 
         all_args = list(self.find_variables(caller, call.all_args(), filename))
-        self.add_dependencies(_return, all_args)
-        self.add_inter_dependencies(frame.f_locals, all_args, caller, line)
+        self.add_dependencies(blackbox, all_args)
+        self.add_blackbox_args(frame.f_locals, all_args, caller, line,
+                               blackbox)
         return _return
+
+    def add_blackbox_args(self, f_locals, args, caller, lineno, blackbox):       # pylint: disable=too-many-arguments
+        """Add dependencies from all parameters in a call to a blackbox
+
+
+        Arguments:
+        f_locals -- Frame local variables
+        args -- Parameter Variables
+        caller -- parent Activation
+        lineno -- Activation lineno
+        blackbox -- blackbox variable
+        """
+        context = caller.context
+        variables = self.variables
+        add_variable = self.add_variable
+
+        added = {}
+        for arg in args:
+            try:
+                name = arg.name
+                var = f_locals[name]
+                if not isinstance(var, IMMUTABLE):
+                    vid = add_variable(caller.id, name, lineno, {}, value=var)
+                    variable = variables[vid]
+                    self.dependencies.add(variable.activation_id, vid,
+                                          blackbox.activation_id, blackbox.id)
+                    added[name] = variable
+            except KeyError:
+                pass
+
+        for name, variable in viewitems(added):
+            context[name] = variable
 
     def add_inter_dependencies(self, f_locals, args, caller, lineno):            # pylint: disable=too-many-locals
         """Add dependencies between all parameters in a call
@@ -411,7 +471,7 @@ class Tracer(Profiler):                                                         
         add_variable = self.add_variable
 
         added = {}
-        for _, arg in args:
+        for arg in args:
             try:
                 name = arg.name
                 var = f_locals[name]
@@ -523,8 +583,8 @@ class Tracer(Profiler):                                                         
                 print_fn_msg(lambda: var)
 
 
-def get_call_var(activation, name):
+def get_call_var(name):
     """Return Call Var if is instance of ActivationSlicing"""
     if isinstance(name, ActivationSlicing):
-        return activation, name.call_var
-    return activation, name
+        return name.call_var
+    return name
