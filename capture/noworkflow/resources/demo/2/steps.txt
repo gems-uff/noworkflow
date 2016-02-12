@@ -9,7 +9,7 @@ $now run experiment.py
 $now restore 1
 >LOAD step4
 $now run experiment.py
-$now restore 3
+$now restore 5
 $now run experiment.py
 >LOAD step5
 $now run experiment.py
