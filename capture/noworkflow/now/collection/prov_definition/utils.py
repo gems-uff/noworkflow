@@ -78,6 +78,7 @@ class FunctionCall(ast.NodeVisitor):                                            
     """Represent a function call"""
 
     def __init__(self, visitor_class):
+        self.self_attr = []
         self.func = []
         self.args = []
         self.keywords = {}
@@ -93,6 +94,7 @@ class FunctionCall(ast.NodeVisitor):                                            
     def all_args(self):
         """List arguments of function call"""
         return list(itertools.chain(
+            self.self_attr,
             itertools.chain.from_iterable(self.args),
             self.starargs,
             self.kwargs,
@@ -109,6 +111,8 @@ class FunctionCall(ast.NodeVisitor):                                            
     def visit_Call(self, node):                                                  # pylint: disable=invalid-name
         """Visit Call"""
         self.func = self.use_visitor(node.func)
+        if isinstance(node.func, ast.Attribute):
+            self.self_attr = self.use_visitor(node.func.value)
         self.args = []
         for arg in node.args:
             if sys.version_info <= (3, 4) or not isinstance(arg, ast.Starred):

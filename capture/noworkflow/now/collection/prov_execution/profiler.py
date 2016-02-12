@@ -89,29 +89,15 @@ class Profiler(ExecutionProvider):                                              
     @property
     def current_activation(self):
         """Return current activation"""
-        return self._current_activation()
+        astack = self.activation_stack
+        if astack[-1] is not None:
+            return self.activations[astack[-1]]
+        return self.activations.dry_add("", "", "empty", 0, 0, -1, False)
 
     @property
     def parent_activation(self):
         """Return activation that called current activation"""
         return self.activations[self.activation_stack[-2]]
-
-    def _current_activation(self, ignore_open=False):
-        """Return current activation
-
-
-        Keyword Arguments:
-        ignore_open -- if current activation is "open", get previous
-            (default=False)
-        """
-        astack = self.activation_stack
-        if astack[-1] is not None:
-            activation = self.activations[astack[-1]]
-            if ignore_open and len(astack) > 1 and activation.name == "open":
-                # get open"s parent activation
-                return self.activations[astack[-2]]
-            return activation
-        return self.activations.dry_add("", "", "empty", 0, 0, -1, False)
 
     def new_open(self, old_open):
         """Wrap the open builtin function to register file access"""
@@ -144,7 +130,7 @@ class Profiler(ExecutionProvider):                                              
 
     def add_file_access(self, file_access):
         """After activation that called open finish, add file_accesses to it"""
-        activation = self._current_activation(ignore_open=True)
+        activation = self.current_activation
         file_access.function_activation_id = activation.id
         activation.file_accesses.append(file_access)
 
@@ -203,7 +189,7 @@ class Profiler(ExecutionProvider):                                              
         self.depth_non_user += 1
         if self.valid_depth():
             self.add_activation(self.activations.add(
-                frame.f_code.co_filename,
+                "now(n/a)",
                 frame.f_code.co_filename,
                 arg.__name__ if arg.__self__ is None else ".".join(
                     [type(arg.__self__).__name__, arg.__name__]),

@@ -54,6 +54,9 @@ class TrialDot(Model):
                 name = "black-box"
                 color, shape, fontcolor = "black", "box", "grey"
                 blackbox.add((act_id, variable.id))
+            elif name == "--graybox--":
+                name = "gray-box"
+                color, shape, fontcolor = "grey", "box", "black"
             result.append(('    v_{act_id}_{variable.id} '
                            '[label="{variable.line} {name}"'
                            ' fillcolor="{color}" fontcolor="{fontcolor}"'

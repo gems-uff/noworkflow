@@ -22,6 +22,7 @@ from ...persistence.models import SlicingUsage
 from ...utils.io import print_fn_msg
 from ...utils.bytecode.f_trace import find_f_trace, get_f_trace
 from ...utils.cross_version import IMMUTABLE, builtins
+from ...utils.functions import NOWORKFLOW_DIR
 
 from ..prov_definition.utils import CallDependency
 
@@ -288,9 +289,13 @@ class Tracer(Profiler):                                                         
                                 line, {}, "now(n/a)")
         variable = self.variables[vid]
 
-        blackbox = self.create_blackbox()
+        if "import" in call.name:
+            box = self.create_blackbox()
+        else:
+            box = self.create_graybox()
+
         self.dependencies.add(variable.activation_id, variable.id,
-                              blackbox.activation_id, blackbox.id)
+                              box.activation_id, box.id)
 
         activation.context[call_uid] = ActivationSlicing(
             variable, variable, activation.id, variable.id)
@@ -298,7 +303,7 @@ class Tracer(Profiler):                                                         
         args = self.find_variables(activation, call.all_args(),
                                    activation.definition_file)
 
-        self.add_dependencies(blackbox, args)
+        self.add_dependencies(box, args)
         return variable
 
     def create_call(self, activation, _return):
@@ -364,6 +369,12 @@ class Tracer(Profiler):                                                         
         self.blackbox_index += 1
         return blackbox
 
+    def create_graybox(self):
+        """Create a graybox object"""
+        vid = self.add_variable(0, "--graybox--", 0,
+                                {}, value="now(n/a)")
+        return self.variables[vid]
+
 
     def add_generic_return(self, activation, frame):
         """Add return to functions that do not have return
@@ -393,7 +404,13 @@ class Tracer(Profiler):                                                         
             return _return
 
         # Artificial return depends on blackbox
-        blackbox = self.create_blackbox()
+        definition_file = activation.definition_file
+        if NOWORKFLOW_DIR in definition_file or definition_file == "now(n/a)":
+            # noworkflow activations have no side effect
+            # ToDo: check if it is builtin or just C
+            blackbox = self.create_graybox()
+        else:
+            blackbox = self.create_blackbox()
         self.dependencies.add(_return.activation_id, _return.id,
                               blackbox.activation_id, blackbox.id)
 
@@ -419,43 +436,11 @@ class Tracer(Profiler):                                                         
 
         all_args = list(self.find_variables(caller, call.all_args(), filename))
         self.add_dependencies(blackbox, all_args)
-        self.add_blackbox_args(frame.f_locals, all_args, caller, line,
-                               blackbox)
+        self.add_inter_dependencies(frame.f_locals, all_args, caller, line,
+                                    [blackbox])
         return _return
 
-    def add_blackbox_args(self, f_locals, args, caller, lineno, blackbox):       # pylint: disable=too-many-arguments
-        """Add dependencies from all parameters in a call to a blackbox
-
-
-        Arguments:
-        f_locals -- Frame local variables
-        args -- Parameter Variables
-        caller -- parent Activation
-        lineno -- Activation lineno
-        blackbox -- blackbox variable
-        """
-        context = caller.context
-        variables = self.variables
-        add_variable = self.add_variable
-
-        added = {}
-        for arg in args:
-            try:
-                name = arg.name
-                var = f_locals[name]
-                if not isinstance(var, IMMUTABLE):
-                    vid = add_variable(caller.id, name, lineno, {}, value=var)
-                    variable = variables[vid]
-                    self.dependencies.add(variable.activation_id, vid,
-                                          blackbox.activation_id, blackbox.id)
-                    added[name] = variable
-            except KeyError:
-                pass
-
-        for name, variable in viewitems(added):
-            context[name] = variable
-
-    def add_inter_dependencies(self, f_locals, args, caller, lineno):            # pylint: disable=too-many-locals
+    def add_inter_dependencies(self, f_locals, args, caller, lineno, other):     # pylint: disable=too-many-locals
         """Add dependencies between all parameters in a call
 
 
@@ -464,6 +449,7 @@ class Tracer(Profiler):                                                         
         args -- Parameter Variables
         caller -- parent Activation
         lineno -- Activation lineno
+        other -- Other args
         """
         context = caller.context
         variables = self.variables
@@ -478,7 +464,7 @@ class Tracer(Profiler):                                                         
                 if not isinstance(var, IMMUTABLE):
                     vid = add_variable(caller.id, name, lineno, {}, value=var)
                     variable = variables[vid]
-                    add_dependencies(variable, args)
+                    add_dependencies(variable, other)
                     added[name] = variable
             except KeyError:
                 pass
@@ -513,6 +499,9 @@ class Tracer(Profiler):                                                         
             for variable in activation_loops[-1].remove:
                 if variable in activation.context:
                     del activation.context[variable]
+            print_fn_msg(lambda: "POP Loop, {}-{}".format(
+                activation_loops[-1].first_line,
+                activation_loops[-1].last_line))
             activation.slice_stack.pop()
             activation_loops.pop()
 

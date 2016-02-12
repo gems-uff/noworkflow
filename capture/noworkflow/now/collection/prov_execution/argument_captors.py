@@ -126,6 +126,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         super(SlicingArgumentCaptor, self).__init__(*args, **kwargs)
         self.caller, self.activation = None, None
         self.filename, self.line = "", 0
+        self.frame = None
 
     def match_arg(self, passed, arg):
         """Match passed param with argument
@@ -240,10 +241,11 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
 
         # Match positional arguments
         for i, call_arg in enumerate(call.args):
-            j = i if i < activation_arguments else sub
-            act_arg = order[j]
-            match_args(call_arg, act_arg)
-            used[j] += 1
+            if call_arg:
+                j = i if i < activation_arguments else sub
+                act_arg = order[j]
+                match_args(call_arg, act_arg)
+                used[j] += 1
 
         # Match keyword arguments
         for act_arg, call_arg in viewitems(call.keywords):
@@ -276,5 +278,9 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         #   Do not create dependencies between all parameters
         all_args = list(provider.find_variables(
             self.caller, call.all_args(), activation.filename))
-        provider.add_inter_dependencies(frame.f_back.f_locals, all_args,
-                                        self.caller, activation.line)
+        if all_args:
+            graybox = provider.create_graybox()
+            provider.add_dependencies(graybox, all_args)
+            provider.add_inter_dependencies(frame.f_back.f_locals, all_args,
+                                            self.caller, activation.line,
+                                            [graybox])

@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import inspect
 
+from os.path import join, dirname
 from textwrap import dedent
 from pkg_resources import resource_string, resource_listdir, resource_isdir
 
@@ -15,6 +16,7 @@ from pkg_resources import resource_string, resource_listdir, resource_isdir
 MODULE = __name__
 MODULE = MODULE[:MODULE.rfind(".")]
 MODULE = MODULE[:MODULE.rfind(".")]
+NOWORKFLOW_DIR = dirname(dirname(dirname(__file__)))
 
 
 def wrap(string, initial="  ", other="\n  "):
