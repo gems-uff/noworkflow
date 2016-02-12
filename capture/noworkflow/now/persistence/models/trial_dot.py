@@ -49,8 +49,9 @@ class TrialDot(Model):
                 name = name[5:]
                 color, shape, fontcolor = "#3A85B9", "box", "black"
             result.append(('    v_{act_id}_{variable.id} '
-                           '[label="{name}" fillcolor="{color}"'
-                           ' fontcolor="{fontcolor}" shape="{shape}"'
+                           '[label="{variable.line} {name}"'
+                           ' fillcolor="{color}" fontcolor="{fontcolor}"'
+                           ' shape="{shape}"'
                            ' style="filled"];').format(**locals()))
         result.append("")
         for dependency in self.trial.slicing_dependencies:

@@ -46,10 +46,6 @@ class ExecutionProvider(object):                                                
         """Call this function when trace event is not defined"""
         pass
 
-    def tracer(self, frame, event, arg):
-        """Call event function from event_map"""
-        self.event_map[event](frame, event, arg)
-
     def store(self, partial=False):
         """Store provenance. Override it on subclasses"""
         pass

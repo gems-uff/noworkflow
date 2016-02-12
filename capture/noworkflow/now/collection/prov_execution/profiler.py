@@ -148,11 +148,11 @@ class Profiler(ExecutionProvider):                                              
         file_access.function_activation_id = activation.id
         activation.file_accesses.append(file_access)
 
-    def valid_depth(self):
+    def valid_depth(self, extra=0):
         """Check if it is capturing in a valid depth
         Consider both user depth and non user depth.
         """
-        depth = self.depth_user + self.depth_non_user
+        depth = self.depth_user + self.depth_non_user + extra
         if depth < 0:
             self.enabled = False
             return False
@@ -228,7 +228,8 @@ class Profiler(ExecutionProvider):                                              
                 frame.f_back.f_code.co_filename,
                 co_name if co_name != "<module>" else co_filename,
                 frame.f_back.f_lineno, frame.f_back.f_lasti,
-                self.activation_stack[-1], in_paths
+                self.activation_stack[-1],
+                in_paths and self.valid_depth(extra=1)
             )
             activation = self.activations[aid]
 
@@ -287,12 +288,14 @@ class Profiler(ExecutionProvider):                                              
         return False
 
     def tracer(self, frame, event, arg):
-        """Check if event is valid before executing tracer"""
+        """Check if event is valid before executing tracer
+        Call event function from event_map
+        """
         try:
             if self.enabled:
                 if self.unique_events or self.new_event(frame, event, arg):
                     self.pre_tracer(frame, event, arg)
-                    super(Profiler, self).tracer(frame, event, arg)
+                    self.event_map[event](frame, event, arg)
                 if (self.save_frequency and
                         (self.timer() - self.last_time > self.save_frequency)):
                     self.store(partial=True)
