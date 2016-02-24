@@ -81,7 +81,7 @@ usage_or_assign(Trial_id, Name, Line, Id) :- variable(Trial_id, _, Id, Name, Lin
 
 var_name(Trial_id, Id, Name) :- variable(Trial_id, _, Id, Name, _, _, _).
 var_line(Trial_id, Id, Line) :- variable(Trial_id, _, Id, _, Line, _, _).
-var_info(Trial_id, Id, variable(Trial_id, Activation, Id, Name, Line, Value)) :- variable(Trial_id, Activation, Id, Name, Line, Value, _).
+var_info(Trial_id, Id, variable(Trial_id, Activation, Id, Name, Line, Value, Timestamp)) :- variable(Trial_id, Activation, Id, Name, Line, Value, Timestamp).
 
 
 %
@@ -93,6 +93,6 @@ slice(Trial_id, [Id|L1], L2) :- slice(Trial_id, Id, L3), slice(Trial_id, L1, L4)
 slice(Trial_id, Id, [Id|L1]) :- bagof(X, dep(Trial_id, Id, X),L2), !, slice(Trial_id, L2, L1).
 slice(_, Id, [Id]).
 
-slice_name(Trial_id, Id, Names) :- slice(Trial_id, Id, X), maplist(var_name(Trial_id), X, Names).
-slice_line(Trial_id, Id, Lines) :- slice(Trial_id, Id, X), maplist(var_line(Trial_id), X, Lines).
-slice_info(Trial_id, Id, Infos) :- slice(Trial_id, Id, X), maplist(var_info(Trial_id), X, Infos).
+variable_name_dependencies(Trial_id, Id, Names) :- slice(Trial_id, Id, X), maplist(var_name(Trial_id), X, Names).
+variable_line_dependencies(Trial_id, Id, Lines) :- slice(Trial_id, Id, X), maplist(var_line(Trial_id), X, Lines).
+variable_dependencies(Trial_id, Id, Infos) :- slice(Trial_id, Id, X), maplist(var_info(Trial_id), X, Infos).
