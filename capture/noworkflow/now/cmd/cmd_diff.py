@@ -14,6 +14,7 @@ from ..ipython.converter import create_ipynb
 from ..persistence.models.diff import Diff as DiffModel
 from ..persistence import persistence_config
 from ..utils.io import print_msg
+from ..utils.cross_version import zip_longest
 
 from .cmd_show import print_trial_relationship
 from .command import NotebookCommand
@@ -55,6 +56,29 @@ def print_replaced_environment(replaced):
             attr_added.value or "<None>"))
 
 
+def print_brief(added, removed, replaced):
+    """Print brief diff"""
+    added_names = [access.brief for access in added]
+    removed_names = [access.brief for access in removed]
+    replaced_names = [rem.brief for rem, add in replaced]
+    order = added_names, removed_names, replaced_names
+    for column in order:
+        column.sort()
+    added_names.insert(0, "[Additions]")
+    removed_names.insert(0, "[Removals]")
+    replaced_names.insert(0, "[Changes]")
+    max_column_len = [max(len(text) for text in column)
+                      for column in order]
+
+    #max_len = max(len(column) for column in order)
+    for add, rem, cha in zip_longest(*order):
+        add = add or ""
+        rem = rem or ""
+        cha = cha or ""
+        print('{0: <{3}} | {1: <{4}} | {2: <{5}}'.format(
+            add, rem, cha, *max_column_len))
+
+
 class Diff(NotebookCommand):
     """Compare the collected provenance of two trials"""
 
@@ -70,6 +94,8 @@ class Diff(NotebookCommand):
                 help="compare environment conditions")
         add_arg("-f", "--file-accesses", action="store_true",
                 help="compare read/write access to files")
+        add_arg("--brief", action="store_true",
+                help="display a concise version of diff")
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
@@ -84,53 +110,69 @@ class Diff(NotebookCommand):
 
         if args.modules:
             (added, removed, replaced) = diff.modules
-            print_msg("{} modules added:".format(len(added)), True)
-            print_trial_relationship(added)
-            print()
+            if args.brief:
+                print_msg("Brief modules diff", True)
+                print_brief(added, removed, replaced)
+            else:
+                print_msg("{} modules added:".format(len(added)), True)
+                print_trial_relationship(added)
+                print()
 
-            print_msg("{} modules removed:".format(len(removed)), True)
-            print_trial_relationship(removed)
-            print()
+                print_msg("{} modules removed:".format(len(removed)), True)
+                print_trial_relationship(removed)
+                print()
 
-            print_msg("{} modules replaced:".format(len(replaced)), True)
-            print_replaced_attributes(replaced)
+                print_msg("{} modules replaced:".format(len(replaced)), True)
+                print_replaced_attributes(replaced)
+            print()
 
         if args.environment:
             (added, removed, replaced) = diff.environment
-            print_msg("{} environment attributes added:".format(
-                len(added)), True)
-            print_trial_relationship(added, breakline="\n", other="\n  ")
-            print()
+            if args.brief:
+                print_msg("Brief environment attributes diff", True)
+                print_brief(added, removed, replaced)
+            else:
+                print_msg("{} environment attributes added:".format(
+                    len(added)), True)
+                print_trial_relationship(added, breakline="\n", other="\n  ")
+                print()
 
-            print_msg("{} environment attributes removed:".format(
-                len(removed)), True)
-            print_trial_relationship(removed, breakline="\n", other="\n  ")
-            print()
+                print_msg("{} environment attributes removed:".format(
+                    len(removed)), True)
+                print_trial_relationship(removed, breakline="\n", other="\n  ")
+                print()
 
-            print_msg("{} environment attributes replaced:".format(
-                len(replaced)), True)
-            print_replaced_environment(replaced)
+                print_msg("{} environment attributes replaced:".format(
+                    len(replaced)), True)
+                print_replaced_environment(replaced)
+            print()
 
         if args.file_accesses:
             (added, removed, replaced) = diff.file_accesses
-            print_msg("{} file accesses added:".format(
-                len(added)), True)
-            print_trial_relationship(added)
-            print()
+            if args.brief:
+                print_msg("Brief file access diff", True)
+                print_brief(added, removed, replaced)
+            else:
+                print_msg("{} file accesses added:".format(
+                    len(added)), True)
+                print_trial_relationship(added)
+                print()
 
-            print_msg("{} file accesses removed:".format(
-                len(removed)), True)
-            print_trial_relationship(removed)
-            print()
+                print_msg("{} file accesses removed:".format(
+                    len(removed)), True)
+                print_trial_relationship(removed)
+                print()
 
-            print_msg("{} file accesses replaced:".format(
-                len(replaced)), True)
-            print_replaced_attributes(
-                replaced,
-                extra=("mode", "buffering", "content_hash_before",
-                       "content_hash_after", "timestamp", "stack"),
-                ignore=("id", "trial_id", "function_activation_id"),
-                names={"stack": "Function"})
+                print_msg("{} file accesses replaced:".format(
+                    len(replaced)), True)
+                print_replaced_attributes(
+                    replaced,
+                    extra=("mode", "buffering", "content_hash_before",
+                           "content_hash_after", "timestamp", "stack"),
+                    ignore=("id", "trial_id", "function_activation_id"),
+                    names={"stack": "Function"})
+
+
 
     def execute_export(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())

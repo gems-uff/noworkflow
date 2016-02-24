@@ -102,7 +102,8 @@ class Diff(Model):
         """Diff file accesses"""
         return diff_set(
             set(self.trial1.file_accesses),
-            set(self.trial2.file_accesses))
+            set(self.trial2.file_accesses),
+            create_replaced=False)
 
     def _repr_html_(self):
         return self.graph._repr_html_()                                          # pylint: disable=protected-access
@@ -120,7 +121,7 @@ def diff_dict(before, after):
     return result
 
 
-def diff_set(before, after):
+def diff_set(before, after, create_replaced=True):
     """Compare sets to get additions, removals and replacements
 
     Return 3 sets:
@@ -137,10 +138,11 @@ def diff_set(before, after):
         removed_by_name[element_removed.name] = element_removed
     for element_added in added:
         element_removed = removed_by_name.get(element_added.name)
-        if element_removed:
+        if element_removed and create_replaced:
             replaced.add((element_removed, element_added))
-    for (element_removed, element_added) in replaced:
-        removed.discard(element_removed)
-        added.discard(element_added)
+    if create_replaced:
+        for (element_removed, element_added) in replaced:
+            removed.discard(element_removed)
+            added.discard(element_added)
 
     return (added, removed, replaced)

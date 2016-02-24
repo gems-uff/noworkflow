@@ -75,8 +75,17 @@ class FileAccess(AlchemyProxy):
             stack.append(" ... -> open")
         return " -> ".join(stack)
 
+    @property
+    def brief(self):
+        """Brief description of file access"""
+        result = "({0.mode}) {0.name}".format(self)
+        if self.content_hash_before is None:
+            result += " (new)"
+        return result
+
     def __key(self):
-        return (self.name, self.content_hash_before, self.content_hash_after)
+        return (self.name, self.content_hash_before, self.content_hash_after,
+                self.mode)
 
     def __hash__(self):
         return hash(self.__key())

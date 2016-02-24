@@ -29,6 +29,14 @@ class Module(AlchemyProxy):
 
     trials = backref_many("trials")  # Trial.dmodules
 
+    @property
+    def brief(self):
+        """Brief description of module"""
+        result = "{0.name}".format(self)
+        if self.version:
+            result += " {0.version}".format(self)
+        return result
+
     def __key(self):
         return (self.name, self.version, self.path, self.code_hash)
 

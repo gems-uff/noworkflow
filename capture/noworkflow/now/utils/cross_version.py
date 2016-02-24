@@ -20,6 +20,7 @@ if PY3:
     import builtins                                                              # pylint: disable=wrong-import-position, unused-import
     import pickle                                                                # pylint: disable=wrong-import-position, unused-import
     import reprlib                                                               # pylint: disable=wrong-import-position, unused-import
+    from itertools import zip_longest                                            # pylint: disable=wrong-import-position, unused-import
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes)
     string = (str, bytes)                                                        # pylint: disable=invalid-name
@@ -31,6 +32,7 @@ else:
     except ImportError:
         import pickle                                                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports
     import repr as reprlib                                                       # pylint: disable=wrong-import-position, unused-import, import-error
+    from itertools import izip_longest as zip_longest                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)               # pylint: disable=invalid-name, undefined-variable
     string = (basestring,)                                                       # pylint: disable=invalid-name, undefined-variable

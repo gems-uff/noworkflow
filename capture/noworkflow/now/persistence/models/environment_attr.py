@@ -36,6 +36,11 @@ class EnvironmentAttr(AlchemyProxy):
         PrologRepr("value"),
     ))
 
+    @property
+    def brief(self):
+        """Brief description of environment attribute"""
+        return self.name
+
     def __hash__(self):
         return hash((self.name, self.value))
 
