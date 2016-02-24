@@ -117,14 +117,21 @@ def idis(obj=None, compiler=None, outfile=None):
 
 def _visit(obj, visitor, compiler=None, recurse=False):
     """Recursively disassemble"""
+    for _, inst in _visit_with_code(obj, visitor, compiler, recurse):
+        yield inst
+
+
+def _visit_with_code(obj, visitor, compiler=None, recurse=False):
+    """Recursively disassemble"""
     typ, obj = _get_code_object(obj, compiler)
     for inst in visitor(obj, compiler=compiler):
-        yield inst
+        yield obj, inst
     if typ == "code" and recurse:
         for constant in obj.co_consts:
             if type(constant) is type(obj):
-                for inst in _visit(constant, visitor, compiler, recurse):
-                    yield inst
+                for code, inst in _visit_with_code(constant, visitor,
+                                                   compiler, recurse):
+                    yield code, inst
 
 
 def instruction_dis(compiled, compiler=None, recurse=False):
@@ -132,7 +139,21 @@ def instruction_dis(compiled, compiler=None, recurse=False):
     return list(_visit(compiled, idis, compiler, recurse))
 
 
+def code_dis(compiled, compiler=None, recurse=False):
+    """Return dis of compiled code"""
+    return list(_visit_with_code(compiled, idis, compiler, recurse))
+
+
 def instruction_dis_sorted_by_line(compiled, compiler=None, recurse=False):
     """Return dis sorted by line of compiled code"""
     instructions = instruction_dis(compiled, compiler, recurse)
     return sorted(instructions, key=lambda x: (x.line, x.offset))
+
+
+def code_dis_sorted_line(compiled, compiler=None, recurse=False):
+    """Return dis sorted by line of compiled code"""
+    instructions = code_dis(compiled, compiler, recurse)
+    return sorted(instructions, key=lambda x: (x[1].line, x[1].offset))
+
+
+findlinestarts = _dis.findlinestarts                                             # pylint: disable=invalid-name
