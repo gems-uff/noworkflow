@@ -65,8 +65,9 @@ def prepare_graph(graph1, graph2):
     for node in nodes2:
         graph2["levels"][node["node"]["level"]].add(node["index"])
     if nodes1 and nodes2:
-        nodes1[0]["name"] = "<main>"
-        nodes2[0]["name"] = "<main>"
+        if nodes1[0]['name'] != nodes2[0]['name']:
+            nodes1[0]["name"] = "<main>"
+            nodes2[0]["name"] = "<main>"
         graph1["max_level"] = max(viewkeys(graph1["levels"]))
         graph2["max_level"] = max(viewkeys(graph2["levels"]))
     else:
