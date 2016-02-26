@@ -42,14 +42,15 @@ cdef class FileAccessLw(BaseLW):
 
 cdef class VariableLW(BaseLW):
     cdef public int trial_id, id, activation_id, line;
-    cdef public str name, value;
+    cdef public str name, value, type;
     cdef public object time;
 
 cdef class VariableDependencyLW(BaseLW):
     cdef public int trial_id, id;
-    cdef public int dependent_activation, dependent;
-    cdef public int supplier_activation, supplier;
+    cdef public int source_activation_id, source_id;
+    cdef public int target_activation_id, target_id;
+    cdef public str type;
 
 cdef class VariableUsageLW(BaseLW):
     cdef public int trial_id, id, activation_id, variable_id, line;
-    cdef public str name, ctx;
+    cdef public str ctx;

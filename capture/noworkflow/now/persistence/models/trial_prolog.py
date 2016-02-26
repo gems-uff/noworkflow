@@ -12,7 +12,7 @@ from ...utils.functions import resource
 
 from .base import Model
 from . import Activation, FileAccess
-from . import SlicingVariable, SlicingUsage, SlicingDependency
+from . import Variable, VariableUsage, VariableDependency
 
 
 RULES = "../resources/rules.pl"
@@ -33,9 +33,9 @@ class TrialProlog(Model):
             (trial.__class__, lambda: [trial]),
             (Activation, lambda: trial.activations),
             (FileAccess, lambda: trial.file_accesses),
-            (SlicingVariable, lambda: trial.slicing_variables),
-            (SlicingUsage, lambda: trial.slicing_usages),
-            (SlicingDependency, lambda: trial.slicing_dependencies),
+            (Variable, lambda: trial.variables),
+            (VariableUsage, lambda: trial.variable_usages),
+            (VariableDependency, lambda: trial.variable_dependencies),
         ]
 
     def retract(self):

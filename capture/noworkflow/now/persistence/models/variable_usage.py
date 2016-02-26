@@ -17,10 +17,10 @@ from .base import AlchemyProxy, proxy_class, backref_one
 
 
 @proxy_class
-class SlicingUsage(AlchemyProxy):
+class VariableUsage(AlchemyProxy):
     """Represent a variable usage during program slicing"""
 
-    __tablename__ = "slicing_usage"
+    __tablename__ = "variable_usage"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"],
@@ -29,27 +29,26 @@ class SlicingUsage(AlchemyProxy):
                              ["function_activation.trial_id",
                               "function_activation.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "activation_id", "variable_id"],
-                             ["slicing_variable.trial_id",
-                              "slicing_variable.activation_id",
-                              "slicing_variable.id"], ondelete="CASCADE"),
+                             ["variable.trial_id",
+                              "variable.activation_id",
+                              "variable.id"], ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
     variable_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
-    name = Column(Text)
     line = Column(Integer)
     context = Column(Text, CheckConstraint("context IN ('Load', 'Del')"))
 
-    trial = backref_one("trial")  # Trial.slicing_usages
+    trial = backref_one("trial")  # Trial.variable_usages
     activation = backref_one("activation")  # Activation.variables_usages
-    variable = backref_one("variable")  # SlicinVariable.slicing_usages
+    variable = backref_one("variable")  # Variable.usages
 
     prolog_description = PrologDescription("usage", (
         PrologTrial("trial_id"),
         PrologAttribute("activation_id"),
         PrologAttribute("id"),
-        PrologRepr("name"),
+        PrologRepr("name", attr_name="variable.name"),
         PrologAttribute("line"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
@@ -59,10 +58,13 @@ class SlicingUsage(AlchemyProxy):
     ))
 
     def __repr__(self):
+        name = self.variable.name
         return (
-            "SlicingUsage({0.trial_id}, {0.activation_id}, "
-            "{0.variable_id}, {0.id}, {0.name}, {0.line}, {0.context})"
-        ).format(self)
+            "VariableUsage({self.trial_id}, {self.activation_id}, "
+            "{self.variable_id}, {self.id}, {name}, {self.line}, "
+            "{self.context})"
+        ).format(**locals())
 
     def __str__(self):
-        return "(L{0.line}, {0.name}, <{0.context}>)".format(self)
+        name = self.variable.name
+        return "(L{self.line}, {name}, <{self.context}>)".format(**locals())

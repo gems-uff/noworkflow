@@ -73,7 +73,7 @@ class PrologAttribute(object):
         attr = self.attr_name
         while "." in attr:
             attr0, attr = attr.split(".", 1)
-            obj = getattr(self, attr0)
+            obj = getattr(obj, attr0)
         return getattr(obj, attr)
 
     def retract(self, trial_id):                                                 # pylint: disable=unused-argument, no-self-use

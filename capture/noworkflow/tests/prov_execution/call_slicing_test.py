@@ -59,10 +59,10 @@ class TestCallSlicing(unittest.TestCase):
     def extract(self, metascript):
         result = set()
         for dep in metascript.variables_dependencies_store.values():
-            dependent = metascript.variables_store[dep.dependent_id]
-            supplier = metascript.variables_store[dep.supplier_id]
-            result.add(((dependent.name, dependent.line),
-                        (supplier.name, supplier.line)))
+            source = metascript.variables_store[dep.source_id]
+            target = metascript.variables_store[dep.target_id]
+            result.add(((source.name, source.line),
+                        (target.name, target.line)))
         return result
 
     def test_simple(self):

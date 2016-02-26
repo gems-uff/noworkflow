@@ -20,7 +20,7 @@ from ...utils.bytecode.interpreter import FOR_ITERS, GET_ITERS
 from .function_visitor import FunctionVisitor
 from .utils import NamedContext, FunctionCall, ClassDef, Decorator, Generator
 from .utils import Assert, safeget, With, Print, Import, ForIter, GeneratorCall
-from .utils import CallDependency, ReturnDependency, Loop
+from .utils import Dependency, variable, Loop
 
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -80,7 +80,7 @@ class AssignRightVisitor(ast.NodeVisitor):
     def new_comprehension(self, node):
         """Add call to comprehension"""
         self.max_line(node)
-        self.add(CallDependency(*node.uid), "fn", node.lineno)
+        self.add(variable(node.uid, "call"), "fn", node.lineno)
 
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name
         """Collect names"""
@@ -141,22 +141,22 @@ class AssignRightVisitor(ast.NodeVisitor):
     def visit_Call(self, node):                                                  # pylint: disable=invalid-name
         """Create special dependency for calls"""
         self.max_line(node)
-        self.add(CallDependency(*node.uid), "fn", node.lineno)
+        self.add(variable(node.uid, "call"), "fn", node.lineno)
 
     def visit_Print(self, node):                                                 # pylint: disable=invalid-name
         """Create special dependency for calls"""
         self.max_line(node)
-        self.add(CallDependency(*node.uid), "fn print", node.lineno)
+        self.add(variable(node.uid, "print"), "fn print", node.lineno)
 
     def visit_Import(self, node):                                                # pylint: disable=invalid-name
         """Create special dependency for imports"""
         self.max_line(node)
-        self.add(CallDependency(*node.uid), "import", node.lineno)
+        self.add(variable(node.uid, "import"), "import", node.lineno)
 
     def visit_ImportFrom(self, node):                                            # pylint: disable=invalid-name
         """Create special dependency for imports"""
         self.max_line(node)
-        self.add(CallDependency(*node.uid), "import from", node.lineno)
+        self.add(variable(node.uid, "import from"), "import from", node.lineno)
 
 
 class ComprehensionVisitor(AssignRightVisitor):
@@ -196,14 +196,14 @@ def tuple_or_list(node):
     return isinstance(node, ast.Tuple) or isinstance(node, ast.List)
 
 
-def add_all_names(dest, origin):
+def add_all_names(dest, origin, dep_typ):
     """Add all names from <origin> to <dest>"""
     for name in origin:
-        dest.append(name)
+        dest.append(Dependency(name, dep_typ))
 
 
-def assign_dependencies(target, value, dependencies, conditions, loop,           # pylint: disable=too-many-arguments
-                        aug=False, testlist_star_expr=True):
+def assign_dependencies(target, value, dependencies, conditions, loop, typ,      # pylint: disable=too-many-arguments
+                        dep_typ="direct", aug=False, testlist_star_expr=True):
     """Add dependencies to <dependencies>
     <target> depends on <value>
     <target> also depends on <conditions>
@@ -217,7 +217,8 @@ def assign_dependencies(target, value, dependencies, conditions, loop,          
     if testlist_star_expr and tuple_or_list(target) and tuple_or_list(value):
         for i, targ in enumerate(target.elts):
             assign_dependencies(targ, value.elts[i], dependencies, conditions,
-                                loop, testlist_star_expr=True)
+                                loop, typ, dep_typ=dep_typ,
+                                testlist_star_expr=True)
         return
 
     left.visit(target)
@@ -225,25 +226,26 @@ def assign_dependencies(target, value, dependencies, conditions, loop,          
         right.visit(value)
 
     for name, _, lineno in left.names:
+        var = variable(name, typ)
         lineno = right.line if right.line != -1 else lineno
         self_reference = False
         for value, _, _ in right.names:
-            dependencies[lineno][name].append(value)
+            dependencies[lineno][var].append(Dependency(value, dep_typ))
             if name == value:
                 self_reference = True
 
         if aug:
-            dependencies[lineno][name].append(name)
+            dependencies[lineno][var].append(Dependency(name, dep_typ))
             self_reference = True
 
         if self_reference:
-            add_all_names(dependencies[lineno][name], loop)
+            add_all_names(dependencies[lineno][var], loop, "loop")
 
-        add_all_names(dependencies[lineno][name], conditions)
+        add_all_names(dependencies[lineno][var], conditions, "conditional")
 
 
 def assign_artificial_dependencies(target, artificial, dependencies,
-                                   conditions):
+                                   conditions, typ):
     """Add artificial dependencies to <dependencies>
     <target> depends on <artificial> and <conditions>
     """
@@ -252,10 +254,11 @@ def assign_artificial_dependencies(target, artificial, dependencies,
     left.visit(target)
 
     for name, _, _ in left.names:
+        var = variable(name, typ)
         lineno = target.lineno
-        dependencies[lineno][name].append(artificial)
+        dependencies[lineno][var].append(Dependency(artificial, "direct"))
 
-        add_all_names(dependencies[lineno][name], conditions)
+        add_all_names(dependencies[lineno][var], conditions, "conditional")
 
 
 def assign_right(lineno, target, value, dependencies, conditions):
@@ -269,9 +272,9 @@ def assign_right(lineno, target, value, dependencies, conditions):
         right.visit(value)
 
     for name, _, _ in right.names:
-        dependencies[lineno][target].append(name)
+        dependencies[lineno][target].append(Dependency(name, "direct"))
 
-    add_all_names(dependencies[lineno][target], conditions)
+    add_all_names(dependencies[lineno][target], conditions, "conditional")
 
 
 class SlicingVisitor(FunctionVisitor):                                           # pylint: disable=too-many-instance-attributes, too-many-public-methods
@@ -324,12 +327,12 @@ class SlicingVisitor(FunctionVisitor):                                          
         decorators = [self.add_decorator(dec_node)
                       for dec_node in node.decorator_list]
         lineno = node.lineno
-        name = original_name
+        name = variable(original_name, 'call')
         for dec in reversed(decorators):
             uid = (dec.line, dec.col)
-            self.dependencies[lineno][name].append(uid)
+            self.dependencies[lineno][name].append(Dependency(uid, "direct"))
             #dec.args.append([name])
-            name = uid
+            name = variable(uid, 'call')
 
     def add_decorator(self, node):
         """Add special function call for decorator"""
@@ -356,9 +359,9 @@ class SlicingVisitor(FunctionVisitor):                                          
             self.call_by_col[call.line][call.col] = call
             right = ComprehensionVisitor()
             right.visit(node)
-            line, uid = call.line, ReturnDependency(call.line, call.col)
+            line, uid = call.line, variable((call.line, call.col), "return")
             for name, _, _ in right.names:
-                self.dependencies[line][uid].append(name)
+                self.dependencies[line][uid].append(Dependency(name, "direct"))
         for gen_node in node.generators:
             self.add_generator(typ, gen_node)
 
@@ -373,6 +376,7 @@ class SlicingVisitor(FunctionVisitor):                                          
                             self.gen_dependencies,
                             self.condition.flat(),
                             self.loop.flat(),
+                            "normal",
                             testlist_star_expr=False)
         self.condition.pop()
 
@@ -384,7 +388,8 @@ class SlicingVisitor(FunctionVisitor):                                          
             assign_artificial_dependencies(node.optional_vars,
                                            node.context_expr.uid,
                                            self.dependencies,
-                                           self.condition.flat())
+                                           self.condition.flat(),
+                                           "normal")
         self.call_by_col[_with.line][_with.col] = _with
 
     def add_return_yield(self, node, label):
@@ -392,22 +397,25 @@ class SlicingVisitor(FunctionVisitor):                                          
         Use for return and yield dependencies
         """
         self.new_var(ast.Name(label, ast.Store(), lineno=node.lineno),
-                     value=node.value)
+                     "virtual", dep_typ="return", value=node.value)
 
-    def new_var(self, name, value=None, **kwargs):
+    def new_var(self, name, typ, dep_typ="direct", value=None, **kwargs):
         """Create new variable"""
         assign_dependencies(name,
                             value,
                             self.dependencies,
                             self.condition.flat(),
                             self.loop.flat(),
+                            typ,
+                            dep_typ=dep_typ,
                             testlist_star_expr=False, **kwargs)
 
     def add_func_dependency(self, call):
         """Create dependency for call nodes that accept expr as func"""
         for name in call.func:
-            uid = CallDependency(call.line, call.col)
-            self.dependencies[call.line][uid].append(name)
+            uid = variable((call.line, call.col), "call")
+            self.dependencies[call.line][uid].append(
+                Dependency(name, "direct"))
 
     def visit_stmts(self, stmts):
         """Visit stmts"""
@@ -416,7 +424,7 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_AugAssign(self, node):                                             # pylint: disable=invalid-name
         """Visit AugAssign. Create dependencies"""
-        self.new_var(node.target, value=node.value, aug=True)
+        self.new_var(node.target, "normal", value=node.value, aug=True)
         self.generic_visit(node)
 
     def visit_Assign(self, node):                                                # pylint: disable=invalid-name
@@ -425,7 +433,8 @@ class SlicingVisitor(FunctionVisitor):                                          
             assign_dependencies(target, node.value,
                                 self.dependencies,
                                 self.condition.flat(),
-                                self.loop.flat())
+                                self.loop.flat(),
+                                "normal")
 
         self.generic_visit(node)
 
@@ -442,9 +451,10 @@ class SlicingVisitor(FunctionVisitor):                                          
         lineno = node.lineno
         assign_artificial_dependencies(node.target, uid,
                                        self.dependencies,
-                                       self.condition.flat())
+                                       self.condition.flat(),
+                                       "normal")
 
-        assign_right(lineno, CallDependency(*uid), node.iter,
+        assign_right(lineno, variable(uid, "call"), node.iter,
                      self.dependencies, self.condition.flat())
 
         self.loop.enable()
@@ -524,7 +534,7 @@ class SlicingVisitor(FunctionVisitor):                                          
 
             name = ast.Name(alias.asname if alias.asname else alias.name,
                             ast.Store(), lineno=node.lineno)
-            self.new_var(name, value=node)
+            self.new_var(name, "import", value=node)
 
     def visit_ImportFrom(self, node):                                            # pylint: disable=invalid-name
         """Visit ImportFrom"""
@@ -537,7 +547,7 @@ class SlicingVisitor(FunctionVisitor):                                          
         for alias in node.names:
             name = ast.Name(alias.asname if alias.asname else alias.name,
                             ast.Store(), lineno=node.lineno)
-            self.new_var(name, value=node)
+            self.new_var(name, "import from", value=node)
 
     def visit_ListComp(self, node):                                              # pylint: disable=invalid-name
         """Visit ListComp. Create special function call on Python 3"""
@@ -572,12 +582,12 @@ class SlicingVisitor(FunctionVisitor):                                          
         lineno = node.lineno
         uid = (_class.line, _class.col)
         if not node.bases:
-            assign_right(lineno, uid, None,
+            assign_right(lineno, variable(uid, "call"), None,
                          self.dependencies, self.condition.flat())
 
 
         for base in node.bases:
-            assign_right(lineno, uid, base,
+            assign_right(lineno, variable(uid, "call"), base,
                          self.dependencies, self.condition.flat())
 
 
@@ -587,7 +597,7 @@ class SlicingVisitor(FunctionVisitor):                                          
     def visit_FunctionDef(self, node):                                           # pylint: disable=invalid-name
         """Visit FunctionDef"""
         name = ast.Name(node.name, ast.Store(), lineno=node.lineno)
-        self.new_var(name, None)
+        self.new_var(name, "function definition", value=None)
 
         self.add_decorators(node, node.name)
         super(SlicingVisitor, self).visit_FunctionDef(node)
@@ -595,7 +605,7 @@ class SlicingVisitor(FunctionVisitor):                                          
     def visit_AsyncFunctionDef(self, node):                                      # pylint: disable=invalid-name
         """Visit AsyncFunctionDef. Python 3.5"""
         name = ast.Name(node.name, ast.Store(), lineno=node.lineno)
-        self.new_var(name, None)
+        self.new_var(name, "function definition", value=None)
 
         self.add_decorators(node, node.name)
         super(SlicingVisitor, self).visit_AsyncFunctionDef(node)

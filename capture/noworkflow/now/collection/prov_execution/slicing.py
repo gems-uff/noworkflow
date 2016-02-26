@@ -17,14 +17,14 @@ from inspect import ismethod
 
 from future.utils import viewitems
 
-from ...persistence.models import SlicingVariable, SlicingDependency
-from ...persistence.models import SlicingUsage
+from ...persistence.models import Variable, VariableDependency
+from ...persistence.models import VariableUsage
 from ...utils.io import print_fn_msg
 from ...utils.bytecode.f_trace import find_f_trace, get_f_trace
 from ...utils.cross_version import IMMUTABLE, builtins
 from ...utils.functions import NOWORKFLOW_DIR
 
-from ..prov_definition.utils import CallDependency
+from ..prov_definition.utils import CallDependency, Dependency
 
 from .argument_captors import SlicingArgumentCaptor
 from .profiler import Profiler
@@ -149,7 +149,7 @@ class Tracer(Profiler):                                                         
         self.comprehension_dependencies = None
 
 
-    def add_variable(self, act_id, name, line, f_locals, value="--check--"):     # pylint: disable=too-many-arguments
+    def add_variable(self, act_id, name, line, f_locals, typ, value="--chk--"):     # pylint: disable=too-many-arguments
         """Add variable
 
 
@@ -160,13 +160,14 @@ class Tracer(Profiler):                                                         
         f_locals -- Local Variables Dict in variable frame
 
         Keyword argument:
-        value -- override variable value (default "--check--")
+        value -- override variable value (default "--chk--")
         """
-        if value == "--check--" and name in f_locals:
+        if value == "--chk--" and name in f_locals:
             value = self.serialize(f_locals[name])
         else:
             value = "now(n/a)"
-        return self.variables.add(act_id, name, line, value, datetime.now())
+        return self.variables.add(
+            act_id, name, line, value, datetime.now(), typ)
 
 
     def find_variable(self, activation, name, definition):
@@ -194,12 +195,13 @@ class Tracer(Profiler):                                                         
         elif name in self.builtins:
             # New Builtins
             activation = self.main_activation
-            vid = self.add_variable(activation.id, name, 0, self.builtins)
+            vid = self.add_variable(activation.id, name, 0, self.builtins,
+                                    "builtin")
             variable = self.variables[vid]
             self.created_builtins[name] = variable
             return get_call_var(variable)
 
-    def find_variables(self, activation, names, filename):
+    def find_variables(self, activation, dependencies, filename):
         """Find variables in activation context by names
 
 
@@ -208,30 +210,36 @@ class Tracer(Profiler):                                                         
         name -- variable name or tuple
         definition -- definition filename
         """
-        for name in names:
-            variable = self.find_variable(activation, name, filename)
-            if variable is None and isinstance(name, tuple):
-                variable = self.add_fake_call(activation, name)
+        for dep in dependencies:
+            variable = self.find_variable(activation, dep.dependency, filename)
+            if variable is None and isinstance(dep.dependency, tuple):
+                variable = self.add_fake_call(activation, dep.dependency)
             if variable:
-                yield variable
+                yield variable, dep.type
 
-    def add_dependencies(self, dependent, suppliers):
-        """ Create dependencies: dependent depends on suppliers
+    def add_dependencies(self, dependent, dependencies, replace=None):
+        """ Create dependencies: dependent depends on dependencies
 
         Arguments:
         self -- Tracer object
         dependent -- Dependent Variable object
-        suppliers -- List of supplier variables
+        dependencies -- List of tuples (dependency variable, dependency type)
         """
         dependencies_add = self.dependencies.add
-        for supplier in suppliers:
+        for target, dep_type in dependencies:
+            if replace:
+                dep_type = replace
             dependencies_add(dependent.activation_id, dependent.id,
-                             supplier.activation_id, supplier.id)
+                             target.activation_id, target.id, dep_type)
 
 
     def slice_line(self, activation, lineno, f_locals, filename,                 # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
                    line_dependencies=None):
         """Generates dependencies from line"""
+        for var in activation.temp_context:
+            del activation.context[var]
+        activation.temp_context = set()
+
         if line_dependencies is None:
             line_dependencies = self.line_dependencies
         print_fn_msg(lambda: "Slice [{}] -> {}".format(
@@ -246,47 +254,48 @@ class Tracer(Profiler):                                                         
             usages = self.line_usages[filename][lineno][ctx]
             for name in usages:
                 if name in context:
-                    usages_add(activation.id, context[name].id, name,
+                    usages_add(activation.id, context[name].id,
                                lineno, ctx)
 
-        for name, others in viewitems(dependencies):
+        for var, others in viewitems(dependencies):
             vid = None
-            suppliers_gen = self.find_variables(activation, others, filename)
+            targets_gen = self.find_variables(activation, others, filename)
 
-            if name == "return":
-                vid = add_variable(activation.id, name, lineno, f_locals,
-                                   value=activation.return_value)
-            elif name == "yield":
-                vid = add_variable(activation.id, name, lineno, f_locals)
-            elif not isinstance(name, tuple):
-                vid = add_variable(activation.id, name, lineno, f_locals)
+            if var == "return":
+                vid = add_variable(activation.id, var.name, lineno, f_locals,
+                                   var.type, value=activation.return_value)
+            elif var == "yield":
+                vid = add_variable(activation.id, var.name, lineno, f_locals,
+                                   var.type)
+            elif not isinstance(var, tuple):
+                vid = add_variable(activation.id, var.name, lineno, f_locals,
+                                   var.type)
 
             if vid is not None:
-                add_dependencies(variables[vid], suppliers_gen)
-                context[name] = variables[vid]
-                if name == "yield":
-                    context["return"] = context[name]
-            elif name in context:
-                # name is a tuple representing a call.
-                if isinstance(name, CallDependency):
-                    variable = context[name].call_var
+                add_dependencies(variables[vid], targets_gen)
+                context[var.name] = variables[vid]
+                if var == "yield":
+                    context["return"] = context[var.name]
+            elif var in context:
+                # var is a tuple representing a call.
+                if isinstance(var, CallDependency):
+                    variable = context[var].call_var
                 else:
-                    variable = context[name].return_var
-                add_dependencies(variable, suppliers_gen)
+                    variable = context[var].return_var
+                add_dependencies(variable, targets_gen)
             else:
                 # Python skips tracing calls to builtins (float, int...)
                 # create artificial variables for them
-                variable = self.add_fake_call(activation, name)
-                add_dependencies(variable, suppliers_gen)
+                variable = self.add_fake_call(activation, var)
+                add_dependencies(variable, targets_gen)
 
 
     def add_fake_call(self, activation, call_uid):
         """Create fake call for builtins"""
         line, col = call_uid
         call = self.call_by_col[activation.definition_file][line][col]
-        vid = self.add_variable(activation.id,
-                                "{} {}".format(call.prefix, call.name),
-                                line, {}, "now(n/a)")
+        vid = self.add_variable(activation.id, call.name,
+                                line, {}, call.prefix, value="now(n/a)")
         variable = self.variables[vid]
 
         if "import" in call.name:
@@ -295,10 +304,11 @@ class Tracer(Profiler):                                                         
             box = self.create_graybox()
 
         self.dependencies.add(variable.activation_id, variable.id,
-                              box.activation_id, box.id)
+                              box.activation_id, box.id, "box")
 
         activation.context[call_uid] = ActivationSlicing(
             variable, variable, activation.id, variable.id)
+        activation.temp_context.add(call_uid)
 
         args = self.find_variables(activation, call.all_args(),
                                    activation.definition_file)
@@ -310,9 +320,9 @@ class Tracer(Profiler):                                                         
         """Create call variable and dependency"""
         caller = self.current_activation
         dependencies_add = self.dependencies.add
-        vid = self.add_variable(caller.id, "call {}".format(activation.name),
-                                activation.line, {}, "now(n/a)")
-        dependencies_add(caller.id, vid, activation.id, _return.id)
+        vid = self.add_variable(caller.id, activation.name,
+                                activation.line, {}, "call", value="now(n/a)")
+        dependencies_add(caller.id, vid, activation.id, _return.id, "return")
 
         if caller.with_definition:
             filename = activation.filename
@@ -329,7 +339,8 @@ class Tracer(Profiler):                                                         
                     # Two calls in the same lasti: create dependencies import
                     variable = caller.context[uid].call_var
                     dependencies_add(activation.id, _return.id,
-                                     variable.activation_id, variable.id)
+                                     variable.activation_id, variable.id,
+                                     "call")
                 caller.context[uid] = ActivationSlicing(
                     self.variables[vid], _return, caller.id, vid)
 
@@ -338,7 +349,7 @@ class Tracer(Profiler):                                                         
             if activation.is_comprehension():
                 for dependency in self.comprehension_dependencies:
                     dependencies_add(activation.id, _return.id,
-                                     dependency[0], dependency[1])
+                                     dependency[0], dependency[1], "direct")
                 self.comprehension_dependencies = None
             else:
                 self.comprehension_dependencies.append((caller.id, vid))
@@ -359,12 +370,13 @@ class Tracer(Profiler):                                                         
     def create_blackbox(self):
         """Create a blackbox object with dependency to the previous one"""
         vid = self.add_variable(0, "--blackbox--", self.blackbox_index,
-                                {}, value="now(n/a)")
+                                {}, "--blackbox--", value="now(n/a)")
         blackbox = self.variables[vid]
         old_blackbox = self.blackbox
         if old_blackbox is not None:
             self.dependencies.add(blackbox.activation_id, blackbox.id,
-                                  old_blackbox.activation_id, old_blackbox.id)
+                                  old_blackbox.activation_id, old_blackbox.id,
+                                  "box")
         self.blackbox = blackbox
         self.blackbox_index += 1
         return blackbox
@@ -372,7 +384,7 @@ class Tracer(Profiler):                                                         
     def create_graybox(self):
         """Create a graybox object"""
         vid = self.add_variable(0, "--graybox--", 0,
-                                {}, value="now(n/a)")
+                                {}, "--graybox--", value="now(n/a)")
         return self.variables[vid]
 
 
@@ -393,7 +405,7 @@ class Tracer(Profiler):                                                         
             return activation.context["return"] # call has return
 
         vid = self.add_variable(activation.id, "return", lineno, {},
-                                value=activation.return_value)
+                                "return", value=activation.return_value)
         _return = variables[vid]
 
         activation.context["return"] = _return
@@ -412,7 +424,7 @@ class Tracer(Profiler):                                                         
         else:
             blackbox = self.create_blackbox()
         self.dependencies.add(_return.activation_id, _return.id,
-                              blackbox.activation_id, blackbox.id)
+                              blackbox.activation_id, blackbox.id, "box")
 
         if not activation.has_parameters:
             # activation does not have parameters
@@ -437,7 +449,7 @@ class Tracer(Profiler):                                                         
         all_args = list(self.find_variables(caller, call.all_args(), filename))
         self.add_dependencies(blackbox, all_args)
         self.add_inter_dependencies(frame.f_locals, all_args, caller, line,
-                                    [blackbox])
+                                    [(blackbox, "box")])
         return _return
 
     def add_inter_dependencies(self, f_locals, args, caller, lineno, other):     # pylint: disable=too-many-locals
@@ -457,14 +469,15 @@ class Tracer(Profiler):                                                         
         add_variable = self.add_variable
 
         added = {}
-        for arg in args:
+        for arg, dep_type in args:
             try:
                 name = arg.name
                 var = f_locals[name]
                 if not isinstance(var, IMMUTABLE):
-                    vid = add_variable(caller.id, name, lineno, {}, value=var)
+                    vid = add_variable(caller.id, name, lineno, {},
+                                       "arg", value=var)
                     variable = variables[vid]
-                    add_dependencies(variable, other)
+                    add_dependencies(variable, other, replace="argument")
                     added[name] = variable
             except KeyError:
                 pass
@@ -553,9 +566,9 @@ class Tracer(Profiler):                                                         
                 self.close_activation(None, "store", None)
         super(Tracer, self).store(partial=partial)
         tid = self.trial_id
-        SlicingVariable.fast_store(tid, self.variables, partial)
-        SlicingDependency.fast_store(tid, self.dependencies, partial)
-        SlicingUsage.fast_store(tid, self.usages, partial)
+        Variable.fast_store(tid, self.variables, partial)
+        VariableDependency.fast_store(tid, self.dependencies, partial)
+        VariableUsage.fast_store(tid, self.usages, partial)
 
     def view_slicing_data(self, show=True):
         """View captured slicing"""
@@ -565,8 +578,8 @@ class Tracer(Profiler):                                                         
 
             for dep in self.dependencies:
                 print_fn_msg(lambda d=dep: "{}\t<-\t{}".format(
-                    self.variables[d.dependent],
-                    self.variables[d.supplier]))
+                    self.variables[d.source_id],
+                    self.variables[d.target_id]))
 
             for var in self.usages:
                 print_fn_msg(lambda: var)

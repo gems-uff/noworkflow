@@ -89,9 +89,9 @@ class Trial(AlchemyProxy):
     file_accesses = many_viewonly_ref("trial", "FileAccess")
     objects = many_viewonly_ref("trial", "Object")
     object_values = many_viewonly_ref("trial", "ObjectValue")
-    slicing_variables = many_viewonly_ref("trial", "SlicingVariable")
-    slicing_usages = many_viewonly_ref("trial", "SlicingUsage")
-    slicing_dependencies = many_viewonly_ref("trial", "SlicingDependency")
+    variables = many_viewonly_ref("trial", "Variable")
+    variable_usages = many_viewonly_ref("trial", "VariableUsage")
+    variable_dependencies = many_viewonly_ref("trial", "VariableDependency")
     tags = many_ref("trial", "Tag")
 
     bypass_children = backref_many("bypass_children")  # Trial.inherited

@@ -129,7 +129,7 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
         self.frame = None
 
     def match_arg(self, passed, arg):
-        """Match passed param with argument
+        """Match passed arguments with param
 
 
         Arguments:
@@ -144,21 +144,21 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
             act_var = context[arg]
         else:
             vid = provider.add_variable(activation.id, arg,
-                                        self.line, self.f_locals)
+                                        self.line, self.f_locals, "param")
             act_var = provider.variables[vid]
             context[arg] = act_var
 
         if passed:
             caller = self.caller
-            supplier = provider.find_variable(caller, passed, self.filename)
-            if supplier is not None:
+            target = provider.find_variable(caller, passed, self.filename)
+            if target is not None:
                 provider.dependencies.add(
                     act_var.activation_id, act_var.id,
-                    supplier.activation_id, supplier.id
+                    target.activation_id, target.id, "parameter"
                 )
 
     def match_args(self, params, arg):
-        """Match passed param with argument
+        """Match passed argument with param
 
 
         Arguments:

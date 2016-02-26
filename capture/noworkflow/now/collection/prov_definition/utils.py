@@ -19,6 +19,57 @@ CallDependency = namedtuple("Call", "line col")
 ReturnDependency = namedtuple("Return", "line col")
 
 
+class Variable(object):                                                          # pylint: disable=too-few-public-methods
+    """Represent a variable name"""
+
+    def __init__(self, name, typ):
+        self.name = name
+        self.type = typ
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.name == other
+        elif isinstance(other, Variable):
+            return self.name == other.name
+        return False
+
+    def __repr__(self):
+        return "Var({}, {})".format(self.name, self.type)
+
+
+class Dependency(object):                                                        # pylint: disable=too-few-public-methods
+    """Represent a variable dependency"""
+
+    def __init__(self, dependency, typ):
+        self.dependency = dependency
+        self.type = typ
+
+    def __hash__(self):
+        return hash(self.dependency)
+
+    def __eq__(self, other):
+        if not isinstance(other, Dependency):
+            return False
+        return self.dependency == other.dependency and self.type == other.type
+
+    def __repr__(self):
+        return "Dependency({}, {})".format(self.dependency, self.type)
+
+
+def variable(name, typ):
+    """Create Variable or Call Dependency"""
+    if isinstance(name, str):
+        return Variable(name, typ)
+    if typ == "return":
+        return ReturnDependency(*name)
+    if typ in ("call", "print", "import", "import from"):
+        return CallDependency(*name)
+    return name
+
+
 class NamedContext(object):
     """Store variable visibility context"""
 
@@ -93,13 +144,16 @@ class FunctionCall(ast.NodeVisitor):                                            
 
     def all_args(self):
         """List arguments of function call"""
-        return list(itertools.chain(
-            self.self_attr,
-            itertools.chain.from_iterable(self.args),
-            self.starargs,
-            self.kwargs,
-            itertools.chain.from_iterable(viewvalues(self.keywords))
-        ))
+        return [
+            Dependency(x, "parameter")
+            for x in itertools.chain(
+                self.self_attr,
+                itertools.chain.from_iterable(self.args),
+                self.starargs,
+                self.kwargs,
+                itertools.chain.from_iterable(viewvalues(self.keywords))
+            )
+        ]
 
     def use_visitor(self, node):
         """Use configured visitor to visit sub node"""

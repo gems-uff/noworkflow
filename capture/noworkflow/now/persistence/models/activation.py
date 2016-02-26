@@ -17,7 +17,7 @@ from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref, many_ref
 from .base import backref_one, backref_many, query_many_property
 from .object_value import ObjectValue
-from .slicing_dependency import SlicingDependency
+from .variable_dependency import VariableDependency
 
 
 @proxy_class
@@ -49,16 +49,16 @@ class Activation(AlchemyProxy):
     object_values = many_viewonly_ref("activation", "ObjectValue")
     file_accesses = many_viewonly_ref("activation", "FileAccess")
 
-    variables = many_ref("activation", "SlicingVariable")
-    variables_usages = many_viewonly_ref("activation", "SlicingUsage")
-    dependent_variables = many_viewonly_ref(
-        "dependent_activation", "SlicingDependency",
-        primaryjoin=((id == SlicingDependency.m.dependent_activation_id) &
-                     (trial_id == SlicingDependency.m.trial_id)))
-    supplier_variables = many_viewonly_ref(
-        "supplier_activation", "SlicingDependency",
-        primaryjoin=((id == SlicingDependency.m.supplier_activation_id) &
-                     (trial_id == SlicingDependency.m.trial_id)))
+    variables = many_ref("activation", "Variable")
+    variables_usages = many_viewonly_ref("activation", "VariableUsage")
+    source_variables = many_viewonly_ref(
+        "source_activation", "VariableDependency",
+        primaryjoin=((id == VariableDependency.m.source_activation_id) &
+                     (trial_id == VariableDependency.m.trial_id)))
+    target_variables = many_viewonly_ref(
+        "target_activation", "VariableDependency",
+        primaryjoin=((id == VariableDependency.m.target_activation_id) &
+                     (trial_id == VariableDependency.m.trial_id)))
 
     trial = backref_one("trial")  # Trial.activations
     children = backref_many("children")  # Activation.caller
@@ -125,7 +125,7 @@ class Activation(AlchemyProxy):
 
         _show_slicing("Variables:", self.variables, _print)
         _show_slicing("Usages:", self.variables_usages, _print)
-        _show_slicing("Dependencies:", self.dependent_variables, _print)
+        _show_slicing("Dependencies:", self.source_variables, _print)
 
     def __repr__(self):
         return "Activation({0.trial_id}, {0.id}, {0.name})".format(self)

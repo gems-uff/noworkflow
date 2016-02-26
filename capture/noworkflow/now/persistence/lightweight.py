@@ -281,7 +281,8 @@ class ActivationLW(BaseLW):                                                     
          "trial_id"],
         ["file_accesses", "context", "slice_stack", "lasti", "definition_file",
          "args", "kwargs", "starargs", "with_definition", "filename",
-         "is_main", "has_parameters", "current_loop"]
+         "is_main", "has_parameters", "current_loop",
+         "temp_context", "temp_line"]
     )
     special = {"caller_id"}
 
@@ -311,6 +312,11 @@ class ActivationLW(BaseLW):                                                     
         self.file_accesses = []
         # Variable context. Used in the slicing lookup
         self.context = {}
+
+        # Temporary variables
+        self.temp_context = set()
+        self.temp_line = None
+
         # Line execution stack.
         # Used to evaluate function calls before execution line
         self.slice_stack = []
@@ -419,26 +425,28 @@ class VariableLW(BaseLW):
     There are type definitions on lightweight.pxd
     """
     __slots__, attributes = define_attrs(
-        ["id", "activation_id", "name", "line", "value", "time", "trial_id"]
+        ["id", "activation_id", "name", "line", "value", "time", "trial_id",
+         "type"]
     )
     special = set()
 
-    def __init__(self, vid, activation_id, name, line, value, time):             # pylint: disable=too-many-arguments
+    def __init__(self, vid, activation_id, name, line, value, time, _type):             # pylint: disable=too-many-arguments
         self.id = vid                                                            # pylint: disable=invalid-name
         self.activation_id = activation_id
         self.name = name
         self.line = line
         self.value = value
         self.time = time
+        self.type = _type
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Variable can never be removed"""
         return False
 
     def __repr__(self):
-        return ("Variable(id={}, activation_id={}, name={}, line={}, "
+        return ("Variable(id={}, activation_id={}, name={}, line={}, type={},"
                 "value={})").format(self.id, self.activation_id, self.name,
-                                    self.line, self.value)
+                                    self.line, self.value, self.type)
 
 
 class VariableDependencyLW(BaseLW):
@@ -446,19 +454,20 @@ class VariableDependencyLW(BaseLW):
     There are type definitions on lightweight.pxd
     """
     __slots__, attributes = define_attrs(
-        ["id", "dependent_activation_id", "dependent_id",
-         "supplier_activation_id", "supplier_id", "trial_id"]
+        ["id", "source_activation_id", "source_id",
+         "target_activation_id", "target_id", "trial_id", "type"]
     )
     special = set()
 
-    def __init__(self, vid, dependent_activation_id, dependent_id,               # pylint: disable=too-many-arguments
-                 supplier_activation_id, supplier_id):
+    def __init__(self, vid, source_activation_id, source_id,                     # pylint: disable=too-many-arguments
+                 target_activation_id, target_id, _type):
         self.id = vid                                                            # pylint: disable=invalid-name
-        self.dependent_activation_id = dependent_activation_id
-        self.dependent_id = dependent_id
-        self.supplier_activation_id = supplier_activation_id
-        self.supplier_id = supplier_id
+        self.source_activation_id = source_activation_id
+        self.source_id = source_id
+        self.target_activation_id = target_activation_id
+        self.target_id = target_id
         self.trial_id = -1
+        self.type = _type
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Variable Dependency can always be removed"""
@@ -467,12 +476,12 @@ class VariableDependencyLW(BaseLW):
     def __repr__(self):
         return (
             "Dependent(id={}, "
-            "dact_id={}, dependent_id={}, "
-            "sact_id={}, supplier_id={})"
+            "sact_id={}, source_id={}, "
+            "tact_id={}, target_id={}, type={})"
         ).format(
             self.id,
-            self.dependent_activation_id, self.dependent_id,
-            self.supplier_activation_id, self.supplier_id
+            self.source_activation_id, self.source_id,
+            self.target_activation_id, self.target_id, self.type
         )
 
 
@@ -482,15 +491,14 @@ class VariableUsageLW(BaseLW):
     """
     __slots__, attributes = define_attrs(
         ["id", "activation_id", "variable_id",
-         "name", "line", "ctx", "trial_id"]
+         "line", "ctx", "trial_id"]
     )
     special = set()
 
-    def __init__(self, vid, activation_id, variable_id, name, line, ctx):        # pylint: disable=too-many-arguments
+    def __init__(self, vid, activation_id, variable_id, line, ctx):              # pylint: disable=too-many-arguments
         self.id = vid                                                            # pylint: disable=invalid-name
         self.activation_id = activation_id
         self.variable_id = variable_id
-        self.name = name
         self.line = line
         self.ctx = ctx
         self.trial_id = -1
@@ -501,5 +509,5 @@ class VariableUsageLW(BaseLW):
 
     def __repr__(self):
         return (
-            "Usage(id={}, variable_id={}, name={}, line={}, ctx={})"
-        ).format(self.id, self.variable_id, self.name, self.line, self.ctx)
+            "Usage(id={}, variable_id={}, line={}, ctx={})"
+        ).format(self.id, self.variable_id, self.line, self.ctx)

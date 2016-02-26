@@ -22,9 +22,9 @@ from .head import Head
 from .module import Module
 from .object import Object
 from .object_value import ObjectValue
-from .slicing_dependency import SlicingDependency
-from .slicing_usage import SlicingUsage
-from .slicing_variable import SlicingVariable
+from .variable import Variable
+from .variable_dependency import VariableDependency
+from .variable_usage import VariableUsage
 from .tag import Tag
 from .trial import Trial
 
@@ -39,7 +39,7 @@ ORDER = [
     Module, Dependency, EnvironmentAttr,  # Deployment
     FunctionDef, Object,  # Definition
     Activation, ObjectValue, FileAccess,  # Execution
-    SlicingVariable, SlicingUsage, SlicingDependency  # Slicing
+    Variable, VariableUsage, VariableDependency  # Slicing
 ]
 
 
