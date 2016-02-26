@@ -29,6 +29,13 @@ TYPES = {
 }
 
 
+def variable_id(variable):
+    """Return variable identification for .dot file"""
+    act_id = variable.activation_id
+    act_id = "global" if act_id == -1 else act_id
+    return "v_{}_{}".format(act_id, variable.id)
+
+
 class TrialDot(Model):
     """Handle Dot export"""
 
@@ -40,6 +47,7 @@ class TrialDot(Model):
         self.show_blackbox_dependencies = False
         self.max_depth = float('inf')
         self.mode = "simulation"
+        self.rank_line = True
 
         self.result = []
         self.created = set()
@@ -49,7 +57,7 @@ class TrialDot(Model):
 
     def _add_variable(self, variable, depth, config):
         color, shape, font = config                                              # pylint: disable=unused-variable
-        act_id = variable.activation_id                                          # pylint: disable=unused-variable
+        var = variable_id(variable)
 
         value = variable.value
         value = '' if value is None else value.replace('"', '\\"')
@@ -58,7 +66,7 @@ class TrialDot(Model):
         name = '' if name is None else name.replace('"', '\\"')
 
         self.result.append("    " * depth + (
-            'v_{act_id}_{variable.id} '
+            '{var} '
             '[label="{variable.line} {name}"'
             ' fillcolor="{color}" fontcolor="{font}"'
             ' shape="{shape}"'
@@ -103,6 +111,7 @@ class TrialDot(Model):
         self.synonyms[variable] = _return
 
         self._export_activation(new_activation, ndepth)
+        self._prepare_rank(new_activation, ndepth)
         result.append("    " * depth + "}")
         return True
 
@@ -115,6 +124,19 @@ class TrialDot(Model):
             config = TYPES.get(variable.type)
             if config:
                 self._add_variable(variable, depth, config)
+
+    def _prepare_rank(self, activation, depth):
+        if self.rank_line:
+            result = self.result
+            created = self.created
+            by_line = defaultdict(list)
+            for variable in activation.variables:
+                if variable in created:
+                    by_line[variable.line].append(variable)
+
+            for line, variables in viewitems(by_line):
+                result.append("    " * depth + "{rank=same " +
+                    " ".join(variable_id(var) for var in variables) + "}")
 
     def _create_dependencies(self):
         departing_arrows = self.departing_arrows
@@ -187,12 +209,9 @@ class TrialDot(Model):
                 sup_act_id = target.activation_id
                 sup_act_id = "global" if sup_act_id == -1 else sup_act_id
 
-                result.append(
-                    ('    v_{0}_{1} -> v_{2}_{3} [style="{4}"];').format(
-                        dep_act_id, source.id, sup_act_id, target.id,
-                        style
-                    )
-                )
+                result.append(('    {} -> {} [style="{}"];').format(
+                    variable_id(source), variable_id(target), style
+                ))
 
     def erase(self):
         """Erase graph"""
@@ -218,6 +237,7 @@ class TrialDot(Model):
         synonyms = self.synonyms
         for activation in self.trial.initial_activations:
             self._export_activation(activation)
+            self._prepare_rank(activation, 1)
 
         for variable in self.trial.variables:
             if variable.type == "arg":
