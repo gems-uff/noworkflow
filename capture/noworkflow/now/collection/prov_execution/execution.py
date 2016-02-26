@@ -18,6 +18,9 @@ from .profiler import Profiler
 from .slicing import Tracer                                                      # pylint: disable=unused-import
 
 
+Tracker = Tracer
+
+
 class Execution(object):
     """Execution Class"""
 
