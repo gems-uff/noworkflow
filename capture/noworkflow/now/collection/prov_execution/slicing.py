@@ -101,12 +101,36 @@ class ActivationLoop(object):
 
     def __init__(self, loop):
         self.iterable = []
+        self.iter_var = []
         self.loop_def = loop
+        self.remove = False
         self.temp_context = {}
 
     def __contains__(self, line):
         """Check if line is in loop"""
         return self.loop_def.first_line <= line <= self.loop_def.last_line
+
+
+class ActivationCondition(object):
+    """Activation Condition class. Used for tracking variables in conditions"""
+
+    def __init__(self, condition):
+        self.test_var = []
+        self.remove = False
+        self.condition_def = condition
+
+    def __contains__(self, line):
+        """Check if line is in loop"""
+        condition_def = self.condition_def
+        return condition_def.first_line <= line <= condition_def.last_line
+
+
+def last_valid(objects):
+    """Return last object not marked for removal"""
+    for obj in reversed(objects):
+        if not obj.remove:
+            return obj
+    return None
 
 
 class Tracer(Profiler):                                                          # pylint: disable=too-many-instance-attributes
@@ -142,6 +166,8 @@ class Tracer(Profiler):                                                         
         self.iters = definition.iters
         # Map of For and While loops
         self.loops = definition.loops
+        # Map of If and While statement conditions
+        self.conditions = definition.conditions
 
         # Allow debuggers:
         self.f_trace_frames = []
@@ -231,7 +257,7 @@ class Tracer(Profiler):                                                         
             if variable:
                 yield variable, dep.type
             if dep.type == "loop":
-                for loop in activation.current_loop:
+                for loop in activation.loops:
                     for variable in loop.iter_var:
                         yield variable, "loop"
 
@@ -269,6 +295,10 @@ class Tracer(Profiler):                                                         
             activation.context[var.name] = variable
             if var == "yield":
                 activation.context["return"] = activation.context[var.name]
+            for condition in activation.conditions:
+                self.add_dependencies(variable, condition.test_var)
+            for condition in activation.permanent_conditions:
+                self.add_dependencies(variable, condition.test_var)
         elif var in activation.context:
             # var is a tuple representing a call.
             if isinstance(var, CallDependency):
@@ -286,12 +316,13 @@ class Tracer(Profiler):                                                         
 
     def slice_loop(self, activation, lineno, f_locals, filename):
         """Create loops, and generates dependencies between iterables"""
-        activation_loops = activation.current_loop
+        loops = activation.loops
+        while loops and lineno not in loops[-1]:
+            loops.pop()
         context = activation.context
         loop_def = self.loops[filename].get(lineno)
         if loop_def is not None and loop_def.first_line == lineno:
-            if (not activation_loops or
-                    activation_loops[-1].loop_def != loop_def):
+            if not loops or loops[-1].loop_def != loop_def:
                 loop = ActivationLoop(loop_def)
 
                 loop.iterable = list(self.find_variables(
@@ -305,10 +336,10 @@ class Tracer(Profiler):                                                         
                 for var in activation.temp_context:
                     loop.temp_context[var] = context[var]
 
-                activation_loops.append(loop)
+                loops.append(loop)
 
-            elif activation_loops[-1].loop_def == loop_def:
-                loop = activation_loops[-1]
+            elif loops[-1].loop_def == loop_def:
+                loop = loops[-1]
 
                 loop.iter_var = []
                 for var in loop_def.iter_var:
@@ -319,6 +350,28 @@ class Tracer(Profiler):                                                         
                     activation.temp_context.add(var_name)
                     activation.context[var_name] = var
 
+    def slice_condition(self, activation, lineno, f_locals, filename):           # pylint: disable=unused-argument
+        """Create if and while conditions"""
+        conditions = activation.conditions
+        while conditions and lineno not in conditions[-1]:
+            condition = conditions.pop()
+            if condition.condition_def.has_return:
+                activation.permanent_conditions.append(condition)
+
+        condition_def = self.conditions[filename].get(lineno)
+        if condition_def is not None and condition_def.first_line == lineno:
+            if not conditions or conditions[-1].condition_def != condition_def:
+                condition = ActivationCondition(condition_def)
+
+                condition.test_var = list(self.find_variables(
+                    activation, condition_def.test_var, filename))
+                conditions.append(condition)
+
+            elif conditions[-1].condition_def == condition_def:
+                condition = conditions[-1]
+
+                condition.test_var = list(self.find_variables(
+                    activation, condition_def.test_var, filename))
 
     def slice_line(self, activation, lineno, f_locals, filename):
         """Generates dependencies from line"""
@@ -326,10 +379,12 @@ class Tracer(Profiler):                                                         
             del activation.context[var]
         activation.temp_context = set()
 
-        self.slice_loop(activation, lineno, f_locals, filename)
-
         print_fn_msg(lambda: "Slice [{}] -> {}".format(
             lineno, linecache.getline(filename, lineno).strip()))
+
+        self.slice_loop(activation, lineno, f_locals, filename)
+        self.slice_condition(activation, lineno, f_locals, filename)
+
         context = activation.context
         usages_add = self.usages.add
 
@@ -559,11 +614,11 @@ class Tracer(Profiler):                                                         
             self.comprehension_dependencies = []
             return  # ignore comprehension
 
-        activation_loops = activation.current_loop
-        if activation_loops and lineno not in activation_loops[-1]:
+        last_loop = last_valid(activation.loops)
+        if last_loop and lineno not in last_loop:
             # Remove last trace line
             activation.slice_stack.pop()
-            activation_loops.pop()
+            last_loop.remove = True
 
         print_fn_msg(lambda: "[{}] -> {}".format(
             lineno, linecache.getline(filename, lineno).strip()))

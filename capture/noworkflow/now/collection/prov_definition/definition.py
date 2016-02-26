@@ -35,6 +35,8 @@ class Definition(object):                                                       
         self.line_gen_dependencies = {}
         # Map of loops by line
         self.loops = {}
+        # Map of conditional statements (if, while) by line
+        self.conditions = {}
         # Map of name_refs by line
         self.line_usages = {}
         # Map of calls by line and col
@@ -107,3 +109,4 @@ class Definition(object):                                                       
         self.iters[visitor.path] = visitor.iters
         self.function_globals[visitor.path] = visitor.function_globals
         self.loops[visitor.path] = visitor.loops
+        self.conditions[visitor.path] = visitor.conditions

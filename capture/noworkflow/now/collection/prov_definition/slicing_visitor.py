@@ -20,7 +20,7 @@ from ...utils.bytecode.interpreter import FOR_ITERS, GET_ITERS
 from .function_visitor import FunctionVisitor
 from .utils import NamedContext, FunctionCall, ClassDef, Decorator, Generator
 from .utils import Assert, safeget, With, Print, Import, ForIter, GeneratorCall
-from .utils import Dependency, variable, Loop
+from .utils import Dependency, variable, Loop, Condition
 
 
 class AssignLeftVisitor(ast.NodeVisitor):
@@ -202,11 +202,10 @@ def add_all_names(dest, origin, dep_typ):
         dest.append(Dependency(name, dep_typ))
 
 
-def assign_dependencies(target, value, dependencies, conditions, typ,            # pylint: disable=too-many-arguments
+def assign_dependencies(target, value, dependencies, typ,                        # pylint: disable=too-many-arguments
                         dep_typ="direct", aug=False, testlist_star_expr=True):
     """Add dependencies to <dependencies>
     <target> depends on <value>
-    <target> also depends on <conditions>
     <target> may also depends on loop if <aug>
                                            or if there is a self_reference
     Expand assign dependencies if <testlist_star_expr>
@@ -216,9 +215,8 @@ def assign_dependencies(target, value, dependencies, conditions, typ,           
 
     if testlist_star_expr and tuple_or_list(target) and tuple_or_list(value):
         for i, targ in enumerate(target.elts):
-            assign_dependencies(targ, value.elts[i], dependencies, conditions,
-                                typ, dep_typ=dep_typ,
-                                testlist_star_expr=True)
+            assign_dependencies(targ, value.elts[i], dependencies,
+                                typ, dep_typ=dep_typ, testlist_star_expr=True)
         return
 
     left.visit(target)
@@ -227,6 +225,7 @@ def assign_dependencies(target, value, dependencies, conditions, typ,           
 
     for name, _, lineno in left.names:
         var = variable(name, typ)
+        dependencies[lineno][var]
         lineno = right.line if right.line != -1 else lineno
         self_reference = False
         for value, _, _ in right.names:
@@ -241,13 +240,10 @@ def assign_dependencies(target, value, dependencies, conditions, typ,           
         if self_reference:
             dependencies[lineno][var].append(Dependency("<self>", "loop"))
 
-        add_all_names(dependencies[lineno][var], conditions, "conditional")
 
-
-def assign_artificial_dependencies(target, artificial, dependencies,
-                                   conditions, typ):
+def assign_artificial_dependencies(target, artificial, dependencies, typ):
     """Add artificial dependencies to <dependencies>
-    <target> depends on <artificial> and <conditions>
+    <target> depends on <artificial>
     """
     left = AssignLeftVisitor()
 
@@ -258,23 +254,19 @@ def assign_artificial_dependencies(target, artificial, dependencies,
         lineno = target.lineno
         dependencies[lineno][var].append(Dependency(artificial, "direct"))
 
-        add_all_names(dependencies[lineno][var], conditions, "conditional")
 
-
-def assign_right(lineno, target, value, dependencies, conditions):
+def assign_right(lineno, target, value, dependencies):
     """Add dependencies to <dependencies>
     <target> depends on <value>
-    <target> also depends on <conditions>
     """
 
     right = AssignRightVisitor()
     if value:
         right.visit(value)
 
+    dependencies[lineno][target]
     for name, _, _ in right.names:
         dependencies[lineno][target].append(Dependency(name, "direct"))
-
-    add_all_names(dependencies[lineno][target], conditions, "conditional")
 
 
 class SlicingVisitor(FunctionVisitor):                                           # pylint: disable=too-many-instance-attributes, too-many-public-methods
@@ -298,7 +290,9 @@ class SlicingVisitor(FunctionVisitor):                                          
         self.imports = set()
         self.iters_list = []
         self.iters = defaultdict(set)
-        self.condition = NamedContext()
+
+        self.condition_stack = []
+        self.conditions = {}
         self.loops = {}
         self.disasm = []
 
@@ -367,16 +361,13 @@ class SlicingVisitor(FunctionVisitor):                                          
     def add_generator(self, typ, node):
         """Add special function call for generator"""
         self.add_call_function(node, Generator, typ, call_list=self.iters_list)
-        self.condition.enable()
+
+        assign_dependencies(node.target, node.iter, self.gen_dependencies,
+                            "normal", testlist_star_expr=False)
         for nif in node.ifs:
             self.visit(nif)
-        self.condition.disable()
-        assign_dependencies(node.target, node.iter,
-                            self.gen_dependencies,
-                            self.condition.flat(),
-                            "normal",
-                            testlist_star_expr=False)
-        self.condition.pop()
+            assign_dependencies(node.target, nif, self.gen_dependencies,
+                                "conditional", testlist_star_expr=False)
 
     def add_with(self, node):
         """Cross version visit With and create dependencies"""
@@ -386,7 +377,6 @@ class SlicingVisitor(FunctionVisitor):                                          
             assign_artificial_dependencies(node.optional_vars,
                                            node.context_expr.uid,
                                            self.dependencies,
-                                           self.condition.flat(),
                                            "normal")
         self.call_by_col[_with.line][_with.col] = _with
 
@@ -399,11 +389,7 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def new_var(self, name, typ, dep_typ="direct", value=None, **kwargs):
         """Create new variable"""
-        assign_dependencies(name,
-                            value,
-                            self.dependencies,
-                            self.condition.flat(),
-                            typ,
+        assign_dependencies(name, value, self.dependencies, typ,
                             dep_typ=dep_typ,
                             testlist_star_expr=False, **kwargs)
 
@@ -427,9 +413,7 @@ class SlicingVisitor(FunctionVisitor):                                          
     def visit_Assign(self, node):                                                # pylint: disable=invalid-name
         """Visit Assign. Create dependencies"""
         for target in node.targets:
-            assign_dependencies(target, node.value,
-                                self.dependencies,
-                                self.condition.flat(),
+            assign_dependencies(target, node.value, self.dependencies,
                                 "normal")
 
         self.generic_visit(node)
@@ -456,25 +440,24 @@ class SlicingVisitor(FunctionVisitor):                                          
         self.visit_For(node)
 
     def visit_While(self, node):                                                 # pylint: disable=invalid-name
-        """Visit With. Create conditional dependencies"""
+        """Visit While. Create conditional dependencies"""
         loop = Loop(node, "while")
         self.loops[loop.first_line] = loop
         self.visit_If(node)
 
     def visit_If(self, node):                                                    # pylint: disable=invalid-name
         """Visit If. Create conditional dependencies"""
-        self.condition.enable()
-        self.visit(node.test)
-        self.condition.disable()
+        condition = Condition(node)
+        self.conditions[condition.first_line] = condition
+        condition.add_test(node.test, AssignRightVisitor)
+        self.condition_stack.append(condition)
         self.visit_stmts(node.body)
         self.visit_stmts(node.orelse)
-        self.condition.pop()
+        self.condition_stack.pop()
 
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name
         """Visit Name. Crate Usage"""
-        self.condition.add(node.id)
-        self.line_usages[node.lineno][type(node.ctx).__name__]\
-            .append(node.id)
+        self.line_usages[node.lineno][type(node.ctx).__name__].append(node.id)
         super(SlicingVisitor, self).visit_Name(node)
 
     def visit_Call(self, node):                                                  # pylint: disable=invalid-name
@@ -497,7 +480,8 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_Return(self, node):                                                # pylint: disable=invalid-name
         """Visit Return. Create special variable"""
-
+        for condition in self.condition_stack:
+            condition.has_return = True
         self.add_return_yield(node, "return")
         if node.value:
             self.visit(node.value)
@@ -564,16 +548,14 @@ class SlicingVisitor(FunctionVisitor):                                          
         _class = self.add_call_function(name, ClassDef)
         self.call_by_col[_class.line][_class.col] = _class
 
-        lineno = node.lineno
+        line = node.lineno
         uid = (_class.line, _class.col)
         if not node.bases:
-            assign_right(lineno, variable(uid, "call"), None,
-                         self.dependencies, self.condition.flat())
+            assign_right(line, variable(uid, "call"), None, self.dependencies)
 
 
         for base in node.bases:
-            assign_right(lineno, variable(uid, "call"), base,
-                         self.dependencies, self.condition.flat())
+            assign_right(line, variable(uid, "call"), base, self.dependencies)
 
 
         self.add_decorators(node, uid)
@@ -640,7 +622,7 @@ class SlicingVisitor(FunctionVisitor):                                          
                       self.imports_list, self.function_calls_by_lasti),
             AddWith(SETUP_WITH | SETUP_ASYNC_WITH, self.with_enter_by_lasti,
                     end_with, self.with_list, self.function_calls_by_lasti),
-            AddWithCleanup(WITH_CLEANUP,  self.with_exit_by_lasti,
+            AddWithCleanup(WITH_CLEANUP, self.with_exit_by_lasti,
                            end_with, self.function_calls_by_lasti),
             AddForIter(FOR_ITERS, self.iters,
                        self.iters_list, self.function_calls_by_lasti),

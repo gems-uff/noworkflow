@@ -281,7 +281,8 @@ class ActivationLW(BaseLW):                                                     
          "trial_id"],
         ["file_accesses", "context", "slice_stack", "lasti", "definition_file",
          "args", "kwargs", "starargs", "with_definition", "filename",
-         "is_main", "has_parameters", "current_loop",
+         "is_main", "has_parameters",
+         "loops", "conditions", "permanent_conditions",
          "temp_context", "temp_line"]
     )
     special = {"caller_id"}
@@ -326,7 +327,9 @@ class ActivationLW(BaseLW):                                                     
         self.kwargs = []
         self.starargs = []
 
-        self.current_loop = []
+        self.loops = []
+        self.conditions = []
+        self.permanent_conditions = []
 
     def is_complete(self):
         """Activation can be removed from object store after setting finish"""

@@ -103,7 +103,20 @@ class NamedContext(object):
             self._names[-1].add(name)
 
 
-class Loop(object):
+class DefinitionObject(object):
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self.info())
+
+    def _dependencies(self, node, visitor_class, func):                          # pylint: disable=no-self-use
+        """Extract name dependencies from node"""
+        visitor = visitor_class()
+        visitor.visit(node)
+        return [func(x if isinstance(x, FunctionCall) else x[0])
+                for x in visitor.names]
+
+
+class Loop(DefinitionObject):
     """Loop class. Used for For and While nodes"""
 
     def __init__(self, node, typ):
@@ -120,16 +133,6 @@ class Loop(object):
         result = ("first_line={}, last_line={}")
         return result.format(self.first_line, self.last_line)
 
-    def __repr__(self):
-        return "Loop({})".format(self.info())
-
-    def _dependencies(self, node, visitor_class, func):                                # pylint: disable=no-self-use
-        """Extract name dependencies from node"""
-        visitor = visitor_class()
-        visitor.visit(node)
-        return [func(x if isinstance(x, FunctionCall) else x[0])
-                for x in visitor.names]
-
     def add_iterable(self, node, visitor_class):
         """Extract dependencies from iterable"""
         self.iterable = self._dependencies(
@@ -140,11 +143,26 @@ class Loop(object):
         self.iter_var = self._dependencies(
             node, visitor_class, lambda x: Variable(x, "normal"))
 
-    def instantiate(self, instance_class):
-        """Create activation loop"""
-        return instance_class(self)
 
+class Condition(DefinitionObject):
+    """Loop class. Used for If and While nodes"""
 
+    def __init__(self, node):
+        self.node = node
+        self.first_line = node.first_line
+        self.last_line = node.last_line
+        self.test_var = []
+        self.has_return = False
+
+    def info(self):
+        """Return call information"""
+        result = ("first_line={}, last_line={}")
+        return result.format(self.first_line, self.last_line)
+
+    def add_test(self, node, visitor_class):
+        """Extract dependencies from iterable"""
+        self.test_var += self._dependencies(
+            node, visitor_class, lambda x: Dependency(x, "conditional"))
 
 
 class FunctionCall(ast.NodeVisitor):                                             # pylint: disable=too-many-instance-attributes
