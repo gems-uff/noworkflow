@@ -202,12 +202,12 @@ def add_all_names(dest, origin, dep_typ):
         dest.append(Dependency(name, dep_typ))
 
 
-def assign_dependencies(target, value, dependencies, conditions, loop, typ,      # pylint: disable=too-many-arguments
+def assign_dependencies(target, value, dependencies, conditions, typ,            # pylint: disable=too-many-arguments
                         dep_typ="direct", aug=False, testlist_star_expr=True):
     """Add dependencies to <dependencies>
     <target> depends on <value>
     <target> also depends on <conditions>
-    <target> may also depends on <loop> if <aug>
+    <target> may also depends on loop if <aug>
                                            or if there is a self_reference
     Expand assign dependencies if <testlist_star_expr>
     """
@@ -217,7 +217,7 @@ def assign_dependencies(target, value, dependencies, conditions, loop, typ,     
     if testlist_star_expr and tuple_or_list(target) and tuple_or_list(value):
         for i, targ in enumerate(target.elts):
             assign_dependencies(targ, value.elts[i], dependencies, conditions,
-                                loop, typ, dep_typ=dep_typ,
+                                typ, dep_typ=dep_typ,
                                 testlist_star_expr=True)
         return
 
@@ -239,7 +239,7 @@ def assign_dependencies(target, value, dependencies, conditions, loop, typ,     
             self_reference = True
 
         if self_reference:
-            add_all_names(dependencies[lineno][var], loop, "loop")
+            dependencies[lineno][var].append(Dependency("<self>", "loop"))
 
         add_all_names(dependencies[lineno][var], conditions, "conditional")
 
@@ -299,7 +299,6 @@ class SlicingVisitor(FunctionVisitor):                                          
         self.iters_list = []
         self.iters = defaultdict(set)
         self.condition = NamedContext()
-        self.loop = NamedContext()
         self.loops = {}
         self.disasm = []
 
@@ -375,7 +374,6 @@ class SlicingVisitor(FunctionVisitor):                                          
         assign_dependencies(node.target, node.iter,
                             self.gen_dependencies,
                             self.condition.flat(),
-                            self.loop.flat(),
                             "normal",
                             testlist_star_expr=False)
         self.condition.pop()
@@ -405,7 +403,6 @@ class SlicingVisitor(FunctionVisitor):                                          
                             value,
                             self.dependencies,
                             self.condition.flat(),
-                            self.loop.flat(),
                             typ,
                             dep_typ=dep_typ,
                             testlist_star_expr=False, **kwargs)
@@ -433,37 +430,26 @@ class SlicingVisitor(FunctionVisitor):                                          
             assign_dependencies(target, node.value,
                                 self.dependencies,
                                 self.condition.flat(),
-                                self.loop.flat(),
                                 "normal")
 
         self.generic_visit(node)
 
     def visit_For(self, node):                                                   # pylint: disable=invalid-name
         """Visit For. Create dependencies"""
-        loop = Loop(node)
+        loop = Loop(node, "for")
         self.loops[loop.first_line] = loop
         _iter = self.add_call_function(node.iter, ForIter,
                                        call_list=self.iters_list)
         _iter.col += 1
         self.call_by_col[_iter.line][_iter.col] = _iter
-        uid = (_iter.line, _iter.col)
-        loop.remove.append(uid)
-        lineno = node.lineno
-        assign_artificial_dependencies(node.target, uid,
-                                       self.dependencies,
-                                       self.condition.flat(),
-                                       "normal")
+        loop.maybe_call = (_iter.line, _iter.col)
+        loop.add_iterable(node.iter, AssignRightVisitor)
+        loop.add_iter_var(node.target, AssignLeftVisitor)
 
-        assign_right(lineno, variable(uid, "call"), node.iter,
-                     self.dependencies, self.condition.flat())
-
-        self.loop.enable()
         self.visit(node.target)
-        self.loop.disable()
         self.visit(node.iter)
         self.visit_stmts(node.body)
         self.visit_stmts(node.orelse)
-        self.loop.pop()
 
     def visit_AsyncFor(self, node):                                              # pylint: disable=invalid-name
         """Visit For. Create dependencies. Python 3.5"""
@@ -471,7 +457,7 @@ class SlicingVisitor(FunctionVisitor):                                          
 
     def visit_While(self, node):                                                 # pylint: disable=invalid-name
         """Visit With. Create conditional dependencies"""
-        loop = Loop(node)
+        loop = Loop(node, "while")
         self.loops[loop.first_line] = loop
         self.visit_If(node)
 
@@ -487,7 +473,6 @@ class SlicingVisitor(FunctionVisitor):                                          
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name
         """Visit Name. Crate Usage"""
         self.condition.add(node.id)
-        self.loop.add(node.id)
         self.line_usages[node.lineno][type(node.ctx).__name__]\
             .append(node.id)
         super(SlicingVisitor, self).visit_Name(node)

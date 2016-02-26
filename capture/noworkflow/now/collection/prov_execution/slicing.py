@@ -14,6 +14,7 @@ from collections import namedtuple
 from datetime import datetime
 from functools import partial
 from inspect import ismethod
+from copy import copy
 
 from future.utils import viewitems
 
@@ -93,6 +94,19 @@ def joint_settrace(tracer):
     _sys_settrace(new)
 
 sys.settrace = joint_settrace
+
+
+class ActivationLoop(object):
+    """Activation Loop class. Used for tracking variables in For loops"""
+
+    def __init__(self, loop):
+        self.iterable = []
+        self.loop_def = loop
+        self.temp_context = {}
+
+    def __contains__(self, line):
+        """Check if line is in loop"""
+        return self.loop_def.first_line <= line <= self.loop_def.last_line
 
 
 class Tracer(Profiler):                                                          # pylint: disable=too-many-instance-attributes
@@ -216,6 +230,10 @@ class Tracer(Profiler):                                                         
                 variable = self.add_fake_call(activation, dep.dependency)
             if variable:
                 yield variable, dep.type
+            if dep.type == "loop":
+                for loop in activation.current_loop:
+                    for variable in loop.iter_var:
+                        yield variable, "loop"
 
     def add_dependencies(self, dependent, dependencies, replace=None):
         """ Create dependencies: dependent depends on dependencies
@@ -232,63 +250,98 @@ class Tracer(Profiler):                                                         
             dependencies_add(dependent.activation_id, dependent.id,
                              target.activation_id, target.id, dep_type)
 
+    def slice_dependencies(self, activation, lineno, f_locals, var, deps):      # pylint: disable=too-many-arguments
+        """Create dependencies for variable"""
+        vid = None
+        if var == "return":
+            vid = self.add_variable(activation.id, var.name, lineno, f_locals,
+                                    var.type, value=activation.return_value)
+        elif var == "yield":
+            vid = self.add_variable(activation.id, var.name, lineno, f_locals,
+                                    var.type)
+        elif not isinstance(var, tuple):
+            vid = self.add_variable(activation.id, var.name, lineno, f_locals,
+                                    var.type)
 
-    def slice_line(self, activation, lineno, f_locals, filename,                 # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
-                   line_dependencies=None):
+        if vid is not None:
+            variable = self.variables[vid]
+            self.add_dependencies(variable, deps)
+            activation.context[var.name] = variable
+            if var == "yield":
+                activation.context["return"] = activation.context[var.name]
+        elif var in activation.context:
+            # var is a tuple representing a call.
+            if isinstance(var, CallDependency):
+                variable = activation.context[var].call_var
+            else:
+                variable = activation.context[var].return_var
+            self.add_dependencies(variable, deps)
+        else:
+            # Python skips tracing calls to builtins (float, int...)
+            # create artificial variables for them
+            variable = self.add_fake_call(activation, var)
+            self.add_dependencies(variable, deps)
+
+        return variable
+
+    def slice_loop(self, activation, lineno, f_locals, filename):
+        """Create loops, and generates dependencies between iterables"""
+        activation_loops = activation.current_loop
+        context = activation.context
+        loop_def = self.loops[filename].get(lineno)
+        if loop_def is not None and loop_def.first_line == lineno:
+            if (not activation_loops or
+                    activation_loops[-1].loop_def != loop_def):
+                loop = ActivationLoop(loop_def)
+
+                loop.iterable = list(self.find_variables(
+                    activation, loop_def.iterable, filename))
+
+                loop.iter_var = []
+                for var in loop_def.iter_var:
+                    loop.iter_var.append(self.slice_dependencies(
+                        activation, lineno, f_locals, var, loop.iterable))
+
+                for var in activation.temp_context:
+                    loop.temp_context[var] = context[var]
+
+                activation_loops.append(loop)
+
+            elif activation_loops[-1].loop_def == loop_def:
+                loop = activation_loops[-1]
+
+                loop.iter_var = []
+                for var in loop_def.iter_var:
+                    loop.iter_var.append(self.slice_dependencies(
+                        activation, lineno, f_locals, var, loop.iterable))
+
+                for var_name, var in viewitems(loop.temp_context):
+                    activation.temp_context.add(var_name)
+                    activation.context[var_name] = var
+
+
+    def slice_line(self, activation, lineno, f_locals, filename):
         """Generates dependencies from line"""
         for var in activation.temp_context:
             del activation.context[var]
         activation.temp_context = set()
 
-        if line_dependencies is None:
-            line_dependencies = self.line_dependencies
+        self.slice_loop(activation, lineno, f_locals, filename)
+
         print_fn_msg(lambda: "Slice [{}] -> {}".format(
             lineno, linecache.getline(filename, lineno).strip()))
-        context, variables = activation.context, self.variables
+        context = activation.context
         usages_add = self.usages.add
-        add_variable = self.add_variable
-        add_dependencies = self.add_dependencies
 
-        dependencies = line_dependencies[filename][lineno]
         for ctx in ("Load", "Del"):
             usages = self.line_usages[filename][lineno][ctx]
             for name in usages:
                 if name in context:
-                    usages_add(activation.id, context[name].id,
-                               lineno, ctx)
+                    usages_add(activation.id, context[name].id, lineno, ctx)
 
-        for var, others in viewitems(dependencies):
-            vid = None
-            targets_gen = self.find_variables(activation, others, filename)
-
-            if var == "return":
-                vid = add_variable(activation.id, var.name, lineno, f_locals,
-                                   var.type, value=activation.return_value)
-            elif var == "yield":
-                vid = add_variable(activation.id, var.name, lineno, f_locals,
-                                   var.type)
-            elif not isinstance(var, tuple):
-                vid = add_variable(activation.id, var.name, lineno, f_locals,
-                                   var.type)
-
-            if vid is not None:
-                add_dependencies(variables[vid], targets_gen)
-                context[var.name] = variables[vid]
-                if var == "yield":
-                    context["return"] = context[var.name]
-            elif var in context:
-                # var is a tuple representing a call.
-                if isinstance(var, CallDependency):
-                    variable = context[var].call_var
-                else:
-                    variable = context[var].return_var
-                add_dependencies(variable, targets_gen)
-            else:
-                # Python skips tracing calls to builtins (float, int...)
-                # create artificial variables for them
-                variable = self.add_fake_call(activation, var)
-                add_dependencies(variable, targets_gen)
-
+        for var, others in viewitems(self.line_dependencies[filename][lineno]):
+            deps = self.find_variables(activation, others, filename)
+            self.slice_dependencies(activation, lineno, f_locals, var, deps)
 
     def add_fake_call(self, activation, call_uid):
         """Create fake call for builtins"""
@@ -509,21 +562,8 @@ class Tracer(Profiler):                                                         
         activation_loops = activation.current_loop
         if activation_loops and lineno not in activation_loops[-1]:
             # Remove last trace line
-            for variable in activation_loops[-1].remove:
-                if variable in activation.context:
-                    del activation.context[variable]
-            print_fn_msg(lambda: "POP Loop, {}-{}".format(
-                activation_loops[-1].first_line,
-                activation_loops[-1].last_line))
             activation.slice_stack.pop()
             activation_loops.pop()
-
-        loop = self.loops[filename].get(lineno)
-        if loop is not None and loop.first_line == lineno:
-            if not activation_loops:
-                activation_loops.append(loop)
-            elif activation_loops[-1] != loop:
-                activation_loops.append(loop)
 
         print_fn_msg(lambda: "[{}] -> {}".format(
             lineno, linecache.getline(filename, lineno).strip()))

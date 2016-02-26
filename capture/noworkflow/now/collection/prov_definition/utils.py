@@ -103,18 +103,17 @@ class NamedContext(object):
             self._names[-1].add(name)
 
 
-class Loop(object):                                                              # pylint: disable=too-few-public-methods
+class Loop(object):
     """Loop class. Used for For and While nodes"""
 
-    def __init__(self, node):
+    def __init__(self, node, typ):
         self.node = node
         self.first_line = node.first_line
         self.last_line = node.last_line
-        self.remove = []
-
-    def __contains__(self, line):
-        """Check if line is in loop"""
-        return self.first_line <= line <= self.last_line
+        self.type = typ
+        self.iterable = []
+        self.iter_var = []
+        self.maybe_call = None
 
     def info(self):
         """Return call information"""
@@ -123,6 +122,29 @@ class Loop(object):                                                             
 
     def __repr__(self):
         return "Loop({})".format(self.info())
+
+    def _dependencies(self, node, visitor_class, func):                                # pylint: disable=no-self-use
+        """Extract name dependencies from node"""
+        visitor = visitor_class()
+        visitor.visit(node)
+        return [func(x if isinstance(x, FunctionCall) else x[0])
+                for x in visitor.names]
+
+    def add_iterable(self, node, visitor_class):
+        """Extract dependencies from iterable"""
+        self.iterable = self._dependencies(
+            node, visitor_class, lambda x: Dependency(x, "direct"))
+
+    def add_iter_var(self, node, visitor_class):
+        """Extract dependencies from iterable"""
+        self.iter_var = self._dependencies(
+            node, visitor_class, lambda x: Variable(x, "normal"))
+
+    def instantiate(self, instance_class):
+        """Create activation loop"""
+        return instance_class(self)
+
+
 
 
 class FunctionCall(ast.NodeVisitor):                                             # pylint: disable=too-many-instance-attributes
