@@ -142,7 +142,18 @@ class Single(TreeElement):                                                      
         self.parent = activation.caller_id
         self.id = activation.id                                                  # pylint: disable=invalid-name
         self.line = activation.line
-        self.name = activation.name
+
+        name = activation.name
+        if activation.name == "_handle_fromlist":
+            for argument in activation.arguments:
+                if argument.name == "module":
+                    name = (
+                        argument.value
+                        .split("' from '")[-1]
+                        .split('" from "')[-1]
+                        [:-2]
+                    )
+        self.name = name
         self.trial_id = activation.trial_id
         self.repr = "S({0}-{1})".format(self.line, self.name)
         self.finished = bool(activation.finish)
