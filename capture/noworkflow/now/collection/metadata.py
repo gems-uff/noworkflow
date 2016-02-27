@@ -118,12 +118,6 @@ class Metascript(object):                                                       
         # Passed arguments : str
         self.command = ""
 
-        # Restore arguments
-
-        # Restore local modules : bool
-        self.local = False
-        # Restore input files : bool
-        self.input = False
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -260,12 +254,9 @@ class Metascript(object):                                                       
 
     def read_restore_args(self, args):
         """Read cmd line argument object for 'now restore'"""
-        self.name = args.script
         self.bypass_modules = args.bypass_modules
         self.command = " ".join(sys.argv[1:])
 
-        self.local = args.local
-        self.input = args.input
         self.dir = args.dir
         return self
 

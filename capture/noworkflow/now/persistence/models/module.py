@@ -90,10 +90,8 @@ class Module(AlchemyProxy):
             tmodule = cls.t
             _query = select([tmodule.c.id]).where(
                 (tmodule.c.name == bindparam("name")) &
-                ((is_none(tmodule.c.version)) |
-                 (tmodule.c.version == bindparam("version"))) &
-                ((is_none(tmodule.c.code_hash)) |
-                 (tmodule.c.code_hash == bindparam("code_hash")))
+                (tmodule.c.version == bindparam("version")) &
+                (tmodule.c.code_hash == bindparam("code_hash"))
             )
             cls._load_or_create_module_id = str(_query)
 

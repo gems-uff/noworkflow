@@ -123,7 +123,7 @@ class Deployment(object):
         modules.id = Module.id_seq()
         for name, module in viewitems(python_modules):
             if name != "__main__":
-                module_version = self._get_version(name)
+                module_version = self.get_version(name)
                 path = module.__file__
                 if path is None:
                     code_hash = None
@@ -134,7 +134,7 @@ class Deployment(object):
                 mid = Module.fast_load_module_id(*info) or modules.add(*info)
                 dependencies.add(mid)
 
-    def _get_version(self, module_name):                                         # pylint: disable=no-self-use
+    def get_version(self, module_name):                                         # pylint: disable=no-self-use
         """Get module version"""
         # Check built-in module
         if module_name in sys.builtin_module_names:

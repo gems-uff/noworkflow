@@ -11,9 +11,9 @@ $now run -e Tracer experiment.py anatomy1.img anatomy2.img anatomy3.img anatomy4
 >LOAD step4
 $now run -e Tracer experiment.py anatomy1.img anatomy2.img anatomy3.img anatomy4.img reference.img
 $now run -e Tracer experiment2.py
-$now restore 3
+$now restore 3 -a
 >LOAD step5
 $now run -e Tracer experiment2.py
-$now restore 8
+$now restore 8 -a
 >LOAD step6
 $now run -e Tracer experiment2.py

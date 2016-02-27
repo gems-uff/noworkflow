@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import os
 
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
@@ -17,6 +18,7 @@ from .. import relational, content, persistence_config
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
 from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
+from .base import proxy
 
 from .trial_prolog import TrialProlog
 from .trial_dot import TrialDot
@@ -213,6 +215,39 @@ class Trial(AlchemyProxy):
         """Return dict: environment variables -> value"""
         return {e.name: e.value for e in self.environment_attrs}
 
+    def versioned_files(self, skip_script=False, skip_local=False,
+                        skip_access=False):
+        """Find first files accessed in a trial
+        Return map with relative path -> (code_hash, type)
+
+        Possible types: script, module, access
+        """
+        files = {}
+        def add(path, info):
+            """Add file to dict"""
+            if os.path.isabs(path):
+                if not persistence_config.base_path in path:
+                    return
+                path = os.path.relpath(path, persistence_config.base_path)
+            files[path] = info
+
+        if not skip_script:
+            add(self.script, {"code_hash": self.code_hash, "type": "script"})
+        if not skip_local:
+            for module in self.local_modules:                                    # pylint: disable=not-an-iterable
+                add(module.path, {
+                    "code_hash": module.code_hash,
+                    "type": "module",
+                    "name": module.name
+                })
+        if not skip_access:
+            for faccess in reversed(list(self.file_accesses)):
+                add(faccess.name, {
+                    "code_hash": faccess.content_hash_before, "type": "access",
+                })
+
+        return files
+
     def create_head(self):
         """Create head for this trial"""
         session = relational.make_session()
@@ -323,7 +358,7 @@ class Trial(AlchemyProxy):
             trial = cls.last_trial(
                 script=script, parent_required=parent_required,
                 session=session)
-        return trial
+        return proxy(trial)
 
     @classmethod  # query
     def fast_last_trial_id(cls, session=None):
