@@ -58,6 +58,8 @@ class Demo(Command):
         choices = sorted(list(resource_ls(DEMO)))
         add_arg("number", type=str, nargs="?", choices=choices,
                 help="demo identification")
+        add_arg("--steps", type=str, default=":",
+                help="select step slice to run. Format start:stop:step")
         add_arg("--dir", type=str,
                 help="set demo path. Default to CWD/demo<number>"
                      "where <number> is the demo identification")
@@ -71,6 +73,8 @@ class Demo(Command):
         steps = resource(os.path.join(demo_path, "steps.txt"),
                          encoding="utf-8")
         steps = steps.split("\n")
+        steps = steps[slice(*[int(x) if x != "" else None
+                              for x in args.steps.split(":")])]
         for step in steps:
             print(step)
             words = step.split(" ")

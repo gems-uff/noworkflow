@@ -119,7 +119,7 @@ setup(
         "install": CustomInstallCommand,
         "develop": CustomDevelopCommand,
     },
-    classifiers={
+    classifiers=[
         'Development Status :: 5 - Production/Stable',
 
         'Intended Audience :: Science/Research',
@@ -133,5 +133,5 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
-    }
+    ]
 )
