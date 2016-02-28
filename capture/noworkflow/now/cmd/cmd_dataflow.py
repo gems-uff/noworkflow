@@ -31,6 +31,9 @@ class Dataflow(Command):
                 help="maximum number of characters to show values. "
                      "Hide values by default (length is 0). Minimum: 5. "
                      "Suggested: 55")
+        add_arg("-i", "--show-internal-use", action="store_false",
+                help="show variables and functions which name starts with "
+                     "a leading underscore")
 
         add_arg("-m", "--mode", type=str, default="simulation",
                 choices=["simulation", "prospective"],
@@ -52,6 +55,7 @@ class Dataflow(Command):
         trial.dot.show_accesses = not bool(args.hide_accesses)
         trial.dot.max_depth = args.depth or float("inf")
         trial.dot.value_length = args.value_length
+        trial.dot.show_internal_use = not bool(args.show_internal_use)
         trial.dot.mode = args.mode
 
         print(trial.dot.export_text())

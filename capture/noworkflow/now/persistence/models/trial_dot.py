@@ -63,6 +63,7 @@ class TrialDot(Model):                                                          
         self.rank_line = True
         self.show_accesses = True
         self.value_length = 0
+        self.show_internal_use = True
 
         self.result = []
         self.created = set()
@@ -72,6 +73,8 @@ class TrialDot(Model):                                                          
         self.variables = {v.id: v for v in self.trial.variables}
 
     def _add_variable(self, variable, depth, config):
+        if variable.name.startswith("_") and not self.show_internal_use:
+            return
         color, shape, font = config
         var = variable_id(variable)
 
@@ -80,7 +83,6 @@ class TrialDot(Model):                                                          
 
         if value == "now(n/a)":
             value = ""
-
 
         label_list = []
         if variable.line:
