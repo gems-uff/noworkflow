@@ -207,9 +207,21 @@ The third command restores the first access to simulation.py, which represents t
 The option *-f* does not affect evolution history.
 
 
-The remaining options of noWorkflow are *diff*, *export* and *vis*. The *diff* option compares two trials, and the *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.
+The remaining options of noWorkflow are *diff*, *export*, *history*, *dataflow*, and *vis*.
 
-The vis option starts a visualization tool that allows interactive analysis:
+The *diff* option compares two trials. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*)
+
+The *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.
+
+The *history* option presents a textual history evolution graph of trials.
+
+The *dataflow* option exports fine-grained provenance data (captured through *-e Tracer*) to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now dataflow -h" to get their descriptions.
+
+```bash
+$ now dataflow 6 -l -m prospective | dot -Tpng -o prospective.png
+```
+
+The *vis* option starts a visualization tool that allows interactive analysis:
 ```bash
 $ now vis -b
 ```
@@ -296,11 +308,19 @@ In  [8]: diff = nip.Diff(1, 3) # Loads diff between trial 1 and 3
 Out [8]: <Diff 1 3>
 ```
 
+To visualize the dataflow of a trial, it is possible to use the dot attribute of trial objects:
+```python
+In  [9]: trial.dot
+Out [9]: <png image>
+
+This command requires an installation of graphviz.
+
+
 There are attributes on those objects to change the graph visualization, width, height and filter values. Please, check the documentation by running the following code on jupyter notebook:
 ```python
-In  [9]: trial?
+In  [10]: trial?
 
-In  [10]: history?
+In  [11]: history?
 ```
 
 It is also possible to run prolog queries on IPython notebook. To do so, you will need to install SWI-Prolog with shared libraries and the pyswip module.
@@ -314,21 +334,21 @@ Check how to install SWI-Prolog with shared libraries at https://github.com/yuce
 
 To query a specific trial, you can do:
 ```python
-In  [10]: result = trial.query("activation(_, 550, X, _, _, _)")
+In  [12]: result = trial.query("activation(_, 550, X, _, _, _)")
     ...: next(result) # The result is a generator
-Out [10]: {'X': 'range'}
+Out [12]: {'X': 'range'}
 ```
 
 To check the existing rules, please do:
 ```python
-In  [11]: %now_prolog_schema
-Out [11]: [...]
+In  [13]: %now_prolog_schema
+Out [13]: [...]
 ```
 
 Finally, it is possible to run the CLI commands inside ipython notebook:
 ```python
-In  [12]: !now export {trial.id}
-Out [12]: %
+In  [14]: !now export {trial.id}
+Out [14]: %
      ...: % FACT: activation(trial_id, id, name, start, finish, caller_activation_id).
      ...: %
      ...: ...
