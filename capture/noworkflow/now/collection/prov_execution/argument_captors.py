@@ -283,4 +283,4 @@ class SlicingArgumentCaptor(ProfilerArgumentCaptor):
             provider.add_dependencies(graybox, all_args)
             provider.add_inter_dependencies(frame.f_back.f_locals, all_args,
                                             self.caller, activation.line,
-                                            [graybox])
+                                            [(graybox, graybox.name)])

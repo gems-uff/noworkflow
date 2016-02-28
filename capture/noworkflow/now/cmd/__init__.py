@@ -16,6 +16,7 @@ from .cmd_debug import Debug
 from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
+from .cmd_dataflow import Dataflow
 from .cmd_export import Export
 from .cmd_restore import Restore
 from .cmd_vis import Vis
@@ -38,6 +39,7 @@ def main():
         List(),
         Show(),
         Diff(),
+        Dataflow(),
         Export(),
         Restore(),
         Vis(),
@@ -67,6 +69,7 @@ __all__ = [
     "List",
     "Show",
     "Diff",
+    "Dataflow",
     "Export",
     "Restore",
     "Vis",

@@ -6,10 +6,12 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, Text, select
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
+
+from .. import relational
 
 from .base import AlchemyProxy, proxy_class, backref_one
 
@@ -76,6 +78,15 @@ class VariableDependency(AlchemyProxy):
         "changes in mutable arguments of function activations,\n"
         "assignment within control flow structure, and function return."
     ))
+
+    @classmethod  # query
+    def fast_load_by_trial(cls, trial_id, session=None):
+        """Return tuples with variable ids"""
+        session = session or relational.session
+        model = cls.m
+        return session.execute(select([model.source_id, model.target_id])
+            .where(model.trial_id == trial_id)
+        )
 
     def __repr__(self):
         return (

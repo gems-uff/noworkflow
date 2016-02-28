@@ -428,8 +428,11 @@ class Tracer(Profiler):                                                         
         """Create call variable and dependency"""
         caller = self.current_activation
         dependencies_add = self.dependencies.add
+        typ = "call"
+        if activation.name in ("_handle_fromlist", "_find_and_load"):
+            typ = "import"
         vid = self.add_variable(caller.id, activation.name,
-                                activation.line, {}, "call", value="now(n/a)")
+                                activation.line, {}, typ, value="now(n/a)")
         dependencies_add(caller.id, vid, activation.id, _return.id, "return")
 
         if caller.with_definition:

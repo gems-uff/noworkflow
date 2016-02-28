@@ -30,8 +30,6 @@ class Export(NotebookCommand):
                 help="also exports inference rules")
         add_arg("-b", "--explict-black-box-dependencies", action="store_true",
                 help="show black-box dependencies when exporting dot file")
-        add_arg("-d", "--dot", action="store_true",
-                help="export dependency graph in graphviz format")
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial. If you are generation "
                      "ipython notebook files, it is also possible to use "
@@ -43,14 +41,9 @@ class Export(NotebookCommand):
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_ref=args.trial)
-        if not args.dot:
-            print(trial.prolog.export_text_facts())
-            if args.rules:
-                print("\n".join(trial.prolog.rules()))
-        else:
-            if args.explict_black_box_dependencies:
-                trial.dot.show_blackbox_dependencies = True
-            print(trial.dot.export_text())
+        print(trial.prolog.export_text_facts())
+        if args.rules:
+            print("\n".join(trial.prolog.rules()))
 
     def execute_export(self, args):
         namespace = Namespace(ipynb=True, dir=args.dir)

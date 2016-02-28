@@ -345,6 +345,10 @@ class With(FunctionCall):
 class Import(FunctionCall):
     """Represent an import statement"""
 
+    def __init__(self, *args, **kwargs):
+        super(Import, self).__init__(*args, **kwargs)
+        self.prefix = "import"
+
     def __repr__(self):
         return "Import(line={})".format(self.line)
 

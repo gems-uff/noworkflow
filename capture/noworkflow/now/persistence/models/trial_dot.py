@@ -10,10 +10,10 @@ import weakref
 
 from collections import defaultdict
 
-from future.utils import viewitems, viewkeys
+from future.utils import viewitems, viewkeys, viewvalues
 
 from .base import Model
-from . import Activation
+from . import Activation, Variable, VariableDependency
 
 
 ITERATOR_SCHEMA = "#1B2881", "box", "#7AC5F9"
@@ -45,7 +45,7 @@ class TrialDot(Model):
         super(TrialDot, self).__init__()
         self.trial = weakref.proxy(trial)
         self.show_blackbox_dependencies = False
-        self.max_depth = float('inf')
+        self.max_depth = float("inf")
         self.mode = "simulation"
         self.rank_line = True
 
@@ -54,6 +54,7 @@ class TrialDot(Model):
         self.synonyms = {}
         self.departing_arrows = {}
         self.arriving_arrows = {}
+        self.variables = {v.id: v for v in self.trial.variables}
 
     def _add_variable(self, variable, depth, config):
         color, shape, font = config                                              # pylint: disable=unused-variable
@@ -107,8 +108,12 @@ class TrialDot(Model):
         result.append("    " * ndepth + 'fontsize=30;')
         result.append("    " * ndepth +
                       'label = "{}";'.format(variable.name))
-        self._add_variable(_return, ndepth, VAR_SCHEMA)
-        self.synonyms[variable] = _return
+
+        if any([any(_return.dependencies_as_source),
+                any(variable.dependencies_as_target)]):
+
+            self._add_variable(_return, ndepth, VAR_SCHEMA)
+            self.synonyms[variable] = _return
 
         self._export_activation(new_activation, ndepth)
         self._prepare_rank(new_activation, ndepth)
@@ -142,16 +147,17 @@ class TrialDot(Model):
         departing_arrows = self.departing_arrows
         arriving_arrows = self.arriving_arrows
         synonyms = self.synonyms
+        variables = self.variables
 
-        for dependency in self.trial.variable_dependencies:
-            source = dependency.source
-            source = synonyms.get(source, source)
-            target = dependency.target
-            target = synonyms.get(target, target)
+        for sid, tid in VariableDependency.fast_load_by_trial(self.trial.id):
+            osource = variables[sid]
+            source = synonyms.get(osource, osource)
+            otarget = variables[tid]
+            target = synonyms.get(otarget, otarget)
             typ = ""
             if "box--" in target.type:
                 typ = "dashed"
-            if source != target:
+            if source != target and osource.type != "arg":
                 departing_arrows[source][target] = typ
                 arriving_arrows[target][source] = typ
 
@@ -161,7 +167,10 @@ class TrialDot(Model):
         arriving_arrows = self.arriving_arrows
         departing_arrows = self.departing_arrows
 
-        removed = set(self.trial.variables) - created - set(viewkeys(synonyms))
+        removed = (set(viewvalues(self.variables))
+            - created
+            - set(viewkeys(synonyms))
+        )
         for variable in removed:
             variable_is_box = "box--" in variable.name
             for source, typ_sv in viewitems(arriving_arrows[variable]):
@@ -169,9 +178,12 @@ class TrialDot(Model):
                         not self.show_blackbox_dependencies):
                     continue
                 for target, typ_vt in viewitems(departing_arrows[variable]):
+                    if variable_is_box and source.type == target.type == "arg":
+                        continue
                     typ = typ_sv or typ_vt
                     if not typ and not variable_is_box:
                         typ = "dashed"
+
                     #del arriving_arrows[target][variable]
                     #del departing_arrows[variable][target]
                     departing_arrows[source][target] = typ
@@ -182,6 +194,8 @@ class TrialDot(Model):
                         not self.show_blackbox_dependencies):
                     continue
                 for source, typ_sv in viewitems(arriving_arrows[variable]):
+                    if variable_is_box and source.type == target.type == "arg":
+                        continue
                     typ = typ_sv or typ_vt
                     if not typ and not variable_is_box:
                         typ = "dashed"
@@ -235,13 +249,15 @@ class TrialDot(Model):
     def simulation(self):
         """Create simulation graph"""
         synonyms = self.synonyms
+        variables = self.variables
         for activation in self.trial.initial_activations:
             self._export_activation(activation)
             self._prepare_rank(activation, 1)
 
-        for variable in self.trial.variables:
-            if variable.type == "arg":
-                synonyms[variable] = variable.original
+
+        arg_orginal = Variable.fast_arg_and_original(self.trial.id)
+        for arg_id, original_id in arg_orginal:
+            synonyms[variables[arg_id]] = variables[original_id]
 
         self._create_dependencies()
         self._show_dependencies()

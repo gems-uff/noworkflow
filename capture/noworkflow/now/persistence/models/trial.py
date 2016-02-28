@@ -268,8 +268,6 @@ class Trial(AlchemyProxy):
                     "code_hash": faccess.content_hash_after, "type": "access",
                 }
 
-
-
     def create_head(self):
         """Create head for this trial"""
         session = relational.make_session()

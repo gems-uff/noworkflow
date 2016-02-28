@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from sqlalchemy import Column, Integer, Text, TIMESTAMP, select, alias
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import aliased
 
@@ -128,6 +128,43 @@ class Variable(AlchemyProxy):
             (a.activation_id == self.activation_id) &
             (a.id == self.id)
         )).first())
+
+    @classmethod  # query
+    def fast_arg_and_original(cls, trial_id, session=None):
+        """Return tuples with variable of type arg and original variable"""
+        # ToDo: optimize here
+        session = session or relational.session
+        avar = alias(cls.t, name="avar")
+        abox = alias(VariableDependency.t, name="abox")
+        box = alias(cls.t, name="box")
+        obox = alias(VariableDependency.t, name="obox")
+        ovar = alias(cls.t, name="ovar")
+
+
+        query = select([avar.c.id, ovar.c.id]).select_from(
+            ovar.join(obox, (
+                (ovar.c.id == obox.c.target_id) &
+                (ovar.c.trial_id == obox.c.trial_id) &
+                (ovar.c.activation_id == obox.c.target_activation_id)
+            )).join(box, (
+                (box.c.id == obox.c.source_id) &
+                (box.c.trial_id == obox.c.trial_id) &
+                (box.c.activation_id == obox.c.source_activation_id)
+            )).join(abox, (
+                (box.c.id == abox.c.target_id) &
+                (box.c.trial_id == abox.c.trial_id) &
+                (box.c.activation_id == abox.c.target_activation_id)
+            )).join(avar, (
+                (avar.c.id == abox.c.source_id) &
+                (avar.c.trial_id == abox.c.trial_id) &
+                (avar.c.activation_id == abox.c.source_activation_id)
+            ))
+        ).where(
+            (avar.c.type == "arg") &
+            (avar.c.trial_id == trial_id) &
+            (ovar.c.name == avar.c.name)
+        )
+        return session.execute(query)
 
     def __repr__(self):
         return (

@@ -34,8 +34,8 @@ class NowRestore(IpythonCommandMagic, Restore):
     def add_arguments(self):
         super(NowRestore, self).add_arguments()
         add_arg = self.add_argument
-        add_arg("--file", action="store_true",
-                help="""Restores the original script file""")
+        #add_arg("--file", action="store_true",
+        #        help="""Restores the original script file""")
 
     def restore_script(self, trial):
         if self.args_file:
