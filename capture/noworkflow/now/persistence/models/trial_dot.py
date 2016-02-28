@@ -40,15 +40,16 @@ def variable_id(variable):
 
 
 def escape(string, size=55):
+    """Escape string for dot file"""
     if not size:
         return ""
     if len(string) > size:
-        s = (size - 5) // 2
-        string = string[:s] + " ... " + string[-s:]
+        half_size = (size - 5) // 2
+        string = string[:half_size] + " ... " + string[-half_size:]
     return "" if string is None else string.replace('"', '\\"')
 
 
-class TrialDot(Model):
+class TrialDot(Model):                                                           # pylint: disable=too-many-instance-attributes
     """Handle Dot export"""
 
     __modelname__ = "TrialDot"
@@ -71,7 +72,7 @@ class TrialDot(Model):
         self.variables = {v.id: v for v in self.trial.variables}
 
     def _add_variable(self, variable, depth, config):
-        color, shape, font = config                                              # pylint: disable=unused-variable
+        color, shape, font = config
         var = variable_id(variable)
 
         value = escape(variable.value, self.value_length)
@@ -81,13 +82,13 @@ class TrialDot(Model):
             value = ""
 
 
-        label = []
+        label_list = []
         if variable.line:
-            label.append("{} ".format(variable.line))
-        label.append(name)
+            label_list.append("{} ".format(variable.line))
+        label_list.append(name)
         if value:
-            label.append("\n{}".format(value))
-        label = "".join(label)
+            label_list.append("\n{}".format(value))
+        label = "".join(label_list)
 
         self.result.append("    " * depth + (
             '{var} '
@@ -95,7 +96,7 @@ class TrialDot(Model):
             ' fillcolor="{color}" fontcolor="{font}"'
             ' shape="{shape}"'
             ' style="filled"];'
-        ).format(**locals()))
+        ).format(var=var, label=label, color=color, font=font, shape=shape))
         self.created.add(variable)
 
     def _all_accesses(self, activation, depth):
@@ -106,17 +107,16 @@ class TrialDot(Model):
                 for access in self._all_accesses(act, depth + 1):
                     yield access
 
-    def _add_call(self, variable, depth):
+    def _add_call(self, variable, depth, recursive_function):
 
         _return = variable.return_dependency
         if not _return:
             # Fake call
-            return False
+            return None, "fake"
         activation_id = variable.activation_id
         new_activation_id = _return.activation_id
         if self.show_accesses:
             for access in self._all_accesses(_return.activation, depth):
-                #print(access)
                 access.value = ""
                 access.line = ""
                 self._add_variable(access, depth, FILE_SCHEMA)
@@ -130,18 +130,18 @@ class TrialDot(Model):
             # c_call
             variable.value = _return.value
             self.synonyms[_return] = variable
-            return False
+            return None, "c_call"
         if len(list(_return.activation.variables)) == 1:
             # Just return. Maybe c_call
             variable.value = _return.value
             self.synonyms[_return] = variable
-            return False
+            return None, "just_return"
         ndepth = depth + 1
         if ndepth > self.max_depth:
             # max depth
             variable.value = _return.value
             self.synonyms[_return] = variable
-            return False
+            return None, "max_depth"
         trial_id = variable.trial_id
         new_activation = Activation((trial_id, new_activation_id))
         result = self.result
@@ -161,23 +161,10 @@ class TrialDot(Model):
             self._add_variable(_return, ndepth, VAR_SCHEMA)
             self.synonyms[variable] = _return
 
-        self._export_activation(new_activation, ndepth)
+        recursive_function(new_activation, ndepth)
         self._prepare_rank(new_activation, ndepth)
         result.append("    " * depth + "}")
-        return True
-
-    def _export_activation(self, activation, depth=1):
-        for variable in activation.variables:
-            if (variable.type == "call" and
-                    self._add_call(variable, depth)):
-                continue
-
-            config = TYPES.get(variable.type)
-            if config:
-                self._add_variable(variable, depth, config)
-
-
-        
+        return _return, "subgraph"
 
     def _prepare_rank(self, activation, depth):
         if self.rank_line:
@@ -188,7 +175,7 @@ class TrialDot(Model):
                 if variable in created:
                     by_line[variable.line].append(variable)
 
-            for line, variables in viewitems(by_line):
+            for variables in viewvalues(by_line):
                 result.append("    " * depth + "{rank=same " +
                     " ".join(variable_id(var) for var in variables) + "}")
 
@@ -216,7 +203,8 @@ class TrialDot(Model):
         arriving_arrows = self.arriving_arrows
         departing_arrows = self.departing_arrows
 
-        removed = (set(viewvalues(self.variables))
+        removed = (
+            set(viewvalues(self.variables))
             - created
             - set(viewkeys(synonyms))
         )
@@ -276,15 +264,6 @@ class TrialDot(Model):
                     variable_id(source), variable_id(target), style
                 ))
 
-    def erase(self):
-        """Erase graph"""
-        self.result = []
-        self.created = set()
-        self.synonyms = {}
-        self.departing_arrows = defaultdict(dict)
-        self.arriving_arrows = defaultdict(dict)
-
-
     def _export_text(self):
         self.erase()
         result = self.result
@@ -295,12 +274,12 @@ class TrialDot(Model):
         result.append("}")
         return result
 
-    def simulation(self):
-        """Create simulation graph"""
+    def _dataflow(self, function):
+        """Create dataflow graph"""
         synonyms = self.synonyms
         variables = self.variables
         for activation in self.trial.initial_activations:
-            self._export_activation(activation)
+            function(activation)
             self._prepare_rank(activation, 1)
 
 
@@ -311,6 +290,74 @@ class TrialDot(Model):
         self._create_dependencies()
         self._show_dependencies()
 
+    def _simulation_activation(self, activation, depth=1):
+        for variable in activation.variables:
+            if (variable.type == "call" and
+                    self._add_call(variable, depth,
+                                   self._simulation_activation)[0]):
+                continue
+
+            config = TYPES.get(variable.type)
+            if config:
+                self._add_variable(variable, depth, config)
+
+    def _add_all_variables(self, variables, depth):
+        created = self.created
+
+        for variable in variables:
+            if not variable in created:
+                config = TYPES.get(variable.type)
+                if config:
+                    self._add_variable(variable, depth, config)
+
+    def _prospective_activation(self, activation, depth=1):
+        for variable in activation.variables:
+            if variable.type == "call":
+                _return, mode = self._add_call(variable, depth,
+                                               self._prospective_activation)
+                if not _return:
+                    config = TYPES.get(variable.type)
+                    self._add_variable(variable, depth, config)
+
+
+                if mode == "fake":
+                    box = variable.box_dependency
+                    self._add_all_variables(box.dependencies, depth)
+
+                if mode in ("c_call", "just_return"):
+                    _return = variable.return_dependency
+                    box = _return.box_dependency
+                    if box:
+                        self._add_all_variables(box.dependencies, depth)
+
+                if mode == "max_depth":
+                    _return = variable.return_dependency
+                    for var in _return.activation.variables:
+                        if var.type == "param":
+                            self._add_all_variables(var.dependencies, depth)
+
+                self._add_all_variables(variable.dependents, depth)
+
+            if variable.type == "param":
+                config = TYPES.get(variable.type)
+                self._add_variable(variable, depth, config)
+                self._add_all_variables(variable.dependencies, depth)
+
+    def simulation(self):
+        """Create simulation graph"""
+        self._dataflow(self._simulation_activation)
+
+    def prospective(self):
+        """Create simulation graph"""
+        self._dataflow(self._prospective_activation)
+
+    def erase(self):
+        """Erase graph"""
+        self.result = []
+        self.created = set()
+        self.synonyms = {}
+        self.departing_arrows = defaultdict(dict)
+        self.arriving_arrows = defaultdict(dict)
 
     def export_text(self):
         """Export facts from trial as text"""

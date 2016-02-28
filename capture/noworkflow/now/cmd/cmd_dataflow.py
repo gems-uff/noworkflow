@@ -33,9 +33,9 @@ class Dataflow(Command):
                      "Suggested: 55")
 
         add_arg("-m", "--mode", type=str, default="simulation",
-                choices=["simulation"],
+                choices=["simulation", "prospective"],
                 help="Graph mode. 'simulation' presents a dataflow graph "
-                     "with all relevant variables. 'dataflow' presents "
+                     "with all relevant variables. 'prospective' presents "
                      "only parameters, calls, and assignments to calls")
 
         add_arg("trial", type=str, nargs="?",

@@ -112,24 +112,10 @@ class Variable(AlchemyProxy):
             Variable.m.name == "return").first())
 
     @property
-    def original(self):
-        """Return its equivalent variable. Valid only for arg type"""
-        a = aliased(Variable.m)
-        abox = aliased(VariableDependency.m)
-        box = aliased(Variable.m)
-        obox = aliased(VariableDependency.m)
-        o = aliased(Variable.m)
-
-        return proxy((relational.session.query(o)
-            .join(obox, o.dependencies_as_target)
-            .join(box, obox.source)
-            .join(abox, box.dependencies_as_target)
-            .join(a, abox.source)
-            .filter(
-            (a.trial_id == self.trial_id) &
-            (a.activation_id == self.activation_id) &
-            (a.id == self.id)
-        )).first())
+    def box_dependency(self):
+        """Return "return" dependency. Valid only for call type"""
+        return proxy(self._get_instance().dependencies.filter(
+            Variable.m.name.like("%box--")).first())
 
     @classmethod  # query
     def fast_arg_and_original(cls, trial_id, session=None):
