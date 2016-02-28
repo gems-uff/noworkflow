@@ -18,6 +18,7 @@ from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref, many_ref
 from .base import backref_one, backref_many, query_many_property
 from .object_value import ObjectValue
 from .variable_dependency import VariableDependency
+from .variable import Variable
 
 
 @proxy_class
@@ -72,6 +73,16 @@ class Activation(AlchemyProxy):
     def arguments(self):
         """Return activation arguments as a SQLAlchemy query"""
         return self.object_values.filter(ObjectValue.m.type == "ARGUMENT")
+
+    @query_many_property
+    def param_variables(self):
+        """Return param variables as a SQLAlchemy query"""
+        return self.variables.filter(Variable.m.type == "param")
+
+    @query_many_property
+    def no_param_variables(self):
+        """Return param variables as a SQLAlchemy query"""
+        return self.variables.filter(Variable.m.type != "param")
 
     prolog_description = PrologDescription("activation", (
         PrologTrial("trial_id"),

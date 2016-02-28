@@ -36,10 +36,12 @@ class Dataflow(Command):
                      "a leading underscore")
 
         add_arg("-m", "--mode", type=str, default="simulation",
-                choices=["simulation", "prospective"],
+                choices=["simulation", "prospective", "dependency"],
                 help="Graph mode. 'simulation' presents a dataflow graph "
                      "with all relevant variables. 'prospective' presents "
-                     "only parameters, calls, and assignments to calls")
+                     "only parameters, calls, and assignments to calls. "
+                     "'dependency' presents all dependencies, and ignores "
+                     "depth, rank-line, and hide-accesses configurations")
 
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial")

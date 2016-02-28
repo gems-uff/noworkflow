@@ -10,19 +10,23 @@ import weakref
 
 from collections import defaultdict
 
+from copy import copy
+
 from future.utils import viewitems, viewkeys, viewvalues
 
 from .base import Model
 from . import Activation, Variable, VariableDependency, FileAccess
 
 
-ITERATOR_SCHEMA = "#1B2881", "box", "#7AC5F9"
 CALL_SCHEMA = "#3A85B9", "box", "black"
 VAR_SCHEMA = "#85CBD0", "ellipse", "black"
 FILE_SCHEMA = "white", "ellipse", "black"
+BLACKBOX_SCHEMA = "black", "box", "grey"
+GRAYBOX_SCHEMA = "grey", "box", "black"
+IMPORT_SCHEMA = "#1B2881", "box", "#7AC5F9"
+
 
 TYPES = {
-    "iterator": ITERATOR_SCHEMA,
     "call": CALL_SCHEMA,
     "normal": VAR_SCHEMA,
     "virtual": VAR_SCHEMA,
@@ -73,6 +77,14 @@ class TrialDot(Model):                                                          
         self.variables = {v.id: v for v in self.trial.variables}
 
     def _add_variable(self, variable, depth, config):
+        """Create variable for graph
+
+
+        Arguments:
+        variable -- Variable or FileAccesss object
+        depth -- depth for configuring spaces in subclusters
+        config -- color schema
+        """
         if variable.name.startswith("_") and not self.show_internal_use:
             return
         color, shape, font = config
@@ -101,7 +113,18 @@ class TrialDot(Model):                                                          
         ).format(var=var, label=label, color=color, font=font, shape=shape))
         self.created.add(variable)
 
+    def _add_all_variables(self, variables, depth):
+        """Create all variables"""
+        created = self.created
+
+        for variable in variables:
+            if not variable in created:
+                config = TYPES.get(variable.type)
+                if config:
+                    self._add_variable(variable, depth, config)
+
     def _all_accesses(self, activation, depth):
+        """Get all file accesses recursively if it reaches the maximum depth"""
         for access in activation.file_accesses:
             yield access
         if depth + 1 > self.max_depth:
@@ -110,15 +133,27 @@ class TrialDot(Model):                                                          
                     yield access
 
     def _add_call(self, variable, depth, recursive_function):
+        """Check if call is valid for subcluster
+        If it is, create a subcluster and call <recursive_function>
 
-        _return = variable.return_dependency
-        if not _return:
+        Return return_ variable and type
+
+        There are five possible type:
+        fake -- indicates that variable is a fake call (no cluster)
+        c_call -- indicates that variable is a c_call (no cluster)
+        just_return -- indicates that call has only a return node (no cluster)
+        max_depth -- indicates that it reached the max depth (no cluster)
+        subgraph -- user defined call within depth (create cluster)
+        """
+
+        return_ = variable.return_dependency
+        if not return_:
             # Fake call
             return None, "fake"
         activation_id = variable.activation_id
-        new_activation_id = _return.activation_id
+        new_activation_id = return_.activation_id
         if self.show_accesses:
-            for access in self._all_accesses(_return.activation, depth):
+            for access in self._all_accesses(return_.activation, depth):
                 access.value = ""
                 access.line = ""
                 self._add_variable(access, depth, FILE_SCHEMA)
@@ -130,19 +165,19 @@ class TrialDot(Model):                                                          
                     self.departing_arrows[access][variable] = "dashed"
         if new_activation_id == activation_id:
             # c_call
-            variable.value = _return.value
-            self.synonyms[_return] = variable
+            variable.value = return_.value
+            self.synonyms[return_] = variable
             return None, "c_call"
-        if len(list(_return.activation.variables)) == 1:
+        if len(list(return_.activation.variables)) == 1:
             # Just return. Maybe c_call
-            variable.value = _return.value
-            self.synonyms[_return] = variable
+            variable.value = return_.value
+            self.synonyms[return_] = variable
             return None, "just_return"
         ndepth = depth + 1
         if ndepth > self.max_depth:
             # max depth
-            variable.value = _return.value
-            self.synonyms[_return] = variable
+            variable.value = return_.value
+            self.synonyms[return_] = variable
             return None, "max_depth"
         trial_id = variable.trial_id
         new_activation = Activation((trial_id, new_activation_id))
@@ -157,18 +192,21 @@ class TrialDot(Model):                                                          
         result.append("    " * ndepth +
                       'label = "{}";'.format(variable.name))
 
-        if any([any(_return.dependencies_as_source),
+        if any([any(return_.dependencies_as_source),
                 any(variable.dependencies_as_target)]):
 
-            self._add_variable(_return, ndepth, VAR_SCHEMA)
-            self.synonyms[variable] = _return
+            self._add_variable(return_, ndepth, VAR_SCHEMA)
+            self.synonyms[variable] = return_
+
+        self._add_all_variables(new_activation.param_variables, ndepth)
 
         recursive_function(new_activation, ndepth)
         self._prepare_rank(new_activation, ndepth)
         result.append("    " * depth + "}")
-        return _return, "subgraph"
+        return return_, "subgraph"
 
     def _prepare_rank(self, activation, depth):
+        """Group variables by line"""
         if self.rank_line:
             result = self.result
             created = self.created
@@ -178,10 +216,12 @@ class TrialDot(Model):                                                          
                     by_line[variable.line].append(variable)
 
             for variables in viewvalues(by_line):
-                result.append("    " * depth + "{rank=same " +
+                result.append(
+                    "    " * depth + "{rank=same " +
                     " ".join(variable_id(var) for var in variables) + "}")
 
-    def _create_dependencies(self):
+    def _create_dependencies(self, skip_arg=True):
+        """Load dependencies from database into a graph"""
         departing_arrows = self.departing_arrows
         arriving_arrows = self.arriving_arrows
         synonyms = self.synonyms
@@ -193,13 +233,18 @@ class TrialDot(Model):                                                          
             otarget = variables[tid]
             target = synonyms.get(otarget, otarget)
             typ = ""
+            if (osource.type == otarget.type == "--blackbox--" and
+                    not self.show_blackbox_dependencies):
+                continue
+
             if "box--" in target.type:
                 typ = "dashed"
-            if source != target and osource.type != "arg":
+            if source != target and (not skip_arg or osource.type != "arg"):
                 departing_arrows[source][target] = typ
                 arriving_arrows[target][source] = typ
 
     def _fix_dependencies(self):
+        """Propagate dependencies, removing missing nodes"""
         created = self.created
         synonyms = self.synonyms
         arriving_arrows = self.arriving_arrows
@@ -245,6 +290,7 @@ class TrialDot(Model):                                                          
             del departing_arrows[variable]
 
     def _show_dependencies(self):
+        """Show dependencies"""
         result = self.result
         created = self.created
         departing_arrows = self.departing_arrows
@@ -252,21 +298,18 @@ class TrialDot(Model):                                                          
         self._fix_dependencies()
 
         for source, targets in viewitems(departing_arrows):
-            if not source in created:
+            if source not in created:
                 continue
-            dep_act_id = source.activation_id
-            dep_act_id = "global" if dep_act_id == -1 else dep_act_id
             for target, style in viewitems(targets):
-                if not target in created or source == target:
+                if target not in created or source == target:
                     continue
-                sup_act_id = target.activation_id
-                sup_act_id = "global" if sup_act_id == -1 else sup_act_id
 
                 result.append(('    {} -> {} [style="{}"];').format(
                     variable_id(source), variable_id(target), style
                 ))
 
     def _export_text(self):
+        """Export graph text"""
         self.erase()
         result = self.result
         result.append("digraph dependency {")
@@ -293,6 +336,7 @@ class TrialDot(Model):                                                          
         self._show_dependencies()
 
     def _simulation_activation(self, activation, depth=1):
+        """Export simulation activation"""
         for variable in activation.variables:
             if (variable.type == "call" and
                     self._add_call(variable, depth,
@@ -303,55 +347,64 @@ class TrialDot(Model):                                                          
             if config:
                 self._add_variable(variable, depth, config)
 
-    def _add_all_variables(self, variables, depth):
-        created = self.created
-
-        for variable in variables:
-            if not variable in created:
-                config = TYPES.get(variable.type)
-                if config:
-                    self._add_variable(variable, depth, config)
-
     def _prospective_activation(self, activation, depth=1):
-        for variable in activation.variables:
+        """Export prospective activation"""
+        # ToDo: param dependencies
+        for variable in activation.no_param_variables:
             if variable.type == "call":
-                _return, mode = self._add_call(variable, depth,
+                return_, mode = self._add_call(variable, depth,
                                                self._prospective_activation)
-                if not _return:
+                if not return_:
                     config = TYPES.get(variable.type)
                     self._add_variable(variable, depth, config)
-
 
                 if mode == "fake":
                     box = variable.box_dependency
                     self._add_all_variables(box.dependencies, depth)
 
-                if mode in ("c_call", "just_return"):
-                    _return = variable.return_dependency
-                    box = _return.box_dependency
+                elif mode in ("c_call", "just_return"):
+                    return_ = variable.return_dependency
+                    box = return_.box_dependency
                     if box:
                         self._add_all_variables(box.dependencies, depth)
 
-                if mode == "max_depth":
-                    _return = variable.return_dependency
-                    for var in _return.activation.variables:
-                        if var.type == "param":
-                            self._add_all_variables(var.dependencies, depth)
+                elif mode == "max_depth":
+                    return_ = variable.return_dependency
+                    for var in return_.activation.param_variables:
+                        self._add_all_variables(var.dependencies, depth)
+                elif mode == "subgraph":
+                    for var in return_.activation.param_variables:
+                        self._add_all_variables(var.dependencies, depth)
 
                 self._add_all_variables(variable.dependents, depth)
-
-            if variable.type == "param":
-                config = TYPES.get(variable.type)
-                self._add_variable(variable, depth, config)
-                self._add_all_variables(variable.dependencies, depth)
 
     def simulation(self):
         """Create simulation graph"""
         self._dataflow(self._simulation_activation)
 
     def prospective(self):
-        """Create simulation graph"""
+        """Create prospective graph"""
         self._dataflow(self._prospective_activation)
+
+    def dependency(self):
+        """Create dependency graph"""
+        types = copy(TYPES)
+        types["import"] = IMPORT_SCHEMA
+        types["--blackbox--"] = BLACKBOX_SCHEMA
+        types["--graybox--"] = GRAYBOX_SCHEMA
+
+        for variable in viewvalues(self.variables):
+            config = types.get(variable.type)
+            if config:
+                self._add_variable(variable, 1, config)
+            else:
+                self._add_variable(variable, 1, VAR_SCHEMA)
+
+        self._create_dependencies(skip_arg=False)
+        self._show_dependencies()
+
+
+
 
     def erase(self):
         """Erase graph"""
