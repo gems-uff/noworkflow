@@ -248,6 +248,28 @@ class Trial(AlchemyProxy):
 
         return files
 
+    def iterate_accesses(self, path=None):
+        """Iterate on all access to a path"""
+        if not path or self.script.endswith(path):
+            yield self.script, {"code_hash": self.code_hash, "type": "script"}
+        for module in self.local_modules:                                        # pylint: disable=not-an-iterable
+            if not path or module.path.endswith(path):
+                yield module.path, {
+                    "code_hash": module.code_hash,
+                    "type": "module",
+                    "name": module.name
+                }
+        for faccess in list(self.file_accesses):
+            if not path or faccess.name.endswith(path):
+                yield faccess.name, {
+                    "code_hash": faccess.content_hash_before, "type": "access",
+                }
+                yield faccess.name, {
+                    "code_hash": faccess.content_hash_after, "type": "access",
+                }
+
+
+
     def create_head(self):
         """Create head for this trial"""
         session = relational.make_session()
@@ -322,6 +344,34 @@ class Trial(AlchemyProxy):
                 select([func.max(model.start)])
             ))
         ).first()
+
+    @classmethod  # query
+    def find_by_name_and_time(cls, script, timestamp, trial=None,
+                              session=None):
+        """Return the first trial according to script and timestamp
+
+        Arguments:
+        script -- specify the desired script
+        timestamp -- specify the start of finish time of trial
+
+        Keyword Arguments:
+        trial -- limit query to a specific trial
+        """
+        model = cls.m
+        session = session or relational.session
+        query = (
+            session.query(model)
+            .filter(
+                (model.script == script) & (
+                    model.start.like(timestamp + "%") |
+                    model.finish.like(timestamp + "%")
+                )
+            ).order_by(model.start)
+        )
+        if trial:
+            query = query.filter(model.id == trial)
+        return proxy(query.first())
+
 
     @classmethod  # query
     def load_trial(cls, trial_ref, session=None):

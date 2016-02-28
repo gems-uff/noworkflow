@@ -56,6 +56,20 @@ class ContentDatabase(object):
                 content_file.write(content)
         return content_hash
 
+    def find_subhash(self, content_hash):
+        """Get hash that starts by content_hash"""
+        content_dirname = content_hash[:2]
+        contet_filename = content_hash[2:]
+        content_dir = join(self.content_path, content_dirname)
+        if not isdir(content_dir):
+            return None
+        for _, _, filenames in os.walk(content_dir):
+            for name in filenames:
+                if name.startswith(contet_filename):
+                    return content_dirname + name
+        return None
+
+
     def get(self, content_hash):
         """Get content from the content database
 

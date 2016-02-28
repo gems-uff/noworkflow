@@ -187,11 +187,24 @@ $ now show -a 1
 
 To restore files used by trial 1, run
 ```bash
-$ now restore -l -i 1
+$ now restore 1
 ```
 
-By default, the restore command only restores the script used for the trial ("simulation.py"), even when it has imports and read files as input. Use the option *-l* to restore imported modules and the option *-i* to restore input files.
-The restore command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 2 is based on Trial 1). When you checkout a Trial, the next Trial will be based on the checked out Trial (e.g. Trial 3 based on Trial 1).
+By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 2 is based on Trial 1). When you restore a Trial, the next Trial will be based on the restored Trial (e.g. Trial 3 based on Trial 1).
+
+The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access.
+
+```bash
+$ now restore 1 -f data1.dat -i "A|2016-01-13 19:06:59"
+$ now restore 1 -f output.png -i 90451b101 -t output_trial1.png
+$ now restore 1 -f simulation.py -i 1
+```
+
+The first command queries data1.dat of Trial 1 accessed at "2016-01-13 19:06:59", and restores the resulting content after the access.
+The second command restores output.png with subhash 90451b101, and save it to output_trial1.png.
+The third command restores the first access to simulation.py, which represents the trial script.
+
+The option *-f* does not affect evolution history.
 
 
 The remaining options of noWorkflow are *diff*, *export* and *vis*. The *diff* option compares two trials, and the *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.

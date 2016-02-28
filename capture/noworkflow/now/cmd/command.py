@@ -6,7 +6,19 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import argparse
+
 from ..utils.functions import abstract
+
+
+class SmartFormatter(argparse.HelpFormatter):
+    """Add option to split lines in help messages"""
+
+    def _split_lines(self, text, width):
+        # this is the RawTextHelpFormatter._split_lines
+        if text.startswith('R|'):
+            return text[2:].splitlines()
+        return argparse.HelpFormatter._split_lines(self, text, width)
 
 
 class Command(object):
@@ -22,7 +34,8 @@ class Command(object):
         kwargs = {}
         if self.help:
             kwargs["help"] = self.help
-        self.parser = subparsers.add_parser(self.cmd, **kwargs)
+        self.parser = subparsers.add_parser(
+            self.cmd, formatter_class=SmartFormatter, **kwargs)
 
         self.add_arguments()
         self.parser.set_defaults(func=self.execute)

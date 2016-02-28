@@ -13,7 +13,9 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologTimestamp, PrologNullable
 from ...utils.prolog import PrologNullableRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .. import relational
+
+from .base import AlchemyProxy, proxy_class, backref_one, proxy
 
 
 @proxy_class
@@ -82,6 +84,31 @@ class FileAccess(AlchemyProxy):
         if self.content_hash_before is None:
             result += " (new)"
         return result
+
+    @classmethod  # query
+    def find_by_name_and_time(cls, name, timestamp, trial=None,
+                              session=None):
+        """Return the first access according to name and timestamp
+
+        Arguments:
+        name -- specify the desired file
+        timestamp -- specify the start of finish time of trial
+
+        Keyword Arguments:
+        trial -- limit search in a specific trial_id
+        """
+        model = cls.m
+        session = session or relational.session
+        query = (
+            session.query(model)
+            .filter(
+                (model.name == name) &
+                (model.timestamp.like(timestamp + "%"))
+            ).order_by(model.timestamp)
+        )
+        if trial:
+            query = query.filter(model.trial_id == trial)
+        return proxy(query.first())
 
     def __key(self):
         return (self.name, self.content_hash_before, self.content_hash_after,

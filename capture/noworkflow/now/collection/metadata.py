@@ -254,7 +254,7 @@ class Metascript(object):                                                       
 
     def read_restore_args(self, args):
         """Read cmd line argument object for 'now restore'"""
-        self.bypass_modules = args.bypass_modules
+        self.bypass_modules = True
         self.command = " ".join(sys.argv[1:])
 
         self.dir = args.dir

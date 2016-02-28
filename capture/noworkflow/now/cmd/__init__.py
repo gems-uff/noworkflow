@@ -10,7 +10,7 @@ import argparse
 import sys
 import sqlalchemy
 
-from .command import Command
+from .command import Command, SmartFormatter
 from .cmd_run import Run
 from .cmd_debug import Debug
 from .cmd_list import List
@@ -23,10 +23,12 @@ from .cmd_demo import Demo
 from .cmd_history import History
 from ..utils.io import print_msg
 
+
 def main():
     """Main function"""
     from ..utils.functions import version
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=SmartFormatter)
     parser.add_argument("-v", "--version", action="version",
                         version="noWorkflow {}".format(version()))
     subparsers = parser.add_subparsers()
