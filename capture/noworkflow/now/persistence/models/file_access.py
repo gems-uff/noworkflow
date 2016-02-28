@@ -85,6 +85,10 @@ class FileAccess(AlchemyProxy):
             result += " (new)"
         return result
 
+    @property
+    def activation_id(self):
+        return self.function_activation_id
+
     @classmethod  # query
     def find_by_name_and_time(cls, name, timestamp, trial=None,
                               session=None):
@@ -118,6 +122,8 @@ class FileAccess(AlchemyProxy):
         return hash(self.__key())
 
     def __eq__(self, other):
+        if not isinstance(other, FileAccess):
+            return False
         return (
             (self.content_hash_before == other.content_hash_before)
             and (self.content_hash_after == other.content_hash_after)

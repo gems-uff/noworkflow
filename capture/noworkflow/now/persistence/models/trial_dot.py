@@ -13,12 +13,13 @@ from collections import defaultdict
 from future.utils import viewitems, viewkeys, viewvalues
 
 from .base import Model
-from . import Activation, Variable, VariableDependency
+from . import Activation, Variable, VariableDependency, FileAccess
 
 
 ITERATOR_SCHEMA = "#1B2881", "box", "#7AC5F9"
 CALL_SCHEMA = "#3A85B9", "box", "black"
 VAR_SCHEMA = "#85CBD0", "ellipse", "black"
+FILE_SCHEMA = "white", "ellipse", "black"
 
 TYPES = {
     "iterator": ITERATOR_SCHEMA,
@@ -31,9 +32,20 @@ TYPES = {
 
 def variable_id(variable):
     """Return variable identification for .dot file"""
+    if isinstance(variable, FileAccess):
+        return "a_{}".format(variable.id)
     act_id = variable.activation_id
     act_id = "global" if act_id == -1 else act_id
     return "v_{}_{}".format(act_id, variable.id)
+
+
+def escape(string, size=55):
+    if not size:
+        return ""
+    if len(string) > size:
+        s = (size - 5) // 2
+        string = string[:s] + " ... " + string[-s:]
+    return "" if string is None else string.replace('"', '\\"')
 
 
 class TrialDot(Model):
@@ -48,6 +60,8 @@ class TrialDot(Model):
         self.max_depth = float("inf")
         self.mode = "simulation"
         self.rank_line = True
+        self.show_accesses = True
+        self.value_length = 0
 
         self.result = []
         self.created = set()
@@ -60,20 +74,37 @@ class TrialDot(Model):
         color, shape, font = config                                              # pylint: disable=unused-variable
         var = variable_id(variable)
 
-        value = variable.value
-        value = '' if value is None else value.replace('"', '\\"')
+        value = escape(variable.value, self.value_length)
+        name = escape(variable.name)
 
-        name = variable.name
-        name = '' if name is None else name.replace('"', '\\"')
+        if value == "now(n/a)":
+            value = ""
+
+
+        label = []
+        if variable.line:
+            label.append("{} ".format(variable.line))
+        label.append(name)
+        if value:
+            label.append("\n{}".format(value))
+        label = "".join(label)
 
         self.result.append("    " * depth + (
             '{var} '
-            '[label="{variable.line} {name}"'
+            '[label="{label}"'
             ' fillcolor="{color}" fontcolor="{font}"'
             ' shape="{shape}"'
             ' style="filled"];'
         ).format(**locals()))
         self.created.add(variable)
+
+    def _all_accesses(self, activation, depth):
+        for access in activation.file_accesses:
+            yield access
+        if depth + 1 > self.max_depth:
+            for act in activation.children:
+                for access in self._all_accesses(act, depth + 1):
+                    yield access
 
     def _add_call(self, variable, depth):
 
@@ -83,17 +114,32 @@ class TrialDot(Model):
             return False
         activation_id = variable.activation_id
         new_activation_id = _return.activation_id
+        if self.show_accesses:
+            for access in self._all_accesses(_return.activation, depth):
+                #print(access)
+                access.value = ""
+                access.line = ""
+                self._add_variable(access, depth, FILE_SCHEMA)
+                if set("ra+") & set(access.mode):
+                    self.departing_arrows[variable][access] = "dashed"
+                    self.arriving_arrows[access][variable] = "dashed"
+                if set("wxa+") & set(access.mode):
+                    self.arriving_arrows[variable][access] = "dashed"
+                    self.departing_arrows[access][variable] = "dashed"
         if new_activation_id == activation_id:
             # c_call
+            variable.value = _return.value
             self.synonyms[_return] = variable
             return False
         if len(list(_return.activation.variables)) == 1:
             # Just return. Maybe c_call
+            variable.value = _return.value
             self.synonyms[_return] = variable
             return False
         ndepth = depth + 1
         if ndepth > self.max_depth:
             # max depth
+            variable.value = _return.value
             self.synonyms[_return] = variable
             return False
         trial_id = variable.trial_id
@@ -129,6 +175,9 @@ class TrialDot(Model):
             config = TYPES.get(variable.type)
             if config:
                 self._add_variable(variable, depth, config)
+
+
+        
 
     def _prepare_rank(self, activation, depth):
         if self.rank_line:

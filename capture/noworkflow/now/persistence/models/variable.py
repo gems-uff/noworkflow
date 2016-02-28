@@ -101,6 +101,8 @@ class Variable(AlchemyProxy):
         return hash(self.__key())
 
     def __eq__(self, other):
+        if not isinstance(other, Variable):
+            return False
         return self.__key() == other.__key()                                     # pylint: disable=protected-access
 
     @property
