@@ -77,58 +77,77 @@ class Run(Command):
         self.default_call_storage_frequency = 10000
         self.default_save_frequency = 0
         self.default_execution_provenance = "Profiler"
+        self.add_help = False
 
     def add_arguments(self):
         add_arg = self.add_argument
         add_cmd = self.add_argument_cmd
-        add_arg("--name", type=str,
-                help="set branch name used for tracking history")
-        add_arg("--dir", type=str,
-                help="set project path. The noworkflow database folder will "
-                     "be created in this path. Default to script directory")
+
         # It will create both script and argv var
         add_cmd("script", nargs=argparse.REMAINDER, action=ScriptArgs,
                 help="Python script to be executed")
 
-        add_cmd("--create_last", action="store_true")
-        add_arg("-v", "--verbose", action="store_true",
-                help="increase output verbosity")
-        add_arg("--meta", action="store_true",
-                help="execute noWorkflow meta profiler")
-
+        deployment = self.parser.add_argument_group(
+            "optional deployment arguments")
+        add_arg = deployment.add_argument
         # Deployment
         add_arg("-b", "--bypass-modules", action="store_true",
                 help="bypass module dependencies analysis, assuming that no "
                      "module changes occurred since last execution")
 
-        # Definition
-        add_arg("--disasm0", action="store_true",
-                help="show script disassembly before noWorkflow change it")
-        add_arg("--disasm", action="store_true",
-                help="show script disassembly")
-
+        execution = self.parser.add_argument_group(
+            "optional execution arguments")
+        add_arg = execution.add_argument
         # Execution
         add_arg("-d", "--depth", type=non_negative,
                 default=sys.getrecursionlimit(),
-                help="depth for capturing function activations (defaults to "
+                help="depth for capturing function activations (default: "
                      "recursion limit)")
         add_arg("-D", "--non-user-depth", type=non_negative, default=1,
                 help="depth for capturing function activations outside the "
-                     "selected context (defaults to 1)")
+                     "selected context (default: 1)")
         add_arg("-e", "--execution-provenance",
                 default=self.default_execution_provenance,
                 choices=["Profiler", "Tracer", "Tracker"],
-                help="execution provenance provider. (defaults to Profiler)")
+                help="R|execution provenance provider. (default: Profiler)\n"
+                     "Profiler captures function calls, parameters, file \n"
+                     "accesses, and globals. \n"
+                     "Tracker captures everything the Profiler captures, \n"
+                     "in addition to variables and dependencies.\n"
+                     "Tracer is an alias to Tracker")
         add_arg("-c", "--context", choices=["main", "package", "all"],
                 default=self.default_context,
                 help="functions subject to depth computation when capturing "
-                     "activations (defaults to main)")
+                     "activations (default: main)")
         add_arg("-s", "--save-frequency", type=non_negative,
                 default=self.default_save_frequency,
                 help="frequency (in ms) to save partial provenance")
         add_arg("-S", "--call-storage-frequency", type=non_negative,
                 default=self.default_call_storage_frequency,
                 help="frequency (in calls) to save partial provenance")
+
+        # Other
+        other = self.parser.add_argument_group(
+            "other optional arguments")
+        add_arg = other.add_argument
+        add_arg("-h", "--help", action="help",
+                help="show this help message and exit")
+        add_arg("--name", type=str,
+                help="R|set script name.\n"
+                     "This options allows separating or grouping trials \n"
+                     "in disjoint branches in the history. It is specially\n"
+                     "useful from grouping Jupyter Cells")
+        add_arg("--dir", type=str,
+                help="set project path. The noworkflow database folder will "
+                     "be created in this path. Default to script directory")
+        add_arg("-v", "--verbose", action="store_true",
+                help="increase output verbosity")
+
+        # Internal
+        add_arg("--disasm0", action="store_true", help=argparse.SUPPRESS)
+        add_arg("--disasm", action="store_true", help=argparse.SUPPRESS)
+        add_cmd("--create_last", action="store_true", help=argparse.SUPPRESS)
+        add_arg("--meta", action="store_true", help=argparse.SUPPRESS)
 
     def execute(self, args):
         if args.meta:

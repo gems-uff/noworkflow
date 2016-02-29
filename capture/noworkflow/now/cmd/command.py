@@ -28,6 +28,7 @@ class Command(object):
         self.cmd = cmd or type(self).__name__.lower()
         self.help = self.__doc__.split("\n")[0].strip()
         self.parser = None
+        self.add_help = True
 
     def create_parser(self, subparsers):
         """Create parser with arguments"""
@@ -35,7 +36,9 @@ class Command(object):
         if self.help:
             kwargs["help"] = self.help
         self.parser = subparsers.add_parser(
-            self.cmd, formatter_class=SmartFormatter, **kwargs)
+            self.cmd, add_help=self.add_help, formatter_class=SmartFormatter,
+            **kwargs
+        )
 
         self.add_arguments()
         self.parser.set_defaults(func=self.execute)
