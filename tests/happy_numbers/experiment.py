@@ -1,0 +1,65 @@
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
+import subprocess
+import csv
+
+try:
+    from subprocess import DEVNULL
+except ImportError:
+    import os
+    DEVNULL = open(os.devnull, "wb")
+
+
+def capture(data, program, script, n=10):
+    total_real = 0.0
+    total_user = 0.0
+    total_system = 0.0
+    print(program, script)
+    for i in range(n):
+        p = subprocess.Popen("time -p {} {}".format(program, script),
+                             shell=True, executable="/bin/bash",
+                             stderr=subprocess.PIPE,
+                             stdout=DEVNULL, stdin=None)
+        err = p.stderr.readlines()
+        #print("".join(err))
+
+        real = float(err[-3][5:])
+        user = float(err[-2][5:])
+        system = float(err[-1][4:])
+        total_real += real
+        total_user += user
+        total_system += system
+        p.wait()
+        data["raw"].append([
+            str(i), program, script,
+            str(real), str(user), str(system)
+        ])
+    data["avg"].append([
+        "avg", program, script,
+        str(total_real / n), str(total_user / n), str(total_system / n)
+    ])
+
+if __name__ == "__main__":
+    data = {
+        "raw": [],
+        "avg": [],
+    }
+
+    capture(data, "python", "maybe_happy_2pow4000.py")
+    capture(data, "now run", "maybe_happy_2pow4000.py")
+    capture(data, "now run -e Tracer", "maybe_happy_2pow4000.py")
+
+    capture(data, "now run -d 1", "maybe_happy_2pow4000.py")
+    capture(data, "now run -e Tracer -d 1", "maybe_happy_2pow4000.py")
+
+    capture(data, "now run", "happy1A.py")
+    capture(data, "now run -e Tracer", "happy1A.py")
+
+    with open("result.csv", "w") as csvfile:
+        datawriter = csv.writer(csvfile)
+        datawriter.writerow(
+            ["number", "program", "script", "real", "user", "system"]
+        )
+        datawriter.writerows(data["raw"])
+        datawriter.writerow([])
+        datawriter.writerows(data["avg"])
