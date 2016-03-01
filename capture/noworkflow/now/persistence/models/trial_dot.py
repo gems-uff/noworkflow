@@ -116,8 +116,10 @@ class TrialDot(Model):                                                          
     def _add_all_variables(self, variables, depth):
         """Create all variables"""
         created = self.created
+        synonyms = self.synonyms
 
         for variable in variables:
+            variable = synonyms.get(variable, variable)
             if not variable in created:
                 config = TYPES.get(variable.type)
                 if config:
