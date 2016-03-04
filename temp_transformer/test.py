@@ -84,8 +84,10 @@ expr(a if b else c) # arg <- b(c), a
 expr(a if expr(b) else c) # arg <- expr(arg <- b)c, a
 expr({a: b}) # arg <- a, b
 expr({a, b}) # arg <- a, b
-expr([x + a for x in range(5)]) # arg <- a, range(5) # ToDo
+expr([x + a for x in range(5) if b]) # arg <- a, range(5) # ToDo
 expr({x + a for x in range(5)}) # arg <- a, range(5) # ToDo
 #lambda x: exec_lambda(args)(x + a)
 
+expr([1, a]) # arg <- OrderedDependencyAware([], a)
+expr((1, a)) # arg <- OrderedDependencyAware([], a)
 

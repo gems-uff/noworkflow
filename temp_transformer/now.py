@@ -4,6 +4,7 @@ from __future__ import (absolute_import, print_function,
 from collections import OrderedDict
 from future.utils import viewvalues, viewkeys
 from functools import wraps
+from itertools import tee
 
 
 class DependencyAware(object):
@@ -17,6 +18,10 @@ class DependencyAware(object):
     def add(self, dependency):
         if self.active:
             self.dependencies.append(dependency)
+
+class OrderedDependencyAware(DependencyAware):
+    pass
+
 
 
 class Arg(DependencyAware):
@@ -46,6 +51,26 @@ class Keyword(DependencyAware):
             self.arg, "=" if self.arg != "**" else "", self.value
         )
 
+class ComprehensionResult(DependencyAware):
+    """Represent a ComprehensionResult"""
+
+    def __init__(self, activation, arg):
+        super(ComprehensionResult, self).__init__(activation)
+        self.value = None
+        self.arg = arg
+
+    def __repr__(self):
+        return "{}".format(self.arg)
+
+class ComprehensionCondition(DependencyAware):
+    """Represent a ComprehensionCondition"""
+
+    def __init__(self, activation):
+        super(ComprehensionCondition, self).__init__(activation)
+        self.value = None
+
+    def __repr__(self):
+        return "{}".format(self.value)
 
 class Call(DependencyAware):
     """Represent a Call"""
@@ -59,6 +84,9 @@ class Call(DependencyAware):
         self.keywords = []
         self.with_definition = False
         self.definition_activation = None
+        self.dependency_type = "direct"
+        self.last_yield = None
+        self.delay_conditions = []
 
     def __repr__(self):
         args = []
@@ -81,6 +109,35 @@ class Decorator(Call):
 
     def __repr__(self):
         return "@{}".format(self.name)
+
+
+class Iterable(DependencyAware):
+
+    def __init__(self, activation, unpack):
+        super(Iterable, self).__init__(activation)
+        self.unpack = unpack
+
+    def __repr__(self):
+        return "<iterable>"
+
+class Unpack(DependencyAware):
+
+    def __init__(self, activation, var, _type):
+        super(Unpack, self).__init__(activation)
+        self.var = var
+        self.type = _type
+
+    def __repr__(self):
+        return "{}".format(self.var)
+
+class Assignment(DependencyAware):
+
+    def __init__(self, activation, targets):
+        super(Assignment, self).__init__(activation)
+        self.targets = targets
+
+    def __repr__(self):
+        return "<Assignment>"
 
 
 class Parameter(object):
@@ -114,6 +171,8 @@ class Dependency(object):
             print(self.type)
 
 
+
+
 class ExecutionCollector(object):
 
     def __init__(self):
@@ -122,6 +181,7 @@ class ExecutionCollector(object):
         self.activation_stack = []
 
         self.dependency_stack = [DependencyAware(None, active=False)]
+        self.last_assignment = []
 
     def dep_name(self, var, value, type_):
         self.dependency_stack[-1].add(Dependency(var, value, type_))
@@ -184,7 +244,6 @@ class ExecutionCollector(object):
         ))
         self.activation_stack.pop()
         return result
-
 
     def default(self):
         """Capture default value before"""
@@ -302,6 +361,7 @@ class ExecutionCollector(object):
         # Todo capture default
 
     def lambda_def(self, me_func, definition_activation, value, *parameters):
+        """Capture lambda definitions"""
         call = self.activation_stack[-1]
         if id(call.func) != id(me_func):
             return call
@@ -309,6 +369,135 @@ class ExecutionCollector(object):
         call.definition_activation = definition_activation
         parameters = self._match_arguments(call, *parameters)
         return value
+
+    def comprehension(self, type_, definition_activation, dep_type, lambda_,):
+        """Capture comprehension"""
+        call = Call(definition_activation, lambda_, type_, -1)
+        call.dependency_type = dep_type
+        self.dependency_stack.append(call)
+        self.activation_stack.append(call)
+        self.dependency_stack.pop()
+        result = lambda_(lambda_, definition_activation, call)
+        print(call, [a for a in call.dependencies])
+        self.dependency_stack[-1].add(Dependency(
+            call, result, dep_type
+        ))
+        self.activation_stack.pop()
+        return result
+
+    def comp_elt(self, activation, arg):
+        """Capture comprehension value before"""
+        self.dependency_stack.append(ComprehensionResult(activation, arg))
+        return self._comp_elt
+
+    def _comp_elt(self, value):
+        """Capture comprehension value after"""
+        comp_result = self.dependency_stack.pop()
+        comp_result.value = value
+        activation = comp_result.activation
+        for dep in activation.delay_conditions:
+            comp_result.add(dep)
+        activation.delay_conditions = []
+        print(comp_result, [a for a in comp_result.dependencies])
+        if activation.name == "GenExpr":
+            activation.last_yield = Dependency("yield", value, "direct")
+        else:
+            activation.add(Dependency(
+                "yield", comp_result, "direct"
+            ))
+
+        return value
+
+    def comp_condition(self, activation):
+        """Capture comprehension condition before"""
+        self.dependency_stack.append(ComprehensionCondition(activation))
+        return self._comp_condition
+
+    def _comp_condition(self, value):
+        """Capture comprehension condition after"""
+        comp_cond = self.dependency_stack.pop()
+        comp_cond.value = value
+        activation = comp_cond.activation
+        activation.delay_conditions.append(Dependency(
+            "<condition>", comp_cond, "conditional"
+        ))
+        return value
+
+    def list(self, activation):
+        """Capture list/tuple before"""
+        self.dependency_stack.append(OrderedDependencyAware(activation))
+        return self._list
+
+    def _list(self, value):
+        """Capture list/tuple after"""
+        list_ = self.dependency_stack.pop()
+        self.dependency_stack[-1].add(list_)
+        return value
+
+    def element(self, activation):
+        self.dependency_stack.append(DependencyAware(activation))
+        return self._element
+
+    def _element(self, value):
+        element = self.dependency_stack.pop()
+        self.dependency_stack[-1].add(element)
+        return value
+
+    '''
+    def iterable(self, activation, unpack):
+        """Capture iterable before"""
+        self.dependency_stack.append(Iterable(activation, unpack))
+        return self._iterable
+
+    def _iterable(self, value):
+        """Capture iterable after"""
+        iterable = self.dependency_stack.pop()
+        iterable.value = value
+        activation = iterable.activation
+        activation.add(Dependency(
+            "<iterable>", iterable, "direct"
+        ))
+        return self.iterator(activation, iterable, value)
+
+
+    def unpack(self, activation, unpack, dependency):
+        if unpack.type == "Name":
+            print("new var:", unpack, dependency)
+            return target
+        if unpack.type == "Tuple":
+
+
+    
+        target, new_target = tee(value)
+
+            for tup, val in zip(unpack_tuple, new_value):
+                self.unpack(activation, )
+            return value
+            self.unpack(activation,)
+            try:
+                iter(value)
+            except TypeError:
+                print("new_var": u)
+            else:
+                pass
+    def iterator(self, activation, dep, old_iterable):
+        """Capture iteration"""
+        unpack = dep.unpack
+        for value in old_iterable:
+            self.unpack(activation, unpack, dep)
+            yield value
+
+    def assign_value(self, activation, targets):
+        """Capture assignements"""
+        self.dependency_stack.append(Assignment(activation, targets))
+        return self._assign
+
+    def _assign_value(self, value):
+        self.last_assignment.append(self.dependency_stack.pop())
+        return value
+
+    '''
+
 
 
 

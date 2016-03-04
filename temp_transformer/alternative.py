@@ -354,7 +354,24 @@ class RewriteAST(ast.NodeTransformer):
         return ast.copy_location(ast.comprehension(
             node.target,
             node.iter,
-            [if_ for if_ in node.ifs]
+            [double_noworkflow(
+                "comp_condition",
+                [activation()],
+                [self.capture(if_, "conditional")]
+             ) for if_ in node.ifs]
+        ), node)
+
+        return ast.copy_location(ast.comprehension(
+            node.target,
+            double_noworkflow(
+                "iterable",
+                [activation(), self.extract_unpack(node.iter)],
+                [node.iter]
+            ), [double_noworkflow(
+                "comp_condition",
+                [activation()],
+                [self.capture(if_, "conditional")]
+             ) for if_ in node.ifs]
         ), node)
 
     def visit_ListComp(self, node, cls=ast.ListComp):                            # pylint: disable=invalid-name
@@ -365,29 +382,71 @@ class RewriteAST(ast.NodeTransformer):
             Transform <(lambda: [x + y for x in iterable if z])()>
 
         ? Alternative ToDo:
-            <now>.comprehension(<act>)([
-                <now>.comp_elt(x + y)
-                for x in <now>.iterable()(<act>, iterable, "x"))
-                if <now>.comp_condition()(z)
-            ])
+            <now>.comprehension(<cls>, <act>, <type>,
+                lambda <me>, <parent>, <act>: [
+                    <now>.comp_elt(<act>, "x + y")(|x + y|)
+                    for x in <now>.iterable(<act>, "x")(|iterable|))
+                    if <now>.comp_condition(<act>)(|z|)
+                ]
+            )
         """
         #ToDo
-        lambda_args = [[], None]
+        lambda_args = [[
+            param("__now_me_func__"),
+            param("__now_parent__"),
+            param("__now_activation__")
+        ], None]
         if PY3:
             lambda_args += [[], []]
         lambda_args += [None, []]
-        new_node = ast.copy_location(self.visit(call(ast.Lambda(
-            ast.arguments(*lambda_args),
-            cls(
-                self.visit(node.elt),
-                [self.visit_comprehension(gen) for gen in node.generators]
-            )
-        ), [])), node)
+        new_node = ast.copy_location(noworkflow(
+            "comprehension", [
+                ast.Str(cls.__name__),
+                activation(),
+                self.dependency_type(),
+                ast.Lambda(
+                    ast.arguments(*lambda_args),
+                    cls(double_noworkflow(
+                        "comp_elt",
+                        [activation(), self.extract_str(node.elt)],
+                        [self.capture(node.elt)]
+                    ), [self.visit_comprehension(gen) for gen in node.generators])
+                )]
+        ), node)
+
         return new_node
 
     def visit_SetComp(self, node):                                               # pylint: disable=invalid-name
         """Visit SetComp. Similar to ListComp"""
         return self.visit_ListComp(node, cls=ast.SetComp)
+
+    def visit_List(self, node, cls=ast.List):                                    # pylint: disable=invalid-name
+        """Visit List
+        Transform:
+            [a, 2, 3]
+        Into:
+            <now>.list(<act>, [
+                <now>.element(<act>)(a),
+                <now>.element(<act>)(2),
+                <now>.element(<act>)(3),
+            ])
+        """
+        if isinstance(node.ctx, ast.Store):
+            return node
+        return ast.copy_location(double_noworkflow("list", [activation()], [
+            cls(
+                [double_noworkflow(
+                    "element", [activation()], [self.capture(elt)]
+                ) for elt in node.elts],
+                node.ctx
+            )
+        ]), node)
+
+    def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
+        """Visit Tuple. Similar to List"""
+        print(node.ctx)
+        return self.visit_List(node, cls=ast.Tuple)
+
 
 class RewriteDependencies(RewriteAST):
 
