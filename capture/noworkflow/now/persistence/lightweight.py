@@ -449,7 +449,7 @@ class VariableLW(BaseLW):
     def __repr__(self):
         return ("Variable(id={}, activation_id={}, name={}, line={}, type={},"
                 "value={})").format(self.id, self.activation_id, self.name,
-                                    self.line, self.value, self.type)
+                                    self.line, self.type, self.value)
 
 
 class VariableDependencyLW(BaseLW):

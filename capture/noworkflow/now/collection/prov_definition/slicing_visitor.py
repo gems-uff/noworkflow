@@ -35,6 +35,8 @@ class AssignLeftVisitor(ast.NodeVisitor):
         self.generic_visit(node)
         if self.enable:
             self.last += "." + node.attr
+            if not isinstance(self.last, str):
+                self.last = self.last.encode("utf-8")
             self.names.append((self.last, node.ctx, node.lineno))
 
     def visit_Subscript(self, node):                                             # pylint: disable=invalid-name
@@ -196,12 +198,6 @@ def tuple_or_list(node):
     return isinstance(node, ast.Tuple) or isinstance(node, ast.List)
 
 
-def add_all_names(dest, origin, dep_typ):
-    """Add all names from <origin> to <dest>"""
-    for name in origin:
-        dest.append(Dependency(name, dep_typ))
-
-
 def assign_dependencies(target, value, dependencies, typ,                        # pylint: disable=too-many-arguments
                         dep_typ="direct", aug=False, testlist_star_expr=True):
     """Add dependencies to <dependencies>
@@ -268,7 +264,6 @@ def assign_right(lineno, target, value, dependencies):
     for name, _, _ in right.names:
         dependencies[lineno][target].append(Dependency(name, "direct"))
 
-
 class SlicingVisitor(FunctionVisitor):                                           # pylint: disable=too-many-instance-attributes, too-many-public-methods
     """Visitor that captures required information for program slicing"""
 
@@ -279,6 +274,7 @@ class SlicingVisitor(FunctionVisitor):                                          
             "AugLoad": [], "AugStore": [], "Param": [],
         })
         self.dependencies = defaultdict(lambda: defaultdict(list))
+
         self.gen_dependencies = defaultdict(lambda: defaultdict(list))
         self.call_by_col = defaultdict(dict)
         self.function_calls_by_lasti = defaultdict(dict)
@@ -415,7 +411,6 @@ class SlicingVisitor(FunctionVisitor):                                          
         for target in node.targets:
             assign_dependencies(target, node.value, self.dependencies,
                                 "normal")
-
         self.generic_visit(node)
 
     def visit_For(self, node):                                                   # pylint: disable=invalid-name
@@ -450,6 +445,7 @@ class SlicingVisitor(FunctionVisitor):                                          
         condition = Condition(node)
         self.conditions[condition.first_line] = condition
         condition.add_test(node.test, AssignRightVisitor)
+        self.visit(node.test)
         self.condition_stack.append(condition)
         self.visit_stmts(node.body)
         self.visit_stmts(node.orelse)
