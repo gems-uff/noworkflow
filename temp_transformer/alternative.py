@@ -141,6 +141,12 @@ class RewriteAST(ast.NodeTransformer):
             pyposast.extract_code(self.lcode, node)
         ))
 
+    def extract_unpack(self, node):
+        """Capture unpack object"""
+        unpack_extractor = ExtractUnpack(self.path, self.code)
+        return unpack_extractor.visit(node)
+
+
 # --- mod
 
     def process_script(self, node, cls):
@@ -158,7 +164,25 @@ class RewriteAST(ast.NodeTransformer):
 
     def process_body(self, body):
         """Process statement list"""
-        return [self.visit(stmt) for stmt in body]
+        new_body = []
+        for stmt in body:
+            new_body.append(self.visit(stmt))
+            if isinstance(stmt, ast.Assign):
+                new_body.append(ast.copy_location(ast.Assign(
+                    [ast.Name("__now__assign__", S())],
+                    noworkflow("pop_assign", [activation()])
+                ), stmt))
+                for target in stmt.targets:
+                    new_body.append(ast.copy_location(ast.Expr(
+                        noworkflow("assign", [
+                            activation(),
+                            ast.Name("__now__assign__", L()),
+                            self.extract_unpack(target),
+                            self.to_load.visit(target)
+                        ])
+                    ), stmt))
+
+        return new_body
 
     def visit_Module(self, node):                                                # pylint: disable=invalid-name
         """Visit Module. Create and close activation"""
@@ -260,6 +284,30 @@ class RewriteAST(ast.NodeTransformer):
         """Visit AsyncFunctionDef. Same transformations as FunctionDef"""
         return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
 
+    def visit_Assign(self, node):                                                # pylint: disable=invalid-name
+        """Visit Assign.
+        Transform:
+            c = a, b = d, e
+        Into:
+            c = a, b = <now>.assign_value(<act>)(|d, e|)
+
+        In process_body; Add:
+        __now__assign__ = <now>.pop_assign(<act>)
+
+        <now>.assign(__now__assign__, Unpack((a, b), Tuple), (a, b))
+        <now>.assign(__now__assign__, Unpack(c, Name), c)
+        """
+        return ast.copy_location(ast.Assign(
+            node.targets,
+            double_noworkflow(
+                "assign_value",
+                [activation()],
+                [self.capture(node.value)]
+            )
+        ), node)
+
+
+
 # --- expr
 
     def _call_arg(self, node, star, call_id):
@@ -353,8 +401,11 @@ class RewriteAST(ast.NodeTransformer):
         """Visit comprehension"""
         return ast.copy_location(ast.comprehension(
             node.target,
-            node.iter,
-            [double_noworkflow(
+            double_noworkflow(
+                "iterable",
+                [activation(), self.extract_unpack(node.target)],
+                [node.iter]
+            ), [double_noworkflow(
                 "comp_condition",
                 [activation()],
                 [self.capture(if_, "conditional")]
@@ -363,16 +414,14 @@ class RewriteAST(ast.NodeTransformer):
 
         return ast.copy_location(ast.comprehension(
             node.target,
-            double_noworkflow(
-                "iterable",
-                [activation(), self.extract_unpack(node.iter)],
-                [node.iter]
-            ), [double_noworkflow(
+            node.iter,
+            [double_noworkflow(
                 "comp_condition",
                 [activation()],
                 [self.capture(if_, "conditional")]
              ) for if_ in node.ifs]
         ), node)
+
 
     def visit_ListComp(self, node, cls=ast.ListComp):                            # pylint: disable=invalid-name
         """Visit ListComp
@@ -476,6 +525,36 @@ class RewriteDependencies(RewriteAST):
         """Visit node"""
         self._dependency_type = mode
         return super(RewriteDependencies, self).visit(node)
+
+
+class ExtractUnpack(RewriteAST):
+
+    def visit_Name(self, node):
+        """Visit Name. Return Unpack(node.id, 'Name')"""
+        return noworkflow("Unpack", [ast.Str(node.id), ast.Str('Name')])
+
+    def visit_Tuple(self, node):
+        """Visit Tuple. Return Unpack([Unpack(a), Unpack(b)], 'Tuple')"""
+        return noworkflow("Unpack", [
+            ast.List([self.visit(elt) for elt in node.elts], L()),
+            ast.Str("Tuple")
+        ])
+
+    def visit_List(self, node):
+        """Visit List. Return Unpack([Unpack(a), Unpack(b)], 'List')"""
+        return noworkflow("Unpack", [
+            ast.List([self.visit(elt) for elt in node.elts], L()),
+            ast.Str("List")
+        ])
+
+    def visit_Starred(self, node):
+        """Visit Starred. Return Unpack(Unpack(a), 'Starred')"""
+        return noworkflow("Unpack", [
+            self.visit(node.value), ast.Str('Starred')
+        ])
+
+    # ToDo: 
+
 
 builtin = __builtins__
 builtin.__noworkflow__ = ExecutionCollector()

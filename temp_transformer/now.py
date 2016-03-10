@@ -6,6 +6,8 @@ from future.utils import viewvalues, viewkeys
 from functools import wraps
 from itertools import tee
 
+from noworkflow.now.utils.cross_version import IMMUTABLE
+
 
 class DependencyAware(object):
     """Store dependencies of an element"""
@@ -23,6 +25,82 @@ class OrderedDependencyAware(DependencyAware):
     pass
 
 
+class Variable(DependencyAware):
+
+    def __init__(self, vid, activation, name, value=None, type_="normal"):
+        super(Variable, self).__init__(activation)
+        self.trial_id = None # ToDo
+        self.activation_id = activation.id
+        self.id = vid
+
+        self.name = name
+        self.line = None # ToDo
+        self.time = None # ToDo
+        self.type = type_
+
+        self.immutable = False
+        self.value_id = None
+        self.value = value
+
+        self.parts = {}
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        self.immutable = isinstance(value, IMMUTABLE)
+        self._value = value
+        self.value_id = id(value)
+
+    def __repr__(self):
+        return "{}".format(self.name)
+
+
+class Activation(DependencyAware):
+    """Represent a Call"""
+
+    def __init__(self, aid, activation, func, name, call_id):
+        super(Activation, self).__init__(activation)
+        self.id = aid
+        self.func = func
+        self.name = name
+        self.call_id = call_id
+        self.args = []
+        self.keywords = []
+        self.with_definition = False
+        self.definition_activation = None
+        self.dependency_type = "direct"
+        self.last_yield = None
+        self.delay_conditions = []
+        self.last_assignment = []
+        self.variables = {}
+
+    def __repr__(self):
+        args = []
+        if self.args:
+            args.append(', '.join(repr(arg) for arg in self.args))
+        if self.keywords:
+            args.append(', '.join(repr(key) for key in self.keywords))
+
+        return "{}({})".format(
+            self.name,
+           ', '.join(args)
+        )
+
+    def __setitem__(self, variable_name, variable):
+        self.variables[variable_name] = variable
+
+    def __getitem__(self, variable_name):
+        result = self.variables.get(variable_name, None)
+        if not result:
+            if not self.activation:
+                return None
+            result = self.activation[variable_name]
+        return result
+
+
 
 class Arg(DependencyAware):
     """Represent a Call parameter"""
@@ -35,7 +113,6 @@ class Arg(DependencyAware):
 
     def __repr__(self):
         return "{}{}".format("*" if self.star else "", self.value)
-
 
 class Keyword(DependencyAware):
     """Represent a Call keyword parameter"""
@@ -72,44 +149,16 @@ class ComprehensionCondition(DependencyAware):
     def __repr__(self):
         return "{}".format(self.value)
 
-class Call(DependencyAware):
-    """Represent a Call"""
-
-    def __init__(self, activation, func, name, call_id):
-        super(Call, self).__init__(activation)
-        self.func = func
-        self.name = name
-        self.call_id = call_id
-        self.args = []
-        self.keywords = []
-        self.with_definition = False
-        self.definition_activation = None
-        self.dependency_type = "direct"
-        self.last_yield = None
-        self.delay_conditions = []
-
-    def __repr__(self):
-        args = []
-        if self.args:
-            args.append(', '.join(repr(arg) for arg in self.args))
-        if self.keywords:
-            args.append(', '.join(repr(key) for key in self.keywords))
-
-        return "{}({})".format(
-            self.name,
-           ', '.join(args)
-        )
 
 
-class Decorator(Call):
+class Decorator(Activation):
     """Represent a decorator"""
 
-    def __init__(self, name, activation):
-        super(Decorator, self).__init__(activation, None, name, -1)
+    def __init__(self, did, name, activation):
+        super(Decorator, self).__init__(did, activation, None, name, -1)
 
     def __repr__(self):
         return "@{}".format(self.name)
-
 
 class Iterable(DependencyAware):
 
@@ -120,25 +169,13 @@ class Iterable(DependencyAware):
     def __repr__(self):
         return "<iterable>"
 
-class Unpack(DependencyAware):
-
-    def __init__(self, activation, var, _type):
-        super(Unpack, self).__init__(activation)
-        self.var = var
-        self.type = _type
-
-    def __repr__(self):
-        return "{}".format(self.var)
-
 class Assignment(DependencyAware):
 
-    def __init__(self, activation, targets):
+    def __init__(self, activation):
         super(Assignment, self).__init__(activation)
-        self.targets = targets
 
     def __repr__(self):
         return "<Assignment>"
-
 
 class Parameter(object):
 
@@ -157,21 +194,27 @@ class Parameter(object):
 
 class Dependency(object):
 
-    def __init__(self, name, value, type_):
-        self.name = name
+    def __init__(self, variable, value, type_):
+        self.variable = variable
         self.value = value
         self.type = type_
 
     def __repr__(self):
         if self.type in ("direct", "call"):
-            return repr(self.name)
+            return repr(self.variable)
         elif self.type == "conditional":
-            return "{!r}c".format(self.name)
+            return "{!r}c".format(self.variable)
         else:
             print(self.type)
 
+class Unpack(object):
 
+    def __init__(self, var, _type):
+        self.var = var
+        self.type = _type
 
+    def __repr__(self):
+        return "Unpack({!r}, {})".format(self.var, self.type)
 
 class ExecutionCollector(object):
 
@@ -181,10 +224,14 @@ class ExecutionCollector(object):
         self.activation_stack = []
 
         self.dependency_stack = [DependencyAware(None, active=False)]
-        self.last_assignment = []
+
+        self.Unpack = Unpack
 
     def dep_name(self, var, value, type_):
-        self.dependency_stack[-1].add(Dependency(var, value, type_))
+        activation = self.dependency_stack[-1].activation
+        variable = activation[var]
+        if variable:
+            self.dependency_stack[-1].add(Dependency(variable, value, type_))
         return value
 
     def arg(self, activation, star, call_id):
@@ -218,7 +265,7 @@ class ExecutionCollector(object):
     def script_start(self, path):
         """Start script"""
         print("start")
-        call = Call(None, None, path, -1)
+        call = Activation(-1, None, None, path, -1)
         self.activation_stack.append(call)
         return call
 
@@ -228,7 +275,7 @@ class ExecutionCollector(object):
 
     def call(self, activation, call_id, func, type_):
         """Capture call before"""
-        call = Call(activation, func, func.__name__, call_id)
+        call = Activation(-1, activation, func, func.__name__, call_id)
         call.dependency_type = type_
         self.activation_stack.append(call)
         self.dependency_stack.append(call)
@@ -257,7 +304,7 @@ class ExecutionCollector(object):
 
     def decorator(self, name, activation):
         """Capture decorator before"""
-        self.dependency_stack.append(Decorator(name, activation))
+        self.dependency_stack.append(Decorator(-1, name, activation))
         return self._decorator
 
     def _decorator(self, dec):
@@ -372,7 +419,7 @@ class ExecutionCollector(object):
 
     def comprehension(self, type_, definition_activation, dep_type, lambda_,):
         """Capture comprehension"""
-        call = Call(definition_activation, lambda_, type_, -1)
+        call = Activation(-1, definition_activation, lambda_, type_, -1)
         call.dependency_type = dep_type
         self.dependency_stack.append(call)
         self.activation_stack.append(call)
@@ -443,7 +490,6 @@ class ExecutionCollector(object):
         self.dependency_stack[-1].add(element)
         return value
 
-    '''
     def iterable(self, activation, unpack):
         """Capture iterable before"""
         self.dependency_stack.append(Iterable(activation, unpack))
@@ -459,27 +505,26 @@ class ExecutionCollector(object):
         ))
         return self.iterator(activation, iterable, value)
 
-
     def unpack(self, activation, unpack, dependency):
+        print(unpack)
+        return True
         if unpack.type == "Name":
             print("new var:", unpack, dependency)
             return target
-        if unpack.type == "Tuple":
-
-
-    
         target, new_target = tee(value)
 
-            for tup, val in zip(unpack_tuple, new_value):
-                self.unpack(activation, )
-            return value
-            self.unpack(activation,)
-            try:
-                iter(value)
-            except TypeError:
-                print("new_var": u)
-            else:
-                pass
+        for tup, val in zip(unpack_tuple, new_value):
+            self.unpack(activation, )
+        return value
+        self.unpack(activation,)
+        try:
+            iter(value)
+        except TypeError:
+            print("new_var", u)
+        else:
+
+            pass
+
     def iterator(self, activation, dep, old_iterable):
         """Capture iteration"""
         unpack = dep.unpack
@@ -487,19 +532,54 @@ class ExecutionCollector(object):
             self.unpack(activation, unpack, dep)
             yield value
 
-    def assign_value(self, activation, targets):
-        """Capture assignements"""
-        self.dependency_stack.append(Assignment(activation, targets))
-        return self._assign
+    def assign_value(self, activation):
+        """Capture assignment values before"""
+        self.dependency_stack.append(Assignment(activation))
+        return self._assign_value
 
     def _assign_value(self, value):
-        self.last_assignment.append(self.dependency_stack.pop())
+        """Capture assignment values after"""
+        assignment = self.dependency_stack.pop()
+        assignment.value = value
+        assignment.activation.last_assignment.append(assignment)
         return value
 
-    '''
+    def pop_assign(self, activation):
+        """Return assignment value dependencies"""
+        return activation.last_assignment.pop()
+
+    def new_var(self, activation, var, value, type_):
+        """Create new variable"""
+        variable = Variable(-1, activation, var, value, type_)
+        activation[var] = variable
+        return variable
+
+    def new_dependency(self, variable, dependency, type_, mode):
+        if mode == "bindto":
+            # Share parts
+            variable.parts = dependency.parts
+        print(variable, "<-", dependency, type_, mode)
+
+    def dependency_or_bind(self, variable, dependencies, type_):
+        for dependency in dependencies:
+            if isinstance(dependency, Dependency):
+                dep = dependency.variable
+                if (dep.value_id != variable.value_id) or dep.immutable:
+                    self.new_dependency(variable, dep, type_, "dependency")
+                else:
+                    self.new_dependency(variable, dep, type_, "bindto")
+            elif isinstance(dependency, DependencyAware):
+                self.dependency_or_bind(variable, dependency.dependencies,
+                                        type_)
+            else:
+                print("DEPENDENCY", type(dependency).__name__)
 
 
+    def assign(self, activation, assign, unpack, value):
+        """Create variables for assignment"""
+        if unpack.type == "Name":
+            variable = self.new_var(activation, unpack.var, value, "normal")
+            self.dependency_or_bind(variable, assign.dependencies, "direct")
 
-
-
-
+        else:
+            print(unpack, value)

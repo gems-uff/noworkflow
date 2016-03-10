@@ -64,7 +64,6 @@ def decorated():
 
 decorated(1, 2)
 
-"""
 # Expression
 
 def expr(param):
@@ -72,6 +71,7 @@ def expr(param):
 
 a = 0
 b, c = 1, 2
+d = [1, 2, 3]
 expr(a) # arg <- a
 expr(expr(a + 1) + 1) # arg <- expr(arg <- a)
 expr(expr(expr(a + 4) + 4) + 8) # arg <- expr(arg <- expr(arg <- a))
@@ -84,10 +84,26 @@ expr(a if b else c) # arg <- b(c), a
 expr(a if expr(b) else c) # arg <- expr(arg <- b)c, a
 expr({a: b}) # arg <- a, b
 expr({a, b}) # arg <- a, b
-expr([x + a for x in range(5) if b]) # arg <- a, range(5) # ToDo
-expr({x + a for x in range(5)}) # arg <- a, range(5) # ToDo
+#expr([x + a for x in range(5) if b]) # arg <- a, range(5) # ToDo
+#expr({x + a for x in range(5)}) # arg <- a, range(5) # ToDo
+#expr({x + a for x, y in zip(range(5), range(5))}) # arg <- a, zip # ToDo
+#expr({x + a for [x, y] in zip(range(5), range(5))}) # arg <- a, zip # ToDo
 #lambda x: exec_lambda(args)(x + a)
+
+#expr({x + a for x, *y in zip(range(5), range(5), range(5))}) # arg <- a, zip # ToDo
+#expr({x + a for x, *(y, *d), z in zip(range(5), range(5), range(5))}) # arg <- a, zip # ToDo
+#expr({x + a for x, *d[expr(1):] in zip(range(5), range(5), range(5))}) # arg <- a, zip # ToDo
+#expr({x + a for x, expr.x in zip(range(5), range(5))}) # arg <- a, zip # ToDo
 
 expr([1, a]) # arg <- OrderedDependencyAware([], a)
 expr((1, a)) # arg <- OrderedDependencyAware([], a)
 
+"""
+
+# Assign
+
+a = 0
+b = a
+c = [a, b]
+d = c
+e = c + [a]

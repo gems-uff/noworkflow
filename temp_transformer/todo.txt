@@ -1,0 +1,8 @@
+Todo:
+- activations for __magic__
+-- setattr
+-- setitem
+- exception
+-- t = (1, 2, [30, 40]); t[2] += [50, 60]
+- unpack
+- from collections import ChainMap
