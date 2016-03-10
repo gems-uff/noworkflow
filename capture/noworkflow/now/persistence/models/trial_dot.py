@@ -74,7 +74,7 @@ class TrialDot(Model):                                                          
         self.synonyms = {}
         self.departing_arrows = {}
         self.arriving_arrows = {}
-        self.variables = {v.id: v for v in self.trial.variables}
+        self.variables = {}
 
     def _add_variable(self, variable, depth, config):
         """Create variable for graph
@@ -415,6 +415,7 @@ class TrialDot(Model):                                                          
         self.synonyms = {}
         self.departing_arrows = defaultdict(dict)
         self.arriving_arrows = defaultdict(dict)
+        self.variables = {v.id: v for v in self.trial.variables}
 
     def export_text(self):
         """Export facts from trial as text"""
