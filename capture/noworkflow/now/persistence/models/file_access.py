@@ -148,3 +148,16 @@ class FileAccess(AlchemyProxy):
     def __repr__(self):
         return "FileAccess({0.trial_id}, {0.id}, {0.name}, {0.mode})".format(
             self)
+
+
+class UniqueFileAccess(FileAccess):
+
+    def __key(self):
+        return self.id
+
+    def __eq__(self, other):
+        if not isinstance(other, FileAccess):
+            return False
+        return (self.id == other.id)
+
+

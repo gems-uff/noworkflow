@@ -16,6 +16,7 @@ from future.utils import viewitems, viewkeys, viewvalues
 
 from .base import Model
 from . import Activation, Variable, VariableDependency, FileAccess
+from . import UniqueFileAccess
 
 
 CALL_SCHEMA = "#3A85B9", "box", "black"
@@ -128,11 +129,11 @@ class TrialDot(Model):                                                          
     def _all_accesses(self, activation, depth):
         """Get all file accesses recursively if it reaches the maximum depth"""
         for access in activation.file_accesses:
-            yield access
+            yield UniqueFileAccess(access._alchemy_pk)
         if depth + 1 > self.max_depth:
             for act in activation.children:
                 for access in self._all_accesses(act, depth + 1):
-                    yield access
+                    yield UniqueFileAccess(access._alchemy_pk)
 
     def _add_call(self, variable, depth, recursive_function):
         """Check if call is valid for subcluster
@@ -328,7 +329,6 @@ class TrialDot(Model):                                                          
         for activation in self.trial.initial_activations:
             function(activation)
             self._prepare_rank(activation, 1)
-
 
         arg_orginal = Variable.fast_arg_and_original(self.trial.id)
         for arg_id, original_id in arg_orginal:

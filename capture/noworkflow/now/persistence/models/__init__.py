@@ -15,7 +15,7 @@ from .base import Model, MetaModel
 from .activation import Activation
 from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
-from .file_access import FileAccess
+from .file_access import FileAccess, UniqueFileAccess
 from .function_def import FunctionDef
 from .graph_cache import GraphCache
 from .head import Head
