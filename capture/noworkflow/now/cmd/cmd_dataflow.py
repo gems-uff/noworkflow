@@ -20,8 +20,11 @@ class Dataflow(Command):
     def add_arguments(self):
         add_arg = self.add_argument
 
-        add_arg("-a", "--hide-accesses", action="store_true",
-                help="hide file accesses")
+        add_arg("-a", "--accesses", type=int, default=1, metavar="A",
+                help="R|show file accesses (default: 1)\n"
+                     "0 hides file accesses\n"
+                     "1 shows each file once and combine accesses\n"
+                     "2 shows all accesses")
         add_arg("-d", "--depth", type=int, default=0, metavar="D",
                 help="R|visualization depth (default: 0)\n"
                      "0 represents infinity")
@@ -70,7 +73,8 @@ class Dataflow(Command):
         trial = Trial(trial_ref=args.trial)
         trial.dot.show_blackbox_dependencies = bool(args.black_box)
         trial.dot.rank_line = bool(args.rank_line)
-        trial.dot.show_accesses = not bool(args.hide_accesses)
+        trial.dot.show_accesses = bool(args.accesses)
+        trial.dot.combine_accesses = args.accesses == 1
         trial.dot.max_depth = args.depth or float("inf")
         trial.dot.value_length = args.value_length
         trial.dot.show_internal_use = not bool(args.show_internal_use)

@@ -69,6 +69,7 @@ class TrialDot(Model):                                                          
         self.show_accesses = True
         self.value_length = 0
         self.show_internal_use = True
+        self.combine_accesses = True
 
         self.result = []
         self.created = set()
@@ -76,6 +77,7 @@ class TrialDot(Model):                                                          
         self.departing_arrows = {}
         self.arriving_arrows = {}
         self.variables = {}
+        self.accesses = {}
 
     def _add_variable(self, variable, depth, config):
         """Create variable for graph
@@ -129,11 +131,11 @@ class TrialDot(Model):                                                          
     def _all_accesses(self, activation, depth):
         """Get all file accesses recursively if it reaches the maximum depth"""
         for access in activation.file_accesses:
-            yield UniqueFileAccess(access._alchemy_pk)
+            yield access
         if depth + 1 > self.max_depth:
             for act in activation.children:
                 for access in self._all_accesses(act, depth + 1):
-                    yield UniqueFileAccess(access._alchemy_pk)
+                    yield access
 
     def _add_call(self, variable, depth, recursive_function):
         """Check if call is valid for subcluster
@@ -148,7 +150,7 @@ class TrialDot(Model):                                                          
         max_depth -- indicates that it reached the max depth (no cluster)
         subgraph -- user defined call within depth (create cluster)
         """
-
+        accesses = self.accesses
         return_ = variable.return_dependency
         if not return_:
             # Fake call
@@ -157,9 +159,14 @@ class TrialDot(Model):                                                          
         new_activation_id = return_.activation_id
         if self.show_accesses:
             for access in self._all_accesses(return_.activation, depth):
-                access.value = ""
-                access.line = ""
-                self._add_variable(access, depth, FILE_SCHEMA)
+                access = UniqueFileAccess(access._alchemy_pk)
+                if not self.combine_accesses or access.name not in accesses:
+                    access.value = ""
+                    access.line = ""
+                    accesses[access.name] = access
+                    self._add_variable(access, depth, FILE_SCHEMA)
+                else:
+                    access = accesses[access.name]
                 if set("ra+") & set(access.mode):
                     self.departing_arrows[variable][access] = "dashed"
                     self.arriving_arrows[access][variable] = "dashed"
@@ -416,6 +423,7 @@ class TrialDot(Model):                                                          
         self.departing_arrows = defaultdict(dict)
         self.arriving_arrows = defaultdict(dict)
         self.variables = {v.id: v for v in self.trial.variables}
+        self.accesses = {}
 
     def export_text(self):
         """Export facts from trial as text"""
