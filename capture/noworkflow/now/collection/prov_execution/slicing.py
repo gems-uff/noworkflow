@@ -556,7 +556,7 @@ class Tracer(Profiler):                                                         
         except (IndexError, KeyError):
             # call not found
             # ToDo: show in dev-mode
-            return
+            return _return
 
         all_args = list(self.find_variables(caller, call.all_args(), filename))
         self.add_dependencies(blackbox, all_args)
