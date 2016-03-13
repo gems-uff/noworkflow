@@ -2,7 +2,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from collections import OrderedDict
-from future.utils import viewvalues, viewkeys
+from future.utils import viewvalues, viewkeys, viewitems
 from functools import wraps
 from itertools import tee
 
@@ -21,9 +21,84 @@ class DependencyAware(object):
         if self.active:
             self.dependencies.append(dependency)
 
-class OrderedDependencyAware(DependencyAware):
-    pass
 
+class OrderedDependencyAware(DependencyAware):
+
+    def __init__(self, activation):
+        super(OrderedDependencyAware, self).__init__(activation)
+        self.parts = []
+
+    def item(self, dependency):
+        """Add item dependency"""
+        if self.active:
+            self.parts.append(dependency)
+
+    def __iter__(self):
+        return enumerate(self.parts)
+
+    @classmethod
+    def iterate_value(cls, value):
+        """Get parts of value"""
+        return enumerate(value)
+
+class SetDependencyAware(DependencyAware):
+
+    def __init__(self, activation):
+        super(SetDependencyAware, self).__init__(activation)
+        self.parts = {}
+
+    def item(self, dependency):
+        """Add item dependency"""
+        if self.active:
+            value = dependency.value
+            hash_ = "<%r, %s>" % (hash(value), type(value).__name__)
+            self.parts[hash_] = dependency
+
+    def __iter__(self):
+        return iter(viewitems(self.parts))
+
+    @classmethod
+    def iterate_value(cls, value):
+        """Get parts of value"""
+        return (("<%r, %s>" % (hash(x), type(x).__name__), x)
+                for x in value)
+
+class DictDependencyAware(DependencyAware):
+
+    def __init__(self, activation):
+        super(DictDependencyAware, self).__init__(activation)
+        self.parts = {}
+        self._keys = []
+
+    def key(self, key):
+        """Add key value"""
+        self._keys.append(key)
+
+    def value(self, dependency):
+        """Associate key to dependency"""
+        key = self._keys.pop()
+        if self.active:
+            self.parts[key] = dependency
+
+    def __iter__(self):
+        return iter(viewitems(self.parts))
+
+    @classmethod
+    def iterate_value(cls, value):
+        """Get parts of value"""
+        return iter(viewitems(value))
+
+class ElementDependency(DependencyAware):
+
+    def __init__(self, activation):
+        super(ElementDependency, self).__init__(activation)
+        self.value = None
+
+SPECIAL_DATA_STRUCTURES = (
+    ((tuple, list), OrderedDependencyAware),
+    (dict, DictDependencyAware),
+    (set, SetDependencyAware),
+)
 
 class Variable(DependencyAware):
 
@@ -481,14 +556,64 @@ class ExecutionCollector(object):
         self.dependency_stack[-1].add(list_)
         return value
 
+    def set(self, activation):
+        """Capture list/tuple before"""
+        self.dependency_stack.append(SetDependencyAware(activation))
+        return self._set
+
+    def _set(self, value):
+        """Capture list/tuple after"""
+        set_ = self.dependency_stack.pop()
+        self.dependency_stack[-1].add(set_)
+        return value
+
     def element(self, activation):
-        self.dependency_stack.append(DependencyAware(activation))
+        """Capture list element before"""
+        self.dependency_stack.append(ElementDependency(activation))
         return self._element
 
     def _element(self, value):
+        """Capture list element after"""
+        element = self.dependency_stack.pop()
+        element.value = value
+        self.dependency_stack[-1].item(element)
+        return value
+
+    def dict(self, activation):
+        """Capture dict before"""
+        self.dependency_stack.append(DictDependencyAware(activation))
+        return self._dict
+
+    def _dict(self, value):
+        """Capture list/tuple after"""
+        dict_ = self.dependency_stack.pop()
+        self.dependency_stack[-1].add(dict_)
+        return value
+
+    def dict_key(self, activation):
+        """Capture dict key before"""
+        self.dependency_stack.append(DependencyAware(activation))
+        return self._dict_key
+
+    def _dict_key(self, value):
+        """Capture dict key after"""
         element = self.dependency_stack.pop()
         self.dependency_stack[-1].add(element)
+        self.dependency_stack[-1].key(value)
         return value
+
+    def dict_value(self, activation):
+        """Capture dict value before"""
+        self.dependency_stack.append(ElementDependency(activation))
+        return self._dict_value
+
+    def _dict_value(self, value):
+        """Capture dict value after"""
+        element = self.dependency_stack.pop()
+        element.value = value
+        self.dependency_stack[-1].value(element)
+        return value
+
 
     def iterable(self, activation, unpack):
         """Capture iterable before"""
@@ -560,19 +685,64 @@ class ExecutionCollector(object):
             variable.parts = dependency.parts
         print(variable, "<-", dependency, type_, mode)
 
-    def dependency_or_bind(self, variable, dependencies, type_):
-        for dependency in dependencies:
-            if isinstance(dependency, Dependency):
-                dep = dependency.variable
-                if (dep.value_id != variable.value_id) or dep.immutable:
-                    self.new_dependency(variable, dep, type_, "dependency")
-                else:
-                    self.new_dependency(variable, dep, type_, "bindto")
-            elif isinstance(dependency, DependencyAware):
-                self.dependency_or_bind(variable, dependency.dependencies,
-                                        type_)
+    def single_dependency_or_bind(self, variable, dependency, type_):
+        if isinstance(dependency, Dependency):
+            dep = dependency.variable
+            if (dep.value_id != variable.value_id) or dep.immutable:
+                self.new_dependency(variable, dep, type_, "dependency")
             else:
-                print("DEPENDENCY", type(dependency).__name__)
+                self.new_dependency(variable, dep, type_, "bindto")
+        elif isinstance(dependency, DependencyAware):
+            self.dependency_or_bind(variable, dependency.dependencies,
+                                    type_)
+        else:
+            print("DEPENDENCY", type(dependency).__name__)
+
+    def dependency_or_bind(self, variable, dependencies, type_):
+        # Create dependency of bind
+        name = variable.name
+        activation = variable.activation
+        var_type = variable.type
+        for cls, dep_cls in SPECIAL_DATA_STRUCTURES:
+            if isinstance(variable.value, cls):
+                if len(dependencies) == 1:
+                    # Single Dependency. Check if match single dependency type
+                    dependency0 = dependencies[0]
+                    if isinstance(dependency0, dep_cls):
+                        if dependency0.dependencies:
+                            self.dependency_or_bind(
+                                variable, dependency0.dependencies, type_
+                            )
+                        # Create each part
+                        for key, dependency in dependency0:
+                            part = Variable(-1, activation,
+                                            "%s[%r]" % (name, key),
+                                            dependency.value, var_type)
+                            variable.parts["[%r]" % (key,)] = part
+                            self.new_dependency(variable, part, type_, "parts")
+                            self.dependency_or_bind(
+                                part, dependency.dependencies, type_
+                            )
+                        return
+                # ToDo: Create parts?
+                #    elif isinstance(dependency0, Dependency):
+                #        # Check bind
+                #        dep = dependency0.variable
+                #        if dep.value_id == variable.value_id and not dep.immutable:
+                #            self.new_dependency(variable, dep, type_, "bindto")
+                #            return
+                #for key, value in dep_cls.iterate_value(variable.value):
+                #    part = Variable(-1, activation,
+                #                    "%s[%r]" % (name, key),
+                #                    value, variable.type)
+                #    variable.parts["[%r]" % (key,)] = part
+                #    self.new_dependency(variable, part, type_, "parts")
+                #    self.dependency_or_bind(part, dependencies, type_)
+                #return
+
+        # Variable is not list nor tuple
+        for dependency in dependencies:
+            self.single_dependency_or_bind(variable, dependency, type_)
 
 
     def assign(self, activation, assign, unpack, value):

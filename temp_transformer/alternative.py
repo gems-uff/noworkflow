@@ -474,10 +474,10 @@ class RewriteAST(ast.NodeTransformer):
         Transform:
             [a, 2, 3]
         Into:
-            <now>.list(<act>, [
-                <now>.element(<act>)(a),
-                <now>.element(<act>)(2),
-                <now>.element(<act>)(3),
+            <now>.list(<act>)([
+                <now>.element(<act>)(|a|),
+                <now>.element(<act>)(|2|),
+                <now>.element(<act>)(|3|),
             ])
         """
         if isinstance(node.ctx, ast.Store):
@@ -493,8 +493,47 @@ class RewriteAST(ast.NodeTransformer):
 
     def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
         """Visit Tuple. Similar to List"""
-        print(node.ctx)
         return self.visit_List(node, cls=ast.Tuple)
+
+    def visit_Dict(self, node):                                                  # pylint: disable=invalid-name
+        """Visit Dict
+        Transform:
+            {'x': a, y: b}
+        Into:
+            <now>.dict(<act>){
+                <now>.dict_key(<act>)(|'x'|): <now>.dict_value(<act>)(|a|),
+                <now>.dict_key(<act>)(|y|): <now>.dict_value(<act>)(|b|),
+            })
+        """
+        return ast.copy_location(double_noworkflow("dict", [activation()], [
+            ast.Dict(
+                [double_noworkflow(
+                    "dict_key", [activation()], [self.capture(key)]
+                ) for key in node.keys],
+                [double_noworkflow(
+                    "dict_value", [activation()], [self.capture(value)]
+                ) for value in node.values],
+            )
+        ]), node)
+
+    def visit_Set(self, node):                                    # pylint: disable=invalid-name
+        """Visit Set
+        Transform:
+            {a, 2, 3}
+        Into:
+            <now>.set(<act>)([
+                <now>.element(<act>)(|a|),
+                <now>.element(<act>)(|2|),
+                <now>.element(<act>)(|3|),
+            ])
+        """
+        return ast.copy_location(double_noworkflow("set", [activation()], [
+            ast.Set(
+                [double_noworkflow(
+                    "element", [activation()], [self.capture(elt)]
+                ) for elt in node.elts]
+            )
+        ]), node)
 
 
 class RewriteDependencies(RewriteAST):
