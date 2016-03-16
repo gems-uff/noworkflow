@@ -26,6 +26,7 @@ from ...utils.cross_version import IMMUTABLE, builtins
 from ...utils.functions import NOWORKFLOW_DIR
 
 from ..prov_definition.utils import CallDependency, Dependency
+from ..prov_definition.utils import Variable as Var
 
 from .argument_captors import SlicingArgumentCaptor
 from .profiler import Profiler
@@ -279,15 +280,12 @@ class Tracer(Profiler):                                                         
     def slice_dependencies(self, activation, lineno, f_locals, var, deps):      # pylint: disable=too-many-arguments
         """Create dependencies for variable"""
         vid = None
-        if var == "return":
+        if isinstance(var, Var):
+            value = "--chk--"
+            if var.name == "return":
+                value = activation.return_value
             vid = self.add_variable(activation.id, var.name, lineno, f_locals,
-                                    var.type, value=activation.return_value)
-        elif var == "yield":
-            vid = self.add_variable(activation.id, var.name, lineno, f_locals,
-                                    var.type)
-        elif not isinstance(var, tuple):
-            vid = self.add_variable(activation.id, var.name, lineno, f_locals,
-                                    var.type)
+                                    var.type, value=value)
 
         if vid is not None:
             variable = self.variables[vid]
@@ -396,6 +394,7 @@ class Tracer(Profiler):                                                         
 
         for var, others in viewitems(self.line_dependencies[filename][lineno]):
             deps = self.find_variables(activation, others, filename)
+            #deps = list(deps)
             self.slice_dependencies(activation, lineno, f_locals, var, deps)
 
     def add_fake_call(self, activation, call_uid):
@@ -433,7 +432,8 @@ class Tracer(Profiler):                                                         
             typ = "import"
         vid = self.add_variable(caller.id, activation.name,
                                 activation.line, {}, typ, value="now(n/a)")
-        dependencies_add(caller.id, vid, activation.id, _return.id, "return")
+        dependencies_add(caller.id, vid, activation.id, _return.id,
+                         "return")
 
         if caller.with_definition:
             filename = activation.filename
@@ -516,7 +516,8 @@ class Tracer(Profiler):                                                         
             return activation.context["return"] # call has return
 
         vid = self.add_variable(activation.id, "return", lineno, {},
-                                "return", value=activation.return_value)
+                                "virtual",
+                                value=activation.return_value)
         _return = variables[vid]
 
         activation.context["return"] = _return
@@ -555,7 +556,7 @@ class Tracer(Profiler):                                                         
         except (IndexError, KeyError):
             # call not found
             # ToDo: show in dev-mode
-            return
+            return _return
 
         all_args = list(self.find_variables(caller, call.all_args(), filename))
         self.add_dependencies(blackbox, all_args)

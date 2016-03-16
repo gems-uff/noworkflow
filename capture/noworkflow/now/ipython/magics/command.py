@@ -28,7 +28,9 @@ class IpythonCommandMagic(Command):
 
     def __init__(self, magic, docstring, magic_type="cell"):
         self.__doc__ = docstring
+        self.__name__ = type(self).__name__
         super(IpythonCommandMagic, self).__init__()
+        self.is_ipython = True
         self.magic = magic
         self.docstring = docstring
         self.magic_type = magic_type

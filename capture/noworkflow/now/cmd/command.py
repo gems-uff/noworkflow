@@ -29,6 +29,7 @@ class Command(object):
         self.help = self.__doc__.split("\n")[0].strip()
         self.parser = None
         self.add_help = True
+        self.is_ipython = False
 
     def create_parser(self, subparsers):
         """Create parser with arguments"""

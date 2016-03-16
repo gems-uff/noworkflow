@@ -133,7 +133,7 @@ class Restore(Command):
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
         metascript = Metascript().read_restore_args(args)
-        trial = metascript.trial = Trial(trial_ref=args.trial)
+        self.trial = trial = metascript.trial = Trial(trial_ref=args.trial)
         metascript.trial_id = trial.id
         metascript.name = trial.script
         metascript.fake_path(trial.script, "")

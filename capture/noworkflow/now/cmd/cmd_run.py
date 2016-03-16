@@ -13,6 +13,7 @@ import sys
 from ..collection.metadata import Metascript
 from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
+from ..utils.cross_version import PY3
 
 from .command import Command
 
@@ -87,18 +88,20 @@ class Run(Command):
         add_cmd("script", nargs=argparse.REMAINDER, action=ScriptArgs,
                 help="Python script to be executed")
 
-        deployment = self.parser.add_argument_group(
-            "optional deployment arguments")
-        add_arg = deployment.add_argument
         # Deployment
+        if not self.is_ipython:
+            deployment = self.parser.add_argument_group(
+                "optional deployment arguments")
+            add_arg = deployment.add_argument
         add_arg("-b", "--bypass-modules", action="store_true",
                 help="bypass module dependencies analysis, assuming that no "
                      "module changes occurred since last execution")
 
-        execution = self.parser.add_argument_group(
-            "optional execution arguments")
-        add_arg = execution.add_argument
         # Execution
+        if not self.is_ipython:
+            execution = self.parser.add_argument_group(
+                "optional execution arguments")
+            add_arg = execution.add_argument
         add_arg("-d", "--depth", type=non_negative,
                 default=sys.getrecursionlimit(),
                 help="depth for capturing function activations (default: "
@@ -127,9 +130,10 @@ class Run(Command):
                 help="frequency (in calls) to save partial provenance")
 
         # Other
-        other = self.parser.add_argument_group(
-            "other optional arguments")
-        add_arg = other.add_argument
+        if not self.is_ipython:
+            other = self.parser.add_argument_group(
+                "other optional arguments")
+            add_arg = other.add_argument
         add_arg("-h", "--help", action="help",
                 help="show this help message and exit")
         add_arg("--name", type=str,

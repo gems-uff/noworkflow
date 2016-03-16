@@ -63,11 +63,13 @@ def variable(name, typ):
     """Create Variable or Call Dependency"""
     if isinstance(name, str):
         return Variable(name, typ)
+    if isinstance(name, (Variable, ReturnDependency, CallDependency)):
+        return name
     if typ == "return":
         return ReturnDependency(*name)
     if typ in ("call", "print", "import", "import from"):
         return CallDependency(*name)
-    return name
+    return Variable(name, typ)
 
 
 class NamedContext(object):
@@ -386,6 +388,7 @@ def safeget(container, ind):
     except IndexError as err:
         if not err.args:
             err.args = ("",)
-        err.args = (err.args[0] + "\n Get\n  Index {}\n  Container {}".format(
-            ind, container),) + err.args[1:]
+        import pprint
+        err.args = (err.args[0] + "\n Get\n  Index {}\n  Container \n{}".format(
+            ind, pprint.pformat(list(enumerate(container)))),) + err.args[1:]
         raise err
