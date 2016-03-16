@@ -110,7 +110,11 @@ class ReplaceContextWithLoad(ast.NodeTransformer):
             [self.visit(elt) for elt in node.elts], L()
         ), node)
 
-
+    def visit_Starred(self, node):
+        """Visit Starred"""
+        return ast.copy_location(ast.Starred(
+            self.visit(node.value), L()
+        ), node)
 
 
 
@@ -123,6 +127,8 @@ class RewriteAST(ast.NodeTransformer):
         self.call_id = 0
         self.to_load = ReplaceContextWithLoad()
         self._dependency_type = "direct"
+
+    subscript_id = 0
 
 # --- util
 
@@ -143,8 +149,8 @@ class RewriteAST(ast.NodeTransformer):
 
     def extract_unpack(self, node):
         """Capture unpack object"""
-        unpack_extractor = ExtractUnpack(self.path, self.code)
-        return unpack_extractor.visit(node)
+        unpack_extractor = ExtractUnpack(self, self.path, self.code)
+        return unpack_extractor.visit(node), unpack_extractor.assign_node
 
 
 # --- mod
@@ -166,21 +172,10 @@ class RewriteAST(ast.NodeTransformer):
         """Process statement list"""
         new_body = []
         for stmt in body:
-            new_body.append(self.visit(stmt))
             if isinstance(stmt, ast.Assign):
-                new_body.append(ast.copy_location(ast.Assign(
-                    [ast.Name("__now__assign__", S())],
-                    noworkflow("pop_assign", [activation()])
-                ), stmt))
-                for target in stmt.targets:
-                    new_body.append(ast.copy_location(ast.Expr(
-                        noworkflow("assign", [
-                            activation(),
-                            ast.Name("__now__assign__", L()),
-                            self.extract_unpack(target),
-                            self.to_load.visit(target)
-                        ])
-                    ), stmt))
+                self.visit_assign(new_body, stmt)
+            else:
+                new_body.append(self.visit(stmt))
 
         return new_body
 
@@ -284,28 +279,48 @@ class RewriteAST(ast.NodeTransformer):
         """Visit AsyncFunctionDef. Same transformations as FunctionDef"""
         return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
 
-    def visit_Assign(self, node):                                                # pylint: disable=invalid-name
-        """Visit Assign.
+    def visit_assign(self, new_body, node):                                      # pylint: disable=invalid-name
+        """Visit Assign through process_body
         Transform:
             c = a, b = d, e
         Into:
             c = a, b = <now>.assign_value(<act>)(|d, e|)
+            __now__assign__ = <now>.pop_assign(<act>)
 
-        In process_body; Add:
-        __now__assign__ = <now>.pop_assign(<act>)
-
-        <now>.assign(__now__assign__, Unpack((a, b), Tuple), (a, b))
-        <now>.assign(__now__assign__, Unpack(c, Name), c)
+            <now>.assign(__now__assign__, Unpack((a, b), Tuple), (a, b))
+            <now>.assign(__now__assign__, Unpack(c, Name), c)
         """
-        return ast.copy_location(ast.Assign(
-            node.targets,
+        new_targets = []
+        assign_calls = []
+        for target in node.targets:
+            import astunparse
+            print(astunparse.unparse(target))
+            unpack, new_target = self.extract_unpack(target)
+            print(astunparse.unparse(new_target))
+            new_targets.append(new_target)
+            read_target = self.to_load.visit(target)
+            assign_calls.append(ast.copy_location(ast.Expr(
+                noworkflow("assign", [
+                    activation(),
+                    ast.Name("__now__assign__", L()),
+                    unpack,
+                    read_target
+                ])
+            ), node))
+        new_body.append(ast.copy_location(ast.Assign(
+            new_targets,
             double_noworkflow(
                 "assign_value",
                 [activation()],
                 [self.capture(node.value)]
             )
-        ), node)
-
+        ), node))
+        new_body.append(ast.copy_location(ast.Assign(
+            [ast.Name("__now__assign__", S())],
+            noworkflow("pop_assign", [activation()])
+        ), node))
+        for assign_call in assign_calls:
+            new_body.append(assign_call)
 
 
 # --- expr
@@ -535,16 +550,46 @@ class RewriteAST(ast.NodeTransformer):
             )
         ]), node)
 
+    def visit_Subscript(self, node):
+        """Visit Subscript
+        Transform:
+            a[0]
+        Into:
+            <now>.subscript(<act>, <id>)[
+                <now>.sub_value(<act>)(|a|),
+                <now>.sub_slice(<act>)(|b|)
+            ]
+        """
+        num = ast.copy_location(ast.Num(RewriteAST.subscript_id), node)
+        result = ast.copy_location(ast.Subscript(
+            noworkflow("subscript", [activation(), num]),
+            ast.ExtSlice([
+                ast.Index(double_noworkflow(
+                    "sub_value",
+                    [activation()],
+                    [self.capture(node.value)]
+                )),
+                ast.Index(double_noworkflow(
+                    "sub_slice",
+                    [activation()],
+                    [self.capture(node.slice)]
+                )),
+            ]),
+            node.ctx
+        ), node)
+        RewriteAST.subscript_id += 1
+        return result
+
 
 class RewriteDependencies(RewriteAST):
 
-    def visit_Name(self, node):                                                  # pylint: disable=invalid-name
+    def visit_Name(self, node):                                                 # pylint: disable=invalid-name
         """Visit Name"""
         return ast.copy_location(noworkflow(
             "dep_name", [ast.Str(node.id), node, self.dependency_type()]
         ), node)
 
-    def visit_Lambda(self, node):                                                # pylint: disable=invalid-name
+    def visit_Lambda(self, node):                                               # pylint: disable=invalid-name
         """Visit Lambda"""
         return ast.copy_location(noworkflow("dep_name", [
             self.extract_str(node),
@@ -560,6 +605,23 @@ class RewriteDependencies(RewriteAST):
             self.visit(node.orelse)
         ), node)
 
+    def visit_Slice(self, node):
+        """Visit Slice"""
+        return ast.copy_location(call("slice", [
+            self.visit(node.lower) or none(),
+            self.visit(node.upper) or none(),
+            self.visit(node.step) or none()]
+        ), node)
+
+    def visit_ExtSlice(self, node):
+        """Visit ExtSlice"""
+        return ast.copy_location(ast.Tuple(
+            [self.visit(dim) for dim in node.dims], L()
+        ), node)
+
+    def visit_Index(self, node):
+        return self.visit(node.value)
+
     def visit(self, node, mode="direct"):
         """Visit node"""
         self._dependency_type = mode
@@ -568,28 +630,65 @@ class RewriteDependencies(RewriteAST):
 
 class ExtractUnpack(RewriteAST):
 
-    def visit_Name(self, node):
+    def __init__(self, parent, *args, **kwargs):
+        super(ExtractUnpack, self).__init__(*args, **kwargs)
+        self.parent = parent
+        self.assign_node = None
+
+    def visit_Name(self, node):                                                 # pylint: disable=invalid-name
         """Visit Name. Return Unpack(node.id, 'Name')"""
+        if not self.assign_node:
+            self.assign_node = node
         return noworkflow("Unpack", [ast.Str(node.id), ast.Str('Name')])
 
-    def visit_Tuple(self, node):
+    def visit_Tuple(self, node):                                                # pylint: disable=invalid-name
         """Visit Tuple. Return Unpack([Unpack(a), Unpack(b)], 'Tuple')"""
+        if not self.assign_node:
+            self.assign_node = node
         return noworkflow("Unpack", [
             ast.List([self.visit(elt) for elt in node.elts], L()),
             ast.Str("Tuple")
         ])
 
-    def visit_List(self, node):
+    def visit_List(self, node):                                                 # pylint: disable=invalid-name
         """Visit List. Return Unpack([Unpack(a), Unpack(b)], 'List')"""
+        if not self.assign_node:
+            self.assign_node = node
         return noworkflow("Unpack", [
             ast.List([self.visit(elt) for elt in node.elts], L()),
             ast.Str("List")
         ])
 
-    def visit_Starred(self, node):
+    def visit_Starred(self, node):                                              # pylint: disable=invalid-name
         """Visit Starred. Return Unpack(Unpack(a), 'Starred')"""
+        if not self.assign_node:
+            self.assign_node = node
         return noworkflow("Unpack", [
-            self.visit(node.value), ast.Str('Starred')
+            self.visit(node.value), ast.Str("Starred")
+        ])
+
+    def visit_Subscript(self, node):                                            # pylint: disable=invalid-name
+        """Visit Subscript
+        If context is store, transform:
+        a[b] = c
+        Into:
+        <now>.subscript(<act>, <id>)[
+            <now>.sub_value(<act>)(|a|),
+            <now>.sub_slice(<act>)(|b|)
+        ] = c
+
+        Otherwise, visit with super
+        """
+
+        result = self.parent.visit(node)
+        if isinstance(node.ctx, ast.Load):
+            return result
+
+        num = result.value.args[1]
+
+        self.assign_node = result
+        return noworkflow("Unpack", [
+            num, ast.Str("Part")
         ])
 
     # ToDo: 
@@ -608,6 +707,51 @@ with open(path, "rb") as script_file:
     code = pyposast.native_decode_source(script_file.read())
 tree = pyposast.parse(code, path)
 tree = RewriteAST(path, code).visit(tree)
+
+class NewVisitor(ast.NodeVisitor):
+
+    def visit_expr(self, node):
+        if not hasattr(node, 'lineno'):
+            print(node)
+        return self.generic_visit(node)
+
+    def visit_Subscript(self, node):
+        if not isinstance(node.slice, (ast.ExtSlice, ast.Index, ast.Slice)):
+            print(node)
+            import astunparse
+            print(astunparse.unparse(node))
+
+    visit_BoolOp = visit_expr
+    visit_BinOp = visit_expr
+    visit_UnaryOp = visit_expr
+    visit_Lambda = visit_expr
+    visit_IfExp = visit_expr
+    visit_Dict = visit_expr
+    visit_Set = visit_expr
+    visit_ListComp = visit_expr
+    visit_SetComp = visit_expr
+    visit_DictComp = visit_expr
+    visit_GeneratorExp = visit_expr
+    visit_Await = visit_expr
+    visit_Yield = visit_expr
+    visit_YieldFrom = visit_expr
+    visit_Compare = visit_expr
+    visit_Call = visit_expr
+    visit_Num = visit_expr
+    visit_Str = visit_expr
+    visit_Bytes = visit_expr
+    visit_Ellipsis = visit_expr
+    visit_Attribute = visit_expr
+    #visit_Subscript = visit_expr
+    visit_Starred = visit_expr
+    visit_Name = visit_expr
+    visit_List = visit_expr
+    visit_Tuple = visit_expr
+
+
+NewVisitor().visit(tree)
+#import astunparse
+#print(astunparse.unparse(tree))
 
 compiled = compile(tree, path, 'exec')
 eval(compiled, namespace)

@@ -51,7 +51,7 @@ class SetDependencyAware(DependencyAware):
         """Add item dependency"""
         if self.active:
             value = dependency.value
-            hash_ = "<%r, %s>" % (hash(value), type(value).__name__)
+            hash_ = "<%r>" % (hash(value),)
             self.parts[hash_] = dependency
 
     def __iter__(self):
@@ -60,7 +60,7 @@ class SetDependencyAware(DependencyAware):
     @classmethod
     def iterate_value(cls, value):
         """Get parts of value"""
-        return (("<%r, %s>" % (hash(x), type(x).__name__), x)
+        return (("<%r>" % (hash(x),), x)
                 for x in value)
 
 class DictDependencyAware(DependencyAware):
@@ -175,6 +175,17 @@ class Activation(DependencyAware):
             result = self.activation[variable_name]
         return result
 
+
+class Subscript(DependencyAware):
+    """Represent a Subscript"""
+
+    def __init__(self, activation, subscript_id, value=None):
+        super(Subscript, self).__init__(activation)
+        self.value = value
+        self.subscript_id = subscript_id
+
+    def __repr__(self):
+        return "{}".format(self.value)
 
 
 class Arg(DependencyAware):
@@ -744,12 +755,65 @@ class ExecutionCollector(object):
         for dependency in dependencies:
             self.single_dependency_or_bind(variable, dependency, type_)
 
+    def assign_item(self, activation, assign, unpack, value, item, dep):
+        """Create variables for tuple assignment"""
+        if dep is not None:
+            # dep is OrderedDependencyAware
+            if isinstance(item, slice):
+                new_ordered = OrderedDependencyAware(activation)
+                new_ordered.parts = dep.parts[item]
+                new_dep = DependencyAware(activation)
+                new_dep.add(new_ordered)
+            else:
+                new_dep = dep.parts[item]
+        else:
+            new_dep = assign
+        self.assign(activation, new_dep, unpack, value[item])
+
 
     def assign(self, activation, assign, unpack, value):
         """Create variables for assignment"""
+        deps = assign.dependencies
+        dep = None
+        if len(deps) == 1 and isinstance(deps[0], OrderedDependencyAware):
+            dep = deps[0]
+        print(unpack)
         if unpack.type == "Name":
             variable = self.new_var(activation, unpack.var, value, "normal")
             self.dependency_or_bind(variable, assign.dependencies, "direct")
+        elif unpack.type in ("Tuple", "List"):
+            starred = False
+            i = 0
+            for i, new_unpack in enumerate(unpack.var):
+                if new_unpack.type == "Starred":
+                    starred = True
+                    break
+                self.assign_item(activation, assign, new_unpack, value, i, dep)
+            if starred:
+                k = len(value)
+                for j in range(len(unpack.var) - 1, i, -1):
+                    k -= 1
+                    new_unpack = unpack.var[j]
+                    self.assign_item(
+                        activation, assign, new_unpack, value, k, dep
+                    )
+                new_unpack = unpack.var[i].var
+                self.assign_item(
+                    activation, assign, new_unpack, value, slice(i, k), dep
+                )
 
         else:
             print(unpack, value)
+
+    def subscript(self, activation, subscript_id):
+        self.dependency_stack.append(Subscript(activation, subscript_id))
+        return self
+
+    def __getitem__(self, item):
+        obj, slic = item
+        subscript = self.dependency_stack.pop()
+        value = obj[slic]
+        subscript.value = value
+        return value
+
+    
