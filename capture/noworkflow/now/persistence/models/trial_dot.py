@@ -7,12 +7,15 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import weakref
+import os
 
 from collections import defaultdict
 
 from copy import copy
 
 from future.utils import viewitems, viewkeys, viewvalues
+
+from .. import persistence_config
 
 from .base import Model
 from . import Activation, Variable, VariableDependency, FileAccess
@@ -68,8 +71,10 @@ class TrialDot(Model):                                                          
         self.rank_line = True
         self.show_accesses = True
         self.value_length = 0
+        self.name_length = 55
         self.show_internal_use = True
         self.combine_accesses = True
+        self.show_external_files = False
 
         self.result = []
         self.created = set()
@@ -78,8 +83,9 @@ class TrialDot(Model):                                                          
         self.arriving_arrows = {}
         self.variables = {}
         self.accesses = {}
+        self.outside = []
 
-    def _add_variable(self, variable, depth, config):
+    def _add_variable(self, variable, depth, config, result=None):
         """Create variable for graph
 
 
@@ -88,13 +94,15 @@ class TrialDot(Model):                                                          
         depth -- depth for configuring spaces in subclusters
         config -- color schema
         """
+        if result is None:
+            result = self.result
         if variable.name.startswith("_") and not self.show_internal_use:
             return
         color, shape, font = config
         var = variable_id(variable)
 
         value = escape(variable.value, self.value_length)
-        name = escape(variable.name)
+        name = escape(variable.name, self.name_length)
 
         if value == "now(n/a)":
             value = ""
@@ -107,7 +115,7 @@ class TrialDot(Model):                                                          
             label_list.append("\n{}".format(value))
         label = "".join(label_list)
 
-        self.result.append("    " * depth + (
+        result.append("    " * depth + (
             '{var} '
             '[label="{label}"'
             ' fillcolor="{color}" fontcolor="{font}"'
@@ -131,7 +139,8 @@ class TrialDot(Model):                                                          
     def _all_accesses(self, activation, depth):
         """Get all file accesses recursively if it reaches the maximum depth"""
         for access in activation.file_accesses:
-            yield access
+            if self.show_external_files or access.is_internal:
+                yield access
         if depth + 1 > self.max_depth:
             for act in activation.children:
                 for access in self._all_accesses(act, depth + 1):
@@ -164,7 +173,13 @@ class TrialDot(Model):                                                          
                     access.value = ""
                     access.line = ""
                     accesses[access.name] = access
-                    self._add_variable(access, depth, FILE_SCHEMA)
+                    fdepth = 1
+                    display = self.outside
+                    if not access.is_internal:
+                        fdepth = depth
+                        display = self.result
+
+                    self._add_variable(access, fdepth, FILE_SCHEMA, display)
                 else:
                     access = accesses[access.name]
                 if set("ra+") & set(access.mode):
@@ -326,6 +341,7 @@ class TrialDot(Model):                                                          
         result.append("  rankdir=RL;")
         result.append("  node[fontsize=20]")
         getattr(self, self.mode)()
+        result += self.outside
         result.append("}")
         return result
 
@@ -340,6 +356,8 @@ class TrialDot(Model):                                                          
         arg_orginal = Variable.fast_arg_and_original(self.trial.id)
         for arg_id, original_id in arg_orginal:
             synonyms[variables[arg_id]] = variables[original_id]
+            if variables[original_id].type == "arg":
+                synonyms[variables[arg_id]] = synonyms[variables[original_id]]
 
         self._create_dependencies()
         self._show_dependencies()
@@ -418,6 +436,7 @@ class TrialDot(Model):                                                          
     def erase(self):
         """Erase graph"""
         self.result = []
+        self.outside = []
         self.created = set()
         self.synonyms = {}
         self.departing_arrows = defaultdict(dict)

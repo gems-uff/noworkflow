@@ -23,8 +23,10 @@ class Dataflow(Command):
         add_arg("-a", "--accesses", type=int, default=1, metavar="A",
                 help="R|show file accesses (default: 1)\n"
                      "0 hides file accesses\n"
-                     "1 shows each file once and combine accesses\n"
-                     "2 shows all accesses")
+                     "1 shows each file once (hide external accesses)\n"
+                     "2 shows each file once (show external accesses)\n"
+                     "3 shows all accesses (except external accesses)\n"
+                     "4 shows all accesses (including external accesses)")
         add_arg("-d", "--depth", type=int, default=0, metavar="D",
                 help="R|visualization depth (default: 0)\n"
                      "0 represents infinity")
@@ -45,6 +47,10 @@ class Dataflow(Command):
                      "but it will transform 'data2.dat' in to 'da...dat'\n"
                      "to respect the length restriction (note that '' is\n"
                      "part of the value).\n"
+                     "Minimum displayable value: 5. Suggested: 55.")
+        add_arg("-n", "--name-length", type=int, default=55,
+                help="R|maximum length of names (default: 55)\n"
+                     "0 indicates that values should be hidden.\n"
                      "Minimum displayable value: 5. Suggested: 55.")
         add_arg("-m", "--mode", type=str, default="prospective",
                 choices=["simulation", "prospective", "dependency"],
@@ -74,9 +80,11 @@ class Dataflow(Command):
         trial.dot.show_blackbox_dependencies = bool(args.black_box)
         trial.dot.rank_line = bool(args.rank_line)
         trial.dot.show_accesses = bool(args.accesses)
-        trial.dot.combine_accesses = args.accesses == 1
+        trial.dot.combine_accesses = args.accesses in {1, 2}
+        trial.dot.show_external_files = args.accesses in {2, 4}
         trial.dot.max_depth = args.depth or float("inf")
         trial.dot.value_length = args.value_length
+        trial.dot.name_length = args.name_length
         trial.dot.show_internal_use = not bool(args.show_internal_use)
         trial.dot.mode = args.mode
 

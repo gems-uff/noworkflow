@@ -6,6 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import os
+
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
@@ -13,7 +15,7 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologTimestamp, PrologNullable
 from ...utils.prolog import PrologNullableRepr
 
-from .. import relational
+from .. import relational, persistence_config
 
 from .base import AlchemyProxy, proxy_class, backref_one, proxy
 
@@ -88,6 +90,13 @@ class FileAccess(AlchemyProxy):
     @property
     def activation_id(self):
         return self.function_activation_id
+
+    @property
+    def is_internal(self):
+        return (
+            not os.path.isabs(self.name) or
+            persistence_config.base_path in self.name
+        )
 
     @classmethod  # query
     def find_by_name_and_time(cls, name, timestamp, trial=None,
