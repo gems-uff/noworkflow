@@ -169,4 +169,5 @@ class UniqueFileAccess(FileAccess):
             return False
         return (self.id == other.id)
 
-
+    def __hash__(self):
+        return hash(self.__key())

@@ -76,7 +76,7 @@ access_influence(Trial_id, Influencer, Influenced) :- access_influence_id(Trial_
 %
 
 dep(Trial_id, Dependent, Supplier) :- dependency(Trial_id, _, _, Dependent, _, Supplier).
-usage_or_assign(Trial_id, Name, Line, Id) :- usage(Trial_id, _, Id, _, Name, Line).
+usage_or_assign(Trial_id, Name, Line, Id) :- usage(Trial_id, _, Id, Name, Line).
 usage_or_assign(Trial_id, Name, Line, Id) :- variable(Trial_id, _, Id, Name, Line, _, _).
 
 var_name(Trial_id, Id, Name) :- variable(Trial_id, _, Id, Name, _, _, _).

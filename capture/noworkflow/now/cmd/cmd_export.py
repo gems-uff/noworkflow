@@ -28,8 +28,6 @@ class Export(NotebookCommand):
         add_arg = self.add_argument
         add_arg("-r", "--rules", action="store_true",
                 help="also exports inference rules")
-        add_arg("-b", "--explict-black-box-dependencies", action="store_true",
-                help="show black-box dependencies when exporting dot file")
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial. If you are generation "
                      "ipython notebook files, it is also possible to use "
