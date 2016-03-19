@@ -12,7 +12,8 @@ from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
 
 from ...utils.formatter import PrettyLines
-from ...utils.prolog import PrologDescription, PrologTrial
+from ...utils.prolog import PrologDescription, PrologTrial, PrologNullableRepr
+from ...utils.prolog import PrologTimestamp, PrologAttribute, PrologRepr
 
 from .. import relational, content, persistence_config
 
@@ -72,6 +73,7 @@ class Trial(AlchemyProxy):
     inherited_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
     run = Column(Integer)
+    docstring = Column(Text)
 
     inherited = one(
         "Trial", backref="bypass_children", viewonly=True,
@@ -137,7 +139,26 @@ class Trial(AlchemyProxy):
 
     prolog_description = PrologDescription("trial", (
         PrologTrial("id"),
-    ), description="informs all trials.")
+        PrologTimestamp("start"),
+        PrologTimestamp("finish"),
+        PrologRepr("script"),
+        PrologRepr("code_hash"),
+        PrologRepr("command"),
+        PrologAttribute("inherited_id"),
+        PrologAttribute("parent_id"),
+        PrologAttribute("run"),
+        PrologNullableRepr("docstring"),
+    ), description=(
+        "informs that a given *script* with *docstring*,\n"
+        "and content *code_hash*,\n"
+        "executed during a time period from *start*"
+        "to *finish*,\n"
+        "using noWokflow's *command*,\n"
+        "that generated a trial *id*.\n"
+        "This trial uses modules from *inherited_id*,\n"
+        "is based on *parent_id*,\n"
+        "and might be a *run* or a backup trial."
+    ))
 
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], relational.base):
@@ -439,7 +460,7 @@ class Trial(AlchemyProxy):
         return an_id[0]
 
     @classmethod  # query
-    def fast_update(cls, trial_id, finish, session=None):
+    def fast_update(cls, trial_id, finish, docstring, session=None):
         """Update finish time of trial
 
         Use core sqlalchemy
@@ -456,14 +477,14 @@ class Trial(AlchemyProxy):
         ttrial = cls.t
         session.execute(
             ttrial.update()
-            .values(finish=finish)
+            .values(finish=finish, docstring=docstring)
             .where(ttrial.c.id == trial_id)
         )
         session.commit()
 
     @classmethod  # query
     def store(cls, start, script, code_hash, arguments, bypass_modules,          # pylint: disable=too-many-arguments
-              command, run, session=None):
+              command, run, docstring, session=None):
         """Create trial and assign a new id to it
 
         Use core sqlalchemy
@@ -494,7 +515,8 @@ class Trial(AlchemyProxy):
             ttrial.insert(),
             {"start": start, "script": script, "code_hash": code_hash,
              "arguments": arguments, "command": command, "run": run,
-             "inherited_id": inherited_id, "parent_id": parent_id})
+             "inherited_id": inherited_id, "parent_id": parent_id,
+             "docstring": docstring})
         tid = result.lastrowid
         session.commit()
         return tid

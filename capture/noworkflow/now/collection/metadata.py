@@ -86,6 +86,8 @@ class Metascript(object):                                                       
         self.argv = None
         # Object Serialize function
         self.serialize = None
+        # Script docstring
+        self.docstring = ""
 
         # Verbose print
         self.verbose = False
@@ -156,7 +158,7 @@ class Metascript(object):                                                       
             if set_code:
                 self.code = code
             self.paths[path] = self.definitions_store.dry_add(
-                "", path, code, "FILE", None)
+                "", path, code, "FILE", None, 0, 0, "")
 
     def fake_path(self, path, code):
         """Fake configuration for tests"""
@@ -164,7 +166,7 @@ class Metascript(object):                                                       
         self._path = path
         self.code = native_decode_source(code)
         self.paths[path] = self.definitions_store.dry_add(
-            "", path, self.code, "FILE", None)
+            "", path, self.code, "FILE", None, 0, 0, "")
 
     @property
     def context(self):
@@ -274,7 +276,8 @@ class Metascript(object):                                                       
         now = datetime.now()
         return (
             now, self.name, self.code_hash, args,
-            self.bypass_modules, self.command, run
+            self.bypass_modules, self.command, run,
+            self.docstring
         )
 
     def create_automatic_tag_args(self):

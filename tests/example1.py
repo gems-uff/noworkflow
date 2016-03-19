@@ -1,3 +1,4 @@
+"""First example"""
 import example2
 import re
 
@@ -11,6 +12,7 @@ def a(var1):
 
 
 def b():
+    """function b calls c"""
     c()
 
 

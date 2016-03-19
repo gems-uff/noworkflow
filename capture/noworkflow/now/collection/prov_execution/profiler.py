@@ -300,7 +300,7 @@ class Profiler(ExecutionProvider):                                              
         tid = self.trial_id
         if not partial:
             now = datetime.now()
-            Trial.fast_update(tid, now)
+            Trial.fast_update(tid, now, self.metascript.docstring)
 
         Activation.fast_store(tid, self.activations, partial)
         ObjectValue.fast_store(tid, self.object_values, partial)

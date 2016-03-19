@@ -11,7 +11,7 @@ import weakref
 from ...utils.functions import resource
 
 from .base import Model
-from . import Activation, FileAccess
+from . import Activation, FileAccess, FunctionDef
 from . import Variable, VariableUsage, VariableDependency
 
 
@@ -31,6 +31,7 @@ class TrialProlog(Model):
 
         self.models = [
             (trial.__class__, lambda: [trial]),
+            (FunctionDef, lambda: trial.function_defs),
             (Activation, lambda: trial.activations),
             (FileAccess, lambda: trial.file_accesses),
             (Variable, lambda: trial.variables),
