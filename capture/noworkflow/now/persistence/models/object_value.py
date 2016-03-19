@@ -45,6 +45,11 @@ class ObjectValue(AlchemyProxy):
         PrologRepr("name"),
         PrologRepr("value"),
         PrologAttribute("type"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "a given activation (*function_activation_id*),\n"
+        "has a GLOBAL/ARGUMENT (*type*) variable *name*,\n"
+        "with *value*.\n"
     ))
 
     def __repr__(self):

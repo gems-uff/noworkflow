@@ -43,6 +43,10 @@ class Dependency(AlchemyProxy):
         PrologRepr("version", attr_name="module.version"),
         PrologRepr("path", attr_name="module.path"),
         PrologAttribute("code_hash", attr_name="module.code_hash"),
+    ), description=(
+        "informs that a given trial (*trial_id*)\n"
+        "imported the *version* of a module (*name*),\n"
+        "with content (*code_hash*) written in *path*."
     ))
 
     def __repr__(self):

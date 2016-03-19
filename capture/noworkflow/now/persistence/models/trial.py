@@ -115,6 +115,13 @@ class Trial(AlchemyProxy):
         return self.dmodules
 
     @query_many_property
+    def dependencies(self):
+        """Load modules. Return SQLAlchemy query"""
+        if self.inherited:
+            return self.inherited.dependencies
+        return self.module_dependencies
+
+    @query_many_property
     def initial_activations(self):
         """Return initial activation as a SQLAlchemy query"""
         return self.activations.filter(is_none(Activation.m.caller_id))

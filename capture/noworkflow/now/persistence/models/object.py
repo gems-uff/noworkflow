@@ -45,6 +45,11 @@ class Object(AlchemyProxy):
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologAttribute("type"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "a given function definition (*function_def_id*),\n"
+        "has a GLOBAL/ARGUMENT/FUNCTION_CALL (*type*),\n"
+        "with *name*.\n"
     ))
 
     def __repr__(self):

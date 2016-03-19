@@ -43,6 +43,10 @@ class Tag(AlchemyProxy):
         PrologAttribute("type"),
         PrologRepr("name"),
         PrologTimestamp("timestamp"),
+    ), description=(
+        "informs that a given trial (*trial_id*)\n"
+        "has a tag (*name*) of *type*,\n"
+        "created at *timestamp*.\n"
     ))
 
     def __repr__(self):
