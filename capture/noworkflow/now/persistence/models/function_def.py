@@ -57,7 +57,7 @@ class FunctionDef(AlchemyProxy):
         PrologTrial("trial_id"),
         PrologAttribute("id"),
         PrologRepr("name"),
-        PrologRepr("code_hash"),
+        PrologNullableRepr("code_hash"),
         PrologAttribute("first_line"),
         PrologAttribute("last_line"),
         PrologNullableRepr("docstring"),

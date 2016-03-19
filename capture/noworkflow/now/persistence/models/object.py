@@ -44,7 +44,7 @@ class Object(AlchemyProxy):
         PrologAttribute("function_def_id"),
         PrologAttribute("id"),
         PrologRepr("name"),
-        PrologAttribute("type"),
+        PrologRepr("type"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "a given function definition (*function_def_id*),\n"

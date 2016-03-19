@@ -14,6 +14,7 @@ from sqlalchemy import ForeignKeyConstraint, select, func, distinct
 from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial, PrologNullableRepr
 from ...utils.prolog import PrologTimestamp, PrologAttribute, PrologRepr
+from ...utils.prolog import PrologNullable
 
 from .. import relational, content, persistence_config
 
@@ -151,8 +152,8 @@ class Trial(AlchemyProxy):
         PrologRepr("script"),
         PrologRepr("code_hash"),
         PrologRepr("command"),
-        PrologAttribute("inherited_id"),
-        PrologAttribute("parent_id"),
+        PrologNullable("inherited_id"),
+        PrologNullable("parent_id"),
         PrologAttribute("run"),
         PrologNullableRepr("docstring"),
     ), description=(

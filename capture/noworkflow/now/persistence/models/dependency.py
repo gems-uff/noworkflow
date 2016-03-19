@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr
+from ...utils.prolog import PrologRepr, PrologNullableRepr
 
 from .base import AlchemyProxy, proxy_class, one, backref_one
 
@@ -40,9 +40,9 @@ class Dependency(AlchemyProxy):
         PrologTrial("trial_id"),
         PrologAttribute("id", attr_name="module.id"),
         PrologRepr("name", attr_name="module.name"),
-        PrologRepr("version", attr_name="module.version"),
-        PrologRepr("path", attr_name="module.path"),
-        PrologAttribute("code_hash", attr_name="module.code_hash"),
+        PrologNullableRepr("version", attr_name="module.version"),
+        PrologNullableRepr("path", attr_name="module.path"),
+        PrologNullableRepr("code_hash", attr_name="module.code_hash"),
     ), description=(
         "informs that a given trial (*trial_id*)\n"
         "imported the *version* of a module (*name*),\n"

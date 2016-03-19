@@ -40,7 +40,7 @@ class Tag(AlchemyProxy):
 
     prolog_description = PrologDescription("tag", (
         PrologTrial("trial_id"),
-        PrologAttribute("type"),
+        PrologRepr("type"),
         PrologRepr("name"),
         PrologTimestamp("timestamp"),
     ), description=(
