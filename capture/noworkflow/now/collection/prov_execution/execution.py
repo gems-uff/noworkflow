@@ -61,7 +61,6 @@ class Execution(object):
             exec(metascript.compiled, metascript.namespace)                      # pylint: disable=exec-used
             if '__doc__' in metascript.namespace:
                 metascript.docstring = metascript.namespace['__doc__']
-                print(metascript.namespace['__doc__'])
         except SystemExit as ex:
             self.force_msg = self.partial = ex.code > 0
             self.msg = ("the execution exited via sys.exit(). Exit status: {}"
