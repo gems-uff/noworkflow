@@ -387,6 +387,8 @@ class TrialDot(Model):                                                          
 
                 if mode == "fake":
                     box = variable.box_dependency
+                    if not box:
+                        box = variable
                     self._add_all_variables(box.dependencies, depth)
 
                 elif mode in ("c_call", "just_return"):
