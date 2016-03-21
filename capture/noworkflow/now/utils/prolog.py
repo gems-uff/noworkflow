@@ -106,7 +106,10 @@ class PrologRepr(PrologAttribute):
         result = repr(self.value(obj))
         if result[0] not in ('"', "'") and result[1] in ('"', "'"):
             result = result[1:]
-        return result
+        if result[0] in ('"', "'") and result[-1] == result[0]:
+            result = result[1:-1]
+        result = result.replace("'", "''")
+        return "'{}'".format(result)
 
 
 class PrologTimestamp(PrologAttribute):
