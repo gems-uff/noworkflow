@@ -40,7 +40,7 @@ class ObjectValue(AlchemyProxy):
 
     prolog_description = PrologDescription("object_value", (
         PrologTrial("trial_id"),
-        PrologAttribute("function_activation_id"),
+        PrologAttribute("activation_id", attr_name="function_activation_id"),
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologRepr("value"),

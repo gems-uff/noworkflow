@@ -54,7 +54,8 @@ class PrologDescription(object):
 
     def __repr__(self):
         return "{0.name}({1}).".format(
-            self, ', '.join(x.name for x in self.attributes)
+            self, ', '.join("".join(y.title() for y in x.name.split("_"))
+                            for x in self.attributes)
         )
 
 
