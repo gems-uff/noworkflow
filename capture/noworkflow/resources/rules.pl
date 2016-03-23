@@ -352,3 +352,54 @@ variable_line_dependencies(TrialId, Id, Lines) :- slice(TrialId, Id, X), maplist
 %              in a given trial (*TrialId*).
 %
 variable_dependencies_info(TrialId, Id, Infos) :- slice(TrialId, Id, X), maplist(var_info(TrialId), X, Infos).
+
+
+%
+% RULE DEFINITION: variables_variables_dependency(TrialId, Dependents, Dependencies)/3
+% DESCRIPTION: match *Dependencies* of *Dependents*
+%              in a given trial (*TrialId*).
+%
+variables_variables_dependency(_, [],[]).
+variables_variables_dependency(TrialId, [Dependent|Dependents], Dependencies) :- variable_variables_dependency(TrialId, Dependent, SomeDependencies),
+                                                                                 variables_variables_dependency(TrialId, Dependents, OtherDependencies),
+                                                                                 ord_union(SomeDependencies, OtherDependencies, Dependencies).
+
+%
+% RULE DEFINITION: variable_variables_dependency(TrialId, Dependent, Dependencies)/3
+% DESCRIPTION: match *Dependencies* of a *Dependent*
+%              in a given trial (*TrialId*).
+%
+variable_variables_dependency(TrialId, Dependent, Dependencies) :- variable(TrialId, _, Dependent, _, _, _, _),
+                                                                   findall(Dependency, dependency(TrialId, _, _, Dependent, _, Dependency), DirectDependenciesWithDuplicates),
+                                                                   sort(DirectDependenciesWithDuplicates, DirectDependencies),
+                                                                   variables_variables_dependency(TrialId, DirectDependencies, IndirectDependencies),
+                                                                   ord_union(DirectDependencies, IndirectDependencies, Dependencies).
+
+%
+% RULE DEFINITION: variables_activations_dependency(TrialId, DependentVariables, DependencyActivations)/3
+% DESCRIPTION: match *DependencyActivations* of *DependentVariables*
+%              in a given trial (*TrialId*).
+%
+variables_activations_dependency(_, [], []).
+variables_activations_dependency(TrialId, [DependentVariable|DependentVariables], DependencyActivations) :- variable_activations_dependency(TrialId, DependentVariable, SomeDependencyActivations),
+                                                                                                            variables_activations_dependency(TrialId, DependentVariables, OtherDependencyActivations),
+                                                                                                            ord_union(SomeDependencyActivations, OtherDependencyActivations, DependencyActivations).
+%
+% RULE DEFINITION: variable_activations_dependency(TrialId, DependentVariable, DependencyActivations)/3
+% DESCRIPTION: match *DependencyActivations* of a *DependentVariable*
+%              in a given trial (*TrialId*).
+%
+%variable_activations_dependency(TrialId, DependentVariable, DependencyActivations)
+variable_activations_dependency(TrialId, DependentVariable, DependencyActivations) :- variable_variables_dependency(TrialId, DependentVariable, DependencyVariables),
+                                                                                      findall(DependencyActivation, (member(DependencyVariable, DependencyVariables), variable(TrialId, DependencyActivation, DependencyVariable, _, _, _, _)), DependencyActivationsWithDuplicates),
+                                                                                      sort(DependencyActivationsWithDuplicates, DependencyActivations).
+
+%
+% RULE DEFINITION: activation_activations_dependency(TrialId, Dependent, Dependencies)/3
+% DESCRIPTION: match *Dependencies* of a *Dependent* activation
+%              in a given trial (*TrialId*).
+%
+activation_activations_dependency(TrialId, DependentActivation, DependencyActivations) :- findall(DependentVariable, variable(TrialId, DependentActivation, DependentVariable, _, _, _, _), DependentVariablesWithDuplicates),
+                                                                                          sort(DependentVariablesWithDuplicates, DependentVariables),
+                                                                                          variables_activations_dependency(TrialId, DependentVariables, AllDependencyActivations),
+                                                                                          ord_subtract(AllDependencyActivations, [DependentActivation], DependencyActivations).
