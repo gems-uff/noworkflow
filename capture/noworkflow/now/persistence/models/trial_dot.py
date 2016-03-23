@@ -183,7 +183,7 @@ class TrialDot(Model):                                                          
                     self._add_variable(access, fdepth, FILE_SCHEMA, display)
                 else:
                     access = accesses[access.name]
-                if set("ra+") & set(access.mode):
+                if set("r+") & set(access.mode):
                     self.departing_arrows[variable][access] = "dashed"
                     self.arriving_arrows[access][variable] = "dashed"
                 if set("wxa+") & set(access.mode):

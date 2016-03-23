@@ -64,7 +64,6 @@ mode_id(TrialId, Id, Mode) :- access(TrialId, Id, _, Mode, _, _, _, _).
 % DESCRIPTION: read modes: r, a, +
 %
 read_mode(Mode) :- sub_atom(Mode, _, _, _, 'r').
-read_mode(Mode) :- sub_atom(Mode, _, _, _, 'a').
 read_mode(Mode) :- sub_atom(Mode, _, _, _, '+').
 
 %
