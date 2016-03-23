@@ -61,12 +61,12 @@ class VariableDependency(AlchemyProxy):
     target = backref_one("target")
 
     prolog_description = PrologDescription("dependency", (
-        PrologTrial("trial_id"),
+        PrologTrial("trial_id", link="variable.trial_id"),
         PrologAttribute("id"),
-        PrologAttribute("source_activation_id"),
-        PrologAttribute("source_id"),
-        PrologAttribute("target_activation_id"),
-        PrologAttribute("target_id"),
+        PrologAttribute("source_activation_id", link="variable.activation_id"),
+        PrologAttribute("source_id", link="variable.id"),
+        PrologAttribute("target_activation_id", link="variable.activation_id"),
+        PrologAttribute("target_id", link="variable.id"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "the value of a variable (*target_id*)\n"

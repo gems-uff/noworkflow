@@ -46,14 +46,15 @@ class FileAccess(AlchemyProxy):
     activation = backref_one("activation")  # Activation.file_accesses
 
     prolog_description = PrologDescription("access", (
-        PrologTrial("trial_id"),
+        PrologTrial("trial_id", link="activation.trial_id"),
         PrologAttribute("id", fn=lambda obj: "f{}".format(obj.id)),
         PrologRepr("name"),
         PrologRepr("mode"),
         PrologNullableRepr("content_hash_before"),
         PrologNullableRepr("content_hash_after"),
         PrologTimestamp("timestamp"),
-        PrologNullable("activation_id", attr_name="function_activation_id"),
+        PrologNullable("activation_id", attr_name="function_activation_id",
+                       link="activation.id"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "a file *name*\n"

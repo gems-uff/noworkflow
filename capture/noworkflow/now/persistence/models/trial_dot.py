@@ -68,6 +68,7 @@ class TrialDot(Model):                                                          
         self.show_blackbox_dependencies = False
         self.max_depth = float("inf")
         self.mode = "simulation"
+        self.format = "svg"
         self.rank_line = True
         self.show_accesses = True
         self.value_length = 0
@@ -450,6 +451,16 @@ class TrialDot(Model):                                                          
         """Export facts from trial as text"""
         return "\n".join(self._export_text())
 
+    def _repr_svg_(self):
+        if self.format == "svg":
+            ipython = get_ipython()
+            return ipython.run_cell_magic(
+                "dot", "--format {}".format(self.format), self.export_text()
+            )
+
     def _repr_png_(self):
-        ipython = get_ipython()
-        return ipython.run_cell_magic('dot', '', self.export_text())
+        if self.format == "png":
+            ipython = get_ipython()
+            return ipython.run_cell_magic(
+                "dot", "--format {}".format(self.format), self.export_text()
+            )

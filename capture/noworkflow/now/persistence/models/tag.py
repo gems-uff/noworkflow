@@ -39,7 +39,7 @@ class Tag(AlchemyProxy):
     trial = backref_one("trial")  # Trial.inherited
 
     prolog_description = PrologDescription("tag", (
-        PrologTrial("trial_id"),
+        PrologTrial("trial_id", link="trial.id"),
         PrologRepr("type"),
         PrologRepr("name"),
         PrologTimestamp("timestamp"),

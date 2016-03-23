@@ -40,8 +40,8 @@ class Object(AlchemyProxy):
     function_def = backref_one("function_def")  # FunctionDef.objects
 
     prolog_description = PrologDescription("object", (
-        PrologTrial("trial_id"),
-        PrologAttribute("function_def_id"),
+        PrologTrial("trial_id", link="function_def.trial_id"),
+        PrologAttribute("function_def_id", link="function_def.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologRepr("type"),

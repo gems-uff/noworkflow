@@ -129,6 +129,7 @@ class Trial(AlchemyProxy):
 
     DEFAULT = {
         "dot.show_blackbox_dependencies": False,
+        "dot.format": "png",
         "graph.width": 500,
         "graph.height": 500,
         "graph.mode": 3,
@@ -138,6 +139,7 @@ class Trial(AlchemyProxy):
 
     REPLACE = {
         "dot_show_blackbox_dependencies": "dot.show_blackbox_dependencies",
+        "dot_format": "dot.format",
         "graph_width": "graph.width",
         "graph_height": "graph.height",
         "graph_mode": "graph.mode",
@@ -152,8 +154,8 @@ class Trial(AlchemyProxy):
         PrologRepr("script"),
         PrologRepr("code_hash"),
         PrologRepr("command"),
-        PrologNullable("inherited_id"),
-        PrologNullable("parent_id"),
+        PrologNullable("inherited_id", link="trial.id"),
+        PrologNullable("parent_id", link="trial.id"),
         PrologAttribute("run"),
         PrologNullableRepr("docstring"),
     ), description=(

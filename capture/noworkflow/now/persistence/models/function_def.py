@@ -54,7 +54,7 @@ class FunctionDef(AlchemyProxy):
         return self.objects.filter(Object.m.type == "FUNCTION_CALL")
 
     prolog_description = PrologDescription("function_def", (
-        PrologTrial("trial_id"),
+        PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologNullableRepr("code_hash"),

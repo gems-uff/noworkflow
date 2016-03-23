@@ -341,7 +341,7 @@ Out [12]: {'X': 'range'}
 
 To check the existing rules, please do:
 ```python
-In  [13]: %now_prolog_schema
+In  [13]: %now_schema prolog -t
 Out [13]: [...]
 ```
 

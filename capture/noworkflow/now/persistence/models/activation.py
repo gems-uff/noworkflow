@@ -85,12 +85,13 @@ class Activation(AlchemyProxy):
         return self.variables.filter(Variable.m.type != "param")
 
     prolog_description = PrologDescription("activation", (
-        PrologTrial("trial_id"),
+        PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologTimestamp("start"),
         PrologTimestamp("finish"),
-        PrologNullable("caller_activation_id", attr_name="caller_id"),
+        PrologNullable("caller_activation_id", attr_name="caller_id",
+                       link="activation.id"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "a function *name* was activated\n"

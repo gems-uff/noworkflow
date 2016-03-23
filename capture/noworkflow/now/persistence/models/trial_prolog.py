@@ -11,6 +11,7 @@ import weakref
 from ...utils.functions import resource
 
 from .base import Model
+from .graphs.diagram import ViewPrologDiagram
 from . import Tag, Dependency, EnvironmentAttr
 from . import FunctionDef, Object
 from . import Activation, FileAccess, ObjectValue
@@ -31,8 +32,13 @@ class TrialProlog(Model):
         self.use_cache = True
         self.trial = weakref.proxy(trial)
 
-        self.models = [
-            (trial.__class__, lambda: [trial]),
+        self.models = self.prolog_models(trial)
+
+    @classmethod
+    def prolog_models(cls, trial=None):
+        from . import Trial
+        return [
+            (Trial, lambda: [trial]),
             (Tag, lambda: trial.tags),
             (Dependency, lambda: trial.dependencies),
             (EnvironmentAttr, lambda: trial.environment_attrs),
@@ -45,6 +51,12 @@ class TrialProlog(Model):
             (VariableUsage, lambda: trial.variable_usages),
             (VariableDependency, lambda: trial.variable_dependencies),
         ]
+
+    @classmethod
+    def diagram(cls, format_="svg"):
+        """Show prolog diagram"""
+        descriptions = [x.prolog_description for x, _ in cls.prolog_models()]
+        return ViewPrologDiagram(descriptions, format_)
 
     def retract(self):
         """Remove extracted rules from swipl"""

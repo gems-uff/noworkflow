@@ -22,6 +22,7 @@ from .cmd_restore import Restore
 from .cmd_vis import Vis
 from .cmd_demo import Demo
 from .cmd_history import History
+from .cmd_schema import Schema
 from ..utils.io import print_msg
 
 
@@ -45,6 +46,7 @@ def main():
         Vis(),
         Demo(),
         History(),
+        Schema(),
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)

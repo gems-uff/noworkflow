@@ -54,18 +54,21 @@ class PrologDescription(object):
 
     def __repr__(self):
         return "{0.name}({1}).".format(
-            self, ', '.join("".join(y.title() for y in x.name.split("_"))
-                            for x in self.attributes)
+            self, ', '.join(x.variable() for x in self.attributes)
         )
 
 
 class PrologAttribute(object):
     """Represent a single attribute"""
 
-    def __init__(self, name, fn=None, attr_name=None):
+    def __init__(self, name, fn=None, attr_name=None, link=None):
         self.name = name
         self.attr_name = self.name if attr_name is None else attr_name
         self.func = fn
+        self.link = link
+
+    def variable(self):
+        return "".join(x.title() for x in self.name.split("_"))
 
     def value(self, obj):
         """Return attribute self.attr_name of obj"""
