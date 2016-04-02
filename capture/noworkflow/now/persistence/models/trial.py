@@ -30,6 +30,7 @@ from .dependency import Dependency
 from .activation import Activation
 from .head import Head
 from .graphs.trial_graph import TrialGraph
+from .graphs.dependency_graph import DependencyConfig
 
 
 @proxy_class                                                                     # pylint: disable=too-many-public-methods
@@ -202,6 +203,7 @@ class Trial(AlchemyProxy):
         #self._store_pk(obj)
         #self._restore_instance()
 
+        self.dependency_config = DependencyConfig()
         self.graph = TrialGraph(self)
         self.prolog = TrialProlog(self)
         self.dot = TrialDot(self)

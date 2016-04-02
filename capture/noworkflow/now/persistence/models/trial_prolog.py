@@ -101,11 +101,15 @@ class TrialProlog(Model):
                 self.prolog_cli.assertz(fact[:-1])
         load_rules = "load_rules(1)"
         if not list(self.prolog_cli.query(load_rules)):
-            for rule in self.rules():
-                rule = rule.strip()
-                if not rule or rule[0] == "%":
+            rule = []
+            for line in self.rules():
+                line = line.strip()
+                if not line or line[0] == "%":
                     continue
-                self.prolog_cli.assertz(rule[:-1])
+                rule.append(line)
+                if "." in line:
+                    self.prolog_cli.assertz(" ".join(rule)[:-1])
+                    rule = []
             self.prolog_cli.assertz(load_rules)
 
     def query(self, query):
