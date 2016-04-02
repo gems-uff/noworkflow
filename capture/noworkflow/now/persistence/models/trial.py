@@ -30,7 +30,8 @@ from .dependency import Dependency
 from .activation import Activation
 from .head import Head
 from .graphs.trial_graph import TrialGraph
-from .graphs.dependency_graph import DependencyConfig
+from .graphs.dependency_graph import DependencyConfig, DependencyFilter
+from .graphs.dependency_graph import PrologVisitor
 
 
 @proxy_class                                                                     # pylint: disable=too-many-public-methods
@@ -129,7 +130,7 @@ class Trial(AlchemyProxy):
         return self.activations.filter(is_none(Activation.m.caller_id))
 
     DEFAULT = {
-        "dot.show_blackbox_dependencies": False,
+        "dependency_config.show_blackbox_dependencies": False,
         "dot.format": "png",
         "graph.width": 500,
         "graph.height": 500,
@@ -139,7 +140,8 @@ class Trial(AlchemyProxy):
     }
 
     REPLACE = {
-        "dot_show_blackbox_dependencies": "dot.show_blackbox_dependencies",
+        "dependency_config_show_blackbox_dependencies":
+            "dependency_config.show_blackbox_dependencies",
         "dot_format": "dot.format",
         "graph_width": "graph.width",
         "graph_height": "graph.height",
@@ -204,10 +206,21 @@ class Trial(AlchemyProxy):
         #self._restore_instance()
 
         self.dependency_config = DependencyConfig()
+        self.dependency_filter = DependencyFilter(self)
         self.graph = TrialGraph(self)
         self.prolog = TrialProlog(self)
         self.dot = TrialDot(self)
         self.initialize_default(kwargs)
+        self._prolog_visitor = None
+
+    @property
+    def prolog_variables(self):
+        """Return filtered prolog variables"""
+        if not self._prolog_visitor:
+            self.dependency_filter.run()
+            self._prolog_visitor = PrologVisitor(self.dependency_filter)
+            self._prolog_visitor.visit(self.dependency_filter.main_cluster)
+        return self._prolog_visitor
 
     @property
     def script_content(self):

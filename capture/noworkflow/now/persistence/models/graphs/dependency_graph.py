@@ -17,7 +17,7 @@ from .. import Activation, Variable, VariableDependency, FileAccess
 from .. import UniqueFileAccess
 
 
-class ActivationCluster(object):
+class ActivationCluster(object):                                                 # pylint: disable=too-few-public-methods
     """Represent an activation cluster"""
     def __init__(self, aid, name, depth=1):
         self.components = []
@@ -36,6 +36,16 @@ def variable_id(variable):
     return "v_{}_{}".format(act_id, variable.id)
 
 
+def escape(string, size=55):
+    """Escape string for dot file"""
+    if not size:
+        return ""
+    if len(string) > size:
+        half_size = (size - 5) // 2
+        string = string[:half_size] + " ... " + string[-half_size:]
+    return "" if string is None else string.replace('"', '\\"')
+
+
 class DependencyConfig(object):                                                  # pylint: disable=too-many-instance-attributes
     """Configure dependency graph"""
 
@@ -50,7 +60,7 @@ class DependencyConfig(object):                                                 
         self.mode = "simulation"
 
     @classmethod
-    def create_arguments(cls, add_arg):
+    def create_arguments(cls, add_arg, mode="prospective"):
         """Create arguments
 
         Arguments:
@@ -66,7 +76,7 @@ class DependencyConfig(object):                                                 
         add_arg("-d", "--depth", type=int, default=0, metavar="D",
                 help="R|visualization depth (default: 0)\n"
                      "0 represents infinity")
-        add_arg("-i", "--show-internal-use", action="store_false",
+        add_arg("-u", "--show-internal-use", action="store_false",
                 help="show variables and functions which name starts with a "
                      "leading underscore")
         add_arg("-l", "--rank-line", action="store_true",
@@ -75,15 +85,16 @@ class DependencyConfig(object):                                                 
                      "grouped, reducing the width of the graph.\n"
                      "It may affect the graph legibility.\n"
                      "The alignment is independent for each activation.\n")
-        add_arg("-m", "--mode", type=str, default="prospective",
+        add_arg("-m", "--mode", type=str, default=mode,
                 choices=["simulation", "prospective", "dependency"],
-                help="R|Graph mode (default: prospective)\n"
-                     "'simulation' presents a dataflow graph with all\n"
-                     "relevant variables.\n"
-                     "'prospective' presents only parameters, calls, and\n"
-                     "assignments to calls.\n"
-                     "'dependency' presents all dependencies, and ignores\n"
-                     "depth, rank-line, and hide-accesses configurations")
+                help=("R|Graph mode (default: {})\n"
+                      "'simulation' presents a dataflow graph with all\n"
+                      "relevant variables.\n"
+                      "'prospective' presents only parameters, calls, and\n"
+                      "assignments to calls.\n"
+                      "'dependency' presents all dependencies, and ignores\n"
+                      "depth, rank-line, and hide-accesses configurations"
+                      .format(mode)))
         add_arg("-b", "--black-box", action="store_true",
                 help="R|propagate black-box dependencies. \n"
                      "Use this option to avoid false negatives. \n"
@@ -124,6 +135,7 @@ class DependencyFilter(object):                                                 
         self.current_cluster = None
         self.filtered_variables = set()
         self.dependencies = {}
+        self.executed = False
 
     def _add_variable(self, variable, cluster=None):
         """Create variable in cluster
@@ -431,3 +443,244 @@ class DependencyFilter(object):                                                 
         """Filter variables graph according to mode"""
         self.erase()
         getattr(self, self.config.mode)()
+        self.executed = True
+
+
+class ActivationClusterVisitor(object):
+    """Base ActivationCluster Visitor"""
+
+    visit_initial = None
+    visit_activation = None
+    visit_access = None
+    visit_variable = None
+
+    def __init__(self, dep_filter):
+        self.filter = dep_filter
+
+    def _ranks(self, cluster):
+        for variables in cluster.same_rank:
+            variables = [variable_id(var) for var in variables
+                         if variable_id(var) in self.filter.filtered_variables]
+            if variables:
+                yield variables
+
+    @property
+    def filtered_dependencies(self):
+        """Get all dependencies"""
+        filtered_variables = self.filter.filtered_variables
+        for (source, target), style in viewitems(self.filter.dependencies):
+            if source in filtered_variables and target in filtered_variables:
+                yield source, target, style
+
+    def visit(self, component):
+        """Visit component"""
+        if isinstance(component, ActivationCluster):
+            if component.activation_id == -1 and self.visit_initial:
+                return self.visit_initial(component, self._ranks(component))     # pylint: disable=not-callable
+            if self.visit_activation:
+                return self.visit_activation(component, self._ranks(component))  # pylint: disable=not-callable
+        else:
+            if not variable_id(component) in self.filter.filtered_variables:
+                return
+            if isinstance(component, FileAccess) and self.visit_access:
+                return self.visit_access(component)                              # pylint: disable=not-callable
+            if self.visit_variable:
+                return self.visit_variable(component)                            # pylint: disable=not-callable
+        return self.visit_default(component)
+
+    def visit_default(self, component):
+        """Visit default"""
+        pass
+
+
+class DotVisitor(ActivationClusterVisitor):
+    """Create dot file"""
+
+    def __init__(self, fallback, name_length, value_length, types, dep_filter):  # pylint: disable=too-many-arguments
+        super(DotVisitor, self).__init__(dep_filter)
+        self.result = []
+        self.depth = 0
+        self.name_length = name_length
+        self.value_length = value_length
+        self.fallback = fallback
+        self.types = types
+
+    def visit_initial(self, cluster, ranks):
+        """Visit initial activation"""
+        self.result.append("digraph dependency {")
+        self.result.append("    rankdir=RL;")
+        self.result.append("    node[fontsize=20]")
+
+        for component in cluster.components:
+            self.depth = cluster.depth
+            self.visit(component)
+
+        for rank in ranks:
+            self.result.append(
+                "    " * cluster.depth + "{rank=same " + " ".join(rank) + "}"
+            )
+
+        for source, target, style in self.filtered_dependencies:
+            self.result.append(('    {} -> {} [style="{}"];').format(
+                source, target, style
+            ))
+
+        self.result.append("}")
+
+    def visit_activation(self, cluster, ranks):
+        """Visit other activations"""
+        self.result.append(
+            "    " * (cluster.depth - 1) +
+            "subgraph cluster_{}  {{".format(cluster.activation_id)
+        )
+        self.result.append("    " * cluster.depth + 'color="#3A85B9";')
+        self.result.append("    " * cluster.depth + 'fontsize=30;')
+        self.result.append("    " * cluster.depth +
+                           'label = "{}";'.format(cluster.name))
+
+        for component in cluster.components:
+            self.depth = cluster.depth
+            self.visit(component)
+
+        for rank in ranks:
+            self.result.append(
+                "    " * cluster.depth + "{rank=same " + " ".join(rank) + "}"
+            )
+
+        self.result.append("    " * (cluster.depth - 1) + "}")
+
+    def visit_variable(self, variable):
+        """Create variable for graph
+        Arguments:
+        variable -- Variable or FileAccesss object
+        depth -- depth for configuring spaces in subclusters
+        config -- color schema
+        """
+        color, shape, font = self._schema_config(variable)
+        var = variable_id(variable)
+
+        value = escape(variable.value, self.value_length)
+        name = escape(variable.name, self.name_length)
+
+        if value == "now(n/a)":
+            value = ""
+
+        label_list = []
+        if variable.line:
+            label_list.append("{} ".format(variable.line))
+        label_list.append(name)
+        if value:
+            label_list.append("\n{}".format(value))
+        label = "".join(label_list)
+
+        self.result.append("    " * self.depth + (
+            '{var} '
+            '[label="{label}"'
+            ' fillcolor="{color}" fontcolor="{font}"'
+            ' shape="{shape}"'
+            ' style="filled"];'
+        ).format(var=var, label=label, color=color, font=font, shape=shape))
+
+    def _schema_config(self, variable):
+        """Return color schema for variable
+        or fallback if there is no valid schema
+        """
+        if isinstance(variable, FileAccess):
+            return self.types.get("access") or self.fallback
+        return self.types.get(variable.type) or self.fallback
+
+
+class PrologVisitor(ActivationClusterVisitor):
+    """Export prolog dependencies"""
+
+    def __init__(self, dep_filter):
+        super(PrologVisitor, self).__init__(dep_filter)
+        self.variables = []
+        self.variable_dependencies = []
+
+    @property
+    def usages(self):
+        """Variable usages generator"""
+        filtered_variables = self.filter.filtered_variables
+        for usage in self.filter.trial.variable_usages:
+            variable = usage.variable
+            if variable_id(variable) in filtered_variables:
+                yield usage
+            else:
+                variable = self.filter.synonyms.get(variable, variable)
+                if variable_id(variable) in filtered_variables:
+                    yield FakeVariableUsage(usage, variable)
+
+
+
+
+    @property
+    def dependencies(self):
+        """Variable dependencies generator"""
+        did = 1
+        for source, target, _ in self.filtered_dependencies:
+            yield FakeVariableDependency(
+                self.filter.trial.id, did, source, target
+            )
+            did += 1
+
+    def visit_activation(self, cluster, _):
+        """Visit activations"""
+        for component in cluster.components:
+            self.visit(component)
+
+    def visit_access(self, access):
+        """Visit access"""
+        self.variables.append(FakeVariableAccess(
+            access.trial_id, access.id, access.name, access.timestamp
+        ))
+
+    def visit_variable(self, variable):
+        """Visit variable"""
+        self.variables.append(variable)
+
+
+class FakeVariableAccess(object):
+    """Access that mimics variable for variable prolog description"""
+
+    def __init__(self, trial_id, aid, name, timestamp):
+        self.trial_id = trial_id
+        self.activation_id = "a"
+        self.id = "f{}".format(aid)
+        self.name = name
+        self.line = "nil"
+        self.value = ""
+        self.time = timestamp
+
+
+class FakeVariableDependency(object):
+    """Access that mimics dependency prolog description"""
+
+    def __init__(self, trial_id, did, source, target):
+        self.trial_id = trial_id
+        self.id = did
+        splitted_source = source.split("_")
+        splitted_target = target.split("_")
+
+        self.source_activation_id = splitted_source[-2]
+        self.source_id = splitted_source[-1]
+        if self.source_activation_id == "a":
+            self.source_id = "f{}".format(self.source_id)
+
+        self.target_activation_id = splitted_target[-2]
+        self.target_id = splitted_target[-1]
+        if self.target_activation_id == "a":
+            self.target_id = "f{}".format(self.target_id)
+
+
+class FakeVariableUsage(object):
+    """Usage that mimics variable usage"""
+
+    def __init__(self, original_usage, new_var):
+        self.trial_id = new_var.trial_id
+        self.activation_id = new_var.activation_id
+        self.variable_id = new_var.id
+        self.id = original_usage.id
+        self.line = original_usage.line
+
+        self.variable = new_var

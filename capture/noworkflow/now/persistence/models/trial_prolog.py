@@ -36,6 +36,7 @@ class TrialProlog(Model):
 
     @classmethod
     def prolog_models(cls, trial=None):
+        """Prolog models and accessors"""
         from . import Trial
         return [
             (Trial, lambda: [trial]),
@@ -47,9 +48,9 @@ class TrialProlog(Model):
             (Activation, lambda: trial.activations),
             (ObjectValue, lambda: trial.object_values),
             (FileAccess, lambda: trial.file_accesses),
-            (Variable, lambda: trial.variables),
-            (VariableUsage, lambda: trial.variable_usages),
-            (VariableDependency, lambda: trial.variable_dependencies),
+            (Variable, lambda: trial.prolog_variables.variables),
+            (VariableUsage, lambda: trial.prolog_variables.usages),
+            (VariableDependency, lambda: trial.prolog_variables.dependencies),
         ]
 
     @classmethod
