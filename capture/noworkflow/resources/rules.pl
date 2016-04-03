@@ -294,7 +294,7 @@ dep(TrialId, Dependent, Supplier) :- dependency(TrialId, _, _, Dependent, _, Sup
 %              in a given trial (*TrialId*).
 %
 usage_or_assign(TrialId, Name, Line, Id) :- usage(TrialId, _, Id, _, Name, Line).
-usage_or_assign(TrialId, Name, Line, Id) :- variable(TrialId, _, Id, _, Name, Line, _, _).
+usage_or_assign(TrialId, Name, Line, Id) :- variable(TrialId, _, Id, Name, Line, _, _).
 
 %
 % RULE DEFINITION: var_name(TrialId, Id, Name)/3
