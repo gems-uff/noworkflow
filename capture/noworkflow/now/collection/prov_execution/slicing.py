@@ -591,6 +591,8 @@ class Tracer(Profiler):                                                         
                     variable = variables[vid]
                     add_dependencies(variable, other, replace="argument")
                     added[name] = variable
+                elif arg.value == "now(n/a)":
+                    arg.value = var
             except KeyError:
                 pass
 
