@@ -38,12 +38,21 @@ def variable_id(variable):
 
 def escape(string, size=55):
     """Escape string for dot file"""
-    if not size:
+    if not size or not string:
         return ""
     if len(string) > size:
         half_size = (size - 5) // 2
         string = string[:half_size] + " ... " + string[-half_size:]
     return "" if string is None else string.replace('"', '\\"')
+
+
+def fix_value(synonym, final):
+    """Fix value for synonym"""
+    if not synonym.value or synonym.value == "now(n/a)":
+        return
+    if final.value and final.value != "now(n/a)":
+        return
+    final.value = synonym.value
 
 
 class DependencyConfig(object):                                                  # pylint: disable=too-many-instance-attributes
@@ -217,16 +226,19 @@ class DependencyFilter(object):                                                 
             # c_call
             variable.value = return_.value
             self.synonyms[return_] = variable
+            fix_value(return_, variable)
             return None, "c_call"
         if len(list(return_.activation.variables)) == 1:
             # Just return. Maybe c_call
             variable.value = return_.value
             self.synonyms[return_] = variable
+            fix_value(return_, variable)
             return None, "just_return"
         if cluster.depth + 1 > self.config.max_depth:
             # max depth
             variable.value = return_.value
             self.synonyms[return_] = variable
+            fix_value(return_, variable)
             return None, "max_depth"
         trial_id = variable.trial_id
         new_activation = Activation((trial_id, new_activation_id))
@@ -240,6 +252,7 @@ class DependencyFilter(object):                                                 
 
             self._add_variable(return_, ncluster)
             self.synonyms[variable] = return_
+            fix_value(variable, return_)
 
         self._add_all_variables(new_activation.param_variables, ncluster)
 
@@ -355,8 +368,10 @@ class DependencyFilter(object):                                                 
         arg_orginal = Variable.fast_arg_and_original(self.trial.id)
         for arg_id, original_id in arg_orginal:
             synonyms[variables[arg_id]] = variables[original_id]
+            fix_value(variables[arg_id], variables[original_id])
             if variables[original_id].type == "arg":
                 synonyms[variables[arg_id]] = synonyms[variables[original_id]]
+                fix_value(variables[arg_id], synonyms[variables[original_id]])
 
         self._create_dependencies()
         self._show_dependencies()
