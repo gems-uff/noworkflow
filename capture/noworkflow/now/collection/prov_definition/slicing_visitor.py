@@ -424,6 +424,7 @@ class SlicingVisitor(FunctionVisitor):                                          
         loop.maybe_call = (_iter.line, _iter.col)
         loop.add_iterable(node.iter, AssignRightVisitor)
         loop.add_iter_var(node.target, AssignLeftVisitor)
+        loop.first_line_in_scope = node.body[0].first_line
 
         self.visit(node.target)
         self.visit(node.iter)
