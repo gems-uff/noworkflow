@@ -611,9 +611,6 @@ class PrologVisitor(ActivationClusterVisitor):
                 if variable_id(variable) in filtered_variables:
                     yield FakeVariableUsage(usage, variable)
 
-
-
-
     @property
     def dependencies(self):
         """Variable dependencies generator"""
