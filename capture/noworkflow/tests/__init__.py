@@ -12,8 +12,8 @@ persistence_config.mock()
 persistence_config.connect(".")
 
 
-from .prov_definition import TestSlicingDependencies
-from .prov_execution import TestCallSlicing
-from .prov_deployment import TestProvDeployment
+from .prov_definition import TestDefinition
+#from .prov_execution import TestCallSlicing
+#from .prov_deployment import TestProvDeployment
 from .cross_version_test import TestCrossVersion
 from .formatter_test import TestFormatter

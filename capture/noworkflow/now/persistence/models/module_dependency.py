@@ -16,14 +16,10 @@ from .base import AlchemyProxy, proxy_class, one, backref_one
 
 
 @proxy_class
-class Dependency(AlchemyProxy):
-    """Dependency proxy
+class ModuleDependency(AlchemyProxy):
+    """Represent a Module Dependency"""
 
-    Use it to have different objects with the same primary keys
-    Use it also for re-attaching objects to SQLAlchemy (e.g. for cache)
-    """
-
-    __tablename__ = "dependency"
+    __tablename__ = "module_dependency"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "module_id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
@@ -44,10 +40,10 @@ class Dependency(AlchemyProxy):
         PrologNullableRepr("path", attr_name="module.path"),
         PrologNullableRepr("code_hash", attr_name="module.code_hash"),
     ), description=(
-        "informs that a given trial (*trial_id*)\n"
-        "imported the *version* of a module (*name*),\n"
-        "with content (*code_hash*) written in *path*."
+        "informs that a given trial (*TrialId*)\n"
+        "imported the *version* of a module (*Id*) with *Name*,\n"
+        "and content (*CodeHash*) written in *Path*."
     ))
 
     def __repr__(self):
-        return "Dependency({0.trial_id}, {0.module})".format(self)
+        return "ModuleDependency({0.trial_id}, {0.module})".format(self)

@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, Text, select, bindparam
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_many, is_none
+from .base import AlchemyProxy, proxy_class, backref_many
 
 
 @proxy_class
@@ -76,8 +76,7 @@ class Module(AlchemyProxy):
         return 0
 
     @classmethod  # query
-    def fast_load_module_id(cls, name, version, path, code_hash,                 # pylint: disable=too-many-arguments
-                            session=None):
+    def fast_load_module_id(cls, name, version, path, code_hash, session=None):  # pylint: disable=too-many-arguments
         """Load module id by name, version and code_hash
 
         Compile SQLAlchemy core query into string for optimization

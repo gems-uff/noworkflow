@@ -35,9 +35,9 @@ class EnvironmentAttr(AlchemyProxy):
         PrologRepr("name"),
         PrologRepr("value"),
     ), description=(
-        "informs that a environment attribute (*name*)\n"
-        "was defined with *value*\n"
-        "in a given trial (*trial_id*)."
+        "informs that in a given trial (*TrialId*),\n"
+        "a environment attribute (*Name*)\n"
+        "was defined with *Value*."
     ))
 
     @property

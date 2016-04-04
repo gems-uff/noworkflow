@@ -10,7 +10,6 @@ from datetime import datetime
 
 from future.utils import viewitems, viewvalues
 
-from . import content
 
 
 class ObjectStore(object):
@@ -126,153 +125,6 @@ class BaseLW:                                                                   
         return getattr(self, key)
 
 
-# Deployment
-
-class ModuleLW(BaseLW):
-    """Module lightweight object
-    There are type definitions on lightweight.pxd
-    """
-
-    __slots__, attributes = define_attrs(
-        ["id", "name", "path", "version", "code_hash"],
-        ["trial_id"]
-    )
-    special = set()
-
-    def __init__(self, oid, name, version, path, code_hash):                     # pylint: disable=too-many-arguments
-        self.trial_id = -1
-        self.id = oid                                                            # pylint: disable=invalid-name
-        self.name = name
-        self.version = version
-        self.path = path
-        self.code_hash = code_hash
-
-    def is_complete(self):                                                       # pylint: disable=no-self-use
-        """Module can always be removed from object store"""
-        return True
-
-    def __repr__(self):
-        return ("Module(id={}, name={}, version={})").format(
-            self.id, self.name, self.version)
-
-
-class DependencyLW(BaseLW):
-    """Dependency lightweight object
-    There are type definitions on lightweight.pxd
-    """
-
-    __slots__, attributes = define_attrs(
-        ["trial_id", "module_id"], ["id"]
-    )
-    special = set()
-
-    def __init__(self, oid, module_id):
-        self.trial_id = -1
-        self.id = oid                                                            # pylint: disable=invalid-name
-        self.module_id = module_id
-
-    def is_complete(self):                                                       # pylint: disable=no-self-use
-        """Dependency can always be removed from object store"""
-        return True
-
-    def __repr__(self):
-        return ("Dependency(module_id={})").format(self.module_id)
-
-
-class EnvironmentAttrLW(BaseLW):
-    """EnvironmentAttr lightweight object
-    There are type definitions on lightweight.pxd
-    """
-
-    __slots__, attributes = define_attrs(
-        ["trial_id", "id", "name", "value"]
-    )
-    special = set()
-
-    def __init__(self, oid, name, value):
-        self.trial_id = -1
-        self.id = oid                                                            # pylint: disable=invalid-name
-        self.name = name
-        self.value = value
-
-    def is_complete(self):                                                       # pylint: disable=no-self-use
-        """EnvironmentAttr can always be removed from object store"""
-        return True
-
-    def __repr__(self):
-        return ("EnvironmentAttr(id={}, name={}, value={})").format(
-            self.id, self.name, self.value)
-
-
-# Definition
-
-class DefinitionLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
-    """Definition lightweight object
-    May represent files, classes and function definitions
-    There are type definitions on lightweight.pxd
-    """
-
-    __slots__, attributes = define_attrs(
-        ["id", "name", "code_hash", "trial_id", "first_line", "last_line",
-         "docstring"],
-        ["type", "code", "parent", "namespace"],
-    )
-    special = set()
-
-    def __init__(self, aid, previous_namespace, name, code, dtype, parent,       # pylint: disable=too-many-arguments
-                 first_line, last_line, docstring):
-        self.trial_id = -1
-        self.id = aid                                                            # pylint: disable=invalid-name
-        self.namespace = (
-            previous_namespace +
-            ("." if previous_namespace else "") +
-            name
-        )
-        self.name = self.namespace
-        self.parent = (parent if parent is not None else -1)
-        self.type = dtype
-        self.code = code
-        self.code_hash = content.put(code.encode("utf-8"))
-        self.first_line = first_line
-        self.last_line = last_line
-        self.docstring = docstring or ""
-
-    def is_complete(self):                                                       # pylint: disable=no-self-use
-        """DefinitionLW can always be removed from object store"""
-        return True
-
-    def __repr__(self):
-        return ("DefinitionLW(id={}, name={}, type={})").format(
-            self.id, self.name, self.type)
-
-
-class ObjectLW(BaseLW):
-    """Object lightweight object
-    There are type definitions on lightweight.pxd
-    """
-
-    __slots__, attributes = define_attrs(
-        ["trial_id", "id", "name", "type", "function_def_id"]
-    )
-    special = set()
-
-    def __init__(self, oid, name, otype, function_def_id):
-        self.trial_id = -1
-        self.id = oid                                                            # pylint: disable=invalid-name
-        self.name = name
-        self.type = otype
-        self.function_def_id = function_def_id
-
-    def is_complete(self):                                                       # pylint: disable=no-self-use
-        """Object can always be removed from object store"""
-        return True
-
-    def __repr__(self):
-        return (
-            "Object(id={}, name={}, type={}, "
-            "function_def={})"
-        ).format(self.id, self.name, self.type, self.function_def_id)
-
 
 # Profiler
 
@@ -387,43 +239,6 @@ class ObjectValueLW(BaseLW):
             self.value, self.type, self.function_activation_id
         )
 
-
-class FileAccessLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
-    """FileAccess lightweight object
-    There are type definitions on lightweight.pxd
-    """
-
-    __slots__, attributes = define_attrs(
-        ["id", "name", "mode", "buffering", "timestamp", "trial_id",
-         "content_hash_before", "content_hash_after",
-         "function_activation_id"],
-        ["done"]
-    )
-    special = {"function_activation_id"}
-
-    def __init__(self, fid, name):
-        self.trial_id = -1
-        self.id = fid                                                            # pylint: disable=invalid-name
-        self.name = name
-        self.mode = "r"
-        self.buffering = "default"
-        self.content_hash_before = None
-        self.content_hash_after = None
-        self.timestamp = datetime.now()
-        self.function_activation_id = -1
-        self.done = False
-
-    def update(self, variables):
-        """Update file access with dict"""
-        for key, value in viewitems(variables):
-            setattr(self, key, value)
-
-    def is_complete(self):
-        """FileAccess can be removed once it is tagged as done"""
-        return self.done
-
-    def __repr__(self):
-        return ("FileAccess(id={}, name={}").format(self.id, self.name)
 
 
 # Slicing

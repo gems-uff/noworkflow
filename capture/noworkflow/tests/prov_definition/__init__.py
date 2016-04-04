@@ -6,8 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from .slicing_test import TestSlicingDependencies
+from .test_definition import TestDefinition
 
 __all__ = [
-    b"TestSlicingDependencies",
+    b"TestDefinition",
 ]

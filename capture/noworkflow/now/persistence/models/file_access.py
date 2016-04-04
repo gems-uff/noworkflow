@@ -27,9 +27,9 @@ class FileAccess(AlchemyProxy):
     __tablename__ = "file_access"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
-        ForeignKeyConstraint(["trial_id", "function_activation_id"],
-                             ["function_activation.trial_id",
-                              "function_activation.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id", "activation_id"],
+                             ["activation.trial_id",
+                              "activation.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
@@ -40,7 +40,7 @@ class FileAccess(AlchemyProxy):
     content_hash_before = Column(Text)
     content_hash_after = Column(Text)
     timestamp = Column(TIMESTAMP)
-    function_activation_id = Column(Integer, index=True)
+    activation_id = Column(Integer, index=True)
 
     trial = backref_one("trial")  # Trial.file_accesses
     activation = backref_one("activation")  # Activation.file_accesses
@@ -53,17 +53,16 @@ class FileAccess(AlchemyProxy):
         PrologNullableRepr("content_hash_before"),
         PrologNullableRepr("content_hash_after"),
         PrologTimestamp("timestamp"),
-        PrologNullable("activation_id", attr_name="function_activation_id",
-                       link="activation.id"),
+        PrologNullable("activation_id", link="activation.id"),
     ), description=(
-        "informs that in a given trial (*trial_id*),\n"
-        "a file *name*\n"
-        "was accessed by a function activation (*activation_id*)\n"
-        "in a specific read or write *mode*\n"
-        "at a specific *timestamp*.\n"
+        "informs that in a given trial (*TrialId*),\n"
+        "a file *Id* with *Name*\n"
+        "was accessed in a specific read or write *Mode*\n"
         "The content of the file\n"
-        "was captured before (*content_hash_before*)\n"
-        "and after (*content_hash_after*) the access."
+        "was captured before (*ContentHashBefore*)\n"
+        "and after (*ContentHashAfter*) the access."
+        "The file was accessed at a specific *Timestamp*\n"
+        "by a function activation (*ActivationId*)."
     ))
 
     @property
@@ -87,10 +86,6 @@ class FileAccess(AlchemyProxy):
         if self.content_hash_before is None:
             result += " (new)"
         return result
-
-    @property
-    def activation_id(self):
-        return self.function_activation_id
 
     @property
     def is_internal(self):

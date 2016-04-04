@@ -23,75 +23,45 @@ from .variable import Variable
 
 @proxy_class
 class Activation(AlchemyProxy):
-    """Represent a function activation"""
-    __tablename__ = "function_activation"
+    """Represent an activation"""
+    __tablename__ = "activation"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "caller_id"],
-                             ["function_activation.trial_id",
-                              "function_activation.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id", "id"],
+                             ["evaluation.trial_id",
+                              "evaluation.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id", "code_block_id"],
+                             ["code_block.trial_id",
+                              "code_block.id"], ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
-    line = Column(Integer)
-    return_value = Column(Text)
     start = Column(TIMESTAMP)
-    finish = Column(TIMESTAMP)
-    caller_id = Column(Integer, index=True)
+    code_block_id = Column(Integer)
 
-    _children = backref("children", order_by="Activation.start")
+    #evaluations = many_viewonly_ref("activation", "Evaluation")
+    file_accesses = many_viewonly_ref("activation", "FileAccess")
+
+    _children = backref("evaluation", order_by="Activation.start")
     caller = one(
         "Activation", remote_side=[trial_id, id],
         backref=_children, viewonly=True
     )
 
-    object_values = many_viewonly_ref("activation", "ObjectValue")
-    file_accesses = many_viewonly_ref("activation", "FileAccess")
-
-    variables = many_ref("activation", "Variable")
-    variables_usages = many_viewonly_ref("activation", "VariableUsage")
-    source_variables = many_viewonly_ref(
-        "source_activation", "VariableDependency",
-        primaryjoin=((id == VariableDependency.m.source_activation_id) &
-                     (trial_id == VariableDependency.m.trial_id)))
-    target_variables = many_viewonly_ref(
-        "target_activation", "VariableDependency",
-        primaryjoin=((id == VariableDependency.m.target_activation_id) &
-                     (trial_id == VariableDependency.m.trial_id)))
+    this_evaluation = one("Evaluation")
 
     trial = backref_one("trial")  # Trial.activations
-    children = backref_many("children")  # Activation.caller
-
-    @query_many_property
-    def globals(self):
-        """Return activation globals as a SQLAlchemy query"""
-        return self.object_values.filter(ObjectValue.m.type == "GLOBAL")
-
-    @query_many_property
-    def arguments(self):
-        """Return activation arguments as a SQLAlchemy query"""
-        return self.object_values.filter(ObjectValue.m.type == "ARGUMENT")
-
-    @query_many_property
-    def param_variables(self):
-        """Return param variables as a SQLAlchemy query"""
-        return self.variables.filter(Variable.m.type == "param")
-
-    @query_many_property
-    def no_param_variables(self):
-        """Return param variables as a SQLAlchemy query"""
-        return self.variables.filter(Variable.m.type != "param")
+    code_block = backref_one("code_block")  # CodeBlock.activations
+    evaluations = backref_many("evaluation")  # Evaluation.caller
 
     prolog_description = PrologDescription("activation", (
         PrologTrial("trial_id", link="trial.id"),
-        PrologAttribute("id"),
+        PrologAttribute("id", link="evaluation.id"),
         PrologRepr("name"),
         PrologTimestamp("start"),
-        PrologTimestamp("finish"),
-        PrologNullable("caller_activation_id", attr_name="caller_id",
-                       link="activation.id"),
+        PrologNullable("code_block_id", link="code_block.id"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "a function *name* was activated\n"
@@ -101,6 +71,14 @@ class Activation(AlchemyProxy):
     ))
 
     # ToDo: Improve hash
+
+    @property
+    def line(self):
+        return self.this_evaluation.code_component.first_char_line
+
+    @property
+    def finish(self):
+        return self.this_evaluation.moment
 
     def __key(self):
         return (self.trial_id, self.name, self.line)
@@ -122,6 +100,7 @@ class Activation(AlchemyProxy):
         Keyword arguments:
         _print -- custom print function (default=print)
         """
+        """
         global_vars = list(self.globals)
         if global_vars:
             _print("{name}: {values}".format(
@@ -138,6 +117,8 @@ class Activation(AlchemyProxy):
         _show_slicing("Variables:", self.variables, _print)
         _show_slicing("Usages:", self.variables_usages, _print)
         _show_slicing("Dependencies:", self.source_variables, _print)
+        """
+        # ToDo: now2
 
     def __repr__(self):
         return "Activation({0.trial_id}, {0.id}, {0.name})".format(self)
