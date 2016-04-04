@@ -77,8 +77,8 @@ class Variable(AlchemyProxy):
     dependents = backref_many("dependents")  # Variable.dependencies
 
     prolog_description = PrologDescription("variable", (
-        PrologTrial("trial_id"),
-        PrologAttribute("activation_id"),
+        PrologTrial("trial_id", link="activation.trial_id"),
+        PrologAttribute("activation_id", link="activation.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologAttribute("line"),

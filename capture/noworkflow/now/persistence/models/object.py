@@ -40,11 +40,16 @@ class Object(AlchemyProxy):
     function_def = backref_one("function_def")  # FunctionDef.objects
 
     prolog_description = PrologDescription("object", (
-        PrologTrial("trial_id"),
-        PrologAttribute("function_def_id"),
+        PrologTrial("trial_id", link="function_def.trial_id"),
+        PrologAttribute("function_def_id", link="function_def.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
-        PrologAttribute("type"),
+        PrologRepr("type"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "a given function definition (*function_def_id*),\n"
+        "has a GLOBAL/ARGUMENT/FUNCTION_CALL (*type*),\n"
+        "with *name*.\n"
     ))
 
     def __repr__(self):

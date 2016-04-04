@@ -213,12 +213,14 @@ class DefinitionLW(BaseLW):                                                     
     """
 
     __slots__, attributes = define_attrs(
-        ["id", "name", "code_hash", "trial_id"],
+        ["id", "name", "code_hash", "trial_id", "first_line", "last_line",
+         "docstring"],
         ["type", "code", "parent", "namespace"],
     )
     special = set()
 
-    def __init__(self, aid, previous_namespace, name, code, dtype, parent):      # pylint: disable=too-many-arguments
+    def __init__(self, aid, previous_namespace, name, code, dtype, parent,       # pylint: disable=too-many-arguments
+                 first_line, last_line, docstring):
         self.trial_id = -1
         self.id = aid                                                            # pylint: disable=invalid-name
         self.namespace = (
@@ -231,6 +233,9 @@ class DefinitionLW(BaseLW):                                                     
         self.type = dtype
         self.code = code
         self.code_hash = content.put(code.encode("utf-8"))
+        self.first_line = first_line
+        self.last_line = last_line
+        self.docstring = docstring or ""
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """DefinitionLW can always be removed from object store"""

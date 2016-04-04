@@ -17,8 +17,7 @@ from .now_set_default import NowSetDefault
 from .now_sql import NowSQL
 from .now_prolog import NowProlog
 from .now_restore import NowRestore
-from .now_sql_schema import NowSQLSchema
-from .now_prolog_schema import NowPrologSchema
+from .now_schema import NowSchema
 from .now_ls_magic import NowLsMagic
 
 
@@ -29,8 +28,7 @@ MAGICS = [
     ("now_sql", "cell", NowSQL),
     ("now_prolog", "cell", NowProlog),
     ("now_restore", "line", NowRestore),
-    ("now_sql_schema", "line", NowSQLSchema),
-    ("now_prolog_schema", "line", NowPrologSchema),
+    ("now_schema", "line", NowSchema),
     ("now_ls_magic", "line", NowLsMagic),
 ]
 

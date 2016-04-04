@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr
+from ...utils.prolog import PrologRepr, PrologNullableRepr
 
 from .base import proxy_class, AlchemyProxy, many_ref, backref_one
 from .base import query_many_property
@@ -30,6 +30,9 @@ class FunctionDef(AlchemyProxy):
     name = Column(Text)
     code_hash = Column(Text)
     trial_id = Column(Integer, index=True)
+    first_line = Column(Integer)
+    last_line = Column(Integer)
+    docstring = Column(Text)
 
     objects = many_ref("function_def", "Object")
 
@@ -51,10 +54,19 @@ class FunctionDef(AlchemyProxy):
         return self.objects.filter(Object.m.type == "FUNCTION_CALL")
 
     prolog_description = PrologDescription("function_def", (
-        PrologTrial("trial_id"),
+        PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
-        PrologRepr("code_hash"),
+        PrologNullableRepr("code_hash"),
+        PrologAttribute("first_line"),
+        PrologAttribute("last_line"),
+        PrologNullableRepr("docstring"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "a function *name* was defined\n"
+        "with content (*code_hash*)\n"
+        "between *first_line* and *last_line*\n"
+        "and with a *docstring*."
     ))
 
     def show(self, _print=lambda x, offset=0: print(x)):

@@ -53,7 +53,10 @@ class FunctionVisitor(ast.NodeVisitor):                                         
             node.name,
             self.extract_code(node),
             typ,
-            self.contexts[-1].id
+            self.contexts[-1].id,
+            node.first_line,
+            node.last_line,
+            ast.get_docstring(node)
         ))
 
         self.generic_visit(node)
@@ -69,7 +72,10 @@ class FunctionVisitor(ast.NodeVisitor):                                         
             node.name,
             "",
             "CLASS",
-            self.contexts[-1].id
+            self.contexts[-1].id,
+            node.first_line,
+            node.last_line,
+            ast.get_docstring(node)
         ))
         self.generic_visit(node)
         self.contexts.pop()

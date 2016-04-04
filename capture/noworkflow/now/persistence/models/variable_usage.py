@@ -45,8 +45,9 @@ class VariableUsage(AlchemyProxy):
     variable = backref_one("variable")  # Variable.usages
 
     prolog_description = PrologDescription("usage", (
-        PrologTrial("trial_id"),
-        PrologAttribute("activation_id"),
+        PrologTrial("trial_id", link="variable.trial_id"),
+        PrologAttribute("activation_id", link="variable.activation_id"),
+        PrologAttribute("variable_id", link="variable.id"),
         PrologAttribute("id"),
         PrologRepr("name", attr_name="variable.name"),
         PrologAttribute("line"),

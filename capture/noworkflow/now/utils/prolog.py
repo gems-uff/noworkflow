@@ -54,17 +54,21 @@ class PrologDescription(object):
 
     def __repr__(self):
         return "{0.name}({1}).".format(
-            self, ', '.join(x.name for x in self.attributes)
+            self, ', '.join(x.variable() for x in self.attributes)
         )
 
 
 class PrologAttribute(object):
     """Represent a single attribute"""
 
-    def __init__(self, name, fn=None, attr_name=None):
+    def __init__(self, name, fn=None, attr_name=None, link=None):
         self.name = name
         self.attr_name = self.name if attr_name is None else attr_name
         self.func = fn
+        self.link = link
+
+    def variable(self):
+        return "".join(x.title() for x in self.name.split("_"))
 
     def value(self, obj):
         """Return attribute self.attr_name of obj"""
@@ -105,7 +109,10 @@ class PrologRepr(PrologAttribute):
         result = repr(self.value(obj))
         if result[0] not in ('"', "'") and result[1] in ('"', "'"):
             result = result[1:]
-        return result
+        if result[0] in ('"', "'") and result[-1] == result[0]:
+            result = result[1:-1]
+        result = result.replace("'", "''")
+        return "'{}'".format(result)
 
 
 class PrologTimestamp(PrologAttribute):

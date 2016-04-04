@@ -13,8 +13,8 @@ cdef class EnvironmentAttrLW(BaseLW):
     cdef public str name, value;
 
 cdef class DefinitionLW(BaseLW):
-    cdef public int trial_id, id, parent;
-    cdef public str namespace, name, type, code, code_hash;
+    cdef public int trial_id, id, parent, first_line, last_line;
+    cdef public str namespace, name, type, code, code_hash, docstring;
 
 cdef class ObjectLW(BaseLW):
     cdef public int trial_id, id, function_def_id;

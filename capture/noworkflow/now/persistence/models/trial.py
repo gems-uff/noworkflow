@@ -12,7 +12,9 @@ from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
 
 from ...utils.formatter import PrettyLines
-from ...utils.prolog import PrologDescription, PrologTrial
+from ...utils.prolog import PrologDescription, PrologTrial, PrologNullableRepr
+from ...utils.prolog import PrologTimestamp, PrologAttribute, PrologRepr
+from ...utils.prolog import PrologNullable
 
 from .. import relational, content, persistence_config
 
@@ -28,6 +30,8 @@ from .dependency import Dependency
 from .activation import Activation
 from .head import Head
 from .graphs.trial_graph import TrialGraph
+from .graphs.dependency_graph import DependencyConfig, DependencyFilter
+from .graphs.dependency_graph import PrologVisitor
 
 
 @proxy_class                                                                     # pylint: disable=too-many-public-methods
@@ -72,6 +76,7 @@ class Trial(AlchemyProxy):
     inherited_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
     run = Column(Integer)
+    docstring = Column(Text)
 
     inherited = one(
         "Trial", backref="bypass_children", viewonly=True,
@@ -113,12 +118,20 @@ class Trial(AlchemyProxy):
         return self.dmodules
 
     @query_many_property
+    def dependencies(self):
+        """Load modules. Return SQLAlchemy query"""
+        if self.inherited:
+            return self.inherited.dependencies
+        return self.module_dependencies
+
+    @query_many_property
     def initial_activations(self):
         """Return initial activation as a SQLAlchemy query"""
         return self.activations.filter(is_none(Activation.m.caller_id))
 
     DEFAULT = {
-        "dot.show_blackbox_dependencies": False,
+        "dependency_config.show_blackbox_dependencies": False,
+        "dot.format": "png",
         "graph.width": 500,
         "graph.height": 500,
         "graph.mode": 3,
@@ -127,7 +140,9 @@ class Trial(AlchemyProxy):
     }
 
     REPLACE = {
-        "dot_show_blackbox_dependencies": "dot.show_blackbox_dependencies",
+        "dependency_config_show_blackbox_dependencies":
+            "dependency_config.show_blackbox_dependencies",
+        "dot_format": "dot.format",
         "graph_width": "graph.width",
         "graph_height": "graph.height",
         "graph_mode": "graph.mode",
@@ -137,7 +152,26 @@ class Trial(AlchemyProxy):
 
     prolog_description = PrologDescription("trial", (
         PrologTrial("id"),
-    ), description="informs all trials.")
+        PrologTimestamp("start"),
+        PrologTimestamp("finish"),
+        PrologRepr("script"),
+        PrologRepr("code_hash"),
+        PrologRepr("command"),
+        PrologNullable("inherited_id", link="trial.id"),
+        PrologNullable("parent_id", link="trial.id"),
+        PrologAttribute("run"),
+        PrologNullableRepr("docstring"),
+    ), description=(
+        "informs that a given *script* with *docstring*,\n"
+        "and content *code_hash*,\n"
+        "executed during a time period from *start*"
+        "to *finish*,\n"
+        "using noWokflow's *command*,\n"
+        "that generated a trial *id*.\n"
+        "This trial uses modules from *inherited_id*,\n"
+        "is based on *parent_id*,\n"
+        "and might be a *run* or a backup trial."
+    ))
 
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], relational.base):
@@ -171,10 +205,22 @@ class Trial(AlchemyProxy):
         #self._store_pk(obj)
         #self._restore_instance()
 
+        self.dependency_config = DependencyConfig()
+        self.dependency_filter = DependencyFilter(self)
         self.graph = TrialGraph(self)
         self.prolog = TrialProlog(self)
         self.dot = TrialDot(self)
         self.initialize_default(kwargs)
+        self._prolog_visitor = None
+
+    @property
+    def prolog_variables(self):
+        """Return filtered prolog variables"""
+        if not self._prolog_visitor:
+            self.dependency_filter.run()
+            self._prolog_visitor = PrologVisitor(self.dependency_filter)
+            self._prolog_visitor.visit(self.dependency_filter.main_cluster)
+        return self._prolog_visitor
 
     @property
     def script_content(self):
@@ -439,7 +485,7 @@ class Trial(AlchemyProxy):
         return an_id[0]
 
     @classmethod  # query
-    def fast_update(cls, trial_id, finish, session=None):
+    def fast_update(cls, trial_id, finish, docstring, session=None):
         """Update finish time of trial
 
         Use core sqlalchemy
@@ -456,14 +502,14 @@ class Trial(AlchemyProxy):
         ttrial = cls.t
         session.execute(
             ttrial.update()
-            .values(finish=finish)
+            .values(finish=finish, docstring=docstring)
             .where(ttrial.c.id == trial_id)
         )
         session.commit()
 
     @classmethod  # query
     def store(cls, start, script, code_hash, arguments, bypass_modules,          # pylint: disable=too-many-arguments
-              command, run, session=None):
+              command, run, docstring, session=None):
         """Create trial and assign a new id to it
 
         Use core sqlalchemy
@@ -494,7 +540,8 @@ class Trial(AlchemyProxy):
             ttrial.insert(),
             {"start": start, "script": script, "code_hash": code_hash,
              "arguments": arguments, "command": command, "run": run,
-             "inherited_id": inherited_id, "parent_id": parent_id})
+             "inherited_id": inherited_id, "parent_id": parent_id,
+             "docstring": docstring})
         tid = result.lastrowid
         session.commit()
         return tid

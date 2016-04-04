@@ -39,10 +39,14 @@ class Tag(AlchemyProxy):
     trial = backref_one("trial")  # Trial.inherited
 
     prolog_description = PrologDescription("tag", (
-        PrologTrial("trial_id"),
-        PrologAttribute("type"),
+        PrologTrial("trial_id", link="trial.id"),
+        PrologRepr("type"),
         PrologRepr("name"),
         PrologTimestamp("timestamp"),
+    ), description=(
+        "informs that a given trial (*trial_id*)\n"
+        "has a tag (*name*) of *type*,\n"
+        "created at *timestamp*.\n"
     ))
 
     def __repr__(self):

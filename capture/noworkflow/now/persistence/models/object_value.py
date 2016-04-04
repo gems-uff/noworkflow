@@ -39,12 +39,18 @@ class ObjectValue(AlchemyProxy):
     activation = backref_one("activation")  # Ativation.object_values
 
     prolog_description = PrologDescription("object_value", (
-        PrologTrial("trial_id"),
-        PrologAttribute("function_activation_id"),
+        PrologTrial("trial_id", link="activation.trial_id"),
+        PrologAttribute("activation_id", attr_name="function_activation_id",
+                        link="activation.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
         PrologRepr("value"),
-        PrologAttribute("type"),
+        PrologRepr("type"),
+    ), description=(
+        "informs that in a given trial (*trial_id*),\n"
+        "a given activation (*function_activation_id*),\n"
+        "has a GLOBAL/ARGUMENT (*type*) variable *name*,\n"
+        "with *value*.\n"
     ))
 
     def __repr__(self):

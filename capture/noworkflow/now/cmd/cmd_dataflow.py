@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
+from ..persistence.models.graphs.dependency_graph import DependencyConfig
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 
@@ -20,25 +21,7 @@ class Dataflow(Command):
     def add_arguments(self):
         add_arg = self.add_argument
 
-        add_arg("-a", "--accesses", type=int, default=1, metavar="A",
-                help="R|show file accesses (default: 1)\n"
-                     "0 hides file accesses\n"
-                     "1 shows each file once (hide external accesses)\n"
-                     "2 shows each file once (show external accesses)\n"
-                     "3 shows all accesses (except external accesses)\n"
-                     "4 shows all accesses (including external accesses)")
-        add_arg("-d", "--depth", type=int, default=0, metavar="D",
-                help="R|visualization depth (default: 0)\n"
-                     "0 represents infinity")
-        add_arg("-i", "--show-internal-use", action="store_false",
-                help="show variables and functions which name starts with a "
-                     "leading underscore")
-        add_arg("-l", "--rank-line", action="store_true",
-                help="R|align variables of a line in the same column\n"
-                     "With this option, all variables in a loop appear\n"
-                     "grouped, reducing the width of the graph.\n"
-                     "It may affect the graph legibility.\n"
-                     "The alignment is independent for each activation.\n")
+        DependencyConfig.create_arguments(add_arg)
         add_arg("-v", "--value-length", type=int, default=0,
                 help="R|maximum length of values (default: 0)\n"
                      "0 indicates that values should be hidden.\n"
@@ -52,22 +35,6 @@ class Dataflow(Command):
                 help="R|maximum length of names (default: 55)\n"
                      "0 indicates that values should be hidden.\n"
                      "Minimum displayable value: 5. Suggested: 55.")
-        add_arg("-m", "--mode", type=str, default="prospective",
-                choices=["simulation", "prospective", "dependency"],
-                help="R|Graph mode (default: prospective)\n"
-                     "'simulation' presents a dataflow graph with all\n"
-                     "relevant variables.\n"
-                     "'prospective' presents only parameters, calls, and\n"
-                     "assignments to calls.\n"
-                     "'dependency' presents all dependencies, and ignores\n"
-                     "depth, rank-line, and hide-accesses configurations")
-        add_arg("-b", "--black-box", action="store_true",
-                help="R|propagate black-box dependencies. \n"
-                     "Use this option to avoid false negatives. \n"
-                     "It shows all dependencies between calls that we do\n"
-                     "do not have definitions and that could change some \n"
-                     "program state, creating an implicit dependency")
-
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial")
         add_arg("--dir", type=str,
@@ -77,15 +44,8 @@ class Dataflow(Command):
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_ref=args.trial)
-        trial.dot.show_blackbox_dependencies = bool(args.black_box)
-        trial.dot.rank_line = bool(args.rank_line)
-        trial.dot.show_accesses = bool(args.accesses)
-        trial.dot.combine_accesses = args.accesses in {1, 2}
-        trial.dot.show_external_files = args.accesses in {2, 4}
-        trial.dot.max_depth = args.depth or float("inf")
+        trial.dependency_config.read_args(args)
         trial.dot.value_length = args.value_length
         trial.dot.name_length = args.name_length
-        trial.dot.show_internal_use = not bool(args.show_internal_use)
-        trial.dot.mode = args.mode
 
         print(trial.dot.export_text())

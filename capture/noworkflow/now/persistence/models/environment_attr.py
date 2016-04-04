@@ -31,9 +31,13 @@ class EnvironmentAttr(AlchemyProxy):
     trial = backref_one("trial")  # Trial.environment_attrs
 
     prolog_description = PrologDescription("environment", (
-        PrologTrial("trial_id"),
+        PrologTrial("trial_id", link="trial.id"),
         PrologRepr("name"),
         PrologRepr("value"),
+    ), description=(
+        "informs that a environment attribute (*name*)\n"
+        "was defined with *value*\n"
+        "in a given trial (*trial_id*)."
     ))
 
     @property

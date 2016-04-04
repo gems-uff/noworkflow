@@ -327,26 +327,26 @@ class Tracer(Profiler):                                                         
                     activation, loop_def.iterable, filename))
 
                 loop.iter_var = []
-                for var in loop_def.iter_var:
-                    loop.iter_var.append(self.slice_dependencies(
-                        activation, lineno, f_locals, var, loop.iterable))
-
-                for var in activation.temp_context:
-                    loop.temp_context[var] = context[var]
+                loop.first_iter = True
 
                 loops.append(loop)
+        if loops and loops[-1].loop_def.first_line_in_scope == lineno:
+            loop = loops[-1]
+            loop_def = loop.loop_def
+            loop.iter_var = []
+            for var in loop_def.iter_var:
+                loop.iter_var.append(self.slice_dependencies(
+                    activation, loop_def.first_line, f_locals, var,
+                    loop.iterable))
 
-            elif loops[-1].loop_def == loop_def:
-                loop = loops[-1]
+            if loop.first_iter:
+                for var in activation.temp_context:
+                    loop.temp_context[var] = context[var]
+                loop.first_iter = False
 
-                loop.iter_var = []
-                for var in loop_def.iter_var:
-                    loop.iter_var.append(self.slice_dependencies(
-                        activation, lineno, f_locals, var, loop.iterable))
-
-                for var_name, var in viewitems(loop.temp_context):
-                    activation.temp_context.add(var_name)
-                    activation.context[var_name] = var
+            for var_name, var in viewitems(loop.temp_context):
+                activation.temp_context.add(var_name)
+                activation.context[var_name] = var
 
     def slice_condition(self, activation, lineno, f_locals, filename):           # pylint: disable=unused-argument
         """Create if and while conditions"""
@@ -591,6 +591,8 @@ class Tracer(Profiler):                                                         
                     variable = variables[vid]
                     add_dependencies(variable, other, replace="argument")
                     added[name] = variable
+                #else:
+                #    arg.value = self.serialize(var)
             except KeyError:
                 pass
 

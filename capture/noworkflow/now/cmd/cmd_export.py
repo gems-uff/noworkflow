@@ -7,10 +7,10 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-import argparse
 
 from argparse import Namespace
 
+from ..persistence.models.graphs.dependency_graph import DependencyConfig
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 
@@ -28,8 +28,7 @@ class Export(NotebookCommand):
         add_arg = self.add_argument
         add_arg("-r", "--rules", action="store_true",
                 help="also exports inference rules")
-        add_arg("-b", "--explict-black-box-dependencies", action="store_true",
-                help="show black-box dependencies when exporting dot file")
+        DependencyConfig.create_arguments(add_arg, mode="simulation")
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial. If you are generation "
                      "ipython notebook files, it is also possible to use "
@@ -41,6 +40,7 @@ class Export(NotebookCommand):
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_ref=args.trial)
+        trial.dependency_config.read_args(args)
         print(trial.prolog.export_text_facts())
         if args.rules:
             print("\n".join(trial.prolog.rules()))

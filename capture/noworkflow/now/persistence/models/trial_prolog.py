@@ -11,7 +11,10 @@ import weakref
 from ...utils.functions import resource
 
 from .base import Model
-from . import Activation, FileAccess
+from .graphs.diagram import ViewPrologDiagram
+from . import Tag, Dependency, EnvironmentAttr
+from . import FunctionDef, Object
+from . import Activation, FileAccess, ObjectValue
 from . import Variable, VariableUsage, VariableDependency
 
 
@@ -29,14 +32,32 @@ class TrialProlog(Model):
         self.use_cache = True
         self.trial = weakref.proxy(trial)
 
-        self.models = [
-            (trial.__class__, lambda: [trial]),
+        self.models = self.prolog_models(trial)
+
+    @classmethod
+    def prolog_models(cls, trial=None):
+        """Prolog models and accessors"""
+        from . import Trial
+        return [
+            (Trial, lambda: [trial]),
+            (Tag, lambda: trial.tags),
+            (Dependency, lambda: trial.dependencies),
+            (EnvironmentAttr, lambda: trial.environment_attrs),
+            (FunctionDef, lambda: trial.function_defs),
+            (Object, lambda: trial.objects),
             (Activation, lambda: trial.activations),
+            (ObjectValue, lambda: trial.object_values),
             (FileAccess, lambda: trial.file_accesses),
-            (Variable, lambda: trial.variables),
-            (VariableUsage, lambda: trial.variable_usages),
-            (VariableDependency, lambda: trial.variable_dependencies),
+            (Variable, lambda: trial.prolog_variables.variables),
+            (VariableUsage, lambda: trial.prolog_variables.usages),
+            (VariableDependency, lambda: trial.prolog_variables.dependencies),
         ]
+
+    @classmethod
+    def diagram(cls, format_="svg"):
+        """Show prolog diagram"""
+        descriptions = [x.prolog_description for x, _ in cls.prolog_models()]
+        return ViewPrologDiagram(descriptions, format_)
 
     def retract(self):
         """Remove extracted rules from swipl"""
@@ -81,11 +102,15 @@ class TrialProlog(Model):
                 self.prolog_cli.assertz(fact[:-1])
         load_rules = "load_rules(1)"
         if not list(self.prolog_cli.query(load_rules)):
-            for rule in self.rules():
-                rule = rule.strip()
-                if not rule or rule[0] == "%":
+            rule = []
+            for line in self.rules():
+                line = line.strip()
+                if not line or line[0] == "%":
                     continue
-                self.prolog_cli.assertz(rule[:-1])
+                rule.append(line)
+                if "." in line:
+                    self.prolog_cli.assertz(" ".join(rule)[:-1])
+                    rule = []
             self.prolog_cli.assertz(load_rules)
 
     def query(self, query):
