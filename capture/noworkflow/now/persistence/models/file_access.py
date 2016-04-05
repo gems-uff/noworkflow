@@ -89,6 +89,7 @@ class FileAccess(AlchemyProxy):
 
     @property
     def is_internal(self):
+        """Check if file access is inside trial project"""
         return (
             not os.path.isabs(self.name) or
             persistence_config.base_path in self.name
@@ -151,11 +152,11 @@ class FileAccess(AlchemyProxy):
             """.format(f=self))
 
     def __repr__(self):
-        return "FileAccess({0.trial_id}, {0.id}, {0.name}, {0.mode})".format(
-            self)
+        return self.prolog_description.fact(self)
 
 
 class UniqueFileAccess(FileAccess):
+    """FileAccess with Unique hash"""
 
     def __key(self):
         return self.id
@@ -163,7 +164,7 @@ class UniqueFileAccess(FileAccess):
     def __eq__(self, other):
         if not isinstance(other, FileAccess):
             return False
-        return (self.id == other.id)
+        return self.id == other.id
 
     def __hash__(self):
         return hash(self.__key())

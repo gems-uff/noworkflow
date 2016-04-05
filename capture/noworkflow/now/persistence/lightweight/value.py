@@ -2,34 +2,32 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Lightweight Environment Attribute"""
+"""Lightweight Value"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from .base import BaseLW, define_attrs
 
 
-class EnvironmentAttrLW(BaseLW):
-    """EnvironmentAttr lightweight object
-    There are type definitions on lightweight.pxd
-    """
+class ValueLW(BaseLW):
+    """Value lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "name", "value"]
+        ["trial_id", "id", "value", "type_id"]
     )
     special = set()
 
-    def __init__(self, id_, name, value):
+    def __init__(self, id_, value, type_id):
         self.trial_id = -1
         self.id = id_                                                            # pylint: disable=invalid-name
-        self.name = name
         self.value = value
+        self.type_id = type_id
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
-        """EnvironmentAttr can always be removed from object store"""
+        """Value can always be removed from object store"""
         return True
 
     def __repr__(self):
         return (
-            "EnvironmentAttr(id={0.id}, name={0.name}, value={0.value})"
+            "Value(id={0.id}, value={0.value}, type_id={0.type_id})"
         ).format(self)

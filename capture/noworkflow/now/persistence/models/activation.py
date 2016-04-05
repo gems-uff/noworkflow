@@ -6,19 +6,16 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from future.builtins import map as cvmap
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy.orm import backref
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
 from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 
-from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref, many_ref
-from .base import backref_one, backref_many, query_many_property
-from .object_value import ObjectValue
-from .variable_dependency import VariableDependency
-from .variable import Variable
+from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
+from .base import backref_one
+
+from .dependency import Dependency
 
 
 @proxy_class
@@ -39,45 +36,50 @@ class Activation(AlchemyProxy):
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     start = Column(TIMESTAMP)
-    code_block_id = Column(Integer)
+    code_block_id = Column(Integer, index=True)
 
-    #evaluations = many_viewonly_ref("activation", "Evaluation")
+    this_evaluation = one("Evaluation", backref="this_activation")
+    evaluations = many_viewonly_ref("activation", "Evaluation")
     file_accesses = many_viewonly_ref("activation", "FileAccess")
 
-    _children = backref("evaluation", order_by="Activation.start")
-    caller = one(
-        "Activation", remote_side=[trial_id, id],
-        backref=_children, viewonly=True
-    )
+    dependent_variables = many_viewonly_ref(
+        "dependent_activation", "Dependency",
+        primaryjoin=((id == Dependency.m.source_activation_id) &
+                     (trial_id == Dependency.m.trial_id)))
+    dependency_variables = many_viewonly_ref(
+        "dependency_activation", "Dependency",
+        primaryjoin=((id == Dependency.m.target_activation_id) &
+                     (trial_id == Dependency.m.trial_id)))
 
-    this_evaluation = one("Evaluation")
 
     trial = backref_one("trial")  # Trial.activations
     code_block = backref_one("code_block")  # CodeBlock.activations
-    evaluations = backref_many("evaluation")  # Evaluation.caller
 
     prolog_description = PrologDescription("activation", (
-        PrologTrial("trial_id", link="trial.id"),
+        PrologTrial("trial_id", link="evaluation.id"),
         PrologAttribute("id", link="evaluation.id"),
         PrologRepr("name"),
         PrologTimestamp("start"),
         PrologNullable("code_block_id", link="code_block.id"),
     ), description=(
-        "informs that in a given trial (*trial_id*),\n"
-        "a function *name* was activated\n"
-        "by another function (*caller_activation_id*)\n"
-        "and executed during a time period from *start*\n"
-        "to *finish*."
+        "informs that in a given trial (*TrialId*),\n"
+        "a block *Id* with *Name* was activated\n"
+        "at (*Start*).\n"
+        "This activation was defined by *CodeBlockId*."
     ))
 
-    # ToDo: Improve hash
+    @property
+    def caller(self):
+        return self.this_evaluation.activation_id
 
     @property
     def line(self):
+        """Return activation line"""
         return self.this_evaluation.code_component.first_char_line
 
     @property
     def finish(self):
+        """Return activation finish time"""
         return self.this_evaluation.moment
 
     def __key(self):
@@ -121,7 +123,7 @@ class Activation(AlchemyProxy):
         # ToDo: now2
 
     def __repr__(self):
-        return "Activation({0.trial_id}, {0.id}, {0.name})".format(self)
+        return self.prolog_description.fact(self)
 
 
 def _show_slicing(name, query, _print):

@@ -2,17 +2,15 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Lightweight Environment Attribute"""
+"""Lightweight Argument"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from .base import BaseLW, define_attrs
 
 
-class EnvironmentAttrLW(BaseLW):
-    """EnvironmentAttr lightweight object
-    There are type definitions on lightweight.pxd
-    """
+class ArgumentLW(BaseLW):
+    """Argument lightweight object"""
 
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "value"]
@@ -26,10 +24,10 @@ class EnvironmentAttrLW(BaseLW):
         self.value = value
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
-        """EnvironmentAttr can always be removed from object store"""
+        """Argument can always be removed from object store"""
         return True
 
     def __repr__(self):
         return (
-            "EnvironmentAttr(id={0.id}, name={0.name}, value={0.value})"
+            "Argument(id={0.id}, name={0.name}, value={0.value})"
         ).format(self)

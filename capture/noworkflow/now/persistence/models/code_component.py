@@ -13,7 +13,7 @@ from sqlalchemy import CheckConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class, backref_one, many_ref
 
 
 @proxy_class
@@ -43,9 +43,11 @@ class CodeComponent(AlchemyProxy):
     last_char_column = Column(Integer)
     container_id = Column(Integer, index=True)
 
-    trial = backref_one("trial")  # Trial.objects
-    container = backref_one("container")  # CodeBlock.components
+    evaluations = many_ref("code_component", "Evaluation")
 
+    trial = backref_one("trial")  # Trial.code_components
+    container = backref_one("container")  # CodeBlock.components
+    this_block = backref_one("this_block") # CodeBlock.this_component
 
     prolog_description = PrologDescription("code_component", (
         PrologTrial("trial_id", link="trial.id"),
@@ -68,7 +70,4 @@ class CodeComponent(AlchemyProxy):
     ))
 
     def __repr__(self):
-        return (
-            "CodeComponent({0.trial_id}, {0.id}, {0.name}, {0.type}, "
-            "{0.mode}, {0.container_id})"
-        ).format(self)
+        return self.prolog_description.fact(self)

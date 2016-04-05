@@ -40,17 +40,17 @@ class Tag(AlchemyProxy):
 
     prolog_description = PrologDescription("tag", (
         PrologTrial("trial_id", link="trial.id"),
-        PrologRepr("type"),
         PrologRepr("name"),
+        PrologRepr("type"),
         PrologTimestamp("timestamp"),
     ), description=(
-        "informs that a given trial (*trial_id*)\n"
-        "has a tag (*name*) of *type*,\n"
-        "created at *timestamp*.\n"
+        "informs that a given trial (*TrialId*)\n"
+        "has a tag (*Name*) of *Type*,\n"
+        "created at *Timestamp*.\n"
     ))
 
     def __repr__(self):
-        return "Tag({0.trial_id}, {0.type}, {0.name})".format(self)
+        return self.prolog_description.fact(self)
 
     @classmethod  # query
     def fast_load_auto_tag(cls, trial_id, code_hash, command,

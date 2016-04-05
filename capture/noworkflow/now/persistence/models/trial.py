@@ -11,9 +11,16 @@ import os
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
 
+from ...models.graphs.trial_graph import TrialGraph
+from ...models.graphs.dependency_graph import DependencyConfig
+from ...models.graphs.dependency_graph import DependencyFilter
+from ...models.graphs.dependency_graph import PrologVisitor
+from ...models.trial_prolog import TrialProlog
+from ...models.trial_dot import TrialDot
+
 from ...utils.formatter import PrettyLines
-from ...utils.prolog import PrologDescription, PrologTrial, PrologNullableRepr
-from ...utils.prolog import PrologTimestamp, PrologAttribute, PrologRepr
+from ...utils.prolog import PrologDescription, PrologTrial
+from ...utils.prolog import PrologTimestamp, PrologRepr
 from ...utils.prolog import PrologNullable
 
 from .. import relational, content, persistence_config
@@ -22,16 +29,10 @@ from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
 from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
 from .base import proxy
 
-from .trial_prolog import TrialProlog
-from .trial_dot import TrialDot
-
 from .module import Module
-from .dependency import Dependency
+from .module_dependency import ModuleDependency
 from .activation import Activation
 from .head import Head
-from .graphs.trial_graph import TrialGraph
-from .graphs.dependency_graph import DependencyConfig, DependencyFilter
-from .graphs.dependency_graph import PrologVisitor
 
 
 @proxy_class                                                                     # pylint: disable=too-many-public-methods
@@ -60,49 +61,56 @@ class Trial(AlchemyProxy):
 
     __tablename__ = "trial"
     __table_args__ = (
-        ForeignKeyConstraint(["inherited_id"], ["trial.id"],
-                             ondelete="RESTRICT"),
+        ForeignKeyConstraint(["modules_inherited_from_trial_id"],
+                             ["trial.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
+        ForeignKeyConstraint(["id", "main_id"],
+                             ["code_block.trial_id",
+                              "code_block.id"], ondelete="SET NULL"),
         {"sqlite_autoincrement": True},
     )
 
     id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
+    script = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
-    script = Column(Text)
-    code_hash = Column(Text)
-    arguments = Column(Text)
     command = Column(Text)
-    inherited_id = Column(Integer, index=True)
+    status = Column(Text)
+    modules_inherited_from_trial_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
-    run = Column(Integer)
-    docstring = Column(Text)
+    main_id = Column(Integer, index=True)
 
-    inherited = one(
+
+    modules_inherited_from_trial = one(
         "Trial", backref="bypass_children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == inherited_id)
+        remote_side=[id], primaryjoin=(id == modules_inherited_from_trial_id)
     )
     parent = one(
         "Trial", backref="children", viewonly=True,
         remote_side=[id], primaryjoin=(id == parent_id)
     )
+    main = one("CodeBlock")
 
-    function_defs = many_ref("trial", "FunctionDef")
-    module_dependencies = many_ref("trials", "Dependency")
-    dmodules = many_ref("trials", "Module", secondary=Dependency.t)
+    arguments = many_ref("trial", "Argument")
     environment_attrs = many_ref("trial", "EnvironmentAttr")
-    activations = many_ref("trial", "Activation",
-                           order_by=Activation.m.start)
+    dmodule_dependencies = many_ref("trial", "ModuleDependency")
+    dmodules = many_ref("trials", "Module", secondary=ModuleDependency.t)
+
+    code_components = many_ref("trial", "CodeComponent")
+    code_blocks = many_ref("trial", "CodeBlock")
+    evaluations = many_ref("trial", "Evaluation")
+    activations = many_ref("trial", "Activation", order_by=Activation.m.start)
     file_accesses = many_viewonly_ref("trial", "FileAccess")
-    objects = many_viewonly_ref("trial", "Object")
-    object_values = many_viewonly_ref("trial", "ObjectValue")
-    variables = many_viewonly_ref("trial", "Variable")
-    variable_usages = many_viewonly_ref("trial", "VariableUsage")
-    variable_dependencies = many_viewonly_ref("trial", "VariableDependency")
+    values = many_viewonly_ref("trial", "Value")
+    compartments = many_viewonly_ref("trial", "Compartment")
+    dependencies = many_viewonly_ref("trial", "Dependency")
+
     tags = many_ref("trial", "Tag")
 
-    bypass_children = backref_many("bypass_children")  # Trial.inherited
-    children = backref_many("children")  # Trial.parent
+    # Trial.modules_inherited_from_trial
+    bypass_children = backref_many("bypass_children")
+    # Trial.parent
+    children = backref_many("children")
 
     @query_many_property
     def local_modules(self):
@@ -113,21 +121,17 @@ class Trial(AlchemyProxy):
     @query_many_property
     def modules(self):
         """Load modules. Return SQLAlchemy query"""
-        if self.inherited:
-            return self.inherited.modules
+        if self.modules_inherited_from_trial:
+            return self.modules_inherited_from_trial.modules
         return self.dmodules
 
     @query_many_property
-    def dependencies(self):
+    def module_dependencies(self):
         """Load modules. Return SQLAlchemy query"""
-        if self.inherited:
-            return self.inherited.dependencies
+        if self.modules_inherited_from_trial:
+            return self.modules_inherited_from_trial.module_dependencies
         return self.module_dependencies
 
-    @query_many_property
-    def initial_activations(self):
-        """Return initial activation as a SQLAlchemy query"""
-        return self.activations.filter(is_none(Activation.m.caller_id))
 
     DEFAULT = {
         "dependency_config.show_blackbox_dependencies": False,
@@ -152,25 +156,23 @@ class Trial(AlchemyProxy):
 
     prolog_description = PrologDescription("trial", (
         PrologTrial("id"),
+        PrologRepr("script"),
         PrologTimestamp("start"),
         PrologTimestamp("finish"),
-        PrologRepr("script"),
-        PrologRepr("code_hash"),
         PrologRepr("command"),
-        PrologNullable("inherited_id", link="trial.id"),
+        PrologRepr("status"),
+        PrologNullable("modules_inherited_from_trial_id", link="trial.id"),
         PrologNullable("parent_id", link="trial.id"),
-        PrologAttribute("run"),
-        PrologNullableRepr("docstring"),
+        PrologNullable("main_id", link="code_block.id"),
     ), description=(
-        "informs that a given *script* with *docstring*,\n"
-        "and content *code_hash*,\n"
-        "executed during a time period from *start*"
-        "to *finish*,\n"
-        "using noWokflow's *command*,\n"
-        "that generated a trial *id*.\n"
-        "This trial uses modules from *inherited_id*,\n"
-        "is based on *parent_id*,\n"
-        "and might be a *run* or a backup trial."
+        "informs that a given trial (*Id*),\n"
+        "executed *Script* during a time period from *Start*"
+        "to *Finish*,\n"
+        "using noWokflow's *command*.\n"
+        "This trial might by backup/finished/unfinished (*Status*).\n"
+        "This trial uses modules from *ModulesInheritedFromTrialId*,\n"
+        "is based on *ParentId*,\n"
+        "and represents the script *CodeBlockId*."
     ))
 
     def __init__(self, *args, **kwargs):
@@ -226,21 +228,23 @@ class Trial(AlchemyProxy):
     def script_content(self):
         """Return the "main" script content of the trial"""
         return PrettyLines(
-            content.get(self.code_hash)
+            content.get(self.main.code_hash)
             .decode("utf-8").split("/n"))
+
+    @property
+    def docstring(self):
+        """Return trial docstring"""
+        return self.main.docstring
+
+    @property
+    def code_hash(self):
+        """Return trial code hash"""
+        return self.main.code_hash
 
     @property
     def finished(self):
         """Check if trial has finished"""
         return bool(self.finish)
-
-    @property
-    def status(self):
-        """Check trial status
-        Possible statuses: finished, unfinished, backup"""
-        if not self.run:
-            return "backup"
-        return "finished" if self.finished else "unfinished"
 
     @property
     def duration(self):
@@ -260,6 +264,11 @@ class Trial(AlchemyProxy):
     def environment(self):
         """Return dict: environment variables -> value"""
         return {e.name: e.value for e in self.environment_attrs}
+
+    @property
+    def argument_dict(self):
+        """Return dict: argument -> value"""
+        return {a.name: a.value for a in self.arguments}
 
     def versioned_files(self, skip_script=False, skip_local=False,
                         skip_access=False):
@@ -321,10 +330,6 @@ class Trial(AlchemyProxy):
         session.add(Head.m(trial_id=self.id, script=self.script))                # pylint: disable=no-member, not-callable
         session.commit()                                                         # pylint: disable=no-member
 
-    def query(self, query):
-        """Run prolog query"""
-        return self.prolog.query(query)
-
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""
         if hasattr(self, "graph"):
@@ -335,7 +340,7 @@ class Trial(AlchemyProxy):
         """Print trial information"""
         _print("""\
             Id: {t.id}
-            Inherited Id: {t.inherited_id}
+            Inherited Id: {t.modules_inherited_from_trial_id}
             Script: {t.script}
             Code hash: {t.code_hash}
             Start: {t.start}
@@ -485,14 +490,14 @@ class Trial(AlchemyProxy):
         return an_id[0]
 
     @classmethod  # query
-    def fast_update(cls, trial_id, finish, docstring, session=None):
+    def fast_update(cls, trial_id, main_id, finish, status, session=None):
         """Update finish time of trial
 
         Use core sqlalchemy
 
         Arguments:
         trial_id -- trial id
-        finish -- finish time as a datetime object
+        status -- trial status (finished/unfinished)
 
 
         Keyword arguments:
@@ -502,26 +507,22 @@ class Trial(AlchemyProxy):
         ttrial = cls.t
         session.execute(
             ttrial.update()
-            .values(finish=finish, docstring=docstring)
+            .values(finish=finish, status=status, main_id=main_id)
             .where(ttrial.c.id == trial_id)
         )
         session.commit()
 
     @classmethod  # query
-    def store(cls, start, script, code_hash, arguments, bypass_modules,          # pylint: disable=too-many-arguments
-              command, run, docstring, session=None):
+    def store(cls, script, start, command, bypass_modules, session=None):        # pylint: disable=too-many-arguments
         """Create trial and assign a new id to it
 
         Use core sqlalchemy
 
         Arguments:
-        start -- trial start time
         script -- script name
-        code_hash -- script hash code
-        arguments -- trial arguments
-        bypass_modules -- whether it captured modules or not
+        start -- trial start time
         command -- the full command line with noWorkflow parametes
-        run -- trial created by the run command
+        bypass_modules -- whether it captured modules or not
 
         Keyword arguments:
         session -- specify session for loading (default=relational.session)
@@ -538,10 +539,9 @@ class Trial(AlchemyProxy):
         ttrial = cls.__table__
         result = session.execute(
             ttrial.insert(),
-            {"start": start, "script": script, "code_hash": code_hash,
-             "arguments": arguments, "command": command, "run": run,
-             "inherited_id": inherited_id, "parent_id": parent_id,
-             "docstring": docstring})
+            {"script": script, "start": start, "command": command,
+             "status": "ongoing", "parent_id": parent_id,
+             "modules_inherited_from_trial_id": inherited_id})
         tid = result.lastrowid
         session.commit()
         return tid

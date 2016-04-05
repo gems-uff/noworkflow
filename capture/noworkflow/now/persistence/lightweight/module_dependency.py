@@ -27,4 +27,4 @@ class ModuleDependencyLW(BaseLW):
         return True
 
     def __repr__(self):
-        return ("ModuleDependency(module_id={})").format(self.module_id)\
+        return ("ModuleDependency(module_id={})").format(self.module_id)

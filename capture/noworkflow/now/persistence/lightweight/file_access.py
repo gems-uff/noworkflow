@@ -24,9 +24,9 @@ class FileAccessLW(BaseLW):                                                     
     )
     special = {"function_activation_id"}
 
-    def __init__(self, fid, name):
+    def __init__(self, id_, name):
         self.trial_id = -1
-        self.id = fid                                                            # pylint: disable=invalid-name
+        self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
         self.mode = "r"
         self.buffering = "default"
@@ -46,4 +46,4 @@ class FileAccessLW(BaseLW):                                                     
         return self.done
 
     def __repr__(self):
-        return ("FileAccess(id={}, name={}").format(self.id, self.name)
+        return ("FileAccess(id={0.id}, name={0.name}").format(self)

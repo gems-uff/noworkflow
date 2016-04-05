@@ -30,7 +30,7 @@ class ModuleDependency(AlchemyProxy):
 
     module = one("Module")
 
-    trial = backref_one("trial")  # Trial.module_dependencies
+    trial = backref_one("trial")  # Trial.dmodule_dependencies
 
     prolog_description = PrologDescription("module", (
         PrologTrial("trial_id", link="trial.id"),

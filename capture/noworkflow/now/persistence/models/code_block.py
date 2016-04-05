@@ -34,10 +34,11 @@ class CodeBlock(AlchemyProxy):
     code_hash = Column(Text)
     docstring = Column(Text)
 
-    this_component = one("CodeComponent")
-    trial = backref_one("trial")  #  Trial.code_blocks
-    components = many_ref("code_block", "CodeComponent")
+    this_component = one("CodeComponent", backref="this_block")
+    components = many_ref("container", "CodeComponent")
     activations = many_ref("code_block", "Activation")
+
+    trial = backref_one("trial")  # Trial.code_blocks
 
     prolog_description = PrologDescription("code_block", (
         PrologTrial("trial_id", link="code_component.trial_id"),
@@ -98,4 +99,4 @@ class CodeBlock(AlchemyProxy):
             """.format(block=self, component=component, extra=extra))
 
     def __repr__(self):
-        return "CodeBlock({0.trial_id}, {0.id})".format(self)
+        return self.prolog_description.fact(self)

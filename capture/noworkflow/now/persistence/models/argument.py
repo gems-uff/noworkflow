@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Environment Attribute Model"""
+"""Argument Model"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -15,10 +15,10 @@ from .base import AlchemyProxy, proxy_class, backref_one
 
 
 @proxy_class
-class EnvironmentAttr(AlchemyProxy):
-    """Represent an environment attribute"""
+class Argument(AlchemyProxy):
+    """Represent a command line argument"""
 
-    __tablename__ = "environment_attr"
+    __tablename__ = "argument"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
@@ -28,36 +28,17 @@ class EnvironmentAttr(AlchemyProxy):
     name = Column(Text)
     value = Column(Text)
 
-    trial = backref_one("trial")  # Trial.environment_attrs
+    trial = backref_one("trial")  # Trial.arguments
 
-    prolog_description = PrologDescription("environment", (
+    prolog_description = PrologDescription("argument", (
         PrologTrial("trial_id", link="trial.id"),
         PrologRepr("name"),
         PrologRepr("value"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
-        "a environment attribute (*Name*)\n"
-        "was defined with *Value*."
+        "an argument (*Name*)\n"
+        "was passed with *Value*."
     ))
-
-    @property
-    def brief(self):
-        """Brief description of environment attribute"""
-        return self.name
-
-    def __hash__(self):
-        return hash((self.name, self.value))
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def show(self, _print=lambda x, offset=0: print(x)):
-        """Show object
-
-        Keyword arguments:
-        _print -- custom print function (default=print)
-        """
-        _print("{0.name}: {0.value}".format(self))
 
     def __repr__(self):
         return self.prolog_description.fact(self)
