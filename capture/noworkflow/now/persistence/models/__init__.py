@@ -13,43 +13,34 @@ from .base import Model, MetaModel
 
 # Database Models
 from .activation import Activation
+from .argument import Argument
+from .code_block import CodeBlock
+from .code_component import CodeComponent
+from .compartment import Compartment
 from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
-from .file_access import FileAccess, UniqueFileAccess
-from .function_def import FunctionDef
+from .evaluation import Evaluation
+from .file_access import FileAccess
 from .graph_cache import GraphCache
 from .head import Head
 from .module import Module
-from .object import Object
-from .object_value import ObjectValue
-from .variable import Variable
-from .variable_dependency import VariableDependency
-from .variable_usage import VariableUsage
+from .module_dependency import ModuleDependency
 from .tag import Tag
 from .trial import Trial
-
-# Other models
-from .history import History
-from .diff import Diff
-from .trial_prolog import TrialProlog
+from .value import Value
 
 
 ORDER = [
-    Trial, Head, Tag, GraphCache,  # Trial
-    Module, Dependency, EnvironmentAttr,  # Deployment
-    FunctionDef, Object,  # Definition
-    Activation, ObjectValue, FileAccess,  # Execution
-    Variable, VariableUsage, VariableDependency  # Slicing
+    Trial, Head, Tag, GraphCache, Argument, # Trial
+    Module, ModuleDependency, EnvironmentAttr,  # Deployment
+    CodeComponent, CodeBlock,  # Definition
+    Activation, Evaluation, Value, Compartment, FileAccess  # Execution
 ]
 
 
 __all__ = [
     n(x.__modelname__) for x in ORDER
 ] + [
-    "History",
-    "Diff",
-    "TrialProlog",
-
     "MetaModel",
     "Model",
     "ORDER"
