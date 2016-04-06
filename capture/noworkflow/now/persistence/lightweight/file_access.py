@@ -10,6 +10,7 @@ from datetime import datetime
 
 from future.utils import viewitems
 
+from ..models import FileAccess
 from .base import BaseLW, define_attrs
 
 
@@ -22,7 +23,8 @@ class FileAccessLW(BaseLW):                                                     
          "timestamp", "activation_id"],
         ["done"]
     )
-    special = {"function_activation_id"}
+    nullable = {"activation_id"}
+    model = FileAccess
 
     def __init__(self, id_, name):
         self.trial_id = -1

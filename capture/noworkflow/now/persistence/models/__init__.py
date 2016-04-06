@@ -20,7 +20,7 @@ from .compartment import Compartment
 from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
 from .evaluation import Evaluation
-from .file_access import FileAccess
+from .file_access import FileAccess, UniqueFileAccess
 from .graph_cache import GraphCache
 from .head import Head
 from .module import Module
@@ -43,5 +43,6 @@ __all__ = [
 ] + [
     "MetaModel",
     "Model",
-    "ORDER"
+    "UniqueFileAccess",
+    "ORDER",
 ]

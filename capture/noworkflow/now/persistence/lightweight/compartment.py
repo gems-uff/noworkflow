@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models import Compartment
 from .base import BaseLW, define_attrs
 
 
@@ -15,7 +16,8 @@ class CompartmentLW(BaseLW):
     __slots__, attributes = define_attrs(
         ["trial_id", "name", "moment", "whole_id", "part_id"], ["id"]
     )
-    special = set()
+    nullable = set()
+    model = Compartment
 
     def __init__(self, id_, name, moment, whole_id, part_id):                    # pylint: disable=too-many-arguments
         self.trial_id = -1

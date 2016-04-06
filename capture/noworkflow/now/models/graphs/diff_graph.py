@@ -15,7 +15,7 @@ from copy import deepcopy, copy
 
 from future.utils import viewitems, viewkeys, viewvalues
 
-from ....utils.data import OrderedCounter, concat_iter, HashableDict
+from ...utils.data import OrderedCounter, concat_iter, HashableDict
 
 from .structures import prepare_cache, Graph
 

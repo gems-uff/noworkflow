@@ -11,7 +11,7 @@ import os
 from future.utils import viewitems, viewkeys
 
 from ..ipython.converter import create_ipynb
-from ..persistence.models.diff import Diff as DiffModel
+from ..models.diff import Diff as DiffModel
 from ..persistence import persistence_config
 from ..utils.io import print_msg
 from ..utils.cross_version import zip_longest

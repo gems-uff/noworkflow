@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models import CodeComponent
 from .base import BaseLW, define_attrs
 
 
@@ -18,7 +19,8 @@ class CodeComponentLW(BaseLW):                                                  
          "last_char_line", "last_char_column",
          "container_id"]
     )
-    special = set()
+    nullable = {"container_id"}
+    model = CodeComponent
 
     def __init__(self, id_, name, type_, mode,                                   # pylint: disable=too-many-arguments
                  first_char_line, first_char_column,

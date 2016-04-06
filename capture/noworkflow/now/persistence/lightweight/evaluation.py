@@ -6,8 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from datetime import datetime
-
+from ..models import Evaluation
 from .base import BaseLW, define_attrs
 
 
@@ -18,19 +17,23 @@ class EvaluationLW(BaseLW):                                                     
         ["trial_id", "id", "moment", "code_component_id", "activation_id",
          "value_id"]
     )
-    special = {"caller_id"}
+    nullable = {"moment", "activation_id"}
+    model = Evaluation
 
-    def __init__(self, id_, code_component_id, activation_id, value_id):
+    def __init__(self, id_, moment, code_component_id, activation_id,            # pylint: disable=too-many-arguments
+                 value_id):
         self.trial_id = -1
         self.id = id_                                                            # pylint: disable=invalid-name
-        self.moment = datetime.now()
+        self.moment = -1 if not moment else moment
         self.code_component_id = code_component_id
         self.activation_id = activation_id if activation_id else -1
         self.value_id = value_id
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
-        """Evaluation can always be removed from object store"""
-        return True
+        """Evaluation can only be removed from object store
+        if it has a moment
+        """
+        return self.moment != -1
 
     def __repr__(self):
         return (

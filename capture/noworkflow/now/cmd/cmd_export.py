@@ -10,7 +10,7 @@ import os
 
 from argparse import Namespace
 
-from ..persistence.models.graphs.dependency_graph import DependencyConfig
+from ..models.graphs.dependency_graph import DependencyConfig
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 

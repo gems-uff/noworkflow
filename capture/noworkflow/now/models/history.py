@@ -6,9 +6,10 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..persistence.models.base import Model
+from ..persistence.models.trial import Trial
+
 from .graphs.history_graph import HistoryGraph
-from .base import Model
-from .trial import Trial
 
 
 class History(Model):

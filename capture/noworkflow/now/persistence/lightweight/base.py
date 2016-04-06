@@ -98,6 +98,10 @@ class ObjectStore(object):
         """Return true if it has items"""
         return bool(self.count)
 
+    def fast_store(self, trial_id, partial=False):
+        """Store object store into database"""
+        self.cls.model.fast_store(trial_id, self, partial)
+
 
 class SharedObjectStore(ObjectStore):
     """Temporary storage for LW objects. Share ids"""
@@ -142,6 +146,6 @@ class BaseLW:                                                                   
         return iter(self.attributes)                                             # pylint: disable=no-member
 
     def __getitem__(self, key):
-        if key in self.special and getattr(self, key) == -1:                     # pylint: disable=no-member
+        if key in self.nullable and getattr(self, key) == -1:                     # pylint: disable=no-member
             return None
         return getattr(self, key)

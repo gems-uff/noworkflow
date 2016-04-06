@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
+from ..models import Dependency
 from .base import BaseLW, define_attrs
 
 
@@ -16,7 +17,8 @@ class DependencyLW(BaseLW):
         ["trial_id", "id", "dependent_activation_id", "dependent_id",
          "dependency_activation_id", "dependency_id", "type"]
     )
-    special = set()
+    nullable = set()
+    model = Dependency
 
     def __init__(self, id_, dependent_activation_id, dependent_id,                     # pylint: disable=too-many-arguments
                  dependency_activation_id, dependency_id, type_):

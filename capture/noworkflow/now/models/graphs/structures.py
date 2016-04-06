@@ -16,12 +16,12 @@ from collections import OrderedDict
 from future.utils import viewitems
 from sqlalchemy import exc
 
-from ....persistence import relational, content
-from ....utils.cross_version import pickle
-from ....utils.data import OrderedCounter
-from ....utils.io import print_msg
+from ...persistence import relational, content
+from ...persistence.models import GraphCache
 
-from .. import GraphCache
+from ...utils.cross_version import pickle
+from ...utils.data import OrderedCounter
+from ...utils.io import print_msg
 
 
 class Graph(object):                                                             # pylint: disable=too-few-public-methods

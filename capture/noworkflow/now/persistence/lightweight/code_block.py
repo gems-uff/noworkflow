@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models import CodeBlock
 from .. import content
 
 from .base import BaseLW, define_attrs
@@ -18,7 +19,8 @@ class CodeBlockLW(BaseLW):
         ["trial_id", "id", "code_hash", "docstring"],
         ["code"],
     )
-    special = set()
+    nullable = set()
+    model = CodeBlock
 
     def __init__(self, id_, code, docstring):
         self.trial_id = -1
@@ -28,8 +30,8 @@ class CodeBlockLW(BaseLW):
         self.docstring = docstring or ""
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
-        """CodeBlockLW can always be removed from object store"""
-        return True
+        """The first CodeBlockLW cannot be removed from object store"""
+        return self.id != 1
 
     def __repr__(self):
         return ("CodeBlockLW(id={0.id})").format(self)

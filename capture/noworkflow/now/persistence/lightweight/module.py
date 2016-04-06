@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models import Module
 from .base import BaseLW, define_attrs
 
 
@@ -16,7 +17,8 @@ class ModuleLW(BaseLW):
         ["id", "name", "path", "version", "code_hash"],
         ["trial_id"]
     )
-    special = set()
+    nullable = set()
+    model = Module
 
     def __init__(self, id_, name, version, path, code_hash):                     # pylint: disable=too-many-arguments
         self.trial_id = -1

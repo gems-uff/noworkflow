@@ -19,7 +19,7 @@ import pkg_resources
 from future.utils import viewitems
 from future.builtins import map as cvmap
 
-from ...persistence.models import EnvironmentAttr, Module, Dependency
+from ...persistence.models import Module
 from ...persistence import content
 from ...utils.io import print_msg, redirect_output
 from ...utils.metaprofiler import meta_profiler
@@ -119,7 +119,7 @@ class Deployment(object):
         """
         metascript = self.metascript
         modules = metascript.modules_store
-        dependencies = metascript.dependencies_store
+        module_dependencies = metascript.module_dependencies_store
         modules.id = Module.id_seq()
         for name, module in viewitems(python_modules):
             if name != "__main__":
@@ -132,7 +132,7 @@ class Deployment(object):
                         code_hash = content.put(fil.read())
                 info = (name, module_version, path, code_hash)
                 mid = Module.fast_load_module_id(*info) or modules.add(*info)
-                dependencies.add(mid)
+                module_dependencies.add(mid)
 
     def get_version(self, module_name):                                         # pylint: disable=no-self-use
         """Get module version"""
@@ -190,7 +190,6 @@ class Deployment(object):
         tid = metascript.trial_id
         # Remove after save
         partial = True
-        EnvironmentAttr.fast_store(tid, metascript.environment_attrs_store,
-                                   partial)
-        Module.fast_store(tid, metascript.modules_store, partial)
-        Dependency.fast_store(tid, metascript.dependencies_store, partial)
+        metascript.environment_attrs_store.fast_store(tid, partial=partial)
+        metascript.modules_store.fast_store(tid, partial=partial)
+        metascript.module_dependencies_store.fast_store(tid, partial=partial)

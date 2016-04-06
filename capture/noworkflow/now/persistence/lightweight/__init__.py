@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division)
 
-from .base import ObjectStore
+from .base import ObjectStore, SharedObjectStore
 from .activation import ActivationLW
 from .argument import ArgumentLW
 from .code_block import CodeBlockLW
@@ -23,6 +23,7 @@ from .value import ValueLW
 
 __all__ = [
     "ObjectStore",
+    "SharedObjectStore",
     "ActivationLW",
     "ArgumentLW",
     "CodeBlockLW",

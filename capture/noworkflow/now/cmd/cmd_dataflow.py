@@ -8,7 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..persistence.models.graphs.dependency_graph import DependencyConfig
+from ..models.graphs.dependency_graph import DependencyConfig
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 

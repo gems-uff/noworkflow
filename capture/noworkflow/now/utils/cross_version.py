@@ -15,7 +15,8 @@ except ImportError:
     from io import StringIO
 
 
-PY3 = (sys.version_info >= (3, 0))
+PY35 = sys.version_info >= (3, 5)
+PY3 = sys.version_info >= (3, 0)
 if PY3:
     import builtins                                                              # pylint: disable=wrong-import-position, unused-import
     import pickle                                                                # pylint: disable=wrong-import-position, unused-import

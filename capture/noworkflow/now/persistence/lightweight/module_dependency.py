@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models import ModuleDependency
 from .base import BaseLW, define_attrs
 
 
@@ -15,7 +16,8 @@ class ModuleDependencyLW(BaseLW):
     __slots__, attributes = define_attrs(
         ["trial_id", "module_id"], ["id"]
     )
-    special = set()
+    nullable = set()
+    model = ModuleDependency
 
     def __init__(self, id_, module_id):
         self.trial_id = -1

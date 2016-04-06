@@ -21,7 +21,7 @@ class Compartment(AlchemyProxy):
     """Represent a compartment"""
     __tablename__ = "compartment"
     __table_args__ = (
-        PrimaryKeyConstraint("trial_id", "id"),
+        PrimaryKeyConstraint("trial_id", "part_id", "whole_id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "part_id"],
                              ["value.trial_id",

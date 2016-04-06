@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models import Value
 from .base import BaseLW, define_attrs
 
 
@@ -15,7 +16,8 @@ class ValueLW(BaseLW):
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "value", "type_id"]
     )
-    special = set()
+    nullable = set()
+    model = Value
 
     def __init__(self, id_, value, type_id):
         self.trial_id = -1

@@ -10,9 +10,9 @@ from collections import OrderedDict
 
 from future.utils import viewkeys
 
-from .base import Model, proxy_gen
+from ..persistence.models.base import Model, proxy_gen
+from ..persistence.models.trial import Trial
 from .graphs.diff_graph import DiffGraph
-from .trial import Trial
 
 
 class Diff(Model):

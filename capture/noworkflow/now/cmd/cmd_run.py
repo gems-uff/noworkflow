@@ -13,7 +13,6 @@ import sys
 from ..collection.metadata import Metascript
 from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
-from ..utils.cross_version import PY3
 
 from .command import Command
 

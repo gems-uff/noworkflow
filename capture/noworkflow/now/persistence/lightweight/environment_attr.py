@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models import EnvironmentAttr
 from .base import BaseLW, define_attrs
 
 
@@ -17,7 +18,8 @@ class EnvironmentAttrLW(BaseLW):
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "value"]
     )
-    special = set()
+    nullable = set()
+    model = EnvironmentAttr
 
     def __init__(self, id_, name, value):
         self.trial_id = -1

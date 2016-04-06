@@ -10,7 +10,8 @@ import os
 
 from flask import render_template, jsonify, request
 
-from ..persistence.models import History, Diff, Trial
+from ..persistence.models import Trial
+from ..models import History, Diff
 from ..persistence import relational
 
 

@@ -10,7 +10,8 @@ import argparse
 
 from IPython.utils.text import DollarFormatter
 
-from ...persistence.models import TrialProlog, Trial
+from ...persistence.models import Trial
+from ...models.trial_prolog import TrialProlog
 
 from .command import IpythonCommandMagic
 

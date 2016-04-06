@@ -44,11 +44,11 @@ class Activation(AlchemyProxy):
 
     dependent_variables = many_viewonly_ref(
         "dependent_activation", "Dependency",
-        primaryjoin=((id == Dependency.m.source_activation_id) &
+        primaryjoin=((id == Dependency.m.dependent_activation_id) &
                      (trial_id == Dependency.m.trial_id)))
     dependency_variables = many_viewonly_ref(
         "dependency_activation", "Dependency",
-        primaryjoin=((id == Dependency.m.target_activation_id) &
+        primaryjoin=((id == Dependency.m.dependency_activation_id) &
                      (trial_id == Dependency.m.trial_id)))
 
 

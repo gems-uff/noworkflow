@@ -13,8 +13,10 @@ from collections import defaultdict
 
 from future.utils import viewitems, viewkeys, viewvalues
 
-from .. import Activation, Variable, VariableDependency, FileAccess
-from .. import UniqueFileAccess
+from ...persistence.models import Activation
+from ...persistence.models import Evaluation as Variable
+from ...persistence.models import Dependency as VariableDependency
+from ...persistence.models import FileAccess, UniqueFileAccess
 
 
 class ActivationCluster(object):                                                 # pylint: disable=too-few-public-methods

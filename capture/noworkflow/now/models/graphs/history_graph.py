@@ -12,7 +12,7 @@ import weakref
 from collections import OrderedDict, defaultdict
 
 from .structures import Graph
-from ..trial import Trial
+from ...persistence.models.trial import Trial
 
 
 MAXTRIALS = 1000000

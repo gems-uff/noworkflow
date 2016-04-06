@@ -10,8 +10,9 @@ import os
 
 from sqlalchemy.schema import CreateTable
 
-from ..persistence.models.graphs.diagram import ViewRelationalDiagram
-from ..persistence.models import Trial, TrialProlog, ORDER
+from ..models.graphs.diagram import ViewRelationalDiagram
+from ..models.trial_prolog import TrialProlog
+from ..persistence.models import Trial, ORDER
 from ..persistence import persistence_config, relational
 
 

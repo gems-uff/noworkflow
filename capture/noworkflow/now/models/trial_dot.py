@@ -8,11 +8,9 @@ from __future__ import (absolute_import, print_function,
 
 import weakref
 
-from future.utils import viewitems
 
-from .base import Model
-from . import FileAccess
-from .graphs.dependency_graph import DependencyFilter, variable_id
+from ..persistence.models.base import Model
+
 from .graphs.dependency_graph import DotVisitor
 
 

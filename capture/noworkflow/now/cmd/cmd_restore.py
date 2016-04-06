@@ -14,7 +14,7 @@ import time
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Trial, Module, Dependency, FileAccess
+from ..persistence.models import Trial, Module, ModuleDependency, FileAccess
 from ..persistence import persistence_config, content
 from ..utils.io import print_msg
 
@@ -54,7 +54,7 @@ class Restore(Command):
     def create_backup(self, metascript, files):
         """Create a backup trial"""
         modules = metascript.modules_store
-        dependencies = metascript.dependencies_store
+        module_dependencies = metascript.module_dependencies_store
         accesses = metascript.file_accesses_store
         for path, info in viewitems(files):
             if info["type"] == "script":
@@ -65,7 +65,7 @@ class Restore(Command):
                 version = metascript.deployment.get_version(info["name"])
                 mod = (info["name"], version, path, info["code_hash"])
                 mid = Module.fast_load_module_id(*mod) or modules.add(*mod)
-                dependencies.add(mid)
+                module_dependencies.add(mid)
             elif info["type"] == "access":
                 aid = accesses.add(path)
                 access = accesses[aid]
@@ -81,7 +81,7 @@ class Restore(Command):
 
         tid, partial = metascript.trial_id, True
         Module.fast_store(tid, modules, partial)
-        Dependency.fast_store(tid, dependencies, partial)
+        ModuleDependency.fast_store(tid, module_dependencies, partial)
         FileAccess.fast_store(tid, accesses, partial)
 
         print_msg("Backup Trial {} created".format(metascript.trial_id),

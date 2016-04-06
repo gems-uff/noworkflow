@@ -9,18 +9,14 @@ from __future__ import (absolute_import, print_function,
 
 import weakref
 
-from collections import defaultdict
-
-from future.builtins import map as cvmap
-from future.utils import viewitems
-
 import pyposast
 
-from .slicing_visitor import SlicingVisitor
-
-from ...persistence.models import FunctionDef, Object
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
+from ...utils.cross_version import cross_compile
+
+from .ast_helpers import debug_tree
+from .transformer import RewriteAST
 
 
 class Definition(object):                                                        # pylint: disable=too-many-instance-attributes
@@ -28,47 +24,13 @@ class Definition(object):                                                       
 
     def __init__(self, metascript):
         self.metascript = weakref.proxy(metascript)
-        self.paths = []
-        # Map of dependencies by line
-        self.line_dependencies = {}
-        # Map of dependencies by line
-        self.line_gen_dependencies = {}
-        # Map of loops by line
-        self.loops = {}
-        # Map of conditional statements (if, while) by line
-        self.conditions = {}
-        # Map of name_refs by line
-        self.line_usages = {}
-        # Map of calls by line and col
-        self.call_by_col = {}
-        # Map of calls by offset line and lasti
-        self.call_by_lasti = {}
-        # Map of with __enter__ by line and lasti
-        self.with_enter_by_lasti = {}
-        # Map of with __exit__ by line and lasti
-        self.with_exit_by_lasti = {}
-        # Set of imports
-        self.imports = {}
-        # Set of GET_ITER and FOR_ITER lasti by line
-        self.iters = {}
-        # Function definitions
-        self.function_globals = defaultdict(lambda: defaultdict(list))
 
     @meta_profiler("definition")
     def collect_provenance(self):
-        """Collect definition provenance from scripts in metascript.paths"""
+        """Collect definition provenance from the main script"""
         metascript = self.metascript
-        print_msg("  registering user-defined functions")
-        for path, file_definition in viewitems(metascript.paths):
-            visitor = self._visit_ast(file_definition)
-            if visitor:
-                if metascript.disasm:
-                    print("--------------------------------------------------")
-                    print(path)
-                    print("--------------------------------------------------")
-                    print("\n".join(cvmap(repr, visitor.disasm)))
-                    print("--------------------------------------------------")
-                self._add_visitor(visitor)
+        print_msg("  registering code components and code blocks")
+        metascript.compiled = self._visit_ast(metascript.path)
 
     def store_provenance(self):
         """Store definition provenance"""
@@ -76,37 +38,22 @@ class Definition(object):                                                       
         tid = metascript.trial_id
         # Remove after save
         partial = True
-        FunctionDef.fast_store(tid, metascript.definitions_store, partial)
-        Object.fast_store(tid, metascript.objects_store, partial)
+        metascript.code_components_store.fast_store(tid, partial=partial)
+        metascript.code_blocks_store.fast_store(tid, partial=partial)
 
-    def _visit_ast(self, file_definition):
+    def _visit_ast(self, path):
         """Return a visitor that visited the tree"""
         metascript = self.metascript
         try:
-            tree = pyposast.parse(file_definition.code, file_definition.name)
+            with open(path, "rb") as script_file:
+                code = pyposast.native_decode_source(script_file.read())
+            tree = pyposast.parse(code, path)
         except SyntaxError:
-            print_msg("Syntax error on file {}. Skipping file.".format(
-                file_definition.name))
+            print_msg("Syntax error on file {}.".format(path))
             return None
 
-        visitor = SlicingVisitor(metascript, file_definition)
-        visitor.result = visitor.visit(tree)
-        visitor.extract_disasm()
-        visitor.teardown()
-        return visitor
-
-    def _add_visitor(self, visitor):
-        """Add visitor data to Definition object"""
-        self.paths.append(visitor.path)
-        self.line_dependencies[visitor.path] = visitor.dependencies
-        self.line_gen_dependencies[visitor.path] = visitor.gen_dependencies
-        self.line_usages[visitor.path] = visitor.line_usages
-        self.call_by_col[visitor.path] = visitor.call_by_col
-        self.call_by_lasti[visitor.path] = visitor.function_calls_by_lasti
-        self.with_enter_by_lasti[visitor.path] = visitor.with_enter_by_lasti
-        self.with_exit_by_lasti[visitor.path] = visitor.with_exit_by_lasti
-        self.imports[visitor.path] = visitor.imports
-        self.iters[visitor.path] = visitor.iters
-        self.function_globals[visitor.path] = visitor.function_globals
-        self.loops[visitor.path] = visitor.loops
-        self.conditions[visitor.path] = visitor.conditions
+        visitor = RewriteAST(metascript, code, path)
+        tree = visitor.visit(tree)
+        debug_tree(tree, just_print=[], show_code=[])
+        compiled = cross_compile(tree, path, "exec")
+        return compiled

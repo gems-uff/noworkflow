@@ -25,7 +25,7 @@ class Value(AlchemyProxy):
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "caller_id"],
+        ForeignKeyConstraint(["trial_id", "type_id"],
                              ["value.trial_id",
                               "value.id"], ondelete="CASCADE"),
     )

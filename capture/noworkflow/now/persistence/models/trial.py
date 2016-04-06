@@ -11,13 +11,6 @@ import os
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
 
-from ...models.graphs.trial_graph import TrialGraph
-from ...models.graphs.dependency_graph import DependencyConfig
-from ...models.graphs.dependency_graph import DependencyFilter
-from ...models.graphs.dependency_graph import PrologVisitor
-from ...models.trial_prolog import TrialProlog
-from ...models.trial_dot import TrialDot
-
 from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial
 from ...utils.prolog import PrologTimestamp, PrologRepr
@@ -75,6 +68,7 @@ class Trial(AlchemyProxy):
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
     command = Column(Text)
+    path = Column(Text)
     status = Column(Text)
     modules_inherited_from_trial_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
@@ -207,9 +201,16 @@ class Trial(AlchemyProxy):
         #self._store_pk(obj)
         #self._restore_instance()
 
+        from ...models.graphs.dependency_graph import DependencyConfig
+        from ...models.graphs.dependency_graph import DependencyFilter
+        from ...models.graphs.trial_graph import TrialGraph
+        from ...models.trial_prolog import TrialProlog
+        from ...models.trial_dot import TrialDot
+
         self.dependency_config = DependencyConfig()
         self.dependency_filter = DependencyFilter(self)
         self.graph = TrialGraph(self)
+
         self.prolog = TrialProlog(self)
         self.dot = TrialDot(self)
         self.initialize_default(kwargs)
@@ -219,6 +220,7 @@ class Trial(AlchemyProxy):
     def prolog_variables(self):
         """Return filtered prolog variables"""
         if not self._prolog_visitor:
+            from ...models.graphs.dependency_graph import PrologVisitor
             self.dependency_filter.run()
             self._prolog_visitor = PrologVisitor(self.dependency_filter)
             self._prolog_visitor.visit(self.dependency_filter.main_cluster)
@@ -490,13 +492,15 @@ class Trial(AlchemyProxy):
         return an_id[0]
 
     @classmethod  # query
-    def fast_update(cls, trial_id, main_id, finish, status, session=None):
-        """Update finish time of trial
+    def fast_update(cls, trial_id, main_id, finish, status, session=None):       # pylint: disable=too-many-arguments
+        """Update finish time, main_id, and status of trial
 
         Use core sqlalchemy
 
         Arguments:
         trial_id -- trial id
+        main_id -- id of main code_block
+        finish -- finish time
         status -- trial status (finished/unfinished)
 
 

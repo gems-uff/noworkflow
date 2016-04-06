@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from ..ipython.converter import create_ipynb
-from ..persistence.models.history import History as HistoryModel
+from ..models.history import History as HistoryModel
 from ..persistence import persistence_config
 
 from .command import NotebookCommand

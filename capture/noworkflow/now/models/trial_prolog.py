@@ -8,14 +8,16 @@ from __future__ import (absolute_import, print_function,
 
 import weakref
 
-from ...utils.functions import resource
+from ..utils.functions import resource
 
-from .base import Model
+from ..persistence.models.base import Model
+from ..persistence.models import Tag, Argument
+from ..persistence.models import ModuleDependency, EnvironmentAttr
+from ..persistence.models import CodeComponent, CodeBlock
+from ..persistence.models import Activation, Evaluation, Dependency
+from ..persistence.models import FileAccess, Value, Compartment
+
 from .graphs.diagram import ViewPrologDiagram
-from . import Tag, Dependency, EnvironmentAttr
-from . import FunctionDef, Object
-from . import Activation, FileAccess, ObjectValue
-from . import Variable, VariableUsage, VariableDependency
 
 
 RULES = "../resources/rules.pl"
@@ -37,20 +39,21 @@ class TrialProlog(Model):
     @classmethod
     def prolog_models(cls, trial=None):
         """Prolog models and accessors"""
-        from . import Trial
+        from ..persistence.models import Trial
         return [
             (Trial, lambda: [trial]),
             (Tag, lambda: trial.tags),
-            (Dependency, lambda: trial.dependencies),
+            (Argument, lambda: trial.arguments),
+            (ModuleDependency, lambda: trial.module_dependencies),
             (EnvironmentAttr, lambda: trial.environment_attrs),
-            (FunctionDef, lambda: trial.function_defs),
-            (Object, lambda: trial.objects),
+            (CodeComponent, lambda: trial.code_components),
+            (CodeBlock, lambda: trial.code_blocks),
             (Activation, lambda: trial.activations),
-            (ObjectValue, lambda: trial.object_values),
+            (Evaluation, lambda: trial.evaluations),
+            (Dependency, lambda: trial.dependencies),
             (FileAccess, lambda: trial.file_accesses),
-            (Variable, lambda: trial.prolog_variables.variables),
-            (VariableUsage, lambda: trial.prolog_variables.usages),
-            (VariableDependency, lambda: trial.prolog_variables.dependencies),
+            (Value, lambda: trial.values),
+            (Compartment, lambda: trial.compartments),
         ]
 
     @classmethod
@@ -125,7 +128,7 @@ class TrialProlog(Model):
     def init_cli(cls):
         """Initialize swipl if it was not initialized yet"""
         # Avoid import loop
-        from . import Trial
+        from ..persistence.models import Trial
 
         if not cls.prolog_cli:
             from pyswip import Prolog
