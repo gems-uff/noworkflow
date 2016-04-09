@@ -107,8 +107,13 @@ def select_trial(id_):
 
 
 def head_count():
-    """Cound Head tuples"""
+    """Count Head tuples"""
     return relational.session.query(func.count(Head.m.id)).scalar()
+
+def tag_count():
+    """Count Tag tuples"""
+    return relational.session.query(func.count(Tag.m.id)).scalar()
+
 
 
 def tag_params(trial_id, name="tag", type_="AUTO", minute=20):

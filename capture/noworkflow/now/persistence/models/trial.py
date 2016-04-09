@@ -908,7 +908,7 @@ class Trial(AlchemyProxy):
 
         Return trial if tag matches:
         >>> session = relational.make_session()
-        >>> Tag.create(**tag_params(id1, name="tag"), session=session)
+        >>> _ = Tag.create(session=session, **tag_params(id1, name="tag"))
         >>> trial = Trial.load_trial("tag")
         >>> trial.id == id1
         True
@@ -1155,7 +1155,7 @@ class Trial(AlchemyProxy):
         inherited_id = None
         if bypass_modules:
             inherited_id = cls.fast_last_trial_id()
-        ttrial = cls.__table__
+        ttrial = cls.t
         result = session.execute(
             ttrial.insert(),
             {"script": script, "start": start, "command": command,

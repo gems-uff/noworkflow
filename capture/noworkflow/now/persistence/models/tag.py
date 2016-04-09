@@ -13,7 +13,7 @@ from future.builtins import map as cvmap
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, bindparam
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
+from ...utils.prolog import PrologDescription, PrologTrial
 from ...utils.prolog import PrologRepr, PrologTimestamp
 
 from .. import relational
@@ -23,7 +23,19 @@ from .base import AlchemyProxy, proxy_class, backref_one
 
 @proxy_class
 class Tag(AlchemyProxy):
-    """Represent a tag"""
+    """Represent a tag
+
+    Doctest:
+    >>> from ....tests.helpers.models import erase_database, populate_trial
+    >>> from ....tests.helpers.models import tag_count
+    >>> erase_database()
+    >>> trial_id = populate_trial(script="main.py")
+    >>> tag_id = Tag.create(trial_id, "AUTO", "1.1.1", datetime.now())
+
+    Load a Tag object by passing its id:
+    >>> Tag(tag_id) # doctest: +ELLIPSIS
+    tag(..., '1.1.1', 'AUTO', ...).
+    """
 
     __tablename__ = "tag"
     __table_args__ = (
@@ -53,14 +65,13 @@ class Tag(AlchemyProxy):
         return self.prolog_description.fact(self)
 
     @classmethod  # query
-    def fast_load_auto_tag(cls, trial_id, code_hash, command,
-                           session=None):
+    def fast_load_auto_tag(cls, trial_id, code_hash, command, session=None):
         """Find automatic by code_hash and command.
         Ignore tags on the same trial_id
 
 
-        Return (typ, tag)
-        typ -- int representing the type of tag:
+        Return (type_, tag)
+        type_ -- int representing the type of tag:
             0: Completely new tag (1.1.1)
             1: Match both code_hash and command (new tag should be x.y.+)
             2: Match code_hash (new tag should be x.+.1)
@@ -73,38 +84,69 @@ class Tag(AlchemyProxy):
         code_hash -- code_hash of trial script
         command -- command line
 
-
         Keyword arguments:
         session -- specify session for loading (default=relational.session)
+
+
+        Doctest:
+        >>> from .trial import Trial
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> erase_database()
+
+        If there is no tag in the database, return (0, [1, 1, 1])
+        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test")
+        (0, [1, 1, 1])
+
+        If there is a tag in the database with the same code_hash and command,
+        return existing (1, [1, 1, 1]):
+        >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
+        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test")
+        (1, [1, 1, 1])
+
+        If there is a tag in the database with the same code_hash but different
+        command, return existing (2, [1, 1, 2]):
+        >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
+        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
+        (2, [1, 1, 2])
+
+        If there are only tags with different code hash return
+        existing (3, [1, 2, 1]):
+        >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
+        >>> trial = Trial(populate_trial(script="main.py", docstring="a"))
+        >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
+        (3, [1, 2, 1])
         """
         from .trial import Trial
+        from .code_block import CodeBlock
         session = session or relational.session
-        ttag = cls.__table__
-        ttrial = Trial.__table__
-        _query = select([ttag.c.name]).where(
-            (ttrial.c.id == ttag.c.trial_id) &
-            (ttrial.c.id != bindparam("trial_id")) &
-            (ttag.c.type == "AUTO")
+        _query = select([cls.m.name]).where(
+            (Trial.m.id == cls.m.trial_id) &
+            (Trial.m.id == CodeBlock.m.trial_id) &
+            (Trial.m.main_id == CodeBlock.m.id) &
+            (Trial.m.id != bindparam("trial_id")) &
+            (cls.m.type == "AUTO")
         )
 
         conditions = [
-            (1, ((ttrial.c.code_hash == bindparam("code_hash")) &
-                 (ttrial.c.command == bindparam("command")))),
-            (2, ((ttrial.c.code_hash == bindparam("code_hash")))),
+            (1, ((CodeBlock.m.code_hash == bindparam("code_hash")) &
+                 (Trial.m.command == bindparam("command")))),
+            (2, ((CodeBlock.m.code_hash == bindparam("code_hash")))),
             (3, True)
         ]
-
         info = {
             "trial_id": trial_id,
             "code_hash": code_hash,
             "command": command,
         }
 
-        for typ, condition in conditions:
+        for type_, condition in conditions:
             results = session.execute(_query.where(condition), info).fetchall()
             tags = [lmap(int, tag[0].split(".")) for tag in results]
             if tags:
-                return typ, max(tags)
+                return type_, max(tags)
 
         return 0, [1, 1, 1]
 
@@ -123,29 +165,57 @@ class Tag(AlchemyProxy):
         code_hash -- code_hash of trial script
         command -- command line
 
-
         Keyword arguments:
         session -- specify session for loading (default=relational.session)
+
+
+        Doctest:
+        >>> from .trial import Trial
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> erase_database()
+
+        If there is no tag in the database, return 1.1.1
+        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
+        '1.1.1'
+
+        If there is a tag in the database with the same code_hash and command,
+        increment patch
+        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
+        '1.1.2'
+
+        If there is a tag in the database with the same code_hash but different
+        command, increment minor:
+        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
+        '1.2.1'
+
+        If there are only tags with different code hash, increment major:
+        >>> trial = Trial(populate_trial(script="main.py", docstring="a"))
+        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
+        '2.1.1'
         """
         session = session or relational.session
-        tag_typ, tag = cls.fast_load_auto_tag(
+        tag_type, tag = cls.fast_load_auto_tag(
             trial_id, code_hash, command, session=session)
         new_tag = ""
-        if tag_typ == 1:
+        if tag_type == 1:
             tag[2] += 1
-        elif tag_typ == 2:
+        elif tag_type == 2:
             tag[1] += 1
             tag[2] = 1
-        elif tag_typ == 3:
+        elif tag_type == 3:
             tag[0] += 1
             tag[1] = 1
             tag[2] = 1
         new_tag = ".".join(cvmap(str, tag))
 
         cls.create(trial_id, "AUTO", new_tag, datetime.now(), session=session)
+        return new_tag
 
     @classmethod  # query
-    def create(cls, trial_id, type_, name, timestamp, session=None):
+    def create(cls, trial_id, type_, name, timestamp, session=None):             # pylint: disable=too-many-arguments
         """Create tag for trial id
 
         Arguments:
@@ -156,9 +226,24 @@ class Tag(AlchemyProxy):
 
         Keyword arguments:
         session -- specify session for loading (default=relational.session)
+
+
+        Doctest:
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> from ....tests.helpers.models import tag_count
+        >>> erase_database()
+
+        Create tag:
+        >>> tag_count()
+        0
+        >>> trial_id = populate_trial(script="main.py")
+        >>> _ = Tag.create(trial_id, "AUTO", "1.1.1", datetime.now())
+        >>> tag_count()
+        1
         """
         session = session or relational.session
-        session.execute(cls.t.insert(), dict(
+        result = session.execute(cls.t.insert(), dict(
             trial_id=trial_id, type=type_, name=name, timestamp=timestamp
         ))
         session.commit()
+        return result.lastrowid
