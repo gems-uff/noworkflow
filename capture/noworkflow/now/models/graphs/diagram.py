@@ -184,16 +184,18 @@ class ViewRelationalDiagram(ViewDiagram):
                 content = [viz_tr(viz_td(viz_b(name)))]
                 attributes = []
                 for column in table.columns:
-                    if not column.foreign_keys:
+                    if all(fk.use_alter for fk in column.foreign_keys):
                         attributes.append(viz_tr(viz_td(
                             "{}: {!s}".format(column.name, column.type),
                             align="LEFT", port=column.name
                         )))
                     else:
                         for fkey in column.foreign_keys:
-                            if not fkey.column.foreign_keys:
+                            if all(fk.use_alter
+                                   for fk in fkey.column.foreign_keys):
                                 link = fkey.target_fullname
                                 self.add_link(name, link, column.name)
+
                 if attributes:
                     content.append(viz_tr(viz_td(viz_table(
                         "".join(attributes), border=0, cellborder=0

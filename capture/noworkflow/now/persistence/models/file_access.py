@@ -135,13 +135,13 @@ class FileAccess(AlchemyProxy):
             and (self.content_hash_after == other.content_hash_after)
         )
 
-    def show(self, _print=print):
+    def show(self, print_=print):
         """Show object
 
         Keyword arguments:
-        _print -- custom print function (default=print)
+        print_ -- custom print function (default=print)
         """
-        _print("""\
+        print_("""\
             Name: {f.name}
             Mode: {f.mode}
             Buffering: {f.buffering}

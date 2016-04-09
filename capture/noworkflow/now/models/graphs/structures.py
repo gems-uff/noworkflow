@@ -388,7 +388,7 @@ def activation_text(activation):
     ]
 
     activation.show(
-        _print=lambda x, offset=0: result.append(offset * "&nbsp;" + x))
+        print_=lambda x, offset=0: result.append(offset * "&nbsp;" + x))
 
     return result
 

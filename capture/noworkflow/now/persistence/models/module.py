@@ -46,9 +46,9 @@ class Module(AlchemyProxy):
     def __eq__(self, other):
         return self.__key() == other.__key()                                     # pylint: disable=protected-access
 
-    def show(self, _print=print):
+    def show(self, print_=print):
         """Show module"""
-        _print("""\
+        print_("""\
             Name: {0.name}
             Version: {0.version}
             Path: {0.path}

@@ -6,18 +6,19 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from future.builtins import map as cvmap
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from sqlalchemy import Column, Integer, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy.orm import backref
+from sqlalchemy.orm import remote, foreign
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
-from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
+from ...utils.prolog import PrologAttribute, PrologNullable
 
-from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref, many_ref
-from .base import backref_one, backref_many, query_many_property
+from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
+from .base import backref_one, backref_many
 
 from .dependency import Dependency
+from .activation import Activation
+
 
 @proxy_class
 class Evaluation(AlchemyProxy):
@@ -27,14 +28,14 @@ class Evaluation(AlchemyProxy):
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "code_component_id"],
-                             ["code_component.trial_id",
-                              "code_component.id"], ondelete="CASCADE"),
+                             ["code_component.trial_id", "code_component.id"],
+                             ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "activation_id"],
-                             ["activation.trial_id",
-                              "activation.id"], ondelete="CASCADE"),
+                             ["activation.trial_id", "activation.id"],
+                             ondelete="CASCADE", use_alter=True),
         ForeignKeyConstraint(["trial_id", "value_id"],
-                             ["value.trial_id",
-                              "value.id"], ondelete="CASCADE"),
+                             ["value.trial_id", "value.id"],
+                             ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
@@ -43,6 +44,16 @@ class Evaluation(AlchemyProxy):
     activation_id = Column(Integer, index=True)
     value_id = Column(Integer, index=True)
 
+    this_activation = one(
+        "Activation", backref="this_evaluation",
+        primaryjoin=((foreign(id) == remote(Activation.m.id)) &
+                     (foreign(trial_id) == remote(Activation.m.trial_id))))
+
+    activation = one(
+        "Activation", backref="evaluations",
+        remote_side=[Activation.m.trial_id, Activation.m.id],
+        primaryjoin=((foreign(activation_id) == remote(Activation.m.id)) &
+                     (foreign(trial_id) == remote(Activation.m.trial_id))))
 
     # dependencies in which this variable is the dependent
     dependencies_as_dependent = many_viewonly_ref(
@@ -72,15 +83,11 @@ class Evaluation(AlchemyProxy):
             (id == Dependency.m.dependency_id) &
             (activation_id == Dependency.m.dependency_activation_id) &
             (trial_id == Dependency.m.trial_id)))
-    value = one("Value", backref="evaluation")
 
     trial = backref_one("trial")  # Trial.evaluations
     code_component = backref_one("code_component")  # CodeComponent.evaluations
-    activation = backref_one("activation")  # Activation.evaluations
     dependents = backref_many("dependents")  # Evaluation.dependencies
-
-    # Activation.this_evaluation
-    this_activation = backref_one("this_activation")
+    value = backref_one("value") # Value.evaluations
 
     prolog_description = PrologDescription("evaluation", (
         PrologTrial("trial_id", link="trial.id"),

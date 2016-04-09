@@ -241,7 +241,7 @@ def skip_dict(args):
     if args.file:
         return {}
     return {
-        "skip_script": args.skip_script,
-        "skip_local": args.skip_local,
-        "skip_access": args.skip_access,
+        "script": not args.skip_script,
+        "local": not args.skip_local,
+        "access": not args.skip_access,
     }

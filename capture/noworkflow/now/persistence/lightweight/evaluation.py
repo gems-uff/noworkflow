@@ -17,7 +17,7 @@ class EvaluationLW(BaseLW):                                                     
         ["trial_id", "id", "moment", "code_component_id", "activation_id",
          "value_id"]
     )
-    nullable = {"moment", "activation_id"}
+    nullable = {"moment", "activation_id", "value_id"}
     model = Evaluation
 
     def __init__(self, id_, moment, code_component_id, activation_id,            # pylint: disable=too-many-arguments

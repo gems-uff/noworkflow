@@ -17,6 +17,7 @@ from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
 from .base import backref_one, backref_many
 
 from .compartment import Compartment
+from .evaluation import Evaluation
 
 @proxy_class
 class Value(AlchemyProxy):
@@ -52,6 +53,12 @@ class Value(AlchemyProxy):
         primaryjoin=(
             (id == Compartment.m.whole_id) &
             (trial_id == Compartment.m.trial_id)))
+
+    evaluations = many_viewonly_ref(
+        "value", "Evaluation",
+        primaryjoin=(
+            (id == Evaluation.m.value_id) &
+            (trial_id == Evaluation.m.trial_id)))
 
     trial = backref_one("trial")  # Trial.activations
     instances = backref_many("instances")  # Value.type

@@ -12,9 +12,9 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologNullableRepr
 
-from .base import proxy_class, AlchemyProxy, many_ref, backref_one, one
+from .base import proxy_class, AlchemyProxy
+from .base import many_ref, backref_one, backref_many
 from .base import query_many_property
-from .code_component import CodeComponent
 
 
 @proxy_class
@@ -34,11 +34,11 @@ class CodeBlock(AlchemyProxy):
     code_hash = Column(Text)
     docstring = Column(Text)
 
-    this_component = one("CodeComponent", backref="this_block")
-    components = many_ref("container", "CodeComponent")
     activations = many_ref("code_block", "Activation")
 
     trial = backref_one("trial")  # Trial.code_blocks
+    this_component = backref_one("this_component") # CodeComponent.this_block
+    components = backref_many("components") # CodeComponent.container
 
     prolog_description = PrologDescription("code_block", (
         PrologTrial("trial_id", link="code_component.trial_id"),
@@ -67,11 +67,11 @@ class CodeBlock(AlchemyProxy):
         """Return function definition calls as a SQLAlchemy query"""
         return self.components.filter(CodeComponent.m.type == "call")
 
-    def show(self, _print=lambda x, offset=0: print(x)):
+    def show(self, print_=lambda x, offset=0: print(x)):
         """Show code block
 
         Keyword arguments:
-        _print -- custom print function (default=print)
+        print_ -- custom print function (default=print)
         """
         component = self.this_component
 
@@ -91,7 +91,7 @@ class CodeBlock(AlchemyProxy):
             calls=", ".join(x.name for x in self.function_calls)                 # pylint: disable=not-an-iterable
         )
 
-        _print("""\
+        print_("""\
             Name: {component.name}
             Docstring: {block.docstring}
             {extra}

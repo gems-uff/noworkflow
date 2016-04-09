@@ -35,7 +35,7 @@ class CodeComponentLW(BaseLW):                                                  
         self.first_char_column = first_char_column
         self.last_char_line = last_char_line
         self.last_char_column = last_char_column
-        self.container_id = container_id
+        self.container_id = container_id if container_id else -1
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """CodeComponentLW can never be removed from object store"""

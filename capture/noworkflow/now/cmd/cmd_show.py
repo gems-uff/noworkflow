@@ -21,7 +21,7 @@ def print_trial_relationship(relation, breakline="\n\n", other="\n    "):
     """Print trial relationship"""
     output = []
     for obj in relation:
-        obj.show(_print=lambda x: output.append(wrap(x, other=other)))
+        obj.show(print_=lambda x: output.append(wrap(x, other=other)))
     print(breakline.join(output))
 
 
@@ -32,7 +32,7 @@ def print_function_activation(trial, activation, level=1):
         initial="  " * level)
     indent = text.index(": ") + 2
     print(text)
-    activation.show(_print=lambda x, offset=0: print(
+    activation.show(print_=lambda x, offset=0: print(
         wrap(x, initial=" " * (indent + offset))))
 
     for inner_activation in activation.children:
@@ -65,7 +65,7 @@ class Show(NotebookCommand):
         trial = Trial(trial_ref=args.trial)
 
         print_msg("trial information:", True)
-        trial.show(_print=lambda x: print(wrap(x)))
+        trial.show(print_=lambda x: print(wrap(x)))
 
         if args.modules:
             print_msg("this trial depends on the following modules:", True)

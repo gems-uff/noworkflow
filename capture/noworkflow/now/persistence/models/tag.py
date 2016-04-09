@@ -109,8 +109,7 @@ class Tag(AlchemyProxy):
         return 0, [1, 1, 1]
 
     @classmethod  # query
-    def create_automatic_tag(cls, trial_id, code_hash, command,
-                             session=None):
+    def create_automatic_tag(cls, trial_id, code_hash, command, session=None):
         """Create automatic tag for trial id
 
         Find maximum automatic tag by code_hash and command
@@ -143,8 +142,23 @@ class Tag(AlchemyProxy):
             tag[2] = 1
         new_tag = ".".join(cvmap(str, tag))
 
+        cls.create(trial_id, "AUTO", new_tag, datetime.now(), session=session)
+
+    @classmethod  # query
+    def create(cls, trial_id, type_, name, timestamp, session=None):
+        """Create tag for trial id
+
+        Arguments:
+        trial_id -- id of trial that should be tagged
+        type_ -- tag type
+        name -- tag name
+        timestamp -- tag timestamp
+
+        Keyword arguments:
+        session -- specify session for loading (default=relational.session)
+        """
+        session = session or relational.session
         session.execute(cls.t.insert(), dict(
-            trial_id=trial_id, type="AUTO",
-            name=new_tag, timestamp=datetime.now()
+            trial_id=trial_id, type=type_, name=name, timestamp=timestamp
         ))
         session.commit()

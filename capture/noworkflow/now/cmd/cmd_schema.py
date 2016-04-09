@@ -73,5 +73,5 @@ class Schema(Command):
         return self.post_process(func(), args)
 
     def execute(self, args):
-        persistence_config.connect_existing(args.dir or os.getcwd())
+        persistence_config.connect(args.dir or os.getcwd())
         print(self.process(args))

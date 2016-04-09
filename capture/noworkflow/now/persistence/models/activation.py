@@ -12,8 +12,8 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
 from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 
-from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
-from .base import backref_one
+from .base import AlchemyProxy, proxy_class, many_viewonly_ref
+from .base import backref_one, backref_many
 
 from .dependency import Dependency
 
@@ -38,8 +38,6 @@ class Activation(AlchemyProxy):
     start = Column(TIMESTAMP)
     code_block_id = Column(Integer, index=True)
 
-    this_evaluation = one("Evaluation", backref="this_activation")
-    evaluations = many_viewonly_ref("activation", "Evaluation")
     file_accesses = many_viewonly_ref("activation", "FileAccess")
 
     dependent_variables = many_viewonly_ref(
@@ -54,6 +52,9 @@ class Activation(AlchemyProxy):
 
     trial = backref_one("trial")  # Trial.activations
     code_block = backref_one("code_block")  # CodeBlock.activations
+    # Evaluation.this_activation
+    this_evaluation = backref_one("this_evaluation")
+    evaluations = backref_many("evaluations") # Evaluation.activation
 
     prolog_description = PrologDescription("activation", (
         PrologTrial("trial_id", link="evaluation.id"),
@@ -96,29 +97,29 @@ class Activation(AlchemyProxy):
         """Calculate activation duration"""
         return int((self.finish - self.start).total_seconds() * 1000000)
 
-    def show(self, _print=lambda x, offset=0: print(x)):
+    def show(self, print_=lambda x, offset=0: print(x)):
         """Show object
 
         Keyword arguments:
-        _print -- custom print function (default=print)
+        print_ -- custom print function (default=print)
         """
         """
         global_vars = list(self.globals)
         if global_vars:
-            _print("{name}: {values}".format(
+            print_("{name}: {values}".format(
                 name="Globals", values=", ".join(cvmap(str, global_vars))))
 
         arg_vars = list(self.arguments)
         if arg_vars:
-            _print("{name}: {values}".format(
+            print_("{name}: {values}".format(
                 name="Arguments", values=", ".join(cvmap(str, arg_vars))))
 
         if self.return_value:
-            _print("Return value: {ret}".format(ret=self.return_value))
+            print_("Return value: {ret}".format(ret=self.return_value))
 
-        _show_slicing("Variables:", self.variables, _print)
-        _show_slicing("Usages:", self.variables_usages, _print)
-        _show_slicing("Dependencies:", self.source_variables, _print)
+        _show_slicing("Variables:", self.variables, print_)
+        _show_slicing("Usages:", self.variables_usages, print_)
+        _show_slicing("Dependencies:", self.source_variables, print_)
         """
         # ToDo: now2
 
@@ -126,10 +127,10 @@ class Activation(AlchemyProxy):
         return self.prolog_description.fact(self)
 
 
-def _show_slicing(name, query, _print):
+def _show_slicing(name, query, print_):
     """Show slicing objects"""
     objects = list(query)
     if objects:
-        _print(name)
+        print_(name)
         for obj in objects:
-            _print(str(obj), 1)
+            print_(str(obj), 1)

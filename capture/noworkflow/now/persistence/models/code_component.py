@@ -9,11 +9,15 @@ from __future__ import (absolute_import, print_function,
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
+from sqlalchemy.orm import remote, foreign
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one, many_ref
+from .base import AlchemyProxy, proxy_class
+from .base import backref_one, one, many_viewonly_ref
+
+from .code_block import CodeBlock
 
 
 @proxy_class
@@ -26,11 +30,11 @@ class CodeComponent(AlchemyProxy):
 
     __tablename__ = "code_component"
     __table_args__ = (
-        PrimaryKeyConstraint("trial_id", "container_id", "id"),
+        PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "container_id"],
-                             ["container.trial_id",
-                              "container.id"], ondelete="CASCADE"),
+                             ["code_block.trial_id", "code_block.id"],
+                             ondelete="CASCADE", use_alter=True),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
@@ -43,11 +47,19 @@ class CodeComponent(AlchemyProxy):
     last_char_column = Column(Integer)
     container_id = Column(Integer, index=True)
 
-    evaluations = many_ref("code_component", "Evaluation")
+    evaluations = many_viewonly_ref("code_component", "Evaluation")
+
+    this_block = one(
+        "CodeBlock", backref="this_component",
+        primaryjoin=((foreign(id) == remote(CodeBlock.m.id)) &
+                     (foreign(trial_id) == remote(CodeBlock.m.trial_id))))
+    container = one(
+        "CodeBlock", backref="components",
+        viewonly=True,
+        primaryjoin=((foreign(container_id) == remote(CodeBlock.m.id)) &
+                     (foreign(trial_id) == remote(CodeBlock.m.trial_id))))
 
     trial = backref_one("trial")  # Trial.code_components
-    container = backref_one("container")  # CodeBlock.components
-    this_block = backref_one("this_block") # CodeBlock.this_component
 
     prolog_description = PrologDescription("code_component", (
         PrologTrial("trial_id", link="trial.id"),

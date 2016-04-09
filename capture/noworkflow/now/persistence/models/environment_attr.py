@@ -51,13 +51,13 @@ class EnvironmentAttr(AlchemyProxy):
     def __eq__(self, other):
         return self.name == other.name
 
-    def show(self, _print=lambda x, offset=0: print(x)):
+    def show(self, print_=lambda x, offset=0: print(x)):
         """Show object
 
         Keyword arguments:
-        _print -- custom print function (default=print)
+        print_ -- custom print function (default=print)
         """
-        _print("{0.name}: {0.value}".format(self))
+        print_("{0.name}: {0.value}".format(self))
 
     def __repr__(self):
         return self.prolog_description.fact(self)

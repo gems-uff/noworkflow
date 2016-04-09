@@ -6,8 +6,6 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from datetime import datetime
-
 from ..models import Activation
 from .base import BaseLW, define_attrs
 
@@ -22,11 +20,11 @@ class ActivationLW(BaseLW):                                                     
     nullable = {"code_block_id"}
     model = Activation
 
-    def __init__(self, id_, name, code_block_id):
+    def __init__(self, id_, name, start, code_block_id):
         self.trial_id = -1
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
-        self.start = datetime.now()
+        self.start = start
         self.code_block_id = code_block_id if code_block_id else -1
 
         # File accesses. Used to get the content after the activation
