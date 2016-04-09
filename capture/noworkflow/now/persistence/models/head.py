@@ -18,7 +18,28 @@ from .base import AlchemyProxy, proxy_class, one, proxy
 
 @proxy_class
 class Head(AlchemyProxy):
-    """Represent a Head of a branch"""
+    """Represent a Head of a branch
+
+
+    Doctest:
+    >>> from .trial import Trial
+    >>> from ....tests.helpers.models import erase_database, populate_trial
+    >>> erase_database()
+    >>> trial = Trial(populate_trial(script="main.py"))
+    >>> session = relational.make_session()
+    >>> result = session.execute(Head.t.insert(), {"trial_id": trial.id,
+    ...     "script": "main.py"})
+    >>> head_id = result.lastrowid
+
+    Load a Head object by passing its id:
+    >>> head = Head(head_id)
+    >>> head # doctest: +ELLIPSIS
+    head(..., 'main.py', ...).
+
+    It is possible to access the head trial:
+    >>> head.trial.id == trial.id
+    True
+    """
 
     __tablename__ = "head"
     __table_args__ = (
@@ -37,11 +58,29 @@ class Head(AlchemyProxy):
     ))
 
     def __repr__(self):
-        return "Head({0.id}, {0.script}, {0.trial_id})".format(self)
+        return "head({0.id}, {0.script!r}, {0.trial_id}).".format(self)
 
     @classmethod  # query
     def load_head(cls, script, session=None):
-        """Load head by script"""
+        """Load head by script
+
+
+        Doctest:
+        >>> from .trial import Trial
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> erase_database()
+        >>> trial1 = Trial(populate_trial(script="main.py"))
+        >>> trial2 = Trial(populate_trial(script="main.py"))
+        >>> trial3 = Trial(populate_trial(script="main2.py"))
+        >>> trial1.create_head()
+        >>> trial3.create_head()
+
+        Return Head correspondind to script:
+        >>> Head.load_head("main.py").trial_id == trial1.id
+        True
+        >>> Head.load_head("main2.py").trial_id == trial3.id
+        True
+        """
         session = session or relational.session
         return proxy(
             session.query(cls.m)
@@ -51,8 +90,31 @@ class Head(AlchemyProxy):
 
     @classmethod  # query
     def remove(cls, hid, session=None):
-        """Remove head by id"""
+        """Remove head by id
+
+
+        Doctest:
+        >>> from .trial import Trial
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> from ....tests.helpers.models import head_count
+        >>> erase_database()
+        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> trial.create_head()
+        >>> head_count()
+        1
+
+        Do not remove wrong id:
+        >>> Head.remove(-1)
+        >>> head_count()
+        1
+
+        Remove right id:
+        >>> Head.remove(Head.load_head("main.py").id)
+        >>> head_count()
+        0
+        """
         session = session or relational.session
         head = session.query(cls.m).get(hid)
-        session.delete(head)
-        session.commit()
+        if head:
+            session.delete(head)
+            session.commit()
