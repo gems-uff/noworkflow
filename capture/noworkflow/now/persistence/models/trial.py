@@ -22,7 +22,6 @@ from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
 from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
 from .base import proxy
 
-from .module import Module
 from .module_dependency import ModuleDependency
 from .code_block import CodeBlock
 from .activation import Activation
@@ -34,15 +33,20 @@ class Trial(AlchemyProxy):
     """Represent a trial
 
     Doctest:
-    >>> from ....tests.helpers.models import erase_database
-    >>> from ....tests.helpers.models import trial_params
+    >>> from ....tests.helpers.models import erase_database, populate_trial
     >>> erase_database()
-    >>> id_ = Trial.store(**trial_params())
+    >>> id1 = populate_trial(status="finished", tag="1.0.0")
+    >>> id2 = populate_trial(status="finished", docstring="main script",
+    ...                      duration=65, tag="1.1.0")
 
     Initialize it by passing a trial reference (id or tag):
-    >>> trial = Trial(id_)
-    >>> trial.id == id_
+    >>> first_trial = Trial("1.0.0")
+    >>> first_trial.id == id1
     True
+    >>> trial = Trial(id2)
+    >>> trial.id == id2
+    True
+
 
     There are four visualization modes for the graph:
     tree: activation tree without any filters
@@ -62,6 +66,76 @@ class Trial(AlchemyProxy):
     You can change the graph width and height by the variables:
     >>> trial.graph.width = 600
     >>> trial.graph.height = 400
+
+
+    If the trial was based on another one, it is possible to access it:
+    >>> trial.parent.id == id1
+    True
+
+    Similarly, it is possible to get which trials are based on the current one
+    >>> list(first_trial.children) # doctest: +ELLIPSIS
+    [trial(...).]
+
+
+    It is possible to check trial has finished by running:
+    >>> trial.finished
+    True
+
+    It is also possible to get the trial duration in microseconds:
+    >>> trial.duration
+    65000000
+
+    And as text:
+    >>> trial.duration_text
+    '0:01:05'
+
+    To access the trial main script, please do:
+    >>> code_block = trial.main
+    >>> code_block.docstring
+    'main script'
+
+    As a shortcut, you can also access the following properties.
+    These properties access the main script:
+    >>> str(trial.script_content)
+    "'main script'\\ndef f(x):\\n    return x\\na = [1]\\nb = f(a)"
+    >>> trial.docstring
+    'main script'
+    >>> trial.code_hash == trial.main.code_hash
+    True
+
+    For a list of all code blocks, code components, evaluations, activations,
+    accesses, values, compartments, dependencies and tags:
+    >>> list(trial.code_blocks) # doctest: +ELLIPSIS
+    [code_block(...)., ...]
+    >>> list(trial.code_components) # doctest: +ELLIPSIS
+    [code_component(...)., ...]
+    >>> list(trial.evaluations) # doctest: +ELLIPSIS
+    [evaluation(...)., ...]
+    >>> list(trial.activations) # doctest: +ELLIPSIS
+    [activation(...)., ...]
+    >>> list(trial.file_accesses) # doctest: +ELLIPSIS
+    [access(...)., ...]
+    >>> list(trial.values) # doctest: +ELLIPSIS
+    [value(...)., ...]
+    >>> list(trial.compartments) # doctest: +ELLIPSIS
+    [compartment(...).]
+    >>> list(trial.dependencies) # doctest: +ELLIPSIS
+    [dependency(...)., ...]
+    >>> list(trial.tags) # doctest: +ELLIPSIS
+    [tag(..., '1.1.0', 'AUTO', ...).]
+
+    To load modules, propagating inherited modules:
+    >>> list(trial.modules) # doctest: +ELLIPSIS
+    [module_def(...)., ...]
+
+    Similarly, to load module dependencies, propagating inherited modules:
+    >>> list(trial.module_dependencies) # doctest: +ELLIPSIS
+    [module(...)., ...]
+
+    If you are interested only on local modules:
+    >>> list(trial.local_modules) # doctest: +ELLIPSIS
+    [module_def(...).]
+
     """
 
     __tablename__ = "trial"
@@ -108,8 +182,8 @@ class Trial(AlchemyProxy):
 
     arguments = many_ref("trial", "Argument")
     environment_attrs = many_ref("trial", "EnvironmentAttr")
-    dmodule_dependencies = many_ref("trial", "ModuleDependency")
-    dmodules = many_ref("trials", "Module", secondary=ModuleDependency.t)
+    _module_dependencies = many_ref("trial", "ModuleDependency")
+    _modules = many_ref("trials", "Module", secondary=ModuleDependency.t)
 
     code_components = many_viewonly_ref("trial", "CodeComponent")
     evaluations = many_viewonly_ref("trial", "Evaluation")
@@ -218,17 +292,57 @@ class Trial(AlchemyProxy):
 
     @query_many_property
     def modules(self):
-        """Load modules. Return SQLAlchemy query"""
+        """Load modules. Return SQLAlchemy query
+
+
+        Doctest:
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> erase_database()
+        >>> trial1 = Trial(populate_trial())
+        >>> trial2 = Trial(populate_trial(bypass_modules=True))
+
+        Return this modules, if it did not bypass modules:
+        >>> trial1.dmodules == trial1.modules
+        True
+
+        Do not return this modules, if it bypassed modules:
+        >>> trial2.dmodules != trial2.modules
+        True
+
+        Instead, return the inherited trial modules:
+        >>> trial1.dmodules == trial2.modules
+        True
+        """
         if self.modules_inherited_from_trial:
             return self.modules_inherited_from_trial.modules
-        return self.dmodules
+        return self._modules
 
     @query_many_property
     def module_dependencies(self):
-        """Load modules. Return SQLAlchemy query"""
+        """Load modules. Return SQLAlchemy query
+
+
+        Doctest:
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> erase_database()
+        >>> trial1 = Trial(populate_trial())
+        >>> trial2 = Trial(populate_trial(bypass_modules=True))
+
+        Return this modules, if it did not bypass modules:
+        >>> trial1.dmodule_dependencies == trial1.modules
+        True
+
+        Do not return this modules, if it bypassed modules:
+        >>> trial2.dmodule_dependencies != trial2.modules
+        True
+
+        Instead, return the inherited trial modules:
+        >>> trial1.dmodule_dependencies == trial2.modules
+        True
+        """
         if self.modules_inherited_from_trial:
             return self.modules_inherited_from_trial.module_dependencies
-        return self.module_dependencies
+        return self._module_dependencies
 
     @property
     def prolog_variables(self):
@@ -242,7 +356,43 @@ class Trial(AlchemyProxy):
 
     @property
     def local_modules(self):
-        """Load local modules"""
+        """Load local modules
+
+        Doctest:
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> from ....tests.helpers.models import modules, module_dependencies
+        >>> erase_database()
+        >>> trial_id = populate_trial(path="/home/now")
+        >>> trial = Trial(trial_id)
+
+        Return empty list if there are no modules:
+        >>> list(trial.local_modules)
+        []
+
+        Do not return modules outside the trial path:
+        >>> m1 = modules.add("external", "1.0.1", "/home/external.py", "aaaa")
+        >>> md1 = module_dependencies.add(m1)
+        >>> modules.fast_store(trial_id)
+        >>> module_dependencies.fast_store(trial_id)
+        >>> list(trial.local_modules)
+        []
+
+        Return modules inside the trial path:
+        >>> m2 = modules.add("inte", "1.0.1", "/home/now/inte.py", "aaaa")
+        >>> md2 = module_dependencies.add(m2)
+        >>> modules.fast_store(trial_id)
+        >>> module_dependencies.fast_store(trial_id)
+        >>> list(trial.local_modules) # doctest: +ELLIPSIS
+        [module_def(..., inte, 1.0.1).]
+
+        Return modules with relative path:
+        >>> m3 = modules.add("inte2", "1.0.2", "inte2.py", "bbbb")
+        >>> md3 = module_dependencies.add(m3)
+        >>> modules.fast_store(trial_id)
+        >>> module_dependencies.fast_store(trial_id)
+        >>> list(trial.local_modules) # doctest: +ELLIPSIS
+        [module_def(..., inte, 1.0.1)., module_def(..., inte2, 1.0.2).]
+        """
         for module in self.modules:                                              # pylint: disable=not-an-iterable
             if not os.path.isabs(module.path):
                 yield module
@@ -260,8 +410,8 @@ class Trial(AlchemyProxy):
         >>> trial = Trial(populate_trial(docstring="block"))
 
         Return script_content:
-        >>> trial.script_content #doctest: +ELLIPSIS
-        <noworkflow.now.utils.formatter.PrettyLines object at 0x...>
+        >>> str(trial.script_content) #doctest: +ELLIPSIS
+        "'block'\\ndef f(x):\\n    return x\\na = [1]\\nb = f(a)"
         """
         return PrettyLines(
             content.get(self.main.code_hash)
@@ -357,12 +507,36 @@ class Trial(AlchemyProxy):
 
     @property
     def environment(self):
-        """Return dict: environment variables -> value"""
+        """Return dict: environment variables -> value
+
+
+        Doctest:
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> erase_database()
+        >>> trial = Trial(populate_trial(
+        ...     path="/home/now", user="now", status="unfinished"))
+
+        Return environment dict
+        >>> sorted(trial.environment.items())
+        [('CWD', '/home/now'), ('USER', 'now')]
+        """
         return {e.name: e.value for e in self.environment_attrs}
 
     @property
     def argument_dict(self):
-        """Return dict: argument -> value"""
+        """Return dict: argument -> value
+
+
+        Doctest:
+        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> erase_database()
+        >>> trial = Trial(populate_trial(
+        ...     script="main.py", bypass_modules=False, status="unfinished"))
+
+        Return argument dict
+        >>> sorted(trial.argument_dict.items())
+        [('bypass_modules', 'False'), ('script', 'main.py')]
+        """
         return {a.name: a.value for a in self.arguments}
 
     def versioned_files(self, script=True, local=True, access=True):
@@ -572,7 +746,7 @@ class Trial(AlchemyProxy):
         return repr(self)
 
     def __repr__(self):
-        return "Trial({})".format(self.id)
+        return self.prolog_description.fact(self)
 
     @classmethod  # query
     def distinct_scripts(cls):

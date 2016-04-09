@@ -30,8 +30,17 @@ class ContentDatabase(object):
 
     def mock(self, config):                                                      # pylint: disable=unused-argument, no-self-use
         """Mock storage for tests"""
-        ContentDatabase.put = lambda s, c: hashlib.sha1(c).hexdigest()
-        ContentDatabase.get = lambda s, c: "".encode("utf-8")
+        self.temp = {}
+        def put(self, content):
+            """Mock put"""
+            hash_code = hashlib.sha1(content).hexdigest()
+            self.temp[hash_code] = content
+            return hash_code
+        def get(self, content_hash):
+            """Mock get"""
+            return self.temp[content_hash]
+        ContentDatabase.put = put
+        ContentDatabase.get = get
 
     def connect(self, config):
         """Create content directory"""

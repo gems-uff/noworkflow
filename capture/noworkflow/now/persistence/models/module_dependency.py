@@ -46,4 +46,4 @@ class ModuleDependency(AlchemyProxy):
     ))
 
     def __repr__(self):
-        return "ModuleDependency({0.trial_id}, {0.module})".format(self)
+        return self.prolog_description.fact(self)

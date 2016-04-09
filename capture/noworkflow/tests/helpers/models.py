@@ -17,52 +17,75 @@ from ...now.persistence.lightweight import ActivationLW, EvaluationLW
 from ...now.persistence.lightweight import ValueLW, CompartmentLW
 from ...now.persistence.lightweight import DependencyLW, FileAccessLW
 from ...now.persistence.lightweight import ModuleLW, ModuleDependencyLW
+from ...now.persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 
 from ...now.persistence.models.trial import Trial
 from ...now.persistence.models.head import Head
+from ...now.persistence.models.tag import Tag
 from ...now.persistence import relational
+from ...now.collection.metadata import Metascript
 
 
-def erase_database(delete=True):
-    """Remove all rows from database"""
+trial_list = {}
+meta = None
+
+def restart_object_store(trial_id=None):
+    """Restart all object store"""
     global components, blocks, evaluations, activations, dependencies
     global file_accesses, values, compartments, modules, module_dependencies
-    if delete:
-        relational.session.execute(Trial.t.delete())
-        relational.session.execute(Head.t.delete())
-        relational.session.execute(CodeComponentLW.model.t.delete())
-        relational.session.execute(CodeBlockLW.model.t.delete())
-        relational.session.execute(EvaluationLW.model.t.delete())
-        relational.session.execute(ActivationLW.model.t.delete())
-        relational.session.execute(DependencyLW.model.t.delete())
-        relational.session.execute(FileAccessLW.model.t.delete())
-        relational.session.execute(ValueLW.model.t.delete())
-        relational.session.execute(CompartmentLW.model.t.delete())
-        relational.session.execute(ModuleLW.model.t.delete())
-        relational.session.execute(ModuleDependencyLW.model.t.delete())
+    global environment_attrs, arguments
+    global meta
 
-    components = ObjectStore(CodeComponentLW)
-    blocks = SharedObjectStore(CodeBlockLW)
-    evaluations = ObjectStore(EvaluationLW)
-    activations = SharedObjectStore(ActivationLW)
-    dependencies = ObjectStore(DependencyLW)
-    file_accesses = ObjectStore(FileAccessLW)
-    values = ObjectStore(ValueLW)
-    compartments = ObjectStore(CompartmentLW)
-    modules = ObjectStore(ModuleLW)
-    module_dependencies = ObjectStore(ModuleDependencyLW)
-erase_database(delete=False)
+    if not trial_id:
+        meta = Metascript()
+    else:
+        meta = trial_list[trial_id]
+
+    components = meta.code_components_store
+    blocks = meta.code_blocks_store
+    evaluations = meta.evaluations_store
+    activations = meta.activations_store
+    dependencies = meta.dependencies_store
+    file_accesses = meta.file_accesses_store
+    values = meta.values_store
+    compartments = meta.compartments_store
+    modules = meta.modules_store
+    module_dependencies = meta.module_dependencies_store
+    environment_attrs = meta.environment_attrs_store
+    arguments = meta.arguments_store
+
+restart_object_store()
+
+
+def erase_database():
+    """Remove all rows from database"""
+    relational.session.execute(Trial.t.delete())
+    relational.session.execute(Head.t.delete())
+    relational.session.execute(Tag.t.delete())
+    relational.session.execute(CodeComponentLW.model.t.delete())
+    relational.session.execute(CodeBlockLW.model.t.delete())
+    relational.session.execute(EvaluationLW.model.t.delete())
+    relational.session.execute(ActivationLW.model.t.delete())
+    relational.session.execute(DependencyLW.model.t.delete())
+    relational.session.execute(FileAccessLW.model.t.delete())
+    relational.session.execute(ValueLW.model.t.delete())
+    relational.session.execute(CompartmentLW.model.t.delete())
+    relational.session.execute(ModuleLW.model.t.delete())
+    relational.session.execute(ModuleDependencyLW.model.t.delete())
+    relational.session.execute(EnvironmentAttrLW.model.t.delete())
+    relational.session.execute(ArgumentLW.model.t.delete())
+    restart_object_store()
 
 
 def trial_params(year=2016, month=4, day=8, hour=1, minute=18, second=0,
-                 bypass_modules=False, script="main.py"):
+                 bypass_modules=False, script="main.py", path="/home/now"):
     """Return default trial params"""
     return {
         "script": script,
         "start":  datetime(year=year, month=month, day=day,
                            hour=hour, minute=minute, second=second),
         "command": "test",
-        "path": "/home/now",
+        "path": path,
         "bypass_modules": bypass_modules,
     }
 
@@ -168,10 +191,12 @@ def populate_trial(year=2016, month=4, day=8, hour=1, minute=18, second=0,
                    duration=65, script="main.py", docstring="block",
                    status="ongoing", bypass_modules=False,
                    read_file="file.txt", write_file="file2.txt",
-                   read_hash="a", write_hash_before=None,
-                   write_hash_after="b"):
+                   read_hash="a", write_hash_before=None, tag="",
+                   write_hash_after="b", path="/home/now", user="now"):
     """Populate database"""
-    params = trial_params(script=script, bypass_modules=bypass_modules)
+    restart_object_store()
+    params = trial_params(script=script, bypass_modules=bypass_modules,
+                          path=path)
     params["start"] = datetime(
         year=year, month=month, day=day,
         hour=hour, minute=minute, second=second
@@ -180,7 +205,7 @@ def populate_trial(year=2016, month=4, day=8, hour=1, minute=18, second=0,
     trial_id = Trial.store(**params)
 
     function_code = "def f(x):\n    return x"
-    code = "'block'\n{}\na = [1]\nb = f(a)".format(function_code)
+    code = "'{}'\n{}\na = [1]\nb = f(a)".format(docstring, function_code)
 
     main_id = _add_component(script, "script", "w", -1)
     blocks.add(*block_params(main_id, code=code, docstring=docstring))
@@ -262,13 +287,25 @@ def populate_trial(year=2016, month=4, day=8, hour=1, minute=18, second=0,
         file_accesses.fast_store(trial_id)
 
     if status != "ongoing":
-        if modules.id <= 0:
-            modules.add("external", "1.0.1", "/home/external.py", "aaaa")
-            modules.add("internal", "", "internal.py", "bbbb")
+        if not bypass_modules:
+            if modules.id <= 0:
+                modules.add("external", "1.0.1", "/home/external.py", "aaaa")
+                modules.add("internal", "", "internal.py", "bbbb")
 
-            modules.fast_store(trial_id)
-        module_dependencies.add(1)
-        module_dependencies.add(2)
-        module_dependencies.fast_store(trial_id)
+                modules.fast_store(trial_id)
+            module_dependencies.add(1)
+            module_dependencies.add(2)
+            module_dependencies.fast_store(trial_id)
 
+        arguments.add("script", script)
+        arguments.add("bypass_modules", str(bypass_modules))
+        environment_attrs.add("CWD", path)
+        environment_attrs.add("USER", user)
+        arguments.fast_store(trial_id)
+        environment_attrs.fast_store(trial_id)
+
+    if tag:
+        Tag.create(**tag_params(trial_id, name=tag))
+
+    trial_list[trial_id] = meta
     return trial_id

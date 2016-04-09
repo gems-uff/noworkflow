@@ -56,11 +56,6 @@ class Metascript(object):                                                       
         self.compartments_store = ObjectStore(CompartmentLW)
         self.file_accesses_store = ObjectStore(FileAccessLW)
 
-        # Definition object : Definition
-        self.definition = Definition(self)
-        self.execution = Execution(self)
-        self.deployment = Deployment(self)
-
         # Trial id read from Database : int
         self.trial_id = -1
         # Trial name : str
@@ -103,6 +98,11 @@ class Metascript(object):                                                       
         self.save_frequency = None
         # Save after closing X activations : int
         self.call_storage_frequency = 0
+
+        # Definition object : Definition
+        self.definition = Definition(self)
+        self.execution = Execution(self)
+        self.deployment = Deployment(self)
 
 
     @property

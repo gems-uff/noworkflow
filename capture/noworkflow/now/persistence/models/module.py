@@ -56,7 +56,7 @@ class Module(AlchemyProxy):
             """.format(self))
 
     def __repr__(self):
-        return "Module({0.id}, {0.name}, {0.version})".format(self)
+        return "module_def({0.id}, {0.name}, {0.version}).".format(self)
 
     @classmethod  # query
     def id_seq(cls, session=None):
