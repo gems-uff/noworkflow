@@ -159,7 +159,7 @@ def proxy_gen(query):
         yield proxy(element)
 
 
-def proxy_property(func, proxy_func=proxy):
+def proxy_property(func, proxy_func=proxy, doc=None):
     """Return a proxy property to a __model__ function"""
     @wraps(func)
     def prop(self, *args, **kwargs):
@@ -167,15 +167,15 @@ def proxy_property(func, proxy_func=proxy):
         obj = self._get_instance()                                               # pylint: disable=protected-access
         result = func(obj, *args, **kwargs)
         return proxy_func(result)
-    return property(prop)
+    return property(prop, doc=doc)
 
 
-def proxy_attr(name, proxy_func=proxy):
+def proxy_attr(name, proxy_func=proxy, doc=None):
     """Return a proxy property to a __model__ attribute"""
     def func(self):
         """Return {}""".format(name)
         return getattr(self, name)
-    return proxy_property(func, proxy_func=proxy_func)
+    return proxy_property(func, proxy_func=proxy_func, doc=doc)
 
 
 class AlchemyProxy(Model):
@@ -197,6 +197,11 @@ class AlchemyProxy(Model):
         else:
             self._alchemy_pk = obj
         self._restore_instance()
+
+    def __repr__(self):
+        if hasattr(self, 'prolog_description'):
+            return self.prolog_description.fact(self)                            # pylint: disable=no-member
+        return super(AlchemyProxy, self).__repr__()                              # pylint: disable=no-member
 
     def _store_pk(self, obj):
         self._alchemy_pk = obj.__mapper__.primary_key_from_instance(obj)
@@ -240,6 +245,18 @@ class AlchemyProxy(Model):
             if conn is None:
                 _conn.close()
 
+    @classmethod  # query
+    def all(cls, session=None):
+        """Return all tuples
+
+
+        Keyword arguments:
+        session -- specify session for loading (default=relational.session)
+        """
+        session = session or relational.session
+        return proxy_gen(session.query(cls.m))
+
+
 def create_relationship(proxy_func):
     """Create proxy descriptor"""
     class Relationship(object):                                                  # pylint: disable=too-few-public-methods
@@ -265,6 +282,11 @@ ModelMethod = namedtuple("ModelMethod", "func proxy")
 def query_many_property(func):
     """Property is part of the Model class. It should return a generator"""
     return ModelMethod(func, proxy_gen)
+
+def query_one_property(func):
+    """Property is part of the Model class. It should return a single instance"""
+    return ModelMethod(func, proxy)
+
 
 
 Many = create_relationship(proxy_gen)
@@ -327,8 +349,10 @@ def proxy_class(cls):
             attributes[var.name] = relationship(*var.args, **var.kwargs)
         elif isinstance(var, ModelMethod):
             new_name = name
-            setattr(cls, name, proxy_attr(new_name, proxy_func=var.proxy))
-            attributes[new_name] = property(var.func)
+            setattr(cls, name, proxy_attr(
+                new_name, proxy_func=var.proxy, doc=var.func.__doc__
+            ))
+            attributes[new_name] = property(var.func, doc=var.func.__doc__)
         elif name in ('__tablename__', '__table_args__'):
             attributes[name] = var
 

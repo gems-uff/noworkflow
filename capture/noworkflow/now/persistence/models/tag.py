@@ -26,15 +26,20 @@ class Tag(AlchemyProxy):
     """Represent a tag
 
     Doctest:
-    >>> from ....tests.helpers.models import erase_database, populate_trial
-    >>> from ....tests.helpers.models import tag_count
-    >>> erase_database()
-    >>> trial_id = populate_trial(script="main.py")
+    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+    >>> erase_db()
+    >>> trial_id = new_trial(script="main.py")
     >>> tag_id = Tag.create(trial_id, "AUTO", "1.1.1", datetime.now())
 
     Load a Tag object by passing its id:
-    >>> Tag(tag_id) # doctest: +ELLIPSIS
+    >>> tag = Tag(tag_id)
+    >>> tag  # doctest: +ELLIPSIS
     tag(..., '1.1.1', 'AUTO', ...).
+
+    Load Tag trial:
+    >>> trial = tag.trial
+    >>> trial.id == trial_id
+    True
     """
 
     __tablename__ = "tag"
@@ -61,9 +66,6 @@ class Tag(AlchemyProxy):
         "created at *Timestamp*.\n"
     ))
 
-    def __repr__(self):
-        return self.prolog_description.fact(self)
-
     @classmethod  # query
     def fast_load_auto_tag(cls, trial_id, code_hash, command, session=None):
         """Find automatic by code_hash and command.
@@ -89,33 +91,33 @@ class Tag(AlchemyProxy):
 
 
         Doctest:
-        >>> from .trial import Trial
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
+        >>> from noworkflow.now.persistence.models.trial import Trial
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
 
         If there is no tag in the database, return (0, [1, 1, 1])
-        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> trial = Trial(new_trial(script="main.py"))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test")
         (0, [1, 1, 1])
 
         If there is a tag in the database with the same code_hash and command,
         return existing (1, [1, 1, 1]):
         >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
-        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> trial = Trial(new_trial(script="main.py"))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test")
         (1, [1, 1, 1])
 
         If there is a tag in the database with the same code_hash but different
         command, return existing (2, [1, 1, 2]):
         >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
-        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> trial = Trial(new_trial(script="main.py"))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
         (2, [1, 1, 2])
 
         If there are only tags with different code hash return
         existing (3, [1, 2, 1]):
         >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
-        >>> trial = Trial(populate_trial(script="main.py", docstring="a"))
+        >>> trial = Trial(new_trial(script="main.py", docstring="a"))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
         (3, [1, 2, 1])
         """
@@ -170,29 +172,29 @@ class Tag(AlchemyProxy):
 
 
         Doctest:
-        >>> from .trial import Trial
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
 
         If there is no tag in the database, return 1.1.1
-        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> trial = Trial(new_trial(script="main.py"))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
         '1.1.1'
 
         If there is a tag in the database with the same code_hash and command,
         increment patch
-        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> trial = Trial(new_trial(script="main.py"))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
         '1.1.2'
 
         If there is a tag in the database with the same code_hash but different
         command, increment minor:
-        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> trial = Trial(new_trial(script="main.py"))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
         '1.2.1'
 
         If there are only tags with different code hash, increment major:
-        >>> trial = Trial(populate_trial(script="main.py", docstring="a"))
+        >>> trial = Trial(new_trial(script="main.py", docstring="a"))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
         '2.1.1'
         """
@@ -229,16 +231,16 @@ class Tag(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> from ....tests.helpers.models import tag_count
-        >>> erase_database()
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> erase_db()
 
         Create tag:
-        >>> tag_count()
+        >>> count(Tag)
         0
-        >>> trial_id = populate_trial(script="main.py")
+        >>> trial_id = new_trial(script="main.py")
         >>> _ = Tag.create(trial_id, "AUTO", "1.1.1", datetime.now())
-        >>> tag_count()
+        >>> count(Tag)
         1
         """
         session = session or relational.session

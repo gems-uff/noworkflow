@@ -14,7 +14,26 @@ from .base import AlchemyProxy, proxy_class, proxy_gen
 
 @proxy_class
 class GraphCache(AlchemyProxy):
-    """Represent a Graph Cache"""
+    """Represent a Graph Cache
+
+
+    Doctest:
+    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+    >>> from noworkflow.tests.helpers.models import count
+    >>> from noworkflow.tests.helpers.models import graph_cache_params
+    >>> erase_db()
+    >>> GraphCache.create(commit=True, **graph_cache_params(
+    ...     type_="tree", name="auto", attr=""))
+
+    Please, use select_cache classmethod to load caches:
+    >>> cache = list(GraphCache.select_cache("tree", "auto", ""))[0]
+    >>> cache  # doctest: +ELLIPSIS
+    cache(..., 'tree', 'auto').
+
+    It is also possible to load by the constructor, passing the cache id:
+    >>> GraphCache(cache.id)  # doctest: +ELLIPSIS
+    cache(..., 'tree', 'auto').
+    """
 
     __tablename__ = "graph_cache"
     __table_args__ = (
@@ -29,7 +48,7 @@ class GraphCache(AlchemyProxy):
     timestamp = Column(TIMESTAMP)
 
     def __repr__(self):
-        return "Cache({0.id}, {0.type}, {0.name})".format(self)
+        return "cache({0.id}, {0.type!r}, {0.name!r}).".format(self)
 
     @classmethod  # query
     def _query_select_cache(cls, gtype, name, attributes, session=None):
@@ -54,9 +73,25 @@ class GraphCache(AlchemyProxy):
         name -- graph mode: graph, tree, no_match, exact_match, namespace_match
         attributes -- other configuration: time
 
-
         Keyword arguments:
         session -- desired session
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> from noworkflow.tests.helpers.models import graph_cache_params
+        >>> erase_db()
+        >>> GraphCache.create(commit=True, **graph_cache_params(
+        ...     type_="tree", name="auto", attr=""))
+        >>> GraphCache.create(commit=True, **graph_cache_params(
+        ...     type_="no_match", name="auto", attr=""))
+
+
+        Select caches by type, name and attributes:
+        >>> list(GraphCache.select_cache("tree", "auto", "")
+        ... )  # doctest: +ELLIPSIS
+        [cache(..., 'tree', 'auto').]
         """
         return proxy_gen(cls._query_select_cache(
             gtype, name, attributes, session=session or relational.session))
@@ -71,11 +106,34 @@ class GraphCache(AlchemyProxy):
         name -- graph mode: graph, tree, no_match, exact_match, namespace_match
         attributes -- other configuration: time
 
-
         Keyword arguments:
         session -- desired session (default=relational.session)
         commit -- commit deletion (default=False)
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> from noworkflow.tests.helpers.models import graph_cache_params
+        >>> erase_db()
+        >>> GraphCache.create(commit=True, **graph_cache_params(
+        ...     type_="tree", name="auto", attr=""))
+        >>> GraphCache.create(commit=True, **graph_cache_params(
+        ...     type_="no_match", name="auto", attr=""))
+        >>> count(GraphCache)
+        2
+
+        Remove cache if matches type, name and attributes:
+        >>> GraphCache.remove("tree", "auto", "", commit=True)
+        >>> count(GraphCache)
+        1
+
+        Do not remove without matches:
+        >>> GraphCache.remove("invalid", "auto", "", commit=True)
+        >>> count(GraphCache)
+        1
         """
+        session = session or relational.session
         cls._query_select_cache(
             gtype, name, attributes, session=session or relational.session
         ).delete()
@@ -83,27 +141,46 @@ class GraphCache(AlchemyProxy):
             session.commit()
 
     @classmethod  # query
-    def create(cls, gtype, name, duration, attributes, content_hash,             # pylint: disable=too-many-arguments
-               session=None, commit=False):
+    def create(cls, type_, name, dur, attr, hash_, session=None, commit=False):   # pylint: disable=too-many-arguments
         """Create Cache
 
 
         Arguments:
         type -- cache type: trial, diff
         name -- graph mode: graph, tree, no_match, exact_match, namespace_match
-        duration -- required time to calculate graph
-        attributes -- other configuration: time
-        content_hash -- hash of stored graph
-
+        dur -- required time to calculate graph
+        attr -- other configuration: time
+        hash -- hash of stored graph
 
         Keyword arguments:
         session -- desired session (default=relational.session)
         commit -- commit insertion (default=False)
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> from noworkflow.tests.helpers.models import graph_cache_params
+        >>> erase_db()
+
+        Do not create cache if commit is false
+        >>> count(GraphCache)
+        0
+        >>> s = relational.make_session()
+        >>> GraphCache.create(commit=False, session=s, **graph_cache_params())
+        >>> count(GraphCache)
+        0
+
+        Create cache with type, name, duration, attributes, and content_hash:
+        >>> g = relational.make_session()
+        >>> GraphCache.create(commit=True, session=g, **graph_cache_params())
+        >>> count(GraphCache)
+        1
         """
         session = session or relational.session
         cache = cls.m(                                                           # pylint: disable=not-callable
-            type=gtype, name=name, duration=duration,
-            attributes=attributes, content_hash=content_hash
+            type=type_, name=name, duration=dur,
+            attributes=attr, content_hash=hash_
         )
         session.add(cache)
         if commit:

@@ -19,7 +19,9 @@ from .base import query_many_property
 
 @proxy_class
 class CodeBlock(AlchemyProxy):
-    """Represent a script, class or function definition"""
+    """Represent a script, class or function definition
+
+    """
 
     __tablename__ = "code_block"
     __table_args__ = (
@@ -97,6 +99,3 @@ class CodeBlock(AlchemyProxy):
             {extra}
             Code hash: {block.code_hash}\
             """.format(block=self, component=component, extra=extra))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)

@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import doctest
 import unittest
+import sys
 
 from ..now.persistence import persistence_config
 
@@ -21,20 +22,20 @@ persistence_config.connect(".")
 from .cross_version_test import TestCrossVersion
 from .formatter_test import TestFormatter
 
-from ..now.persistence.models import trial as trial_module
-from ..now.persistence.models import head as head_module
-from ..now.persistence.models import tag as tag_module
+from ..now.persistence.models import ORDER
 
-trial = doctest.DocTestSuite(trial_module)
-head = doctest.DocTestSuite(head_module)
-tag = doctest.DocTestSuite(tag_module)
+
+suites = []
+for model in ORDER:
+    model_test = doctest.DocTestSuite(sys.modules[model.__module__])
+    locals()[model.__name__] = model_test
+    suites.append(model_test)
 
 
 def load_tests(loader, tests, pattern):
     suite = unittest.TestSuite()
-    suite.addTest(trial)
-    suite.addTest(head)
-    suite.addTest(tag)
+    for test_suite in suites:
+        suite.addTest(test_suite)
     suite.addTests(loader.loadTestsFromTestCase(TestCrossVersion))
     suite.addTests(loader.loadTestsFromTestCase(TestFormatter))
     return suite

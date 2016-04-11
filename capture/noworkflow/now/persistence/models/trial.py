@@ -33,11 +33,11 @@ class Trial(AlchemyProxy):
     """Represent a trial
 
     Doctest:
-    >>> from ....tests.helpers.models import erase_database, populate_trial
-    >>> erase_database()
-    >>> id1 = populate_trial(status="finished", tag="1.0.0")
-    >>> id2 = populate_trial(status="finished", docstring="main script",
-    ...                      duration=65, tag="1.1.0")
+    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+    >>> erase_db()
+    >>> id1 = new_trial(status="finished", tag="1.0.0")
+    >>> id2 = new_trial(status="finished", docstring="main script",
+    ...                 duration=65, tag="1.1.0")
 
     Initialize it by passing a trial reference (id or tag):
     >>> first_trial = Trial("1.0.0")
@@ -73,7 +73,7 @@ class Trial(AlchemyProxy):
     True
 
     Similarly, it is possible to get which trials are based on the current one
-    >>> list(first_trial.children) # doctest: +ELLIPSIS
+    >>> list(first_trial.children)  # doctest: +ELLIPSIS
     [trial(...).]
 
 
@@ -105,37 +105,36 @@ class Trial(AlchemyProxy):
 
     For a list of all code blocks, code components, evaluations, activations,
     accesses, values, compartments, dependencies and tags:
-    >>> list(trial.code_blocks) # doctest: +ELLIPSIS
+    >>> list(trial.code_blocks)  # doctest: +ELLIPSIS
     [code_block(...)., ...]
-    >>> list(trial.code_components) # doctest: +ELLIPSIS
+    >>> list(trial.code_components)  # doctest: +ELLIPSIS
     [code_component(...)., ...]
-    >>> list(trial.evaluations) # doctest: +ELLIPSIS
+    >>> list(trial.evaluations)  # doctest: +ELLIPSIS
     [evaluation(...)., ...]
-    >>> list(trial.activations) # doctest: +ELLIPSIS
+    >>> list(trial.activations)  # doctest: +ELLIPSIS
     [activation(...)., ...]
-    >>> list(trial.file_accesses) # doctest: +ELLIPSIS
+    >>> list(trial.file_accesses)  # doctest: +ELLIPSIS
     [access(...)., ...]
-    >>> list(trial.values) # doctest: +ELLIPSIS
+    >>> list(trial.values)  # doctest: +ELLIPSIS
     [value(...)., ...]
-    >>> list(trial.compartments) # doctest: +ELLIPSIS
+    >>> list(trial.compartments)  # doctest: +ELLIPSIS
     [compartment(...).]
-    >>> list(trial.dependencies) # doctest: +ELLIPSIS
+    >>> list(trial.dependencies)  # doctest: +ELLIPSIS
     [dependency(...)., ...]
-    >>> list(trial.tags) # doctest: +ELLIPSIS
+    >>> list(trial.tags)  # doctest: +ELLIPSIS
     [tag(..., '1.1.0', 'AUTO', ...).]
 
     To load modules, propagating inherited modules:
-    >>> list(trial.modules) # doctest: +ELLIPSIS
+    >>> list(trial.modules)  # doctest: +ELLIPSIS
     [module_def(...)., ...]
 
     Similarly, to load module dependencies, propagating inherited modules:
-    >>> list(trial.module_dependencies) # doctest: +ELLIPSIS
+    >>> list(trial.module_dependencies)  # doctest: +ELLIPSIS
     [module(...)., ...]
 
     If you are interested only on local modules:
-    >>> list(trial.local_modules) # doctest: +ELLIPSIS
+    >>> list(trial.local_modules)  # doctest: +ELLIPSIS
     [module_def(...).]
-
     """
 
     __tablename__ = "trial"
@@ -296,21 +295,25 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial1 = Trial(populate_trial())
-        >>> trial2 = Trial(populate_trial(bypass_modules=True))
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial1 = Trial(new_trial(status="unfinished"))
+        >>> trial2 = Trial(new_trial(status="unfinished", bypass_modules=True))
 
         Return this modules, if it did not bypass modules:
-        >>> trial1.dmodules == trial1.modules
+        >>> _ids1 = sorted([m.id for m in trial1._modules])
+        >>> ids1 = sorted([m.id for m in trial1.modules])
+        >>> _ids1 == ids1
         True
 
         Do not return this modules, if it bypassed modules:
-        >>> trial2.dmodules != trial2.modules
+        >>> _ids2 = sorted([m.id for m in trial2._modules])
+        >>> ids2 = sorted([m.id for m in trial2.modules])
+        >>> _ids2 != ids2
         True
 
         Instead, return the inherited trial modules:
-        >>> trial1.dmodules == trial2.modules
+        >>> _ids1 == ids2
         True
         """
         if self.modules_inherited_from_trial:
@@ -323,21 +326,25 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial1 = Trial(populate_trial())
-        >>> trial2 = Trial(populate_trial(bypass_modules=True))
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial1 = Trial(new_trial(status="unfinished"))
+        >>> trial2 = Trial(new_trial(status="unfinished", bypass_modules=True))
 
         Return this modules, if it did not bypass modules:
-        >>> trial1.dmodule_dependencies == trial1.modules
+        >>> _ids1 = sorted([d.module_id for d in trial1._module_dependencies])
+        >>> ids1 = sorted([d.module_id for d in trial1.module_dependencies])
+        >>> _ids1 == ids1
         True
 
         Do not return this modules, if it bypassed modules:
-        >>> trial2.dmodule_dependencies != trial2.modules
+        >>> _ids2 = sorted([d.module_id for d in trial2._module_dependencies])
+        >>> ids2 = sorted([d.module_id for d in trial2.module_dependencies])
+        >>> _ids2 != ids2
         True
 
         Instead, return the inherited trial modules:
-        >>> trial1.dmodule_dependencies == trial2.modules
+        >>> _ids1 == ids2
         True
         """
         if self.modules_inherited_from_trial:
@@ -359,10 +366,11 @@ class Trial(AlchemyProxy):
         """Load local modules
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> from ....tests.helpers.models import modules, module_dependencies
-        >>> erase_database()
-        >>> trial_id = populate_trial(path="/home/now")
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import modules
+        >>> from noworkflow.tests.helpers.models import module_dependencies
+        >>> erase_db()
+        >>> trial_id = new_trial(path="/home/now")
         >>> trial = Trial(trial_id)
 
         Return empty list if there are no modules:
@@ -382,16 +390,16 @@ class Trial(AlchemyProxy):
         >>> md2 = module_dependencies.add(m2)
         >>> modules.fast_store(trial_id)
         >>> module_dependencies.fast_store(trial_id)
-        >>> list(trial.local_modules) # doctest: +ELLIPSIS
-        [module_def(..., inte, 1.0.1).]
+        >>> list(trial.local_modules)  # doctest: +ELLIPSIS
+        [module_def(..., 'inte', '1.0.1').]
 
         Return modules with relative path:
         >>> m3 = modules.add("inte2", "1.0.2", "inte2.py", "bbbb")
         >>> md3 = module_dependencies.add(m3)
         >>> modules.fast_store(trial_id)
         >>> module_dependencies.fast_store(trial_id)
-        >>> list(trial.local_modules) # doctest: +ELLIPSIS
-        [module_def(..., inte, 1.0.1)., module_def(..., inte2, 1.0.2).]
+        >>> list(trial.local_modules)  # doctest: +ELLIPSIS
+        [module_def(..., 'inte', '1.0.1')., module_def(..., 'inte2', '1.0.2').]
         """
         for module in self.modules:                                              # pylint: disable=not-an-iterable
             if not os.path.isabs(module.path):
@@ -405,9 +413,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(docstring="block"))
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(docstring="block"))
 
         Return script_content:
         >>> str(trial.script_content) #doctest: +ELLIPSIS
@@ -423,9 +431,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(docstring="block"))
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(docstring="block"))
 
         Return docstring:
         >>> trial.docstring
@@ -439,9 +447,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(docstring="block"))
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(docstring="block"))
 
         Return code hash:
         >>> len(trial.code_hash)
@@ -454,10 +462,10 @@ class Trial(AlchemyProxy):
         """Check if trial has finished
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> id1 = populate_trial(status="finished")
-        >>> id2 = populate_trial(status="unfinished")
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> id1 = new_trial(status="finished")
+        >>> id2 = new_trial(status="unfinished")
 
         Trial has finished:
         >>> Trial(id1).finished
@@ -475,9 +483,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(duration=65))
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(duration=65))
 
         Return duration:
         >>> trial.duration
@@ -493,9 +501,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(duration=65))
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(duration=65))
 
         Return duration:
         >>> trial.duration_text
@@ -511,9 +519,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(
         ...     path="/home/now", user="now", status="unfinished"))
 
         Return environment dict
@@ -528,9 +536,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(
         ...     script="main.py", bypass_modules=False, status="unfinished"))
 
         Return argument dict
@@ -547,9 +555,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(
         ...     script="main.py", read_file="file.txt", write_file="file2.txt",
         ...     read_hash="abc", write_hash_before=None,
         ...     write_hash_after="def", status="finished"))
@@ -623,9 +631,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial = Trial(new_trial(
         ...     script="main.py", read_file="file.txt", write_file="file2.txt",
         ...     read_hash="abc", write_hash_before=None,
         ...     write_hash_after="def", status="finished"))
@@ -672,31 +680,31 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> from ....tests.helpers.models import head_count
-        >>> erase_database()
-        >>> id1 = populate_trial(script="main.py")
-        >>> id2 = populate_trial(script="main.py")
-        >>> id3 = populate_trial(script="main2.py")
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> erase_db()
+        >>> id1 = new_trial(script="main.py")
+        >>> id2 = new_trial(script="main.py")
+        >>> id3 = new_trial(script="main2.py")
 
         Create a new head row:
-        >>> head_count()
+        >>> count(Head)
         0
         >>> trial = Trial(id1)
         >>> trial.create_head()
-        >>> head_count()
+        >>> count(Head)
         1
 
         Remove old head if there is a head for the same script:
         >>> trial = Trial(id2)
         >>> trial.create_head()
-        >>> head_count()
+        >>> count(Head)
         1
 
         Create new head for different script:
         >>> trial = Trial(id3)
         >>> trial.create_head()
-        >>> head_count()
+        >>> count(Head)
         2
 
         """
@@ -710,10 +718,10 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
         >>> from textwrap import dedent
-        >>> erase_database()
-        >>> id_ = populate_trial(
+        >>> erase_db()
+        >>> id_ = new_trial(
         ...     year=2016, month=4, day=8, hour=18, minute=17, second=0,
         ...     duration=65, script="main.py"
         ... )
@@ -745,20 +753,17 @@ class Trial(AlchemyProxy):
             return self.graph._repr_html_()                                      # pylint: disable=protected-access
         return repr(self)
 
-    def __repr__(self):
-        return self.prolog_description.fact(self)
-
     @classmethod  # query
     def distinct_scripts(cls):
         """Return a set with distinct scripts
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> id1 = populate_trial(script="main.py")
-        >>> id2 = populate_trial(script="main2.py")
-        >>> id3 = populate_trial(script="main3.py")
-        >>> id4 = populate_trial(script="main.py")
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> id1 = new_trial(script="main.py")
+        >>> id2 = new_trial(script="main2.py")
+        >>> id3 = new_trial(script="main3.py")
+        >>> id4 = new_trial(script="main.py")
 
         Return all scripts:
         >>> sorted(list(Trial.distinct_scripts()))
@@ -778,20 +783,20 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
 
         Return None if there is no trial:
         >>> Trial.last_trial()
 
         Return trial if trial exists:
-        >>> id1 = populate_trial(minute=47, script="main.py")
+        >>> id1 = new_trial(minute=47, script="main.py")
         >>> trial = Trial.last_trial()
         >>> trial.id == id1
         True
 
         Return last trial:
-        >>> id2 = populate_trial(minute=49, script="main2.py")
+        >>> id2 = new_trial(minute=49, script="main2.py")
         >>> trial = Trial.last_trial()
         >>> trial.id == id2
         True
@@ -839,12 +844,13 @@ class Trial(AlchemyProxy):
         Keyword Arguments:
         trial -- limit query to a specific trial
 
+
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> id1 = populate_trial(year=2016, month=4, script="main.py")
-        >>> id2 = populate_trial(year=2016, month=5, script="main.py")
-        >>> id3 = populate_trial(year=2016, month=4, script="main2.py")
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> id1 = new_trial(year=2016, month=4, script="main.py")
+        >>> id2 = new_trial(year=2016, month=5, script="main.py")
+        >>> id3 = new_trial(year=2016, month=4, script="main2.py")
 
         Return trial if name and time matches:
         >>> trial = Trial.find_by_name_and_time("main.py", "2016")
@@ -892,13 +898,13 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> from ....tests.helpers.models import tag_params
-        >>> from .tag import Tag
-        >>> erase_database()
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import tag_params
+        >>> from noworkflow.now.persistence.models import Tag
+        >>> erase_db()
 
         Return trial if id matches:
-        >>> id1 = populate_trial()
+        >>> id1 = new_trial()
         >>> trial = Trial.load_trial(id1)
         >>> trial.id == id1
         True
@@ -933,12 +939,12 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> from ....tests.helpers.models import head_count
-        >>> erase_database()
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> erase_db()
 
         Return last_trial object if there is not head:
-        >>> id1 = populate_trial(minute=0, script="main.py")
+        >>> id1 = new_trial(minute=0, script="main.py")
         >>> trial = Trial.load_parent("main.py")
         >>> trial.id == id1
         True
@@ -953,23 +959,23 @@ class Trial(AlchemyProxy):
         >>> trial
 
         Return Head trial if head exists. Don't remove head if remove=False
-        >>> id2 = populate_trial(minute=1, script="main.py")
+        >>> id2 = new_trial(minute=1, script="main.py")
         >>> session = relational.make_session()
         >>> session.add(Head.m(trial_id=id1, script="main.py"))
         >>> session.commit()
-        >>> head_count()
+        >>> count(Head)
         1
         >>> trial = Trial.load_parent("main.py", remove=False)
         >>> trial.id == id1
         True
-        >>> head_count()
+        >>> count(Head)
         1
 
         Returns Head trial if head exists. Remove head if remove=true (default)
         >>> trial = Trial.load_parent("main.py")
         >>> trial.id == id1
         True
-        >>> head_count()
+        >>> count(Head)
         0
         """
         session = session or relational.session
@@ -995,8 +1001,8 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
 
         Raise RuntimerError if there is no trial:
         >>> Trial.fast_last_trial_id()
@@ -1006,12 +1012,12 @@ class Trial(AlchemyProxy):
             No previous trial was found
 
         Return the last existing trial id:
-        >>> id1 = populate_trial()
+        >>> id1 = new_trial()
         >>> Trial.fast_last_trial_id() == id1
         True
 
         Only if the trial did not bypass modules:
-        >>> id2 = populate_trial(minute=38, bypass_modules=True)
+        >>> id2 = new_trial(minute=38, bypass_modules=True)
         >>> Trial.fast_last_trial_id() == id1
         True
         """
@@ -1052,10 +1058,10 @@ class Trial(AlchemyProxy):
         session -- specify session for loading (default=relational.session)
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database
-        >>> from ....tests.helpers.models import trial_params, select_trial
-        >>> from ....tests.helpers.models import trial_update_params
-        >>> erase_database()
+        >>> from noworkflow.tests.helpers.models import erase_db, select_trial
+        >>> from noworkflow.tests.helpers.models import trial_params
+        >>> from noworkflow.tests.helpers.models import trial_update_params
+        >>> erase_db()
 
         Set main_id, finish and status of an existing trial:
         >>> trial_id = Trial.store(**trial_params(minute=39))
@@ -1098,9 +1104,9 @@ class Trial(AlchemyProxy):
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database
-        >>> from ....tests.helpers.models import trial_params, select_trial
-        >>> erase_database()
+        >>> from noworkflow.tests.helpers.models import erase_db, select_trial
+        >>> from noworkflow.tests.helpers.models import trial_params
+        >>> erase_db()
 
         Create a trial with script, start, path, command and bypass_modules.
         The first trial has no parent_id and does not inherit modules:
@@ -1167,37 +1173,15 @@ class Trial(AlchemyProxy):
         return tid
 
     @classmethod  # query
-    def all(cls, session=None):
-        """Return all trials
-
-
-        Keyword arguments:
-        session -- specify session for loading (default=relational.session)
-
-
-        Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> id1 = populate_trial()
-        >>> id2 = populate_trial()
-
-        Return all trials:
-        >>> [t.id for t in Trial.all()] == [id1, id2]
-        True
-        """
-        session = session or relational.session
-        return proxy_gen(session.query(cls.m))
-
-    @classmethod  # query
     def reverse_trials(cls, limit, session=None):
         """Return a generator with <limit> trials ordered by start time desc
 
 
         Doctest:
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> id1 = populate_trial(minute=4)
-        >>> id2 = populate_trial(minute=20)
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> id1 = new_trial(minute=4)
+        >>> id2 = new_trial(minute=20)
 
         Return trials in reverse order:
         >>> [t.id for t in Trial.reverse_trials(2)] == [id2, id1]

@@ -17,7 +17,36 @@ from .base import AlchemyProxy, proxy_class, one, backref_one
 
 @proxy_class
 class ModuleDependency(AlchemyProxy):
-    """Represent a Module Dependency"""
+    """Represent a Module Dependency
+
+
+    Doctest:
+    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+    >>> from noworkflow.tests.helpers.models import modules
+    >>> from noworkflow.tests.helpers.models import module_dependencies
+    >>> erase_db()
+    >>> trial_id = new_trial()
+    >>> mid = modules.add("module", "1.0.1", "/home/module.py", "abc")
+    >>> _ = module_dependencies.add(mid)
+    >>> modules.fast_store(trial_id)
+    >>> module_dependencies.fast_store(trial_id)
+
+
+    Load a ModuleDependency object by trial_id, id:
+    >>> module_dependency = ModuleDependency((trial_id, mid))
+    >>> module_dependency  # doctest: +ELLIPSIS
+    module(..., ..., 'module', '1.0.1', '/home/module.py', 'abc').
+
+    Load ModuleDependency trial:
+    >>> trial = module_dependency.trial
+    >>> trial.id == trial_id
+    True
+
+    Load ModuleDependency module:
+    >>> module = module_dependency.module
+    >>> module.id == mid
+    True
+    """
 
     __tablename__ = "module_dependency"
     __table_args__ = (
@@ -44,6 +73,3 @@ class ModuleDependency(AlchemyProxy):
         "imported the *version* of a module (*Id*) with *Name*,\n"
         "and content (*CodeHash*) written in *Path*."
     ))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)

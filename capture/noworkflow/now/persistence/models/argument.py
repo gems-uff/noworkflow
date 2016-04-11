@@ -16,7 +16,28 @@ from .base import AlchemyProxy, proxy_class, backref_one
 
 @proxy_class
 class Argument(AlchemyProxy):
-    """Represent a command line argument"""
+    """Represent a command line argument
+
+
+    Doctest:
+    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+    >>> from noworkflow.tests.helpers.models import arguments
+    >>> erase_db()
+    >>> trial_id = new_trial()
+    >>> id_ = arguments.add("arg_name", "arg_value")
+    >>> arguments.fast_store(trial_id)
+
+
+    Load Argument object by (trial_id, id):
+    >>> argument = Argument((trial_id, id_))
+    >>> argument  # doctest: +ELLIPSIS
+    argument(..., 'arg_name', 'arg_value').
+
+    Load Argument trial:
+    >>> trial = argument.trial
+    >>> trial.id == trial_id
+    True
+    """
 
     __tablename__ = "argument"
     __table_args__ = (
@@ -39,6 +60,3 @@ class Argument(AlchemyProxy):
         "an argument (*Name*)\n"
         "was passed with *Value*."
     ))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)

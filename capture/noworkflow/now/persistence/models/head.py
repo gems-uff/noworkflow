@@ -22,10 +22,10 @@ class Head(AlchemyProxy):
 
 
     Doctest:
-    >>> from .trial import Trial
-    >>> from ....tests.helpers.models import erase_database, populate_trial
-    >>> erase_database()
-    >>> trial = Trial(populate_trial(script="main.py"))
+    >>> from noworkflow.now.persistence.models import Trial
+    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+    >>> erase_db()
+    >>> trial = Trial(new_trial(script="main.py"))
     >>> session = relational.make_session()
     >>> result = session.execute(Head.t.insert(), {"trial_id": trial.id,
     ...     "script": "main.py"})
@@ -33,11 +33,12 @@ class Head(AlchemyProxy):
 
     Load a Head object by passing its id:
     >>> head = Head(head_id)
-    >>> head # doctest: +ELLIPSIS
+    >>> head  # doctest: +ELLIPSIS
     head(..., 'main.py', ...).
 
-    It is possible to access the head trial:
-    >>> head.trial.id == trial.id
+    Load Head trial:
+    >>> trial = head.trial
+    >>> trial.id == trial.id
     True
     """
 
@@ -66,12 +67,12 @@ class Head(AlchemyProxy):
 
 
         Doctest:
-        >>> from .trial import Trial
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> erase_database()
-        >>> trial1 = Trial(populate_trial(script="main.py"))
-        >>> trial2 = Trial(populate_trial(script="main.py"))
-        >>> trial3 = Trial(populate_trial(script="main2.py"))
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> erase_db()
+        >>> trial1 = Trial(new_trial(script="main.py"))
+        >>> trial2 = Trial(new_trial(script="main.py"))
+        >>> trial3 = Trial(new_trial(script="main2.py"))
         >>> trial1.create_head()
         >>> trial3.create_head()
 
@@ -94,23 +95,23 @@ class Head(AlchemyProxy):
 
 
         Doctest:
-        >>> from .trial import Trial
-        >>> from ....tests.helpers.models import erase_database, populate_trial
-        >>> from ....tests.helpers.models import head_count
-        >>> erase_database()
-        >>> trial = Trial(populate_trial(script="main.py"))
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> erase_db()
+        >>> trial = Trial(new_trial(script="main.py"))
         >>> trial.create_head()
-        >>> head_count()
+        >>> count(Head)
         1
 
         Do not remove wrong id:
         >>> Head.remove(-1)
-        >>> head_count()
+        >>> count(Head)
         1
 
         Remove right id:
         >>> Head.remove(Head.load_head("main.py").id)
-        >>> head_count()
+        >>> count(Head)
         0
         """
         session = session or relational.session

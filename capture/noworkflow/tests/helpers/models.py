@@ -22,12 +22,14 @@ from ...now.persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 from ...now.persistence.models.trial import Trial
 from ...now.persistence.models.head import Head
 from ...now.persistence.models.tag import Tag
+from ...now.persistence.models.graph_cache import GraphCache
 from ...now.persistence import relational
 from ...now.collection.metadata import Metascript
 
 
 trial_list = {}
 meta = None
+m1, m2 = 1, 2
 
 def restart_object_store(trial_id=None):
     """Restart all object store"""
@@ -50,6 +52,7 @@ def restart_object_store(trial_id=None):
     values = meta.values_store
     compartments = meta.compartments_store
     modules = meta.modules_store
+    modules.id = ModuleLW.model.id_seq()
     module_dependencies = meta.module_dependencies_store
     environment_attrs = meta.environment_attrs_store
     arguments = meta.arguments_store
@@ -59,6 +62,7 @@ restart_object_store()
 
 def erase_database():
     """Remove all rows from database"""
+    relational.session.execute(GraphCache.t.delete())
     relational.session.execute(Trial.t.delete())
     relational.session.execute(Head.t.delete())
     relational.session.execute(Tag.t.delete())
@@ -74,8 +78,10 @@ def erase_database():
     relational.session.execute(ModuleDependencyLW.model.t.delete())
     relational.session.execute(EnvironmentAttrLW.model.t.delete())
     relational.session.execute(ArgumentLW.model.t.delete())
+    relational.session.expire_all()
     restart_object_store()
 
+erase_db = erase_database
 
 def trial_params(year=2016, month=4, day=8, hour=1, minute=18, second=0,
                  bypass_modules=False, script="main.py", path="/home/now"):
@@ -106,14 +112,9 @@ def select_trial(id_):
     ).first()
 
 
-def head_count():
-    """Count Head tuples"""
-    return relational.session.query(func.count(Head.m.id)).scalar()
-
-def tag_count():
-    """Count Tag tuples"""
-    return relational.session.query(func.count(Tag.m.id)).scalar()
-
+def count(model):
+    """Count tuples from model"""
+    return relational.session.query(func.count(model.m.id)).scalar()
 
 
 def tag_params(trial_id, name="tag", type_="AUTO", minute=20):
@@ -123,6 +124,18 @@ def tag_params(trial_id, name="tag", type_="AUTO", minute=20):
         "name": name,
         "type_": type_,
         "timestamp": datetime(year=2016, month=4, day=8, hour=1, minute=minute)
+    }
+
+
+def graph_cache_params(type_="tree", name="cache1", dur=0,
+                       attr="", hash_="abcd"):
+    """Return default graph_cache params"""
+    return {
+        "type_": type_,
+        "name": name,
+        "dur": dur,
+        "attr": attr,
+        "hash_": hash_,
     }
 
 
@@ -293,13 +306,15 @@ def populate_trial(year=2016, month=4, day=8, hour=1, minute=18, second=0,
 
     if status != "ongoing":
         if not bypass_modules:
-            if modules.id <= 0:
-                modules.add("external", "1.0.1", "/home/external.py", "aaaa")
-                modules.add("internal", "", "internal.py", "bbbb")
+            if not count(ModuleLW.model):
+                global m1, m2
+                m1 = modules.add("external", "1.0.1", "/home/external.py",
+                                 "aaaa")
+                m2 = modules.add("internal", "", "internal.py", "bbbb")
 
                 modules.fast_store(trial_id)
-            module_dependencies.add(1)
-            module_dependencies.add(2)
+            module_dependencies.add(m1)
+            module_dependencies.add(m2)
             module_dependencies.fast_store(trial_id)
 
         arguments.add("script", script)
@@ -314,3 +329,5 @@ def populate_trial(year=2016, month=4, day=8, hour=1, minute=18, second=0,
 
     trial_list[trial_id] = meta
     return trial_id
+
+new_trial = populate_trial
