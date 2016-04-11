@@ -159,6 +159,12 @@ def proxy_gen(query):
         yield proxy(element)
 
 
+def proxy_gen_first(query):
+    """Return proxy instance from SQLALchemy object when uselist=True"""
+    for element in query:
+        return proxy(element)
+
+
 def proxy_property(func, proxy_func=proxy, doc=None):
     """Return a proxy property to a __model__ function"""
     @wraps(func)
@@ -326,6 +332,10 @@ def backref_many(name):
 def backref_one(name):
     """Create property for backref object"""
     return proxy_attr(name)
+
+def backref_one_uselist(name):
+    """Create a property for backref object"""
+    return proxy_attr(name, proxy_func=proxy_gen_first)
 
 
 def proxy_class(cls):

@@ -13,7 +13,7 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologNullableRepr
 
 from .base import proxy_class, AlchemyProxy
-from .base import many_ref, backref_one, backref_many
+from .base import many_ref, backref_many, backref_one_uselist
 from .base import query_many_property
 
 
@@ -21,6 +21,32 @@ from .base import query_many_property
 class CodeBlock(AlchemyProxy):
     """Represent a script, class or function definition
 
+    Doctest:
+    >>> from noworkflow.tests.scenarios.models import Definition
+    >>> scenario = Definition(3)
+    >>> trial, id_ = scenario.trial, scenario.id
+
+
+    Load CodeBlock by (trial_id, id):
+    >>> code_block = CodeBlock((trial.id, id_))
+    >>> code_block  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    code_block(..., ..., ..., 'ab').
+
+    Load CodeBlock trial:
+    >>> code_block.trial.id == trial.id
+    True
+
+    Load CodeBlock this_component:
+    >>> code_block.this_component  # doctest: +ELLIPSIS
+    code_component(..., ..., 'function', 'function_def', 'w', 1, 0, 2, 8, ...).
+
+    Load CodeBlock sub components:
+    >>> list(code_block.components)  # doctest: +ELLIPSIS
+    [code_component(...)., ...]
+
+    Load CodeBlock activations:
+    >>> list(code_block.activations)  # doctest: +ELLIPSIS
+    [activation(...).]
     """
 
     __tablename__ = "code_block"
@@ -38,8 +64,8 @@ class CodeBlock(AlchemyProxy):
 
     activations = many_ref("code_block", "Activation")
 
-    trial = backref_one("trial")  # Trial.code_blocks
-    this_component = backref_one("this_component") # CodeComponent.this_block
+    trial = backref_one_uselist("trial")  # Trial.code_blocks
+    this_component = backref_one_uselist("this_component") # CodeComponent.this_block
     components = backref_many("components") # CodeComponent.container
 
     prolog_description = PrologDescription("code_block", (

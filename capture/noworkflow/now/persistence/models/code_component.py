@@ -29,25 +29,9 @@ class CodeComponent(AlchemyProxy):
 
 
     Doctest:
-    >>> from noworkflow.now.persistence.models import Trial
-    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
-    >>> from noworkflow.tests.helpers.models import blocks
-    >>> from noworkflow.tests.helpers.models import component_params
-    >>> from noworkflow.tests.helpers.models import evaluation_params
-    >>> from noworkflow.tests.helpers.models import block_params
-    >>> erase_db()
-    >>> trial = Trial(new_trial(status="finished"))
-    >>> from noworkflow.tests.helpers.models import components, evaluations
-    >>> id_ = components.add(*component_params(
-    ...     name="function", type_="function_def", mode="w",
-    ...     first_char_line=1, first_char_column=0,
-    ...     last_char_line=2, last_char_column= 8,
-    ...     container_id=trial.main_id))
-    >>> activation = list(trial.activations)[0]
-    >>> eval_id = evaluations.add(*evaluation_params(id_, activation.id))
-    >>> components.fast_store(trial.id)
-    >>> evaluations.fast_store(trial.id)
-
+    >>> from noworkflow.tests.scenarios.models import Definition
+    >>> scenario = Definition(1)
+    >>> trial, id_ = scenario.trial, scenario.id
 
     Load CodeComponent object by (trial_id, id):
     >>> code_component = CodeComponent((trial.id, id_))
@@ -57,7 +41,7 @@ class CodeComponent(AlchemyProxy):
     Load CodeComponent evaluations:
     >>> evaluations = list(code_component.evaluations)
     >>> evaluations  # doctest: +ELLIPSIS
-    [evaluation(...).]
+    [evaluation(...)., ...]
 
     Load CodeComponent container:
     >>> container = code_component.container
@@ -73,10 +57,9 @@ class CodeComponent(AlchemyProxy):
     >>> code_component.this_block
 
     Otherwise, this_block is the corresponding block
-    >>> _ = blocks.add(*block_params(id_))
-    >>> blocks.fast_store(trial.id)
+    >>> scenario.create_block()
     >>> code_component.this_block  # doctest: +ELLIPSIS
-    code_block(...).
+    code_block(..., ..., ..., 'ab').
     """
 
     __tablename__ = "code_component"
@@ -138,22 +121,10 @@ class CodeComponent(AlchemyProxy):
 
 
         Doctest:
-        >>> from noworkflow.now.persistence.models import Trial
-        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
-        >>> from noworkflow.tests.helpers.models import components, evaluations
-        >>> from noworkflow.tests.helpers.models import component_params
-        >>> from noworkflow.tests.helpers.models import evaluation_params
-        >>> erase_db()
-        >>> trial = Trial(new_trial(status="finished"))
-        >>> id_ = components.add(*component_params())
-        >>> activation = list(trial.activations)[0]
-        >>> eval_id1 = evaluations.add(*evaluation_params(
-        ...     id_, activation.id, minute=40))
-        >>> eval_id2 = evaluations.add(*evaluation_params(
-        ...     id_, activation.id, minute=41))
-        >>> components.fast_store(trial.id)
-        >>> evaluations.fast_store(trial.id)
-        >>> code_component = CodeComponent((trial.id, id_))
+        >>> from noworkflow.tests.scenarios.models import Definition
+        >>> scenario = Definition(1)
+        >>> pk, eval_id1 = scenario.pk, scenario.eval_id1
+        >>> code_component = CodeComponent(pk)
 
         Return first evaluation:
         >>> evaluation = code_component.first_evaluation
