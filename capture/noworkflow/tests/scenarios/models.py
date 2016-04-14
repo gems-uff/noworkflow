@@ -133,3 +133,6 @@ class Definition(object):
         meta.activations_store.fast_store(self.trial_id)
 
     steps = [create_component, create_block, create_subcomponents]
+
+
+

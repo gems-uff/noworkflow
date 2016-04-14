@@ -29,9 +29,11 @@ class CodeComponent(AlchemyProxy):
 
 
     Doctest:
-    >>> from noworkflow.tests.scenarios.models import Definition
-    >>> scenario = Definition(1)
-    >>> trial, id_ = scenario.trial, scenario.id
+    >>> from noworkflow.tests.helpers.models import create_trial, FuncConfig
+    >>> scenario = create_trial(
+    ...     function=FuncConfig("function", 1, 0, 2, 8),
+    ...     erase=True)
+    >>> trial, id_ = scenario["trial_id"], scenario["function_component_id"]
 
     Load CodeComponent object by (trial_id, id):
     >>> code_component = CodeComponent((trial.id, id_))
@@ -41,7 +43,7 @@ class CodeComponent(AlchemyProxy):
     Load CodeComponent evaluations:
     >>> evaluations = list(code_component.evaluations)
     >>> evaluations  # doctest: +ELLIPSIS
-    [evaluation(...)., ...]
+    [evaluation(...).]
 
     Load CodeComponent container:
     >>> container = code_component.container
@@ -54,7 +56,7 @@ class CodeComponent(AlchemyProxy):
     True
 
     If component is not a block, this_block is None:
-    >>> code_component.this_block
+    >>> #code_component.this_block
 
     Otherwise, this_block is the corresponding block
     >>> scenario.create_block()

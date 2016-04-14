@@ -26,9 +26,8 @@ class Tag(AlchemyProxy):
     """Represent a tag
 
     Doctest:
-    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
-    >>> erase_db()
-    >>> trial_id = new_trial(script="main.py")
+    >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+    >>> trial_id = new_trial(TrialConfig(script="main.py"), erase=True)
     >>> tag_id = Tag.create(trial_id, "AUTO", "1.1.1", datetime.now())
 
     Load a Tag object by passing its id:
@@ -92,32 +91,32 @@ class Tag(AlchemyProxy):
 
         Doctest:
         >>> from noworkflow.now.persistence.models.trial import Trial
-        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
-        >>> erase_db()
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
 
         If there is no tag in the database, return (0, [1, 1, 1])
-        >>> trial = Trial(new_trial(script="main.py"))
+        >>> trial = Trial(new_trial(TrialConfig(script="main.py"), erase=True))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test")
         (0, [1, 1, 1])
 
         If there is a tag in the database with the same code_hash and command,
         return existing (1, [1, 1, 1]):
         >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
-        >>> trial = Trial(new_trial(script="main.py"))
+        >>> trial = Trial(new_trial(TrialConfig(script="main.py")))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test")
         (1, [1, 1, 1])
 
         If there is a tag in the database with the same code_hash but different
         command, return existing (2, [1, 1, 2]):
         >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
-        >>> trial = Trial(new_trial(script="main.py"))
+        >>> trial = Trial(new_trial(TrialConfig(script="main.py")))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
         (2, [1, 1, 2])
 
         If there are only tags with different code hash return
         existing (3, [1, 2, 1]):
         >>> _ = Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
-        >>> trial = Trial(new_trial(script="main.py", docstring="a"))
+        >>> trial = Trial(new_trial(
+        ...     TrialConfig(script="main.py", docstring="a")))
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
         (3, [1, 2, 1])
         """
@@ -173,28 +172,28 @@ class Tag(AlchemyProxy):
 
         Doctest:
         >>> from noworkflow.now.persistence.models import Trial
-        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
-        >>> erase_db()
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
 
         If there is no tag in the database, return 1.1.1
-        >>> trial = Trial(new_trial(script="main.py"))
+        >>> trial = Trial(new_trial(TrialConfig(script="main.py"), erase=True))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
         '1.1.1'
 
         If there is a tag in the database with the same code_hash and command,
         increment patch
-        >>> trial = Trial(new_trial(script="main.py"))
+        >>> trial = Trial(new_trial(TrialConfig(script="main.py")))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
         '1.1.2'
 
         If there is a tag in the database with the same code_hash but different
         command, increment minor:
-        >>> trial = Trial(new_trial(script="main.py"))
+        >>> trial = Trial(new_trial(TrialConfig(script="main.py")))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
         '1.2.1'
 
         If there are only tags with different code hash, increment major:
-        >>> trial = Trial(new_trial(script="main.py", docstring="a"))
+        >>> trial = Trial(new_trial(
+        ...     TrialConfig(script="main.py", docstring="a")))
         >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
         '2.1.1'
         """
@@ -231,14 +230,14 @@ class Tag(AlchemyProxy):
 
 
         Doctest:
-        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
         >>> from noworkflow.tests.helpers.models import count
-        >>> erase_db()
+        >>> TrialConfig.erase()
 
         Create tag:
         >>> count(Tag)
         0
-        >>> trial_id = new_trial(script="main.py")
+        >>> trial_id = new_trial(TrialConfig(script="main.py"))
         >>> _ = Tag.create(trial_id, "AUTO", "1.1.1", datetime.now())
         >>> count(Tag)
         1

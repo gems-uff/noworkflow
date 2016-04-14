@@ -27,7 +27,9 @@ from ..now.persistence.models import ORDER
 
 suites = []
 for model in ORDER:
-    model_test = doctest.DocTestSuite(sys.modules[model.__module__])
+    model_test = doctest.DocTestSuite(
+        sys.modules[model.__module__],
+        optionflags=doctest.REPORT_ONLY_FIRST_FAILURE)
     locals()[model.__name__] = model_test
     suites.append(model_test)
 

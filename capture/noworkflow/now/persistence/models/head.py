@@ -23,9 +23,8 @@ class Head(AlchemyProxy):
 
     Doctest:
     >>> from noworkflow.now.persistence.models import Trial
-    >>> from noworkflow.tests.helpers.models import erase_db, new_trial
-    >>> erase_db()
-    >>> trial = Trial(new_trial(script="main.py"))
+    >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+    >>> trial = Trial(new_trial(TrialConfig(script="main.py"), erase=True))
     >>> session = relational.make_session()
     >>> result = session.execute(Head.t.insert(), {"trial_id": trial.id,
     ...     "script": "main.py"})
@@ -68,11 +67,10 @@ class Head(AlchemyProxy):
 
         Doctest:
         >>> from noworkflow.now.persistence.models import Trial
-        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
-        >>> erase_db()
-        >>> trial1 = Trial(new_trial(script="main.py"))
-        >>> trial2 = Trial(new_trial(script="main.py"))
-        >>> trial3 = Trial(new_trial(script="main2.py"))
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> trial1 = Trial(new_trial(TrialConfig(script="main.py"),erase=True))
+        >>> trial2 = Trial(new_trial(TrialConfig(script="main.py")))
+        >>> trial3 = Trial(new_trial(TrialConfig(script="main2.py")))
         >>> trial1.create_head()
         >>> trial3.create_head()
 
@@ -96,10 +94,9 @@ class Head(AlchemyProxy):
 
         Doctest:
         >>> from noworkflow.now.persistence.models import Trial
-        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
         >>> from noworkflow.tests.helpers.models import count
-        >>> erase_db()
-        >>> trial = Trial(new_trial(script="main.py"))
+        >>> trial = Trial(new_trial(TrialConfig(script="main.py"), erase=True))
         >>> trial.create_head()
         >>> count(Head)
         1
