@@ -51,11 +51,6 @@ if __name__ == "__main__":
     capture(data, "now run", "maybe_happy_2pow4000.py")
     capture(data, "now run -e Tracer", "maybe_happy_2pow4000.py")
 
-    capture(data, "python", "slow.py")
-    capture(data, "now run", "slow.py")
-    capture(data, "now run -e Tracer", "slow.py")
-
-
     capture(data, "now run -d 1", "maybe_happy_2pow4000.py")
     capture(data, "now run -e Tracer -d 1", "maybe_happy_2pow4000.py")
 
