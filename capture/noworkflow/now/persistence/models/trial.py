@@ -550,11 +550,14 @@ class Trial(AlchemyProxy):
 
         Doctest:
         >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> from noworkflow.tests.helpers.models import AccessConfig
         >>> trial = Trial(new_trial(
         ...     TrialConfig("finished", script="main.py"),
-        ...     read_file="file.txt", write_file="file2.txt",
-        ...     read_hash="abc", write_hash_before=None,
-        ...     write_hash_after="def", erase=True))
+        ...     AccessConfig(
+        ...         read_file="file.txt", write_file="file2.txt",
+        ...         read_hash="abc", write_hash_before=None,
+        ...         write_hash_after="def"
+        ...     ), erase=True))
 
         Get only script:
         >>> [(path, sorted(dic.items()))
@@ -626,11 +629,14 @@ class Trial(AlchemyProxy):
 
         Doctest:
         >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> from noworkflow.tests.helpers.models import AccessConfig
         >>> trial = Trial(new_trial(TrialConfig(
         ...     "finished", script="main.py"
-        ... ), read_file="file.txt", write_file="file2.txt",
+        ... ), AccessConfig(
+        ...    read_file="file.txt", write_file="file2.txt",
         ...    read_hash="abc", write_hash_before=None,
-        ...    write_hash_after="def", erase=True))
+        ...    write_hash_after="def"
+        ... ), erase=True))
 
         Generate all trial accesses:
         >>> [(name, sorted(dic.items()))

@@ -156,22 +156,26 @@ def block_params(id_, code="'block'", docstring="block"):
 
 
 def evaluation_params(code_component_id, activation_id, value_id=-1,
-                      year=2016, month=4, day=8, hour=1, minute=19, second=5):
+                      year=2016, month=4, day=8, hour=1, minute=19, second=5,
+                      moment=None):
     """Return evaluation params"""
-    moment = datetime(
-        year=year, month=month, day=day,
-        hour=hour, minute=minute, second=second
-    )
+    if moment is None:
+        moment = datetime(
+            year=year, month=month, day=day,
+            hour=hour, minute=minute, second=second
+        )
     return [moment, code_component_id, activation_id, value_id]
 
 
 def activation_params(id_, code_block_id, name="main.py",
-                      year=2016, month=4, day=8, hour=1, minute=18, second=5):
+                      year=2016, month=4, day=8, hour=1, minute=18, second=5,
+                      start=None):
     """Return activation params"""
-    start = datetime(
-        year=year, month=month, day=day,
-        hour=hour, minute=minute, second=second
-    )
+    if start is None:
+        start = datetime(
+            year=year, month=month, day=day,
+            hour=hour, minute=minute, second=second
+        )
     return [id_, name, start, code_block_id]
 
 def value_params(value="<class 'type'>", type_id=1):
@@ -191,15 +195,6 @@ def compartment_params(whole_id, part_id, name="[0]",
 def access_params(name="file.txt"):
     return [name]
 
-def _add_component(name, type_, mode, container_id):
-    return components.add(*component_params(
-        name=name, type_=type_, mode=mode, container_id=container_id
-    ))
-
-
-def _add_value(value, type_id):
-    return values.add(*value_params(value=value, type_id=type_id))
-
 
 def _add_evaluation(code_component_id, activation_id, value_id, second):
     return evaluations.add(*evaluation_params(
@@ -208,6 +203,11 @@ def _add_evaluation(code_component_id, activation_id, value_id, second):
 
 
 class ConfigObj(object):
+
+    def __init__(self):
+        self.meta = None
+        self.start = datetime(year=2016, month=4, day=8,
+                              hour=1, minute=18, second=5)
 
     def comp(self, name, type_, mode, container_id, **kwargs):
         meta = self.meta
@@ -221,10 +221,18 @@ class ConfigObj(object):
         return meta.values_store.add(*value_params(
             value=value, type_id=type_id))
 
+    def evaluation(self, code_component_id, activation_id, value_id, delta):
+        meta = self.meta
+        moment = self.start + timedelta(seconds=delta)
+        return meta.evaluations_store.add(*evaluation_params(
+            code_component_id, activation_id, value_id=value_id, moment=moment
+        ))
+
 class FuncConfig(ConfigObj):
 
     def __init__(self, name="f", first_line=1, first_column=0,
                  last_line=2, last_column=12, param="x", docstring=None):
+        super(FuncConfig, self).__init__()
         self.name = name
         self.first_char_line = first_line
         self.first_char_column = first_column
@@ -243,6 +251,11 @@ class FuncConfig(ConfigObj):
         self.return_ = None
         self.function_type = None
         self.function_value = None
+        self.start = None
+        self.feval = None
+        self.x_param_eval = None
+        self.x_return_eval = None
+        self.return_eval = None
 
     def insert(self, meta, container_id):
         self.meta = meta
@@ -264,16 +277,26 @@ class FuncConfig(ConfigObj):
         self.return_ = self.comp("return", "return", "r", self.id)
         return self.param_variable, self.param_return, self.return_
 
-    def create_values(self, type_value_id):
+    def create_values(self, trial):
+        type_value_id = trial.type_value_id
         self.function_type = self.value("<class 'function'>", type_value_id)
         self.function_value = self.value("<function f at 0x...>",
                                          self.function_type)
         return self.function_type, self.function_value
 
+    def create_evaluations(self, trial):
+        main_act = trial.main_act
+        self.start = trial.start
+        self.f_eval = self.evaluation(
+            self.id, main_act, self.function_value, 2)
+
+        return self.feval
+
 
 class AssignConfig(ConfigObj):
 
     def __init__(self, arg="a", result="b"):
+        super(AssignConfig, self).__init__()
         self.arg = arg
         self.result = result
         self.code = None
@@ -289,12 +312,21 @@ class AssignConfig(ConfigObj):
         self.int_type = None
         self.array0_value = None
         self.a0comp = None
+        self.start = None
+        self.a_write_eval = None
+        self.f_variable_eval = None
+        self.f_func_eval = None
+        self.a_read_eval = None
+        self.a_arg_eval = None
+        self.f_activation = None
+        self.b_write_eval = None
+
+        self.meta = None
 
     def define_code(self, function):
         self.code = "{0} = [1]\n{2} = {1}({0})".format(
             self.arg, function.name, self.result
         )
-
 
     def insert(self, meta, function, container_id):
         call = "{}({})".format(function.name, self.arg)
@@ -313,7 +345,8 @@ class AssignConfig(ConfigObj):
             self.func_variable_id, self.func_id, self.call_id, self.result_id,
         )
 
-    def create_values(self, type_value_id):
+    def create_values(self, trial):
+        type_value_id = trial.type_value_id
         self.list_type = self.value("<class 'list'>", type_value_id)
         self.array_value = self.value("[1]", self.list_type)
         self.int_type = self.value("<class 'int'>", type_value_id)
@@ -325,13 +358,115 @@ class AssignConfig(ConfigObj):
             self.list_type, self.array_value, self.int_type, self.array0_value,
         )
 
+    def create_evaluations(self, trial):
+        self.start = trial.start
+        main_act = trial.main_act
+        function = trial.function
 
-class TrialConfig(ConfigObj):
+        self.a_write_eval = self.evaluation(
+            self.write_variable_id, main_act, self.array_value, 3)
+        self.f_variable_eval = self.evaluation(
+            self.func_variable_id, main_act, function.function_value, 4)
+        self.f_func_eval = self.evaluation(
+            self.func_id, main_act, function.function_value, 5)
+        self.a_read_eval = self.evaluation(
+            self.read_variable_id, main_act, self.array_value, 5)
+        self.a_arg_eval = self.evaluation(
+            self.arg_id, main_act, self.array_value, 6)
 
-    def __init__(self, status="ongoing", script="main.py", docstring="block",
+        self.f_activation = self.evaluation(
+            self.call_id, main_act, self.array_value, 50)
+        self.meta.activations_store.add(*activation_params(
+            self.f_activation, function.id,
+            start=self.start + timedelta(seconds=7)
+        ))
+
+        function.x_param_eval = self.evaluation(
+            function.param_variable, self.f_activation, self.array_value, 8)
+        function.x_return_eval = self.evaluation(
+            function.param_return, self.f_activation, self.array_value, 9)
+        function.return_eval = self.evaluation(
+            function.return_, self.f_activation, self.array_value, 10)
+
+        self.b_write_eval = self.evaluation(
+            self.result_id, main_act, self.array_value, 11)
+
+        self.meta.dependencies_store.add(
+            main_act, self.a_read_eval,
+            main_act, self.a_write_eval, "assignment")
+        self.meta.dependencies_store.add(
+            main_act, self.f_variable_eval,
+            main_act, function.feval, "assignment")
+        self.meta.dependencies_store.add(
+            main_act, self.f_func_eval,
+            self.f_variable_eval, function.feval, "bind")
+        self.meta.dependencies_store.add(
+            main_act, self.a_arg_eval,
+            main_act, self.a_read_eval, "bind")
+        self.meta.dependencies_store.add(
+            self.f_activation, function.x_param_eval,
+            main_act, self.a_arg_eval, "bind")
+        self.meta.dependencies_store.add(
+            self.f_activation, function.x_return_eval,
+            self.f_activation, function.x_param_eval, "assignment")
+        self.meta.dependencies_store.add(
+            self.f_activation, function.return_eval,
+            self.f_activation, function.x_return_eval, "bind")
+        self.meta.dependencies_store.add(
+            main_act, self.f_activation,
+            self.f_activation, function.return_eval, "bind")
+        self.meta.dependencies_store.add(
+            main_act, self.b_write_eval,
+            main_act, self.f_activation, "bind")
+
+        return (
+            self.a_write_eval, self.f_variable_eval, self.f_func_eval,
+            self.a_read_eval, self.a_arg_eval, self.f_activation,
+            function.x_param_eval, function.return_eval, function.return_eval,
+            self.b_write_eval
+        )
+
+
+class AccessConfig(ConfigObj):
+
+    def __init__(self,
+            read_file="file.txt", write_file="file2.txt",
+            read_hash="a", write_hash_before=None, write_hash_after="b"):
+        super(AccessConfig, self).__init__()
+        self.read_file = read_file
+        self.read_hash = read_hash
+        self.write_file = write_file
+        self.write_hash_before = write_hash_before
+        self.write_hash_after = write_hash_after
+        self.r_access = None
+        self.w_access = None
+
+    def create_accesses(self, trial):
+        assign = trial.assignment
+        meta = trial.meta
+        self.r_access = meta.file_accesses_store.add_object(*access_params(
+            name=self.read_file))
+        self.r_access.activation_id = assign.f_activation
+        self.r_access.content_hash_before = self.read_hash
+        self.r_access.content_hash_after = self.read_hash
+        w_access = meta.file_accesses_store.add_object(*access_params(
+            name=self.write_file))
+        w_access.activation_id = assign.f_activation
+        w_access.mode = "w"
+        w_access.content_hash_before = self.write_hash_before
+        w_access.content_hash_after = self.write_hash_after
+
+
+class TrialConfig(ConfigObj):                                                    # pylint: disable=too-many-instance-attributes
+    """Configure Trial object"""
+
+    def __init__(                                                                # pylint: disable=too-many-arguments
+            self, status="ongoing", script="main.py", docstring="block",
             year=2016, month=4, day=8, hour=1, minute=18, second=0,
-            duration=65, path="/home/now", bypass_modules=False):
-        self.start =  datetime(
+            duration=65, main_duration=60, main_start=1,
+            path="/home/now", bypass_modules=False):
+        super(TrialConfig, self).__init__()
+        self.start = datetime(
             year=year, month=month, day=day,
             hour=hour, minute=minute, second=second
         )
@@ -340,18 +475,24 @@ class TrialConfig(ConfigObj):
         self.docstring = docstring
         self.status = status
         self.bypass_modules = bypass_modules
+        self.main_duration = main_duration
+        self.main_start = main_start
         self.path = path
         self.trial_id = None
         self.code = None
         self.function = None
         self.assignment = None
+        self.access = None
         self.main_id = None
         self.type_value_id = None
+        self.main_act = None
 
-    def create(self, function, assignment):
+    def create(self, function, assignment, access):
+        """Create trial and code_block"""
         restart_object_store()
         self.function = function
         self.assignment = assignment
+        self.access = access
         self.meta = meta
         params = trial_params(
             script=self.script, bypass_modules=self.bypass_modules,
@@ -372,19 +513,45 @@ class TrialConfig(ConfigObj):
         return meta
 
     def update(self):
+        """Update trial to set finished"""
         params = trial_update_params(main_id=self.main_id, status=self.status)
         params["finish"] = self.finish
         Trial.fast_update(self.trial_id, **params)
 
-
     def create_values(self):
+        """Create values"""
+        meta = self.meta
         self.type_value_id = meta.values_store.add(*value_params())
         type_object = meta.values_store[self.type_value_id]
         type_object.type_id = self.type_value_id
         return self.type_value_id
 
+    def create_evaluations(self):
+        """Create evaluations"""
+        self.main_act = self.meta.evaluations_store.add(*evaluation_params(
+            self.main_id, -1,
+            moment=self.start + timedelta(seconds=self.main_duration)
+        ))
+
+        self.meta.activations_store.add(*activation_params(
+            self.main_act, self.main_id,
+            start=self.start + timedelta(seconds=self.main_start)
+        ))
+
+        return self.main_act
+
     def finished(self):
+        """Create execution provenance for finished trial"""
         self.create_values()
+
+        self.function.create_values(self)
+        self.assignment.create_values(self)
+
+        self.create_evaluations()
+        self.function.create_evaluations(self)
+
+        self.assignment.create_evaluations(self)
+        self.access.create_accesses(self)
 
 
     @classmethod
@@ -396,78 +563,34 @@ class TrialConfig(ConfigObj):
 
 def create_trial(
         trial=TrialConfig(),
-        read_file="file.txt", write_file="file2.txt",
-        read_hash="a", write_hash_before=None, tag="",
-        write_hash_after="b",  user="now",
+        access=AccessConfig(),
         function=FuncConfig(),
         assignment=AssignConfig(),
+        tag="", user="now",
         erase=False):
     """Populate database"""
     if erase:
         erase_db()
     assignment.define_code(function)
-    meta = trial.create(function, assignment)
+    meta = trial.create(function, assignment, access)
     trial.update()
 
-    function_component_id = function.insert(meta, trial.main_id)
-    subcomponents = function.insert_subcomponents()
-    xparam, xreturn, return_ = subcomponents
+    function.insert(meta, trial.main_id)
+    function.insert_subcomponents()
 
-    awrite, aread, aarg, fvar, ffunction, facall, bwrite = assignment.insert(meta, function, trial.main_id)
+    assignment.insert(meta, function, trial.main_id)
 
-    components.fast_store(trial.trial_id)
-    blocks.fast_store(trial.trial_id)
+    meta.code_components_store.fast_store(trial.trial_id)
+    meta.code_blocks_store.fast_store(trial.trial_id)
 
     if trial.status == "finished":
-        vtype = trial.create_values()
-        ftype, fvalue = function.create_values(vtype)
-        ltype, avalue, itype, a0value = assignment.create_values(vtype)
-
-        main_act = evaluations.add(*evaluation_params(trial.main_id, -1, second=59))
-        activations.add(*activation_params(main_act, trial.main_id, second=1))
-        feval = _add_evaluation(function_component_id, main_act, fvalue, 2)
-        aweval = _add_evaluation(awrite, main_act, avalue, 3)
-        fvareval = _add_evaluation(fvar, main_act, fvalue, 4)
-        ffunceval = _add_evaluation(ffunction, main_act, fvalue, 5)
-        areadeval = _add_evaluation(aread, main_act, avalue, 5)
-        aargeval = _add_evaluation(aarg, main_act, avalue, 6)
-        faceval = _add_evaluation(facall, main_act, avalue, 50)
-        activations.add(*activation_params(
-            faceval, function_component_id, second=7
-        ))
-        xpreval = _add_evaluation(xparam, faceval, avalue, 8)
-        xreteval = _add_evaluation(xreturn, faceval, avalue, 9)
-        returneval = _add_evaluation(return_, faceval, avalue, 10)
-        bwriteeval = _add_evaluation(bwrite, main_act, avalue, 11)
-
-        dependencies.add(main_act, areadeval, main_act, aweval, "assignment")
-        dependencies.add(main_act, fvareval, main_act, feval, "assignment")
-        dependencies.add(main_act, ffunceval, fvareval, feval, "bind")
-        dependencies.add(main_act, aargeval, main_act, areadeval, "bind")
-        dependencies.add(faceval, xpreval, main_act, aargeval, "bind")
-        dependencies.add(faceval, xreteval, faceval, xpreval, "assignment")
-        dependencies.add(faceval, returneval, faceval, xreteval, "bind")
-        dependencies.add(main_act, faceval, faceval, returneval, "bind")
-        dependencies.add(main_act, bwriteeval, main_act, faceval, "bind")
-
-        r_access = file_accesses.add_object(*access_params(name=read_file))
-        r_access.activation_id = faceval
-        r_access.content_hash_before = read_hash
-        r_access.content_hash_after = read_hash
-        w_access = file_accesses.add_object(*access_params(name=write_file))
-        w_access.activation_id = faceval
-        w_access.mode = "w"
-        w_access.content_hash_before = write_hash_before
-        w_access.content_hash_after = write_hash_after
-
-
-
-        values.fast_store(trial.trial_id)
-        compartments.fast_store(trial.trial_id)
-        evaluations.fast_store(trial.trial_id)
-        activations.fast_store(trial.trial_id)
-        dependencies.fast_store(trial.trial_id)
-        file_accesses.fast_store(trial.trial_id)
+        trial.finished()
+        meta.values_store.fast_store(trial.trial_id)
+        meta.compartments_store.fast_store(trial.trial_id)
+        meta.evaluations_store.fast_store(trial.trial_id)
+        meta.activations_store.fast_store(trial.trial_id)
+        meta.dependencies_store.fast_store(trial.trial_id)
+        meta.file_accesses_store.fast_store(trial.trial_id)
 
     if trial.status != "ongoing":
         if not trial.bypass_modules:
