@@ -18,10 +18,36 @@ from .base import backref_one
 
 @proxy_class
 class Compartment(AlchemyProxy):
-    """Represent a compartment"""
+    """Represent a compartment
+
+    Doctest:
+    >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+    >>> from noworkflow.tests.helpers.models import AssignConfig
+    >>> from noworkflow.now.persistence.models import Trial
+    >>> assign = AssignConfig()
+    >>> trial_id = new_trial(TrialConfig("finished"),
+    ...                      assignment=assign, erase=True)
+
+    Load Compartment by (trial_id, whole_id, part_id):
+    >>> comp = Compartment((trial_id, assign.array_value, assign.array0_value))
+    >>> comp  # doctest: +ELLIPSIS
+    compartment(..., '[0]', ..., ..., ...).
+
+    Load Compartment trial:
+    >>> comp.trial.id == trial_id
+    True
+
+    Load Compartment part:
+    >>> comp.part  # doctest: +ELLIPSIS
+    value(..., ..., '1', ...).
+
+    Load Compartment whole:
+    >>> comp.whole  # doctest: +ELLIPSIS
+    value(..., ..., '[1]', ...).
+    """
     __tablename__ = "compartment"
     __table_args__ = (
-        PrimaryKeyConstraint("trial_id", "part_id", "whole_id"),
+        PrimaryKeyConstraint("trial_id", "whole_id", "part_id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "part_id"],
                              ["value.trial_id",
