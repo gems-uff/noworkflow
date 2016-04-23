@@ -231,7 +231,8 @@ class ConfigObj(object):
 class FuncConfig(ConfigObj):
 
     def __init__(self, name="f", first_line=1, first_column=0,
-                 last_line=2, last_column=12, param="x", docstring=None):
+                 last_line=2, last_column=12, param="x",
+                 global_name="", docstring=None):
         super(FuncConfig, self).__init__()
         self.name = name
         self.first_char_line = first_line
@@ -239,23 +240,28 @@ class FuncConfig(ConfigObj):
         self.last_char_line = last_line
         self.last_char_column = last_column
         self.param = param
+        self.global_name = global_name
         self.code = "def {0}({1}):\n".format(name, param)
         self.docstring = docstring
         if docstring is not None:
             self.code += "    '{}'\n".format(docstring)
+        if global_name:
+            self.code += "    global {}\n".format(global_name)
         self.code += "    return {}".format(param)
 
-        self.id = -1
+        self.id = -1                                                             # pylint: disable=invalid-name
         self.param_variable = None
         self.param_return = None
         self.return_ = None
+        self.f_eval = None
         self.function_type = None
         self.function_value = None
+        self.global_var = None
         self.start = None
-        self.feval = None
         self.x_param_eval = None
         self.x_return_eval = None
         self.return_eval = None
+        self.global_eval = None
 
     def insert(self, meta, container_id):
         self.meta = meta
@@ -275,6 +281,9 @@ class FuncConfig(ConfigObj):
         self.param_variable = self.comp(self.param, "param", "w", self.id)
         self.param_return = self.comp(self.param, "variable", "r", self.id)
         self.return_ = self.comp("return", "return", "r", self.id)
+        if self.global_name:
+            self.global_var = self.comp(
+                self.global_name, "global", "r", self.id)
         return self.param_variable, self.param_return, self.return_
 
     def create_values(self, trial):
@@ -290,7 +299,7 @@ class FuncConfig(ConfigObj):
         self.f_eval = self.evaluation(
             self.id, main_act, self.function_value, 2)
 
-        return self.feval
+        return self.f_eval
 
 
 class AssignConfig(ConfigObj):
@@ -387,6 +396,9 @@ class AssignConfig(ConfigObj):
             function.param_return, self.f_activation, self.array_value, 9)
         function.return_eval = self.evaluation(
             function.return_, self.f_activation, self.array_value, 10)
+        if function.global_name:
+            function.global_eval = self.evaluation(
+                function.global_var, self.f_activation, self.array_value, 8)
 
         self.b_write_eval = self.evaluation(
             self.result_id, main_act, self.array_value, 11)
@@ -396,10 +408,10 @@ class AssignConfig(ConfigObj):
             main_act, self.a_write_eval, "assignment")
         self.meta.dependencies_store.add(
             main_act, self.f_variable_eval,
-            main_act, function.feval, "assignment")
+            main_act, function.f_eval, "assignment")
         self.meta.dependencies_store.add(
             main_act, self.f_func_eval,
-            self.f_variable_eval, function.feval, "bind")
+            self.f_variable_eval, function.f_eval, "bind")
         self.meta.dependencies_store.add(
             main_act, self.a_arg_eval,
             main_act, self.a_read_eval, "bind")
@@ -409,6 +421,10 @@ class AssignConfig(ConfigObj):
         self.meta.dependencies_store.add(
             self.f_activation, function.x_return_eval,
             self.f_activation, function.x_param_eval, "assignment")
+        if function.global_name:
+            self.meta.dependencies_store.add(
+                self.f_activation, function.global_eval,
+                main_act, self.a_write_eval, "assignment")
         self.meta.dependencies_store.add(
             self.f_activation, function.return_eval,
             self.f_activation, function.x_return_eval, "bind")

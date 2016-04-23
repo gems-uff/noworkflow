@@ -727,7 +727,7 @@ class Trial(AlchemyProxy):
 
         Show trial:
         >>> Trial(id_).show(
-        ...     print_=lambda x: print(dedent(x))) #doctest: +ELLIPSIS
+        ...     print_=lambda x: print(dedent(x)))  #doctest: +ELLIPSIS
         Id: ...
         Inherited Id: None
         Script: main.py

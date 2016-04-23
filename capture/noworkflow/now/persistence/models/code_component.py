@@ -29,14 +29,16 @@ class CodeComponent(AlchemyProxy):
 
 
     Doctest:
-    >>> from noworkflow.tests.helpers.models import create_trial, FuncConfig
-    >>> scenario = create_trial(
-    ...     function=FuncConfig("function", 1, 0, 2, 8),
-    ...     erase=True)
-    >>> trial, id_ = scenario["trial_id"], scenario["function_component_id"]
+    >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+    >>> from noworkflow.tests.helpers.models import FuncConfig
+    >>> from noworkflow.now.persistence.models import Trial
+    >>> function = FuncConfig("function", 1, 0, 2, 8)
+    >>> trial_id = new_trial(TrialConfig("finished"),
+    ...                      function=function, erase=True)
+    >>> trial = Trial(trial_id)
 
-    Load CodeComponent object by (trial_id, id):
-    >>> code_component = CodeComponent((trial.id, id_))
+    Load CodeComponent object by (trial_id, function.id):
+    >>> code_component = CodeComponent((trial_id, function.id))
     >>> code_component  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     code_component(..., ..., 'function', 'function_def', 'w', 1, 0, 2, 8, ...).
 
@@ -55,13 +57,13 @@ class CodeComponent(AlchemyProxy):
     >>> component_trial.id == trial.id
     True
 
-    If component is not a block, this_block is None:
-    >>> #code_component.this_block
-
-    Otherwise, this_block is the corresponding block
-    >>> scenario.create_block()
+    Load corresponding block:
     >>> code_component.this_block  # doctest: +ELLIPSIS
-    code_block(..., ..., ..., 'ab').
+    code_block(..., ..., ..., ...).
+
+    If there is no corresponding block, this_block return None:
+    >>> code_component2 = CodeComponent((trial_id, function.param_variable))
+    >>> code_component2.this_block
     """
 
     __tablename__ = "code_component"
@@ -123,16 +125,19 @@ class CodeComponent(AlchemyProxy):
 
 
         Doctest:
-        >>> from noworkflow.tests.scenarios.models import Definition
-        >>> scenario = Definition(1)
-        >>> pk, eval_id1 = scenario.pk, scenario.eval_id1
-        >>> code_component = CodeComponent(pk)
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import FuncConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> function = FuncConfig("function", 1, 0, 2, 8)
+        >>> trial_id = new_trial(TrialConfig("finished"),
+        ...                      function=function, erase=True)
+        >>> code_component = CodeComponent((trial_id, function.id))
 
         Return first evaluation:
         >>> evaluation = code_component.first_evaluation
         >>> evaluation  # doctest: +ELLIPSIS
         evaluation(...).
-        >>> evaluation.id == eval_id1
+        >>> evaluation.id == function.f_eval
         True
         """
         from .evaluation import Evaluation

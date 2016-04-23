@@ -6,11 +6,16 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+
+from textwrap import dedent
+
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologNullableRepr
+
+from .. import relational
 
 from .base import proxy_class, AlchemyProxy
 from .base import many_ref, backref_many, backref_one_uselist
@@ -22,18 +27,20 @@ class CodeBlock(AlchemyProxy):
     """Represent a script, class or function definition
 
     Doctest:
-    >>> from noworkflow.tests.scenarios.models import Definition
-    >>> scenario = Definition(3)
-    >>> trial, id_ = scenario.trial, scenario.id
-
+    >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+    >>> from noworkflow.tests.helpers.models import FuncConfig
+    >>> from noworkflow.now.persistence.models import Trial
+    >>> function = FuncConfig("function", 1, 0, 2, 8, docstring='ab')
+    >>> trial_id = new_trial(TrialConfig("finished"),
+    ...                      function=function, erase=True)
 
     Load CodeBlock by (trial_id, id):
-    >>> code_block = CodeBlock((trial.id, id_))
+    >>> code_block = CodeBlock((trial_id, function.id))
     >>> code_block  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     code_block(..., ..., ..., 'ab').
 
     Load CodeBlock trial:
-    >>> code_block.trial.id == trial.id
+    >>> code_block.trial.id == trial_id
     True
 
     Load CodeBlock this_component:
@@ -65,8 +72,10 @@ class CodeBlock(AlchemyProxy):
     activations = many_ref("code_block", "Activation")
 
     trial = backref_one_uselist("trial")  # Trial.code_blocks
-    this_component = backref_one_uselist("this_component") # CodeComponent.this_block
     components = backref_many("components") # CodeComponent.container
+
+    # CodeComponent.this_block
+    this_component = backref_one_uselist("this_component")
 
     prolog_description = PrologDescription("code_block", (
         PrologTrial("trial_id", link="code_component.trial_id"),
@@ -82,46 +91,114 @@ class CodeBlock(AlchemyProxy):
 
     @query_many_property
     def globals(self):
-        """Return function definition globals as a SQLAlchemy query"""
-        return self.components.filter(CodeComponent.m.type == "global")
+        """Return block globals as a SQLAlchemy query
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, FuncConfig
+        >>> function = FuncConfig("function", 1, 0, 2, 8, global_name="a")
+        >>> trial_id = new_trial(function=function, erase=True)
+        >>> code_block = CodeBlock((trial_id, function.id))
+
+        Return list of global components:
+        >>> list(code_block.globals)  # doctest: +ELLIPSIS
+        [code_component(..., ..., 'a', 'global', ...).]
+        """
+        from .code_component import CodeComponent
+        return relational.session.query(CodeComponent.m).filter(
+            ((CodeComponent.m.container_id == self.id) &
+             (CodeComponent.m.type == "global"))
+        )
 
     @query_many_property
-    def arguments(self):
-        """Return function definition arguments as a SQLAlchemy query"""
-        return self.components.filter(CodeComponent.m.type == "argument")
+    def parameters(self):
+        """Return block parameters as a SQLAlchemy query
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, FuncConfig
+        >>> function = FuncConfig("function", 1, 0, 2, 8, global_name="a")
+        >>> trial_id = new_trial(function=function, erase=True)
+        >>> code_block = CodeBlock((trial_id, function.id))
+
+        Return list of parameter components:
+        >>> list(code_block.parameters)  # doctest: +ELLIPSIS
+        [code_component(..., ..., 'x', 'param', ...).]
+        """
+        from .code_component import CodeComponent
+        return relational.session.query(CodeComponent.m).filter(
+            ((CodeComponent.m.container_id == self.id) &
+             (CodeComponent.m.type == "param"))
+        )
 
     @query_many_property
-    def function_calls(self):
-        """Return function definition calls as a SQLAlchemy query"""
-        return self.components.filter(CodeComponent.m.type == "call")
+    def calls(self):
+        """Return block calls as a SQLAlchemy query
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> trial_config = TrialConfig()
+        >>> trial_id = new_trial(trial_config, erase=True)
+        >>> code_block = CodeBlock((trial_id, trial_config.main_id))
+
+        Return list of call components:
+        >>> list(code_block.calls)  # doctest: +ELLIPSIS
+        [code_component(..., ..., 'f(a)', 'call', ...).]
+        """
+        from .code_component import CodeComponent
+        return relational.session.query(CodeComponent.m).filter(
+            ((CodeComponent.m.container_id == self.id) &
+             (CodeComponent.m.type == "call"))
+        )
 
     def show(self, print_=lambda x, offset=0: print(x)):
         """Show code block
 
         Keyword arguments:
         print_ -- custom print function (default=print)
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, FuncConfig
+        >>> from textwrap import dedent
+        >>> function = FuncConfig("function", 1, 0, 2, 8, global_name="a",
+        ...                       docstring="ab")
+        >>> trial_id = new_trial(function=function, erase=True)
+        >>> code_block = CodeBlock((trial_id, function.id))
+
+        Show block:
+        >>> code_block.show(
+        ...    print_=lambda x, offset=0: print(dedent(x))
+        ... )  #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        Name: function
+        Code hash: ...
+        Docstring: ab
+        Parameters: x
+        Globals: a
+        Calls:
         """
         component = self.this_component
 
         extra = ""
         if component.type == "function_def":
-            extra = """\
-                Arguments: {arguments}
+            extra = dedent("""\
+                Parameters: {parameters}
                 Globals: {globals}
-                Function calls: {calls}\
-            """
+                Calls: {calls}""")
         elif component.type == "class_def":
-            extra = "Arguments: {arguments}"
+            extra = "Arguments: {parameters}"
 
         extra = extra.format(
-            arguments=", ".join(x.name for x in self.arguments),                 # pylint: disable=not-an-iterable
+            parameters=", ".join(x.name for x in self.parameters),               # pylint: disable=not-an-iterable
             globals=", ".join(x.name for x in self.globals),                     # pylint: disable=not-an-iterable
-            calls=", ".join(x.name for x in self.function_calls)                 # pylint: disable=not-an-iterable
+            calls=", ".join(x.name for x in self.calls)                          # pylint: disable=not-an-iterable
         )
 
-        print_("""\
+        result = dedent("""\
             Name: {component.name}
+            Code hash: {block.code_hash}
             Docstring: {block.docstring}
-            {extra}
-            Code hash: {block.code_hash}\
-            """.format(block=self, component=component, extra=extra))
+            """.format(block=self, component=component))
+        result += extra
+        print_(result)
