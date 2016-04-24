@@ -22,7 +22,65 @@ from .activation import Activation
 
 @proxy_class
 class Evaluation(AlchemyProxy):
-    """Represent an evaluation"""
+    """Represent an evaluation
+
+
+    Doctest:
+    >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+    >>> from noworkflow.tests.helpers.models import FuncConfig, AssignConfig
+    >>> from noworkflow.now.persistence.models import Trial
+    >>> assign = AssignConfig(arg="a")
+    >>> function = FuncConfig("f", 1, 0, 2, 8)
+    >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+    ...                      function=function, erase=True)
+    >>> trial = Trial(trial_id)
+
+    Load Evaluation by (trial_id, id):
+    >>> evaluation = Evaluation((trial_id, assign.f_activation))
+    >>> evaluation  # doctest: +ELLIPSIS
+    evaluation(..., ..., ..., ..., ..., ...).
+
+    If Evaluation is an activation, load this_activation:
+    >>> evaluation.this_activation  # doctest: +ELLIPSIS
+    activation(..., ..., 'f', ..., ...).
+
+    Otherwise, this_activation return None:
+    >>> evaluation2 = Evaluation((trial_id, assign.a_read_eval))
+    >>> evaluation2.this_activation
+
+    Load Evaluation parent activation:
+    >>> main_activation = trial.main.this_component.first_evaluation
+    >>> evaluation.activation.id == main_activation.id
+    True
+
+    Load Evaluation trial:
+    >>> evaluation.trial.id == trial_id
+    True
+
+    Load Evaluation code component:
+    >>> evaluation.code_component  # doctest: +ELLIPSIS
+    code_component(..., ..., 'f(a)', 'call', 'r', ..., ..., ..., ..., ...).
+
+    Load Evaluation value:
+    >>> evaluation.value  # doctest: +ELLIPSIS
+    value(..., ..., '[1]', ...).
+
+    Load Evaluation dependencies in which the evaluation is the dependent:
+    >>> list(evaluation2.dependencies_as_dependent)  # doctest: +ELLIPSIS
+    [dependency(..., ..., ..., ..., ..., 'assignment').]
+
+    Load Evaluation dependencies in which the evaluation is the dependency:
+    >>> list(evaluation2.dependencies_as_dependency)  # doctest: +ELLIPSIS
+    [dependency(..., ..., ..., ..., ..., 'bind').]
+
+    Load Evaluation dependents evaluations:
+    >>> list(evaluation2.dependents)  # doctest: +ELLIPSIS
+    [evaluation(..., ..., ..., ..., ..., ...).]
+
+    Load Evaluation dependencies evaluations:
+    >>> list(evaluation2.dependencies)  # doctest: +ELLIPSIS
+    [evaluation(..., ..., ..., ..., ..., ...).]
+    """
     __tablename__ = "evaluation"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
@@ -84,9 +142,9 @@ class Evaluation(AlchemyProxy):
             (activation_id == Dependency.m.dependency_activation_id) &
             (trial_id == Dependency.m.trial_id)))
 
+    dependents = backref_many("dependents")  # Evaluation.dependencies
     trial = backref_one("trial")  # Trial.evaluations
     code_component = backref_one("code_component")  # CodeComponent.evaluations
-    dependents = backref_many("dependents")  # Evaluation.dependencies
     value = backref_one("value") # Value.evaluations
 
     prolog_description = PrologDescription("evaluation", (

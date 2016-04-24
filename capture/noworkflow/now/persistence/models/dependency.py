@@ -10,6 +10,7 @@ from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
+from ...utils.prolog import PrologRepr
 
 from .base import AlchemyProxy, proxy_class, backref_one
 
@@ -66,7 +67,7 @@ class Dependency(AlchemyProxy):
         PrologAttribute("dependency_activation_id",
                         link="evaluation.activation_id"),
         PrologAttribute("dependency_id", link="evaluation.id"),
-        PrologAttribute("type"),
+        PrologRepr("type"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "the value of a evaluation (*DependentId*),\n"

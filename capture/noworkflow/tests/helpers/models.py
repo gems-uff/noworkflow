@@ -386,7 +386,7 @@ class AssignConfig(ConfigObj):
         self.f_activation = self.evaluation(
             self.call_id, main_act, self.array_value, 50)
         self.meta.activations_store.add(*activation_params(
-            self.f_activation, function.id,
+            self.f_activation, function.id, name=function.name,
             start=self.start + timedelta(seconds=7)
         ))
 

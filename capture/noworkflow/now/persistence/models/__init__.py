@@ -34,7 +34,8 @@ ORDER = [
     Trial, Head, Tag, GraphCache, Argument, # Trial
     Module, ModuleDependency, EnvironmentAttr,  # Deployment
     CodeComponent, CodeBlock,  # Definition
-    Value, Compartment, Evaluation, Activation, FileAccess  # Execution
+    Value, Compartment, Evaluation, Activation, Dependency,  # Execution
+    FileAccess  # Execution
 ]
 
 
