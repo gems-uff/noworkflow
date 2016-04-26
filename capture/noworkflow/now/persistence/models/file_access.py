@@ -151,9 +151,6 @@ class FileAccess(AlchemyProxy):
             Function: {f.stack}\
             """.format(f=self))
 
-    def __repr__(self):
-        return self.prolog_description.fact(self)
-
 
 class UniqueFileAccess(FileAccess):
     """FileAccess with Unique hash"""

@@ -159,6 +159,3 @@ class Evaluation(AlchemyProxy):
         "an evaluation *Id* of *CodeComponentId* finalized at *Moment*\n"
         "in *ActivationId*, returning *ValueId*."
     ))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)

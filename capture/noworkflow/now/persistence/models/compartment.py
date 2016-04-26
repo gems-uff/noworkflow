@@ -77,6 +77,3 @@ class Compartment(AlchemyProxy):
         "a compartment *Name*, in a given *Moment*\n,"
         "of a value *WholeId* has the value *PartId*."
     ))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)

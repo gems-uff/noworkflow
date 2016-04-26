@@ -125,6 +125,3 @@ class Value(AlchemyProxy):
         "a value *Id* has the content *Value*\n"
         "and is instance of *TypeId*."
     ))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)

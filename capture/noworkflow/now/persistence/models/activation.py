@@ -304,6 +304,3 @@ class Activation(AlchemyProxy):
         return_value = self.this_evaluation.value.value
         if return_value:
             print_("Return value: {ret}".format(ret=return_value))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)

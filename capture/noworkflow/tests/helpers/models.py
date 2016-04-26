@@ -332,6 +332,9 @@ class AssignConfig(ConfigObj):
         self.f_activation = None
         self.b_write_eval = None
 
+        self.return_dependency = None
+        self.b_dependency = None
+
         self.meta = None
 
     def define_code(self, function):
@@ -436,10 +439,10 @@ class AssignConfig(ConfigObj):
         self.meta.dependencies_store.add(
             self.f_activation, function.return_eval,
             self.f_activation, function.x_return_eval, "bind")
-        self.meta.dependencies_store.add(
+        self.return_dependency = self.meta.dependencies_store.add(
             main_act, self.f_activation,
             self.f_activation, function.return_eval, "bind")
-        self.meta.dependencies_store.add(
+        self.b_dependency = self.meta.dependencies_store.add(
             main_act, self.b_write_eval,
             main_act, self.f_activation, "bind")
 

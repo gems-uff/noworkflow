@@ -17,7 +17,46 @@ from .base import AlchemyProxy, proxy_class, backref_one
 
 @proxy_class
 class Dependency(AlchemyProxy):
-    """Represent a evaluation dependency"""
+    """Represent a evaluation dependency
+
+
+    Doctest:
+    >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+    >>> from noworkflow.tests.helpers.models import FuncConfig, AssignConfig
+    >>> from noworkflow.now.persistence.models import Trial, Activation
+    >>> assign = AssignConfig(arg="a", result="b")
+    >>> function = FuncConfig("f", 1, 0, 2, 8)
+    >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+    ...                      function=function, erase=True)
+    >>> trial = Trial(trial_id)
+    >>> main_activation = trial.main.this_component.first_evaluation
+    >>> f_activation = Activation((trial_id, assign.f_activation))
+
+    Load Dependency by (trial_id, id):
+    >>> dependency = Dependency((trial_id, assign.return_dependency))
+    >>> dependency  # doctest: +ELLIPSIS
+    dependency(..., ..., ..., ..., ..., 'bind').
+
+    Load Dependency trial;
+    >>> dependency.trial.id == trial_id
+    True
+
+    Load dependent activation
+    >>> dependency.dependent_activation.id == main_activation.id
+    True
+
+    Load dependency activation
+    >>> dependency.dependency_activation.id == f_activation.id
+    True
+
+    Load dependent evaluation
+    >>> dependency.dependent  # doctest: +ELLIPSIS
+    evaluation(...).
+
+    Load dependency evaluation
+    >>> dependency.dependency  # doctest: +ELLIPSIS
+    evaluation(...).
+    """
 
     __tablename__ = "dependency"
     __table_args__ = (
@@ -78,9 +117,3 @@ class Dependency(AlchemyProxy):
         "This influence *Type* is one of following: \n"
         "bind/influence/conditional/loop/assignment."
     ))
-
-    def __repr__(self):
-        return self.prolog_description.fact(self)
-
-    def __str__(self):
-        return "{0.dependent} <- {0.dependency} ({0.type})".format(self)
