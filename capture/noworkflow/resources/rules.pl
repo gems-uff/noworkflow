@@ -10,7 +10,7 @@
 %
 name(_, [], []).
 name(TrialId, [Id|Ids], [Name|Names]) :- name(TrialId, Id, Name), name(TrialId, Ids, Names).
-name(TrialId, Id, Name) :- activation(TrialId, Id, Name, _, _, _).
+name(TrialId, Id, Name) :- activation(TrialId, Id, Name, _, _, _, _).
 name(TrialId, Id, Name) :- access(TrialId, Id, Name, _, _, _, _, _).
 
 %
@@ -18,8 +18,8 @@ name(TrialId, Id, Name) :- access(TrialId, Id, Name, _, _, _, _, _).
 % DESCRIPTION: get the *Timestamp* of an activation (*Id*)
 %              in a given trial (*TrialId*).
 %
-timestamp_id(TrialId, Id, Start, start) :- activation(TrialId, Id, _, Start, _, _).
-timestamp_id(TrialId, Id, Finish, finish) :- activation(TrialId, Id, _, _, Finish, _).
+timestamp_id(TrialId, Id, Start, start) :- activation(TrialId, Id, _, _, Start, _, _).
+timestamp_id(TrialId, Id, Finish, finish) :- activation(TrialId, Id, _, _, _, Finish, _).
 
 %
 % RULE DEFINITION: timestamp_id(TrialId, Id, Timestamp)/3
@@ -50,7 +50,7 @@ successor_id(TrialId, Before, After) :- timestamp_id(TrialId, Before, TS1), time
 % DESCRIPTION: match *Called* activations by *Caller*
 %              in a given trial (*TrialId*).
 %
-activation_id(TrialId, Caller, Called) :- activation(TrialId, Called, _, _, _, Caller).
+activation_id(TrialId, Caller, Called) :- activation(TrialId, Called, _, _, _, _, Caller).
 
 %
 % RULE DEFINITION: mode_id(TrialId, Id, Mode)/3

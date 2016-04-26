@@ -88,6 +88,7 @@ class Activation(AlchemyProxy):
         PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
+        PrologAttribute("line"),
         PrologTimestamp("start"),
         PrologTimestamp("finish"),
         PrologNullable("caller_activation_id", attr_name="caller_id",
