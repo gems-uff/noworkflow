@@ -304,10 +304,12 @@ class FuncConfig(ConfigObj):
 
 class AssignConfig(ConfigObj):
 
-    def __init__(self, arg="a", result="b"):
+    def __init__(self, arg="a", result="b", call_line=5, duration=43):
         super(AssignConfig, self).__init__()
         self.arg = arg
         self.result = result
+        self.call_line = call_line
+        self.duration = duration
         self.code = None
         self.write_variable_id = None
         self.read_variable_id = None
@@ -342,12 +344,18 @@ class AssignConfig(ConfigObj):
         self.meta = meta
         id_ = container_id
         self.write_variable_id = self.comp(self.arg, "variable", "w", id_)
-        self.read_variable_id = self.comp(self.arg, "variable", "r", id_)
-        self.arg_id = self.comp(self.arg, "arg", "r", id_)
-        self.func_variable_id = self.comp(function.name, "variable", "r", id_)
-        self.func_id = self.comp(function.name, "function", "r", id_)
-        self.call_id = self.comp(call, "call", "r", id_)
-        self.result_id = self.comp(self.result, "variable", "w", id_)
+        self.read_variable_id = self.comp(self.arg, "variable", "r", id_,
+                                          first_char_line=self.call_line)
+        self.arg_id = self.comp(self.arg, "arg", "r", id_,
+                                first_char_line=self.call_line)
+        self.func_variable_id = self.comp(function.name, "variable", "r", id_,
+                                          first_char_line=self.call_line)
+        self.func_id = self.comp(function.name, "function", "r", id_,
+                                 first_char_line=self.call_line)
+        self.call_id = self.comp(call, "call", "r", id_,
+                                 first_char_line=self.call_line)
+        self.result_id = self.comp(self.result, "variable", "w", id_,
+                                   first_char_line=self.call_line)
 
         return (
             self.write_variable_id, self.read_variable_id, self.arg_id,
@@ -384,7 +392,7 @@ class AssignConfig(ConfigObj):
             self.arg_id, main_act, self.array_value, 6)
 
         self.f_activation = self.evaluation(
-            self.call_id, main_act, self.array_value, 50)
+            self.call_id, main_act, self.array_value, 7 + self.duration)
         self.meta.activations_store.add(*activation_params(
             self.f_activation, function.id, name=function.name,
             start=self.start + timedelta(seconds=7)
