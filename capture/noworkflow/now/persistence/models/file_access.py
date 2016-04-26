@@ -15,14 +15,39 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologTimestamp, PrologNullable
 from ...utils.prolog import PrologNullableRepr
 
-from .. import relational, persistence_config
+from .. import relational
 
 from .base import AlchemyProxy, proxy_class, backref_one, proxy
 
 
 @proxy_class
 class FileAccess(AlchemyProxy):
-    """Represent a file access"""
+    """Represent a file access
+
+
+    Doctest:
+    >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+    >>> from noworkflow.tests.helpers.models import AccessConfig, AssignConfig
+    >>> from noworkflow.now.persistence.models import Activation
+    >>> assign = AssignConfig(arg="a")
+    >>> access_config = AccessConfig(read_file="a.txt", read_hash="ab")
+    >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+    ...                      access=access_config, erase=True)
+    >>> f_activation = Activation((trial_id, assign.f_activation))
+
+    Load FileAccess by (trial_id, id):
+    >>> access = FileAccess((trial_id, access_config.r_access.id))
+    >>> access  # doctest: +ELLIPSIS
+    access(..., ..., 'a.txt', 'r', 'ab', 'ab', ..., ...).
+
+    Load FileAccess trial:
+    >>> access.trial.id == trial_id
+    True
+
+    Load FileAccess activation:
+    >>> access.activation.id == f_activation.id
+    True
+    """
 
     __tablename__ = "file_access"
     __table_args__ = (
@@ -67,7 +92,22 @@ class FileAccess(AlchemyProxy):
 
     @property
     def stack(self):
-        """Return the activation stack since the beginning of execution"""
+        """Return the activation stack since the beginning of execution
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AccessConfig
+        >>> from noworkflow.now.persistence.models import Activation
+        >>> access_config = AccessConfig(read_file="a.txt", read_hash="ab")
+        >>> trial_id = new_trial(TrialConfig("finished"),
+        ...                      access=access_config, erase=True)
+        >>> access = FileAccess((trial_id, access_config.r_access.id))
+
+        Return activation stack:
+        >>> access.stack
+        'f -> ... -> open'
+        """
         stack = []
         activation = self.activation
         while activation:
@@ -76,12 +116,32 @@ class FileAccess(AlchemyProxy):
             if activation:
                 stack.insert(0, name)
         if not stack or stack[-1] != "open":
-            stack.append(" ... -> open")
+            stack.append("... -> open")
         return " -> ".join(stack)
 
     @property
     def brief(self):
-        """Brief description of file access"""
+        """Brief description of file access
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AccessConfig
+        >>> from noworkflow.now.persistence.models import Activation
+        >>> access_config = AccessConfig(
+        ...     read_file="a.txt", read_hash="ab", write_file="b.txt",
+        ...     write_hash_before=None)
+        >>> trial_id = new_trial(TrialConfig("finished"),
+        ...                      access=access_config, erase=True)
+
+        Show mode and name:
+        >>> FileAccess((trial_id, access_config.r_access.id)).brief
+        '(r) a.txt'
+
+        Indicate new files:
+        >>> FileAccess((trial_id, access_config.w_access.id)).brief
+        '(w) b.txt (new)'
+        """
         result = "({0.mode}) {0.name}".format(self)
         if self.content_hash_before is None:
             result += " (new)"
@@ -89,15 +149,34 @@ class FileAccess(AlchemyProxy):
 
     @property
     def is_internal(self):
-        """Check if file access is inside trial project"""
+        """Check if file access is inside trial project
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AccessConfig
+        >>> from noworkflow.now.persistence.models import Activation
+        >>> access_config = AccessConfig(
+        ...     read_file="a.txt", read_hash="ab", write_file="/x/b.txt",
+        ...     write_hash_before=None)
+        >>> trial_id = new_trial(TrialConfig("finished"),
+        ...                      access=access_config, erase=True)
+
+        Show mode and name:
+        >>> FileAccess((trial_id, access_config.r_access.id)).is_internal
+        True
+
+        Indicate new files:
+        >>> FileAccess((trial_id, access_config.w_access.id)).is_internal
+        False
+        """
         return (
-            not os.path.isabs(self.name) or
-            persistence_config.base_path in self.name
+            (not os.path.isabs(self.name)) or
+            self.trial.path in self.name
         )
 
     @classmethod  # query
-    def find_by_name_and_time(cls, name, timestamp, trial=None,
-                              session=None):
+    def find_by_name_and_time(cls, name, timestamp, trial=None, session=None):
         """Return the first access according to name and timestamp
 
         Arguments:
@@ -106,6 +185,37 @@ class FileAccess(AlchemyProxy):
 
         Keyword Arguments:
         trial -- limit search in a specific trial_id
+
+
+        Doctest:
+        >>> from datetime import datetime
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AccessConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Activation
+        >>> access_config = AccessConfig(
+        ...     read_file="a.txt", read_hash="ab", write_file="a.txt",
+        ...     write_hash_before=None,
+        ...     read_timestamp=datetime(year=2016, month=5, day=26,
+        ...                              hour=15, minute=53, second=51),
+        ...     write_timestamp=datetime(year=2016, month=4, day=26,
+        ...                              hour=15, minute=48, second=55))
+        >>> trial_id = new_trial(TrialConfig("finished"),
+        ...                      access=access_config, erase=True)
+
+        Find accesses by name and timestamp:
+        >>> FileAccess.find_by_name_and_time(
+        ... 'a.txt', '2016-04-26 15:48:55')  # doctest: +ELLIPSIS
+        access(..., ..., 'a.txt', 'w', nil, 'b', ..., ...).
+
+        Find accesses by name and partial timestamp:
+        >>> FileAccess.find_by_name_and_time(
+        ... 'a.txt', '2016-05') # doctest: +ELLIPSIS
+        access(..., ..., 'a.txt', 'r', 'ab', 'ab', ..., ...).
+
+        Return None if not found:
+        >>> FileAccess.find_by_name_and_time(
+        ... 'a.txt', '2017') # doctest: +ELLIPSIS
         """
         model = cls.m
         session = session or relational.session
@@ -136,10 +246,36 @@ class FileAccess(AlchemyProxy):
         )
 
     def show(self, print_=print):
-        """Show object
+        """Show file access
 
         Keyword arguments:
         print_ -- custom print function (default=print)
+
+
+        Doctest:
+        >>> from datetime import datetime
+        >>> from textwrap import dedent
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AccessConfig
+        >>> from noworkflow.now.persistence.models import Activation
+        >>> access_config = AccessConfig(
+        ...     read_file="a.txt", read_hash="ab",
+        ...     read_timestamp=datetime(year=2016, month=5, day=26,
+        ...                              hour=15, minute=53, second=51))
+        >>> trial_id = new_trial(TrialConfig("finished"),
+        ...                      access=access_config, erase=True)
+
+        Show FileAccess:
+        >>> FileAccess((trial_id, access_config.r_access.id)).show(
+        ...     print_=lambda x: print(dedent(x))
+        ... )  #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        Name: a.txt
+        Mode: r
+        Buffering: default
+        Content hash before: ab
+        Content hash after: ab
+        Timestamp: 2016-05-26 15:53:51
+        Function: f -> ... -> open
         """
         print_("""\
             Name: {f.name}

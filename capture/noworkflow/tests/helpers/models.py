@@ -456,15 +456,19 @@ class AssignConfig(ConfigObj):
 
 class AccessConfig(ConfigObj):
 
-    def __init__(self,
+    def __init__(
+            self,
             read_file="file.txt", write_file="file2.txt",
-            read_hash="a", write_hash_before=None, write_hash_after="b"):
+            read_hash="a", write_hash_before=None, write_hash_after="b",
+            read_timestamp=None, write_timestamp=None):
         super(AccessConfig, self).__init__()
         self.read_file = read_file
         self.read_hash = read_hash
         self.write_file = write_file
         self.write_hash_before = write_hash_before
         self.write_hash_after = write_hash_after
+        self.read_timestamp = read_timestamp
+        self.write_timestamp = write_timestamp
         self.r_access = None
         self.w_access = None
 
@@ -476,13 +480,16 @@ class AccessConfig(ConfigObj):
         self.r_access.activation_id = assign.f_activation
         self.r_access.content_hash_before = self.read_hash
         self.r_access.content_hash_after = self.read_hash
-        w_access = meta.file_accesses_store.add_object(*access_params(
+        if self.read_timestamp:
+            self.r_access.timestamp = self.read_timestamp
+        self.w_access = meta.file_accesses_store.add_object(*access_params(
             name=self.write_file))
-        w_access.activation_id = assign.f_activation
-        w_access.mode = "w"
-        w_access.content_hash_before = self.write_hash_before
-        w_access.content_hash_after = self.write_hash_after
-
+        self.w_access.activation_id = assign.f_activation
+        self.w_access.mode = "w"
+        self.w_access.content_hash_before = self.write_hash_before
+        self.w_access.content_hash_after = self.write_hash_after
+        if self.write_timestamp:
+            self.w_access.timestamp = self.write_timestamp
 
 class TrialConfig(ConfigObj):                                                    # pylint: disable=too-many-instance-attributes
     """Configure Trial object"""
