@@ -33,12 +33,17 @@ class Export(NotebookCommand):
                 help="trial id or none for last trial. If you are generation "
                      "ipython notebook files, it is also possible to use "
                      "'history' or 'diff:<trial_id_1>:<trial_id_2>'")
+        add_arg("-t", "--hide-timestamps", action="store_true",
+                help="hide timestamps")
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
 
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
+        if args.hide_timestamps:
+            from ..utils.prolog import PrologTimestamp
+            PrologTimestamp.use_nil = True
         trial = Trial(trial_ref=args.trial)
         trial.dependency_config.read_args(args)
         print(trial.prolog.export_text_facts())

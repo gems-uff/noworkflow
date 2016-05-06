@@ -20,12 +20,14 @@ from .cmd_show import print_trial_relationship
 from .command import NotebookCommand
 
 
-def print_diff_trials(diff):
+def print_diff_trials(diff, skip=None):
     """Print diff of basic trial information"""
+    skip = skip or set()
     for key, values in viewitems(diff.trial):
-        print("  {} changed from {} to {}".format(
-            key.capitalize().replace("_", " "),
-            values[0] or "<None>", values[1] or "<None>"))
+        if key not in skip:
+            print("  {} changed from {} to {}".format(
+                key.capitalize().replace("_", " "),
+                values[0] or "<None>", values[1] or "<None>"))
     print()
 
 
@@ -79,6 +81,13 @@ def print_brief(added, removed, replaced):
             add, rem, cha, *max_column_len))
 
 
+
+def hide_timestamp(elements):
+    """Set hide_timestamp of elements"""
+    for element in elements:
+        element.hide_timestamp = True
+
+
 class Diff(NotebookCommand):
     """Compare the collected provenance of two trials"""
 
@@ -94,6 +103,8 @@ class Diff(NotebookCommand):
                 help="compare environment conditions")
         add_arg("-f", "--file-accesses", action="store_true",
                 help="compare read/write access to files")
+        add_arg("-t", "--hide-timestamps", action="store_true",
+                help="hide timestamps")
         add_arg("--brief", action="store_true",
                 help="display a concise version of diff")
         add_arg("--dir", type=str,
@@ -102,11 +113,19 @@ class Diff(NotebookCommand):
 
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
+        if args.hide_timestamps:
+            skip_in_trial = {"start", "finish", "duration_text"}
+            access_extra = ("mode", "buffering", "content_hash_before",
+                            "content_hash_after", "stack")
+        else:
+            skip_in_trial = set()
+            access_extra = ("mode", "buffering", "content_hash_before",
+                            "content_hash_after", "timestamp", "stack")
 
         diff = DiffModel(args.trial1, args.trial2)
 
         print_msg("trial diff:", True)
-        print_diff_trials(diff)
+        print_diff_trials(diff, skip=skip_in_trial)
 
         if args.modules:
             (added, removed, replaced) = diff.modules
@@ -153,6 +172,9 @@ class Diff(NotebookCommand):
                 print_msg("Brief file access diff", True)
                 print_brief(added, removed, replaced)
             else:
+                if args.hide_timestamps:
+                    hide_timestamp(added)
+                    hide_timestamp(removed)
                 print_msg("{} file accesses added:".format(
                     len(added)), True)
                 print_trial_relationship(added)
@@ -167,8 +189,7 @@ class Diff(NotebookCommand):
                     len(replaced)), True)
                 print_replaced_attributes(
                     replaced,
-                    extra=("mode", "buffering", "content_hash_before",
-                           "content_hash_after", "timestamp", "stack"),
+                    extra=access_extra,
                     ignore=("id", "trial_id", "function_activation_id"),
                     names={"stack": "Function"})
 

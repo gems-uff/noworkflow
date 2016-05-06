@@ -123,8 +123,12 @@ class PrologRepr(PrologAttribute):
 class PrologTimestamp(PrologAttribute):
     """Represent a timestamp"""
 
+    use_nil = False
+
     def fact(self, obj):
         """Return attribute self.attr_name of obj as formatted timestamp"""
+        if PrologTimestamp.use_nil:
+            return "nil"
         time = self.value(obj)
         if not time:
             return -1

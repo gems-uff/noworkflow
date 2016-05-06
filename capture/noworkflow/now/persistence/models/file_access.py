@@ -24,6 +24,8 @@ from .base import AlchemyProxy, proxy_class, backref_one, proxy
 class FileAccess(AlchemyProxy):
     """Represent a file access"""
 
+    hide_timestamp = False
+
     __tablename__ = "file_access"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
@@ -145,15 +147,20 @@ class FileAccess(AlchemyProxy):
         Keyword arguments:
         _print -- custom print function (default=print)
         """
-        _print("""\
+        result = """\
             Name: {f.name}
             Mode: {f.mode}
             Buffering: {f.buffering}
             Content hash before: {f.content_hash_before}
             Content hash after: {f.content_hash_after}
-            Timestamp: {f.timestamp}
-            Function: {f.stack}\
-            """.format(f=self))
+            """
+        if not self.hide_timestamp:
+            result += """Timestamp: {f.timestamp}
+            """
+        result += """Function: {f.stack}\
+            """
+        _print(result.format(f=self))
+
 
     def __repr__(self):
         return "FileAccess({0.trial_id}, {0.id}, {0.name}, {0.mode})".format(
