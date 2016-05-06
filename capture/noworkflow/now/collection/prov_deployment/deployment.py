@@ -16,14 +16,14 @@ import weakref
 import getpass
 import pkg_resources
 
-from future.utils import viewitems
+from future.utils import viewitems, native_str
 from future.builtins import map as cvmap
 
 from ...persistence.models import Module
 from ...persistence import content
 from ...utils.io import print_msg, redirect_output
 from ...utils.metaprofiler import meta_profiler
-from ...utils.cross_version import string, default_string
+from ...utils.cross_version import string
 from ...utils.functions import version
 
 
@@ -154,7 +154,7 @@ class Deployment(object):
                 try:
                     module_version = getattr(module, attr)
                     if isinstance(module_version, string):
-                        return default_string(module_version)
+                        return native_str(module_version)
                     if isinstance(module_version, tuple):
                         return ".".join(cvmap(str, module_version))
 

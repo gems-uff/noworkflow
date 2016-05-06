@@ -8,7 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import inspect
 
-from os.path import join, dirname
+from os.path import dirname
 from textwrap import dedent
 from pkg_resources import resource_string, resource_listdir, resource_isdir
 
@@ -20,7 +20,19 @@ NOWORKFLOW_DIR = dirname(dirname(dirname(__file__)))
 
 
 def wrap(string, initial="  ", other="\n  "):
-    """Re-indent indented text"""
+    """Re-indent indented text
+
+
+    Doctest:
+    Wrap indented text:
+    >>> text = '''   a
+    ...    b
+    ...    c'''
+    >>> print(wrap(text, initial=" "))
+     a
+      b
+      c
+    """
     return initial + other.join(dedent(string).split("\n"))
 
 

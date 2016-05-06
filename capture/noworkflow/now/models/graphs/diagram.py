@@ -82,7 +82,7 @@ class ViewDiagram(object):
 
     def as_dot(self):                                                            # pylint: disable=no-self-use
         """Export diagram to dot"""
-        ...
+        pass
 
     def __enter__(self):
         self.links = []

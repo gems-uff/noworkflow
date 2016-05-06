@@ -9,13 +9,6 @@ from __future__ import (absolute_import, print_function,
 from collections import OrderedDict, Counter
 
 
-def concat_iter(*iters):
-    """Concatenate iterators"""
-    for iterator in iters:
-        for value in iterator:
-            yield value
-
-
 class OrderedCounter(OrderedDict, Counter):
     """OrderedDict with default value 0"""
     def __repr__(self):

@@ -6,16 +6,16 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import itertools
 import time
 import weakref
+import itertools
 
 from collections import defaultdict, namedtuple
 from copy import deepcopy, copy
 
 from future.utils import viewitems, viewkeys, viewvalues
 
-from ...utils.data import OrderedCounter, concat_iter, HashableDict
+from ...utils.data import OrderedCounter, HashableDict
 
 from .structures import prepare_cache, Graph
 
@@ -154,9 +154,9 @@ class MappingToGraph(object):
     def __init__(self, g1, g2, mapping):
         self.nid = 0
         self._result = {
-            "max_duration": dict(concat_iter(
+            "max_duration": dict(itertools.chain(
                 viewitems(g1["max_duration"]), viewitems(g2["max_duration"]))),
-            "min_duration": dict(concat_iter(
+            "min_duration": dict(itertools.chain(
                 viewitems(g1["min_duration"]), viewitems(g2["min_duration"]))),
             "nodes": [],
             "edges": [],

@@ -33,7 +33,7 @@ else:
     except ImportError:
         import pickle                                                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports
     import repr as reprlib                                                       # pylint: disable=wrong-import-position, unused-import, import-error
-    from itertools import izip_longest as zip_longest                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports
+    from itertools import izip_longest as zip_longest                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports, no-name-in-module
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)               # pylint: disable=invalid-name, undefined-variable
     string = (basestring,)                                                       # pylint: disable=invalid-name, undefined-variable
@@ -49,31 +49,6 @@ def cross_compile(*args, **kwargs):
     return compile(*args, **kwargs)
 
 
-def bytes_string(text, encode="utf-8"):
-    """Return a bytes object on Python 3 and a str object on Python 2"""
-    if not PY3:
-        if isinstance(text, unicode):                                            # pylint: disable=undefined-variable
-            result = text.encode(encode)
-        else:
-            result = text
-    else:
-        if isinstance(text, bytes):
-            result = text
-        else:
-            result = bytes(text, encode)
-    return result
-
-
-def default_string(text, encode="utf-8"):
-    """Return a unicode object on Python 3 and a bytes object on Python 2"""
-    if not PY3:
-        if isinstance(text, unicode):                                            # pylint: disable=undefined-variable
-            result = text.encode(encode)
-        else:
-            result = text
-    else:
-        if isinstance(text, bytes):
-            result = text.decode(encode)
-        else:
-            result = text
-    return result
+def to_unicode(text):
+    """Convert bytes to unicode"""
+    return text.decode("utf-8") if isinstance(text, raw_bytes) else text

@@ -47,9 +47,3 @@ def print_msg(message, force=False, file=STDOUT):
     """Print message with [now] prefix when in verbose mode"""
     if verbose or force:
         print("{}{}".format(LABEL, message), file=file)
-
-
-def print_fn_msg(message, force=False, file=STDOUT):
-    """Print lazy message with [now] prefix"""
-    if verbose or force:
-        print("{}{}".format(LABEL, message()), file=file)

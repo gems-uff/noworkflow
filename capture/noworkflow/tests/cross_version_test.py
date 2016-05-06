@@ -7,23 +7,14 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import unittest
-from ..now.utils.cross_version import bytes_string, cross_compile
+from ..now.utils.cross_version import cross_compile
 
 
 class TestCrossVersion(unittest.TestCase):
     """TestCase for now.cross_version module"""
 
-    def test_bytes_string_unicode_to_bytes(self):
-        string = u"\u0435"
-        self.assertEqual(1, len(string))
-        self.assertEqual(2, len(bytes_string(string)))
-
-    def test_bytes_string_bytes_to_bytes(self):
-        string = b"a"
-        self.assertEqual(1, len(string))
-        self.assertEqual(1, len(bytes_string(string)))
-
     def test_cross_compile(self):
+        """Check if cross_compile behavior matches compile behavior"""
         code = b"a = 2"
         expected = compile(code, "name", "exec")
         result = cross_compile(code, "name", "exec")

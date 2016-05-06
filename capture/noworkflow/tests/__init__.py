@@ -2,13 +2,15 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-
+"""Load tests"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import doctest
 import unittest
 import sys
+
+from future.utils import viewitems
 
 from ..now.persistence import persistence_config
 
@@ -20,24 +22,33 @@ persistence_config.connect(".")
 #from .prov_execution import TestCallSlicing
 #from .prov_deployment import TestProvDeployment
 from .cross_version_test import TestCrossVersion
-from .formatter_test import TestFormatter
 
 from ..now.persistence.models import ORDER
+from ..now.utils import formatter
+from ..now.utils import functions
 
 
-suites = []
-for model in ORDER:
+tests_modules = {                                                                        # pylint: disable=invalid-name
+    model.__name__: model.__module__ for model in ORDER
+}
+
+tests_modules["formatter"] = formatter.__name__
+tests_modules["functions"] = functions.__name__
+
+
+suites = []                                                                      # pylint: disable=invalid-name
+for name, module in viewitems(tests_modules):
     model_test = doctest.DocTestSuite(
-        sys.modules[model.__module__],
+        sys.modules[module],
         optionflags=doctest.REPORT_ONLY_FIRST_FAILURE)
-    locals()[model.__name__] = model_test
+    locals()[name] = model_test
     suites.append(model_test)
 
 
-def load_tests(loader, tests, pattern):
+def load_tests(loader, tests, pattern):                                          # pylint: disable=unused-argument
+    """Create test suite"""
     suite = unittest.TestSuite()
     for test_suite in suites:
         suite.addTest(test_suite)
     suite.addTests(loader.loadTestsFromTestCase(TestCrossVersion))
-    suite.addTests(loader.loadTestsFromTestCase(TestFormatter))
     return suite
