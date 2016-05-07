@@ -81,8 +81,8 @@ class EnvironmentAttr(AlchemyProxy):
         >>> env = EnvironmentAttr((trial_id, id_))
 
         Show name as brief description
-        >>> env.brief
-        'attr_name'
+        >>> env.brief == 'attr_name'
+        True
         """
         return self.name
 

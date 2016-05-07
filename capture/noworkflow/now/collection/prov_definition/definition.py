@@ -30,7 +30,12 @@ class Definition(object):                                                       
         """Collect definition provenance from the main script"""
         metascript = self.metascript
         print_msg("  registering code components and code blocks")
-        metascript.compiled = self._visit_ast(metascript.path)
+        if metascript.code:
+            metascript.compiled = self.visit_code(
+                metascript.code, metascript.path
+            )
+        else:
+            metascript.compiled = self.visit_file(metascript.path)
 
     def store_provenance(self):
         """Store definition provenance"""
@@ -41,16 +46,20 @@ class Definition(object):                                                       
         metascript.code_components_store.fast_store(tid, partial=partial)
         metascript.code_blocks_store.fast_store(tid, partial=partial)
 
-    def _visit_ast(self, path):
+    def visit_file(self, path):
         """Return a visitor that visited the tree"""
-        metascript = self.metascript
         try:
             with open(path, "rb") as script_file:
                 code = pyposast.native_decode_source(script_file.read())
-            tree = pyposast.parse(code, path)
         except SyntaxError:
             print_msg("Syntax error on file {}.".format(path))
             return None
+        return self.visit_code(code, path)
+
+    def visit_code(self, code, path):
+        """Return a visitor that visited the tree"""
+        metascript = self.metascript
+        tree = pyposast.parse(code, path)
 
         visitor = RewriteAST(metascript, code, path)
         tree = visitor.visit(tree)

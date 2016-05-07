@@ -6,8 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from .test_definition import TestDefinition
+from .test_code_block_definition import TestCodeBlockDefinition
 
 __all__ = [
-    b"TestDefinition",
+    b"TestCodeBlockDefinition",
 ]

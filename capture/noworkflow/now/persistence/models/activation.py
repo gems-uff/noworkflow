@@ -222,7 +222,8 @@ class Activation(AlchemyProxy):
         >>> activation = Activation((trial_id, assign.f_activation))
 
         Filter global evaluations:
-        >>> list(activation.filter_evaluations_by_type("global"))
+        >>> print(repr(list(activation.filter_evaluations_by_type("global"))
+        ... ).replace("u'", "'"))
         [('a', '[1]')]
         """
         from .evaluation import Evaluation

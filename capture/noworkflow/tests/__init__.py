@@ -18,9 +18,9 @@ persistence_config.mock()
 persistence_config.connect(".")
 
 
-#from .prov_definition import TestDefinition
 #from .prov_execution import TestCallSlicing
 #from .prov_deployment import TestProvDeployment
+from .prov_definition import TestCodeBlockDefinition
 from .cross_version_test import TestCrossVersion
 
 from ..now.persistence.models import ORDER
@@ -51,4 +51,5 @@ def load_tests(loader, tests, pattern):                                         
     for test_suite in suites:
         suite.addTest(test_suite)
     suite.addTests(loader.loadTestsFromTestCase(TestCrossVersion))
+    suite.addTests(loader.loadTestsFromTestCase(TestCodeBlockDefinition))
     return suite

@@ -58,7 +58,7 @@ class Head(AlchemyProxy):
     ))
 
     def __repr__(self):
-        return "head({0.id}, {0.script!r}, {0.trial_id}).".format(self)
+        return "head({0.id}, '{0.script}', {0.trial_id}).".format(self)
 
     @classmethod  # query
     def load_head(cls, script, session=None):

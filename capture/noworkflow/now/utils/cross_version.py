@@ -52,3 +52,13 @@ def cross_compile(*args, **kwargs):
 def to_unicode(text):
     """Convert bytes to unicode"""
     return text.decode("utf-8") if isinstance(text, raw_bytes) else text
+
+
+def only(*versions):
+    """Check python version"""
+    def dec(func):
+        """Check version decorator"""
+        if any(versions):
+            return func
+        return None
+    return dec

@@ -105,8 +105,8 @@ class FileAccess(AlchemyProxy):
         >>> access = FileAccess((trial_id, access_config.r_access.id))
 
         Return activation stack:
-        >>> access.stack
-        'f -> ... -> open'
+        >>> access.stack == 'f -> ... -> open'
+        True
         """
         stack = []
         activation = self.activation
@@ -135,12 +135,14 @@ class FileAccess(AlchemyProxy):
         ...                      access=access_config, erase=True)
 
         Show mode and name:
-        >>> FileAccess((trial_id, access_config.r_access.id)).brief
-        '(r) a.txt'
+        >>> (FileAccess((trial_id, access_config.r_access.id)).brief
+        ... ) == '(r) a.txt'
+        True
 
         Indicate new files:
-        >>> FileAccess((trial_id, access_config.w_access.id)).brief
-        '(w) b.txt (new)'
+        >>> (FileAccess((trial_id, access_config.w_access.id)).brief
+        ... ) == '(w) b.txt (new)'
+        True
         """
         result = "({0.mode}) {0.name}".format(self)
         if self.content_hash_before is None:

@@ -7,10 +7,12 @@ Collect definition provenance during the transformations"""
 
 import ast
 import pyposast
+import os
 
+from .ast_elements import maybe
 from .ast_elements import L, S, P, none, true, false, call, param
 from .ast_elements import noworkflow, double_noworkflow
-from .ast_elements import activation
+from .ast_elements import activation, function_def, class_def
 
 
 class RewriteAST(ast.NodeTransformer):
@@ -27,10 +29,10 @@ class RewriteAST(ast.NodeTransformer):
 
     # data
 
-    def create_code_component(self, node, type_):
+    def create_code_component(self, node, type_, mode):
         """Create code_component. Return component id"""
         return self.code_components.add(
-            node.name, type_,
+            node.name, type_, mode,
             node.first_line, node.first_col,
             node.last_line, node.last_col,
             self.container_id
@@ -40,7 +42,7 @@ class RewriteAST(ast.NodeTransformer):
         """Create code_block and corresponding code_component
         Return component id
         """
-        id_ = self.create_code_component(node, type_)
+        id_ = self.create_code_component(node, type_, "w")
         self.code_blocks.add(
             id_,
             pyposast.extract_code(self.lcode, node),
@@ -52,7 +54,6 @@ class RewriteAST(ast.NodeTransformer):
 
     def process_script(self, node, cls):
         """Process script, creating initial activation, and closing it"""
-        body = self.process_body(node.body)
 
         #body.insert(0, ast.Assign(
         #    [ast.Name("__now_activation__", S())],
@@ -61,9 +62,12 @@ class RewriteAST(ast.NodeTransformer):
         #body.append(ast.Expr(noworkflow(
         #    "script_end", [ast.Name("__now_activation__", L())]
         #)))
-
         current_container_id = self.container_id
+        node.name = os.path.relpath(self.path, self.metascript.dir)
+        node.first_line, node.first_col = int(bool(self.code)), 0
+        node.last_line, node.last_col = len(self.lcode), len(self.lcode[-1])
         self.container_id = self.create_code_block(node, "script")
+        body = self.process_body(node.body)
         result = ast.copy_location(cls(body), node)
         self.container_id = current_container_id
         return result
@@ -95,7 +99,11 @@ class RewriteAST(ast.NodeTransformer):
         """Visit Class Definition"""
         current_container_id = self.container_id
         self.container_id = self.create_code_block(node, "class_def")
-        result = super(RewriteAST, self).visit(node)
+        result = ast.copy_location(class_def(
+            node.name, node.bases, self.process_body(node.body),
+            node.decorator_list,
+            keywords=maybe(node, "keywords")
+        ), node)
         self.container_id = current_container_id
         return result
 
@@ -103,7 +111,12 @@ class RewriteAST(ast.NodeTransformer):
         """Visit Function Definition"""
         current_container_id = self.container_id
         self.container_id = self.create_code_block(node, "function_def")
-        result = super(RewriteAST, self).visit(node)
+
+        result = ast.copy_location(function_def(
+            node.name, node.args, self.process_body(node.body),
+            node.decorator_list,
+            returns=maybe(node, "returns"), cls=cls
+        ), node)
         self.container_id = current_container_id
         return result
 

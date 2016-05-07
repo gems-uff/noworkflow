@@ -77,12 +77,12 @@ class Module(AlchemyProxy):
         >>> module2 = Module(mid2)
 
         Brief decription of module with version:
-        >>> module1.brief
-        'module 1.0.1'
+        >>> module1.brief == 'module 1.0.1'
+        True
 
         Brief decription of module without version:
-        >>> module2.brief
-        'module2'
+        >>> module2.brief == 'module2'
+        True
         """
         result = "{0.name}".format(self)
         if self.version:
@@ -116,7 +116,7 @@ class Module(AlchemyProxy):
             Code hash: {0.code_hash}""".format(self))
 
     def __repr__(self):
-        return "module_def({0.id}, {0.name!r}, {0.version!r}).".format(self)
+        return "module_def({0.id}, '{0.name}', '{0.version}').".format(self)
 
     @classmethod  # query
     def id_seq(cls, session=None):

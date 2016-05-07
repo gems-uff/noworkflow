@@ -93,15 +93,15 @@ class Trial(AlchemyProxy):
 
     To access the trial main script, please do:
     >>> code_block = trial.main
-    >>> code_block.docstring
-    'main script'
+    >>> code_block.docstring == 'main script'
+    True
 
     As a shortcut, you can also access the following properties.
     These properties access the main script:
     >>> str(trial.script_content)
     "'main script'\\ndef f(x):\\n    return x\\na = [1]\\nb = f(a)"
-    >>> trial.docstring
-    'main script'
+    >>> trial.docstring == 'main script'
+    True
     >>> trial.code_hash == trial.main.code_hash
     True
 
@@ -435,8 +435,8 @@ class Trial(AlchemyProxy):
         >>> trial = Trial(new_trial(erase=True))
 
         Return docstring:
-        >>> trial.docstring
-        'block'
+        >>> trial.docstring == 'block'
+        True
         """
         return self.main.docstring
 
@@ -519,7 +519,8 @@ class Trial(AlchemyProxy):
         ...     "unfinished", path="/home/now"), user="now", erase=True))
 
         Return environment dict
-        >>> sorted(trial.environment.items())
+        >>> print(repr(sorted(trial.environment.items())
+        ... ).replace("u'", "'"))
         [('CWD', '/home/now'), ('USER', 'now')]
         """
         return {e.name: e.value for e in self.environment_attrs}
@@ -536,7 +537,8 @@ class Trial(AlchemyProxy):
         ... ), erase=True))
 
         Return argument dict
-        >>> sorted(trial.argument_dict.items())
+        >>> print(repr(sorted(trial.argument_dict.items())
+        ... ).replace("u'", "'"))
         [('bypass_modules', 'False'), ('script', 'main.py')]
         """
         return {a.name: a.value for a in self.arguments}
@@ -560,37 +562,37 @@ class Trial(AlchemyProxy):
         ...     ), erase=True))
 
         Get only script:
-        >>> [(path, sorted(dic.items()))
+        >>> print(repr([(path, sorted(dic.items()))
         ...  for path, dic in sorted(
         ...     trial.versioned_files(local=False, access=False).items()
         ...  )
-        ... ] #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('main.py', [('code_hash', '...'), ('type', 'script')])]
 
         Get only modules:
-        >>> [(path, sorted(dic.items()))
+        >>> print(repr([(path, sorted(dic.items()))
         ...  for path, dic in sorted(
         ...     trial.versioned_files(script=False, access=False).items()
         ...  )
-        ... ] #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('internal.py', [('code_hash', 'bbbb'), ('name', 'internal'),
                           ('type', 'module')])]
 
         Get only accesses:
-        >>> [(path, sorted(dic.items()))
+        >>> print(repr([(path, sorted(dic.items()))
         ...  for path, dic in sorted(
         ...     trial.versioned_files(script=False, local=False).items()
         ...  )
-        ... ] #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
          ('file2.txt', [('code_hash', None), ('type', 'access')])]
 
         Get everythin:
-        >>> [(path, sorted(dic.items()))
+        >>> print(repr([(path, sorted(dic.items()))
         ...  for path, dic in sorted(
         ...     trial.versioned_files().items()
         ...  )
-        ... ] #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
          ('file2.txt', [('code_hash', None), ('type', 'access')]),
          ('internal.py', [('code_hash', 'bbbb'), ('name', 'internal'),
@@ -639,9 +641,9 @@ class Trial(AlchemyProxy):
         ... ), erase=True))
 
         Generate all trial accesses:
-        >>> [(name, sorted(dic.items()))
+        >>> print(repr([(name, sorted(dic.items()))
         ...  for name, dic in trial.iterate_accesses()
-        ... ] #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('main.py', [('code_hash', '...'), ('type', 'script')]),
          ('internal.py', [('code_hash', 'bbbb'), ('name', 'internal'),
                           ('type', 'module')]),
@@ -651,9 +653,9 @@ class Trial(AlchemyProxy):
          ('file2.txt', [('code_hash', 'def'), ('type', 'access')])]
 
         Filter by path:
-        >>> [(name, sorted(dic.items()))
+        >>> print(repr([(name, sorted(dic.items()))
         ...  for name, dic in trial.iterate_accesses("file2.txt")
-        ... ] #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('file2.txt', [('code_hash', None), ('type', 'access')]),
          ('file2.txt', [('code_hash', 'def'), ('type', 'access')])]
         """
@@ -763,7 +765,8 @@ class Trial(AlchemyProxy):
         >>> id4 = new_trial(TrialConfig(script="main.py"))
 
         Return all scripts:
-        >>> sorted(list(Trial.distinct_scripts()))
+        >>> print(repr(sorted(list(Trial.distinct_scripts()))
+        ... ).replace("u'", "'"))
         ['main.py', 'main2.py', 'main3.py']
         """
         return {s[0].rsplit("/", 1)[-1]
@@ -1121,8 +1124,8 @@ class Trial(AlchemyProxy):
         True
         >>> trial.path == path
         True
-        >>> trial.status
-        'ongoing'
+        >>> trial.status == 'ongoing'
+        True
         >>> trial.modules_inherited_from_trial_id
         >>> trial.parent_id
         >>> trial.main_id

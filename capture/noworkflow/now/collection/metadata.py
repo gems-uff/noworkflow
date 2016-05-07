@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 import sys
 
+from future.utils import viewitems
 
 from ..persistence import persistence_config, get_serializer
 from ..persistence.lightweight import ObjectStore, SharedObjectStore
@@ -39,7 +40,7 @@ CONTEXTS = {
 class Metascript(object):                                                        # pylint: disable=too-many-instance-attributes
     """Metascript object. Contain storages and arguments"""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Storage
         self.arguments_store = ObjectStore(ArgumentLW)
         self.environment_attrs_store = ObjectStore(EnvironmentAttrLW)
@@ -76,6 +77,8 @@ class Metascript(object):                                                       
         self.command = ""
         # Main id : int
         self.main_id = 1
+        # Code override. Just use it if you want to ignore path : str
+        self.code = ""
 
         # Verbose print : bool
         self.verbose = False
@@ -103,6 +106,9 @@ class Metascript(object):                                                       
         self.definition = Definition(self)
         self.execution = Execution(self)
         self.deployment = Deployment(self)
+
+        for key, value in viewitems(kwargs):
+            setattr(self, key, value)
 
 
     @property

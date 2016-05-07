@@ -540,7 +540,7 @@ class TrialConfig(ConfigObj):                                                   
             self.docstring, function.code, assignment.code
         )
 
-        self.main_id = self.comp(self.script, "scripẗ", "w", -1)
+        self.main_id = self.comp(self.script, "script", "w", -1)
         meta.code_blocks_store.add(*block_params(
             self.main_id, code=self.code, docstring=self.docstring
         ))

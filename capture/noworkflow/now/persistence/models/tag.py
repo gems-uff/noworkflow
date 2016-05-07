@@ -176,26 +176,26 @@ class Tag(AlchemyProxy):
 
         If there is no tag in the database, return 1.1.1
         >>> trial = Trial(new_trial(TrialConfig(script="main.py"), erase=True))
-        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
-        '1.1.1'
+        >>> print(Tag.create_automatic_tag(trial.id, trial.code_hash, "test"))
+        1.1.1
 
         If there is a tag in the database with the same code_hash and command,
         increment patch
         >>> trial = Trial(new_trial(TrialConfig(script="main.py")))
-        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test")
-        '1.1.2'
+        >>> print(Tag.create_automatic_tag(trial.id, trial.code_hash, "test"))
+        1.1.2
 
         If there is a tag in the database with the same code_hash but different
         command, increment minor:
         >>> trial = Trial(new_trial(TrialConfig(script="main.py")))
-        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
-        '1.2.1'
+        >>> print(Tag.create_automatic_tag(trial.id, trial.code_hash, "test2"))
+        1.2.1
 
         If there are only tags with different code hash, increment major:
         >>> trial = Trial(new_trial(
         ...     TrialConfig(script="main.py", docstring="a")))
-        >>> Tag.create_automatic_tag(trial.id, trial.code_hash, "test2")
-        '2.1.1'
+        >>> print(Tag.create_automatic_tag(trial.id, trial.code_hash, "test2"))
+        2.1.1
         """
         session = session or relational.session
         tag_type, tag = cls.fast_load_auto_tag(

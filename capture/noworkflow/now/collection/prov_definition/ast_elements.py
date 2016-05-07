@@ -9,6 +9,14 @@ import ast
 from ...utils.cross_version import PY3, PY35
 
 
+def maybe(obj, attribute):
+    """Return object attribute or None if it does not exist"""
+    try:
+        return getattr(obj, attribute)
+    except AttributeError:
+        return None
+
+
 def L():                                                                         # pylint: disable=invalid-name
     """Create Load expr context"""
     return ast.Load()
@@ -81,3 +89,23 @@ def param(value, annotation=None):
     if PY3:
         return ast.arg(value, annotation)
     return ast.Name(value, P())
+
+
+def function_def(name, args, body, decs, returns=None, cls=ast.FunctionDef):     # pylint: disable=too-many-arguments
+    """Create function definition"""
+    constructor = [name, args, body, decs]
+    if PY3:
+        constructor.append(returns)
+
+    return cls(*constructor)
+
+
+def class_def(name, bases, body, decorators, keywords=None):
+    """Create class definition"""
+    constructor = [name, bases]
+    if PY3:
+        constructor.append(keywords)
+    constructor.append(body)
+    constructor.append(decorators)
+
+    return ast.ClassDef(*constructor)

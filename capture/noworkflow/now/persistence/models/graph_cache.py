@@ -48,7 +48,7 @@ class GraphCache(AlchemyProxy):
     timestamp = Column(TIMESTAMP)
 
     def __repr__(self):
-        return "cache({0.id}, {0.type!r}, {0.name!r}).".format(self)
+        return "cache({0.id}, '{0.type}', '{0.name}').".format(self)
 
     @classmethod  # query
     def _query_select_cache(cls, gtype, name, attributes, session=None):
