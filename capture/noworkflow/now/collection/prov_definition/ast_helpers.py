@@ -55,9 +55,17 @@ class DebugVisitor(ast.NodeVisitor):
         """Just visit expr"""
         return self.generic_visit(node)
 
+    def visit_stmt(self, node):
+        """Just visit stmt"""
+        return self.generic_visit(node)
+
     def _visit_expr(self, node):
         """Just visit expr"""
         return self.visit_expr(node)
+
+    def _visit_stmt(self, node):
+        """Just visit stmt"""
+        return self.visit_stmt(node)
 
     visit_BoolOp = _visit_expr
     visit_BinOp = _visit_expr
@@ -85,6 +93,35 @@ class DebugVisitor(ast.NodeVisitor):
     visit_Name = _visit_expr
     visit_List = _visit_expr
     visit_Tuple = _visit_expr
+
+    visit_FunctionDef = _visit_stmt
+    visit_AsyncFunctionDef = _visit_stmt
+    visit_ClassDef = _visit_stmt
+    visit_Return = _visit_stmt
+    visit_Delete = _visit_stmt
+    visit_Assign = _visit_stmt
+    visit_AugAssign = _visit_stmt
+    visit_Print = _visit_stmt
+    visit_For = _visit_stmt
+    visit_AsyncFor = _visit_stmt
+    visit_While = _visit_stmt
+    visit_If = _visit_stmt
+    visit_With = _visit_stmt
+    visit_AsyncWith = _visit_stmt
+    visit_Raise = _visit_stmt
+    visit_TryExcept = _visit_stmt
+    visit_TryFinally = _visit_stmt
+    visit_Try = _visit_stmt
+    visit_Assert = _visit_stmt
+    visit_Import = _visit_stmt
+    visit_ImportFrom = _visit_stmt
+    visit_Exec = _visit_stmt
+    visit_Global = _visit_stmt
+    visit_Nonlocal = _visit_stmt
+    visit_Expr = _visit_stmt
+    visit_Pass = _visit_stmt
+    visit_Break = _visit_stmt
+    visit_Continue = _visit_stmt
 
 
 def debug_tree(tree, just_print=None, show_code=None, methods=None):

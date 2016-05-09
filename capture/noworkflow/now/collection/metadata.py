@@ -18,6 +18,7 @@ from ..persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 from ..persistence.lightweight import CodeComponentLW, CodeBlockLW
 from ..persistence.lightweight import EvaluationLW, ActivationLW, DependencyLW
 from ..persistence.lightweight import ValueLW, CompartmentLW, FileAccessLW
+from ..persistence.lightweight import ExceptionLW
 from ..utils import io
 
 from .prov_definition.definition import Definition
@@ -57,6 +58,7 @@ class Metascript(object):                                                       
         self.compartments_store = ObjectStore(CompartmentLW)
         self.file_accesses_store = ObjectStore(FileAccessLW)
 
+        self.exceptions_store = ObjectStore(ExceptionLW)
         # Trial id read from Database : int
         self.trial_id = -1
         # Trial name : str

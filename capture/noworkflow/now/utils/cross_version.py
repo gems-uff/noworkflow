@@ -23,7 +23,8 @@ if PY3:
     import reprlib                                                               # pylint: disable=wrong-import-position, unused-import
     from itertools import zip_longest                                            # pylint: disable=wrong-import-position, unused-import
 
-    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes)
+    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes, 
+                 type(Ellipsis))
     string = (str, bytes)                                                        # pylint: disable=invalid-name
     raw_bytes = (bytes, bytearray)                                               # pylint: disable=invalid-name
 else:

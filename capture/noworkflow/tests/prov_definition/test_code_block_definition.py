@@ -6,41 +6,14 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import os
-import unittest
 
-from future.utils import viewvalues, viewitems
+from ..collection_testcase import CollectionTestCase
 
-from ...now.collection.metadata import Metascript
 from ...now.utils.cross_version import PY35, only
 
 
-NAME = "noworkflow/tests/examples/script.py"
-
-class TestCodeBlockDefinition(unittest.TestCase):
+class TestCodeBlockDefinition(CollectionTestCase):
     """Test Code Block collection"""
-
-    def find_code_component(self, **kwargs):
-        """Find component by attributes in kwargs"""
-        components = self.metascript.code_components_store
-        for component in viewvalues(components.store):
-            found = True
-            for key, value in viewitems(kwargs):
-                if getattr(component, key) != value:
-                    found = False
-                    break
-            if found:
-                return component
-        return None
-
-    def script(self, code):
-        """Create metascript with the desired code"""
-        self.metascript = Metascript(
-            path=NAME,
-            dir=os.path.dirname(NAME),
-            code=code
-        )
-
 
     def test_script(self):
         """Test script collection. Do not ignore comments."""

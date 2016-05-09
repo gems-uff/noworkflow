@@ -15,6 +15,7 @@ from .compartment import CompartmentLW
 from .dependency import DependencyLW
 from .environment_attr import EnvironmentAttrLW
 from .evaluation import EvaluationLW
+from .exception import ExceptionLW
 from .file_access import FileAccessLW
 from .module import ModuleLW
 from .module_dependency import ModuleDependencyLW
@@ -32,6 +33,7 @@ __all__ = [
     "DependencyLW",
     "EnvironmentAttrLW",
     "EvaluationLW",
+    "ExceptionLW",
     "FileAccessLW",
     "ModuleLW",
     "ModuleDependencyLW",

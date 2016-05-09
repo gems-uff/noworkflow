@@ -6,37 +6,33 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from ..models import Evaluation
+#from ..models import Evaluation
 from .base import BaseLW, define_attrs
 
 
-class EvaluationLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
+class ExceptionLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
     """Evaluation lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "moment", "code_component_id", "activation_id",
-         "value_id"]
+        ["trial_id", "id", "activation_id"],
+        ["exception"]
     )
-    nullable = {"moment", "activation_id", "value_id"}
-    model = Evaluation
+    nullable = set()
+    #model = Evaluation
 
-    def __init__(self, id_, code_component_id, activation_id, moment, value):
+    def __init__(self, id_, exception, activation_id):
         self.trial_id = -1
         self.id = id_                                                            # pylint: disable=invalid-name
-        self.code_component_id = code_component_id
-        self.activation_id = activation_id if activation_id else -1
-        self.moment = -1 if not moment else moment
-        self.value_id = -1 if not value else value
+        self.activation_id = activation_id
+        self.exception = exception
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Evaluation can only be removed from object store
         if it has a moment
         """
-        return self.moment != -1
+        return True
 
     def __repr__(self):
         return (
-            "Evaluation(id={0.id}, moment={0.moment}, "
-            "code_component_id={0.code_component_id}, "
-            "activation_id={0.activation_id}, value_id={0.value_id})"
+            "Exception(id={0.id}, {0.exception})"
         ).format(self)

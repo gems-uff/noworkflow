@@ -30,7 +30,7 @@ class Execution(object):
     def collect_provenance(self):
         """Collect execution provenance"""
         metascript = self.metascript
-        metascript.namespace["__builtins__"].__noworkflow__ = self.collector
+        metascript.namespace["__builtins__"]["__noworkflow__"] = self.collector
 
         debugger_builtins(
             self.collector, metascript.namespace["__builtins__"], metascript
@@ -44,6 +44,7 @@ class Execution(object):
             self.force_msg = self.partial = ex.code > 0
             self.msg = ("the execution exited via sys.exit(). Exit status: {}"
                         "".format(ex.code))
+
         except Exception as exc:                                                 # pylint: disable=broad-except
             # ToDo #77: exceptions should be registered as return from the
             # activation and stored in the database. We are currently ignoring

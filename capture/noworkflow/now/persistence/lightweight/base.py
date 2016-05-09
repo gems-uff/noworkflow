@@ -108,16 +108,18 @@ class SharedObjectStore(ObjectStore):
 
     def add(self, *args):
         """Add object using its __init__ arguments and return id"""
-        id_ = args[0]
+        obj = self.cls(*args)
+        id_ = obj.id
         self.count += 1
-        self.store[id_] = self.cls(*args)
+        self.store[id_] = obj
         return id_
 
     def add_object(self, *args):
         """Add object using its __init__ arguments and return object"""
-        id_ = args[0]
+        obj = self.cls(*args)
+        id_ = obj.id
         self.count += 1
-        self.store[id_] = self.cls(*args)
+        self.store[id_] = obj
         return self.store[id_]
 
     def dry_add(self, *args):

@@ -31,6 +31,23 @@ def P():                                                                        
     """Create Param expr context"""
     return ast.Param()
 
+def context(node):
+    """Return node context as string"""
+    expr_context = node.ctx
+    result = "?"
+    if isinstance(expr_context, ast.Load):
+        result = "r"
+    elif isinstance(expr_context, ast.Store):
+        result = "w"
+    elif isinstance(expr_context, ast.Del):
+        result = "d"
+    elif isinstance(expr_context, ast.AugLoad):
+        result = "r+"
+    elif isinstance(expr_context, ast.AugStore):
+        result = "w+"
+    elif isinstance(expr_context, ast.Param):
+        result = "p"
+    return result
 
 def none():
     """Create None object"""
@@ -109,3 +126,17 @@ def class_def(name, bases, body, decorators, keywords=None):
     constructor.append(decorators)
 
     return ast.ClassDef(*constructor)
+
+def try_def(body, handlers, orelse, finalbody, node=None):
+    """Create try block"""
+    if PY3:
+        result = ast.Try(body, handlers, orelse, finalbody)
+        return ast.copy_location(result, node) if node else result
+    else:
+        if handlers or orelse:
+            result = ast.TryExcept(body, handlers, orelse)
+            body = [ast.copy_location(result, node) if node else result]
+        if finalbody:
+            result = ast.TryFinally(body, finalbody)
+            body = [ast.copy_location(result, node) if node else result]
+        return body[-1]

@@ -164,10 +164,10 @@ def evaluation_params(code_component_id, activation_id, value_id=-1,
             year=year, month=month, day=day,
             hour=hour, minute=minute, second=second
         )
-    return [moment, code_component_id, activation_id, value_id]
+    return [code_component_id, activation_id, moment, value_id]
 
 
-def activation_params(id_, code_block_id, name="main.py",
+def activation_params(evaluation, code_block_id, name="main.py",
                       year=2016, month=4, day=8, hour=1, minute=18, second=5,
                       start=None):
     """Return activation params"""
@@ -176,7 +176,7 @@ def activation_params(id_, code_block_id, name="main.py",
             year=year, month=month, day=day,
             hour=hour, minute=minute, second=second
         )
-    return [id_, name, start, code_block_id]
+    return [evaluation, name, start, code_block_id]
 
 def value_params(value="<class 'type'>", type_id=1):
     """Return value params"""
@@ -397,7 +397,8 @@ class AssignConfig(ConfigObj):
         self.f_activation = self.evaluation(
             self.call_id, main_act, self.array_value, 7 + self.duration)
         self.meta.activations_store.add(*activation_params(
-            self.f_activation, function.id, name=function.name,
+            self.meta.evaluations_store[self.f_activation],
+            function.id, name=function.name,
             start=self.start + timedelta(seconds=7)
         ))
 
@@ -568,7 +569,7 @@ class TrialConfig(ConfigObj):                                                   
         ))
 
         self.meta.activations_store.add(*activation_params(
-            self.main_act, self.main_id,
+            self.meta.evaluations_store[self.main_act], self.main_id,
             start=self.start + timedelta(seconds=self.main_start)
         ))
 

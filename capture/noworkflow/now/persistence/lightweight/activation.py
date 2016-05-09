@@ -15,17 +15,26 @@ class ActivationLW(BaseLW):                                                     
 
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "start", "code_block_id"],
-        ["file_accesses", "context", "conditions", "permanent_conditions"]
+        ["file_accesses", "context", "conditions", "permanent_conditions",
+         "evaluation", "assignments"]
     )
     nullable = {"code_block_id"}
     model = Activation
 
-    def __init__(self, id_, name, start, code_block_id):
+    def __init__(self, evaluation, name, start, code_block_id):
         self.trial_id = -1
-        self.id = id_                                                            # pylint: disable=invalid-name
+        self.id = evaluation.id                                                  # pylint: disable=invalid-name
         self.name = name
         self.start = start
         self.code_block_id = code_block_id if code_block_id else -1
+
+        self.evaluation = evaluation
+
+        # Assignments
+        self.assignments = []
+
+        # Dependencies. Used to construct dependencies
+        self.dependencies = []
 
         # File accesses. Used to get the content after the activation
         self.file_accesses = []
