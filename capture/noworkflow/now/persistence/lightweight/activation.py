@@ -16,7 +16,7 @@ class ActivationLW(BaseLW):                                                     
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "start", "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
-         "evaluation", "assignments"]
+         "evaluation", "assignments", "closure", "func", "dependency_type"]
     )
     nullable = {"code_block_id"}
     model = Activation
@@ -36,10 +36,18 @@ class ActivationLW(BaseLW):                                                     
         # Dependencies. Used to construct dependencies
         self.dependencies = []
 
-        # File accesses. Used to get the content after the activation
-        self.file_accesses = []
         # Variable context. Used in the slicing lookup
         self.context = {}
+        # Closure activation
+        self.closure = None
+        # Executed function
+        self.func = None
+        # Dependency type
+        self.dependency_type = "dependency"
+
+
+        # File accesses. Used to get the content after the activation
+        self.file_accesses = []
 
         # Track conditional dependencies
         self.conditions = []

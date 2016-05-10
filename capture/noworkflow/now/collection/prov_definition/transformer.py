@@ -15,6 +15,9 @@ from .ast_elements import noworkflow, double_noworkflow
 from .ast_elements import activation, function_def, class_def, try_def
 
 
+from ...utils.cross_version import PY3, PY35
+
+
 class RewriteAST(ast.NodeTransformer):
     """Rewrite AST to add calls to noWorkflow collector"""
 
@@ -59,9 +62,11 @@ class RewriteAST(ast.NodeTransformer):
         __now_activation__ = <now>.script_start(__name__, <block_id>)
         try:
             ...script...
+        except:
+            <now>.collect_exception(__now_activation__)
+            raise
         finally:
-
-            <now>.script_end(__now_activation__)
+            <now>.close_script(__now_activation__)
         """
 
         current_container_id = self.container_id
@@ -207,13 +212,107 @@ class RewriteAST(ast.NodeTransformer):
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name
         """Visit Name. Create code component"""
         node.name = node.id
-        id_ = self.create_code_component(node, 'name', context(node))
+        id_ = self.create_code_component(node, "name", context(node))
         node.code_component_expr = ast.Tuple([
             ast.Tuple([ast.Num(id_),
                        ast.Str(pyposast.extract_code(self.lcode, node))], L()),
             ast.Str("single")
         ], L())
         return node
+
+    def _call_arg(self, node, star):
+        """Create <now>.param(<act>, param_id)(|node|)"""
+        if not node:
+            return None
+        node.name = pyposast.extract_code(self.lcode, node)
+        if star:
+            node.name = "*" + node.name
+        id_ = self.create_code_component(node, "param", "r")
+        return ast.copy_location(double_noworkflow(
+            "param",
+            [activation()],
+            [activation(), ast.Num(id_), self.capture(node, mode="use")]
+        ), node)
+
+    def _call_keyword(self, arg, node):
+        """Create <now>.param(<act>, param_id)(|node|)"""
+        if not node:
+            return None
+        node.name = (("{}=".format(arg) if arg else "**") +
+                     pyposast.extract_code(self.lcode, node))
+        id_ = self.create_code_component(node, "param", "r")
+        return ast.copy_location(double_noworkflow(
+            "param",
+            [activation()],
+            [activation(), ast.Num(id_), self.capture(node, mode="use")]
+        ), node)
+
+    def process_call_arg(self, node, is_star=False):
+        """Process call argument
+        Transform (star?)value into <now>.param(<act>, param_id)(value)
+        """
+        if PY3 and isinstance(node, ast.Starred):
+            return ast.copy_location(ast.Starred(self._call_arg(
+                node.value, True
+            ), node.ctx), node)
+
+
+        return self._call_arg(node, is_star)
+
+    def process_call_keyword(self, node):
+        """Process call keyword
+        Transform arg=value into arg=<now>.param(<act>, param_id)(value)
+        """
+        return ast.copy_location(ast.keyword(node.arg, self._call_keyword(
+            node.arg, node.value
+        )), node)
+
+    def process_kwargs(self, node):
+        """Process call kwars
+        Transform **kw into **<now>.param(<act>, param_id)(kw)
+        Valid only for python < 3.5
+        """
+        return self._call_keyword(None, node)
+
+
+    def visit_Call(self, node, mode="dependency"):                               # pylint: disable=invalid-name
+        """Visit Call
+        Transform:
+            (+1)f(x, *y, **z)
+        Into:
+            <now>.call(<act>, (+1), f, <dep>)(|x|, |*y|, |**z|)
+        Or: (if metascript.capture_func_component)
+            <now>.func(<act>)(<act>, (+1), f.id, |f|, <dep>)(|x|, |*y|, |**z|)
+
+        """
+        node.name = pyposast.extract_code(self.lcode, node)
+        id_ = self.create_code_component(node, "call", "r")
+
+        old_func = node.func
+        if self.metascript.capture_func_component:
+            old_func.name = pyposast.extract_code(self.lcode, old_func)
+            func_id = self.create_code_component(old_func, "func", "r")
+            func = ast.copy_location(double_noworkflow(
+                "func", [activation()], [
+                    activation(), ast.Num(id_), ast.Num(func_id),
+                    self.capture(old_func, mode="use"), ast.Str(mode)
+                ]
+            ), old_func)
+        else:
+            func = ast.copy_location(noworkflow("call", [
+                activation(), ast.Num(id_), old_func, ast.Str(mode)
+            ]), old_func)
+
+        args = [self.process_call_arg(arg) for arg in node.args]
+        keywords = [self.process_call_keyword(k) for k in node.keywords]
+
+        star, kwarg = None, None
+        if not PY35:
+            star = self.process_call_arg(node.starargs, True)
+            kwarg = self.process_kwargs(node.kwargs)
+
+        return ast.copy_location(call(func, args, keywords, star, kwarg), node)
+
 
     def capture(self, node, mode="dependency"):
         """Capture node"""
@@ -238,7 +337,9 @@ class RewriteDependencies(ast.NodeTransformer):
         ), node)
 
 
-    
+    def generic_visit(self, node):
+        """Visit node"""
+        return self.rewriter.visit(node)
     '''
     def visit_Lambda(self, node):                                               # pylint: disable=invalid-name
         """Visit Lambda"""

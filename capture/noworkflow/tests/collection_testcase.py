@@ -59,6 +59,8 @@ class CollectionTestCase(unittest.TestCase):
             self.executed = True
 
         var = self.find_code_component(**kwargs)
+        if not var:
+            return None
         return self.find_evaluation(code_component_id=var.id)
 
     def rtype(self, name):
@@ -67,12 +69,13 @@ class CollectionTestCase(unittest.TestCase):
         return "<{} '{}'>".format(keyword, name)
 
 
-    def script(self, code, name=NAME):
+    def script(self, code, name=NAME, **kwargs):
         """Create metascript with the desired code"""
         self.maxDiff = None
         self.metascript = Metascript(
             path=name,
             dir=os.path.dirname(name),
-            code=code
+            code=code,
+            **kwargs
         )
         self.metascript.clear_namespace()

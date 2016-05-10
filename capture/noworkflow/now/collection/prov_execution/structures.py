@@ -39,10 +39,5 @@ class Dependency(object):
         self.mode = mode
 
     def __repr__(self):
-        if self.mode in ("dependency", "call"):
-            return repr(self.evaluation_id)
-        elif self.mode == "conditional":
-            return "{!r}c".format(self.evaluation_id)
-        else:
-            print(self.mode)
+        return "{}({})".format(self.evaluation_id, self.mode)
 

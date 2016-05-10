@@ -7,6 +7,7 @@
 import sys
 import weakref
 
+from copy import copy
 from datetime import datetime, timedelta
 
 from ...persistence.models import Trial
@@ -21,6 +22,7 @@ class Collector(object):
     def __init__(self, metascript):
         self.metascript = weakref.proxy(metascript)
 
+        self.code_components = self.metascript.code_components_store
         self.evaluations = self.metascript.evaluations_store
         self.activations = self.metascript.activations_store
         self.dependencies = self.metascript.dependencies_store
@@ -40,6 +42,10 @@ class Collector(object):
         )
         self.last_activation = self.first_activation
         self.shared_types = {}
+
+        # Original globals
+        self.globals = copy(__builtins__)
+        self.global_evaluations = {}
 
     def time(self):
         """Return time at this moment
@@ -63,11 +69,11 @@ class Collector(object):
         self.last_activation = activation
         return activation
 
-    def close_activation(self, activation, value):
+    def close_activation(self, activation, value_id):
         """Close activation. Set moment and value"""
         evaluation = activation.evaluation
         evaluation.moment = self.time()
-        evaluation.value_id = self.add_value(value)
+        evaluation.value_id = value_id
         self.last_activation = self.activations.store.get(
             evaluation.activation_id, self.first_activation
         )
@@ -96,19 +102,39 @@ class Collector(object):
 
     def close_script(self, now_activation):
         """Close script activation"""
-        self.close_activation(now_activation, sys.modules[now_activation.name])
+        self.close_activation(
+            now_activation, self.add_value(sys.modules[now_activation.name])
+        )
 
     def collect_exception(self, now_activation):
         """Collect activation exceptions"""
         exc = sys.exc_info()
         self.exceptions.add(exc, now_activation.id)
 
+    def lookup(self, activation, name):
+        """Lookup for variable name"""
+        while activation:
+            evaluation = activation.context.get(name, None)
+            if evaluation:
+                return evaluation
+            activation = activation.closure
+        evaluation = self.global_evaluations.get(name, None)
+        if evaluation:
+            return evaluation
+        if name in self.globals:
+            evaluation = self.evaluations.add_object(self.code_components.add(
+                name, 'global', 'w', -1, -1, -1, -1, -1
+            ), -1, self.time(), self.add_value(self.globals[name]))
+            self.global_evaluations[name] = evaluation
+        return evaluation
+
+
     def capture_single(self, activation, code_tuple, value, mode="dependency"):
         """Capture single value"""
         if code_tuple[0]:
             # Capture only if there is a code component id
             code_id, name = code_tuple[0]
-            old_eval = activation.context.get(name, None)
+            old_eval = self.lookup(activation, name)
             value_id = old_eval.value_id if old_eval else self.add_value(value)
 
             evaluation_id = self.evaluations.add(
@@ -141,38 +167,150 @@ class Collector(object):
         """Pop assignment from activation"""
         return activation.assignments.pop()
 
-    def assign(self, activation, assign, code_component_tuple):                                # pylint: disable=no-self-use
+    def find_value_id(self, value, depa, create=True):
+        """Find bound depedendency in dependency aware"""
+        value_id = None
+        if depa and not isinstance(value, IMMUTABLE):
+            for dep in depa.dependencies:
+                if dep.value is value and dep.mode != "use":
+                    value_id = dep.value_id
+                    dep.mode = "bind"
+                    break
+        if create and not value_id:
+            value_id = self.add_value(value)
+        return value_id
+
+    def create_dependencies(self, evaluation, depa):
+        """Create dependencies. Evaluation depends on depa"""
+        for dep in depa.dependencies:
+            self.dependencies.add(
+                evaluation.activation_id, evaluation.id,
+                dep.activation_id, dep.evaluation_id,
+                dep.mode
+            )
+
+    def create_param_dependencies(self, evaluation, depa):
+        """Create dependencies. Evaluation depends on depa"""
+        for dep in depa.dependencies:
+            if dep.mode == "param":
+                self.dependencies.add(
+                    evaluation.activation_id, evaluation.id,
+                    dep.activation_id, dep.evaluation_id,
+                    "dependency"
+                )
+
+    def evaluate(self, activation, code_id, value, moment, depa=None):           # pylint: disable=too-many-arguments
+        """Create evaluation for code component"""
+        if moment is None:
+            moment = self.time()
+        value_id = self.find_value_id(value, depa)
+        evaluation = self.evaluations.add_object(
+            code_id, activation.id, moment, value_id
+        )
+        self.create_dependencies(evaluation, depa)
+
+        return evaluation
+
+    def assign(self, activation, assign, code_component_tuple):
         """Create dependencies"""
-        moment, value, dependency = assign
+        moment, value, depa = assign
 
         if code_component_tuple[1] == 'single':
-            value_id = None
-            if dependency and not isinstance(value, IMMUTABLE):
-                for dep in dependency.dependencies:
-                    if dep.value is value:
-                        value_id = dep.value_id
-                        dep.mode = "bind"
-                        break
-            if not value_id:
-                value_id = self.add_value(value)
             code, name = code_component_tuple[0]
-            evaluation = self.evaluations.add_object(
-                code, activation.id, moment, value_id
-            )
+            evaluation = self.evaluate(activation, code, value, moment, depa)
             if name:
                 activation.context[name] = evaluation
-            for dep in dependency.dependencies:
-                self.dependencies.add(
-                    activation.id, evaluation.id,
-                    dep.activation_id, dep.evaluation_id,
-                    dep.mode
-                )
+
+    def call(self, activation, code_id, func, mode="dependency"):
+        """Capture call before"""
+        act = self.start_activation(func.__name__, code_id, -1, activation)
+        act.dependencies.append(DependencyAware())
+        act.func = func
+        act.depedency_type = mode
+        return self._call
+
+    def func(self, activation):
+        """Capture func before"""
+        activation.dependencies.append(DependencyAware())
+        return self._func
+
+    def _func(self, activation, code_id, func_id, func, mode="dependency"):      # pylint: disable=too-many-arguments
+        """Capture func after"""
+        dependency = activation.dependencies.pop()
+        evaluation = self.evaluate(
+            activation, func_id, func, self.time(), dependency
+        )
+
+        result = self.call(activation, code_id, func, mode)
+
+        self.last_activation.dependencies[-1].add(Dependency(
+            activation.id, evaluation.id, func, evaluation.value_id, "func"
+        ))
+
+        return result
+
+    def _call(self, *args, **kwargs):
+        """Capture call activation"""
+        activation = self.last_activation
+        evaluation = activation.evaluation
+        result = None
+        try:
+            result = activation.func(*args, **kwargs)
+        except:
+            self.collect_exception(activation)
+            raise
+        finally:
+            # Find value in activation result
+            value_id = None
+            for depa in activation.dependencies:
+                value_id = self.find_value_id(result, depa, create=False)
+                if value_id:
+                    break
+            if not value_id:
+                value_id = self.add_value(result)
+            # Close activation
+            self.close_activation(activation, value_id)
+
+            # Create dependencies
+            depa = activation.dependencies[0]
+            self.create_dependencies(evaluation, depa)
+            if activation.code_block_id == -1:
+                # Call without definition
+                self.create_param_dependencies(evaluation, depa)
+
+        self.last_activation.dependencies[-1].add(Dependency(
+            evaluation.activation_id, evaluation.id, result,
+            self.add_value(result),
+            activation.depedency_type
+        ))
+        return result
+
+    def param(self, activation):
+        """Capture param before"""
+        activation.dependencies.append(DependencyAware())
+        return self._param
+
+    def _param(self, activation, code_id, value):
+        """Capture param after"""
+        dependency = activation.dependencies.pop()
+        evaluation = self.evaluate(
+            activation, code_id, value, self.time(), dependency
+        )
+        self.last_activation.dependencies[-1].add(Dependency(
+            activation.id, evaluation.id, value, evaluation.value_id, "param"
+        ))
+
+        return value
+
+    
+
 
     def store(self, partial, status="running"):
         """Store execution provenance"""
         metascript = self.metascript
         tid = metascript.trial_id
 
+        metascript.code_components_store.fast_store(tid, partial=partial)
         metascript.evaluations_store.fast_store(tid, partial=partial)
         metascript.activations_store.fast_store(tid, partial=partial)
         metascript.dependencies_store.fast_store(tid, partial=partial)
