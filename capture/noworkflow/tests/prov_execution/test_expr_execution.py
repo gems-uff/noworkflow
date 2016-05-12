@@ -35,10 +35,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=var_a.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, var_a, "dependency")
 
     def test_str(self):
         """Test str collection"""
@@ -60,10 +57,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("str"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=var_a.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, var_a, "dependency")
 
     def test_bytes(self):
         """Test bytes collection"""
@@ -85,10 +79,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bytes" if PY3 else "str"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=var_a.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, var_a, "dependency")
 
     @only(PY3)
     def test_ellipsis(self):
@@ -111,10 +102,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("ellipsis"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=var_a.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, var_a, "dependency")
 
     def test_true(self):
         """Test True collection"""
@@ -136,10 +124,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bool"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=var_a.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, var_a, "dependency")
 
     def test_false(self):
         """Test False collection"""
@@ -161,10 +146,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bool"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=var_a.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, var_a, "dependency")
 
     def test_none(self):
         """Test None collection"""
@@ -186,10 +168,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("NoneType"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=var_a.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, var_a, "dependency")
 
     def test_global(self):
         """Test global collection"""
@@ -211,10 +190,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_a.id, dependency_id=var_int.id,
-            type="bind"
-        ))
+        self.assert_dependency(var_a, var_int, "bind")
 
     def test_external_call(self):
         """Test external call collection"""
@@ -253,24 +229,12 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_type.value, self.rtype("str"))
         self.assertEqual(var_b_type.value, self.rtype("int"))
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=call.id,
-            type="dependency"
-        ))
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=argument.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, call, "dependency")
+        self.assert_dependency(call, argument, "dependency")
 
         # Maybe we should move this dependencies to prospective
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=argument.id,
-            type="argument"
-        ))
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=argument.id, dependency_id=var_a.id,
-            type="use"
-        ))
+        self.assert_dependency(call, argument, "argument")
+        self.assert_dependency(argument, var_a, "use")
 
     def test_external_call_with_func(self):
         """Test external call collection with func collection"""
@@ -297,29 +261,11 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(activation.code_block_id, -1)
         self.assertEqual(activation.name, "int")
 
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=var_b.id, dependency_id=call.id,
-            type="dependency"
-        ))
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=argument.id,
-            type="dependency"
-        ))
+        self.assert_dependency(var_b, call, "dependency")
+        self.assert_dependency(call, argument, "dependency")
 
         # Maybe we should move this dependencies to prospective
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=argument.id,
-            type="argument"
-        ))
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=argument.id, dependency_id=var_a.id,
-            type="use"
-        ))
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=func.id,
-            type="func"
-        ))
-        self.assertIsNotNone(self.find_dependency(
-            dependent_id=func.id, dependency_id=var_int.id,
-            type="use"
-        ))
+        self.assert_dependency(call, argument, "argument")
+        self.assert_dependency(argument, var_a, "use")
+        self.assert_dependency(call, func, "func")
+        self.assert_dependency(func, var_int, "use")

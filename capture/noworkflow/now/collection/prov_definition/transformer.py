@@ -284,6 +284,20 @@ class RewriteAST(ast.NodeTransformer):
         return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
 
 
+    def visit_Return(self, node):                                                # pylint: disable=invalid-name
+        """Visit Return
+        Transform:
+            return x
+        Into:
+            return <now>.return_(<act>)(<act>, |x|)
+        """
+        node.value = ast.copy_location(double_noworkflow(
+            "return_", [activation()],
+            [activation(), self.capture(node.value) if node.value else none()]
+        ), node)
+        return node
+
+
     # expr
 
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name

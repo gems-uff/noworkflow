@@ -450,6 +450,17 @@ class Collector(object):
             if not param.filled and param.default is not None:
                 match(param.default, param)
 
+    def return_(self, activation):
+        """Capture return before"""
+        activation.dependencies.append(DependencyAware())
+        return self._return
+
+    def _return(self, activation, value):
+        """Capture return after"""
+        dependency_aware = activation.dependencies.pop()
+        self.create_dependencies(activation.evaluation, dependency_aware)
+        return value
+
 
     def store(self, partial, status="running"):
         """Store execution provenance"""

@@ -21,7 +21,7 @@ NAME = "noworkflow/tests/examples/script.py"
 class CollectionTestCase(unittest.TestCase):
     """Helpers to test noWorkflow collection"""
 
-    def find(self, store, **kwargs):
+    def find(self, store, **kwargs):                                             # pylint: disable=no-self-use
         """Find object in object store by kwargs attributes"""
         for component in viewvalues(store):
             found = True
@@ -63,7 +63,35 @@ class CollectionTestCase(unittest.TestCase):
             return None
         return self.find_evaluation(code_component_id=var.id)
 
-    def rtype(self, name):
+    def evaluation_repr(self, evaluation):
+        """Get evaluation friendly representation"""
+        return "{}({})".format(self.metascript.code_components_store[
+            evaluation.code_component_id
+        ].name, evaluation.id)
+
+    def assert_dependency(self, dependent, dependency, type_=None):
+        """Check if dependency exists"""
+        dep = self.find_dependency(dependent_id=dependent.id,
+                                   dependency_id=dependency.id)
+        if not dep:
+            self.fail("Dependency not found {} -> {}".format(
+                self.evaluation_repr(dependent),
+                self.evaluation_repr(dependency),
+            ))
+        if type_ is not None:
+            full_dep = self.find_dependency(
+                dependent_id=dependent.id, dependency_id=dependency.id,
+                type=type_)
+            if not full_dep:
+                self.fail(
+                    "Dependency not found {} -({})> {}. "
+                    "Found dependency with type '{}'".format(
+                        self.evaluation_repr(dependent), type_,
+                        self.evaluation_repr(dependency), dep.type
+                    )
+                )
+
+    def rtype(self, name):                                                       # pylint: disable=no-self-use
         """Create type repr according to python version"""
         keyword = "class" if PY3 else "type"
         return "<{} '{}'>".format(keyword, name)
