@@ -7,13 +7,17 @@
 import sys
 import weakref
 
+from collections import OrderedDict
 from copy import copy
 from datetime import datetime, timedelta
+from functools import wraps
+
+from future.utils import viewvalues, viewkeys
 
 from ...persistence.models import Trial
 from ...utils.cross_version import IMMUTABLE
 
-from .structures import Assign, DependencyAware, Dependency
+from .structures import Assign, DependencyAware, Dependency, Parameter
 
 
 class Collector(object):
@@ -172,9 +176,10 @@ class Collector(object):
         value_id = None
         if depa and not isinstance(value, IMMUTABLE):
             for dep in depa.dependencies:
-                if dep.value is value and dep.mode != "use":
+                if dep.value is value:
                     value_id = dep.value_id
-                    dep.mode = "bind"
+                    if dep.mode != "use":
+                        dep.mode = "bind"
                     break
         if create and not value_id:
             value_id = self.add_value(value)
@@ -182,17 +187,18 @@ class Collector(object):
 
     def create_dependencies(self, evaluation, depa):
         """Create dependencies. Evaluation depends on depa"""
-        for dep in depa.dependencies:
-            self.dependencies.add(
-                evaluation.activation_id, evaluation.id,
-                dep.activation_id, dep.evaluation_id,
-                dep.mode
-            )
+        if depa:
+            for dep in depa.dependencies:
+                self.dependencies.add(
+                    evaluation.activation_id, evaluation.id,
+                    dep.activation_id, dep.evaluation_id,
+                    dep.mode
+                )
 
-    def create_param_dependencies(self, evaluation, depa):
+    def create_argument_dependencies(self, evaluation, depa):
         """Create dependencies. Evaluation depends on depa"""
         for dep in depa.dependencies:
-            if dep.mode == "param":
+            if dep.mode == "argument":
                 self.dependencies.add(
                     evaluation.activation_id, evaluation.id,
                     dep.activation_id, dep.evaluation_id,
@@ -215,7 +221,7 @@ class Collector(object):
         """Create dependencies"""
         moment, value, depa = assign
 
-        if code_component_tuple[1] == 'single':
+        if code_component_tuple[1] == "single":
             code, name = code_component_tuple[0]
             evaluation = self.evaluate(activation, code, value, moment, depa)
             if name:
@@ -276,7 +282,7 @@ class Collector(object):
             self.create_dependencies(evaluation, depa)
             if activation.code_block_id == -1:
                 # Call without definition
-                self.create_param_dependencies(evaluation, depa)
+                self.create_argument_dependencies(evaluation, depa)
 
         self.last_activation.dependencies[-1].add(Dependency(
             evaluation.activation_id, evaluation.id, result,
@@ -285,24 +291,164 @@ class Collector(object):
         ))
         return result
 
-    def param(self, activation):
-        """Capture param before"""
+    def argument(self, activation):
+        """Capture argument before"""
         activation.dependencies.append(DependencyAware())
-        return self._param
+        return self._argument
 
-    def _param(self, activation, code_id, value):
-        """Capture param after"""
-        dependency = activation.dependencies.pop()
+    def _argument(self, activation, code_id, value, mode="argument",             # pylint: disable=too-many-arguments
+                  arg="", kind="argument"):
+        """Capture argument after"""
+        dependency_aware = activation.dependencies.pop()
         evaluation = self.evaluate(
-            activation, code_id, value, self.time(), dependency
+            activation, code_id, value, self.time(), dependency_aware
         )
-        self.last_activation.dependencies[-1].add(Dependency(
-            activation.id, evaluation.id, value, evaluation.value_id, "param"
-        ))
+        dependency = Dependency(
+            activation.id, evaluation.id, value, evaluation.value_id, mode
+        )
+        dependency.arg = arg
+        dependency.kind = kind
+        self.last_activation.dependencies[-1].add(dependency)
 
         return value
 
-    
+    def function_def(self, activation):
+        """Decorate function definition.
+        Start collecting default arguments dependencies
+        """
+        activation.dependencies.append(DependencyAware())
+        return self._function_def
+
+    def _function_def(self, closure_activation, block_id, arguments):            # pylint: disable=no-self-use
+        """Decorate function definition with then new activation.
+        Collect arguments and match to parameters.
+        """
+        defaults = closure_activation.dependencies.pop()
+        def dec(function_def):
+            """Decorate function definition"""
+
+            @wraps(function_def)
+            def new_function_def(*args, **kwargs):
+                """Capture variables
+                Pass __now_activation__ as parameter
+                """
+                activation = self.last_activation
+                activation.closure = closure_activation
+                activation.code_block_id = block_id
+                self._match_arguments(activation, arguments, defaults)
+                return function_def(activation, *args, **kwargs)
+            if arguments[1]:
+                new_function_def.__defaults__ = arguments[1]
+
+            closure_activation.dependencies.append(DependencyAware())
+            evaluation = self.evaluate(
+                closure_activation, block_id, new_function_def, self.time()
+            )
+            closure_activation.dependencies[-1].add(Dependency(
+                closure_activation.id, evaluation.id,
+                new_function_def, evaluation.value_id, "decorate"
+            ))
+            return new_function_def
+        return dec
+
+    def collect_function_def(self, activation):
+        """Collect function definition after all decorators. Set context"""
+        def dec(function_def):
+            """Decorate function definition again"""
+            dependency_aware = activation.dependencies.pop()
+            dependency = dependency_aware.dependencies.pop()
+            activation.context[function_def.__name__] = self.evaluations[
+                dependency.evaluation_id
+            ]
+            return function_def
+        return dec
+
+    def _match_arguments(self, activation, arguments, default_dependencies):
+        """Match arguments to parameters. Create Variables"""
+        time = self.time()
+        defaults = default_dependencies.dependencies
+        args, _, vararg, kwarg, kwonlyargs = arguments
+
+        arguments = []
+        keywords = []
+
+        for dependency in activation.dependencies[0].dependencies:
+            if dependency.mode == "argument":
+                kind = dependency.kind
+                if kind == "argument":
+                    arguments.append(dependency)
+                elif kind == "keyword":
+                    keywords.append(dependency)
+
+        # Create parameters
+        parameters = OrderedDict()
+        len_positional = len(args) - len(defaults)
+        for pos, arg in enumerate(args):
+            param = parameters[arg[0]] = Parameter(*arg)
+            if pos > len_positional:
+                param.default = defaults[pos - len_positional]
+        if vararg:
+            parameters[vararg[0]] = Parameter(*vararg, is_vararg=True)
+        if kwonlyargs:
+            for arg in kwonlyargs:
+                parameters[arg[0]] = Parameter(*arg)
+        if kwarg:
+            parameters[kwarg[0]] = Parameter(*kwarg)
+
+        parameter_order = list(viewvalues(parameters))
+        last_unfilled = 0
+
+        def match(arg, param):
+            """Create dependency"""
+            arg.mode = "dependency"
+            evaluation = self.evaluate(
+                activation, param.code_id, arg.value, time,
+                DependencyAware([arg])
+            )
+            activation.context[param.name] = evaluation
+            arg.mode = "argument"
+
+        # Match args
+        for arg in arguments:
+            if arg.arg == "*":
+                for _ in range(len(arg.value)):
+                    param = parameter_order[last_unfilled]
+                    match(arg, param)
+                    if param.is_vararg:
+                        break
+                    param.filled = True
+                    last_unfilled += 1
+            else:
+                param = parameter_order[last_unfilled]
+                match(arg, param)
+                if not param.is_vararg:
+                    param.filled = True
+                    last_unfilled += 1
+
+        if vararg:
+            parameters[vararg[0]].filled = True
+
+        # Match keywords
+        for keyword in keywords:
+            param = None
+            if keyword.arg in parameters:
+                param = parameters[keyword.arg]
+            elif kwarg:
+                param = parameters[kwarg[0]]
+            if param is not None:
+                match(keyword, param)
+                param.filled = True
+            elif keyword.arg == "**":
+                for key in viewkeys(keyword.value):
+                    if key in parameters:
+                        param = parameters[key]
+                        match(keyword, param)
+                        param.filled = True
+
+        # Default parameters
+        for param in viewvalues(parameters):
+            if not param.filled and param.default is not None:
+                match(param.default, param)
 
 
     def store(self, partial, status="running"):

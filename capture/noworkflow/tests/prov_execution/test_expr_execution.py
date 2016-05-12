@@ -224,7 +224,7 @@ class TestExprExecution(CollectionTestCase):
                     "# other")
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
-        param = self.get_evaluation(name="a", type="param")
+        argument = self.get_evaluation(name="a", type="argument")
         var_b = self.get_evaluation(name="b")
         var_int = self.get_evaluation(name="int", type="name")
         func = self.get_evaluation(name="int", type="func")
@@ -258,17 +258,17 @@ class TestExprExecution(CollectionTestCase):
             type="dependency"
         ))
         self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=param.id,
+            dependent_id=call.id, dependency_id=argument.id,
             type="dependency"
         ))
 
         # Maybe we should move this dependencies to prospective
         self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=param.id,
-            type="param"
+            dependent_id=call.id, dependency_id=argument.id,
+            type="argument"
         ))
         self.assertIsNotNone(self.find_dependency(
-            dependent_id=param.id, dependency_id=var_a.id,
+            dependent_id=argument.id, dependency_id=var_a.id,
             type="use"
         ))
 
@@ -281,7 +281,7 @@ class TestExprExecution(CollectionTestCase):
                     capture_func_component=True)
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
-        param = self.get_evaluation(name="a", type="param")
+        argument = self.get_evaluation(name="a", type="argument")
         var_b = self.get_evaluation(name="b")
         func = self.get_evaluation(name="int", type="func")
         call = self.get_evaluation(name="int(a)", type="call")
@@ -302,17 +302,17 @@ class TestExprExecution(CollectionTestCase):
             type="dependency"
         ))
         self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=param.id,
+            dependent_id=call.id, dependency_id=argument.id,
             type="dependency"
         ))
 
         # Maybe we should move this dependencies to prospective
         self.assertIsNotNone(self.find_dependency(
-            dependent_id=call.id, dependency_id=param.id,
-            type="param"
+            dependent_id=call.id, dependency_id=argument.id,
+            type="argument"
         ))
         self.assertIsNotNone(self.find_dependency(
-            dependent_id=param.id, dependency_id=var_a.id,
+            dependent_id=argument.id, dependency_id=var_a.id,
             type="use"
         ))
         self.assertIsNotNone(self.find_dependency(

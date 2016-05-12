@@ -14,8 +14,8 @@ Assign = namedtuple("Assign", "moment value dependency")
 class DependencyAware(object):
     """Store dependencies of an element"""
 
-    def __init__(self, active=True):
-        self.dependencies = []
+    def __init__(self, dependencies=None, active=True):
+        self.dependencies = dependencies or []
         self.active = active
 
     def add(self, dependency):
@@ -25,7 +25,6 @@ class DependencyAware(object):
 
     def __bool__(self):
         return bool(self.dependencies)
-
 
 
 class Dependency(object):
@@ -38,6 +37,25 @@ class Dependency(object):
         self.value_id = value_id
         self.mode = mode
 
-    def __repr__(self):
-        return "{}({})".format(self.evaluation_id, self.mode)
+        # Kind: extra information about dependency
+        self.kind = None
+        self.arg = None
 
+    def __repr__(self):
+        evaluation = __noworkflow__.evaluations[self.evaluation_id]
+        code_component = __noworkflow__.code_components[
+            evaluation.code_component_id]
+        return "{}({})".format(code_component.name, self.mode)
+
+
+class Parameter(object):
+
+    def __init__(self, name, code_id, is_vararg=False):
+        self.name = name
+        self.code_id = code_id
+        self.is_vararg = is_vararg
+        self.filled = False
+        self.default = None
+
+    def __repr__(self):
+        return "{}".format(self.name)

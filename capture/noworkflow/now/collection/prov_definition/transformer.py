@@ -9,6 +9,8 @@ import ast
 import pyposast
 import os
 
+from .ast_helpers import ReplaceContextWithLoad
+
 from .ast_elements import maybe, context
 from .ast_elements import L, S, P, none, true, false, call, param
 from .ast_elements import noworkflow, double_noworkflow
@@ -189,14 +191,89 @@ class RewriteAST(ast.NodeTransformer):
         self.container_id = current_container_id
         return result
 
+    def process_arg(self, arg):
+        """Return None if arg does not exist
+        Otherwise, create code component, return tuple ("arg name", code_id)
+        """
+        if not arg:
+            return none()
+
+        arg.name = (arg.arg if PY3 else
+                    pyposast.extract_code(self.lcode, arg).strip("()"))
+
+        id_ = self.create_code_component(arg, "param", "w")
+        return ast.copy_location(ast.Tuple([
+            ast.Str(arg.name), ast.Num(id_)
+        ], L()), arg)
+
+    def process_default(self, default):
+        """Process default value"""
+        if not default:
+            return none()
+        id_ = self.create_code_component(default, "default", context(default))
+        return ast.copy_location(double_noworkflow(
+            "argument", [activation()],
+            [activation(), ast.Num(id_), self.capture(default), "param"]
+        ), default)
+
+    def process_decorator(self, decorator):
+        """Transform @dec into @__noworkflow__.decorator(<act>)(|dec|)"""
+        return ast.copy_location(double_noworkflow(
+            "decorator",
+            [pyposast.extract_code(self.lcode, decorator), activation()],
+            [self.capture(decorator)]
+        ), decorator)
+
+    def process_parameters(self, arguments):
+        """Return List of arguments for <now>.function_def"""
+        args = ast.List([self.process_arg(arg) for arg in arguments.args], L())
+        vararg = self.process_arg(arguments.vararg)
+        defaults = ast.Tuple([
+            self.process_default(def_) for def_ in arguments.defaults
+        ], L())
+        kwarg = self.process_arg(arguments.kwarg)
+        if PY3:
+            kwonlyargs = ast.List([
+                self.process_arg(arg) for arg in arguments.kwonlyargs
+            ], L())
+        else:
+            kwonlyargs = none()
+        return ast.Tuple([args, defaults, vararg, kwarg, kwonlyargs], L())
+
+
     def visit_FunctionDef(self, node, cls=ast.FunctionDef):                      # pylint: disable=invalid-name
-        """Visit Function Definition"""
+        """Visit Function Definition
+        Transform:
+        @dec
+        def f(x, y=2, *args, z=3, **kwargs):
+            ...
+        Into:
+        @<now>.collect_function_def(<act>)
+        @<now>.decorator(__now_activation__)(|dec|)
+        @<now>.function_def(<act>)(<act>, <block_id>, <parameters>)
+        def f(__now_activation__, x, y=2, *args, z=3, **kwargs):
+            ...
+        """
         current_container_id = self.container_id
         self.container_id = self.create_code_block(node, "function_def")
 
+        decorators = [ast.copy_location(noworkflow("collect_function_def", [
+            activation()
+        ]), node)] + [self.process_decorator(dec)
+                      for dec in node.decorator_list]
+        decorators.append(ast.copy_location(double_noworkflow(
+            "function_def", [activation()],
+            [activation(), ast.Num(self.container_id),
+             self.process_parameters(node.args)]
+        ), node))
+
+        body = self.process_body(node.body)
+
+        node.args.args = [param("__now_activation__")] + node.args.args
+        node.args.defaults = [none() for _ in node.args.defaults]
+
         result = ast.copy_location(function_def(
-            node.name, node.args, self.process_body(node.body),
-            node.decorator_list,
+            node.name, node.args, body, decorators,
             returns=maybe(node, "returns"), cls=cls
         ), node)
         self.container_id = current_container_id
@@ -221,35 +298,40 @@ class RewriteAST(ast.NodeTransformer):
         return node
 
     def _call_arg(self, node, star):
-        """Create <now>.param(<act>, param_id)(|node|)"""
+        """Create <now>.argument(<act>, argument_id)(|node|)"""
         if not node:
             return None
         node.name = pyposast.extract_code(self.lcode, node)
+        arg = ast.Str("")
         if star:
             node.name = "*" + node.name
-        id_ = self.create_code_component(node, "param", "r")
+            arg = ast.Str("*")
+        id_ = self.create_code_component(node, "argument", "r")
         return ast.copy_location(double_noworkflow(
-            "param",
+            "argument",
             [activation()],
-            [activation(), ast.Num(id_), self.capture(node, mode="use")]
+            [activation(), ast.Num(id_), self.capture(node, mode="use"),
+             ast.Str("argument"), arg, ast.Str("argument")]
         ), node)
 
     def _call_keyword(self, arg, node):
-        """Create <now>.param(<act>, param_id)(|node|)"""
+        """Create <now>.argument(<act>, argument_id)(|node|)"""
         if not node:
             return None
         node.name = (("{}=".format(arg) if arg else "**") +
                      pyposast.extract_code(self.lcode, node))
-        id_ = self.create_code_component(node, "param", "r")
+        id_ = self.create_code_component(node, "argument", "r")
         return ast.copy_location(double_noworkflow(
-            "param",
+            "argument",
             [activation()],
-            [activation(), ast.Num(id_), self.capture(node, mode="use")]
+            [activation(), ast.Num(id_), self.capture(node, mode="use"),
+             ast.Str("argument"), ast.Str(arg if arg else "**"),
+             ast.Str("keyword")]
         ), node)
 
     def process_call_arg(self, node, is_star=False):
         """Process call argument
-        Transform (star?)value into <now>.param(<act>, param_id)(value)
+        Transform (star?)value into <now>.argument(<act>, argument_id)(value)
         """
         if PY3 and isinstance(node, ast.Starred):
             return ast.copy_location(ast.Starred(self._call_arg(
@@ -261,7 +343,7 @@ class RewriteAST(ast.NodeTransformer):
 
     def process_call_keyword(self, node):
         """Process call keyword
-        Transform arg=value into arg=<now>.param(<act>, param_id)(value)
+        Transform arg=value into arg=<now>.argument(<act>, argument_id)(value)
         """
         return ast.copy_location(ast.keyword(node.arg, self._call_keyword(
             node.arg, node.value
@@ -269,7 +351,7 @@ class RewriteAST(ast.NodeTransformer):
 
     def process_kwargs(self, node):
         """Process call kwars
-        Transform **kw into **<now>.param(<act>, param_id)(kw)
+        Transform **kw into **<now>.argument(<act>, argument_id)(kw)
         Valid only for python < 3.5
         """
         return self._call_keyword(None, node)

@@ -78,3 +78,50 @@ class TestStmtExecution(CollectionTestCase):
             dependent_id=write_b_eval.id, dependency_id=read_a_eval.id,
             type="dependency"
         ))
+
+    def test_function_definition(self):
+        """Test function_def collection"""
+        self.script("# script.py\n"
+                    "def f(x):\n"
+                    "    pass\n"
+                    "a = 2\n"
+                    "b = f(a)\n"
+                    "# other")
+
+        write_f_eval = self.get_evaluation(name="f", mode="w")
+        param_x_eval = self.get_evaluation(name="x", mode="w")
+        write_a_eval = self.get_evaluation(name="a", mode="w")
+        arg_a_eval = self.get_evaluation(name="a", type="argument")
+        write_b_eval = self.get_evaluation(name="b", mode="w")
+        call = self.get_evaluation(name="f(a)", type="call")
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        activation = self.metascript.activations_store[call.id]
+
+        self.assertEqual(call.activation_id, script_act.id)
+        self.assertTrue(activation.start < call.moment)
+        self.assertEqual(activation.code_block_id, write_f_eval.id)
+        self.assertEqual(activation.name, "f")
+
+
+        self.assertEqual(write_f_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(write_f_eval.moment))
+        self.assertEqual(arg_a_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(arg_a_eval.moment))
+        self.assertEqual(write_b_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(write_b_eval.moment))
+        self.assertEqual(call.activation_id, script_eval.id)
+        self.assertTrue(bool(call.moment))
+        self.assertEqual(param_x_eval.activation_id, activation.id)
+        self.assertTrue(bool(param_x_eval.moment))
+        self.assertEqual(script_act.context['a'], write_a_eval)
+        self.assertEqual(script_act.context['b'], write_b_eval)
+        self.assertEqual(script_act.context['f'], write_f_eval)
+        self.assertEqual(activation.context['x'], param_x_eval)
+
+        self.assertIsNotNone(self.find_dependency(
+            dependent_id=param_x_eval.id, dependency_id=arg_a_eval.id,
+            type="dependency"
+        ))
