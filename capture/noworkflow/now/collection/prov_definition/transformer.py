@@ -283,7 +283,6 @@ class RewriteAST(ast.NodeTransformer):
         """Visit Async Function Definition"""
         return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
 
-
     def visit_Return(self, node):                                                # pylint: disable=invalid-name
         """Visit Return
         Transform:
@@ -409,7 +408,6 @@ class RewriteAST(ast.NodeTransformer):
 
         return ast.copy_location(call(func, args, keywords, star, kwarg), node)
 
-
     def capture(self, node, mode="dependency"):
         """Capture node"""
         dependency_rewriter = RewriteDependencies(self, mode=mode)
@@ -425,12 +423,65 @@ class RewriteDependencies(ast.NodeTransformer):
         self.mode = mode
 
     def visit_Name(self, node):                                                 # pylint: disable=invalid-name
-        """Visit Name"""
+        """Visit Name.
+        Transform;
+            (+1)a
+        Into:
+            <now>.capture_single(<act>, (+1), a, 'a')
+        """
         node = self.rewriter.visit(node)
         return ast.copy_location(noworkflow(
             "capture_single",
             [activation(), node.code_component_expr, node, ast.Str(self.mode)]
         ), node)
+
+    def visit_BoolOp(self, node):                                               # pylint: disable=invalid-name
+        """Visit BoolOp. Transform a and b or c into |a| and |b| or |c|"""
+        return ast.copy_location(ast.BoolOp(node.op, [
+            self.rewriter.capture(value, mode=self.mode)
+            for value in node.values
+        ]), node)
+
+    def visit_BinOp(self, node):                                                # pylint: disable=invalid-name
+        """Visit BinOp. Transform a + b into |a| + |b|"""
+        return ast.copy_location(ast.BinOp(
+            self.rewriter.capture(node.left, mode=self.mode), node.op,
+            self.rewriter.capture(node.right, mode=self.mode)
+        ), node)
+
+    def visit_UnaryOp(self, node):                                              # pylint: disable=invalid-name
+        """Visit UnaryOp. Transform ~a into ~|a|"""
+        return ast.copy_location(ast.UnaryOp(
+            node.op, self.rewriter.capture(node.operand, mode=self.mode)
+        ), node)
+
+    def visit_Dict(self, node):                                                 # pylint: disable=invalid-name
+        """Visit Dict.
+        Transform:
+            {a: b}
+        Into:
+            <now>.dict(<act>)(<act>, {
+                <now>.dict_key(<act>)(<act>,|a|):
+                    <now>.dict_value(<act>)(<act>, |b|)
+            })
+        """
+        node.keys = [
+            ast.copy_location(double_noworkflow(
+                "dict_key", [activation()],
+                [activation(), self.rewriter.capture(key, mode=self.mode)]
+            ), key)
+            for key in node.keys
+        ]
+        node.values = [
+            ast.copy_location(double_noworkflow(
+                "dict_value", [activation()],
+                [activation(), self.rewriter.capture(value, mode=self.mode)]
+            ), value)
+            for value in node.values
+        ]
+        return ast.copy_location(double_noworkflow("dict", [activation()], [
+            activation(), node
+        ]), node)
 
 
     def generic_visit(self, node):

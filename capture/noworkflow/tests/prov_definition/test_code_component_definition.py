@@ -10,7 +10,7 @@ from __future__ import (absolute_import, print_function,
 from ..collection_testcase import CollectionTestCase
 
 
-class TestStmtDefinition(CollectionTestCase):
+class TestCodeComponentDefinition(CollectionTestCase):
     """Test Stmt collection"""
 
     def test_assign_to_name(self):

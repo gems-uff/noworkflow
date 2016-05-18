@@ -19,7 +19,8 @@ persistence_config.connect(".")
 
 
 #from .prov_deployment import TestProvDeployment
-from .prov_definition import TestCodeBlockDefinition, TestStmtDefinition
+from .prov_definition import TestCodeBlockDefinition
+from .prov_definition import TestCodeComponentDefinition
 from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
 from .cross_version_test import TestCrossVersion
 
@@ -52,6 +53,7 @@ def load_tests(loader, tests, pattern):                                         
         suite.addTest(test_suite)
     suite.addTests(loader.loadTestsFromTestCase(TestCrossVersion))
     suite.addTests(loader.loadTestsFromTestCase(TestCodeBlockDefinition))
+    suite.addTests(loader.loadTestsFromTestCase(TestCodeComponentDefinition))
     suite.addTests(loader.loadTestsFromTestCase(TestScript))
     suite.addTests(loader.loadTestsFromTestCase(TestStmtExecution))
     suite.addTests(loader.loadTestsFromTestCase(TestExprExecution))

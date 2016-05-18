@@ -8,9 +8,9 @@ from __future__ import (absolute_import, print_function,
                         division)
 
 from .test_code_block_definition import TestCodeBlockDefinition
-from .test_stmt_definition import TestStmtDefinition
+from .test_code_component_definition import TestCodeComponentDefinition
 
 __all__ = [
     "TestCodeBlockDefinition",
-    "TestStmtDefinition",
+    "TestCodeComponentDefinition",
 ]

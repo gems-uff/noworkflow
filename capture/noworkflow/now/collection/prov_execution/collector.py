@@ -156,6 +156,42 @@ class Collector(object):
 
         return value
 
+    def dict(self, activation):
+        """Capture dict before"""
+        #activation.dependencies.append(DictDependencyAware())
+        return self._dict
+
+    def _dict(self, activation, value):                                          # pylint: disable=no-self-use
+        """Capture dict after"""
+        #dict_dependency_aware = activation.dependencies.pop()
+        #activation.dependencies[-1].add(dict_dependency_aware)
+        return value
+
+    def dict_key(self, activation):
+        """Capture dict key before"""
+        #activation.dependencies.append(DependencyAware())
+        return self._dict_key
+
+    def _dict_key(self, activation, value):                                      # pylint: disable=no-self-use
+        """Capture dict key after"""
+        #dependency_aware = activation.dependencies.pop()
+        #activation.dependencies[-1].add(dependency_aware)
+        #activation.dependencies[-1].key(value)
+        print(value)
+        return value
+
+    def dict_value(self, activation):
+        """Capture dict value before"""
+        #activation.dependencies.append(ElementDependencyAware())
+        return self._dict_value
+
+    def _dict_value(self, activation, value):                                    # pylint: disable=no-self-use
+        #element_dependency_aware = activation.dependencies.pop()
+        #element_dependency_aware.value = value
+        #activation.dependencies[-1].value(element_dependency_aware)
+        print(value)
+        return value
+
     def assign_value(self, activation):
         """Capture assignment before"""
         activation.dependencies.append(DependencyAware())

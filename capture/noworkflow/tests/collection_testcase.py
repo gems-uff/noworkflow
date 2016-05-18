@@ -49,6 +49,10 @@ class CollectionTestCase(unittest.TestCase):
         """Find dependency by attributes in kwargs"""
         return self.find(self.metascript.dependencies_store.store, **kwargs)
 
+    def find_compartment(self, **kwargs):
+        """Find compartment by attributes in kwargs"""
+        return self.find(self.metascript.compartments_store.store, **kwargs)
+
     def get_evaluation(self, **kwargs):
         """Execute and get evaluation"""
         if not hasattr(self, 'executed'):
@@ -62,6 +66,13 @@ class CollectionTestCase(unittest.TestCase):
         if not var:
             return None
         return self.find_evaluation(code_component_id=var.id)
+
+    def get_compartment_value(self, whole, name, **kwargs):
+        compartment = self.find_compartment(
+            whole_id=whole.id, name=name, **kwargs)
+        if not compartment:
+            return None
+        return self.metascript.values_store[compartment.part_id]
 
     def evaluation_repr(self, evaluation):
         """Get evaluation friendly representation"""
@@ -90,6 +101,15 @@ class CollectionTestCase(unittest.TestCase):
                         self.evaluation_repr(dependency), dep.type
                     )
                 )
+
+    def assert_no_dependency(self, dependent, dependency, type_=None):
+        """Check if dependency exists"""
+        params = {'dependent_id': dependent.id, 'dependency_id': dependency}
+        if type_ is not None:
+            params['type'] = type_
+        dep = self.find_dependency(**params)
+        self.assertIsNone(dep)
+
 
     def rtype(self, name):                                                       # pylint: disable=no-self-use
         """Create type repr according to python version"""

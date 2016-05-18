@@ -269,3 +269,96 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(argument, var_a, "use")
         self.assert_dependency(call, func, "func")
         self.assert_dependency(func, var_int, "use")
+
+    def test_bool_op(self):
+        """Test bool expr collection"""
+        self.script("# script.py\n"
+                    "a = True\n"
+                    "b = False\n"
+                    "c = True\n"
+                    "d = a and b or c\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b", mode="r")
+        var_c = self.get_evaluation(name="c", mode="r")
+        var_d = self.get_evaluation(name="d")
+
+        self.assert_dependency(var_d, var_a, "dependency")
+        self.assert_dependency(var_d, var_b, "dependency")
+        self.assert_dependency(var_d, var_c, "dependency")
+
+
+    def test_bool_op_cut(self):
+        """Test bool expr collection. 'b' is not evaluated"""
+        self.script("# script.py\n"
+                    "a = False\n"
+                    "b = True\n"
+                    "c = True\n"
+                    "d = a and b or c\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b", mode="r")
+        var_c = self.get_evaluation(name="c", mode="r")
+        var_d = self.get_evaluation(name="d")
+
+        self.assert_dependency(var_d, var_a, "dependency")
+        self.assert_no_dependency(var_d, var_b)
+        self.assert_dependency(var_d, var_c, "dependency")
+
+
+    def test_bin_op(self):
+        """Test bin expr collection"""
+        self.script("# script.py\n"
+                    "a = 2\n"
+                    "b = 5\n"
+                    "c = a + b\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b", mode="r")
+        var_c = self.get_evaluation(name="c")
+
+        self.assert_dependency(var_c, var_a, "dependency")
+        self.assert_dependency(var_c, var_b, "dependency")
+
+    def test_unary_op(self):
+        """Test unary expr collection"""
+        self.script("# script.py\n"
+                    "a = 2\n"
+                    "b = ~a\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b")
+
+        self.assert_dependency(var_b, var_a, "dependency")
+
+    def test_dict_definition(self):
+        """Test dict definition"""
+        self.script("# script.py\n"
+                    "a = {'a': 1, 'b': 2}\n"
+                    "b = a\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b")
+
+        var_a_key_a = self.get_evaluation(name="'a': 1")
+        var_a_key_b = self.get_evaluation(name="'b': 2")
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        #var_a_key_a = self.get_compartment_value(var_a, "[a]")
+        #var_a_key_b = self.get_compartment_value(var_a, "[b]")
+        var_b_value = self.metascript.values_store[var_b.value_id]
+
+        self.assertEqual(var_a_value, var_b_value)
+        #self.assertIsNotNone(var_a_key_a)
+        #self.assertIsNotNone(var_a_key_b)
+
+        #self.assertEqual(var_a.compartments["[a]"].id, var_a.id)
+        #self.assertEqual(var_a.compartments["[b]"].id, var_b.id)
+
+        self.assert_dependency(var_b, var_a, "bind")
+
