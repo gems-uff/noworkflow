@@ -439,6 +439,7 @@ class SlicingVisitor(FunctionVisitor):                                          
         """Visit While. Create conditional dependencies"""
         loop = Loop(node, "while")
         self.loops[loop.first_line] = loop
+        loop.first_line_in_scope = node.body[0].first_line
         self.visit_If(node)
 
     def visit_If(self, node):                                                    # pylint: disable=invalid-name
