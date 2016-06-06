@@ -11,9 +11,9 @@ def check_color(value):
     raise argparse.ArgumentTypeError("%s is an invalid color/schema" % value)
 
 
-def restyle(data, color="NW", direction="RL", same_line_equal=True):
+def restyle(data, color="NW", direction="RL", same_line_equal=False):
     new_result = data.replace("rankdir=RL", "rankdir={}".format(direction))
-    if not same_line_equal:
+    if same_line_equal:
         new_result = new_result.replace("=\n", "= ")
     call_color = "#3A85B9"
     variable_color = "#85CBD0"
@@ -57,6 +57,6 @@ if __name__ == "__main__":
                         "It requires to export the values")
 
     args = parser.parse_args()
-    userinput = "\n".join(sys.stdin.readlines())
+    userinput = "".join(sys.stdin.readlines())
     print(restyle(userinput, color=args.color, direction=args.direction,
           same_line_equal=args.same_line_equal))
