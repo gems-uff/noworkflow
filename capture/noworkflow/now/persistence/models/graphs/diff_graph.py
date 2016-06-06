@@ -203,6 +203,14 @@ class MappingToGraph(object):
         self.add_edges(graph1["edges"], 1)
         self.add_edges(graph2["edges"], 2)
 
+
+        for (trial_num, old_index), new_index in self.old_to_new.items():
+            node = self.nodes[new_index]
+            old_node = [None, self.nodes1, self.nodes2][trial_num][old_index]
+            node["caller_id"] = self.old_to_new[(trial_num, old_node["caller_id"])]
+        # ToDo: avoid cycles
+
+
     def add_nodes(self, nodes, trial_number):
         """Convert matched nodes to graph"""
         for node in nodes:

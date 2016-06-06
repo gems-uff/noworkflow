@@ -86,10 +86,11 @@ class TreeVisitor(object):
         caller_id = self.add_node(call.caller)
         self.nodes[caller_id]["repr"] = repr(call)
         callees = call.called.visit(self)
-        pos = 1
+        pos = len(callees)
         for callee_id in callees:
             self.add_edge(caller_id, callee_id, pos, "call")
-            pos += 1
+            pos -= 1
+            self.nodes[callee_id]["caller_id"] = caller_id
         return [caller_id]
 
     def visit_group(self, group):
@@ -170,6 +171,7 @@ class NoMatchVisitor(TreeVisitor):
         for element in viewvalues(group.nodes):
             node_id, node = element.visit(self)
             node_map[node] = node_id
+            self.nodes[node_id]['caller_id'] = delegated['call'].node
 
         self.solve_cis_delegation(node_map[group.next_element],
                                   group.count, delegated)

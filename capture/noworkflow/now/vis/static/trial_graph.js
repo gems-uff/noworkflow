@@ -1,11 +1,13 @@
 /*global d3 */
 function TrialGraph(id, svg, options) {
   var self = this;
+  // Configure Graph
 
   self.state_mousedown_node = false;
   self.translate = false;
   self.use_tooltip = false;
   self.hide_fullname = false;
+  self.two_color_scale = false;
   self.graph_id = id;
 
   self.custom_size = options.custom_size || function () {
@@ -20,6 +22,493 @@ function TrialGraph(id, svg, options) {
   self.nodes = [];
   self.edges = [];
 
+  self.link_map = {};
+  self.label_map = {};
+
+  var size = self.custom_size();
+  self.width = size[0];
+  self.height = size[1];
+
+  self.svg = svg;
+  self.diagonal = d3.svg.diagonal()
+      .projection(function(d){ return [d.x, d.y]; });
+
+
+
+  // Define functions
+  self._label_distance = function (d) {
+    var dx = (d.source.x - d.target.x);
+    var dy = (d.source.y - d.target.y);
+    console.log("aqui", d, d.source.x, d.target.x, Math.sqrt(dx*dx + dy*dy) / 2);
+    return Math.sqrt(dx*dx + dy*dy) / 2;
+  };
+
+  self._path_function = function (d, i, reverse) {
+
+    if (reverse) {
+      return self.diagonal(d);
+    }
+
+    var x1 = d.source.x,
+      y1 = d.source.y,
+      x2 = d.target.x,
+      y2 = d.target.y,
+      dx = x2 - x1,
+      dy = y2 - y1,
+      theta = Math.atan2(dy, dx),
+      phi = Math.atan2(dx, dy),
+      r = TrialGraph.consts.radius + TrialGraph.consts.stroke_width,
+      sin_theta = r * Math.sin(theta),
+      cos_theta = r * Math.cos(theta),
+      sin_phi = r * Math.sin(phi),
+      cos_phi = r * Math.cos(phi),
+      m1 = (y2 > y1) ? 1 : -1,
+      m2 = (x2 > x1) ? -1 : 1,
+      dr = Math.sqrt(dx * dx + dy * dy),
+      drx = dr,
+      dry = dr,
+      rotation = 0,
+      large_arc = 0,
+      sweep = 1;
+
+    if (dx === 0 && dy === 0 && d.type !== 'initial' && !reverse) {
+      rotation = -45;
+      large_arc = 1;
+      drx = 15;
+      dry = 20;
+      x2 = x2 + 1;
+      y2 = y2 + 1;
+    } else if (d.type === 'initial') {
+      x2 -= r / 2.0;
+      y2 -= r / 2.0;
+      x1 = x2 - 20;
+      y1 = y2 - 20;
+      large_arc = 1;
+      sweep = 0;
+    } else {
+   /*
+    //  x1 += m1 * sin_theta;
+    //  y1 += m1 * cos_theta;
+      if (dx !== 0) {
+        x2 += m2 * cos_phi;
+      }
+      if (dy !== 0) {
+        y2 += m2 * sin_phi;
+      }
+
+      return d3.svg.line()
+      diag = d3.svg.diagonal()
+        //.projection(function(d){ return [d.x, d.y]; })
+        .source({"x": x1, "y": y1})
+        .target({"x": x2, "y": y2});*/
+      return "M" + x1 + "," + y1 + "L" + x2 + "," + y2;
+
+    }
+
+    return "M" + x1 + "," + y1 +
+      "A" + drx + "," + dry +
+      " " + rotation + "," + large_arc + "," + sweep +
+      " " + x2 + "," + y2;
+  }
+
+  self._graph_id = function () {
+    return ("trial-graph-"
+      + self.graph_id);
+  };
+
+  self._node_name = function (d) {
+    if (self.hide_fullname) {
+      var s = d.name.split(/[\/\\]/);
+      return s[s.length - 1];
+    }
+    return d.name;
+  };
+
+  self._update_node_text = function () {
+    d3.selectAll("#" + self._graph_id() + " g.node text").text(
+      self._node_name);
+  };
+
+  self._prepare_nodes_and_edges = function (nodes, edges) {
+    nodes.forEach(function(node){
+      node.children = [];
+    });
+    self.root = 0;
+    nodes.forEach(function(node){
+      node.x0 = 0;
+      node.y0 = 0;
+      node.px = 0;
+      node.py = 0;
+      node.visible = true;
+      node.links = {};
+      if (node.caller_id == null) {
+        self.root = node.index;
+      } else {
+        nodes[node.caller_id].children.push(node);
+      }
+    });
+    nodes.forEach(function(node){
+      node.children.reverse();
+    });
+    self.nodes = nodes;
+    edges.forEach(function (e) {
+      if (typeof e.source == "number") e.source = self.nodes[e.source];
+      if (typeof e.target == "number") e.target = self.nodes[e.target];
+    });
+    self.edges = edges;
+  };
+
+  self._calculate_color = function (node) {
+    if (self.two_color_scale) {
+      proportion = Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
+      return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
+    } else {
+      proportion = Math.round(255 * (1.0 - (node.duration / self.total_duration[node.trial_id])));
+      return d3.rgb(255, proportion, proportion, 0);
+    }
+  };
+
+  self._node_id = function (node) {
+    if (!node.ref) {
+      node.ref = ("node-"
+        + self.graph_id
+        + "-" + node.index);
+    }
+    return node.ref;
+  };
+
+  self._link_id = function (link) {
+    if (!link.ref) {
+      link.ref = ("link-"
+        + self._node_id(link.source)
+        + "-"
+        + link.type
+        + "-"
+        + self._node_id(link.target));
+    }
+    return link.ref;
+  };
+
+  self._node_click = function (d) {
+    // Toggle children on click.
+    if (d.children) {
+      d._children = d.children;
+      d.children = null;
+    } else {
+      d.children = d._children;
+      d._children = null;
+    }
+    self.restart(d);
+  };
+
+  self._show_tooltip = function (d) {
+    self.div.classed("hidden", false);
+    self.div.transition()
+      .duration(200)
+      .style("opacity", 0.9);
+    self.div.html(d.info)
+      .style("left", (d3.event.pageX - 3) + "px")
+      .style("top", (d3.event.pageY - 28) + "px");
+  };
+
+  self._close_tooltip = function () {
+    self.div.transition()
+      .duration(500)
+      .style("opacity", 0);
+    self.div.classed("hidden", true);
+  };
+
+  self._zoomed = function () {
+    self._close_tooltip();
+    if (!self.state_mousedown_node) {
+      d3.select("#" + self._graph_id())
+        .attr("transform",
+            "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")");
+    }
+  };
+
+  self.load = function (data, t1, t2) {
+    self.init(data.nodes, data.edges, data.min_duration, data.max_duration, t1, t2);
+    self.update_window();
+  };
+
+  self.init = function (nodes, edges, min_duration, max_duration, t1, t2) {
+    self.t1 = t1;
+    self.t2 = t2;
+    self.min_duration = min_duration;
+    self.max_duration = max_duration;
+    self.total_duration = {};
+    self.total_duration[t1] = max_duration[t1] - min_duration[t1];
+    self.total_duration[t2] = max_duration[t2] - min_duration[t2];
+
+    self._prepare_nodes_and_edges(nodes, edges);
+
+    size = self.custom_size();
+    size[0] -= TrialGraph.consts.margin_left + TrialGraph.consts.margin_right;
+    size[1] -= TrialGraph.consts.margin_top + TrialGraph.consts.margin_bottom
+
+    self.tree = d3.layout.tree()
+      .size(size);
+
+    self.restart();
+  };
+
+  self.restart = function (source) {
+    if (source === undefined) {
+      source = self.nodes[self.root];
+    }
+    // Compute the new tree layout
+    var nodes = self.tree.nodes(self.nodes[self.root]);
+    console.log(nodes, nodes.children);
+    // Normalize for fixed-depth
+    nodes.forEach(function (d) { d.y = d.depth * 100; });
+
+    // Declare the nodes
+    var node = self.svg_g.selectAll("g.node")
+      .data(nodes, self._node_id);
+
+    // Entrer the nodes
+    var node_enter = node.enter().append("g")
+      .attr("class", "node")
+      .attr("transform", function (d) {
+        d.visible = true;
+        return "translate(" + source.x0 + "," + source.y0 + ")";
+      })
+      .classed("nbefore", function (d) {
+        return (d.node && d.node.trial_id == self.t1 && self.t1 !== self.t2);
+      })
+      .classed("nafter", function (d) {
+        return (d.node && d.node.trial_id == self.t2 && self.t1 !== self.t2);
+      })
+      .call(self.drag)
+      .on("dblclick", self._node_click)
+      .on("mousedown", function () {
+        self.translate = self.drag_svg.translate();
+        self.state_mousedown_node = true;
+        self._close_tooltip();
+      })
+      .on("mouseup", function () {
+        if (self.translate) {
+          self.drag_svg.translate(self.translate);
+          self.translate = false;
+        }
+        self.state_mousedown_node = false;
+      })
+      .on("mouseover", function (d) {
+        var show_tooltip = !self.state_mousedown_node && self.use_tooltip,
+            name;
+        if (d.node) {
+          name = 'node';
+        } else {
+          name = (d3.mouse(this)[0] < 0) ? 'node1' : 'node2';
+        }
+        if (show_tooltip) {
+          self._close_tooltip();
+          self._show_tooltip(d[name]);
+        }
+        self.custom_mouseover(d, name, show_tooltip);
+      })
+      .on('mouseout', function (d) {
+        self.custom_mouseout(d);
+      });
+
+    node_enter.append("circle")
+      .attr("r", TrialGraph.consts.radius)
+      .attr("data-clicked", "0")
+      .attr("stroke", function (d) {
+        return d.children || d._children ? "blue" : "#000000"; 
+      })
+      .style("fill", function (d) {
+        if (d.node) {
+          return self._calculate_color(d.node);
+        }
+        var grad = self.svg.append("svg:defs")
+          .append("linearGradient")
+          .attr("id", "grad-" + self.graph_id + "-" + d.index)
+          .attr("x1", "100%")
+          .attr("x2", "0%")
+          .attr("y1", "0%")
+          .attr("y2", "0%");
+        grad.append("stop")
+          .attr("offset", "50%")
+          .style("stop-color", self._calculate_color(d.node2));
+        grad.append("stop")
+          .attr("offset", "50%")
+          .style("stop-color", self._calculate_color(d.node1));
+
+        return "url(#grad-" + self.graph_id + "-" + d.index + ")";
+      });
+
+    node_enter.append("text")
+      .attr("y", function (d) {
+          return d.children || d._children ? -18 : 18;
+      })
+      .attr("dy", ".35em")
+      .attr("text-anchor", "middle")
+      .text(self._node_name)
+      .style("fill-opacity", 1e-6);
+
+    // Transition nodest to their new position
+    var node_update = node
+     // .transition()
+     // .duration(TrialGraph.consts.duration)
+      .attr("transform", function (d) {
+        return "translate(" + d.x + "," + d.y + ")";
+      });
+
+    node_update.select("circle")
+      .attr("r", TrialGraph.consts.radius)
+      .attr("stroke", function (d) {
+        return d._children ? "blue" : "#000000";
+      });
+
+    node_update.select("text")
+      .style("fill-opacity", 1);
+
+    // Transition exiting nodes to the parent's new position.
+    var node_exit = node.exit()
+      //.transition()
+      //.duration(TrialGraph.consts.duration)
+      .attr("transform", function (d) {
+        d.visible = false;
+        return "translate(" + source.x + "," + source.y + ")";
+      })
+      .remove();
+
+    node_exit.select("circle")
+      .attr("r", 1e-6);
+    node_exit.select("text")
+      .style("fill-opacity", 1e-6);
+
+
+    var links = self.edges.filter(function(x) {
+      return x.source.visible && x.target.visible;
+    });//self.tree.links(nodes);
+    // Update links
+    // Declare links
+    var link = self.link_g.selectAll("path.link")
+      .data(links, self._link_id)
+
+    // Enter the links
+    link.enter().insert("path", "g")
+      .attr("class", "link")
+      .attr("id", self._link_id)
+      .attr("marker-end", "")
+      .classed('call-arrow', function (d) {
+        return d.type === 'call';
+      }).classed('return-arrow', function (d) {
+        return d.type === 'return';
+      }).classed('sequence-arrow', function (d) {
+        return d.type === 'sequence';
+      }).classed('initial-arrow', function (d) {
+        return d.type === 'initial';
+      });
+    // Transition links to their new position.
+    link
+      //.transition()
+      //.duration(TrialGraph.consts.duration)
+      .attr("marker-end", function (d) {
+        if (!d.trial) {
+          return "url(#end)";
+        }
+        if (d.trial === 1) {
+          return "url(#endbefore)";
+        }
+        if (d.trial === 2) {
+          return "url(#endafter)";
+        }
+        return "";
+      })
+      .attr("d", function(d) {
+        var link_id = self._link_id(d);
+        self.link_map[link_id] = this;
+        d.source.links[link_id] = true;
+        d.target.links[link_id] = true;
+        return self._path_function(d);
+      });
+
+    // Transition exiting nodes to the parent's new position
+    link.exit()
+      .attr("d", function(d) {
+        var link_id = self._link_id(d);
+        delete d.source.links[link_id];
+        delete d.target.links[link_id];
+        return self._path_function(d);
+      })
+      .remove();
+
+    // Create link labels
+    var link_labels = self.svg_g.selectAll(".label_text")
+      .data(links, self._link_id);
+
+    // Enter the labels
+    link_labels.enter().append("text")
+      .attr("class", "label_text")
+      .attr("dx", self._label_distance)
+      .attr("dy", -3)
+      .attr("id", function (d, i) {
+        self.label_map[self._link_id(d)] = this;
+        return "pathlabel-" + self.graph_id + "-" + i;
+      })
+      .append("textPath")
+      .attr("xlink:href", function (d, i) {
+        return "#" + self._link_id(d);
+      })
+      .text(function (d) {
+        return (d.type === 'initial') ? '' : d.count;
+      });
+
+    // Exit labels
+    link_labels.exit().remove();
+
+    // Stash the old positions for transition.
+    nodes.forEach(function (d) {
+        d.x0 = d.x;
+        d.y0 = d.y;
+    });
+
+    // Add links to nodes for navigation
+
+    links.forEach(function (link, i) {
+      var source = link.source,
+      target = link.target;
+
+      source.arrival_links = source.arrival_links || [];
+      source.sequence_links = source.sequence_links || [];
+      source.call_links = source.call_links || [];
+      source.return_links = source.return_links || [];
+      target.arrival_links = target.arrival_links || [];
+      target.sequence_links = target.sequence_links || [];
+      target.call_links = target.call_links || [];
+      target.return_links = target.return_links || [];
+
+
+      if (link.type === 'sequence') { source.sequence_links.push([i, target]); }
+      if (link.type === 'call') { source.call_links.push([i, target]); }
+      if (link.type === 'return') { source.return_links.push([i, target]); }
+      target.arrival_links.push([i, source, link.type]);
+    })
+  };
+
+  self.set_use_tooltip = function (use) {
+    self.use_tooltip = use;
+    return;
+  };
+
+  self.set_hide_fullname = function (hide) {
+    self.hide_fullname = hide;
+    self._update_node_text();
+  };
+
+  self.update_window = function () {
+    size = self.custom_size();
+    self.svg
+      .attr("width", size[0])
+      .attr("height", size[1]);
+  };
+
+  // Create Tooltip, hint, markers, selections
+
   self.div = d3.select("body").append("div")
     .attr("class", "now-tooltip now-trial-tooltip")
     .style("opacity", 0)
@@ -27,33 +516,44 @@ function TrialGraph(id, svg, options) {
       self._close_tooltip();
     });
 
-  var d = self.custom_size();
-  self.width = d[0];
-  self.height = d[1];
-
   svg.append("text")
     .text(self.hint_message)
     .attr("dx", 5)
     .attr("dy",  self.hint_y)
     .classed(self.hint_class, true);
-  self.svg = svg;
 
-  self._create_marker('end', 'enormal');
-  self._create_marker('endbefore', 'ebefore');
-  self._create_marker('endafter', 'eafter');
+  self._create_marker(svg, 'end', 'enormal');
+  self._create_marker(svg, 'endbefore', 'ebefore');
+  self._create_marker(svg, 'endafter', 'eafter');
 
   var svg_g = svg.append("g")
     .attr("id", self._graph_id())
-    .classed(TrialGraph.consts.graph_class, true);
-
+    .classed(TrialGraph.consts.graph_class, true)
+    .attr("transform", "translate(" + TrialGraph.consts.margin_left + ","
+      + TrialGraph.consts.margin_top + ")");
 
   self.svg_g = svg_g;
 
-  self.path = svg_g.append("svg:g").selectAll("path");
-  self.label_path = svg_g.selectAll(".label_text");
-  self.node = svg_g.selectAll(".node");
+  self.link_g = svg_g.append("svg:g")
+  self.label_selection = svg_g.selectAll(".label_text");
 
-  self.drag = d3.behavior.drag();
+  self.drag = d3.behavior.drag()
+    .on("drag", function dragmove(d, i) {
+        d.px += d3.event.dx;
+        d.py += d3.event.dy;
+        d.x += d3.event.dx;
+        d.y += d3.event.dy;
+        d3.select(this).attr("transform", function (d) {
+          return "translate(" + d.x + "," + d.y + ")";
+        });
+
+        d3.selectAll(Object.keys(d.links).map(function(link_id){
+          return self.link_map[link_id];
+        })).attr("d", self._path_function);
+        d3.selectAll(Object.keys(d.links).map(function(link_id){
+          return self.label_map[link_id];
+        })).attr("dx", self._label_distance);
+    })
   self.drag_svg = d3.behavior.zoom()
     .on("zoom", function () {
       self._zoomed();
@@ -65,6 +565,9 @@ function TrialGraph(id, svg, options) {
       d3.select('body').style("cursor", "auto");
     });
   svg.call(self.drag_svg).on("dblclick.zoom", null);
+
+
+  return self;
 }
 
 TrialGraph.consts =  {
@@ -75,16 +578,20 @@ TrialGraph.consts =  {
   stroke_width: 2,
   marker_width: 6,
   marker_height: 6,
+  duration: 750,
+  margin_top: 40,
+  margin_right: 20,
+  margin_bottom: 20,
+  margin_left: 20,
 };
 
-TrialGraph.prototype._create_marker = function (name, cls) {
-  var self = this;
-  self.svg.append("svg:defs").selectAll("marker")
+TrialGraph.prototype._create_marker = function (svg, name, cls) {
+  svg.append("svg:defs").selectAll("marker")
     .data([name])
     .enter().append("svg:marker")
       .attr("id", String)
       .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 10)
+      .attr("refX", 20)
       .attr("refY", 0)
       .attr("markerWidth", TrialGraph.consts.marker_width)
       .attr("markerHeight", TrialGraph.consts.marker_height)
@@ -94,422 +601,6 @@ TrialGraph.prototype._create_marker = function (name, cls) {
       .attr("d", "M0,-5L10,0L0,5");
 };
 
-TrialGraph.prototype._update_node_text = function () {
-  var self = this;
-  d3.selectAll("#" + self._graph_id() + " g.node text").text(function (d) {
-    if (self.hide_fullname) {
-      var s = d.name.split(/[\/\\]/);
-      return s[s.length - 1];
-    }
-    return d.name;
-  });
-};
-
-TrialGraph.prototype._graph_id = function () {
-  var self = this;
-  return "trial-graph-" + self.graph_id;
-};
-
-TrialGraph.prototype._zoomed = function () {
-  var self = this;
-  self._close_tooltip();
-  if (!self.state_mousedown_node) {
-    d3.select("#" + self._graph_id())
-      .attr("transform",
-          "translate(" + d3.event.translate + ") scale(" + d3.event.scale + ")");
-  }
-};
-
-TrialGraph.prototype._tick = function (self) {
-  return function () {
-    self.path.attr("d", function (d) {
-      var x1 = d.source.x,
-        y1 = d.source.y,
-        x2 = d.target.x,
-        y2 = d.target.y,
-        dx = x2 - x1,
-        dy = y2 - y1,
-        theta = Math.atan(dx / dy),
-        phi = Math.atan(dy / dx),
-        r = TrialGraph.consts.radius + TrialGraph.consts.stroke_width,
-        sin_theta = r * Math.sin(theta),
-        cos_theta = r * Math.cos(theta),
-        sin_phi = r * Math.sin(phi),
-        cos_phi = r * Math.cos(phi),
-        m1 = (y2 > y1) ? 1 : -1,
-        m2 = (x2 > x1) ? -1 : 1,
-        dr = Math.sqrt(dx * dx + dy * dy),
-        drx = dr,
-        dry = dr,
-        rotation = 0,
-        large_arc = 0,
-        sweep = 1;
-
-      if (dx === 0 && dy === 0 && d.type !== 'initial') {
-
-        rotation = -45;
-        large_arc = 1;
-        drx = 15;
-        dry = 20;
-        x2 = x2 + 1;
-        y2 = y2 + 1;
-      } else if (d.type === 'initial') {
-        x2 -= r / 2.0;
-        y2 -= r / 2.0;
-        x1 = x2 - 20;
-        y1 = y2 - 20;
-        large_arc = 1;
-        sweep = 0;
-      } else {
-        x1 += m1 * sin_theta;
-        y1 += m1 * cos_theta;
-        x2 += m2 * cos_phi;
-        y2 += m2 * sin_phi;
-      }
-
-      return "M" + x1 + "," + y1 +
-        "A" + drx + "," + dry +
-        " " + rotation + "," + large_arc + "," + sweep +
-        " " + x2 + "," + y2;
-    });
-
-    self.node.attr("transform", function (d) {
-      return "translate(" + d.x + "," + d.y + ")";
-    });
-  };
-};
-
-TrialGraph.prototype._update_path = function (path) {
-  return path
-    .attr("marker-end", function (d) {
-      if (!d.trial) {
-        return "url(#end)";
-      }
-      if (d.trial === 1) {
-        return "url(#endbefore)";
-      }
-      if (d.trial === 2) {
-        return "url(#endafter)";
-      }
-      return "";
-    })
-    .classed('call-arrow', function (d) {
-      return d.type === 'call';
-    }).classed('return-arrow', function (d) {
-      return d.type === 'return';
-    }).classed('sequence-arrow', function (d) {
-      return d.type === 'sequence';
-    }).classed('initial-arrow', function (d) {
-      return d.type === 'initial';
-    });
-};
-
-TrialGraph.prototype._add_path = function (path) {
-  var self = this;
-  /*jslint unparam: true*/
-  path = path.enter().append("svg:path")
-    .attr("id", function (d, i) {
-      return "pathId-" + self.graph_id + "-" + i;
-    })
-    .attr("class", "link");
-  /*jslint unparam: false*/
-  self._update_path(path);
-};
-
-TrialGraph.prototype._add_label_path = function (label_path) {
-  var self = this;
-  /*jslint unparam: true*/
-  label_path = label_path.enter().append("text")
-    .attr("class", "label_text")
-    .attr("dx", 20)
-    .attr("dy", -3)
-    .attr("id", function (d, i) {
-      return "pathlabel-" + self.graph_id + "-" + i;
-    })
-    .append("textPath")
-    .attr("xlink:href", function (d, i) {
-      return "#pathId-" + self.graph_id + "-" + i;
-    })
-    .text(function (d) {
-      return (d.type === 'initial') ? '' : d.count;
-    });
-  /*jslint unparam: false*/
-};
-
-TrialGraph.prototype._calculate_color = function (node) {
-  var self = this,
-    proportion = Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
-  return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
-};
-
-TrialGraph.prototype._add_node = function (node) {
-  var self = this;
-  node = node.enter().append("g")
-    .attr("id", function (d) {
-      return "node-" + self.graph_id + "-" + d.index;
-    })
-    .attr("class", "node")
-    .classed('nbefore', function (d) {
-      return (d.node && d.node.trial_id === self.t1 && self.t1 !== self.t2);
-    })
-    .classed('nafter', function (d) {
-      return (d.node && d.node.trial_id === self.t2 && self.t1 !== self.t2);
-    })
-    .call(self.force.drag);
-
-
-  node.append("circle")
-    .attr("r", TrialGraph.consts.radius)
-    .attr("data-clicked", "0")
-    .style('fill', function (d) {
-      if (d.node) {
-        return self._calculate_color(d.node);
-      }
-      var grad = self.svg.append("svg:defs")
-        .append("linearGradient")
-        .attr("id", "grad-" + self.graph_id + "-" + d.index)
-        .attr("x1", "100%")
-        .attr("x2", "0%")
-        .attr("y1", "0%")
-        .attr("y2", "0%");
-      grad.append("stop")
-        .attr("offset", "50%")
-        .style("stop-color", self._calculate_color(d.node2));
-      grad.append("stop")
-        .attr("offset", "50%")
-        .style("stop-color", self._calculate_color(d.node1));
-
-      return "url(#grad-" + self.graph_id + "-" + d.index + ")";
-    }).on("click", self._toggle_nodes(false))
-      .on("dblclick", self._toggle_nodes(true));
-
-  node.append("text")
-    .attr("x", 12)
-    .attr("dy", ".35em");
-
-  self._update_node_text();
-
-  node.append("path")
-    .attr("stroke", "#000")
-    //.attr("viewBox", "0 0 2 2")
-    .attr("d", function (d) {
-      if (!d.node) {
-        return "M0," + (-TrialGraph.consts.radius) +
-             "L0," + TrialGraph.consts.radius;
-      }
-      return "M0,0L0,0";
-    });
-
-  node.on('mousedown', function () {
-    self.translate = self.drag_svg.translate();
-    self.state_mousedown_node = true;
-    self._close_tooltip();
-  }).on('mouseup', function () {
-    if (self.translate) {
-      self.drag_svg.translate(self.translate);
-      self.translate = false;
-    }
-    self.state_mousedown_node = false;
-  }).on('mouseover', function (d) {
-    var show_tooltip = !self.state_mousedown_node && self.use_tooltip,
-      name;
-    if (d.node) {
-      name = 'node';
-    } else {
-      name = (d3.mouse(this)[0] < 0) ? 'node1' : 'node2';
-    }
-    if (show_tooltip) {
-      self._close_tooltip();
-      self._show_tooltip(d[name]);
-    }
-    self.custom_mouseover(d, name, show_tooltip);
-
-  }).on('mouseout', function (d) {
-    self.custom_mouseout(d);
-  })
-    .call(self.force.drag);
-};
-
-TrialGraph.prototype._toggle_nodes = function (skip_check) {
-  var self = this;
-  return function (node) {
-    if (!skip_check) {
-      if (!d3.event.ctrlKey) {
-        return;
-      }
-    }
-    if (!node.call_links.length) {
-      return;
-    }
-
-    var visibility = 'visible',
-      data_clicked = "0",
-      used = {},
-      queue = [];
-    var hide_path = function (a) {
-      d3.select("#pathId-" + self.graph_id + "-" + a[0]).style('visibility', visibility);
-      d3.select("#pathlabel-" + self.graph_id + "-" + a[0]).style('visibility', visibility);
-    };
-    var hide_if_return = function (a) {
-      if (a[2] === 'return') {
-        hide_path(a);
-      }
-    };
-    var hide_if_not_return = function (a) {
-      if (a[2] !== 'return') {
-        hide_path(a);
-      }
-    };
-    var add_to_queue = function (n2) {
-      if (n2[1].index !== node.index && !used[n2[1].index]) {
-        queue.push(n2);
-        used[n2[1].index] = 1;
-      }
-    };
-
-    if (d3.select(this).attr("data-clicked") === "1") {
-      d3.select(this).attr("data-clicked", "0");
-      data_clicked = "0";
-      visibility = 'visible';
-    } else {
-      d3.select(this).attr("data-clicked", "1");
-      visibility = 'hidden';
-      data_clicked = "1";
-    }
-
-    used[node.index] = 1;
-    node.call_links.forEach(function (n) {
-      queue.push(n);
-      used[n[1].index] = 1;
-      n[1].arrival_links.forEach(hide_path);
-    });
-    node.arrival_links.forEach(hide_if_return);
-
-    var ln, n, node_clicked;
-    while (queue.length) {
-      ln = queue.pop();
-      n = ln[1];
-      node_clicked = String(d3.select("#node-" + self.graph_id + "-" + n.index + ' circle')
-        .attr("data-clicked"));
-
-      d3.select("#node-" + self.graph_id + "-" + n.index).style('visibility', visibility);
-
-      if (visibility === 'hidden' || node_clicked === data_clicked) {
-        n.call_links.forEach(add_to_queue);
-        n.arrival_links.forEach(hide_path);
-      } else if (visibility !== 'hidden' && node_clicked !== data_clicked) {
-        n.arrival_links.forEach(hide_if_not_return);
-      }
-
-      n.sequence_links.forEach(add_to_queue);
-    }
-  };
-};
-
-TrialGraph.prototype._show_tooltip = function (d) {
-  var self = this;
-  self.div.classed("hidden", false);
-  self.div.transition()
-    .duration(200)
-    .style("opacity", 0.9);
-  self.div.html(d.info)
-    .style("left", (d3.event.pageX - 3) + "px")
-    .style("top", (d3.event.pageY - 28) + "px");
-};
-
-TrialGraph.prototype._close_tooltip = function () {
-  var self = this;
-  self.div.transition()
-    .duration(500)
-    .style("opacity", 0);
-  self.div.classed("hidden", true);
-};
-
-TrialGraph.prototype.load = function (data, t1, t2) {
-  var self = this;
-  self.init(data.nodes, data.edges, data.min_duration, data.max_duration, t1, t2);
-  self.update_window();
-};
-
-TrialGraph.prototype.init = function (nodes, edges, min_duration, max_duration, t1, t2) {
-  var self = this;
-  self.t1 = t1;
-  self.t2 = t2;
-  self.min_duration = min_duration;
-  self.max_duration = max_duration;
-  self.total_duration = {};
-  self.total_duration[t1] = max_duration[t1] - min_duration[t1];
-  self.total_duration[t2] = max_duration[t2] - min_duration[t2];
-  self.force = d3.layout.force()
-    .nodes(nodes)
-    .links(edges)
-    .size([self.width, self.height])
-    .linkDistance(60)
-    .charge(-300)
-    .on("tick", self._tick(self))
-    .start();
-
-  self.force_links = self.force.links();
-  self.restart();
-};
-
-TrialGraph.prototype.restart = function () {
-  var self = this;
-  self.path = self.path.data(self.force_links); // path (link) group
-  self._update_path(self.path); // update existing links
-  self._add_path(self.path); // add new paths
-  self.path.exit().remove(); // remove old links
-
-  self.label_path = self.label_path.data(self.force_links); // label path group
-  self._add_label_path(self.label_path); // add new label paths
-  self.label_path.exit().remove(); // remove old labels
-
-  self.node = self.node.data(self.force.nodes()); // circle (node) group
-  self._add_node(self.node); // add new nodes
-  self.node.exit().remove(); // remove olf nodes
-
-  // Add links to nodes for navigation
-  self.force_links.forEach(function (link, i) {
-    var source = link.source,
-      target = link.target;
-
-    source.arrival_links = source.arrival_links || [];
-    source.sequence_links = source.sequence_links || [];
-    source.call_links = source.call_links || [];
-    source.return_links = source.return_links || [];
-    target.arrival_links = target.arrival_links || [];
-    target.sequence_links = target.sequence_links || [];
-    target.call_links = target.call_links || [];
-    target.return_links = target.return_links || [];
-
-
-    if (link.type === 'sequence') { source.sequence_links.push([i, target]); }
-    if (link.type === 'call') { source.call_links.push([i, target]); }
-    if (link.type === 'return') { source.return_links.push([i, target]); }
-    target.arrival_links.push([i, source, link.type]);
-  });
-};
-
-TrialGraph.prototype.set_use_tooltip = function (use) {
-  var self = this;
-  self.use_tooltip = use;
-};
-
-TrialGraph.prototype.set_hide_fullname = function (hide) {
-  var self = this;
-  self.hide_fullname = hide;
-  self._update_node_text();
-};
-
-
-
-TrialGraph.prototype.update_window = function () {
-  var self = this,
-    size = self.custom_size();
-  this.svg
-    .attr("width", size[0])
-    .attr("height", size[1]);
-};
 
 function now_trial_graph(div_selector, graph_id, trial_id_1, trial_id_2, data, width, height, tooltip_selector, hide_fullname_selector, options) {
   $(div_selector).html('');

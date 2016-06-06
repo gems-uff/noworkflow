@@ -587,7 +587,6 @@ class DotVisitor(ActivationClusterVisitor):
         if value:
             label_list.append(" =\n{}".format(value))
         label = "".join(label_list)
-
         self.result.append("    " * self.depth + (
             '{var} '
             '[label="{label}"'
