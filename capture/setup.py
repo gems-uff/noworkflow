@@ -111,9 +111,9 @@ setup(
     install_requires=["pyposast>=1.1.3", "future", "SQLAlchemy"],
     extras_require={
         "vis": ["pyposast", "flask"],
-        "notebook": ["pyposast", "ipython", "jupyter"],
+        "notebook": ["pyposast", "ipython", "jupyter", "sphinx"],
         "all": ["pyposast", "ipython", "jupyter", "flask", "pyswip-alt",
-                "jsonpickle"],
+                "jsonpickle", "sphinx"],
     },
     cmdclass={
         "install": CustomInstallCommand,

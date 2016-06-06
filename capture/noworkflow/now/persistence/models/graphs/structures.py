@@ -425,7 +425,8 @@ class Info(object):
 
     def __repr__(self):
         result = [self.title, self.duration, self.mean]
-        for activation in self.activation_list:
-            result += activation_text(activation[1])
+        if self.activation_list is not None:
+            for activation in self.activation_list:
+                result += activation_text(activation[1])
 
         return "<br/>".join(result)

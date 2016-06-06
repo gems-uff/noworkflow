@@ -1,0 +1,10 @@
+>ERASE_ALL
+>LOAD step1
+$now run -e Tracer experiment.py
+>LOAD step2
+$now run -e Tracer experiment.py
+>LOAD step3
+$now restore 1
+>LOAD step4
+$now run -e Tracer experiment.py 2
+$now run -e Tracer experiment.py 1

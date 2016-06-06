@@ -20,7 +20,7 @@ def main():
     for anatomy in anatomy_images:
         resliced += align_reslice(anatomy, reference)
     atlas_image, atlas_header = softmean(*resliced)
-    for coordinate in :
+    for coordinate in error:
         atlas = slice_convert(atlas_image, atlas_header, coordinate)
 
 main()
