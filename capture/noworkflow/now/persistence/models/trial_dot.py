@@ -16,7 +16,7 @@ from .graphs.dependency_graph import DependencyFilter, variable_id
 from .graphs.dependency_graph import DotVisitor
 
 
-CALL_SCHEMA = "#3A85B9", "box", "black", "filled"
+CALL_SCHEMA = "#3A85B9", "box", "white", "filled"
 VAR_SCHEMA = "#85CBD0", "box", "black", "rounded,filled"
 FILE_SCHEMA = "white", "box", "black", "rounded,filled"
 BLACKBOX_SCHEMA = "black", "box", "grey", "filled"

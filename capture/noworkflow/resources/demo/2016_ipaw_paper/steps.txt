@@ -1,0 +1,19 @@
+>ERASE_ALL
+>LOAD step1
+$now run -e Tracer experiment.py anatomy1.img anatomy2.img anatomy3.img anatomy4.img reference.img
+>LOAD step2
+$now run -e Tracer experiment.py anatomy1.img anatomy2.img anatomy3.img anatomy4.img reference.img
+$now run -e Tracer experiment2.py
+$now run -e Tracer experiment.py anatomy1.img anatomy2.img anatomy3.img anatomy4.img reference.img
+>LOAD step3
+$now restore 2
+$now run -e Tracer experiment.py anatomy1.img anatomy2.img anatomy3.img anatomy4.img reference.img
+>LOAD step4
+$now run -e Tracer experiment.py anatomy1.img anatomy2.img anatomy3.img anatomy4.img reference.img
+$now run -e Tracer experiment2.py
+$now restore 3 -a
+>LOAD step5
+$now run -e Tracer experiment2.py
+$now restore 8 -a
+>LOAD step6
+$now run -e Tracer experiment2.py
