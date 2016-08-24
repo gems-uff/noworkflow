@@ -161,7 +161,7 @@ class Collector(object):
         #activation.dependencies.append(DictDependencyAware())
         return self._dict
 
-    def _dict(self, activation, value):                                          # pylint: disable=no-self-use
+    def _dict(self, activation, code_id, value):                                          # pylint: disable=no-self-use
         """Capture dict after"""
         #dict_dependency_aware = activation.dependencies.pop()
         #activation.dependencies[-1].add(dict_dependency_aware)
@@ -172,7 +172,7 @@ class Collector(object):
         #activation.dependencies.append(DependencyAware())
         return self._dict_key
 
-    def _dict_key(self, activation, value):                                      # pylint: disable=no-self-use
+    def _dict_key(self, activation, code_id, value):                                      # pylint: disable=no-self-use
         """Capture dict key after"""
         #dependency_aware = activation.dependencies.pop()
         #activation.dependencies[-1].add(dependency_aware)
@@ -185,7 +185,7 @@ class Collector(object):
         #activation.dependencies.append(ElementDependencyAware())
         return self._dict_value
 
-    def _dict_value(self, activation, value):                                    # pylint: disable=no-self-use
+    def _dict_value(self, activation, code_id, value):                                    # pylint: disable=no-self-use
         #element_dependency_aware = activation.dependencies.pop()
         #element_dependency_aware.value = value
         #activation.dependencies[-1].value(element_dependency_aware)

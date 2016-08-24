@@ -58,4 +58,40 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.assertEqual(write_b.last_char_column, 1)
         self.assertEqual(write_b.container_id, script.id)
 
+    def test_dict_definition(self):
+        """Test dict definition"""
+        self.script("# script.py\n"
+                    "x = {'a': 1, 'b': 2}\n"
+                    "# other")
+        self.metascript.definition.collect_provenance()
+
+        script = self.find_code_component(name="script.py")
+        key_value_a = self.find_code_component(name="'a': 1", mode="r")
+        key_value_b = self.find_code_component(name="'b': 2", mode="r")
+        dict_comp = self.find_code_component(name="{'a': 1, 'b': 2}", mode="r")
+
+        self.assertEqual(key_value_a.type, "key_value")
+        self.assertEqual(key_value_a.mode, "r")
+        self.assertEqual(key_value_a.first_char_line, 2)
+        self.assertEqual(key_value_a.first_char_column, 5)
+        self.assertEqual(key_value_a.last_char_line, 2)
+        self.assertEqual(key_value_a.last_char_column, 11)
+        self.assertEqual(key_value_a.container_id, script.id)
+
+        self.assertEqual(key_value_b.type, "key_value")
+        self.assertEqual(key_value_b.mode, "r")
+        self.assertEqual(key_value_b.first_char_line, 2)
+        self.assertEqual(key_value_b.first_char_column, 13)
+        self.assertEqual(key_value_b.last_char_line, 2)
+        self.assertEqual(key_value_b.last_char_column, 19)
+        self.assertEqual(key_value_b.container_id, script.id)
+
+        self.assertEqual(dict_comp.type, "dict")
+        self.assertEqual(dict_comp.mode, "r")
+        self.assertEqual(dict_comp.first_char_line, 2)
+        self.assertEqual(dict_comp.first_char_column, 4)
+        self.assertEqual(dict_comp.last_char_line, 2)
+        self.assertEqual(dict_comp.last_char_column, 20)
+        self.assertEqual(dict_comp.container_id, script.id)
+
 

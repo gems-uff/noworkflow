@@ -460,27 +460,42 @@ class RewriteDependencies(ast.NodeTransformer):
         Transform:
             {a: b}
         Into:
-            <now>.dict(<act>)(<act>, {
-                <now>.dict_key(<act>)(<act>,|a|):
-                    <now>.dict_value(<act>)(<act>, |b|)
+            <now>.dict(<act>)(<act>, #`{a: b}`, {
+                <now>.dict_key(<act>)(<act>, #`a: b`, |a|):
+                    <now>.dict_value(<act>)(<act>, #`a: b`, |b|)
             })
         """
-        node.keys = [
-            ast.copy_location(double_noworkflow(
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        dict_code_component = self.rewriter.create_code_component(
+            node, "dict", "r"
+        )
+        new_keys, new_values = [], []
+        for key, value in zip(node.keys, node.values):
+            last_line, last_col = key.last_line, key.last_col
+            key.last_line, key.last_col = value.last_line, value.last_col
+            name = pyposast.extract_code(self.rewriter.lcode, key)
+            key_value_component = self.rewriter.code_components.add(
+                name, "key_value", "r",
+                key.first_line, key.first_col,
+                value.last_line, value.last_col,
+                self.rewriter.container_id
+            )
+            key.last_line, key.last_col = last_line, last_col
+            new_keys.append(ast.copy_location(double_noworkflow(
                 "dict_key", [activation()],
-                [activation(), self.rewriter.capture(key, mode=self.mode)]
-            ), key)
-            for key in node.keys
-        ]
-        node.values = [
-            ast.copy_location(double_noworkflow(
+                [activation(), ast.Num(key_value_component),
+                 self.rewriter.capture(key, mode=self.mode)]
+            ), key))
+            new_values.append(ast.copy_location(double_noworkflow(
                 "dict_value", [activation()],
-                [activation(), self.rewriter.capture(value, mode=self.mode)]
-            ), value)
-            for value in node.values
-        ]
+                [activation(), ast.Num(key_value_component),
+                 self.rewriter.capture(value, mode=self.mode)]
+            ), value))
+        node.keys = new_keys
+        node.values = new_values
+
         return ast.copy_location(double_noworkflow("dict", [activation()], [
-            activation(), node
+            activation(), ast.Num(dict_code_component), node
         ]), node)
 
 
