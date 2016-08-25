@@ -40,7 +40,7 @@ History
 
 The project started in 2013, when Leonardo Murta and Vanessa Braganholo were visiting professors at New York University (NYU) with Juliana Freire. At that moment, David Koop and Fernando Chirigati also joined the project. They published the initial paper about noWorkflow in IPAW 2014. After going back to their home university, Universidade Federal Fluminense (UFF), Leonardo and Vanessa invited João Felipe Pimentel to join the project in 2014 for his PhD. João, Juliana, Leonardo and Vanessa integrated noWorkflow and IPython and published a paper about it in TaPP 2015. They also worked on provenance versioning and fine-grained provenance collection and published papers in IPAW 2016. During the same time, David, João, Leonardo and Vanessa worked with the YesWorkflow team on an integration between noWorkflow & YesWorkflow and published a demo in IPAW 2016. The research and development on noWorkflow continues and is currently under the responsibility of João Felipe, in the context of his PhD thesis.
 
-![Contribution Timeline](history/history.svg)
+![Contribution Timeline](https://cdn.rawgit.com/gems-uff/noworkflow/master/history/history20160824.svg)
 
 
 Quick Installation
