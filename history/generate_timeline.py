@@ -106,7 +106,7 @@ class Builder(object):
         self.initial_last_dates(configuration)
         self.position_function()
         height = y + sep + (self.max_elements + 1) * (image_size + sep)
-        self.dwg = Drawing(name, size=(u"100%", height))
+        self.dwg = Drawing(name, size=(width + 2 * deltax, height))
         
         self.deltax = deltax
         self.width = width
