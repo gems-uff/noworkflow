@@ -69,7 +69,7 @@ class CollectionTestCase(unittest.TestCase):
 
     def get_compartment_value(self, whole, name, **kwargs):
         compartment = self.find_compartment(
-            whole_id=whole.id, name=name, **kwargs)
+            whole_id=whole.value_id, name=name, **kwargs)
         if not compartment:
             return None
         return self.metascript.values_store[compartment.part_id]

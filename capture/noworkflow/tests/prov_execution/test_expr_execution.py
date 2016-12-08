@@ -342,6 +342,7 @@ class TestExprExecution(CollectionTestCase):
                     "b = a\n"
                     "# other")
 
+        var_dic = self.get_evaluation(name="{'a': 1, 'b': 2}")
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b")
 
@@ -349,13 +350,13 @@ class TestExprExecution(CollectionTestCase):
         var_a_key_b = self.get_evaluation(name="'b': 2")
 
         var_a_value = self.metascript.values_store[var_a.value_id]
-        #var_a_key_a = self.get_compartment_value(var_a, "[a]")
-        #var_a_key_b = self.get_compartment_value(var_a, "[b]")
+        var_a_key_a = self.get_compartment_value(var_a, "['a']")
+        var_a_key_b = self.get_compartment_value(var_a, "['b']")
         var_b_value = self.metascript.values_store[var_b.value_id]
 
         self.assertEqual(var_a_value, var_b_value)
-        #self.assertIsNotNone(var_a_key_a)
-        #self.assertIsNotNone(var_a_key_b)
+        self.assertIsNotNone(var_a_key_a)
+        self.assertIsNotNone(var_a_key_b)
 
         #self.assertEqual(var_a.compartments["[a]"].id, var_a.id)
         #self.assertEqual(var_a.compartments["[b]"].id, var_b.id)

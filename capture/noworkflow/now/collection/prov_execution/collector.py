@@ -18,6 +18,7 @@ from ...persistence.models import Trial
 from ...utils.cross_version import IMMUTABLE
 
 from .structures import Assign, DependencyAware, Dependency, Parameter
+from .structures import CompartmentDependencyAware, CollectionDependencyAware
 
 
 class Collector(object):
@@ -31,6 +32,7 @@ class Collector(object):
         self.activations = self.metascript.activations_store
         self.dependencies = self.metascript.dependencies_store
         self.values = self.metascript.values_store
+        self.compartments = self.metascript.compartments_store
 
         self.exceptions = self.metascript.exceptions_store
         # Partial save
@@ -82,7 +84,6 @@ class Collector(object):
             evaluation.activation_id, self.first_activation
         )
 
-
     def add_value(self, value):
         """Add value. Create type value recursively. Return value id"""
         if value is type:
@@ -132,7 +133,6 @@ class Collector(object):
             self.global_evaluations[name] = evaluation
         return evaluation
 
-
     def capture_single(self, activation, code_tuple, value, mode="dependency"):
         """Capture single value"""
         if code_tuple[0]:
@@ -158,38 +158,58 @@ class Collector(object):
 
     def dict(self, activation):
         """Capture dict before"""
-        #activation.dependencies.append(DictDependencyAware())
+        activation.dependencies.append(CollectionDependencyAware())
         return self._dict
 
     def _dict(self, activation, code_id, value):                                          # pylint: disable=no-self-use
         """Capture dict after"""
-        #dict_dependency_aware = activation.dependencies.pop()
-        #activation.dependencies[-1].add(dict_dependency_aware)
+        depa = activation.dependencies.pop()
+        evaluation = self.evaluate(activation, code_id, value, None, depa)
+        for key, value_id, moment in depa.items:
+            tkey = "[{0!r}]".format(key)
+            self.compartments.add_object(
+                tkey, moment, evaluation.value_id, value_id
+            )
+        dependency = Dependency(
+            activation.id, evaluation.id, value, evaluation.value_id,
+            "collection"
+        )
+        activation.dependencies[-1].add(dependency)
         return value
 
     def dict_key(self, activation):
         """Capture dict key before"""
-        #activation.dependencies.append(DependencyAware())
+        activation.dependencies.append(CompartmentDependencyAware())
         return self._dict_key
 
     def _dict_key(self, activation, code_id, value):                                      # pylint: disable=no-self-use
         """Capture dict key after"""
-        #dependency_aware = activation.dependencies.pop()
-        #activation.dependencies[-1].add(dependency_aware)
-        #activation.dependencies[-1].key(value)
-        print(value)
+        activation.dependencies[-1].key = value
         return value
 
     def dict_value(self, activation):
         """Capture dict value before"""
-        #activation.dependencies.append(ElementDependencyAware())
+        activation.dependencies.append(DependencyAware())
         return self._dict_value
 
     def _dict_value(self, activation, code_id, value):                                    # pylint: disable=no-self-use
-        #element_dependency_aware = activation.dependencies.pop()
-        #element_dependency_aware.value = value
-        #activation.dependencies[-1].value(element_dependency_aware)
-        print(value)
+        value_dependency_aware = activation.dependencies.pop()
+        compartment_dependency_aware = activation.dependencies.pop()
+        compartment_dependency_aware.dependencies += (
+            value_dependency_aware.dependencies
+        )
+        value_id = self.find_value_id(value, value_dependency_aware)
+        evaluation = self.evaluations.add_object(
+            code_id, activation.id, self.time(), value_id
+        )
+        value_id = self.find_value_id(value, value_dependency_aware)
+        self.create_dependencies(evaluation, compartment_dependency_aware)
+        activation.dependencies[-1].add(Dependency(
+            activation.id, evaluation.id, value, value_id, "item"
+        ))
+        activation.dependencies[-1].items.append((
+            compartment_dependency_aware.key, evaluation.id, evaluation.moment
+        ))
         return value
 
     def assign_value(self, activation):
@@ -208,7 +228,7 @@ class Collector(object):
         return activation.assignments.pop()
 
     def find_value_id(self, value, depa, create=True):
-        """Find bound depedendency in dependency aware"""
+        """Find bound dependency in dependency aware"""
         value_id = None
         if depa and not isinstance(value, IMMUTABLE):
             for dep in depa.dependencies:

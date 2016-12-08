@@ -59,3 +59,26 @@ class Parameter(object):
 
     def __repr__(self):
         return "{}".format(self.name)
+
+
+class CompartmentDependencyAware(DependencyAware):
+    """Store dependencies of a compartment element"""
+
+    def __init__(self, key=None, value=None, dependencies=None, active=True):
+        super(CompartmentDependencyAware, self).__init__(
+            dependencies=dependencies,
+            active=active
+        )
+        self.key = key
+        self.value = value
+
+class CollectionDependencyAware(DependencyAware):
+    """Store dependencies of a compartment element"""
+
+    def __init__(self, dependencies=None, active=True):
+        super(CollectionDependencyAware, self).__init__(
+            dependencies=dependencies,
+            active=active
+        )
+        # list of tuples representing (item name, evaluation_id, time)
+        self.items = []
