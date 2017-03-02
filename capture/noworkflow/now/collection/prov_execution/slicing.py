@@ -203,7 +203,7 @@ class Tracer(Profiler):                                                         
         Keyword argument:
         value -- override variable value (default "--chk--")
         """
-        if value == "--chk--" and name in f_locals:
+        if isinstance(value, str) and value == "--chk--" and name in f_locals:
             value = self.serialize(f_locals[name])
         else:
             value = "now(n/a)"

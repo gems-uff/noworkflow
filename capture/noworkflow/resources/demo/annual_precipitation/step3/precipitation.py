@@ -3,6 +3,7 @@
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 from itertools import chain
 from collections import defaultdict
@@ -77,6 +78,7 @@ def create_bargraph(output, months, years, *prec):
     plt.savefig(output)
 
 def sum_by_month(data, months):
+    time.sleep(1)
     return [sum(data[i]) for i in months]
 
 __VERSION__ = "1.1.0"

@@ -15,7 +15,7 @@ from ..persistence import persistence_config
 from .command import Command
 
 
-def run(path=None, browser=False, port=5000, debug=False):
+def run(path=None, browser=False, port=5000, debug=False, host="localhost"):
     """Open Flask server"""
     if browser:
         url = "http://127.0.0.1:{0}".format(port)
@@ -23,7 +23,7 @@ def run(path=None, browser=False, port=5000, debug=False):
         threading.Timer(1.25, lambda: webbrowser.open(url)).start()
     from ..vis.views import app
     app.dir = path or os.getcwd()
-    app.run(port=port, debug=debug, threaded=True)
+    app.run(port=port, debug=debug, threaded=True, host=host)
 
 
 class Vis(Command):
@@ -37,6 +37,8 @@ class Vis(Command):
                 help="debug mode")
         add_arg("-b", "--browser", action="store_true",
                 help="opens browser")
+        add_arg("--host", type=str, default="localhost",
+                help="host")
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
@@ -44,4 +46,4 @@ class Vis(Command):
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())
         run(path=args.dir, browser=args.browser, port=args.port,
-            debug=args.debug)
+            debug=args.debug, host=args.host)

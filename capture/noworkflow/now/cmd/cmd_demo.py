@@ -35,7 +35,7 @@ class Demo(Command):
                      "where <id> is the demo identification")
 
     def execute(self, args):
-        directory = "demo{}".format(args.id)
+        directory = "demo_{}".format(args.id)
         if args.dir:
             directory = args.dir
         print("Creating Demo {}".format(args.id))
