@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 
 from ...now.utils.cross_version import PY3, only
+from ...now.collection.helper import get_compartment
 
 from ..collection_testcase import CollectionTestCase
 
@@ -335,31 +336,193 @@ class TestExprExecution(CollectionTestCase):
 
         self.assert_dependency(var_b, var_a, "dependency")
 
-    def test_dict_definition(self):
+    def test_dict_definition(self):                                              # pylint: disable=too-many-locals
         """Test dict definition"""
-        self.script("# script.py\n"
-                    "a = {'a': 1, 'b': 2}\n"
+        self.script("e = 'a'\n"
+                    "f = 1\n"
+                    "a = {e: f, 'b': 2}\n"
                     "b = a\n"
                     "# other")
 
-        var_dic = self.get_evaluation(name="{'a': 1, 'b': 2}")
         var_a = self.get_evaluation(name="a", mode="r")
+        var_aw = self.get_evaluation(name="a", mode="w")
         var_b = self.get_evaluation(name="b")
 
-        var_a_key_a = self.get_evaluation(name="'a': 1")
-        var_a_key_b = self.get_evaluation(name="'b': 2")
+        var_e = self.get_evaluation(name="e", mode="r")
+        var_f = self.get_evaluation(name="f", mode="r")
+        var_dict = self.get_evaluation(name="{e: f, 'b': 2}")
+        var_a_kv_a = self.get_evaluation(name="e: f")
+        var_a_kv_b = self.get_evaluation(name="'b': 2")
+        var_a_kv_a_val = self.metascript.values_store[var_a_kv_a.value_id]
+        var_a_kv_b_val = self.metascript.values_store[var_a_kv_b.value_id]
+        self.assertEqual(var_a_kv_a_val.value, '1')
+        self.assertEqual(var_a_kv_b_val.value, '2')
 
         var_a_value = self.metascript.values_store[var_a.value_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
         var_a_key_a = self.get_compartment_value(var_a, "['a']")
         var_a_key_b = self.get_compartment_value(var_a, "['b']")
-        var_b_value = self.metascript.values_store[var_b.value_id]
 
         self.assertEqual(var_a_value, var_b_value)
         self.assertIsNotNone(var_a_key_a)
         self.assertIsNotNone(var_a_key_b)
+        self.assertEqual(var_a_key_a.value, '1')
+        self.assertEqual(var_a_key_b.value, '2')
 
-        #self.assertEqual(var_a.compartments["[a]"].id, var_a.id)
-        #self.assertEqual(var_a.compartments["[b]"].id, var_b.id)
+        meta = self.metascript
+        var_a_key_a_part = get_compartment(meta, var_a.value_id, "['a']")
+        var_b_key_a_part = get_compartment(meta, var_b.value_id, "['a']")
+        var_a_key_b_part = get_compartment(meta, var_a.value_id, "['b']")
+
+
+        self.assertEqual(var_a_key_a_part, var_a_key_a.id)
+        self.assertEqual(var_a_key_a_part, var_b_key_a_part)
+        self.assertEqual(var_a_key_b_part, var_a_key_b.id)
 
         self.assert_dependency(var_b, var_a, "bind")
+        self.assert_dependency(var_aw, var_dict, "bind")
+        self.assert_dependency(var_dict, var_a_kv_a, "item")
+        self.assert_dependency(var_dict, var_a_kv_b, "item")
+        self.assert_dependency(var_a_kv_a, var_e, "dependency")
+        self.assert_dependency(var_a_kv_a, var_f, "dependency")
 
+    def test_list_definition(self):                                              # pylint: disable=too-many-locals
+        """Test list definition"""
+        self.script("e = 1\n"
+                    "a = [e, 2]\n"
+                    "b = a\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_aw = self.get_evaluation(name="a", mode="w")
+        var_b = self.get_evaluation(name="b")
+
+        var_list = self.get_evaluation(name="[e, 2]")
+        var_a_e = self.get_evaluation(name="e", mode="r", type="name")
+        var_a_i0 = self.get_evaluation(name="e", mode="r", type="item")
+        var_a_i1 = self.get_evaluation(name="2", type="item")
+        var_a_i0_val = self.metascript.values_store[var_a_i0.value_id]
+        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
+        self.assertEqual(var_a_i0_val.value, '1')
+        self.assertEqual(var_a_i1_val.value, '2')
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_a_key_0 = self.get_compartment_value(var_a, "[0]")
+        var_a_key_1 = self.get_compartment_value(var_a, "[1]")
+
+        self.assertEqual(var_a_value, var_b_value)
+        self.assertIsNotNone(var_a_key_0)
+        self.assertIsNotNone(var_a_key_1)
+        self.assertEqual(var_a_key_0.value, '1')
+        self.assertEqual(var_a_key_1.value, '2')
+
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[0]")
+        var_b_key_0_part = get_compartment(meta, var_b.value_id, "[0]")
+        var_a_key_1_part = get_compartment(meta, var_a.value_id, "[1]")
+
+
+        self.assertEqual(var_a_key_0_part, var_a_key_0.id)
+        self.assertEqual(var_a_key_0_part, var_b_key_0_part)
+        self.assertEqual(var_a_key_1_part, var_a_key_1.id)
+
+        self.assert_dependency(var_b, var_a, "bind")
+        self.assert_dependency(var_aw, var_list, "bind")
+        self.assert_dependency(var_list, var_a_i0, "item")
+        self.assert_dependency(var_list, var_a_i1, "item")
+        self.assert_dependency(var_a_i0, var_a_e, "dependency")
+
+    def test_tuple_definition(self):                                              # pylint: disable=too-many-locals
+        """Test list definition"""
+        self.script("e = 1\n"
+                    "a = (e, 2)\n"
+                    "b = a\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_aw = self.get_evaluation(name="a", mode="w")
+        var_b = self.get_evaluation(name="b")
+
+        var_list = self.get_evaluation(name="(e, 2)")
+        var_a_e = self.get_evaluation(name="e", mode="r", type="name")
+        var_a_i0 = self.get_evaluation(name="e", mode="r", type="item")
+        var_a_i1 = self.get_evaluation(name="2", type="item")
+        var_a_i0_val = self.metascript.values_store[var_a_i0.value_id]
+        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
+        self.assertEqual(var_a_i0_val.value, '1')
+        self.assertEqual(var_a_i1_val.value, '2')
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_a_key_0 = self.get_compartment_value(var_a, "[0]")
+        var_a_key_1 = self.get_compartment_value(var_a, "[1]")
+
+        self.assertEqual(var_a_value, var_b_value)
+        self.assertIsNotNone(var_a_key_0)
+        self.assertIsNotNone(var_a_key_1)
+        self.assertEqual(var_a_key_0.value, '1')
+        self.assertEqual(var_a_key_1.value, '2')
+
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[0]")
+        var_b_key_0_part = get_compartment(meta, var_b.value_id, "[0]")
+        var_a_key_1_part = get_compartment(meta, var_a.value_id, "[1]")
+
+
+        self.assertEqual(var_a_key_0_part, var_a_key_0.id)
+        self.assertEqual(var_a_key_0_part, var_b_key_0_part)
+        self.assertEqual(var_a_key_1_part, var_a_key_1.id)
+
+        self.assert_dependency(var_b, var_a, "bind")
+        self.assert_dependency(var_aw, var_list, "bind")
+        self.assert_dependency(var_list, var_a_i0, "item")
+        self.assert_dependency(var_list, var_a_i1, "item")
+        self.assert_dependency(var_a_i0, var_a_e, "dependency")
+
+    def test_set_definition(self):                                              # pylint: disable=too-many-locals
+        """Test set definition"""
+        self.script("e = 1\n"
+                    "a = {e, 2}\n"
+                    "b = a\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_aw = self.get_evaluation(name="a", mode="w")
+        var_b = self.get_evaluation(name="b")
+
+        var_list = self.get_evaluation(name="{e, 2}")
+        var_a_e = self.get_evaluation(name="e", mode="r", type="name")
+        var_a_i0 = self.get_evaluation(name="e", mode="r", type="item")
+        var_a_i1 = self.get_evaluation(name="2", type="item")
+        var_a_i0_val = self.metascript.values_store[var_a_i0.value_id]
+        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
+        self.assertEqual(var_a_i0_val.value, '1')
+        self.assertEqual(var_a_i1_val.value, '2')
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_a_key_0 = self.get_compartment_value(var_a, "[1]")
+        var_a_key_1 = self.get_compartment_value(var_a, "[2]")
+
+        self.assertEqual(var_a_value, var_b_value)
+        self.assertIsNotNone(var_a_key_0)
+        self.assertIsNotNone(var_a_key_1)
+        self.assertEqual(var_a_key_0.value, '1')
+        self.assertEqual(var_a_key_1.value, '2')
+
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[1]")
+        var_b_key_0_part = get_compartment(meta, var_b.value_id, "[1]")
+        var_a_key_1_part = get_compartment(meta, var_a.value_id, "[2]")
+
+
+        self.assertEqual(var_a_key_0_part, var_a_key_0.id)
+        self.assertEqual(var_a_key_0_part, var_b_key_0_part)
+        self.assertEqual(var_a_key_1_part, var_a_key_1.id)
+
+        self.assert_dependency(var_b, var_a, "bind")
+        self.assert_dependency(var_aw, var_list, "bind")
+        self.assert_dependency(var_list, var_a_i0, "item")
+        self.assert_dependency(var_list, var_a_i1, "item")
+        self.assert_dependency(var_a_i0, var_a_e, "dependency")

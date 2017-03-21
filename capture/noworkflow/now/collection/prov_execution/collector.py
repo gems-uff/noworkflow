@@ -202,13 +202,69 @@ class Collector(object):
         evaluation = self.evaluations.add_object(
             code_id, activation.id, self.time(), value_id
         )
-        value_id = self.find_value_id(value, value_dependency_aware)
+        #value_id = self.find_value_id(value, value_dependency_aware)
         self.create_dependencies(evaluation, compartment_dependency_aware)
         activation.dependencies[-1].add(Dependency(
             activation.id, evaluation.id, value, value_id, "item"
         ))
         activation.dependencies[-1].items.append((
-            compartment_dependency_aware.key, evaluation.id, evaluation.moment
+            compartment_dependency_aware.key, value_id, evaluation.moment
+        ))
+        return value
+
+
+    def list(self, activation):
+        """Capture list before"""
+        activation.dependencies.append(CollectionDependencyAware())
+        return self._list
+
+    def _list(self, activation, code_id, value):                                          # pylint: disable=no-self-use
+        """Capture dict after"""
+        depa = activation.dependencies.pop()
+        evaluation = self.evaluate(activation, code_id, value, None, depa)
+        for key, value_id, moment in depa.items:
+            tkey = "[{0!r}]".format(key)
+            self.compartments.add_object(
+                tkey, moment, evaluation.value_id, value_id
+            )
+        dependency = Dependency(
+            activation.id, evaluation.id, value, evaluation.value_id,
+            "collection"
+        )
+        activation.dependencies[-1].add(dependency)
+        return value
+
+    def tuple(self, activation):
+        """Capture list before"""
+        activation.dependencies.append(CollectionDependencyAware())
+        return self._list
+
+    def set(self, activation):
+        """Capture list before"""
+        activation.dependencies.append(CollectionDependencyAware())
+        return self._list
+
+    def item(self, activation):
+        """Capture item before"""
+        activation.dependencies.append(DependencyAware())
+        return self._item
+
+    def _item(self, activation, code_id, value, key):                            # pylint: disable=no-self-use
+        """Capture item after"""
+        if key is None:
+            key = value
+        value_dependency_aware = activation.dependencies.pop()
+        value_id = self.find_value_id(value, value_dependency_aware)
+        evaluation = self.evaluations.add_object(
+            code_id, activation.id, self.time(), value_id
+        )
+        value_id = self.find_value_id(value, value_dependency_aware)
+        self.create_dependencies(evaluation, value_dependency_aware)
+        activation.dependencies[-1].add(Dependency(
+            activation.id, evaluation.id, value, value_id, "item"
+        ))
+        activation.dependencies[-1].items.append((
+            key, value_id, evaluation.moment
         ))
         return value
 

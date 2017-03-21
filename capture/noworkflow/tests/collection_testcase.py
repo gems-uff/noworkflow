@@ -76,9 +76,12 @@ class CollectionTestCase(unittest.TestCase):
 
     def evaluation_repr(self, evaluation):
         """Get evaluation friendly representation"""
-        return "{}({})".format(self.metascript.code_components_store[
+        component = self.metascript.code_components_store[
             evaluation.code_component_id
-        ].name, evaluation.id)
+        ]
+        return "{}({}:l{})".format(
+            component.name, evaluation.id, component.first_char_line
+        )
 
     def assert_dependency(self, dependent, dependency, type_=None):
         """Check if dependency exists"""
@@ -101,6 +104,28 @@ class CollectionTestCase(unittest.TestCase):
                         self.evaluation_repr(dependency), dep.type
                     )
                 )
+
+    def pdebug(self):
+        """Print current dependencies"""
+        used_evals = set()
+        print()
+        print("Dependencies")
+        for dep in viewvalues(self.metascript.dependencies_store.store):
+            dependent, dependency = dep.dependent_id, dep.dependency_id
+            edependent = self.metascript.evaluations_store[dependent]
+            edependency = self.metascript.evaluations_store[dependency]
+            used_evals.add(dependent)
+            used_evals.add(dependency)
+            print("  {} -({})> {}".format(
+                self.evaluation_repr(edependent), dep.type,
+                self.evaluation_repr(edependency)
+            ))
+        print("Evaluations")
+        for eva in viewvalues(self.metascript.evaluations_store.store):
+            if not eva.id in used_evals:
+                print("  {}".format(
+                    self.evaluation_repr(eva),
+                ))
 
     def assert_no_dependency(self, dependent, dependency, type_=None):
         """Check if dependency exists"""

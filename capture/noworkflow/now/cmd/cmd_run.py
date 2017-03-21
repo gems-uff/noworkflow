@@ -48,11 +48,11 @@ def run(metascript):
     """Execute noWokflow to capture provenance from script"""
     try:
         metascript.trial_id = Trial.store(*metascript.create_trial_args())
-        Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
 
         io.print_msg("collecting definition provenance")
         metascript.definition.collect_provenance()
         metascript.definition.store_provenance()
+        Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
 
         io.print_msg("collecting deployment provenance")
         metascript.deployment.collect_provenance()
@@ -63,7 +63,6 @@ def run(metascript):
         metascript.execution.store_provenance()
 
         metaprofiler.meta_profiler.save()
-
     finally:
         metascript.create_last()
 
@@ -173,3 +172,4 @@ class Run(Command):
 
         # Run script
         run(metascript)
+

@@ -498,6 +498,67 @@ class RewriteDependencies(ast.NodeTransformer):
             activation(), ast.Num(dict_code_component), node
         ]), node)
 
+    def visit_List(self, node, comp="list", set_key=None):                                                 # pylint: disable=invalid-name
+        """Visit list.
+        Transform:
+            [a]
+        Into:
+            <now>.list(<act>)(<act>, #`[a]`, [
+                <now>.item(<act>)(<act>, #`a`, |a|, 0)
+            ])
+        """
+        if set_key is None:
+            set_key = lambda index, item: ast.Num(index)
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        list_code_component = self.rewriter.create_code_component(
+            node, comp, "r"
+        )
+        new_items = []
+        for index, item in enumerate(node.elts):
+            name = pyposast.extract_code(self.rewriter.lcode, item)
+            item_component = self.rewriter.code_components.add(
+                name, "item", "r",
+                item.first_line, item.first_col,
+                item.last_line, item.last_col,
+                self.rewriter.container_id
+            )
+            new_items.append(ast.copy_location(double_noworkflow(
+                "item", [activation()],
+                [activation(), ast.Num(item_component),
+                 self.rewriter.capture(item, mode=self.mode),
+                 set_key(index, item)]
+            ), item))
+        node.elts = new_items
+
+        return ast.copy_location(double_noworkflow(comp, [activation()], [
+            activation(), ast.Num(list_code_component), node
+        ]), node)
+
+    def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
+        """Visit tuple.
+        Transform:
+            (a,)
+        Into:
+            <now>.tuple(<act>)(<act>, #`[a]`, (
+                <now>.item(<act>)(<act>, #`a`, |a|, 0),
+            ))
+        """
+        return self.visit_List(node, comp="tuple")
+
+    def visit_Set(self, node):                                                 # pylint: disable=invalid-name
+        """Visit tuple.
+        Transform:
+            {a}
+        Into:
+            <now>.set(<act>)(<act>, #`[a]`, {
+                <now>.item(<act>)(<act>, #`a`, |a|, None),
+            })
+        """
+        return self.visit_List(
+            node, comp="set",
+            set_key=lambda index, item: none()
+        )
+
 
     def generic_visit(self, node):
         """Visit node"""

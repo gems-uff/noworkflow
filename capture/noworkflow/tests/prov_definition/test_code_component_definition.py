@@ -94,4 +94,112 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.assertEqual(dict_comp.last_char_column, 20)
         self.assertEqual(dict_comp.container_id, script.id)
 
+    def test_list_definition(self):
+        """Test list definition"""
+        self.script("# script.py\n"
+                    "x = [1, 2]\n"
+                    "# other")
+        self.metascript.definition.collect_provenance()
+
+        script = self.find_code_component(name="script.py")
+        item_1 = self.find_code_component(name="1", mode="r")
+        item_2 = self.find_code_component(name="2", mode="r")
+        list_comp = self.find_code_component(name="[1, 2]", mode="r")
+
+        self.assertEqual(item_1.type, "item")
+        self.assertEqual(item_1.mode, "r")
+        self.assertEqual(item_1.first_char_line, 2)
+        self.assertEqual(item_1.first_char_column, 5)
+        self.assertEqual(item_1.last_char_line, 2)
+        self.assertEqual(item_1.last_char_column, 6)
+        self.assertEqual(item_1.container_id, script.id)
+
+        self.assertEqual(item_2.type, "item")
+        self.assertEqual(item_2.mode, "r")
+        self.assertEqual(item_2.first_char_line, 2)
+        self.assertEqual(item_2.first_char_column, 8)
+        self.assertEqual(item_2.last_char_line, 2)
+        self.assertEqual(item_2.last_char_column, 9)
+        self.assertEqual(item_2.container_id, script.id)
+
+        self.assertEqual(list_comp.type, "list")
+        self.assertEqual(list_comp.mode, "r")
+        self.assertEqual(list_comp.first_char_line, 2)
+        self.assertEqual(list_comp.first_char_column, 4)
+        self.assertEqual(list_comp.last_char_line, 2)
+        self.assertEqual(list_comp.last_char_column, 10)
+        self.assertEqual(list_comp.container_id, script.id)
+
+    def test_tuple_definition(self):
+        """Test tuple definition"""
+        self.script("# script.py\n"
+                    "x = (1, 2)\n"
+                    "# other")
+        self.metascript.definition.collect_provenance()
+
+        script = self.find_code_component(name="script.py")
+        item_1 = self.find_code_component(name="1", mode="r")
+        item_2 = self.find_code_component(name="2", mode="r")
+        list_comp = self.find_code_component(name="(1, 2)", mode="r")
+
+        self.assertEqual(item_1.type, "item")
+        self.assertEqual(item_1.mode, "r")
+        self.assertEqual(item_1.first_char_line, 2)
+        self.assertEqual(item_1.first_char_column, 5)
+        self.assertEqual(item_1.last_char_line, 2)
+        self.assertEqual(item_1.last_char_column, 6)
+        self.assertEqual(item_1.container_id, script.id)
+
+        self.assertEqual(item_2.type, "item")
+        self.assertEqual(item_2.mode, "r")
+        self.assertEqual(item_2.first_char_line, 2)
+        self.assertEqual(item_2.first_char_column, 8)
+        self.assertEqual(item_2.last_char_line, 2)
+        self.assertEqual(item_2.last_char_column, 9)
+        self.assertEqual(item_2.container_id, script.id)
+
+        self.assertEqual(list_comp.type, "tuple")
+        self.assertEqual(list_comp.mode, "r")
+        self.assertEqual(list_comp.first_char_line, 2)
+        self.assertEqual(list_comp.first_char_column, 4)
+        self.assertEqual(list_comp.last_char_line, 2)
+        self.assertEqual(list_comp.last_char_column, 10)
+        self.assertEqual(list_comp.container_id, script.id)
+
+    def test_set_definition(self):
+        """Test set definition"""
+        self.script("# script.py\n"
+                    "x = {1, 2}\n"
+                    "# other")
+        self.metascript.definition.collect_provenance()
+
+        script = self.find_code_component(name="script.py")
+        item_1 = self.find_code_component(name="1", mode="r")
+        item_2 = self.find_code_component(name="2", mode="r")
+        list_comp = self.find_code_component(name="{1, 2}", mode="r")
+
+        self.assertEqual(item_1.type, "item")
+        self.assertEqual(item_1.mode, "r")
+        self.assertEqual(item_1.first_char_line, 2)
+        self.assertEqual(item_1.first_char_column, 5)
+        self.assertEqual(item_1.last_char_line, 2)
+        self.assertEqual(item_1.last_char_column, 6)
+        self.assertEqual(item_1.container_id, script.id)
+
+        self.assertEqual(item_2.type, "item")
+        self.assertEqual(item_2.mode, "r")
+        self.assertEqual(item_2.first_char_line, 2)
+        self.assertEqual(item_2.first_char_column, 8)
+        self.assertEqual(item_2.last_char_line, 2)
+        self.assertEqual(item_2.last_char_column, 9)
+        self.assertEqual(item_2.container_id, script.id)
+
+        self.assertEqual(list_comp.type, "set")
+        self.assertEqual(list_comp.mode, "r")
+        self.assertEqual(list_comp.first_char_line, 2)
+        self.assertEqual(list_comp.first_char_column, 4)
+        self.assertEqual(list_comp.last_char_line, 2)
+        self.assertEqual(list_comp.last_char_column, 10)
+        self.assertEqual(list_comp.container_id, script.id)
+
 

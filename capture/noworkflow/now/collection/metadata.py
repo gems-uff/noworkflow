@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 import sys
+from datetime import datetime
 
 from future.utils import viewitems
 
@@ -213,4 +214,11 @@ class Metascript(object):                                                       
             self.trial_id,
             self.code_blocks_store[1].code_hash,
             self.command
+        )
+
+    def create_trial_args(self):
+        """Return arguments for Trial.store"""
+        return (
+            self.name, datetime.now(), self.command, self.path,
+            self.bypass_modules
         )
