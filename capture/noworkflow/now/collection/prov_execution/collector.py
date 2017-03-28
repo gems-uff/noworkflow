@@ -15,7 +15,9 @@ from functools import wraps
 from future.utils import viewvalues, viewkeys
 
 from ...persistence.models import Trial
-from ...utils.cross_version import IMMUTABLE
+from ...utils.cross_version import IMMUTABLE, isiterable
+
+from ..helper import get_compartment, last_evaluation_by_value_id
 
 from .structures import Assign, DependencyAware, Dependency, Parameter
 from .structures import CompartmentDependencyAware, CollectionDependencyAware
@@ -137,7 +139,7 @@ class Collector(object):
         """Capture single value"""
         if code_tuple[0]:
             # Capture only if there is a code component id
-            code_id, name = code_tuple[0]
+            code_id, name, _ = code_tuple[0]
             old_eval = self.lookup(activation, name)
             value_id = old_eval.value_id if old_eval else self.add_value(value)
 
@@ -258,7 +260,7 @@ class Collector(object):
         evaluation = self.evaluations.add_object(
             code_id, activation.id, self.time(), value_id
         )
-        value_id = self.find_value_id(value, value_dependency_aware)
+        #value_id = self.find_value_id(value, value_dependency_aware)
         self.create_dependencies(evaluation, value_dependency_aware)
         activation.dependencies[-1].add(Dependency(
             activation.id, evaluation.id, value, value_id, "item"
@@ -329,15 +331,87 @@ class Collector(object):
 
         return evaluation
 
+
     def assign(self, activation, assign, code_component_tuple):
         """Create dependencies"""
-        moment, value, depa = assign
+        meta = self.metascript
+        ldepa = []
+        moment, assign_value, depa = assign
+        if isinstance(depa, list):
+            ldepa, depa = depa, DependencyAware.join(depa)
 
-        if code_component_tuple[1] == "single":
-            code, name = code_component_tuple[0]
+        info, type_ = code_component_tuple
+        if type_ == "single":
+            code, name, value = info
             evaluation = self.evaluate(activation, code, value, moment, depa)
             if name:
                 activation.context[name] = evaluation
+            return 1
+        if type_ == "multiple":
+            subcomps, value = info
+            propagate_dependencies = (
+                len(depa.dependencies) == 1 and
+                depa.dependencies[0].mode == "bind" and
+                isiterable(value)
+            )
+            clone_depa = depa.clone("dependency")
+            if ldepa:
+                def custom_dependency(index):
+                    """Propagate dependencies"""
+                    try:
+                        return ldepa[index]
+                    except IndexError:
+                        return clone_depa
+            elif propagate_dependencies:
+                dep = depa.dependencies[0]
+                def custom_dependency(index):
+                    """Propagate dependencies"""
+                    addr = "[{}]".format(index)
+                    part_id = get_compartment(meta, dep.value_id, addr)
+                    aid, eid = last_evaluation_by_value_id(meta, part_id)
+                    if not part_id or not eid:
+                        return clone_depa
+                    val = assign_value[index]
+                    new_depa = DependencyAware()
+                    new_depa.add(Dependency(
+                        aid, eid, val, part_id,
+                        "dependency" if isinstance(val, IMMUTABLE) else "bind"
+                    ))
+                    return new_depa
+            else:
+                def custom_dependency(_):
+                    """Propagate dependencies"""
+                    return clone_depa
+            starred = None
+            delta = 0
+            for index, subcomp in enumerate(subcomps):
+                if subcomp[-1] == "starred":
+                    starred = index
+                    break
+                val = subcomp[0][-1]
+                adepa = custom_dependency(index)
+                delta += self.assign(activation, (moment, val, adepa), subcomp)
+
+            if starred is not None:
+                star = subcomps[starred][0][0]
+                rdelta = -1
+                for index in range(len(subcomps) - 1, starred, -1):
+                    subcomp = subcomps[index]
+                    val = subcomp[0][-1]
+                    new_index = len(assign_value) + rdelta
+                    adepa = custom_dependency(new_index)
+                    rdelta -= self.assign(
+                        activation, (moment, val, adepa), subcomp)
+
+                new_value = assign_value[delta:rdelta + 1]
+                depas = [
+                    custom_dependency(index)
+                    for index in range(delta, len(assign_value) + rdelta + 1)
+                ]
+                self.assign(activation, (moment, new_value, depas), star)
+
+
+
 
     def call(self, activation, code_id, func, mode="dependency"):
         """Capture call before"""

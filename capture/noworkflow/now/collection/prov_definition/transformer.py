@@ -300,13 +300,78 @@ class RewriteAST(ast.NodeTransformer):
     # expr
 
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name
-        """Visit Name. Create code component"""
+        """Visit Name. Create code component
+        Code component of:
+            x
+        Is:
+            ((|x|, 'x', x), 'single')
+        """
         node.name = node.id
         id_ = self.create_code_component(node, "name", context(node))
         node.code_component_expr = ast.Tuple([
-            ast.Tuple([ast.Num(id_),
-                       ast.Str(pyposast.extract_code(self.lcode, node))], L()),
+            ast.Tuple([
+                ast.Num(id_),
+                ast.Str(pyposast.extract_code(self.lcode, node)),
+                ast.Name(node.id, L()),
+            ], L()),
             ast.Str("single")
+        ], L())
+        return node
+
+    def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
+        """Visit Tuple. Create code component
+        Code component of:
+            (x, y)
+        Is:
+            (
+             (
+              (((|x|, 'x', x), 'single'), ((|y|, 'y', y), 'single')),
+              (x, y)
+             ),'multiple'
+            )
+        """
+        for elt in node.elts:
+            self.visit(elt)
+        node.code_component_expr = ast.Tuple([
+            ast.Tuple([
+                ast.Tuple([
+                    elt.code_component_expr for elt in node.elts
+                ], L()),
+                ReplaceContextWithLoad().visit(node),
+            ], L()),
+            ast.Str("multiple")
+        ], L())
+        return node
+
+    def visit_List(self, node):                                                  # pylint: disable=invalid-name
+        """Visit List. Create code component
+        Code component of:
+            [x, y]
+        Is:
+            (
+             (
+              (((|x|, 'x', x), 'single'), ((|y|, 'y', y), 'single')),
+              [x, y]
+             ),'multiple'
+            )
+        """
+        return self.visit_Tuple(node)
+
+    def visit_Starred(self, node):                                               # pylint: disable=invalid-name
+        """Visit Starred. Create code component
+        Code component of:
+            *x
+        Is:
+            ((((|x|, 'x', x), 'single'), x), 'starred')
+
+        """
+        self.visit(node.value)
+        node.code_component_expr = ast.Tuple([
+            ast.Tuple([
+                node.value.code_component_expr,
+                ReplaceContextWithLoad().visit(node),
+            ], L()),
+            ast.Str("starred")
         ], L())
         return node
 
@@ -427,7 +492,7 @@ class RewriteDependencies(ast.NodeTransformer):
         Transform;
             (+1)a
         Into:
-            <now>.capture_single(<act>, (+1), a, 'a')
+            <now>.capture_single(<act>, cce(a), a, 'a')
         """
         node = self.rewriter.visit(node)
         return ast.copy_location(noworkflow(

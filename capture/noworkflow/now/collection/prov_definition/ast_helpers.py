@@ -43,9 +43,7 @@ class ReplaceContextWithLoad(ast.NodeTransformer):
 
     def visit_Starred(self, node):                                               # pylint: disable=invalid-name
         """Visit Starred"""
-        return ast.copy_location(ast.Starred(
-            self.visit(node.value), L()
-        ), node)
+        return self.visit(node.value)
 
 
 class DebugVisitor(ast.NodeVisitor):

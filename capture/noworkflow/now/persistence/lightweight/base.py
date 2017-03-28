@@ -22,6 +22,7 @@ class ObjectStore(object):
         """
         self.cls = cls
         self.store = {}
+        self.order = []
         self.id = 0                                                              # pylint: disable=invalid-name
         self.count = 0
 
@@ -37,6 +38,7 @@ class ObjectStore(object):
         self.id += 1
         self.count += 1
         self.store[self.id] = self.cls(self.id, *args)
+        self.order.append(self.id)
         return self.id
 
     def add_object(self, *args):
@@ -44,6 +46,7 @@ class ObjectStore(object):
         self.id += 1
         self.count += 1
         self.store[self.id] = self.cls(self.id, *args)
+        self.order.append(self.id)
         return self.store[self.id]
 
     def dry_add(self, *args):
@@ -56,6 +59,7 @@ class ObjectStore(object):
         """Remove object from storage"""
         for key, val in viewitems(self.store):
             if val == value:
+                #self.order.remove(key)
                 del self.store[key]
                 self.count -= 1
 
@@ -81,7 +85,14 @@ class ObjectStore(object):
 
     def clear(self):
         """Remove deleted objects from storage"""
-        self.store = {key: val for key, val in viewitems(self.store) if val}
+        new_order = []
+        new_store = {}
+        for key, val in viewitems(self.store):
+            if val:
+                new_order.append(key)
+                new_store[key] = val
+        self.order = new_order
+        self.store = new_store
         self.count = len(self.store)
 
     def generator(self, trial_id, partial=False):

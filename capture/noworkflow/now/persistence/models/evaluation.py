@@ -13,6 +13,8 @@ from sqlalchemy.orm import remote, foreign
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
 from ...utils.prolog import PrologAttribute, PrologNullable
 
+from .. import relational
+
 from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
 from .base import backref_one, backref_many
 
@@ -159,3 +161,41 @@ class Evaluation(AlchemyProxy):
         "an evaluation *Id* of *CodeComponentId* finalized at *Moment*\n"
         "in *ActivationId*, returning *ValueId*."
     ))
+
+    @classmethod
+    def find_by_value_id(cls, trial_id, value_id, order="asc", session=None):
+        """Find Evaluation by value_id
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> config = TrialConfig("finished")
+        >>> trial_id = new_trial(config,
+        ...                      assignment=assign, erase=True)
+
+
+        Find Evaluation
+        >>> vid = assign.array_value
+        >>> act, eid = Evaluation.find_by_value_id(trial_id, vid)
+        >>> act == config.main_act
+        True
+
+        >>> eid == assign.a_write_eval
+        True
+        """
+        model = cls.m
+        session = session or relational.session
+
+        evaluation = (
+            session.query(model)
+            .filter(
+                (model.trial_id == trial_id) &
+                (model.value_id == value_id)
+            )
+            .order_by(getattr(model.moment, order)())
+        ).first()
+        if evaluation:
+            return evaluation.activation_id, evaluation.id
+        return None, None

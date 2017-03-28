@@ -54,6 +54,14 @@ def to_unicode(text):
     """Convert bytes to unicode"""
     return text.decode("utf-8") if isinstance(text, raw_bytes) else text
 
+def isiterable(element):
+    """Check if element is iterable"""
+    try:
+        iterator = iter(element)
+    except TypeError:
+        return False
+    else:
+        return True
 
 def only(*versions):
     """Check python version"""

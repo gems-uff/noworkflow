@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from copy import copy
 from collections import namedtuple
 
 Assign = namedtuple("Assign", "moment value dependency")
@@ -25,6 +26,23 @@ class DependencyAware(object):
 
     def __bool__(self):
         return bool(self.dependencies)
+
+    def clone(self, mode=None):
+        """Clone dependency aware and replace mode"""
+        new_depa = DependencyAware()
+        for dep in self.dependencies:
+            new_dep = copy(dep)
+            new_dep.mode = mode or new_dep.mode
+            new_depa.add(new_dep)
+        return new_depa
+
+    @classmethod
+    def join(cls, depa_list):
+        new_depa = DependencyAware()
+        for e_depa in depa_list:
+            for dep in e_depa.dependencies:
+                new_depa.add(dep)
+        return new_depa
 
 
 class Dependency(object):
