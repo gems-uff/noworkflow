@@ -54,6 +54,8 @@ class Collector(object):
         # Original globals
         self.globals = copy(__builtins__)
         self.global_evaluations = {}
+        self.slice = slice
+        self.Ellipsis = Ellipsis
 
     def time(self):
         """Return time at this moment
@@ -135,8 +137,19 @@ class Collector(object):
             self.global_evaluations[name] = evaluation
         return evaluation
 
-    def capture_single(self, activation, code_tuple, value, mode="dependency"):
-        """Capture single value"""
+    def literal(self, activation, code_id, value, mode="dependency"):
+        """Capture literal value"""
+        value_id = self.add_value(value)
+        evaluation_id = self.evaluations.add(
+            code_id, activation.id, self.time(), value_id
+        )
+        activation.dependencies[-1].add(Dependency(
+            activation.id, evaluation_id, value, value_id, mode
+        ))
+        return value
+
+    def name(self, activation, code_tuple, value, mode="dependency"):
+        """Capture name value"""
         if code_tuple[0]:
             # Capture only if there is a code component id
             code_id, name, _ = code_tuple[0]
@@ -158,12 +171,36 @@ class Collector(object):
 
         return value
 
+    def operation(self, activation):
+        """Capture operation before"""
+        activation.dependencies.append(DependencyAware())
+        return self._operation
+
+    def _operation(self, activation, code_id, value, mode="dependency"):
+        """Capture operation after"""
+        depa = activation.dependencies.pop()
+        evaluation = self.evaluate(activation, code_id, value, None, depa)
+        dependency = Dependency(
+            activation.id, evaluation.id, value, evaluation.value_id, mode
+        )
+        activation.dependencies[-1].add(dependency)
+        return value
+
+    def container(self, activation):
+        """Capture container before"""
+        activation.dependencies.append(CompartmentDependencyAware())
+        return self._container
+
+    def _container(self, activation, code_id, value):                            # pylint: disable=no-self-use, unused-argument
+        activation.dependencies[-1].key = value
+        return value
+
     def dict(self, activation):
         """Capture dict before"""
         activation.dependencies.append(CollectionDependencyAware())
         return self._dict
 
-    def _dict(self, activation, code_id, value):                                          # pylint: disable=no-self-use
+    def _dict(self, activation, code_id, value, mode="collection"):              # pylint: disable=no-self-use
         """Capture dict after"""
         depa = activation.dependencies.pop()
         evaluation = self.evaluate(activation, code_id, value, None, depa)
@@ -174,7 +211,7 @@ class Collector(object):
             )
         dependency = Dependency(
             activation.id, evaluation.id, value, evaluation.value_id,
-            "collection"
+            mode
         )
         activation.dependencies[-1].add(dependency)
         return value
@@ -184,7 +221,7 @@ class Collector(object):
         activation.dependencies.append(CompartmentDependencyAware())
         return self._dict_key
 
-    def _dict_key(self, activation, code_id, value):                                      # pylint: disable=no-self-use
+    def _dict_key(self, activation, code_id, value):                             # pylint: disable=no-self-use, unused-argument
         """Capture dict key after"""
         activation.dependencies[-1].key = value
         return value
@@ -194,7 +231,7 @@ class Collector(object):
         activation.dependencies.append(DependencyAware())
         return self._dict_value
 
-    def _dict_value(self, activation, code_id, value):                                    # pylint: disable=no-self-use
+    def _dict_value(self, activation, code_id, value):                           # pylint: disable=no-self-use
         value_dependency_aware = activation.dependencies.pop()
         compartment_dependency_aware = activation.dependencies.pop()
         compartment_dependency_aware.dependencies += (
@@ -214,13 +251,12 @@ class Collector(object):
         ))
         return value
 
-
     def list(self, activation):
         """Capture list before"""
         activation.dependencies.append(CollectionDependencyAware())
         return self._list
 
-    def _list(self, activation, code_id, value):                                          # pylint: disable=no-self-use
+    def _list(self, activation, code_id, value, mode="collection"):              # pylint: disable=no-self-use
         """Capture dict after"""
         depa = activation.dependencies.pop()
         evaluation = self.evaluate(activation, code_id, value, None, depa)
@@ -230,9 +266,9 @@ class Collector(object):
                 tkey, moment, evaluation.value_id, value_id
             )
         dependency = Dependency(
-            activation.id, evaluation.id, value, evaluation.value_id,
-            "collection"
+            activation.id, evaluation.id, value, evaluation.value_id, mode
         )
+        dependency.sub_dependencies.extend(depa.dependencies)
         activation.dependencies[-1].add(dependency)
         return value
 
@@ -256,44 +292,39 @@ class Collector(object):
         if key is None:
             key = value
         value_dependency_aware = activation.dependencies.pop()
-        value_id = self.find_value_id(value, value_dependency_aware)
-        evaluation = self.evaluations.add_object(
-            code_id, activation.id, self.time(), value_id
-        )
-        #value_id = self.find_value_id(value, value_dependency_aware)
-        self.create_dependencies(evaluation, value_dependency_aware)
-        activation.dependencies[-1].add(Dependency(
-            activation.id, evaluation.id, value, value_id, "item"
-        ))
+        if len(value_dependency_aware.dependencies) == 1:
+            dependency = value_dependency_aware.dependencies[0]
+        else:
+            value_id = self.find_value_id(value, value_dependency_aware)
+            evaluation = self.evaluations.add_object(
+                code_id, activation.id, self.time(), value_id
+            )
+            #value_id = self.find_value_id(value, value_dependency_aware)
+            self.create_dependencies(evaluation, value_dependency_aware)
+            dependency = Dependency(
+                activation.id, evaluation.id, value, value_id, "item"
+            )
+        value_id = dependency.value_id
+        moment = self.time()
+        activation.dependencies[-1].add(dependency)
         activation.dependencies[-1].items.append((
-            key, value_id, evaluation.moment
+            key, value_id, moment
         ))
         return value
-
-    def assign_value(self, activation):
-        """Capture assignment before"""
-        activation.dependencies.append(DependencyAware())
-        return self._assign_value
-
-    def _assign_value(self, activation, value):
-        """Capture assignment after"""
-        dependency = activation.dependencies.pop()
-        activation.assignments.append(Assign(self.time(), value, dependency))
-        return value
-
-    def pop_assign(self, activation):                                            # pylint: disable=no-self-use
-        """Pop assignment from activation"""
-        return activation.assignments.pop()
 
     def find_value_id(self, value, depa, create=True):
         """Find bound dependency in dependency aware"""
         value_id = None
-        if depa and not isinstance(value, IMMUTABLE):
+        if depa and (
+                not isinstance(value, IMMUTABLE) or
+                len(depa.dependencies) == 1):
             for dep in depa.dependencies:
                 if dep.value is value:
                     value_id = dep.value_id
-                    if dep.mode != "use":
-                        dep.mode = "bind"
+                    if dep.mode.startswith("dependency"):
+                        dep.mode = "assign"
+                    elif not dep.mode.endswith("-bind"):
+                        dep.mode += "-bind"
                     break
         if create and not value_id:
             value_id = self.add_value(value)
@@ -312,7 +343,7 @@ class Collector(object):
     def create_argument_dependencies(self, evaluation, depa):
         """Create dependencies. Evaluation depends on depa"""
         for dep in depa.dependencies:
-            if dep.mode == "argument":
+            if dep.mode.startswith("argument"):
                 self.dependencies.add(
                     evaluation.activation_id, evaluation.id,
                     dep.activation_id, dep.evaluation_id,
@@ -331,8 +362,22 @@ class Collector(object):
 
         return evaluation
 
+    def assign_value(self, activation):
+        """Capture assignment before"""
+        activation.dependencies.append(DependencyAware())
+        return self._assign_value
 
-    def assign(self, activation, assign, code_component_tuple):
+    def _assign_value(self, activation, value, augvalue=None):                   # pylint: disable=unused-argument
+        """Capture assignment after"""
+        dependency = activation.dependencies.pop()
+        activation.assignments.append(Assign(self.time(), value, dependency))
+        return value
+
+    def pop_assign(self, activation):                                            # pylint: disable=no-self-use
+        """Pop assignment from activation"""
+        return activation.assignments.pop()
+
+    def assign(self, activation, assign, code_component_tuple):                  # pylint: disable=too-many-locals
         """Create dependencies"""
         meta = self.metascript
         ldepa = []
@@ -351,7 +396,7 @@ class Collector(object):
             subcomps, value = info
             propagate_dependencies = (
                 len(depa.dependencies) == 1 and
-                depa.dependencies[0].mode == "bind" and
+                depa.dependencies[0].mode.startswith("assign") and
                 isiterable(value)
             )
             clone_depa = depa.clone("dependency")
@@ -366,16 +411,24 @@ class Collector(object):
                 dep = depa.dependencies[0]
                 def custom_dependency(index):
                     """Propagate dependencies"""
-                    addr = "[{}]".format(index)
-                    part_id = get_compartment(meta, dep.value_id, addr)
-                    aid, eid = last_evaluation_by_value_id(meta, part_id)
+                    part_id = eid = None
+                    if len(dep.sub_dependencies) > index:
+                        new_dep = dep.sub_dependencies[index]
+                        aid = new_dep.activation_id
+                        eid = new_dep.evaluation_id
+                        val = new_dep.value
+                        part_id = new_dep.value_id
+                    else:
+                        addr = "[{}]".format(index)
+                        part_id = get_compartment(meta, dep.value_id, addr)
+                        aid, eid = last_evaluation_by_value_id(meta, part_id)
                     if not part_id or not eid:
                         return clone_depa
                     val = assign_value[index]
                     new_depa = DependencyAware()
                     new_depa.add(Dependency(
                         aid, eid, val, part_id,
-                        "dependency" if isinstance(val, IMMUTABLE) else "bind"
+                        "assign"
                     ))
                     return new_depa
             else:
@@ -410,8 +463,29 @@ class Collector(object):
                 ]
                 self.assign(activation, (moment, new_value, depas), star)
 
+    def func(self, activation):
+        """Capture func before"""
+        activation.dependencies.append(DependencyAware())
+        return self._func
 
+    def _func(self, activation, code_id, func_id, func, mode="dependency"):      # pylint: disable=too-many-arguments
+        """Capture func after"""
+        dependency_aware = activation.dependencies.pop()
+        if len(dependency_aware.dependencies) == 1:
+            dependency = dependency_aware.dependencies[0]
+        else:
+            evaluation = self.evaluate(
+                activation, func_id, func, self.time(), dependency_aware
+            )
+            dependency = Dependency(
+                activation.id, evaluation.id, func, evaluation.value_id, "func"
+            )
 
+        result = self.call(activation, code_id, func, mode)
+
+        self.last_activation.dependencies[-1].add(dependency)
+
+        return result
 
     def call(self, activation, code_id, func, mode="dependency"):
         """Capture call before"""
@@ -420,26 +494,6 @@ class Collector(object):
         act.func = func
         act.depedency_type = mode
         return self._call
-
-    def func(self, activation):
-        """Capture func before"""
-        activation.dependencies.append(DependencyAware())
-        return self._func
-
-    def _func(self, activation, code_id, func_id, func, mode="dependency"):      # pylint: disable=too-many-arguments
-        """Capture func after"""
-        dependency = activation.dependencies.pop()
-        evaluation = self.evaluate(
-            activation, func_id, func, self.time(), dependency
-        )
-
-        result = self.call(activation, code_id, func, mode)
-
-        self.last_activation.dependencies[-1].add(Dependency(
-            activation.id, evaluation.id, func, evaluation.value_id, "func"
-        ))
-
-        return result
 
     def _call(self, *args, **kwargs):
         """Capture call activation"""
@@ -482,16 +536,20 @@ class Collector(object):
         activation.dependencies.append(DependencyAware())
         return self._argument
 
-    def _argument(self, activation, code_id, value, mode="argument",             # pylint: disable=too-many-arguments
-                  arg="", kind="argument"):
+    def _argument(self, activation, code_id, value, mode="", arg="", kind=""):   # pylint: disable=too-many-arguments
         """Capture argument after"""
+        mode = mode or "argument"
+        kind = kind or "argument"
         dependency_aware = activation.dependencies.pop()
-        evaluation = self.evaluate(
-            activation, code_id, value, self.time(), dependency_aware
-        )
-        dependency = Dependency(
-            activation.id, evaluation.id, value, evaluation.value_id, mode
-        )
+        if len(dependency_aware.dependencies) == 1:
+            dependency = dependency_aware.dependencies[0]
+        else:
+            evaluation = self.evaluate(
+                activation, code_id, value, self.time(), dependency_aware
+            )
+            dependency = Dependency(
+                activation.id, evaluation.id, value, evaluation.value_id, mode
+            )
         dependency.arg = arg
         dependency.kind = kind
         self.last_activation.dependencies[-1].add(dependency)
@@ -549,7 +607,7 @@ class Collector(object):
             return function_def
         return dec
 
-    def _match_arguments(self, activation, arguments, default_dependencies):
+    def _match_arguments(self, activation, arguments, default_dependencies):     # pylint: disable=too-many-locals
         """Match arguments to parameters. Create Variables"""
         time = self.time()
         defaults = default_dependencies.dependencies
@@ -559,7 +617,7 @@ class Collector(object):
         keywords = []
 
         for dependency in activation.dependencies[0].dependencies:
-            if dependency.mode == "argument":
+            if dependency.mode.startswith("argument"):
                 kind = dependency.kind
                 if kind == "argument":
                     arguments.append(dependency)
@@ -586,13 +644,13 @@ class Collector(object):
 
         def match(arg, param):
             """Create dependency"""
-            arg.mode = "dependency"
+            arg.mode = "argument"
             evaluation = self.evaluate(
                 activation, param.code_id, arg.value, time,
                 DependencyAware([arg])
             )
-            activation.context[param.name] = evaluation
             arg.mode = "argument"
+            activation.context[param.name] = evaluation
 
         # Match args
         for arg in arguments:
@@ -646,7 +704,6 @@ class Collector(object):
         dependency_aware = activation.dependencies.pop()
         self.create_dependencies(activation.evaluation, dependency_aware)
         return value
-
 
     def store(self, partial, status="running"):
         """Store execution provenance"""

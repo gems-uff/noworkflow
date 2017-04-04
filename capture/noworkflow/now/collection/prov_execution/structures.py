@@ -58,6 +58,7 @@ class Dependency(object):
         # Kind: extra information about dependency
         self.kind = None
         self.arg = None
+        self.sub_dependencies = []
 
     def __repr__(self):
         evaluation = __noworkflow__.evaluations[self.evaluation_id]

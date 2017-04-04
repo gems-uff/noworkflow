@@ -9,7 +9,7 @@ import ast
 import pyposast
 import os
 
-from .ast_helpers import ReplaceContextWithLoad
+from .ast_helpers import ReplaceContextWithLoad, ast_copy
 
 from .ast_elements import maybe, context
 from .ast_elements import L, S, P, none, true, false, call, param
@@ -36,12 +36,14 @@ class RewriteAST(ast.NodeTransformer):
 
     def create_code_component(self, node, type_, mode):
         """Create code_component. Return component id"""
-        return self.code_components.add(
+        num = self.code_components.add(
             node.name, type_, mode,
             node.first_line, node.first_col,
             node.last_line, node.last_col,
             self.container_id
         )
+        node.code_component_id = num
+        return num
 
     def create_code_block(self, node, type_):
         """Create code_block and corresponding code_component
@@ -78,9 +80,9 @@ class RewriteAST(ast.NodeTransformer):
         self.container_id = self.create_code_block(node, "script")
         old_body = self.process_body(node.body)
         if not old_body:
-            old_body = [ast.copy_location(ast.Pass(), node)]
+            old_body = [ast_copy(ast.Pass(), node)]
         body = [
-            ast.copy_location(ast.Assign(
+            ast_copy(ast.Assign(
                 [ast.Name("__now_activation__", S())],
                 noworkflow(
                     "start_script",
@@ -89,19 +91,19 @@ class RewriteAST(ast.NodeTransformer):
             ), node),
             try_def(old_body, [
                 ast.ExceptHandler(None, None, [
-                    ast.copy_location(ast.Expr(noworkflow(
+                    ast_copy(ast.Expr(noworkflow(
                         "collect_exception",
                         [ast.Name("__now_activation__", L())]
                     )), node),
-                    ast.copy_location(ast.Raise(), node)
+                    ast_copy(ast.Raise(), node)
                 ])
             ], [], [
-                ast.copy_location(ast.Expr(noworkflow(
+                ast_copy(ast.Expr(noworkflow(
                     "close_script", [ast.Name("__now_activation__", L())]
                 )), node)
             ], node)
         ]
-        result = ast.copy_location(cls(body), node)
+        result = ast_copy(cls(body), node)
         self.container_id = current_container_id
         return ast.fix_missing_locations(result)
 
@@ -111,6 +113,8 @@ class RewriteAST(ast.NodeTransformer):
         for stmt in body:
             if isinstance(stmt, ast.Assign):
                 self.visit_assign(new_body, stmt)
+            elif isinstance(stmt, ast.AugAssign):
+                self.visit_augassign(new_body, stmt)
             else:
                 new_body.append(self.visit(stmt))
 
@@ -136,26 +140,23 @@ class RewriteAST(ast.NodeTransformer):
             (+1)a = (+2)b, (+3)c = [(+4)d, (+5)e] = *(+6)f =
                 (+7)<now>[(+8)g, (+9)h, '[]'] =
                 (+10)<now>[i, 'j', '.'] =
-                <now>.assign_value(<act>, |k, l|)
+                <now>.assign_value(<act>)(<act>, |k, l|)
             __now__assign__ = <now>.pop_assign(<act>)
 
-            <now>.assign(<act>, __now__assign__, ((+1, 'a'), 'single'))
-            <now>.assign(<act>, __now__assign__, (((+2, 'b'), (+3, 'c')),
-                                                  'multiple'))
-            <now>.assign(<act>, __now__assign__, (((+4, 'd'), (+5, 'e')),
-                                                  'multiple'))
-            <now>.assign(<act>, __now__assign__, (((+6, 'f'), 'single')),
-                                                  'star'))
+            <now>.assign(<act>, __now__assign__, cce(a))
+            <now>.assign(<act>, __now__assign__, cce((b, c)))
+            <now>.assign(<act>, __now__assign__, cce([d, e]))
+            <now>.assign(<act>, __now__assign__, cce(*f))
             # Check if assigned
-            <now>.assign(<act>, __now__assign__, ((+7, None), 'single'))
-            <now>.assign(<act>, __now__assign__, ((+10, None), 'single'))
+            <now>.assign(<act>, __now__assign__, cce(g[h]))
+            <now>.assign(<act>, __now__assign__, cce(i.j))
         """
         new_targets = []
         assign_calls = []
         for target in node.targets:
             new_target = self.visit(target)
             new_targets.append(new_target)
-            assign_calls.append(ast.copy_location(ast.Expr(
+            assign_calls.append(ast_copy(ast.Expr(
                 noworkflow("assign", [
                     activation(),
                     ast.Name("__now__assign__", L()),
@@ -163,15 +164,15 @@ class RewriteAST(ast.NodeTransformer):
                 ])
             ), node))
 
-        new_body.append(ast.copy_location(ast.Assign(
+        new_body.append(ast_copy(ast.Assign(
             new_targets,
             double_noworkflow(
                 "assign_value", [activation()],
-                [activation(), self.capture(node.value)]
+                [activation(), self.capture(node.value, mode="assign")]
             )
         ), node))
 
-        new_body.append(ast.copy_location(ast.Assign(
+        new_body.append(ast_copy(ast.Assign(
             [ast.Name("__now__assign__", S())],
             noworkflow("pop_assign", [activation()])
         ), node))
@@ -179,11 +180,49 @@ class RewriteAST(ast.NodeTransformer):
         for assign_call in assign_calls:
             new_body.append(assign_call)
 
+    def visit_augassign(self, new_body, node):
+        """Visit AugAssign through process_body
+        Transform
+            a += 1
+        Into:
+            a += self.assign_value(<act>)(<act>, |1|, |a|)
+            __now__assign__ = <now>.pop_assign(<act>)
+
+            <now>.assign(<act>, __now__assign__, cce(a))
+        """
+        new_target = self.visit(node.target)
+        mode = "{}_assign".format(type(node.op).__name__.lower())
+        new_body.append(ast_copy(ast.AugAssign(
+            new_target, node.op,
+            double_noworkflow(
+                "assign_value", [activation()],
+                [
+                    activation(),
+                    self.capture(node.value, mode=mode),
+                    self.capture(
+                        ReplaceContextWithLoad().visit(new_target), mode=mode)
+                ]
+            ),
+        ), node))
+        new_body.append(ast_copy(ast.Assign(
+            [ast.Name("__now__assign__", S())],
+            noworkflow("pop_assign", [activation()])
+        ), node))
+        new_body.append(ast_copy(ast.Expr(
+            noworkflow("assign", [
+                activation(),
+                ast.Name("__now__assign__", L()),
+                new_target.code_component_expr,
+            ])
+        ), node))
+
+
+
     def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
         """Visit Class Definition"""
         current_container_id = self.container_id
         self.container_id = self.create_code_block(node, "class_def")
-        result = ast.copy_location(class_def(
+        result = ast_copy(class_def(
             node.name, node.bases, self.process_body(node.body),
             node.decorator_list,
             keywords=maybe(node, "keywords")
@@ -202,7 +241,7 @@ class RewriteAST(ast.NodeTransformer):
                     pyposast.extract_code(self.lcode, arg).strip("()"))
 
         id_ = self.create_code_component(arg, "param", "w")
-        return ast.copy_location(ast.Tuple([
+        return ast_copy(ast.Tuple([
             ast.Str(arg.name), ast.Num(id_)
         ], L()), arg)
 
@@ -211,14 +250,14 @@ class RewriteAST(ast.NodeTransformer):
         if not default:
             return none()
         id_ = self.create_code_component(default, "default", context(default))
-        return ast.copy_location(double_noworkflow(
+        return ast_copy(double_noworkflow(
             "argument", [activation()],
             [activation(), ast.Num(id_), self.capture(default), "param"]
         ), default)
 
     def process_decorator(self, decorator):
         """Transform @dec into @__noworkflow__.decorator(<act>)(|dec|)"""
-        return ast.copy_location(double_noworkflow(
+        return ast_copy(double_noworkflow(
             "decorator",
             [pyposast.extract_code(self.lcode, decorator), activation()],
             [self.capture(decorator)]
@@ -257,11 +296,11 @@ class RewriteAST(ast.NodeTransformer):
         current_container_id = self.container_id
         self.container_id = self.create_code_block(node, "function_def")
 
-        decorators = [ast.copy_location(noworkflow("collect_function_def", [
+        decorators = [ast_copy(noworkflow("collect_function_def", [
             activation()
         ]), node)] + [self.process_decorator(dec)
                       for dec in node.decorator_list]
-        decorators.append(ast.copy_location(double_noworkflow(
+        decorators.append(ast_copy(double_noworkflow(
             "function_def", [activation()],
             [activation(), ast.Num(self.container_id),
              self.process_parameters(node.args)]
@@ -272,7 +311,7 @@ class RewriteAST(ast.NodeTransformer):
         node.args.args = [param("__now_activation__")] + node.args.args
         node.args.defaults = [none() for _ in node.args.defaults]
 
-        result = ast.copy_location(function_def(
+        result = ast_copy(function_def(
             node.name, node.args, body, decorators,
             returns=maybe(node, "returns"), cls=cls
         ), node)
@@ -290,9 +329,11 @@ class RewriteAST(ast.NodeTransformer):
         Into:
             return <now>.return_(<act>)(<act>, |x|)
         """
-        node.value = ast.copy_location(double_noworkflow(
-            "return_", [activation()],
-            [activation(), self.capture(node.value) if node.value else none()]
+        node.value = ast_copy(double_noworkflow(
+            "return_", [activation()], [
+                activation(),
+                self.capture(node.value, mode="use") if node.value else none()
+            ]
         ), node)
         return node
 
@@ -384,11 +425,15 @@ class RewriteAST(ast.NodeTransformer):
         if star:
             node.name = "*" + node.name
             arg = ast.Str("*")
-        id_ = self.create_code_component(node, "argument", "r")
-        return ast.copy_location(double_noworkflow(
+        cnode = self.capture(node, mode="argument")
+        if hasattr(cnode, "code_component_id"):
+            id_ = none()
+        else:
+            id_ = ast.Num(self.create_code_component(node, "argument", "r"))
+        return ast_copy(double_noworkflow(
             "argument",
             [activation()],
-            [activation(), ast.Num(id_), self.capture(node, mode="use"),
+            [activation(), id_, cnode,
              ast.Str("argument"), arg, ast.Str("argument")]
         ), node)
 
@@ -398,11 +443,15 @@ class RewriteAST(ast.NodeTransformer):
             return None
         node.name = (("{}=".format(arg) if arg else "**") +
                      pyposast.extract_code(self.lcode, node))
-        id_ = self.create_code_component(node, "argument", "r")
-        return ast.copy_location(double_noworkflow(
+        cnode = self.capture(node, mode="argument")
+        if hasattr(cnode, "code_component_id"):
+            id_ = none()
+        else:
+            id_ = ast.Num(self.create_code_component(node, "argument", "r"))
+        return ast_copy(double_noworkflow(
             "argument",
             [activation()],
-            [activation(), ast.Num(id_), self.capture(node, mode="use"),
+            [activation(), id_, cnode,
              ast.Str("argument"), ast.Str(arg if arg else "**"),
              ast.Str("keyword")]
         ), node)
@@ -412,7 +461,7 @@ class RewriteAST(ast.NodeTransformer):
         Transform (star?)value into <now>.argument(<act>, argument_id)(value)
         """
         if PY3 and isinstance(node, ast.Starred):
-            return ast.copy_location(ast.Starred(self._call_arg(
+            return ast_copy(ast.Starred(self._call_arg(
                 node.value, True
             ), node.ctx), node)
 
@@ -423,7 +472,7 @@ class RewriteAST(ast.NodeTransformer):
         """Process call keyword
         Transform arg=value into arg=<now>.argument(<act>, argument_id)(value)
         """
-        return ast.copy_location(ast.keyword(node.arg, self._call_keyword(
+        return ast_copy(ast.keyword(node.arg, self._call_keyword(
             node.arg, node.value
         )), node)
 
@@ -451,15 +500,21 @@ class RewriteAST(ast.NodeTransformer):
         old_func = node.func
         if self.metascript.capture_func_component:
             old_func.name = pyposast.extract_code(self.lcode, old_func)
-            func_id = self.create_code_component(old_func, "func", "r")
-            func = ast.copy_location(double_noworkflow(
+            cnode = self.capture(old_func, mode="func")
+            if hasattr(cnode, "code_component_id"):
+                func_id = none()
+            else:
+                func_id = ast.Num(
+                    self.create_code_component(node, "func", "r")
+                )
+            func = ast_copy(double_noworkflow(
                 "func", [activation()], [
-                    activation(), ast.Num(id_), ast.Num(func_id),
-                    self.capture(old_func, mode="use"), ast.Str(mode)
+                    activation(), ast.Num(id_), func_id,
+                    cnode, ast.Str(mode)
                 ]
             ), old_func)
         else:
-            func = ast.copy_location(noworkflow("call", [
+            func = ast_copy(noworkflow("call", [
                 activation(), ast.Num(id_), old_func, ast.Str(mode)
             ]), old_func)
 
@@ -471,7 +526,7 @@ class RewriteAST(ast.NodeTransformer):
             star = self.process_call_arg(node.starargs, True)
             kwarg = self.process_kwargs(node.kwargs)
 
-        return ast.copy_location(call(func, args, keywords, star, kwarg), node)
+        return ast_copy(call(func, args, keywords, star, kwarg), node)
 
     def capture(self, node, mode="dependency"):
         """Capture node"""
@@ -487,37 +542,162 @@ class RewriteDependencies(ast.NodeTransformer):
         self.rewriter = rewriter
         self.mode = mode
 
+    def visit_literal(self, node):
+        """Visit Num.
+        Transform:
+            1
+        Into:
+            <now>.literal(<act>, #`1`, 1)
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "literal", "r"
+        )
+        return ast_copy(noworkflow(
+            "literal",
+            [activation(), ast.Num(component_id), node, ast.Str(self.mode)]
+        ), node)
+
+
+    visit_Num = visit_literal
+    visit_Str = visit_literal
+    visit_Bytes = visit_literal
+    visit_Ellipsis = visit_literal
+    visit_NameConstant = visit_literal
+    visit_Constant = visit_literal
+
+
     def visit_Name(self, node):                                                 # pylint: disable=invalid-name
         """Visit Name.
         Transform;
             (+1)a
         Into:
-            <now>.capture_single(<act>, cce(a), a, 'a')
+            <now>.name(<act>, cce(a), a, 'a')
         """
         node = self.rewriter.visit(node)
-        return ast.copy_location(noworkflow(
-            "capture_single",
+        return ast_copy(noworkflow(
+            "name",
             [activation(), node.code_component_expr, node, ast.Str(self.mode)]
         ), node)
 
     def visit_BoolOp(self, node):                                               # pylint: disable=invalid-name
-        """Visit BoolOp. Transform a and b or c into |a| and |b| or |c|"""
-        return ast.copy_location(ast.BoolOp(node.op, [
-            self.rewriter.capture(value, mode=self.mode)
-            for value in node.values
-        ]), node)
+        """Visit BoolOp.
+        Transform:
+            a and b or c
+        Into:
+            <now>.operation(<act>)(<act>, #, |a| and |b| or |c|)
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, type(node.op).__name__.lower(), "r"
+        )
+        return ast_copy(double_noworkflow(
+            "operation",
+            [activation()],
+            [
+                activation(),
+                ast.Num(component_id),
+                ast_copy(ast.BoolOp(node.op, [
+                    self.rewriter.capture(value, mode="use")
+                    for value in node.values
+                ]), node),
+                ast.Str(self.mode)
+            ]
+        ), node)
 
     def visit_BinOp(self, node):                                                # pylint: disable=invalid-name
-        """Visit BinOp. Transform a + b into |a| + |b|"""
-        return ast.copy_location(ast.BinOp(
-            self.rewriter.capture(node.left, mode=self.mode), node.op,
-            self.rewriter.capture(node.right, mode=self.mode)
+        """Visit BinOp.
+        Transform:
+            a + b
+        Into:
+            <now>.operation(<act>)(<act>, #, |a| + |b|)
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, type(node.op).__name__.lower(), "r"
+        )
+        return ast_copy(double_noworkflow(
+            "operation",
+            [activation()],
+            [
+                activation(),
+                ast.Num(component_id),
+                ast_copy(ast.BinOp(
+                    self.rewriter.capture(node.left, mode="use"), node.op,
+                    self.rewriter.capture(node.right, mode="use")
+                ), node),
+                ast.Str(self.mode)
+            ]
         ), node)
 
     def visit_UnaryOp(self, node):                                              # pylint: disable=invalid-name
-        """Visit UnaryOp. Transform ~a into ~|a|"""
-        return ast.copy_location(ast.UnaryOp(
-            node.op, self.rewriter.capture(node.operand, mode=self.mode)
+        """Visit UnaryOp.
+        Transform:
+            ~a
+        Into:
+            <now>.operation(<act>)(<act>, #, ~|a|)
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, type(node.op).__name__.lower(), "r"
+        )
+        return ast_copy(double_noworkflow(
+            "operation",
+            [activation()],
+            [
+                activation(),
+                ast.Num(component_id),
+                ast_copy(ast.UnaryOp(
+                    node.op, self.rewriter.capture(node.operand, mode="use")
+                ), node),
+                ast.Str(self.mode)
+            ]
+        ), node)
+
+    def visit_Subscript(self, node):                                            # pylint: disable=invalid-name
+        """Visit Subscript
+        Transform:
+            a[b]
+        Into:
+            <now>[
+                `a[b]`,
+                <now>.container(<act>)(<act>, #a, |a|),
+                <now>.index(<act>)(<act>, #b, |b|),
+                '[]'
+            ]
+        """
+        nvalue = node.value
+        nslice = node.slice
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        subscript_component = self.rewriter.create_code_component(
+            node, "subscript", "r"
+        )
+
+        nvalue.name = pyposast.extract_code(self.rewriter.lcode, nvalue)
+        value_component = self.rewriter.create_code_component(
+            nvalue, "container", "r"
+        )
+        nslice.name = pyposast.extract_code(self.rewriter.lcode, nslice)
+        slice_component = self.rewriter.create_code_component(
+            nslice, "index", "r"
+        )
+
+        return ast_copy(ast.Subscript(
+            ast.Name("__noworkflow__", L()),
+            ast.Index(ast.Tuple([
+                ast.Num(subscript_component),
+                double_noworkflow("container", [activation()], [
+                    activation(),
+                    ast.Num(value_component),
+                    self.rewriter.capture(nvalue)
+                ]),
+                double_noworkflow("index", [activation()], [
+                    activation(),
+                    ast.Num(slice_component),
+                    self.rewriter.capture(nslice)
+                ])
+            ], L())),
+            node.ctx,
         ), node)
 
     def visit_Dict(self, node):                                                 # pylint: disable=invalid-name
@@ -546,21 +726,22 @@ class RewriteDependencies(ast.NodeTransformer):
                 self.rewriter.container_id
             )
             key.last_line, key.last_col = last_line, last_col
-            new_keys.append(ast.copy_location(double_noworkflow(
+            new_keys.append(ast_copy(double_noworkflow(
                 "dict_key", [activation()],
                 [activation(), ast.Num(key_value_component),
-                 self.rewriter.capture(key, mode=self.mode)]
+                 self.rewriter.capture(key, mode="key")]
             ), key))
-            new_values.append(ast.copy_location(double_noworkflow(
+            new_values.append(ast_copy(double_noworkflow(
                 "dict_value", [activation()],
                 [activation(), ast.Num(key_value_component),
-                 self.rewriter.capture(value, mode=self.mode)]
+                 self.rewriter.capture(value, mode="value")]
             ), value))
         node.keys = new_keys
         node.values = new_values
 
-        return ast.copy_location(double_noworkflow("dict", [activation()], [
-            activation(), ast.Num(dict_code_component), node
+        return ast_copy(double_noworkflow("dict", [activation()], [
+            activation(), ast.Num(dict_code_component), node,
+            ast.Str(self.mode)
         ]), node)
 
     def visit_List(self, node, comp="list", set_key=None):                                                 # pylint: disable=invalid-name
@@ -581,22 +762,25 @@ class RewriteDependencies(ast.NodeTransformer):
         new_items = []
         for index, item in enumerate(node.elts):
             name = pyposast.extract_code(self.rewriter.lcode, item)
-            item_component = self.rewriter.code_components.add(
-                name, "item", "r",
-                item.first_line, item.first_col,
-                item.last_line, item.last_col,
-                self.rewriter.container_id
-            )
-            new_items.append(ast.copy_location(double_noworkflow(
+            citem = self.rewriter.capture(item, mode="item")
+            if hasattr(citem, "code_component_id"):
+                item_component = none()
+            else:
+                item_component = ast.Num(self.rewriter.code_components.add(
+                    name, "item", "r",
+                    item.first_line, item.first_col,
+                    item.last_line, item.last_col,
+                    self.rewriter.container_id
+                ))
+            new_items.append(ast_copy(double_noworkflow(
                 "item", [activation()],
-                [activation(), ast.Num(item_component),
-                 self.rewriter.capture(item, mode=self.mode),
-                 set_key(index, item)]
+                [activation(), item_component, citem, set_key(index, item)]
             ), item))
         node.elts = new_items
 
-        return ast.copy_location(double_noworkflow(comp, [activation()], [
-            activation(), ast.Num(list_code_component), node
+        return ast_copy(double_noworkflow(comp, [activation()], [
+            activation(), ast.Num(list_code_component), node,
+            ast.Str(self.mode)
         ]), node)
 
     def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
@@ -624,6 +808,39 @@ class RewriteDependencies(ast.NodeTransformer):
             set_key=lambda index, item: none()
         )
 
+    def visit_Index(self, node):                                                # pylint: disable=invalid-name
+        """Visit Index"""
+        return self.visit(node.value)
+
+    def visit_Slice(self, node):                                                # pylint: disable=invalid-name
+        """Visit Slice"""
+        null = none()
+        return ast_copy(noworkflow(
+            "slice", [
+                self.visit(node.lower) or null,
+                self.visit(node.upper) or null,
+                self.visit(node.step) or null,
+            ]
+        ), node)
+
+    def visit_Ellipsis(self, node):                                             # pylint: disable=invalid-name
+        """Visit Ellipsis"""
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "literal", "r"
+        )
+        return ast_copy(noworkflow("literal", [
+            activation(), ast.Num(component_id), ast.Attribute(
+                ast.Name("__noworkflow__", L()), "Ellipsis", L()
+            ), ast.Str(self.mode)
+        ]), node)
+
+
+    def visit_ExtSlice(self, node):                                             # pylint: disable=invalid-name
+        """Visit ExtSlice"""
+        return ast_copy(ast.Tuple([
+            self.visit(dim) for dim in node.dims
+        ], L()), node)
 
     def generic_visit(self, node):
         """Visit node"""
@@ -631,7 +848,7 @@ class RewriteDependencies(ast.NodeTransformer):
     '''
     def visit_Lambda(self, node):                                               # pylint: disable=invalid-name
         """Visit Lambda"""
-        return ast.copy_location(noworkflow("dep_name", [
+        return ast_copy(noworkflow("dep_name", [
             self.extract_str(node),
             super(RewriteDependencies, self).visit_Lambda(node),
             self.dependency_type()
@@ -639,31 +856,22 @@ class RewriteDependencies(ast.NodeTransformer):
 
     def visit_IfExp(self, node):                                                # pylint: disable=invalid-name
         """Visit IfExp"""
-        return ast.copy_location(ast.IfExp(
+        return ast_copy(ast.IfExp(
             self.capture(node.test, mode="conditional"),
             self.visit(node.body),
             self.visit(node.orelse)
         ), node)
 
-    def visit_Slice(self, node):
-        """Visit Slice"""
-        return ast.copy_location(call("slice", [
-            self.visit(node.lower) or none(),
-            self.visit(node.upper) or none(),
-            self.visit(node.step) or none()]
-        ), node)
 
-    def visit_ExtSlice(self, node):
-        """Visit ExtSlice"""
-        return ast.copy_location(ast.Tuple(
-            [self.visit(dim) for dim in node.dims], L()
-        ), node)
-
-    def visit_Index(self, node):
-        return self.visit(node.value)
 
     def visit(self, node, mode="direct"):
         """Visit node"""
         self._dependency_type = mode
         return super(RewriteDependencies, self).visit(node)
     '''
+
+
+class SliceToExpr(ast.NodeTransformer):
+    """Convert slice to expr"""
+
+    

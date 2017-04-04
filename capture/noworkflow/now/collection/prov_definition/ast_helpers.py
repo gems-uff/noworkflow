@@ -8,36 +8,50 @@ import ast
 
 from .ast_elements import L
 
+
+def ast_copy(new_node, old_node):
+    """Copy ast location with pyposast location"""
+    new_node = ast.copy_location(new_node, old_node)
+    attrs = [
+        "first_line", "first_col", "last_line", "last_col", "uid",
+        "code_component_id",
+    ]
+    for attr in attrs:
+        if hasattr(old_node, attr):
+            setattr(new_node, attr, getattr(old_node, attr))
+    return new_node
+
+
 class ReplaceContextWithLoad(ast.NodeTransformer):
     """Replace expr_context from any node to Load context"""
 
     def visit_Attribute(self, node):                                             # pylint: disable=invalid-name
         """Visit Attribute"""
-        return ast.copy_location(ast.Attribute(
+        return ast_copy(ast.Attribute(
             self.visit(node.value), node.attr, L()
         ), node)
 
     def visit_Subscript(self, node):                                             # pylint: disable=invalid-name
         """Visit Subscript"""
-        return ast.copy_location(ast.Subscript(
+        return ast_copy(ast.Subscript(
             self.visit(node.value), self.visit(node.slice), L()
         ), node)
 
     def visit_Name(self, node):                                                  # pylint: disable=invalid-name, no-self-use
         """Visit Name"""
-        return ast.copy_location(ast.Name(
+        return ast_copy(ast.Name(
             node.id, L()
         ), node)
 
     def visit_List(self, node):                                                  # pylint: disable=invalid-name
         """Visit List"""
-        return ast.copy_location(ast.List(
+        return ast_copy(ast.List(
             [self.visit(elt) for elt in node.elts], L()
         ), node)
 
     def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
         """Visit Tuple"""
-        return ast.copy_location(ast.Tuple(
+        return ast_copy(ast.Tuple(
             [self.visit(elt) for elt in node.elts], L()
         ), node)
 

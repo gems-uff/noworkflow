@@ -21,6 +21,7 @@ class TestStmtExecution(CollectionTestCase):
                     "# other")
 
         var_evaluation = self.get_evaluation(name="a")
+        var_2 = self.get_evaluation(name="2")
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
@@ -36,6 +37,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_value.value, "2")
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
+
+        self.assertEqual(var_evaluation.value_id, var_2.value_id)
 
     def test_assign_name_to_name(self):
         """Test assign collection"""
@@ -65,14 +68,45 @@ class TestStmtExecution(CollectionTestCase):
         a_type = self.metascript.values_store[a_value.type_id]
         b_type = self.metascript.values_store[b_value.type_id]
 
-        self.assertNotEqual(a_value.id, b_value.id)
+        self.assertEqual(a_value.id, b_value.id)
 
         self.assertEqual(a_value.value, "2")
         self.assertEqual(b_value.value, "2")
         self.assertEqual(a_type.id, b_type.id)
 
         self.assert_dependency(read_a_eval, write_a_eval, "assignment")
-        self.assert_dependency(write_b_eval, read_a_eval, "dependency")
+        self.assert_dependency(write_b_eval, read_a_eval, "assign-bind")
+
+    def test_augassign_to_name(self):
+        """Test augmented assign collection"""
+        self.script("# script.py\n"
+                    "a = 2\n"
+                    "a += 1\n"
+                    "# other")
+
+        var_a1 = self.get_evaluation(name="a", first_char_line=2)
+        var_a2w = self.get_evaluation(name="a", first_char_line=3, mode="w")
+        var_a2r = self.get_evaluation(name="a", first_char_line=3, mode="r")
+        var_1 = self.get_evaluation(name="1")
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        self.assertEqual(var_a2w.activation_id, script_eval.id)
+        self.assertTrue(bool(var_a2w.moment))
+        self.assertEqual(script_act.context['a'], var_a2w)
+
+        var_value = self.metascript.values_store[var_a2w.value_id]
+        var_type = self.metascript.values_store[var_value.type_id]
+        type_type = self.metascript.values_store[var_type.type_id]
+
+        self.assertEqual(var_value.value, "3")
+        self.assertEqual(var_type.value, self.rtype("int"))
+        self.assertEqual(type_type.value, self.rtype("type"))
+
+        self.assert_dependency(var_a2r, var_a1, "assignment")
+        self.assert_dependency(var_a2w, var_a2r, "add_assign")
+        self.assert_dependency(var_a2w, var_1, "add_assign")
 
     def test_function_definition(self):
         """Test function_def collection"""
@@ -86,7 +120,7 @@ class TestStmtExecution(CollectionTestCase):
         write_f_eval = self.get_evaluation(name="f", mode="w")
         param_x_eval = self.get_evaluation(name="x", mode="w")
         write_a_eval = self.get_evaluation(name="a", mode="w")
-        arg_a_eval = self.get_evaluation(name="a", type="argument")
+        arg_a_eval = self.get_evaluation(name="a", mode="r")
         write_b_eval = self.get_evaluation(name="b", mode="w")
         call = self.get_evaluation(name="f(a)", type="call")
 
@@ -116,9 +150,9 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(script_act.context['f'], write_f_eval)
         self.assertEqual(activation.context['x'], param_x_eval)
 
-        self.assert_dependency(param_x_eval, arg_a_eval, "dependency")
+        self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
 
-    def test_function_definition_with_return(self):
+    def test_function_definition_with_return(self):                              # pylint: disable=invalid-name
         """Test return collection"""
         self.script("# script.py\n"
                     "def f(x):\n"
@@ -131,7 +165,7 @@ class TestStmtExecution(CollectionTestCase):
         param_x_eval = self.get_evaluation(name="x", mode="w")
         read_x_eval = self.get_evaluation(name="x", mode="r")
         write_a_eval = self.get_evaluation(name="a", mode="w")
-        arg_a_eval = self.get_evaluation(name="a", type="argument")
+        arg_a_eval = self.get_evaluation(name="a", mode="r")
         write_b_eval = self.get_evaluation(name="b", mode="w")
         call = self.get_evaluation(name="f(a)", type="call")
 
@@ -161,9 +195,9 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(script_act.context['f'], write_f_eval)
         self.assertEqual(activation.context['x'], param_x_eval)
 
-        self.assert_dependency(param_x_eval, arg_a_eval, "dependency")
+        self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
         self.assert_dependency(read_x_eval, param_x_eval, "assignment")
-        self.assert_dependency(call, read_x_eval, "dependency")
+        self.assert_dependency(call, read_x_eval, "use")
 
     def test_tuple_assign(self):                                                 # pylint: disable=too-many-locals
         """Test tuple assignment"""
@@ -178,12 +212,10 @@ class TestStmtExecution(CollectionTestCase):
         var_tuple = self.get_evaluation(name="(e, [f, 2])")
         var_list = self.get_evaluation(name="[f, 2]", type="list")
         var_a_e = self.get_evaluation(name="e", mode="r", type="name")
-        var_a_i0 = self.get_evaluation(name="e", mode="r", type="item")
-        var_a_i1 = self.get_evaluation(name="[f, 2]", type="item")
-        var_a_i10 = self.get_evaluation(name="f", mode="r", type="item")
-        var_a_i11 = self.get_evaluation(name="2", type="item")
-        var_a_i0_val = self.metascript.values_store[var_a_i0.value_id]
-        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
+        var_a_i10 = self.get_evaluation(name="f", mode="r")
+        var_a_i11 = self.get_evaluation(name="2")
+        var_a_i0_val = self.metascript.values_store[var_a_e.value_id]
+        var_a_i1_val = self.metascript.values_store[var_list.value_id]
         var_a_i10_val = self.metascript.values_store[var_a_i10.value_id]
         var_a_i11_val = self.metascript.values_store[var_a_i11.value_id]
         self.assertEqual(var_a_i0_val.value, '1')
@@ -210,17 +242,15 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_a_key_0.id)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a_i0, "dependency")
-        self.assert_dependency(var_c, var_a_i1, "bind")
-        self.assert_dependency(var_a, var_tuple, "bind")
-        self.assert_dependency(var_tuple, var_a_i0, "item")
-        self.assert_dependency(var_tuple, var_a_i1, "item")
-        self.assert_dependency(var_a_i1, var_list, "bind")
+        self.assert_dependency(var_b, var_a_e, "assign-bind")
+        self.assert_dependency(var_c, var_list, "assign-bind")
+        self.assert_dependency(var_a, var_tuple, "assign-bind")
+        self.assert_dependency(var_tuple, var_a_e, "item")
+        self.assert_dependency(var_tuple, var_list, "item")
         self.assert_dependency(var_list, var_a_i10, "item")
         self.assert_dependency(var_list, var_a_i11, "item")
-        self.assert_dependency(var_a_i0, var_a_e, "dependency")
 
-    def test_tuple_assign_not_bound(self):                                        # pylint: disable=too-many-locals
+    def test_tuple_assign_not_bound(self):
         """Test tuple assignment"""
         self.script("e = f = 1\n"
                     "a = b, c = [e] + [f]\n"
@@ -229,30 +259,24 @@ class TestStmtExecution(CollectionTestCase):
         var_a = self.get_evaluation(name="a", mode="w")
         var_b = self.get_evaluation(name="b")
         var_c = self.get_evaluation(name="c")
+        var_ef = self.get_evaluation(name="[e] + [f]")
+        var_e = self.get_evaluation(name="[e]")
+        var_f = self.get_evaluation(name="[f]")
 
-        var_list_e = self.get_evaluation(name="[e]", type="list")
-        var_list_e_i0 = self.get_evaluation(name="e", mode="r", type="item")
-        var_list_f = self.get_evaluation(name="[f]", type="list")
-        var_list_f_i0 = self.get_evaluation(name="f", mode="r", type="item")
         var_a_e = self.get_evaluation(name="e", mode="r", type="name")
         var_a_f = self.get_evaluation(name="f", mode="r", type="name")
 
-        var_a_key_0 = self.get_compartment_value(var_a, "[0]")
-        var_a_key_1 = self.get_compartment_value(var_a, "[1]")
+         # it was not accessed
+        self.assertIsNone(self.get_compartment_value(var_a, "[0]"))
+        self.assertIsNone(self.get_compartment_value(var_a, "[1]"))
 
-        self.assertIsNone(var_a_key_0) # it was not accessed
-        self.assertIsNone(var_a_key_1) # it was not accessed
-
-        self.assert_dependency(var_a, var_list_e, "collection")
-        self.assert_dependency(var_a, var_list_f, "collection")
-        self.assert_dependency(var_b, var_list_e, "dependency")
-        self.assert_dependency(var_b, var_list_f, "dependency")
-        self.assert_dependency(var_c, var_list_e, "dependency")
-        self.assert_dependency(var_c, var_list_f, "dependency")
-        self.assert_dependency(var_list_e, var_list_e_i0, "item")
-        self.assert_dependency(var_list_f, var_list_f_i0, "item")
-        self.assert_dependency(var_list_e_i0, var_a_e, "dependency")
-        self.assert_dependency(var_list_f_i0, var_a_f, "dependency")
+        self.assert_dependency(var_ef, var_e, "use")
+        self.assert_dependency(var_ef, var_f, "use")
+        self.assert_dependency(var_e, var_a_e, "item")
+        self.assert_dependency(var_f, var_a_f, "item")
+        self.assert_dependency(var_a, var_ef, "assign-bind")
+        self.assert_dependency(var_b, var_ef, "dependency")
+        self.assert_dependency(var_c, var_ef, "dependency")
 
     def test_list_assign(self):                                                  # pylint: disable=too-many-locals
         """Test list assignment"""
@@ -267,12 +291,10 @@ class TestStmtExecution(CollectionTestCase):
         var_tuple = self.get_evaluation(name="(e, [f, 2])")
         var_list = self.get_evaluation(name="[f, 2]", type="list")
         var_a_e = self.get_evaluation(name="e", mode="r", type="name")
-        var_a_i0 = self.get_evaluation(name="e", mode="r", type="item")
-        var_a_i1 = self.get_evaluation(name="[f, 2]", type="item")
-        var_a_i10 = self.get_evaluation(name="f", mode="r", type="item")
-        var_a_i11 = self.get_evaluation(name="2", type="item")
-        var_a_i0_val = self.metascript.values_store[var_a_i0.value_id]
-        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
+        var_a_i10 = self.get_evaluation(name="f", mode="r")
+        var_a_i11 = self.get_evaluation(name="2")
+        var_a_i0_val = self.metascript.values_store[var_a_e.value_id]
+        var_a_i1_val = self.metascript.values_store[var_list.value_id]
         var_a_i10_val = self.metascript.values_store[var_a_i10.value_id]
         var_a_i11_val = self.metascript.values_store[var_a_i11.value_id]
         self.assertEqual(var_a_i0_val.value, '1')
@@ -299,15 +321,13 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_a_key_0.id)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a_i0, "dependency")
-        self.assert_dependency(var_c, var_a_i1, "bind")
-        self.assert_dependency(var_a, var_tuple, "bind")
-        self.assert_dependency(var_tuple, var_a_i0, "item")
-        self.assert_dependency(var_tuple, var_a_i1, "item")
-        self.assert_dependency(var_a_i1, var_list, "bind")
+        self.assert_dependency(var_b, var_a_e, "assign-bind")
+        self.assert_dependency(var_c, var_list, "assign-bind")
+        self.assert_dependency(var_a, var_tuple, "assign-bind")
+        self.assert_dependency(var_tuple, var_a_e, "item")
+        self.assert_dependency(var_tuple, var_list, "item")
         self.assert_dependency(var_list, var_a_i10, "item")
         self.assert_dependency(var_list, var_a_i11, "item")
-        self.assert_dependency(var_a_i0, var_a_e, "dependency")
 
     def test_star_assign(self):                                                  # pylint: disable=too-many-locals
         """Test star assignment"""
@@ -321,13 +341,11 @@ class TestStmtExecution(CollectionTestCase):
         var_d = self.get_evaluation(name="d")
 
         var_tuple = self.get_evaluation(name="e, 2, 3, f, 4")
-        var_a_e = self.get_evaluation(name="e", mode="r", type="name")
-        var_a_f = self.get_evaluation(name="f", mode="r", type="name")
-        var_a_i0 = self.get_evaluation(name="e", mode="r", type="item")
-        var_a_i1 = self.get_evaluation(name="2", mode="r", type="item")
-        var_a_i2 = self.get_evaluation(name="3", mode="r", type="item")
-        var_a_i3 = self.get_evaluation(name="f", mode="r", type="item")
-        var_a_i4 = self.get_evaluation(name="4", mode="r", type="item")
+        var_a_i0 = self.get_evaluation(name="e", mode="r")
+        var_a_i1 = self.get_evaluation(name="2", mode="r")
+        var_a_i2 = self.get_evaluation(name="3", mode="r")
+        var_a_i3 = self.get_evaluation(name="f", mode="r")
+        var_a_i4 = self.get_evaluation(name="4", mode="r")
         var_a_i0_val = self.metascript.values_store[var_a_i0.value_id]
         var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
         var_a_i2_val = self.metascript.values_store[var_a_i2.value_id]
@@ -369,13 +387,14 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_3_part, var_a_key_3.id)
         self.assertEqual(var_a_key_4_part, var_a_key_4.id)
 
-        self.assert_dependency(var_b, var_a_i0, "dependency")
-        self.assert_dependency(var_c, var_a_i3, "dependency")
-        self.assert_dependency(var_a, var_tuple, "bind")
+        self.assert_dependency(var_a, var_tuple, "assign-bind")
+        self.assert_dependency(var_b, var_a_i0, "assign-bind")
+        self.assert_dependency(var_d, var_a_i4, "assign-bind")
+        self.assert_dependency(var_c, var_a_i3, "assign")
+        self.assert_dependency(var_c, var_a_i2, "assign")
+        self.assert_dependency(var_c, var_a_i1, "assign")
         self.assert_dependency(var_tuple, var_a_i0, "item")
         self.assert_dependency(var_tuple, var_a_i1, "item")
         self.assert_dependency(var_tuple, var_a_i2, "item")
         self.assert_dependency(var_tuple, var_a_i3, "item")
         self.assert_dependency(var_tuple, var_a_i4, "item")
-        self.assert_dependency(var_a_i0, var_a_e, "dependency")
-        self.assert_dependency(var_a_i3, var_a_f, "dependency")

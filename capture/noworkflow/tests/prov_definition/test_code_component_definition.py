@@ -106,7 +106,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         item_2 = self.find_code_component(name="2", mode="r")
         list_comp = self.find_code_component(name="[1, 2]", mode="r")
 
-        self.assertEqual(item_1.type, "item")
+        self.assertEqual(item_1.type, "literal")
         self.assertEqual(item_1.mode, "r")
         self.assertEqual(item_1.first_char_line, 2)
         self.assertEqual(item_1.first_char_column, 5)
@@ -114,7 +114,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.assertEqual(item_1.last_char_column, 6)
         self.assertEqual(item_1.container_id, script.id)
 
-        self.assertEqual(item_2.type, "item")
+        self.assertEqual(item_2.type, "literal")
         self.assertEqual(item_2.mode, "r")
         self.assertEqual(item_2.first_char_line, 2)
         self.assertEqual(item_2.first_char_column, 8)
@@ -142,7 +142,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         item_2 = self.find_code_component(name="2", mode="r")
         list_comp = self.find_code_component(name="(1, 2)", mode="r")
 
-        self.assertEqual(item_1.type, "item")
+        self.assertEqual(item_1.type, "literal")
         self.assertEqual(item_1.mode, "r")
         self.assertEqual(item_1.first_char_line, 2)
         self.assertEqual(item_1.first_char_column, 5)
@@ -150,7 +150,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.assertEqual(item_1.last_char_column, 6)
         self.assertEqual(item_1.container_id, script.id)
 
-        self.assertEqual(item_2.type, "item")
+        self.assertEqual(item_2.type, "literal")
         self.assertEqual(item_2.mode, "r")
         self.assertEqual(item_2.first_char_line, 2)
         self.assertEqual(item_2.first_char_column, 8)
@@ -178,7 +178,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         item_2 = self.find_code_component(name="2", mode="r")
         list_comp = self.find_code_component(name="{1, 2}", mode="r")
 
-        self.assertEqual(item_1.type, "item")
+        self.assertEqual(item_1.type, "literal")
         self.assertEqual(item_1.mode, "r")
         self.assertEqual(item_1.first_char_line, 2)
         self.assertEqual(item_1.first_char_column, 5)
@@ -186,7 +186,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.assertEqual(item_1.last_char_column, 6)
         self.assertEqual(item_1.container_id, script.id)
 
-        self.assertEqual(item_2.type, "item")
+        self.assertEqual(item_2.type, "literal")
         self.assertEqual(item_2.mode, "r")
         self.assertEqual(item_2.first_char_line, 2)
         self.assertEqual(item_2.first_char_column, 8)
@@ -201,5 +201,3 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.assertEqual(list_comp.last_char_line, 2)
         self.assertEqual(list_comp.last_char_column, 10)
         self.assertEqual(list_comp.container_id, script.id)
-
-
