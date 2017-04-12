@@ -562,10 +562,8 @@ class RewriteDependencies(ast.NodeTransformer):
     visit_Num = visit_literal
     visit_Str = visit_literal
     visit_Bytes = visit_literal
-    visit_Ellipsis = visit_literal
     visit_NameConstant = visit_literal
     visit_Constant = visit_literal
-
 
     def visit_Name(self, node):                                                 # pylint: disable=invalid-name
         """Visit Name.
@@ -659,43 +657,29 @@ class RewriteDependencies(ast.NodeTransformer):
         Transform:
             a[b]
         Into:
-            <now>[
-                `a[b]`,
-                <now>.container(<act>)(<act>, #a, |a|),
-                <now>.index(<act>)(<act>, #b, |b|),
+            <now>.access(<act>)[
+                <act>,
+                #`a[b]`,
+                |a|:value,
+                |b|:slice,
                 '[]'
             ]
         """
-        nvalue = node.value
-        nslice = node.slice
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         subscript_component = self.rewriter.create_code_component(
             node, "subscript", "r"
         )
-
-        nvalue.name = pyposast.extract_code(self.rewriter.lcode, nvalue)
-        value_component = self.rewriter.create_code_component(
-            nvalue, "container", "r"
-        )
-        nslice.name = pyposast.extract_code(self.rewriter.lcode, nslice)
-        slice_component = self.rewriter.create_code_component(
-            nslice, "index", "r"
-        )
+        mode = self.mode if hasattr(self, "mode") else "dependency"
 
         return ast_copy(ast.Subscript(
-            ast.Name("__noworkflow__", L()),
+            noworkflow("access", [activation()]),
             ast.Index(ast.Tuple([
+                activation(),
                 ast.Num(subscript_component),
-                double_noworkflow("container", [activation()], [
-                    activation(),
-                    ast.Num(value_component),
-                    self.rewriter.capture(nvalue)
-                ]),
-                double_noworkflow("index", [activation()], [
-                    activation(),
-                    ast.Num(slice_component),
-                    self.rewriter.capture(nslice)
-                ])
+                self.rewriter.capture(node.value, mode="value"),
+                self.rewriter.capture(node.slice, mode="slice"),
+                ast.Str("[]"),
+                ast.Str(mode)
             ], L())),
             node.ctx,
         ), node)
@@ -813,15 +797,25 @@ class RewriteDependencies(ast.NodeTransformer):
         return self.visit(node.value)
 
     def visit_Slice(self, node):                                                # pylint: disable=invalid-name
-        """Visit Slice"""
-        null = none()
-        return ast_copy(noworkflow(
-            "slice", [
-                self.visit(node.lower) or null,
-                self.visit(node.upper) or null,
-                self.visit(node.step) or null,
-            ]
-        ), node)
+        """Visit Slice
+        Transform:
+            a:b:c
+        Into:
+            <now>.slice(<act>)(<act>, #, a, b, c, <mode>)
+        """
+        capture = self.rewriter.capture
+        lower = capture(node.lower, mode="use") if node.lower else none()
+        upper = capture(node.upper, mode="use") if node.upper else none()
+        step = capture(node.step, mode="use") if node.step else none()
+
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "slice", "r"
+        )
+        return ast_copy(double_noworkflow("slice", [activation()], [
+            activation(), ast.Num(component_id),
+            lower, upper, step, ast.Str(self.mode)
+        ]), node)
 
     def visit_Ellipsis(self, node):                                             # pylint: disable=invalid-name
         """Visit Ellipsis"""
@@ -838,9 +832,17 @@ class RewriteDependencies(ast.NodeTransformer):
 
     def visit_ExtSlice(self, node):                                             # pylint: disable=invalid-name
         """Visit ExtSlice"""
-        return ast_copy(ast.Tuple([
-            self.visit(dim) for dim in node.dims
-        ], L()), node)
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "extslice", "r"
+        )
+        return ast_copy(double_noworkflow("extslice", [activation()], [
+            activation(), ast.Num(component_id),
+            ast.Tuple([
+                self.rewriter.capture(dim, mode="use") for dim in node.dims
+            ], L()),
+            ast.Str(self.mode)
+        ]), node)
 
     def generic_visit(self, node):
         """Visit node"""
