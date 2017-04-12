@@ -54,8 +54,55 @@ class Collector(object):
         # Original globals
         self.globals = copy(__builtins__)
         self.global_evaluations = {}
-        self.slice = slice
+        self.pyslice = slice
         self.Ellipsis = Ellipsis
+
+    def __getitem__(self, index):                                                # pylint: disable=too-many-locals
+        activation, code_id, vcontainer, vindex, access, mode = index
+        depa = activation.dependencies.pop()
+        value_dep = part_id = None
+        for dep in depa.dependencies:
+            if dep.mode == "value":
+                value_dep = dep
+                break
+
+        if access == "[]":
+            addr = "[{}]".format(vindex)
+            value = vcontainer[vindex]
+        elif access == ".":
+            value = getattr(vcontainer, vindex)
+            addr = ".{}".format(vindex)
+        if value_dep is not None:
+            meta = self.metascript
+            part_id = get_compartment(meta, value_dep.value_id, addr)
+
+        if part_id is not None:
+            # Use existing value_id
+            eva = self.evaluate_vid(activation, code_id, part_id, None, depa)
+        else:
+            # Create new value_id
+            eva = self.evaluate(activation, code_id, value, None, depa)
+
+        is_whitebox_slice = (
+            isinstance(vindex, self.pyslice) and
+            isinstance(vcontainer, (list, tuple)) and
+            access == "[]" and
+            value_dep is not None
+        )
+        if is_whitebox_slice:
+            original_indexes = range(len(vcontainer))[vindex]
+            for slice_index, original_index in enumerate(original_indexes):
+                oaddr = "[{}]".format(original_index)
+                naddr = "[{}]".format(slice_index)
+                part_id = get_compartment(meta, value_dep.value_id, oaddr)
+                self.compartments.add_object(
+                    naddr, eva.moment, eva.value_id, part_id
+                )
+
+        activation.dependencies[-1].add(Dependency(
+            activation.id, eva.id, value, eva.value_id, mode
+        ))
+        return value
 
     def time(self):
         """Return time at this moment
@@ -186,14 +233,10 @@ class Collector(object):
         activation.dependencies[-1].add(dependency)
         return value
 
-    def container(self, activation):
-        """Capture container before"""
-        activation.dependencies.append(CompartmentDependencyAware())
-        return self._container
-
-    def _container(self, activation, code_id, value):                            # pylint: disable=no-self-use, unused-argument
-        activation.dependencies[-1].key = value
-        return value
+    def access(self, activation):
+        """Capture object access before"""
+        activation.dependencies.append(DependencyAware())
+        return self
 
     def dict(self, activation):
         """Capture dict before"""
@@ -312,6 +355,35 @@ class Collector(object):
         ))
         return value
 
+    def slice(self, activation):
+        """Capture slice before"""
+        activation.dependencies.append(DependencyAware())
+        return self._slice
+
+    def _slice(self, activation, code_id, low, upp, step, mode="dependency"):    # pylint: disable=too-many-arguments
+        """Capture slice after"""
+        depa = activation.dependencies.pop()
+        value = self.pyslice(low, upp, step)
+        evaluation = self.evaluate(activation, code_id, value, None, depa)
+        activation.dependencies[-1].add(Dependency(
+            activation.id, evaluation.id, value, evaluation.value_id, mode
+        ))
+        return value
+
+    def extslice(self, activation):
+        """Capture extslice before"""
+        activation.dependencies.append(DependencyAware())
+        return self._extslice
+
+    def _extslice(self, activation, code_id, value, mode="dependency"):
+        """Capture slice after"""
+        depa = activation.dependencies.pop()
+        evaluation = self.evaluate(activation, code_id, value, None, depa)
+        activation.dependencies[-1].add(Dependency(
+            activation.id, evaluation.id, value, evaluation.value_id, mode
+        ))
+        return value
+
     def find_value_id(self, value, depa, create=True):
         """Find bound dependency in dependency aware"""
         value_id = None
@@ -355,11 +427,16 @@ class Collector(object):
         if moment is None:
             moment = self.time()
         value_id = self.find_value_id(value, depa)
+        return self.evaluate_vid(activation, code_id, value_id, moment, depa)
+
+    def evaluate_vid(self, activation, code_id, value_id, moment, depa=None):    # pylint: disable=too-many-arguments
+        """Create evaluation for code component using a given value_id"""
+        if moment is None:
+            moment = self.time()
         evaluation = self.evaluations.add_object(
             code_id, activation.id, moment, value_id
         )
         self.create_dependencies(evaluation, depa)
-
         return evaluation
 
     def assign_value(self, activation):

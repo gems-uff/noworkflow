@@ -523,7 +523,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_list, var_a_e, "item")
         self.assert_dependency(var_list, var_a_i1, "item")
 
-    def _test_subscript_definition(self):                                         # pylint: disable=too-many-locals
+    def test_subscript_definition(self):
         """Test subscript definition"""
         self.script("e = []\n"
                     "a = [e, 2]\n"
@@ -531,13 +531,10 @@ class TestExprExecution(CollectionTestCase):
                     "# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
-        var_aw = self.get_evaluation(name="a", mode="w")
+        var_0 = self.get_evaluation(name="0")
+        var_a0 = self.get_evaluation(name="a[0]", mode="r")
+        var_e = self.get_evaluation(name="e")
         var_b = self.get_evaluation(name="b")
-        var_e = self.get_evaluation(name="e", mode="r", type="name")
-
-        var_list = self.get_evaluation(name="[e, 2]")
-        var_a_i0 = self.get_evaluation(name="e", mode="r", type="item")
-        var_a_i1 = self.get_evaluation(name="2", type="item")
 
         var_b_value = self.metascript.values_store[var_b.value_id]
         var_e_value = self.metascript.values_store[var_e.value_id]
@@ -551,9 +548,28 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0.value, '[]')
         self.assertEqual(var_a_key_0_part, var_a_key_0.id)
         self.assertEqual(var_a_key_0_part, var_b.value_id)
+        self.assertEqual(var_b.value_id, var_a0.value_id)
 
-        self.assert_dependency(var_b, var_a_i0, "bind")
-        self.assert_dependency(var_aw, var_list, "bind")
-        self.assert_dependency(var_list, var_a_i0, "item")
-        self.assert_dependency(var_list, var_a_i1, "item")
-        self.assert_dependency(var_a_i0, var_e, "dependency")
+        self.assert_dependency(var_b, var_a0, "assign-bind")
+        self.assert_dependency(var_a0, var_a, "value")
+        self.assert_dependency(var_a0, var_0, "slice")
+
+    def test_subscript_slice_definition(self):
+        """Test subscript definition"""
+        self.script("e = []\n"
+                    "a = [e, 3]\n"
+                    "b = a[1:2]\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_slice = self.get_evaluation(name="1:2")
+        var_a01 = self.get_evaluation(name="a[1:2]", mode="r")
+        var_b = self.get_evaluation(name="b")
+
+        var_a_key_1 = self.get_compartment_value(var_a, "[1]")
+        var_a01_key_0 = self.get_compartment_value(var_a01, "[0]")
+        self.assertEqual(var_a_key_1.id, var_a01_key_0.id)
+
+        self.assert_dependency(var_b, var_a01, "assign-bind")
+        self.assert_dependency(var_a01, var_a, "value")
+        self.assert_dependency(var_a01, var_slice, "slice")
