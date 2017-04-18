@@ -260,6 +260,46 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_a_plus_b, var_b, "use")
         self.assert_dependency(var_c, var_a_plus_b, "assign-bind")
 
+    def test_compare(self):
+        """Test bin expr collection"""
+        self.script("# script.py\n"
+                    "a = 2\n"
+                    "b = 5\n"
+                    "c = 7\n"
+                    "d = a < b < c\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b", mode="r")
+        var_c = self.get_evaluation(name="c", mode="r")
+        var_comp = self.get_evaluation(name="a < b < c")
+        var_d = self.get_evaluation(name="d")
+
+        self.assert_dependency(var_comp, var_a, "use")
+        self.assert_dependency(var_comp, var_b, "use")
+        self.assert_dependency(var_comp, var_c, "use")
+        self.assert_dependency(var_d, var_comp, "assign-bind")
+
+    def test_compare_cut(self):
+        """Test bin expr collection"""
+        self.script("# script.py\n"
+                    "a = 2\n"
+                    "b = 1\n"
+                    "c = 7\n"
+                    "d = a < b < c\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b", mode="r")
+        var_c = self.get_evaluation(name="c", mode="r")
+        var_comp = self.get_evaluation(name="a < b < c")
+        var_d = self.get_evaluation(name="d")
+
+        self.assert_dependency(var_comp, var_a, "use")
+        self.assert_dependency(var_comp, var_b, "use")
+        self.assert_no_dependency(var_comp, var_c)
+        self.assert_dependency(var_d, var_comp, "assign-bind")
+
     def test_unary_op(self):
         """Test unary expr collection"""
         self.script("# script.py\n"

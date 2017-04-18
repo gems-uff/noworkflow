@@ -216,6 +216,40 @@ class RewriteAST(ast.NodeTransformer):                                          
             ])
         ), node))
 
+    def visit_For(self, node):                                                   # pylint: disable=invalid-name
+        """Visit For
+        Transform:
+            for i in lis:
+                ...
+        Into:
+            for __now__assign__, i in <now>.loop(<act>)(<act>, |lis|):
+                <now>.assign(<act>, __now__assign__, cce(i))
+        """
+        target = self.visit(node.target)
+        node.target = ast_copy(ast.Tuple([
+            ast.Name("__now__assign__", S()),
+            target
+        ], S()), node.target)
+        node.iter = ast_copy(double_noworkflow(
+            "loop", [activation()], [
+                activation(), self.capture(node.iter, mode="dependency")
+            ]
+        ), node.iter)
+        node.body = [
+            ast_copy(ast.Expr(
+                noworkflow("assign", [
+                    activation(),
+                    ast.Name("__now__assign__", L()),
+                    target.code_component_expr,
+                ])
+            ), node)
+        ] + self.process_body(node.body)
+        return node
+
+
+
+
+
     def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
         """Visit Class Definition"""
         current_container_id = self.container_id
@@ -673,6 +707,33 @@ class RewriteDependencies(ast.NodeTransformer):
                 ast_copy(ast.BinOp(
                     self.rewriter.capture(node.left, mode="use"), node.op,
                     self.rewriter.capture(node.right, mode="use")
+                ), node),
+                ast.Str(self.mode)
+            ]
+        ), node)
+
+    def visit_Compare(self, node):                                                 # pylint: disable=invalid-name
+        """Visit Compare.
+        Transform:
+            a < b < c
+        Into:
+            <now>.operation(<act>)(<act>, #, |a| < |b| < |c|)
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, ".".join(type(op).__name__.lower() for op in node.ops), "r"
+        )
+        return ast_copy(double_noworkflow(
+            "operation",
+            [activation()],
+            [
+                activation(),
+                ast.Num(component_id),
+                ast_copy(ast.Compare(
+                    self.rewriter.capture(node.left, mode="use"),
+                    node.ops,
+                    [self.rewriter.capture(comp, mode="use")
+                     for comp in node.comparators]
                 ), node),
                 ast.Str(self.mode)
             ]

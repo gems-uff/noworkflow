@@ -21,8 +21,8 @@ NAME = "noworkflow/tests/examples/script.py"
 class CollectionTestCase(unittest.TestCase):
     """Helpers to test noWorkflow collection"""
 
-    def find(self, store, **kwargs):                                             # pylint: disable=no-self-use
-        """Find object in object store by kwargs attributes"""
+    def find_all(self, store, **kwargs):                                             # pylint: disable=no-self-use
+        """Find objects in object store by kwargs attributes"""
         for component in viewvalues(store):
             found = True
             for key, value in viewitems(kwargs):
@@ -30,12 +30,21 @@ class CollectionTestCase(unittest.TestCase):
                     found = False
                     break
             if found:
-                return component
+                yield component
+
+    def find(self, store, **kwargs):                                             # pylint: disable=no-self-use
+        """Find object in object store by kwargs attributes"""
+        for component in self.find_all(store, **kwargs):
+            return component
         return None
 
     def find_code_component(self, **kwargs):
         """Find code component by attributes in kwargs"""
         return self.find(self.metascript.code_components_store.store, **kwargs)
+
+    def find_all_evaluations(self, **kwargs):
+        """Find evaluation by attributes in kwargs"""
+        return self.find_all(self.metascript.evaluations_store.store, **kwargs)
 
     def find_evaluation(self, **kwargs):
         """Find evaluation by attributes in kwargs"""
@@ -53,7 +62,7 @@ class CollectionTestCase(unittest.TestCase):
         """Find compartment by attributes in kwargs"""
         return self.find(self.metascript.compartments_store.store, **kwargs)
 
-    def get_evaluation(self, **kwargs):
+    def get_evaluations(self, **kwargs):
         """Execute and get evaluation"""
         if not hasattr(self, 'executed'):
             self.metascript.definition.collect_provenance()
@@ -64,8 +73,14 @@ class CollectionTestCase(unittest.TestCase):
 
         var = self.find_code_component(**kwargs)
         if not var:
-            return None
-        return self.find_evaluation(code_component_id=var.id)
+            return []
+        return list(self.find_all_evaluations(code_component_id=var.id))
+
+    def get_evaluation(self, **kwargs):
+        """Execute and get evaluation"""
+        for evaluation in self.get_evaluations(**kwargs):
+            return evaluation
+        return None
 
     def get_compartment_value(self, whole, name, **kwargs):
         compartment = self.find_compartment(

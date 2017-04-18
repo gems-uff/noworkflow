@@ -34,6 +34,8 @@ class DependencyAware(object):
 
     def __init__(self, dependencies=None, active=True):
         self.dependencies = dependencies or []
+        self.extra_dependencies = []
+
         self.active = active
 
     def add(self, dependency):
@@ -41,16 +43,26 @@ class DependencyAware(object):
         if self.active:
             self.dependencies.append(dependency)
 
-    def __bool__(self):
-        return bool(self.dependencies)
+    def add_extra(self, dependency):
+        """Add extra dependency"""
+        if self.active:
+            self.extra_dependencies.append(dependency)
 
-    def clone(self, mode=None):
+    def __bool__(self):
+        return bool(self.dependencies) or bool(self.extra_dependencies)
+
+    def clone(self, mode=None, extra_only=False):
         """Clone dependency aware and replace mode"""
         new_depa = DependencyAware()
-        for dep in self.dependencies:
+        if not extra_only:
+            for dep in self.dependencies:
+                new_dep = copy(dep)
+                new_dep.mode = mode or new_dep.mode
+                new_depa.add(new_dep)
+        for dep in self.extra_dependencies:
             new_dep = copy(dep)
             new_dep.mode = mode or new_dep.mode
-            new_depa.add(new_dep)
+            new_depa.add_extra(new_dep)
         return new_depa
 
     @classmethod
@@ -59,6 +71,8 @@ class DependencyAware(object):
         for e_depa in depa_list:
             for dep in e_depa.dependencies:
                 new_depa.add(dep)
+            for dep in e_depa.extra_dependencies:
+                new_depa.add_extra(dep)
         return new_depa
 
 

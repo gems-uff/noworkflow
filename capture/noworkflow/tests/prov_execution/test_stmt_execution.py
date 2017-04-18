@@ -540,3 +540,131 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_dependency(var_ax, var_3, "assign-bind")
         self.assert_dependency(var_ax, var_a, "value")
+
+    def test_for_loop(self):
+        """Test for loop"""
+        self.script("for x in [1, 2]:\n"
+                    "    y = x\n"
+                    "# other")
+
+        var_l = self.get_evaluation(name="[1, 2]", mode="r")
+        var_1 = self.get_evaluation(name="1")
+        var_2 = self.get_evaluation(name="2")
+
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_ys_w = self.get_evaluations(name="y", mode="w")
+
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_xs_r), 2)
+        self.assertEqual(len(var_ys_w), 2)
+
+        var_x1_w, var_x2_w = var_xs_w
+        var_x1_r, var_x2_r = var_xs_r
+        var_y1_w, var_y2_w = var_ys_w
+
+        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
+        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
+        self.assertEqual(var_x1_val.value, '1')
+        self.assertEqual(var_x2_val.value, '2')
+
+        self.assertEqual(var_x1_w.value_id, var_x1_r.value_id)
+        self.assertEqual(var_x1_w.value_id, var_y1_w.value_id)
+        self.assertEqual(var_x2_w.value_id, var_x2_r.value_id)
+        self.assertEqual(var_x2_w.value_id, var_y2_w.value_id)
+
+        self.assert_dependency(var_l, var_1, "item")
+        self.assert_dependency(var_l, var_2, "item")
+        self.assert_dependency(var_x1_w, var_l, "dependency")
+        self.assert_dependency(var_x2_w, var_l, "dependency")
+        self.assert_dependency(var_x1_w, var_1, "assign-bind")
+        self.assert_dependency(var_x2_w, var_2, "assign-bind")
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
+        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
+        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+
+    def test_for_loop_variable(self):                                            # pylint: disable=too-many-locals
+        """Test for loop"""
+        self.script("lis = [1, 2]\n"
+                    "for x in lis:\n"
+                    "    y = x\n"
+                    "# other")
+
+        var_l = self.get_evaluation(name="[1, 2]", mode="r")
+        var_lis_w = self.get_evaluation(name="lis", mode="w")
+        var_lis_r = self.get_evaluation(name="lis", mode="r")
+        var_1 = self.get_evaluation(name="1")
+        var_2 = self.get_evaluation(name="2")
+
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_ys_w = self.get_evaluations(name="y", mode="w")
+
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_xs_r), 2)
+        self.assertEqual(len(var_ys_w), 2)
+
+        var_x1_w, var_x2_w = var_xs_w
+        var_x1_r, var_x2_r = var_xs_r
+        var_y1_w, var_y2_w = var_ys_w
+
+        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
+        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
+        self.assertEqual(var_x1_val.value, '1')
+        self.assertEqual(var_x2_val.value, '2')
+
+        self.assertEqual(var_x1_w.value_id, var_x1_r.value_id)
+        self.assertEqual(var_x1_w.value_id, var_y1_w.value_id)
+        self.assertEqual(var_x2_w.value_id, var_x2_r.value_id)
+        self.assertEqual(var_x2_w.value_id, var_y2_w.value_id)
+
+        self.assert_dependency(var_l, var_1, "item")
+        self.assert_dependency(var_l, var_2, "item")
+        self.assert_dependency(var_lis_w, var_l, "assign-bind")
+        self.assert_dependency(var_lis_r, var_lis_w, "assignment")
+        self.assert_dependency(var_x1_w, var_lis_r, "dependency")
+        self.assert_dependency(var_x2_w, var_lis_r, "dependency")
+        self.assert_dependency(var_x1_w, var_1, "assign-bind")
+        self.assert_dependency(var_x2_w, var_2, "assign-bind")
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
+        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
+        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+
+    def test_for_loop_multiple_assignment(self):                                            # pylint: disable=too-many-locals
+        """Test for loop"""
+        self.script("lis = [(1, 2)]\n"
+                    "for x, y in lis:\n"
+                    "    pass\n"
+                    "# other")
+
+        var_l = self.get_evaluation(name="[(1, 2)]", mode="r")
+        var_lis_w = self.get_evaluation(name="lis", mode="w")
+        var_lis_r = self.get_evaluation(name="lis", mode="r")
+        var_1 = self.get_evaluation(name="1")
+        var_2 = self.get_evaluation(name="2")
+
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_ys_w = self.get_evaluations(name="y", mode="w")
+
+        self.assertEqual(len(var_xs_w), 1)
+        self.assertEqual(len(var_ys_w), 1)
+
+        var_x1_w, = var_xs_w
+        var_y1_w, = var_ys_w
+
+        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
+        var_y1_val = self.metascript.values_store[var_y1_w.value_id]
+        self.assertEqual(var_x1_val.value, '1')
+        self.assertEqual(var_y1_val.value, '2')
+
+        self.assertEqual(var_x1_w.value_id, var_1.value_id)
+        self.assertEqual(var_y1_w.value_id, var_2.value_id)
+
+        self.assert_dependency(var_x1_w, var_lis_r, "dependency")
+        self.assert_dependency(var_y1_w, var_lis_r, "dependency")
+        self.assert_dependency(var_lis_w, var_l, "assign-bind")
+        self.assert_dependency(var_lis_r, var_lis_w, "assignment")
+        self.assert_dependency(var_x1_w, var_1, "assign-bind")
+        self.assert_dependency(var_y1_w, var_2, "assign-bind")

@@ -410,61 +410,6 @@ class Collector(object):
         ))
         return value
 
-    def find_value_id(self, value, depa, create=True):
-        """Find bound dependency in dependency aware"""
-        value_id = None
-        if depa and (
-                not isinstance(value, IMMUTABLE) or
-                len(depa.dependencies) == 1):
-            for dep in depa.dependencies:
-                if dep.value is value:
-                    value_id = dep.value_id
-                    if dep.mode.startswith("dependency"):
-                        dep.mode = "assign"
-                    elif not dep.mode.endswith("-bind"):
-                        dep.mode += "-bind"
-                    break
-        if create and not value_id:
-            value_id = self.add_value(value)
-        return value_id
-
-    def create_dependencies(self, evaluation, depa):
-        """Create dependencies. Evaluation depends on depa"""
-        if depa:
-            for dep in depa.dependencies:
-                self.dependencies.add(
-                    evaluation.activation_id, evaluation.id,
-                    dep.activation_id, dep.evaluation_id,
-                    dep.mode
-                )
-
-    def create_argument_dependencies(self, evaluation, depa):
-        """Create dependencies. Evaluation depends on depa"""
-        for dep in depa.dependencies:
-            if dep.mode.startswith("argument"):
-                self.dependencies.add(
-                    evaluation.activation_id, evaluation.id,
-                    dep.activation_id, dep.evaluation_id,
-                    "dependency"
-                )
-
-    def evaluate(self, activation, code_id, value, moment, depa=None):           # pylint: disable=too-many-arguments
-        """Create evaluation for code component"""
-        if moment is None:
-            moment = self.time()
-        value_id = self.find_value_id(value, depa)
-        return self.evaluate_vid(activation, code_id, value_id, moment, depa)
-
-    def evaluate_vid(self, activation, code_id, value_id, moment, depa=None):    # pylint: disable=too-many-arguments
-        """Create evaluation for code component using a given value_id"""
-        if moment is None:
-            moment = self.time()
-        evaluation = self.evaluations.add_object(
-            code_id, activation.id, moment, value_id
-        )
-        self.create_dependencies(evaluation, depa)
-        return evaluation
-
     def assign_value(self, activation):
         """Capture assignment before"""
         activation.dependencies.append(DependencyAware())
@@ -505,52 +450,58 @@ class Collector(object):
             )
         return 1
 
+    def sub_dependency(self, dep, value, index, clone_depa):
+        """Get dependency aware inside of another dependency aware"""
+        meta = self.metascript
+        part_id = eid = None
+        sub = []
+        if len(dep.sub_dependencies) > index:
+            new_dep = dep.sub_dependencies[index]
+            aid = new_dep.activation_id
+            eid = new_dep.evaluation_id
+            val = new_dep.value
+            part_id = new_dep.value_id
+            sub = new_dep.sub_dependencies
+        else:
+            addr = "[{}]".format(index)
+            part_id = get_compartment(meta, dep.value_id, addr)
+            aid, eid = last_evaluation_by_value_id(meta, part_id)
+        if not part_id or not eid:
+            return clone_depa, None
+        val = value[index]
+
+        new_depa = clone_depa.clone(extra_only=True)
+        dependency = Dependency(aid, eid, val, part_id, "assign")
+        dependency.sub_dependencies = sub
+        new_depa.add(dependency)
+        return new_depa, part_id
+
     def assign_multiple(self, activation, assign, info, depa, ldepa):            # pylint: disable=too-many-arguments
         """Prepare to create dependencies for assignment to tuple/list"""
         meta = self.metascript
-        assign_value = assign.value
+        value = assign.value
         propagate_dependencies = (
             len(depa.dependencies) == 1 and
             depa.dependencies[0].mode.startswith("assign") and
-            isiterable(assign_value)
+            isiterable(value)
         )
         clone_depa = depa.clone("dependency")
         if ldepa:
             def custom_dependency(index):
                 """Propagate dependencies"""
                 try:
-                    return ldepa[index]
+                    return ldepa[index], None
                 except IndexError:
-                    return clone_depa
+                    return clone_depa, None
         elif propagate_dependencies:
             dep = depa.dependencies[0]
             def custom_dependency(index):
                 """Propagate dependencies"""
-                part_id = eid = None
-                sub = []
-                if len(dep.sub_dependencies) > index:
-                    new_dep = dep.sub_dependencies[index]
-                    aid = new_dep.activation_id
-                    eid = new_dep.evaluation_id
-                    val = new_dep.value
-                    part_id = new_dep.value_id
-                    sub = new_dep.sub_dependencies
-                else:
-                    addr = "[{}]".format(index)
-                    part_id = get_compartment(meta, dep.value_id, addr)
-                    aid, eid = last_evaluation_by_value_id(meta, part_id)
-                if not part_id or not eid:
-                    return clone_depa, None
-                val = assign_value[index]
-                new_depa = DependencyAware()
-                dependency = Dependency(aid, eid, val, part_id, "assign")
-                dependency.sub_dependencies = sub
-                new_depa.add(dependency)
-                return new_depa, part_id
+                return self.sub_dependency(dep, value, index, clone_depa)
         else:
             def custom_dependency(_):
                 """Propagate dependencies"""
-                return clone_depa
+                return clone_depa, None
 
         return self.assign_multiple_apply(
             activation, assign, info, custom_dependency
@@ -855,6 +806,84 @@ class Collector(object):
         )
         self.create_dependencies(activation.evaluation, dependency_aware)
         return value
+
+    def loop(self, activation):
+        """Capture loop before"""
+        activation.dependencies.append(DependencyAware())
+        return self._loop
+
+    def _loop(self, activation, value):
+        """Capture loop after. Return generator"""
+        dependency = activation.dependencies.pop()
+        return self._loop_generator(activation, value, dependency)
+
+    def _loop_generator(self, activation, value, dependency):
+        """Loop generator that creates a assign for each iteration"""
+        for index, element in enumerate(value):
+            clone_depa = dependency.clone("dependency")
+            if len(dependency.dependencies) == 1:
+                dep = dependency.dependencies[0]
+                clone_depa = self.sub_dependency(
+                    dep, value, index, clone_depa
+                )[0]
+                clone_depa.extra_dependencies = dependency.dependencies
+            yield Assign(self.time(), element, clone_depa), element
+
+    def find_value_id(self, value, depa, create=True):
+        """Find bound dependency in dependency aware"""
+        value_id = None
+        if depa and (
+                not isinstance(value, IMMUTABLE) or
+                len(depa.dependencies) == 1):
+            for dep in depa.dependencies:
+                if dep.value is value:
+                    value_id = dep.value_id
+                    if dep.mode.startswith("dependency"):
+                        dep.mode = "assign"
+                    elif not dep.mode.endswith("-bind"):
+                        dep.mode += "-bind"
+                    break
+        if create and not value_id:
+            value_id = self.add_value(value)
+        return value_id
+
+    def create_dependencies(self, evaluation, depa):
+        """Create dependencies. Evaluation depends on depa"""
+        if depa:
+            for container in [depa.dependencies, depa.extra_dependencies]:
+                for dep in container:
+                    self.dependencies.add(
+                        evaluation.activation_id, evaluation.id,
+                        dep.activation_id, dep.evaluation_id,
+                        dep.mode
+                    )
+
+    def create_argument_dependencies(self, evaluation, depa):
+        """Create dependencies. Evaluation depends on depa"""
+        for dep in depa.dependencies:
+            if dep.mode.startswith("argument"):
+                self.dependencies.add(
+                    evaluation.activation_id, evaluation.id,
+                    dep.activation_id, dep.evaluation_id,
+                    "dependency"
+                )
+
+    def evaluate(self, activation, code_id, value, moment, depa=None):           # pylint: disable=too-many-arguments
+        """Create evaluation for code component"""
+        if moment is None:
+            moment = self.time()
+        value_id = self.find_value_id(value, depa)
+        return self.evaluate_vid(activation, code_id, value_id, moment, depa)
+
+    def evaluate_vid(self, activation, code_id, value_id, moment, depa=None):    # pylint: disable=too-many-arguments
+        """Create evaluation for code component using a given value_id"""
+        if moment is None:
+            moment = self.time()
+        evaluation = self.evaluations.add_object(
+            code_id, activation.id, moment, value_id
+        )
+        self.create_dependencies(evaluation, depa)
+        return evaluation
 
     def store(self, partial, status="running"):
         """Store execution provenance"""
