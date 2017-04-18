@@ -573,3 +573,81 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_b, var_a01, "assign-bind")
         self.assert_dependency(var_a01, var_a, "value")
         self.assert_dependency(var_a01, var_slice, "slice")
+
+    def test_attribute_definition(self):
+        """Test attribute definition"""
+        self.script("def a(): pass\n"
+                    "a.x = 0\n"
+                    "b = a.x\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r", first_char_line=3)
+        var_ax = self.get_evaluation(name="a.x", mode="r", first_char_line=3)
+        var_b = self.get_evaluation(name="b")
+
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_ax_value = self.metascript.values_store[var_ax.value_id]
+
+        self.assertEqual(var_b_value, var_ax_value)
+
+        meta = self.metascript
+        var_a_key_x = self.get_compartment_value(var_a, ".x")
+        var_a_key_x_part = get_compartment(meta, var_a.value_id, ".x")
+        self.assertIsNotNone(var_a_key_x)
+        self.assertEqual(var_a_key_x.value, '0')
+        self.assertEqual(var_a_key_x_part, var_a_key_x.id)
+        self.assertEqual(var_a_key_x_part, var_b.value_id)
+        self.assertEqual(var_b.value_id, var_ax.value_id)
+
+        self.assert_dependency(var_b, var_ax, "assign-bind")
+        self.assert_dependency(var_ax, var_a, "value")
+
+    def test_lambda_definition(self):                              # pylint: disable=invalid-name
+        """Test return collection"""
+        self.script("# script.py\n"
+                    "f = lambda x: x\n"
+                    "a = 2\n"
+                    "b = f(a)\n"
+                    "# other")
+
+        lambda_eval = self.get_evaluation(name="lambda x: x", mode="r")
+        write_f_eval = self.get_evaluation(name="f", mode="w")
+        param_x_eval = self.get_evaluation(name="x", mode="w")
+        read_x_eval = self.get_evaluation(name="x", mode="r")
+        write_a_eval = self.get_evaluation(name="a", mode="w")
+        arg_a_eval = self.get_evaluation(name="a", mode="r")
+        write_b_eval = self.get_evaluation(name="b", mode="w")
+        call = self.get_evaluation(name="f(a)", type="call")
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        activation = self.metascript.activations_store[call.id]
+
+        self.assertEqual(call.activation_id, script_act.id)
+        self.assertTrue(activation.start < call.moment)
+        self.assertEqual(activation.code_block_id, write_f_eval.id)
+        self.assertEqual(activation.name, "<lambda>")
+
+
+        self.assertEqual(write_f_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(write_f_eval.moment))
+        self.assertEqual(arg_a_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(arg_a_eval.moment))
+        self.assertEqual(write_b_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(write_b_eval.moment))
+        self.assertEqual(call.activation_id, script_eval.id)
+        self.assertTrue(bool(call.moment))
+        self.assertEqual(param_x_eval.activation_id, activation.id)
+        self.assertTrue(bool(param_x_eval.moment))
+        self.assertEqual(script_act.context['a'], write_a_eval)
+        self.assertEqual(script_act.context['b'], write_b_eval)
+        self.assertEqual(script_act.context['f'], write_f_eval)
+        self.assertEqual(activation.context['x'], param_x_eval)
+
+        self.pdebug()
+
+        self.assert_dependency(write_f_eval, lambda_eval, "assign-bind")
+        self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
+        self.assert_dependency(read_x_eval, param_x_eval, "assignment")
+        self.assert_dependency(call, read_x_eval, "use")

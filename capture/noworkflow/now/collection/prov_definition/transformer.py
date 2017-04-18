@@ -20,7 +20,7 @@ from .ast_elements import activation, function_def, class_def, try_def
 from ...utils.cross_version import PY3, PY35
 
 
-class RewriteAST(ast.NodeTransformer):
+class RewriteAST(ast.NodeTransformer):                                           # pylint: disable=too-many-public-methods
     """Rewrite AST to add calls to noWorkflow collector"""
 
     def __init__(self, metascript, code, path):
@@ -89,7 +89,7 @@ class RewriteAST(ast.NodeTransformer):
                     [ast.Name("__name__", L()), ast.Num(self.container_id)]
                 )
             ), node),
-            try_def(old_body, [
+            ast_copy(try_def(old_body, [
                 ast.ExceptHandler(None, None, [
                     ast_copy(ast.Expr(noworkflow(
                         "collect_exception",
@@ -101,7 +101,7 @@ class RewriteAST(ast.NodeTransformer):
                 ast_copy(ast.Expr(noworkflow(
                     "close_script", [ast.Name("__now_activation__", L())]
                 )), node)
-            ], node)
+            ], node), node)
         ]
         result = ast_copy(cls(body), node)
         self.container_id = current_container_id
@@ -371,6 +371,7 @@ class RewriteAST(ast.NodeTransformer):
              ),'multiple'
             )
         """
+        replaced = ReplaceContextWithLoad().visit(node)
         for elt in node.elts:
             self.visit(elt)
         node.code_component_expr = ast.Tuple([
@@ -378,7 +379,7 @@ class RewriteAST(ast.NodeTransformer):
                 ast.Tuple([
                     elt.code_component_expr for elt in node.elts
                 ], L()),
-                ReplaceContextWithLoad().visit(node),
+                replaced,
             ], L()),
             ast.Str("multiple")
         ], L())
@@ -406,15 +407,68 @@ class RewriteAST(ast.NodeTransformer):
             ((((|x|, 'x', x), 'single'), x), 'starred')
 
         """
-        self.visit(node.value)
+        replaced = ReplaceContextWithLoad().visit(node)
+        node.value = self.visit(node.value)
         node.code_component_expr = ast.Tuple([
             ast.Tuple([
                 node.value.code_component_expr,
-                ReplaceContextWithLoad().visit(node),
+                replaced,
             ], L()),
             ast.Str("starred")
         ], L())
         return node
+
+    def visit_Subscript(self, node):                                            # pylint: disable=invalid-name
+        """Visit Subscript
+        Transform:
+            a[b]
+        Into:
+            <now>.access(<act>)[
+                <act>,
+                #`a[b]`,
+                |a|:value,
+                |b|:slice,
+                '[]'
+            ]
+        Code component is:
+            ((|a[b]|, a[b]), 'subscript')
+        """
+        replaced = ReplaceContextWithLoad().visit(node)
+        new_node = self.capture(node)
+        new_node.code_component_expr = ast.Tuple([
+            ast.Tuple([
+                ast.Num(new_node.component_id),
+                replaced
+            ], L()),
+            ast.Str("access")
+        ], L())
+        return new_node
+
+    def visit_Attribute(self, node):                                            # pylint: disable=invalid-name
+        """Visit Attribute
+        Transform:
+            a.b
+        Into:
+            <now>.access(<act>)[
+                <act>,
+                #`a.b`,
+                |a|:value,
+                "b",
+                '[]'
+            ]
+        Code component is:
+            ((|a[b]|, a[b]), 'attribute')
+        """
+        replaced = ReplaceContextWithLoad().visit(node)
+        new_node = self.capture(node)
+        new_node.code_component_expr = ast.Tuple([
+            ast.Tuple([
+                ast.Num(new_node.component_id),
+                replaced
+            ], L()),
+            ast.Str("access")
+        ], L())
+        return new_node
 
     def _call_arg(self, node, star):
         """Create <now>.argument(<act>, argument_id)(|node|)"""
@@ -482,7 +536,6 @@ class RewriteAST(ast.NodeTransformer):
         Valid only for python < 3.5
         """
         return self._call_keyword(None, node)
-
 
     def visit_Call(self, node, mode="dependency"):                               # pylint: disable=invalid-name
         """Visit Call
@@ -671,7 +724,7 @@ class RewriteDependencies(ast.NodeTransformer):
         )
         mode = self.mode if hasattr(self, "mode") else "dependency"
 
-        return ast_copy(ast.Subscript(
+        node = ast_copy(ast.Subscript(
             noworkflow("access", [activation()]),
             ast.Index(ast.Tuple([
                 activation(),
@@ -683,6 +736,43 @@ class RewriteDependencies(ast.NodeTransformer):
             ], L())),
             node.ctx,
         ), node)
+        node.component_id = subscript_component
+        return node
+
+    def visit_Attribute(self, node):                                            # pylint: disable=invalid-name
+        """Visit Attribute
+        Transform:
+            a.b
+        Into:
+            <now>.access(<act>)[
+                <act>,
+                #`a.b`,
+                |a|:value,
+                "b",
+                '[]'
+            ]
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        attribute_component = self.rewriter.create_code_component(
+            node, "attribute", "r"
+        )
+        mode = self.mode if hasattr(self, "mode") else "dependency"
+
+        node = ast_copy(ast.Subscript(
+            noworkflow("access", [activation()]),
+            ast.Index(ast.Tuple([
+                activation(),
+                ast.Num(attribute_component),
+                self.rewriter.capture(node.value, mode="value"),
+                ast.Str(node.attr),
+                ast.Str("."),
+                ast.Str(mode)
+            ], L())),
+            node.ctx,
+        ), node)
+        node.component_id = attribute_component
+        return node
+
 
     def visit_Dict(self, node):                                                 # pylint: disable=invalid-name
         """Visit Dict.
@@ -873,7 +963,3 @@ class RewriteDependencies(ast.NodeTransformer):
     '''
 
 
-class SliceToExpr(ast.NodeTransformer):
-    """Convert slice to expr"""
-
-    

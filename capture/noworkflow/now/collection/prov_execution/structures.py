@@ -9,7 +9,24 @@ from __future__ import (absolute_import, print_function,
 from copy import copy
 from collections import namedtuple
 
-Assign = namedtuple("Assign", "moment value dependency")
+
+AssignAccess = namedtuple("AssignAccess", "value dependency addr value_dep")
+
+
+class Assign(namedtuple("Assign", "moment value dependency")):
+    """Represent an assignment for further processing"""
+
+    def __new__(cls, *args, **kwargs):
+        self = super(Assign, cls).__new__(cls, *args, **kwargs)
+        self.accesses = {}
+        return self
+
+    def sub(self, value, dependency):
+        """Create a new Assign with the same access for propagation in
+        multiple assignments"""
+        assign = Assign(self.moment, value, dependency)
+        assign.accesses = self.accesses
+        return assign
 
 
 class DependencyAware(object):

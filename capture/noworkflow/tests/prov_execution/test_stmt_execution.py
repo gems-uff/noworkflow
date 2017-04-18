@@ -398,3 +398,145 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_tuple, var_a_i2, "item")
         self.assert_dependency(var_tuple, var_a_i3, "item")
         self.assert_dependency(var_tuple, var_a_i4, "item")
+
+    def test_item_assign(self):                                                 # pylint: disable=too-many-locals
+        """Test item assignment"""
+        self.script("a = [1, 2]\n"
+                    "a[0] = 3\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_0 = self.get_evaluation(name="0")
+        var_3 = self.get_evaluation(name="3")
+        var_a0 = self.get_evaluation(name="a[0]")
+
+        var_a_val = self.metascript.values_store[var_a.value_id]
+        var_0_val = self.metascript.values_store[var_0.value_id]
+        var_3_val = self.metascript.values_store[var_3.value_id]
+        var_a0_val = self.metascript.values_store[var_a0.value_id]
+        self.assertEqual(var_a_val.value, '[1, 2]')
+        self.assertEqual(var_0_val.value, '0')
+        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_a0_val, var_3_val)
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[0]")
+        self.assertEqual(var_a_key_0_part, var_a0_val.id)
+
+
+        self.assert_dependency(var_a0, var_3, "assign-bind")
+        self.assert_dependency(var_a0, var_a, "value")
+        self.assert_dependency(var_a0, var_0, "slice")
+
+    def test_negative_item_assign(self):                                        # pylint: disable=too-many-locals
+        """Test negative item assignment"""
+        self.script("a = [1, 2]\n"
+                    "a[-2] = 3\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_m2 = self.get_evaluation(name="-2")
+        var_3 = self.get_evaluation(name="3")
+        var_a0 = self.get_evaluation(name="a[-2]")
+
+        var_a_val = self.metascript.values_store[var_a.value_id]
+        var_0_val = self.metascript.values_store[var_m2.value_id]
+        var_3_val = self.metascript.values_store[var_3.value_id]
+        var_a0_val = self.metascript.values_store[var_a0.value_id]
+        self.assertEqual(var_a_val.value, '[1, 2]')
+        self.assertEqual(var_0_val.value, '-2')
+        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_a0_val, var_3_val)
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[0]")
+        self.assertEqual(var_a_key_0_part, var_a0_val.id)
+
+        self.assert_dependency(var_a0, var_3, "assign-bind")
+        self.assert_dependency(var_a0, var_a, "value")
+        self.assert_dependency(var_a0, var_m2, "slice")
+
+    def test_slice_item_assign(self):                                           # pylint: disable=too-many-locals
+        """Test slice assignment. Blackbox operation"""
+        self.script("a = [1, 2]\n"
+                    "a[0:1] = 3, 4\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_01 = self.get_evaluation(name="0:1")
+        var_34 = self.get_evaluation(name="3, 4")
+        var_3 = self.get_evaluation(name="3")
+        var_a01 = self.get_evaluation(name="a[0:1]")
+
+        var_a_val = self.metascript.values_store[var_a.value_id]
+        var_01_val = self.metascript.values_store[var_01.value_id]
+        var_34_val = self.metascript.values_store[var_34.value_id]
+        var_3_val = self.metascript.values_store[var_3.value_id]
+        var_a01_val = self.metascript.values_store[var_a01.value_id]
+        self.assertEqual(var_a_val.value, '[1, 2]')
+        self.assertEqual(var_01_val.value, 'slice(0, 1, None)')
+        self.assertEqual(var_34_val.value, '(3, 4)')
+        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_a01_val, var_34_val)
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[0]")
+        # ToDo: Transform it in a white box operation
+        self.assertNotEqual(var_a_key_0_part, var_3_val.id)
+
+        self.assert_dependency(var_a01, var_34, "assign-bind")
+        self.assert_dependency(var_a01, var_a, "value")
+        self.assert_dependency(var_a01, var_01, "slice")
+
+    def test_starred_item_assign(self):
+        """Test starred item assignment"""
+        self.script("a = []\n"
+                    "*a[0:1], b = 3, 4\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b")
+        var_01 = self.get_evaluation(name="0:1")
+        var_34 = self.get_evaluation(name="3, 4")
+        var_3 = self.get_evaluation(name="3")
+        var_4 = self.get_evaluation(name="4")
+        var_a01 = self.get_evaluation(name="a[0:1]")
+
+        var_a_val = self.metascript.values_store[var_a.value_id]
+        var_b_val = self.metascript.values_store[var_b.value_id]
+        var_01_val = self.metascript.values_store[var_01.value_id]
+        var_34_val = self.metascript.values_store[var_34.value_id]
+        var_3_val = self.metascript.values_store[var_3.value_id]
+        var_4_val = self.metascript.values_store[var_4.value_id]
+        var_a01_val = self.metascript.values_store[var_a01.value_id]
+        self.assertEqual(var_a_val.value, '[]')
+        self.assertEqual(var_01_val.value, 'slice(0, 1, None)')
+        self.assertEqual(var_34_val.value, '(3, 4)')
+        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_4_val.value, '4')
+        self.assertEqual(var_a01_val.value, '[3]')
+        self.assertEqual(var_b_val, var_4_val)
+
+        self.assert_dependency(var_b, var_4, "assign-bind")
+        self.assert_dependency(var_a01, var_3, "assign")
+        self.assert_dependency(var_a01, var_a, "value")
+        self.assert_dependency(var_a01, var_01, "slice")
+
+    def test_attribute_assign(self):
+        """Test item assignment"""
+        self.script("def a(): pass\n"
+                    "a.x = 3\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_3 = self.get_evaluation(name="3")
+        var_ax = self.get_evaluation(name="a.x")
+
+        var_3_val = self.metascript.values_store[var_3.value_id]
+        var_ax_val = self.metascript.values_store[var_ax.value_id]
+        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_ax_val, var_3_val)
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, ".x")
+        self.assertEqual(var_a_key_0_part, var_ax_val.id)
+
+
+        self.assert_dependency(var_ax, var_3, "assign-bind")
+        self.assert_dependency(var_ax, var_a, "value")

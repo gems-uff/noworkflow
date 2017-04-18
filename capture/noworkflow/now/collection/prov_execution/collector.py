@@ -19,7 +19,8 @@ from ...utils.cross_version import IMMUTABLE, isiterable
 
 from ..helper import get_compartment, last_evaluation_by_value_id
 
-from .structures import Assign, DependencyAware, Dependency, Parameter
+from .structures import AssignAccess, Assign
+from .structures import DependencyAware, Dependency, Parameter
 from .structures import CompartmentDependencyAware, CollectionDependencyAware
 
 
@@ -55,7 +56,7 @@ class Collector(object):
         self.globals = copy(__builtins__)
         self.global_evaluations = {}
         self.pyslice = slice
-        self.Ellipsis = Ellipsis
+        self.Ellipsis = Ellipsis                                                 # pylint: disable=invalid-name
 
     def __getitem__(self, index):                                                # pylint: disable=too-many-locals
         activation, code_id, vcontainer, vindex, access, mode = index
@@ -67,7 +68,10 @@ class Collector(object):
                 break
 
         if access == "[]":
-            addr = "[{}]".format(vindex)
+            nvindex = vindex
+            if isinstance(vindex, int) and vindex < 0:
+                nvindex = len(vcontainer) + vindex
+            addr = "[{}]".format(nvindex)
             value = vcontainer[vindex]
         elif access == ".":
             value = getattr(vcontainer, vindex)
@@ -103,6 +107,28 @@ class Collector(object):
             activation.id, eva.id, value, eva.value_id, mode
         ))
         return value
+
+    def __setitem__(self, index, value):                                         # pylint: disable=too-many-locals
+        activation, code_id, vcontainer, vindex, access, _ = index
+        depa = activation.dependencies.pop()
+        value_dep = None
+        for dep in depa.dependencies:
+            if dep.mode == "value":
+                value_dep = dep
+                break
+
+        if access == "[]":
+            nvindex = vindex
+            if isinstance(vindex, int) and vindex < 0:
+                nvindex = len(vcontainer) + vindex
+            addr = "[{}]".format(nvindex)
+            vcontainer[vindex] = value
+        elif access == ".":
+            setattr(vcontainer, vindex, value)
+            addr = ".{}".format(vindex)
+        activation.assignments[-1].accesses[code_id] = AssignAccess(
+            value, depa, addr, value_dep
+        )
 
     def time(self):
         """Return time at this moment
@@ -454,91 +480,136 @@ class Collector(object):
         """Pop assignment from activation"""
         return activation.assignments.pop()
 
-    def assign(self, activation, assign, code_component_tuple):                  # pylint: disable=too-many-locals
-        """Create dependencies"""
+    def assign_single(self, activation, assign, info, depa):
+        """Create dependencies for assignment to single name"""
+        moment = assign.moment
+        code, name, value = info
+        evaluation = self.evaluate(activation, code, value, moment, depa)
+        if name:
+            activation.context[name] = evaluation
+        return 1
+
+    def assign_access(self, activation, assign, info, depa):
+        """Create dependencies for assignment to subscript"""
+        moment = assign.moment
+        code, value = info
+        addr = value_dep = None
+        if code in assign.accesses:
+            # Replaces information for more precise subscript
+            value, access_depa, addr, value_dep = assign.accesses[code]
+        evaluation = self.evaluate(activation, code, value, moment, depa)
+        if value_dep:
+            self.create_dependencies(evaluation, access_depa)
+            self.compartments.add_object(
+                addr, moment, value_dep.value_id, evaluation.value_id
+            )
+        return 1
+
+    def assign_multiple(self, activation, assign, info, depa, ldepa):            # pylint: disable=too-many-arguments
+        """Prepare to create dependencies for assignment to tuple/list"""
         meta = self.metascript
+        assign_value = assign.value
+        propagate_dependencies = (
+            len(depa.dependencies) == 1 and
+            depa.dependencies[0].mode.startswith("assign") and
+            isiterable(assign_value)
+        )
+        clone_depa = depa.clone("dependency")
+        if ldepa:
+            def custom_dependency(index):
+                """Propagate dependencies"""
+                try:
+                    return ldepa[index]
+                except IndexError:
+                    return clone_depa
+        elif propagate_dependencies:
+            dep = depa.dependencies[0]
+            def custom_dependency(index):
+                """Propagate dependencies"""
+                part_id = eid = None
+                sub = []
+                if len(dep.sub_dependencies) > index:
+                    new_dep = dep.sub_dependencies[index]
+                    aid = new_dep.activation_id
+                    eid = new_dep.evaluation_id
+                    val = new_dep.value
+                    part_id = new_dep.value_id
+                    sub = new_dep.sub_dependencies
+                else:
+                    addr = "[{}]".format(index)
+                    part_id = get_compartment(meta, dep.value_id, addr)
+                    aid, eid = last_evaluation_by_value_id(meta, part_id)
+                if not part_id or not eid:
+                    return clone_depa, None
+                val = assign_value[index]
+                new_depa = DependencyAware()
+                dependency = Dependency(aid, eid, val, part_id, "assign")
+                dependency.sub_dependencies = sub
+                new_depa.add(dependency)
+                return new_depa, part_id
+        else:
+            def custom_dependency(_):
+                """Propagate dependencies"""
+                return clone_depa
+
+        return self.assign_multiple_apply(
+            activation, assign, info, custom_dependency
+        )
+
+    def assign_multiple_apply(self, activation, assign, info, custom):           # pylint: disable=too-many-locals
+        """Create dependencies for assignment to tuple/list"""
+        assign_value = assign.value
+        subcomps, _ = info
+        # Assign until starred
+        starred = None
+        delta = 0
+        for index, subcomp in enumerate(subcomps):
+            if subcomp[-1] == "starred":
+                starred = index
+                break
+            val = subcomp[0][-1]
+            adepa, _ = custom(index)
+            delta += self.assign(activation, assign.sub(val, adepa), subcomp)
+
+        if starred is None:
+            return
+
+        star = subcomps[starred][0][0]
+        rdelta = -1
+        for index in range(len(subcomps) - 1, starred, -1):
+            subcomp = subcomps[index]
+            val = subcomp[0][-1]
+            new_index = len(assign_value) + rdelta
+            adepa, _ = custom(new_index)
+            rdelta -= self.assign(
+                activation, assign.sub(val, adepa), subcomp)
+
+        # ToDo: treat it as a plain slice
+        new_value = assign_value[delta:rdelta + 1]
+
+        depas = [
+            custom(index)[0]
+            for index in range(delta, len(assign_value) + rdelta + 1)
+        ]
+
+        self.assign(activation, assign.sub(new_value, depas), star)
+
+
+    def assign(self, activation, assign, code_component_tuple):
+        """Create dependencies"""
         ldepa = []
-        moment, assign_value, depa = assign
+        _, _, depa = assign
         if isinstance(depa, list):
             ldepa, depa = depa, DependencyAware.join(depa)
 
         info, type_ = code_component_tuple
         if type_ == "single":
-            code, name, value = info
-            evaluation = self.evaluate(activation, code, value, moment, depa)
-            if name:
-                activation.context[name] = evaluation
-            return 1
+            return self.assign_single(activation, assign, info, depa)
+        if type_ == "access":
+            return self.assign_access(activation, assign, info, depa)
         if type_ == "multiple":
-            subcomps, value = info
-            propagate_dependencies = (
-                len(depa.dependencies) == 1 and
-                depa.dependencies[0].mode.startswith("assign") and
-                isiterable(value)
-            )
-            clone_depa = depa.clone("dependency")
-            if ldepa:
-                def custom_dependency(index):
-                    """Propagate dependencies"""
-                    try:
-                        return ldepa[index]
-                    except IndexError:
-                        return clone_depa
-            elif propagate_dependencies:
-                dep = depa.dependencies[0]
-                def custom_dependency(index):
-                    """Propagate dependencies"""
-                    part_id = eid = None
-                    if len(dep.sub_dependencies) > index:
-                        new_dep = dep.sub_dependencies[index]
-                        aid = new_dep.activation_id
-                        eid = new_dep.evaluation_id
-                        val = new_dep.value
-                        part_id = new_dep.value_id
-                    else:
-                        addr = "[{}]".format(index)
-                        part_id = get_compartment(meta, dep.value_id, addr)
-                        aid, eid = last_evaluation_by_value_id(meta, part_id)
-                    if not part_id or not eid:
-                        return clone_depa
-                    val = assign_value[index]
-                    new_depa = DependencyAware()
-                    new_depa.add(Dependency(
-                        aid, eid, val, part_id,
-                        "assign"
-                    ))
-                    return new_depa
-            else:
-                def custom_dependency(_):
-                    """Propagate dependencies"""
-                    return clone_depa
-            starred = None
-            delta = 0
-            for index, subcomp in enumerate(subcomps):
-                if subcomp[-1] == "starred":
-                    starred = index
-                    break
-                val = subcomp[0][-1]
-                adepa = custom_dependency(index)
-                delta += self.assign(activation, (moment, val, adepa), subcomp)
+            return self.assign_multiple(activation, assign, info, depa, ldepa)
 
-            if starred is not None:
-                star = subcomps[starred][0][0]
-                rdelta = -1
-                for index in range(len(subcomps) - 1, starred, -1):
-                    subcomp = subcomps[index]
-                    val = subcomp[0][-1]
-                    new_index = len(assign_value) + rdelta
-                    adepa = custom_dependency(new_index)
-                    rdelta -= self.assign(
-                        activation, (moment, val, adepa), subcomp)
-
-                new_value = assign_value[delta:rdelta + 1]
-                depas = [
-                    custom_dependency(index)
-                    for index in range(delta, len(assign_value) + rdelta + 1)
-                ]
-                self.assign(activation, (moment, new_value, depas), star)
 
     def func(self, activation):
         """Capture func before"""
