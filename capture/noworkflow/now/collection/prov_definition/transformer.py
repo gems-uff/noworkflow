@@ -45,7 +45,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         node.code_component_id = num
         return num
 
-    def create_code_block(self, node, type_):
+    def create_code_block(self, node, type_, has_doc=True):
         """Create code_block and corresponding code_component
         Return component id
         """
@@ -53,7 +53,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         self.code_blocks.add(
             id_,
             pyposast.extract_code(self.lcode, node),
-            ast.get_docstring(node)
+            ast.get_docstring(node) if has_doc else ""
         )
         return id_
 
@@ -216,8 +216,6 @@ class RewriteAST(ast.NodeTransformer):                                          
             ])
         ), node))
 
-
-
     def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
         """Visit Class Definition"""
         current_container_id = self.container_id
@@ -279,7 +277,6 @@ class RewriteAST(ast.NodeTransformer):                                          
             kwonlyargs = none()
         return ast.Tuple([args, defaults, vararg, kwarg, kwonlyargs], L())
 
-
     def visit_FunctionDef(self, node, cls=ast.FunctionDef):                      # pylint: disable=invalid-name
         """Visit Function Definition
         Transform:
@@ -303,7 +300,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         decorators.append(ast_copy(double_noworkflow(
             "function_def", [activation()],
             [activation(), ast.Num(self.container_id),
-             self.process_parameters(node.args)]
+             self.process_parameters(node.args), ast.Str("decorate")]
         ), node))
 
         body = self.process_body(node.body)
@@ -618,7 +615,7 @@ class RewriteDependencies(ast.NodeTransformer):
     visit_NameConstant = visit_literal
     visit_Constant = visit_literal
 
-    def visit_Name(self, node):                                                 # pylint: disable=invalid-name
+    def visit_Name(self, node):                                                  # pylint: disable=invalid-name
         """Visit Name.
         Transform;
             (+1)a
@@ -631,7 +628,7 @@ class RewriteDependencies(ast.NodeTransformer):
             [activation(), node.code_component_expr, node, ast.Str(self.mode)]
         ), node)
 
-    def visit_BoolOp(self, node):                                               # pylint: disable=invalid-name
+    def visit_BoolOp(self, node):                                                # pylint: disable=invalid-name
         """Visit BoolOp.
         Transform:
             a and b or c
@@ -656,7 +653,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ]
         ), node)
 
-    def visit_BinOp(self, node):                                                # pylint: disable=invalid-name
+    def visit_BinOp(self, node):                                                 # pylint: disable=invalid-name
         """Visit BinOp.
         Transform:
             a + b
@@ -681,7 +678,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ]
         ), node)
 
-    def visit_UnaryOp(self, node):                                              # pylint: disable=invalid-name
+    def visit_UnaryOp(self, node):                                               # pylint: disable=invalid-name
         """Visit UnaryOp.
         Transform:
             ~a
@@ -705,7 +702,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ]
         ), node)
 
-    def visit_Subscript(self, node):                                            # pylint: disable=invalid-name
+    def visit_Subscript(self, node):                                             # pylint: disable=invalid-name
         """Visit Subscript
         Transform:
             a[b]
@@ -739,7 +736,7 @@ class RewriteDependencies(ast.NodeTransformer):
         node.component_id = subscript_component
         return node
 
-    def visit_Attribute(self, node):                                            # pylint: disable=invalid-name
+    def visit_Attribute(self, node):                                             # pylint: disable=invalid-name
         """Visit Attribute
         Transform:
             a.b
@@ -773,8 +770,7 @@ class RewriteDependencies(ast.NodeTransformer):
         node.component_id = attribute_component
         return node
 
-
-    def visit_Dict(self, node):                                                 # pylint: disable=invalid-name
+    def visit_Dict(self, node):                                                  # pylint: disable=invalid-name
         """Visit Dict.
         Transform:
             {a: b}
@@ -818,7 +814,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ast.Str(self.mode)
         ]), node)
 
-    def visit_List(self, node, comp="list", set_key=None):                                                 # pylint: disable=invalid-name
+    def visit_List(self, node, comp="list", set_key=None):                       # pylint: disable=invalid-name
         """Visit list.
         Transform:
             [a]
@@ -868,7 +864,7 @@ class RewriteDependencies(ast.NodeTransformer):
         """
         return self.visit_List(node, comp="tuple")
 
-    def visit_Set(self, node):                                                 # pylint: disable=invalid-name
+    def visit_Set(self, node):                                                   # pylint: disable=invalid-name
         """Visit tuple.
         Transform:
             {a}
@@ -882,11 +878,11 @@ class RewriteDependencies(ast.NodeTransformer):
             set_key=lambda index, item: none()
         )
 
-    def visit_Index(self, node):                                                # pylint: disable=invalid-name
+    def visit_Index(self, node):                                                 # pylint: disable=invalid-name
         """Visit Index"""
         return self.visit(node.value)
 
-    def visit_Slice(self, node):                                                # pylint: disable=invalid-name
+    def visit_Slice(self, node):                                                 # pylint: disable=invalid-name
         """Visit Slice
         Transform:
             a:b:c
@@ -907,7 +903,7 @@ class RewriteDependencies(ast.NodeTransformer):
             lower, upper, step, ast.Str(self.mode)
         ]), node)
 
-    def visit_Ellipsis(self, node):                                             # pylint: disable=invalid-name
+    def visit_Ellipsis(self, node):                                              # pylint: disable=invalid-name
         """Visit Ellipsis"""
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         component_id = self.rewriter.create_code_component(
@@ -919,8 +915,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ), ast.Str(self.mode)
         ]), node)
 
-
-    def visit_ExtSlice(self, node):                                             # pylint: disable=invalid-name
+    def visit_ExtSlice(self, node):                                              # pylint: disable=invalid-name
         """Visit ExtSlice"""
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         component_id = self.rewriter.create_code_component(
@@ -933,6 +928,57 @@ class RewriteDependencies(ast.NodeTransformer):
             ], L()),
             ast.Str(self.mode)
         ]), node)
+
+    def visit_Lambda(self, node):                                                # pylint: disable=invalid-name
+        """Visit Lambda
+        Transform:
+            lambda x: x
+        Into:
+            <now>.function_def(<act>)(<act>, <block_id>, <parameters>)(
+                lambda __now_activation__, x:
+                <now>.return_(<act>)(<act>, |x|)
+            )
+        """
+        rewriter = self.rewriter
+        current_container_id = rewriter.container_id
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        rewriter.container_id = rewriter.create_code_block(
+            node, "lambda_def", False
+        )
+
+        result = ast_copy(call(
+            ast_copy(double_noworkflow("function_def", [activation()], [
+                activation(),
+                ast.Num(rewriter.container_id),
+                rewriter.process_parameters(node.args),
+                ast.Str(self.mode)
+            ]), node),
+            [node]
+        ), node)
+        node.args.args = [param("__now_activation__")] + node.args.args
+        node.args.defaults = [none() for _ in node.args.defaults]
+        node.body = ast_copy(double_noworkflow(
+            "return_", [activation()], [
+                activation(),
+                rewriter.capture(node.body, mode="use")
+            ]
+        ), node.body)
+
+        rewriter.container_id = current_container_id
+        return result
+
+    def visit_Call(self, node):                                                 # pylint: disable=invalid-name
+        """Visit Call
+        Transform:
+            (+1)f(x, *y, **z)
+        Into:
+            <now>.call(<act>, (+1), f, <dep>)(|x|, |*y|, |**z|)
+        Or: (if metascript.capture_func_component)
+            <now>.func(<act>)(<act>, (+1), f.id, |f|, <dep>)(|x|, |*y|, |**z|)
+
+        """
+        return self.rewriter.visit_Call(node, mode=self.mode)
+
 
     def generic_visit(self, node):
         """Visit node"""

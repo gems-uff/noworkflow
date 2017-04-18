@@ -308,7 +308,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_type.value, self.rtype("str"))
         self.assertEqual(var_b_type.value, self.rtype("int"))
 
-        self.assert_dependency(var_b, call, "assign")
+        self.assert_dependency(var_b, call, "assign-bind")
         self.assert_dependency(call, var_a, "argument")
 
     def test_external_call_with_func(self):
@@ -334,7 +334,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(activation.code_block_id, -1)
         self.assertEqual(activation.name, "int")
 
-        self.assert_dependency(var_b, call, "assign")
+        self.assert_dependency(var_b, call, "assign-bind")
         self.assert_dependency(call, var_a, "argument")
         self.assert_dependency(call, var_int, "func")
 
@@ -610,7 +610,7 @@ class TestExprExecution(CollectionTestCase):
                     "b = f(a)\n"
                     "# other")
 
-        lambda_eval = self.get_evaluation(name="lambda x: x", mode="r")
+        lambda_eval = self.get_evaluation(name="lambda x: x")
         write_f_eval = self.get_evaluation(name="f", mode="w")
         param_x_eval = self.get_evaluation(name="x", mode="w")
         read_x_eval = self.get_evaluation(name="x", mode="r")
@@ -644,10 +644,10 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(script_act.context['b'], write_b_eval)
         self.assertEqual(script_act.context['f'], write_f_eval)
         self.assertEqual(activation.context['x'], param_x_eval)
-
-        self.pdebug()
+        self.assertEqual(call.value_id, write_b_eval.value_id)
 
         self.assert_dependency(write_f_eval, lambda_eval, "assign-bind")
         self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
         self.assert_dependency(read_x_eval, param_x_eval, "assignment")
-        self.assert_dependency(call, read_x_eval, "use")
+        self.assert_dependency(call, read_x_eval, "use-bind")
+        self.assert_dependency(write_b_eval, call, "assign-bind")

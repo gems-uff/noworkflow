@@ -674,7 +674,7 @@ class Collector(object):
 
         self.last_activation.dependencies[-1].add(Dependency(
             evaluation.activation_id, evaluation.id, result,
-            self.add_value(result),
+            value_id,
             activation.depedency_type
         ))
         return result
@@ -711,7 +711,7 @@ class Collector(object):
         activation.dependencies.append(DependencyAware())
         return self._function_def
 
-    def _function_def(self, closure_activation, block_id, arguments):            # pylint: disable=no-self-use
+    def _function_def(self, closure_activation, block_id, arguments, mode):      # pylint: disable=no-self-use
         """Decorate function definition with then new activation.
         Collect arguments and match to parameters.
         """
@@ -738,7 +738,7 @@ class Collector(object):
             )
             closure_activation.dependencies[-1].add(Dependency(
                 closure_activation.id, evaluation.id,
-                new_function_def, evaluation.value_id, "decorate"
+                new_function_def, evaluation.value_id, mode
             ))
             return new_function_def
         return dec
@@ -850,6 +850,9 @@ class Collector(object):
     def _return(self, activation, value):
         """Capture return after"""
         dependency_aware = activation.dependencies.pop()
+        activation.evaluation.value_id = self.find_value_id(
+            value, dependency_aware, create=False
+        )
         self.create_dependencies(activation.evaluation, dependency_aware)
         return value
 

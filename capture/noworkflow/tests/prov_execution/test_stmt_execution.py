@@ -197,7 +197,7 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
         self.assert_dependency(read_x_eval, param_x_eval, "assignment")
-        self.assert_dependency(call, read_x_eval, "use")
+        self.assert_dependency(call, read_x_eval, "use-bind")
 
     def test_tuple_assign(self):                                                 # pylint: disable=too-many-locals
         """Test tuple assignment"""
