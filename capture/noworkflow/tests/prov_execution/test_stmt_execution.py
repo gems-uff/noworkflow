@@ -670,7 +670,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_2, "assign-bind")
 
     def test_if(self):                                                           # pylint: disable=invalid-name
-        """Test for loop"""
+        """Test if condition"""
         self.script("x = 2\n"
                     "if x:\n"
                     "    y = 3\n"
@@ -692,3 +692,64 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_y, var_x, "condition")
         self.assert_dependency(var_z, var_4, "assign-bind")
         self.assert_no_dependency(var_z, var_x)
+
+    def test_while(self):                                                        # pylint: disable=invalid-name
+        """Test while loop"""
+        self.script("x = 2\n"
+                    "while x:\n"
+                    "    y = 1\n"
+                    "    x -= y\n"
+                    "z = 4\n"
+                    "# other")
+
+
+        x1_w = self.get_evaluation(name="x", mode="w", first_char_line=1)
+        var_xs_w = self.get_evaluations(name="x", mode="w", first_char_line=4)
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_ys_w = self.get_evaluations(name="y", mode="w")
+        var_ys_r = self.get_evaluations(name="y", mode="r")
+        var_1s = self.get_evaluations(name="1")
+        var_2 = self.get_evaluation(name="2")
+        var_z = self.get_evaluation(name="z", mode="w")
+
+        self.assertEqual(len(var_xs_r), 3)
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_ys_w), 2)
+        self.assertEqual(len(var_1s), 2)
+
+        x2_w, x3_w = var_xs_w
+        x1_r, x2_r, x3_r = var_xs_r
+        y1_w, y2_w = var_ys_w
+        y1_r, y2_r = var_ys_r
+        v11, v12 = var_1s
+
+        meta = self.metascript
+
+        self.assertEqual(meta.values_store[x1_w.value_id].value, '2')
+        self.assertEqual(meta.values_store[x2_w.value_id].value, '1')
+        self.assertEqual(meta.values_store[x3_w.value_id].value, '0')
+        self.assertEqual(meta.values_store[y1_w.value_id].value, '1')
+        self.assertEqual(meta.values_store[y2_w.value_id].value, '1')
+
+        self.assertEqual(x1_w.value_id, x1_r.value_id)
+        self.assertEqual(x2_w.value_id, x2_r.value_id)
+        self.assertEqual(x3_w.value_id, x3_r.value_id)
+        self.assertEqual(y1_w.value_id, y1_r.value_id)
+        self.assertEqual(y2_w.value_id, y2_r.value_id)
+
+        self.assert_dependency(x1_w, var_2, "assign-bind")
+        self.assert_dependency(x1_r, x1_w, "assignment")
+        self.assert_dependency(y1_w, x1_r, "condition")
+        self.assert_dependency(y1_w, v11, "assign-bind")
+        self.assert_dependency(x2_w, x1_r, "condition")
+        self.assert_dependency(x2_w, y1_r, "sub_assign")
+        self.assert_dependency(y1_r, y1_w, "assignment")
+        self.assert_dependency(x2_r, x2_w, "assignment")
+        self.assert_dependency(y2_w, x2_r, "condition")
+        self.assert_dependency(y2_w, v12, "assign-bind")
+        self.assert_dependency(x3_w, x2_r, "condition")
+        self.assert_dependency(x3_w, y2_r, "sub_assign")
+        self.assert_dependency(y2_r, y2_w, "assignment")
+        self.assert_no_dependency(var_z, x1_r)
+        self.assert_no_dependency(var_z, x2_r)
+        self.assert_no_dependency(var_z, x3_r)

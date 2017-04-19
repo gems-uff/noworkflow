@@ -843,6 +843,15 @@ class Collector(object):
     def remove_condition(self, activation):
         """Just remove the condition dependencies"""
         activation.conditions.pop()
+        return self._remove_condition
+
+    def _remove_condition(self, value):
+        """Remove condition after"""
+        return value
+
+    def prepare_while(self, activation):
+        """Prepare while, by adding empty condition"""
+        activation.conditions.append(DependencyAware())
 
     def find_value_id(self, value, depa, create=True):
         """Find bound dependency in dependency aware"""

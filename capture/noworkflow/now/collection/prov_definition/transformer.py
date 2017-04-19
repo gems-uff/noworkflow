@@ -93,13 +93,13 @@ class RewriteAST(ast.NodeTransformer):                                          
                 ast.ExceptHandler(None, None, [
                     ast_copy(ast.Expr(noworkflow(
                         "collect_exception",
-                        [ast.Name("__now_activation__", L())]
+                        [activation()]
                     )), node),
                     ast_copy(ast.Raise(), node)
                 ])
             ], [], [
                 ast_copy(ast.Expr(noworkflow(
-                    "close_script", [ast.Name("__now_activation__", L())]
+                    "close_script", [activation()]
                 )), node)
             ], node), node)
         ]
@@ -275,13 +275,64 @@ class RewriteAST(ast.NodeTransformer):                                          
             ast.ExceptHandler(None, None, [
                 ast_copy(ast.Expr(noworkflow(
                     "collect_exception",
-                    [ast.Name("__now_activation__", L())]
+                    [activation()]
                 )), node),
                 ast_copy(ast.Raise(), node)
             ])
         ], [], [
             ast_copy(ast.Expr(noworkflow(
-                "remove_condition", [ast.Name("__now_activation__", L())]
+                "remove_condition", [activation()]
+            )), node)
+        ], node), node)
+        return result
+
+    def visit_While(self, node):                                                 # pylint: disable=invalid-name
+        """Visit While
+        Transform:
+            while x:
+                ...
+            else:
+                ...
+        Into:
+            try:
+                <now>.prepare_while(<act>)
+                while <now>.remove_condition(
+                    <act>)(<now>.condition(<act>)(<act>, |x|)):
+                    ...
+                else:
+                    ...
+            except:
+                <now>.collect_exception(__now_activation__)
+                raise
+            finally:
+                <now>.remove_condition(<act>)
+        """
+        node.test = ast_copy(double_noworkflow(
+            "remove_condition", [activation()], [double_noworkflow(
+                "condition",
+                [activation()],
+                [activation(), self.capture(node.test, mode="condition")]
+            )]
+        ), node)
+        node.body = self.process_body(node.body)
+        node.orelse = self.process_body(node.orelse)
+
+        result = ast_copy(try_def([
+            ast_copy(ast.Expr(noworkflow(
+                "prepare_while", [activation()]
+            )), node),
+            node
+        ], [
+            ast.ExceptHandler(None, None, [
+                ast_copy(ast.Expr(noworkflow(
+                    "collect_exception",
+                    [activation()]
+                )), node),
+                ast_copy(ast.Raise(), node)
+            ])
+        ], [], [
+            ast_copy(ast.Expr(noworkflow(
+                "remove_condition", [activation()]
             )), node)
         ], node), node)
         return result
