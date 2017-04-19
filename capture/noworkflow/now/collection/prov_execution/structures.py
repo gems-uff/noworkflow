@@ -32,9 +32,11 @@ class Assign(namedtuple("Assign", "moment value dependency")):
 class DependencyAware(object):
     """Store dependencies of an element"""
 
-    def __init__(self, dependencies=None, active=True):
-        self.dependencies = dependencies or []
+    def __init__(self, active=True, exc_handler=-1, code_id=None):
+        self.dependencies = []
         self.extra_dependencies = []
+        self.exc_handler = exc_handler
+        self.code_id = code_id
 
         self.active = active
 
@@ -63,12 +65,20 @@ class DependencyAware(object):
             new_dep = copy(dep)
             new_dep.mode = mode or new_dep.mode
             new_depa.add_extra(new_dep)
+        new_depa.exc_handler = self.exc_handler
+        new_depa.code_id = self.code_id
         return new_depa
 
     @classmethod
     def join(cls, depa_list):
-        new_depa = DependencyAware()
+        new_depa = DependencyAware(exc_handler=float('inf'))
         for e_depa in depa_list:
+            new_depa.code_id = e_depa.code_id
+            new_depa.exc_handler = min(
+                new_depa.exc_handler,
+                e_depa.exc_handler
+            )
+
             for dep in e_depa.dependencies:
                 new_depa.add(dep)
             for dep in e_depa.extra_dependencies:
@@ -114,21 +124,23 @@ class Parameter(object):
 class CompartmentDependencyAware(DependencyAware):
     """Store dependencies of a compartment element"""
 
-    def __init__(self, key=None, value=None, dependencies=None, active=True):
+    def __init__(self, active=True, exc_handler=-1, code_id=None):
         super(CompartmentDependencyAware, self).__init__(
-            dependencies=dependencies,
-            active=active
+            active=active,
+            exc_handler=exc_handler,
+            code_id=code_id,
         )
-        self.key = key
-        self.value = value
+        self.key = None
+        self.value = None
 
 class CollectionDependencyAware(DependencyAware):
     """Store dependencies of a compartment element"""
 
-    def __init__(self, dependencies=None, active=True):
+    def __init__(self, active=True, exc_handler=-1, code_id=None):
         super(CollectionDependencyAware, self).__init__(
-            dependencies=dependencies,
-            active=active
+            active=active,
+            exc_handler=exc_handler,
+            code_id=code_id,
         )
         # list of tuples representing (item name, evaluation_id, time)
         self.items = []

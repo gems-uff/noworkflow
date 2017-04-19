@@ -7,6 +7,7 @@
 import ast
 
 from .ast_elements import L
+from contextlib import contextmanager
 
 
 def ast_copy(new_node, old_node):
@@ -168,3 +169,12 @@ def debug_tree(tree, just_print=None, show_code=None, methods=None):
 
     visitor = type('Debugger', (DebugVisitor,), methods)()
     visitor.visit(tree)
+
+
+@contextmanager
+def temporary(obj, name, value):
+    """Set temporary attribute"""
+    old = getattr(obj, name)
+    setattr(obj, name, value)
+    yield value
+    setattr(obj, name, old)

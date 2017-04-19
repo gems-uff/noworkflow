@@ -16,7 +16,8 @@ class ActivationLW(BaseLW):                                                     
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "start", "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
-         "evaluation", "assignments", "closure", "func", "dependency_type"]
+         "evaluation", "assignments", "closure", "func", "dependency_type",
+         "active"]
     )
     nullable = {"code_block_id"}
     model = Activation
@@ -52,6 +53,9 @@ class ActivationLW(BaseLW):                                                     
         # Track conditional dependencies
         self.conditions = []
         self.permanent_conditions = []
+
+        # Active collection
+        self.active = True
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Activation can always be removed from object store"""
