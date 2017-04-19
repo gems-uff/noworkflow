@@ -632,7 +632,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
         self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
 
-    def test_for_loop_multiple_assignment(self):                                            # pylint: disable=too-many-locals
+    def test_for_loop_multiple_assignment(self):                                 # pylint: disable=invalid-name
         """Test for loop"""
         self.script("lis = [(1, 2)]\n"
                     "for x, y in lis:\n"
@@ -668,3 +668,27 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_lis_r, var_lis_w, "assignment")
         self.assert_dependency(var_x1_w, var_1, "assign-bind")
         self.assert_dependency(var_y1_w, var_2, "assign-bind")
+
+    def test_if(self):                                                           # pylint: disable=invalid-name
+        """Test for loop"""
+        self.script("x = 2\n"
+                    "if x:\n"
+                    "    y = 3\n"
+                    "z = 4\n"
+                    "# other")
+
+        var_x = self.get_evaluation(name="x", mode="r")
+        var_y = self.get_evaluation(name="y", mode="w")
+        var_z = self.get_evaluation(name="z", mode="w")
+        var_3 = self.get_evaluation(name="3")
+        var_4 = self.get_evaluation(name="4")
+
+        var_y_val = self.metascript.values_store[var_y.value_id]
+        self.assertEqual(var_y_val.value, '3')
+
+        self.assertEqual(var_y.value_id, var_3.value_id)
+
+        self.assert_dependency(var_y, var_3, "assign-bind")
+        self.assert_dependency(var_y, var_x, "condition")
+        self.assert_dependency(var_z, var_4, "assign-bind")
+        self.assert_no_dependency(var_z, var_x)

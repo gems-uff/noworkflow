@@ -246,8 +246,45 @@ class RewriteAST(ast.NodeTransformer):                                          
         ] + self.process_body(node.body)
         return node
 
+    def visit_If(self, node):                                                    # pylint: disable=invalid-name
+        """Visit If
+        Transform:
+            if x:
+                ...
+            else:
+                ...
+        Into:
+            try:
+                if <now>.condition(<act>)(<act>, |x|):
+                    ...
+            except:
+                <now>.collect_exception(__now_activation__)
+                raise
+            finally:
+                <now>.remove_condition(__now_activation__)
+        """
+        node.test = ast_copy(double_noworkflow(
+            "condition",
+            [activation()],
+            [activation(), self.capture(node.test, mode="condition")]
+        ), node)
+        node.body = self.process_body(node.body)
+        node.orelse = self.process_body(node.orelse)
 
-
+        result = ast_copy(try_def([node], [
+            ast.ExceptHandler(None, None, [
+                ast_copy(ast.Expr(noworkflow(
+                    "collect_exception",
+                    [ast.Name("__now_activation__", L())]
+                )), node),
+                ast_copy(ast.Raise(), node)
+            ])
+        ], [], [
+            ast_copy(ast.Expr(noworkflow(
+                "remove_condition", [ast.Name("__now_activation__", L())]
+            )), node)
+        ], node), node)
+        return result
 
 
     def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
