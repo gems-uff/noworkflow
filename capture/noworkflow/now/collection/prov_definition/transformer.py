@@ -379,15 +379,20 @@ class RewriteAST(ast.NodeTransformer):                                          
                 keywords=maybe(node, "keywords")
             ), node)
 
-    def process_arg(self, arg):
+    def process_arg(self, arg, parent=None):
         """Return None if arg does not exist
         Otherwise, create code component, return tuple ("arg name", code_id)
         """
         if not arg:
             return none()
 
-        arg.name = (arg.arg if PY3 else
-                    pyposast.extract_code(self.lcode, arg).strip("()"))
+        if PY3:
+            arg.name = arg.arg
+        elif isinstance(arg, str):
+            old, arg = arg, ast_copy(ast.Name(arg, L()), parent)
+            arg.name = old
+        else:
+            arg.name = pyposast.extract_code(self.lcode, arg).strip("()")
 
         id_ = self.create_code_component(arg, "param", "w")
         return ast_copy(ast.Tuple([
@@ -422,15 +427,19 @@ class RewriteAST(ast.NodeTransformer):                                          
 
     def process_parameters(self, arguments):
         """Return List of arguments for <now>.function_def"""
-        args = ast.List([self.process_arg(arg) for arg in arguments.args], L())
-        vararg = self.process_arg(arguments.vararg)
+        args = ast.List([
+            self.process_arg(arg, arguments) for arg in arguments.args
+        ], L())
+
+        vararg = self.process_arg(arguments.vararg, arguments)
         defaults = ast.Tuple([
             self.process_default(def_) for def_ in arguments.defaults
         ], L())
-        kwarg = self.process_arg(arguments.kwarg)
+        kwarg = self.process_arg(arguments.kwarg, arguments)
         if PY3:
             kwonlyargs = ast.List([
-                self.process_arg(arg) for arg in arguments.kwonlyargs
+                self.process_arg(arg, arguments)
+                for arg in arguments.kwonlyargs
             ], L())
         else:
             kwonlyargs = none()

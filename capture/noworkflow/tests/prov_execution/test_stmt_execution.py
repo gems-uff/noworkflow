@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
+from ...now.utils.cross_version import PY3, only
 from ...now.collection.helper import get_compartment
 from ..collection_testcase import CollectionTestCase
 
@@ -329,7 +330,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_list, var_a_i10, "item")
         self.assert_dependency(var_list, var_a_i11, "item")
 
-    def test_star_assign(self):                                                  # pylint: disable=too-many-locals
+    @only(PY3)
+    def test_star_assign(self):                                                  # pylint: disable=too-many-locals; disable=too-many-statements
         """Test star assignment"""
         self.script("e = f = 1\n"
                     "a = b, *c, d = e, 2, 3, f, 4\n"
@@ -485,6 +487,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_a01, var_a, "value")
         self.assert_dependency(var_a01, var_01, "slice")
 
+    @only(PY3)
     def test_starred_item_assign(self):
         """Test starred item assignment"""
         self.script("a = []\n"

@@ -15,7 +15,7 @@ from functools import wraps
 from future.utils import viewvalues, viewkeys
 
 from ...persistence.models import Trial
-from ...utils.cross_version import IMMUTABLE, isiterable
+from ...utils.cross_version import IMMUTABLE, isiterable, PY3
 
 from ..helper import get_compartment, last_evaluation_by_value_id
 
@@ -329,26 +329,39 @@ class Collector(object):
     def _dict_key(self, activation, code_id, value):                             # pylint: disable=no-self-use, unused-argument
         """Capture dict key after"""
         activation.dependencies[-1].key = value
+        if not PY3:
+            compartment_depa = activation.dependencies.pop()
+            value_depa = activation.dependencies.pop()
+            self.after_dict_item(activation, value_depa, compartment_depa)
         return value
 
     def dict_value(self, activation, code_id, exc_handler):
         """Capture dict value before"""
-        activation.dependencies.append(DependencyAware(
+        activation.dependencies.append(CompartmentDependencyAware(
             exc_handler=exc_handler,
             code_id=code_id,
         ))
         return self._dict_value
 
-    def _dict_value(self, activation, code_id, value):                           # pylint: disable=no-self-use
-        value_depa = activation.dependencies.pop()
-        compartment_depa = activation.dependencies.pop()
+    def _dict_value(self, activation, code_id, value):                           # pylint: disable=no-self-use, unused-argument
+        """Capture dict value after"""
+        activation.dependencies[-1].key = value
+        if PY3:
+            value_depa = activation.dependencies.pop()
+            compartment_depa = activation.dependencies.pop()
+            self.after_dict_item(activation, value_depa, compartment_depa)
+        return value
+
+    def after_dict_item(self, activation, value_depa, compartment_depa):
+        """Capture dict item after"""
         if activation.active:
+            code_id = value_depa.code_id
+            value = value_depa.key
             eva = self.eval_dep(activation, code_id, value, "item", value_depa)
             self.make_dependencies(activation, eva, compartment_depa)
             activation.dependencies[-1].items.append((
                 compartment_depa.key, eva.value_id, eva.moment
             ))
-        return value
 
     def list(self, activation, code_id, exc_handler):
         """Capture list before"""
