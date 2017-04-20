@@ -49,6 +49,7 @@ class Collector(object):
         self.first_activation = self.activations.dry_add(
             self.evaluations.dry_add(-1, -1, None, None), "<now>", None, None
         )
+        self.first_activation.depth = 0
         self.last_activation = self.first_activation
         self.shared_types = {}
 
@@ -158,11 +159,33 @@ class Collector(object):
 
         return now
 
+    def dry_activation(self, act):
+        """Start new dry activation. Return activation object"""
+        activation = self.activations.dry_add(
+            self.evaluations.dry_add(-1, act.id, None, None),
+            "<now>", None, None
+        )
+        activation.depth = act.depth + 1
+        activation.active = False
+        activation.dependencies.append(DependencyAware(
+            exc_handler=float('inf'), # do not delete
+        ))
+        activation.parent = act
+        self.last_activation = activation
+        return activation
+
     def start_activation(self, name, code_component_id, definition_id, act):
         """Start new activation. Return activation object"""
         activation = self.activations.add_object(self.evaluations.add_object(
             code_component_id, act.id, None, None
         ), name, self.time(), definition_id)
+        activation.depth = act.depth + 1
+        if activation.depth > self.metascript.depth:
+            activation.active = False
+        activation.dependencies.append(DependencyAware(
+            exc_handler=float('inf'), # do not delete
+        ))
+        activation.parent = act
         self.last_activation = activation
         return activation
 
@@ -171,9 +194,10 @@ class Collector(object):
         evaluation = activation.evaluation
         evaluation.moment = self.time()
         evaluation.value_id = value_id
-        self.last_activation = self.activations.store.get(
-            evaluation.activation_id, self.first_activation
-        )
+        self.last_activation = activation.parent
+        #self.activations.store.get(
+        #    evaluation.activation_id, self.first_activation
+        #)
 
     def add_value(self, value):
         """Add value. Create type value recursively. Return value id"""
@@ -211,7 +235,7 @@ class Collector(object):
         while deps and exc_handler >= deps[-1].exc_handler:
             depa = deps.pop()
             code_id = code_id or depa.code_id
-            print(deps)
+            #print(deps)
 
         self.exceptions.add(exc, activation.id)
 
@@ -614,8 +638,10 @@ class Collector(object):
 
     def call(self, activation, code_id, exc_handler, func, mode="dependency"):   # pylint: disable=too-many-arguments
         """Capture call before"""
-        # ToDo: skip inactive
-        act = self.start_activation(func.__name__, code_id, -1, activation)
+        if activation.active:
+            act = self.start_activation(func.__name__, code_id, -1, activation)
+        else:
+            act = self.dry_activation(activation)
         act.dependencies.append(DependencyAware(
             exc_handler=exc_handler,
             code_id=code_id,
@@ -626,11 +652,11 @@ class Collector(object):
 
     def _call(self, *args, **kwargs):
         """Capture call activation"""
-        # ToDo: skip inactive
         activation = self.last_activation
         evaluation = activation.evaluation
         result = None
         try:
+
             result = activation.func(*args, **kwargs)
         except:
             self.collect_exception(activation)
@@ -647,18 +673,20 @@ class Collector(object):
             # Close activation
             self.close_activation(activation, value_id)
 
-            # Create dependencies
-            depa = activation.dependencies[0]
-            self.make_dependencies(activation, evaluation, depa)
-            if activation.code_block_id == -1:
-                # Call without definition
-                self.create_argument_dependencies(evaluation, depa)
+            if self.last_activation.active:
+                # Create dependencies
+                depa = activation.dependencies[1]
+                self.make_dependencies(activation, evaluation, depa)
+                if activation.code_block_id == -1:
+                    # Call without definition
+                    self.create_argument_dependencies(evaluation, depa)
 
-        self.last_activation.dependencies[-1].add(Dependency(
-            evaluation.activation_id, evaluation.id, result,
-            value_id,
-            activation.depedency_type
-        ))
+                # Just add dependency if it is expecting one
+                self.last_activation.dependencies[-1].add(Dependency(
+                    evaluation.activation_id, evaluation.id, result,
+                    value_id,
+                    activation.depedency_type
+                ))
         return result
 
     def argument(self, activation, code_id, exc_handler):
@@ -704,7 +732,6 @@ class Collector(object):
         """Decorate function definition with then new activation.
         Collect arguments and match to parameters.
         """
-        # ToDo: skip inactive
         defaults = closure_activation.dependencies.pop()
         def dec(function_def):
             """Decorate function definition"""
@@ -717,29 +744,32 @@ class Collector(object):
                 activation = self.last_activation
                 activation.closure = closure_activation
                 activation.code_block_id = block_id
-                self._match_arguments(activation, arguments, defaults)
+                if activation.active:
+                    self._match_arguments(activation, arguments, defaults)
                 return function_def(activation, *args, **kwargs)
             if arguments[1]:
                 new_function_def.__defaults__ = arguments[1]
-
             closure_activation.dependencies.append(DependencyAware(
                 exc_handler=defaults.exc_handler,
                 code_id=block_id,
             ))
-            self.eval_dep(closure_activation, block_id, new_function_def, mode)
+            if closure_activation.active:
+                self.eval_dep(
+                    closure_activation, block_id, new_function_def, mode
+                )
             return new_function_def
         return dec
 
     def collect_function_def(self, activation):
         """Collect function definition after all decorators. Set context"""
-        # ToDo: skip inactive
         def dec(function_def):
             """Decorate function definition again"""
             dependency_aware = activation.dependencies.pop()
-            dependency = dependency_aware.dependencies.pop()
-            activation.context[function_def.__name__] = self.evaluations[
-                dependency.evaluation_id
-            ]
+            if activation.active:
+                dependency = dependency_aware.dependencies.pop()
+                activation.context[function_def.__name__] = self.evaluations[
+                    dependency.evaluation_id
+                ]
             return function_def
         return dec
 
@@ -752,7 +782,7 @@ class Collector(object):
         arguments = []
         keywords = []
 
-        for dependency in activation.dependencies[0].dependencies:
+        for dependency in activation.dependencies[1].dependencies:
             if dependency.mode.startswith("argument"):
                 kind = dependency.kind
                 if kind == "argument":
@@ -882,8 +912,10 @@ class Collector(object):
     def _condition(self, activation, value):                                     # pylint: disable=no-self-use
         """Capture condition after"""
         dependency = activation.dependencies.pop()
-        if activation.active:
-            activation.conditions.append(dependency)
+        activation.conditions.append(dependency.clone(
+            extra_only=not activation.active
+        ))
+
         return value
 
     def remove_condition(self, activation):

@@ -642,13 +642,14 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_b, var_ax, "assign-bind")
         self.assert_dependency(var_ax, var_a, "value")
 
-    def test_lambda_definition(self):                              # pylint: disable=invalid-name
+    def test_lambda_definition(self):                                            # pylint: disable=invalid-name
         """Test return collection"""
         self.script("# script.py\n"
                     "f = lambda x: x\n"
                     "a = 2\n"
                     "b = f(a)\n"
                     "# other")
+
 
         lambda_eval = self.get_evaluation(name="lambda x: x")
         write_f_eval = self.get_evaluation(name="f", mode="w")

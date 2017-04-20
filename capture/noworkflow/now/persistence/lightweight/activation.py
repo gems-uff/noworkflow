@@ -17,7 +17,7 @@ class ActivationLW(BaseLW):                                                     
         ["trial_id", "id", "name", "start", "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
          "evaluation", "assignments", "closure", "func", "dependency_type",
-         "active"]
+         "active", "depth", "parent"]
     )
     nullable = {"code_block_id"}
     model = Activation
@@ -41,6 +41,8 @@ class ActivationLW(BaseLW):                                                     
         self.context = {}
         # Closure activation
         self.closure = None
+        # Parent activation
+        self.parent = None
         # Executed function
         self.func = None
         # Dependency type
@@ -56,6 +58,9 @@ class ActivationLW(BaseLW):                                                     
 
         # Active collection
         self.active = True
+
+        # Current depth
+        self.depth = 0
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Activation can always be removed from object store"""

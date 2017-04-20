@@ -33,6 +33,8 @@ def P():                                                                        
 
 def context(node):
     """Return node context as string"""
+    if not hasattr(node, "ctx"):
+        return "r"
     expr_context = node.ctx
     result = "?"
     if isinstance(expr_context, ast.Load):

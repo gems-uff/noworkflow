@@ -10,9 +10,11 @@ from __future__ import (absolute_import, print_function,
 from .test_script import TestScript
 from .test_stmt_execution import TestStmtExecution
 from .test_expr_execution import TestExprExecution
+from .test_depth_execution import TestDepthExecution
 
 __all__ = [
     "TestScript",
     "TestStmtExecution",
     "TestExprExecution",
+    "TestDepthExecution",
 ]

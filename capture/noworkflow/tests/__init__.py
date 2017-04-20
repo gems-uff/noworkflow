@@ -22,6 +22,7 @@ persistence_config.connect(".")
 from .prov_definition import TestCodeBlockDefinition
 from .prov_definition import TestCodeComponentDefinition
 from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
+from .prov_execution import TestDepthExecution
 from .cross_version_test import TestCrossVersion
 
 from ..now.persistence.models import ORDER
@@ -57,4 +58,5 @@ def load_tests(loader, tests, pattern):                                         
     suite.addTests(loader.loadTestsFromTestCase(TestScript))
     suite.addTests(loader.loadTestsFromTestCase(TestStmtExecution))
     suite.addTests(loader.loadTestsFromTestCase(TestExprExecution))
+    suite.addTests(loader.loadTestsFromTestCase(TestDepthExecution))
     return suite
