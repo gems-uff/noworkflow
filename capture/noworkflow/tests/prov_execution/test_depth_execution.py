@@ -87,6 +87,7 @@ class TestDepthExecution(CollectionTestCase):
                     "       z = 3\n"
                     "    while z:\n"
                     "       z -= 1\n"
+                    "    w = 4 if 5 else 6\n"
                     "f()\n", depth=1)
         self.assertIsNone(self.get_evaluation(name="x"))
         self.assertIsNone(self.get_evaluation(name="y"))
@@ -96,6 +97,11 @@ class TestDepthExecution(CollectionTestCase):
         self.assertIsNone(self.get_evaluation(name="1"))
         self.assertIsNone(self.get_evaluation(name="2"))
         self.assertIsNone(self.get_evaluation(name="3"))
+        self.assertIsNone(self.get_evaluation(name="w"))
+        self.assertIsNone(self.get_evaluation(name="4"))
+        self.assertIsNone(self.get_evaluation(name="5"))
+        self.assertIsNone(self.get_evaluation(name="6"))
+        self.assertIsNone(self.get_evaluation(name="4 if 5 else 6"))
         var_f = self.get_evaluation(name="f()")
         self.assertIsNotNone(var_f)
         activation = self.metascript.activations_store[var_f.id]

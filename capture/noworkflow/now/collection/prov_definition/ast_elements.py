@@ -97,6 +97,23 @@ def double_noworkflow(name, external_args, args,
         args, keywords, star, kwargs
     )
 
+def arguments():
+    """Create arguments object"""
+    result = ast.arguments()
+    result.args = []
+    result.vararg = None
+    result.kwarg = None
+    result.defaults = []
+    if PY3:
+        result.kwonlyargs = []
+        result.kw_defaults = []
+    return result
+
+def nlambda(args=None, body=None):
+    """Create lambda object"""
+    args = args or arguments()
+    body = body or none()
+    return ast.Lambda(args, body)
 
 def activation():
     """Access activation"""

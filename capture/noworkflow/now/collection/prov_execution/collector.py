@@ -946,6 +946,25 @@ class Collector(object):
             exc_handler=exc_handler
         ))
 
+    def ifexp(self, activation, code_id, exc_handler, if_lambda, mode):          # pylint: disable=too-many-arguments
+        """Collect ifexp"""
+        value = "<<<noWorkflow>>>"
+        try:
+            activation.dependencies.append(DependencyAware(
+                exc_handler=exc_handler,
+                code_id=code_id
+            ))
+            value = if_lambda()
+            return value
+        except:
+            self.collect_exception(activation, exc_handler)
+            raise
+        finally:
+            depa = activation.dependencies.pop()
+            if activation.active and value != "<<<noWorkflow>>>":
+                self.eval_dep(activation, code_id, value, mode, depa)
+            self.remove_condition(activation)
+
     def find_value_id(self, value, depa, create=True):
         """Find bound dependency in dependency aware"""
         value_id = None

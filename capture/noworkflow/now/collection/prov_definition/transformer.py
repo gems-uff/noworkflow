@@ -11,7 +11,7 @@ import os
 
 from .ast_helpers import ReplaceContextWithLoad, ast_copy, temporary
 
-from .ast_elements import maybe, context
+from .ast_elements import maybe, context, nlambda
 from .ast_elements import L, S, P, none, true, false, call, param
 from .ast_elements import noworkflow, double_noworkflow
 from .ast_elements import activation, function_def, class_def, try_def
@@ -84,10 +84,10 @@ class RewriteAST(ast.NodeTransformer):                                          
         try:
             ...script...
         except:
-            <now>.collect_exception(__now_activation__)
+            <now>.collect_exception(<act>, <exc>)
             raise
         finally:
-            <now>.close_script(__now_activation__)
+            <now>.close_script(<act>)
         """
         node.name = os.path.relpath(self.path, self.metascript.dir)
         node.first_line, node.first_col = int(bool(self.code)), 0
@@ -1241,33 +1241,47 @@ class RewriteDependencies(ast.NodeTransformer):
 
         return ast_copy(call(func, args, keywords, star, kwarg), node)
 
+    def visit_IfExp(self, node):                                                 # pylint: disable=invalid-name
+        """Visit ifexp
+        Transform:
+            a if b else c
+        Into:
+            <now>.ifexp(
+                <act>, #, <exc>,
+                lambda:
+                    |a| if <now>.condition(<act>, <exc>)(<act>, |b|) else |c|
+            )
+        """
+        with self.rewriter.exc_handler():
+            node.name = pyposast.extract_code(self.rewriter.lcode, node)
+            id_ = self.rewriter.create_code_component(node, "ifexp", "r")
+            node.test = ast_copy(double_noworkflow(
+                "condition",
+                [
+                    activation(),
+                    ast.Num(self.rewriter.current_exc_handler)
+                ], [
+                    activation(),
+                    self.rewriter.capture(node.test, mode="condition")
+                ]
+            ), node)
+            node.body = self.rewriter.capture(node.body, mode="use")
+            node.orelse = self.rewriter.capture(node.orelse, mode="use")
+
+            lambda_node = nlambda(body=node)
+
+
+            return ast_copy(noworkflow(
+                "ifexp",
+                [
+                    activation(),
+                    ast.Num(id_),
+                    ast.Num(self.rewriter.current_exc_handler),
+                    lambda_node,
+                    ast.Str(self.mode)
+                ]
+            ), node)
 
     def generic_visit(self, node):
         """Visit node"""
         return self.rewriter.visit(node)
-    '''
-    def visit_Lambda(self, node):                                               # pylint: disable=invalid-name
-        """Visit Lambda"""
-        return ast_copy(noworkflow("dep_name", [
-            self.extract_str(node),
-            super(RewriteDependencies, self).visit_Lambda(node),
-            self.dependency_type()
-        ]), node)
-
-    def visit_IfExp(self, node):                                                # pylint: disable=invalid-name
-        """Visit IfExp"""
-        return ast_copy(ast.IfExp(
-            self.capture(node.test, mode="conditional"),
-            self.visit(node.body),
-            self.visit(node.orelse)
-        ), node)
-
-
-
-    def visit(self, node, mode="direct"):
-        """Visit node"""
-        self._dependency_type = mode
-        return super(RewriteDependencies, self).visit(node)
-    '''
-
-

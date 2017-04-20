@@ -692,3 +692,51 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(read_x_eval, param_x_eval, "assignment")
         self.assert_dependency(call, read_x_eval, "use-bind")
         self.assert_dependency(write_b_eval, call, "assign-bind")
+
+    def test_ifexp_true_definition(self):                                        # pylint: disable=invalid-name
+        """Test return collection"""
+        self.script("# script.py\n"
+                    "x = 2 if 1 else 3\n"
+                    "# other")
+
+
+        ifexp = self.get_evaluation(name="2 if 1 else 3")
+        var_x = self.get_evaluation(name="x")
+        var_1 = self.get_evaluation(name="1")
+        var_2 = self.get_evaluation(name="2")
+        self.assertIsNone(self.get_evaluation(name="3"))
+
+        self.assertEqual(ifexp.value_id, var_2.value_id)
+        self.assertEqual(var_x.value_id, ifexp.value_id)
+
+        var_value = self.metascript.values_store[var_x.value_id]
+        self.assertEqual(var_value.value, "2")
+
+        self.assert_dependency(ifexp, var_2, "use-bind")
+        self.assert_dependency(ifexp, var_1, "condition")
+        self.assert_dependency(var_x, ifexp, "assign-bind")
+        self.assert_dependency(var_2, var_1, "condition")
+
+    def test_ifexp_false_definition(self):                                       # pylint: disable=invalid-name
+        """Test return collection"""
+        self.script("# script.py\n"
+                    "x = 2 if 0 else 3\n"
+                    "# other")
+
+
+        ifexp = self.get_evaluation(name="2 if 0 else 3")
+        var_x = self.get_evaluation(name="x")
+        var_0 = self.get_evaluation(name="0")
+        var_3 = self.get_evaluation(name="3")
+        self.assertIsNone(self.get_evaluation(name="2"))
+
+        self.assertEqual(ifexp.value_id, var_3.value_id)
+        self.assertEqual(var_x.value_id, ifexp.value_id)
+
+        var_value = self.metascript.values_store[var_x.value_id]
+        self.assertEqual(var_value.value, "3")
+
+        self.assert_dependency(ifexp, var_3, "use-bind")
+        self.assert_dependency(ifexp, var_0, "condition")
+        self.assert_dependency(var_x, ifexp, "assign-bind")
+        self.assert_dependency(var_3, var_0, "condition")
