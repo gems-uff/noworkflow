@@ -19,12 +19,14 @@ class Assign(namedtuple("Assign", "moment value dependency")):
     def __new__(cls, *args, **kwargs):
         self = super(Assign, cls).__new__(cls, *args, **kwargs)
         self.accesses = {}
+        self.index = -1
         return self
 
     def sub(self, value, dependency):
         """Create a new Assign with the same access for propagation in
         multiple assignments"""
         assign = Assign(self.moment, value, dependency)
+        assign.index = self.index
         assign.accesses = self.accesses
         return assign
 

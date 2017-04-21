@@ -512,7 +512,6 @@ class RewriteAST(ast.NodeTransformer):                                          
         ), node)
         return node
 
-
     def visit_Expr(self, node):
         """Visit Expr. Capture it"""
         node.value = self.capture(node.value)
@@ -792,6 +791,44 @@ class RewriteDependencies(ast.NodeTransformer):
         ], L())
         return node
 
+    def _dict_itemize(self, key, value, func="dict", extra=None):
+        extra = extra or []
+        last_line, last_col = key.last_line, key.last_col
+        key.last_line, key.last_col = value.last_line, value.last_col
+        name = pyposast.extract_code(self.rewriter.lcode, key)
+        key_value_component = self.rewriter.code_components.add(
+            name, "key_value", "r",
+            key.first_line, key.first_col,
+            value.last_line, value.last_col,
+            self.rewriter.container_id
+        )
+        key.last_line, key.last_col = last_line, last_col
+        new_key = ast_copy(double_noworkflow(
+            func + "_key",
+            [
+                activation(),
+                ast.Num(key_value_component),
+                ast.Num(self.rewriter.current_exc_handler)
+            ], [
+                activation(),
+                ast.Num(key_value_component),
+                self.rewriter.capture(key, mode="key"),
+            ] + extra
+        ), key)
+        new_value = ast_copy(double_noworkflow(
+            func + "_value",
+            [
+                activation(),
+                ast.Num(key_value_component),
+                ast.Num(self.rewriter.current_exc_handler)
+            ], [
+                activation(),
+                ast.Num(key_value_component),
+                self.rewriter.capture(value, mode="value")
+            ] + extra
+        ), value)
+        return new_key, new_value
+
     def visit_Dict(self, node):                                                  # pylint: disable=invalid-name
         """Visit Dict.
         Transform:
@@ -808,40 +845,9 @@ class RewriteDependencies(ast.NodeTransformer):
         )
         new_keys, new_values = [], []
         for key, value in zip(node.keys, node.values):
-            last_line, last_col = key.last_line, key.last_col
-            key.last_line, key.last_col = value.last_line, value.last_col
-            name = pyposast.extract_code(self.rewriter.lcode, key)
-            key_value_component = self.rewriter.code_components.add(
-                name, "key_value", "r",
-                key.first_line, key.first_col,
-                value.last_line, value.last_col,
-                self.rewriter.container_id
-            )
-            key.last_line, key.last_col = last_line, last_col
-            new_keys.append(ast_copy(double_noworkflow(
-                "dict_key",
-                [
-                    activation(),
-                    ast.Num(key_value_component),
-                    ast.Num(self.rewriter.current_exc_handler)
-                ], [
-                    activation(),
-                    ast.Num(key_value_component),
-                    self.rewriter.capture(key, mode="key"),
-                ]
-            ), key))
-            new_values.append(ast_copy(double_noworkflow(
-                "dict_value",
-                [
-                    activation(),
-                    ast.Num(key_value_component),
-                    ast.Num(self.rewriter.current_exc_handler)
-                ], [
-                    activation(),
-                    ast.Num(key_value_component),
-                    self.rewriter.capture(value, mode="value")
-                ]
-            ), value))
+            new_key, new_value = self._dict_itemize(key, value)
+            new_keys.append(new_key)
+            new_values.append(new_value)
         node.keys = new_keys
         node.values = new_values
 
@@ -858,6 +864,35 @@ class RewriteDependencies(ast.NodeTransformer):
                 ast.Str(self.mode)
             ]
         ), node)
+
+    def _itemize(self, index, item, ctx, set_key):
+        """Create List/Tuple/Set Item"""
+        name = pyposast.extract_code(self.rewriter.lcode, item)
+        citem = ast_copy(self.rewriter.capture(item, mode="item"), item)
+        if ctx.startswith("r"):
+            if hasattr(citem, "code_component_id"):
+                item_component = none()
+            else:
+                item_component = ast.Num(self.rewriter.code_components.add(
+                    name, "item", "r",
+                    item.first_line, item.first_col,
+                    item.last_line, item.last_col,
+                    self.rewriter.container_id
+                ))
+            return ast_copy(double_noworkflow(
+                "item",
+                [
+                    activation(),
+                    item_component,
+                    ast.Num(self.rewriter.current_exc_handler)
+                ], [
+                    activation(),
+                    item_component,
+                    citem,
+                    set_key(index, item)
+                ]
+            ), citem)
+        return citem
 
     def visit_List(self, node, comp="list", set_key=None):                       # pylint: disable=invalid-name
         """Visit list.
@@ -883,33 +918,7 @@ class RewriteDependencies(ast.NodeTransformer):
         )
         new_items = []
         for index, item in enumerate(node.elts):
-            name = pyposast.extract_code(self.rewriter.lcode, item)
-            citem = ast_copy(self.rewriter.capture(item, mode="item"), item)
-            if ctx.startswith("r"):
-                if hasattr(citem, "code_component_id"):
-                    item_component = none()
-                else:
-                    item_component = ast.Num(self.rewriter.code_components.add(
-                        name, "item", "r",
-                        item.first_line, item.first_col,
-                        item.last_line, item.last_col,
-                        self.rewriter.container_id
-                    ))
-                new_items.append(ast_copy(double_noworkflow(
-                    "item",
-                    [
-                        activation(),
-                        item_component,
-                        ast.Num(self.rewriter.current_exc_handler)
-                    ], [
-                        activation(),
-                        item_component,
-                        citem,
-                        set_key(index, item)
-                    ]
-                ), citem))
-            else:
-                new_items.append(citem)
+            new_items.append(self._itemize(index, item, ctx, set_key))
 
         if ctx.startswith("w"):
             node.code_component_expr = ast.Tuple([
@@ -970,7 +979,7 @@ class RewriteDependencies(ast.NodeTransformer):
         return node
 
     def visit_Set(self, node):                                                   # pylint: disable=invalid-name
-        """Visit tuple.
+        """Visit set
         Transform:
             {a}
         Into:
@@ -1281,6 +1290,180 @@ class RewriteDependencies(ast.NodeTransformer):
                     ast.Str(self.mode)
                 ]
             ), node)
+
+    def visit_ListComp(self, node, comp="list", set_key=None):                   # pylint: disable=invalid-name
+        """Visit ListComp
+        Transform:
+            [x for x in l if y if z
+               for k in l2 if w]
+        Into:
+            <now>.list(<act>, #, <exc>)(<act>, #, [
+                <now>.comprehension_item(
+                    <act>,
+                    <now>.item(<act>, #, <exc>)(
+                        <act>, #, |x|, -1
+                    ),
+                    2
+                )
+                for __now__assign__, x in <now>.loop(<act>, <exc>)(<act>, |l|)
+                if <now>.assign(<act>, __now__assign__, cce(x))
+                if <now>.rcondition(<act>, <exc>)(<act>, 1, |y| and |z|)
+                for __now__assign__, k in <now>.loop(<act>, <exc>)(<act>, |l2|)
+                if <now>.rcondition(<act>, <exc>)(<act>, 2, |w|)
+            ], <mode>)
+        """
+        if set_key is None:
+            set_key = lambda item, index: ast.Num(-1)
+
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        list_code_component = self.rewriter.create_code_component(
+            node, comp+"comp", "r"
+        )
+
+        item = self._itemize(0, node.elt, "r", set_key)
+        gens = []
+        total = 0
+        for gen in node.generators:
+            if gen.ifs:
+                total += 1
+            gens.append(self.visit_generator(gen, count=total))
+        node.generators = gens
+
+        item = ast_copy(noworkflow(
+            "comprehension_item",
+            [activation(), item, ast.Num(total)],
+        ), node.elt)
+        node.elt = item
+
+        return ast_copy(double_noworkflow(
+            comp,
+            [
+                activation(),
+                ast.Num(list_code_component),
+                ast.Num(self.rewriter.current_exc_handler),
+            ], [
+                activation(),
+                ast.Num(list_code_component),
+                node,
+                ast.Str(self.mode)
+            ]
+        ), node)
+
+    def visit_SetComp(self, node):                                               # pylint: disable=invalid-name
+        """Visit SetComp
+        Transform:
+            {x for x in l if y if z}
+        Into:
+            <now>.list(<act>, #, <exc>)(<act>, #, {
+                <now>.remove_conditions(<act>, 1)(
+                    <now>.item(<act>, #, <exc>)(
+                        <act>, #, |x|, None
+                    )
+                )
+                for __now__assign__, x in <now>.loop(<act>, <exc>)(<act>, |l|)
+                if <now>.assign(<act>, __now__assign__, cce(x))
+                if <now>.rcondition(<act>, <exc>)(<act>, 1, |y| and |z|)
+            }, <mode>)
+        """
+        return self.visit_ListComp(
+            node, comp="set",
+            set_key=lambda index, item: none()
+        )
+
+    def visit_DictComp(self, node):                                              # pylint: disable=invalid-name
+        """Visit DictComp
+        Transform:
+            {x:z for x in l if y}
+        Into:
+            <now>.dict(<act>, #, <exc>)(<act>, #, {
+                <now>.comp_key(<act>, #, <exc>)(<act>, #, |x|, 1):
+                    <now>.comp_value(<act>, #, <exc>)(<act>, #, |z|, 1)
+                for __now__assign__, x in <now>.loop(<act>, <exc>)(<act>, |l|)
+                if <now>.assign(<act>, __now__assign__, cce(x))
+                if <now>.rcondition(<act>, <exc>)(<act>, 1, |y|)
+            }, <mode>)
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        list_code_component = self.rewriter.create_code_component(
+            node, "dictcomp", "r"
+        )
+
+
+        gens = []
+        total = 0
+        for gen in node.generators:
+            if gen.ifs:
+                total += 1
+            gens.append(self.visit_generator(gen, count=total))
+        node.generators = gens
+        node.key, node.value = self._dict_itemize(
+            node.key, node.value, func="comp", extra=[ast.Num(total)]
+        )
+
+        return ast_copy(double_noworkflow(
+            "dict",
+            [
+                activation(),
+                ast.Num(list_code_component),
+                ast.Num(self.rewriter.current_exc_handler),
+            ], [
+                activation(),
+                ast.Num(list_code_component),
+                node,
+                ast.Str(self.mode)
+            ]
+        ), node)
+
+    def visit_generator(self, node, count=0):
+        """Visit comprehension"""
+        # ToDo: consider node.is_async
+        target = self.rewriter.capture(node.target)
+        node.target = ast_copy(ast.Tuple([
+            ast.Name("__now__assign__", S()),
+            target
+        ], S()), node.target)
+
+        node.iter = ast_copy(double_noworkflow(
+            "loop",
+            [
+                activation(),
+                ast.Num(self.rewriter.current_exc_handler)
+            ], [
+                activation(),
+                self.rewriter.capture(node.iter, mode="dependency")
+            ]
+        ), node.iter)
+
+        ifs = []
+        ifs.append(ast_copy(noworkflow("assign", [
+            activation(),
+            ast.Name("__now__assign__", L()),
+            target.code_component_expr,
+        ]), node))
+
+        if node.ifs:
+            if len(node.ifs) > 1:
+                if1 = ast.BoolOp()
+                if1.op = ast.And()
+                if1.values = [
+                    self.rewriter.capture(value, mode="condition")
+                    for value in node.ifs
+                ]
+            else:
+                if1 = self.rewriter.capture(node.ifs[0], mode="condition")
+            ifs.append(ast_copy(double_noworkflow(
+                "rcondition",
+                [
+                    activation(),
+                    ast.Num(self.rewriter.current_exc_handler),
+                ], [
+                    activation(),
+                    ast.Num(count),
+                    if1
+                ]
+            ), node.ifs[0]))
+        node.ifs = ifs
+        return node
 
     def generic_visit(self, node):
         """Visit node"""

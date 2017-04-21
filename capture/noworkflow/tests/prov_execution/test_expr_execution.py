@@ -740,3 +740,202 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(ifexp, var_0, "condition")
         self.assert_dependency(var_x, ifexp, "assign-bind")
         self.assert_dependency(var_3, var_0, "condition")
+
+    def test_list_comprehension_definition(self):                                # pylint: disable=too-many-locals, invalid-name
+        """Test list comprehension definition"""
+        self.script("a = [x * 2 for x in [3, 4] if 1]\n"
+                    "b = a\n"
+                    "# other")
+
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_x2s = self.get_evaluations(name="x * 2")
+        var_1s = self.get_evaluations(name="1")
+
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_xs_r), 2)
+        self.assertEqual(len(var_x2s), 2)
+        self.assertEqual(len(var_1s), 2)
+
+        x1w, x2w = var_xs_w
+        x1r, x2r = var_xs_r
+        x2_1, x2_2 = var_x2s
+        v1_1, v1_2 = var_1s
+
+        var_comp = self.get_evaluation(name="[x * 2 for x in [3, 4] if 1]")
+        var_aw = self.get_evaluation(name="a", mode="w")
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b")
+
+        var_c_i0_val = self.metascript.values_store[x2_1.value_id]
+        var_c_i1_val = self.metascript.values_store[x2_2.value_id]
+        self.assertEqual(var_c_i0_val.value, '6')
+        self.assertEqual(var_c_i1_val.value, '8')
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_a_key_0 = self.get_compartment_value(var_a, "[0]")
+        var_a_key_1 = self.get_compartment_value(var_a, "[1]")
+
+        self.assertEqual(var_a_value, var_b_value)
+        self.assertIsNotNone(var_a_key_0)
+        self.assertIsNotNone(var_a_key_1)
+        self.assertEqual(var_a_key_0.value, '6')
+        self.assertEqual(var_a_key_1.value, '8')
+
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[0]")
+        var_b_key_0_part = get_compartment(meta, var_b.value_id, "[0]")
+        var_a_key_1_part = get_compartment(meta, var_a.value_id, "[1]")
+
+
+        self.assertEqual(var_a_key_0_part, var_a_key_0.id)
+        self.assertEqual(var_a_key_0_part, var_b_key_0_part)
+        self.assertEqual(var_a_key_1_part, var_a_key_1.id)
+
+        self.assert_dependency(var_b, var_a, "assign-bind")
+        self.assert_dependency(var_aw, var_comp, "assign-bind")
+        self.assert_dependency(var_comp, x2_1, "item")
+        self.assert_dependency(var_comp, x2_2, "item")
+        self.assert_dependency(x2_1, v1_1, "condition")
+        self.assert_dependency(x2_1, x1r, "use")
+        self.assert_dependency(x2_2, x2r, "use")
+        self.assert_dependency(x2_2, v1_2, "condition")
+        self.assert_dependency(x1r, x1w, "assignment")
+        self.assert_dependency(x2r, x2w, "assignment")
+
+    def test_set_comprehension_definition(self):                                # pylint: disable=too-many-locals, invalid-name
+        """Test set comprehension definition"""
+        self.script("a = {x * 2 for x in [3, 4] if 1}\n"
+                    "b = a\n"
+                    "# other")
+
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_x2s = self.get_evaluations(name="x * 2")
+        var_1s = self.get_evaluations(name="1")
+
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_xs_r), 2)
+        self.assertEqual(len(var_x2s), 2)
+        self.assertEqual(len(var_1s), 2)
+
+        x1w, x2w = var_xs_w
+        x1r, x2r = var_xs_r
+        x2_1, x2_2 = var_x2s
+        v1_1, v1_2 = var_1s
+
+        var_comp = self.get_evaluation(name="{x * 2 for x in [3, 4] if 1}")
+        var_aw = self.get_evaluation(name="a", mode="w")
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b")
+
+        var_c_i0_val = self.metascript.values_store[x2_1.value_id]
+        var_c_i1_val = self.metascript.values_store[x2_2.value_id]
+        self.assertEqual(var_c_i0_val.value, '6')
+        self.assertEqual(var_c_i1_val.value, '8')
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_a_key_0 = self.get_compartment_value(var_a, "[6]")
+        var_a_key_1 = self.get_compartment_value(var_a, "[8]")
+
+        self.assertEqual(var_a_value, var_b_value)
+        self.assertIsNotNone(var_a_key_0)
+        self.assertIsNotNone(var_a_key_1)
+        self.assertEqual(var_a_key_0.value, '6')
+        self.assertEqual(var_a_key_1.value, '8')
+
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[6]")
+        var_b_key_0_part = get_compartment(meta, var_b.value_id, "[6]")
+        var_a_key_1_part = get_compartment(meta, var_a.value_id, "[8]")
+
+
+        self.assertEqual(var_a_key_0_part, var_a_key_0.id)
+        self.assertEqual(var_a_key_0_part, var_b_key_0_part)
+        self.assertEqual(var_a_key_1_part, var_a_key_1.id)
+
+        self.assert_dependency(var_b, var_a, "assign-bind")
+        self.assert_dependency(var_aw, var_comp, "assign-bind")
+        self.assert_dependency(var_comp, x2_1, "item")
+        self.assert_dependency(var_comp, x2_2, "item")
+        self.assert_dependency(x2_1, v1_1, "condition")
+        self.assert_dependency(x2_1, x1r, "use")
+        self.assert_dependency(x2_2, x2r, "use")
+        self.assert_dependency(x2_2, v1_2, "condition")
+        self.assert_dependency(x1r, x1w, "assignment")
+        self.assert_dependency(x2r, x2w, "assignment")
+
+    def test_dict_comprehension_definition(self):                                # pylint: disable=too-many-locals, invalid-name, too-many-statements
+        """Test set comprehension definition"""
+        self.script("a = {x * 2: 5 for x in [3, 4] if 1}\n"
+                    "b = a\n"
+                    "# other")
+
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_x2s = self.get_evaluations(name="x * 2")
+        var_items = self.get_evaluations(name="x * 2: 5")
+        var_1s = self.get_evaluations(name="1")
+        var_5s = self.get_evaluations(name="5")
+
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_xs_r), 2)
+        self.assertEqual(len(var_x2s), 2)
+        self.assertEqual(len(var_items), 2)
+        self.assertEqual(len(var_1s), 2)
+        self.assertEqual(len(var_5s), 2)
+
+        x1w, x2w = var_xs_w
+        x1r, x2r = var_xs_r
+        x2_1, x2_2 = var_x2s
+        v1_1, v1_2 = var_1s
+        v5_1, v5_2 = var_5s
+        vi_1, vi_2 = var_items
+
+        var_comp = self.get_evaluation(name="{x * 2: 5 for x in [3, 4] if 1}")
+        var_aw = self.get_evaluation(name="a", mode="w")
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b")
+
+        var_c_i0_val = self.metascript.values_store[vi_1.value_id]
+        var_c_i1_val = self.metascript.values_store[vi_2.value_id]
+        self.assertEqual(var_c_i0_val.value, '5')
+        self.assertEqual(var_c_i1_val.value, '5')
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_a_key_0 = self.get_compartment_value(var_a, "[6]")
+        var_a_key_1 = self.get_compartment_value(var_a, "[8]")
+
+        self.assertEqual(var_a_value, var_b_value)
+        self.assertIsNotNone(var_a_key_0)
+        self.assertIsNotNone(var_a_key_1)
+        self.assertEqual(var_a_key_0.value, '5')
+        self.assertEqual(var_a_key_1.value, '5')
+
+        meta = self.metascript
+        var_a_key_0_part = get_compartment(meta, var_a.value_id, "[6]")
+        var_b_key_0_part = get_compartment(meta, var_b.value_id, "[6]")
+        var_a_key_1_part = get_compartment(meta, var_a.value_id, "[8]")
+
+
+        self.assertEqual(var_a_key_0_part, var_a_key_0.id)
+        self.assertEqual(var_a_key_0_part, var_b_key_0_part)
+        self.assertEqual(var_a_key_1_part, var_a_key_1.id)
+
+        self.assert_dependency(var_b, var_a, "assign-bind")
+        self.assert_dependency(var_aw, var_comp, "assign-bind")
+        self.assert_dependency(var_comp, vi_1, "item")
+        self.assert_dependency(var_comp, vi_2, "item")
+        self.assert_dependency(vi_1, x2_1, "key")
+        self.assert_dependency(vi_2, x2_2, "key")
+        self.assert_dependency(vi_1, v5_1, "value-bind")
+        self.assert_dependency(vi_2, v5_2, "value-bind")
+        self.assert_dependency(vi_1, v1_1, "condition")
+        self.assert_dependency(x2_1, x1r, "use")
+        self.assert_dependency(x2_2, x2r, "use")
+        self.assert_dependency(vi_2, v1_2, "condition")
+        self.assert_dependency(x1r, x1w, "assignment")
+        self.assert_dependency(x2r, x2w, "assignment")

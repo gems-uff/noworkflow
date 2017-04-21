@@ -326,13 +326,24 @@ class Collector(object):
         ))
         return self._dict_key
 
-    def _dict_key(self, activation, code_id, value):                             # pylint: disable=no-self-use, unused-argument
+    def _dict_key(self, activation, code_id, value, final=not PY3):              # pylint: disable=no-self-use, unused-argument
         """Capture dict key after"""
         activation.dependencies[-1].key = value
-        if not PY3:
+        if final:
             compartment_depa = activation.dependencies.pop()
             value_depa = activation.dependencies.pop()
             self.after_dict_item(activation, value_depa, compartment_depa)
+        return value
+
+    def comp_key(self, activation, code_id, exc_handler):
+        """Capture dict comprehension key before"""
+        self.dict_key(activation, code_id, exc_handler)
+        return self._comp_key
+
+    def _comp_key(self, activation, code_id, value, count):                      # pylint: disable=no-self-use, unused-argument
+        """Capture dict comprehension key after"""
+        self._dict_key(activation, code_id, value, final=True)
+        self.remove_conditions(activation, count)
         return value
 
     def dict_value(self, activation, code_id, exc_handler):
@@ -343,13 +354,23 @@ class Collector(object):
         ))
         return self._dict_value
 
-    def _dict_value(self, activation, code_id, value):                           # pylint: disable=no-self-use, unused-argument
+    def _dict_value(self, activation, code_id, value, final=PY3):                # pylint: disable=no-self-use, unused-argument
         """Capture dict value after"""
         activation.dependencies[-1].key = value
-        if PY3:
+        if final:
             value_depa = activation.dependencies.pop()
             compartment_depa = activation.dependencies.pop()
             self.after_dict_item(activation, value_depa, compartment_depa)
+        return value
+
+    def comp_value(self, activation, code_id, exc_handler):
+        """Capture dict comprehension value before"""
+        self.dict_value(activation, code_id, exc_handler)
+        return self._comp_value
+
+    def _comp_value(self, activation, code_id, value, count):                    # pylint: disable=no-self-use, unused-argument
+        """Capture dict comprehension value after"""
+        self._dict_value(activation, code_id, value, final=False)
         return value
 
     def after_dict_item(self, activation, value_depa, compartment_depa):
@@ -414,9 +435,11 @@ class Collector(object):
 
     def _item(self, activation, code_id, value, key):                            # pylint: disable=no-self-use
         """Capture item after"""
+        value_depa = activation.dependencies.pop()
         if key is None:
             key = value
-        value_depa = activation.dependencies.pop()
+        if key == -1:
+            key = len(activation.dependencies[-1].items)
         if activation.active:
             if len(value_depa.dependencies) == 1:
                 dependency = value_depa.dependencies[0]
@@ -434,6 +457,11 @@ class Collector(object):
             activation.dependencies[-1].items.append((
                 key, value_id, moment
             ))
+        return value
+
+    def comprehension_item(self, activation, value, condition_count):
+        """Remove conditions of comprehension item"""
+        self.remove_conditions(activation, condition_count)
         return value
 
     def slice(self, activation, code_id, exc_handler):
@@ -913,7 +941,9 @@ class Collector(object):
                     dep, value, index, clone_depa
                 )[0]
                 clone_depa.extra_dependencies = dependency.dependencies
-            yield Assign(self.time(), element, clone_depa), element
+            assign = Assign(self.time(), element, clone_depa)
+            assign.index = index
+            yield assign, element
 
     def condition(self, activation, exc_handler):
         """Capture condition before"""
@@ -931,9 +961,28 @@ class Collector(object):
 
         return value
 
+    def rcondition(self, activation, exc_handler):
+        """Capture rcondition before. Remove conditions if false"""
+        self.condition(activation, exc_handler)
+        return self._rcondition
+
+    def _rcondition(self, activation, count, value):                             # pylint: disable=no-self-use
+        """Capture rcondition after. Remove conditions if false"""
+        self._condition(activation, value)
+        if not value:
+            self.remove_conditions(activation, count)
+
+        return value
+
     def remove_condition(self, activation):
         """Just remove the condition dependencies"""
         activation.conditions.pop()
+        return self._remove_condition
+
+    def remove_conditions(self, activation, count):
+        """Just remove count condition dependencies"""
+        for _ in range(count):
+            activation.conditions.pop()
         return self._remove_condition
 
     def _remove_condition(self, value):                                          # pylint: disable=no-self-use
