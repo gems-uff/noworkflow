@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from copy import copy
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 
 AssignAccess = namedtuple("AssignAccess", "value dependency addr value_dep")
@@ -19,7 +19,9 @@ class Assign(namedtuple("Assign", "moment value dependency")):
     def __new__(cls, *args, **kwargs):
         self = super(Assign, cls).__new__(cls, *args, **kwargs)
         self.accesses = {}
+        self.generators = defaultdict(list)
         self.index = -1
+        self.collecting_dependencies = False
         return self
 
     def sub(self, value, dependency):
@@ -87,13 +89,20 @@ class DependencyAware(object):
                 new_depa.add_extra(dep)
         return new_depa
 
+class Generator(object):
+    """Represent a generator"""
+    def __init__(self):
+        self.value = None
+        self.evaluation = None
+        self.dependency = None
 
 class Dependency(object):
     """Represent a dependency"""
 
-    def __init__(self, activation_id, evaluation_id, value, value_id, mode):
-        self.activation_id = activation_id
+    def __init__(self, act_id, evaluation_id, code_id, value, value_id, mode):
+        self.activation_id = act_id
         self.evaluation_id = evaluation_id
+        self.code_id = code_id
         self.value = value
         self.value_id = value_id
         self.mode = mode

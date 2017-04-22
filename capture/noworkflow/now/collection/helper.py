@@ -27,7 +27,11 @@ def last_evaluation_by_value_id(metascript, value_id):
         if evaluation is None:
             continue
         if evaluation.value_id == value_id:
-            return (evaluation.activation_id, evaluation.id)
+            return (
+                evaluation.activation_id,
+                evaluation.id,
+                evaluation.code_component_id
+            )
     return Evaluation.find_by_value_id(
         metascript.trial_id, value_id, order="desc"
     )

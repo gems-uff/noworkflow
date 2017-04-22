@@ -31,7 +31,6 @@ class Execution(object):
         """Collect execution provenance"""
         metascript = self.metascript
         metascript.namespace["__builtins__"]["__noworkflow__"] = self.collector
-
         debugger_builtins(
             self.collector, metascript.namespace["__builtins__"], metascript
         )

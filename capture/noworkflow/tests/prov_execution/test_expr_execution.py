@@ -939,3 +939,80 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(vi_2, v1_2, "condition")
         self.assert_dependency(x1r, x1w, "assignment")
         self.assert_dependency(x2r, x2w, "assignment")
+
+    def test_generator_expression_variable(self):                                # pylint: disable=too-many-locals
+        """Test for loop"""
+        self.script("a = (z * 2 for z in [3, 4] if 1)\n"
+                    "b = a\n"
+                    "for x in b:"
+                    "    y = x\n"
+                    "# other")
+
+        var_gen = self.get_evaluation(name="(z * 2 for z in [3, 4] if 1)")
+        var_a_w = self.get_evaluation(name="a", mode="w")
+        var_a_r = self.get_evaluation(name="a", mode="r")
+        var_b_w = self.get_evaluation(name="b", mode="w")
+        var_b_r = self.get_evaluation(name="b", mode="r")
+        var_3 = self.get_evaluation(name="3")
+        var_4 = self.get_evaluation(name="4")
+
+        var_zs_w = self.get_evaluations(name="z", mode="w")
+        var_zs_r = self.get_evaluations(name="z", mode="r")
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_ys_w = self.get_evaluations(name="y", mode="w")
+        var_z2s = self.get_evaluations(name="z * 2")
+        var_1s = self.get_evaluations(name="1")
+
+        self.assertEqual(len(var_zs_w), 2)
+        self.assertEqual(len(var_zs_r), 2)
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_xs_r), 2)
+        self.assertEqual(len(var_ys_w), 2)
+        self.assertEqual(len(var_z2s), 2)
+        self.assertEqual(len(var_1s), 2)
+
+        var_z1_w, var_z2_w = var_zs_w
+        var_z1_r, var_z2_r = var_zs_r
+        var_x1_w, var_x2_w = var_xs_w
+        var_x1_r, var_x2_r = var_xs_r
+        var_y1_w, var_y2_w = var_ys_w
+        z2_1, z2_2 = var_z2s
+        v1_1, v1_2 = var_1s
+
+        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
+        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
+        self.assertEqual(var_x1_val.value, '6')
+        self.assertEqual(var_x2_val.value, '8')
+
+        self.assertEqual(var_x1_w.value_id, var_x1_r.value_id)
+        self.assertEqual(var_x1_w.value_id, var_y1_w.value_id)
+        self.assertEqual(var_x2_w.value_id, var_x2_r.value_id)
+        self.assertEqual(var_x2_w.value_id, var_y2_w.value_id)
+
+
+        self.assert_dependency(var_a_w, var_gen, "assign-bind")
+        self.assert_dependency(var_a_r, var_a_w, "assignment")
+        self.assert_dependency(var_x1_w, var_b_r, "dependency")
+        self.assert_dependency(var_x2_w, var_b_r, "dependency")
+
+        self.assert_dependency(var_z1_w, var_3, "assign-bind")
+        self.assert_dependency(var_z2_w, var_4, "assign-bind")
+        self.assert_dependency(var_z1_r, var_z1_w, "assignment")
+        self.assert_dependency(var_z2_r, var_z2_w, "assignment")
+
+        self.assert_dependency(z2_1, var_z1_r, "use")
+        self.assert_dependency(z2_1, v1_1, "condition")
+        self.assert_dependency(z2_2, var_z2_r, "use")
+        self.assert_dependency(z2_2, v1_2, "condition")
+
+        self.assert_dependency(var_b_r, var_b_w, "assignment")
+        self.assert_dependency(var_b_r, z2_1, "item")
+        self.assert_dependency(var_b_r, z2_2, "item")
+
+        self.assert_dependency(var_x1_w, z2_1, "assign-bind")
+        self.assert_dependency(var_x2_w, z2_2, "assign-bind")
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
+        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
+        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")

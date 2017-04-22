@@ -178,7 +178,7 @@ class Evaluation(AlchemyProxy):
 
         Find Evaluation
         >>> vid = assign.array_value
-        >>> act, eid = Evaluation.find_by_value_id(trial_id, vid)
+        >>> act, eid, cid = Evaluation.find_by_value_id(trial_id, vid)
         >>> act == config.main_act
         True
 
@@ -197,5 +197,9 @@ class Evaluation(AlchemyProxy):
             .order_by(getattr(model.moment, order)())
         ).first()
         if evaluation:
-            return evaluation.activation_id, evaluation.id
-        return None, None
+            return (
+                evaluation.activation_id,
+                evaluation.id,
+                evaluation.code_component_id
+            )
+        return None, None, None

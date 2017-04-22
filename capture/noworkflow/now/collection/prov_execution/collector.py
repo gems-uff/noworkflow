@@ -11,6 +11,7 @@ from collections import OrderedDict
 from copy import copy
 from datetime import datetime, timedelta
 from functools import wraps
+from types import GeneratorType
 
 from future.utils import viewvalues, viewkeys
 
@@ -19,9 +20,18 @@ from ...utils.cross_version import IMMUTABLE, isiterable, PY3
 
 from ..helper import get_compartment, last_evaluation_by_value_id
 
-from .structures import AssignAccess, Assign
+from .structures import AssignAccess, Assign, Generator
 from .structures import DependencyAware, Dependency, Parameter
 from .structures import CompartmentDependencyAware, CollectionDependencyAware
+
+
+def debug(func):
+    @wraps(func)
+    def new_func(self, *args, **kwargs):
+        res = func(self, *args, **kwargs)
+        print("{}(*{}, **{}) -> {}".format(func.__name__, args, kwargs, res))
+        return res
+    return new_func
 
 
 class Collector(object):
@@ -58,6 +68,7 @@ class Collector(object):
         self.global_evaluations = {}
         self.pyslice = slice
         self.Ellipsis = Ellipsis                                                 # pylint: disable=invalid-name
+        self.old_next = next
 
     def access(self, activation, code_id, exc_handler):
         """Capture object access before"""
@@ -117,7 +128,8 @@ class Collector(object):
                 )
 
         activation.dependencies[-1].add(Dependency(
-            activation.id, eva.id, value, eva.value_id, mode
+            activation.id, eva.id, eva.code_component_id,
+            value, eva.value_id, mode
         ))
         return value
 
@@ -272,7 +284,8 @@ class Collector(object):
 
             evaluation = self.evaluate_vid(activation, code_id, value_id, None)
             activation.dependencies[-1].add(Dependency(
-                activation.id, evaluation.id, value, evaluation.value_id, mode
+                activation.id, evaluation.id, code_id,
+                value, evaluation.value_id, mode
             ))
 
             if old_eval:
@@ -398,7 +411,8 @@ class Collector(object):
         if activation.active:
             evaluation = self.evaluate(activation, code_id, value, None, depa)
             dependency = Dependency(
-                activation.id, evaluation.id, value, evaluation.value_id, mode
+                activation.id, evaluation.id, code_id,
+                value, evaluation.value_id, mode
             )
             dependency.sub_dependencies.extend(depa.dependencies)
             activation.dependencies[-1].add(dependency)
@@ -448,8 +462,8 @@ class Collector(object):
                     activation, code_id, value, None, value_depa
                 )
                 dependency = Dependency(
-                    activation.id, evaluation.id, value, evaluation.value_id,
-                    "item"
+                    activation.id, evaluation.id, code_id,
+                    value, evaluation.value_id, "item"
                 )
             value_id = dependency.value_id
             moment = self.time()
@@ -457,6 +471,64 @@ class Collector(object):
             activation.dependencies[-1].items.append((
                 key, value_id, moment
             ))
+        return value
+
+    def genexp(self, activation, code_id, exc_handler, lvalue, mode):
+        """Capture genexp"""
+        try:
+            activation.dependencies.append(CollectionDependencyAware(
+                exc_handler=exc_handler,
+                code_id=code_id,
+            ))
+            gen = Generator()
+            value = lvalue(gen)
+            return value
+        except:
+            self.collect_exception(activation, exc_handler)
+            raise
+        finally:
+            depa = activation.dependencies.pop()
+            gen.value = value
+            if activation.active:
+                eva = self.evaluate(activation, code_id, value, None, depa)
+                dependency = Dependency(
+                    activation.id, eva.id, code_id,
+                    value, eva.value_id, mode
+                )
+                dependency.sub_dependencies.extend(depa.dependencies)
+                activation.dependencies[-1].add(dependency)
+                gen.evaluation = eva
+                gen.dependency = dependency
+
+    def genitem(self, activation, code_id, exc_handler):
+        """Capture genitem before"""
+        activation.dependencies.append(DependencyAware(
+            exc_handler=exc_handler,
+            code_id=code_id,
+        ))
+        return self._genitem
+
+    def _genitem(self, activation, code_id, value, generator):                   # pylint: disable=no-self-use
+        """Capture item after"""
+        value_depa = activation.dependencies.pop()
+        if activation.active:
+            if len(value_depa.dependencies) == 1:
+                dependency = value_depa.dependencies[0]
+            else:
+                evaluation = self.evaluate(
+                    activation, code_id, value, None, value_depa
+                )
+                dependency = Dependency(
+                    activation.id, evaluation.id, code_id,
+                    value, evaluation.value_id, "item"
+                )
+            value_id = dependency.value_id
+            moment = self.time()
+            if activation.assignments:
+                assign = activation.assignments[-1]
+                assign.generators[id(generator.value)].append(
+                    (code_id, value, value_id, moment, dependency)
+                )
         return value
 
     def comprehension_item(self, activation, value, condition_count):
@@ -497,7 +569,7 @@ class Collector(object):
 
     def assign_value(self, activation, exc_handler):
         """Capture assignment before"""
-        activation.dependencies.append(DependencyAware(
+        activation.dependencies.append(CollectionDependencyAware(
             exc_handler=exc_handler
         ))
         return self._assign_value
@@ -505,12 +577,46 @@ class Collector(object):
     def _assign_value(self, activation, value, augvalue=None):                   # pylint: disable=unused-argument
         """Capture assignment after"""
         dependency = activation.dependencies.pop()
-        activation.assignments.append(Assign(self.time(), value, dependency))
+        assign = Assign(self.time(), value, dependency)
+        activation.assignments.append(assign)
+        #if isinstance(value, GeneratorType):
+        #    assign.collecting_dependencies = True
+        #    activation.dependencies.append(CollectionDependencyAware(
+        #        exc_handler=dependency.exc_handler,
+        #        code_id=dependency.code_id,
+        #    ))
         return value
+
+    '''
+    def assign_generator_dependencies(self, activation, assign):
+        """Process assign generator dependencies"""
+        # Generator already evaluated
+        depa = activation.dependencies.pop()
+        if len(assign.dependency.dependencies) == 1:
+            dep = assign.dependency.dependencies[0]
+            self.create_dependencies_id(
+                activation.id, dep.evaluation_id, depa
+            )
+            dep.sub_dependencies.extend(depa.dependencies)
+            for key, value_id, moment in depa.items:
+                tkey = "[{0!r}]".format(key)
+                self.compartments.add_object(
+                    tkey, moment, dep.value_id, value_id
+                )
+        else:
+            print(assign.dependency, depa)
+            assign.dependency = DependencyAware.join([
+                assign.dependency,
+                depa
+            ])
+    '''
 
     def pop_assign(self, activation):                                            # pylint: disable=no-self-use
         """Pop assignment from activation"""
-        return activation.assignments.pop()
+        assign = activation.assignments.pop()
+        #if assign.collecting_dependencies:
+        #    self.assign_generator_dependencies(activation, assign)
+        return assign
 
     def assign_single(self, activation, assign, info, depa):
         """Create dependencies for assignment to single name"""
@@ -540,25 +646,28 @@ class Collector(object):
     def sub_dependency(self, dep, value, index, clone_depa):
         """Get dependency aware inside of another dependency aware"""
         meta = self.metascript
-        part_id = eid = None
+        part_id = eid = cid = None
+        val = "<now_unset>"
         sub = []
         if len(dep.sub_dependencies) > index:
             new_dep = dep.sub_dependencies[index]
             aid = new_dep.activation_id
             eid = new_dep.evaluation_id
+            cid = new_dep.code_id
             val = new_dep.value
             part_id = new_dep.value_id
             sub = new_dep.sub_dependencies
         else:
             addr = "[{}]".format(index)
             part_id = get_compartment(meta, dep.value_id, addr)
-            aid, eid = last_evaluation_by_value_id(meta, part_id)
+            aid, eid, cid = last_evaluation_by_value_id(meta, part_id)
         if not part_id or not eid:
             return clone_depa, None
-        val = value[index]
+        if val == "<now_unset>":
+            val = value[index]
 
         new_depa = clone_depa.clone(extra_only=True)
-        dependency = Dependency(aid, eid, val, part_id, "assign")
+        dependency = Dependency(aid, eid, cid, val, part_id, "assign")
         dependency.sub_dependencies = sub
         new_depa.add(dependency)
         return new_depa, part_id
@@ -572,6 +681,10 @@ class Collector(object):
             isiterable(value)
         )
         clone_depa = depa.clone("dependency")
+        def custom_dependency(_):
+            """Propagate dependencies"""
+            return clone_depa, None
+
         if ldepa:
             def custom_dependency(index):
                 """Propagate dependencies"""
@@ -581,13 +694,23 @@ class Collector(object):
                     return clone_depa, None
         elif propagate_dependencies:
             dep = depa.dependencies[0]
-            def custom_dependency(index):
-                """Propagate dependencies"""
-                return self.sub_dependency(dep, value, index, clone_depa)
-        else:
-            def custom_dependency(_):
-                """Propagate dependencies"""
-                return clone_depa, None
+            if id(value) in assign.generators:
+                gens = assign.generators[id(value)]
+                def custom_dependency(index):
+                    """Propagate dependencies"""
+                    icode_id, ivalue, ivalue_id, imoment, idep = gens[index]
+                    new_depa = clone_depa.clone(extra_only=True)
+                    new_depa.add(idep)
+                    self.create_dependencies_id(
+                        activation, dep.evaluation_id, new_depa
+                    )
+                    return new_depa.clone("assign"), ivalue_id
+                    #return self.sub_dependency(dep, value, index, clone_depa)
+            else:
+                def custom_dependency(index):
+                    """Propagate dependencies"""
+                    return self.sub_dependency(dep, value, index, clone_depa)
+
 
         return self.assign_multiple_apply(
             activation, assign, info, custom_dependency
@@ -667,8 +790,8 @@ class Collector(object):
                     activation, func_id, func, self.time(), depa
                 )
                 dependency = Dependency(
-                    activation.id, evaluation.id, func, evaluation.value_id,
-                    "func"
+                    activation.id, evaluation.id, func_id,
+                    func, evaluation.value_id, "func"
                 )
         result = self.call(activation, code_id, depa.exc_handler, func, mode)
 
@@ -694,7 +817,7 @@ class Collector(object):
     def _call(self, *args, **kwargs):
         """Capture call activation"""
         activation = self.last_activation
-        evaluation = activation.evaluation
+        eva = activation.evaluation
         result = None
         try:
 
@@ -717,16 +840,15 @@ class Collector(object):
             if self.last_activation.active:
                 # Create dependencies
                 depa = activation.dependencies[1]
-                self.make_dependencies(activation, evaluation, depa)
+                self.make_dependencies(activation, eva, depa)
                 if activation.code_block_id == -1:
                     # Call without definition
-                    self.create_argument_dependencies(evaluation, depa)
+                    self.create_argument_dependencies(eva, depa)
 
                 # Just add dependency if it is expecting one
                 self.last_activation.dependencies[-1].add(Dependency(
-                    evaluation.activation_id, evaluation.id, result,
-                    value_id,
-                    activation.depedency_type
+                    eva.activation_id, eva.id, eva.code_component_id,
+                    result, value_id, activation.depedency_type
                 ))
         return result
 
@@ -751,7 +873,8 @@ class Collector(object):
                     activation, code_id, value, self.time(), dependency_aware
                 )
                 dependency = Dependency(
-                    activation.id, eva.id, value, eva.value_id, mode
+                    activation.id, eva.id, eva.code_component_id,
+                    value, eva.value_id, mode
                 )
             dependency.arg = arg
             dependency.kind = kind
@@ -919,9 +1042,10 @@ class Collector(object):
         self.make_dependencies(activation, evaluation, dependency_aware)
         return value
 
-    def loop(self, activation, exc_handler):
+    def loop(self, activation, code_id, exc_handler):
         """Capture loop before"""
         activation.dependencies.append(DependencyAware(
+            code_id=code_id,
             exc_handler=exc_handler
         ))
         return self._loop
@@ -931,19 +1055,65 @@ class Collector(object):
         dependency = activation.dependencies.pop()
         return self._loop_generator(activation, value, dependency)
 
+    def enumerate_generator(self, activation, value, code_id, exc_handler):
+        """Iterate on generator"""
+        if isinstance(value, GeneratorType):
+            index = 0
+            it_ = iter(value)
+            while True:
+                try:
+                    activation.assignments.append(Assign(
+                        None, None, None
+                    ))
+                    element = next(it_)
+                except StopIteration:
+                    break
+                finally:
+                    depa = CollectionDependencyAware(
+                        code_id=code_id,
+                        exc_handler=exc_handler
+                    )
+                    assign = activation.assignments.pop()
+                    for gen in assign.generators.get(id(value), []):
+                        depa.add(gen[-1])
+                yield index, element, depa
+                index += 1
+        else:
+            depa = DependencyAware(
+                code_id=code_id,
+                exc_handler=exc_handler,
+            )
+            for index, element in enumerate(value):
+                yield index, element, depa
+
     def _loop_generator(self, activation, value, dependency):
         """Loop generator that creates a assign for each iteration"""
-        for index, element in enumerate(value):
+        it_ = self.enumerate_generator(
+            activation, value, dependency.code_id, dependency.exc_handler
+        )
+
+        for index, element, depa in it_:
             clone_depa = dependency.clone("dependency")
             if len(dependency.dependencies) == 1 and activation.active:
                 dep = dependency.dependencies[0]
+                self.create_dependencies_id(
+                    activation.id, dep.evaluation_id, depa
+                )
+                extra = ""
+                if len(depa.dependencies) == 1:
+                    gen_dep = depa.dependencies[0]
+                    extra = "-bind" if gen_dep.value == element else ""
                 clone_depa = self.sub_dependency(
                     dep, value, index, clone_depa
                 )[0]
-                clone_depa.extra_dependencies = dependency.dependencies
+                clone_depa.extra_dependencies = (
+                    dependency.dependencies +
+                    depa.clone("assign" + extra).dependencies
+                )
             assign = Assign(self.time(), element, clone_depa)
             assign.index = index
-            yield assign, element
+            activation.assignments.append(assign)
+            yield element
 
     def condition(self, activation, exc_handler):
         """Capture condition before"""
@@ -1040,11 +1210,17 @@ class Collector(object):
 
     def create_dependencies(self, evaluation, depa):
         """Create dependencies. Evaluation depends on depa"""
+        self.create_dependencies_id(
+            evaluation.activation_id, evaluation.id, depa
+        )
+
+    def create_dependencies_id(self, activation_id, evaluation_id, depa):
+        """Create dependencies. Evaluation depends on depa"""
         if depa:
             for container in [depa.dependencies, depa.extra_dependencies]:
                 for dep in container:
                     self.dependencies.add(
-                        evaluation.activation_id, evaluation.id,
+                        activation_id, evaluation_id,
                         dep.activation_id, dep.evaluation_id,
                         dep.mode
                     )
@@ -1063,7 +1239,8 @@ class Collector(object):
         """Create evaluation and dependency"""
         evaluation = self.evaluate(activation, code, value, moment, depa)
         activation.dependencies[-1].add(Dependency(
-            activation.id, evaluation.id, value, evaluation.value_id, mode
+            activation.id, evaluation.id, evaluation.code_component_id,
+            value, evaluation.value_id, mode
         ))
         return evaluation
 
