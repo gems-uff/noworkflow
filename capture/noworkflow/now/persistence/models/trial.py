@@ -291,6 +291,7 @@ class Trial(AlchemyProxy):
         self.initialize_default(kwargs)
         self._prolog_visitor = None
 
+
     @query_many_property
     def modules(self):
         """Load modules. Return SQLAlchemy query
@@ -352,6 +353,33 @@ class Trial(AlchemyProxy):
         if self.modules_inherited_from_trial:
             return self.modules_inherited_from_trial.module_dependencies
         return self._module_dependencies
+
+
+    @property
+    def initial_activation(self):
+        """Return initial activation
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import FuncConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> function = FuncConfig("f", 1, 0, 2, 8)
+        >>> trial_config = TrialConfig("finished")
+        >>> trial_id = new_trial(trial_config, assignment=assign,
+        ...                      function=function, erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+        >>> trial = Trial(trial_id)
+        >>> main_activation = trial.main.this_component.first_evaluation
+
+        Return initial activation:
+        >>> trial.initial_activation.id == trial_config.main_act
+        True
+        """
+        return self.main.this_component.first_evaluation.this_activation
+
 
     @property
     def prolog_variables(self):

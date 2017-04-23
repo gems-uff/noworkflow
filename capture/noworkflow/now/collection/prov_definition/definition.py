@@ -31,6 +31,7 @@ class Definition(object):                                                       
         metascript = self.metascript
         print_msg("  registering code components and code blocks")
         if metascript.code:
+            print("code")
             metascript.compiled = self.visit_code(
                 metascript.code, metascript.path
             )

@@ -105,10 +105,11 @@ class CodeBlock(AlchemyProxy):
         [code_component(..., ..., 'a', 'global', ...).]
         """
         from .code_component import CodeComponent
-        return relational.session.query(CodeComponent.m).filter(
-            ((CodeComponent.m.container_id == self.id) &
-             (CodeComponent.m.type == "global"))
-        )
+        return relational.session.query(CodeComponent.m).filter((
+            (CodeComponent.m.trial_id == self.trial_id) &
+            (CodeComponent.m.container_id == self.id) &
+            (CodeComponent.m.type == "global")
+        ))
 
     @query_many_property
     def parameters(self):
@@ -126,10 +127,11 @@ class CodeBlock(AlchemyProxy):
         [code_component(..., ..., 'x', 'param', ...).]
         """
         from .code_component import CodeComponent
-        return relational.session.query(CodeComponent.m).filter(
-            ((CodeComponent.m.container_id == self.id) &
-             (CodeComponent.m.type == "param"))
-        )
+        return relational.session.query(CodeComponent.m).filter((
+            (CodeComponent.m.trial_id == self.trial_id) &
+            (CodeComponent.m.container_id == self.id) &
+            (CodeComponent.m.type == "param")
+        ))
 
     @query_many_property
     def calls(self):
@@ -147,10 +149,11 @@ class CodeBlock(AlchemyProxy):
         [code_component(..., ..., 'f(a)', 'call', ...).]
         """
         from .code_component import CodeComponent
-        return relational.session.query(CodeComponent.m).filter(
-            ((CodeComponent.m.container_id == self.id) &
-             (CodeComponent.m.type == "call"))
-        )
+        return relational.session.query(CodeComponent.m).filter((
+            (CodeComponent.m.trial_id == self.trial_id) &
+            (CodeComponent.m.container_id == self.id) &
+            (CodeComponent.m.type == "call")
+        ))
 
     def show(self, print_=lambda x, offset=0: print(x)):
         """Show code block
@@ -180,25 +183,22 @@ class CodeBlock(AlchemyProxy):
         """
         component = self.this_component
 
-        extra = ""
-        if component.type == "function_def":
-            extra = dedent("""\
-                Parameters: {parameters}
-                Globals: {globals}
-                Calls: {calls}""")
-        elif component.type == "class_def":
-            extra = "Arguments: {parameters}"
 
-        extra = extra.format(
-            parameters=", ".join(x.name for x in self.parameters),               # pylint: disable=not-an-iterable
-            globals=", ".join(x.name for x in self.globals),                     # pylint: disable=not-an-iterable
-            calls=", ".join(x.name for x in self.calls)                          # pylint: disable=not-an-iterable
+        result = []
+
+        append = lambda attr, value, force=False: (
+            result.append("{}: {}".format(attr, value))
+            if value or force else None
         )
+        append("Name", "{} [{}]".format(component.name, component.type))
+        append("Code hash", self.code_hash, force=True)
+        append("Docstring", self.docstring)
 
-        result = dedent("""\
-            Name: {component.name}
-            Code hash: {block.code_hash}
-            Docstring: {block.docstring}
-            """.format(block=self, component=component))
-        result += extra
-        print_(result)
+        if component.type == "function_def":
+            append("Parameters", ", ".join(x.name for x in self.parameters))     # pylint: disable=not-an-iterable
+            append("Globals", ", ".join(x.name for x in self.globals))           # pylint: disable=not-an-iterable
+            append("Calls", ", ".join(x.name for x in self.calls))               # pylint: disable=not-an-iterable
+        elif component.type == "class_def":
+            append("Arguments", ", ".join(x.name for x in self.parameters))      # pylint: disable=not-an-iterable
+
+        print_("\n".join(result))

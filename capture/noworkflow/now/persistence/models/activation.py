@@ -16,6 +16,7 @@ from .. import relational
 
 from .base import AlchemyProxy, proxy_class, many_viewonly_ref
 from .base import backref_one, backref_many, backref_one_uselist
+from .base import query_many_property
 
 from .dependency import Dependency
 
@@ -111,6 +112,41 @@ class Activation(AlchemyProxy):
         "at (*Start*).\n"
         "This activation was defined by *CodeBlockId*."
     ))
+
+    @query_many_property
+    def activations(self):
+        """Load internal. Return SQLAlchemy query
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import FuncConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> function = FuncConfig("f", 1, 0, 2, 8)
+        >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+        ...                      function=function, erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+        >>> trial = Trial(trial_id)
+        >>> main_activation = trial.initial_activation
+
+        Return internal activations:
+        >>> ids = [act.id for act in main_activation.activations]
+        >>> activation.id in ids
+        True
+        """
+        #from IPython import embed; embed()
+        from .evaluation import Evaluation
+        return relational.session.query(Activation.m).join(Evaluation.m, (
+            (Activation.m.trial_id == Evaluation.m.trial_id) &
+            (Activation.m.id == Evaluation.m.id)
+        )).filter(
+            (Activation.m.trial_id == self.trial_id) &
+            (Evaluation.m.activation_id == self.id)
+        )
+
+        #return self.evaluations.this_activation
 
     @property
     def caller(self):

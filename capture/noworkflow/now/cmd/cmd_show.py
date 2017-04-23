@@ -35,7 +35,7 @@ def print_function_activation(trial, activation, level=1):
     activation.show(print_=lambda x, offset=0: print(
         wrap(x, initial=" " * (indent + offset))))
 
-    for inner_activation in activation.children:
+    for inner_activation in activation.activations:
         print_function_activation(trial, inner_activation, level + 1)
 
 
@@ -48,8 +48,8 @@ class Show(NotebookCommand):
                 help="trial id or none for last trial")
         add_arg("-m", "--modules", action="store_true",
                 help="shows module dependencies")
-        add_arg("-d", "--function-defs", action="store_true",
-                help="shows the user-defined functions")
+        add_arg("-d", "--definition", action="store_true",
+                help="shows the definition provenance")
         add_arg("-e", "--environment", action="store_true",
                 help="shows the environment conditions")
         add_arg("-a", "--function-activations", action="store_true",
@@ -71,9 +71,11 @@ class Show(NotebookCommand):
             print_msg("this trial depends on the following modules:", True)
             print_trial_relationship(trial.modules)
 
-        if args.function_defs:
-            print_msg("this trial has the following functions:", True)
-            print_trial_relationship(trial.function_defs)
+        if args.definition:
+            print_msg("this trial has the following code blocks:", True)
+            print_trial_relationship(sorted(
+                trial.code_blocks, key=lambda x: x.id
+            ))
 
         if args.environment:
             print_msg("this trial has been executed under the following"
@@ -84,8 +86,7 @@ class Show(NotebookCommand):
         if args.function_activations:
             print_msg("this trial has the following function activation "
                       "graphF:", True)
-            for act in trial.initial_activations:                                # pylint: disable=not-an-iterable
-                print_function_activation(trial, act)
+            print_function_activation(trial, trial.initial_activation)
 
         if args.file_accesses:
             print_msg("this trial accessed the following files:", True)
