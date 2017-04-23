@@ -872,3 +872,117 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_lis_r, var_lis_w, "assignment")
         self.assert_dependency(var_x1_w, z2_1, "assign-bind")
         self.assert_dependency(var_y1_w, z2_2, "assign-bind")
+
+    def test_generator_function_variable(self):                                  # pylint: disable=too-many-locals, invalid-name
+        """Test for loop"""
+        self.script("def f():\n"
+                    "    yield 3\n"
+                    "    yield 4\n"
+                    "a = f()\n"
+                    "b = a\n"
+                    "for x in b:"
+                    "    y = x\n"
+                    "# other")
+
+        var_gen = self.get_evaluation(name="f()")
+        var_a_w = self.get_evaluation(name="a", mode="w")
+        var_a_r = self.get_evaluation(name="a", mode="r")
+        var_b_w = self.get_evaluation(name="b", mode="w")
+        var_b_r = self.get_evaluation(name="b", mode="r")
+        var_3 = self.get_evaluation(name="3")
+        var_4 = self.get_evaluation(name="4")
+        yield_3 = self.get_evaluation(name="yield 3")
+        yield_4 = self.get_evaluation(name="yield 4")
+
+        var_xs_w = self.get_evaluations(name="x", mode="w")
+        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_ys_w = self.get_evaluations(name="y", mode="w")
+
+        self.assertEqual(len(var_xs_w), 2)
+        self.assertEqual(len(var_xs_r), 2)
+        self.assertEqual(len(var_ys_w), 2)
+
+        var_x1_w, var_x2_w = var_xs_w
+        var_x1_r, var_x2_r = var_xs_r
+        var_y1_w, var_y2_w = var_ys_w
+
+        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
+        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
+        self.assertEqual(var_x1_val.value, '3')
+        self.assertEqual(var_x2_val.value, '4')
+
+        self.assertEqual(var_x1_w.value_id, var_3.value_id)
+        self.assertEqual(var_x2_w.value_id, var_4.value_id)
+        self.assertEqual(var_x1_w.value_id, var_x1_r.value_id)
+        self.assertEqual(var_x1_w.value_id, var_y1_w.value_id)
+        self.assertEqual(var_x2_w.value_id, var_x2_r.value_id)
+        self.assertEqual(var_x2_w.value_id, var_y2_w.value_id)
+
+
+        self.assert_dependency(var_a_w, var_gen, "assign-bind")
+        self.assert_dependency(var_a_r, var_a_w, "assignment")
+        self.assert_dependency(var_x1_w, var_b_r, "dependency")
+        self.assert_dependency(var_x2_w, var_b_r, "dependency")
+
+        self.assert_dependency(var_b_r, var_b_w, "assignment")
+        self.assert_dependency(var_b_r, var_3, "item")
+        self.assert_dependency(var_b_r, var_4, "item")
+
+        self.assert_dependency(var_x1_w, var_3, "assign-bind")
+        self.assert_dependency(var_x2_w, var_4, "assign-bind")
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
+        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
+        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+
+        self.assert_dependency(yield_3, var_3, "use")
+        self.assert_dependency(yield_4, var_4, "use")
+
+    def test_collect_try(self):
+        """Test assign collection"""
+        self.script("# script.py\n"
+                    "try:\n"
+                    "    a = 2\n"
+                    "    erro\n"
+                    "except NameError as err:\n"
+                    "    b = a\n"
+                    "    c = err\n"
+                    "# other")
+
+        write_a_eval = self.get_evaluation(name="a", mode="w")
+        read_a_eval = self.get_evaluation(name="a", mode="r")
+        write_b_eval = self.get_evaluation(name="b", mode="w")
+        write_c_eval = self.get_evaluation(name="c", mode="w")
+        write_err_eval = self.get_evaluation(name="err", mode="w")
+        read_err_eval = self.get_evaluation(name="err", mode="r")
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        self.assertEqual(read_a_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(read_a_eval.moment))
+        self.assertEqual(write_b_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(write_b_eval.moment))
+        self.assertEqual(script_act.context['a'], write_a_eval)
+        self.assertEqual(script_act.context['b'], write_b_eval)
+
+        self.assertEqual(read_a_eval.value_id,
+                         write_a_eval.value_id)
+        a_value = self.metascript.values_store[read_a_eval.value_id]
+        b_value = self.metascript.values_store[write_b_eval.value_id]
+        a_type = self.metascript.values_store[a_value.type_id]
+        b_type = self.metascript.values_store[b_value.type_id]
+
+        self.assertEqual(a_value.id, b_value.id)
+
+        self.assertEqual(a_value.value, "2")
+        self.assertEqual(b_value.value, "2")
+        self.assertEqual(a_type.id, b_type.id)
+
+        self.assert_dependency(read_a_eval, write_a_eval, "assignment")
+        self.assert_dependency(write_b_eval, read_a_eval, "assign-bind")
+        self.assert_dependency(write_c_eval, read_err_eval, "assign-bind")
+        self.assert_dependency(read_err_eval, write_err_eval, "assignment")
+
+    # ToDo: expr/YieldFrom
+    # ToDo: expr/Await

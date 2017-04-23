@@ -13,7 +13,7 @@ from .ast_helpers import ReplaceContextWithLoad, ast_copy, temporary
 
 from .ast_elements import maybe, context, nlambda
 from .ast_elements import L, S, P, none, true, false, call, param
-from .ast_elements import noworkflow, double_noworkflow
+from .ast_elements import noworkflow, double_noworkflow, act_attribute
 from .ast_elements import activation, function_def, class_def, try_def
 
 
@@ -509,9 +509,141 @@ class RewriteAST(ast.NodeTransformer):                                          
         ), node)
         return node
 
-    def visit_Expr(self, node):
+    def visit_Expr(self, node):                                                  # pylint: disable=invalid-name
         """Visit Expr. Capture it"""
         node.value = self.capture(node.value)
+        return node
+
+    def visit_Try(self, node):                                                   # pylint: disable=invalid-name
+        """Visit Try
+        Transform:
+            try:
+                ...
+            except Exception as e:
+                ...
+            else:
+                ...
+            finally:
+                ...
+        Into:
+            try:
+                try:
+                    ...
+                except:
+                    <now>.collect_exception(<act>, <exc>)
+                    raise
+            except Exception as err:
+                <now>.exception(<act>, #, <exc>, err)
+                ...
+            else:
+                ...
+            finally:
+                ...
+        """
+        with self.exc_handler() as internal_handler:
+            node.body = [ast_copy(try_def(self.process_body(node.body), [
+                ast.ExceptHandler(None, None, [
+                    ast_copy(ast.Expr(noworkflow(
+                        "collect_exception",
+                        [activation(), ast.Num(self.current_exc_handler)]
+                    )), node),
+                    ast_copy(ast.Raise(), node)
+                ])
+            ], [], [], node), node)]
+        handlers = []
+        for handler in node.handlers:
+            handlers.append(self.visit_exchandler(handler, internal_handler))
+        node.handlers = handlers
+        node.orelse = self.process_body(node.orelse)
+        node.finalbody = self.process_body(node.finalbody)
+        return node
+
+    def visit_TryFinally(self, node):                                            # pylint: disable=invalid-name
+        """Visit TryFinally -- Python 2
+        Transform:
+            try:
+                ...
+            finally:
+                ...
+        Into:
+            try:
+                ...
+            finally:
+                ...
+        """
+        node.body = self.process_body(node.body)
+        node.finalbody = self.process_body(node.finalbody)
+        return node
+
+    def visit_TryExcept(self, node):                                             # pylint: disable=invalid-name
+        """Visit TryExcept -- Python 2
+        Transform:
+            try:
+                ...
+            except Exception as e:
+                ...
+            else:
+                ...
+        Into:
+            try:
+                try:
+                    ...
+                except:
+                    <now>.collect_exception(<act>, <exc>)
+                    raise
+            except Exception as err:
+                <now>.exception(<act>, #, <exc>, err)
+                ...
+            else:
+                ...
+        """
+        with self.exc_handler() as internal_handler:
+            node.body = [ast_copy(try_def(self.process_body(node.body), [
+                ast.ExceptHandler(None, None, [
+                    ast_copy(ast.Expr(noworkflow(
+                        "collect_exception",
+                        [activation(), ast.Num(self.current_exc_handler)]
+                    )), node),
+                    ast_copy(ast.Raise(), node)
+                ])
+            ], [], [], node), node)]
+        handlers = []
+        for handler in node.handlers:
+            handlers.append(self.visit_exchandler(handler, internal_handler))
+        node.handlers = handlers
+        node.orelse = self.process_body(node.orelse)
+        return node
+
+    def visit_exchandler(self, node, internal_handler):
+        """Visit excepthandler
+        Transform:
+            except Exception as err:
+                ...
+        Into:
+            except Exception as err:
+                <now>.exception(<act>, #, <exc>, err)
+                ...
+        """
+        if node.type is None:
+            node.type = ast.Name("Exception", L())
+        name = "__now_exception__"
+        if node.name is None:
+            node.name = name if PY3 else ast.Name(name, S())
+        name = node.name if PY3 else node.name.id
+        with temporary(node, "name", name):
+            component_id = self.create_code_component(node, "exception", 'w')
+        node.body = [
+            ast_copy(ast.Expr(noworkflow(
+                "exception",
+                [
+                    activation(),
+                    ast.Num(component_id),
+                    ast.Num(internal_handler),
+                    ast.Str(name),
+                    ast.Name(name, L()),
+                ]
+            )), node)
+        ] + self.process_body(node.body)
         return node
 
 
@@ -1508,6 +1640,62 @@ class RewriteDependencies(ast.NodeTransformer):
             ), node.ifs[0]))
         node.ifs = ifs
         return node
+
+    def visit_Yield(self, node):
+        """Visit yield
+        Transform:
+            yield x
+        Into
+            <now>.yield_(<act>, #y, <exc>)(
+                <act>, #y,
+                yield <now>.genitem(<act>, #i, <exc>)(
+                    <act>, #, |x|, <act>.generator
+                ),
+                <mode>
+            )
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        yield_component = self.rewriter.create_code_component(
+            node, "yield", "r"
+        )
+
+        if node.value:
+            value = self.rewriter.capture(node.value, mode="item")
+            if hasattr(value, "code_component_id"):
+                value_component = value.code_component_id
+            else:
+                value.name = pyposast.extract_code(self.rewriter.lcode, value)
+                value_component = self.rewriter.create_code_component(
+                    node, "item", "r"
+                )
+            node.value = ast_copy(double_noworkflow(
+                "yielditem",
+                [
+                    activation(),
+                    ast.Num(value_component),
+                    ast.Num(self.rewriter.current_exc_handler)
+                ], [
+                    activation(),
+                    ast.Num(value_component),
+                    value,
+                    act_attribute("generator")
+                ]
+            ), value)
+
+        return ast_copy(double_noworkflow(
+            "yield_",
+            [
+                activation(),
+                ast.Num(yield_component),
+                ast.Num(self.rewriter.current_exc_handler)
+            ],
+            [
+                activation(),
+                ast.Num(yield_component),
+                node,
+                ast.Str(self.mode)
+            ]
+        ), node)
 
     def generic_visit(self, node):
         """Visit node"""

@@ -1016,3 +1016,8 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_x2_r, var_x2_w, "assignment")
         self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
         self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+
+    # ToDo: expr/FormattedValue -- PY3
+    # ToDo: expr/JoinedStr -- PY3
+    # ToDo: expr/Constant -- PY3
+    # ToDo: expr/Repe -- PY2

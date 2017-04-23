@@ -81,10 +81,15 @@ def call(func, args, keywords=None, star=None, kwargs=None):
     return ast.Call(*create_call)
 
 
+def now_attribute(name):
+    """Access <now>.<name> attribute"""
+    return ast.Attribute(ast.Name("__noworkflow__", L()), name, L())
+
+
 def noworkflow(name, args, keywords=None, star=None, kwargs=None):
     """Create <now>.<name>(args...) call"""
     return call(
-        ast.Attribute(ast.Name("__noworkflow__", L()), name, L()),
+        now_attribute(name),
         args, keywords, star, kwargs
     )
 
@@ -115,9 +120,16 @@ def nlambda(args=None, body=None):
     body = body or none()
     return ast.Lambda(args, body)
 
+
+
 def activation():
     """Access activation"""
     return ast.Name("__now_activation__", L())
+
+
+def act_attribute(name):
+    """Access <act>.<name> attribute"""
+    return ast.Attribute(activation(), name, L())
 
 
 def param(value, annotation=None):

@@ -21,7 +21,6 @@ class Assign(namedtuple("Assign", "moment value dependency")):
         self.accesses = {}
         self.generators = defaultdict(list)
         self.index = -1
-        self.collecting_dependencies = False
         return self
 
     def sub(self, value, dependency):
@@ -31,6 +30,14 @@ class Assign(namedtuple("Assign", "moment value dependency")):
         assign.index = self.index
         assign.accesses = self.accesses
         return assign
+
+    def combine(self, other):
+        """Combine assignents"""
+        for code_id, access in other.accesses.items():
+            self.accesses[code_id] = access
+
+        for obj_id, generator in other.generators.items():
+            self.generators[obj_id] = generator
 
 
 class DependencyAware(object):
@@ -88,6 +95,15 @@ class DependencyAware(object):
             for dep in e_depa.extra_dependencies:
                 new_depa.add_extra(dep)
         return new_depa
+
+    def swap(self):
+        """Swap dependencies and extra_dependencies"""
+        self.dependencies, self.extra_dependencies = (
+            self.extra_dependencies, self.dependencies
+        )
+
+    def __repr__(self):
+        return "{} - {}".format(self.dependencies, self.extra_dependencies)
 
 class Generator(object):
     """Represent a generator"""

@@ -17,7 +17,7 @@ class ActivationLW(BaseLW):                                                     
         ["trial_id", "id", "name", "start", "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
          "evaluation", "assignments", "closure", "func", "dependency_type",
-         "active", "depth", "parent"]
+         "active", "depth", "parent", "generator"]
     )
     nullable = {"code_block_id"}
     model = Activation
@@ -61,6 +61,9 @@ class ActivationLW(BaseLW):                                                     
 
         # Current depth
         self.depth = 0
+
+        # Generator Object
+        self.generator = None
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Activation can always be removed from object store"""
