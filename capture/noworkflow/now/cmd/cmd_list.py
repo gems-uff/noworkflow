@@ -28,13 +28,18 @@ class List(Command):
         persistence_config.connect_existing(args.dir or os.getcwd())
         print_msg("trials available in the provenance store:", True)
         for trial in Trial.all():
-            text = "  Trial {0.id}: {0.command}".format(trial)
+            text = "  [{0.status_letter}]Trial {0.id}: {0.command}".format(
+                trial
+            )
             indent = text.index(": ") + 2
             print(text)
             print("{indent}with code hash {t.code_hash}".format(
-                indent=" " * indent, t=trial))
+                indent=" " * indent, t=trial
+            ))
             print("{indent}ran from {t.start} to {t.finish}".format(
-                indent=" " * indent, t=trial))
+                indent=" " * indent, t=trial
+            ))
             if trial.finish:
                 print('{indent}duration: {t.duration_text}'.format(
-                    indent=" " * indent, t=trial))
+                    indent=" " * indent, t=trial
+                ))

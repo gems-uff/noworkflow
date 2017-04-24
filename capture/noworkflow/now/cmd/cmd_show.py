@@ -27,6 +27,8 @@ def print_trial_relationship(relation, breakline="\n\n", other="\n    "):
 
 def print_function_activation(trial, activation, level=1):
     """Print function activation recursively"""
+    if activation is None:
+        return
     text = wrap(
         "{0.line}: {0.name} ({0.start} - {0.finish})".format(activation),
         initial="  " * level)
@@ -54,6 +56,8 @@ class Show(NotebookCommand):
                 help="shows the environment conditions")
         add_arg("-a", "--function-activations", action="store_true",
                 help="shows function activations")
+        add_arg("-p", "--arguments", action="store_true",
+                help="shows noworkflow parameters")
         add_arg("-f", "--file-accesses", action="store_true",
                 help="shows read/write access to files")
         add_arg("--dir", type=str,
@@ -85,12 +89,18 @@ class Show(NotebookCommand):
 
         if args.function_activations:
             print_msg("this trial has the following function activation "
-                      "graphF:", True)
+                      "tree:", True)
             print_function_activation(trial, trial.initial_activation)
 
         if args.file_accesses:
             print_msg("this trial accessed the following files:", True)
             print_trial_relationship(trial.file_accesses)
+
+        if args.arguments:
+            print_msg("this trial has the following arguments:", True)
+            print_trial_relationship(trial.arguments, breakline="\n",
+                                     other="\n  ")
+
 
     def execute_export(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())

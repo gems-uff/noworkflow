@@ -37,6 +37,8 @@ class Execution(object):
 
         print_msg("  executing the script")
         try:
+            if isinstance(metascript.compiled, SyntaxError):
+                raise metascript.compiled
             #eval(metascript.compiled, metascript.namespace)
             exec(metascript.compiled, metascript.namespace)                      # pylint: disable=exec-used
         except SystemExit as ex:
@@ -62,7 +64,7 @@ class Execution(object):
         """Disable provider and store provenance"""
         self.collector.store(
             partial=False,
-            status="finished" if not self.msg else "unfinished"
+            status="finished" if not self.force_msg else "unfinished"
         )
         if self.msg:
             print_msg(self.msg, self.force_msg)

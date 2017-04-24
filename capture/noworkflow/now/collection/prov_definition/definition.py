@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 
 import weakref
+import os
 
 import pyposast
 
@@ -31,7 +32,7 @@ class Definition(object):                                                       
         metascript = self.metascript
         print_msg("  registering code components and code blocks")
         if metascript.code:
-            print("code")
+            # Tests use this version
             metascript.compiled = self.visit_code(
                 metascript.code, metascript.path
             )
@@ -52,10 +53,18 @@ class Definition(object):                                                       
         try:
             with open(path, "rb") as script_file:
                 code = pyposast.native_decode_source(script_file.read())
-        except SyntaxError:
+            return self.visit_code(code, path)
+        except SyntaxError as err:
+            # Create Code Component and Code Block anyway
+            lines = code.split("\n")
+            id_ = self.metascript.code_components_store.add(
+                os.path.relpath(path, self.metascript.dir), "script", "w",
+                1, 0, len(lines), len(lines[-1]),
+                -1
+            )
+            self.metascript.code_blocks_store.add(id_, code, "")
             print_msg("Syntax error on file {}.".format(path))
-            return None
-        return self.visit_code(code, path)
+            return err
 
     def visit_code(self, code, path):
         """Return a visitor that visited the tree"""

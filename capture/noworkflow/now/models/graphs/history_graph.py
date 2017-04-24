@@ -329,9 +329,7 @@ def _line_text(active, trial, current, moving=False, width=25):
     for i, value in enumerate(active):
         if i == current:
             text.append("/ " if moving else
-                        " b" if not trial.run else
-                        " *" if trial.finished else
-                        " f")
+                        " {}".format(trial.status_letter))
         elif value:
             text.append(" |")
         else:

@@ -378,6 +378,8 @@ class Trial(AlchemyProxy):
         >>> trial.initial_activation.id == trial_config.main_act
         True
         """
+        if self.main.this_component.first_evaluation is None:
+            return None
         return self.main.this_component.first_evaluation.this_activation
 
 
@@ -431,9 +433,12 @@ class Trial(AlchemyProxy):
         [module_def(..., 'inte', '1.0.1')., module_def(..., 'inte2', '1.0.2').]
         """
         for module in self.modules:                                              # pylint: disable=not-an-iterable
-            if not os.path.isabs(module.path):
+            path = module.path
+            if path is None:
+                continue
+            elif not os.path.isabs(path):
                 yield module
-            elif module.path.startswith(self.path):
+            elif path.startswith(self.path):
                 yield module
 
     @property
@@ -501,6 +506,55 @@ class Trial(AlchemyProxy):
         False
         """
         return self.status == "finished"
+
+    @property
+    def backup(self):
+        """Check if trial has finished
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> id1 = new_trial(TrialConfig("backup"), erase=True)
+        >>> id2 = new_trial(TrialConfig("unfinished"))
+
+        Trial is backup:
+        >>> Trial(id1).backup
+        True
+
+        Trial has not finished:
+        >>> Trial(id2).backup
+        False
+        """
+        return self.status == "backup"
+
+    @property
+    def status_letter(self):
+        """Return letter representing status
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> id1 = new_trial(TrialConfig("backup"), erase=True)
+        >>> id2 = new_trial(TrialConfig("unfinished"))
+        >>> id3 = new_trial(TrialConfig("finished"))
+
+
+        Trial is backup:
+        >>> Trial(id1).status_letter
+        'b'
+
+        Trial has not finished:
+        >>> Trial(id2).status_letter
+        'f'
+
+        Trial has finished:
+        >>> Trial(id3).status_letter
+        '*'
+        """
+        if self.status == "backup":
+            return "b"
+        elif self.status == "finished":
+            return "*"
+        else:
+            return "f"
 
     @property
     def duration(self):
@@ -768,12 +822,15 @@ class Trial(AlchemyProxy):
         """
         print_("""\
             Id: {t.id}
+            Status: {status}
             Inherited Id: {t.modules_inherited_from_trial_id}
             Script: {t.script}
             Code hash: {t.code_hash}
             Start: {t.start}
             Finish: {t.finish}
-            Duration: {t.duration_text}""".format(t=self))
+            Duration: {t.duration_text}""".format(
+                t=self, status=self.status.capitalize()
+        ))
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""

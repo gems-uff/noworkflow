@@ -11,10 +11,12 @@ import os
 import sys
 import time
 
+from datetime import datetime
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
 from ..persistence.models import Trial, Module, ModuleDependency, FileAccess
+from ..persistence.models import Argument
 from ..persistence import persistence_config, content
 from ..utils.io import print_msg
 
@@ -56,10 +58,11 @@ class Restore(Command):
         modules = metascript.modules_store
         module_dependencies = metascript.module_dependencies_store
         accesses = metascript.file_accesses_store
+        arguments = metascript.arguments_store
         for path, info in viewitems(files):
             if info["type"] == "script":
-                metascript.fake_path(path, "")
-                metascript.paths[path].code_hash = info["code_hash"]
+                metascript.path = path
+                metascript.definition.visit_file(path)
             elif info["type"] == "module":
                 path = os.path.abspath(path)
                 version = metascript.deployment.get_version(info["name"])
@@ -73,16 +76,16 @@ class Restore(Command):
                 access.content_hash_after = info["code_hash"]
                 access.mode = "a+"
 
-        metascript.trial_id = Trial.store(
-            *metascript.create_trial_args(
-                args="<restore {}>".format(metascript.trial_id), run=False
-            )
-        )
+        metascript.arguments_store.add("restore", repr(metascript.trial_id))
+        metascript.trial_id = Trial.store(*metascript.create_trial_args())
 
         tid, partial = metascript.trial_id, True
+        Trial.fast_update(tid, metascript.main_id, datetime.now(), "backup")
         Module.fast_store(tid, modules, partial)
         ModuleDependency.fast_store(tid, module_dependencies, partial)
         FileAccess.fast_store(tid, accesses, partial)
+        Argument.fast_store(tid, arguments, partial)
+        metascript.definition.store_provenance()
 
         print_msg("Backup Trial {} created".format(metascript.trial_id),
                   self.print_msg)
@@ -136,8 +139,7 @@ class Restore(Command):
         self.trial = trial = metascript.trial = Trial(trial_ref=args.trial)
         metascript.trial_id = trial.id
         metascript.name = trial.script
-        metascript.fake_path(trial.script, "")
-        metascript.paths[trial.script].code_hash = None
+        metascript.path = trial.path
 
         restore_files = trial.versioned_files(**skip_dict(args))
         if not args.file:

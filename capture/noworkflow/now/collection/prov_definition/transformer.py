@@ -392,7 +392,6 @@ class RewriteAST(ast.NodeTransformer):                                          
             arg.name = pyposast.extract_code(self.lcode, arg).strip("()")
 
         id_ = self.create_code_component(arg, "param", "w")
-        print("param>", arg, id_)
         return ast_copy(ast.Tuple([
             ast.Str(arg.name), ast.Num(id_)
         ], L()), arg)

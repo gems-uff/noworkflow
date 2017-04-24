@@ -178,6 +178,7 @@ class Metascript(object):                                                       
     def _read_args(self, args):
         """Read cmd line argument object"""
         # ToDo #54: add serializer param
+        self.create_arguments(args)
         self.serialize = get_serializer(args)
         self.verbose = args.verbose
         self.meta = args.meta
@@ -195,11 +196,19 @@ class Metascript(object):                                                       
 
     def read_restore_args(self, args):
         """Read cmd line argument object for 'now restore'"""
+        self.create_arguments(args)
         self.bypass_modules = True
         self.command = " ".join(sys.argv[1:])
 
         self.dir = args.dir
         return self
+
+    def create_arguments(self, args):
+        """Create arguments"""
+        for arg in vars(args):
+            value = getattr(args, arg)
+            if arg not in ("func", ):
+                self.arguments_store.add(arg, repr(value))
 
     def create_last(self):
         """Create file indicating last trial id"""

@@ -11,7 +11,7 @@ import os
 import sys
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Tag, Trial
+from ..persistence.models import Tag, Trial, Argument
 from ..utils import io, metaprofiler
 
 from .command import Command
@@ -48,6 +48,8 @@ def run(metascript):
     """Execute noWokflow to capture provenance from script"""
     try:
         metascript.trial_id = Trial.store(*metascript.create_trial_args())
+        arguments = metascript.arguments_store
+        Argument.fast_store(metascript.trial_id, arguments, True)
 
         io.print_msg("collecting definition provenance")
         metascript.definition.collect_provenance()

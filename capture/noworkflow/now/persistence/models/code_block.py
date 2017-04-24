@@ -174,12 +174,12 @@ class CodeBlock(AlchemyProxy):
         >>> code_block.show(
         ...    print_=lambda x, offset=0: print(dedent(x))
         ... )  #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        Name: function
+        Name: function [function_def]
         Code hash: ...
         Docstring: ab
         Parameters: x
         Globals: a
-        Calls:
+
         """
         component = self.this_component
 

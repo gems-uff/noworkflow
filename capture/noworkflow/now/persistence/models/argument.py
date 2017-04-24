@@ -60,3 +60,29 @@ class Argument(AlchemyProxy):
         "an argument (*Name*)\n"
         "was passed with *Value*."
     ))
+
+
+    def show(self, print_=lambda x, offset=0: print(x)):
+        """Show object
+
+        Keyword arguments:
+        print_ -- custom print function (default=print)
+
+
+        Doctest:
+        >>> from textwrap import dedent
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import arguments
+        >>> erase_db()
+        >>> trial_id = new_trial()
+        >>> id_ = arguments.add("attr_name", "attr_value")
+        >>> arguments.fast_store(trial_id)
+        >>> arg = Argument((trial_id, id_))
+
+
+        Show environment attribute:
+        >>> arg.show(
+        ...     print_=lambda x: print(dedent(x))) #doctest: +ELLIPSIS
+        attr_name: attr_value
+        """
+        print_("{0.name}: {0.value}".format(self))
