@@ -77,7 +77,6 @@ class Run(Command):
         self.default_context = "main"
         self.default_call_storage_frequency = 10000
         self.default_save_frequency = 0
-        self.default_execution_provenance = "Profiler"
         self.add_help = False
 
     def add_arguments(self):
@@ -106,18 +105,8 @@ class Run(Command):
                 default=sys.getrecursionlimit(),
                 help="depth for capturing function activations (default: "
                      "recursion limit)")
-        add_arg("-D", "--non-user-depth", type=non_negative, default=1,
-                help="depth for capturing function activations outside the "
-                     "selected context (default: 1)")
-        add_arg("-e", "--execution-provenance",
-                default=self.default_execution_provenance,
-                choices=["Profiler", "Tracer", "Tracker"],
-                help="R|execution provenance provider. (default: Profiler)\n"
-                     "Profiler captures function calls, parameters, file \n"
-                     "accesses, and globals. \n"
-                     "Tracker captures everything the Profiler captures, \n"
-                     "in addition to variables and dependencies.\n"
-                     "Tracer is an alias to Tracker")
+        # ToDo: limit module depth
+        #   Use context option: main, package, all
         add_arg("-c", "--context", choices=["main", "package", "all"],
                 default=self.default_context,
                 help="functions subject to depth computation when capturing "
@@ -128,6 +117,7 @@ class Run(Command):
         add_arg("-S", "--call-storage-frequency", type=non_negative,
                 default=self.default_call_storage_frequency,
                 help="frequency (in calls) to save partial provenance")
+        # ToDo: capture only activations
 
         # Other
         if not self.is_ipython:
@@ -148,8 +138,6 @@ class Run(Command):
                 help="increase output verbosity")
 
         # Internal
-        add_arg("--disasm0", action="store_true", help=argparse.SUPPRESS)
-        add_arg("--disasm", action="store_true", help=argparse.SUPPRESS)
         add_cmd("--create_last", action="store_true", help=argparse.SUPPRESS)
         add_arg("--meta", action="store_true", help=argparse.SUPPRESS)
 

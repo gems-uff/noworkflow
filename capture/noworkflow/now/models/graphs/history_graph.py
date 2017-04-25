@@ -67,9 +67,9 @@ class HistoryGraph(Graph):
         # To JSON
         final = []
         for trial in result["nodes"]:
-            dic = trial.to_dict(
-                ignore=tuple(),
-                extra=("level", "status", "tooltip", "duration_text"))
+            dic = trial.to_dict(ignore=tuple(), extra=(
+                "level", "status", "tooltip", "duration_text", "code_hash"
+            ))
             dic["start"] = str(dic["start"])
             dic["finish"] = str(dic["finish"])
             final.append(dic)

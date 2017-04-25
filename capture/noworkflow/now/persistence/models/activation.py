@@ -173,6 +173,30 @@ class Activation(AlchemyProxy):
         return self.this_evaluation.activation
 
     @property
+    def caller_id(self):
+        """Return Activation caller
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import FuncConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> function = FuncConfig("f", 1, 0, 2, 8)
+        >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+        ...                      function=function, erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+        >>> trial = Trial(trial_id)
+        >>> main_activation = trial.main.this_component.first_evaluation
+
+        Return caller activation:
+        >>> activation.caller_id == main_activation.id
+        True
+        """
+        return self.this_evaluation.activation_id
+
+    @property
     def line(self):
         """Return activation line
 

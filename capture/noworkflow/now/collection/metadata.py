@@ -98,8 +98,6 @@ class Metascript(object):                                                       
 
         # Depth for capturing function activations : int
         self.depth = sys.getrecursionlimit()
-        # Depth for capturing function activations outside context : int
-        self.non_user_depth = 1
         # Script context : ["main", "package", "all"]
         self._context = MAIN
 
@@ -124,10 +122,8 @@ class Metascript(object):                                                       
 
     @context.setter
     def context(self, context):
-        """Set context. Must be set AFTER self.non_user_depth"""
+        """Set context"""
         self._context = CONTEXTS[context]
-        if context == ALL:
-            self.non_user_depth = self.depth
 
     def clear_namespace(self, erase=True):
         """Clear namespace dict"""
@@ -186,7 +182,6 @@ class Metascript(object):                                                       
         self.bypass_modules = args.bypass_modules
 
         self.depth = args.depth
-        self.non_user_depth = args.non_user_depth
         self.save_frequency = args.save_frequency
         self.call_storage_frequency = args.call_storage_frequency
 
@@ -228,6 +223,7 @@ class Metascript(object):                                                       
     def create_trial_args(self):
         """Return arguments for Trial.store"""
         return (
-            self.name, datetime.now(), self.command, self.path,
+            self.name, datetime.now(), self.command,
+            os.path.dirname(self.path),
             self.bypass_modules
         )

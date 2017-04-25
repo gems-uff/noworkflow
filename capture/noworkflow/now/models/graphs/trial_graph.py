@@ -324,7 +324,7 @@ def recursive_generate_graph(trial, single, depth):
     if not depth:
         return single
     children = []
-    for act in single.activation.children:
+    for act in single.activation.activations:
         child = Single(act)
         child.level = single.level + 1
         children.append(recursive_generate_graph(trial, child, depth - 1))
@@ -341,13 +341,13 @@ def recursive_generate_graph(trial, single, depth):
 
 def generate_graph(trial, depth=1000):
     """Return the activation graph"""
-    activations = list(trial.initial_activations)
-    if not activations:
+    activation = trial.initial_activation
+    if not activation:
         tree = TreeElement(level=0)
         tree.trial_id = trial.id
         return tree
 
-    return recursive_generate_graph(trial, Single(activations[0]), depth - 1)
+    return recursive_generate_graph(trial, Single(activation), depth - 1)
 
 
 cache = prepare_cache(                                                           # pylint: disable=invalid-name
