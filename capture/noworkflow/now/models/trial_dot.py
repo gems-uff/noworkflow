@@ -14,12 +14,12 @@ from ..persistence.models.base import Model
 from .graphs.dependency_graph import DotVisitor
 
 
-CALL_SCHEMA = "#3A85B9", "box", "black"
-VAR_SCHEMA = "#85CBD0", "ellipse", "black"
-FILE_SCHEMA = "white", "ellipse", "black"
-BLACKBOX_SCHEMA = "black", "box", "grey"
-GRAYBOX_SCHEMA = "grey", "box", "black"
-IMPORT_SCHEMA = "#1B2881", "box", "#7AC5F9"
+CALL_SCHEMA = "#3A85B9", "box", "white", "filled"
+VAR_SCHEMA = "#85CBD0", "box", "black", "rounded,filled"
+FILE_SCHEMA = "white", "box", "black", "rounded,filled"
+BLACKBOX_SCHEMA = "black", "box", "grey", "filled"
+GRAYBOX_SCHEMA = "grey", "box", "black", "filled"
+IMPORT_SCHEMA = "#1B2881", "box", "#7AC5F9", "filled"
 
 
 TYPES = {

@@ -49,6 +49,8 @@ class FileAccess(AlchemyProxy):
     True
     """
 
+    hide_timestamp = False
+
     __tablename__ = "file_access"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
@@ -279,15 +281,20 @@ class FileAccess(AlchemyProxy):
         Timestamp: 2016-05-26 15:53:51
         Function: f -> ... -> open
         """
-        print_("""\
+        result = """\
             Name: {f.name}
             Mode: {f.mode}
             Buffering: {f.buffering}
             Content hash before: {f.content_hash_before}
             Content hash after: {f.content_hash_after}
-            Timestamp: {f.timestamp}
-            Function: {f.stack}\
-            """.format(f=self))
+            """
+        if not self.hide_timestamp:
+            result += """Timestamp: {f.timestamp}
+            """
+        result += """Function: {f.stack}\
+            """
+        print_(result.format(f=self))
+
 
 
 class UniqueFileAccess(FileAccess):

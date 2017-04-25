@@ -2,6 +2,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 import subprocess
 import csv
+from time import sleep
 
 try:
     from subprocess import DEVNULL
@@ -16,6 +17,7 @@ def capture(data, program, script, n=10):
     total_system = 0.0
     print(program, script)
     for i in range(n):
+        sleep(5)
         p = subprocess.Popen("time -p {} {}".format(program, script),
                              shell=True, executable="/bin/bash",
                              stderr=subprocess.PIPE,
@@ -48,6 +50,11 @@ if __name__ == "__main__":
     capture(data, "python", "maybe_happy_2pow4000.py")
     capture(data, "now run", "maybe_happy_2pow4000.py")
     capture(data, "now run -e Tracer", "maybe_happy_2pow4000.py")
+
+    capture(data, "python", "slow.py")
+    capture(data, "now run", "slow.py")
+    capture(data, "now run -e Tracer", "slow.py")
+
 
     capture(data, "now run -d 1", "maybe_happy_2pow4000.py")
     capture(data, "now run -e Tracer -d 1", "maybe_happy_2pow4000.py")

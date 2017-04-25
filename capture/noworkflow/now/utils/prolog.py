@@ -6,6 +6,7 @@
 
 
 from datetime import datetime
+from string import ascii_letters
 
 
 class PrologDescription(object):
@@ -106,20 +107,28 @@ class PrologRepr(PrologAttribute):
 
     def fact(self, obj):
         """Return attribute self.attr_name of obj as escaped repr"""
-        result = repr(self.value(obj))
-        if result[0] not in ('"', "'") and result[1] in ('"', "'"):
-            result = result[1:]
-        if result[0] in ('"', "'") and result[-1] == result[0]:
-            result = result[1:-1]
-        result = result.replace("'", "''")
-        return "'{}'".format(result)
+        value = self.value(obj)
+        if not isinstance(value, str):
+            value = repr(value)
+
+        if len(value) > 1:
+            if value[0] in ascii_letters and value[1] in ('"', "'"):
+                value = value[1:]
+            if value[0] in ('"', "'") and value[-1] == value[0]:
+                value = value[1:-1]
+
+        return "'{}'".format(value.replace("'", "''"))
 
 
 class PrologTimestamp(PrologAttribute):
     """Represent a timestamp"""
 
+    use_nil = False
+
     def fact(self, obj):
         """Return attribute self.attr_name of obj as formatted timestamp"""
+        if PrologTimestamp.use_nil:
+            return "nil"
         time = self.value(obj)
         if not time:
             return -1

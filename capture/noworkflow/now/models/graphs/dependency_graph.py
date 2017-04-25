@@ -573,7 +573,7 @@ class DotVisitor(ActivationClusterVisitor):
         depth -- depth for configuring spaces in subclusters
         config -- color schema
         """
-        color, shape, font = self._schema_config(variable)
+        color, shape, font, style = self._schema_config(variable)
         var = variable_id(variable)
 
         value = escape(variable.value, self.value_length)
@@ -595,8 +595,11 @@ class DotVisitor(ActivationClusterVisitor):
             '[label="{label}"'
             ' fillcolor="{color}" fontcolor="{font}"'
             ' shape="{shape}"'
-            ' style="filled"];'
-        ).format(var=var, label=label, color=color, font=font, shape=shape))
+            ' style="{style}"];'
+        ).format(
+            var=var, label=label, color=color, font=font, shape=shape,
+            style=style,
+        ))
 
     def _schema_config(self, variable):
         """Return color schema for variable

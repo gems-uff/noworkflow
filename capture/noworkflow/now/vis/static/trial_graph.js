@@ -237,9 +237,11 @@ TrialGraph.prototype._add_label_path = function (label_path) {
 };
 
 TrialGraph.prototype._calculate_color = function (node) {
-  var self = this,
-    proportion = Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
-  return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
+  var self = this;
+  var proportion = Math.round(255 * (1.0 - (node.duration / self.max_total_duration)));
+    //Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
+  return d3.rgb(255, proportion, proportion, 0);
+  //return d3.rgb(Math.min(255, proportion), Math.min(255, 510 - proportion), 0);
 };
 
 TrialGraph.prototype._add_node = function (node) {
@@ -440,6 +442,8 @@ TrialGraph.prototype.init = function (nodes, edges, min_duration, max_duration, 
   self.total_duration = {};
   self.total_duration[t1] = max_duration[t1] - min_duration[t1];
   self.total_duration[t2] = max_duration[t2] - min_duration[t2];
+  self.max_total_duration = Math.max(
+    self.total_duration[t1], self.total_duration[t2]);
   self.force = d3.layout.force()
     .nodes(nodes)
     .links(edges)

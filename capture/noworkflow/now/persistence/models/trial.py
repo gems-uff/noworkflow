@@ -538,16 +538,16 @@ class Trial(AlchemyProxy):
 
 
         Trial is backup:
-        >>> Trial(id1).status_letter
-        'b'
+        >>> print(Trial(id1).status_letter)
+        b
 
         Trial has not finished:
-        >>> Trial(id2).status_letter
-        'f'
+        >>> print(Trial(id2).status_letter)
+        f
 
         Trial has finished:
-        >>> Trial(id3).status_letter
-        '*'
+        >>> print(Trial(id3).status_letter)
+        *
         """
         if self.status == "backup":
             return "b"

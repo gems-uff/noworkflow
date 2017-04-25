@@ -1,0 +1,112 @@
+number,program,script,real,user,system
+0,python,maybe_happy_2pow4000.py,0.04,0.03,0.0
+1,python,maybe_happy_2pow4000.py,0.03,0.02,0.0
+2,python,maybe_happy_2pow4000.py,0.03,0.03,0.0
+3,python,maybe_happy_2pow4000.py,0.03,0.02,0.0
+4,python,maybe_happy_2pow4000.py,0.03,0.03,0.0
+5,python,maybe_happy_2pow4000.py,0.04,0.03,0.0
+6,python,maybe_happy_2pow4000.py,0.04,0.03,0.0
+7,python,maybe_happy_2pow4000.py,0.03,0.03,0.0
+8,python,maybe_happy_2pow4000.py,0.03,0.03,0.0
+9,python,maybe_happy_2pow4000.py,0.04,0.02,0.01
+0,now run,maybe_happy_2pow4000.py,0.95,0.84,0.05
+1,now run,maybe_happy_2pow4000.py,0.93,0.81,0.06
+2,now run,maybe_happy_2pow4000.py,0.95,0.83,0.06
+3,now run,maybe_happy_2pow4000.py,0.95,0.83,0.06
+4,now run,maybe_happy_2pow4000.py,0.95,0.84,0.05
+5,now run,maybe_happy_2pow4000.py,1.01,0.85,0.05
+6,now run,maybe_happy_2pow4000.py,0.98,0.85,0.06
+7,now run,maybe_happy_2pow4000.py,0.97,0.86,0.05
+8,now run,maybe_happy_2pow4000.py,0.97,0.82,0.08
+9,now run,maybe_happy_2pow4000.py,1.04,0.86,0.07
+0,now run -e Tracer,maybe_happy_2pow4000.py,2.14,1.48,0.29
+1,now run -e Tracer,maybe_happy_2pow4000.py,2.18,1.43,0.33
+2,now run -e Tracer,maybe_happy_2pow4000.py,2.22,1.47,0.31
+3,now run -e Tracer,maybe_happy_2pow4000.py,2.19,1.42,0.34
+4,now run -e Tracer,maybe_happy_2pow4000.py,2.18,1.49,0.28
+5,now run -e Tracer,maybe_happy_2pow4000.py,2.19,1.45,0.33
+6,now run -e Tracer,maybe_happy_2pow4000.py,2.32,1.43,0.37
+7,now run -e Tracer,maybe_happy_2pow4000.py,2.21,1.44,0.34
+8,now run -e Tracer,maybe_happy_2pow4000.py,2.23,1.42,0.37
+9,now run -e Tracer,maybe_happy_2pow4000.py,2.23,1.44,0.32
+0,python,slow.py,10.05,0.04,0.0
+1,python,slow.py,10.05,0.04,0.0
+2,python,slow.py,10.05,0.03,0.0
+3,python,slow.py,10.05,0.04,0.0
+4,python,slow.py,10.06,0.04,0.0
+5,python,slow.py,10.05,0.04,0.0
+6,python,slow.py,10.06,0.04,0.0
+7,python,slow.py,10.04,0.03,0.0
+8,python,slow.py,10.05,0.04,0.0
+9,python,slow.py,10.05,0.03,0.0
+0,now run,slow.py,11.02,0.85,0.08
+1,now run,slow.py,11.04,0.89,0.06
+2,now run,slow.py,11.09,0.9,0.07
+3,now run,slow.py,11.03,0.88,0.07
+4,now run,slow.py,11.05,0.9,0.05
+5,now run,slow.py,11.03,0.89,0.04
+6,now run,slow.py,11.05,0.9,0.07
+7,now run,slow.py,11.05,0.91,0.05
+8,now run,slow.py,11.04,0.91,0.04
+9,now run,slow.py,11.03,0.9,0.05
+0,now run -e Tracer,slow.py,11.07,0.91,0.06
+1,now run -e Tracer,slow.py,11.07,0.89,0.07
+2,now run -e Tracer,slow.py,11.06,0.89,0.07
+3,now run -e Tracer,slow.py,11.14,0.96,0.03
+4,now run -e Tracer,slow.py,11.18,0.92,0.06
+5,now run -e Tracer,slow.py,11.07,0.9,0.06
+6,now run -e Tracer,slow.py,11.04,0.91,0.05
+7,now run -e Tracer,slow.py,11.1,0.93,0.06
+8,now run -e Tracer,slow.py,11.08,0.9,0.08
+9,now run -e Tracer,slow.py,11.05,0.89,0.08
+0,now run -d 1,maybe_happy_2pow4000.py,0.97,0.87,0.04
+1,now run -d 1,maybe_happy_2pow4000.py,0.96,0.83,0.07
+2,now run -d 1,maybe_happy_2pow4000.py,0.95,0.82,0.07
+3,now run -d 1,maybe_happy_2pow4000.py,0.96,0.87,0.03
+4,now run -d 1,maybe_happy_2pow4000.py,0.97,0.86,0.04
+5,now run -d 1,maybe_happy_2pow4000.py,0.94,0.83,0.05
+6,now run -d 1,maybe_happy_2pow4000.py,0.97,0.85,0.06
+7,now run -d 1,maybe_happy_2pow4000.py,0.99,0.85,0.08
+8,now run -d 1,maybe_happy_2pow4000.py,0.99,0.87,0.05
+9,now run -d 1,maybe_happy_2pow4000.py,0.97,0.86,0.04
+0,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.09,0.85,0.08
+1,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.02,0.87,0.06
+2,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.01,0.9,0.04
+3,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.02,0.87,0.07
+4,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.02,0.87,0.06
+5,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.02,0.9,0.05
+6,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.01,0.87,0.06
+7,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.04,0.87,0.04
+8,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.0,0.84,0.07
+9,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.04,0.89,0.04
+0,now run,happy1A.py,1.01,0.82,0.07
+1,now run,happy1A.py,0.98,0.83,0.08
+2,now run,happy1A.py,0.97,0.85,0.05
+3,now run,happy1A.py,0.95,0.84,0.05
+4,now run,happy1A.py,0.94,0.83,0.05
+5,now run,happy1A.py,0.98,0.85,0.06
+6,now run,happy1A.py,0.95,0.84,0.04
+7,now run,happy1A.py,0.97,0.83,0.07
+8,now run,happy1A.py,0.96,0.86,0.03
+9,now run,happy1A.py,0.97,0.85,0.05
+0,now run -e Tracer,happy1A.py,0.99,0.85,0.06
+1,now run -e Tracer,happy1A.py,1.01,0.86,0.06
+2,now run -e Tracer,happy1A.py,1.01,0.85,0.07
+3,now run -e Tracer,happy1A.py,1.01,0.88,0.04
+4,now run -e Tracer,happy1A.py,1.04,0.88,0.05
+5,now run -e Tracer,happy1A.py,1.01,0.84,0.09
+6,now run -e Tracer,happy1A.py,1.03,0.87,0.07
+7,now run -e Tracer,happy1A.py,1.0,0.86,0.05
+8,now run -e Tracer,happy1A.py,0.99,0.86,0.04
+9,now run -e Tracer,happy1A.py,1.01,0.84,0.09
+
+avg,python,maybe_happy_2pow4000.py,0.034,0.027000000000000003,0.001
+avg,now run,maybe_happy_2pow4000.py,0.97,0.8390000000000001,0.05899999999999998
+avg,now run -e Tracer,maybe_happy_2pow4000.py,2.209,1.4469999999999998,0.32799999999999996
+avg,python,slow.py,10.050999999999998,0.037,0.0
+avg,now run,slow.py,11.043000000000001,0.893,0.05800000000000001
+avg,now run -e Tracer,slow.py,11.085999999999999,0.9100000000000001,0.062
+avg,now run -d 1,maybe_happy_2pow4000.py,0.967,0.851,0.053000000000000005
+avg,now run -e Tracer -d 1,maybe_happy_2pow4000.py,1.027,0.873,0.05700000000000001
+avg,now run,happy1A.py,0.9680000000000002,0.8400000000000001,0.05500000000000001
+avg,now run -e Tracer,happy1A.py,1.01,0.8590000000000002,0.062

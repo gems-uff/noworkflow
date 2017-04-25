@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from ..models.graphs.dependency_graph import DependencyConfig
+from ..models.graphs.dependency_graph import variable_id
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 
@@ -35,6 +36,9 @@ class Dataflow(Command):
                 help="R|maximum length of names (default: 55)\n"
                      "0 indicates that values should be hidden.\n"
                      "Minimum displayable value: 5. Suggested: 55.")
+        add_arg("-f", "--filter", type=str,
+                help="R|filter dataflow by a variable/file name.\n"
+                     "It requires pyswip.")
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial")
         add_arg("--dir", type=str,
@@ -47,5 +51,25 @@ class Dataflow(Command):
         trial.dependency_config.read_args(args)
         trial.dot.value_length = args.value_length
         trial.dot.name_length = args.name_length
+        if args.filter:
+            query = (
+                "var_name({trial}, X, '{filter}'), slice({trial}, X, Y)"
+                .format(trial=args.trial, filter=args.filter)
+            )
+            trial.prolog.use_cache = True
+            result = trial.prolog.query(query)
+
+            trial.dependency_filter.run()
+            dfilter = trial.dependency_filter
+            filtered_variables = []
+            for values in result:
+                for dependency in values["Y"]:
+                    if isinstance(dependency, int):
+                        filtered_variables.append(
+                            variable_id(dfilter.variables[dependency]))
+                    else:
+                        filtered_variables.append("a_" + dependency.value[1:])
+            dfilter.filtered_variables = filtered_variables
+            trial.dot.run = False
 
         print(trial.dot.export_text())
