@@ -150,7 +150,7 @@ class Trial(AlchemyProxy):
         {"sqlite_autoincrement": True},
     )
 
-    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True, autoincrement=True)                                       # pylint: disable=invalid-name
     script = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
