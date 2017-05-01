@@ -150,7 +150,7 @@ class Trial(AlchemyProxy):
         {"sqlite_autoincrement": True},
     )
 
-    id = Column(Integer, primary_key=True, autoincrement=True)                                       # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True, autoincrement=True)                   # pylint: disable=invalid-name
     script = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
@@ -188,7 +188,8 @@ class Trial(AlchemyProxy):
 
     code_components = many_viewonly_ref("trial", "CodeComponent")
     evaluations = many_viewonly_ref("trial", "Evaluation")
-    activations = many_viewonly_ref("trial", "Activation", order_by=Activation.m.start)
+    activations = many_viewonly_ref(
+        "trial", "Activation", order_by=Activation.m.start)
     file_accesses = many_viewonly_ref("trial", "FileAccess")
     values = many_viewonly_ref("trial", "Value")
     compartments = many_viewonly_ref("trial", "Compartment")
