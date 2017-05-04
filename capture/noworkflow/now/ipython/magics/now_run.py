@@ -157,10 +157,10 @@ class NowRun(IpythonCommandMagic, Run):
                 )
                 script = magic_cls.shell.find_cell_magic("script").__self__
                 script.shebang(cmd, "")
-                tmp_dir = os.path.dirname(filename)
+                #tmp_dir = os.path.dirname(filename)
 
                 try:
-                    with open(os.path.join(tmp_dir, LAST_TRIAL), "r") as last:
+                    with open(os.path.join(directory, LAST_TRIAL), "r") as last:
                         return Trial(int(last.read()))
                 except Exception as exc:                                         # pylint: disable=broad-except
                     print("Failed", exc)

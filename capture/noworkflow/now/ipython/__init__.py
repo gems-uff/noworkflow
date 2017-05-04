@@ -9,6 +9,8 @@ from __future__ import (absolute_import, print_function,
 
 from ..persistence.models import *                                               # pylint: disable=wildcard-import
 from ..persistence import persistence_config, relational, content
+from ..models.history import History
+from ..models.diff import Diff
 
 
 def init(path=None, ipython=None):
