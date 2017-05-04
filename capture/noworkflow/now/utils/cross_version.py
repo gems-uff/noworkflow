@@ -14,8 +14,10 @@ try:
 except ImportError:
     from io import StringIO
 
+from .future_cross_version import cross_print
 
 PY35 = sys.version_info >= (3, 5)
+PY2 = sys.version_info < (3, 0)
 PY3 = sys.version_info >= (3, 0)
 if PY3:
     import builtins                                                              # pylint: disable=wrong-import-position, unused-import
@@ -48,7 +50,7 @@ def cross_compile(*args, **kwargs):
     This function just provides the 'compile' free of __future__ imports
     """
     return compile(*args, **kwargs)
-
+cross_compile.__name__ = "compile"
 
 def to_unicode(text):
     """Convert bytes to unicode"""

@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from ...now.utils.cross_version import PY3, only
+from ...now.utils.cross_version import PY2, PY3, only
 from ...now.collection.helper import get_compartment
 from ..collection_testcase import CollectionTestCase
 
@@ -983,6 +983,67 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(write_b_eval, read_a_eval, "assign-bind")
         self.assert_dependency(write_c_eval, read_err_eval, "assign-bind")
         self.assert_dependency(read_err_eval, write_err_eval, "assignment")
+
+    @only(PY2)
+    def test_print(self):
+        """Test external call collection"""
+        self.script("# script.py\n"
+                    "a = ''\n"
+                    "print a,\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r", type="name")
+        call = self.get_evaluation(name="print a", type="call")
+
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        activation = self.metascript.activations_store[call.id]
+
+        self.assertEqual(call.activation_id, script_act.id)
+        self.assertTrue(activation.start < call.moment)
+        self.assertEqual(activation.code_block_id, -1)
+        self.assertEqual(activation.name, "print")
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_a_type = self.metascript.values_store[var_a_value.type_id]
+
+        self.assertEqual(var_a_value.value, "''")
+        self.assertEqual(var_a_type.value, self.rtype("str"))
+
+        self.assert_dependency(call, var_a, "argument")
+
+    @only(PY2)
+    def test_exec(self):
+        """Test external call collection"""
+        self.script("# script.py\n"
+                    "a = 'x = 2'\n"
+                    "exec a\n"
+                    "x\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r", type="name")
+        call = self.get_evaluation(name="exec a", type="call")
+
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        activation = self.metascript.activations_store[call.id]
+
+        self.assertEqual(call.activation_id, script_act.id)
+        self.assertTrue(activation.start < call.moment)
+        self.assertEqual(activation.code_block_id, -1)
+        self.assertEqual(activation.name, "exec")
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_a_type = self.metascript.values_store[var_a_value.type_id]
+
+        self.assertEqual(var_a_value.value, "'x = 2'")
+        self.assertEqual(var_a_type.value, self.rtype("str"))
+
+        self.assert_dependency(call, var_a, "argument")
 
     # ToDo: expr/YieldFrom
     # ToDo: expr/Await

@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from ...now.utils.cross_version import PY3, only
+from ...now.utils.cross_version import PY3, only, PY2
 from ...now.collection.helper import get_compartment
 
 from ..collection_testcase import CollectionTestCase
@@ -1017,7 +1017,42 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
         self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
 
+    @only(PY2)
+    def test_repr(self):
+        """Test external call collection"""
+        self.script("# script.py\n"
+                    "a = '1'\n"
+                    "b = `a`\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r", type="name")
+        var_b = self.get_evaluation(name="b")
+        call = self.get_evaluation(name="`a`", type="call")
+
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        activation = self.metascript.activations_store[call.id]
+
+        self.assertEqual(call.activation_id, script_act.id)
+        self.assertTrue(activation.start < call.moment)
+        self.assertEqual(activation.code_block_id, -1)
+        self.assertEqual(activation.name, "repr")
+
+        var_a_value = self.metascript.values_store[var_a.value_id]
+        var_a_type = self.metascript.values_store[var_a_value.type_id]
+        var_b_value = self.metascript.values_store[var_b.value_id]
+        var_b_type = self.metascript.values_store[var_b_value.type_id]
+
+        self.assertEqual(var_a_value.value, "'1'")
+        self.assertEqual(var_b_value.value, '"\'1\'"')
+        self.assertEqual(var_a_type.value, self.rtype("str"))
+        self.assertEqual(var_b_type.value, self.rtype("str"))
+
+        self.assert_dependency(var_b, call, "assign-bind")
+        self.assert_dependency(call, var_a, "argument")
+
     # ToDo: expr/FormattedValue -- PY3
     # ToDo: expr/JoinedStr -- PY3
     # ToDo: expr/Constant -- PY3
-    # ToDo: expr/Repe -- PY2

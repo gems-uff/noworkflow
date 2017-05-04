@@ -13,10 +13,11 @@ from datetime import datetime, timedelta
 from functools import wraps
 from types import GeneratorType
 
-from future.utils import viewvalues, viewkeys
+from future.utils import viewvalues, viewkeys, exec_
 
 from ...persistence.models import Trial
 from ...utils.cross_version import IMMUTABLE, isiterable, PY3
+from ...utils.cross_version import cross_print
 
 from ..helper import get_compartment, last_evaluation_by_value_id
 
@@ -830,7 +831,8 @@ class Collector(object):
         try:
 
             result = activation.func(*args, **kwargs)
-        except:
+        except Exception as e:
+            print(e)
             self.collect_exception(activation)
             raise
         finally:
@@ -890,6 +892,7 @@ class Collector(object):
                 )
             dependency.arg = arg
             dependency.kind = kind
+
             self.last_activation.dependencies[-1].add(dependency)
 
         return value
@@ -1201,6 +1204,19 @@ class Collector(object):
             if activation.active and value != "<<<noWorkflow>>>":
                 self.eval_dep(activation, code_id, value, mode, depa)
             self.remove_condition(activation)
+
+    def py2_repr(self, activation, code_id, exc_handler, mode):
+        """Collect py2 `repr`"""
+        return self.call(activation, code_id, exc_handler, repr, mode)
+
+    def py2_print(self, activation, code_id, exc_handler, mode):
+        """Collect py2 print"""
+        return self.call(activation, code_id, exc_handler, cross_print, mode)
+
+    def py2_exec(self, activation, code_id, exc_handler, mode):
+        """Collect py2 exec"""
+        exec_.__name__ = "exec"
+        return self.call(activation, code_id, exc_handler, exec_, mode)
 
     def find_value_id(self, value, depa, create=True):
         """Find bound dependency in dependency aware"""

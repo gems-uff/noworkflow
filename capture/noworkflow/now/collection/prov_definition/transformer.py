@@ -646,6 +646,83 @@ class RewriteAST(ast.NodeTransformer):                                          
         ] + self.process_body(node.body)
         return node
 
+    def visit_Exec(self, node):
+        """
+        Transform:
+            exec a
+        Into:
+            <now>.py2_exec(<act>. #, <exc>, <mode>)(|a|)
+        """
+        node.name = pyposast.extract_code(self.lcode, node)
+        component_id = self.create_code_component(
+            node, "call", "r"
+        )
+        rewriter = RewriteDependencies(self, mode="dependency")
+        key = lambda arg, no: ast_copy(
+            rewriter._call_arg(arg, no) if no
+            else call(ast.Name(arg, L()), []), node
+        )
+
+        keywords = [
+            key("globals", node.globals),
+            key("locals", node.globals),
+        ]
+
+        if node.locals:
+            keywords.append(ast.keyword(
+                'locals', rewriter._call_keyword('locals', node.locals)
+            ))
+
+        return ast_copy(ast.Expr(double_noworkflow(
+            "py2_exec",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.current_exc_handler),
+                ast.Str("dependency")
+            ], [
+                rewriter._call_arg(node.body, False),
+                key("globals", node.globals),
+                key("locals", node.locals),
+
+
+            ],
+        )), node)
+
+    def visit_Print(self, node):
+        """
+        Transform:
+            print a
+        Into:
+            <now>.py2_print(<act>. #, <exc>, <mode>)(|a|)
+        """
+        node.name = pyposast.extract_code(self.lcode, node)
+        component_id = self.create_code_component(
+            node, "call", "r"
+        )
+        rewriter = RewriteDependencies(self, mode="dependency")
+        keywords = []
+        if not node.nl:
+            keywords.append(ast.keyword('end', ast.Str('')))
+        if node.dest:
+            keywords.append(ast.keyword('file',
+                            rewriter._call_keyword('file', node.dest)))
+
+        return ast_copy(ast.Expr(double_noworkflow(
+            "py2_print",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.current_exc_handler),
+                ast.Str("dependency")
+            ], [
+                rewriter._call_arg(dest, False)
+                for dest in node.values
+            ],
+            keywords=keywords
+        )), node)
+
+
 
     def capture(self, node, mode="dependency"):
         """Capture node"""
@@ -1694,6 +1771,29 @@ class RewriteDependencies(ast.NodeTransformer):
                 ast.Num(yield_component),
                 node,
                 ast.Str(self.mode)
+            ]
+        ), node)
+
+    def visit_Repr(self, node):
+        """
+        Transform:
+            `a`
+        Into:
+            <now>.py2_repr(<act>. #, <exc>, <mode>)(|a|)
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "call", "r"
+        )
+        return ast_copy(double_noworkflow(
+            "py2_repr",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.rewriter.current_exc_handler),
+                ast.Str(self.mode)
+            ], [
+                self._call_arg(node.value, False),
             ]
         ), node)
 
