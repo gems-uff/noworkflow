@@ -189,6 +189,7 @@ class Collector(object):
             exc_handler=float('inf'), # do not delete
         ))
         activation.parent = act
+        activation.last_activation = self.last_activation
         self.last_activation = activation
         return activation
 
@@ -197,7 +198,7 @@ class Collector(object):
         evaluation = activation.evaluation
         evaluation.moment = self.time()
         evaluation.value_id = value_id
-        self.last_activation = activation.parent
+        self.last_activation = activation.last_activation
         #self.activations.store.get(
         #    evaluation.activation_id, self.first_activation
         #)
@@ -844,7 +845,7 @@ class Collector(object):
             # Close activation
             self.close_activation(activation, value_id)
 
-            if self.last_activation.active:
+            if activation.parent.active:
                 # Create dependencies
                 depa = activation.dependencies[1]
                 self.make_dependencies(activation, eva, depa)

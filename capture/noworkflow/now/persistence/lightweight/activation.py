@@ -17,7 +17,7 @@ class ActivationLW(BaseLW):                                                     
         ["trial_id", "id", "name", "start", "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
          "evaluation", "assignments", "closure", "func", "dependency_type",
-         "active", "depth", "parent", "generator"]
+         "active", "depth", "parent", "generator", "last_activation"]
     )
     nullable = {"code_block_id"}
     model = Activation
@@ -43,6 +43,7 @@ class ActivationLW(BaseLW):                                                     
         self.closure = None
         # Parent activation
         self.parent = None
+        self.last_activation = None
         # Executed function
         self.func = None
         # Dependency type
