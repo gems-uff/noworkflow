@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from ...now.utils.cross_version import PY3, only, PY2
+from ...now.utils.cross_version import PY2, PY3, PY36, only
 from ...now.collection.helper import get_compartment
 
 from ..collection_testcase import CollectionTestCase
@@ -1053,6 +1053,24 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_b, call, "assign-bind")
         self.assert_dependency(call, var_a, "argument")
 
-    # ToDo: expr/FormattedValue -- PY3
-    # ToDo: expr/JoinedStr -- PY3
-    # ToDo: expr/Constant -- PY3
+    @only(PY36)
+    def test_joined_str_and_formatted_value(self):
+        """Test bool expr collection"""
+        self.script("# script.py\n"
+                    "a = 1\n"
+                    "b = 2\n"
+                    "d = f'a: {a}; b: {b}'\n"
+                    "# other")
+
+        var_a = self.get_evaluation(name="a", mode="r")
+        var_b = self.get_evaluation(name="b", mode="r")
+        var_fa = self.get_evaluation(name="{a}", mode="r")
+        var_fb = self.get_evaluation(name="{b}", mode="r")
+        var_fstring = self.get_evaluation(name="f'a: {a}; b: {b}'")
+        var_d = self.get_evaluation(name="d")
+
+        self.assert_dependency(var_fa, var_a, "use")
+        self.assert_dependency(var_fb, var_b, "use")
+        self.assert_dependency(var_fstring, var_fa, "use")
+        self.assert_dependency(var_fstring, var_fb, "use")
+        self.assert_dependency(var_d, var_fstring, "assign-bind")

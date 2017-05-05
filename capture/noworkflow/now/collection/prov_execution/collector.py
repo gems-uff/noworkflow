@@ -311,6 +311,9 @@ class Collector(object):
             self.eval_dep(activation, code_id, value, mode, depa)
         return value
 
+    joined_str = operation
+    formatted_value = operation
+
     def dict(self, activation, code_id, exc_handler):
         """Capture dict before"""
         activation.dependencies.append(CollectionDependencyAware(

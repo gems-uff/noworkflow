@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from ...now.utils.cross_version import PY2, PY3, only
+from ...now.utils.cross_version import PY2, PY3, PY36, only
 from ...now.collection.helper import get_compartment
 from ..collection_testcase import CollectionTestCase
 
@@ -1044,6 +1044,31 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_type.value, self.rtype("str"))
 
         self.assert_dependency(call, var_a, "argument")
+
+    def test_annassign_to_name(self):
+        """Test assign collection"""
+        self.script("# script.py\n"
+                    "a: int = 2\n"
+                    "# other")
+
+        var_evaluation = self.get_evaluation(name="a")
+        var_2 = self.get_evaluation(name="2")
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+
+        self.assertEqual(var_evaluation.activation_id, script_eval.id)
+        self.assertTrue(bool(var_evaluation.moment))
+        self.assertEqual(script_act.context['a'], var_evaluation)
+
+        var_value = self.metascript.values_store[var_evaluation.value_id]
+        var_type = self.metascript.values_store[var_value.type_id]
+        type_type = self.metascript.values_store[var_type.type_id]
+
+        self.assertEqual(var_value.value, "2")
+        self.assertEqual(var_type.value, self.rtype("int"))
+        self.assertEqual(type_type.value, self.rtype("type"))
+
 
     # ToDo: expr/YieldFrom
     # ToDo: expr/Await

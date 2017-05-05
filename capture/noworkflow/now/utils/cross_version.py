@@ -16,9 +16,10 @@ except ImportError:
 
 from .future_cross_version import cross_print
 
+PY36 = sys.version_info >= (3, 6)
 PY35 = sys.version_info >= (3, 5)
-PY2 = sys.version_info < (3, 0)
 PY3 = sys.version_info >= (3, 0)
+PY2 = sys.version_info < (3, 0)
 if PY3:
     import builtins                                                              # pylint: disable=wrong-import-position, unused-import
     import pickle                                                                # pylint: disable=wrong-import-position, unused-import

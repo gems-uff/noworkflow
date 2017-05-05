@@ -128,6 +128,8 @@ class RewriteAST(ast.NodeTransformer):                                          
                 self.visit_assign(new_body, stmt)
             elif isinstance(stmt, ast.AugAssign):
                 self.visit_augassign(new_body, stmt)
+            elif isinstance(stmt, ast.AnnAssign):
+                self.visit_annassign(new_body, stmt)
             else:
                 new_body.append(self.visit(stmt))
 
@@ -220,6 +222,45 @@ class RewriteAST(ast.NodeTransformer):                                          
                         ReplaceContextWithLoad().visit(new_target), mode=mode)
                 ]
             ),
+        ), node))
+        new_body.append(ast_copy(ast.Assign(
+            [ast.Name("__now__assign__", S())],
+            noworkflow("pop_assign", [activation()])
+        ), node))
+        new_body.append(ast_copy(ast.Expr(
+            noworkflow("assign", [
+                activation(),
+                ast.Name("__now__assign__", L()),
+                new_target.code_component_expr,
+            ])
+        ), node))
+
+    def visit_annassign(self, new_body, node):
+        """Visit AnnAssign through process_body
+        Transform
+            a : int = 1
+        Into:
+            a : int = self.assign_value(<act>, <ext>)(<act>, |1|, |a|)
+            __now__assign__ = <now>.pop_assign(<act>)
+
+            <now>.assign(<act>, __now__assign__, cce(a))
+        """
+        if not node.value:
+            # Just annotation
+            new_body.append(node)
+            return
+
+        new_target = self.capture(node.target)
+        mode = "assign"
+        new_body.append(ast_copy(ast.AnnAssign(
+            new_target,
+            node.annotation,
+            double_noworkflow(
+                "assign_value",
+                [activation(), ast.Num(self.current_exc_handler)],
+                [activation(), self.capture(node.value, mode=mode)]
+            ),
+            node.simple
         ), node))
         new_body.append(ast_copy(ast.Assign(
             [ast.Name("__now__assign__", S())],
@@ -1794,6 +1835,68 @@ class RewriteDependencies(ast.NodeTransformer):
                 ast.Str(self.mode)
             ], [
                 self._call_arg(node.value, False),
+            ]
+        ), node)
+
+    def visit_JoinedStr(self, node):                                              # pylint: disable=invalid-name
+        """Visit BinOp.
+        Transform:
+            f'{a} x {b}'
+        Into:
+            <now>.joined_str(<act>, #, <exc>)(
+                <act>, #, f'{|a|}' |' x '| f'{|b|}')
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "fstring", "r"
+        )
+        node.values = [
+            self.rewriter.capture(value, mode="use")
+            for value in node.values
+        ]
+
+        return ast_copy(double_noworkflow(
+            "joined_str",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.rewriter.current_exc_handler)
+            ], [
+                activation(),
+                ast.Num(component_id),
+                node,
+                ast.Str(self.mode)
+            ]
+        ), node)
+
+    def visit_FormattedValue(self, node):                                         # pylint: disable=invalid-name
+        """Visit BinOp.
+        Transform:
+            f'{a}'
+        Into:
+            <now>.formatted_value(<act>, #, <exc>)(
+                <act>, #, f'{|a|}')
+        """
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "fvalue", "r"
+        )
+        node.value = self.rewriter.capture(node.value, mode="use")
+        if node.format_spec:
+            node.format_spec = self.rewriter.capture(
+                node.format_spec, mode="use")
+
+        return ast_copy(double_noworkflow(
+            "formatted_value",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.rewriter.current_exc_handler)
+            ], [
+                activation(),
+                ast.Num(component_id),
+                ast.JoinedStr([node]),
+                ast.Str(self.mode)
             ]
         ), node)
 
