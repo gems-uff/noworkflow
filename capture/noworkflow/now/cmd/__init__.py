@@ -24,6 +24,7 @@ from .cmd_demo import Demo
 from .cmd_helper import Helper
 from .cmd_history import History
 from .cmd_schema import Schema
+from .cmd_kernel import Kernel
 from ..utils.io import print_msg
 
 
@@ -49,6 +50,7 @@ def main():
         Helper(),
         History(),
         Schema(),
+        Kernel(),
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
@@ -80,5 +82,6 @@ __all__ = [
     "Demo",
     "Helper",
     "History",
+    "Kernel",
     "main",
 ]
