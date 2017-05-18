@@ -15,10 +15,11 @@ from datetime import datetime
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Trial, Module, ModuleDependency, FileAccess
+from ..persistence.models import Trial, Module, FileAccess
 from ..persistence.models import Argument
 from ..persistence import persistence_config, content
 from ..utils.io import print_msg
+from ..utils.cross_version import PY34, PY35, PY2, PY36
 
 from .command import Command
 
@@ -56,7 +57,6 @@ class Restore(Command):
     def create_backup(self, metascript, files):
         """Create a backup trial"""
         modules = metascript.modules_store
-        module_dependencies = metascript.module_dependencies_store
         accesses = metascript.file_accesses_store
         arguments = metascript.arguments_store
         for path, info in viewitems(files):
@@ -65,10 +65,32 @@ class Restore(Command):
                 metascript.definition.visit_file(path)
             elif info["type"] == "module":
                 path = os.path.abspath(path)
-                version = metascript.deployment.get_version(info["name"])
-                mod = (info["name"], version, path, info["code_hash"])
-                mid = Module.fast_load_module_id(*mod) or modules.add(*mod)
-                module_dependencies.add(mid)
+                cid = metascript.definition.create_code_block(
+                    None, path, False, False, True
+                )[1]
+                version = None
+                try:
+                    if PY35:
+                        import importlib.util
+                        spec = importlib.util.spec_from_file_location(
+                            info["name"], path
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    elif PY34:
+                        from importlib.machinery import SourceFileLoader
+                        module = SourceFileLoader(
+                            info["name"], path
+                        ).load_module()
+                    elif PY2:
+                        import imp
+                        module = imp.load_source(info["name"], path)
+                    version = metascript.deployment.get_version(module)
+                except:
+                    pass
+                metascript.deployment.add_module(
+                    info["name"], version, path, cid, False
+                )
             elif info["type"] == "access":
                 aid = accesses.add(path)
                 access = accesses[aid]
@@ -82,7 +104,6 @@ class Restore(Command):
         tid, partial = metascript.trial_id, True
         Trial.fast_update(tid, metascript.main_id, datetime.now(), "backup")
         Module.fast_store(tid, modules, partial)
-        ModuleDependency.fast_store(tid, module_dependencies, partial)
         FileAccess.fast_store(tid, accesses, partial)
         Argument.fast_store(tid, arguments, partial)
         metascript.definition.store_provenance()

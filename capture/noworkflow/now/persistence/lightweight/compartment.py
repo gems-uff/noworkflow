@@ -14,7 +14,8 @@ class CompartmentLW(BaseLW):
     """Compartment lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "name", "moment", "whole_id", "part_id"], ["id"]
+        ["trial_id", "name", "moment", "whole_id", "part_trial_id", "part_id"],
+        ["id"]
     )
     nullable = set()
     model = Compartment
@@ -26,6 +27,12 @@ class CompartmentLW(BaseLW):
         self.moment = moment
         self.whole_id = whole_id
         self.part_id = part_id
+        self.part_trial_id = -1
+
+    def set_trial_id(self, value):
+        if self.part_trial_id == -1:
+            self.part_trial_id = value
+        self.trial_id = value
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Compartment can always be removed from object store"""

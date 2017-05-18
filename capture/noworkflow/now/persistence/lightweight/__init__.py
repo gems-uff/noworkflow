@@ -18,7 +18,6 @@ from .evaluation import EvaluationLW
 from .exception import ExceptionLW
 from .file_access import FileAccessLW
 from .module import ModuleLW
-from .module_dependency import ModuleDependencyLW
 from .value import ValueLW
 
 
@@ -36,6 +35,5 @@ __all__ = [
     "ExceptionLW",
     "FileAccessLW",
     "ModuleLW",
-    "ModuleDependencyLW",
     "ValueLW",
 ]

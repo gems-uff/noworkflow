@@ -16,17 +16,18 @@ class CodeBlockLW(BaseLW):
     """Code Block lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "code_hash", "docstring"],
+        ["trial_id", "id", "code_hash", "binary", "docstring"],
         ["code"],
     )
     nullable = set()
     model = CodeBlock
 
-    def __init__(self, id_, code, docstring):
+    def __init__(self, id_, code, binary, docstring):
         self.trial_id = -1
         self.id = id_                                                            # pylint: disable=invalid-name
         self.code = code
-        self.code_hash = content.put(code.encode("utf-8"))
+        bin_code = code if binary else code.encode("utf-8")
+        self.code_hash = content.put(bin_code)
         self.docstring = docstring or ""
 
     def is_complete(self):                                                       # pylint: disable=no-self-use

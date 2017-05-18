@@ -22,9 +22,12 @@ from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
 from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
 from .base import proxy
 
-from .module_dependency import ModuleDependency
 from .code_block import CodeBlock
+from .compartment import Compartment
+from .dependency import Dependency
 from .activation import Activation
+from .evaluation import Evaluation
+from .value import Value
 from .head import Head
 
 
@@ -128,15 +131,11 @@ class Trial(AlchemyProxy):
 
     To load modules, propagating inherited modules:
     >>> list(trial.modules)  # doctest: +ELLIPSIS
-    [module_def(...)., ...]
-
-    Similarly, to load module dependencies, propagating inherited modules:
-    >>> list(trial.module_dependencies)  # doctest: +ELLIPSIS
     [module(...)., ...]
 
     If you are interested only on local modules:
     >>> list(trial.local_modules)  # doctest: +ELLIPSIS
-    [module_def(...).]
+    [module(...).]
     """
 
     __tablename__ = "trial"
@@ -144,6 +143,7 @@ class Trial(AlchemyProxy):
         ForeignKeyConstraint(["modules_inherited_from_trial_id"],
                              ["trial.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
+        ForeignKeyConstraint(["super_id"], ["trial.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["id", "main_id"],
                              ["code_block.trial_id", "code_block.id"],
                              ondelete="SET NULL", use_alter=True),
@@ -158,6 +158,7 @@ class Trial(AlchemyProxy):
     path = Column(Text)
     status = Column(Text)
     modules_inherited_from_trial_id = Column(Integer, index=True)
+    super_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
     main_id = Column(Integer, index=True)
 
@@ -165,6 +166,10 @@ class Trial(AlchemyProxy):
     modules_inherited_from_trial = one(
         "Trial", backref="bypass_children", viewonly=True,
         remote_side=[id], primaryjoin=(id == modules_inherited_from_trial_id)
+    )
+    super_trial = one(
+        "Trial", backref="inner_trials", viewonly=True,
+        remote_side=[id], primaryjoin=(id == super_id)
     )
     parent = one(
         "Trial", backref="children", viewonly=True,
@@ -183,17 +188,34 @@ class Trial(AlchemyProxy):
 
     arguments = many_ref("trial", "Argument")
     environment_attrs = many_ref("trial", "EnvironmentAttr")
-    _module_dependencies = many_ref("trial", "ModuleDependency")
-    _modules = many_ref("trials", "Module", secondary=ModuleDependency.t)
+    _modules = many_ref("trial", "Module")
 
     code_components = many_viewonly_ref("trial", "CodeComponent")
-    evaluations = many_viewonly_ref("trial", "Evaluation")
+    evaluations = many_viewonly_ref(
+        "trial", "Evaluation",
+        uselist=True,
+        remote_side=[Evaluation.m.trial_id],
+        primaryjoin=((id == Evaluation.m.trial_id)))
     activations = many_viewonly_ref(
         "trial", "Activation", order_by=Activation.m.start)
     file_accesses = many_viewonly_ref("trial", "FileAccess")
-    values = many_viewonly_ref("trial", "Value")
-    compartments = many_viewonly_ref("trial", "Compartment")
-    dependencies = many_viewonly_ref("trial", "Dependency")
+    values = many_viewonly_ref(
+        "trial", "Value",
+        uselist=True,
+        remote_side=[Value.m.trial_id],
+        primaryjoin=((id == Value.m.trial_id)))
+
+    compartments = many_viewonly_ref(
+        "trial", "Compartment",
+        uselist=True,
+        remote_side=[Compartment.m.trial_id],
+        primaryjoin=((id == Compartment.m.trial_id)))
+
+    dependencies = many_viewonly_ref(
+        "trial", "Dependency",
+        uselist=True,
+        remote_side=[Dependency.m.trial_id],
+        primaryjoin=((id == Dependency.m.trial_id)))
 
     tags = many_ref("trial", "Tag")
 
@@ -225,6 +247,7 @@ class Trial(AlchemyProxy):
 
     prolog_description = PrologDescription("trial", (
         PrologTrial("id"),
+        PrologNullable("super_id", link="trial.id"),
         PrologRepr("script"),
         PrologTimestamp("start"),
         PrologTimestamp("finish"),
@@ -235,6 +258,7 @@ class Trial(AlchemyProxy):
         PrologNullable("main_id", link="code_block.id"),
     ), description=(
         "informs that a given trial (*Id*),\n"
+        "subtrial of another trial (*SuperId*),\n"
         "executed *Script* during a time period from *Start*"
         "to *Finish*,\n"
         "using noWokflow's *command*.\n"
@@ -324,37 +348,6 @@ class Trial(AlchemyProxy):
             return self.modules_inherited_from_trial.modules
         return self._modules
 
-    @query_many_property
-    def module_dependencies(self):
-        """Load modules. Return SQLAlchemy query
-
-
-        Doctest:
-        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
-        >>> trial1 = Trial(new_trial(TrialConfig("unfinished"), erase=True))
-        >>> trial2 = Trial(new_trial(
-        ...     TrialConfig("unfinished", bypass_modules=True)))
-
-        Return this modules, if it did not bypass modules:
-        >>> _ids1 = sorted([d.module_id for d in trial1._module_dependencies])
-        >>> ids1 = sorted([d.module_id for d in trial1.module_dependencies])
-        >>> _ids1 == ids1
-        True
-
-        Do not return this modules, if it bypassed modules:
-        >>> _ids2 = sorted([d.module_id for d in trial2._module_dependencies])
-        >>> ids2 = sorted([d.module_id for d in trial2.module_dependencies])
-        >>> _ids2 != ids2
-        True
-
-        Instead, return the inherited trial modules:
-        >>> _ids1 == ids2
-        True
-        """
-        if self.modules_inherited_from_trial:
-            return self.modules_inherited_from_trial.module_dependencies
-        return self._module_dependencies
-
 
     @property
     def initial_activation(self):
@@ -401,7 +394,6 @@ class Trial(AlchemyProxy):
         Doctest:
         >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
         >>> from noworkflow.tests.helpers.models import modules
-        >>> from noworkflow.tests.helpers.models import module_dependencies
         >>> trial_id = new_trial(TrialConfig(path="/home/now"), erase=True)
         >>> trial = Trial(trial_id)
 
@@ -410,28 +402,22 @@ class Trial(AlchemyProxy):
         []
 
         Do not return modules outside the trial path:
-        >>> m1 = modules.add("external", "1.0.1", "/home/external.py", "aaaa")
-        >>> md1 = module_dependencies.add(m1)
+        >>> m1 = modules.add("external", "1.0.1", "/home/external.py", None, 0)
         >>> modules.fast_store(trial_id)
-        >>> module_dependencies.fast_store(trial_id)
         >>> list(trial.local_modules)
         []
 
         Return modules inside the trial path:
-        >>> m2 = modules.add("inte", "1.0.1", "/home/now/inte.py", "aaaa")
-        >>> md2 = module_dependencies.add(m2)
+        >>> m2 = modules.add("inte", "1.0.1", "/home/now/inte.py", None, 0)
         >>> modules.fast_store(trial_id)
-        >>> module_dependencies.fast_store(trial_id)
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
-        [module_def(..., 'inte', '1.0.1').]
+        [module(..., 'inte', '1.0.1').]
 
         Return modules with relative path:
-        >>> m3 = modules.add("inte2", "1.0.2", "inte2.py", "bbbb")
-        >>> md3 = module_dependencies.add(m3)
+        >>> m3 = modules.add("inte2", "1.0.2", "inte2.py", None, 0)
         >>> modules.fast_store(trial_id)
-        >>> module_dependencies.fast_store(trial_id)
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
-        [module_def(..., 'inte', '1.0.1')., module_def(..., 'inte2', '1.0.2').]
+        [module(..., 'inte', '1.0.1')., module(..., 'inte2', '1.0.2').]
         """
         for module in self.modules:                                              # pylint: disable=not-an-iterable
             path = module.path
@@ -658,7 +644,7 @@ class Trial(AlchemyProxy):
         ...     trial.versioned_files(script=False, access=False).items()
         ...  )
         ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [('internal.py', [('code_hash', 'bbbb'), ('name', 'internal'),
+        [('internal.py', [('code_hash', '...'), ('name', 'internal'),
                           ('type', 'module')])]
 
         Get only accesses:
@@ -678,7 +664,7 @@ class Trial(AlchemyProxy):
         ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
          ('file2.txt', [('code_hash', None), ('type', 'access')]),
-         ('internal.py', [('code_hash', 'bbbb'), ('name', 'internal'),
+         ('internal.py', [('code_hash', '...'), ('name', 'internal'),
                           ('type', 'module')]),
          ('main.py', [('code_hash', '...'), ('type', 'script')])]
         """
@@ -695,11 +681,13 @@ class Trial(AlchemyProxy):
             add(self.script, {"code_hash": self.code_hash, "type": "script"})
         if local:
             for module in self.local_modules:                                    # pylint: disable=not-an-iterable
-                add(module.path, {
-                    "code_hash": module.code_hash,
-                    "type": "module",
-                    "name": module.name
-                })
+                code_hash = module.code_hash
+                if code_hash:
+                    add(module.path, {
+                        "code_hash": code_hash,
+                        "type": "module",
+                        "name": module.name
+                    })
         if access:
             for faccess in reversed(list(self.file_accesses)):
                 add(faccess.name, {
@@ -728,7 +716,7 @@ class Trial(AlchemyProxy):
         ...  for name, dic in trial.iterate_accesses()
         ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [('main.py', [('code_hash', '...'), ('type', 'script')]),
-         ('internal.py', [('code_hash', 'bbbb'), ('name', 'internal'),
+         ('internal.py', [('code_hash', '...'), ('name', 'internal'),
                           ('type', 'module')]),
          ('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
          ('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
@@ -1171,7 +1159,8 @@ class Trial(AlchemyProxy):
         session.commit()
 
     @classmethod  # query
-    def store(cls, script, start, command, path, bypass_modules, session=None):  # pylint: disable=too-many-arguments
+    def store(cls, script, start, command, path, bypass_modules, super_id=None, 
+              session=None):  # pylint: disable=too-many-arguments
         """Create trial and assign a new id to it
         Use core sqlalchemy
 
@@ -1193,7 +1182,7 @@ class Trial(AlchemyProxy):
         >>> erase_db()
 
         Create a trial with script, start, path, command and bypass_modules.
-        The first trial has no parent_id and does not inherit modules:
+        The first trial has no super_id, parent_id and does not inherit modules:
         >>> par = trial_params()
         >>> script, start, path = par["script"], par["start"], par["path"]
         >>> command, bypass_modules = par["command"], par["bypass_modules"]
@@ -1214,6 +1203,7 @@ class Trial(AlchemyProxy):
         True
         >>> trial.modules_inherited_from_trial_id
         >>> trial.parent_id
+        >>> trial.super_id
         >>> trial.main_id
 
         Set parent id if there is a trial:
@@ -1250,7 +1240,7 @@ class Trial(AlchemyProxy):
             ttrial.insert(),
             {"script": script, "start": start, "command": command,
              "path": path,
-             "status": "ongoing", "parent_id": parent_id,
+             "status": "ongoing", "parent_id": parent_id, "super_id": super_id,
              "modules_inherited_from_trial_id": inherited_id})
         tid = result.lastrowid
         session.commit()

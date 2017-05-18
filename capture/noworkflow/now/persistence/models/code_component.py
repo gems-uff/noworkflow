@@ -18,6 +18,7 @@ from .base import AlchemyProxy, proxy_class, query_one_property
 from .base import backref_one, one, many_viewonly_ref
 
 from .code_block import CodeBlock
+from .evaluation import Evaluation
 
 
 @proxy_class
@@ -85,7 +86,12 @@ class CodeComponent(AlchemyProxy):
     last_char_column = Column(Integer)
     container_id = Column(Integer, index=True)
 
-    evaluations = many_viewonly_ref("code_component", "Evaluation")
+    evaluations = many_viewonly_ref(
+        "code_component", "Evaluation",
+        remote_side=[Evaluation.m.code_component_trial_id,
+                     Evaluation.m.code_component_id],
+        primaryjoin=((trial_id == Evaluation.m.code_component_trial_id) &
+                     (id == Evaluation.m.code_component_id)))
 
     this_block = one(
         "CodeBlock", backref="this_component",

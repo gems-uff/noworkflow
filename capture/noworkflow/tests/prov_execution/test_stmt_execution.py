@@ -1045,6 +1045,7 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_dependency(call, var_a, "argument")
 
+    @only(PY36)
     def test_annassign_to_name(self):
         """Test assign collection"""
         self.script("# script.py\n"

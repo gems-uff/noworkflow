@@ -171,3 +171,9 @@ def try_def(body, handlers, orelse, finalbody, node=None):
             result = ast.TryFinally(body, finalbody)
             body = [ast.copy_location(result, node) if node else result]
         return body[-1]
+
+def raise_(exc, cause=None):
+    if PY3:
+        return ast.Raise(exc, cause)
+    else:
+        return ast.Raise(exc, None, cause)

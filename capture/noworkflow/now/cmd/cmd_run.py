@@ -51,19 +51,16 @@ def run(metascript):
         arguments = metascript.arguments_store
         Argument.fast_store(metascript.trial_id, arguments, True)
 
-        io.print_msg("collecting definition provenance")
-        metascript.definition.collect_provenance()
-        metascript.definition.store_provenance()
-        Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
-
         io.print_msg("collecting deployment provenance")
         metascript.deployment.collect_provenance()
-        metascript.deployment.store_provenance()
 
-        io.print_msg("collection execution provenance")
+        io.print_msg("collection definition and execution provenance")
         metascript.execution.collect_provenance()
+        metascript.deployment.store_provenance()
+        metascript.definition.store_provenance()
         metascript.execution.store_provenance()
 
+        Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
         metaprofiler.meta_profiler.save()
     finally:
         metascript.create_last()

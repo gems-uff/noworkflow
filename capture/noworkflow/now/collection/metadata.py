@@ -14,7 +14,7 @@ from future.utils import viewitems
 
 from ..persistence import persistence_config, get_serializer
 from ..persistence.lightweight import ObjectStore, SharedObjectStore
-from ..persistence.lightweight import ModuleLW, ModuleDependencyLW
+from ..persistence.lightweight import ModuleLW
 from ..persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 from ..persistence.lightweight import CodeComponentLW, CodeBlockLW
 from ..persistence.lightweight import EvaluationLW, ActivationLW, DependencyLW
@@ -47,7 +47,6 @@ class Metascript(object):                                                       
         self.arguments_store = ObjectStore(ArgumentLW)
         self.environment_attrs_store = ObjectStore(EnvironmentAttrLW)
         self.modules_store = ObjectStore(ModuleLW)
-        self.module_dependencies_store = ObjectStore(ModuleDependencyLW)
 
         self.code_components_store = ObjectStore(CodeComponentLW)
         self.code_blocks_store = SharedObjectStore(CodeBlockLW)
@@ -81,7 +80,7 @@ class Metascript(object):                                                       
         # Main id : int
         self.main_id = 1
         # Code override. Just use it if you want to ignore path : str
-        self.code = ""
+        self.code = None
 
         # Verbose print : bool
         self.verbose = False

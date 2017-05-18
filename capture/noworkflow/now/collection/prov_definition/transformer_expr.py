@@ -2,774 +2,22 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Transform AST to allow execution provenance collection
+"""Transform expr AST to allow execution provenance collection
 Collect definition provenance during the transformations"""
 
 import ast
 import pyposast
 import os
 
+from copy import copy
+
 from .ast_helpers import ReplaceContextWithLoad, ast_copy, temporary
 
-from .ast_elements import maybe, context, nlambda
-from .ast_elements import L, S, P, none, true, false, call, param
-from .ast_elements import noworkflow, double_noworkflow, act_attribute
-from .ast_elements import activation, function_def, class_def, try_def
-
+from .ast_elements import L, S, P, context, none, call, param
+from .ast_elements import noworkflow, double_noworkflow
+from .ast_elements import nlambda, activation, act_attribute
 
 from ...utils.cross_version import PY3, PY35
-
-
-class RewriteAST(ast.NodeTransformer):                                           # pylint: disable=too-many-public-methods
-    """Rewrite AST to add calls to noWorkflow collector"""
-
-    def __init__(self, metascript, code, path):
-        self.metascript = metascript
-        self.code_components = metascript.code_components_store
-        self.code_blocks = metascript.code_blocks_store
-        self.path = path
-        self.code = code
-        self.lcode = code.split("\n")
-        self.container_id = -1
-        self.exc_handler_counter = 0
-        self.current_exc_handler = 0
-
-    # data
-
-    def create_code_component(self, node, type_, mode):
-        """Create code_component. Return component id"""
-        num = self.code_components.add(
-            node.name, type_, mode,
-            node.first_line, node.first_col,
-            node.last_line, node.last_col,
-            self.container_id
-        )
-        node.code_component_id = num
-        return num
-
-    def create_code_block(self, node, type_, has_doc=True):
-        """Create code_block and corresponding code_component
-        Return component id
-        """
-        id_ = self.create_code_component(node, type_, "w")
-        self.code_blocks.add(
-            id_,
-            pyposast.extract_code(self.lcode, node),
-            ast.get_docstring(node) if has_doc else ""
-        )
-        return id_
-
-    def create_exc_handler(self):
-        """Create new exception handler id"""
-        self.exc_handler_counter += 1
-        return self.exc_handler_counter
-
-    def container(self, node, type_):
-        """Create container code_block and sets current"""
-        return temporary(
-            self, "container_id", self.create_code_block(node, type_))
-
-    def exc_handler(self):
-        """Create container code_block and sets current"""
-        return temporary(
-            self, "current_exc_handler", self.create_exc_handler())
-
-    # mod
-
-    def process_script(self, node, cls):
-        """Process script, creating initial activation, and closing it.
-
-        Surround script with calls to noWorkflow:
-        __now_activation__ = <now>.script_start(__name__, <block_id>)
-        try:
-            ...script...
-        except:
-            <now>.collect_exception(<act>, <exc>)
-            raise
-        finally:
-            <now>.close_script(<act>)
-        """
-        node.name = os.path.relpath(self.path, self.metascript.dir)
-        node.first_line, node.first_col = int(bool(self.code)), 0
-        node.last_line, node.last_col = len(self.lcode), len(self.lcode[-1])
-        with self.container(node, "script"), self.exc_handler():
-            old_body = self.process_body(node.body)
-            if not old_body:
-                old_body = [ast_copy(ast.Pass(), node)]
-            body = [
-                ast_copy(ast.Assign(
-                    [ast.Name("__now_activation__", S())],
-                    noworkflow(
-                        "start_script",
-                        [ast.Name("__name__", L()), ast.Num(self.container_id)]
-                    )
-                ), node),
-                ast_copy(try_def(old_body, [
-                    ast.ExceptHandler(None, None, [
-                        ast_copy(ast.Expr(noworkflow(
-                            "collect_exception",
-                            [activation(), ast.Num(self.current_exc_handler)]
-                        )), node),
-                        ast_copy(ast.Raise(), node)
-                    ])
-                ], [], [
-                    ast_copy(ast.Expr(noworkflow(
-                        "close_script", [activation()]
-                    )), node)
-                ], node), node)
-            ]
-            return ast.fix_missing_locations(ast_copy(cls(body), node))
-
-    def process_body(self, body):
-        """Process statement list"""
-        new_body = []
-        for stmt in body:
-            if isinstance(stmt, ast.Assign):
-                self.visit_assign(new_body, stmt)
-            elif isinstance(stmt, ast.AugAssign):
-                self.visit_augassign(new_body, stmt)
-            elif isinstance(stmt, ast.AnnAssign):
-                self.visit_annassign(new_body, stmt)
-            else:
-                new_body.append(self.visit(stmt))
-
-        return new_body
-
-    def visit_Module(self, node, cls=ast.Module):                                # pylint: disable=invalid-name
-        """Visit Module. Create and close activation"""
-        return ast.fix_missing_locations(self.process_script(node, cls))
-
-    def visit_Interactive(self, node):                                           # pylint: disable=invalid-name
-        """Visit Interactive. Create and close activation"""
-        return self.visit_Module(node, cls=ast.Interactive)
-
-    # ToDo: visit_Expression?
-
-    # stmt
-
-    def visit_assign(self, new_body, node):
-        """Visit Assign through process_body
-        Transform:
-            a = b, c = [d, e] = *f = g[h], i.j = k, l
-        Into:
-            (+1)a = (+2)b, (+3)c = [(+4)d, (+5)e] = *(+6)f =
-                (+7)<now>[(+8)g, (+9)h, '[]'] =
-                (+10)<now>[i, 'j', '.'] =
-                <now>.assign_value(<act>, <exc>)(<act>, |k, l|)
-            __now__assign__ = <now>.pop_assign(<act>)
-
-            <now>.assign(<act>, __now__assign__, cce(a))
-            <now>.assign(<act>, __now__assign__, cce((b, c)))
-            <now>.assign(<act>, __now__assign__, cce([d, e]))
-            <now>.assign(<act>, __now__assign__, cce(*f))
-            # Check if assigned
-            <now>.assign(<act>, __now__assign__, cce(g[h]))
-            <now>.assign(<act>, __now__assign__, cce(i.j))
-        """
-        new_targets = []
-        assign_calls = []
-        for target in node.targets:
-            new_target = self.capture(target)
-            new_targets.append(new_target)
-            assign_calls.append(ast_copy(ast.Expr(
-                noworkflow("assign", [
-                    activation(),
-                    ast.Name("__now__assign__", L()),
-                    new_target.code_component_expr,
-                ])
-            ), node))
-
-        new_body.append(ast_copy(ast.Assign(
-            new_targets,
-            double_noworkflow(
-                "assign_value",
-                [activation(), ast.Num(self.current_exc_handler)],
-                [activation(), self.capture(node.value, mode="assign")]
-            )
-        ), node))
-
-        new_body.append(ast_copy(ast.Assign(
-            [ast.Name("__now__assign__", S())],
-            noworkflow("pop_assign", [activation()])
-        ), node))
-
-        for assign_call in assign_calls:
-            new_body.append(assign_call)
-
-    def visit_augassign(self, new_body, node):
-        """Visit AugAssign through process_body
-        Transform
-            a += 1
-        Into:
-            a += self.assign_value(<act>, <ext>)(<act>, |1|, |a|)
-            __now__assign__ = <now>.pop_assign(<act>)
-
-            <now>.assign(<act>, __now__assign__, cce(a))
-        """
-        new_target = self.capture(node.target)
-        mode = "{}_assign".format(type(node.op).__name__.lower())
-        new_body.append(ast_copy(ast.AugAssign(
-            new_target, node.op,
-            double_noworkflow(
-                "assign_value",
-                [
-                    activation(),
-                    ast.Num(self.current_exc_handler)
-                ], [
-                    activation(),
-                    self.capture(node.value, mode=mode),
-                    self.capture(
-                        ReplaceContextWithLoad().visit(new_target), mode=mode)
-                ]
-            ),
-        ), node))
-        new_body.append(ast_copy(ast.Assign(
-            [ast.Name("__now__assign__", S())],
-            noworkflow("pop_assign", [activation()])
-        ), node))
-        new_body.append(ast_copy(ast.Expr(
-            noworkflow("assign", [
-                activation(),
-                ast.Name("__now__assign__", L()),
-                new_target.code_component_expr,
-            ])
-        ), node))
-
-    def visit_annassign(self, new_body, node):
-        """Visit AnnAssign through process_body
-        Transform
-            a : int = 1
-        Into:
-            a : int = self.assign_value(<act>, <ext>)(<act>, |1|, |a|)
-            __now__assign__ = <now>.pop_assign(<act>)
-
-            <now>.assign(<act>, __now__assign__, cce(a))
-        """
-        if not node.value:
-            # Just annotation
-            new_body.append(node)
-            return
-
-        new_target = self.capture(node.target)
-        mode = "assign"
-        new_body.append(ast_copy(ast.AnnAssign(
-            new_target,
-            node.annotation,
-            double_noworkflow(
-                "assign_value",
-                [activation(), ast.Num(self.current_exc_handler)],
-                [activation(), self.capture(node.value, mode=mode)]
-            ),
-            node.simple
-        ), node))
-        new_body.append(ast_copy(ast.Assign(
-            [ast.Name("__now__assign__", S())],
-            noworkflow("pop_assign", [activation()])
-        ), node))
-        new_body.append(ast_copy(ast.Expr(
-            noworkflow("assign", [
-                activation(),
-                ast.Name("__now__assign__", L()),
-                new_target.code_component_expr,
-            ])
-        ), node))
-
-    def visit_For(self, node):                                                   # pylint: disable=invalid-name
-        """Visit For
-        Transform:
-            for i in lis:
-                ...
-        Into:
-            for i in <now>.loop(<act>, #, <exc>)(<act>, |lis|):
-                <now>.assign(<act>, <now>.pop_assign(<act>), cce(i))
-        """
-        node.target = self.capture(node.target)
-        node.iter = ast_copy(double_noworkflow(
-            "loop",
-            [
-                activation(),
-                ast.Num(node.target.code_component_id),
-                ast.Num(self.current_exc_handler)
-            ], [
-                activation(),
-                self.capture(node.iter, mode="dependency")
-            ]
-        ), node.iter)
-        node.body = [
-            ast_copy(ast.Expr(
-                noworkflow("assign", [
-                    activation(),
-                    noworkflow("pop_assign", [activation()]),
-                    node.target.code_component_expr,
-                ])
-            ), node)
-        ] + self.process_body(node.body)
-        return node
-
-    def visit_If(self, node):                                                    # pylint: disable=invalid-name
-        """Visit If
-        Transform:
-            if x:
-                ...
-            else:
-                ...
-        Into:
-            try:
-                if <now>.condition(<act>, <exc>)(<act>, |x|):
-                    ...
-            except:
-                <now>.collect_exception(__now_activation__)
-                raise
-            finally:
-                <now>.remove_condition(__now_activation__)
-        """
-        with self.exc_handler():
-            node.test = ast_copy(double_noworkflow(
-                "condition",
-                [
-                    activation(),
-                    ast.Num(self.current_exc_handler)
-                ], [
-                    activation(),
-                    self.capture(node.test, mode="condition")
-                ]
-            ), node)
-            node.body = self.process_body(node.body)
-            node.orelse = self.process_body(node.orelse)
-
-            return ast_copy(try_def([node], [
-                ast.ExceptHandler(None, None, [
-                    ast_copy(ast.Expr(noworkflow(
-                        "collect_exception",
-                        [activation(), ast.Num(self.current_exc_handler)]
-                    )), node),
-                    ast_copy(ast.Raise(), node)
-                ])
-            ], [], [
-                ast_copy(ast.Expr(noworkflow(
-                    "remove_condition", [activation()]
-                )), node)
-            ], node), node)
-
-    def visit_While(self, node):                                                 # pylint: disable=invalid-name
-        """Visit While
-        Transform:
-            while x:
-                ...
-            else:
-                ...
-        Into:
-            try:
-                <now>.prepare_while(<act>)
-                while <now>.remove_condition(
-                    <act>)(<now>.condition(<act>, <exc>)(<act>, |x|)):
-                    ...
-                else:
-                    ...
-            except:
-                <now>.collect_exception(<act>, <exc>)
-                raise
-            finally:
-                <now>.remove_condition(<act>)
-        """
-        with self.exc_handler():
-            node.test = ast_copy(double_noworkflow(
-                "remove_condition", [activation()], [double_noworkflow(
-                    "condition",
-                    [
-                        activation(),
-                        ast.Num(self.current_exc_handler)
-                    ], [
-                        activation(),
-                        self.capture(node.test, mode="condition")
-                    ]
-                )]
-            ), node)
-            node.body = self.process_body(node.body)
-            node.orelse = self.process_body(node.orelse)
-
-            return ast_copy(try_def([
-                ast_copy(ast.Expr(noworkflow(
-                    "prepare_while",
-                    [activation(), ast.Num(self.current_exc_handler)]
-                )), node),
-                node
-            ], [
-                ast.ExceptHandler(None, None, [
-                    ast_copy(ast.Expr(noworkflow(
-                        "collect_exception",
-                        [activation(), ast.Num(self.current_exc_handler)]
-                    )), node),
-                    ast_copy(ast.Raise(), node)
-                ])
-            ], [], [
-                ast_copy(ast.Expr(noworkflow(
-                    "remove_condition", [activation()]
-                )), node)
-            ], node), node)
-
-    def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
-        """Visit Class Definition"""
-        with self.container(node, "class_def"):
-            return ast_copy(class_def(
-                node.name, node.bases, self.process_body(node.body),
-                node.decorator_list,
-                keywords=maybe(node, "keywords")
-            ), node)
-
-    def process_arg(self, arg, parent=None):
-        """Return None if arg does not exist
-        Otherwise, create code component, return tuple ("arg name", code_id)
-        """
-        if not arg:
-            return none()
-
-        if PY3:
-            arg.name = arg.arg
-        elif isinstance(arg, str):
-            old, arg = arg, ast_copy(ast.Name(arg, L()), parent)
-            arg.name = old
-        else:
-            arg.name = pyposast.extract_code(self.lcode, arg).strip("()")
-
-        id_ = self.create_code_component(arg, "param", "w")
-        return ast_copy(ast.Tuple([
-            ast.Str(arg.name), ast.Num(id_)
-        ], L()), arg)
-
-    def process_default(self, default):
-        """Process default value"""
-        if not default:
-            return none()
-        id_ = self.create_code_component(default, "default", context(default))
-        return ast_copy(double_noworkflow(
-            "argument",
-            [
-                activation(),
-                ast.Num(id_),
-                ast.Num(self.current_exc_handler)
-            ], [
-                activation(),
-                ast.Num(id_),
-                self.capture(default), "param"
-            ]
-        ), default)
-
-    def process_decorator(self, decorator):
-        """Transform @dec into @__noworkflow__.decorator(<act>)(|dec|)"""
-        return ast_copy(double_noworkflow(
-            "decorator",
-            [pyposast.extract_code(self.lcode, decorator), activation()],
-            [self.capture(decorator)]
-        ), decorator)
-
-    def process_parameters(self, arguments):
-        """Return List of arguments for <now>.function_def"""
-        args = ast.List([
-            self.process_arg(arg, arguments) for arg in arguments.args
-        ], L())
-
-        vararg = self.process_arg(arguments.vararg, arguments)
-        defaults = ast.Tuple([
-            self.process_default(def_) for def_ in arguments.defaults
-        ], L())
-        kwarg = self.process_arg(arguments.kwarg, arguments)
-        if PY3:
-            kwonlyargs = ast.List([
-                self.process_arg(arg, arguments)
-                for arg in arguments.kwonlyargs
-            ], L())
-        else:
-            kwonlyargs = none()
-        return ast.Tuple([args, defaults, vararg, kwarg, kwonlyargs], L())
-
-    def visit_FunctionDef(self, node, cls=ast.FunctionDef):                      # pylint: disable=invalid-name
-        """Visit Function Definition
-        Transform:
-        @dec
-        def f(x, y=2, *args, z=3, **kwargs):
-            ...
-        Into:
-        @<now>.collect_function_def(<act>)
-        @<now>.decorator(__now_activation__)(|dec|)
-        @<now>.function_def(<act>)(<act>, <block_id>, <parameters>)
-        def f(__now_activation__, x, y=2, *args, z=3, **kwargs):
-            ...
-        """
-        old_exc_handler = self.current_exc_handler
-        with self.container(node, "function_def"), self.exc_handler():
-
-            decorators = [ast_copy(noworkflow("collect_function_def", [
-                activation()
-            ]), node)] + [self.process_decorator(dec)
-                          for dec in node.decorator_list]
-            decorators.append(ast_copy(double_noworkflow(
-                "function_def",
-                [
-                    activation(),
-                    ast.Num(self.container_id),
-                    ast.Num(old_exc_handler)
-                ], [
-                    activation(),
-                    ast.Num(self.container_id),
-                    self.process_parameters(node.args),
-                    ast.Str("decorate")
-                ]
-            ), node))
-
-            body = self.process_body(node.body)
-
-            node.args.args = [param("__now_activation__")] + node.args.args
-            node.args.defaults = [none() for _ in node.args.defaults]
-
-            return ast_copy(function_def(
-                node.name, node.args, body, decorators,
-                returns=maybe(node, "returns"), cls=cls
-            ), node)
-
-    def visit_AsyncFunctionDef(self, node):                                      # pylint: disable=invalid-name
-        """Visit Async Function Definition"""
-        return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
-
-    def visit_Return(self, node):                                                # pylint: disable=invalid-name
-        """Visit Return
-        Transform:
-            return x
-        Into:
-            return <now>.return_(<act>, <exc>)(<act>, |x|)
-        """
-        node.value = ast_copy(double_noworkflow(
-            "return_",
-            [
-                activation(),
-                ast.Num(self.current_exc_handler),
-            ], [
-                activation(),
-                self.capture(node.value, mode="use") if node.value else none()
-            ]
-        ), node)
-        return node
-
-    def visit_Expr(self, node):                                                  # pylint: disable=invalid-name
-        """Visit Expr. Capture it"""
-        node.value = self.capture(node.value)
-        return node
-
-    def visit_Try(self, node):                                                   # pylint: disable=invalid-name
-        """Visit Try
-        Transform:
-            try:
-                ...
-            except Exception as e:
-                ...
-            else:
-                ...
-            finally:
-                ...
-        Into:
-            try:
-                try:
-                    ...
-                except:
-                    <now>.collect_exception(<act>, <exc>)
-                    raise
-            except Exception as err:
-                <now>.exception(<act>, #, <exc>, err)
-                ...
-            else:
-                ...
-            finally:
-                ...
-        """
-        with self.exc_handler() as internal_handler:
-            node.body = [ast_copy(try_def(self.process_body(node.body), [
-                ast.ExceptHandler(None, None, [
-                    ast_copy(ast.Expr(noworkflow(
-                        "collect_exception",
-                        [activation(), ast.Num(self.current_exc_handler)]
-                    )), node),
-                    ast_copy(ast.Raise(), node)
-                ])
-            ], [], [], node), node)]
-        handlers = []
-        for handler in node.handlers:
-            handlers.append(self.visit_exchandler(handler, internal_handler))
-        node.handlers = handlers
-        node.orelse = self.process_body(node.orelse)
-        node.finalbody = self.process_body(node.finalbody)
-        return node
-
-    def visit_TryFinally(self, node):                                            # pylint: disable=invalid-name
-        """Visit TryFinally -- Python 2
-        Transform:
-            try:
-                ...
-            finally:
-                ...
-        Into:
-            try:
-                ...
-            finally:
-                ...
-        """
-        node.body = self.process_body(node.body)
-        node.finalbody = self.process_body(node.finalbody)
-        return node
-
-    def visit_TryExcept(self, node):                                             # pylint: disable=invalid-name
-        """Visit TryExcept -- Python 2
-        Transform:
-            try:
-                ...
-            except Exception as e:
-                ...
-            else:
-                ...
-        Into:
-            try:
-                try:
-                    ...
-                except:
-                    <now>.collect_exception(<act>, <exc>)
-                    raise
-            except Exception as err:
-                <now>.exception(<act>, #, <exc>, err)
-                ...
-            else:
-                ...
-        """
-        with self.exc_handler() as internal_handler:
-            node.body = [ast_copy(try_def(self.process_body(node.body), [
-                ast.ExceptHandler(None, None, [
-                    ast_copy(ast.Expr(noworkflow(
-                        "collect_exception",
-                        [activation(), ast.Num(self.current_exc_handler)]
-                    )), node),
-                    ast_copy(ast.Raise(), node)
-                ])
-            ], [], [], node), node)]
-        handlers = []
-        for handler in node.handlers:
-            handlers.append(self.visit_exchandler(handler, internal_handler))
-        node.handlers = handlers
-        node.orelse = self.process_body(node.orelse)
-        return node
-
-    def visit_exchandler(self, node, internal_handler):
-        """Visit excepthandler
-        Transform:
-            except Exception as err:
-                ...
-        Into:
-            except Exception as err:
-                <now>.exception(<act>, #, <exc>, err)
-                ...
-        """
-        if node.type is None:
-            node.type = ast.Name("Exception", L())
-        name = "__now_exception__"
-        if node.name is None:
-            node.name = name if PY3 else ast.Name(name, S())
-        name = node.name if PY3 else node.name.id
-        with temporary(node, "name", name):
-            component_id = self.create_code_component(node, "exception", 'w')
-        node.body = [
-            ast_copy(ast.Expr(noworkflow(
-                "exception",
-                [
-                    activation(),
-                    ast.Num(component_id),
-                    ast.Num(internal_handler),
-                    ast.Str(name),
-                    ast.Name(name, L()),
-                ]
-            )), node)
-        ] + self.process_body(node.body)
-        return node
-
-    def visit_Exec(self, node):
-        """
-        Transform:
-            exec a
-        Into:
-            <now>.py2_exec(<act>. #, <exc>, <mode>)(|a|)
-        """
-        node.name = pyposast.extract_code(self.lcode, node)
-        component_id = self.create_code_component(
-            node, "call", "r"
-        )
-        rewriter = RewriteDependencies(self, mode="dependency")
-        key = lambda arg, no: ast_copy(
-            rewriter._call_arg(arg, no) if no
-            else call(ast.Name(arg, L()), []), node
-        )
-
-        keywords = [
-            key("globals", node.globals),
-            key("locals", node.globals),
-        ]
-
-        if node.locals:
-            keywords.append(ast.keyword(
-                'locals', rewriter._call_keyword('locals', node.locals)
-            ))
-
-        return ast_copy(ast.Expr(double_noworkflow(
-            "py2_exec",
-            [
-                activation(),
-                ast.Num(component_id),
-                ast.Num(self.current_exc_handler),
-                ast.Str("dependency")
-            ], [
-                rewriter._call_arg(node.body, False),
-                key("globals", node.globals),
-                key("locals", node.locals),
-
-
-            ],
-        )), node)
-
-    def visit_Print(self, node):
-        """
-        Transform:
-            print a
-        Into:
-            <now>.py2_print(<act>. #, <exc>, <mode>)(|a|)
-        """
-        node.name = pyposast.extract_code(self.lcode, node)
-        component_id = self.create_code_component(
-            node, "call", "r"
-        )
-        rewriter = RewriteDependencies(self, mode="dependency")
-        keywords = []
-        if not node.nl:
-            keywords.append(ast.keyword('end', ast.Str('')))
-        if node.dest:
-            keywords.append(ast.keyword('file',
-                            rewriter._call_keyword('file', node.dest)))
-
-        return ast_copy(ast.Expr(double_noworkflow(
-            "py2_print",
-            [
-                activation(),
-                ast.Num(component_id),
-                ast.Num(self.current_exc_handler),
-                ast.Str("dependency")
-            ], [
-                rewriter._call_arg(dest, False)
-                for dest in node.values
-            ],
-            keywords=keywords
-        )), node)
-
-
-
-    def capture(self, node, mode="dependency"):
-        """Capture node"""
-        dependency_rewriter = RewriteDependencies(self, mode=mode)
-        return dependency_rewriter.visit(node)
-
 
 
 class RewriteDependencies(ast.NodeTransformer):
@@ -1030,13 +278,12 @@ class RewriteDependencies(ast.NodeTransformer):
             node, "subscript", "r"
         )
         mode = self.mode if hasattr(self, "mode") else "dependency"
-
-        node = ast_copy(ast.Subscript(
-            noworkflow("access", [
+        new_node = ast_copy(ast.Subscript(
+            ast_copy(noworkflow("access", [
                 activation(),
                 ast.Num(subscript_component),
                 ast.Num(self.rewriter.current_exc_handler)
-            ]),
+            ]), node),
             ast.Index(ast.Tuple([
                 activation(),
                 ast.Num(subscript_component),
@@ -1047,15 +294,17 @@ class RewriteDependencies(ast.NodeTransformer):
             ], L())),
             node.ctx,
         ), node)
-        node.component_id = subscript_component
-        node.code_component_expr = ast.Tuple([
+        new_node.component_id = subscript_component
+        new_node.code_component_expr = ast.Tuple([
             ast.Tuple([
                 ast.Num(subscript_component),
                 replaced
             ], L()),
             ast.Str("access")
         ], L())
-        return node
+        node.component_id = new_node.component_id
+        node.code_component_expr = new_node.code_component_expr
+        return new_node
 
     def visit_Attribute(self, node):                                             # pylint: disable=invalid-name
         """Visit Attribute
@@ -1078,7 +327,7 @@ class RewriteDependencies(ast.NodeTransformer):
             node, "attribute", "r"
         )
         mode = self.mode if hasattr(self, "mode") else "dependency"
-
+        old_node = node
         node = ast_copy(ast.Subscript(
             noworkflow("access", [
                 activation(),
@@ -1103,6 +352,8 @@ class RewriteDependencies(ast.NodeTransformer):
             ], L()),
             ast.Str("access")
         ], L())
+        old_node.component_id = node.component_id
+        old_node.code_component_expr = node.code_component_expr
         return node
 
     def visit_Dict(self, node):                                                  # pylint: disable=invalid-name
@@ -1124,8 +375,10 @@ class RewriteDependencies(ast.NodeTransformer):
             new_key, new_value = self._dict_itemize(key, value)
             new_keys.append(new_key)
             new_values.append(new_value)
-        node.keys = new_keys
-        node.values = new_values
+
+        new_node = copy(node)
+        new_node.keys = new_keys
+        new_node.values = new_values
 
         return ast_copy(double_noworkflow(
             "dict",
@@ -1136,7 +389,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ], [
                 activation(),
                 ast.Num(dict_code_component),
-                node,
+                new_node,
                 ast.Str(self.mode)
             ]
         ), node)
@@ -1161,23 +414,25 @@ class RewriteDependencies(ast.NodeTransformer):
         list_code_component = self.rewriter.create_code_component(
             node, comp, "r"
         )
+        new_node = copy(node)
         new_items = []
-        for index, item in enumerate(node.elts):
+        for index, item in enumerate(new_node.elts):
             if set_key is None:
                 set_key = lambda: ("item", ast.Num(index))
             new_items.append(self._itemize(item, ctx, set_key))
 
-        if ctx.startswith("w"):
-            node.code_component_expr = ast.Tuple([
+        new_node.code_component_expr = ast.Tuple([
+            ast.Tuple([
                 ast.Tuple([
-                    ast.Tuple([
-                        elt.code_component_expr for elt in node.elts
-                    ], L()),
-                    replaced,
+                    getattr(elt, "code_component_expr", None)
+                    for elt in node.elts
                 ], L()),
-                ast.Str("multiple")
-            ], L())
-        node.elts = new_items
+                replaced,
+            ], L()),
+            ast.Str("multiple")
+        ], L())
+        node.code_component_expr = new_node.code_component_expr
+        new_node.elts = new_items
 
         if ctx.startswith("r"):
             return ast_copy(double_noworkflow(
@@ -1189,11 +444,11 @@ class RewriteDependencies(ast.NodeTransformer):
                 ], [
                     activation(),
                     ast.Num(list_code_component),
-                    node,
+                    new_node,
                     ast.Str(self.mode)
                 ]
-            ), node)
-        return node
+            ), new_node)
+        return new_node
 
     def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
         """Visit tuple.
@@ -1229,82 +484,18 @@ class RewriteDependencies(ast.NodeTransformer):
 
         """
         replaced = ReplaceContextWithLoad().visit(node)
-        node.value = self.visit(node.value)
-        node.code_component_expr = ast.Tuple([
+        new_node = copy(node)
+        new_node.value = self.visit(node.value)
+        new_node.code_component_expr = ast.Tuple([
             ast.Tuple([
-                node.value.code_component_expr,
+                new_node.value.code_component_expr,
                 replaced,
             ], L()),
             ast.Str("starred")
         ], L())
-        return node
+        node.code_component_expr = new_node.code_component_expr
+        return new_node
 
-    def visit_Index(self, node):                                                 # pylint: disable=invalid-name
-        """Visit Index"""
-        return self.visit(node.value)
-
-    def visit_Slice(self, node):                                                 # pylint: disable=invalid-name
-        """Visit Slice
-        Transform:
-            a:b:c
-        Into:
-            <now>.slice(<act>, #, <exc>)(<act>, #, a, b, c, <mode>)
-        """
-        capture = self.rewriter.capture
-        lower = capture(node.lower, mode="use") if node.lower else none()
-        upper = capture(node.upper, mode="use") if node.upper else none()
-        step = capture(node.step, mode="use") if node.step else none()
-
-        node.name = pyposast.extract_code(self.rewriter.lcode, node)
-        component_id = self.rewriter.create_code_component(
-            node, "slice", "r"
-        )
-        return ast_copy(double_noworkflow(
-            "slice",
-            [
-                activation(),
-                ast.Num(component_id),
-                ast.Num(self.rewriter.current_exc_handler)
-            ], [
-                activation(),
-                ast.Num(component_id),
-                lower, upper, step, ast.Str(self.mode)
-            ]
-        ), node)
-
-    def visit_Ellipsis(self, node):                                              # pylint: disable=invalid-name
-        """Visit Ellipsis"""
-        node.name = pyposast.extract_code(self.rewriter.lcode, node)
-        component_id = self.rewriter.create_code_component(
-            node, "literal", "r"
-        )
-        return ast_copy(noworkflow("literal", [
-            activation(), ast.Num(component_id), ast.Attribute(
-                ast.Name("__noworkflow__", L()), "Ellipsis", L()
-            ), ast.Str(self.mode)
-        ]), node)
-
-    def visit_ExtSlice(self, node):                                              # pylint: disable=invalid-name
-        """Visit ExtSlice"""
-        node.name = pyposast.extract_code(self.rewriter.lcode, node)
-        component_id = self.rewriter.create_code_component(
-            node, "extslice", "r"
-        )
-        return ast_copy(double_noworkflow(
-            "extslice",
-            [
-                activation(),
-                ast.Num(component_id),
-                ast.Num(self.rewriter.current_exc_handler)
-            ], [
-                activation(),
-                ast.Num(component_id),
-                ast.Tuple([
-                    self.rewriter.capture(dim, mode="use") for dim in node.dims
-                ], L()),
-                ast.Str(self.mode)
-            ]
-        ), node)
 
     def visit_Lambda(self, node):                                                # pylint: disable=invalid-name
         """Visit Lambda
@@ -1323,6 +514,7 @@ class RewriteDependencies(ast.NodeTransformer):
             node, "lambda_def", False
         )
 
+        new_node = copy(node)
         result = ast_copy(call(
             ast_copy(double_noworkflow(
                 "function_def",
@@ -1333,15 +525,15 @@ class RewriteDependencies(ast.NodeTransformer):
                 ], [
                     activation(),
                     ast.Num(rewriter.container_id),
-                    rewriter.process_parameters(node.args),
+                    rewriter.process_parameters(new_node.args),
                     ast.Str(self.mode)
                 ]
-            ), node),
-            [node]
-        ), node)
-        node.args.args = [param("__now_activation__")] + node.args.args
-        node.args.defaults = [none() for _ in node.args.defaults]
-        node.body = ast_copy(double_noworkflow(
+            ), new_node),
+            [new_node]
+        ), new_node)
+        new_node.args.args = [param("__now_activation__")] + new_node.args.args
+        new_node.args.defaults = [none() for _ in new_node.args.defaults]
+        new_node.body = ast_copy(double_noworkflow(
             "return_",
             [
                 activation(),
@@ -1350,7 +542,7 @@ class RewriteDependencies(ast.NodeTransformer):
                 activation(),
                 rewriter.capture(node.body, mode="use")
             ]
-        ), node.body)
+        ), new_node.body)
 
         rewriter.container_id = current_container_id
         return result
@@ -1450,6 +642,7 @@ class RewriteDependencies(ast.NodeTransformer):
             <now>.func(<act>, #, <exc>)(<act>, (+1), f.id, |f|, <dep>)(|x|, |*y|, |**z|)
 
         """
+
         rewriter = self.rewriter
         node.name = pyposast.extract_code(rewriter.lcode, node)
         id_ = rewriter.create_code_component(node, "call", "r")
@@ -1509,22 +702,23 @@ class RewriteDependencies(ast.NodeTransformer):
             )
         """
         with self.rewriter.exc_handler():
+            new_node = copy(node)
             node.name = pyposast.extract_code(self.rewriter.lcode, node)
             id_ = self.rewriter.create_code_component(node, "ifexp", "r")
-            node.test = ast_copy(double_noworkflow(
+            new_node.test = ast_copy(double_noworkflow(
                 "condition",
                 [
                     activation(),
                     ast.Num(self.rewriter.current_exc_handler)
                 ], [
                     activation(),
-                    self.rewriter.capture(node.test, mode="condition")
+                    self.rewriter.capture(new_node.test, mode="condition")
                 ]
             ), node)
-            node.body = self.rewriter.capture(node.body, mode="use")
-            node.orelse = self.rewriter.capture(node.orelse, mode="use")
+            new_node.body = self.rewriter.capture(new_node.body, mode="use")
+            new_node.orelse = self.rewriter.capture(new_node.orelse, mode="use")
 
-            lambda_node = nlambda(body=node)
+            lambda_node = nlambda(body=new_node)
 
 
             return ast_copy(noworkflow(
@@ -1565,28 +759,29 @@ class RewriteDependencies(ast.NodeTransformer):
         list_code_component = self.rewriter.create_code_component(
             node, comp+"comp", "r"
         )
+        new_node = copy(node)
         if set_key is None:
             set_key = lambda: ("item", ast.Num(-1))
 
-        item = self._itemize(node.elt, "r", set_key)
+        item = self._itemize(new_node.elt, "r", set_key)
         gens = []
         total = 0
-        for gen in node.generators:
+        for gen in new_node.generators:
             if gen.ifs:
                 total += 1
             gens.append(self.visit_generator(
                 gen, code_id=list_code_component, count=total
             ))
-        node.generators = gens
+        new_node.generators = gens
 
         item = ast_copy(noworkflow(
             "comprehension_item",
             [activation(), item, ast.Num(total)],
-        ), node.elt)
-        node.elt = item
+        ), new_node.elt)
+        new_node.elt = item
 
         if result is None:
-            result = lambda code_id: (
+            result = lambda new_node, code_id: (
                 ast_copy(double_noworkflow(
                     comp,
                     [
@@ -1596,13 +791,13 @@ class RewriteDependencies(ast.NodeTransformer):
                     ], [
                         activation(),
                         ast.Num(code_id),
-                        node,
+                        new_node,
                         ast.Str(self.mode)
                     ]
-                ), node)
+                ), new_node)
             )
 
-        return result(list_code_component)
+        return result(new_node, list_code_component)
 
     def visit_SetComp(self, node):                                               # pylint: disable=invalid-name
         """Visit SetComp
@@ -1641,9 +836,9 @@ class RewriteDependencies(ast.NodeTransformer):
                 if <now>.rcondition(<act>, <exc>)(<act>, 1, |y| and |z|)
             )), <mode>)
         """
-        def result(code_id):
+        def result(new_node, code_id):
             """Return output"""
-            lambda_node = nlambda(body=node)
+            lambda_node = nlambda(body=new_node)
             lambda_node.args.args = [param("__now_generator__")]
             return ast_copy(noworkflow(
                 "genexp",
@@ -1654,7 +849,7 @@ class RewriteDependencies(ast.NodeTransformer):
                     lambda_node,
                     ast.Str(self.mode)
                 ]
-            ), node)
+            ), new_node)
 
 
         return self.visit_ListComp(
@@ -1690,8 +885,10 @@ class RewriteDependencies(ast.NodeTransformer):
             gens.append(self.visit_generator(
                 gen, code_id=list_code_component, count=total
             ))
-        node.generators = gens
-        node.key, node.value = self._dict_itemize(
+
+        new_node = copy(node)
+        new_node.generators = gens
+        new_node.key, new_node.value = self._dict_itemize(
             node.key, node.value, func="comp", extra=[ast.Num(total)]
         )
 
@@ -1704,7 +901,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ], [
                 activation(),
                 ast.Num(list_code_component),
-                node,
+                new_node,
                 ast.Str(self.mode)
             ]
         ), node)
@@ -1712,11 +909,13 @@ class RewriteDependencies(ast.NodeTransformer):
     def visit_generator(self, node, code_id=-1, count=0):
         """Visit comprehension"""
         # ToDo: consider node.is_async
-        if context(node.target) == "r":
-            node.target.ctx = S()
-        node.target = self.rewriter.capture(node.target)
+        new_node = copy(node)
+        new_node.target = copy(node.target)
+        if context(new_node.target) == "r":
+            new_node.target.ctx = S()
+        new_node.target = self.rewriter.capture(new_node.target)
 
-        node.iter = ast_copy(double_noworkflow(
+        new_node.iter = ast_copy(double_noworkflow(
             "loop",
             [
                 activation(),
@@ -1724,27 +923,27 @@ class RewriteDependencies(ast.NodeTransformer):
                 ast.Num(self.rewriter.current_exc_handler)
             ], [
                 activation(),
-                self.rewriter.capture(node.iter, mode="dependency")
+                self.rewriter.capture(new_node.iter, mode="dependency")
             ]
-        ), node.iter)
+        ), new_node.iter)
 
         ifs = []
         ifs.append(ast_copy(noworkflow("assign", [
             activation(),
             noworkflow("pop_assign", [activation()]),
-            node.target.code_component_expr,
-        ]), node))
+            new_node.target.code_component_expr,
+        ]), new_node))
 
-        if node.ifs:
-            if len(node.ifs) > 1:
+        if new_node.ifs:
+            if len(new_node.ifs) > 1:
                 if1 = ast.BoolOp()
                 if1.op = ast.And()
                 if1.values = [
                     self.rewriter.capture(value, mode="condition")
-                    for value in node.ifs
+                    for value in new_node.ifs
                 ]
             else:
-                if1 = self.rewriter.capture(node.ifs[0], mode="condition")
+                if1 = self.rewriter.capture(new_node.ifs[0], mode="condition")
             ifs.append(ast_copy(double_noworkflow(
                 "rcondition",
                 [
@@ -1755,9 +954,9 @@ class RewriteDependencies(ast.NodeTransformer):
                     ast.Num(count),
                     if1
                 ]
-            ), node.ifs[0]))
-        node.ifs = ifs
-        return node
+            ), new_node.ifs[0]))
+        new_node.ifs = ifs
+        return new_node
 
     def visit_Yield(self, node):
         """Visit yield
@@ -1776,17 +975,18 @@ class RewriteDependencies(ast.NodeTransformer):
         yield_component = self.rewriter.create_code_component(
             node, "yield", "r"
         )
+        new_node = copy(node)
 
-        if node.value:
-            value = self.rewriter.capture(node.value, mode="item")
+        if new_node.value:
+            value = self.rewriter.capture(new_node.value, mode="item")
             if hasattr(value, "code_component_id"):
                 value_component = value.code_component_id
             else:
                 value.name = pyposast.extract_code(self.rewriter.lcode, value)
                 value_component = self.rewriter.create_code_component(
-                    node, "item", "r"
+                    new_node, "item", "r"
                 )
-            node.value = ast_copy(double_noworkflow(
+            new_node.value = ast_copy(double_noworkflow(
                 "yielditem",
                 [
                     activation(),
@@ -1810,10 +1010,10 @@ class RewriteDependencies(ast.NodeTransformer):
             [
                 activation(),
                 ast.Num(yield_component),
-                node,
+                new_node,
                 ast.Str(self.mode)
             ]
-        ), node)
+        ), new_node)
 
     def visit_Repr(self, node):
         """
@@ -1850,12 +1050,14 @@ class RewriteDependencies(ast.NodeTransformer):
         component_id = self.rewriter.create_code_component(
             node, "fstring", "r"
         )
-        node.values = [
-            self.rewriter.capture(value, mode="use")
-            for value in node.values
+        new_node = copy(node)
+        new_node.values = [
+            value if isinstance(value, ast.Str)
+            else self.rewriter.capture(value, mode="use") 
+            for value in new_node.values
         ]
 
-        return ast_copy(double_noworkflow(
+        result = ast_copy(double_noworkflow(
             "joined_str",
             [
                 activation(),
@@ -1864,29 +1066,30 @@ class RewriteDependencies(ast.NodeTransformer):
             ], [
                 activation(),
                 ast.Num(component_id),
-                node,
+                new_node,
                 ast.Str(self.mode)
             ]
-        ), node)
+        ), new_node)
+        return result
 
     def visit_FormattedValue(self, node):                                         # pylint: disable=invalid-name
         """Visit BinOp.
         Transform:
             f'{a}'
         Into:
-            <now>.formatted_value(<act>, #, <exc>)(
-                <act>, #, f'{|a|}')
+            f'{<now>.formatted_value(<act>, #, <exc>)(
+                <act>, #, f'{|a|}')}'
         """
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         component_id = self.rewriter.create_code_component(
             node, "fvalue", "r"
         )
-        node.value = self.rewriter.capture(node.value, mode="use")
-        if node.format_spec:
-            node.format_spec = self.rewriter.capture(
-                node.format_spec, mode="use")
-
-        return ast_copy(double_noworkflow(
+        new_node = copy(node)
+        new_node.value = self.rewriter.capture(new_node.value, mode="use")
+        if new_node.format_spec:
+            new_node.format_spec = self.rewriter.capture(
+                new_node.format_spec, mode="use")
+        result = ast_copy(ast.FormattedValue(double_noworkflow(
             "formatted_value",
             [
                 activation(),
@@ -1895,11 +1098,86 @@ class RewriteDependencies(ast.NodeTransformer):
             ], [
                 activation(),
                 ast.Num(component_id),
-                ast.JoinedStr([node]),
+                ast.JoinedStr([new_node]),
                 ast.Str(self.mode)
             ]
-        ), node)
+        ), -1, None), new_node)
+        return result
+
+
 
     def generic_visit(self, node):
         """Visit node"""
         return self.rewriter.visit(node)
+
+
+    # slice: The following three slice types are replaced by expressions
+    # The subscript puts Index around them
+
+    def visit_Index(self, node):                                                 # pylint: disable=invalid-name
+        """Visit Index"""
+        return self.visit(node.value)
+
+    def visit_Slice(self, node):                                                 # pylint: disable=invalid-name
+        """Visit Slice
+        Transform:
+            a:b:c
+        Into:
+            <now>.slice(<act>, #, <exc>)(<act>, #, a, b, c, <mode>)
+        """
+        capture = self.rewriter.capture
+        lower = capture(node.lower, mode="use") if node.lower else none()
+        upper = capture(node.upper, mode="use") if node.upper else none()
+        step = capture(node.step, mode="use") if node.step else none()
+
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "slice", "r"
+        )
+        return ast_copy(double_noworkflow(
+            "slice",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.rewriter.current_exc_handler)
+            ], [
+                activation(),
+                ast.Num(component_id),
+                lower, upper, step, ast.Str(self.mode)
+            ]
+        ), node)
+
+    def visit_Ellipsis(self, node):                                              # pylint: disable=invalid-name
+        """Visit Ellipsis"""
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "literal", "r"
+        )
+        return ast_copy(noworkflow("literal", [
+            activation(), ast.Num(component_id), ast.Attribute(
+                ast.Name("__noworkflow__", L()), "Ellipsis", L()
+            ), ast.Str(self.mode)
+        ]), node)
+
+    def visit_ExtSlice(self, node):                                              # pylint: disable=invalid-name
+        """Visit ExtSlice"""
+        node.name = pyposast.extract_code(self.rewriter.lcode, node)
+        component_id = self.rewriter.create_code_component(
+            node, "extslice", "r"
+        )
+        return ast_copy(double_noworkflow(
+            "extslice",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.rewriter.current_exc_handler)
+            ], [
+                activation(),
+                ast.Num(component_id),
+                ast.Tuple([
+                    self.rewriter.capture(dim, mode="use") for dim in node.dims
+                ], L()),
+                ast.Str(self.mode)
+            ]
+        ), node)
+

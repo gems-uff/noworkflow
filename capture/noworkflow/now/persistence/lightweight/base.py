@@ -100,7 +100,7 @@ class ObjectStore(object):
         for obj in self.values():
             if partial and obj.is_complete():
                 del self[obj.id]
-            obj.trial_id = trial_id
+            obj.set_trial_id(trial_id)
             yield obj
         if partial:
             self.clear()
@@ -148,12 +148,15 @@ def define_attrs(required, extra=[]):                                           
     return slots, attributes
 
 
-class BaseLW:                                                                    # pylint: disable=too-few-public-methods
+class BaseLW(object):                                                            # pylint: disable=too-few-public-methods
     """Lightweight modules base class"""
 
     def keys(self):
         """Return attributes that should be saved"""
         return self.attributes                                                   # pylint: disable=no-member
+
+    def set_trial_id(self, value):
+        self.trial_id = value
 
     def __iter__(self):
         return iter(self.attributes)                                             # pylint: disable=no-member

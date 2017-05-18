@@ -14,8 +14,9 @@ class EvaluationLW(BaseLW):                                                     
     """Evaluation lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "moment", "code_component_id", "activation_id",
-         "value_id"]
+        ["trial_id", "id", "moment",
+         "code_component_trial_id", "code_component_id", "activation_id",
+         "value_trial_id", "value_id"]
     )
     nullable = {"moment", "activation_id", "value_id"}
     model = Evaluation
@@ -23,10 +24,19 @@ class EvaluationLW(BaseLW):                                                     
     def __init__(self, id_, code_component_id, activation_id, moment, value):
         self.trial_id = -1
         self.id = id_                                                            # pylint: disable=invalid-name
+        self.code_component_trial_id = -1
         self.code_component_id = code_component_id
         self.activation_id = activation_id if activation_id else -1
         self.moment = -1 if not moment else moment
+        self.value_trial_id = -1
         self.value_id = -1 if not value else value
+
+    def set_trial_id(self, value):
+        if self.code_component_trial_id == -1:
+            self.code_component_trial_id = value
+        if self.value_trial_id == -1:
+            self.value_trial_id = value
+        self.trial_id = value
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Evaluation can only be removed from object store

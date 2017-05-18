@@ -12,7 +12,7 @@ from ..utils.functions import resource
 
 from ..persistence.models.base import Model
 from ..persistence.models import Tag, Argument
-from ..persistence.models import ModuleDependency, EnvironmentAttr
+from ..persistence.models import Module, EnvironmentAttr
 from ..persistence.models import CodeComponent, CodeBlock
 from ..persistence.models import Activation, Evaluation, Dependency
 from ..persistence.models import FileAccess, Value, Compartment
@@ -44,7 +44,7 @@ class TrialProlog(Model):
             (Trial, lambda: [trial]),
             (Tag, lambda: trial.tags),
             (Argument, lambda: trial.arguments),
-            (ModuleDependency, lambda: trial.module_dependencies),
+            (Module, lambda: trial.modules),
             (EnvironmentAttr, lambda: trial.environment_attrs),
             (CodeComponent, lambda: trial.code_components),
             (CodeBlock, lambda: trial.code_blocks),

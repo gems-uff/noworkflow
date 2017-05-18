@@ -20,7 +20,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.script("# script.py\n"
                     "a = 2\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         self.assertEqual(script.type, "script")
@@ -41,7 +41,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.script("# script.py\n"
                     "'doc'\n"
                     "a = 2")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         self.assertEqual(script.type, "script")
@@ -63,7 +63,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
                     "def f():\n"
                     "    'fdoc'\n"
                     "    pass\n")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         function_def = self.find_code_component(name="f")
@@ -84,6 +84,91 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(function_def_block.docstring, "fdoc")
         self.assertTrue(bool(function_def_block.code_hash))
 
+    def test_function_definition_with_args(self):
+        """Test function definition collection with arguments"""
+        self.script("# script.py\n"
+                    "def f(x, y=False):\n"
+                    "    'fdoc'\n"
+                    "    pass\n")
+        self.compile()
+
+        script = self.find_code_component(name="script.py")
+        function_def = self.find_code_component(name="f")
+        var_x = self.find_code_component(name="x")
+        var_y = self.find_code_component(name="y")
+        false = self.find_code_component(name="False")
+
+        self.assertEqual(function_def.type, "function_def")
+        self.assertEqual(function_def.mode, "w")
+        self.assertEqual(function_def.first_char_line, 2)
+        self.assertEqual(function_def.first_char_column, 0)
+        self.assertEqual(function_def.last_char_line, 4)
+        self.assertEqual(function_def.last_char_column, 8)
+        self.assertEqual(function_def.container_id, script.id)
+
+        self.assertEqual(var_x.type, "param")
+        self.assertEqual(var_x.mode, "w")
+        self.assertEqual(var_x.first_char_line, 2)
+        self.assertEqual(var_x.first_char_column, 6)
+        self.assertEqual(var_x.last_char_line, 2)
+        self.assertEqual(var_x.last_char_column, 7)
+        self.assertEqual(var_x.container_id, function_def.id)
+
+        self.assertEqual(var_y.type, "param")
+        self.assertEqual(var_y.mode, "w")
+        self.assertEqual(var_y.first_char_line, 2)
+        self.assertEqual(var_y.first_char_column, 9)
+        self.assertEqual(var_y.last_char_line, 2)
+        self.assertEqual(var_y.last_char_column, 10)
+        self.assertEqual(var_y.container_id, function_def.id)
+
+        #self.assertEqual(false.type, "literal")
+        self.assertEqual(false.mode, "r")
+        self.assertEqual(false.first_char_line, 2)
+        self.assertEqual(false.first_char_column, 11)
+        self.assertEqual(false.last_char_line, 2)
+        self.assertEqual(false.last_char_column, 16)
+        self.assertEqual(false.container_id, function_def.id)
+
+        function_def_block = self.metascript.code_blocks_store[function_def.id]
+        self.assertEqual(function_def_block.code,
+                         "def f(x, y=False):\n"
+                         "    'fdoc'\n"
+                         "    pass")
+        self.assertEqual(function_def_block.docstring, "fdoc")
+        self.assertTrue(bool(function_def_block.code_hash))
+
+    def test_function_definition_with_decorator(self):
+        """Test function definition collection with decorator"""
+        self.script("# script.py\n"
+                    "def g(x):\n"
+                    "    return x\n"
+                    "@g\n"
+                    "def f():\n"
+                    "    'fdoc'\n"
+                    "    pass\n")
+        self.compile()
+
+        script = self.find_code_component(name="script.py")
+        function_def = self.find_code_component(name="f")
+
+        self.assertEqual(function_def.type, "function_def")
+        self.assertEqual(function_def.mode, "w")
+        self.assertEqual(function_def.first_char_line, 4)
+        self.assertEqual(function_def.first_char_column, 0)
+        self.assertEqual(function_def.last_char_line, 7)
+        self.assertEqual(function_def.last_char_column, 8)
+        self.assertEqual(function_def.container_id, script.id)
+
+        function_def_block = self.metascript.code_blocks_store[function_def.id]
+        self.assertEqual(function_def_block.code,
+                         "@g\n"
+                         "def f():\n"
+                         "    'fdoc'\n"
+                         "    pass")
+        self.assertEqual(function_def_block.docstring, "fdoc")
+        self.assertTrue(bool(function_def_block.code_hash))
+
     @only(PY35)
     def test_async_function_definition(self):
         """Test async function definition collection"""
@@ -91,7 +176,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
                     "async def f():\n"
                     "    'fdoc'\n"
                     "    pass\n")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         function_def = self.find_code_component(name="f")
@@ -118,7 +203,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
                     "class C():\n"
                     "    'cdoc'\n"
                     "    pass\n")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         class_def = self.find_code_component(name="C")
@@ -147,7 +232,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
                     "    def f(self):\n"
                     "        'mdoc'\n"
                     "        pass")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         class_def = self.find_code_component(name="C")
         method_def = self.find_code_component(name="f")
@@ -176,7 +261,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
                     "    def c():\n"
                     "        'cdoc'\n"
                     "        pass")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         function_def = self.find_code_component(name="f")
         closure_def = self.find_code_component(name="c")
@@ -196,4 +281,3 @@ class TestCodeBlockDefinition(CollectionTestCase):
                          "        pass")
         self.assertEqual(closure_def_block.docstring, "cdoc")
         self.assertTrue(bool(closure_def_block.code_hash))
-

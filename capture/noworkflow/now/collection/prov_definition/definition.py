@@ -7,37 +7,35 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-import weakref
+import ast
+import builtins
 import os
+import weakref
 
 import pyposast
+import traceback
+
+
 
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
-from ...utils.cross_version import cross_compile
+from ...utils.cross_version import cross_compile, PY3
 
 from .ast_helpers import debug_tree
-from .transformer import RewriteAST
+from .transformer_stmt import RewriteAST
 
 
 class Definition(object):                                                        # pylint: disable=too-many-instance-attributes
     """Collect definition provenance"""
 
     def __init__(self, metascript):
+        self.first = True
         self.metascript = weakref.proxy(metascript)
-
-    @meta_profiler("definition")
-    def collect_provenance(self):
-        """Collect definition provenance from the main script"""
-        metascript = self.metascript
-        print_msg("  registering code components and code blocks")
-        if metascript.code:
-            # Tests use this version
-            metascript.compiled = self.visit_code(
-                metascript.code, metascript.path
-            )
+        if PY3:
+            from ..prov_deployment.py3module import finder
         else:
-            metascript.compiled = self.visit_file(metascript.path)
+            from ..prov_deployment.py2module import finder
+        self.finder = finder(self.metascript)
 
     def store_provenance(self):
         """Store definition provenance"""
@@ -48,31 +46,75 @@ class Definition(object):                                                       
         metascript.code_components_store.fast_store(tid, partial=partial)
         metascript.code_blocks_store.fast_store(tid, partial=partial)
 
-    def visit_file(self, path):
-        """Return a visitor that visited the tree"""
-        try:
-            with open(path, "rb") as script_file:
-                code = pyposast.native_decode_source(script_file.read())
-            return self.visit_code(code, path)
-        except SyntaxError as err:
-            # Create Code Component and Code Block anyway
+    def create_code_block(self, code, path, is_script, binary, load):
+        """Create code block for script/module"""
+        if load:
+            try:
+                with open(path, "rb") as script_file:
+                    code = script_file.read()
+                    if not binary:
+                        code = pyposast.native_decode_source(code)
+            except UnicodeError:
+                # Failed to open file, use existing code
+                binary = True
+                print_msg("Failed to decode file {}. Using binary."
+                          .format(path))
+            except IOError:
+                # Failed to open file, use existing code
+                print_msg("Failed to open file {}. Using original."
+                          .format(path))
+
+        if code is None:
+            code = b"" if binary else u""
+
+        if not binary:
             lines = code.split("\n")
-            id_ = self.metascript.code_components_store.add(
-                os.path.relpath(path, self.metascript.dir), "script", "w",
-                1, 0, len(lines), len(lines[-1]),
-                -1
-            )
-            self.metascript.code_blocks_store.add(id_, code, "")
-            print_msg("Syntax error on file {}.".format(path))
-            return err
+        else:
+            lines = [code]
 
-    def visit_code(self, code, path):
-        """Return a visitor that visited the tree"""
-        metascript = self.metascript
-        tree = pyposast.parse(code, path)
+        id_ = self.metascript.code_components_store.add(
+            os.path.relpath(path, self.metascript.dir),
+            "script" if is_script else "module",
+            "w",
+            1, 0, len(lines), len(lines[-1]), -1
+        )
+        self.metascript.code_blocks_store.add(id_, code, binary, None)
+        return code, id_
 
-        visitor = RewriteAST(metascript, code, path)
-        tree = visitor.visit(tree)
-        debug_tree(tree, just_print=[], show_code=[])
-        compiled = cross_compile(tree, path, "exec")
-        return compiled
+
+    @meta_profiler("definition")
+    def collect(self, source, filename, mode, **kwargs):
+        """Compile source and return code, code_block_id"""
+        transformed = False
+        ast_or_no_source = isinstance(source, ast.AST) or source is None
+        tree = source if ast_or_no_source else None
+        source, id_ = self.create_code_block(
+            source, filename, self.first, False, ast_or_no_source
+        )
+        self.first = False
+        try:
+            tree = pyposast.parse(source, filename, mode, tree=tree)
+            visitor = RewriteAST(self.metascript, source, filename, id_)
+            tree = visitor.visit(tree)
+            debug_tree(tree, just_print=[], show_code=[])
+            transformed = True
+        except SyntaxError:
+            print_msg("Syntax error on file {}. Skipping transformer."
+                      .format(filename))
+        except Exception as e:
+            # Unexpected exception
+            traceback.print_exc()
+            raise e
+
+        if tree is None:
+            tree = ast.parse(source, filename, mode)
+
+        return cross_compile(
+            tree, filename, mode,
+            **kwargs
+        ), id_, transformed
+
+    def compile(self, source, filename, mode, **kwargs):
+        """Compile source and return code, code_block_id"""
+        return self.collect(source, filename, mode, **kwargs)[0]
+

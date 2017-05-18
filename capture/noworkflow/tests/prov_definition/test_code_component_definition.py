@@ -18,7 +18,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.script("# script.py\n"
                     "a = 2\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         variable = self.find_code_component(name="a")
@@ -36,7 +36,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
                     "a = 2\n"
                     "b = a\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         read_a = self.find_code_component(name="a", mode="r")
@@ -63,7 +63,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.script("# script.py\n"
                     "x = {'a': 1, 'b': 2}\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         key_value_a = self.find_code_component(name="'a': 1", mode="r")
@@ -99,7 +99,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.script("# script.py\n"
                     "x = [1, 2]\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         item_1 = self.find_code_component(name="1", mode="r")
@@ -135,7 +135,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.script("# script.py\n"
                     "x = (1, 2)\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         item_1 = self.find_code_component(name="1", mode="r")
@@ -171,7 +171,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
         self.script("# script.py\n"
                     "x = {1, 2}\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
+        self.compile()
 
         script = self.find_code_component(name="script.py")
         item_1 = self.find_code_component(name="1", mode="r")

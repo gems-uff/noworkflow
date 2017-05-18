@@ -31,7 +31,8 @@ class Compartment(AlchemyProxy):
     ...                      assignment=assign, erase=True)
 
     Load Compartment by (trial_id, whole_id, part_id):
-    >>> comp = Compartment((trial_id, assign.array_value, assign.array0_value))
+    >>> comp = Compartment(
+    ...     (trial_id, assign.array_value, trial_id, assign.array0_value))
     >>> comp  # doctest: +ELLIPSIS
     compartment(..., '[0]', ..., ..., ...).
 
@@ -49,18 +50,23 @@ class Compartment(AlchemyProxy):
     """
     __tablename__ = "compartment"
     __table_args__ = (
-        PrimaryKeyConstraint("trial_id", "whole_id", "part_id"),
+        PrimaryKeyConstraint(
+            "trial_id", "whole_id", "part_trial_id", "part_id"
+        ),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "part_id"],
-                             ["value.trial_id",
-                              "value.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["part_trial_id"],
+                             ["trial.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["part_trial_id", "part_id"],
+                             ["value.trial_id", "value.id"],
+                             ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "whole_id"],
-                             ["value.trial_id",
-                              "value.id"], ondelete="CASCADE"),
+                             ["value.trial_id", "value.id"],
+                             ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     name = Column(Text)
     moment = Column(TIMESTAMP)
+    part_trial_id = Column(Integer, index=True)
     part_id = Column(Integer, index=True)
     whole_id = Column(Integer, index=True)
 
@@ -75,9 +81,10 @@ class Compartment(AlchemyProxy):
         PrologAttribute("whole_id", link="value.id"),
         PrologAttribute("part_id", link="value.id"),
     ), description=(
-        "informs that in a given trial (*TrialId*),\n"
-        "a compartment *Name*, in a given *Moment*\n,"
-        "of a value *WholeId* has the value *PartId*."
+        "informs that a given value *WholeId*,\n"
+        "of a given trial (*TrialId*)\n"
+        "with a compartment *Name*, in a given *Moment*\n,"
+        "has the value *PartId* of a given trial (*PartTrialId*)."
     ))
 
     @classmethod

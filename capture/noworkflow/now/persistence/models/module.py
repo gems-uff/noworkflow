@@ -6,11 +6,15 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text, select, bindparam
+from sqlalchemy import Column, Integer, Text, Boolean, select, bindparam
+from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+
+from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
+from ...utils.prolog import PrologAttribute, PrologNullableRepr
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_many
+from .base import AlchemyProxy, proxy_class, backref_many, backref_one
 
 
 @proxy_class
@@ -21,38 +25,66 @@ class Module(AlchemyProxy):
     Doctest:
     >>> from noworkflow.tests.helpers.models import erase_db, new_trial
     >>> from noworkflow.tests.helpers.models import modules
-    >>> from noworkflow.tests.helpers.models import module_dependencies
+    >>> from noworkflow.tests.helpers.models import components
+    >>> from noworkflow.tests.helpers.models import blocks
     >>> erase_db()
     >>> trial_id = new_trial()
-    >>> mid = modules.add("module", "1.0.1", "/home/module.py", "abc")
-    >>> _ = module_dependencies.add(mid)
+    >>> cid = components.add("/home/module.py", "module", "w", 1, 0, 1, 10, -1)
+    >>> _ = blocks.add(cid, "abcdefghij", False, None)
+    >>> mid = modules.add("module", "1.0.1", "/home/module.py", cid, True)
+    >>> components.fast_store(trial_id)
+    >>> blocks.fast_store(trial_id)
     >>> modules.fast_store(trial_id)
-    >>> module_dependencies.fast_store(trial_id)
 
-    Load a Module object by its id:
-    >>> module = Module(mid)
+    Load a Module object by (trial_id, id):
+    >>> module = Module((trial_id, mid))
     >>> module  # doctest: +ELLIPSIS
-    module_def(..., 'module', '1.0.1').
+    module(..., 'module', '1.0.1').
 
-    Load all trials that use this module:
-    >>> trials = list(module.trials)
-    >>> trials  # doctest: +ELLIPSIS
-    [trial(...).]
-    >>> trials[0].id == trial_id
+    Load trial
+    >>> module.trial.id == trial_id
+    True
+
+    Load block
+    >>> module.code_block.id == cid
     True
     """
 
     __tablename__ = "module"
     __table_args__ = (
-        {"sqlite_autoincrement": True},
+        PrimaryKeyConstraint("trial_id", "id"),
+        ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id", "code_block_id"],
+                             ["code_block.trial_id", "code_block.id"],
+                             ondelete="CASCADE"),
     )
-    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
+    trial_id = Column(Integer, index=True)
+    id = Column(Integer, index=True)                                       # pylint: disable=invalid-name
     name = Column(Text)
     version = Column(Text)
     path = Column(Text)
-    code_hash = Column(Text, index=True)
+    code_block_id = Column(Text, index=True)
+    transformed = Column(Boolean)
 
-    trials = backref_many("trials")  # Trial.dmodules
+    trial = backref_one("trial")  # Trial.modules
+    code_block = backref_one("code_block")  # CodeBlock.modules
+
+    prolog_description = PrologDescription("argument", (
+        PrologTrial("trial_id", link="trial.id"),
+        PrologAttribute("id"),
+        PrologRepr("name"),
+        PrologNullableRepr("version"),
+        PrologRepr("path"),
+        PrologNullableRepr("code_block_id", link="code_block.id"),
+        PrologAttribute("transformed"),
+    ), description=(
+        "informs that in a given trial (*TrialId*),\n"
+        "a module with *Id* and *Name* at *Version*,\n"
+        "associated with a *CodeBlockId*,\n"
+        "was imported from *Path*,\n"
+        "and *Transformed* for collection."
+    ))
+
 
     def __key(self):
         return (self.name, self.version, self.path, self.code_hash)
@@ -70,18 +102,18 @@ class Module(AlchemyProxy):
         Doctest:
         >>> from noworkflow.tests.helpers.models import erase_db, modules
         >>> erase_db()
-        >>> mid1 = modules.add("module", "1.0.1", "/home/module.py", "abc")
-        >>> mid2 = modules.add("module2", None, "/home/module2.py", "def")
+        >>> mid1 = modules.add("mod", "1.0.1", "/home/module.py", None, False)
+        >>> mid2 = modules.add("mod2", None, "/home/module2.py", None, False)
         >>> modules.fast_store(-1)
-        >>> module1 = Module(mid1)
-        >>> module2 = Module(mid2)
+        >>> module1 = Module((-1, mid1))
+        >>> module2 = Module((-1, mid2))
 
         Brief decription of module with version:
-        >>> module1.brief == 'module 1.0.1'
+        >>> module1.brief == 'mod 1.0.1'
         True
 
         Brief decription of module without version:
-        >>> module2.brief == 'module2'
+        >>> module2.brief == 'mod2'
         True
         """
         result = "{0.name}".format(self)
@@ -89,17 +121,55 @@ class Module(AlchemyProxy):
             result += " {0.version}".format(self)
         return result
 
+    @property
+    def code_hash(self):
+        """Return code_block code_hash or None
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import modules
+        >>> from noworkflow.tests.helpers.models import components
+        >>> from noworkflow.tests.helpers.models import blocks
+        >>> erase_db()
+        >>> trial_id = new_trial()
+        >>> cid = components.add(
+        ...     "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
+        ... )
+        >>> _ = blocks.add(cid, "abcdefghij", False, None)
+        >>> mid = modules.add("module", "1.0.1", "/home/module.py", cid, True)
+        >>> components.fast_store(trial_id)
+        >>> blocks.fast_store(trial_id)
+        >>> modules.fast_store(trial_id)
+        >>> module = Module((trial_id, mid))
+
+        >>> module.code_hash == 'd68c19a0a345b7eab78d5e11e991c026ec60db63'
+        True
+        """
+        if self.code_block:
+            return self.code_block.code_hash
+        return None
+
+
     def show(self, print_=print):
         """Show module
 
 
         Doctest:
         >>> from textwrap import dedent
-        >>> from noworkflow.tests.helpers.models import erase_db, modules
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import modules
+        >>> from noworkflow.tests.helpers.models import components
+        >>> from noworkflow.tests.helpers.models import blocks
         >>> erase_db()
-        >>> mid = modules.add("module", "1.0.1", "/home/module.py", "abc")
-        >>> modules.fast_store(-1)
-        >>> module = Module(mid)
+        >>> trial_id = new_trial()
+        >>> cid = components.add(
+        ...     "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
+        ... )
+        >>> _ = blocks.add(cid, "abcdefghij", False, None)
+        >>> mid = modules.add("module", "1.0.1", "/home/module.py", cid, True)
+        >>> components.fast_store(trial_id)
+        >>> blocks.fast_store(trial_id)
+        >>> modules.fast_store(trial_id)
+        >>> module = Module((trial_id, mid))
 
         Show module:
         >>> module.show(
@@ -107,7 +177,7 @@ class Module(AlchemyProxy):
         Name: module
         Version: 1.0.1
         Path: /home/module.py
-        Code hash: abc
+        Code hash: d68c19a0a345b7eab78d5e11e991c026ec60db63
         """
         print_("""\
             Name: {0.name}
@@ -116,74 +186,4 @@ class Module(AlchemyProxy):
             Code hash: {0.code_hash}""".format(self))
 
     def __repr__(self):
-        return "module_def({0.id}, '{0.name}', '{0.version}').".format(self)
-
-    @classmethod  # query
-    def id_seq(cls, session=None):
-        """Load last module id
-
-        Keyword arguments:
-        session -- specify session for loading (default=relational.session)
-
-
-        Doctest:
-        >>> from noworkflow.tests.helpers.models import erase_db, modules
-        >>> erase_db()
-        >>> mid = modules.add("module", "1.0.1", "/home/module.py", "abc")
-        >>> modules.fast_store(-1)
-
-        Return last module id:
-        >>> Module.id_seq() == mid
-        True
-        """
-        session = session or relational.session
-        an_id = session.execute(
-            """SELECT seq
-               FROM SQLITE_SEQUENCE
-               WHERE name='module'"""
-        ).fetchone()
-        if an_id:
-            return an_id[0]
-        return 0
-
-    @classmethod  # query
-    def fast_load_module_id(cls, name, version, path, code_hash, session=None):  # pylint: disable=too-many-arguments
-        """Load module id by name, version and code_hash.
-        Note that path is there for compability with lightweight add,
-        and will be ignored
-
-        Compile SQLAlchemy core query into string for optimization
-
-        Keyword arguments:
-        session -- specify session for loading (default=relational.session)
-
-
-        Doctest:
-        >>> from noworkflow.tests.helpers.models import erase_db, modules
-        >>> erase_db()
-        >>> mid = modules.add("module", "1.0.1", "/home/module.py", "abc")
-        >>> modules.fast_store(-1)
-
-        Load module id by name, version, and code_hash:
-        >>> mod = Module.fast_load_module_id("module", "1.0.1", "...", "abc")
-        >>> mod == mid
-        True
-
-        Return None if module is not found:
-        >>> Module.fast_load_module_id("other", "1.0.1", "...", "abc")
-        """
-        session = session or relational.session
-        if not hasattr(cls, "_load_module_id"):
-            tmodule = cls.t
-            _query = select([tmodule.c.id]).where(
-                (tmodule.c.name == bindparam("name")) &
-                (tmodule.c.version == bindparam("version")) &
-                (tmodule.c.code_hash == bindparam("code_hash"))
-            )
-            cls._load_module_id = str(_query)
-
-        info = dict(name=name, path=path, version=version, code_hash=code_hash)
-        an_id = session.execute(
-            cls._load_module_id, info).fetchone()
-        if an_id:
-            return an_id[0]
+        return "module({0.id}, '{0.name}', '{0.version}').".format(self)

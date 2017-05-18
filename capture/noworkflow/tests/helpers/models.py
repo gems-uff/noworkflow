@@ -18,7 +18,7 @@ from ...now.persistence.lightweight import CodeBlockLW, CodeComponentLW
 from ...now.persistence.lightweight import ActivationLW, EvaluationLW
 from ...now.persistence.lightweight import ValueLW, CompartmentLW
 from ...now.persistence.lightweight import DependencyLW, FileAccessLW
-from ...now.persistence.lightweight import ModuleLW, ModuleDependencyLW
+from ...now.persistence.lightweight import ModuleLW
 from ...now.persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 
 from ...now.persistence.models.trial import Trial
@@ -36,7 +36,7 @@ m1, m2 = 1, 2
 def restart_object_store(trial_id=None):
     """Restart all object store"""
     global components, blocks, evaluations, activations, dependencies
-    global file_accesses, values, compartments, modules, module_dependencies
+    global file_accesses, values, compartments, modules
     global environment_attrs, arguments
     global meta
 
@@ -54,8 +54,6 @@ def restart_object_store(trial_id=None):
     values = meta.values_store
     compartments = meta.compartments_store
     modules = meta.modules_store
-    modules.id = ModuleLW.model.id_seq()
-    module_dependencies = meta.module_dependencies_store
     environment_attrs = meta.environment_attrs_store
     arguments = meta.arguments_store
 
@@ -77,7 +75,6 @@ def erase_database():
     relational.session.execute(ValueLW.model.t.delete())
     relational.session.execute(CompartmentLW.model.t.delete())
     relational.session.execute(ModuleLW.model.t.delete())
-    relational.session.execute(ModuleDependencyLW.model.t.delete())
     relational.session.execute(EnvironmentAttrLW.model.t.delete())
     relational.session.execute(ArgumentLW.model.t.delete())
     relational.session.expire_all()
@@ -152,7 +149,7 @@ def component_params(name="main.py", type_="script", mode="w",
 
 def block_params(id_, code="'block'", docstring="block"):
     """Return default code block params"""
-    return [id_, code, docstring]
+    return [id_, code, False, docstring]
 
 
 def evaluation_params(code_component_id, activation_id, value_id=-1,
@@ -629,16 +626,22 @@ def create_trial(
 
     if trial.status != "ongoing":
         if not trial.bypass_modules:
-            if not count(ModuleLW.model):
-                global m1, m2
-                m1 = modules.add("external", "1.0.1", "/home/external.py",
-                                 "aaaa")
-                m2 = modules.add("internal", "", "internal.py", "bbbb")
-
-                modules.fast_store(trial.trial_id)
-            module_dependencies.add(m1)
-            module_dependencies.add(m2)
-            module_dependencies.fast_store(trial.trial_id)
+            global m1, m2, mc1, mc2
+            mc1 = meta.code_components_store.add(
+                "/home/external.py", "module", "w", 1, 0, 1, 4, -1
+            )
+            meta.code_blocks_store.add(mc1, "aaaa", False, None)
+            mc2 = meta.code_components_store.add(
+                "/home/internal.py", "module", "w", 1, 0, 1, 4, -1
+            )
+            meta.code_blocks_store.add(mc2, "bbbb", False, None)
+            m1 = meta.modules_store.add(
+                "external", "1.0.1", "/home/external.py", mc1, False)
+            m2 = meta.modules_store.add(
+                "internal", "", "internal.py", mc2, False)
+            meta.code_components_store.fast_store(trial.trial_id)
+            meta.code_blocks_store.fast_store(trial.trial_id)
+            meta.modules_store.fast_store(trial.trial_id)
 
         arguments.add("script", trial.script)
         arguments.add("bypass_modules", str(trial.bypass_modules))

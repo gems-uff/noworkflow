@@ -73,70 +73,15 @@ class Deployment(object):
 
         attrs.add("NOWORKFLOW_VERSION", version())
 
-    @meta_profiler("modules")
-    def _collect_modules_provenance(self):
-        with redirect_output():
-            modules = self._find_modules()
+    def add_module(self, name, version, path, code_id, transformed=False):
+        """Insert module into provenance store"""
+        self.metascript.modules_store.add(
+            name, version, path, code_id, transformed
+        )
 
-            print_msg("  registering provenance from {} modules".format(
-                len(modules) - 1))
-            self._extract_modules_provenance(modules)
-
-    @meta_profiler("find_modules")
-    def _find_modules(self):
-        """Use modulefinder to find modules
-
-        Return finder.modules dict
-        """
-        metascript = self.metascript
-        excludes = set()
-        last_name = "A" * 255  # invalid name
-        max_atemps = 1000
-        for i in range(max_atemps):
-            try:
-                finder = modulefinder.ModuleFinder(excludes=excludes)
-                finder.run_script(metascript.path)
-                print(metascript.path)
-                return finder.modules
-            except SyntaxError as exc:
-                name = exc.filename.split("site-packages/")[-1]                  # pylint: disable=no-member
-                name = name.replace(os.sep, ".")
-                name = name[:name.rfind(".")]
-                if last_name in name:
-                    last_name = last_name[last_name.find(".") + 1:]
-                else:
-                    last_name = name
-                excludes.add(last_name)
-                print_msg("   skip module due syntax error: {} ({}/{})"
-                          .format(last_name, i + 1, max_atemps))
-        return {}
-
-    @meta_profiler("extract_modules")
-    def _extract_modules_provenance(self, python_modules):
-        """Return a set of module dependencies in the form:
-            (name, version, path, code_hash)
-        Store module provenance in the content database
-        """
-        metascript = self.metascript
-        modules = metascript.modules_store
-        module_dependencies = metascript.module_dependencies_store
-        modules.id = Module.id_seq()
-        for name, module in viewitems(python_modules):
-            if name != "__main__":
-                module_version = self.get_version(name)
-                path = module.__file__
-                if path is None:
-                    code_hash = None
-                else:
-                    with open(path, "rb") as fil:
-                        code_hash = content.put(fil.read())
-                info = (name, module_version, path, code_hash)
-                mid = Module.fast_load_module_id(*info) or modules.add(*info)
-                module_dependencies.add(mid)
-
-    def get_version(self, module_name):                                         # pylint: disable=no-self-use
+    def get_version(self, module):
         """Get module version"""
-        # Check built-in module
+        module_name = module.__name__
         if module_name in sys.builtin_module_names:
             return platform.python_version()
 
@@ -149,7 +94,6 @@ class Deployment(object):
 
         # Check explicitly declared module version
         try:
-            module = importlib.import_module(module_name)
             for attr in ["__version__", "version", "__VERSION__", "VERSION"]:
                 try:
                     module_version = getattr(module, attr)
@@ -157,7 +101,6 @@ class Deployment(object):
                         return native_str(module_version)
                     if isinstance(module_version, tuple):
                         return ".".join(cvmap(str, module_version))
-
                 except AttributeError:
                     pass
         except Exception:                                                        # pylint: disable=broad-except
@@ -170,19 +113,14 @@ class Deployment(object):
     def collect_provenance(self):
         """Collect deployment provenance:
         - environment variables
-        - modules dependencies
+
+        Modules are collected during the execution
 
         metascript should have "trial_id" and "path"
         """
         print_msg("  registering environment attributes")
         self._collect_environment_provenance()
 
-        if self.metascript.bypass_modules:
-            print_msg("  using previously detected module dependencies "
-                      "(--bypass-modules).")
-        else:
-            print_msg("  searching for module dependencies")
-            self._collect_modules_provenance()
 
     def store_provenance(self):
         """Store deployment provenance"""
@@ -192,4 +130,3 @@ class Deployment(object):
         partial = True
         metascript.environment_attrs_store.fast_store(tid, partial=partial)
         metascript.modules_store.fast_store(tid, partial=partial)
-        metascript.module_dependencies_store.fast_store(tid, partial=partial)

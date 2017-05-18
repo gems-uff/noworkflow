@@ -6,6 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import builtins
+import sys
 import traceback
 import weakref
 
@@ -37,10 +39,11 @@ class Execution(object):
 
         print_msg("  executing the script")
         try:
-            if isinstance(metascript.compiled, SyntaxError):
-                raise metascript.compiled
-            #eval(metascript.compiled, metascript.namespace)
-            exec(metascript.compiled, metascript.namespace)                      # pylint: disable=exec-used
+            compiled = metascript.definition.compile(
+                metascript.code, metascript.path, "exec"
+            )
+            sys.meta_path.insert(0, metascript.definition.finder)
+            exec(compiled, metascript.namespace)                                 # pylint: disable=exec-used
         except SystemExit as ex:
             self.force_msg = self.partial = ex.code > 0
             self.msg = ("the execution exited via sys.exit(). Exit status: {}"

@@ -65,7 +65,6 @@ class CollectionTestCase(unittest.TestCase):
     def get_evaluations(self, **kwargs):
         """Execute and get evaluation"""
         if not hasattr(self, 'executed'):
-            self.metascript.definition.collect_provenance()
             self.metascript.execution.collect_provenance()
             self.assertEqual(self.metascript.execution.msg,
                              "the execution of trial -1 finished successfully")
@@ -167,3 +166,9 @@ class CollectionTestCase(unittest.TestCase):
             **kwargs
         )
         self.metascript.clear_namespace()
+
+    def compile(self):
+        """Compile script to apply AST transformations"""
+        compiled = self.metascript.definition.compile(
+            self.metascript.code, self.metascript.path, "exec"
+        )

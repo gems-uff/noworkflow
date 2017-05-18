@@ -156,9 +156,9 @@ def debug_tree(tree, just_print=None, show_code=None, methods=None):
 
     def visit_code(self, node):
         """visit node"""
-        print(node)
-        import astunparse
-        print(astunparse.unparse(node))
+        print(node, getattr(node, 'lineno', None))
+        import astor
+        print(astor.to_source(node, add_line_information=True))
         return self.generic_visit(node)
 
     for node_type in just_print:
@@ -178,3 +178,12 @@ def temporary(obj, name, value):
     setattr(obj, name, value)
     yield value
     setattr(obj, name, old)
+
+
+def select_future_imports(body):
+    """Select statements up to the last from __future__ import ..."""
+    index = -1
+    for i, stmt in enumerate(body):
+        if isinstance(stmt, ast.ImportFrom) and stmt.module == "__future__":
+            index = i
+    return body[:index + 1]

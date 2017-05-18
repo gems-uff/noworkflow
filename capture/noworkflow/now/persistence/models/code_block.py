@@ -19,8 +19,9 @@ from .. import relational
 
 from .base import proxy_class, AlchemyProxy
 from .base import many_ref, backref_many, backref_one_uselist
-from .base import query_many_property
+from .base import query_many_property, many_viewonly_ref
 
+from .activation import Activation
 
 @proxy_class
 class CodeBlock(AlchemyProxy):
@@ -69,7 +70,15 @@ class CodeBlock(AlchemyProxy):
     code_hash = Column(Text)
     docstring = Column(Text)
 
-    activations = many_ref("code_block", "Activation")
+    activations = many_ref(
+        "code_block", "Activation",
+        remote_side=[
+            Activation.m.code_block_trial_id, Activation.m.code_block_id
+        ],
+        primaryjoin=((trial_id == Activation.m.code_block_trial_id) &
+                     (id == Activation.m.code_block_id)))
+    
+    modules = many_viewonly_ref("code_block", "Module")
 
     trial = backref_one_uselist("trial")  # Trial.code_blocks
     components = backref_many("components") # CodeComponent.container

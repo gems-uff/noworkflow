@@ -72,15 +72,16 @@ class Activation(AlchemyProxy):
         ForeignKeyConstraint(["trial_id", "id"],
                              ["evaluation.trial_id",
                               "evaluation.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "code_block_id"],
-                             ["code_block.trial_id",
-                              "code_block.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["code_block_trial_id", "code_block_id"],
+                             ["code_block.trial_id", "code_block.id"],
+                             ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     start = Column(TIMESTAMP)
     code_block_id = Column(Integer, index=True)
+    code_block_trial_id = Column(Integer, index=True)
 
     file_accesses = many_viewonly_ref("activation", "FileAccess")
 
@@ -101,16 +102,18 @@ class Activation(AlchemyProxy):
     evaluations = backref_many("evaluations") # Evaluation.activation
 
     prolog_description = PrologDescription("activation", (
-        PrologTrial("trial_id", link="evaluation.id"),
+        PrologTrial("trial_id", link="evaluation.trial_id"),
         PrologAttribute("id", link="evaluation.id"),
         PrologRepr("name"),
         PrologTimestamp("start"),
+        PrologNullable("code_block_trial_id", link="code_block.trial_sid"),
         PrologNullable("code_block_id", link="code_block.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "a block *Id* with *Name* was activated\n"
         "at (*Start*).\n"
-        "This activation was defined by *CodeBlockId*."
+        "This activation was defined by *CodeBlockId*\n"
+        "of a trial *CodeBlockTrialId*."
     ))
 
     @query_many_property

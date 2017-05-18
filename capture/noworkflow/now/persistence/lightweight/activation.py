@@ -14,7 +14,8 @@ class ActivationLW(BaseLW):                                                     
     """Activation lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "name", "start", "code_block_id"],
+        ["trial_id", "id", "name", "start", "code_block_trial_id",
+         "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
          "evaluation", "assignments", "closure", "func", "dependency_type",
          "active", "depth", "parent", "generator", "last_activation"]
@@ -28,6 +29,7 @@ class ActivationLW(BaseLW):                                                     
         self.name = name
         self.start = start
         self.code_block_id = code_block_id if code_block_id else -1
+        self.code_block_trial_id = -1
 
         self.evaluation = evaluation
 
@@ -65,6 +67,11 @@ class ActivationLW(BaseLW):                                                     
 
         # Generator Object
         self.generator = None
+
+    def set_trial_id(self, value):
+        if self.code_block_trial_id == -1:
+            self.code_block_trial_id = value
+        self.trial_id = value
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Activation can always be removed from object store"""

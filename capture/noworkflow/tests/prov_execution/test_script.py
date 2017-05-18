@@ -17,7 +17,6 @@ class TestScript(CollectionTestCase):
         """Test script collection"""
         self.script("# script.py\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
         self.metascript.execution.collect_provenance()
         self.assertEqual(self.metascript.execution.msg,
                          "the execution of trial -1 finished successfully")
@@ -49,7 +48,6 @@ class TestScript(CollectionTestCase):
         self.script("# script.py\n"
                     "1 / 0\n"
                     "# other")
-        self.metascript.definition.collect_provenance()
         self.metascript.execution.collect_provenance()
         self.assertNotEqual(self.metascript.execution.msg,
                             "the execution of trial -1 finished successfully")

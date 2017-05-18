@@ -26,6 +26,20 @@ from .structures import DependencyAware, Dependency, Parameter
 from .structures import CompartmentDependencyAware, CollectionDependencyAware
 
 
+class ConditionExceptions(object):
+
+    def __init__(self):
+        self.exceptions = {}
+
+    def __getitem__(self, item):
+        if item not in self.exceptions:
+            class ConditionException(Exception):
+                pass
+            self.exceptions[item] = ConditionException
+        return self.exceptions[item]
+
+
+
 class Collector(object):
     """Collector called by the transformed AST. __noworkflow__ object"""
 
@@ -62,6 +76,8 @@ class Collector(object):
         self.Ellipsis = Ellipsis                                                 # pylint: disable=invalid-name
         self.old_next = next
 
+        self.condition_exceptions = ConditionExceptions()
+    
     def access(self, activation, code_id, exc_handler):
         """Capture object access before"""
         activation.dependencies.append(DependencyAware(
@@ -73,6 +89,7 @@ class Collector(object):
     def __getitem__(self, index):                                                # pylint: disable=too-many-locals
         activation, code_id, vcontainer, vindex, access, mode = index
         depa = activation.dependencies.pop()
+        
         value_dep = part_id = None
         for dep in depa.dependencies:
             if dep.mode == "value":
@@ -832,10 +849,9 @@ class Collector(object):
         eva = activation.evaluation
         result = None
         try:
-
             result = activation.func(*args, **kwargs)
         except Exception as e:
-            print(e)
+            #print(e)
             self.collect_exception(activation)
             raise
         finally:
@@ -852,11 +868,12 @@ class Collector(object):
 
             if activation.parent.active:
                 # Create dependencies
-                depa = activation.dependencies[1]
-                self.make_dependencies(activation, eva, depa)
-                if activation.code_block_id == -1:
-                    # Call without definition
-                    self.create_argument_dependencies(eva, depa)
+                if len(activation.dependencies) >= 2:
+                    depa = activation.dependencies[1]
+                    self.make_dependencies(activation, eva, depa)
+                    if activation.code_block_id == -1:
+                        # Call without definition
+                        self.create_argument_dependencies(eva, depa)
 
                 # Just add dependency if it is expecting one
                 dependency = Dependency(
@@ -868,6 +885,20 @@ class Collector(object):
                     activation.generator.evaluation = eva
                     activation.generator.dependency = dependency
         return result
+
+    def decorator(self, activation, code_id, exc_handler):
+        """Capture decorator before"""
+        activation.dependencies.append(DependencyAware(
+            exc_handler=exc_handler,
+            code_id=code_id,
+        ))
+        return self._decorator
+
+    def _decorator(self, activation, code_id, value, mode="use"):
+        """Capture decorator after"""
+        dependency_aware = activation.dependencies.pop()
+        #ToDo: use dependency
+        return value
 
     def argument(self, activation, code_id, exc_handler):
         """Capture argument before"""
@@ -946,14 +977,14 @@ class Collector(object):
             return new_function_def
         return dec
 
-    def collect_function_def(self, activation):
+    def collect_function_def(self, activation, function_name):
         """Collect function definition after all decorators. Set context"""
         def dec(function_def):
             """Decorate function definition again"""
             dependency_aware = activation.dependencies.pop()
             if activation.active:
                 dependency = dependency_aware.dependencies.pop()
-                activation.context[function_def.__name__] = self.evaluations[
+                activation.context[function_name] = self.evaluations[
                     dependency.evaluation_id
                 ]
             return function_def
