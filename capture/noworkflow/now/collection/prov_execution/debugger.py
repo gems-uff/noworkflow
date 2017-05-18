@@ -64,6 +64,7 @@ def create_debugger(pdb=None):
     return NowDebugger
 
 
+
 def debugger_builtins(provider, namespace, metascript):
     """Define debugging functions"""
     vis = vis_open, browser_open = [False, False]                                # pylint: disable=unused-variable
@@ -129,15 +130,32 @@ def debugger_builtins(provider, namespace, metascript):
         except ImportError:
             return "IPython not found"
 
-    namespace["set_trace"] = set_trace
-    namespace["now_save"] = now_save
-    namespace["now_trial"] = now_trial
-    namespace["now_vis"] = now_vis
-    namespace["now_notebook"] = now_notebook
-
     try:
-        with redirect_output():
-            from IPython import embed
-            namespace["now_ipython"] = embed
-    except ImportError:
-        namespace["now_ipython"] = lambda: "IPython not found"
+        namespace["set_trace"] = set_trace
+        namespace["now_save"] = now_save
+        namespace["now_trial"] = now_trial
+        namespace["now_vis"] = now_vis
+        namespace["now_notebook"] = now_notebook
+        try:
+            with redirect_output():
+                from IPython import embed
+                namespace["now_ipython"] = embed
+        except ImportError:
+            namespace["now_ipython"] = lambda: "IPython not found"
+
+    except TypeError:
+        namespace.set_trace = set_trace
+        namespace.now_save = now_save
+        namespace.now_trial = now_trial
+        namespace.now_vis = now_vis
+        namespace.now_notebook = now_notebook
+
+        try:
+            with redirect_output():
+                from IPython import embed
+                namespace.now_ipython = embed
+        except ImportError:
+            namespace.now_ipython = lambda: "IPython not found"
+
+
+    

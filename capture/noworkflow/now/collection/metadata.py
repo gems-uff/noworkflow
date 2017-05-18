@@ -8,6 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 import os
 import sys
+
+from argparse import Namespace
 from datetime import datetime
 
 from future.utils import viewitems
@@ -167,6 +169,27 @@ class Metascript(object):                                                       
         self.name = args.name or os.path.basename(filename)
         self._read_args(args)
         self.path = filename
+        self.context = args.context
+        return self
+
+    def read_jupyter_args(self):
+        """Read jupyter args"""
+        self.command = " ".join(sys.argv)
+        self.dir = os.getcwd()
+        self.argv = sys.argv
+        self.should_create_last_file = False
+        self.name = "Jupyter Kernel"
+        args = Namespace(
+            verbose=False,
+            meta=False,
+            bypass_modules=False,
+            depth=sys.getrecursionlimit(),
+            save_frequency=0,
+            call_storage_frequency=10000,
+            context="main"
+        )
+        self._read_args(args)
+        self.path = os.getcwd()
         self.context = args.context
         return self
 

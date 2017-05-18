@@ -86,7 +86,7 @@ class Definition(object):                                                       
 
 
     @meta_profiler("definition")
-    def collect(self, source, filename, mode, **kwargs):
+    def collect(self, source, filename, mode, compiler=cross_compile, **kwargs):
         """Compile source and return code, code_block_id"""
         transformed = False
         ast_or_no_source = isinstance(source, ast.AST) or source is None
@@ -95,9 +95,11 @@ class Definition(object):                                                       
             source, filename, self.first, False, ast_or_no_source
         )
         self.first = False
+
         try:
             tree = pyposast.parse(source, filename, mode, tree=tree)
             visitor = RewriteAST(self.metascript, source, filename, id_)
+            
             tree = visitor.visit(tree)
             debug_tree(tree, just_print=[], show_code=[])
             transformed = True
@@ -119,5 +121,8 @@ class Definition(object):                                                       
 
     def compile(self, source, filename, mode, **kwargs):
         """Compile source and return code, code_block_id"""
-        return self.collect(source, filename, mode, **kwargs)[0]
+        return self.collect(
+            source, filename, mode, compiler=cross_compile, 
+            **kwargs
+        )[0]
 
