@@ -70,13 +70,7 @@ class CodeBlock(AlchemyProxy):
     code_hash = Column(Text)
     docstring = Column(Text)
 
-    activations = many_ref(
-        "code_block", "Activation",
-        remote_side=[
-            Activation.m.code_block_trial_id, Activation.m.code_block_id
-        ],
-        primaryjoin=((trial_id == Activation.m.code_block_trial_id) &
-                     (id == Activation.m.code_block_id)))
+    activations = many_ref("code_block", "Activation")
     
     modules = many_viewonly_ref("code_block", "Module")
 

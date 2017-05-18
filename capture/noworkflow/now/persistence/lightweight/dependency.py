@@ -15,8 +15,7 @@ class DependencyLW(BaseLW):
     """Dependency lightweight object"""
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "dependent_activation_id", "dependent_id",
-         "dependency_trial_id", "dependency_activation_id", "dependency_id",
-         "type"]
+         "dependency_activation_id", "dependency_id", "type"]
     )
     nullable = set()
     model = Dependency
@@ -26,16 +25,10 @@ class DependencyLW(BaseLW):
         self.id = id_                                                            # pylint: disable=invalid-name
         self.dependent_activation_id = dependent_activation_id
         self.dependent_id = dependent_id
-        self.dependency_trial_id = trial_id
         self.dependency_activation_id = dependency_activation_id
         self.dependency_id = dependency_id
         self.trial_id = trial_id
         self.type = type_
-
-    def set_trial_id(self, value):
-        if self.dependency_trial_id == -1:
-            self.dependency_trial_id = value
-        self.trial_id = value
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Variable Dependency can always be removed"""

@@ -72,7 +72,7 @@ class Activation(AlchemyProxy):
         ForeignKeyConstraint(["trial_id", "id"],
                              ["evaluation.trial_id",
                               "evaluation.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["code_block_trial_id", "code_block_id"],
+        ForeignKeyConstraint(["trial_id", "code_block_id"],
                              ["code_block.trial_id", "code_block.id"],
                              ondelete="CASCADE"),
     )
@@ -81,7 +81,6 @@ class Activation(AlchemyProxy):
     name = Column(Text)
     start = Column(TIMESTAMP)
     code_block_id = Column(Integer, index=True)
-    code_block_trial_id = Column(Integer, index=True)
 
     file_accesses = many_viewonly_ref("activation", "FileAccess")
 
@@ -106,14 +105,12 @@ class Activation(AlchemyProxy):
         PrologAttribute("id", link="evaluation.id"),
         PrologRepr("name"),
         PrologTimestamp("start"),
-        PrologNullable("code_block_trial_id", link="code_block.trial_sid"),
         PrologNullable("code_block_id", link="code_block.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "a block *Id* with *Name* was activated\n"
         "at (*Start*).\n"
-        "This activation was defined by *CodeBlockId*\n"
-        "of a trial *CodeBlockTrialId*."
+        "This activation was defined by *CodeBlockId*."
     ))
 
     @query_many_property

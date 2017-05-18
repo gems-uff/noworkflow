@@ -23,11 +23,7 @@ from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
 from .base import proxy
 
 from .code_block import CodeBlock
-from .compartment import Compartment
-from .dependency import Dependency
 from .activation import Activation
-from .evaluation import Evaluation
-from .value import Value
 from .head import Head
 
 
@@ -143,7 +139,6 @@ class Trial(AlchemyProxy):
         ForeignKeyConstraint(["modules_inherited_from_trial_id"],
                              ["trial.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
-        ForeignKeyConstraint(["super_id"], ["trial.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["id", "main_id"],
                              ["code_block.trial_id", "code_block.id"],
                              ondelete="SET NULL", use_alter=True),
@@ -158,7 +153,6 @@ class Trial(AlchemyProxy):
     path = Column(Text)
     status = Column(Text)
     modules_inherited_from_trial_id = Column(Integer, index=True)
-    super_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
     main_id = Column(Integer, index=True)
 
@@ -166,10 +160,6 @@ class Trial(AlchemyProxy):
     modules_inherited_from_trial = one(
         "Trial", backref="bypass_children", viewonly=True,
         remote_side=[id], primaryjoin=(id == modules_inherited_from_trial_id)
-    )
-    super_trial = one(
-        "Trial", backref="inner_trials", viewonly=True,
-        remote_side=[id], primaryjoin=(id == super_id)
     )
     parent = one(
         "Trial", backref="children", viewonly=True,
@@ -191,31 +181,15 @@ class Trial(AlchemyProxy):
     _modules = many_ref("trial", "Module")
 
     code_components = many_viewonly_ref("trial", "CodeComponent")
-    evaluations = many_viewonly_ref(
-        "trial", "Evaluation",
-        uselist=True,
-        remote_side=[Evaluation.m.trial_id],
-        primaryjoin=((id == Evaluation.m.trial_id)))
+    evaluations = many_viewonly_ref("trial", "Evaluation")
     activations = many_viewonly_ref(
         "trial", "Activation", order_by=Activation.m.start)
     file_accesses = many_viewonly_ref("trial", "FileAccess")
-    values = many_viewonly_ref(
-        "trial", "Value",
-        uselist=True,
-        remote_side=[Value.m.trial_id],
-        primaryjoin=((id == Value.m.trial_id)))
+    values = many_viewonly_ref("trial", "Value")
 
-    compartments = many_viewonly_ref(
-        "trial", "Compartment",
-        uselist=True,
-        remote_side=[Compartment.m.trial_id],
-        primaryjoin=((id == Compartment.m.trial_id)))
+    compartments = many_viewonly_ref("trial", "Compartment")
 
-    dependencies = many_viewonly_ref(
-        "trial", "Dependency",
-        uselist=True,
-        remote_side=[Dependency.m.trial_id],
-        primaryjoin=((id == Dependency.m.trial_id)))
+    dependencies = many_viewonly_ref("trial", "Dependency")
 
     tags = many_ref("trial", "Tag")
 
@@ -247,7 +221,6 @@ class Trial(AlchemyProxy):
 
     prolog_description = PrologDescription("trial", (
         PrologTrial("id"),
-        PrologNullable("super_id", link="trial.id"),
         PrologRepr("script"),
         PrologTimestamp("start"),
         PrologTimestamp("finish"),
@@ -258,7 +231,6 @@ class Trial(AlchemyProxy):
         PrologNullable("main_id", link="code_block.id"),
     ), description=(
         "informs that a given trial (*Id*),\n"
-        "subtrial of another trial (*SuperId*),\n"
         "executed *Script* during a time period from *Start*"
         "to *Finish*,\n"
         "using noWokflow's *command*.\n"
@@ -1162,8 +1134,7 @@ class Trial(AlchemyProxy):
         session.commit()
 
     @classmethod  # query
-    def create(cls, script, start, command, path, bypass_modules, super_id=None, 
-              session=None):  # pylint: disable=too-many-arguments
+    def create(cls, script, start, command, path, bypass_modules, session=None):  # pylint: disable=too-many-arguments
         """Create trial and assign a new id to it
         Use core sqlalchemy
 
@@ -1185,7 +1156,7 @@ class Trial(AlchemyProxy):
         >>> erase_db()
 
         Create a trial with script, start, path, command and bypass_modules.
-        The first trial has no super_id, parent_id and does not inherit modules:
+        The first trial has no parent_id and does not inherit modules:
         >>> par = trial_params()
         >>> script, start, path = par["script"], par["start"], par["path"]
         >>> command, bypass_modules = par["command"], par["bypass_modules"]
@@ -1206,7 +1177,6 @@ class Trial(AlchemyProxy):
         True
         >>> trial.modules_inherited_from_trial_id
         >>> trial.parent_id
-        >>> trial.super_id
         >>> trial.main_id
 
         Set parent id if there is a trial:
@@ -1243,7 +1213,7 @@ class Trial(AlchemyProxy):
             ttrial.insert(),
             {"script": script, "start": start, "command": command,
              "path": path,
-             "status": "ongoing", "parent_id": parent_id, "super_id": super_id,
+             "status": "ongoing", "parent_id": parent_id,
              "modules_inherited_from_trial_id": inherited_id})
         tid = result.lastrowid
         session.commit()

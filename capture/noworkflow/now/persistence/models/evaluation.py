@@ -87,25 +87,21 @@ class Evaluation(AlchemyProxy):
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["value_trial_id"],
-                             ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["code_component_trial_id", "code_component_id"],
+        ForeignKeyConstraint(["trial_id", "code_component_id"],
                              ["code_component.trial_id", "code_component.id"],
                              ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id", "activation_id"],
                              ["activation.trial_id", "activation.id"],
                              ondelete="CASCADE", use_alter=True),
-        ForeignKeyConstraint(["value_trial_id", "value_id"],
+        ForeignKeyConstraint(["trial_id", "value_id"],
                              ["value.trial_id", "value.id"],
                              ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     moment = Column(TIMESTAMP)
-    code_component_trial_id = Column(Integer, index=True)
     code_component_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
-    value_trial_id = Column(Integer, index=True)
     value_id = Column(Integer, index=True)
 
     this_activation = one(
@@ -134,7 +130,7 @@ class Evaluation(AlchemyProxy):
         primaryjoin=(
             (id == Dependency.m.dependency_id) &
             (activation_id == Dependency.m.dependency_activation_id) &
-            (trial_id == Dependency.m.dependency_trial_id)))
+            (trial_id == Dependency.m.trial_id)))
 
     dependencies = many_viewonly_ref(
         "dependents", "Evaluation",
@@ -146,7 +142,7 @@ class Evaluation(AlchemyProxy):
         secondaryjoin=(
             (id == Dependency.m.dependency_id) &
             (activation_id == Dependency.m.dependency_activation_id) &
-            (trial_id == Dependency.m.dependency_trial_id)))
+            (trial_id == Dependency.m.trial_id)))
 
     dependents = backref_many("dependents")  # Evaluation.dependencies
     trial = backref_one("trial")  # Trial.evaluations
@@ -157,18 +153,13 @@ class Evaluation(AlchemyProxy):
         PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
         PrologTimestamp("moment"),
-        PrologAttribute("code_component_trial_id",
-                        link="code_component.trial_id"),
         PrologAttribute("code_component_id", link="code_component.id"),
         PrologNullable("activation_id", link="activation.id"),
-        PrologAttribute("value_trial_id", link="value.trial_id"),
         PrologAttribute("value_id", link="value.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
-        "an evaluation *Id* of *CodeComponentId*,\n"
-        "defined at *CodeComponentTrialId*,\n"
-        "finalized at *Moment*\n"
-        "in *ActivationId*, returning *ValueId* of trial *ValueTrialId*."
+        "an evaluation *Id* of *CodeComponentId* finalized at *Moment*\n"
+        "in *ActivationId*, returning *ValueId*."
     ))
 
     @classmethod

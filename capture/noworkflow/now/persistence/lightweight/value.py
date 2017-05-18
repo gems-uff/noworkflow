@@ -14,7 +14,7 @@ class ValueLW(BaseLW):
     """Value lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "value", "type_trial_id", "type_id"]
+        ["trial_id", "id", "value", "type_id"]
     )
     nullable = set()
     model = Value
@@ -23,13 +23,7 @@ class ValueLW(BaseLW):
         self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.value = value
-        self.type_trial_id = trial_id
         self.type_id = type_id
-
-    def set_trial_id(self, value):
-        if self.type_trial_id == -1:
-            self.type_trial_id = value
-        self.trial_id = value
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Value can always be removed from object store"""
