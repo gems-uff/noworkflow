@@ -240,13 +240,13 @@ class AlchemyProxy(Model):
         return result
 
     @classmethod
-    def fast_store(cls, trial_id, object_store, partial, conn=None):
+    def store(cls, object_store, partial, conn=None):
         """Bulk insert lightweight objects from ObjectStore"""
         if object_store.has_items():
             _conn = conn if conn else relational.engine.connect()
             _conn.execute(
                 cls.__model__.__table__.insert().prefix_with("OR REPLACE"),
-                *object_store.generator(trial_id, partial)
+                *object_store.generator(partial)
             )
             if conn is None:
                 _conn.close()

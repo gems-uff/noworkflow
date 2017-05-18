@@ -402,20 +402,23 @@ class Trial(AlchemyProxy):
         []
 
         Do not return modules outside the trial path:
-        >>> m1 = modules.add("external", "1.0.1", "/home/external.py", None, 0)
-        >>> modules.fast_store(trial_id)
+        >>> m1 = modules.add(
+        ...     trial_id, "external", "1.0.1", "/home/external.py", None, 0)
+        >>> modules.do_store()
         >>> list(trial.local_modules)
         []
 
         Return modules inside the trial path:
-        >>> m2 = modules.add("inte", "1.0.1", "/home/now/inte.py", None, 0)
-        >>> modules.fast_store(trial_id)
+        >>> m2 = modules.add(
+        ...    trial_id, "inte", "1.0.1", "/home/now/inte.py", None, 0)
+        >>> modules.do_store()
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
         [module(..., 'inte', '1.0.1').]
 
         Return modules with relative path:
-        >>> m3 = modules.add("inte2", "1.0.2", "inte2.py", None, 0)
-        >>> modules.fast_store(trial_id)
+        >>> m3 = modules.add(
+        ...    trial_id, "inte2", "1.0.2", "inte2.py", None, 0)
+        >>> modules.do_store()
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
         [module(..., 'inte', '1.0.1')., module(..., 'inte2', '1.0.2').]
         """
@@ -1136,7 +1139,7 @@ class Trial(AlchemyProxy):
         >>> erase_db()
 
         Set main_id, finish and status of an existing trial:
-        >>> trial_id = Trial.store(**trial_params(minute=39))
+        >>> trial_id = Trial.create(**trial_params(minute=39))
         >>> par = trial_update_params()
         >>> main_id, finish = par["main_id"], par["finish"]
         >>> status = par["status"]
@@ -1159,7 +1162,7 @@ class Trial(AlchemyProxy):
         session.commit()
 
     @classmethod  # query
-    def store(cls, script, start, command, path, bypass_modules, super_id=None, 
+    def create(cls, script, start, command, path, bypass_modules, super_id=None, 
               session=None):  # pylint: disable=too-many-arguments
         """Create trial and assign a new id to it
         Use core sqlalchemy
@@ -1186,7 +1189,7 @@ class Trial(AlchemyProxy):
         >>> par = trial_params()
         >>> script, start, path = par["script"], par["start"], par["path"]
         >>> command, bypass_modules = par["command"], par["bypass_modules"]
-        >>> id1 = Trial.store(script, start, command, path, bypass_modules)
+        >>> id1 = Trial.create(script, start, command, path, bypass_modules)
         >>> trial = select_trial(id1)
         >>> trial.id == id1
         True
@@ -1207,21 +1210,21 @@ class Trial(AlchemyProxy):
         >>> trial.main_id
 
         Set parent id if there is a trial:
-        >>> id2 = Trial.store(**trial_params(minute=25))
+        >>> id2 = Trial.create(**trial_params(minute=25))
         >>> trial = select_trial(id2)
         >>> trial.parent_id == id1
         True
         >>> trial.modules_inherited_from_trial_id
 
         Set inherited trial if bypass_modules=True
-        >>> id3 = Trial.store(**trial_params(minute=32, bypass_modules=True))
+        >>> id3 = Trial.create(**trial_params(minute=32, bypass_modules=True))
         >>> trial = select_trial(id3)
         >>> trial.modules_inherited_from_trial_id == id2
         True
 
         Set inherited trial to a trial that did not inherit
         modules. Note that it sets `modules_inherited_from_trial_id` to `id2`
-        >>> id4 = Trial.store(**trial_params(minute=33, bypass_modules=True))
+        >>> id4 = Trial.create(**trial_params(minute=33, bypass_modules=True))
         >>> trial = select_trial(id4)
         >>> trial.modules_inherited_from_trial_id == id2
         True

@@ -20,14 +20,14 @@ class CompartmentLW(BaseLW):
     nullable = set()
     model = Compartment
 
-    def __init__(self, id_, name, moment, whole_id, part_id):                    # pylint: disable=too-many-arguments
-        self.trial_id = -1
+    def __init__(self, id_, trial_id, name, moment, whole_id, part_id):                    # pylint: disable=too-many-arguments
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
         self.moment = moment
         self.whole_id = whole_id
         self.part_id = part_id
-        self.part_trial_id = -1
+        self.part_trial_id = trial_id
 
     def set_trial_id(self, value):
         if self.part_trial_id == -1:

@@ -20,8 +20,8 @@ class ExceptionLW(BaseLW):                                                      
     nullable = set()
     #model = Evaluation
 
-    def __init__(self, id_, exception, activation_id):
-        self.trial_id = -1
+    def __init__(self, id_, trial_id, exception, activation_id):
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.activation_id = activation_id
         self.exception = exception

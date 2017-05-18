@@ -22,8 +22,8 @@ class CodeBlockLW(BaseLW):
     nullable = set()
     model = CodeBlock
 
-    def __init__(self, id_, code, binary, docstring):
-        self.trial_id = -1
+    def __init__(self, id_, trial_id, code, binary, docstring):
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.code = code
         bin_code = code if binary else code.encode("utf-8")

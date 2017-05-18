@@ -20,8 +20,9 @@ class ModuleLW(BaseLW):
     nullable = set()
     model = Module
 
-    def __init__(self, id_, name, version, path, code_block_id, transformed):                     # pylint: disable=too-many-arguments
-        self.trial_id = -1
+    def __init__(self, id_, trial_id, name, version, path, code_block_id,        # pylint: disable=too-many-arguments
+                 transformed):
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
         self.version = version

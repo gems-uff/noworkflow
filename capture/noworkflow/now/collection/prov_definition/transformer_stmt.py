@@ -29,6 +29,7 @@ class RewriteAST(ast.NodeTransformer):                                          
 
     def __init__(self, metascript, code, path, container_id=-1):
         self.metascript = metascript
+        self.trial_id = metascript.trial_id
         self.code_components = metascript.code_components_store
         self.code_blocks = metascript.code_blocks_store
         self.path = path
@@ -43,7 +44,7 @@ class RewriteAST(ast.NodeTransformer):                                          
     def create_code_component(self, node, type_, mode):
         """Create code_component. Return component id"""
         num = self.code_components.add(
-            node.name, type_, mode,
+            self.trial_id, node.name, type_, mode,
             node.first_line, node.first_col,
             node.last_line, node.last_col,
             self.container_id
@@ -58,6 +59,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         id_ = self.create_code_component(node, type_, "w")
         self.code_blocks.add(
             id_,
+            self.trial_id,
             pyposast.extract_code(self.lcode, node),
             False,
             ast.get_docstring(node) if has_doc else ""

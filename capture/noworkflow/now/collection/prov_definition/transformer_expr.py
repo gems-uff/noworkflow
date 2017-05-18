@@ -33,7 +33,7 @@ class RewriteDependencies(ast.NodeTransformer):
         key.last_line, key.last_col = value.last_line, value.last_col
         name = pyposast.extract_code(self.rewriter.lcode, key)
         key_value_component = self.rewriter.code_components.add(
-            name, "key_value", "r",
+            self.rewriter.trial_id, name, "key_value", "r",
             key.first_line, key.first_col,
             value.last_line, value.last_col,
             self.rewriter.container_id
@@ -74,7 +74,7 @@ class RewriteDependencies(ast.NodeTransformer):
                 item_component = ast.Num(citem.code_component_id)
             else:
                 item_component = ast.Num(self.rewriter.code_components.add(
-                    name, "item", "r",
+                    self.rewriter.trial_id, name, "item", "r",
                     item.first_line, item.first_col,
                     item.last_line, item.last_col,
                     self.rewriter.container_id

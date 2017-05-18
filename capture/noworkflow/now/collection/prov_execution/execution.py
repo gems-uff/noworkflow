@@ -32,6 +32,7 @@ class Execution(object):
     def collect_provenance(self):
         """Collect execution provenance"""
         metascript = self.metascript
+        self.collector.trial_id = self.metascript.trial_id
         metascript.namespace["__builtins__"]["__noworkflow__"] = self.collector
         debugger_builtins(
             self.collector, metascript.namespace["__builtins__"], metascript

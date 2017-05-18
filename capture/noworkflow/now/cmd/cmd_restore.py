@@ -16,7 +16,7 @@ from future.utils import viewitems
 
 from ..collection.metadata import Metascript
 from ..persistence.models import Trial, Module, FileAccess
-from ..persistence.models import Argument
+from ..persistence.models import CodeComponent, CodeBlock, Argument
 from ..persistence import persistence_config, content
 from ..utils.io import print_msg
 from ..utils.cross_version import PY34, PY35, PY2, PY36
@@ -54,15 +54,25 @@ class Restore(Command):
                      "<TARGET> specifies the target path (default to path)")
 
 
-    def create_backup(self, metascript, files):
+    def create_backup(self, metascript, files, args):
         """Create a backup trial"""
         modules = metascript.modules_store
         accesses = metascript.file_accesses_store
         arguments = metascript.arguments_store
+
+        old_id = metascript.trial_id
+        metascript.trial_id = Trial.create(*metascript.create_trial_args())
+        tid = metascript.trial_id
+        metascript.create_arguments(args)
+        metascript.arguments_store.add(tid, "restore", repr(old_id))
+
+
         for path, info in viewitems(files):
             if info["type"] == "script":
                 metascript.path = path
-                metascript.definition.visit_file(path)
+                metascript.definition.create_code_block(
+                    None, path, True, False, True
+                )
             elif info["type"] == "module":
                 path = os.path.abspath(path)
                 cid = metascript.definition.create_code_block(
@@ -92,20 +102,21 @@ class Restore(Command):
                     info["name"], version, path, cid, False
                 )
             elif info["type"] == "access":
-                aid = accesses.add(path)
+                aid = accesses.add(tid, path)
                 access = accesses[aid]
                 access.content_hash_before = info["code_hash"]
                 access.content_hash_after = info["code_hash"]
                 access.mode = "a+"
 
-        metascript.arguments_store.add("restore", repr(metascript.trial_id))
-        metascript.trial_id = Trial.store(*metascript.create_trial_args())
+        
 
-        tid, partial = metascript.trial_id, True
+        partial = True
         Trial.fast_update(tid, metascript.main_id, datetime.now(), "backup")
-        Module.fast_store(tid, modules, partial)
-        FileAccess.fast_store(tid, accesses, partial)
-        Argument.fast_store(tid, arguments, partial)
+        CodeComponent.store(metascript.code_components_store)
+        CodeBlock.store(metascript.code_blocks_store)
+        Module.store(modules, partial)
+        FileAccess.store(accesses, partial)
+        Argument.store(arguments, partial)
         metascript.definition.store_provenance()
 
         print_msg("Backup Trial {} created".format(metascript.trial_id),
@@ -169,7 +180,7 @@ class Restore(Command):
             last_files = head.versioned_files(**skip_dict(args))
             match, new_files = self.find_differences(last_files)
             if not match:
-                self.create_backup(metascript, new_files)
+                self.create_backup(metascript, new_files, args)
 
             for path, info in viewitems(restore_files):
                 self.restore(path, info["code_hash"], trial.id,

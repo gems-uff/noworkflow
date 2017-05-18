@@ -46,6 +46,8 @@ class Collector(object):
     def __init__(self, metascript):
         self.metascript = weakref.proxy(metascript)
 
+        self.trial_id = -1  # It should be updated
+
         self.code_components = self.metascript.code_components_store
         self.evaluations = self.metascript.evaluations_store
         self.activations = self.metascript.activations_store
@@ -63,7 +65,8 @@ class Collector(object):
         self.last_partial_save = datetime.now()
 
         self.first_activation = self.activations.dry_add(
-            self.evaluations.dry_add(-1, -1, None, None), "<now>", None, None
+            self.evaluations.dry_add(self.trial_id, -1, -1, None, None),
+            self.trial_id, "<now>", None, None
         )
         self.first_activation.depth = 0
         self.last_activation = self.first_activation
@@ -133,7 +136,7 @@ class Collector(object):
                 naddr = "[{}]".format(slice_index)
                 part_id = get_compartment(meta, value_dep.value_id, oaddr)
                 self.compartments.add_object(
-                    naddr, eva.moment, eva.value_id, part_id
+                    self.trial_id, naddr, eva.moment, eva.value_id, part_id
                 )
 
         activation.dependencies[-1].add(Dependency(
@@ -183,8 +186,8 @@ class Collector(object):
     def dry_activation(self, act):
         """Start new dry activation. Return activation object"""
         activation = self.activations.dry_add(
-            self.evaluations.dry_add(-1, act.id, None, None),
-            "<now>", None, None
+            self.evaluations.dry_add(self.trial_id, -1, act.id, None, None),
+            self.trial_id, "<now>", None, None
         )
         activation.depth = act.depth + 1
         activation.active = False
@@ -197,9 +200,10 @@ class Collector(object):
 
     def start_activation(self, name, code_component_id, definition_id, act):
         """Start new activation. Return activation object"""
+        trial_id = self.trial_id
         activation = self.activations.add_object(self.evaluations.add_object(
-            code_component_id, act.id, None, None
-        ), name, self.time(), definition_id)
+            trial_id, code_component_id, act.id, None, None
+        ), trial_id, name, self.time(), definition_id)
         activation.depth = act.depth + 1
         if activation.depth > self.metascript.depth:
             activation.active = False
@@ -224,7 +228,9 @@ class Collector(object):
     def add_value(self, value):
         """Add value. Create type value recursively. Return value id"""
         if value is type:
-            value_object = self.values.add_object(repr(value), -1)
+            value_object = self.values.add_object(
+                self.trial_id, repr(value), -1
+            )
             value_object.type_id = value_object.id
             self.shared_types[value] = value_object.id
             return value_object.id
@@ -233,7 +239,7 @@ class Collector(object):
         if value_type not in self.shared_types:
             self.shared_types[value_type] = self.add_value(value_type)
         type_id = self.shared_types[value_type]
-        return self.values.add(repr(value), type_id)
+        return self.values.add(self.trial_id, repr(value), type_id)
 
     def start_script(self, module_name, code_component_id):
         """Start script collection. Create new activation"""
@@ -259,7 +265,7 @@ class Collector(object):
             code_id = code_id or depa.code_id
             #print(deps)
 
-        self.exceptions.add(exc, activation.id)
+        self.exceptions.add(self.trial_id, exc, activation.id)
 
     def exception(self, activation, code_id, exc_handler, name, value):          # pylint: disable=too-many-arguments, unused-argument
         """Collection activation exc value"""
@@ -279,9 +285,11 @@ class Collector(object):
         if evaluation:
             return evaluation
         if name in self.globals:
-            evaluation = self.evaluations.add_object(self.code_components.add(
-                name, 'global', 'w', -1, -1, -1, -1, -1
-            ), -1, self.time(), self.add_value(self.globals[name]))
+            trial_id = self.trial_id
+            evaluation = self.evaluations.add_object(
+                trial_id, self.code_components.add(
+                    trial_id, name, 'global', 'w', -1, -1, -1, -1, -1
+                ), -1, self.time(), self.add_value(self.globals[name]))
             self.global_evaluations[name] = evaluation
         return evaluation
 
@@ -307,7 +315,7 @@ class Collector(object):
 
             if old_eval:
                 self.dependencies.add(
-                    activation.id, evaluation.id,
+                    self.trial_id, activation.id, evaluation.id,
                     old_eval.activation_id, old_eval.id, "assignment"
                 )
 
@@ -347,7 +355,7 @@ class Collector(object):
             for key, value_id, moment in depa.items:
                 tkey = "[{0!r}]".format(key)
                 self.compartments.add_object(
-                    tkey, moment, evaluation.value_id, value_id
+                    self.trial_id, tkey, moment, evaluation.value_id, value_id
                 )
         return value
 
@@ -439,7 +447,7 @@ class Collector(object):
             for key, value_id, moment in depa.items:
                 tkey = "[{0!r}]".format(key)
                 self.compartments.add_object(
-                    tkey, moment, evaluation.value_id, value_id
+                    self.trial_id, tkey, moment, evaluation.value_id, value_id
                 )
         return value
 
@@ -668,6 +676,7 @@ class Collector(object):
         if value_dep:
             self.make_dependencies(activation, evaluation, access_depa)
             self.compartments.add_object(
+                self.trial_id, 
                 addr, moment, value_dep.value_id, evaluation.value_id
             )
         return 1
@@ -1288,7 +1297,7 @@ class Collector(object):
             for container in [depa.dependencies, depa.extra_dependencies]:
                 for dep in container:
                     self.dependencies.add(
-                        activation_id, evaluation_id,
+                        self.trial_id, activation_id, evaluation_id,
                         dep.activation_id, dep.evaluation_id,
                         dep.mode
                     )
@@ -1298,7 +1307,7 @@ class Collector(object):
         for dep in depa.dependencies:
             if dep.mode.startswith("argument"):
                 self.dependencies.add(
-                    evaluation.activation_id, evaluation.id,
+                    self.trial_id, evaluation.activation_id, evaluation.id,
                     dep.activation_id, dep.evaluation_id,
                     "dependency"
                 )
@@ -1322,7 +1331,7 @@ class Collector(object):
         if moment is None:
             moment = self.time()
         evaluation = self.evaluations.add_object(
-            code_id, activation.id, moment, value_id
+            self.trial_id, code_id, activation.id, moment, value_id
         )
         self.make_dependencies(activation, evaluation, depa)
         return evaluation
@@ -1332,13 +1341,13 @@ class Collector(object):
         metascript = self.metascript
         tid = metascript.trial_id
 
-        metascript.code_components_store.fast_store(tid, partial=partial)
-        metascript.evaluations_store.fast_store(tid, partial=partial)
-        metascript.activations_store.fast_store(tid, partial=partial)
-        metascript.dependencies_store.fast_store(tid, partial=partial)
-        metascript.values_store.fast_store(tid, partial=partial)
-        metascript.compartments_store.fast_store(tid, partial=partial)
-        metascript.file_accesses_store.fast_store(tid, partial=partial)
+        metascript.code_components_store.do_store(partial)
+        metascript.evaluations_store.do_store(partial)
+        metascript.activations_store.do_store(partial)
+        metascript.dependencies_store.do_store(partial)
+        metascript.values_store.do_store(partial)
+        metascript.compartments_store.do_store(partial)
+        metascript.file_accesses_store.do_store(partial)
 
         now = datetime.now()
         if not partial:

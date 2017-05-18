@@ -44,12 +44,14 @@ class ScriptArgs(argparse.Action):                                              
         setattr(namespace, "argv", values)
 
 
-def run(metascript):
+def run(metascript, args=None):
     """Execute noWokflow to capture provenance from script"""
+    args = args or []
     try:
-        metascript.trial_id = Trial.store(*metascript.create_trial_args())
+        metascript.trial_id = Trial.create(*metascript.create_trial_args())
+        metascript.create_arguments(args)
         arguments = metascript.arguments_store
-        Argument.fast_store(metascript.trial_id, arguments, True)
+        Argument.store(arguments, True)
 
         io.print_msg("collecting deployment provenance")
         metascript.deployment.collect_provenance()
@@ -158,5 +160,5 @@ class Run(Command):
         metascript.clear_namespace()
 
         # Run script
-        run(metascript)
+        run(metascript, args)
 

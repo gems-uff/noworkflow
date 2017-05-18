@@ -29,12 +29,14 @@ class Module(AlchemyProxy):
     >>> from noworkflow.tests.helpers.models import blocks
     >>> erase_db()
     >>> trial_id = new_trial()
-    >>> cid = components.add("/home/module.py", "module", "w", 1, 0, 1, 10, -1)
-    >>> _ = blocks.add(cid, "abcdefghij", False, None)
-    >>> mid = modules.add("module", "1.0.1", "/home/module.py", cid, True)
-    >>> components.fast_store(trial_id)
-    >>> blocks.fast_store(trial_id)
-    >>> modules.fast_store(trial_id)
+    >>> cid = components.add(
+    ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1)
+    >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+    >>> mid = modules.add(
+    ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
+    >>> components.do_store()
+    >>> blocks.do_store()
+    >>> modules.do_store()
 
     Load a Module object by (trial_id, id):
     >>> module = Module((trial_id, mid))
@@ -100,13 +102,17 @@ class Module(AlchemyProxy):
         """Brief description of module
 
         Doctest:
-        >>> from noworkflow.tests.helpers.models import erase_db, modules
+        >>> from noworkflow.tests.helpers.models import erase_db, new_trial
+        >>> from noworkflow.tests.helpers.models import modules
         >>> erase_db()
-        >>> mid1 = modules.add("mod", "1.0.1", "/home/module.py", None, False)
-        >>> mid2 = modules.add("mod2", None, "/home/module2.py", None, False)
-        >>> modules.fast_store(-1)
-        >>> module1 = Module((-1, mid1))
-        >>> module2 = Module((-1, mid2))
+        >>> trial_id = new_trial()
+        >>> mid1 = modules.add(
+        ...     trial_id, "mod", "1.0.1", "/home/module.py", None, False)
+        >>> mid2 = modules.add(
+        ...     trial_id, "mod2", None, "/home/module2.py", None, False)
+        >>> modules.do_store()
+        >>> module1 = Module((trial_id, mid1))
+        >>> module2 = Module((trial_id, mid2))
 
         Brief decription of module with version:
         >>> module1.brief == 'mod 1.0.1'
@@ -132,13 +138,14 @@ class Module(AlchemyProxy):
         >>> erase_db()
         >>> trial_id = new_trial()
         >>> cid = components.add(
-        ...     "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
+        ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
         ... )
-        >>> _ = blocks.add(cid, "abcdefghij", False, None)
-        >>> mid = modules.add("module", "1.0.1", "/home/module.py", cid, True)
-        >>> components.fast_store(trial_id)
-        >>> blocks.fast_store(trial_id)
-        >>> modules.fast_store(trial_id)
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+        >>> mid = modules.add(
+        ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
+        >>> components.do_store()
+        >>> blocks.do_store()
+        >>> modules.do_store()
         >>> module = Module((trial_id, mid))
 
         >>> module.code_hash == 'd68c19a0a345b7eab78d5e11e991c026ec60db63'
@@ -162,13 +169,14 @@ class Module(AlchemyProxy):
         >>> erase_db()
         >>> trial_id = new_trial()
         >>> cid = components.add(
-        ...     "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
+        ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
         ... )
-        >>> _ = blocks.add(cid, "abcdefghij", False, None)
-        >>> mid = modules.add("module", "1.0.1", "/home/module.py", cid, True)
-        >>> components.fast_store(trial_id)
-        >>> blocks.fast_store(trial_id)
-        >>> modules.fast_store(trial_id)
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+        >>> mid = modules.add(
+        ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
+        >>> components.do_store()
+        >>> blocks.do_store()
+        >>> modules.do_store()
         >>> module = Module((trial_id, mid))
 
         Show module:

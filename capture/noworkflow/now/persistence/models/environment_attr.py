@@ -24,8 +24,8 @@ class EnvironmentAttr(AlchemyProxy):
     >>> from noworkflow.tests.helpers.models import environment_attrs
     >>> erase_db()
     >>> trial_id = new_trial()
-    >>> id_ = environment_attrs.add("attr_name", "attr_value")
-    >>> environment_attrs.fast_store(trial_id)
+    >>> id_ = environment_attrs.add(trial_id, "attr_name", "attr_value")
+    >>> environment_attrs.do_store()
 
     Load EnvironmentAttr object by (trial_id, id):
     >>> environment = EnvironmentAttr((trial_id, id_))
@@ -76,8 +76,8 @@ class EnvironmentAttr(AlchemyProxy):
         >>> from noworkflow.tests.helpers.models import environment_attrs
         >>> erase_db()
         >>> trial_id = new_trial()
-        >>> id_ = environment_attrs.add("attr_name", "attr_value")
-        >>> environment_attrs.fast_store(trial_id)
+        >>> id_ = environment_attrs.add(trial_id, "attr_name", "attr_value")
+        >>> environment_attrs.do_store()
         >>> env = EnvironmentAttr((trial_id, id_))
 
         Show name as brief description
@@ -99,8 +99,8 @@ class EnvironmentAttr(AlchemyProxy):
         >>> from noworkflow.tests.helpers.models import environment_attrs
         >>> erase_db()
         >>> trial_id = new_trial()
-        >>> id_ = environment_attrs.add("attr_name", "attr_value")
-        >>> environment_attrs.fast_store(trial_id)
+        >>> id_ = environment_attrs.add(trial_id, "attr_name", "attr_value")
+        >>> environment_attrs.do_store()
         >>> env = EnvironmentAttr((trial_id, id_))
 
 

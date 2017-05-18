@@ -39,44 +39,45 @@ class Deployment(object):
         Return dict
         """
         attrs = self.metascript.environment_attrs_store
+        trial_id = self.metascript.trial_id
 
-        attrs.add("OS_NAME", platform.system())
+        attrs.add(trial_id, "OS_NAME", platform.system())
         # Unix environment
         try:
             for name in os.sysconf_names:
                 try:
-                    attrs.add(name, os.sysconf(name))
+                    attrs.add(trial_id, name, os.sysconf(name))
                 except (ValueError, OSError):
                     pass
             for name in os.confstr_names:
-                attrs.add(name, os.confstr(name))
+                attrs.add(trial_id, name, os.confstr(name))
         except AttributeError:
             pass
 
         os_name, _, os_release, os_version, _, _ = platform.uname()
-        attrs.add("OS_NAME", os_name)
-        attrs.add("OS_RELEASE", os_release)
-        attrs.add("OS_VERSION", os_version)
+        attrs.add(trial_id, "OS_NAME", os_name)
+        attrs.add(trial_id, "OS_RELEASE", os_release)
+        attrs.add(trial_id, "OS_VERSION", os_version)
 
         # Both Unix and Windows
         for attr, value in viewitems(os.environ):
-            attrs.add(attr, value)
+            attrs.add(trial_id, attr, value)
 
-        attrs.add("USER", getpass.getuser())
-        attrs.add("PWD", os.getcwd())
-        attrs.add("PID", os.getpid())
-        attrs.add("HOSTNAME", socket.gethostname())
-        attrs.add("ARCH", platform.architecture()[0])
-        attrs.add("PROCESSOR", platform.processor())
-        attrs.add("PYTHON_IMPLEMENTATION", platform.python_implementation())
-        attrs.add("PYTHON_VERSION", platform.python_version())
+        attrs.add(trial_id, "USER", getpass.getuser())
+        attrs.add(trial_id, "PWD", os.getcwd())
+        attrs.add(trial_id, "PID", os.getpid())
+        attrs.add(trial_id, "HOSTNAME", socket.gethostname())
+        attrs.add(trial_id, "ARCH", platform.architecture()[0])
+        attrs.add(trial_id, "PROCESSOR", platform.processor())
+        attrs.add(trial_id, "PYTHON_IMPLEMENTATION", platform.python_implementation())
+        attrs.add(trial_id, "PYTHON_VERSION", platform.python_version())
 
-        attrs.add("NOWORKFLOW_VERSION", version())
+        attrs.add(trial_id, "NOWORKFLOW_VERSION", version())
 
     def add_module(self, name, version, path, code_id, transformed=False):
         """Insert module into provenance store"""
         self.metascript.modules_store.add(
-            name, version, path, code_id, transformed
+            self.metascript.trial_id, name, version, path, code_id, transformed
         )
 
     def get_version(self, module):
@@ -128,5 +129,5 @@ class Deployment(object):
         tid = metascript.trial_id
         # Remove after save
         partial = True
-        metascript.environment_attrs_store.fast_store(tid, partial=partial)
-        metascript.modules_store.fast_store(tid, partial=partial)
+        metascript.environment_attrs_store.do_store(partial)
+        metascript.modules_store.do_store(partial)

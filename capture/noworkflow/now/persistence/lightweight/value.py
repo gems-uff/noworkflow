@@ -19,11 +19,11 @@ class ValueLW(BaseLW):
     nullable = set()
     model = Value
 
-    def __init__(self, id_, value, type_id):
-        self.trial_id = -1
+    def __init__(self, id_, trial_id, value, type_id):
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.value = value
-        self.type_trial_id = -1
+        self.type_trial_id = trial_id
         self.type_id = type_id
 
     def set_trial_id(self, value):

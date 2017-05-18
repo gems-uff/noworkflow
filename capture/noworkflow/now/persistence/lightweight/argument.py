@@ -19,8 +19,8 @@ class ArgumentLW(BaseLW):
     nullable = set()
     model = Argument
 
-    def __init__(self, id_, name, value):
-        self.trial_id = -1
+    def __init__(self, id_, trial_id, name, value):
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
         self.value = value

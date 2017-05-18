@@ -138,21 +138,21 @@ def graph_cache_params(type_="tree", name="cache1", dur=0,
     }
 
 
-def component_params(name="main.py", type_="script", mode="w",
+def component_params(trial_id, name="main.py", type_="script", mode="w",
                      first_char_line=1, first_char_column=0,
                      last_char_line=1, last_char_column=7,
                      container_id=None, ):
     """Return default component params"""
-    return [name, type_, mode, first_char_line, first_char_column,
+    return [trial_id, name, type_, mode, first_char_line, first_char_column,
             last_char_line, last_char_column, container_id]
 
 
-def block_params(id_, code="'block'", docstring="block"):
+def block_params(id_, trial_id, code="'block'", docstring="block"):
     """Return default code block params"""
-    return [id_, code, False, docstring]
+    return [id_, trial_id, code, False, docstring]
 
 
-def evaluation_params(code_component_id, activation_id, value_id=-1,
+def evaluation_params(trial_id, code_component_id, activation_id, value_id=-1,
                       year=2016, month=4, day=8, hour=1, minute=19, second=5,
                       moment=None):
     """Return evaluation params"""
@@ -161,10 +161,10 @@ def evaluation_params(code_component_id, activation_id, value_id=-1,
             year=year, month=month, day=day,
             hour=hour, minute=minute, second=second
         )
-    return [code_component_id, activation_id, moment, value_id]
+    return [trial_id, code_component_id, activation_id, moment, value_id]
 
 
-def activation_params(evaluation, code_block_id, name="main.py",
+def activation_params(evaluation, trial_id, code_block_id, name="main.py",
                       year=2016, month=4, day=8, hour=1, minute=18, second=5,
                       start=None):
     """Return activation params"""
@@ -173,30 +173,25 @@ def activation_params(evaluation, code_block_id, name="main.py",
             year=year, month=month, day=day,
             hour=hour, minute=minute, second=second
         )
-    return [evaluation, name, start, code_block_id]
+    return [evaluation, trial_id, name, start, code_block_id]
 
-def value_params(value="<class 'type'>", type_id=1):
+def value_params(trial_id, value="<class 'type'>", type_id=1):
     """Return value params"""
-    return [value, type_id]
+    return [trial_id, value, type_id]
 
 
-def compartment_params(whole_id, part_id, name="[0]",
+def compartment_params(trial_id, whole_id, part_id, name="[0]",
                        year=2016, month=4, day=8, hour=1, minute=19, second=5):
     """Return compartment params"""
     moment = datetime(
         year=year, month=month, day=day,
         hour=hour, minute=minute, second=second
     )
-    return [name, moment, whole_id, part_id]
-
-def access_params(name="file.txt"):
-    return [name]
+    return [trial_id, name, moment, whole_id, part_id]
 
 
-def _add_evaluation(code_component_id, activation_id, value_id, second):
-    return evaluations.add(*evaluation_params(
-        code_component_id, activation_id, value_id=value_id, second=second
-    ))
+def access_params(trial_id, name="file.txt"):
+    return [trial_id, name]
 
 
 class ConfigObj(object):
@@ -209,6 +204,7 @@ class ConfigObj(object):
     def comp(self, name, type_, mode, container_id, **kwargs):
         meta = self.meta
         return meta.code_components_store.add(*component_params(
+            meta.trial_id,
             name=name, type_=type_, mode=mode, container_id=container_id,
             **kwargs
         ))
@@ -216,12 +212,14 @@ class ConfigObj(object):
     def value(self, value, type_id):
         meta = self.meta
         return meta.values_store.add(*value_params(
+            meta.trial_id,
             value=value, type_id=type_id))
 
     def evaluation(self, code_component_id, activation_id, value_id, delta):
         meta = self.meta
         moment = self.start + timedelta(seconds=delta)
         return meta.evaluations_store.add(*evaluation_params(
+            meta.trial_id,
             code_component_id, activation_id, value_id=value_id, moment=moment
         ))
 
@@ -270,7 +268,8 @@ class FuncConfig(ConfigObj):
             last_char_column=self.last_char_column,
         )
         meta.code_blocks_store.add(*block_params(
-            self.id, code=self.code, docstring=self.docstring
+            self.id, self.meta.trial_id,
+            code=self.code, docstring=self.docstring
         ))
         return self.id
 
@@ -369,7 +368,7 @@ class AssignConfig(ConfigObj):
         self.int_type = self.value("<class 'int'>", type_value_id)
         self.array0_value = self.value("1", self.int_type)
         self.a0comp = self.meta.compartments_store.add(*compartment_params(
-            self.array_value, self.array0_value
+            self.meta.trial_id, self.array_value, self.array0_value
         ))
         return (
             self.list_type, self.array_value, self.int_type, self.array0_value,
@@ -394,7 +393,7 @@ class AssignConfig(ConfigObj):
         self.f_activation = self.evaluation(
             self.call_id, main_act, self.array_value, 7 + self.duration)
         self.meta.activations_store.add(*activation_params(
-            self.meta.evaluations_store[self.f_activation],
+            self.meta.evaluations_store[self.f_activation], self.meta.trial_id,
             function.id, name=function.name,
             start=self.start + timedelta(seconds=7)
         ))
@@ -413,34 +412,44 @@ class AssignConfig(ConfigObj):
             self.result_id, main_act, self.array_value, 11)
 
         self.meta.dependencies_store.add(
+            self.meta.trial_id,
             main_act, self.a_read_eval,
             main_act, self.a_write_eval, "assignment")
         self.meta.dependencies_store.add(
+            self.meta.trial_id,
             main_act, self.f_variable_eval,
             main_act, function.f_eval, "assignment")
         self.meta.dependencies_store.add(
+            self.meta.trial_id,
             main_act, self.f_func_eval,
             self.f_variable_eval, function.f_eval, "bind")
         self.meta.dependencies_store.add(
+            self.meta.trial_id,
             main_act, self.a_arg_eval,
             main_act, self.a_read_eval, "bind")
         self.meta.dependencies_store.add(
+            self.meta.trial_id,
             self.f_activation, function.x_param_eval,
             main_act, self.a_arg_eval, "bind")
         self.meta.dependencies_store.add(
+            self.meta.trial_id,
             self.f_activation, function.x_return_eval,
             self.f_activation, function.x_param_eval, "assignment")
         if function.global_name:
             self.meta.dependencies_store.add(
+                self.meta.trial_id,
                 self.f_activation, function.global_eval,
                 main_act, self.a_write_eval, "assignment")
         self.meta.dependencies_store.add(
+            self.meta.trial_id,
             self.f_activation, function.return_eval,
             self.f_activation, function.x_return_eval, "bind")
         self.return_dependency = self.meta.dependencies_store.add(
+            self.meta.trial_id,
             main_act, self.f_activation,
             self.f_activation, function.return_eval, "bind")
         self.b_dependency = self.meta.dependencies_store.add(
+            self.meta.trial_id,
             main_act, self.b_write_eval,
             main_act, self.f_activation, "bind")
 
@@ -474,14 +483,14 @@ class AccessConfig(ConfigObj):
         assign = trial.assignment
         meta = trial.meta
         self.r_access = meta.file_accesses_store.add_object(*access_params(
-            name=self.read_file))
+            meta.trial_id, name=self.read_file))
         self.r_access.activation_id = assign.f_activation
         self.r_access.content_hash_before = self.read_hash
         self.r_access.content_hash_after = self.read_hash
         if self.read_timestamp:
             self.r_access.timestamp = self.read_timestamp
         self.w_access = meta.file_accesses_store.add_object(*access_params(
-            name=self.write_file))
+            meta.trial_id, name=self.write_file))
         self.w_access.activation_id = assign.f_activation
         self.w_access.mode = "w"
         self.w_access.content_hash_before = self.write_hash_before
@@ -532,7 +541,8 @@ class TrialConfig(ConfigObj):                                                   
         )
         params["start"] = self.start
 
-        self.trial_id = Trial.store(**params)
+        self.trial_id = Trial.create(**params)
+        self.meta.trial_id = self.trial_id
 
         self.code = "'{0}'\n{1}\n{2}".format(
             self.docstring, function.code, assignment.code
@@ -540,7 +550,8 @@ class TrialConfig(ConfigObj):                                                   
 
         self.main_id = self.comp(self.script, "script", "w", -1)
         meta.code_blocks_store.add(*block_params(
-            self.main_id, code=self.code, docstring=self.docstring
+            self.main_id, self.meta.trial_id,
+            code=self.code, docstring=self.docstring
         ))
         return meta
 
@@ -553,7 +564,9 @@ class TrialConfig(ConfigObj):                                                   
     def create_values(self):
         """Create values"""
         meta = self.meta
-        self.type_value_id = meta.values_store.add(*value_params())
+        self.type_value_id = meta.values_store.add(*value_params(
+            meta.trial_id
+        ))
         type_object = meta.values_store[self.type_value_id]
         type_object.type_id = self.type_value_id
         return self.type_value_id
@@ -561,12 +574,13 @@ class TrialConfig(ConfigObj):                                                   
     def create_evaluations(self):
         """Create evaluations"""
         self.main_act = self.meta.evaluations_store.add(*evaluation_params(
-            self.main_id, -1,
+            self.meta.trial_id, self.main_id, -1,
             moment=self.start + timedelta(seconds=self.main_duration)
         ))
 
         self.meta.activations_store.add(*activation_params(
-            self.meta.evaluations_store[self.main_act], self.main_id,
+            self.meta.evaluations_store[self.main_act], 
+            self.meta.trial_id, self.main_id,
             start=self.start + timedelta(seconds=self.main_start)
         ))
 
@@ -612,43 +626,47 @@ def create_trial(
 
     assignment.insert(meta, function, trial.main_id)
 
-    meta.code_components_store.fast_store(trial.trial_id)
-    meta.code_blocks_store.fast_store(trial.trial_id)
+    meta.code_components_store.do_store()
+    meta.code_blocks_store.do_store()
 
     if trial.status == "finished":
         trial.finished()
-        meta.values_store.fast_store(trial.trial_id)
-        meta.compartments_store.fast_store(trial.trial_id)
-        meta.evaluations_store.fast_store(trial.trial_id)
-        meta.activations_store.fast_store(trial.trial_id)
-        meta.dependencies_store.fast_store(trial.trial_id)
-        meta.file_accesses_store.fast_store(trial.trial_id)
+        meta.values_store.do_store()
+        meta.compartments_store.do_store()
+        meta.evaluations_store.do_store()
+        meta.activations_store.do_store()
+        meta.dependencies_store.do_store()
+        meta.file_accesses_store.do_store()
 
     if trial.status != "ongoing":
         if not trial.bypass_modules:
             global m1, m2, mc1, mc2
             mc1 = meta.code_components_store.add(
+                meta.trial_id,
                 "/home/external.py", "module", "w", 1, 0, 1, 4, -1
             )
-            meta.code_blocks_store.add(mc1, "aaaa", False, None)
+            meta.code_blocks_store.add(mc1, meta.trial_id, "aaaa", False, None)
             mc2 = meta.code_components_store.add(
+                meta.trial_id,
                 "/home/internal.py", "module", "w", 1, 0, 1, 4, -1
             )
-            meta.code_blocks_store.add(mc2, "bbbb", False, None)
+            meta.code_blocks_store.add(mc2, meta.trial_id, "bbbb", False, None)
             m1 = meta.modules_store.add(
+                meta.trial_id,
                 "external", "1.0.1", "/home/external.py", mc1, False)
             m2 = meta.modules_store.add(
+                meta.trial_id,
                 "internal", "", "internal.py", mc2, False)
-            meta.code_components_store.fast_store(trial.trial_id)
-            meta.code_blocks_store.fast_store(trial.trial_id)
-            meta.modules_store.fast_store(trial.trial_id)
+            meta.code_components_store.do_store()
+            meta.code_blocks_store.do_store()
+            meta.modules_store.do_store()
 
-        arguments.add("script", trial.script)
-        arguments.add("bypass_modules", str(trial.bypass_modules))
-        environment_attrs.add("CWD", trial.path)
-        environment_attrs.add("USER", user)
-        arguments.fast_store(trial.trial_id)
-        environment_attrs.fast_store(trial.trial_id)
+        arguments.add(trial.trial_id, "script", trial.script)
+        arguments.add(trial.trial_id, "bypass_modules", str(trial.bypass_modules))
+        environment_attrs.add(trial.trial_id, "CWD", trial.path)
+        environment_attrs.add(trial.trial_id, "USER", user)
+        arguments.do_store()
+        environment_attrs.do_store()
 
     if tag:
         Tag.create(**tag_params(trial.trial_id, name=tag))

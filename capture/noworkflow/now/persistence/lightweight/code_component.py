@@ -22,11 +22,11 @@ class CodeComponentLW(BaseLW):                                                  
     nullable = {"container_id"}
     model = CodeComponent
 
-    def __init__(self, id_, name, type_, mode,                                   # pylint: disable=too-many-arguments
+    def __init__(self, id_, trial_id, name, type_, mode,                         # pylint: disable=too-many-arguments
                  first_char_line, first_char_column,
                  last_char_line, last_char_column,
                  container_id):
-        self.trial_id = -1
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
         self.type = type_

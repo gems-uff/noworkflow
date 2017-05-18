@@ -23,13 +23,13 @@ class ActivationLW(BaseLW):                                                     
     nullable = {"code_block_id"}
     model = Activation
 
-    def __init__(self, evaluation, name, start, code_block_id):
-        self.trial_id = -1
+    def __init__(self, evaluation, trial_id, name, start, code_block_id):
+        self.trial_id = trial_id
         self.id = evaluation.id                                                  # pylint: disable=invalid-name
         self.name = name
         self.start = start
         self.code_block_id = code_block_id if code_block_id else -1
-        self.code_block_trial_id = -1
+        self.code_block_trial_id = trial_id
 
         self.evaluation = evaluation
 
@@ -67,11 +67,6 @@ class ActivationLW(BaseLW):                                                     
 
         # Generator Object
         self.generator = None
-
-    def set_trial_id(self, value):
-        if self.code_block_trial_id == -1:
-            self.code_block_trial_id = value
-        self.trial_id = value
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Activation can always be removed from object store"""

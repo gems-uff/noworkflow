@@ -43,8 +43,8 @@ class Definition(object):                                                       
         tid = metascript.trial_id
         # Remove after save
         partial = True
-        metascript.code_components_store.fast_store(tid, partial=partial)
-        metascript.code_blocks_store.fast_store(tid, partial=partial)
+        metascript.code_components_store.do_store(partial)
+        metascript.code_blocks_store.do_store(partial)
 
     def create_code_block(self, code, path, is_script, binary, load):
         """Create code block for script/module"""
@@ -73,12 +73,15 @@ class Definition(object):                                                       
             lines = [code]
 
         id_ = self.metascript.code_components_store.add(
+            self.metascript.trial_id,
             os.path.relpath(path, self.metascript.dir),
             "script" if is_script else "module",
             "w",
             1, 0, len(lines), len(lines[-1]), -1
         )
-        self.metascript.code_blocks_store.add(id_, code, binary, None)
+        self.metascript.code_blocks_store.add(
+            id_, self.metascript.trial_id, code, binary, None
+        )
         return code, id_
 
 

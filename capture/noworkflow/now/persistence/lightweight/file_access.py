@@ -26,8 +26,8 @@ class FileAccessLW(BaseLW):                                                     
     nullable = {"activation_id"}
     model = FileAccess
 
-    def __init__(self, id_, name):
-        self.trial_id = -1
+    def __init__(self, id_, trial_id, name):
+        self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
         self.mode = "r"

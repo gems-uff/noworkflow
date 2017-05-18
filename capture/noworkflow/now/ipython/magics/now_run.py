@@ -133,7 +133,7 @@ class NowRun(IpythonCommandMagic, Run):
                 metascript.clear_namespace(erase=False)
                 metascript.clear_sys()
                 sys.modules["__main__"] = magic_cls.shell.user_module
-                run(metascript)
+                run(metascript, args)
 
                 magic_cls.shell.user_ns["__name__"] = save__name__
                 magic_cls.shell.user_ns["__builtins__"] = builtin_mod

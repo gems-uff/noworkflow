@@ -95,13 +95,20 @@ class ObjectStore(object):
         self.store = new_store
         self.count = len(self.store)
 
-    def generator(self, trial_id, partial=False):
+    def generator_set(self, trial_id, partial=False):
+        """Generator used for storing objects in database"""
+        for obj in self.generator(partial=partial):
+            obj.set_trial_id(trial_id)
+            yield obj
+
+    def generator(self, partial=False):
         """Generator used for storing objects in database"""
         for obj in self.values():
             if partial and obj.is_complete():
                 del self[obj.id]
-            obj.set_trial_id(trial_id)
             yield obj
+            if obj.trial_id == -1:
+                print("---->", self.cls, obj)
         if partial:
             self.clear()
 
@@ -109,10 +116,9 @@ class ObjectStore(object):
         """Return true if it has items"""
         return bool(self.count)
 
-    def fast_store(self, trial_id, partial=False):
+    def do_store(self, partial=False):
         """Store object store into database"""
-        self.cls.model.fast_store(trial_id, self, partial)
-
+        self.cls.model.store(self, partial)
 
 class SharedObjectStore(ObjectStore):
     """Temporary storage for LW objects. Share ids"""

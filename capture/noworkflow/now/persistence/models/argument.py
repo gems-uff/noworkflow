@@ -24,8 +24,8 @@ class Argument(AlchemyProxy):
     >>> from noworkflow.tests.helpers.models import arguments
     >>> erase_db()
     >>> trial_id = new_trial()
-    >>> id_ = arguments.add("arg_name", "arg_value")
-    >>> arguments.fast_store(trial_id)
+    >>> id_ = arguments.add(trial_id, "arg_name", "arg_value")
+    >>> arguments.do_store()
 
 
     Load Argument object by (trial_id, id):
@@ -75,8 +75,8 @@ class Argument(AlchemyProxy):
         >>> from noworkflow.tests.helpers.models import arguments
         >>> erase_db()
         >>> trial_id = new_trial()
-        >>> id_ = arguments.add("attr_name", "attr_value")
-        >>> arguments.fast_store(trial_id)
+        >>> id_ = arguments.add(trial_id, "attr_name", "attr_value")
+        >>> arguments.do_store()
         >>> arg = Argument((trial_id, id_))
 
 
