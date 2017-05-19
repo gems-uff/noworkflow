@@ -248,10 +248,13 @@ class Collector(object):
             self.last_activation
         )
 
-    def close_script(self, now_activation):
+    def close_script(self, now_activation, is_module=True, result=None):
         """Close script activation"""
+        if is_module:
+            result = sys.modules[now_activation.name]
+
         self.close_activation(
-            now_activation, self.add_value(sys.modules[now_activation.name])
+            now_activation, self.add_value(result)
         )
 
     def collect_exception(self, activation, exc_handler=None):

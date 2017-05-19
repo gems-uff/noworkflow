@@ -86,7 +86,7 @@ def finder(metascript):
                     if create_module:
                         transformed = False
                         id_ = metascript.definition.create_code_block(
-                            None, self.filename, False, False, True
+                            None, self.filename, "module", False, True
                         )[1]
                     module = imp.load_module(
                         fullname, self.file, self.filename, self.etc

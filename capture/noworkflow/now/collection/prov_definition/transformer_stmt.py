@@ -15,7 +15,7 @@ from .ast_helpers import ReplaceContextWithLoad, ast_copy, temporary
 from .ast_helpers import select_future_imports
 
 from .ast_elements import maybe, context, raise_, now_attribute
-from .ast_elements import L, S, P, none, call, param
+from .ast_elements import L, S, P, none, call, param, true_false
 from .ast_elements import noworkflow, double_noworkflow
 from .ast_elements import activation, function_def, class_def, try_def
 
@@ -27,7 +27,7 @@ from ...utils.cross_version import PY3, PY36
 class RewriteAST(ast.NodeTransformer):                                           # pylint: disable=too-many-public-methods
     """Rewrite AST to add calls to noWorkflow collector"""
 
-    def __init__(self, metascript, code, path, container_id=-1):
+    def __init__(self, metascript, code, path, container_id=-1, cell=None):
         self.metascript = metascript
         self.trial_id = metascript.trial_id
         self.code_components = metascript.code_components_store
@@ -38,6 +38,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         self.container_id = container_id
         self.exc_handler_counter = 0
         self.current_exc_handler = 0
+        self.cell = cell
 
     # data
 
@@ -87,14 +88,17 @@ class RewriteAST(ast.NodeTransformer):                                          
         """Process script, creating initial activation, and closing it.
 
         Surround script with calls to noWorkflow:
-        __now_activation__ = <now>.script_start(__name__, <block_id>)
+        __now_result__ = None
+        __now_activation__ = <now>.start_script(__name__, <block_id>)
         try:
             ...script...
+            __now_result__ = last_expr (if exists)
         except:
             <now>.collect_exception(<act>, <exc>)
             raise
         finally:
-            <now>.close_script(<act>)
+            <now>.close_script(<act>, cell is None, __now_result__)
+        __now_result__
         """
         node.name = os.path.relpath(self.path, self.metascript.dir)
         node.first_line, node.first_col = int(bool(self.code)), 0
@@ -111,12 +115,28 @@ class RewriteAST(ast.NodeTransformer):                                          
             old_body = self.process_body(new_node.body)
             if not old_body:
                 old_body = [ast_copy(ast.Pass(), new_node)]
+            post_body = []
+            if isinstance(old_body[-1], ast.Expr):
+                old_body[-1] = ast_copy(ast.Assign(
+                    [ast.Name("__now_result__", S())],
+                    old_body[-1].value
+                ), new_node.body[-1])
+                post_body.append(
+                    ast.Expr(ast.Name("__now_result__", L()))
+                )
+            name = ast.Name("__name__", L())
+            if self.cell is not None:
+                name = ast.Str(self.cell)
             body = future_imports + [
+                ast_copy(ast.Assign(
+                    [ast.Name("__now_result__", S())],
+                    none()
+                ), new_node),
                 ast_copy(ast.Assign(
                     [ast.Name("__now_activation__", S())],
                     noworkflow(
                         "start_script",
-                        [ast.Name("__name__", L()), ast.Num(self.container_id)]
+                        [name, ast.Num(self.container_id)]
                     )
                 ), new_node),
                 ast_copy(try_def(old_body, [
@@ -129,10 +149,15 @@ class RewriteAST(ast.NodeTransformer):                                          
                     ]), new_node)
                 ], [], [
                     ast_copy(ast.Expr(noworkflow(
-                        "close_script", [activation()]
+                        "close_script",
+                        [
+                            activation(),
+                            true_false(self.cell is None),
+                            ast.Name("__now_result__", L())
+                        ]
                     )), new_node)
                 ], new_node), new_node)
-            ]
+            ] + post_body
             return ast.fix_missing_locations(ast_copy(cls(body), new_node))
 
     def process_body(self, body):

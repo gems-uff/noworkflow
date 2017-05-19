@@ -26,7 +26,7 @@ def finder(metascript):
                 if create_module:
                     transformed = False
                     id_ = metascript.definition.create_code_block(
-                        None, source_path, False, False, True
+                        None, source_path, "module", False, True
                     )[1]
                 super(SourceLoader, self).exec_module(module)
 
@@ -47,7 +47,7 @@ def finder(metascript):
                 if create_module:
                     source_path = module.__file__
                     id_ = metascript.definition.create_code_block(
-                        None, source_path, False, True, True
+                        None, source_path, "module", True, True
                     )[1]
                     super(GenericLoader, self).exec_module(module)
                     # To get version, the module must execute first

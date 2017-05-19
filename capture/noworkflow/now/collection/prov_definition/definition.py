@@ -15,8 +15,6 @@ import weakref
 import pyposast
 import traceback
 
-
-
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
 from ...utils.cross_version import cross_compile, PY3
@@ -46,7 +44,7 @@ class Definition(object):                                                       
         metascript.code_components_store.do_store(partial)
         metascript.code_blocks_store.do_store(partial)
 
-    def create_code_block(self, code, path, is_script, binary, load):
+    def create_code_block(self, code, path, type_, binary, load):
         """Create code block for script/module"""
         if load:
             try:
@@ -75,7 +73,7 @@ class Definition(object):                                                       
         id_ = self.metascript.code_components_store.add(
             self.metascript.trial_id,
             os.path.relpath(path, self.metascript.dir),
-            "script" if is_script else "module",
+            type_,
             "w",
             1, 0, len(lines), len(lines[-1]), -1
         )
@@ -86,19 +84,21 @@ class Definition(object):                                                       
 
 
     @meta_profiler("definition")
-    def collect(self, source, filename, mode, compiler=cross_compile, **kwargs):
-        """Compile source and return code, code_block_id"""
+    def parse(self, type_, source, filename, mode, **kwargs):
+        """Parse source and return tree, code_block_id, transformed"""
         transformed = False
         ast_or_no_source = isinstance(source, ast.AST) or source is None
         tree = source if ast_or_no_source else None
         source, id_ = self.create_code_block(
-            source, filename, self.first, False, ast_or_no_source
+            source, filename,
+            type_,
+            False, ast_or_no_source
         )
-        self.first = False
-
+        cell = filename if type_ == "cell" else None
+        
         try:
             tree = pyposast.parse(source, filename, mode, tree=tree)
-            visitor = RewriteAST(self.metascript, source, filename, id_)
+            visitor = RewriteAST(self.metascript, source, filename, id_, cell)
             
             tree = visitor.visit(tree)
             debug_tree(tree, just_print=[], show_code=[])
@@ -113,6 +113,16 @@ class Definition(object):                                                       
 
         if tree is None:
             tree = ast.parse(source, filename, mode)
+
+        return tree, id_, transformed
+            
+    def collect(self, source, filename, mode, compiler=cross_compile, **kwargs):
+        """Compile source and return code, code_block_id, transformed"""
+        tree, id_, transformed = self.parse(
+            "script" if self.first else "module",
+            source, filename, mode
+        )
+        self.first = False
 
         return cross_compile(
             tree, filename, mode,

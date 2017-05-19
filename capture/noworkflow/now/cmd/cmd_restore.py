@@ -71,12 +71,12 @@ class Restore(Command):
             if info["type"] == "script":
                 metascript.path = path
                 metascript.definition.create_code_block(
-                    None, path, True, False, True
+                    None, path, "script", False, True
                 )
             elif info["type"] == "module":
                 path = os.path.abspath(path)
                 cid = metascript.definition.create_code_block(
-                    None, path, False, False, True
+                    None, path, "module", False, True
                 )[1]
                 version = None
                 try:

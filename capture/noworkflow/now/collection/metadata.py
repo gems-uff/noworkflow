@@ -107,6 +107,10 @@ class Metascript(object):                                                       
         # Save after closing X activations : int
         self.call_storage_frequency = 0
 
+        # Used by jupyter to indicate that it should not transform cell : bool
+        self.jupyter_original = False
+
+
         # Definition object : Definition
         self.definition = Definition(self)
         self.execution = Execution(self)

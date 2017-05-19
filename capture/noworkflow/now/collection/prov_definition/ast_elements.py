@@ -71,6 +71,8 @@ def false():
         return ast.NameConstant(False)
     return ast.Name("False", L())
 
+def true_false(condition):
+    return true() if condition else false()
 
 def call(func, args, keywords=None, star=None, kwargs=None):
     """Create call with args, keywords, star args and kwargs"""
