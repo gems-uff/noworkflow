@@ -12,6 +12,8 @@ from ...now.persistence.models import Trial
 
 from ..collection_testcase import CollectionTestCase
 
+from future.utils import viewitems
+
 # pylint: disable=C0411
 
 import weakref
@@ -78,6 +80,9 @@ class Node(object):
 
     def __hash__(self):
         return hash((type(self), self.node_id))
+
+    def __gt__(self, other):
+        return (self.node_id, type(self)) > (other.node_id, type(other))
 
 
 class ValueNode(Node):
@@ -277,7 +282,7 @@ class Clusterizer(object):
         self.__init__(self.trial(), self.filter, self.synonymer)
 
     def add_dependency(self, source, target, attrs):
-        """Add dependency to self.dependencies"""
+        """Add dependency"""
         dep = (source, target)
         if dep in self.filter.dependencies:
             self.dependencies[dep] = attrs
@@ -294,7 +299,13 @@ class Clusterizer(object):
         nid = node.node_id
         if node not in filter_.after_synonym:
             return None
+
         if nid in created:
+            # Value exists elsewhere. Add value type and create dependency
+            if value.id == value.type.id:
+                # Value is its type (Python's "type")
+                # Stop the dependency creation
+                return node
             type_node = self.process_value(value.type, created[nid][0])
         else:
             created[nid] = (cluster, node)
@@ -303,7 +314,7 @@ class Clusterizer(object):
             type_node = self.process_value(value.type, cluster)
 
         if type_node:
-            self.add_dependency(node, cluster, TYPE_ATTR)
+            self.add_dependency(node, type_node, TYPE_ATTR)
         return node
 
     def process_evaluation(self, evaluation, cluster):
@@ -413,7 +424,8 @@ class TestClusterizer(CollectionTestCase):
                     "\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial()).run()
+        trial = Trial()
+        clusterizer = Clusterizer(trial).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", []),
@@ -426,7 +438,8 @@ class TestClusterizer(CollectionTestCase):
                     "1\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial()).run()
+        trial = Trial()
+        clusterizer = Clusterizer(trial).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2"]),
@@ -440,7 +453,8 @@ class TestClusterizer(CollectionTestCase):
                     "2\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial()).run()
+        trial = Trial()
+        clusterizer = Clusterizer(trial).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2", "e_3"]),
@@ -453,16 +467,17 @@ class TestClusterizer(CollectionTestCase):
                     "a = 1\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial()).run()
+        trial = Trial()
+        clusterizer = Clusterizer(trial).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2", "e_3"]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual({
-            (created["e_3"][1], created["e_2"][1]): EMPTY_ATTR,
-        }, clusterizer.dependencies)
+        self.assertEqual([
+            ((created["e_3"][1], created["e_2"][1]), EMPTY_ATTR),
+        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_chain_of_evaluations(self):
         self.script("# script.py\n"
@@ -471,20 +486,21 @@ class TestClusterizer(CollectionTestCase):
                     "c = b\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial()).run()
+        trial = Trial()
+        clusterizer = Clusterizer(trial).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2", "e_3", "e_4", "e_5", "e_6", "e_7"]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual({
-            (created["e_3"][1], created["e_2"][1]): EMPTY_ATTR,
-            (created["e_4"][1], created["e_3"][1]): EMPTY_ATTR,
-            (created["e_5"][1], created["e_4"][1]): EMPTY_ATTR,
-            (created["e_6"][1], created["e_5"][1]): EMPTY_ATTR,
-            (created["e_7"][1], created["e_6"][1]): EMPTY_ATTR,
-        }, clusterizer.dependencies)
+        self.assertEqual([
+            ((created["e_3"][1], created["e_2"][1]), EMPTY_ATTR),
+            ((created["e_4"][1], created["e_3"][1]), EMPTY_ATTR),
+            ((created["e_5"][1], created["e_4"][1]), EMPTY_ATTR),
+            ((created["e_6"][1], created["e_5"][1]), EMPTY_ATTR),
+            ((created["e_7"][1], created["e_6"][1]), EMPTY_ATTR),
+        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_chain_of_evaluations_with_custom_filter(self):
         self.script("# script.py\n"
@@ -493,9 +509,12 @@ class TestClusterizer(CollectionTestCase):
                     "c = b\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial())
+        trial = Trial()
+        clusterizer = Clusterizer(trial)
         class CustomFilter(Filter):
             def __contains__(self, element):
+                if isinstance(element, ValueNode):
+                    return False
                 if isinstance(element, EvaluationNode):
                     return element.evaluation.code_component.name in ("a", "c")
                 return True
@@ -507,10 +526,10 @@ class TestClusterizer(CollectionTestCase):
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual({
-            (created["e_4"][1], created["e_3"][1]): EMPTY_ATTR,
-            (created["e_7"][1], created["e_4"][1]): PROPAGATED_ATTR,
-        }, clusterizer.dependencies)
+        self.assertEqual([
+            ((created["e_4"][1], created["e_3"][1]), EMPTY_ATTR),
+            ((created["e_7"][1], created["e_4"][1]), PROPAGATED_ATTR),
+        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_chain_of_evaluations_with_same_assignment_synonymer(self):
         self.script("# script.py\n"
@@ -519,7 +538,8 @@ class TestClusterizer(CollectionTestCase):
                     "c = b\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial())
+        trial = Trial()
+        clusterizer = Clusterizer(trial)
         clusterizer.synonymer = SameSynonymer()
         clusterizer.run()
 
@@ -528,11 +548,11 @@ class TestClusterizer(CollectionTestCase):
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual({
-            (created["e_3"][1], created["e_2"][1]): EMPTY_ATTR,
-            (created["e_5"][1], created["e_3"][1]): EMPTY_ATTR,
-            (created["e_7"][1], created["e_5"][1]): EMPTY_ATTR,
-        }, clusterizer.dependencies)
+        self.assertEqual([
+            ((created["e_3"][1], created["e_2"][1]), EMPTY_ATTR),
+            ((created["e_5"][1], created["e_3"][1]), EMPTY_ATTR),
+            ((created["e_7"][1], created["e_5"][1]), EMPTY_ATTR),
+        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_chain_of_evaluations_with_same_value_synonymer(self):
         self.script("# script.py\n"
@@ -541,7 +561,8 @@ class TestClusterizer(CollectionTestCase):
                     "c = b\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial())
+        trial = Trial()
+        clusterizer = Clusterizer(trial)
         clusterizer.synonymer = ValueSynonymer()
         clusterizer.run()
 
@@ -556,15 +577,45 @@ class TestClusterizer(CollectionTestCase):
                     "1\n")
         self.clean_execution()
 
-        clusterizer = Clusterizer(Trial())
+        trial = Trial()
+        clusterizer = Clusterizer(trial)
         clusterizer.filter = AcceptAllNodesFilter()
         clusterizer.run()
 
         self.assertEqual(
-            ("e_1", "cluster_1", ["e_2", "v_1"]),
+            ("e_1", "cluster_1", ["e_2", "v_3", "v_2", "v_1"]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual({
-            (created["e_2"][1], created["v_1"][1]): VALUE_ATTR,
-        }, clusterizer.dependencies)
+        self.assertEqual([
+            ((created["e_2"][1], created["v_3"][1]), VALUE_ATTR),
+            ((created["v_1"][1], created["v_1"][1]), TYPE_ATTR),
+            ((created["v_2"][1], created["v_1"][1]), TYPE_ATTR),
+            ((created["v_3"][1], created["v_2"][1]), TYPE_ATTR),
+        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+
+    def test_single_evaluation_with_compartment(self):
+        self.script("# script.py\n"
+                    "[1]\n")
+        self.clean_execution()
+        trial = Trial()
+        clusterizer = Clusterizer(trial)
+        clusterizer.filter = AcceptAllNodesFilter()
+        clusterizer.run()
+
+        self.assertEqual(
+            ("e_1", "cluster_1", ["e_2", "v_3", "v_2", "v_1", "e_3", "v_5", "v_4"]),
+            clusterizer.main_cluster.to_tree()
+        )
+        created = clusterizer.created
+        self.assertEqual([
+            ((created["e_2"][1], created["v_3"][1]), VALUE_ATTR),
+            ((created["e_3"][1], created["e_2"][1]), EMPTY_ATTR),
+            ((created["e_3"][1], created["v_5"][1]), VALUE_ATTR),
+            ((created["v_1"][1], created["v_1"][1]), TYPE_ATTR),
+            ((created["v_2"][1], created["v_1"][1]), TYPE_ATTR),
+            ((created["v_3"][1], created["v_2"][1]), TYPE_ATTR),
+            ((created["v_4"][1], created["v_1"][1]), TYPE_ATTR),
+            ((created["v_5"][1], created["v_4"][1]), TYPE_ATTR),
+        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+
