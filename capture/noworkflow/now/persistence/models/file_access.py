@@ -310,3 +310,10 @@ class UniqueFileAccess(FileAccess):
 
     def __hash__(self):
         return hash(self.__key())
+
+    def resolve_node(self, clusterizer, cluster, nid):
+        """Resolve node for clusterizer"""
+        fcluster = clusterizer.main_cluster
+        if not self.is_internal:
+            fcluster = cluster
+        return cluster, nid

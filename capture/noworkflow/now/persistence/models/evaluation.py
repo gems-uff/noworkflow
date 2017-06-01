@@ -16,7 +16,7 @@ from ...utils.prolog import PrologAttribute, PrologNullable
 from .. import relational
 
 from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
-from .base import backref_one, backref_many
+from .base import backref_one, backref_many, proxy
 
 from .dependency import Dependency
 from .activation import Activation
@@ -161,6 +161,35 @@ class Evaluation(AlchemyProxy):
         "an evaluation *Id* of *CodeComponentId* finalized at *Moment*\n"
         "in *ActivationId*, returning *ValueId*."
     ))
+
+    @property
+    def assignment_evaluation(self):
+        """Return "assignment" dependency.
+
+         Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> config = TrialConfig("finished")
+        >>> trial_id = new_trial(config,
+        ...                      assignment=assign, erase=True)
+
+
+        Find Evaluation
+        >>> a_write = Evaluation((trial_id, assign.a_write_eval))
+        >>> a_write.assignment_evaluation is None
+        True
+
+        >>> a_read = Evaluation((trial_id, assign.a_read_eval))
+        >>> a_read.assignment_evaluation.id == a_write.id
+        True
+        """
+        return getattr(proxy(
+            self._get_instance().dependencies_as_dependent
+            .filter(Dependency.m.type == "assignment")
+            .first()
+        ), "dependency", None)
 
     @classmethod
     def find_by_value_id(cls, trial_id, value_id, order="asc", session=None):

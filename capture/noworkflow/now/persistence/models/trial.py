@@ -199,7 +199,6 @@ class Trial(AlchemyProxy):
     children = backref_many("children")
 
     DEFAULT = {
-        "dependency_config.show_blackbox_dependencies": False,
         "dot.format": "png",
         "graph.width": 500,
         "graph.height": 500,
@@ -209,8 +208,6 @@ class Trial(AlchemyProxy):
     }
 
     REPLACE = {
-        "dependency_config_show_blackbox_dependencies":
-            "dependency_config.show_blackbox_dependencies",
         "dot_format": "dot.format",
         "graph_width": "graph.width",
         "graph_height": "graph.height",
@@ -273,14 +270,14 @@ class Trial(AlchemyProxy):
         #self._store_pk(obj)
         #self._restore_instance()
 
-        from ...models.graphs.dependency_graph import DependencyConfig
-        from ...models.graphs.dependency_graph import DependencyFilter
+        #from ...models.graphs.dependency_graph import DependencyConfig
+        #from ...models.graphs.dependency_graph import DependencyFilter
         from ...models.graphs.trial_graph import TrialGraph
         from ...models.trial_prolog import TrialProlog
         from ...models.trial_dot import TrialDot
 
-        self.dependency_config = DependencyConfig()
-        self.dependency_filter = DependencyFilter(self)
+        #self.dependency_config = DependencyConfig()
+        #self.dependency_filter = DependencyFilter(self)
         self.graph = TrialGraph(self)
 
         self.prolog = TrialProlog(self)

@@ -146,7 +146,64 @@ class Activation(AlchemyProxy):
             (Evaluation.m.activation_id == self.id)
         )
 
-        #return self.evaluations.this_activation
+    @property
+    def has_evaluations(self):
+        """Load internal. Return SQLAlchemy query
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import FuncConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> function = FuncConfig("f", 1, 0, 2, 8)
+        >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+        ...                      function=function, erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+        >>> trial = Trial(trial_id)
+        >>> main_activation = trial.initial_activation
+
+        Return internal activations:
+        >>> main_activation.has_evaluations
+        True
+        """
+        for _ in self.evaluations:
+            return True
+        return False
+
+    def recursive_accesses(self, depth, max_depth=-1, external=True):
+        """Get all accesses recursively
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import FuncConfig, AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig(arg="a")
+        >>> function = FuncConfig("f", 1, 0, 2, 8)
+        >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+        ...                      function=function, erase=True)
+        >>> trial = Trial(trial_id)
+
+        Load Activation by (trial_id, id):
+        >>> activation = Activation((trial_id, assign.f_activation))
+
+        Load Activation file accesses:
+        >>> list(activation.recursive_accesses(0))  # doctest: +ELLIPSIS
+        [access(...)., access(...).]
+        """
+        if max_depth == -1:
+            max_depth = float('inf')
+
+        for access in self.file_accesses:
+            if external or access.is_internal:
+                yield access
+        if depth + 1 > max_depth:
+            for act in self.activations:
+                act_accesses = act.recursive_accesses(
+                    depth + 1, max_depth, external
+                )
+                for access in act_accesses:
+                    yield access
 
     @property
     def caller(self):

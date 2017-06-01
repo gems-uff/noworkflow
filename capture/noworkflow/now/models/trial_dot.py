@@ -11,7 +11,7 @@ import weakref
 
 from ..persistence.models.base import Model
 
-from .graphs.dependency_graph import DotVisitor
+#from .graphs.dependency_graph import DotVisitor
 
 
 CALL_SCHEMA = "#3A85B9", "box", "white", "filled"
@@ -63,6 +63,7 @@ class TrialDot(Model):                                                          
 
     def export_text(self):
         """Export facts from trial as text"""
+        print(self.trial.dependency_filter)
         dep_filter = self.trial.dependency_filter
         if self.run:
             dep_filter.run()

@@ -8,8 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..models.graphs.dependency_graph import DependencyConfig
-from ..models.graphs.dependency_graph import variable_id
+#from ..models.graphs.dependency_graph import DependencyConfig
+#from ..models.graphs.dependency_graph import variable_id
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 
@@ -23,7 +23,7 @@ class Dataflow(Command):
         add_arg = self.add_argument
 
         DependencyConfig.create_arguments(add_arg)
-        add_arg("-v", "--value-length", type=int, default=0,
+        add_arg("--value-length", type=int, default=0,
                 help="R|maximum length of values (default: 0)\n"
                      "0 indicates that values should be hidden.\n"
                      "The values appear on the second line of node lables.\n"

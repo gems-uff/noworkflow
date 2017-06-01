@@ -13,6 +13,7 @@ from future.utils import viewvalues, viewitems
 
 from ..now.collection.metadata import Metascript
 from ..now.utils.cross_version import PY3
+from .helpers import models
 
 
 NAME = "noworkflow/tests/examples/script.py"
@@ -21,8 +22,9 @@ NAME = "noworkflow/tests/examples/script.py"
 class CollectionTestCase(unittest.TestCase):
     """Helpers to test noWorkflow collection"""
 
-    def find_all(self, store, **kwargs):                                             # pylint: disable=no-self-use
+    def find_all(self, store, **kwargs):
         """Find objects in object store by kwargs attributes"""
+        # pylint: disable=no-self-use
         for component in viewvalues(store):
             found = True
             for key, value in viewitems(kwargs):
@@ -32,8 +34,9 @@ class CollectionTestCase(unittest.TestCase):
             if found:
                 yield component
 
-    def find(self, store, **kwargs):                                             # pylint: disable=no-self-use
+    def find(self, store, **kwargs):
         """Find object in object store by kwargs attributes"""
+        # pylint: disable=no-self-use
         for component in self.find_all(store, **kwargs):
             return component
         return None
@@ -64,16 +67,38 @@ class CollectionTestCase(unittest.TestCase):
 
     def get_evaluations(self, **kwargs):
         """Execute and get evaluation"""
+        self.execute()
+        var = self.find_code_component(**kwargs)
+        if not var:
+            return []
+        return list(self.find_all_evaluations(code_component_id=var.id))
+
+    def execute(self):
+        """Execute script"""
+        # pylint: disable=attribute-defined-outside-init
         if not hasattr(self, 'executed'):
             self.metascript.execution.collect_provenance()
             self.assertEqual(self.metascript.execution.msg,
                              "the execution of trial -1 finished successfully")
             self.executed = True
 
-        var = self.find_code_component(**kwargs)
-        if not var:
-            return []
-        return list(self.find_all_evaluations(code_component_id=var.id))
+    def clean_execution(self):
+        """Clear database and execute"""
+        # pylint: disable=attribute-defined-outside-init
+        models.meta = self.metascript
+        models.erase_database()
+        self.metascript.trial_id = models.Trial.create(**models.trial_params(
+            script=self.metascript.code,
+            path=self.metascript.path
+        ))
+        if not hasattr(self, 'executed'):
+            self.metascript.execution.collect_provenance()
+            self.assertEqual(self.metascript.execution.msg,
+                             "the execution of trial 1 finished successfully")
+            self.executed = True
+        self.metascript.deployment.store_provenance()
+        self.metascript.definition.store_provenance()
+        self.metascript.execution.store_provenance()
 
     def get_evaluation(self, **kwargs):
         """Execute and get evaluation"""
@@ -82,6 +107,7 @@ class CollectionTestCase(unittest.TestCase):
         return None
 
     def get_compartment_value(self, whole, name, **kwargs):
+        """Return compartment value"""
         compartment = self.find_compartment(
             whole_id=whole.value_id, name=name, **kwargs)
         if not compartment:
@@ -150,15 +176,16 @@ class CollectionTestCase(unittest.TestCase):
         self.assertIsNone(dep)
 
 
-    def rtype(self, name):                                                       # pylint: disable=no-self-use
+    def rtype(self, name):
         """Create type repr according to python version"""
+        # pylint: disable=no-self-use
         keyword = "class" if PY3 else "type"
         return "<{} '{}'>".format(keyword, name)
 
 
     def script(self, code, name=NAME, **kwargs):
         """Create metascript with the desired code"""
-        self.maxDiff = None
+        # pylint: disable=attribute-defined-outside-init
         self.metascript = Metascript(
             path=name,
             dir=os.path.dirname(name),
@@ -169,6 +196,6 @@ class CollectionTestCase(unittest.TestCase):
 
     def compile(self):
         """Compile script to apply AST transformations"""
-        compiled = self.metascript.definition.compile(
+        self.metascript.definition.compile(
             self.metascript.code, self.metascript.path, "exec"
         )
