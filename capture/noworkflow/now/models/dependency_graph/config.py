@@ -4,15 +4,22 @@
 # Please, consult the license terms in the LICENSE file.
 """Dependency graph configuration"""
 
+from collections import defaultdict
 
-class DependencyConfig(object):
+from future.utils import viewvalues
+
+from .synonymers import Synonymer
+from .filters import FilterValuesOut
+
+
+class DataflowConfig(object):
     """Configure dependency graph"""
 
     # pylint: disable=too-many-instance-attributes
     # This is a configuration class. It is expected to have many attributes
 
     def __init__(self):
-        self.rank_line = True
+        self.rank_option = 0
         self.show_accesses = True
         self.show_values = True
         self.combine_accesses = True
@@ -43,8 +50,11 @@ class DependencyConfig(object):
         add_arg("-u", "--show-internal-use", action="store_false",
                 help="show variables and functions which name starts with a "
                      "leading underscore")
-        add_arg("-l", "--rank-line", action="store_true",
-                help="R|align variables of a line in the same column\n"
+        add_arg("-r", "--rank", type=int, default=0, metavar="R",
+                help="R|align evalutions in the same column (default: 0)\n"
+                     "0 does no align\n"
+                     "1 aligns by line\n"
+                     "2 aligns by line and column\n"
                      "With this option, all variables in a loop appear\n"
                      "grouped, reducing the width of the graph.\n"
                      "It may affect the graph legibility.\n"
@@ -68,5 +78,34 @@ class DependencyConfig(object):
         self.show_external_files = args.accesses in {2, 4}
         self.max_depth = args.depth or float("inf")
         self.show_internal_use = not bool(args.show_internal_use)
-        self.rank_line = bool(args.rank_line)
+        self.rank_option = bool(args.rank_line)
         self.mode = args.mode
+
+    def rank(self, cluster, new_nodes):
+        """Group cluster evaluations"""
+        if self.rank_option == 0:
+            return
+        by_line = defaultdict(list)
+        for node in new_nodes:
+            if node is None:
+                continue
+            if self.rank_option == 1:
+                line = node.evaluation.code_component.first_char_line
+            else:
+                line = (
+                    node.evaluation.code_component.first_char_line,
+                    node.evaluation.code_component.first_char_column,
+                )
+
+            by_line[line].append(node)
+
+        for eva_nids in viewvalues(by_line):
+            cluster.ranks.append(eva_nids)
+
+    def synonymer(self):
+        """Return synonymer based on config"""
+        return Synonymer()
+
+    def filter(self):
+        """Return filter based on config"""
+        return FilterValuesOut()

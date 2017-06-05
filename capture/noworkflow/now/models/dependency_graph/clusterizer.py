@@ -8,159 +8,202 @@ import weakref
 
 from collections import defaultdict
 
-from future.utils import viewvalues, viewitems
+from future.utils import viewitems
 
-from ...persistence.models import Evaluation, UniqueFileAccess, Value
-from ...persistence.models import FileAccess
+from ...persistence.models import UniqueFileAccess
 
-from .structures import EMPTY_ATTR, PROPAGATED_ATTR, ACCESS_ATTR, VALUE_ATTR
-
-from .structures import Cluster, NodeResolver, Attributes, SynonymGroups
-from .structures import AcceptAllNodesFilter
-from .structures import ActivationEvaluation, ActivationCluster
-
-
+from .attributes import VALUE_ATTR, TYPE_ATTR
+from .attributes import EMPTY_ATTR, ACCESS_ATTR, PROPAGATED_ATTR
+from .config import DataflowConfig
+from .node_types import AccessNode, ValueNode
+from .node_types import ActivationNode, ClusterNode, EvaluationNode
 
 
 class Clusterizer(object):
-    """Handle Dot export"""
-
+    """Clusterize trial activations"""
     # pylint: disable=too-many-instance-attributes
-    # The attributtes are reasonable
 
-    def __init__(self, trial, config=None, filter_obj=None):
-        self.trial = weakref.proxy(trial)
-        self.config = config or self.trial.dependency_config
-
-        # Node id synonyms: Map synonym identifier to synonym group
-        self.synonyms = SynonymGroups()
-
-        # Arrows: nid -> nid [type = "value"]
+    def __init__(self, trial, config=None, filter_=None, synonymer=None):
+        self.trial = weakref.ref(trial)
+        self.config = config or DataflowConfig()
+        self.main_cluster = ClusterNode(trial.initial_activation)
+        # Map of dependencies as (node1, node2): style
+        self.dependencies = {}
+        # Complete map of dependencies as node_id1: {node_id2: style}
         self.departing_arrows = defaultdict(dict)
         self.arriving_arrows = defaultdict(dict)
-
-        # Actual arrows
-        self.dependencies = {}
-
-        # Create cache
-        self.resolver = NodeResolver(self.trial)
-
-        # Cluster information
-        self.main_cluster = Cluster(-1, "main")
-        self.current_cluster = self.main_cluster
-
-        # Map node to cluster. It also indicates created nodes
+        # Map of node_id to nodes
         self.created = {}
-
-        # Filter nodes
-        self.filter = filter_obj or AcceptAllNodesFilter()
-        self.filter.resolver = self.resolver
-
-        # Status
-        self.executed = False
+        # Filter and synonymer
+        self.filter = filter_ or self.config.filter()
+        self.synonymer = synonymer or self.config.synonymer()
+        self.synonymer.clusterizer = weakref.proxy(self)
 
     def erase(self):
         """Erase graph"""
-        self.__init__(self.trial, self.config, self.filter)
+        self.__init__(self.trial(), self.config, self.filter, self.synonymer)
 
-    def add_node(self, element, cluster=None):
-        """Create node in cluster
+    def add_dependency(self, source, target, attrs):
+        """Add dependency"""
+        dep = (source, target)
+        if (dep, attrs) in self.filter.dependencies:
+            self.dependencies[dep] = attrs
 
-        Arguments:
-        element -- FileAccess/Value/Evaluation
-        cluster -- activation cluster
+    def add_node(self, node, cluster):
+        """Add node to graph"""
+        created = self.created
+        filter_ = self.filter
+        synonymer = self.synonymer
+        if node not in filter_.before_synonym:
+            return None, "before"
+        node = synonymer.get(node)
+        nid = node.node_id
+        if node not in filter_.after_synonym:
+            return None, "after"
+        if nid in created:
+            return node, "exists"
+        created[nid] = (cluster, node)
+        cluster.add(node)
+        synonymer.set(node)
+        return node, "done"
 
-        Returns:
-        node_id -- Node id in graph
-        cluster -- Resulting cluster, or None if it gets filtered out
-        added -- indicates whether the function added or not the element
-            Note that it may not add for two reasons:
-            - If it already exists, returns the cluster where it exists
-            - If it was filtered out, the resulting cluster is None
+    def add_evaluation_node(self, node, cluster, value=None):
+        """Add evaluation node with its value"""
+        node, reason = self.add_node(node, cluster)
+        if reason != "done":
+            return None
 
-        """
-        if cluster is None:
-            cluster = self.current_cluster
+        if self.filter.show_values and value is not None:
+            value_node = self.process_value(value, cluster)
+            if value_node:
+                self.add_dependency(node, value_node, VALUE_ATTR)
 
-        element, nid = self.resolver(element)
+        return node
 
-        if isinstance(element, ActivationCluster):
-            self.current_cluster = element
-            element.depth = cluster.depth + 1
+    def process_value(self, value, cluster):
+        """Process node and add it to cluster"""
+        type_node = None
+        node, reason = self.add_node(ValueNode(value), cluster)
+        if reason == "exists":
+            # Value exists elsewhere. Add value type and create dependency
+            if value.id == value.type.id:
+                # Value is its type (Python's "type")
+                # Stop the dependency creation
+                return node
+            nid = node.node_id
+            type_node = self.process_value(value.type, self.created[nid][0])
+        elif reason == "done":
+            type_node = self.process_value(value.type, cluster)
+        else:
+            return None
 
-        if nid not in self.filter:
-            return nid, None, False
+        if type_node:
+            self.add_dependency(node, type_node, TYPE_ATTR)
+        return node
 
-        nid = self._get_synonym(nid, element)
+    def process_evaluation(self, evaluation, cluster):
+        """Process evaluation and add it to cluster"""
+        act = evaluation.this_activation
+        if act is not None:
+            return self.process_activation(act, evaluation, cluster)
 
-        result_cluster = self.created.get(nid)
-        added = False
-        if result_cluster is None:
-            if hasattr(element, "resolve_node"):
-                cluster, nid = element.resolve_node(self, cluster, nid)
-            cluster.add_component(nid)
-            result_cluster = self.created[nid] = cluster
-            added = True
-            self._set_synonym(nid, element)
-        return nid, result_cluster, added
+        return self.add_evaluation_node(
+            EvaluationNode(evaluation), cluster, evaluation.value
+        )
 
-    def _get_synonym(self, nid, element):
-        """Get synonym nid for element"""
-        synonyms = self.synonyms
-        if isinstance(element, FileAccess) and self.config.combine_accesses:
-            syn_id = "a:{}".format(element.name)
-            if syn_id not in synonyms:
-                return nid
-            group = synonyms[syn_id]
-            synonyms[nid] = group
-            group.append(nid)
-            return synonyms.get_node_id(syn_id)
-        return synonyms.get_node_id(nid)
+    def process_activation(self, activation, evaluation, cluster):
+        """Process activation and add it to cluster"""
+        at_maximum_depth = cluster.depth + 1 > self.config.max_depth
+        if not activation.has_evaluations or at_maximum_depth:
+            node = self.add_evaluation_node(
+                ActivationNode(activation, evaluation),
+                cluster, evaluation.value
+            )
+        else:
+            node = self.add_cluster_node(activation, evaluation, cluster)
 
-    def _set_synonym(self, nid, element):
-        """Create synonym for element"""
-        synonyms = self.synonyms
-        if isinstance(element, FileAccess) and self.config.combine_accesses:
-            syn_id = "a:{}".format(element.name)
-            synonyms.update_main(syn_id, nid)
-            group = synonyms[syn_id]
-            synonyms[nid] = group
-            group.append(nid)
+        if node is None or not self.filter.show_accesses:
+            return node
+        # Add acesses
+        departing_arrows = self.departing_arrows
+        arriving_arrows = self.arriving_arrows
+        nid = node.node_id
+        activation_accesses = activation.recursive_accesses(
+            cluster.depth,
+            max_depth=self.config.max_depth,
+            external=self.config.show_external_files
+        )
+        for access in activation_accesses:
+            access_node = self.process_access(access, cluster)
+            if access_node is None:
+                continue
+            acc_nid = access_node.node_id
+            if set("r+") & set(access.mode):
+                departing_arrows[nid][acc_nid] = ACCESS_ATTR
+                arriving_arrows[acc_nid][nid] = ACCESS_ATTR
+            if set("wxa+") & set(access.mode):
+                arriving_arrows[nid][acc_nid] = ACCESS_ATTR
+                departing_arrows[acc_nid][nid] = ACCESS_ATTR
+        return node
 
-    def _create_dependencies(self):
+    def process_access(self, access, cluster):
+        """Process access and add it to cluster"""
+        node, _ = self.add_node(
+            AccessNode(UniqueFileAccess((access.trial_id, access.id))),
+            cluster
+        )
+        return node
+
+    def add_cluster_node(self, activation, evaluation, cluster):
+        """Create new cluster"""
+        node = self.add_evaluation_node(
+            ClusterNode(activation, evaluation, cluster.depth + 1),
+            cluster, evaluation.value
+        )
+        if isinstance(node, ClusterNode):
+            self.process_cluster(node)
+        return node
+
+    def process_cluster(self, cluster):
+        """Process cluster"""
+        new_nodes = []
+        for evaluation in cluster.activation.evaluations:
+            new_nodes.append(self.process_evaluation(evaluation, cluster))
+        self.config.rank(cluster, new_nodes)
+
+    def dep_iter(self, dependencies):
+        """Iterate on dependencies and get node_ids"""
+        synonymer = self.synonymer
+        for dep in dependencies:
+            dependency_nid = EvaluationNode.get_node_id(dep.dependency_id)
+            dependent_nid = EvaluationNode.get_node_id(dep.dependent_id)
+            dependency_nid = synonymer.from_node_id(dependency_nid)
+            dependent_nid = synonymer.from_node_id(dependent_nid)
+            yield dep, dependent_nid, dependency_nid
+
+    def _create_evaluation_dependencies(self):
         """Load propagatable dependencies from database into a graph"""
         departing_arrows = self.departing_arrows
         arriving_arrows = self.arriving_arrows
-        resolver = self.resolver
         attributes = EMPTY_ATTR
-
-        for dep in self.trial.dependencies:
-            dependency_nid = resolver.node_id((Evaluation, dep.dependency_id))
-            dependent_nid = resolver.node_id((Evaluation, dep.dependent_id))
-            dependency_nid = self._get_synonym(dependency_nid, None)
-            dependent_nid = self._get_synonym(dependent_nid, None)
-
-            departing_arrows[dependent_nid][dependency_nid] = attributes
-            arriving_arrows[dependency_nid][dependent_nid] = attributes
+        for dep, source, target in self.dep_iter(self.trial().dependencies):
+            dep_attributes = attributes.update({"_type": dep.type})
+            departing_arrows[source][target] = dep_attributes
+            arriving_arrows[target][source] = dep_attributes
 
     def _all_nodes(self):
         """Iterate on all possible nodes"""
-        resolver = self.resolver
-        for evaluation in self.trial.evaluations:
-            yield evaluation, resolver.node_id(evaluation)
-        for access in self.trial.file_accesses:
-            yield access, resolver.node_id(access)
+        for evaluation in self.trial().evaluations:
+            yield EvaluationNode.get_node_id(evaluation.id)
 
     def _fix_dependencies(self):
         """Propagate dependencies, removing missing nodes"""
         created = self.created
-        synonyms = self.synonyms
         arriving_arrows = self.arriving_arrows
         departing_arrows = self.departing_arrows
 
-
-        for _, nid in self._all_nodes():
-            if nid in created or nid in synonyms:
+        for nid in self._all_nodes():
+            if nid in created:
                 continue  # Node exists in the graph, nothing to fix here
 
             for source, attr_arriving in viewitems(arriving_arrows[nid]):
@@ -177,109 +220,30 @@ class Clusterizer(object):
                     arriving_arrows[target][source] = attrs
             del departing_arrows[nid]
 
-    def _add_value(self, value, cluster):
-        """Add value and type recursively"""
-        value_nid, cluster, added = self.add_node(value, cluster)
-        if cluster is None:
-            return None
-        if not added:
-            return value_nid
-        type_nid = self._add_value(value.type, cluster)
-        if type_nid is not None:
-            self.dependencies[(value_nid, type_nid)] = VALUE_ATTR
-        return value_nid
-
-
-    def _create_values(self):
-        """Load non propagatable dependencies from database into a graph"""
-        if not self.config.show_values:
-            return
-        created = self.created
-
-        # Get created evaluations. It must be a list, because we modify created
-        created_evaluations = [
-            (nid, cluster) for nid, cluster in viewitems(created)
-            if nid.startswith("e")
-        ]
-
-        for eva_nid, cluster in created_evaluations:
-            evaluation = self.cache[eva_nid]
-            value_nid = self._add_value(evaluation.value, cluster)
-            if value_nid is not None:
-                self.dependencies[(eva_nid, value_nid)] = VALUE_ATTR
-
-    def _show_dependencies(self):
-        """Show dependencies"""
+    def process_dependencies(self):
+        """Load dependencies from db"""
+        departing_arrows = self.departing_arrows
         created = self.created
         filter_ = self.filter
-        departing_arrows = self.departing_arrows
-
-        self._create_dependencies()
+        empty = (None, None)
+        self._create_evaluation_dependencies()
         self._fix_dependencies()
 
-        for source, targets in viewitems(departing_arrows):
-            if source not in created or source not in filter_:
+        for source_nid, targets in viewitems(departing_arrows):
+            _, source = created.get(source_nid, empty)
+            if source is None or source not in filter_.after_synonym:
                 continue
-            for target, style in viewitems(targets):
-                if target not in created or target not in filter_:
+            for target_nid, style in viewitems(targets):
+                _, target = created.get(target_nid, empty)
+                if target is None or target not in filter_.after_synonym:
                     continue
-                dep = (node_id(source), node_id(target))
-                self.dependencies[dep] = style
 
-    def _dataflow(self, function):
-        """Create dataflow graph"""
-        activation = self.trial.initial_activation
-        function(activation, self.main_cluster)
-        self._prepare_rank(activation, self.main_cluster)
-
-        self._show_dependencies()
-        self._create_values()
-
-
-    def _add_activation(self, activation, cluster):
-        """Export simulation activation"""
-        resolver = self.resolver
-        for evaluation in activation.evaluations:
-            
-            node = resolver.fix_type(evaluation)
-            activation = evaluation.this_activation
-            self._add_node(evaluation, cluster)
-        self._prepare_rank(activation, cluster)
-
-    def _group_activation(self, activation, cluster):
-        """Export simulation activation"""
-        synonyms = self.synonyms
-
-        for eva in activation.evaluations:
-            if eva.this_activation:  # Is activation
-                self._add_call(eva, cluster, self._group_activation)
-            eva_nid = node_id(eva)
-            value_nid = node_id((Value, eva.value_id))
-            group = synonyms[value_nid]
-            if not group.node_id:
-                synonyms.update_main(value_nid, eva_nid)
-                self._add_node(eva, cluster)
-            group.append(eva_nid)
-            synonyms[eva_nid] = group
-
-    def _prospective_activation(self, activation, cluster):
-        """Export prospective activation"""
-        # ToDo
-
-    def simulation(self):
-        """Create simulation graph"""
-        self._dataflow(self._simulation_activation)
-
-    def group(self):
-        """Create group graph"""
-        self._dataflow(self._group_activation)
-
-    def prospective(self):
-        """Create prospective graph"""
-        self._dataflow(self._prospective_activation)
+                self.add_dependency(source, target, style)
 
     def run(self):
-        """Filter variables graph according to mode"""
+        """Process main_cluster to create nodes"""
         self.erase()
-        getattr(self, self.config.mode)()
-        self.executed = True
+        self.process_cluster(self.main_cluster)
+        self.created[self.main_cluster.node_id] = (None, self.main_cluster)
+        self.process_dependencies()
+        return self
