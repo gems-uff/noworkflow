@@ -2,7 +2,7 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Synonymers for Dataflow graph"""
+"""Synonymers for dependency graph"""
 
 from .node_types import EvaluationNode, AccessNode
 

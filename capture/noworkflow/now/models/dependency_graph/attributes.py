@@ -2,7 +2,7 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Attributes for Dataflow graph"""
+"""Attributes for dependency graph"""
 
 from copy import copy
 

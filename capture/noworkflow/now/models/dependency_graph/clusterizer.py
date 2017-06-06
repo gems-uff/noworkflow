@@ -14,7 +14,7 @@ from ...persistence.models import UniqueFileAccess
 
 from .attributes import VALUE_ATTR, TYPE_ATTR
 from .attributes import EMPTY_ATTR, ACCESS_ATTR, PROPAGATED_ATTR
-from .config import DataflowConfig
+from .config import DependencyConfig
 from .node_types import AccessNode, ValueNode
 from .node_types import ActivationNode, ClusterNode, EvaluationNode
 
@@ -25,7 +25,7 @@ class Clusterizer(object):
 
     def __init__(self, trial, config=None, filter_=None, synonymer=None):
         self.trial = weakref.ref(trial)
-        self.config = config or DataflowConfig()
+        self.config = config or DependencyConfig()
         self.main_cluster = ClusterNode(trial.initial_activation)
         # Map of dependencies as (node1, node2): style
         self.dependencies = {}
@@ -73,10 +73,15 @@ class Clusterizer(object):
         if reason != "done":
             return None
 
-        if self.filter.show_values and value is not None:
+        if value is None:
+            return node
+
+        if self.filter.show_values:
             value_node = self.process_value(value, cluster)
             if value_node:
                 self.add_dependency(node, value_node, VALUE_ATTR)
+        else:
+            node.value = value.value
 
         return node
 
@@ -136,7 +141,7 @@ class Clusterizer(object):
         activation_accesses = activation.recursive_accesses(
             cluster.depth,
             max_depth=self.config.max_depth,
-            external=self.config.show_external_files
+            external=self.filter.show_external_accesses
         )
         for access in activation_accesses:
             access_node = self.process_access(access, cluster)

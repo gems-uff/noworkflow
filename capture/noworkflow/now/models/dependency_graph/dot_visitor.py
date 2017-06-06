@@ -6,20 +6,28 @@
 
 from contextlib import contextmanager
 from .base_visitor import ClusterVisitor
-from .helpers import escape
+from .attributes import Attributes
+
+
+def escape(string, size=55):
+    """Escape string for dot file"""
+    if not size or not string:
+        return ""
+    if len(string) > size:
+        half_size = (size - 5) // 2
+        string = string[:half_size] + " ... " + string[-half_size:]
+    return "" if string is None else string.replace('"', '\\"')
 
 
 class DotVisitor(ClusterVisitor):
     """Create dot file"""
 
-    def __init__(self, fallback, name_length, value_length, types, dep_filter):  # pylint: disable=too-many-arguments
-        super(DotVisitor, self).__init__(dep_filter)
+    def __init__(self, clusterizer, name_length=55, value_length=55):
+        super(DotVisitor, self).__init__(clusterizer)
         self.result = []
+        self.indent = ""
         self.name_length = name_length
         self.value_length = value_length
-        self.fallback = fallback
-        self.types = types
-        self.indent = ""
 
     def insert(self, text):
         """Insert indented line"""
@@ -34,83 +42,98 @@ class DotVisitor(ClusterVisitor):
         self.indent = self.indent[:4]
         self.insert("}")
 
-    def process_cluster_content(self, cluster, ranks):
+    def process_cluster_content(self, cluster):
         """Process cluster content"""
-        for component in cluster.components:
-            self.visit(component)
+        for node in cluster.elements:
+            self.visit(node)
 
-        for rank in ranks:
-            joined = " ".join(rank)
+        for rank in cluster.ranks:
+            joined = " ".join(x.node_id for x in rank)
             if joined:
                 self.insert("{{rank=same {}}}".format(joined))
 
-    def visit_initial(self, node_id, cluster, ranks):
+    def visit_initial(self, cluster):
         """Visit initial cluster"""
         self.indent = ""
-        with self.subgroup("digraph {}".format(node_id)):
+        with self.subgroup("digraph {}".format(cluster.node_id)):
             self.insert("rankdir=RL;")
             self.insert("node[fontsize=20]")
 
-            self.process_cluster_content(cluster, ranks)
+            self.process_cluster_content(cluster)
 
             for source, target, style in self.dependencies:
                 self.insert("{} -> {} {};".format(source, target, style))
 
-    def visit_cluster(self, node_id, cluster, ranks):
+    def visit_cluster(self, cluster):
         """Visit other clusters"""
-        with self.subgroup("subgraph {}".format(node_id)):
+        with self.subgroup("subgraph {}".format(cluster.cluster_id)):
             self.insert('color="#3A85B9";')
             self.insert("fontsize=30;")
-            self.insert('label = "{}";'.format(cluster.name))
+            self.insert('label = "{}";'.format(cluster.activation_name))
 
-            self.process_cluster_content(cluster, ranks)
+            self.visit_activation(cluster, name="return")
+            self.process_cluster_content(cluster)
 
-    def visit_evaluation(self, node_id, element):
-        """Create evaluation for graph
-        Arguments:
-        node_id -- node_id
-        element -- evaluation object
-        """
+    def visit_evaluation(self, node):
+        """Create evaluation node for graph"""
+        name = escape(node.name, self.name_length)
+        value = escape(node.value, self.value_length)
 
-    def visit_variable(self, variable):
-        """Create variable for graph
-        Arguments:
-        variable -- Variable or FileAccesss object
-        depth -- depth for configuring spaces in subclusters
-        config -- color schema
-        """
-        color, shape, font, style = self._schema_config(variable)
-        var = variable_id(variable)
-
-        value = escape(variable.value, self.value_length)
-        name = escape(variable.name, self.name_length)
-
-        if value == "now(n/a)":
-            value = ""
-
-        label_list = []
-        if variable.line:
-            label_list.append("{} ".format(variable.line))
-        label_list.append(name)
+        label_list = ["{} {}".format(node.line, name)]
         if value:
             label_list.append(" =\n{}".format(value))
         label = "".join(label_list)
 
-        self.result.append("    " * self.depth + (
-            '{var} '
-            '[label="{label}"'
-            ' fillcolor="{color}" fontcolor="{font}"'
-            ' shape="{shape}"'
-            ' style="{style}"];'
-        ).format(
-            var=var, label=label, color=color, font=font, shape=shape,
-            style=style,
-        ))
+        attrs = Attributes({
+            "label": label,
+            "fillcolor": "#85CBD0",
+            "fontcolor": "black",
+            "shape": "box",
+            "style": "rounded,filled",
+        })
+        self.insert("{} {};".format(node.node_id, attrs))
 
-    def _schema_config(self, variable):
-        """Return color schema for variable
-        or fallback if there is no valid schema
-        """
-        if isinstance(variable, FileAccess):
-            return self.types.get("access") or self.fallback
-        return self.types.get(variable.type) or self.fallback
+    def visit_activation(self, node, name=None):
+        """Create activation node for graph"""
+        name = escape(name or node.name, self.name_length)
+        value = escape(node.value, self.value_length)
+
+        label_list = ["{} {}".format(node.line, name)]
+        if value:
+            label_list.append(" =\n{}".format(value))
+        label = "".join(label_list)
+
+        attrs = Attributes({
+            "label": label,
+            "fillcolor": "#3A85B9",
+            "fontcolor": "white",
+            "shape": "box",
+            "style": "filled",
+        })
+        self.insert("{} {};".format(node.node_id, attrs))
+
+    def visit_access(self, node):
+        """Create access node for graph"""
+        label = escape(node.name, self.name_length)
+
+        attrs = Attributes({
+            "label": label,
+            "fillcolor": "white",
+            "fontcolor": "black",
+            "shape": "box",
+            "style": "rounded,filled",
+        })
+        self.insert("{} {};".format(node.node_id, attrs))
+
+    def visit_value(self, node):
+        """Create value node for graph"""
+        label = escape(node.name, self.name_length)
+
+        attrs = Attributes({
+            "label": label,
+            "fillcolor": "white",
+            "fontcolor": "blue",
+            "shape": "box",
+            "style": "rounded,filled",
+        })
+        self.insert("{} {};".format(node.node_id, attrs))

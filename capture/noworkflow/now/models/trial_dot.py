@@ -14,25 +14,6 @@ from ..persistence.models.base import Model
 #from .graphs.dependency_graph import DotVisitor
 
 
-CALL_SCHEMA = "#3A85B9", "box", "white", "filled"
-VAR_SCHEMA = "#85CBD0", "box", "black", "rounded,filled"
-FILE_SCHEMA = "white", "box", "black", "rounded,filled"
-BLACKBOX_SCHEMA = "black", "box", "grey", "filled"
-GRAYBOX_SCHEMA = "grey", "box", "black", "filled"
-IMPORT_SCHEMA = "#1B2881", "box", "#7AC5F9", "filled"
-
-
-TYPES = {
-    "call": CALL_SCHEMA,
-    "normal": VAR_SCHEMA,
-    "virtual": VAR_SCHEMA,
-    "param": VAR_SCHEMA,
-    "import": IMPORT_SCHEMA,
-    "--blackbox--": BLACKBOX_SCHEMA,
-    "--graybox--": GRAYBOX_SCHEMA,
-    "access": FILE_SCHEMA,
-}
-
 
 class TrialDot(Model):                                                           # pylint: disable=too-many-instance-attributes
     """Handle Dot export"""
@@ -47,19 +28,6 @@ class TrialDot(Model):                                                          
         self.name_length = 55
         self.fallback = None
         self.run = True
-
-
-    def simulation(self):
-        """Configure simulation graph"""
-        self.fallback = None
-
-    def prospective(self):
-        """Configure prospective graph"""
-        self.fallback = None
-
-    def dependency(self):
-        """Configure dependency graph"""
-        self.fallback = VAR_SCHEMA
 
     def export_text(self):
         """Export facts from trial as text"""

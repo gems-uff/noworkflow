@@ -2,7 +2,7 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Test dataflow clusterizer"""
+"""Test dependency clusterizer"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -17,7 +17,7 @@ from ..collection_testcase import CollectionTestCase
 
 
 class TestDependencyClusterizer(CollectionTestCase):
-    """Test Dataflow Clusterizer"""
+    """Test Dependency Clusterizer"""
     # pylint: disable=missing-docstring
     # pylint: disable=invalid-name
     # pylint: disable=too-many-public-methods

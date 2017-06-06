@@ -218,6 +218,7 @@ class Activation(AlchemyProxy):
         >>> list(activation.recursive_accesses(0))  # doctest: +ELLIPSIS
         [access(...)., access(...).]
         """
+        # pylint: disable=not-an-iterable
         if max_depth == -1:
             max_depth = float('inf')
 

@@ -2,9 +2,10 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Filters for Dataflow graph"""
+"""Filters for dependency graph"""
 
 from .node_types import AccessNode, ValueNode, ClusterNode
+from .node_types import EvaluationNode
 
 
 class Filter(object):
@@ -67,10 +68,29 @@ class FilterAccessesOut(AcceptAllNodesFilter):
     show_accesses = False
 
 
+class FilterExternalAccessesOut(AcceptAllNodesFilter):
+    """Filter that ignores external accesses"""
+    # pylint: disable=too-few-public-methods
+    def __contains__(self, node):
+        if isinstance(node, AccessNode):
+            return node.access.is_internal
+        return super(FilterExternalAccessesOut, self).__contains__(node)
+
+    show_external_accesses = False
+
+
+class FilterInternalsOut(AcceptAllNodesFilter):
+    """Filter that ignores evaluations that start with _"""
+    # pylint: disable=too-few-public-methods
+    def __contains__(self, node):
+        if isinstance(node, EvaluationNode):
+            return not node.name.startswith("_")
+        return super(FilterInternalsOut, self).__contains__(node)
+
+
 class _JoinedFilterAttribute(object):
     """Joined attribute"""
     # pylint: disable=too-few-public-methods
-
     def __init__(self, all_filters, attr):
         self.all_filters = all_filters
         self.attr = attr

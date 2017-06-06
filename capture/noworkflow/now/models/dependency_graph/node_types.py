@@ -2,7 +2,7 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Define node types for dataflow graph"""
+"""Define node types for dependency graph"""
 
 class Node(object):
     """Node object"""
@@ -37,6 +37,7 @@ class AccessNode(Node):
     def __init__(self, access):
         super(AccessNode, self).__init__(self.get_node_id(access.id))
         self.access = access
+        self.name = access.name
 
     @staticmethod
     def get_node_id(id_):
@@ -49,6 +50,11 @@ class EvaluationNode(Node):
     def __init__(self, evaluation):
         super(EvaluationNode, self).__init__(self.get_node_id(evaluation.id))
         self.evaluation = evaluation
+        code_component = evaluation.code_component
+        self.line = code_component.first_char_line
+        self.column = code_component.first_char_column
+        self.name = code_component.name
+        self.value = ""
 
     @staticmethod
     def get_node_id(id_):
@@ -61,6 +67,7 @@ class ActivationNode(EvaluationNode):
     def __init__(self, activation, evaluation):
         super(ActivationNode, self).__init__(evaluation)
         self.activation = activation
+        self.activation_name = activation.name
 
 
 class ClusterNode(ActivationNode):
@@ -76,15 +83,12 @@ class ClusterNode(ActivationNode):
         self.cluster_id = "cluster_{}".format(activation.id)
         # Cluster depth
         self.depth = depth
-        # Cluster name
-        self.name = activation.name
         # Cluster ranks
         self.ranks = []
 
     def add(self, node):
         """Add node to cluster"""
         self.elements.append(node)
-
 
     def to_tree(self):
         return (
@@ -97,6 +101,7 @@ class ValueNode(Node):
     def __init__(self, value):
         super(ValueNode, self).__init__(self.get_node_id(value.id))
         self.value = value
+        self.name = value.value
 
     @staticmethod
     def get_node_id(id_):
