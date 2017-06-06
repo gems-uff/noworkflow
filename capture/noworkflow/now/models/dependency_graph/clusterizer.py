@@ -8,7 +8,7 @@ import weakref
 
 from collections import defaultdict
 
-from future.utils import viewitems
+from future.utils import viewitems, viewvalues
 
 from ...persistence.models import UniqueFileAccess
 
@@ -124,6 +124,7 @@ class Clusterizer(object):
 
         if node is None or not self.filter.show_accesses:
             return node
+
         # Add acesses
         departing_arrows = self.departing_arrows
         arriving_arrows = self.arriving_arrows
@@ -247,3 +248,33 @@ class Clusterizer(object):
         self.created[self.main_cluster.node_id] = (None, self.main_cluster)
         self.process_dependencies()
         return self
+
+
+class DependencyClusterizer(Clusterizer):
+    """Create a dependency graph with a single cluster"""
+    def add_cluster_node(self, activation, evaluation, cluster):
+        """Create new cluster"""
+        old_depth = cluster.depth
+        node = self.add_evaluation_node(
+            ActivationNode(activation, evaluation),
+            cluster, evaluation.value
+        )
+        cluster.depth += 1
+        if node is not None and self.config.max_depth != float('inf'):
+            for subeval in activation.evaluations:
+                self.process_evaluation(subeval, cluster)
+        cluster.depth = old_depth
+        return node
+
+    def process_cluster(self, cluster):
+        """Process only main cluster"""
+        no_max = self.config.max_depth == float('inf')
+        obj = self.trial() if no_max else cluster.activation
+        for evaluation in obj.evaluations:
+            if evaluation.id == cluster.evaluation.id:
+                continue
+            self.process_evaluation(evaluation, cluster)
+        self.config.rank(cluster, [
+            node for _, node in viewvalues(self.created)
+            if isinstance(node, EvaluationNode)
+        ])

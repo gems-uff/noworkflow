@@ -8,7 +8,9 @@ from __future__ import (absolute_import, print_function,
                         division)
 
 from .test_clusterizer import TestClusterizer
+from .test_dependency import TestDependency
 
 __all__ = [
     "TestClusterizer",
+    "TestDependency",
 ]
