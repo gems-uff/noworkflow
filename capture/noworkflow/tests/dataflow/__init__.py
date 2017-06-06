@@ -7,10 +7,12 @@
 from __future__ import (absolute_import, print_function,
                         division)
 
-from .test_clusterizer import TestClusterizer
-from .test_dependency import TestDependency
+from .test_default_clusterizer import TestClusterizer
+from .test_dependency_clusterizer import TestDependencyClusterizer
+from .test_activation_clusterizer import TestActivationClusterizer
 
 __all__ = [
     "TestClusterizer",
-    "TestDependency",
+    "TestDependencyClusterizer",
+    "TestActivationClusterizer",
 ]

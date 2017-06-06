@@ -148,7 +148,7 @@ class Activation(AlchemyProxy):
 
     @property
     def has_evaluations(self):
-        """Load internal. Return SQLAlchemy query
+        """Check if activation has internal evaluations
 
 
         Doctest:
@@ -169,6 +169,33 @@ class Activation(AlchemyProxy):
         True
         """
         for _ in self.evaluations:
+            return True
+        return False
+
+    @property
+    def has_activations(self):
+        """Check if activation has internal activations
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import FuncConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> function = FuncConfig("f", 1, 0, 2, 8)
+        >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+        ...                      function=function, erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+        >>> trial = Trial(trial_id)
+        >>> main_activation = trial.initial_activation
+
+        Return internal activations:
+        >>> main_activation.has_evaluations
+        True
+        """
+        # pylint: disable=not-an-iterable
+        for _ in self.activations:
             return True
         return False
 

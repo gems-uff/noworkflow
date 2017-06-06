@@ -16,7 +16,7 @@ from ...now.models.dependency_graph.clusterizer import DependencyClusterizer
 from ..collection_testcase import CollectionTestCase
 
 
-class TestDependency(CollectionTestCase):
+class TestDependencyClusterizer(CollectionTestCase):
     """Test Dataflow Clusterizer"""
     # pylint: disable=missing-docstring
     # pylint: disable=invalid-name
@@ -263,13 +263,17 @@ class TestDependency(CollectionTestCase):
             ((created["e_8"][1], created["e_7"][1]), EMPTY_ATTR),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
+        ranks = sorted([
+            sorted(x) for x in created["e_1"][1].ranks
+        ])
+
+        self.assertEqual([
+            created["e_10"][1], created["e_11"][1],
+            created["e_3"][1], created["e_4"][1], created["e_9"][1],
+        ], ranks[0])
         self.assertEqual([
             created["e_2"][1], created["e_5"][1]
-        ], created["e_1"][1].ranks[0])
-        self.assertEqual([
-            created["e_3"][1], created["e_4"][1], created["e_9"][1],
-            created["e_10"][1], created["e_11"][1],
-        ], created["e_1"][1].ranks[1])
+        ], ranks[1])
         self.assertEqual([
             created["e_6"][1], created["e_7"][1], created["e_8"][1],
-        ], created["e_1"][1].ranks[2])
+        ], ranks[2])

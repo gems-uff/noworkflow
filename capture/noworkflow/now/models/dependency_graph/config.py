@@ -8,6 +8,8 @@ from collections import defaultdict
 
 from future.utils import viewvalues
 
+from ...utils.data import OrderedDefaultDict
+
 from .synonymers import Synonymer
 from .filters import FilterValuesOut
 
@@ -85,7 +87,7 @@ class DataflowConfig(object):
         """Group cluster evaluations"""
         if self.rank_option == 0:
             return
-        by_line = defaultdict(list)
+        by_line = OrderedDefaultDict(list)
         for node in new_nodes:
             if node is None:
                 continue

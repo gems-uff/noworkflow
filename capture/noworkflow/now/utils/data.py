@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, defaultdict
 
 
 class OrderedCounter(OrderedDict, Counter):
@@ -38,3 +38,15 @@ class HashableDict(dict):
 
     def __eq__(self, other):
         return self.key() == other.key()
+
+
+class OrderedDefaultDict(OrderedDict):
+    """OrderedDefaultDict that works both on Python 2.7 and Python 3.6"""
+
+    def __init__(self, default_factory=None, *args, **kwargs):
+        super(OrderedDefaultDict, self).__init__(*args, **kwargs)
+        self.default_factory = default_factory
+
+    def __missing__(self, key):
+        self[key] = value = self.default_factory()
+        return value

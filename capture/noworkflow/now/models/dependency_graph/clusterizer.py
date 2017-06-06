@@ -111,10 +111,14 @@ class Clusterizer(object):
             EvaluationNode(evaluation), cluster, evaluation.value
         )
 
+    def _activation_node_condition(self, activation, cluster):
+        """Condition for creating an activation node instead of a cluster"""
+        at_maximum_depth = cluster.depth + 1 > self.config.max_depth
+        return not activation.has_evaluations or at_maximum_depth
+
     def process_activation(self, activation, evaluation, cluster):
         """Process activation and add it to cluster"""
-        at_maximum_depth = cluster.depth + 1 > self.config.max_depth
-        if not activation.has_evaluations or at_maximum_depth:
+        if self._activation_node_condition(activation, cluster):
             node = self.add_evaluation_node(
                 ActivationNode(activation, evaluation),
                 cluster, evaluation.value
@@ -278,3 +282,21 @@ class DependencyClusterizer(Clusterizer):
             node for _, node in viewvalues(self.created)
             if isinstance(node, EvaluationNode)
         ])
+
+class ActivationClusterizer(Clusterizer):
+    """Create an activation graph"""
+
+    def _activation_node_condition(self, activation, cluster):
+        """Condition for creating an activation node instead of a cluster"""
+        at_maximum_depth = cluster.depth + 1 > self.config.max_depth
+        return not activation.has_activations or at_maximum_depth
+
+    def process_cluster(self, cluster):
+        """Process cluster"""
+        new_nodes = []
+        for activation in cluster.activation.activations:
+            evaluation = activation.this_evaluation
+            new_nodes.append(self.process_activation(
+                activation, evaluation, cluster
+            ))
+        self.config.rank(cluster, new_nodes)
