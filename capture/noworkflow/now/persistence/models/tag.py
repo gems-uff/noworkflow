@@ -46,9 +46,9 @@ class Tag(AlchemyProxy):
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
         {"sqlite_autoincrement": True},
     )
-    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     trial_id = Column(Integer, index=True)
-    type = Column(Text)                                                          # pylint: disable=invalid-name
+    type = Column(Text)  # pylint: disable=invalid-name
     name = Column(Text)
     timestamp = Column(TIMESTAMP)
 
@@ -62,7 +62,7 @@ class Tag(AlchemyProxy):
     ), description=(
         "informs that a given trial (*TrialId*)\n"
         "has a tag (*Name*) of *Type*,\n"
-        "created at *Timestamp*.\n"
+        "created at *Timestamp*."
     ))
 
     @classmethod  # query
@@ -216,7 +216,7 @@ class Tag(AlchemyProxy):
         return new_tag
 
     @classmethod  # query
-    def create(cls, trial_id, type_, name, timestamp, session=None):             # pylint: disable=too-many-arguments
+    def create(cls, trial_id, type_, name, timestamp, session=None):
         """Create tag for trial id
 
         Arguments:
@@ -242,6 +242,7 @@ class Tag(AlchemyProxy):
         >>> count(Tag)
         1
         """
+        # pylint: disable=too-many-arguments
         session = session or relational.session
         result = session.execute(cls.t.insert(), dict(
             trial_id=trial_id, type=type_, name=name, timestamp=timestamp

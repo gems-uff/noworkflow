@@ -110,6 +110,7 @@ class PrologRepr(PrologAttribute):
         value = self.value(obj)
         if not isinstance(value, str):
             value = repr(value)
+        value = value.replace("\\", "\\\\")
 
         if len(value) > 1:
             if value[0] in ascii_letters and value[1] in ('"', "'"):

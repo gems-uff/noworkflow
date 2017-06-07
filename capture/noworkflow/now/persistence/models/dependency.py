@@ -79,12 +79,12 @@ class Dependency(AlchemyProxy):
                               "evaluation.id"], ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
-    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     dependent_activation_id = Column(Integer, index=True)
     dependent_id = Column(Integer, index=True)
     dependency_activation_id = Column(Integer, index=True)
     dependency_id = Column(Integer, index=True)
-    type = Column(Text)                                                          # pylint: disable=invalid-name
+    type = Column(Text)  # pylint: disable=invalid-name
 
     trial = backref_one("trial")  # Trial.dependencies
     # Activation.dependent_variables, Evaluation.dependencies_as_dependent
@@ -107,9 +107,9 @@ class Dependency(AlchemyProxy):
         "informs that in a given trial (*trial_id*),\n"
         "the value of a evaluation (*DependentId*),\n"
         "in a specific activation (*DependentActivationId*),\n"
-        "was influenced somehow \n"
+        "was influenced somehow\n"
         "by the value of another evaluation (*DependencyId*),\n"
         "in another activation (*DependencyActivationId*).\n"
-        "This influence *Type* is one of following: \n"
+        "This influence *Type* is one of following:\n"
         "bind/influence/conditional/loop/assignment."
     ))

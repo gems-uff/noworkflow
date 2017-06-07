@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Trial Model"""
+# pylint: disable=too-many-lines
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -233,7 +234,7 @@ class Trial(AlchemyProxy):
         "informs that a given trial (*Id*),\n"
         "executed *Script* during a time period from *Start*"
         "to *Finish*,\n"
-        "using noWokflow's *command*.\n"
+        "using noWokflows *command*.\n"
         "This trial might by backup/finished/unfinished (*Status*).\n"
         "This trial uses modules from *ModulesInheritedFromTrialId*,\n"
         "is based on *ParentId*,\n"

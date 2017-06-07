@@ -12,7 +12,7 @@ from sqlalchemy import CheckConstraint
 from sqlalchemy.orm import remote, foreign
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr
+from ...utils.prolog import PrologRepr, PrologNullable
 
 from .base import AlchemyProxy, proxy_class, query_one_property
 from .base import backref_one, one, many_viewonly_ref
@@ -75,7 +75,7 @@ class CodeComponent(AlchemyProxy):
                              ondelete="CASCADE", use_alter=True),
     )
     trial_id = Column(Integer, index=True)
-    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     name = Column(Text)
     type = Column(Text)  # ToDo: CheckConstraint?
     mode = Column(Text, CheckConstraint("mode IN ('r', 'w', 'd')"))
@@ -109,7 +109,7 @@ class CodeComponent(AlchemyProxy):
         PrologAttribute("first_char_column"),
         PrologAttribute("last_char_line"),
         PrologAttribute("last_char_column"),
-        PrologAttribute("container_id", link="code_component.id"),
+        PrologNullable("container_id", link="code_component.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "a code component (*Id*) with *Name*\n"

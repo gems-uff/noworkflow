@@ -1,405 +1,370 @@
-%
-% ID-BASED ACCESSOR RULES FOR activation AND access predicates
-%
-
-%
-% RULE DEFINITION: name(TrialId, Id, Name)/3
-% DESCRIPTION: get the *Name* of an activation or access (*Id*)
-%              in a given trial (*TrialId*).
-%              Note that accesses Ids start with a 'f'.
-%
-name(_, [], []).
-name(TrialId, [Id|Ids], [Name|Names]) :- name(TrialId, Id, Name), name(TrialId, Ids, Names).
-name(TrialId, Id, Name) :- activation(TrialId, Id, Name, _, _, _, _).
-name(TrialId, Id, Name) :- access(TrialId, Id, Name, _, _, _, _, _).
-
-%
-% RULE DEFINITION: timestamp_id(TrialId, Id, Timestamp, start|finish)/4
-% DESCRIPTION: get the *Timestamp* of an activation (*Id*)
-%              in a given trial (*TrialId*).
-%
-timestamp_id(TrialId, Id, Start, start) :- activation(TrialId, Id, _, _, Start, _, _).
-timestamp_id(TrialId, Id, Finish, finish) :- activation(TrialId, Id, _, _, _, Finish, _).
-
-%
-% RULE DEFINITION: timestamp_id(TrialId, Id, Timestamp)/3
-% DESCRIPTION: get the *Timestamp* of an access (*Id*)
-%              in a given trial (*TrialId*).
-%
-timestamp_id(TrialId, Id, Timestamp) :- access(TrialId, Id, _, _, _, _, Timestamp, _).
-
-%
-% RULE DEFINITION: duration_id(TrialId, Id, Duration)/3
-% DESCRIPTION: get the *Duration* of an activation (*Id*)
-%              in a given trial (*TrialId*).
-%
-duration_id(TrialId, Id, Duration) :- timestamp_id(TrialId, Id, Start, start), timestamp_id(TrialId, Id, Finish, finish), Duration is Finish - Start.
-
-%
-% RULE DEFINITION: successor_id(TrialId, Before, After)/3
-% DESCRIPTION: match activations or accesses that ocurred *Before*
-%              other activations or accesses (*After*)
-%              in a given trial (*TrialId*).
-%              Note that called activations are successors of the caller
-%
-successor_id(TrialId, Before, After) :- timestamp_id(TrialId, Before, TS1, start), timestamp_id(TrialId, After, TS2, finish), TS1 =< TS2.
-successor_id(TrialId, Before, After) :- timestamp_id(TrialId, Before, TS1), timestamp_id(TrialId, After, TS2), TS1 =< TS2.
-
-%
-% RULE DEFINITION: activation_id(TrialId, Caller, Called)/3
-% DESCRIPTION: match *Called* activations by *Caller*
-%              in a given trial (*TrialId*).
-%
-activation_id(TrialId, Caller, Called) :- activation(TrialId, Called, _, _, _, _, Caller).
-
-%
-% RULE DEFINITION: mode_id(TrialId, Id, Mode)/3
-% DESCRIPTION: match *Mode* of an access (*Id*)
-%              in a given trial (*TrialId*).
-%
-mode_id(TrialId, Id, Mode) :- access(TrialId, Id, _, Mode, _, _, _, _).
-
-%
-% RULE DEFINITION: read_mode(Mode)/1
-% DESCRIPTION: read modes: r, a, +
-%
-read_mode(Mode) :- sub_atom(Mode, _, _, _, 'r').
-read_mode(Mode) :- sub_atom(Mode, _, _, _, '+').
-
-%
-% RULE DEFINITION: write_mode(Mode)/1
-% DESCRIPTION: write modes: w, x, a, +
-%
-write_mode(Mode) :- sub_atom(Mode, _, _, _, 'w').
-write_mode(Mode) :- sub_atom(Mode, _, _, _, 'x').
-write_mode(Mode) :- sub_atom(Mode, _, _, _, 'a').
-write_mode(Mode) :- sub_atom(Mode, _, _, _, '+').
-
-%
-% RULE DEFINITION: file_read_id(TrialId, Id)/2
-% DESCRIPTION: match read accesses (*Id*)
-%              in a given trial (*TrialId*).
-%
-file_read_id(TrialId, Id) :- mode_id(TrialId, Id, Mode), once(read_mode(Mode)).
-
-%
-% RULE DEFINITION: file_written_id(TrialId, Id)/2
-% DESCRIPTION: match written accesses (*Id*)
-%              in a given trial (*TrialId*).
-%
-file_written_id(TrialId, Id) :- mode_id(TrialId, Id, Mode), once(write_mode(Mode)).
-
-%
-% RULE DEFINITION: hash_id(TrialId, Id, Hash, before|after)/4
-% DESCRIPTION: match *Hash* of accesses (*Id*)
-%              in a given trial (*TrialId*).
-%
-hash_id(TrialId, Id, Hash, before) :- access(TrialId, Id, _, _, Hash, _, _, _).
-hash_id(TrialId, Id, Hash, after) :- access(TrialId, Id, _, _, _, Hash, _, _).
-
-%
-% RULE DEFINITION: changed_id(TrialId, Id)/2
-% DESCRIPTION: match accesses (*Id*) that changed a file
-%              in a given trial (*TrialId*).
-%
-changed_id(TrialId, Id) :- hash_id(TrialId, Id, Hash1, before), hash_id(TrialId, Id, Hash2, after), Hash1 \== Hash2.
-
-%
-% RULE DEFINITION: access_id(TrialId, ActivationId, Id)/3
-% DESCRIPTION: match accesses (*Id*) to activations (*ActivationId*)
-%              in a given trial (*TrialId*).
-%
-access_id(TrialId, ActivationId, Id) :- access(TrialId, Id, _, _, _, _, _, ActivationId).
+% ToDo: test all access rules
 
 
-%
-% ID-BASED INFERENCE RULES
-%
+%%% ID RULES
+
+    % compartment_id(WholeId, PartId, CombinedId)/3
+        % DESCRIPTION: get the *CombinedId* of a compartment defined by *WholeId* and *PartId*
+
+        compartment_id(WholeId, PartId, [WholeId, PartId]).
 
 
-%
-% RULE DEFINITION: activation_stack_id(TrialId, Called, Stack)/3
-% DESCRIPTION: match caller *Stack* from a *Called* activation
-%              in a given trial (*TrialId*).
-%
-activation_stack_id(TrialId, Called, []) :- activation_id(TrialId, nil, Called).
-activation_stack_id(TrialId, Called, [Caller|Callers]) :- activation_id(TrialId, Caller, Called), activation_stack_id(TrialId, Caller, Callers).
+%%% NAME RULES
 
-%
-% RULE DEFINITION: indirect_activation_id(TrialId, Caller, Called)/3
-% DESCRIPTION: match *Caller* activations that belongs to *Called* stack
-%              in a given trial (*TrialId*).
-%
-indirect_activation_id(TrialId, Caller, Called) :- activation_stack_id(TrialId, Called, Callers), member(Caller, Callers).
+    % code_name(TrialId, Id, Name)/3
+        % DESCRIPTION: get the *Name* of a code_component or code_block (*Id*)
+        %              in a given trial (*TrialId*).
 
-%
-% RULE DEFINITION: activation_influence_id(TrialId, Influencer, Influenced)/3
-% DESCRIPTION: match *Influencer* activations that might have *Influenced* an activation
-%              in a given trial (*TrialId*).
-%              This a Naive rule! It considers just the succession order
-%
-activation_influence_id(TrialId, Influencer, Influenced) :- successor_id(TrialId, Influencer, Influenced).
+        code_name(_, [], []).
+        code_name(TrialId, [Id|Ids], [Name|Names]) :- code_name(TrialId, Id, Name), code_name(TrialId, Ids, Names).
+        code_name(TrialId, Id, Name) :- code_component(TrialId, Id, Name, _, _, _, _, _, _, _).
 
-%
-% RULE DEFINITION: access_stack_id(TrialId, File, Stack)/3
-% DESCRIPTION: match *File* accesses from an activation *Stack*
-%              in a given trial (*TrialId*).
-%
-access_stack_id(TrialId, File, [Function|Functions]) :- access_id(TrialId, Function, File), activation_stack_id(TrialId, Function, Functions).
+    % evaluation_name(TrialId, Id, Name)/3
+        % DESCRIPTION: get the *Name* of an evaluation or activation (*Id*)
+        %              in a given trial (*TrialId*).
 
-%
-% RULE DEFINITION: indirect_access_id(TrialId, Activation, File)/3
-% DESCRIPTION: match *File* accesses that belongs to an *Activation* stack
-%              in a given trial (*TrialId*).
-%
-indirect_access_id(TrialId, Function, File) :- access_stack_id(TrialId, File, Functions), member(Function, Functions).
+        evaluation_name(_, [], []).
+        evaluation_name(TrialId, [Id|Ids], [Name|Names]) :- evaluation_name(TrialId, Id, Name), evaluation_name(TrialId, Ids, Names).
+        evaluation_name(TrialId, Id, Name) :- evaluation(TrialId, Id, _, CodeId, _, _), code_name(TrialId, CodeId, Name).
 
-%
-% RULE DEFINITION: activation_influence_id(TrialId, Influencer, Influenced)/3
-% DESCRIPTION: match *Influencer* activations that might have *Influenced* an access
-%              in a given trial (*TrialId*).
-%              This a Naive rule! It considers just the succession order
-%
-access_influence_id(TrialId, Influencer, Influenced) :- file_read_id(TrialId, Influencer), file_written_id(TrialId, Influenced), successor_id(TrialId, Influencer, Influenced), access_id(TrialId, F1, Influencer), access_id(TrialId, F2, Influenced), activation_influence_id(TrialId, F1, F2).
+    % activation_name(TrialId, Id, Name)/3
+        % DESCRIPTION: get the *Name* of an activation (*Id*)
+        %              in a given trial (*TrialId*).
+        %              Note that it may be different than the evaluation_name
 
-%
-% NAME-BASED ACCESSOR RULES
-%
+        activation_name(_, [], []).
+        activation_name(TrialId, [Id|Ids], [Name|Names]) :- activation_name(TrialId, Id, Name), activation_name(TrialId, Ids, Names).
+        activation_name(TrialId, Id, Name) :- activation(TrialId, Id, Name, _, _).
 
-%
-% RULE DEFINITION: timestamp(TrialId, Name, Timestamp, start|finish)/4
-% DESCRIPTION: get the *Timestamp* of an activation by *Name*
-%              in a given trial (*TrialId*).
-%
-timestamp(TrialId, Name, Timestamp, Moment) :- timestamp_id(TrialId, Id, Timestamp, Moment), name(TrialId, Id, Name).
+    % access_name(TrialId, Id, Name)/3
+        % DESCRIPTION: get the *Name* of an access (*Id*)
+        %              in a given trial (*TrialId*).
 
-%
-% RULE DEFINITION: timestamp(TrialId, Name, Timestamp)/3
-% DESCRIPTION: get the *Timestamp* of an access by *Name*
-%              in a given trial (*TrialId*).
-%
-timestamp(TrialId, Name, Timestamp) :- timestamp_id(TrialId, Id, Timestamp), name(TrialId, Id, Name).
+        access_name(_, [], []).
+        access_name(TrialId, [Id|Ids], [Name|Names]) :- access_name(TrialId, Id, Name), access_name(TrialId, Ids, Names).
+        access_name(TrialId, Id, Name) :- access(TrialId, Id, Name, _, _, _, _, _).
 
-%
-% RULE DEFINITION: duration(TrialId, Name, Duration)/3
-% DESCRIPTION: get the *Duration* of an activation by *Name*
-%              in a given trial (*TrialId*).
-%
-duration(TrialId, Name, Duration) :- duration_id(TrialId, Id, Duration), name(TrialId, Id, Name).
+    % value_name(TrialId, Id, Name)/3
+        % DESCRIPTION: get the *Name* (Value) of a value (*Id*)
+        %              in a given trial (*TrialId*).
 
-%
-% RULE DEFINITION: successor(TrialId, Before, After)/3
-% DESCRIPTION: match activations or accesses by name that ocurred *Before*
-%              other activations or accesses by name (*After*)
-%              in a given trial (*TrialId*).
-%              Note that called activations are successors of the caller
-%
-successor(TrialId, Before, After) :- successor_id(TrialId, BeforeId, AfterId), name(TrialId, BeforeId, Before), name(TrialId, AfterId, After).
+        value_name(_, [], []).
+        value_name(TrialId, [Id|Ids], [Name|Names]) :- value_name(TrialId, Id, Name), value_name(TrialId, Ids, Names).
+        value_name(TrialId, Id, Name) :- value(TrialId, Id, Name, _).
 
-%
-% RULE DEFINITION: mode(TrialId, Name, Mode)/3
-% DESCRIPTION: match *Mode* of an access by file *Name*
-%              in a given trial (*TrialId*).
-%
-mode(TrialId, Name, Mode) :- mode_id(TrialId, Id, Mode), name(TrialId, Id, Name).
+    % compartment_name(TrialId, [WholeId, PartId], Name)/3
+        % DESCRIPTION: get the *Name* of a compartment ([*WholeId*, *PartId*])
+        %              in a given trial (*TrialId*).
 
-%
-% RULE DEFINITION: file_read(TrialId, Name)/2
-% DESCRIPTION: match read accesses by *Name*
-%              in a given trial (*TrialId*).
-%
-file_read(TrialId, Name) :- file_read_id(TrialId, Id), name(TrialId, Id, Name).
+        compartment_name(_, [], []).
+        compartment_name(TrialId, [Id|Ids], [Name|Names]) :- compartment_name(TrialId, Id, Name), compartment_name(TrialId, Ids, Names).
+        compartment_name(TrialId, [WholeId, PartId], Name) :- compartment(TrialId, Name, _, WholeId, PartId).
 
-% RULE DEFINITION: file_written(TrialId, Name)/2
-% DESCRIPTION: match written accesses by *Name*
-%              in a given trial (*TrialId*).
-%
-file_written(TrialId, Name) :- file_written_id(TrialId, Id), name(TrialId, Id, Name).
+    % name(TrialId, Model, Id, Name)/4
+        % DESCRIPTION: get the *Name* of a *Model* (*Id*)
+        %              in a given trial (*TrialId*).
 
-%
-% RULE DEFINITION: hash(TrialId, Name, Hash, before|after)/4
-% DESCRIPTION: match *Hash* of accesses by *Name*
-%              in a given trial (*TrialId*).
-%
-hash(TrialId, Name, Hash, Moment) :- hash_id(TrialId, Id, Hash, Moment), name(TrialId, Id, Name).
-
-%
-% RULE DEFINITION: changed(TrialId, Name)/2
-% DESCRIPTION: match accesses by *Name* that changed a file
-%              in a given trial (*TrialId*).
-%
-changed(TrialId, Name) :- changed_id(TrialId, Id), name(TrialId, Id, Name).
-
-%
-% NAME-BASED INFERENCE RULES
-%
-
-%
-% RULE DEFINITION: activation_stack(TrialId, Called, Callers)/3
-% DESCRIPTION: match caller *Stack* from a *Called* activation by name
-%              in a given trial (*TrialId*).
-%
-activation_stack(TrialId, Called, Callers) :- activation_stack_id(TrialId, CalledId, CallerIds), name(TrialId, CalledId, Called), name(TrialId, CallerIds, Callers).
-
-% RULE DEFINITION: indirect_activation(TrialId, Caller, Called)/3
-% DESCRIPTION: match *Caller* activations by name that belongs to *Called* stack
-%              in a given trial (*TrialId*).
-%
-indirect_activation(TrialId, Caller, Called) :- indirect_activation_id(TrialId, CallerId, CalledId), name(TrialId, CalledId, Called), name(TrialId, CallerId, Caller).
-
-%
-% RULE DEFINITION: activation_influence(TrialId, Influencer, Influenced)/3
-% DESCRIPTION: match *Influencer* activations by name that might have *Influenced* an activation
-%              in a given trial (*TrialId*).
-%              This a Naive rule! It considers just the succession order
-%
-activation_influence(TrialId, Influencer, Influenced) :- activation_influence_id(TrialId, InfluencerId, InfluencedId), name(TrialId, InfluencerId, Influencer), name(TrialId, InfluencedId, Influenced).
-
-%
-% RULE DEFINITION: access_stack(TrialId, File, Stack)/3
-% DESCRIPTION: match *File* accesses by name from an activation *Stack*
-%              in a given trial (*TrialId*).
-%
-access_stack(TrialId, File, Activations) :- access_stack_id(TrialId, FileId, ActivationsId), name(TrialId, FileId, File), name(TrialId, ActivationsId, Activations).
-
-%
-% RULE DEFINITION: indirect_access(TrialId, Activation, File)/3
-% DESCRIPTION: match *File* accesses by name that belongs to an *Activation* stack
-%              in a given trial (*TrialId*).
-%
-indirect_access(TrialId, Activation, File) :- indirect_access_id(TrialId, Activationid, FileId), name(TrialId, Activationid, Activation), name(TrialId, FileId, File).
-
-%
-% RULE DEFINITION: access_influence(TrialId, Influencer, Influenced)/3
-% DESCRIPTION: match *Influencer* activations by name that might have *Influenced* an access
-%              in a given trial (*TrialId*).
-%              This a Naive rule! It considers just the succession order
-%
-access_influence(TrialId, Influencer, Influenced) :- access_influence_id(TrialId, InfluencerId, InfluencedId), name(TrialId, InfluencerId, Influencer), name(TrialId, InfluencedId, Influenced).
-
-%
-% SLICING-BASED ACCESSOR RULES
-%
-
-%
-% RULE DEFINITION: dep(TrialId, Dependent, Supplier)/3
-% DESCRIPTION: match *Dependent* variables to *Supplier* variables
-%              in a given trial (*TrialId*).
-%
-dep(TrialId, Dependent, Supplier) :- dependency(TrialId, _, _, Dependent, _, Supplier).
-
-%
-% RULE DEFINITION: usage_or_assign(TrialId, Name, Line, Id)/4
-% DESCRIPTION: match *Name* and *Line* of variable (*Id*) usages or assignments
-%              in a given trial (*TrialId*).
-%
-usage_or_assign(TrialId, Name, Line, Id) :- usage(TrialId, _, Id, _, Name, Line).
-usage_or_assign(TrialId, Name, Line, Id) :- variable(TrialId, _, Id, Name, Line, _, _).
-
-%
-% RULE DEFINITION: var_name(TrialId, Id, Name)/3
-% DESCRIPTION: match *Name* of variable (*Id*)
-%              in a given trial (*TrialId*).
-%
-var_name(TrialId, Id, Name) :- variable(TrialId, _, Id, Name, _, _, _).
-
-%
-% RULE DEFINITION: var_line(TrialId, Id, Line)/3
-% DESCRIPTION: match *Line* of variable (*Id*)
-%              in a given trial (*TrialId*).
-%
-var_line(TrialId, Id, Line) :- variable(TrialId, _, Id, _, Line, _, _).
-
-%
-% RULE DEFINITION: var_info(TrialId, Id, Variable)/3
-% DESCRIPTION: get *Variable* by variable *Id*
-%              in a given trial (*TrialId*).
-%
-var_info(TrialId, Id, variable(TrialId, Activation, Id, Name, Line, Value, Timestamp)) :- variable(TrialId, Activation, Id, Name, Line, Value, Timestamp).
+        name(TrialId, code_component, Id, Name) :- code_name(TrialId, Id, Name).
+        name(TrialId, code_block, Id, Name) :- code_name(TrialId, Id, Name).
+        name(TrialId, evaluation, Id, Name) :- evaluation_name(TrialId, Id, Name).
+        name(TrialId, activation, Id, Name) :- activation_name(TrialId, Id, Name).
+        name(TrialId, access, Id, Name) :- access_name(TrialId, Id, Name).
+        name(TrialId, value, Id, Name) :- value_name(TrialId, Id, Name).
+        name(TrialId, compartment, Id, Name) :- compartment_name(TrialId, Id, Name).
+        name(TrialId, trial, 0, Name) :- trial(TrialId, Name, _, _, _, _, _, _, _).
 
 
-%
-% SLICING-BASED INFERENCE RULES
-%
+%%% TIMESTAMP RULES
 
-%
-% RULE DEFINITION: slice(TrialId, Dependent, Dependencies)/3
-% DESCRIPTION: get *Dependencies* of *Dependent* variable
-%              in a given trial (*TrialId*).
-%
-slice(_, [],[]).
-slice(TrialId, [Id|L1], L2) :- slice(TrialId, Id, L3), slice(TrialId, L1, L4), union(L3, L4, L2), !.
-slice(TrialId, Id, [Id|L1]) :- bagof(X, dep(TrialId, Id, X),L2), !, slice(TrialId, L2, L1).
-slice(_, Id, [Id]).
+    % timestamp_id(TrialId, Id, Timestamp, ModelMoment)/4
+        % DESCRIPTION: get the *Timestamp* of a *ModelMoment* (*Id*)
+        %              in a given trial (*TrialId*).
+        %              ModelMoment:
+        %                start: start time of an activation (equivalent to *activation*)
+        %                finish: finish time of an activation (equivalent to *evaluation*)
+        %                evaluation: evaluation timestamp
+        %                activation: activation timestamp
+        %                access: access timestamp
+        %              Use Id == 0 to match the trial itself
+        %              Use Id == [WholeId, PartId] to match compartments
 
-%
-% RULE DEFINITION: variable_name_dependencies(TrialId, Dependent, Names)/3
-% DESCRIPTION: get name *Dependencies* of *Dependent* variable
-%              in a given trial (*TrialId*).
-%
-variable_name_dependencies(TrialId, Id, Names) :- slice(TrialId, Id, X), maplist(var_name(TrialId), X, Names).
+        timestamp_id(TrialId, 0, Start, start) :- trial(TrialId, _, Start, _, _, _, _, _, _).
+        timestamp_id(TrialId, 0, Finish, finish) :- trial(TrialId, _, _, Finish, _, _, _, _, _).
+        timestamp_id(TrialId, Id, Start, start) :- timestamp_id(TrialId, Id, Start, activation).
+        timestamp_id(TrialId, Id, Finish, finish) :- timestamp_id(TrialId, Id, Finish, evaluation).
+        timestamp_id(TrialId, Id, Moment, activation) :- activation(TrialId, Id, _, Moment, _).
+        timestamp_id(TrialId, Id, Moment, evaluation) :- evaluation(TrialId, Id, Moment, _, _, _).
+        timestamp_id(TrialId, Id, Moment, access) :- access(TrialId, Id, _, _, _, _, Moment, _).
+        timestamp_id(TrialId, [WholeId, PartId], Moment, compartment) :- compartment(TrialId, _, Moment, WholeId, PartId).
 
-%
-% RULE DEFINITION: variable_line_dependencies(TrialId, Dependent, Lines)/3
-% DESCRIPTION: get line *Dependencies* of *Dependent* variable
-%              in a given trial (*TrialId*).
-%
-variable_line_dependencies(TrialId, Id, Lines) :- slice(TrialId, Id, X), maplist(var_line(TrialId), X, Lines).
+    % duration_id(TrialId, Id, Duration)/3
+        % DESCRIPTION: get the *Duration* of an activation (*Id*)
+        %              in a given trial (*TrialId*).
 
-%
-% RULE DEFINITION: variable_dependencies_info(TrialId, Dependent, Infos)/3
-% DESCRIPTION: get variable *Dependencies* of *Dependent* variable
-%              in a given trial (*TrialId*).
-%
-variable_dependencies_info(TrialId, Id, Infos) :- slice(TrialId, Id, X), maplist(var_info(TrialId), X, Infos).
+        duration_id(TrialId, Id, Duration) :- timestamp_id(TrialId, Id, Start, start), timestamp_id(TrialId, Id, Finish, finish), Duration is Finish - Start.
+
+    % successor_id(TrialId, BeforeModel, BeforeId, AfterModel, AfterId)/5
+        % DESCRIPTION: match *BeforeModel* instance (*BeforeId*) that ocurred
+        %              before other *AfterModel* instance (*AfterId*)
+        %              in a given trial (*TrialId*).
+        %              Note that called activations are successors of the caller
+
+        successor_id(TrialId, BeforeModel, BeforeId, AfterModel, AfterId) :- timestamp_id(TrialId, BeforeId, TS1, BeforeModel), timestamp_id(TrialId, AfterId, TS2, AfterModel), AfterModel \= activation, TS1 =< TS2.
+        successor_id(TrialId, trial, 0, AfterModel, AfterId) :- successor_id(TrialId, start, 0, AfterModel, AfterId).
+        successor_id(TrialId, BeforeModel, BeforeId, trial, 0) :- successor_id(TrialId, BeforeModel, BeforeId, finish, 0).
+        successor_id(TrialId, BeforeModel, BeforeId, activation, Id) :- successor_id(TrialId, BeforeModel, BeforeId, evaluation, Id), activation(TrialId, Id, _, _, _).
+
+    %%% NAME-BASED
+
+    % timestamp(TrialId, Name, Timestamp, ModelMoment)/4
+        % DESCRIPTION: get the *Timestamp* of a *ModelMoment* instance by *Name*
+        %              in a given trial (*TrialId*).
+
+        timestamp(TrialId, Name, Timestamp, Model) :- timestamp_id(TrialId, Id, Timestamp, Model), name(TrialId, Model, Id, Name).
+        timestamp(TrialId, trial, Timestamp, Moment) :- timestamp_id(TrialId, 0, Timestamp, Moment).
+        timestamp(TrialId, Name, Timestamp, start) :- timestamp_id(TrialId, Id, Timestamp, start), name(TrialId, activation, Id, Name).
+        timestamp(TrialId, Name, Timestamp, finish) :- timestamp_id(TrialId, Id, Timestamp, finish), name(TrialId, activation, Id, Name).
+
+    % duration(TrialId, Name, Duration)/3
+        % DESCRIPTION: get the *Duration* of an activation by *Name*
+        %              in a given trial (*TrialId*).
+
+        duration(TrialId, Name, Duration) :- duration_id(TrialId, Id, Duration), name(TrialId, activation, Id, Name).
+        duration(TrialId, trial, Duration) :- duration_id(TrialId, 0, Duration).
+
+    % successor(TrialId, BeforeModel, BeforeName, AfterModel, AfterName)/5
+        % DESCRIPTION: match *BeforeModel* instances by *BeforeName* that ocurred before
+        %              other *AfterModel* instances by *AfterName*
+        %              in a given trial (*TrialId*).
+        %              Note that called activations are successors of the caller
+
+        successor(TrialId, BeforeModel, BeforeName, AfterModel, AfterName) :- successor_id(TrialId, BeforeModel, BeforeId, AfterModel, AfterId), name(TrialId, BeforeModel, BeforeId, BeforeName), name(TrialId, AfterModel, AfterId, AfterName).
 
 
-%
-% RULE DEFINITION: variables_variables_dependency(TrialId, Dependents, Dependencies)/3
-% DESCRIPTION: match *Dependencies* of *Dependents*
-%              in a given trial (*TrialId*).
-%
-variables_variables_dependency(_, [],[]).
-variables_variables_dependency(TrialId, [Dependent|Dependents], Dependencies) :- variable_variables_dependency(TrialId, Dependent, SomeDependencies),
-                                                                                 variables_variables_dependency(TrialId, Dependents, OtherDependencies),
-                                                                                 ord_union(SomeDependencies, OtherDependencies, Dependencies).
+%%% MODE ACCESS RULES
 
-%
-% RULE DEFINITION: variable_variables_dependency(TrialId, Dependent, Dependencies)/3
-% DESCRIPTION: match *Dependencies* of a *Dependent*
-%              in a given trial (*TrialId*).
-%
-variable_variables_dependency(TrialId, Dependent, Dependencies) :- variable(TrialId, _, Dependent, _, _, _, _),
-                                                                   findall(Dependency, dependency(TrialId, _, _, Dependent, _, Dependency), DirectDependenciesWithDuplicates),
-                                                                   sort(DirectDependenciesWithDuplicates, DirectDependencies),
-                                                                   variables_variables_dependency(TrialId, DirectDependencies, IndirectDependencies),
-                                                                   ord_union(DirectDependencies, IndirectDependencies, Dependencies).
+    % read_mode(Mode)/1
+        % DESCRIPTION: read modes: r, a, +
 
-%
-% RULE DEFINITION: variables_activations_dependency(TrialId, DependentVariables, DependencyActivations)/3
-% DESCRIPTION: match *DependencyActivations* of *DependentVariables*
-%              in a given trial (*TrialId*).
-%
-variables_activations_dependency(_, [], []).
-variables_activations_dependency(TrialId, [DependentVariable|DependentVariables], DependencyActivations) :- variable_activations_dependency(TrialId, DependentVariable, SomeDependencyActivations),
-                                                                                                            variables_activations_dependency(TrialId, DependentVariables, OtherDependencyActivations),
-                                                                                                            ord_union(SomeDependencyActivations, OtherDependencyActivations, DependencyActivations).
-%
-% RULE DEFINITION: variable_activations_dependency(TrialId, DependentVariable, DependencyActivations)/3
-% DESCRIPTION: match *DependencyActivations* of a *DependentVariable*
-%              in a given trial (*TrialId*).
-%
-%variable_activations_dependency(TrialId, DependentVariable, DependencyActivations)
-variable_activations_dependency(TrialId, DependentVariable, DependencyActivations) :- variable_variables_dependency(TrialId, DependentVariable, DependencyVariables),
-                                                                                      findall(DependencyActivation, (member(DependencyVariable, DependencyVariables), variable(TrialId, DependencyActivation, DependencyVariable, _, _, _, _)), DependencyActivationsWithDuplicates),
-                                                                                      sort(DependencyActivationsWithDuplicates, DependencyActivations).
+        read_mode(Mode) :- sub_atom(Mode, _, _, _, 'r').
+        read_mode(Mode) :- sub_atom(Mode, _, _, _, '+').
 
-%
-% RULE DEFINITION: activation_activations_dependency(TrialId, Dependent, Dependencies)/3
-% DESCRIPTION: match *Dependencies* of a *Dependent* activation
-%              in a given trial (*TrialId*).
-%
-activation_activations_dependency(TrialId, DependentActivation, DependencyActivations) :- findall(DependentVariable, variable(TrialId, DependentActivation, DependentVariable, _, _, _, _), DependentVariablesWithDuplicates),
-                                                                                          sort(DependentVariablesWithDuplicates, DependentVariables),
-                                                                                          variables_activations_dependency(TrialId, DependentVariables, AllDependencyActivations),
-                                                                                          ord_subtract(AllDependencyActivations, [DependentActivation], DependencyActivations).
+    % write_mode(Mode)/1
+        % DESCRIPTION: write modes: w, x, a, +
+
+        write_mode(Mode) :- sub_atom(Mode, _, _, _, 'w').
+        write_mode(Mode) :- sub_atom(Mode, _, _, _, 'x').
+        write_mode(Mode) :- sub_atom(Mode, _, _, _, 'a').
+        write_mode(Mode) :- sub_atom(Mode, _, _, _, '+').
+
+    % delete_mode(Mode)/1
+        % DESCRIPTION: delete modes: d
+
+        delete_mode(Mode) :- sub_atom(Mode, _, _, _, 'd').
+
+    % param_mode(Mode)/1
+        % DESCRIPTION: param modes: p
+        %              Note: Python defines this mode for variables
+        %                    but I (Joao) have never seem in practice
+
+        param_mode(Mode) :- sub_atom(Mode, _, _, _, 'p').
+
+    % access_mode_id(TrialId, Id, Mode)/3
+        % DESCRIPTION: match *Mode* of an access (*Id*)
+        %              in a given trial (*TrialId*).
+
+        access_mode_id(TrialId, Id, Mode) :- access(TrialId, Id, _, Mode, _, _, _, _).
+
+    % code_mode_id(TrialId, Id, Mode)/3
+        % DESCRIPTION: match *Mode* of a code_component (*Id*)
+        %              in a given trial (*TrialId*).
+
+        code_mode_id(TrialId, Id, Mode) :- code_component(TrialId, Id, _, _, Mode, _, _, _, _, _).
+
+    % mode_id(TrialId, Model, Id, Mode)/4
+        % DESCRIPTION: match *Mode* of a *Model* (*Id*)
+        %              in a given trial (*TrialId*).
+
+        mode_id(TrialId, access, Id, Mode) :- access_mode_id(TrialId, Id, Mode).
+        mode_id(TrialId, code_component, Id, Mode) :- code_mode_id(TrialId, Id, Mode).
+        mode_id(TrialId, code_block, Id, Mode) :- code_mode_id(TrialId, Id, Mode).
+        mode_id(TrialId, evaluation, Id, Mode) :- evaluation(TrialId, Id, _, CodeId, _, _), code_mode_id(TrialId, CodeId, Mode).
+        mode_id(TrialId, activation, Id, Mode) :- evaluation(TrialId, Id, _, CodeId, _, _), code_mode_id(TrialId, CodeId, Mode).
+
+    %%% NAME-BASED
+
+    % mode(TrialId, Model, Name, Mode)/4
+        % DESCRIPTION: match *Mode* of a *Model* by *Name*
+        %              in a given trial (*TrialId*).
+
+        mode(TrialId, Model, Name, Mode) :- mode_id(TrialId, Model, Id, Mode), name(TrialId, Model, Id, Name).
+
+
+%%% HASH RULES
+
+    % hash_id(TrialId, Id, Hash, before|after|code_block)/4
+        % DESCRIPTION: match *Hash* of accesses (*Id*)
+        %              in a given trial (*TrialId*).
+
+        hash_id(TrialId, Id, Hash, before) :- access(TrialId, Id, _, _, Hash, _, _, _).
+        hash_id(TrialId, Id, Hash, after) :- access(TrialId, Id, _, _, _, Hash, _, _).
+        hash_id(TrialId, Id, Hash, code_block) :- code_block(TrialId, Id, Hash, _).
+
+    % changed_id(TrialId, Id)/2
+        % DESCRIPTION: match accesses (*Id*) that changed a file
+        %              in a given trial (*TrialId*).
+
+        changed_id(TrialId, Id) :- hash_id(TrialId, Id, Hash1, before), hash_id(TrialId, Id, Hash2, after), Hash1 \== Hash2.
+
+    %%% NAME-BASED
+
+    % hash(TrialId, Name, Hash, before|after|code_block)/4
+        % DESCRIPTION: match *Hash* of accesses by *Name*
+        %              in a given trial (*TrialId*).
+
+        hash(TrialId, Name, Hash, Moment) :- hash_id(TrialId, Id, Hash, Moment), name(TrialId, access, Id, Name).
+        hash(TrialId, Name, Hash, code_block) :- hash_id(TrialId, Id, Hash, code_block), name(TrialId, code_block, Id, Name).
+
+    % changed(TrialId, Name)/2
+        % DESCRIPTION: match accesses by *Name* that changed a file
+        %              in a given trial (*TrialId*).
+
+        changed(TrialId, Name) :- changed_id(TrialId, Id), name(TrialId, access, Id, Name).
+
+
+%%% ACTIVATION/EVALUATION RULES
+
+    % activation_id(TrialId, Caller, Called)/3
+        % DESCRIPTION: match *Called* evaluations by *Caller* activation
+        %              in a given trial (*TrialId*).
+
+        activation_id(TrialId, Caller, Called) :- evaluation(TrialId, Called, _, _, Caller, _).
+
+    % called_activation_id(TrialId, Caller, Called)/3
+        % DESCRIPTION: match *Called* activation by *Caller* activation
+        %              in a given trial (*TrialId*).
+
+        called_activation_id(TrialId, Caller, Called) :- activation_id(TrialId, Caller, Called), activation(TrialId, Called, _, _, _).
+
+
+%%% ACCESS RULES
+
+    % file_read_id(TrialId, Id)/2
+        % DESCRIPTION: match read accesses (*Id*)
+        %              in a given trial (*TrialId*).
+
+        file_read_id(TrialId, Id) :- mode_id(TrialId, access, Id, Mode), once(read_mode(Mode)).
+
+    % file_written_id(TrialId, Id)/2
+        % DESCRIPTION: match written accesses (*Id*)
+        %              in a given trial (*TrialId*).
+
+        file_written_id(TrialId, Id) :- mode_id(TrialId, access, Id, Mode), once(write_mode(Mode)).
+
+    % access_id(TrialId, ActivationId, Id)/3
+        % DESCRIPTION: match accesses (*Id*) to activations (*ActivationId*)
+        %              in a given trial (*TrialId*).
+
+        access_id(TrialId, ActivationId, Id) :- access(TrialId, Id, _, _, _, _, _, ActivationId).
+
+    %%% NAME-BASED
+
+    % file_read(TrialId, Name)/2
+        % DESCRIPTION: match read accesses by *Name*
+        %              in a given trial (*TrialId*).
+
+        file_read(TrialId, Name) :- file_read_id(TrialId, Id), name(TrialId, access, Id, Name).
+
+    % file_written(TrialId, Name)/2
+        % DESCRIPTION: match written accesses by *Name*
+        %              in a given trial (*TrialId*).
+
+        file_written(TrialId, Name) :- file_written_id(TrialId, Id), name(TrialId, access, Id, Name).
+
+
+%%% TEMPORAL INFERENCE RULES
+
+    % activation_stack_id(TrialId, Called, Stack)/3
+        % DESCRIPTION: match caller *Stack* from a *Called* evaluation
+        %              in a given trial (*TrialId*).
+
+        activation_stack_id(TrialId, Called, []) :- activation_id(TrialId, nil, Called).
+        activation_stack_id(TrialId, Called, [Caller|Callers]) :- activation_id(TrialId, Caller, Called), activation_stack_id(TrialId, Caller, Callers).
+
+    % indirect_activation_id(TrialId, Caller, Called)/3
+        % DESCRIPTION: match *Caller* activations that belongs to *Called* stack
+        %              in a given trial (*TrialId*).
+
+        indirect_activation_id(TrialId, Caller, Called) :- activation_stack_id(TrialId, Called, Callers), member(Caller, Callers).
+
+    % temporal_activation_influence_id(TrialId, Influencer, Influenced)/3
+        % DESCRIPTION: match *Influencer* activations that might have *Influenced* an activation
+        %              in a given trial (*TrialId*).
+        %              This a Naive rule! It considers just the succession order
+
+        temporal_activation_influence_id(TrialId, Influencer, Influenced) :- successor_id(TrialId, activation, Influencer, activation, Influenced).
+
+    % access_stack_id(TrialId, File, Stack)/3
+        % DESCRIPTION: match *File* accesses from an activation *Stack*
+        %              in a given trial (*TrialId*).
+
+        access_stack_id(TrialId, File, [Function|Functions]) :- access_id(TrialId, Function, File), activation_stack_id(TrialId, Function, Functions).
+
+    % indirect_access_id(TrialId, Activation, File)/3
+        % DESCRIPTION: match *File* accesses that belongs to an *Activation* stack
+        %              in a given trial (*TrialId*).
+
+        indirect_access_id(TrialId, Function, File) :- access_stack_id(TrialId, File, Functions), member(Function, Functions).
+
+    % activation_influence_id(TrialId, Influencer, Influenced)/3
+        % DESCRIPTION: match *Influencer* activations that might have *Influenced* an access
+        %              in a given trial (*TrialId*).
+        %              This a Naive rule! It considers just the succession order
+
+        access_influence_id(TrialId, Influencer, Influenced) :- file_read_id(TrialId, Influencer), file_written_id(TrialId, Influenced), successor_id(TrialId, access, Influencer, access, Influenced), access_id(TrialId, F1, Influencer), access_id(TrialId, F2, Influenced), activation_influence_id(TrialId, F1, F2).
+
+    %%% NAME-BASED
+
+    % activation_stack(TrialId, Called, Callers)/3
+        % DESCRIPTION: match caller *Stack* from a *Called* activation by name
+        %              in a given trial (*TrialId*).
+
+        activation_stack(TrialId, Called, Callers) :- activation_stack_id(TrialId, CalledId, CallerIds), name(TrialId, activation, CalledId, Called), name(TrialId, activation, CallerIds, Callers).
+        activation_stack(TrialId, Called, Callers) :- activation_stack_id(TrialId, CalledId, CallerIds), name(TrialId, evaluation, CalledId, Called), name(TrialId, activation, CallerIds, Callers).
+
+    % indirect_activation(TrialId, Caller, Called)/3
+        % DESCRIPTION: match *Caller* activations by name that belongs to *Called* stack
+        %              in a given trial (*TrialId*).
+
+        indirect_activation(TrialId, Caller, Called) :- indirect_activation_id(TrialId, CallerId, CalledId), name(TrialId, evaluation, CalledId, Called), name(TrialId, activation, CallerId, Caller).
+        indirect_activation(TrialId, Caller, Called) :- indirect_activation_id(TrialId, CallerId, CalledId), name(TrialId, activation, CalledId, Called), name(TrialId, activation, CallerId, Caller).
+
+    % temporal_activation_influence(TrialId, Influencer, Influenced)/3
+        % DESCRIPTION: match *Influencer* activations by name that might have *Influenced* an activation
+        %              in a given trial (*TrialId*).
+        %              This a Naive rule! It considers just the succession order
+
+        temporal_activation_influence(TrialId, Influencer, Influenced) :- temporal_activation_influence_id(TrialId, InfluencerId, InfluencedId), name(TrialId, activation, InfluencerId, Influencer), name(TrialId, activation, InfluencedId, Influenced).
+
+    % access_stack(TrialId, File, Stack)/3
+        % DESCRIPTION: match *File* accesses by name from an activation *Stack*
+        %              in a given trial (*TrialId*).
+
+        access_stack(TrialId, File, Activations) :- access_stack_id(TrialId, FileId, ActivationsId), name(TrialId, access, FileId, File), name(TrialId, activation, ActivationsId, Activations).
+
+    % indirect_access(TrialId, Activation, File)/3
+        % DESCRIPTION: match *File* accesses by name that belongs to an *Activation* stack
+        %              in a given trial (*TrialId*).
+
+        indirect_access(TrialId, Activation, File) :- indirect_access_id(TrialId, Activationid, FileId), name(TrialId, activation, Activationid, Activation), name(TrialId, access, FileId, File).
+
+    % access_influence(TrialId, Influencer, Influenced)/3
+        % DESCRIPTION: match *Influencer* activations by name that might have *Influenced* an access
+        %              in a given trial (*TrialId*).
+        %              This a Naive rule! It considers just the succession order
+
+        access_influence(TrialId, Influencer, Influenced) :- access_influence_id(TrialId, InfluencerId, InfluencedId), name(TrialId, access, InfluencerId, Influencer), name(TrialId, access, InfluencedId, Influenced).
+
+
+
+
