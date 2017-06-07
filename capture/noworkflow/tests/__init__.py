@@ -3,6 +3,8 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Load tests"""
+# pylint: disable=invalid-name
+# pylint: disable=wrong-import-position
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -24,6 +26,7 @@ from .prov_definition import TestCodeComponentDefinition
 from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
 from .prov_execution import TestDepthExecution
 from .dependency import TestClusterizer, TestClusterizerConfig
+from .dependency import TestProspectiveClusterizer
 from .dependency import TestActivationClusterizer, TestDependencyClusterizer
 from .cross_version_test import TestCrossVersion
 
@@ -32,15 +35,15 @@ from ..now.utils import formatter
 from ..now.utils import functions
 
 
-tests_modules = {                                                                        # pylint: disable=invalid-name
+
+tests_modules = {
     model.__name__: model.__module__ for model in ORDER
 }
 
 tests_modules["formatter"] = formatter.__name__
 tests_modules["functions"] = functions.__name__
 
-
-suites = []                                                                      # pylint: disable=invalid-name
+suites = []
 for name, module in viewitems(tests_modules):
     model_test = doctest.DocTestSuite(
         sys.modules[module],
@@ -49,8 +52,9 @@ for name, module in viewitems(tests_modules):
     suites.append(model_test)
 
 
-def load_tests(loader, tests, pattern):                                          # pylint: disable=unused-argument
+def load_tests(loader, tests, pattern):
     """Create test suite"""
+    # pylint: disable=unused-argument
     suite = unittest.TestSuite()
     for test_suite in suites:
         suite.addTest(test_suite)
@@ -64,5 +68,6 @@ def load_tests(loader, tests, pattern):                                         
     suite.addTests(loader.loadTestsFromTestCase(TestClusterizer))
     suite.addTests(loader.loadTestsFromTestCase(TestDependencyClusterizer))
     suite.addTests(loader.loadTestsFromTestCase(TestActivationClusterizer))
+    suite.addTests(loader.loadTestsFromTestCase(TestProspectiveClusterizer))
     suite.addTests(loader.loadTestsFromTestCase(TestClusterizerConfig))
     return suite

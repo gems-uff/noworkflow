@@ -100,14 +100,12 @@ class DependencyConfig(object):
         self.rank_option = args.rank
         self.mode = args.mode
 
-    def rank(self, cluster, new_nodes):
+    def rank(self, cluster):
         """Group cluster evaluations"""
         if self.rank_option == 0:
             return
         by_line = OrderedDefaultDict(list)
-        for node in new_nodes:
-            if node is None:
-                continue
+        for node in cluster.elements:
             if self.rank_option == 1:
                 line = node.line
             else:
@@ -151,11 +149,12 @@ class DependencyConfig(object):
         from .clusterizer import Clusterizer
         from .clusterizer import ActivationClusterizer
         from .clusterizer import DependencyClusterizer
+        from .clusterizer import ProspectiveClusterizer
         cls = {
             "simulation": Clusterizer,
             "activation": ActivationClusterizer,
             "dependency": DependencyClusterizer,
-            "prospective": Clusterizer,
+            "prospective": ProspectiveClusterizer,
         }[self.mode]
         return cls(
             trial,

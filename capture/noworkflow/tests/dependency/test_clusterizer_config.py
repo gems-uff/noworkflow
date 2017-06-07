@@ -3,11 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test clusterizer configuration"""
+
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from ...now.models.dependency_graph.config import DependencyConfig
 from ...now.models.dependency_graph.clusterizer import Clusterizer
+from ...now.models.dependency_graph.clusterizer import ActivationClusterizer
+from ...now.models.dependency_graph.clusterizer import DependencyClusterizer
+from ...now.models.dependency_graph.clusterizer import ProspectiveClusterizer
 from ...now.models.dependency_graph.filters import FilterValuesOut
 from ...now.models.dependency_graph.filters import FilterAccessesOut
 from ...now.models.dependency_graph.filters import FilterExternalAccessesOut
@@ -21,6 +25,22 @@ from ...now.models.dependency_graph.synonymers import ValueSynonymer
 from ...now.models.dependency_graph.synonymers import JoinedSynonymer
 
 from ..collection_testcase import CollectionTestCase
+
+
+class TrialMock(object):
+    """Mock trial"""
+    # pylint: disable=too-few-public-methods
+    # pylint: disable=invalid-name
+    # pylint: disable=missing-docstring
+    class initial_activation(object):
+        id = 1
+        name = ""
+        class this_evaluation(object):
+            id = 1
+            class code_component(object):
+                name = ""
+                first_char_line = 1
+                first_char_column = 0
 
 
 class TestClusterizerConfig(CollectionTestCase):
@@ -126,4 +146,36 @@ class TestClusterizerConfig(CollectionTestCase):
         self.assertEqual(
             SameSynonymer,
             type(config.synonymer([SameSynonymer()]))
+        )
+
+    def test_mode_simulation(self):
+        config = DependencyConfig()
+        config.mode = "simulation"
+        self.assertEqual(
+            Clusterizer,
+            type(config.clusterizer(TrialMock()))
+        )
+
+    def test_mode_activation(self):
+        config = DependencyConfig()
+        config.mode = "activation"
+        self.assertEqual(
+            ActivationClusterizer,
+            type(config.clusterizer(TrialMock()))
+        )
+
+    def test_mode_dependency(self):
+        config = DependencyConfig()
+        config.mode = "dependency"
+        self.assertEqual(
+            DependencyClusterizer,
+            type(config.clusterizer(TrialMock()))
+        )
+
+    def test_mode_prospective(self):
+        config = DependencyConfig()
+        config.mode = "prospective"
+        self.assertEqual(
+            ProspectiveClusterizer,
+            type(config.clusterizer(TrialMock()))
         )

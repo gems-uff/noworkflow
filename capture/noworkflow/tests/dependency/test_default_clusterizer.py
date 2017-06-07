@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 from future.utils import viewitems
 
 from ...now.persistence.models import Trial
+from ...now.models.dependency_graph.synonymers import Synonymer
 from ...now.models.dependency_graph.synonymers import SameSynonymer
 from ...now.models.dependency_graph.synonymers import ValueSynonymer
 from ...now.models.dependency_graph.synonymers import AccessNameSynonymer
@@ -38,7 +39,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial).run()
+        clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", []),
@@ -52,7 +53,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial).run()
+        clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2"]),
@@ -67,7 +68,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial).run()
+        clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2", "e_3"]),
@@ -81,7 +82,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial).run()
+        clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2", "e_3"]),
@@ -100,7 +101,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial).run()
+        clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2", "e_3", "e_4", "e_5", "e_6", "e_7"]),
@@ -123,7 +124,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         class CustomFilter(AcceptAllNodesFilter):
             def __contains__(self, node):
                 if isinstance(node, ValueNode):
@@ -191,7 +192,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.filter = AcceptAllNodesFilter()
         clusterizer.run()
 
@@ -212,7 +213,7 @@ class TestClusterizer(CollectionTestCase):
                     "[1]\n")
         self.clean_execution()
         trial = Trial()
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.filter = AcceptAllNodesFilter()
         clusterizer.run()
 
@@ -238,7 +239,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial).run()
+        clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2"]),
@@ -252,7 +253,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial).run()
+        clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
             ("e_1", "cluster_1", ["e_2", "e_3", "e_4"]),
@@ -272,7 +273,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.config.max_depth = 1
         clusterizer.run()
 
@@ -294,7 +295,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.run()
 
         self.assertEqual(
@@ -332,7 +333,7 @@ class TestClusterizer(CollectionTestCase):
         trial = Trial()
 
 
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.run()
 
         self.assertEqual(
@@ -381,7 +382,7 @@ class TestClusterizer(CollectionTestCase):
         trial = Trial()
 
 
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.config.max_depth = 2
         clusterizer.run()
 
@@ -425,7 +426,7 @@ class TestClusterizer(CollectionTestCase):
         self.metascript.file_accesses_store.do_store()
         trial = Trial()
 
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.config.max_depth = 1
         clusterizer.run()
 
@@ -463,7 +464,7 @@ class TestClusterizer(CollectionTestCase):
         trial = Trial()
 
 
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.run()
 
         self.assertEqual(
@@ -611,7 +612,7 @@ class TestClusterizer(CollectionTestCase):
         trial = Trial()
 
 
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.filter = FilterAccessesOut()
         clusterizer.run()
 
@@ -675,7 +676,7 @@ class TestClusterizer(CollectionTestCase):
         trial = Trial()
 
 
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.filter = JoinedFilter.create(
             FilterAccessesOut(), FilterValuesOut()
         )
@@ -714,7 +715,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
-        clusterizer = Clusterizer(trial)
+        clusterizer = Clusterizer(trial, synonymer=Synonymer())
         clusterizer.config.rank_option = 1
         clusterizer.run()
 

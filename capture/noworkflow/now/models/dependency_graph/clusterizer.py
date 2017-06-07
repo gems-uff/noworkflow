@@ -7,6 +7,7 @@
 import weakref
 
 from collections import defaultdict
+from itertools import chain
 
 from future.utils import viewitems, viewvalues
 
@@ -176,10 +177,9 @@ class Clusterizer(object):
 
     def process_cluster(self, cluster):
         """Process cluster"""
-        new_nodes = []
         for evaluation in cluster.activation.evaluations:
-            new_nodes.append(self.process_evaluation(evaluation, cluster))
-        self.config.rank(cluster, new_nodes)
+            self.process_evaluation(evaluation, cluster)
+        self.config.rank(cluster)
 
     def dep_iter(self, dependencies):
         """Iterate on dependencies and get node_ids"""
@@ -253,8 +253,8 @@ class Clusterizer(object):
     def run(self):
         """Process main_cluster to create nodes"""
         self.erase()
-        self.process_cluster(self.main_cluster)
         self.created[self.main_cluster.node_id] = (None, self.main_cluster)
+        self.process_cluster(self.main_cluster)
         self.process_dependencies()
         return self
 
@@ -283,10 +283,7 @@ class DependencyClusterizer(Clusterizer):
             if evaluation.id == cluster.evaluation.id:
                 continue
             self.process_evaluation(evaluation, cluster)
-        self.config.rank(cluster, [
-            node for _, node in viewvalues(self.created)
-            if isinstance(node, EvaluationNode)
-        ])
+        self.config.rank(cluster)
 
 class ActivationClusterizer(Clusterizer):
     """Create an activation graph"""
@@ -298,10 +295,37 @@ class ActivationClusterizer(Clusterizer):
 
     def process_cluster(self, cluster):
         """Process cluster"""
-        new_nodes = []
         for activation in cluster.activation.activations:
             evaluation = activation.this_evaluation
-            new_nodes.append(self.process_activation(
-                activation, evaluation, cluster
-            ))
-        self.config.rank(cluster, new_nodes)
+            self.process_activation(activation, evaluation, cluster)
+        self.config.rank(cluster)
+
+
+class ProspectiveClusterizer(Clusterizer):
+    """Create an activation graph"""
+
+    def __init__(self, *args, **kwargs):
+        super(ProspectiveClusterizer, self).__init__(*args, **kwargs)
+        self.clusters = []
+
+    def process_cluster(self, cluster):
+        """Process cluster"""
+        self.clusters.append(cluster)
+        created = self.created
+        for activation in cluster.activation.activations:
+            evaluation = activation.this_evaluation
+            self.process_activation(activation, evaluation, cluster)
+            for dep in chain(evaluation.dependencies, evaluation.dependents):
+
+                dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
+                dep_cluster = created[dep_act_node_id][1]
+                if not isinstance(dep_cluster, ClusterNode):
+                    continue
+                self.process_evaluation(dep, dep_cluster)
+
+    def run(self):
+        """Process main_cluster to create nodes"""
+        result = super(ProspectiveClusterizer, self).run()
+        for cluster in self.clusters:
+            self.config.rank(cluster)
+        return result
