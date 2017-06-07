@@ -15,6 +15,7 @@ from .synonymers import AccessNameSynonymer, JoinedSynonymer
 from .filters import FilterValuesOut, FilterAccessesOut, FilterInternalsOut
 from .filters import FilterExternalAccessesOut
 from .filters import JoinedFilter, AcceptAllNodesFilter
+from .node_types import ClusterNode, EvaluationNode
 
 
 class DependencyConfig(object):
@@ -51,7 +52,7 @@ class DependencyConfig(object):
                      "4 shows all accesses (including external accesses)")
         add_arg("-v", "--values", action="store_true",
                 help="R|show values as individual nodes.")
-        add_arg("-i", "--internals", action="store_true",
+        add_arg("-H", "--hide-internals", action="store_false",
                 help="show variables and functions which name starts with a "
                      "leading underscore")
         add_arg("-e", "--evaluations", type=int, default=1, metavar="E",
@@ -62,7 +63,7 @@ class DependencyConfig(object):
         add_arg("-d", "--depth", type=int, default=0, metavar="D",
                 help="R|visualization depth (default: 0)\n"
                      "0 represents infinity")
-        add_arg("-r", "--rank", type=int, default=0, metavar="R",
+        add_arg("-g", "--group", type=int, default=0, metavar="R",
                 help="R|align evalutions in the same column (default: 0)\n"
                      "0 does no align\n"
                      "1 aligns by line\n"
@@ -89,7 +90,7 @@ class DependencyConfig(object):
         """Read config from args"""
         self.show_accesses = bool(args.accesses)
         self.show_values = bool(args.values)
-        self.show_internals = bool(args.internals)
+        self.show_internals = not bool(args.hide_internals)
         self.show_external_files = args.accesses in {2, 4}
 
         self.combine_accesses = args.accesses in {1, 2}
@@ -97,7 +98,7 @@ class DependencyConfig(object):
         self.combine_values = args.evaluations == 2
 
         self.max_depth = args.depth or float("inf")
-        self.rank_option = args.rank
+        self.rank_option = args.group
         self.mode = args.mode
 
     def rank(self, cluster):
@@ -106,6 +107,10 @@ class DependencyConfig(object):
             return
         by_line = OrderedDefaultDict(list)
         for node in cluster.elements:
+            if not isinstance(node, EvaluationNode):
+                continue
+            if isinstance(node, ClusterNode):
+                continue
             if self.rank_option == 1:
                 line = node.line
             else:
@@ -159,6 +164,6 @@ class DependencyConfig(object):
         return cls(
             trial,
             config=self,
-            filter_=filter_ or self.filter(),
-            synonymer=synonymer or self.synonymer()
+            filter_=filter_,
+            synonymer=synonymer
         )

@@ -26,6 +26,9 @@ class Synonymer(object):
         """Get synonym node_id from node_id"""
         return node_id
 
+    def __repr__(self):
+        return type(self).__name__
+
 
 class SameSynonymer(Synonymer):
     """Synonymer that combines evaluations of the same assignments"""
@@ -167,3 +170,8 @@ class JoinedSynonymer(Synonymer):
             if new_node_id != original_node_id:
                 return new_node_id
         return node_id
+
+    def __repr__(self):
+        return "JoinedSynonymer({})".format(
+            ", ".join(map(repr, self.synonymers))
+        )

@@ -11,11 +11,10 @@ import weakref
 
 from ..persistence.models.base import Model
 
-#from .graphs.dependency_graph import DotVisitor
+from .dependency_graph.dot_visitor import DotVisitor
 
 
-
-class TrialDot(Model):                                                           # pylint: disable=too-many-instance-attributes
+class TrialDot(Model):
     """Handle Dot export"""
 
     __modelname__ = "TrialDot"
@@ -31,26 +30,23 @@ class TrialDot(Model):                                                          
 
     def export_text(self):
         """Export facts from trial as text"""
-        print(self.trial.dependency_filter)
-        dep_filter = self.trial.dependency_filter
+        clusterizer = self.trial.dependency_clusterizer
         if self.run:
-            dep_filter.run()
-        getattr(self, self.trial.dependency_config.mode)()
-        visitor = DotVisitor(self.fallback, self.name_length,
-                             self.value_length, TYPES, dep_filter)
-        visitor.visit(dep_filter.main_cluster)
+            clusterizer.run()
+        visitor = DotVisitor(clusterizer, self.name_length, self.value_length)
+        visitor.visit(clusterizer)
         return "\n".join(visitor.result)
 
     def _repr_svg_(self):
         if self.format == "svg":
-            ipython = get_ipython()
+            ipython = get_ipython()  # pylint: disable=undefined-variable
             return ipython.run_cell_magic(
                 "dot", "--format {}".format(self.format), self.export_text()
             )
 
     def _repr_png_(self):
         if self.format == "png":
-            ipython = get_ipython()
+            ipython = get_ipython()  # pylint: disable=undefined-variable
             return ipython.run_cell_magic(
                 "dot", "--format {}".format(self.format), self.export_text()
             )

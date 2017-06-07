@@ -4,6 +4,21 @@
 # Please, consult the license terms in the LICENSE file.
 """Define node types for dependency graph"""
 
+class FakeActivation(object):
+    """Fake activation for clusters, when initial_activation is None"""
+    # pylint: disable=too-few-public-methods
+    # pylint: disable=invalid-name
+    # pylint: disable=missing-docstring
+    id = 1
+    name = ""
+    class this_evaluation(object):
+        id = 1
+        class code_component(object):
+            name = ""
+            first_char_line = 1
+            first_char_column = 0
+
+
 class Node(object):
     """Node object"""
 
@@ -73,6 +88,8 @@ class ActivationNode(EvaluationNode):
 class ClusterNode(ActivationNode):
     """Cluster node"""
     def __init__(self, activation, evaluation=None, depth=1):
+        if activation is None:
+            activation = FakeActivation()
         super(ClusterNode, self).__init__(
             activation,
             evaluation or activation.this_evaluation

@@ -30,17 +30,7 @@ from ..collection_testcase import CollectionTestCase
 class TrialMock(object):
     """Mock trial"""
     # pylint: disable=too-few-public-methods
-    # pylint: disable=invalid-name
-    # pylint: disable=missing-docstring
-    class initial_activation(object):
-        id = 1
-        name = ""
-        class this_evaluation(object):
-            id = 1
-            class code_component(object):
-                name = ""
-                first_char_line = 1
-                first_char_column = 0
+    initial_activation = None
 
 
 class TestClusterizerConfig(CollectionTestCase):

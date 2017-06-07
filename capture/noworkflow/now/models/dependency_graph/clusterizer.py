@@ -27,7 +27,7 @@ class Clusterizer(object):
     def __init__(self, trial, config=None, filter_=None, synonymer=None):
         self.trial = weakref.ref(trial)
         self.config = config or DependencyConfig()
-        self.main_cluster = ClusterNode(trial.initial_activation)
+        self.main_cluster = None
         # Map of dependencies as (node1, node2): style
         self.dependencies = {}
         # Complete map of dependencies as node_id1: {node_id2: style}
@@ -36,13 +36,15 @@ class Clusterizer(object):
         # Map of node_id to nodes
         self.created = {}
         # Filter and synonymer
-        self.filter = filter_ or self.config.filter()
-        self.synonymer = synonymer or self.config.synonymer()
+        self.replace_filter = getattr(self, "replace_filter", filter_)
+        self.replace_synonymer = getattr(self, "replace_synonymer", synonymer)
+        self.filter = self.replace_filter or self.config.filter()
+        self.synonymer = self.replace_synonymer or self.config.synonymer()
         self.synonymer.clusterizer = weakref.proxy(self)
 
     def erase(self):
         """Erase graph"""
-        self.__init__(self.trial(), self.config, self.filter, self.synonymer)
+        self.__init__(self.trial(), self.config)
 
     def add_dependency(self, source, target, attrs):
         """Add dependency"""
@@ -253,6 +255,7 @@ class Clusterizer(object):
     def run(self):
         """Process main_cluster to create nodes"""
         self.erase()
+        self.main_cluster = ClusterNode(self.trial().initial_activation)
         self.created[self.main_cluster.node_id] = (None, self.main_cluster)
         self.process_cluster(self.main_cluster)
         self.process_dependencies()

@@ -27,7 +27,7 @@ from .activation import Activation
 from .head import Head
 
 
-@proxy_class                                                                     # pylint: disable=too-many-public-methods
+@proxy_class
 class Trial(AlchemyProxy):
     """Represent a trial
 
@@ -133,6 +133,7 @@ class Trial(AlchemyProxy):
     >>> list(trial.local_modules)  # doctest: +ELLIPSIS
     [module(...).]
     """
+    # pylint: disable=too-many-public-methods
 
     __tablename__ = "trial"
     __table_args__ = (
@@ -145,7 +146,9 @@ class Trial(AlchemyProxy):
         {"sqlite_autoincrement": True},
     )
 
-    id = Column(Integer, primary_key=True, autoincrement=True)                   # pylint: disable=invalid-name
+    id = Column(  # pylint: disable=invalid-name
+        Integer, primary_key=True, autoincrement=True
+    )
     script = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
@@ -270,14 +273,14 @@ class Trial(AlchemyProxy):
         #self._store_pk(obj)
         #self._restore_instance()
 
-        #from ...models.graphs.dependency_graph import DependencyConfig
-        #from ...models.graphs.dependency_graph import DependencyFilter
+        from ...models.dependency_graph.config import DependencyConfig
         from ...models.graphs.trial_graph import TrialGraph
         from ...models.trial_prolog import TrialProlog
         from ...models.trial_dot import TrialDot
 
-        #self.dependency_config = DependencyConfig()
-        #self.dependency_filter = DependencyFilter(self)
+        self.dependency_config = DependencyConfig()
+        self._dependency_clusterizer = None
+        self._clusterizer_mode = None
         self.graph = TrialGraph(self)
 
         self.prolog = TrialProlog(self)
@@ -285,6 +288,14 @@ class Trial(AlchemyProxy):
         self.initialize_default(kwargs)
         self._prolog_visitor = None
 
+    @property
+    def dependency_clusterizer(self):
+        """Return clusterizer"""
+        config = self.dependency_config
+        if config.mode != self._clusterizer_mode:
+            self._clusterizer_mode = config.mode
+            self._dependency_clusterizer = config.clusterizer(self)
+        return self._dependency_clusterizer
 
     @query_many_property
     def modules(self):
@@ -345,17 +356,6 @@ class Trial(AlchemyProxy):
             return None
         return self.main.this_component.first_evaluation.this_activation
 
-
-    @property
-    def prolog_variables(self):
-        """Return filtered prolog variables"""
-        if not self._prolog_visitor:
-            from ...models.graphs.dependency_graph import PrologVisitor
-            self.dependency_filter.run()
-            self._prolog_visitor = PrologVisitor(self.dependency_filter)
-            self._prolog_visitor.visit(self.dependency_filter.main_cluster)
-        return self._prolog_visitor
-
     @property
     def local_modules(self):
         """Load local modules
@@ -391,7 +391,8 @@ class Trial(AlchemyProxy):
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
         [module(..., 'inte', '1.0.1')., module(..., 'inte2', '1.0.2').]
         """
-        for module in self.modules:                                              # pylint: disable=not-an-iterable
+        # pylint: disable=not-an-iterable
+        for module in self.modules:
             path = module.path
             if path is None:
                 continue
@@ -512,8 +513,7 @@ class Trial(AlchemyProxy):
             return "b"
         elif self.status == "finished":
             return "*"
-        else:
-            return "f"
+        return "f"
 
     @property
     def duration(self):
@@ -652,7 +652,8 @@ class Trial(AlchemyProxy):
         if script:
             add(self.script, {"code_hash": self.code_hash, "type": "script"})
         if local:
-            for module in self.local_modules:                                    # pylint: disable=not-an-iterable
+            # pylint: disable=not-an-iterable
+            for module in self.local_modules:
                 code_hash = module.code_hash
                 if code_hash:
                     add(module.path, {
@@ -704,7 +705,8 @@ class Trial(AlchemyProxy):
         """
         if not path or self.script.endswith(path):
             yield self.script, {"code_hash": self.code_hash, "type": "script"}
-        for module in self.local_modules:                                        # pylint: disable=not-an-iterable
+        # pylint: disable=not-an-iterable
+        for module in self.local_modules:
             if not path or module.path.endswith(path):
                 yield module.path, {
                     "code_hash": module.code_hash,
@@ -752,10 +754,11 @@ class Trial(AlchemyProxy):
         2
 
         """
+        # pylint: disable=no-member, not-callable
         session = relational.make_session()
-        session.query(Head.m).filter(Head.m.script == self.script).delete()      # pylint: disable=no-member
-        session.add(Head.m(trial_id=self.id, script=self.script))                # pylint: disable=no-member, not-callable
-        session.commit()                                                         # pylint: disable=no-member
+        session.query(Head.m).filter(Head.m.script == self.script).delete()
+        session.add(Head.m(trial_id=self.id, script=self.script))
+        session.commit()
 
     def show(self, print_=print):
         """Print trial information
@@ -791,12 +794,13 @@ class Trial(AlchemyProxy):
             Finish: {t.finish}
             Duration: {t.duration_text}""".format(
                 t=self, status=self.status.capitalize()
-        ))
+            ))
 
     def _repr_html_(self):
         """Display d3 graph on ipython notebook"""
         if hasattr(self, "graph"):
-            return self.graph._repr_html_()                                      # pylint: disable=protected-access
+            # pylint: disable=protected-access
+            return self.graph._repr_html_()
         return repr(self)
 
     @classmethod  # query
@@ -1086,7 +1090,7 @@ class Trial(AlchemyProxy):
         return an_id[0]
 
     @classmethod  # query
-    def fast_update(cls, trial_id, main_id, finish, status, session=None):       # pylint: disable=too-many-arguments
+    def fast_update(cls, trial_id, main_id, finish, status, session=None):
         """Update finish time, main_id, and status of trial
 
         Use core sqlalchemy
@@ -1121,6 +1125,7 @@ class Trial(AlchemyProxy):
         >>> trial.main_id == main_id
         True
         """
+        # pylint: disable=too-many-arguments
         session = session or relational.session
         ttrial = cls.t
         session.execute(
@@ -1131,7 +1136,7 @@ class Trial(AlchemyProxy):
         session.commit()
 
     @classmethod  # query
-    def create(cls, script, start, command, path, bypass_modules, session=None):  # pylint: disable=too-many-arguments
+    def create(cls, script, start, command, path, bypass_modules, session=None):
         """Create trial and assign a new id to it
         Use core sqlalchemy
 
@@ -1196,6 +1201,7 @@ class Trial(AlchemyProxy):
         >>> trial.modules_inherited_from_trial_id == id2
         True
         """
+        # pylint: disable=too-many-arguments
         session = session or relational.session
 
         # ToDo: use core query

@@ -132,7 +132,7 @@ class TestClusterizer(CollectionTestCase):
                 if isinstance(node, EvaluationNode):
                     return node.evaluation.code_component.name in ("a", "c")
                 return super(CustomFilter, self).__contains__(node)
-        clusterizer.filter = CustomFilter()
+        clusterizer.replace_filter = CustomFilter()
         clusterizer.run()
 
         self.assertEqual(
@@ -154,7 +154,7 @@ class TestClusterizer(CollectionTestCase):
 
         trial = Trial()
         clusterizer = Clusterizer(trial)
-        clusterizer.synonymer = SameSynonymer()
+        clusterizer.replace_synonymer = SameSynonymer()
         clusterizer.run()
 
         self.assertEqual(
@@ -177,7 +177,7 @@ class TestClusterizer(CollectionTestCase):
 
         trial = Trial()
         clusterizer = Clusterizer(trial)
-        clusterizer.synonymer = ValueSynonymer()
+        clusterizer.replace_synonymer = ValueSynonymer()
         clusterizer.run()
 
         self.assertEqual(
@@ -193,7 +193,7 @@ class TestClusterizer(CollectionTestCase):
 
         trial = Trial()
         clusterizer = Clusterizer(trial, synonymer=Synonymer())
-        clusterizer.filter = AcceptAllNodesFilter()
+        clusterizer.replace_filter = AcceptAllNodesFilter()
         clusterizer.run()
 
         self.assertEqual(
@@ -214,7 +214,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
         trial = Trial()
         clusterizer = Clusterizer(trial, synonymer=Synonymer())
-        clusterizer.filter = AcceptAllNodesFilter()
+        clusterizer.replace_filter = AcceptAllNodesFilter()
         clusterizer.run()
 
         self.assertEqual(
@@ -514,7 +514,7 @@ class TestClusterizer(CollectionTestCase):
 
 
         clusterizer = Clusterizer(trial)
-        clusterizer.synonymer = AccessNameSynonymer()
+        clusterizer.replace_synonymer = AccessNameSynonymer()
         clusterizer.run()
 
         self.assertEqual(
@@ -564,7 +564,7 @@ class TestClusterizer(CollectionTestCase):
 
 
         clusterizer = Clusterizer(trial)
-        clusterizer.synonymer = JoinedSynonymer.create(
+        clusterizer.replace_synonymer = JoinedSynonymer.create(
             AccessNameSynonymer(), SameSynonymer()
         )
         clusterizer.run()
@@ -613,7 +613,7 @@ class TestClusterizer(CollectionTestCase):
 
 
         clusterizer = Clusterizer(trial, synonymer=Synonymer())
-        clusterizer.filter = FilterAccessesOut()
+        clusterizer.replace_filter = FilterAccessesOut()
         clusterizer.run()
 
         self.assertEqual(
@@ -677,7 +677,7 @@ class TestClusterizer(CollectionTestCase):
 
 
         clusterizer = Clusterizer(trial, synonymer=Synonymer())
-        clusterizer.filter = JoinedFilter.create(
+        clusterizer.replace_filter = JoinedFilter.create(
             FilterAccessesOut(), FilterValuesOut()
         )
         clusterizer.run()
