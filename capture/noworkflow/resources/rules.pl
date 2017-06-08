@@ -1,4 +1,11 @@
 % ToDo: test all access rules
+% ToDo: evaluation influence activation
+%   Check if an evaluation influence any other evaluation inside an activation
+% ToDo: activation influence activation
+%   Check if any evaluation of an activation influence any other evaluation inside another activation
+% ToDo: activation influence evaluation
+%   Check if any evaluation of an activation influence a evaluation
+% ToDo: optimize evaluation_influence
 
 
 %%% ID RULES
@@ -7,6 +14,12 @@
         % DESCRIPTION: get the *CombinedId* of a compartment defined by *WholeId* and *PartId*
 
         compartment_id(WholeId, PartId, [WholeId, PartId]).
+
+    % evaluation_code_id(TrialId, Id, CodeId)/3
+        % DESCRIPTION: match *CodeId* of evalation *Id*
+        %              in a given trial (*TrialId*).
+
+        evaluation_code_id(TrialId, Id, CodeId) :- evaluation(TrialId, Id, _, CodeId, _, _).
 
 
 %%% NAME RULES
@@ -25,7 +38,7 @@
 
         evaluation_name(_, [], []).
         evaluation_name(TrialId, [Id|Ids], [Name|Names]) :- evaluation_name(TrialId, Id, Name), evaluation_name(TrialId, Ids, Names).
-        evaluation_name(TrialId, Id, Name) :- evaluation(TrialId, Id, _, CodeId, _, _), code_name(TrialId, CodeId, Name).
+        evaluation_name(TrialId, Id, Name) :- evaluation_code_id(TrialId, Id, CodeId), code_name(TrialId, CodeId, Name).
 
     % activation_name(TrialId, Id, Name)/3
         % DESCRIPTION: get the *Name* of an activation (*Id*)
@@ -72,6 +85,12 @@
         name(TrialId, value, Id, Name) :- value_name(TrialId, Id, Name).
         name(TrialId, compartment, Id, Name) :- compartment_name(TrialId, Id, Name).
         name(TrialId, trial, 0, Name) :- trial(TrialId, Name, _, _, _, _, _, _, _).
+
+    % map_names(TrialId, Model, Ids, Names)/4
+        % DESCRIPTION: get the *Names* of instances (*Ids*) of a *Model*
+        %              in a given trial (*TrialId*).
+
+        map_names(TrialId, Model, Ids, Names) :- maplist(name(TrialId, Model), Ids, Names).
 
 
 %%% TIMESTAMP RULES
@@ -188,8 +207,8 @@
         mode_id(TrialId, access, Id, Mode) :- access_mode_id(TrialId, Id, Mode).
         mode_id(TrialId, code_component, Id, Mode) :- code_mode_id(TrialId, Id, Mode).
         mode_id(TrialId, code_block, Id, Mode) :- code_mode_id(TrialId, Id, Mode).
-        mode_id(TrialId, evaluation, Id, Mode) :- evaluation(TrialId, Id, _, CodeId, _, _), code_mode_id(TrialId, CodeId, Mode).
-        mode_id(TrialId, activation, Id, Mode) :- evaluation(TrialId, Id, _, CodeId, _, _), code_mode_id(TrialId, CodeId, Mode).
+        mode_id(TrialId, evaluation, Id, Mode) :- evaluation_code_id(TrialId, Id, CodeId), code_mode_id(TrialId, CodeId, Mode).
+        mode_id(TrialId, activation, Id, Mode) :- evaluation_code_id(TrialId, Id, CodeId), code_mode_id(TrialId, CodeId, Mode).
 
     %%% NAME-BASED
 
@@ -232,7 +251,31 @@
         changed(TrialId, Name) :- changed_id(TrialId, Id), name(TrialId, access, Id, Name).
 
 
+%%% CODE_COMPONENT/CODE_BLOCK RULES
+
+    % code_line_id(TrialId, Id, Line)/3
+        % DESCRIPTION: match *Line* of an code_component *Id*
+        %              in a given trial (*TrialId*).
+        %              Note: Line may match multiple lines
+
+        code_line_id(TrialId, Id, Line) :- code_component(TrialId, Id, _, _, _, FirstCharLine, _, LastCharLine, _, _), between(FirstCharLine, LastCharLine, Line).
+
+    % map_code_lines_id(TrialId, Ids, Lines)/3
+        % DESCRIPTION: get the *Lines* of code components (*Ids*)
+        %              in a given trial (*TrialId*).
+
+        map_code_lines_id(_, [], []).
+        map_code_lines_id(TrialId, [Id|Ids], Lines) :- bagof(L, code_line_id(TrialId, Id, L), L1), map_code_lines_id(TrialId, Ids, L2), append(L1, L2, LT), sort(LT, Lines).
+
+
 %%% ACTIVATION/EVALUATION RULES
+
+    % is_activation_id(TrialId, Id)/2
+        % DESCRIPTION: check if an evaluation *Id* is an activation Id
+        %              in a given trial (*TrialId*).
+
+        is_activation_id(TrialId, Id) :- activation(TrialId, Id, _, _, _).
+
 
     % activation_id(TrialId, Caller, Called)/3
         % DESCRIPTION: match *Called* evaluations by *Caller* activation
@@ -245,6 +288,40 @@
         %              in a given trial (*TrialId*).
 
         called_activation_id(TrialId, Caller, Called) :- activation_id(TrialId, Caller, Called), activation(TrialId, Called, _, _, _).
+
+    % evaluation_line_id(TrialId, Id, Line)/3
+        % DESCRIPTION: match *Line* of an evaluation *Id*
+        %              in a given trial (*TrialId*).
+        %              Note: Line may match multiple lines
+
+        evaluation_line_id(TrialId, Id, Line) :- evaluation_code_id(TrialId, Id, CodeId), code_line_id(TrialId, CodeId, Line).
+
+    % map_evaluation_lines_id(TrialId, Ids, Lines)/3
+        % DESCRIPTION: get the *Lines* of evaluations (*Ids*)
+        %              in a given trial (*TrialId*).
+
+        map_evaluation_lines_id(_, [], []).
+        map_evaluation_lines_id(TrialId, [Id|Ids], Lines) :- bagof(L, evaluation_line_id(TrialId, Id, L), L1), map_evaluation_lines_id(TrialId, Ids, L2), append(L1, L2, LT), sort(LT, Lines).
+
+    % map_evaluation_code_ids(TrialId, Ids, CodeIds)/3
+        % DESCRIPTION: get the *CodeIds* of evaluations (*Ids*)
+        %              in a given trial (*TrialId*).
+
+        map_evaluation_code_ids(TrialId, Ids, CodeIds) :- maplist(evaluation_code_id(TrialId), Ids, CodeIds).
+
+    % filter_activation_ids(TrialId, Ids, ActivationIds)/3
+        % DESCRIPTION: filter evaluation *Ids* to get only *ActivationIds*
+        %              in a given trial (*TrialId*).
+
+        filter_activation_ids(TrialId, Ids, ActivationIds) :- include(is_activation_id(TrialId), Ids, ActivationIds).
+
+    % recursive_internal_evaluations_ids(TrialId, Activations, Evaluations)/3
+        % DESCRIPTION: get a list of internar *Evaluations* from a list of *Activations*
+        %              in a given trial (*TrialId*).
+
+        recursive_internal_evaluations_ids(_, [], []).
+        recursive_internal_evaluations_ids(TrialId, [InfluencedActivation], Evaluations) :- bagof(X, activation_id(TrialId, InfluencedActivation, X), E1), filter_activation_ids(TrialId, E1, Activations), recursive_internal_evaluations_ids(TrialId, Activations, E2), append(E1, E2, Evaluations), !.
+        recursive_internal_evaluations_ids(TrialId, [A|As], Evaluations) :- recursive_internal_evaluations_ids(TrialId, [A], E1), recursive_internal_evaluations_ids(TrialId, As, E2), append(E1, E2, Evaluations).
 
 
 %%% ACCESS RULES
@@ -366,5 +443,61 @@
         access_influence(TrialId, Influencer, Influenced) :- access_influence_id(TrialId, InfluencerId, InfluencedId), name(TrialId, access, InfluencerId, Influencer), name(TrialId, access, InfluencedId, Influenced).
 
 
+%%% SLICING INFERENCE RULES
+
+    % valid_dependency_id(TrialId, Dependent, Dependency, Type)/4
+        % DESCRIPTION: *Dependent* evaluation has a *Type* dependency to *Dependency* evaluation
+        %              in a given trial (*TrialId*).
+        %              Ignores argument types
+
+        valid_dependency_id(TrialId, Dependent, Dependency, Type) :- dependency(TrialId, _, Dependent, _, Dependency, Type), sub_atom(Type, 0, 3, _, Prefix), Prefix \= 'arg'.
+
+    % evaluation_slice_id(TrialId, Dependent, Dependencies)/3
+        % DESCRIPTION: get *Dependencies* of *Dependent* evaluation
+        %              in a given trial (*TrialId*).
+
+        evaluation_slice_id(_, [],[]).
+        evaluation_slice_id(TrialId, [Id|L1], L2) :- evaluation_slice_id(TrialId, Id, L3), evaluation_slice_id(TrialId, L1, L4), union(L3, L4, L2), !.
+        evaluation_slice_id(TrialId, Id, [Id|L1]) :- bagof(X, valid_dependency_id(TrialId, Id, X, _),L2), !, evaluation_slice_id(TrialId, L2, L1).
+        evaluation_slice_id(_, Id, [Id]).
+
+    % evaluation_slice_lines_id(TrialId, Dependent, Lines)/3
+        % DESCRIPTION: get *Lines* of dependencies of *Dependent* evaluation
+        %              in a given trial (*TrialId*).
+
+        evaluation_slice_lines_id(TrialId, Dependent, Lines) :- evaluation_slice_id(TrialId, Dependent, Dependencies), map_evaluation_lines_id(TrialId, Dependencies, Lines).
+
+    % evaluation_influence_id(TrialId, Influencer, Influenced)/3
+        % DESCRIPTION: *Influenced* evaluation depends on *Influencer* evaluation
+        %              in a given trial (*TrialId*).
+
+        evaluation_influence_id(TrialId, Influencer, Influenced) :- evaluation_slice_id(TrialId, Influenced, Dependencies), member(Influencer, Dependencies).
 
 
+    %%% NAME-BASED
+
+
+        % evaluation_slice_id_by_name(TrialId, DependentName, Dependencies)/3
+            % DESCRIPTION: get *Dependencies* ids of *DependentName* evaluation
+            %              in a given trial (*TrialId*).
+
+            evaluation_slice_id_by_name(TrialId, DependentName, Dependencies) :- name(TrialId, evaluation, Dependent, DependentName), evaluation_slice_id(TrialId, Dependent, Dependencies).
+
+
+        % evaluation_slice(TrialId, DependentName, DependenciesNames)/3
+            % DESCRIPTION: get *DependenciesNames* of *DependentName* evaluation
+            %              in a given trial (*TrialId*).
+
+            evaluation_slice(TrialId, DependentName, DependenciesNames) :- evaluation_slice_id_by_name(TrialId, DependentName, Dependencies), map_names(TrialId, evaluation, Dependencies, DependenciesNames).
+
+        % evaluation_slice_lines(TrialId, DependentName, Lines)/3
+            % DESCRIPTION: get *Lines* of dependencies of *DependentName* evaluation
+            %              in a given trial (*TrialId*).
+
+            evaluation_slice_lines(TrialId, DependentName, Lines) :- name(TrialId, evaluation, Dependent, DependentName), evaluation_slice_lines_id(TrialId, Dependent, Lines).
+
+        % evaluation_influence(TrialId, InfluencerName, InfluencedName)/3
+            % DESCRIPTION: *InfluencerName* evaluation depends on *InfluencedName* evaluation
+            %              in a given trial (*TrialId*).
+
+            evaluation_influence(TrialId, InfluencerName, InfluencedName) :- name(TrialId, evaluation, Influenced, InfluencedName), name(TrialId, evaluation, Influencer, InfluencerName), evaluation_influence_id(TrialId, Influencer, Influenced).
