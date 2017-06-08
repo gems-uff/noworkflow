@@ -68,13 +68,13 @@ class ContentDatabase(object):
     def find_subhash(self, content_hash):
         """Get hash that starts by content_hash"""
         content_dirname = content_hash[:2]
-        contet_filename = content_hash[2:]
+        content_filename = content_hash[2:]
         content_dir = join(self.content_path, content_dirname)
         if not isdir(content_dir):
             return None
         for _, _, filenames in os.walk(content_dir):
             for name in filenames:
-                if name.startswith(contet_filename):
+                if name.startswith(content_filename):
                     return content_dirname + name
         return None
 
