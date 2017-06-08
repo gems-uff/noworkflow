@@ -324,6 +324,73 @@
         recursive_internal_evaluations_ids(TrialId, [A|As], Evaluations) :- recursive_internal_evaluations_ids(TrialId, [A], E1), recursive_internal_evaluations_ids(TrialId, As, E2), append(E1, E2, Evaluations).
 
 
+%%% DOCSTRING RULES
+
+    % code_docstring_id(TrialId, Id, Docstring)/3
+        % DESCRIPTION: get the *Docstring* of a code block (*Id*)
+        %              in a given trial (*TrialId*).
+
+        code_docstring_id(TrialId, Id, Docstring) :- code_block(TrialId, Id, _, Docstring).
+
+    % activation_docstring_id(TrialId, Id, Docstring)/3
+        % DESCRIPTION: get the *Docstring* of a activation (*Id*)
+        %              in a given trial (*TrialId*).
+
+        activation_docstring_id(TrialId, Id, Docstring) :- activation(TrialId, Id, _, _, BlockId), code_block(TrialId, BlockId, _, Docstring).
+
+    % docstring_id(TrialId, Model, Id, Docstring)/4
+        % DESCRIPTION: get the *Docstring* of a *Model* (*Id*)
+        %              in a given trial (*TrialId*).
+
+        docstring_id(TrialId, code_block, Id, Docstring) :- code_docstring_id(TrialId, Id, Docstring).
+        docstring_id(TrialId, code_component, Id, Docstring) :- code_docstring_id(TrialId, Id, Docstring).
+        docstring_id(TrialId, evaluation, Id, Docstring) :- activation_docstring_id(TrialId, Id, Docstring).
+        docstring_id(TrialId, activation, Id, Docstring) :- activation_docstring_id(TrialId, Id, Docstring).
+
+    %%% NAME-BASED
+
+    % docstring(TrialId, Model, Name, Docstring)/4
+        % DESCRIPTION: get the *Docstring* of a *Model* (*Name*)
+        %              in a given trial (*TrialId*).
+
+        docstring(TrialId, Model, Name, Docstring) :- name(TrialId, Model, Id, Name), docstring_id(TrialId, Model, Id, Docstring).
+
+
+%%% SCOPE RULES
+
+    % code_scope_id(TrialId, Id, Type)/3
+        % DESCRIPTION: get the *Type* of the scope of a code component (*Id*)
+        %              in a given trial (*TrialId*).
+        %              Type = 'project'|'script'|'class_def'|'function_def'
+
+        code_scope_id(TrialId, Id, 'project') :- code_component(TrialId, Id, _, _, _, _, _, _, _, nil).
+        code_scope_id(TrialId, Id, Type) :- code_component(TrialId, Id, _, _, _, _, _, _, _, ContainerId), code_component(TrialId, ContainerId, _, Type, _, _, _, _, _, _).
+
+    % evaluation_scope_id(TrialId, Id, Type)/3
+        % DESCRIPTION: get the *Type* of the scope of an evaluation (*Id*)
+        %              in a given trial (*TrialId*).
+        %              Type = 'project'|'script'|'class_def'|'function_def'
+
+        evaluation_scope_id(TrialId, Id, Type) :- evaluation_code_id(TrialId, Id, CodeId), code_scope_id(TrialId, CodeId, Type).
+
+    % scope_id(TrialId, Model, Id, Type)/3
+        % DESCRIPTION: get the *Type* of the scope of a *Model* (*Id*)
+        %              in a given trial (*TrialId*).
+        %              Type = 'project'|'script'|'class_def'|'function_def'
+
+        scope_id(TrialId, code_block, Id, Type) :- code_scope_id(TrialId, Id, Type).
+        scope_id(TrialId, code_component, Id, Type) :- code_scope_id(TrialId, Id, Type).
+        scope_id(TrialId, evaluation, Id, Type) :- evaluation_scope_id(TrialId, Id, Type).
+        scope_id(TrialId, activation, Id, Type) :- evaluation_scope_id(TrialId, Id, Type).
+
+    % scope(TrialId, Model, Name, Type)/3
+        % DESCRIPTION: get the *Type* of the scope of a *Model* (*Name*)
+        %              in a given trial (*TrialId*).
+        %              Type = 'project'|'script'|'class_def'|'function_def'
+
+        scope(TrialId, Model, Name, Type) :- name(TrialId, Model, Id, Name), scope_id(TrialId, Model, Id, Type).
+
+
 %%% ACCESS RULES
 
     % file_read_id(TrialId, Id)/2
