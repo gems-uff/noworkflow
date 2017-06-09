@@ -151,6 +151,6 @@ class PrologNullableRepr(PrologRepr):
 
     def fact(self, obj):
         """Return attribute self.attr_name of obj as escaped repr"""
-        if not self.value(obj):
+        if self.value(obj) is None:
             return "nil"
         return super(PrologNullableRepr, self).fact(obj)
