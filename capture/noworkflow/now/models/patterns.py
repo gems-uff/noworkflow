@@ -5,8 +5,10 @@
 """Pattern Matching Queries"""
 # pylint: disable=invalid-name
 
+import inspect
 from collections import OrderedDict, defaultdict
-from itertools import zip_longest, chain
+from copy import copy
+from itertools import zip_longest, chain, product
 from sqlalchemy.sql.expression import and_, BinaryExpression
 from future.utils import viewitems, viewvalues
 from ..persistence import relational
@@ -26,39 +28,165 @@ from ..persistence.models import Trial
 from ..persistence.models import Value
 
 
-BLANK = object()
+class Blank(object):
+    """Singleton object to represent _"""
+    # pylint: disable=too-few-public-methods
+    def __repr__(self):
+        return "_"
+
+
+BLANK = Blank()
 
 
 class Variable(object):
     """Variable for joining matches"""
     # pylint: disable=too-few-public-methods
-    def __init__(self):
+    def __init__(self, name=None):
         self.results = set()
         self.bound = BLANK
+        self.name = str(id(self) if name is None else name)
 
     def reset(self):
         """Reset variable"""
-        self.__init__()
+        self.__init__(self.name)
 
     def __call__(self, val):
-        """Binds p to value"""
+        """Binds variable to value"""
         self.bound = val
         return self
 
+    def __repr__(self):
+        return self.name
 
-class Query(object):
-    """Pattern matching query"""
-    # pylint: disable=too-few-public-methods
+
+class BoundQuery(object):
+    """Generic pattern matching query"""
+
+    def __init__(self):
+        self.patterns = {}
+        self.binds = {}
+        self.reverse_patterns = defaultdict(list)
 
     def __and__(self, other):
+        if isinstance(self, NullQuery) or isinstance(other, NullQuery):
+            return NullQuery()
         return GenericJoinedQuery(self, other)
 
+    def reset_patterns(self):
+        """Reset pattern mappings"""
+        self.patterns = {}
+        self.reverse_patterns = defaultdict(list)
 
-class BoundQuery(Query):
-    """BoundQuery that supports joins"""
-    # pylint: disable=too-few-public-methods
+    def process_value(self, attr, val):
+        """Process variable pattern or value"""
+        if isinstance(val, Variable):
+            if val.bound is BLANK:
+                self.patterns[attr] = val
+                self.reverse_patterns[val].append(attr)
+            return val.bound
+        return val
+
+    def get_bound(self, result, attr):
+        """Get bound value in result"""
+        # pylint: disable=no-self-use, unused-argument
+        return BLANK
+
+    def iterate(self):
+        """Abstract generator"""
+        # pylint: disable=no-self-use
+        yield
+
+    def __iter__(self):
+        self.binds.clear()
+        for result in self.iterate():
+            for attr, pattern in viewitems(self.patterns):
+                temp = self.get_bound(result, attr)
+                pattern.results.add(temp)
+                pattern.bound = temp
+                self.binds[pattern] = temp
+            yield result, copy(self.binds)
+
+        for pattern in self.binds:
+            pattern.bound = BLANK
+
+
+class NullQuery(BoundQuery):
+    """Null query that has no results"""
+    def iterate(self):
+        """Null query"""
+        #pylint: disable=unreachable
+        return
+        yield
+
+
+class RuleQuery(BoundQuery):
+    """Call rules function for all possibilities of unbound_options"""
+
+    def __init__(self, func, args, values, has_binds, unbound_options):
+        # pylint: disable=too-many-arguments
+        super(RuleQuery, self).__init__()
+        self.func = func
+        self.args = args
+        self.values = values
+        self.has_binds = has_binds
+        self.unbound_options = unbound_options
+
+    def apply_function(self, values):
+        """Apply function to values"""
+        kwargs = {}
+        if self.has_binds:
+            kwargs["_binds"] = self.binds
+        for result, binds in self.func(*values, **kwargs):
+            if binds is not self.binds:
+                self.binds.update(binds)
+            yield result
+
+            for pattern in self.binds:
+                pattern.bound = BLANK
+
+    def get_bound(self, result, attr):
+        """Get bound value in result"""
+        if attr in self.patterns:
+            return self.patterns[attr].bound
+        return BLANK
+
+    def prepare_values(self, order, bind):
+        """Prepare values for exploration"""
+        self.reset_patterns()
+        new_values = copy(self.values)
+        for i, arg in enumerate(order):
+            prevalue = new_values[self.args[arg]]
+            val = self.process_value(arg, prevalue)
+            if val is not BLANK and val != bind[i]:
+                # Variable bound to a different value
+                return None
+            elif val != bind[i] and isinstance(prevalue, Variable):
+                prevalue.bound = bind[i]
+                self.binds[prevalue] = bind[i]
+            new_values[self.args[arg]] = bind[i]
+        return new_values
+
+    def iterate(self):
+        """generator"""
+        order = list(self.unbound_options)
+        explored = False
+        exploration = product(*(self.unbound_options[x] for x in order))
+        for bind in exploration:
+            explored = True
+            new_values = self.prepare_values(order, bind)
+            if new_values is not None:
+                for result in self.apply_function(new_values):
+                    yield result
+        if not explored:
+            for result in self.apply_function(self.values):
+                yield result
+
+
+class ModelQuery(BoundQuery):
+    """Use SQLAlchemy to run query"""
 
     def __init__(self, model_rule, conditions):
+        super(ModelQuery, self).__init__()
         self.conditions = conditions
         self.model_rule = model_rule
 
@@ -72,28 +200,19 @@ class BoundQuery(Query):
             return val
         return self._get(attr) == val
 
-    def _result_attr(self, result, attr):
+    def get_bound(self, result, attr):
         """Get result attribute"""
         return self.model_rule.get_proxy_attr(result, attr)
 
-    def __iter__(self):
-        """Iterate on results. Support Variables"""
-        patterns = {}
-        reverse_patterns = defaultdict(list)
+    def iterate(self):
+        """Iterate on query generation"""
         session = relational.session
         conditions = []
         for attr, val in self.conditions:
-            if isinstance(val, Variable):
-                if val.bound is BLANK:
-                    patterns[attr] = val
-                    reverse_patterns[val].append(attr)
-                    continue
-                else:
-                    val = val.bound
-            if val is BLANK:
-                continue
-            conditions.append(self._eq(attr, val))
-        for attrs in viewvalues(reverse_patterns):
+            val = self.process_value(attr, val)
+            if val is not BLANK:
+                conditions.append(self._eq(attr, val))
+        for attrs in viewvalues(self.reverse_patterns):
             attr0 = attrs[0]
             for attr in attrs:
                 if attr != attr0:
@@ -102,36 +221,27 @@ class BoundQuery(Query):
         sql_result = session.query(self.model_rule.get_model()).filter(
             and_(*conditions)
         )
-
-        binds = set()
         for sql_model in sql_result:
-            result = proxy(sql_model)
-            for attr, pattern in viewitems(patterns):
-                temp = self._result_attr(result, attr)
-                pattern.results.add(temp)
-                pattern.bound = temp
-                binds.add(pattern)
-            yield result
-
-        for pattern in binds:
-            pattern.bound = BLANK
+            yield proxy(sql_model)
 
 
-class GenericJoinedQuery(Query):
+class GenericJoinedQuery(BoundQuery):
     """Joined BoundQuery"""
 
     def __init__(self, bound_a, bound_b):
+        super(GenericJoinedQuery, self).__init__()
         self.bound_a = bound_a
         self.bound_b = bound_b
 
-    def __iter__(self):
-        """Iterate on results. Support Variables"""
-        for result_a in self.bound_a:
-            for result_b in self.bound_b:
+    def iterate(self):
+        """Iterate on query generation"""
+        for result_a, binds_a in self.bound_a:
+            for result_b, self.binds in self.bound_b:
                 if not isinstance(result_a, tuple):
                     result_a = (result_a,)
                 if not isinstance(result_b, tuple):
                     result_b = (result_b,)
+                self.binds.update(binds_a)
                 yield tuple(chain(result_a, result_b))
 
 
@@ -172,13 +282,60 @@ class ModelRule(object):
             (self._names.get(name, BLANK), value)
             for name, value in viewitems(kwargs)
         ]
-        return BoundQuery(self, conditions)
+        return ModelQuery(self, conditions)
 
     def __getattr__(self, attr):
         return getattr(self._model.m, self._names[attr])
 
     def __dir__(self):
         return list(self._names)
+
+
+class FunctionRule(object):
+    """Rule function"""
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self, func):
+        self.func = func
+        all_args = inspect.getargs(func.__code__).args
+        self.args = OrderedDict(
+            (arg, i)
+            for i, arg in enumerate(all_args)
+        )
+        self.has_binds = False
+        if "_binds" in self.args:
+            self.has_binds = True
+            del self.args["_binds"]
+        self.options = {}
+        self.__doc__ = "{}({})".format(func.__name__, ", ".join(self.args))
+
+    def __call__(self, *args, **kwargs):
+        values = [BLANK] * len(self.args)
+        for i, val in enumerate(args):
+            values[i] = val
+        for arg, val in viewitems(kwargs):
+            values[self.args[arg]] = val
+        unbound_options = {}
+        for arg, options in viewitems(self.options):
+            bound_value = values[self.args[arg]]
+            if bound_value is BLANK or isinstance(bound_value, Variable):
+                unbound_options[arg] = options
+            elif bound_value not in options:
+                return NullQuery()
+        return RuleQuery(self.func, self.args, values, self.has_binds, unbound_options)
+
+def create_rule(func):
+    """Create rule object"""
+    return FunctionRule(func)
+
+def restrict_rule(**options):
+    """Restrict domain of rule"""
+    def apply_restrictions(rule):
+        """Apply restrictions to rule"""
+        for key, values in viewitems(options):
+            rule.options[key] = values
+        return rule
+    return apply_restrictions
 
 
 activation = ModelRule(Activation)
