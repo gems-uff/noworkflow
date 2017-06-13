@@ -19,7 +19,7 @@ from ..persistence.models import Trial, Module, FileAccess
 from ..persistence.models import CodeComponent, CodeBlock, Argument
 from ..persistence import persistence_config, content
 from ..utils.io import print_msg
-from ..utils.cross_version import PY34, PY35, PY2, PY36
+from ..utils.cross_version import PY34, PY35, PY2
 
 from .command import Command
 
@@ -96,7 +96,8 @@ class Restore(Command):
                         import imp
                         module = imp.load_source(info["name"], path)
                     version = metascript.deployment.get_version(module)
-                except:
+                except Exception:
+                    # pylint: disable=too-broad-exception
                     pass
                 metascript.deployment.add_module(
                     info["name"], version, path, cid, False
@@ -108,12 +109,11 @@ class Restore(Command):
                 access.content_hash_after = info["code_hash"]
                 access.mode = "a+"
 
-        
 
         partial = True
         Trial.fast_update(tid, metascript.main_id, datetime.now(), "backup")
-        CodeComponent.store(metascript.code_components_store)
-        CodeBlock.store(metascript.code_blocks_store)
+        CodeComponent.store(metascript.code_components_store, partial)
+        CodeBlock.store(metascript.code_blocks_store, partial)
         Module.store(modules, partial)
         FileAccess.store(accesses, partial)
         Argument.store(arguments, partial)
