@@ -3,9 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Execution provenance collector"""
+# pylint: disable=too-many-lines
 
 import sys
 import weakref
+import os
 
 from collections import OrderedDict
 from copy import copy
@@ -15,6 +17,7 @@ from types import GeneratorType
 
 from future.utils import viewvalues, viewkeys, exec_
 
+from ...persistence import content
 from ...persistence.models import Trial
 from ...utils.cross_version import IMMUTABLE, isiterable, PY3
 from ...utils.cross_version import cross_print
@@ -24,24 +27,13 @@ from ..helper import get_compartment, last_evaluation_by_value_id
 from .structures import AssignAccess, Assign, Generator
 from .structures import DependencyAware, Dependency, Parameter
 from .structures import CompartmentDependencyAware, CollectionDependencyAware
-
-
-class ConditionExceptions(object):
-
-    def __init__(self):
-        self.exceptions = {}
-
-    def __getitem__(self, item):
-        if item not in self.exceptions:
-            class ConditionException(Exception):
-                pass
-            self.exceptions[item] = ConditionException
-        return self.exceptions[item]
-
+from .structures import ConditionExceptions
 
 
 class Collector(object):
     """Collector called by the transformed AST. __noworkflow__ object"""
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-public-methods
 
     def __init__(self, metascript):
         self.metascript = weakref.proxy(metascript)
@@ -54,6 +46,7 @@ class Collector(object):
         self.dependencies = self.metascript.dependencies_store
         self.values = self.metascript.values_store
         self.compartments = self.metascript.compartments_store
+        self.file_accesses = self.metascript.file_accesses_store
 
         self.exceptions = self.metascript.exceptions_store
         # Partial save
@@ -76,11 +69,39 @@ class Collector(object):
         self.globals = copy(__builtins__)
         self.global_evaluations = {}
         self.pyslice = slice
-        self.Ellipsis = Ellipsis                                                 # pylint: disable=invalid-name
+        self.Ellipsis = Ellipsis  # pylint: disable=invalid-name
         self.old_next = next
 
         self.condition_exceptions = ConditionExceptions()
-    
+
+    def new_open(self, old_open):
+        """Wrap the open builtin function to register file access"""
+        def open(name, *args, **kwargs):  # pylint: disable=redefined-builtin
+            """Open file and add it to file_accesses"""
+            activation = self.last_activation
+            while activation and not activation.active:
+                activation = activation.parent
+
+            if not activation:
+                return old_open(name, *args, **kwargs)
+            # Create a file access object with default values
+            file_access = self.file_accesses.add_object(self.trial_id, name)
+            if os.path.exists(name):
+                # Read previous content if file exists
+                with old_open(name, "rb") as fil:
+                    file_access.content_hash_before = content.put(fil.read())
+            file_access.activation_id = activation.id
+            # Update with the informed keyword arguments (mode / buffering)
+            file_access.update(kwargs)
+            # Update with the informed positional arguments
+            if len(args) > 1:
+                file_access.buffering = args[1]
+            elif args:
+                file_access.mode = args[0]
+            activation.file_accesses.append(file_access)
+            return old_open(name, *args, **kwargs)
+        return open
+
     def access(self, activation, code_id, exc_handler):
         """Capture object access before"""
         activation.dependencies.append(DependencyAware(
@@ -89,10 +110,11 @@ class Collector(object):
         ))
         return self
 
-    def __getitem__(self, index):                                                # pylint: disable=too-many-locals
+    def __getitem__(self, index):
+        # pylint: disable=too-many-locals
         activation, code_id, vcontainer, vindex, access, mode = index
         depa = activation.dependencies.pop()
-        
+
         value_dep = part_id = None
         for dep in depa.dependencies:
             if dep.mode == "value":
@@ -145,7 +167,8 @@ class Collector(object):
         ))
         return value
 
-    def __setitem__(self, index, value):                                         # pylint: disable=too-many-locals
+    def __setitem__(self, index, value):
+        # pylint: disable=too-many-locals
         activation, code_id, vcontainer, vindex, access, _ = index
         depa = activation.dependencies.pop()
         value_dep = None
@@ -221,6 +244,11 @@ class Collector(object):
         evaluation.moment = self.time()
         evaluation.value_id = value_id
         self.last_activation = activation.last_activation
+        for file_access in activation.file_accesses:
+            if os.path.exists(file_access.name):
+                with content.std_open(file_access.name, "rb") as fil:
+                    file_access.content_hash_after = content.put(fil.read())
+            file_access.done = True
         #self.activations.store.get(
         #    evaluation.activation_id, self.first_activation
         #)
@@ -270,8 +298,9 @@ class Collector(object):
 
         self.exceptions.add(self.trial_id, exc, activation.id)
 
-    def exception(self, activation, code_id, exc_handler, name, value):          # pylint: disable=too-many-arguments, unused-argument
+    def exception(self, activation, code_id, exc_handler, name, value):
         """Collection activation exc value"""
+        # pylint: disable=too-many-arguments, unused-argument
         # ToDo: relate evaluation to exception
         evaluation = self.evaluate(activation, code_id, value, None)
         if name:
@@ -350,8 +379,9 @@ class Collector(object):
         ))
         return self._dict
 
-    def _dict(self, activation, code_id, value, mode="collection"):              # pylint: disable=no-self-use
+    def _dict(self, activation, code_id, value, mode="collection"):
         """Capture dict after"""
+        # pylint: disable=no-self-use
         depa = activation.dependencies.pop()
         if activation.active:
             evaluation = self.eval_dep(activation, code_id, value, mode, depa)
@@ -370,8 +400,9 @@ class Collector(object):
         ))
         return self._dict_key
 
-    def _dict_key(self, activation, code_id, value, final=not PY3):              # pylint: disable=no-self-use, unused-argument
+    def _dict_key(self, activation, code_id, value, final=not PY3):
         """Capture dict key after"""
+        # pylint: disable=no-self-use, unused-argument
         activation.dependencies[-1].key = value
         if final:
             compartment_depa = activation.dependencies.pop()
@@ -384,8 +415,9 @@ class Collector(object):
         self.dict_key(activation, code_id, exc_handler)
         return self._comp_key
 
-    def _comp_key(self, activation, code_id, value, count):                      # pylint: disable=no-self-use, unused-argument
+    def _comp_key(self, activation, code_id, value, count):
         """Capture dict comprehension key after"""
+        # pylint: disable=no-self-use, unused-argument
         self._dict_key(activation, code_id, value, final=True)
         self.remove_conditions(activation, count)
         return value
@@ -398,8 +430,9 @@ class Collector(object):
         ))
         return self._dict_value
 
-    def _dict_value(self, activation, code_id, value, final=PY3):                # pylint: disable=no-self-use, unused-argument
+    def _dict_value(self, activation, code_id, value, final=PY3):
         """Capture dict value after"""
+        # pylint: disable=no-self-use, unused-argument
         activation.dependencies[-1].key = value
         if final:
             value_depa = activation.dependencies.pop()
@@ -412,8 +445,9 @@ class Collector(object):
         self.dict_value(activation, code_id, exc_handler)
         return self._comp_value
 
-    def _comp_value(self, activation, code_id, value, count):                    # pylint: disable=no-self-use, unused-argument
+    def _comp_value(self, activation, code_id, value, count):
         """Capture dict comprehension value after"""
+        # pylint: disable=no-self-use, unused-argument
         self._dict_value(activation, code_id, value, final=False)
         return value
 
@@ -436,8 +470,9 @@ class Collector(object):
         ))
         return self._list
 
-    def _list(self, activation, code_id, value, mode="collection"):              # pylint: disable=no-self-use
+    def _list(self, activation, code_id, value, mode="collection"):
         """Capture dict after"""
+        # pylint: disable=no-self-use
         depa = activation.dependencies.pop()
         if activation.active:
             evaluation = self.evaluate(activation, code_id, value, None, depa)
@@ -478,8 +513,9 @@ class Collector(object):
         ))
         return self._item
 
-    def _item(self, activation, code_id, value, key):                            # pylint: disable=no-self-use
+    def _item(self, activation, code_id, value, key):
         """Capture item after"""
+        # pylint: disable=no-self-use
         value_depa = activation.dependencies.pop()
         if key is None:
             key = value
@@ -504,8 +540,9 @@ class Collector(object):
             ))
         return value
 
-    def genexp(self, activation, code_id, exc_handler, lvalue, mode):            # pylint: disable=too-many-arguments
+    def genexp(self, activation, code_id, exc_handler, lvalue, mode):
         """Capture genexp"""
+        # pylint: disable=too-many-arguments
         try:
             activation.dependencies.append(CollectionDependencyAware(
                 exc_handler=exc_handler,
@@ -539,8 +576,9 @@ class Collector(object):
         ))
         return self._genitem
 
-    def _genitem(self, activation, code_id, value, generator):                   # pylint: disable=no-self-use
+    def _genitem(self, activation, code_id, value, generator):
         """Capture item after"""
+        # pylint: disable=no-self-use
         value_depa = activation.dependencies.pop()
         if activation.active:
             if len(value_depa.dependencies) == 1:
@@ -567,8 +605,9 @@ class Collector(object):
         self.genitem(activation, code_id, exc_handler)
         return self._yielditem
 
-    def _yielditem(self, activation, code_id, value, generator):                 # pylint: disable=no-self-use
+    def _yielditem(self, activation, code_id, value, generator):
         """Capture yielditem after"""
+        # pylint: disable=no-self-use
         depa = activation.dependencies[-1]
         try:
             activation.assignments.append(Assign(None, None, depa))
@@ -583,8 +622,8 @@ class Collector(object):
             if activation.parent.assignments:
                 activation.parent.assignments[-1].combine(assign)
             gens = assign.generators.get(id(activation.generator.value), [])
-            for generator in gens:
-                dep = copy(generator[-1])
+            for gen in gens:
+                dep = copy(gen[-1])
                 dep.mode = "use"
                 activation.dependencies[-1].add(dep)
 
@@ -616,8 +655,9 @@ class Collector(object):
         ))
         return self._slice
 
-    def _slice(self, activation, code_id, low, upp, step, mode="dependency"):    # pylint: disable=too-many-arguments
+    def _slice(self, activation, code_id, low, upp, step, mode="dependency"):
         """Capture slice after"""
+        # pylint: disable=too-many-arguments
         depa = activation.dependencies.pop()
         value = self.pyslice(low, upp, step)
         if activation.active:
@@ -646,15 +686,17 @@ class Collector(object):
         ))
         return self._assign_value
 
-    def _assign_value(self, activation, value, augvalue=None):                   # pylint: disable=unused-argument
+    def _assign_value(self, activation, value, augvalue=None):
         """Capture assignment after"""
+        # pylint: disable=unused-argument
         dependency = activation.dependencies.pop()
         assign = Assign(self.time(), value, dependency)
         activation.assignments.append(assign)
         return value
 
-    def pop_assign(self, activation):                                            # pylint: disable=no-self-use
+    def pop_assign(self, activation):
         """Pop assignment from activation"""
+        # pylint: disable=no-self-use
         assign = activation.assignments.pop()
         return assign
 
@@ -679,13 +721,14 @@ class Collector(object):
         if value_dep:
             self.make_dependencies(activation, evaluation, access_depa)
             self.compartments.add_object(
-                self.trial_id, 
+                self.trial_id,
                 addr, moment, value_dep.value_id, evaluation.value_id
             )
         return 1
 
-    def sub_dependency(self, dep, value, index, clone_depa):                     # pylint: disable=too-many-locals
+    def sub_dependency(self, dep, value, index, clone_depa):
         """Get dependency aware inside of another dependency aware"""
+        # pylint: disable=too-many-locals
         meta = self.metascript
         part_id = eid = cid = None
         val = "<now_unset>"
@@ -713,8 +756,9 @@ class Collector(object):
         new_depa.add(dependency)
         return new_depa, part_id
 
-    def assign_multiple(self, activation, assign, info, depa, ldepa):            # pylint: disable=too-many-arguments
+    def assign_multiple(self, activation, assign, info, depa, ldepa):
         """Prepare to create dependencies for assignment to tuple/list"""
+        # pylint: disable=too-many-arguments, function-redefined
         value = assign.value
         propagate_dependencies = (
             len(depa.dependencies) == 1 and
@@ -757,8 +801,9 @@ class Collector(object):
             activation, assign, info, custom_dependency
         )
 
-    def assign_multiple_apply(self, activation, assign, info, custom):           # pylint: disable=too-many-locals
+    def assign_multiple_apply(self, activation, assign, info, custom):
         """Create dependencies for assignment to tuple/list"""
+        # pylint: disable=too-many-locals
         assign_value = assign.value
         subcomps, _ = info
         # Assign until starred
@@ -820,8 +865,9 @@ class Collector(object):
         ))
         return self._func
 
-    def _func(self, activation, code_id, func_id, func, mode="dependency"):      # pylint: disable=too-many-arguments
+    def _func(self, activation, code_id, func_id, func, mode="dependency"):
         """Capture func after"""
+        # pylint: disable=too-many-arguments
         depa = activation.dependencies.pop()
         if activation.active:
             if len(depa.dependencies) == 1:
@@ -841,8 +887,9 @@ class Collector(object):
 
         return result
 
-    def call(self, activation, code_id, exc_handler, func, mode="dependency"):   # pylint: disable=too-many-arguments
+    def call(self, activation, code_id, exc_handler, func, mode="dependency"):
         """Capture call before"""
+        # pylint: disable=too-many-arguments
         if activation.active:
             act = self.start_activation(func.__name__, code_id, -1, activation)
         else:
@@ -862,8 +909,7 @@ class Collector(object):
         result = None
         try:
             result = activation.func(*args, **kwargs)
-        except Exception as e:
-            #print(e)
+        except Exception:
             self.collect_exception(activation)
             raise
         finally:
@@ -908,6 +954,7 @@ class Collector(object):
 
     def _decorator(self, activation, code_id, value, mode="use"):
         """Capture decorator after"""
+        # pylint: disable=unused-argument, no-self-use
         dependency_aware = activation.dependencies.pop()
         #ToDo: use dependency
         return value
@@ -920,8 +967,9 @@ class Collector(object):
         ))
         return self._argument
 
-    def _argument(self, activation, code_id, value, mode="", arg="", kind=""):   # pylint: disable=too-many-arguments
+    def _argument(self, activation, code_id, value, mode="", arg="", kind=""):
         """Capture argument after"""
+        # pylint: disable=too-many-arguments
         mode = mode or "argument"
         kind = kind or "argument"
         dependency_aware = activation.dependencies.pop()
@@ -953,7 +1001,7 @@ class Collector(object):
         ))
         return self._function_def
 
-    def _function_def(self, closure_activation, block_id, arguments, mode):      # pylint: disable=no-self-use
+    def _function_def(self, closure_activation, block_id, arguments, mode):
         """Decorate function definition with then new activation.
         Collect arguments and match to parameters.
         """
@@ -1002,8 +1050,9 @@ class Collector(object):
             return function_def
         return dec
 
-    def _match_arguments(self, activation, arguments, default_dependencies):     # pylint: disable=too-many-locals, too-many-branches
+    def _match_arguments(self, activation, arguments, default_dependencies):
         """Match arguments to parameters. Create Variables"""
+        # pylint: disable=too-many-locals, too-many-branches
         time = self.time()
         defaults = default_dependencies.dependencies
         args, _, vararg, kwarg, kwonlyargs = arguments
@@ -1120,8 +1169,9 @@ class Collector(object):
         dependency = activation.dependencies.pop()
         return self._loop_generator(activation, value, dependency)
 
-    def enumerate_generator(self, activation, value, code_id, exc_handler):      # pylint: disable=no-self-use
+    def enumerate_generator(self, activation, value, code_id, exc_handler):
         """Iterate on generator"""
+        # pylint: disable=no-self-use
         if isinstance(value, GeneratorType):
             index = 0
             it_ = iter(value)
@@ -1189,8 +1239,9 @@ class Collector(object):
         ))
         return self._condition
 
-    def _condition(self, activation, value):                                     # pylint: disable=no-self-use
+    def _condition(self, activation, value):
         """Capture condition after"""
+        # pylint: disable=no-self-use
         dependency = activation.dependencies.pop()
         activation.conditions.append(dependency.clone(
             extra_only=not activation.active
@@ -1203,8 +1254,9 @@ class Collector(object):
         self.condition(activation, exc_handler)
         return self._rcondition
 
-    def _rcondition(self, activation, count, value):                             # pylint: disable=no-self-use
+    def _rcondition(self, activation, count, value):
         """Capture rcondition after. Remove conditions if false"""
+        # pylint: disable=no-self-use
         self._condition(activation, value)
         if not value:
             self.remove_conditions(activation, count)
@@ -1222,18 +1274,21 @@ class Collector(object):
             activation.conditions.pop()
         return self._remove_condition
 
-    def _remove_condition(self, value):                                          # pylint: disable=no-self-use
+    def _remove_condition(self, value):
         """Remove condition after"""
+        # pylint: disable=no-self-use
         return value
 
-    def prepare_while(self, activation, exc_handler):                            # pylint: disable=no-self-use
+    def prepare_while(self, activation, exc_handler):
         """Prepare while, by adding empty condition"""
+        # pylint: disable=no-self-use
         activation.conditions.append(DependencyAware(
             exc_handler=exc_handler
         ))
 
-    def ifexp(self, activation, code_id, exc_handler, if_lambda, mode):          # pylint: disable=too-many-arguments
+    def ifexp(self, activation, code_id, exc_handler, if_lambda, mode):
         """Collect ifexp"""
+        # pylint: disable=too-many-arguments
         value = "<<<noWorkflow>>>"
         try:
             activation.dependencies.append(DependencyAware(
@@ -1315,8 +1370,9 @@ class Collector(object):
                     "dependency"
                 )
 
-    def eval_dep(self, activation, code, value, mode, depa=None, moment=None):   # pylint: disable=too-many-arguments
+    def eval_dep(self, activation, code, value, mode, depa=None, moment=None):
         """Create evaluation and dependency"""
+        # pylint: disable=too-many-arguments
         evaluation = self.evaluate(activation, code, value, moment, depa)
         activation.dependencies[-1].add(Dependency(
             activation.id, evaluation.id, evaluation.code_component_id,
@@ -1324,13 +1380,15 @@ class Collector(object):
         ))
         return evaluation
 
-    def evaluate(self, activation, code_id, value, moment, depa=None):           # pylint: disable=too-many-arguments
+    def evaluate(self, activation, code_id, value, moment, depa=None):
         """Create evaluation for code component"""
+        # pylint: disable=too-many-arguments
         value_id = self.find_value_id(value, depa)
         return self.evaluate_vid(activation, code_id, value_id, moment, depa)
 
-    def evaluate_vid(self, activation, code_id, value_id, moment, depa=None):    # pylint: disable=too-many-arguments
+    def evaluate_vid(self, activation, code_id, value_id, moment, depa=None):
         """Create evaluation for code component using a given value_id"""
+        # pylint: disable=too-many-arguments
         if moment is None:
             moment = self.time()
         evaluation = self.evaluations.add_object(

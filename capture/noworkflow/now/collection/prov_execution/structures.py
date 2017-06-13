@@ -40,6 +40,21 @@ class Assign(namedtuple("Assign", "moment value dependency")):
             self.generators[obj_id] = generator
 
 
+class ConditionExceptions(object):
+    """Exception factory for handling ifs transformed into tries"""
+    # pylint: disable=too-few-public-methods
+    def __init__(self):
+        self.exceptions = {}
+
+    def __getitem__(self, item):
+        if item not in self.exceptions:
+            class ConditionException(Exception):
+                """If body Exception"""
+                pass
+            self.exceptions[item] = ConditionException
+        return self.exceptions[item]
+
+
 class DependencyAware(object):
     """Store dependencies of an element"""
 

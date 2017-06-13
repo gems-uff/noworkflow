@@ -1,16 +1,19 @@
-# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2016 Polytechnic Institute of New York University.
+# Copyright (c) 2017 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
 # Do not add from __future__ imports here
 """Provide support for both Python 2 and Python 3"""
+# pylint: disable=wrong-import-position, unused-import, invalid-name
+# pylint: disable=import-error, ungrouped-imports, no-name-in-module
+# pylint: disable=undefined-variable
 
 import sys
 import numbers
 
 try:
-    from cStringIO import StringIO                                               # pylint: disable=unused-import
+    from cStringIO import StringIO
 except ImportError:
     from io import StringIO
 
@@ -22,27 +25,27 @@ PY34 = sys.version_info >= (3, 4)
 PY3 = sys.version_info >= (3, 0)
 PY2 = sys.version_info < (3, 0)
 if PY3:
-    import builtins                                                              # pylint: disable=wrong-import-position, unused-import
-    import pickle                                                                # pylint: disable=wrong-import-position, unused-import
-    import reprlib                                                               # pylint: disable=wrong-import-position, unused-import
-    from itertools import zip_longest                                            # pylint: disable=wrong-import-position, unused-import
+    import builtins
+    import pickle
+    import reprlib
+    from itertools import zip_longest
 
-    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes, 
+    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes,
                  type(Ellipsis))
-    string = (str, bytes)                                                        # pylint: disable=invalid-name
-    raw_bytes = (bytes, bytearray)                                               # pylint: disable=invalid-name
+    string = (str, bytes)
+    raw_bytes = (bytes, bytearray)
 else:
-    import __builtin__ as builtins                                               # pylint: disable=wrong-import-position, unused-import, import-error
+    import __builtin__ as builtins
     try:
-        import cPickle as pickle                                                 # pylint: disable=wrong-import-position, unused-import
+        import cPickle as pickle
     except ImportError:
-        import pickle                                                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports
-    import repr as reprlib                                                       # pylint: disable=wrong-import-position, unused-import, import-error
-    from itertools import izip_longest as zip_longest                            # pylint: disable=wrong-import-position, unused-import, ungrouped-imports, no-name-in-module
+        import pickle
+    import repr as reprlib
+    from itertools import izip_longest as zip_longest
 
-    IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)               # pylint: disable=invalid-name, undefined-variable
-    string = (basestring,)                                                       # pylint: disable=invalid-name, undefined-variable
-    raw_bytes = (str,)                                                           # pylint: disable=invalid-name
+    IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)
+    string = (basestring,)
+    raw_bytes = (str,)
 
 cross_compile = compile
 
@@ -53,7 +56,7 @@ def to_unicode(text):
 def isiterable(element):
     """Check if element is iterable"""
     try:
-        iterator = iter(element)
+        iter(element)
     except TypeError:
         return False
     else:

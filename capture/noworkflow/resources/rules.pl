@@ -163,7 +163,7 @@
 %%% MODE ACCESS RULES
 
     % read_mode(Mode)/1
-        % DESCRIPTION: read modes: r, a, +
+        % DESCRIPTION: read modes: r, r+, a+
 
         read_mode(Mode) :- sub_atom(Mode, _, _, _, 'r').
         read_mode(Mode) :- sub_atom(Mode, _, _, _, '+').

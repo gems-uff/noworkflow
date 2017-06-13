@@ -14,7 +14,7 @@ from datetime import datetime
 
 from future.utils import viewitems
 
-from ..persistence import persistence_config, get_serializer
+from ..persistence import persistence_config, get_serializer, content
 from ..persistence.lightweight import ObjectStore, SharedObjectStore
 from ..persistence.lightweight import ModuleLW
 from ..persistence.lightweight import EnvironmentAttrLW, ArgumentLW
@@ -233,7 +233,7 @@ class Metascript(object):                                                       
         """Create file indicating last trial id"""
         if self.should_create_last_file:
             lastname = os.path.join(self.dir, LAST_TRIAL)
-            with open(lastname, "w") as lastfile:
+            with content.std_open(lastname, "w") as lastfile:
                 lastfile.write(str(self.trial_id))
 
     def create_automatic_tag_args(self):

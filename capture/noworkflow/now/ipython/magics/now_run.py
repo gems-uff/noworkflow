@@ -13,7 +13,7 @@ import argparse
 from ...cmd.cmd_run import Run, run
 from ...collection.metadata import Metascript, LAST_TRIAL
 from ...persistence.models import Trial
-from ...persistence import persistence_config
+from ...persistence import persistence_config, content
 
 from .command import IpythonCommandMagic
 
@@ -98,8 +98,9 @@ class NowRun(IpythonCommandMagic, Run):
         add_arg("params", nargs=argparse.REMAINDER,
                 help="params to be passed to script")
 
-    def execute(self, func, line, cell, magic_cls):                              # pylint: disable=too-many-locals
+    def execute(self, func, line, cell, magic_cls):
         # Calculate noworkflow params and script params
+        # pylint: disable=too-many-locals
         argv, args = self.arguments(func, line)
         params = args.params
         if params:
@@ -142,7 +143,7 @@ class NowRun(IpythonCommandMagic, Run):
                 sys.modules["__main__"] = save__main__
                 try:
                     return Trial(metascript.trial_id)
-                except Exception as exc:                                         # pylint: disable=broad-except
+                except Exception as exc:  # pylint: disable=broad-except
                     print("Failed", exc)
             else:
                 # Set execution line
@@ -160,9 +161,10 @@ class NowRun(IpythonCommandMagic, Run):
                 #tmp_dir = os.path.dirname(filename)
 
                 try:
-                    with open(os.path.join(directory, LAST_TRIAL), "r") as last:
+                    last_trial_dir = os.path.join(directory, LAST_TRIAL)
+                    with content.std_open(last_trial_dir, "r") as last:
                         return Trial(int(last.read()))
-                except Exception as exc:                                         # pylint: disable=broad-except
+                except Exception as exc:  # pylint: disable=broad-except
                     print("Failed", exc)
         finally:
             persistence_config.connect(original_path)

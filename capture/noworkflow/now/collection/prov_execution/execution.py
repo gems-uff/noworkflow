@@ -6,11 +6,11 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import builtins
 import sys
 import traceback
 import weakref
 
+from ...persistence import content
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
 
@@ -34,8 +34,10 @@ class Execution(object):
         builtin = self.metascript.namespace["__builtins__"]
         try:
             builtin["__noworkflow__"] = self.collector
+            builtin["open"] = self.collector.new_open(content.std_open)
         except TypeError:
             builtin.__noworkflow__ = self.collector
+            builtin.open = self.collector.new_open(content.std_open)
         debugger_builtins(
             self.collector, builtin, self.metascript
         )

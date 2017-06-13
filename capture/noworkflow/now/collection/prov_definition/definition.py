@@ -8,12 +8,13 @@ from __future__ import (absolute_import, print_function,
 
 
 import ast
-import builtins
 import os
 import weakref
+import traceback
 
 import pyposast
-import traceback
+
+from ...persistence import content
 
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
@@ -23,7 +24,7 @@ from .ast_helpers import debug_tree
 from .transformer_stmt import RewriteAST
 
 
-class Definition(object):                                                        # pylint: disable=too-many-instance-attributes
+class Definition(object):
     """Collect definition provenance"""
 
     def __init__(self, metascript):
@@ -38,7 +39,6 @@ class Definition(object):                                                       
     def store_provenance(self):
         """Store definition provenance"""
         metascript = self.metascript
-        tid = metascript.trial_id
         # Remove after save
         partial = True
         metascript.code_components_store.do_store(partial)
@@ -46,9 +46,10 @@ class Definition(object):                                                       
 
     def create_code_block(self, code, path, type_, binary, load):
         """Create code block for script/module"""
+        # pylint: disable=too-many-arguments
         if load:
             try:
-                with open(path, "rb") as script_file:
+                with content.std_open(path, "rb") as script_file:
                     code = script_file.read()
                     if not binary:
                         code = pyposast.native_decode_source(code)
@@ -84,7 +85,7 @@ class Definition(object):                                                       
 
 
     @meta_profiler("definition")
-    def parse(self, type_, source, filename, mode, **kwargs):
+    def parse(self, type_, source, filename, mode):
         """Parse source and return tree, code_block_id, transformed"""
         transformed = False
         ast_or_no_source = isinstance(source, ast.AST) or source is None
@@ -95,27 +96,27 @@ class Definition(object):                                                       
             False, ast_or_no_source
         )
         cell = filename if type_ == "cell" else None
-        
+
         try:
             tree = pyposast.parse(source, filename, mode, tree=tree)
             visitor = RewriteAST(self.metascript, source, filename, id_, cell)
-            
+
             tree = visitor.visit(tree)
             debug_tree(tree, just_print=[], show_code=[])
             transformed = True
         except SyntaxError:
             print_msg("Syntax error on file {}. Skipping transformer."
                       .format(filename))
-        except Exception as e:
+        except Exception as exc:
             # Unexpected exception
             traceback.print_exc()
-            raise e
+            raise exc
 
         if tree is None:
             tree = ast.parse(source, filename, mode)
 
         return tree, id_, transformed
-            
+
     def collect(self, source, filename, mode, compiler=cross_compile, **kwargs):
         """Compile source and return code, code_block_id, transformed"""
         tree, id_, transformed = self.parse(
@@ -124,7 +125,7 @@ class Definition(object):                                                       
         )
         self.first = False
 
-        return cross_compile(
+        return compiler(
             tree, filename, mode,
             **kwargs
         ), id_, transformed
@@ -132,7 +133,6 @@ class Definition(object):                                                       
     def compile(self, source, filename, mode, **kwargs):
         """Compile source and return code, code_block_id"""
         return self.collect(
-            source, filename, mode, compiler=cross_compile, 
+            source, filename, mode, compiler=cross_compile,
             **kwargs
         )[0]
-
