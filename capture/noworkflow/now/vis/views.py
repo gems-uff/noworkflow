@@ -16,8 +16,9 @@ from ..models.diff import Diff
 from ..persistence import relational
 
 
-class WebServer(object):                                                         # pylint: disable=too-few-public-methods
+class WebServer(object):
     """Flask WebServer"""
+    # pylint: disable=too-few-public-methods
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -32,7 +33,7 @@ class WebServer(object):                                                        
         self.app = Flask(__name__)
 
 
-app = WebServer().app                                                            # pylint: disable=invalid-name
+app = WebServer().app  # pylint: disable=invalid-name
 
 
 @app.route("/<path:path>")
@@ -52,8 +53,9 @@ def trials():
 
 @app.route("/")
 @app.route("/<tid>-<graph_mode>")
-def index(tid=None, graph_mode=None):                                           # pylint: disable=unused-argument
+def index(tid=None, graph_mode=None):
     """Respond history scripts and index page as HTML"""
+    # pylint: disable=unused-argument
     history = History()
     return render_template(
         "index.html",
@@ -75,19 +77,21 @@ def trial_graph(tid, graph_mode, cache):
 @app.route("/trials/<tid>/dependencies")
 def dependencies(tid):
     """Respond trial module dependencies as JSON"""
+    # pylint: disable=not-an-iterable
     trial = Trial(tid)
-    local = [x.to_dict() for x in trial.local_modules]                           # pylint: disable=not-an-iterable
-    result = [x.to_dict() for x in trial.modules]                                # pylint: disable=not-an-iterable
+    local = [x.to_dict(extra=("code_hash",)) for x in trial.local_modules]
+    result = [x.to_dict(extra=("code_hash",)) for x in trial.modules]
     return jsonify(local=local, all=result)
 
 
 @app.route("/trials/<tid>/all_modules")
 def all_modules(tid):
     """Respond trial module dependencies as HTML"""
+    # pylint: disable=unsupported-membership-test
     trial = Trial(tid)
     local = trial.local_modules
     result = trial.modules
-    result = sorted(result, key=lambda x: x not in local)                        # pylint: disable=unsupported-membership-test
+    result = sorted(result, key=lambda x: x not in local)
     return render_template(
         "trial.html",
         cwd=os.getcwd(),

@@ -61,7 +61,7 @@ class Module(AlchemyProxy):
                              ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
-    id = Column(Integer, index=True)                                       # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     name = Column(Text)
     version = Column(Text)
     path = Column(Text)
@@ -71,7 +71,7 @@ class Module(AlchemyProxy):
     trial = backref_one("trial")  # Trial.modules
     code_block = backref_one("code_block")  # CodeBlock.modules
 
-    prolog_description = PrologDescription("argument", (
+    prolog_description = PrologDescription("module", (
         PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
         PrologRepr("name"),
@@ -95,7 +95,7 @@ class Module(AlchemyProxy):
         return hash(self.__key())
 
     def __eq__(self, other):
-        return self.__key() == other.__key()                                     # pylint: disable=protected-access
+        return self.__key() == other.__key()  # pylint: disable=protected-access
 
     @property
     def brief(self):
@@ -138,7 +138,7 @@ class Module(AlchemyProxy):
         >>> erase_db()
         >>> trial_id = new_trial()
         >>> cid = components.add(
-        ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
+        ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
         >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
         >>> mid = modules.add(
@@ -169,7 +169,7 @@ class Module(AlchemyProxy):
         >>> erase_db()
         >>> trial_id = new_trial()
         >>> cid = components.add(
-        ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1   
+        ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
         >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
         >>> mid = modules.add(
