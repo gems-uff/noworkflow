@@ -67,7 +67,6 @@ def init(path=None, ipython=None):
     css_files = [
         u"vis/static/font-awesome-4.3.0/css/font-awesome-ip.css",
         u"vis/static/shared_graph.css",
-        u"vis/static/trial_graph.css",
         u"vis/static/history_graph.css",
     ]
 

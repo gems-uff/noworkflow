@@ -358,6 +358,11 @@ $('#restore-history-zoom').on('click', function () {
   return false;
 });
 
+$('#download-trial').on('click', function () {
+  trial_graph.download();
+  return false;
+});
+
 window.onpopstate = function (e) {
   if (e.state) {
     history_graph._unselect_node();
