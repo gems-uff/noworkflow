@@ -567,13 +567,13 @@ TrialGraph.prototype.download = function(name) {
   var width = this.svg.attr("width"), height = this.svg.attr("height");
   this.translate = this.drag_svg.translate();
 
-  this.svg_g.attr("transform", "translate(" + (- bbox.x) +", " +(-bbox.y) +")");
+  this.svg_g.attr("transform", "translate(" + (-bbox.x + 5) +", " +(-bbox.y + 5) +")");
   this.hint_element.remove();
   var html = this.svg
       .attr("title", "Trial")
       .attr("version", 1.1)
-      .attr("width", bbox.width)
-      .attr("height", bbox.height)
+      .attr("width", bbox.width + 10)
+      .attr("height", bbox.height + 10)
       .attr("xmlns", "http://www.w3.org/2000/svg")
       .node().parentNode.innerHTML;
   html = '<svg xmlns:xlink="http://www.w3.org/1999/xlink" ' + html.slice(4);
