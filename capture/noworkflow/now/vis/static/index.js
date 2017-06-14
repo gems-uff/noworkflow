@@ -359,7 +359,7 @@ $('#restore-history-zoom').on('click', function () {
 });
 
 $('#download-trial').on('click', function () {
-  trial_graph.download();
+  trial_graph.download("trial"+current_nid+".svg");
   return false;
 });
 

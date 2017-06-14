@@ -213,6 +213,21 @@ $('#side-internal').on('click', '.fold', function () {
   $(first).toggleClass("fa-minus");
 });
 
+$('#download-trial').on('click', function () {
+  trial_graph.download("diff.svg");
+  return false;
+});
+
+$('#download-trial-a').on('click', function () {
+  trial_a.download("trial"+t1+".svg");
+  return false;
+});
+
+$('#download-trial-b').on('click', function () {
+  trial_b.download("trial"+t2+".svg");
+  return false;
+});
+
 
 window.onpopstate = function (e) {
   if (e.state) {

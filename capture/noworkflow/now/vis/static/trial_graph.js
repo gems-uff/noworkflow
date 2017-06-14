@@ -556,12 +556,13 @@ TrialGraph.prototype.update_window = function () {
     .attr("height", size[1]);
 };
 
-TrialGraph.prototype.download = function() {
+TrialGraph.prototype.download = function(name) {
   try {
       var isFileSaverSupported = !!new Blob();
   } catch (e) {
       alert("blob not supported");
   }
+  name = (name === undefined)? "trial.svg" : name;
   var bbox = this.svg_g[0][0].getBBox();
   var width = this.svg.attr("width"), height = this.svg.attr("height");
   this.translate = this.drag_svg.translate();
@@ -582,7 +583,7 @@ TrialGraph.prototype.download = function() {
   this._create_hint();
   this.svg_g.attr("transform", "translate(" + this.translate[0] +", " +this.translate[1] +")");
   var blob = new Blob([html], {type: "image/svg+xml"});
-  saveAs(blob, "trial.svg");
+  saveAs(blob, name);
   this._tick()
 }
 
