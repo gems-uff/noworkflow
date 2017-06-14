@@ -1,3 +1,12 @@
+.cbefore {
+  color: red !important;
+}
+
+.cafter {
+  color: green !important;
+}
+
+
 .dbefore {
   color: red !important;
 }
@@ -36,8 +45,6 @@
 .now .toolbar {
   margin: 5px;
 }
-
-
 
 #graphselector .graph-attr:first-child {
   margin-bottom: 5px;
