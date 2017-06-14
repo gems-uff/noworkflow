@@ -363,6 +363,11 @@ $('#download-trial').on('click', function () {
   return false;
 });
 
+$('#download-history').on('click', function () {
+  history_graph.download("history.svg");
+  return false;
+});
+
 window.onpopstate = function (e) {
   if (e.state) {
     history_graph._unselect_node();

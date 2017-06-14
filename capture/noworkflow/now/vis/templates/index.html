@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block css %}
 <link rel="stylesheet" href="shared_graph.css">
-<link rel="stylesheet" href="history_graph.css">
 <link rel="stylesheet" href="index.css">
 {% endblock %}
 {% block body %}
@@ -32,6 +31,7 @@
                <a class="toollink" id="restore-history-zoom" href="#" title="Restore zoom"><i class="fa fa-eye"></i></a>
                <input id="show-history-tooltips" type="checkbox" name="show-history-tooltips" value="show">
                <label for="show-history-tooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
+               <a href="#" class="toollink" id="download-history" title="Download history SVG"><i class="fa fa-download"></i></a>
             </div>
             <div id="historygraph" class="now-history-graph">
             </div>

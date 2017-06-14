@@ -26,43 +26,22 @@ function HistoryGraph(id, svg, options) {
   self.use_tooltip = false;
 
   self.div = d3.select("body").append("div")
-    .attr("class", "now-tooltip now-history-tooltip")
+    .classed("now-tooltip now-history-tooltip", true)
+    .style("max-width", "250px")
     .style("opacity", 0)
     .on("mouseout", function () {
       self._close_tooltip();
     });
 
-  svg.append("text")
-    .text(self.hint_message)
-    .attr("dx", 5)
-    .attr("dy", 45);
+  self.svg = svg;
+
+  self._create_hint()
 
   self.height = self.custom_size()[1];
 
-  var defs = svg.append('svg:defs');
-  defs.append('svg:marker')
-    .attr('id', 'end-arrow')
-    .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 6)
-    .attr('markerWidth', 3)
-    .attr('markerHeight', 3)
-    .attr('orient', 'auto')
-    .append('svg:path')
-    .attr('d', 'M0,-5L10,0L0,5')
-    .attr('fill', '#000');
+  self._create_marker('end-arrow', 'endarrow', '#000')
+  self._create_marker('start-arrow', 'startarrow', '#000')
 
-  svg.append('svg:defs').append('svg:marker')
-    .attr('id', 'start-arrow')
-    .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 4)
-    .attr('markerWidth', 3)
-    .attr('markerHeight', 3)
-    .attr('orient', 'auto')
-    .append('svg:path')
-    .attr('d', 'M10,-5L0,0L10,5')
-    .attr('fill', '#000');
-
-  self.svg = svg;
   self.svg_g = svg.append("g")
     .attr("id", self._graph_id())
     .classed(HistoryGraph.consts.graph_class, true);
@@ -96,6 +75,9 @@ function HistoryGraph(id, svg, options) {
 HistoryGraph.consts =  {
   selected_class: "selected",
   graph_class: "historygraph",
+  circle_class: "node",
+  marker_width: 3,
+  marker_height: 3,
   move_x: 20,
   move_y: 25,
   move_y2: 10,
@@ -106,6 +88,35 @@ HistoryGraph.consts =  {
   width: 200
 };
 
+
+HistoryGraph.prototype._create_marker = function (name, cls, fill) {
+  var self = this;
+  self.svg.append("svg:defs").selectAll("marker")
+    .data([name])
+    .enter().append("svg:marker")
+      .attr("id", String)
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 6)
+      .attr("refY", 0) //
+      .attr("markerWidth", HistoryGraph.consts.marker_width)
+      .attr("markerHeight", HistoryGraph.consts.marker_height)
+      .attr("orient", "auto")
+    .append("svg:path")
+      .classed(cls, true)
+      .attr("fill", fill)
+      .attr("d", "M0,-5L10,0L0,5");
+};
+
+HistoryGraph.prototype._create_hint = function () {
+  this.hint_element = this.svg.append("text")
+    .text(this.hint_message)
+    .attr('font-family', 'sans-serif')
+    .attr('font-size', '12px')
+    .attr('pointer-events', 'none')
+    .attr("dx", 5)
+    .attr("dy", 45);
+}
+
 HistoryGraph.prototype._graph_id = function () {
   var self = this;
   return "history-graph-" + self.graph_id;
@@ -115,11 +126,11 @@ HistoryGraph.prototype._graph_id = function () {
 HistoryGraph.prototype._unselect_node = function () {
   var self = this,
     state = self.state;
-  self.circle.filter(function (cd) {
+  var unselected = self.circle.filter(function (cd) {
     return cd.id === state.selected_node.id;
   }).select('circle')
     .classed(HistoryGraph.consts.selected_class, false);
-
+  self._update_circle(unselected);
   state.selected_node = null;
 };
 
@@ -155,7 +166,9 @@ HistoryGraph.prototype._node_mouseup = function (d3node, d) {
       self._unselect_node();
     }
 
-    d3node.classed(HistoryGraph.consts.selected_class, true);
+    d3node
+      .attr('fill', 'rgb(200, 238, 241)')
+      .classed(HistoryGraph.consts.selected_class, true);
     state.selected_node = d;
     self.custom_select_node(d);
   }
@@ -207,27 +220,39 @@ HistoryGraph.prototype._update_path = function (path) {
     result += ',' + targetX + ',' + targetY;
 
     return result;
-  }).style('marker-start', function (d) {
+  }).attr('marker-start', function (d) {
     return d.left ? 'url(#start-arrow)' : '';
-  }).style('marker-end', function (d) {
+  }).attr('marker-end', function (d) {
     return d.right ? 'url(#end-arrow)' : '';
-  }).style('stroke', function (d) {
+  }).attr('stroke', function (d) {
     return d3.rgb(colors(d.level)).darker().toString();
   });
 };
 
 HistoryGraph.prototype._update_circle = function (circle) {
-  return circle.attr("transform", function (d) {
-    return "translate(" + d.x + "," + d.y + ")";
-  }).classed('reflexive', function (d) {
-    return d.reflexive;
-  }).classed('finished', function (d) {
-    return d.info.status === 'finished';
-  }).classed('unfinished', function (d) {
-    return d.info.status === 'unfinished';
-  }).classed('backup', function (d) {
-    return d.info.status === 'backup';
-  });
+  return (
+    circle
+      .attr("transform", function (d) {
+        return "translate(" + d.x + "," + d.y + ")";
+      })
+      .attr("stroke", "#000")
+      .attr("stroke-width", "2.5px")
+      .attr("fill", function (d) {
+        if (d3.select(this).classed(HistoryGraph.consts.selected_class)) {
+          return 'rgb(200, 238, 241)';
+        }
+        if (d.info.status === 'unfinished') {
+          return "rgb(238, 200, 241)";
+        }
+        if (d.info.status === 'finished') {
+          return "#F6FBFF";
+        }
+        if (d.info.status === 'backup') {
+          return "rgb(241, 238, 200)";
+        }
+        return '#666';
+      })
+  );
 };
 
 HistoryGraph.prototype._zoomed = function () {
@@ -325,8 +350,10 @@ HistoryGraph.prototype.reset_zoom = function () {
 HistoryGraph.prototype.select_node = function (node) {
   this.state.selected_node = node;
   this.custom_select_node(node);
-  d3.select($('#history text.id:contains("' + node.title + '")')
-    .siblings()[0]).classed('selected', true);
+  d3.select($('#history text.trial-id:contains("' + node.title + '")')
+    .siblings()[0])
+    .attr('fill', 'rgb(200, 238, 241)')
+    .classed(HistoryGraph.consts.selected_class, true);
 };
 
 HistoryGraph.prototype.restart = function () {
@@ -342,7 +369,11 @@ HistoryGraph.prototype.restart = function () {
 
   // add new paths
   var path = self.path.enter().append("svg:path")
-    .attr('class', 'link');
+    .classed('link', true)
+    .attr('cursor', 'crosshair')
+    .attr('fill', 'none')
+    .attr('stroke', '#000')
+    .attr('stroke-width', '4px');
 
   self._update_path(path);
 
@@ -356,12 +387,14 @@ HistoryGraph.prototype.restart = function () {
   self._update_circle(self.circle.selectAll('circle'));
 
   // add new nodes
-  var g = self.circle.enter().append("svg:g");
+  var g = self.circle.enter().append("svg:g")
+    .classed(consts.circle_class, true);
 
   self._update_circle(
     g.append('svg:circle')
-      .classed(consts.cicle_class, true)
-      .attr('class', 'node')
+      .attr('stroke-width', '2px')
+      .attr('cursor', 'pointer')
+      .attr('stroke', '#333')
       .attr('r', consts.radius)
   ).on('mousedown', function (d) {
     self._node_mousedown(d3.select(this), d);
@@ -372,13 +405,22 @@ HistoryGraph.prototype.restart = function () {
       self._close_tooltip();
       self._show_tooltip(d);
     }
+    d3.select(this)
+      .attr('fill', 'rgb(200, 238, 241)')
+  }).on('mouseout', function (d) {
+    self._update_circle(d3.select(this));
   })
     .call(self.drag);
 
   g.append('svg:text')
+    .classed('trial-id', true)
+    .attr('font-family', 'sans-serif')
+    .attr('font-size', '12px')
+    .attr('pointer-events', 'none')
     .attr('x', 0)
     .attr('y', 4)
-    .attr('class', 'id')
+    .attr('text-anchor', 'middle')
+    .attr('font-weight', 'bold')
     .attr("transform", function (d) {
       return "translate(" + d.x + "," + d.y + ")";
     }).text(function (d) { return d.title; });
@@ -401,6 +443,44 @@ HistoryGraph.prototype.update_window = function () {
     .attr("width", size[0])
     .attr("height", size[1]);
 };
+
+HistoryGraph.prototype.download = function(name) {
+  try {
+      var isFileSaverSupported = !!new Blob();
+  } catch (e) {
+      alert("blob not supported");
+  }
+  name = (name === undefined)? "history.svg" : name;
+  var bbox = this.svg_g[0][0].getBBox();
+  var width = this.svg.attr("width"), height = this.svg.attr("height");
+  this.translate = this.drag_svg.translate();
+
+  this.svg_g.attr("transform", "translate(" + (- bbox.x + 5) +", " +(-bbox.y + 5) +")");
+  this.hint_element.remove();
+  var html = this.svg
+      .attr("title", "Trial")
+      .attr("version", 1.1)
+      .attr("width", bbox.width + 10)
+      .attr("height", bbox.height + 10)
+      .attr("xmlns", "http://www.w3.org/2000/svg")
+      .node().parentNode.innerHTML;
+  html = '<svg xmlns:xlink="http://www.w3.org/1999/xlink" ' + html.slice(4);
+  this.svg
+    .attr("width", width)
+    .attr("height", height);
+  this.svg_g.attr("transform", "translate(" + this.translate[0] +", " +this.translate[1] +")");
+  this.drag_svg.event(this.svg);
+  var blob = new Blob([html], {type: "image/svg+xml"});
+  saveAs(blob, name);
+  this._tick()
+}
+
+HistoryGraph.prototype.set_node_font_size = function(size) {
+  this.svg.selectAll("text.trial-id")
+    .attr('y', size / 3)
+    .attr("font-size", size);
+}
+
 
 function now_history_graph(div_selector, graph_id, data, width, height, tooltip_selector, options) {
   $(div_selector).html('');
