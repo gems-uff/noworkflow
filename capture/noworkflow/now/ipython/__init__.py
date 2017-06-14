@@ -11,7 +11,7 @@ from ..persistence.models import *                                              
 from ..persistence import persistence_config, relational, content
 from ..models.history import History
 from ..models.diff import Diff
-from ..models import patterns
+from ... import patterns
 
 
 def init(path=None, ipython=None):

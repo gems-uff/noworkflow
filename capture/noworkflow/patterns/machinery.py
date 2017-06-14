@@ -2,30 +2,19 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Pattern Matching Queries"""
+"""Pattern Matching Machinery"""
 # pylint: disable=invalid-name
 
 import inspect
 from collections import OrderedDict, defaultdict
 from copy import copy
 from itertools import zip_longest, chain, product
-from sqlalchemy.sql.expression import and_, BinaryExpression
+
 from future.utils import viewitems, viewvalues
-from ..persistence import relational
-from ..persistence.models.base import proxy
-from ..persistence.models import Activation
-from ..persistence.models import Argument
-from ..persistence.models import CodeBlock
-from ..persistence.models import CodeComponent
-from ..persistence.models import Compartment
-from ..persistence.models import Dependency
-from ..persistence.models import EnvironmentAttr
-from ..persistence.models import Evaluation
-from ..persistence.models import FileAccess
-from ..persistence.models import Module
-from ..persistence.models import Tag
-from ..persistence.models import Trial
-from ..persistence.models import Value
+from sqlalchemy.sql.expression import and_, BinaryExpression
+
+from ..now.persistence import relational
+from ..now.persistence.models.base import proxy
 
 
 class Blank(object):
@@ -35,9 +24,6 @@ class Blank(object):
         return "_"
 
 
-BLANK = Blank()
-
-
 class Variable(object):
     """Variable for joining matches"""
     # pylint: disable=too-few-public-methods
@@ -45,6 +31,7 @@ class Variable(object):
         self.results = set()
         self.bound = BLANK
         self.name = str(id(self) if name is None else name)
+        self.temp = self.name.startswith("_")
 
     def reset(self):
         """Reset variable"""
@@ -57,6 +44,65 @@ class Variable(object):
 
     def __repr__(self):
         return self.name
+
+
+class VariableFactory(object):
+    """Create variables"""
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self):
+        self.known = {}
+
+    def __getitem__(self, item):
+        if item not in self.known:
+            self.known[item] = Variable(item)
+        return self.known[item]
+
+    def __getattr__(self, attr):
+        return self[attr]
+
+    def __dir__(self):
+        return list(self.known)
+
+    def reset(self):
+        """Reset all variables"""
+        for _, value in viewitems(self.known):
+            value.reset()
+
+    def __call__(self, names_or_count=None):
+        """Create variables
+
+        Usage:
+        >>> var = VariableFactory()
+        >>> a, b, c = var(3)
+        >>> isinstance(a, Variable)
+        True
+        >>> d = var("d")
+        >>> isinstance(d, Variable)
+        True
+        >>> e = var()
+        >>> isinstance(e, Variable)
+        True
+        >>> x, y = var("x y")
+        >>> isinstance(x, Variable)
+        True
+        >>> z, w = var(("z", "w"))
+        >>> isinstance(w, Variable)
+        True
+        """
+        if names_or_count is None:
+            return Variable()
+        if isinstance(names_or_count, int):
+            return [Variable() for _ in range(names_or_count)]
+        if isinstance(names_or_count, str):
+            names = names_or_count.split(" ")
+            if len(names) == 1:
+                return Variable(names[0])
+        else:
+            # Iterable
+            names = names_or_count
+
+        return [Variable(name) for name in names]
 
 
 class BoundQuery(object):
@@ -104,7 +150,7 @@ class BoundQuery(object):
                 pattern.results.add(temp)
                 pattern.bound = temp
                 self.binds[pattern] = temp
-            yield result, copy(self.binds)
+            yield result, {k: v for k, v in viewitems(self.binds) if not k.temp}
 
         for pattern in self.binds:
             pattern.bound = BLANK
@@ -136,19 +182,34 @@ class RuleQuery(BoundQuery):
         kwargs = {}
         if self.has_binds:
             kwargs["_binds"] = self.binds
-        for result, binds in self.func(*values, **kwargs):
-            if binds is not self.binds:
-                self.binds.update(binds)
-            yield result
+        func_result = self.func(*values, **kwargs)
+        if func_result is not None:
+            for result, binds in func_result:
+                if binds is not self.binds:
+                    self.binds.update(binds)
+                yield result
 
-            for pattern in self.binds:
-                pattern.bound = BLANK
+                for pattern in self.binds:
+                    pattern.bound = BLANK
+        for pattern in self.binds:
+            pattern.bound = BLANK
+
 
     def get_bound(self, result, attr):
         """Get bound value in result"""
         if attr in self.patterns:
             return self.patterns[attr].bound
         return BLANK
+
+
+    def final_value(self, current):
+        """Transform value"""
+        # pylint: disable=no-self-use
+        if current is BLANK:
+            return var("_")
+        if isinstance(current, Variable) and current.bound is not BLANK:
+            return current.bound
+        return current
 
     def prepare_values(self, order, bind):
         """Prepare values for exploration"""
@@ -163,8 +224,9 @@ class RuleQuery(BoundQuery):
             elif val != bind[i] and isinstance(prevalue, Variable):
                 prevalue.bound = bind[i]
                 self.binds[prevalue] = bind[i]
-            new_values[self.args[arg]] = bind[i]
-        return new_values
+            if bind[i] is not BLANK:
+                new_values[self.args[arg]] = bind[i]
+        return map(self.final_value, new_values)
 
     def iterate(self):
         """generator"""
@@ -196,7 +258,7 @@ class ModelQuery(BoundQuery):
 
     def _eq(self, attr, val):
         """Get equal condition or custom BinaryExpression"""
-        if isinstance(value, BinaryExpression):
+        if isinstance(val, BinaryExpression):
             return val
         return self._get(attr) == val
 
@@ -253,7 +315,7 @@ class ModelRule(object):
         self._model = model
         self._prolog = model.prolog_description
         self.__doc__ = "{}({})".format(
-            self._prolog.name,
+            self.get_name(),
             ', '.join(
                 attr.name
                 for attr in self._prolog.attributes
@@ -263,6 +325,10 @@ class ModelRule(object):
             (attr.name, attr.attr_name)
             for attr in self._prolog.attributes
         )
+
+    def get_name(self):
+        """Return Model name"""
+        return self._prolog.name
 
     def get_model(self):
         """Return SQLAlchemy model for this rule"""
@@ -307,26 +373,38 @@ class FunctionRule(object):
             self.has_binds = True
             del self.args["_binds"]
         self.options = {}
+        self.restrictions = {}
         self.__doc__ = "{}({})".format(func.__name__, ", ".join(self.args))
+        self.prolog = []
+
+    def _process_val(self, val):
+        """If bound value is ModelRule, returns its name"""
+        # pylint: disable=no-self-use
+        if isinstance(val, ModelRule):
+            return val.get_name()
+        return val
 
     def __call__(self, *args, **kwargs):
         values = [BLANK] * len(self.args)
         for i, val in enumerate(args):
-            values[i] = val
+            values[i] = self._process_val(val)
         for arg, val in viewitems(kwargs):
-            values[self.args[arg]] = val
+            values[self.args[arg]] = self._process_val(val)
         unbound_options = {}
         for arg, options in viewitems(self.options):
             bound_value = values[self.args[arg]]
+            restrictions = self.restrictions.get(arg)
             if bound_value is BLANK or isinstance(bound_value, Variable):
                 unbound_options[arg] = options
-            elif bound_value not in options:
+            elif restrictions and bound_value not in restrictions:
                 return NullQuery()
         return RuleQuery(self.func, self.args, values, self.has_binds, unbound_options)
+
 
 def create_rule(func):
     """Create rule object"""
     return FunctionRule(func)
+
 
 def restrict_rule(**options):
     """Restrict domain of rule"""
@@ -334,20 +412,29 @@ def restrict_rule(**options):
         """Apply restrictions to rule"""
         for key, values in viewitems(options):
             rule.options[key] = values
+            rule.restrictions[key] = values
         return rule
     return apply_restrictions
 
 
-activation = ModelRule(Activation)
-argument = ModelRule(Argument)
-code_block = ModelRule(CodeBlock)
-code_component = ModelRule(CodeComponent)
-compartment = ModelRule(Compartment)
-dependency = ModelRule(Dependency)
-environment = ModelRule(EnvironmentAttr)
-evaluation = ModelRule(Evaluation)
-access = ModelRule(FileAccess)
-module = ModelRule(Module)
-tag = ModelRule(Tag)
-trial = ModelRule(Trial)
-value = ModelRule(Value)
+def set_options_in_rule(**options):
+    """Add pattern to domain of rule"""
+    def apply_options(rule):
+        """Apply pattern options to rule"""
+        for key, values in viewitems(options):
+            rule.options[key] = values
+        return rule
+    return apply_options
+
+
+def prolog_rule(line):
+    """Specify prolog equivalent"""
+    def specify(rule):
+        """Apply restrictions to rule"""
+        rule.prolog.insert(0, line)
+        return rule
+    return specify
+
+
+BLANK = Blank()
+var = VariableFactory()  # pylint: disable=invalid-name
