@@ -78,7 +78,7 @@ function load_graph(t1, t2, type, tl, nh) {
         },
         custom_mouseover: function (d, name) {
           if (name === 'node') {
-            var tg = (d[name].trial_id === t1) ? trial_a : trial_b,
+            var tg = (d[name].trial_id == t1) ? trial_a : trial_b,
               selector = '#node-' + tg.graph_id + '-' + d[name].original + ' circle';
             d3.select(selector)
               .classed('node-hover', true);
