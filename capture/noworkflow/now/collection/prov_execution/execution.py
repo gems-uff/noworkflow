@@ -54,13 +54,14 @@ class Execution(object):
                 metascript.code, metascript.path, "exec"
             )
             sys.meta_path.insert(0, metascript.definition.finder)
-            exec(compiled, metascript.namespace)                                 # pylint: disable=exec-used
+            exec(compiled, metascript.namespace)  # pylint: disable=exec-used
+            sys.meta_path.remove(metascript.definition.finder)
         except SystemExit as ex:
             self.force_msg = self.partial = ex.code > 0
             self.msg = ("the execution exited via sys.exit(). Exit status: {}"
                         "".format(ex.code))
 
-        except Exception as exc:                                                 # pylint: disable=broad-except
+        except Exception as exc:  # pylint: disable=broad-except
             # ToDo #77: exceptions should be registered as return from the
             # activation and stored in the database. We are currently ignoring
             # all the activation tree when exceptions are raised.

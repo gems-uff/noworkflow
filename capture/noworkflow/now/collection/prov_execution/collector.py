@@ -189,7 +189,7 @@ class Collector(object):
 
         if activation.active:
             activation.assignments[-1].accesses[code_id] = AssignAccess(
-                value, depa, addr, value_dep
+                value, depa, addr, value_dep, self.time()
             )
 
     def time(self):
@@ -716,7 +716,7 @@ class Collector(object):
         addr = value_dep = None
         if code in assign.accesses:
             # Replaces information for more precise subscript
-            value, access_depa, addr, value_dep = assign.accesses[code]
+            value, access_depa, addr, value_dep, moment = assign.accesses[code]
         evaluation = self.evaluate(activation, code, value, moment, depa)
         if value_dep:
             self.make_dependencies(activation, evaluation, access_depa)

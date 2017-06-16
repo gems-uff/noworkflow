@@ -126,7 +126,6 @@ class Deployment(object):
     def store_provenance(self):
         """Store deployment provenance"""
         metascript = self.metascript
-        tid = metascript.trial_id
         # Remove after save
         partial = True
         metascript.environment_attrs_store.do_store(partial)

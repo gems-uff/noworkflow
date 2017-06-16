@@ -10,7 +10,8 @@ from copy import copy
 from collections import namedtuple, defaultdict
 
 
-AssignAccess = namedtuple("AssignAccess", "value dependency addr value_dep")
+AssignAccess = namedtuple(
+    "AssignAccess", "value dependency addr value_dep moment")
 
 
 class Assign(namedtuple("Assign", "moment value dependency")):
