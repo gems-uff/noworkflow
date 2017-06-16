@@ -7,21 +7,20 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from textwrap import dedent
-
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
+
+from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologNullableRepr
 
-from .. import relational
+from .. import relational, content
 
 from .base import proxy_class, AlchemyProxy
 from .base import many_ref, backref_many, backref_one_uselist
 from .base import query_many_property, many_viewonly_ref
 
-from .activation import Activation
 
 @proxy_class
 class CodeBlock(AlchemyProxy):
@@ -65,13 +64,13 @@ class CodeBlock(AlchemyProxy):
                              ["code_component.trial_id",
                               "code_component.id"], ondelete="CASCADE"),
     )
-    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     trial_id = Column(Integer, index=True)
     code_hash = Column(Text)
     docstring = Column(Text)
 
     activations = many_ref("code_block", "Activation")
-    
+
     modules = many_viewonly_ref("code_block", "Module")
 
     trial = backref_one_uselist("trial")  # Trial.code_blocks
@@ -91,6 +90,23 @@ class CodeBlock(AlchemyProxy):
         "with content (*CodeHash*)\n"
         "and with a *Docstring*."
     ))
+
+    def __init__(self, *args, **kwargs):
+        super(CodeBlock, self).__init__(*args, **kwargs)
+        from ...models.code_display import CodeDisplay
+        self.content = CodeDisplay(self)
+
+    @property
+    def all_components(self):
+        """Return all components recursively.
+        ToDo: doctest
+        """
+        for component in self.components:
+            yield component
+            block = component.this_block
+            if block:
+                for sub_component in block.all_components:
+                    yield sub_component
 
     @query_many_property
     def globals(self):
