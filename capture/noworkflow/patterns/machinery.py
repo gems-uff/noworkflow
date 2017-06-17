@@ -11,7 +11,7 @@ from copy import copy
 from itertools import zip_longest, chain, product
 
 from future.utils import viewitems, viewvalues
-from sqlalchemy.sql.expression import and_, BinaryExpression
+from sqlalchemy.sql.expression import and_, ColumnElement
 
 from ..now.persistence import relational
 from ..now.persistence.models.base import proxy
@@ -257,8 +257,8 @@ class ModelQuery(BoundQuery):
         return getattr(self.model_rule, attr)
 
     def _eq(self, attr, val):
-        """Get equal condition or custom BinaryExpression"""
-        if isinstance(val, BinaryExpression):
+        """Get equal condition or custom ColumnElement"""
+        if isinstance(val, ColumnElement):
             return val
         return self._get(attr) == val
 

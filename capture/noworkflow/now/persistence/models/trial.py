@@ -415,9 +415,7 @@ class Trial(AlchemyProxy):
         >>> str(trial.script_content) #doctest: +ELLIPSIS
         "'block'\\ndef f(x):\\n    return x\\na = [1]\\nb = f(a)"
         """
-        return PrettyLines(
-            content.get(self.main.code_hash)
-            .decode("utf-8").split("/n"))
+        return self.main.content
 
     @property
     def docstring(self):

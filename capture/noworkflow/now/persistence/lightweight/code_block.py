@@ -23,14 +23,15 @@ class CodeBlockLW(BaseLW):
     model = CodeBlock
 
     def __init__(self, id_, trial_id, code, binary, docstring):
+        # pylint: disable=too-many-arguments
         self.trial_id = trial_id
-        self.id = id_                                                            # pylint: disable=invalid-name
+        self.id = id_  # pylint: disable=invalid-name
         self.code = code
         bin_code = code if binary else code.encode("utf-8")
         self.code_hash = content.put(bin_code)
         self.docstring = docstring or ""
 
-    def is_complete(self):                                                       # pylint: disable=no-self-use
+    def is_complete(self):
         """The first CodeBlockLW cannot be removed from object store"""
         return self.id != 1
 

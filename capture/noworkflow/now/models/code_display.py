@@ -5,7 +5,6 @@
 """Code Display Object"""
 
 import time
-import weakref
 
 from future.utils import viewvalues
 
@@ -14,25 +13,19 @@ from ..persistence import content
 
 class CodeDisplay(object):
     """Code Display object for displaying blocks with codemirror"""
+    # pylint: disable=too-few-public-methods
 
     def __init__(self, block):
-        self.block = weakref.proxy(block)
         component = block.this_component
+        self.trial_id = block.trial_id
         self.first_line = component.first_char_line
         self.marks = []
         self.show_selection = True
-        self._all_components = None
+        self.all_components = {
+            comp.id: comp
+            for comp in block.all_components
+        }
         self.code = content.get(block.code_hash).decode("utf-8")
-
-    @property
-    def all_components(self):
-        """Returns dict with all components"""
-        if self._all_components is None:
-            self._all_components = {
-                comp.id: comp
-                for comp in self.block.all_components
-            }
-        return self._all_components
 
     def get_mark(self, component, properties):
         """Get a codemirror mark definition"""
@@ -97,7 +90,7 @@ class CodeDisplay(object):
             </script>
         """.format(
             uid,
-            self.block.content,
+            self.code,
             self.marks,
             int(self.show_selection)
         )
@@ -105,3 +98,54 @@ class CodeDisplay(object):
     def __str__(self):
         """Default str repr"""
         return self.code
+
+    def _code_component_query(self, first_char, last_char, id_=None):
+        """Return code component query for interval [first_char, last_char]
+        Where:
+          first_char = [first_char_line, first_char_column]
+          last_char = [last_char_line, last_char_column]
+        """
+        from ...patterns import code_component, var
+        line = self.first_line
+        id_ = id_ or var("_id")
+        return code_component(
+            self.trial_id,
+            id_,
+            ((code_component.first_char_line == first_char[0] + line) &
+             (code_component.first_char_column >= first_char[1])) |
+            (code_component.first_char_line > first_char[0] + line),
+            ((code_component.last_char_line == last_char[0] + line) &
+             (code_component.last_char_column <= last_char[1])) |
+            (code_component.last_char_line < last_char[0] + line),
+        )
+
+    def find_code_components(self, first_char, last_char):
+        """Return code components for interval [first_char, last_char]
+        Where:
+          first_char = [first_char_line, first_char_column]
+          last_char = [last_char_line, last_char_column]
+        """
+        for component, _ in self._code_component_query(first_char, last_char):
+            yield component
+
+    def _evaluation_query(self, first_char, last_char):
+        """Return evalation query for interval [first_char, last_char]
+        Where:
+          first_char = [first_char_line, first_char_column]
+          last_char = [last_char_line, last_char_column]
+        """
+        from ...patterns import evaluation, var
+        code_id = var("_code_id")
+        return (
+            self._code_component_query(first_char, last_char, code_id) &
+            evaluation(self.trial_id, code_component_id=code_id)
+        )
+
+    def find_evaluations(self, first_char, last_char):
+        """Return evalations for interval [first_char, last_char]
+        Where:
+          first_char = [first_char_line, first_char_column]
+          last_char = [last_char_line, last_char_column]
+        """
+        for code_eval, _ in self._evaluation_query(first_char, last_char):
+            yield code_eval[1]

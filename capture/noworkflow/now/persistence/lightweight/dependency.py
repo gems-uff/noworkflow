@@ -13,25 +13,29 @@ from .base import BaseLW, define_attrs
 
 class DependencyLW(BaseLW):
     """Dependency lightweight object"""
+    # pylint: disable=too-many-instance-attributes
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "dependent_activation_id", "dependent_id",
-         "dependency_activation_id", "dependency_id", "type"]
+         "dependency_activation_id", "dependency_id", "type", "part_name"]
     )
     nullable = set()
     model = Dependency
 
-    def __init__(self, id_, trial_id, dependent_activation_id, dependent_id,     # pylint: disable=too-many-arguments
-                 dependency_activation_id, dependency_id, type_):
-        self.id = id_                                                            # pylint: disable=invalid-name
+    def __init__(self, id_, trial_id, dependent_activation_id, dependent_id,
+                 dependency_activation_id, dependency_id, type_, part_name):
+        # pylint: disable=too-many-arguments
+        self.id = id_  # pylint: disable=invalid-name
         self.dependent_activation_id = dependent_activation_id
         self.dependent_id = dependent_id
         self.dependency_activation_id = dependency_activation_id
         self.dependency_id = dependency_id
         self.trial_id = trial_id
         self.type = type_
+        self.part_name = part_name
 
-    def is_complete(self):                                                       # pylint: disable=no-self-use
+    def is_complete(self):
         """Variable Dependency can always be removed"""
+        # pylint: disable=no-self-use
         return True
 
     def __repr__(self):

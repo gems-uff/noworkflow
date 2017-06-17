@@ -115,12 +115,6 @@ class Collector(object):
         activation, code_id, vcontainer, vindex, access, mode = index
         depa = activation.dependencies.pop()
 
-        value_dep = part_id = None
-        for dep in depa.dependencies:
-            if dep.mode == "value":
-                value_dep = dep
-                break
-
         if access == "[]":
             nvindex = vindex
             if isinstance(vindex, int) and vindex < 0:
@@ -130,6 +124,12 @@ class Collector(object):
         elif access == ".":
             value = getattr(vcontainer, vindex)
             addr = ".{}".format(vindex)
+
+        value_dep = part_id = None
+        for dep in depa.dependencies:
+            dep.part_name = addr
+            if dep.mode == "value":
+                value_dep = dep
 
         if not activation.active:
             return value
@@ -171,12 +171,6 @@ class Collector(object):
         # pylint: disable=too-many-locals
         activation, code_id, vcontainer, vindex, access, _ = index
         depa = activation.dependencies.pop()
-        value_dep = None
-        for dep in depa.dependencies:
-            if dep.mode == "value":
-                value_dep = dep
-                break
-
         if access == "[]":
             nvindex = vindex
             if isinstance(vindex, int) and vindex < 0:
@@ -186,6 +180,12 @@ class Collector(object):
         elif access == ".":
             setattr(vcontainer, vindex, value)
             addr = ".{}".format(vindex)
+
+        value_dep = None
+        for dep in depa.dependencies:
+            dep.part_name = addr
+            if dep.mode == "value":
+                value_dep = dep
 
         if activation.active:
             activation.assignments[-1].accesses[code_id] = AssignAccess(
@@ -348,7 +348,7 @@ class Collector(object):
             if old_eval:
                 self.dependencies.add(
                     self.trial_id, activation.id, evaluation.id,
-                    old_eval.activation_id, old_eval.id, "assignment"
+                    old_eval.activation_id, old_eval.id, "assignment", None
                 )
 
         return value
@@ -1357,7 +1357,7 @@ class Collector(object):
                     self.dependencies.add(
                         self.trial_id, activation_id, evaluation_id,
                         dep.activation_id, dep.evaluation_id,
-                        dep.mode
+                        dep.mode, dep.part_name
                     )
 
     def create_argument_dependencies(self, evaluation, depa):
@@ -1367,7 +1367,7 @@ class Collector(object):
                 self.dependencies.add(
                     self.trial_id, evaluation.activation_id, evaluation.id,
                     dep.activation_id, dep.evaluation_id,
-                    "dependency"
+                    "dependency", dep.part_name
                 )
 
     def eval_dep(self, activation, code, value, mode, depa=None, moment=None):

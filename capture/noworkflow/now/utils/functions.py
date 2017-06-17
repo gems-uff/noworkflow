@@ -12,6 +12,7 @@ import os
 from os.path import join, dirname, exists
 from textwrap import dedent
 from pkg_resources import resource_string, resource_listdir, resource_isdir
+from subprocess import Popen, PIPE
 
 
 MODULE = __name__
@@ -81,7 +82,6 @@ def recursive_copy(origin, destiny):
             fil.write(resource(origin))
 
 
-
 def erase(directory, everything=False):
     """Remove all files from directory
 
@@ -98,3 +98,19 @@ def erase(directory, everything=False):
             path = join(root, name)
             if everything or ".noworkflow" not in path:
                 os.rmdir(path)
+
+
+def run_dot(code, format_='png'):
+    """run_dot"""
+    process = Popen(
+        ["dot", "-T", format_], stdout=PIPE, stdin=PIPE, stderr=PIPE
+    )
+    try:
+        stdout, stderr = process.communicate(code.encode('utf-8'))
+    except (OSError, IOError) as err:  # pylint: disable=unused-variable
+        stdout, stderr = process.stdout.read(), process.stderr.read()
+        process.wait()
+    if process.returncode != 0:
+        raise RuntimeError('dot exited with error:\n[stderr]\n{0}'
+                           .format(stderr.decode('utf-8')))
+    return stdout

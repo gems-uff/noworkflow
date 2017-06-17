@@ -85,6 +85,7 @@ class Dependency(AlchemyProxy):
     dependency_activation_id = Column(Integer, index=True)
     dependency_id = Column(Integer, index=True)
     type = Column(Text)  # pylint: disable=invalid-name
+    part_name = Column(Text)  # Null if it is not a dependency to a part
 
     trial = backref_one("trial")  # Trial.dependencies
     # Activation.dependent_variables, Evaluation.dependencies_as_dependent
@@ -103,6 +104,7 @@ class Dependency(AlchemyProxy):
                         link="evaluation.activation_id"),
         PrologAttribute("dependency_id", link="evaluation.id"),
         PrologRepr("type"),
+        # ToDo: add part anme
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "the value of a evaluation (*DependentId*),\n"

@@ -93,8 +93,15 @@ class CodeBlock(AlchemyProxy):
 
     def __init__(self, *args, **kwargs):
         super(CodeBlock, self).__init__(*args, **kwargs)
-        from ...models.code_display import CodeDisplay
-        self.content = CodeDisplay(self)
+        self._content = None
+
+    @property
+    def content(self):
+        """Get content"""
+        if self._content is None:
+            from ...models.code_display import CodeDisplay
+            self._content = CodeDisplay(self)
+        return self._content
 
     @property
     def all_components(self):

@@ -138,6 +138,7 @@ class Dependency(object):
         self.value = value
         self.value_id = value_id
         self.mode = mode
+        self.part_name = None
 
         # Kind: extra information about dependency
         self.kind = None

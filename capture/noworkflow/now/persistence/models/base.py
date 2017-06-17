@@ -204,6 +204,15 @@ class AlchemyProxy(Model):
             self._alchemy_pk = obj
         self._restore_instance()
 
+    def __hash__(self):
+        return hash((type(self), tuple(self._alchemy_pk)))
+
+    def __eq__(self, other):
+        # pylint: disable=protected-access
+        if not isinstance(other, type(self)):
+            return False
+        return self._alchemy_pk == other._alchemy_pk
+
     def __repr__(self):
         if hasattr(self, 'prolog_description'):
             return self.prolog_description.fact(self)                            # pylint: disable=no-member
