@@ -5,13 +5,43 @@
 """Lightweight Activation"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
-
 from ..models import Activation
 from .base import BaseLW, define_attrs
 
 
-class ActivationLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
+
+class DepList(list):
+    """Debug depa insertion"""
+    # pylint: disable=E1003, E1101
+
+    def pop(self, *args, **kwargs):
+        """Pop"""
+        import inspect
+        result = super(DepList, self).pop(*args, **kwargs)
+        print("pop", len(self), inspect.stack()[1][3])
+        print(self)
+        return result
+
+    def append(self, *args, **kwargs):
+        """Append"""
+        import inspect
+        super(DepList, self).append(*args, **kwargs)
+        print("append", len(self), inspect.stack()[1][3])
+        print(self)
+
+    def insert(self, *args, **kwargs):
+        """Insert"""
+        import inspect
+        super(DepList, self).insert(*args, **kwargs)
+        print("insert", len(self), inspect.stack()[1][3])
+        print(self)
+
+DepList = list
+
+
+class ActivationLW(BaseLW):
     """Activation lightweight object"""
+    # pylint: disable=too-many-instance-attributes
 
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "start", "code_block_trial_id",
@@ -23,9 +53,10 @@ class ActivationLW(BaseLW):                                                     
     nullable = {"code_block_id"}
     model = Activation
 
-    def __init__(self, evaluation, trial_id, name, start, code_block_id):
+    def __init__(self, evaluation, trial_id, name, start, code_block_id):\
+        # pylint: disable=too-many-arguments
         self.trial_id = trial_id
-        self.id = evaluation.id                                                  # pylint: disable=invalid-name
+        self.id = evaluation.id  # pylint: disable=invalid-name
         self.name = name
         self.start = start
         self.code_block_id = code_block_id if code_block_id else -1
@@ -37,7 +68,7 @@ class ActivationLW(BaseLW):                                                     
         self.assignments = []
 
         # Dependencies. Used to construct dependencies
-        self.dependencies = []
+        self.dependencies = DepList()
 
         # Variable context. Used in the slicing lookup
         self.context = {}
@@ -68,8 +99,9 @@ class ActivationLW(BaseLW):                                                     
         # Generator Object
         self.generator = None
 
-    def is_complete(self):                                                       # pylint: disable=no-self-use
+    def is_complete(self):
         """Activation can always be removed from object store"""
+        # pylint: disable=no-self-use
         return True
 
     def __repr__(self):

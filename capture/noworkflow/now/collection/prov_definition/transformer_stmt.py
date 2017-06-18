@@ -6,16 +6,16 @@
 Collect definition provenance during the transformations"""
 
 import ast
-import pyposast
 import os
-
 from copy import copy
+
+import pyposast
 
 from .ast_helpers import ReplaceContextWithLoad, ast_copy, temporary
 from .ast_helpers import select_future_imports
 
 from .ast_elements import maybe, context, raise_, now_attribute
-from .ast_elements import L, S, P, none, call, param, true_false
+from .ast_elements import L, S, none, call, param, true_false, true, false
 from .ast_elements import noworkflow, double_noworkflow
 from .ast_elements import activation, function_def, class_def, try_def
 
@@ -24,10 +24,13 @@ from .transformer_expr import RewriteDependencies
 from ...utils.cross_version import PY3, PY36
 
 
-class RewriteAST(ast.NodeTransformer):                                           # pylint: disable=too-many-public-methods
+class RewriteAST(ast.NodeTransformer):
     """Rewrite AST to add calls to noWorkflow collector"""
+    # pylint: disable=too-many-public-methods, too-many-public-methods
+    # pylint: disable=too-many-public-methods, too-many-instance-attributes
 
     def __init__(self, metascript, code, path, container_id=-1, cell=None):
+        # pylint: disable=too-many-arguments
         self.metascript = metascript
         self.trial_id = metascript.trial_id
         self.code_components = metascript.code_components_store
@@ -175,12 +178,14 @@ class RewriteAST(ast.NodeTransformer):                                          
 
         return new_body
 
-    def visit_Module(self, node, cls=ast.Module):                                # pylint: disable=invalid-name
+    def visit_Module(self, node, cls=ast.Module):
         """Visit Module. Create and close activation"""
+        # pylint: disable=invalid-name
         return ast.fix_missing_locations(self.process_script(node, cls))
 
-    def visit_Interactive(self, node):                                           # pylint: disable=invalid-name
+    def visit_Interactive(self, node):
         """Visit Interactive. Create and close activation"""
+        # pylint: disable=invalid-name
         return self.visit_Module(node, cls=ast.Interactive)
 
     # ToDo: visit_Expression?
@@ -241,23 +246,45 @@ class RewriteAST(ast.NodeTransformer):                                          
         Transform
             a += 1
         Into:
-            a += self.assign_value(<act>, <ext>)(<act>, |1|, |a|)
+            a += <now>.assign_value(<act>, <ext>)(<act>, |1|, |a|)
+            __now__assign__ = <now>.pop_assign(<act>)
+
+            <now>.assign(<act>, __now__assign__, cce(a))
+        Transform
+            a[0] += 1
+        Into:
+            <now>.augaccess(<act>, <now>.access(<act>, <ext>, #a))[...] +=
+                self.assign_value(<act>, <ext>)(<act>, |1|)
             __now__assign__ = <now>.pop_assign(<act>)
 
             <now>.assign(<act>, __now__assign__, cce(a))
         """
         mode = "{}_assign".format(type(node.op).__name__.lower())
-        assign_target = self.capture(
-            ReplaceContextWithLoad().visit(node.target), mode=mode
-        )
+
         new_target = self.capture(node.target)
+        if isinstance(new_target, ast.Subscript):
+            new_target.value = noworkflow(
+                "augaccess",
+                [
+                    activation(),
+                    new_target.value,
+                ]
+            )
+            assign_target = none()
+            same = true()
+        else:
+            assign_target = self.capture(
+                ReplaceContextWithLoad().visit(node.target), mode=mode
+            )
+            same = false()
         new_body.append(ast_copy(ast.AugAssign(
             new_target, node.op,
             double_noworkflow(
                 "assign_value",
                 [
                     activation(),
-                    ast.Num(self.current_exc_handler)
+                    ast.Num(self.current_exc_handler),
+                    same
                 ], [
                     activation(),
                     self.capture(node.value, mode=mode),
@@ -316,7 +343,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             ])
         ), node))
 
-    def visit_For(self, node):                                                   # pylint: disable=invalid-name
+    def visit_For(self, node):
         """Visit For
         Transform:
             for i in lis:
@@ -325,6 +352,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             for i in <now>.loop(<act>, #, <exc>)(<act>, |lis|):
                 <now>.assign(<act>, <now>.pop_assign(<act>), cce(i))
         """
+        # pylint: disable=invalid-name
         new_node = copy(node)
         new_node.target = self.capture(new_node.target)
         new_node.iter = ast_copy(double_noworkflow(
@@ -349,7 +377,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         ] + self.process_body(new_node.body)
         return new_node
 
-    def visit_If(self, node):                                                    # pylint: disable=invalid-name
+    def visit_If(self, node):
         """Visit If
         Transform:
             if x:
@@ -376,6 +404,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             finally:
                 <now>.remove_condition(__now_activation__)
         """
+        # pylint: disable=invalid-name
         handlers = []
         def access_if(ifnod, exc_id):
             """Create ifexp considering elif"""
@@ -430,7 +459,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             )), node)
         ], node), node)
 
-    def visit_While(self, node):                                                 # pylint: disable=invalid-name
+    def visit_While(self, node):
         """Visit While
         Transform:
             while x:
@@ -451,6 +480,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             finally:
                 <now>.remove_condition(<act>)
         """
+        # pylint: disable=invalid-name
         with self.exc_handler():
             new_node = copy(node)
             new_node.test = ast_copy(double_noworkflow(
@@ -488,8 +518,9 @@ class RewriteAST(ast.NodeTransformer):                                          
                 )), new_node)
             ], new_node), new_node)
 
-    def visit_ClassDef(self, node):                                              # pylint: disable=invalid-name
+    def visit_ClassDef(self, node):
         """Visit Class Definition"""
+        # pylint: disable=invalid-name
         with self.container(node, "class_def"):
             return ast_copy(class_def(
                 node.name, node.bases, self.process_body(node.body),
@@ -586,7 +617,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             kwonlyargs = none()
         return ast.Tuple([args, defaults, vararg, kwarg, kwonlyargs], L())
 
-    def visit_FunctionDef(self, node, cls=ast.FunctionDef):                      # pylint: disable=invalid-name
+    def visit_FunctionDef(self, node, cls=ast.FunctionDef):
         """Visit Function Definition
         Transform:
         @dec
@@ -599,6 +630,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         def f(__now_activation__, x, y=2, *args, z=3, **kwargs):
             ...
         """
+        # pylint: disable=invalid-name
         old_exc_handler = self.current_exc_handler
         with self.container(node, "function_def"), self.exc_handler():
             new_node = copy(node)
@@ -635,17 +667,19 @@ class RewriteAST(ast.NodeTransformer):                                          
                 returns=maybe(new_node, "returns"), cls=cls
             ), new_node)
 
-    def visit_AsyncFunctionDef(self, node):                                      # pylint: disable=invalid-name
+    def visit_AsyncFunctionDef(self, node):
         """Visit Async Function Definition"""
+        # pylint: disable=invalid-name
         return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
 
-    def visit_Return(self, node):                                                # pylint: disable=invalid-name
+    def visit_Return(self, node):
         """Visit Return
         Transform:
             return x
         Into:
             return <now>.return_(<act>, <exc>)(<act>, |x|)
         """
+        # pylint: disable=invalid-name
         new_node = copy(node)
         if new_node.value:
             new_node.value = ast_copy(double_noworkflow(
@@ -661,13 +695,14 @@ class RewriteAST(ast.NodeTransformer):                                          
             ), new_node)
         return new_node
 
-    def visit_Expr(self, node):                                                  # pylint: disable=invalid-name
+    def visit_Expr(self, node):
         """Visit Expr. Capture it"""
+        # pylint: disable=invalid-name
         new_node = copy(node)
         new_node.value = self.capture(new_node.value)
         return new_node
 
-    def visit_Try(self, node):                                                   # pylint: disable=invalid-name
+    def visit_Try(self, node):
         """Visit Try
         Transform:
             try:
@@ -689,6 +724,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             finally:
                 ...
         """
+        # pylint: disable=invalid-name
         new_node = copy(node)
         with self.exc_handler() as internal_handler:
             new_node.body = self.process_body(new_node.body)
@@ -700,7 +736,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         new_node.finalbody = self.process_body(new_node.finalbody)
         return new_node
 
-    def visit_TryFinally(self, node):                                            # pylint: disable=invalid-name
+    def visit_TryFinally(self, node):
         """Visit TryFinally -- Python 2
         Transform:
             try:
@@ -713,12 +749,13 @@ class RewriteAST(ast.NodeTransformer):                                          
             finally:
                 ...
         """
+        # pylint: disable=invalid-name
         new_node = copy(node)
         new_node.body = self.process_body(new_node.body)
         new_node.finalbody = self.process_body(new_node.finalbody)
         return new_node
 
-    def visit_TryExcept(self, node):                                             # pylint: disable=invalid-name
+    def visit_TryExcept(self, node):
         """Visit TryExcept -- Python 2
         Transform:
             try:
@@ -737,6 +774,7 @@ class RewriteAST(ast.NodeTransformer):                                          
             else:
                 ...
         """
+        # pylint: disable=invalid-name
         new_node = copy(node)
         with self.exc_handler() as internal_handler:
             new_node.body = self.process_body(new_node.body)
@@ -793,6 +831,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         Into:
             <now>.py2_exec(<act>. #, <exc>, <mode>)(|a|)
         """
+        # pylint: disable=protected-access, invalid-name
         node.name = pyposast.extract_code(self.lcode, node)
         component_id = self.create_code_component(
             node, "call", "r"
@@ -837,6 +876,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         Into:
             <now>.py2_print(<act>. #, <exc>, <mode>)(|a|)
         """
+        # pylint: disable=invalid-name, protected-access
         node.name = pyposast.extract_code(self.lcode, node)
         component_id = self.create_code_component(
             node, "call", "r"
@@ -847,8 +887,9 @@ class RewriteAST(ast.NodeTransformer):                                          
         if not new_node.nl:
             keywords.append(ast.keyword('end', ast.Str('')))
         if new_node.dest:
-            keywords.append(ast.keyword('file',
-                            rewriter._call_keyword('file', new_node.dest)))
+            keywords.append(ast.keyword(
+                'file', rewriter._call_keyword('file', new_node.dest))
+            )
 
         return ast_copy(ast.Expr(double_noworkflow(
             "py2_print",
@@ -865,11 +906,7 @@ class RewriteAST(ast.NodeTransformer):                                          
         )), new_node)
 
 
-
     def capture(self, node, mode="dependency"):
         """Capture node"""
         dependency_rewriter = RewriteDependencies(self, mode=mode)
         return dependency_rewriter.visit(node)
-
-
-

@@ -98,7 +98,8 @@ class DependencyAware(object):
 
     @classmethod
     def join(cls, depa_list):
-        new_depa = DependencyAware(exc_handler=float('inf'))
+        """Join list of DependencyAwares"""
+        new_depa = cls(exc_handler=float('inf'))
         for e_depa in depa_list:
             new_depa.code_id = e_depa.code_id
             new_depa.exc_handler = min(
@@ -138,7 +139,6 @@ class Dependency(object):
         self.value = value
         self.value_id = value_id
         self.mode = mode
-        self.part_name = None
 
         # Kind: extra information about dependency
         self.kind = None

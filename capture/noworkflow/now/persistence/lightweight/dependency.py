@@ -16,13 +16,13 @@ class DependencyLW(BaseLW):
     # pylint: disable=too-many-instance-attributes
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "dependent_activation_id", "dependent_id",
-         "dependency_activation_id", "dependency_id", "type", "part_name"]
+         "dependency_activation_id", "dependency_id", "type"]
     )
     nullable = set()
     model = Dependency
 
     def __init__(self, id_, trial_id, dependent_activation_id, dependent_id,
-                 dependency_activation_id, dependency_id, type_, part_name):
+                 dependency_activation_id, dependency_id, type_):
         # pylint: disable=too-many-arguments
         self.id = id_  # pylint: disable=invalid-name
         self.dependent_activation_id = dependent_activation_id
@@ -31,7 +31,6 @@ class DependencyLW(BaseLW):
         self.dependency_id = dependency_id
         self.trial_id = trial_id
         self.type = type_
-        self.part_name = part_name
 
     def is_complete(self):
         """Variable Dependency can always be removed"""

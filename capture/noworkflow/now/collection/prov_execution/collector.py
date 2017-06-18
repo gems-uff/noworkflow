@@ -102,6 +102,13 @@ class Collector(object):
             return old_open(name, *args, **kwargs)
         return open
 
+    def augaccess(self, activation, access):
+        """Repeat access depa.
+        Propagate this dependency"""
+        # pylint: disable=no-self-use
+        activation.dependencies.append(activation.dependencies[-1])
+        return access
+
     def access(self, activation, code_id, exc_handler):
         """Capture object access before"""
         activation.dependencies.append(DependencyAware(
@@ -127,9 +134,9 @@ class Collector(object):
 
         value_dep = part_id = None
         for dep in depa.dependencies:
-            dep.part_name = addr
             if dep.mode == "value":
                 value_dep = dep
+                break
 
         if not activation.active:
             return value
@@ -183,9 +190,9 @@ class Collector(object):
 
         value_dep = None
         for dep in depa.dependencies:
-            dep.part_name = addr
             if dep.mode == "value":
                 value_dep = dep
+                break
 
         if activation.active:
             activation.assignments[-1].accesses[code_id] = AssignAccess(
@@ -348,7 +355,7 @@ class Collector(object):
             if old_eval:
                 self.dependencies.add(
                     self.trial_id, activation.id, evaluation.id,
-                    old_eval.activation_id, old_eval.id, "assignment", None
+                    old_eval.activation_id, old_eval.id, "assignment"
                 )
 
         return value
@@ -679,11 +686,14 @@ class Collector(object):
             self.eval_dep(activation, code_id, value, mode, depa)
         return value
 
-    def assign_value(self, activation, exc_handler):
+    def assign_value(self, activation, exc_handler, same=False):
         """Capture assignment before"""
-        activation.dependencies.append(CollectionDependencyAware(
-            exc_handler=exc_handler
-        ))
+        dependency = (
+            activation.dependencies[-1] if same else CollectionDependencyAware(
+                exc_handler=exc_handler
+            )
+        )
+        activation.dependencies.append(dependency)
         return self._assign_value
 
     def _assign_value(self, activation, value, augvalue=None):
@@ -1357,7 +1367,7 @@ class Collector(object):
                     self.dependencies.add(
                         self.trial_id, activation_id, evaluation_id,
                         dep.activation_id, dep.evaluation_id,
-                        dep.mode, dep.part_name
+                        dep.mode
                     )
 
     def create_argument_dependencies(self, evaluation, depa):
@@ -1367,7 +1377,7 @@ class Collector(object):
                 self.dependencies.add(
                     self.trial_id, evaluation.activation_id, evaluation.id,
                     dep.activation_id, dep.evaluation_id,
-                    "dependency", dep.part_name
+                    "dependency"
                 )
 
     def eval_dep(self, activation, code, value, mode, depa=None, moment=None):
