@@ -10,8 +10,8 @@ from collections import namedtuple
 class Arrow(object):
     """Represent an arrow with a label"""
     # pylint: disable=too-few-public-methods
-    def __init__(self, type_, time_restriction=None):
-        self.label = type_
+    def __init__(self, type_, time_restriction=None, part=None):
+        self.label = part or type_
         self.type = type_
         self.time_restriction = time_restriction
         self.marked = False

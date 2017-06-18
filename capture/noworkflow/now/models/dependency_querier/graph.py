@@ -2,7 +2,7 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Trial dependency graph"""
+"""Trial dependency querier"""
 
 from collections import defaultdict
 from itertools import chain
@@ -40,14 +40,15 @@ class DependencyQuerier(object):
         # Stack of last search
         self.search_stack = []
 
-    def add_static_arrow(self, from_, to_, name, moment=None):
+    def add_static_arrow(self, from_, to_, name, moment=None, part=None):
         """Do nothing by default. Override for debugging"""
-        # pylint: disable=unused-argument, no-self-use
+        # pylint: disable=unused-argument, no-self-use, too-many-arguments
+        pass
 
-    def get_arrow(self, from_, to_, name, moment=None):
+    def get_arrow(self, from_, to_, name, moment=None, part=None):
         """Get arrow used to go from a node to another"""
-        # pylint: disable=unused-argument, no-self-use
-        return Arrow(name, moment)
+        # pylint: disable=unused-argument, no-self-use, too-many-arguments
+        return Arrow(name, moment, part)
 
     def visit_arrow(self, arrow, index, new_context):
         """Do nothing by default. Override for debugging"""
@@ -69,7 +70,7 @@ class DependencyQuerier(object):
             part = self.values[compartment.part_id]
             moment = compartment.moment
             # Dependency to compartments
-            self.add_static_arrow(whole, part, compartment.name, moment)
+            self.add_static_arrow(whole, part, "<C>", moment, compartment.name)
             self.compartments[whole][compartment.name][moment] = part
             parts[moment] = part
         return parts
@@ -120,10 +121,12 @@ class DependencyQuerier(object):
         for name, value_state in viewitems(self.compartments[from_]):
             if (from_, name) in context.block_set:
                 continue  # This part is being altered. Thus, it is blocked
+            if (from_, "<C>") in context.block_set:
+                continue  # Going to compartments is blocked
             to_, moment = value_state.current_pair(context.moment)
             if to_ is None:
                 continue  # Value were created after the explored node
-            arrow = self.get_arrow(from_, to_, name, moment)
+            arrow = self.get_arrow(from_, to_, "<C>", moment, name)
             # Keep the context moment and the block_set
             yield Context(to_, context.moment, context.block_set), arrow
 
@@ -150,10 +153,10 @@ class DependencyQuerier(object):
             if dependency.type.startswith("argument"):
                 continue  # Ignore this type
             if dependency.type.startswith("value"):
-                # Block going to referred part
+                # Block going to parts in a access
                 whole_value = self.values[to_.value_id]
                 new_block_set = frozenset(chain(
-                    new_block_set, {(whole_value, dependency.part_name)}
+                    new_block_set, {(whole_value, "<C>")}
                 ))
             arrow = self.get_arrow(from_, to_, dependency.type)
             # Moment is always None, when going to a evaluation

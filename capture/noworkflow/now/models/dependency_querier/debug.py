@@ -34,18 +34,19 @@ class StaticDebugDependencyQuerier(DependencyQuerier):
             return ""
         return str((current - self.start).microseconds)
 
-    def add_static_arrow(self, from_, to_, name, moment=None):
+    def add_static_arrow(self, from_, to_, name, moment=None, part=None):
         """Add static arrow *name* *from_* node *to_* another node
         at a given moment.
         Only add in debug mode
         """
-        arrow = self.arrows[from_][to_] = Arrow(name, moment)
+        # pylint: disable=too-many-arguments
+        arrow = self.arrows[from_][to_] = Arrow(name, moment, part)
         if moment is not None:
             arrow.label += "\n" + self._elapsed_time(moment)
 
-    def get_arrow(self, from_, to_, name, moment=None):
+    def get_arrow(self, from_, to_, name, moment=None, part=None):
         """Get arrow used to go from a node to another"""
-        # pylint: disable=unused-argument
+        # pylint: disable=unused-argument, too-many-arguments
         #arrow = Arrow(name, moment)
         #if moment is not None:
         #    arrow.label += "\n" + self._elapsed_time(moment)
@@ -129,14 +130,17 @@ class StaticDebugDependencyQuerier(DependencyQuerier):
 class DynamicDebugDependencyQuerier(StaticDebugDependencyQuerier):
     """Creates arrows during search"""
 
-    def add_static_arrow(self, from_, to_, name, moment=None):
+    def add_static_arrow(self, from_, to_, name, moment=None, part=None):
         """Do Nothing"""
+        # pylint: disable=too-many-arguments, no-self-use
+        pass
 
-    def get_arrow(self, from_, to_, name, moment=None):
+    def get_arrow(self, from_, to_, name, moment=None, part=None):
         """Get arrow used to go from a node to another or create a new one"""
+        # pylint: disable=too-many-arguments
         arrow = self.arrows[from_].get(to_)
         if arrow is None:
-            arrow = self.arrows[from_][to_] = Arrow(name, moment)
+            arrow = self.arrows[from_][to_] = Arrow(name, moment, part)
             if moment is not None:
                 arrow.label += "\n" + self._elapsed_time(moment)
         return arrow

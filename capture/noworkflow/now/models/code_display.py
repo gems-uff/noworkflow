@@ -20,7 +20,7 @@ class CodeDisplay(object):
         self.trial_id = block.trial_id
         self.first_line = component.first_char_line
         self.marks = []
-        self.show_selection = True
+        self.show_selection = False
         self.all_components = {
             comp.id: comp
             for comp in block.all_components
@@ -59,34 +59,36 @@ class CodeDisplay(object):
             <textarea id="{0}">\n{1}
             </textarea>
             <script>
-            var code_id = "{0}";
-            var code_mirror = CodeMirror.fromTextArea(
-              document.getElementById(code_id), {{
-              lineNumbers: true,
-              styleSelectedText: true,
-              mode: "python",
-              readOnly: true
-            }});
+            (function () {{
+                var code_id = "{0}";
+                var code_mirror = CodeMirror.fromTextArea(
+                  document.getElementById(code_id), {{
+                  lineNumbers: true,
+                  styleSelectedText: true,
+                  mode: "python",
+                  readOnly: true
+                }});
 
-            marks = {2};
-            marks.forEach(function(mark) {{
-              code_mirror.markText.apply(code_mirror, mark)
-            }});
+                var marks = {2};
+                marks.forEach(function(mark) {{
+                  code_mirror.markText.apply(code_mirror, mark)
+                }});
 
-            show_selection = {3};
-            if (show_selection) {{
-              $(code_mirror.getWrapperElement()).after(
-                "<input type='text' id='"+code_id+"-selection'></input>"
-              );
-              code_mirror.on('cursorActivity', function(cm) {{
-                var tcursor = cm.getCursor(true);
-                var fcursor = cm.getCursor(false);
-                $("#"+code_id+"-selection").val(
-                  "[" + tcursor.line + ", " + tcursor.ch + "], "+
-                  "[" + fcursor.line + ", " + fcursor.ch + "]"
-                );
-              }});
-            }}
+                var show_selection = {3};
+                if (show_selection) {{
+                  $(code_mirror.getWrapperElement()).after(
+                    "<input type='text' id='"+code_id+"-selection'></input>"
+                  );
+                  code_mirror.on('cursorActivity', function(cm) {{
+                    var tcursor = cm.getCursor(true);
+                    var fcursor = cm.getCursor(false);
+                    $("#"+code_id+"-selection").val(
+                      "[" + tcursor.line + ", " + tcursor.ch + "], "+
+                      "[" + fcursor.line + ", " + fcursor.ch + "]"
+                    );
+                  }});
+                }}
+            }})();
             </script>
         """.format(
             uid,
