@@ -171,9 +171,12 @@ class DependencyQuerier(object):
         if (from_, "<A>") in context.block_set:
             return  # Moving from evaluation to activation is blocked
         arrow = self.get_arrow(from_, to_, "<A>")
-        # ToDo: Add restriction: to_ to return dependencies
+        # Add restriction: to_ to return dependencies
+        new_block_set = frozenset(chain(
+            context.block_set, {(to_, "use"), (to_, "use-bind")}
+        ))
         # Moment is always None, when going to a evaluation
-        yield Context(to_, None, context.block_set), arrow
+        yield Context(to_, None, new_block_set), arrow
 
     def _evaluation_to_value_neighborhood(self, context):
         """Visit evaluation value"""
