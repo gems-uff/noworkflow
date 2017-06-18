@@ -18,6 +18,8 @@ class DependencyQuerier(object):
         self.trial = trial
         # Cache all trial evaluations
         self.evaluations = {}
+        # Cache all trial activations
+        self.activations = {}
         # Cache all trial values
         self.values = {}
         # ValueState Map: M[Value][Compartment.name][Moment] = Part
@@ -77,6 +79,7 @@ class DependencyQuerier(object):
 
     def initialize_evaluations(self, parts):
         """Initialize evaluations"""
+        self.activations = {act.id: act for act in self.trial.activations}
         for evaluation in self.trial.evaluations:
             self.evaluations[evaluation.id] = evaluation
             value = self.values[evaluation.value_id]
@@ -150,7 +153,7 @@ class DependencyQuerier(object):
                 # Moviment from evaluation to evaluation is blocked
                 continue
             new_block_set = context.block_set
-            if dependency.type.startswith("argument"):
+            if from_.id in self.activations and dependency.type.startswith("argument"):
                 continue  # Ignore this type
             if dependency.type.startswith("value"):
                 # Block going to parts in a access

@@ -109,8 +109,8 @@ class DependencyConfig(object):
         for node in cluster.elements:
             if not isinstance(node, EvaluationNode):
                 continue
-            if isinstance(node, ClusterNode):
-                continue
+            #if isinstance(node, ClusterNode):
+            #    continue
             if self.rank_option == 1:
                 line = node.line
             else:
