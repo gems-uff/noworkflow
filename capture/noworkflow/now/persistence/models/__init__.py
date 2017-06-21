@@ -17,6 +17,7 @@ from .argument import Argument
 from .code_block import CodeBlock
 from .code_component import CodeComponent
 from .compartment import Compartment
+from .composition import Composition
 from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
 from .evaluation import Evaluation
@@ -32,7 +33,7 @@ from .value import Value
 ORDER = [
     Trial, Head, Tag, GraphCache, Argument, # Trial
     Module, EnvironmentAttr,  # Deployment
-    CodeComponent, CodeBlock,  # Definition
+    CodeComponent, CodeBlock, Composition,  # Definition
     Value, Compartment, Evaluation, Activation, Dependency,  # Execution
     FileAccess  # Execution
 ]

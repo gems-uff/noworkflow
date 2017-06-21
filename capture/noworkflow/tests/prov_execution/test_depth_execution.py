@@ -15,8 +15,9 @@ from ..collection_testcase import CollectionTestCase
 
 class TestDepthExecution(CollectionTestCase):
     """Test Execution Depth collection"""
+    # pylint: disable=invalid-name
 
-    def test_depth_1_should_ignore_variables_and_literals(self):                 # pylint: disable=invalid-name
+    def test_depth_1_should_ignore_variables_and_literals(self):
         """Test ignore variables and literals"""
         self.script("# script.py\n"
                     "def f():\n"
@@ -38,7 +39,7 @@ class TestDepthExecution(CollectionTestCase):
         self.assertTrue(activation.start < var_f.moment)
         self.assertEqual(activation.name, "f")
 
-    def test_depth_1_should_ignore_structures_and_accesses(self):                # pylint: disable=invalid-name
+    def test_depth_1_should_ignore_structures_and_accesses(self):
         """Test ignore structures and accesses"""
         self.script("def f():\n"
                     "    x = [2, 3]\n"
@@ -78,7 +79,7 @@ class TestDepthExecution(CollectionTestCase):
         self.assertTrue(activation.start < var_f.moment)
         self.assertEqual(activation.name, "f")
 
-    def test_depth_1_should_ignore_loops_and_conditions(self):                   # pylint: disable=invalid-name
+    def test_depth_1_should_ignore_loops_and_conditions(self):
         """Test ignore loops and conditions"""
         self.script("def f():\n"
                     "    for x in [1, 2]:\n"
@@ -114,7 +115,7 @@ class TestDepthExecution(CollectionTestCase):
         self.assertTrue(activation.start < var_f.moment)
         self.assertEqual(activation.name, "f")
 
-    def test_depth_1_should_ignore_internal_calls(self):                         # pylint: disable=invalid-name
+    def test_depth_1_should_ignore_internal_calls(self):
         """Test ignore function calls"""
         self.script("def g(y):\n"
                     "    pass\n"
@@ -139,7 +140,7 @@ class TestDepthExecution(CollectionTestCase):
         self.assertTrue(activation.start < var_f.moment)
         self.assertEqual(activation.name, "f")
 
-    def test_depth_1_should_ignore_internal_definitions(self):                   # pylint: disable=invalid-name
+    def test_depth_1_should_ignore_internal_definitions(self):
         """Test ignore function calls"""
         self.script("def f():\n"
                     "    def g():\n"
@@ -163,7 +164,7 @@ class TestDepthExecution(CollectionTestCase):
         self.assertEqual(activation.name, "f")
 
 
-    def test_depth_1_should_collect_blackbox_arguments(self):                    # pylint: disable=invalid-name
+    def test_depth_1_should_collect_blackbox_arguments(self):
         """Test collect blackbox arguments"""
         self.script("def f(x, *y, **z):\n"
                     "    pass\n"
@@ -192,7 +193,7 @@ class TestDepthExecution(CollectionTestCase):
         self.assert_dependency(var_f, var_3, "argument")
         self.assert_dependency(var_f, var_5, "argument")
 
-    def test_depth_2_should_ignore_variables_and_literals(self):                 # pylint: disable=invalid-name
+    def test_depth_2_should_ignore_variables_and_literals(self):
         """Test ignore variables and literals"""
         self.script("# script.py\n"
                     "def f():\n"

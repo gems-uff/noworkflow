@@ -18,6 +18,7 @@ from .base import AlchemyProxy, proxy_class, query_one_property
 from .base import backref_one, one, many_viewonly_ref
 
 from .code_block import CodeBlock
+from .composition import Composition
 
 
 @proxy_class
@@ -78,7 +79,8 @@ class CodeComponent(AlchemyProxy):
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
     name = Column(Text)
     type = Column(Text)  # ToDo: CheckConstraint?
-    mode = Column(Text, CheckConstraint("mode IN ('r', 'w', 'd')"))
+    # Mode 'n' indicates that it does not connect to evaluations
+    mode = Column(Text, CheckConstraint("mode IN ('r', 'w', 'd', 'n')"))
     first_char_line = Column(Integer)
     first_char_column = Column(Integer)
     last_char_line = Column(Integer)
@@ -118,6 +120,32 @@ class CodeComponent(AlchemyProxy):
         "and it last char is at [*LastCharLine*, *LastCharColumn*].\n"
         "This component is part of a given code block (*ContainerId*)."
     ))
+
+    # dependencies in which this component is the dependent
+    dependencies_as_dependent = many_viewonly_ref(
+        "dependent", "Composition",
+        primaryjoin=(
+            (id == Composition.m.dependent_id) &
+            (trial_id == Composition.m.trial_id))
+    )
+
+    # dependencies in which this component is the dependency
+    dependencies_as_dependency = many_viewonly_ref(
+        "dependency", "Composition",
+        primaryjoin=(
+            (id == Composition.m.dependency_id) &
+            (trial_id == Composition.m.trial_id)))
+
+    dependencies = many_viewonly_ref(
+        "dependents", "CodeComponent",
+        secondary=Composition.__table__,
+        primaryjoin=(
+            (id == Composition.m.dependent_id) &
+            (trial_id == Composition.m.trial_id)),
+        secondaryjoin=(
+            (id == Composition.m.dependency_id) &
+            (trial_id == Composition.m.trial_id)))
+
 
     @query_one_property
     def first_evaluation(self):

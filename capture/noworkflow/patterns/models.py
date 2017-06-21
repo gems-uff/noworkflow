@@ -10,6 +10,7 @@ from ..now.persistence.models import Argument
 from ..now.persistence.models import CodeBlock
 from ..now.persistence.models import CodeComponent
 from ..now.persistence.models import Compartment
+from ..now.persistence.models import Composition
 from ..now.persistence.models import Dependency
 from ..now.persistence.models import EnvironmentAttr
 from ..now.persistence.models import Evaluation
@@ -27,6 +28,7 @@ argument = ModelRule(Argument)
 code_block = ModelRule(CodeBlock)
 code_component = ModelRule(CodeComponent)
 compartment = ModelRule(Compartment)
+composition = ModelRule(Composition)
 dependency = ModelRule(Dependency)
 environment = ModelRule(EnvironmentAttr)
 evaluation = ModelRule(Evaluation)

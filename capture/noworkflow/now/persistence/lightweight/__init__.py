@@ -12,6 +12,7 @@ from .argument import ArgumentLW
 from .code_block import CodeBlockLW
 from .code_component import CodeComponentLW
 from .compartment import CompartmentLW
+from .composition import CompositionLW
 from .dependency import DependencyLW
 from .environment_attr import EnvironmentAttrLW
 from .evaluation import EvaluationLW
@@ -29,6 +30,7 @@ __all__ = [
     "CodeBlockLW",
     "CodeComponentLW",
     "CompartmentLW",
+    "CompositionLW",
     "DependencyLW",
     "EnvironmentAttrLW",
     "EvaluationLW",

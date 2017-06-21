@@ -43,6 +43,7 @@ class Definition(object):
         partial = True
         metascript.code_components_store.do_store(partial)
         metascript.code_blocks_store.do_store(partial)
+        metascript.compositions_store.do_store(partial)
 
     def create_code_block(self, code, path, type_, binary, load):
         """Create code block for script/module"""

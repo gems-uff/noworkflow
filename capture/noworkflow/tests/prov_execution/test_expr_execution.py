@@ -1,8 +1,9 @@
-# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2016 Polytechnic Institute of New York University.
+# Copyright (c) 2017 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test Expr collection"""
+# pylint: disable=too-many-lines
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -15,6 +16,10 @@ from ..collection_testcase import CollectionTestCase
 
 class TestExprExecution(CollectionTestCase):
     """Test Excution Stmt collection"""
+    # pylint: disable=invalid-name
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-statements
+    # pylint: disable=too-many-public-methods
 
     def test_num(self):
         """Test num collection"""
@@ -378,7 +383,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(call, var_a, "argument")
         self.assert_dependency(call, var_int, "func")
 
-    def test_dict_definition(self):                                              # pylint: disable=too-many-locals
+    def test_dict_definition(self):
         """Test dict definition"""
         self.script("e = 'a'\n"
                     "f = 1\n"
@@ -428,7 +433,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_a_kv_a, var_e, "key")
         self.assert_dependency(var_a_kv_a, var_f, "value-bind")
 
-    def test_list_definition(self):                                              # pylint: disable=too-many-locals
+    def test_list_definition(self):
         """Test list definition"""
         self.script("e = 1\n"
                     "a = [e, 2]\n"
@@ -473,7 +478,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_list, var_a_e, "item")
         self.assert_dependency(var_list, var_a_i1, "item")
 
-    def test_tuple_definition(self):                                             # pylint: disable=too-many-locals
+    def test_tuple_definition(self):
         """Test list definition"""
         self.script("e = 1\n"
                     "a = (e, 2)\n"
@@ -518,7 +523,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_list, var_a_e, "item")
         self.assert_dependency(var_list, var_a_i1, "item")
 
-    def test_set_definition(self):                                               # pylint: disable=too-many-locals
+    def test_set_definition(self):
         """Test set definition"""
         self.script("e = 1\n"
                     "a = {e, 2}\n"
@@ -642,7 +647,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_b, var_ax, "assign-bind")
         self.assert_dependency(var_ax, var_a, "value")
 
-    def test_lambda_definition(self):                                            # pylint: disable=invalid-name
+    def test_lambda_definition(self):
         """Test return collection"""
         self.script("# script.py\n"
                     "f = lambda x: x\n"
@@ -667,7 +672,7 @@ class TestExprExecution(CollectionTestCase):
 
         self.assertEqual(call.activation_id, script_act.id)
         self.assertTrue(activation.start < call.moment)
-        self.assertEqual(activation.code_block_id, write_f_eval.id)
+        self.assertEqual(activation.code_block_id, lambda_eval.code_component_id)
         self.assertEqual(activation.name, "<lambda>")
 
 
@@ -693,7 +698,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(call, read_x_eval, "use-bind")
         self.assert_dependency(write_b_eval, call, "assign-bind")
 
-    def test_ifexp_true_definition(self):                                        # pylint: disable=invalid-name
+    def test_ifexp_true_definition(self):
         """Test return collection"""
         self.script("# script.py\n"
                     "x = 2 if 1 else 3\n"
@@ -717,7 +722,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_x, ifexp, "assign-bind")
         self.assert_dependency(var_2, var_1, "condition")
 
-    def test_ifexp_false_definition(self):                                       # pylint: disable=invalid-name
+    def test_ifexp_false_definition(self):
         """Test return collection"""
         self.script("# script.py\n"
                     "x = 2 if 0 else 3\n"
@@ -741,7 +746,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_x, ifexp, "assign-bind")
         self.assert_dependency(var_3, var_0, "condition")
 
-    def test_list_comprehension_definition(self):                                # pylint: disable=too-many-locals, invalid-name
+    def test_list_comprehension_definition(self):
         """Test list comprehension definition"""
         self.script("a = [x * 2 for x in [3, 4] if 1]\n"
                     "b = a\n"
@@ -804,7 +809,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(x1r, x1w, "assignment")
         self.assert_dependency(x2r, x2w, "assignment")
 
-    def test_set_comprehension_definition(self):                                # pylint: disable=too-many-locals, invalid-name
+    def test_set_comprehension_definition(self):
         """Test set comprehension definition"""
         self.script("a = {x * 2 for x in [3, 4] if 1}\n"
                     "b = a\n"
@@ -867,7 +872,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(x1r, x1w, "assignment")
         self.assert_dependency(x2r, x2w, "assignment")
 
-    def test_dict_comprehension_definition(self):                                # pylint: disable=too-many-locals, invalid-name, too-many-statements
+    def test_dict_comprehension_definition(self):
         """Test set comprehension definition"""
         self.script("a = {x * 2: 5 for x in [3, 4] if 1}\n"
                     "b = a\n"
@@ -940,7 +945,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(x1r, x1w, "assignment")
         self.assert_dependency(x2r, x2w, "assignment")
 
-    def test_generator_expression_variable(self):                                # pylint: disable=too-many-locals
+    def test_generator_expression_variable(self):
         """Test for loop"""
         self.script("a = (z * 2 for z in [3, 4] if 1)\n"
                     "b = a\n"

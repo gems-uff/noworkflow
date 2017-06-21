@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test Stmt collection"""
+# pylint: disable=too-many-lines
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -14,6 +15,10 @@ from ..collection_testcase import CollectionTestCase
 
 class TestStmtExecution(CollectionTestCase):
     """Test Excution Stmt collection"""
+    # pylint: disable=invalid-name
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-statements
 
     def test_assign_to_name(self):
         """Test assign collection"""
@@ -153,7 +158,7 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
 
-    def test_function_definition_with_return(self):                              # pylint: disable=invalid-name
+    def test_function_definition_with_return(self):
         """Test return collection"""
         self.script("# script.py\n"
                     "def f(x):\n"
@@ -200,7 +205,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(read_x_eval, param_x_eval, "assignment")
         self.assert_dependency(call, read_x_eval, "use-bind")
 
-    def test_tuple_assign(self):                                                 # pylint: disable=too-many-locals
+    def test_tuple_assign(self):
         """Test tuple assignment"""
         self.script("e = f = 1\n"
                     "a = b, c = (e, [f, 2])\n"
@@ -279,7 +284,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_b, var_ef, "dependency")
         self.assert_dependency(var_c, var_ef, "dependency")
 
-    def test_list_assign(self):                                                  # pylint: disable=too-many-locals
+    def test_list_assign(self):
         """Test list assignment"""
         self.script("e = f = 1\n"
                     "a = [b, c] = (e, [f, 2])\n"
@@ -331,7 +336,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_list, var_a_i11, "item")
 
     @only(PY3)
-    def test_star_assign(self):                                                  # pylint: disable=too-many-locals; disable=too-many-statements
+    def test_star_assign(self):
         """Test star assignment"""
         self.script("e = f = 1\n"
                     "a = b, *c, d = e, 2, 3, f, 4\n"
@@ -401,7 +406,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_tuple, var_a_i3, "item")
         self.assert_dependency(var_tuple, var_a_i4, "item")
 
-    def test_item_assign(self):                                                 # pylint: disable=too-many-locals
+    def test_item_assign(self):
         """Test item assignment"""
         self.script("a = [1, 2]\n"
                     "a[0] = 3\n"
@@ -429,7 +434,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_a0, var_a, "value")
         self.assert_dependency(var_a0, var_0, "slice")
 
-    def test_negative_item_assign(self):                                        # pylint: disable=too-many-locals
+    def test_negative_item_assign(self):
         """Test negative item assignment"""
         self.script("a = [1, 2]\n"
                     "a[-2] = 3\n"
@@ -456,7 +461,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_a0, var_a, "value")
         self.assert_dependency(var_a0, var_m2, "slice")
 
-    def test_slice_item_assign(self):                                           # pylint: disable=too-many-locals
+    def test_slice_item_assign(self):
         """Test slice assignment. Blackbox operation"""
         self.script("a = [1, 2]\n"
                     "a[0:1] = 3, 4\n"
@@ -587,7 +592,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
         self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
 
-    def test_for_loop_variable(self):                                            # pylint: disable=too-many-locals
+    def test_for_loop_variable(self):
         """Test for loop"""
         self.script("lis = [1, 2]\n"
                     "for x in lis:\n"
@@ -635,7 +640,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
         self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
 
-    def test_for_loop_multiple_assignment(self):                                 # pylint: disable=invalid-name
+    def test_for_loop_multiple_assignment(self):
         """Test for loop"""
         self.script("lis = [(1, 2)]\n"
                     "for x, y in lis:\n"
@@ -672,7 +677,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_x1_w, var_1, "assign-bind")
         self.assert_dependency(var_y1_w, var_2, "assign-bind")
 
-    def test_if(self):                                                           # pylint: disable=invalid-name
+    def test_if(self):
         """Test if condition"""
         self.script("x = 2\n"
                     "if x:\n"
@@ -696,7 +701,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_z, var_4, "assign-bind")
         self.assert_no_dependency(var_z, var_x)
 
-    def test_while(self):                                                        # pylint: disable=invalid-name
+    def test_while(self):
         """Test while loop"""
         self.script("x = 2\n"
                     "while x:\n"
@@ -708,13 +713,12 @@ class TestStmtExecution(CollectionTestCase):
 
         x1_w = self.get_evaluation(name="x", mode="w", first_char_line=1)
         var_xs_w = self.get_evaluations(name="x", mode="w", first_char_line=4)
-        var_xs_r = self.get_evaluations(name="x", mode="r")
+        var_xs_r = self.get_evaluations(name="x", mode="r", first_char_line=2)
         var_ys_w = self.get_evaluations(name="y", mode="w")
         var_ys_r = self.get_evaluations(name="y", mode="r")
         var_1s = self.get_evaluations(name="1")
         var_2 = self.get_evaluation(name="2")
         var_z = self.get_evaluation(name="z", mode="w")
-
         self.assertEqual(len(var_xs_r), 3)
         self.assertEqual(len(var_xs_w), 2)
         self.assertEqual(len(var_ys_w), 2)
@@ -757,7 +761,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_no_dependency(var_z, x2_r)
         self.assert_no_dependency(var_z, x3_r)
 
-    def test_assign_multiple_generator_expression_variable(self):                # pylint: disable=too-many-locals, invalid-name
+    def test_assign_multiple_generator_expression_variable(self):
         """Test for loop"""
         self.script("a, b = (z * 2 for z in [3, 4] if 1)\n"
                     "# other")
@@ -808,7 +812,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_a_w, z2_1, "assign-bind")
         self.assert_dependency(var_b_w, z2_2, "assign-bind")
 
-    def test_for_loop_multiple_generator_assignment(self):                       # pylint: disable=invalid-name
+    def test_for_loop_multiple_generator_assignment(self):
         """Test for loop"""
         self.script("lis = [(z * 2 for z in [3, 4] if 1)]\n"
                     "for x, y in lis:\n"
@@ -873,7 +877,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_x1_w, z2_1, "assign-bind")
         self.assert_dependency(var_y1_w, z2_2, "assign-bind")
 
-    def test_generator_function_variable(self):                                  # pylint: disable=too-many-locals, invalid-name
+    def test_generator_function_variable(self):
         """Test for loop"""
         self.script("def f():\n"
                     "    yield 3\n"

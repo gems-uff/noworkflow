@@ -103,7 +103,6 @@ class Dependency(AlchemyProxy):
                         link="evaluation.activation_id"),
         PrologAttribute("dependency_id", link="evaluation.id"),
         PrologRepr("type"),
-        # ToDo: add part anme
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "the value of a evaluation (*DependentId*),\n"

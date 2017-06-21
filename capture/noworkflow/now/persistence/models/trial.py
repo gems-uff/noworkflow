@@ -194,6 +194,7 @@ class Trial(AlchemyProxy):
     compartments = many_viewonly_ref("trial", "Compartment")
 
     dependencies = many_viewonly_ref("trial", "Dependency")
+    compositions = many_viewonly_ref("trial", "Composition")
 
     tags = many_ref("trial", "Tag")
 

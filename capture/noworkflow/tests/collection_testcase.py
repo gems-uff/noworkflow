@@ -68,10 +68,11 @@ class CollectionTestCase(unittest.TestCase):
     def get_evaluations(self, **kwargs):
         """Execute and get evaluation"""
         self.execute()
-        var = self.find_code_component(**kwargs)
-        if not var:
-            return []
-        return list(self.find_all_evaluations(code_component_id=var.id))
+        c_store = self.metascript.code_components_store.store
+        result = []
+        for var in self.find_all(c_store, **kwargs):
+            result.extend(self.find_all_evaluations(code_component_id=var.id))
+        return result
 
     def execute(self):
         """Execute script"""

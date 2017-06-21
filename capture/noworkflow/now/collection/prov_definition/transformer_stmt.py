@@ -35,6 +35,7 @@ class RewriteAST(ast.NodeTransformer):
         self.trial_id = metascript.trial_id
         self.code_components = metascript.code_components_store
         self.code_blocks = metascript.code_blocks_store
+        self.compositions = metascript.compositions_store
         self.path = path
         self.code = code
         self.lcode = code.split("\n")
@@ -42,6 +43,7 @@ class RewriteAST(ast.NodeTransformer):
         self.exc_handler_counter = 0
         self.current_exc_handler = 0
         self.cell = cell
+        self.composition_edge = None
 
     # data
 
@@ -56,6 +58,11 @@ class RewriteAST(ast.NodeTransformer):
         node.code_component_id = num
         return num
 
+    def create_ast_component(self, node, type_):
+        """Create ast code_component that is not evaluatable"""
+        node.name = pyposast.extract_code(self.lcode, node)
+        return self.create_code_component(node, type_, "n")
+
     def create_code_block(self, node, type_, has_doc=True):
         """Create code_block and corresponding code_component
         Return component id
@@ -69,6 +76,15 @@ class RewriteAST(ast.NodeTransformer):
             ast.get_docstring(node) if has_doc else ""
         )
         return id_
+
+    def create_composition(self, part, whole, typ, pos=None, extra=None):
+        """Create composition"""
+        # pylint: disable=too-many-arguments
+        if whole is None and extra is None:
+            return
+        return self.compositions.add(
+            self.trial_id, part, whole, typ, pos, extra
+        )
 
     def create_exc_handler(self):
         """Create new exception handler id"""
@@ -113,9 +129,19 @@ class RewriteAST(ast.NodeTransformer):
         with self.exc_handler():
             # ToDo: from __future__ import ...
             future_imports = select_future_imports(new_node.body)
-            new_node.body = new_node.body[len(future_imports):]
+            index = 0
+            for stmt in future_imports:
+                self.create_composition(
+                    self.create_ast_component(stmt, "future_import"),
+                    self.container_id, "*body", index
+                )
+                index += 1
 
-            old_body = self.process_body(new_node.body)
+            new_node.body = new_node.body[index:]
+
+            old_body = self.process_body(
+                new_node.body, self.container_id, index
+            )
             if not old_body:
                 old_body = [ast_copy(ast.Pass(), new_node)]
             post_body = []
@@ -163,10 +189,11 @@ class RewriteAST(ast.NodeTransformer):
             ] + post_body
             return ast.fix_missing_locations(ast_copy(cls(body), new_node))
 
-    def process_body(self, body):
+    def process_body(self, body, container_id, index=0, attr="*body"):
         """Process statement list"""
         new_body = []
         for stmt in body:
+            self.composition_edge = (container_id, attr, index)
             if isinstance(stmt, ast.Assign):
                 self.visit_assign(new_body, stmt)
             elif isinstance(stmt, ast.AugAssign):
@@ -175,6 +202,7 @@ class RewriteAST(ast.NodeTransformer):
                 self.visit_annassign(new_body, stmt)
             else:
                 new_body.append(self.visit(stmt))
+            index += 1
 
         return new_body
 
@@ -191,6 +219,231 @@ class RewriteAST(ast.NodeTransformer):
     # ToDo: visit_Expression?
 
     # stmt
+
+    def process_arg(self, arg, parent=None):
+        """Return None if arg does not exist
+        Otherwise, create code component, return tuple ("arg name", code_id)
+        """
+        if not arg:
+            return none()
+
+        if PY3:
+            arg.name = arg.arg
+        elif isinstance(arg, str):
+            old, arg = arg, ast_copy(ast.Name(arg, L()), parent)
+            arg.name = old
+        else:
+            arg.name = pyposast.extract_code(self.lcode, arg).strip("()")
+
+        id_ = self.create_code_component(arg, "param", "w")
+        self.create_composition(id_, *self.composition_edge)
+
+        return ast_copy(ast.Tuple([
+            ast.Str(arg.name), ast.Num(id_)
+        ], L()), arg)
+
+    def process_default(self, default):
+        """Process default value"""
+        if not default:
+            return none()
+        if not hasattr(default, "name"):
+            default.name = pyposast.extract_code(self.lcode, default)
+        cnode = self.capture(default, mode="argument")
+        if hasattr(cnode, "code_component_id"):
+            id_ = none()
+        else:
+            def_id = self.create_code_component(
+                default, "default", context(default))
+            self.create_composition(def_id, *self.composition_edge)
+            id_ = ast.Num(def_id)
+        return ast_copy(double_noworkflow(
+            "argument",
+            [
+                activation(),
+                id_,
+                ast.Num(self.current_exc_handler)
+            ], [
+                activation(),
+                id_,
+                cnode,
+                ast.Str("argument"),
+            ]
+        ), default)
+
+    def process_decorator(self, decorator):
+        """Transform @dec into @__noworkflow__.decorator(<act>)(|dec|)"""
+        cnode = self.capture(decorator, "use")
+        if hasattr(cnode, "code_component_id"):
+            dec_id = cnode.code_component_id
+        else:
+            dec_id = self.create_code_component(
+                decorator, "decorator", context(decorator)
+            )
+            self.create_composition(dec_id, *self.composition_edge)
+        id_ = ast.Num(dec_id)
+
+        return ast_copy(double_noworkflow(
+            "decorator",
+            [
+                activation(),
+                id_,
+                ast.Num(self.current_exc_handler)
+            ], [
+                activation(),
+                id_,
+                cnode,
+                ast.Str("decorator"),
+            ]
+        ), decorator)
+
+    def process_parameters(self, arguments):
+        """Return List of arguments for <now>.function_def"""
+        # pylint: disable=too-many-locals
+        arguments_id = self.create_ast_component(arguments, "arguments")
+        self.create_composition(arguments_id, *self.composition_edge)
+
+        arg_list = []
+        for index, arg in enumerate(arguments.args):
+            self.composition_edge = (arguments_id, "*args", index)
+            arg_list.append(self.process_arg(arg, arguments))
+        args = ast.List(arg_list, L())
+
+        self.composition_edge = (arguments_id, "vararg")
+        vararg = self.process_arg(arguments.vararg, arguments)
+
+        default_list = []
+        for index, def_ in enumerate(arguments.defaults):
+            self.composition_edge = (arguments_id, "*defaults", index)
+            default_list.append(self.process_default(def_))
+        defaults = ast.Tuple(default_list, L())
+
+        self.composition_edge = (arguments_id, "kwarg")
+        kwarg = self.process_arg(arguments.kwarg, arguments)
+        if PY3:
+            kwonlyargs_list = []
+            for index, arg in enumerate(arguments.kwonlyargs):
+                self.composition_edge = (arguments_id, "*kwonlyargs", index)
+                kwonlyargs_list.append(self.process_arg(arg, arguments))
+            kwonlyargs = ast.List(kwonlyargs_list, L())
+
+            kw_defaults_list = []
+            for index, def_ in enumerate(arguments.kw_defaults):
+                self.composition_edge = (arguments_id, "*kw_defaults", index)
+                kw_defaults_list.append(self.process_default(def_))
+            kw_defaults = ast.List(kw_defaults_list, L())
+        else:
+            kwonlyargs = none()
+            kw_defaults = none()
+        return ast.Tuple([
+            args, defaults, vararg, kwarg, kwonlyargs, kw_defaults
+        ], L())
+
+    def visit_FunctionDef(self, node, cls=ast.FunctionDef, typ="function_def"):
+        """Visit Function Definition
+        Transform:
+        @dec
+        def f(x, y=2, *args, z=3, **kwargs):
+            ...
+        Into:
+        @<now>.collect_function_def(<act>, "f")
+        @<now>.decorator(__now_activation__)(|dec|)
+        @<now>.function_def(<act>)(<act>, <block_id>, <parameters>)
+        def f(__now_activation__, x, y=2, *args, z=3, **kwargs):
+            ...
+        """
+        # pylint: disable=invalid-name
+        old_exc_handler = self.current_exc_handler
+        with self.container(node, typ) as func_id, self.exc_handler():
+            self.create_composition(func_id, *self.composition_edge)
+            new_node = copy(node)
+            decorators = [ast_copy(noworkflow("collect_function_def", [
+                activation(),
+                ast.Str(new_node.name)
+            ]), new_node)]
+            for index, dec in enumerate(new_node.decorator_list):
+                self.composition_edge = (func_id, "*decorator_list", index)
+                decorators.append(self.process_decorator(dec))
+
+            self.composition_edge = (func_id, "args")
+            decorators.append(ast_copy(double_noworkflow(
+                "function_def",
+                [
+                    activation(),
+                    ast.Num(self.container_id),
+                    ast.Num(old_exc_handler)
+                ], [
+                    activation(),
+                    ast.Num(self.container_id),
+                    self.process_parameters(new_node.args),
+                    ast.Str("decorate")
+                ]
+            ), new_node))
+
+            body = self.process_body(new_node.body, func_id)
+
+            new_node.args.args = [
+                param("__now_activation__")
+            ] + new_node.args.args
+            new_node.args.defaults = [
+                ast_copy(none(), arg) for arg in new_node.args.defaults
+            ]
+
+            return ast_copy(function_def(
+                new_node.name, new_node.args, body, decorators,
+                returns=maybe(new_node, "returns"), cls=cls
+            ), new_node)
+
+    def visit_AsyncFunctionDef(self, node):
+        """Visit Async Function Definition"""
+        # pylint: disable=invalid-name
+        return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
+
+    def visit_ClassDef(self, node):
+        """Visit Class Definition"""
+        # pylint: disable=invalid-name
+        # ToDo: collect dependencies
+        with self.container(node, "class_def") as class_id:
+            self.create_composition(class_id, *self.composition_edge)
+            return ast_copy(class_def(
+                node.name, node.bases, self.process_body(node.body, class_id),
+                node.decorator_list,
+                keywords=maybe(node, "keywords")
+            ), node)
+
+    def visit_Return(self, node):
+        """Visit Return
+        Transform:
+            return x
+        Into:
+            return <now>.return_(<act>, <exc>)(<act>, |x|)
+        """
+        # pylint: disable=invalid-name
+        return_id = self.create_ast_component(node, "return")
+        self.create_composition(return_id, *self.composition_edge)
+
+        self.composition_edge = (return_id, "value")
+        new_node = copy(node)
+        if new_node.value:
+            new_node.value = ast_copy(double_noworkflow(
+                "return_",
+                [
+                    activation(),
+                    ast.Num(self.current_exc_handler),
+                ], [
+                    activation(),
+                    self.capture(new_node.value, mode="use")
+                    if new_node.value else none()
+                ]
+            ), new_node)
+        return new_node
+
+    def visit_Delete(self, node):
+        """Visit Delete"""
+        # pylint: disable=invalid-name
+        # ToDo: capture delete
+        delete_id = self.create_ast_component(node, "delete")
+        self.create_composition(delete_id, *self.composition_edge)
+        return node
 
     def visit_assign(self, new_body, node):
         """Visit Assign through process_body
@@ -211,9 +464,14 @@ class RewriteAST(ast.NodeTransformer):
             <now>.assign(<act>, __now__assign__, cce(g[h]))
             <now>.assign(<act>, __now__assign__, cce(i.j))
         """
+        assign_id = self.create_ast_component(node, "assign")
+        self.create_composition(assign_id, *self.composition_edge)
+
         new_targets = []
         assign_calls = []
+        index = 0
         for target in node.targets:
+            self.composition_edge = (assign_id, "*targets", index)
             new_target = self.capture(target)
             new_targets.append(new_target)
             assign_calls.append(ast_copy(ast.Expr(
@@ -223,7 +481,9 @@ class RewriteAST(ast.NodeTransformer):
                     new_target.code_component_expr,
                 ])
             ), node))
+            index += 1
 
+        self.composition_edge = (assign_id, "value", None)
         new_body.append(ast_copy(ast.Assign(
             new_targets,
             double_noworkflow(
@@ -259,9 +519,17 @@ class RewriteAST(ast.NodeTransformer):
 
             <now>.assign(<act>, __now__assign__, cce(a))
         """
+        assign_id = self.create_ast_component(node, "aug_assign")
+        self.create_composition(assign_id, *self.composition_edge)
+
+        op_id = self.create_ast_component(node.op_pos, "operator")
+        self.create_composition(op_id, assign_id, "op")
+
         mode = "{}_assign".format(type(node.op).__name__.lower())
 
+        self.composition_edge = (assign_id, "target")
         new_target = self.capture(node.target)
+        self.composition_edge = (None, None)
         if isinstance(new_target, ast.Subscript):
             new_target.value = noworkflow(
                 "augaccess",
@@ -277,6 +545,7 @@ class RewriteAST(ast.NodeTransformer):
                 ReplaceContextWithLoad().visit(node.target), mode=mode
             )
             same = false()
+        self.composition_edge = (assign_id, "value")
         new_body.append(ast_copy(ast.AugAssign(
             new_target, node.op,
             double_noworkflow(
@@ -314,13 +583,29 @@ class RewriteAST(ast.NodeTransformer):
 
             <now>.assign(<act>, __now__assign__, cce(a))
         """
+        assign_id = self.create_ast_component(node, "ann_assign")
+        self.create_composition(assign_id, *self.composition_edge)
+        self.create_composition(
+            self.create_ast_component(node.annotation, "annotation"),
+            assign_id, "annotation"
+        )
+        self.create_composition(
+            None, assign_id, "simple", extra="int({})".format(node.simple)
+        )
         if not node.value:
             # Just annotation
+            self.create_composition(
+                self.create_ast_component(node.target, "ann_target"),
+                assign_id,
+                "target"
+            )
             new_body.append(node)
             return
 
+        self.composition_edge = (assign_id, "target")
         new_target = self.capture(node.target)
         mode = "assign"
+        self.composition_edge = (assign_id, "value")
         new_body.append(ast_copy(ast.AnnAssign(
             new_target,
             node.annotation,
@@ -343,6 +628,50 @@ class RewriteAST(ast.NodeTransformer):
             ])
         ), node))
 
+    def visit_Print(self, node):
+        """
+        Transform:
+            print a
+        Into:
+            <now>.py2_print(<act>. #, <exc>, <mode>)(|a|)
+        """
+        # pylint: disable=invalid-name, protected-access
+        node.name = pyposast.extract_code(self.lcode, node)
+        component_id = self.create_code_component(
+            node, "call", "r"
+        )
+        self.create_composition(component_id, *self.composition_edge)
+        new_node = copy(node)
+        rewriter = RewriteDependencies(self, mode="dependency")
+        keywords = []
+        self.create_composition(
+            None, component_id, "nl", extra="bool({})".format(node.nl)
+        )
+        if not new_node.nl:
+            keywords.append(ast.keyword('end', ast.Str('')))
+        if new_node.dest:
+            self.composition_edge = (component_id, "dest")
+            keywords.append(ast.keyword(
+                'file', rewriter._call_keyword('file', new_node.dest)
+            ))
+
+        values = []
+        for index, dest in enumerate(new_node.values):
+            self.composition_edge = (component_id, "*values", index)
+            values.append(rewriter._call_arg(dest, False))
+
+        return ast_copy(ast.Expr(double_noworkflow(
+            "py2_print",
+            [
+                activation(),
+                ast.Num(component_id),
+                ast.Num(self.current_exc_handler),
+                ast.Str("dependency")
+            ],
+            values,
+            keywords=keywords
+        )), new_node)
+
     def visit_For(self, node):
         """Visit For
         Transform:
@@ -353,8 +682,14 @@ class RewriteAST(ast.NodeTransformer):
                 <now>.assign(<act>, <now>.pop_assign(<act>), cce(i))
         """
         # pylint: disable=invalid-name
+        # ToDo: capture orelse dependencies
+        for_id = self.create_ast_component(node, "for")
+        self.create_composition(for_id, *self.composition_edge)
+
         new_node = copy(node)
+        self.composition_edge = (for_id, "target")
         new_node.target = self.capture(new_node.target)
+        self.composition_edge = (for_id, "iter")
         new_node.iter = ast_copy(double_noworkflow(
             "loop",
             [
@@ -374,8 +709,84 @@ class RewriteAST(ast.NodeTransformer):
                     new_node.target.code_component_expr,
                 ])
             ), new_node)
-        ] + self.process_body(new_node.body)
+        ] + self.process_body(new_node.body, for_id)
+        new_node.orelse = self.process_body(
+            new_node.orelse, for_id, attr="*orelse"
+        )
         return new_node
+
+    def visit_AsyncFor(self, node):
+        """Visit AsyncFor"""
+        # pylint: disable=invalid-name
+        # ToDo: capture async for
+        for_id = self.create_ast_component(node, "async_for")
+        self.create_composition(for_id, *self.composition_edge)
+        return node
+
+    def visit_While(self, node):
+        """Visit While
+        Transform:
+            while x:
+                ...
+            else:
+                ...
+        Into:
+            try:
+                <now>.prepare_while(<act>)
+                while <now>.remove_condition(
+                    <act>)(<now>.condition(<act>, <exc>)(<act>, |x|)):
+                    ...
+                else:
+                    ...
+            except:
+                <now>.collect_exception(<act>, <exc>)
+                raise
+            finally:
+                <now>.remove_condition(<act>)
+        """
+        # pylint: disable=invalid-name
+        while_id = self.create_ast_component(node, "while")
+        self.create_composition(while_id, *self.composition_edge)
+
+        with self.exc_handler():
+            new_node = copy(node)
+            self.composition_edge = (while_id, "test")
+            new_node.test = ast_copy(double_noworkflow(
+                "remove_condition", [activation()], [double_noworkflow(
+                    "condition",
+                    [
+                        activation(),
+                        ast.Num(self.current_exc_handler)
+                    ], [
+                        activation(),
+                        self.capture(new_node.test, mode="condition")
+                    ]
+                )]
+            ), new_node)
+            new_node.body = self.process_body(new_node.body, while_id)
+            new_node.orelse = self.process_body(
+                new_node.orelse, while_id, attr="*orelse"
+            )
+
+            return ast_copy(try_def([
+                ast_copy(ast.Expr(noworkflow(
+                    "prepare_while",
+                    [activation(), ast.Num(self.current_exc_handler)]
+                )), new_node),
+                new_node
+            ], [
+                ast_copy(ast.ExceptHandler(None, None, [
+                    ast_copy(ast.Expr(noworkflow(
+                        "collect_exception",
+                        [activation(), ast.Num(self.current_exc_handler)]
+                    )), new_node),
+                    ast_copy(ast.Raise(), new_node)
+                ]), new_node)
+            ], [], [
+                ast_copy(ast.Expr(noworkflow(
+                    "remove_condition", [activation()]
+                )), new_node)
+            ], new_node), new_node)
 
     def visit_If(self, node):
         """Visit If
@@ -408,6 +819,8 @@ class RewriteAST(ast.NodeTransformer):
         handlers = []
         def access_if(ifnod, exc_id):
             """Create ifexp considering elif"""
+            if_id = self.create_ast_component(node, "if")
+            self.create_composition(if_id, *self.composition_edge)
             subscript = ast.Subscript(
                 now_attribute("condition_exceptions"),
                 ast.Index(ast.Num(exc_id)), L()
@@ -418,7 +831,7 @@ class RewriteAST(ast.NodeTransformer):
             )
             handlers.append(ast_copy(ast.ExceptHandler(
                 subscript, None,
-                self.process_body(ifnod.body)
+                self.process_body(ifnod.body, if_id)
             ), ifnod))
             if_result = call(subscript, [])
 
@@ -426,9 +839,12 @@ class RewriteAST(ast.NodeTransformer):
             if not ifnod.orelse:
                 else_block = [ast.Pass()]
             elif len(ifnod.orelse) == 1 and isinstance(ifnod.orelse[0], ast.If):
+                self.composition_edge = (if_id, "*orelse", 0)
                 else_result = access_if(ifnod.orelse[0], exc_id + 1)
             else:
-                else_block = self.process_body(ifnod.orelse)
+                else_block = self.process_body(
+                    ifnod.orelse, if_id, attr="*orelse"
+                )
 
             if else_block is not None:
                 handlers.append(ast_copy(ast.ExceptHandler(
@@ -436,6 +852,7 @@ class RewriteAST(ast.NodeTransformer):
                 ), ifnod))
                 else_result = call(else_subscript, [])
 
+            self.composition_edge = (if_id, "test")
             return ast_copy(ast.IfExp(
                 double_noworkflow(
                     "condition",
@@ -459,248 +876,29 @@ class RewriteAST(ast.NodeTransformer):
             )), node)
         ], node), node)
 
-    def visit_While(self, node):
-        """Visit While
-        Transform:
-            while x:
-                ...
-            else:
-                ...
-        Into:
-            try:
-                <now>.prepare_while(<act>)
-                while <now>.remove_condition(
-                    <act>)(<now>.condition(<act>, <exc>)(<act>, |x|)):
-                    ...
-                else:
-                    ...
-            except:
-                <now>.collect_exception(<act>, <exc>)
-                raise
-            finally:
-                <now>.remove_condition(<act>)
-        """
+    def visit_With(self, node):
+        """Visit With"""
         # pylint: disable=invalid-name
-        with self.exc_handler():
-            new_node = copy(node)
-            new_node.test = ast_copy(double_noworkflow(
-                "remove_condition", [activation()], [double_noworkflow(
-                    "condition",
-                    [
-                        activation(),
-                        ast.Num(self.current_exc_handler)
-                    ], [
-                        activation(),
-                        self.capture(new_node.test, mode="condition")
-                    ]
-                )]
-            ), new_node)
-            new_node.body = self.process_body(new_node.body)
-            new_node.orelse = self.process_body(new_node.orelse)
+        # ToDo: collect with
+        with_id = self.create_ast_component(node, "with")
+        self.create_composition(with_id, *self.composition_edge)
+        return node
 
-            return ast_copy(try_def([
-                ast_copy(ast.Expr(noworkflow(
-                    "prepare_while",
-                    [activation(), ast.Num(self.current_exc_handler)]
-                )), new_node),
-                new_node
-            ], [
-                ast_copy(ast.ExceptHandler(None, None, [
-                    ast_copy(ast.Expr(noworkflow(
-                        "collect_exception",
-                        [activation(), ast.Num(self.current_exc_handler)]
-                    )), new_node),
-                    ast_copy(ast.Raise(), new_node)
-                ]), new_node)
-            ], [], [
-                ast_copy(ast.Expr(noworkflow(
-                    "remove_condition", [activation()]
-                )), new_node)
-            ], new_node), new_node)
-
-    def visit_ClassDef(self, node):
-        """Visit Class Definition"""
+    def visit_AsyncWith(self, node):
+        """Visit AsyncWith"""
         # pylint: disable=invalid-name
-        with self.container(node, "class_def"):
-            return ast_copy(class_def(
-                node.name, node.bases, self.process_body(node.body),
-                node.decorator_list,
-                keywords=maybe(node, "keywords")
-            ), node)
+        # ToDo: collect async with
+        with_id = self.create_ast_component(node, "async_with")
+        self.create_composition(with_id, *self.composition_edge)
+        return node
 
-    def process_arg(self, arg, parent=None):
-        """Return None if arg does not exist
-        Otherwise, create code component, return tuple ("arg name", code_id)
-        """
-        if not arg:
-            return none()
-
-        if PY3:
-            arg.name = arg.arg
-        elif isinstance(arg, str):
-            old, arg = arg, ast_copy(ast.Name(arg, L()), parent)
-            arg.name = old
-        else:
-            arg.name = pyposast.extract_code(self.lcode, arg).strip("()")
-
-        id_ = self.create_code_component(arg, "param", "w")
-        return ast_copy(ast.Tuple([
-            ast.Str(arg.name), ast.Num(id_)
-        ], L()), arg)
-
-    def process_default(self, default):
-        """Process default value"""
-        if not default:
-            return none()
-        if not hasattr(default, "name"):
-            default.name = pyposast.extract_code(self.lcode, default)
-        cnode = self.capture(default, mode="argument")
-        if hasattr(cnode, "code_component_id"):
-            id_ = none()
-        else:
-            id_ = ast.Num(self.create_code_component(
-                default, "default", context(default)))
-        return ast_copy(double_noworkflow(
-            "argument",
-            [
-                activation(),
-                id_,
-                ast.Num(self.current_exc_handler)
-            ], [
-                activation(),
-                id_,
-                cnode,
-                ast.Str("argument"),
-            ]
-        ), default)
-
-    def process_decorator(self, decorator):
-        """Transform @dec into @__noworkflow__.decorator(<act>)(|dec|)"""
-        cnode = self.capture(decorator, "use")
-        if hasattr(cnode, "code_component_id"):
-            id_ = ast.Num(cnode.code_component_id)
-        else:
-            id_ = ast.Num(self.create_code_component(
-                decorator, "decorator", context(decorator)))
-
-        return ast_copy(double_noworkflow(
-            "decorator",
-            [
-                activation(),
-                id_,
-                ast.Num(self.current_exc_handler)
-            ], [
-                activation(),
-                id_,
-                cnode,
-                ast.Str("decorator"),
-            ]
-        ), decorator)
-
-    def process_parameters(self, arguments):
-        """Return List of arguments for <now>.function_def"""
-        args = ast.List([
-            self.process_arg(arg, arguments) for arg in arguments.args
-        ], L())
-
-        vararg = self.process_arg(arguments.vararg, arguments)
-        defaults = ast.Tuple([
-            self.process_default(def_) for def_ in arguments.defaults
-        ], L())
-        kwarg = self.process_arg(arguments.kwarg, arguments)
-        if PY3:
-            kwonlyargs = ast.List([
-                self.process_arg(arg, arguments)
-                for arg in arguments.kwonlyargs
-            ], L())
-        else:
-            kwonlyargs = none()
-        return ast.Tuple([args, defaults, vararg, kwarg, kwonlyargs], L())
-
-    def visit_FunctionDef(self, node, cls=ast.FunctionDef):
-        """Visit Function Definition
-        Transform:
-        @dec
-        def f(x, y=2, *args, z=3, **kwargs):
-            ...
-        Into:
-        @<now>.collect_function_def(<act>, "f")
-        @<now>.decorator(__now_activation__)(|dec|)
-        @<now>.function_def(<act>)(<act>, <block_id>, <parameters>)
-        def f(__now_activation__, x, y=2, *args, z=3, **kwargs):
-            ...
-        """
+    def visit_Raise(self, node):
+        """Visit Raise"""
         # pylint: disable=invalid-name
-        old_exc_handler = self.current_exc_handler
-        with self.container(node, "function_def"), self.exc_handler():
-            new_node = copy(node)
-            decorators = [ast_copy(noworkflow("collect_function_def", [
-                activation(),
-                ast.Str(new_node.name)
-            ]), new_node)] + [self.process_decorator(dec)
-                          for dec in new_node.decorator_list]
-            decorators.append(ast_copy(double_noworkflow(
-                "function_def",
-                [
-                    activation(),
-                    ast.Num(self.container_id),
-                    ast.Num(old_exc_handler)
-                ], [
-                    activation(),
-                    ast.Num(self.container_id),
-                    self.process_parameters(new_node.args),
-                    ast.Str("decorate")
-                ]
-            ), new_node))
-
-            body = self.process_body(new_node.body)
-
-            new_node.args.args = [
-                param("__now_activation__")
-            ] + new_node.args.args
-            new_node.args.defaults = [
-                ast_copy(none(), arg) for arg in new_node.args.defaults
-            ]
-
-            return ast_copy(function_def(
-                new_node.name, new_node.args, body, decorators,
-                returns=maybe(new_node, "returns"), cls=cls
-            ), new_node)
-
-    def visit_AsyncFunctionDef(self, node):
-        """Visit Async Function Definition"""
-        # pylint: disable=invalid-name
-        return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
-
-    def visit_Return(self, node):
-        """Visit Return
-        Transform:
-            return x
-        Into:
-            return <now>.return_(<act>, <exc>)(<act>, |x|)
-        """
-        # pylint: disable=invalid-name
-        new_node = copy(node)
-        if new_node.value:
-            new_node.value = ast_copy(double_noworkflow(
-                "return_",
-                [
-                    activation(),
-                    ast.Num(self.current_exc_handler),
-                ], [
-                    activation(),
-                    self.capture(new_node.value, mode="use")
-                    if new_node.value else none()
-                ]
-            ), new_node)
-        return new_node
-
-    def visit_Expr(self, node):
-        """Visit Expr. Capture it"""
-        # pylint: disable=invalid-name
-        new_node = copy(node)
-        new_node.value = self.capture(new_node.value)
-        return new_node
+        # ToDo: collect raise
+        raise_id = self.create_ast_component(node, "raise")
+        self.create_composition(raise_id, *self.composition_edge)
+        return node
 
     def visit_Try(self, node):
         """Visit Try
@@ -725,15 +923,22 @@ class RewriteAST(ast.NodeTransformer):
                 ...
         """
         # pylint: disable=invalid-name
+        try_id = self.create_ast_component(node, "try")
+        self.create_composition(try_id, *self.composition_edge)
         new_node = copy(node)
         with self.exc_handler() as internal_handler:
-            new_node.body = self.process_body(new_node.body)
+            new_node.body = self.process_body(new_node.body, try_id)
         handlers = []
-        for handler in new_node.handlers:
+        for index, handler in enumerate(new_node.handlers):
+            self.composition_edge = (try_id, "*handlers", index)
             handlers.append(self.visit_exchandler(handler, internal_handler))
         new_node.handlers = handlers
-        new_node.orelse = self.process_body(new_node.orelse)
-        new_node.finalbody = self.process_body(new_node.finalbody)
+        new_node.orelse = self.process_body(
+            new_node.orelse, try_id, attr="*orelse"
+        )
+        new_node.finalbody = self.process_body(
+            new_node.finalbody, try_id, attr="*finalbody"
+        )
         return new_node
 
     def visit_TryFinally(self, node):
@@ -750,9 +955,13 @@ class RewriteAST(ast.NodeTransformer):
                 ...
         """
         # pylint: disable=invalid-name
+        try_id = self.create_ast_component(node, "try_finally")
+        self.create_composition(try_id, *self.composition_edge)
         new_node = copy(node)
-        new_node.body = self.process_body(new_node.body)
-        new_node.finalbody = self.process_body(new_node.finalbody)
+        new_node.body = self.process_body(new_node.body, try_id)
+        new_node.finalbody = self.process_body(
+            new_node.finalbody, try_id, attr="*finalbody"
+        )
         return new_node
 
     def visit_TryExcept(self, node):
@@ -775,14 +984,17 @@ class RewriteAST(ast.NodeTransformer):
                 ...
         """
         # pylint: disable=invalid-name
+        try_id = self.create_ast_component(node, "try_except")
+        self.create_composition(try_id, *self.composition_edge)
         new_node = copy(node)
         with self.exc_handler() as internal_handler:
-            new_node.body = self.process_body(new_node.body)
+            new_node.body = self.process_body(new_node.body, try_id)
         handlers = []
-        for handler in new_node.handlers:
+        for index, handler in enumerate(new_node.handlers):
+            self.composition_edge = (try_id, "*handlers", index)
             handlers.append(self.visit_exchandler(handler, internal_handler))
         new_node.handlers = handlers
-        new_node.orelse = self.process_body(new_node.orelse)
+        new_node.orelse = self.process_body(new_node.orelse, try_id)
         return new_node
 
     def visit_exchandler(self, node, internal_handler):
@@ -806,6 +1018,7 @@ class RewriteAST(ast.NodeTransformer):
         with temporary(new_node, "name", name):
             component_id = self.create_code_component(
                 new_node, "exception", 'w')
+            self.create_composition(component_id, *self.composition_edge)
         new_node.body = [
             ast_copy(ast.Expr(noworkflow(
                 "collect_exception",
@@ -821,8 +1034,32 @@ class RewriteAST(ast.NodeTransformer):
                     ast.Name(name, L()),
                 ]
             )), new_node)
-        ] + self.process_body(new_node.body)
+        ] + self.process_body(new_node.body, component_id)
         return new_node
+
+    def visit_Assert(self, node):
+        """Visit Assert"""
+        # pylint: disable=invalid-name
+        # ToDo: collect assert
+        assert_id = self.create_ast_component(node, "assert")
+        self.create_composition(assert_id, *self.composition_edge)
+        return node
+
+    def visit_Import(self, node):
+        """Visit Import"""
+        # pylint: disable=invalid-name
+        # ToDo: collect import
+        import_id = self.create_ast_component(node, "import")
+        self.create_composition(import_id, *self.composition_edge)
+        return node
+
+    def visit_ImportFrom(self, node):
+        """Visit ImportFrom"""
+        # pylint: disable=invalid-name
+        # ToDo: collect import from
+        import_id = self.create_ast_component(node, "import_from")
+        self.create_composition(import_id, *self.composition_edge)
+        return node
 
     def visit_Exec(self, node):
         """
@@ -836,12 +1073,16 @@ class RewriteAST(ast.NodeTransformer):
         component_id = self.create_code_component(
             node, "call", "r"
         )
+        self.create_composition(component_id, *self.composition_edge)
         new_node = copy(node)
         rewriter = RewriteDependencies(self, mode="dependency")
-        key = lambda arg, no: ast_copy(
-            rewriter._call_arg(no, False) if no
-            else call(ast.Name(arg, L()), []), new_node
-        )
+
+        def key(arg, no):
+            """Create argument"""
+            self.composition_edge = (component_id, arg)
+            if no:
+                return rewriter._call_arg(no, False)
+            return call(ast.Name(arg, L()), []), new_node
 
         keywords = [
             key("globals", new_node.globals),
@@ -849,6 +1090,7 @@ class RewriteAST(ast.NodeTransformer):
         ]
 
         if new_node.locals:
+            self.composition_edge = (component_id, "locals")
             keywords.append(ast.keyword(
                 'locals', rewriter._call_keyword('locals', new_node.locals)
             ))
@@ -869,42 +1111,52 @@ class RewriteAST(ast.NodeTransformer):
             ],
         )), new_node)
 
-    def visit_Print(self, node):
-        """
-        Transform:
-            print a
-        Into:
-            <now>.py2_print(<act>. #, <exc>, <mode>)(|a|)
-        """
-        # pylint: disable=invalid-name, protected-access
-        node.name = pyposast.extract_code(self.lcode, node)
-        component_id = self.create_code_component(
-            node, "call", "r"
-        )
+    def visit_Global(self, node):
+        """Visit Global"""
+        # pylint: disable=invalid-name
+        # ToDo: collect global
+        global_id = self.create_ast_component(node, "global")
+        self.create_composition(global_id, *self.composition_edge)
+        return node
+
+    def visit_Nonlocal(self, node):
+        """Visit Nonloca"""
+        # pylint: disable=invalid-name
+        # ToDo: collect nonlocal
+        nonlocal_id = self.create_ast_component(node, "nonlocal")
+        self.create_composition(nonlocal_id, *self.composition_edge)
+        return node
+
+    def visit_Expr(self, node):
+        """Visit Expr. Capture it"""
+        # pylint: disable=invalid-name
         new_node = copy(node)
-        rewriter = RewriteDependencies(self, mode="dependency")
-        keywords = []
-        if not new_node.nl:
-            keywords.append(ast.keyword('end', ast.Str('')))
-        if new_node.dest:
-            keywords.append(ast.keyword(
-                'file', rewriter._call_keyword('file', new_node.dest))
-            )
+        expr_id = self.create_ast_component(new_node, "expr")
+        self.create_composition(expr_id, *self.composition_edge)
+        self.composition_edge = (expr_id, "value")
+        new_node.value = self.capture(new_node.value)
+        return new_node
 
-        return ast_copy(ast.Expr(double_noworkflow(
-            "py2_print",
-            [
-                activation(),
-                ast.Num(component_id),
-                ast.Num(self.current_exc_handler),
-                ast.Str("dependency")
-            ], [
-                rewriter._call_arg(dest, False)
-                for dest in new_node.values
-            ],
-            keywords=keywords
-        )), new_node)
+    def visit_Pass(self, node):
+        """Visit Pass"""
+        # pylint: disable=invalid-name
+        pass_id = self.create_ast_component(node, "pass")
+        self.create_composition(pass_id, *self.composition_edge)
+        return node
 
+    def visit_Break(self, node):
+        """Visit Break"""
+        # pylint: disable=invalid-name
+        break_id = self.create_ast_component(node, "break")
+        self.create_composition(break_id, *self.composition_edge)
+        return node
+
+    def visit_Continue(self, node):
+        """Visit Continue"""
+        # pylint: disable=invalid-name
+        continue_id = self.create_ast_component(node, "continue")
+        self.create_composition(continue_id, *self.composition_edge)
+        return node
 
     def capture(self, node, mode="dependency"):
         """Capture node"""

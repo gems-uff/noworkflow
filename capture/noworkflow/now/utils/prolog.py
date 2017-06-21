@@ -143,7 +143,7 @@ class PrologNullable(PrologAttribute):
     def fact(self, obj):
         """Replace None by nil if attribute self.attr_name of obj"""
         value = self.value(obj)
-        return str(value) if value else "nil"
+        return str(value) if value is not None else "nil"
 
 
 class PrologNullableRepr(PrologRepr):

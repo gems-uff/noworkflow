@@ -1025,7 +1025,8 @@ class Collector(object):
                 Pass __now_activation__ as parameter
                 """
                 activation = self.last_activation
-                activation.closure = closure_activation
+                if closure_activation != activation:
+                    activation.closure = closure_activation
                 activation.code_block_id = block_id
                 if activation.active:
                     self._match_arguments(activation, arguments, defaults)
@@ -1063,9 +1064,10 @@ class Collector(object):
     def _match_arguments(self, activation, arguments, default_dependencies):
         """Match arguments to parameters. Create Variables"""
         # pylint: disable=too-many-locals, too-many-branches
+        # ToDo: use kw_defaults # pylint: disable=unused-variable
         time = self.time()
         defaults = default_dependencies.dependencies
-        args, _, vararg, kwarg, kwonlyargs = arguments
+        args, _, vararg, kwarg, kwonlyargs, kw_defaults = arguments
 
         arguments = []
         keywords = []

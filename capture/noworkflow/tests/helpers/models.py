@@ -244,7 +244,7 @@ class FuncConfig(ConfigObj):
             self.code += "    global {}\n".format(global_name)
         self.code += "    return {}".format(param)
 
-        self.id = -1                                                             # pylint: disable=invalid-name
+        self.id = -1  # pylint: disable=invalid-name
         self.param_variable = None
         self.param_return = None
         self.return_ = None
@@ -498,14 +498,16 @@ class AccessConfig(ConfigObj):
         if self.write_timestamp:
             self.w_access.timestamp = self.write_timestamp
 
-class TrialConfig(ConfigObj):                                                    # pylint: disable=too-many-instance-attributes
+class TrialConfig(ConfigObj):
     """Configure Trial object"""
+    # pylint: disable=too-many-instance-attributes
 
-    def __init__(                                                                # pylint: disable=too-many-arguments
+    def __init__(
             self, status="ongoing", script="main.py", docstring="block",
             year=2016, month=4, day=8, hour=1, minute=18, second=0,
             duration=65, main_duration=60, main_start=1,
             path="/home/now", bypass_modules=False):
+        # pylint: disable=too-many-arguments
         super(TrialConfig, self).__init__()
         self.start = datetime(
             year=year, month=month, day=day,
