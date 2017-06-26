@@ -15,7 +15,7 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullable
 
 from .base import AlchemyProxy, proxy_class, query_one_property
-from .base import backref_one, one, many_viewonly_ref
+from .base import backref_one, one, many_viewonly_ref, backref_many
 
 from .code_block import CodeBlock
 from .composition import Composition
@@ -121,30 +121,32 @@ class CodeComponent(AlchemyProxy):
         "This component is part of a given code block (*ContainerId*)."
     ))
 
-    # dependencies in which this component is the dependent
-    dependencies_as_dependent = many_viewonly_ref(
-        "dependent", "Composition",
+    # compositions in which this component is the part
+    compositions_as_part = many_viewonly_ref(
+        "part", "Composition",
         primaryjoin=(
-            (id == Composition.m.dependent_id) &
+            (id == Composition.m.part_id) &
             (trial_id == Composition.m.trial_id))
     )
 
-    # dependencies in which this component is the dependency
-    dependencies_as_dependency = many_viewonly_ref(
-        "dependency", "Composition",
+    # compositions in which this component is the whole
+    compositions_as_whole = many_viewonly_ref(
+        "whole", "Composition",
         primaryjoin=(
-            (id == Composition.m.dependency_id) &
+            (id == Composition.m.whole_id) &
             (trial_id == Composition.m.trial_id)))
 
-    dependencies = many_viewonly_ref(
-        "dependents", "CodeComponent",
+    parents = many_viewonly_ref(
+        "children", "CodeComponent",
         secondary=Composition.__table__,
         primaryjoin=(
-            (id == Composition.m.dependent_id) &
+            (id == Composition.m.part_id) &
             (trial_id == Composition.m.trial_id)),
         secondaryjoin=(
-            (id == Composition.m.dependency_id) &
+            (id == Composition.m.whole_id) &
             (trial_id == Composition.m.trial_id)))
+
+    children = backref_many("children")  # Value.parts
 
 
     @query_one_property

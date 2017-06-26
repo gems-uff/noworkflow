@@ -29,29 +29,29 @@ class Composition(AlchemyProxy):
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"],
                              ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "dependent_id"],
+        ForeignKeyConstraint(["trial_id", "part_id"],
                              ["code_component.trial_id", "code_component.id"],
                              ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "dependency_id"],
+        ForeignKeyConstraint(["trial_id", "whole_id"],
                              ["code_component.trial_id", "code_component.id"],
                              ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
-    dependent_id = Column(Integer, index=True)
-    dependency_id = Column(Integer, index=True)
+    part_id = Column(Integer, index=True)
+    whole_id = Column(Integer, index=True)
     type = Column(Text)  # pylint: disable=invalid-name
     position = Column(Integer)
     extra = Column(Text)
 
     trial = backref_one("trial")  # Trial.compositions
-    dependent = backref_one("dependent")
-    dependency = backref_one("dependency")
+    part = backref_one("part")
+    whole = backref_one("whole")
 
     prolog_description = PrologDescription("composition", (
         PrologTrial("trial_id", link="code_component.trial_id"),
-        PrologAttribute("dependent_id", link="code_component.id"),
-        PrologAttribute("dependency_id", link="code_component.id"),
+        PrologAttribute("whole_id", link="code_component.id"),
+        PrologAttribute("part_id", link="code_component.id"),
         PrologRepr("type"),
         PrologNullable("position"),
         PrologNullableRepr("extra"),
@@ -59,6 +59,6 @@ class Composition(AlchemyProxy):
         "informs that in a given trial (*trial_id*),\n"
         "a code_component (*DependentId*),\n"
         "is a part of\n"
-        "by the value of another code_component (*DependencyId*),\n"
+        "by the value of another code_component (*WholeId*),\n"
         "of a *Type*\n"
     ))

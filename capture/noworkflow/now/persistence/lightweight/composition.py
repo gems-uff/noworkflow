@@ -15,18 +15,17 @@ class CompositionLW(BaseLW):
     """Composition lightweight object"""
     # pylint: disable=too-many-instance-attributes
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "dependent_id", "dependency_id", "type", "position",
+        ["trial_id", "id", "part_id", "whole_id", "type", "position",
          "extra"]
     )
     nullable = set()
     model = Composition
 
-    def __init__(self, id_, trial_id, dependent_id, dependency_id,
-                 type_, pos, extra):
+    def __init__(self, id_, trial_id, part_id, whole_id, type_, pos, extra):
         # pylint: disable=too-many-arguments
         self.id = id_  # pylint: disable=invalid-name
-        self.dependent_id = dependent_id
-        self.dependency_id = dependency_id
+        self.part_id = part_id
+        self.whole_id = whole_id
         self.trial_id = trial_id
         self.type = type_
         self.position = pos
@@ -39,7 +38,7 @@ class CompositionLW(BaseLW):
 
     def __repr__(self):
         return (
-            "Dependent(id={0.id}, "
-            "dependent_id={0.dependent_id}, "
-            "dependency_id={0.dependency_id}, type={0.type})"
+            "Composition(id={0.id}, "
+            "whole_id={0.whole_id}, "
+            "part_id={0.part_id}, type={0.type})"
         ).format(self)
