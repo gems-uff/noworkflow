@@ -12,6 +12,7 @@ import unittest
 from future.utils import viewvalues, viewitems
 
 from ..now.collection.metadata import Metascript
+from ..now.models.ast import create_trees
 from ..now.utils.cross_version import PY3
 from .helpers import models
 
@@ -200,3 +201,16 @@ class CollectionTestCase(unittest.TestCase):
         self.metascript.definition.compile(
             self.metascript.code, self.metascript.path, "exec"
         )
+
+    def compile_tree(self, id_=None):
+        """Compile script and return trees
+        Id limits to a unique tree"""
+        self.compile()
+        trees = create_trees(
+            viewvalues(self.metascript.code_components_store.store),
+            self.metascript.code_blocks_store.store,
+            viewvalues(self.metascript.compositions_store.store),
+        )
+        if id_ is None:
+            return trees
+        return trees[id_]

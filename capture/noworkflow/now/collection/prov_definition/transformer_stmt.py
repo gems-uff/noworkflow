@@ -469,8 +469,7 @@ class RewriteAST(ast.NodeTransformer):
 
         new_targets = []
         assign_calls = []
-        index = 0
-        for target in node.targets:
+        for index, target in enumerate(node.targets):
             self.composition_edge = (assign_id, "*targets", index)
             new_target = self.capture(target)
             new_targets.append(new_target)
@@ -481,7 +480,12 @@ class RewriteAST(ast.NodeTransformer):
                     new_target.code_component_expr,
                 ])
             ), node))
-            index += 1
+
+        for index, op_ in enumerate(node.op_pos):
+            self.create_composition(
+                self.create_ast_component(op_, "operator"),
+                assign_id, "*ops", index
+            )
 
         self.composition_edge = (assign_id, "value", None)
         new_body.append(ast_copy(ast.Assign(
@@ -592,6 +596,12 @@ class RewriteAST(ast.NodeTransformer):
         self.create_composition(
             None, assign_id, "simple", extra="int({})".format(node.simple)
         )
+
+        self.create_composition(
+            self.create_ast_component(node.op_pos[0], "operator"),
+            assign_id, "desc_op"
+        )
+
         if not node.value:
             # Just annotation
             self.create_composition(
@@ -601,6 +611,11 @@ class RewriteAST(ast.NodeTransformer):
             )
             new_body.append(node)
             return
+
+        self.create_composition(
+            self.create_ast_component(node.op_pos[1], "operator"),
+            assign_id, "op"
+        )
 
         self.composition_edge = (assign_id, "target")
         new_target = self.capture(node.target)
@@ -638,7 +653,7 @@ class RewriteAST(ast.NodeTransformer):
         # pylint: disable=invalid-name, protected-access
         node.name = pyposast.extract_code(self.lcode, node)
         component_id = self.create_code_component(
-            node, "call", "r"
+            node, "print", "r"
         )
         self.create_composition(component_id, *self.composition_edge)
         new_node = copy(node)

@@ -8,12 +8,13 @@
 import inspect
 from collections import OrderedDict, defaultdict
 from copy import copy
-from itertools import zip_longest, chain, product
+from itertools import chain, product
 
 from future.utils import viewitems, viewvalues
 from sqlalchemy.sql.expression import and_, ColumnElement
 
 from ..now.persistence import relational
+from ..now.utils.cross_version import zip_longest
 from ..now.persistence.models.base import proxy
 
 
