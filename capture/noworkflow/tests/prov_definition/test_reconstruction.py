@@ -14,7 +14,27 @@ from ...now.models.ast import CodeWriter
 
 class TestReconstruction(CollectionTestCase):
     """Test Code Reconstruction"""
-    # pylint: disable=missing-docstring
+    # pylint: disable=missing-docstring, invalid-name
+
+    def test_function_def(self):
+        code = (
+            "def f(x):\n"
+            "    a = x"
+        )
+        self.script(code)
+        tree = self.compile_tree(1)
+        self.assertEqual(code, CodeWriter(tree).code)
+
+    def test_function_def_with_decorator(self):
+        code = (
+            "@dec\n"
+            "def f(x):\n"
+            "    a = x"
+        )
+        self.script(code)
+        tree = self.compile_tree(1)
+        self.assertEqual(code, CodeWriter(tree).code)
+
 
     def test_assign(self):
         code = (
@@ -42,6 +62,27 @@ class TestReconstruction(CollectionTestCase):
         code = (
             "b : str\n"
             "a: int = 2"
+        )
+        self.script(code)
+        tree = self.compile_tree(1)
+        self.assertEqual(code, CodeWriter(tree).code)
+
+    def test_for(self):
+        code = (
+            "for x in  y:\n"
+            "    a = x\n"
+            "else  :\n"
+            "    a = y"
+        )
+        self.script(code)
+        tree = self.compile_tree(1)
+        self.assertEqual(code, CodeWriter(tree).code)
+
+    def test_for2(self):
+        code = (
+            "for   x in y:\n"
+            "    a = x\n"
+            "    b = a"
         )
         self.script(code)
         tree = self.compile_tree(1)

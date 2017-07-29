@@ -86,7 +86,7 @@ class CustomInstallCommand(install):
 
 
 setup(
-    name="noworkflow",
+    name="noworkflow-alpha",
     version=__version__,
     packages=find_packages(),
     package_data={
@@ -133,5 +133,6 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ]
 )

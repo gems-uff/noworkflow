@@ -131,9 +131,6 @@ class RewriteDependencies(ast.NodeTransformer):
         )
         self.create_composition(component_id, *self.composition_edge)
 
-        op_id = self.rewriter.create_ast_component(node.op_pos[0], "boolop")
-        self.create_composition(op_id, component_id, "op")
-
         values = []
         for index, value in enumerate(node.values):
             self.composition_edge = (component_id, "*values", index)
@@ -169,9 +166,6 @@ class RewriteDependencies(ast.NodeTransformer):
         self.composition_edge = (component_id, "left")
         left = self.rewriter.capture(node.left, mode="use")
 
-        op_id = self.rewriter.create_ast_component(node.op_pos, "operator")
-        self.create_composition(op_id, component_id, "op")
-
         self.composition_edge = (component_id, "right")
         right = self.rewriter.capture(node.right, mode="use")
 
@@ -201,9 +195,6 @@ class RewriteDependencies(ast.NodeTransformer):
             node, type(node.op).__name__.lower(), "r"
         )
         self.create_composition(component_id, *self.composition_edge)
-
-        op_id = self.rewriter.create_ast_component(node.op_pos, "unaryop")
-        self.create_composition(op_id, component_id, "op")
 
         self.composition_edge = (component_id, "operand")
         return ast_copy(double_noworkflow(
@@ -707,12 +698,6 @@ class RewriteDependencies(ast.NodeTransformer):
 
         self.composition_edge = (component_id, "left")
         left = self.rewriter.capture(node.left, mode="use")
-
-        for index, op_ in enumerate(node.op_pos):
-            self.create_composition(
-                self.rewriter.create_ast_component(op_, "cmpop"),
-                component_id, "ops", index
-            )
 
         comparators = []
         for index, comp in enumerate(node.comparators):

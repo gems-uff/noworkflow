@@ -56,6 +56,12 @@ class RewriteAST(ast.NodeTransformer):
             self.container_id
         )
         node.code_component_id = num
+
+        if hasattr(node, 'op_pos'):
+            for index, op_ in enumerate(node.op_pos):
+                op_id = self.create_ast_component(op_, "syntax")
+                self.create_composition(op_id, num, "*op_pos", pos=index)
+
         return num
 
     def create_ast_component(self, node, type_):
@@ -355,6 +361,12 @@ class RewriteAST(ast.NodeTransformer):
         old_exc_handler = self.current_exc_handler
         with self.container(node, typ) as func_id, self.exc_handler():
             self.create_composition(func_id, *self.composition_edge)
+
+            self.create_composition(
+                self.create_ast_component(node.name_node, "identifier"),
+                func_id, "name_node"
+            )
+
             new_node = copy(node)
             decorators = [ast_copy(noworkflow("collect_function_def", [
                 activation(),
@@ -481,12 +493,6 @@ class RewriteAST(ast.NodeTransformer):
                 ])
             ), node))
 
-        for index, op_ in enumerate(node.op_pos):
-            self.create_composition(
-                self.create_ast_component(op_, "operator"),
-                assign_id, "*ops", index
-            )
-
         self.composition_edge = (assign_id, "value", None)
         new_body.append(ast_copy(ast.Assign(
             new_targets,
@@ -525,9 +531,6 @@ class RewriteAST(ast.NodeTransformer):
         """
         assign_id = self.create_ast_component(node, "aug_assign")
         self.create_composition(assign_id, *self.composition_edge)
-
-        op_id = self.create_ast_component(node.op_pos, "operator")
-        self.create_composition(op_id, assign_id, "op")
 
         mode = "{}_assign".format(type(node.op).__name__.lower())
 
@@ -597,11 +600,6 @@ class RewriteAST(ast.NodeTransformer):
             None, assign_id, "simple", extra="int({})".format(node.simple)
         )
 
-        self.create_composition(
-            self.create_ast_component(node.op_pos[0], "operator"),
-            assign_id, "desc_op"
-        )
-
         if not node.value:
             # Just annotation
             self.create_composition(
@@ -611,11 +609,6 @@ class RewriteAST(ast.NodeTransformer):
             )
             new_body.append(node)
             return
-
-        self.create_composition(
-            self.create_ast_component(node.op_pos[1], "operator"),
-            assign_id, "op"
-        )
 
         self.composition_edge = (assign_id, "target")
         new_target = self.capture(node.target)

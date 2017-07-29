@@ -42,26 +42,61 @@ class CodeWriter(NodeVisitor):
             self.result.append(node)
             self.collumn += len(node)
 
+    def visit_op_pos(self, node, index):
+        self.visit(node.op_pos[index])
+        return index + 1
+
+    def visit_body(self, body):
+        for node in body:
+            self.visit(node)
+
+    def visit_function_def(self, node):
+        index = 0
+        if node.decorator_list:
+            for decorator in node.decorator_list:
+                index = self.visit_op_pos(node, index)
+                self.visit(decorator)
+        index = self.visit_op_pos(node, index)
+        self.visit(node.name_node)
+        index = self.visit_op_pos(node, index)
+        self.visit(node.args)
+        index = self.visit_op_pos(node, index)
+        if node.returns:
+            index = self.visit_op_pos(node, index)
+        index = self.visit_op_pos(node, index)
+        self.visit_body(node["*body"])
+
     def visit_assign(self, node):
-        for target, op_ in zip(node.targets, node.ops):
+        for target, op_ in zip(node.targets, node.op_pos):
             self.visit(target)
             self.visit(op_)
         self.visit(node.value)
 
     def visit_aug_assign(self, node):
         self.visit(node.target)
-        self.visit(node.op)
+        self.visit(node.op_pos[0])
         self.visit(node.value)
 
     def visit_ann_assign(self, node):
         self.visit(node.target)
-        self.visit(node.desc_op)
+        self.visit(node.op_pos[0])
         self.visit(node.annotation)
         if node.value:
-            self.visit(node.op)
+            self.visit(node.op_pos[1])
             self.visit(node.value)
     visit_ann_target = write  # When the annotation has no value
     visit_annotation = write
+
+    def visit_for(self, node):
+        self.visit(node.op_pos[0])
+        self.visit(node.target)
+        self.visit(node.op_pos[1])
+        self.visit(node.iter)
+        self.visit(node.op_pos[2])
+        self.visit_body(node["*body"])
+        if node.orelse:
+            self.visit(node.op_pos[3])
+            self.visit_body(node.orelse)
 
     def visit_print(self, node):
         self.write(node, "print")
@@ -77,12 +112,14 @@ class CodeWriter(NodeVisitor):
     visit_future_import = write
     visit_import_from = write  # ToDo: write parts after collection
     visit_import = write  # ToDo: write parts after collection
-
-
+    visit_arguments = write # Todo: write parts of arguments
 
     visit_name = write
     visit_literal = write
     visit_operator = write
+    visit_syntax = write
+    visit_identifier = write
+
 
     def visit_attribute(self, node):
         self.visit(node.value)
