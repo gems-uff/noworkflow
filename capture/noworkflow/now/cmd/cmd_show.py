@@ -112,7 +112,7 @@ class Show(NotebookCommand):
                 "%now_ls_magic\n"
                 "# <codecell>\n"
                 "%%now_prolog {trial.id}\n"
-                "activation({trial.id}, 1, X, _, _, _)"
+                "activation({trial.id}, 1, X, _, _, _, _)"
             )
 
         create_ipynb(name, code)

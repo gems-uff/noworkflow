@@ -40,12 +40,12 @@ class NowSQL(IpythonCommandMagic):
         super(NowSQL, self).__init__(*args, **kwargs)
         javascript = """
             var mode = 'magic_text/x-sql';
-            if (!IPython.CodeCell.config_defaults.highlight_modes[mode]) {
-                IPython.CodeCell.config_defaults.highlight_modes[mode] = {
+            if (!Jupyter.CodeCell.options_default.highlight_modes[mode]) {
+                Jupyter.CodeCell.options_default.highlight_modes[mode] = {
                     'reg':[]
                 };
             }
-            IPython.CodeCell.config_defaults.highlight_modes[mode].reg.push(
+            Jupyter.CodeCell.options_default.highlight_modes[mode].reg.push(
                 /^%%now_sql/
             );
         """
