@@ -1,0 +1,19 @@
+div.now-tooltip {
+    position: absolute;
+    left: 1px;
+    right: 1px;
+    max-height: 200px;
+    max-width: 400px;
+    overflow: auto;
+    padding: 5px;
+    padding-bottom: 10px;
+    font: 12px sans-serif;
+    background: #DDD;
+    border: 0px;
+    border-radius: 8px;
+    z-index: 2000;
+}
+
+.now-tooltip.hidden {
+    display: none;
+}
