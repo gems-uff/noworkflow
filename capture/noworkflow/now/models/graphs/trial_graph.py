@@ -34,6 +34,7 @@ class TreeVisitor(object):
         self.min_duration = defaultdict(partial(int, 1000 ** 10))
         self.max_duration = defaultdict(partial(int, 0))
         self.keep = None
+        self.current_parent = None
 
     def update_durations(self, duration, tid):
         """Update min and max duration"""
@@ -67,7 +68,9 @@ class TreeVisitor(object):
 
     def add_node(self, node):
         """Add node to result"""
-        self.nodes.append(node.to_dict(self.nid))
+        noded = node.to_dict(self.nid)
+        noded["parent_index"] = self.current_parent
+        self.nodes.append(noded)
         original = self.nid
         self.nid += 1
         return original
@@ -83,13 +86,15 @@ class TreeVisitor(object):
 
     def visit_call(self, call):
         """Visit Call Node (Visitor Pattern)"""
-        caller_id = self.add_node(call.caller)
+        temp_parent = self.current_parent
+        self.current_parent = caller_id = self.add_node(call.caller)
         self.nodes[caller_id]["repr"] = repr(call)
         callees = call.called.visit(self)
         pos = 1
         for callee_id in callees:
             self.add_edge(caller_id, callee_id, pos, "call")
             pos += 1
+        self.current_parent = temp_parent
         return [caller_id]
 
     def visit_group(self, group):
@@ -150,8 +155,9 @@ class NoMatchVisitor(TreeVisitor):
             self.add_edge(node_id, edge.node, edge.count, "return")
 
     def visit_call(self, call):
+        temp_parent = self.current_parent
         delegated = self.use_delegated()
-        caller_id = self.add_node(call.caller)
+        self.current_parent = caller_id = self.add_node(call.caller)
         self.nodes[caller_id]["repr"] = repr(call)
 
         if delegated:
@@ -161,6 +167,7 @@ class NoMatchVisitor(TreeVisitor):
         self.delegated["return"] = Edge(caller_id, 1)
 
         call.called.visit(self)
+        self.current_parent = temp_parent
         return caller_id, call
 
     def visit_group(self, group):
