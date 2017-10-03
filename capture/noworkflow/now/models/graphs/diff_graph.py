@@ -34,7 +34,6 @@ def fix_caller_id(graph):
             called[edge["target"]] = edge["source"]
         if edge["type"] == "sequence":
             seq[edge["source"]].append(edge)
-
     visited = set()
     while called:
         new_called = {}
@@ -186,6 +185,7 @@ class MappingToGraph(object):
         for node1, node2 in viewitems(mapping):
             cnode = deepcopy(node1)
             del cnode["node"]
+            cnode["graph"] = 0
             cnode["node1"] = node1["node"]
             cnode["node2"] = node2["node"]
             cnode["node1"]["original"] = node1["index"]
@@ -203,10 +203,24 @@ class MappingToGraph(object):
         self.add_edges(graph1["edges"], 1)
         self.add_edges(graph2["edges"], 2)
 
+        for node in self.nodes:
+            if node["parent_index"] is None:
+                continue
+
+            if "node" in node:
+                node["parent_index"] = self.old_to_new[
+                    (node["graph"], node["parent_index"])
+                ]
+            else:
+                node["parent_index"] = self.old_to_new[
+                    (1, node["parent_index"])
+                ]
+
     def add_nodes(self, nodes, trial_number):
         """Convert matched nodes to graph"""
         for node in nodes:
             if (trial_number, node["index"]) not in self.old_to_new:
+                node["graph"] = trial_number
                 nid = self.add_node(node)
                 self.old_to_new[(trial_number, node["index"])] = nid
                 node["node"]["diff"] = nid
