@@ -147,6 +147,7 @@ class Tag(AlchemyProxy):
             results = session.execute(_query.where(condition), info).fetchall()
             tags = [lmap(int, tag[0].split(".")) for tag in results]
             if tags:
+                print(type_, max(tags))
                 return type_, max(tags)
 
         return 0, [1, 1, 1]
@@ -249,3 +250,34 @@ class Tag(AlchemyProxy):
         ))
         session.commit()
         return result.lastrowid
+
+    @classmethod  # query
+    def auto_tags(cls, session=None):
+        """Return auto tags
+
+        Keyword arguments:
+        session -- specify session for loading (default=relational.session)
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> from noworkflow.tests.helpers.models import count
+        >>> TrialConfig.erase()
+
+        >>> len(list(Tag.auto_tags()))
+        0
+
+        >>> trial_id = new_trial(TrialConfig(script="main.py"))
+        >>> _ = Tag.create(trial_id, "AUTO", "1.1.1", datetime.now())
+
+        >>> len(list(Tag.auto_tags()))
+        1
+
+        >>> _ = Tag.create(trial_id, "test", "test", datetime.now())
+
+        >>> len(list(Tag.auto_tags()))
+        1
+        """
+        model = cls.m
+        session = session or relational.session
+        return session.query(model).filter(model.type == "AUTO")

@@ -1246,3 +1246,71 @@ class Trial(AlchemyProxy):
             .order_by(cls.m.start.desc())
             .limit(limit)
         )
+
+    @classmethod  # query
+    def count(cls, session=None):
+        """Count number of trials on database
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> id1 = new_trial(TrialConfig(minute=4), erase=True)
+        >>> Trial.count()
+        1
+
+        >>> id2 = new_trial(TrialConfig(minute=20))
+        >>> Trial.count()
+        2
+        """
+        session = session or relational.session
+        return session.query(cls.m).count()
+
+    def match_status(self, status):
+        """Check if trial statuses matches
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> id1 = new_trial(TrialConfig("finished"), erase=True)
+
+        >>> Trial(id1).match_status("*")
+        True
+
+        >>> Trial(id1).match_status("finished")
+        True
+
+        >>> Trial(id1).match_status("unfinished")
+        False
+        """
+        if status == "*":
+            return True
+        return self.status == status
+
+    def match_script(self, script):
+        """Check if trial scripts matches
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
+        >>> id1 = new_trial(TrialConfig(script="main.py"), erase=True)
+
+        >>> Trial(id1).match_script("*")
+        True
+
+        >>> Trial(id1).match_script("main.py")
+        True
+
+        >>> Trial(id1).match_script("other.py")
+        False
+        """
+        if script == "*":
+            return True
+        return self.script == script
+
+    @property
+    def str_start(self):
+        """Return start date as string"""
+        return str(self.start)
+
+    @property
+    def str_finish(self):
+        """Return start date as string"""
+        return str(self.finish)
