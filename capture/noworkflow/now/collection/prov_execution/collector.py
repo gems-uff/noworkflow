@@ -901,7 +901,10 @@ class Collector(object):
         """Capture call before"""
         # pylint: disable=too-many-arguments
         if activation.active:
-            act = self.start_activation(func.__name__, code_id, -1, activation)
+            act = self.start_activation(
+                getattr(func, '__name__', type(func).__name__),
+                code_id, -1, activation
+            )
         else:
             act = self.dry_activation(activation)
         act.dependencies.append(DependencyAware(
