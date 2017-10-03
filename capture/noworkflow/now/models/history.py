@@ -47,6 +47,7 @@ class History(Model):
         "graph.use_cache": True,
         "script": "*",
         "status": "*",
+        "summarize": False,
     }
 
     REPLACE = {
@@ -59,6 +60,7 @@ class History(Model):
         super(History, self).__init__(**kwargs)
         self.script = "*"
         self.status = "*"
+        self.summarize = False
         self.graph = HistoryGraph(self)
         self.initialize_default(kwargs)
         self.status_options = ["*", "finished", "unfinished", "backup"]
