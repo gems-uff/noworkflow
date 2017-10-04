@@ -1,9 +1,0 @@
-{
-    "compilerOptions": {
-        "sourceMap":  true,
-        "outDir": "../dist/",
-        "noImplicitAny": true,
-        "target": "es6",
-        "moduleResolution": "node"
-    }
-}
