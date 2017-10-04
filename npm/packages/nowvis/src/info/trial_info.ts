@@ -6,7 +6,9 @@ import {
 
 import {Widget} from '@phosphor/widgets';
 
-import {VisibleHistoryNode} from '@noworkflow/history';
+import {
+  VisibleHistoryNode, HistoryTrialNodeData
+} from '@noworkflow/history';
 import {json} from '@noworkflow/utils';
 import {NowVisPanel} from '../nowpanel';
 
@@ -26,6 +28,8 @@ class TrialInfoWidget extends Widget {
 
   static createNode(trial: VisibleHistoryNode): HTMLElement {
     let node = document.createElement('div');
+    let info = trial.info as HistoryTrialNodeData;
+
     let d3node = d3_select(node);
 
     let content = d3node.append('div')
@@ -41,7 +45,7 @@ class TrialInfoWidget extends Widget {
 
     main.append("h3")
       .classed("hash", true)
-      .text(trial.info.code_hash || "");
+      .text(info.code_hash || "");
 
     let idAttr = main.append("span")
       .classed("attr", true);
@@ -59,7 +63,7 @@ class TrialInfoWidget extends Widget {
       .text("Script: ");
     scriptAttr.append("span")
       .classed("script", true)
-      .text(trial.info.script);
+      .text(info.script);
 
     let startAttr = main.append("span")
       .classed("attr", true);
@@ -68,7 +72,7 @@ class TrialInfoWidget extends Widget {
       .text("Start: ");
     startAttr.append("span")
       .classed("start", true)
-      .text(trial.info.str_start || "");
+      .text(info.str_start || "");
 
     let finishAttr = main.append("span")
       .classed("attr", true);
@@ -77,7 +81,7 @@ class TrialInfoWidget extends Widget {
       .text("Finish: ");
     finishAttr.append("span")
       .classed("finish", true)
-      .text(trial.info.str_finish || "");
+      .text(info.str_finish || "");
 
     let durationAttr = main.append("span")
       .classed("attr", true);
@@ -86,9 +90,9 @@ class TrialInfoWidget extends Widget {
       .text("Duration: ");
     durationAttr.append("span")
       .classed("duration", true)
-      .text(trial.info.duration_text || "");
+      .text(info.duration_text || "");
 
-    if (trial.info.arguments) {
+    if (info.command) {
       let argumentsAttr = main.append("span")
         .classed("attr", true);
       argumentsAttr.append("span")
@@ -96,7 +100,7 @@ class TrialInfoWidget extends Widget {
         .text("Arguments: ");
       argumentsAttr.append("span")
         .classed("arguments", true)
-        .text(trial.info.arguments);
+        .text(info.command);
     }
 
 

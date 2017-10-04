@@ -75,9 +75,7 @@ def trials():
     history = History(script=request.args.get("script"),
                       status=request.args.get("execution"),
                       summarize=bool(int(request.args.get("summarize"))))
-    graph = history.graph.graph()
-    graph["scripts"] = list(history.scripts)
-    return jsonify(**graph)
+    return jsonify(**history.graph.graph())
 
 
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
@@ -184,76 +182,3 @@ def diff_graph(trial1, trial2, graph_mode, tlimit, neighborhoods, cache):
 def shutdown_session(exception=None):                                            # pylint: disable=unused-argument
     """Shutdown SQLAlchemy session"""
     relational.session.remove()
-
-
-
-# Remove
-
-@app.route("/trials/<tid>/all_modules")
-def all_modules(tid):
-    """Respond trial module dependencies as HTML"""
-    # pylint: disable=unsupported-membership-test
-    trial = Trial(tid)
-    local = trial.local_modules
-    result = trial.modules
-    result = sorted(result, key=lambda x: x not in local)
-    return render_template(
-        "trial.html",
-        cwd=os.getcwd(),
-        trial=trial.to_dict(extra=("duration_text",)),
-        modules=result,
-        info="modules.html",
-    )
-
-
-@app.route("/trials/<tid>/all_environment")
-def all_environment(tid):
-    """Respond trial environment variables as HTML"""
-    trial = Trial(tid)
-    return render_template(
-        "trial.html",
-        cwd=os.getcwd(),
-        trial=trial.to_dict(extra=("duration_text",)),
-        env=trial.environment,
-        info="environment.html",
-    )
-
-
-@app.route("/trials/<tid>/all_file_accesses")
-def all_file_accesses(tid):
-    """Respond trial file accesses as HTML"""
-    trial = Trial(tid)
-    return render_template(
-        "trial.html",
-        cwd=os.getcwd(),
-        trial=trial.to_dict(extra=("duration_text",)),
-        file_accesses=[x.to_dict(extra=("stack",))
-                       for x in trial.file_accesses],
-        info="file_accesses.html",
-    )
-
-@app.route("/diff/<trial1>/<trial2>")
-@app.route("/diff/<trial1>/<trial2>/<tlimit>-<neighborhoods>-<graph_mode>")
-def diffsite(trial1, trial2, tlimit=None, neighborhoods=None, graph_mode=None):      # pylint: disable=unused-argument
-    """Respond trial diff as HTML"""
-    diff_object = Diff(trial1, trial2)
-
-    modules_added, modules_removed, modules_replaced = diff_object.modules
-    env_added, env_removed, env_replaced = diff_object.environment
-    fa_added, fa_removed, fa_replaced = diff_object.file_accesses
-    return render_template(
-        "diff.html",
-        cwd=os.getcwd(),
-        trial1=diff_object.trial1.to_dict(extra=("duration_text",)),
-        trial2=diff_object.trial2.to_dict(extra=("duration_text",)),
-        trial=diff_object.trial,
-        modules_added=modules_added,
-        modules_removed=modules_removed,
-        modules_replaced=modules_replaced,
-        env_added=env_added,
-        env_removed=env_removed,
-        env_replaced=env_replaced,
-        fa_added=fa_added,
-        fa_removed=fa_removed,
-        fa_replaced=fa_replaced,
-    )

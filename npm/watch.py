@@ -15,7 +15,7 @@ class Module:
         self.files = files or ["src/", "style/"]
         self.dependencies = dependencies or []
         self.old_sum = 0
-        self.check_dir()
+        #self.check_dir()
 
     def check_dir(self):
         """Check if a file has changed in the package"""
@@ -79,5 +79,8 @@ nowvis = Module("nowvis", dependencies=[history, trial])
 print("Monitoring packages...")
 while True:
     visited = set()
-    nowvis.check(visited=visited)
+    try:
+        nowvis.check(visited=visited)
+    except:
+        print("Failed")
     sleep(1.0)

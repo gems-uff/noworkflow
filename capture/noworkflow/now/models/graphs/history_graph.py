@@ -68,8 +68,11 @@ class HistoryGraph(Graph):
 
         self._set_trials_level(tmap, scripts, order, children, actual_graph)
 
-
-        result = {"nodes": nodes, "edges": edges}
+        result = {
+            "nodes": nodes,
+            "edges": edges,
+            "scripts": list(self.history.scripts),
+        }
         if self.use_cache:
             self.cache[key] = result
 
@@ -87,7 +90,11 @@ class HistoryGraph(Graph):
                 "str_start", "str_finish", "display"
             ))
             final.append(dic)
-        return {"edges": result["edges"], "nodes": final}
+        return {
+            "edges": result["edges"],
+            "nodes": final,
+            "scripts": result["scripts"],
+        }
 
     def _load_trials(self, trial_gen):  # pylint: disable=no-self-use
         """Preprocess trials
@@ -439,7 +446,6 @@ class Node(object):
         self.nid = None
         self.parent_id = None
         self.level = 0
-        self.tooltip = ""
         self.script = ""
         self.trials = []
 
@@ -475,12 +481,9 @@ class Node(object):
         return {
             'id': repr(self.id),
             "display": repr(self.id),
-            'nid': self.nid,
             'parent_id': self.parent_id,
-            'tooltip': self.tooltip,
             'trials': [x.to_dict(*args, **kwargs) for x in self.trials],
             'level': self.level,
-            'status': 'finished',
         }
 
 

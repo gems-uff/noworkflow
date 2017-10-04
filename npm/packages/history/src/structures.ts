@@ -1,24 +1,35 @@
+/**
+  * HistoryNodeData represents either a trial or a summarized version node
+  * Some attributes exist only when it is a trial
+  */
 export
 interface HistoryNodeData {
+  /* Shared attribute */
   id: number;
   display: string;
   parent_id: number;
   level: number;
-  script: string;
-  status: string;
-  tooltip: string;
-  str_start?: string;
-  str_finish?: string;
-  code_hash?: string;
-  command?: string;
-  duration_text?: string;
-  finish?: string;
-  main_id?: number;
-  modules_inherited_from_trial_id?: number;
-  path?: string;
-  start?: string;
-  arguments?: string;
+
+  /* Only when HistoryNodeData acts as a summarized node */
   trials?: HistoryNodeData[];
+}
+
+export
+interface HistoryTrialNodeData extends HistoryNodeData {
+  /* Trial attributes */
+  script: string;
+  command: string;
+  path: string;
+  status: string;
+  modules_inherited_from_trial_id: number;
+  main_id: number;
+
+  /* Extra */
+  code_hash:string;
+  duration_text: string;
+  tooltip: string;
+  str_start: string;
+  str_finish: string;
 }
 
 export
@@ -44,10 +55,12 @@ interface VisibleHistoryNode {
   title: string;
   display: string;
   info: HistoryNodeData;
-  tooltip: string;
   radius: number;
   gradient: boolean;
+  status: string;
+
   trials?: HistoryNodeData[];
+  tooltip?: string;
 }
 
 export

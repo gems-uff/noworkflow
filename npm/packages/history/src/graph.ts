@@ -25,7 +25,7 @@ import * as fs from 'file-saver';
 
 import {HistoryConfig, HistoryState} from './config';
 import {VisibleHistoryNode, VisibleHistoryEdge} from './structures';
-import {HistoryGraphData, HistoryNodeData} from './structures';
+import {HistoryGraphData, HistoryNodeData, HistoryTrialNodeData} from './structures';
 
 
 export
@@ -254,22 +254,23 @@ class HistoryGraph {
       let x: number = start + spacing4 * id;
       let y: number = levelsy[node.level];
 
-      var new_node = {
+      var new_node: VisibleHistoryNode = {
         id: id,
         display: node.display,
         x: x,
         y: y,
         title: node.id.toString(),
         info: node,
-        tooltip: node.tooltip,
         radius: this.config.radius,
         gradient: false,
+        status: "finished"
       };
+
       nodes.push(new_node)
-      if (node.trials) {
+      if (typeof(node.trials) != "undefined") {
         useVersion = true;
         for (var j = 0; j < node.trials.length; j++) {
-          let trialNode: HistoryNodeData = node.trials[j];
+          let trialNode: HistoryTrialNodeData = node.trials[j] as HistoryTrialNodeData;
           let ny = y + (j + 1) * spacing2 + spacing
           otherNodes.push({
             id: tid,
@@ -281,10 +282,13 @@ class HistoryGraph {
             tooltip: trialNode.tooltip,
             radius: this.config.radius / 2,
             gradient: true,
+            status: trialNode.status
           });
           tid += 1;
           max = Math.max(max, y);
         }
+      } else {
+        new_node.tooltip = (node as HistoryTrialNodeData).tooltip;
       }
       max = Math.max(max, y);
       this.maxX = x;
@@ -423,6 +427,9 @@ class HistoryGraph {
   }
 
   private showTooltip(d: VisibleHistoryNode) {
+    if (typeof(d.tooltip) == "undefined") {
+      return;
+    }
     this.tooltipDiv.classed("hidden", false);
     this.tooltipDiv.transition()
       .duration(200)
@@ -570,13 +577,13 @@ class HistoryGraph {
       .attr("stroke-width", "2.5px")
       .attr("fill", function (d: VisibleHistoryNode) {
         var proportion = Math.round(200 * (1.0 - (parseInt(d.title) / self.maxId)) + 50);
-        if (d.info.status === 'unfinished') {
+        if (d.status === 'unfinished') {
           return d.gradient? d3_rgb(255, proportion, proportion, 255).toString(): "rgb(238, 200, 241)";
         }
-        if (d.info.status === 'finished') {
+        if (d.status === 'finished') {
           return d.gradient? d3_rgb(proportion, proportion, proportion, 255).toString(): "#F6FBFF";
         }
-        if (d.info.status === 'backup') {
+        if (d.status === 'backup') {
           return d.gradient? d3_rgb(255, 255, proportion, 255).toString(): "rgb(241, 238, 200)";
         }
         return '#666';
