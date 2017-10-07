@@ -158,7 +158,6 @@ class DiffInfoWidget extends Widget {
       }
     }
 
-
     content.append("div")
       .classed("modules", true);
 

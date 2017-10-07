@@ -482,8 +482,8 @@ class Node(object):
             'id': repr(self.id),
             "display": repr(self.id),
             'parent_id': self.parent_id,
-            'trials': [x.to_dict(*args, **kwargs) for x in self.trials],
             'level': self.level,
+            'trials': [x.to_dict(*args, **kwargs) for x in self.trials],
         }
 
 

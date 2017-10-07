@@ -28,12 +28,11 @@ import * as fs from 'file-saver';
 
 import {wrap, diagonal} from '@noworkflow/utils';
 
-import {CallerMap} from './callermap';
 import {TrialConfig} from './config';
 import {VisibleTrialNode, VisibleTrialEdge} from './structures';
 import {
   TrialGraphData, TrialNodeData,
-  TrialEdgeData, TrialNodeInfoData
+  TrialEdgeData
 } from './structures';
 
 
@@ -56,7 +55,6 @@ class TrialGraph {
 
   graphId: string;
   nodes: d3_HierarchyPointNode<{}>[];
-  allnodes: TrialNodeData[];
   alledges: TrialEdgeData[];
 
   t1: number;
@@ -65,6 +63,8 @@ class TrialGraph {
   maxDuration: { [trial: string]: number };
   totalDuration: { [trial: string]: number };
   maxTotalDuration: number;
+  colors: { [trial: string]: number };
+
 
   constructor(graphId:string, div: any, config: any={}) {
     this.i = 0;
@@ -156,32 +156,29 @@ class TrialGraph {
       ))
   }
 
-  init(nodes: TrialNodeData[], edges: TrialEdgeData[], minDuration: { [trial: string]: number }, maxDuration: { [trial: string]: number }, t1: number, t2: number) {
+  init(data: TrialGraphData, t1: number, t2: number) {
+    console.log(data)
     this.t1 = t1;
     this.t2 = t2;
 
-    this.minDuration = minDuration;
-    this.maxDuration = maxDuration;
+    this.minDuration = data.min_duration;
+    this.maxDuration = data.max_duration;
     this.totalDuration = {};
-    this.totalDuration[t1] = maxDuration[t1] - minDuration[t1];
-    this.totalDuration[t2] = maxDuration[t2] - minDuration[t2];
+    this.totalDuration[t1] = this.maxDuration[t1] - this.minDuration[t1];
+    this.totalDuration[t2] = this.maxDuration[t2] - this.minDuration[t2];
     this.maxTotalDuration = Math.max(
       this.totalDuration[t1], this.totalDuration[t2]
     );
 
-    let callermap = new CallerMap(nodes, edges);
+    this.colors = data.colors;
 
-    let temp = callermap.populate();
-    if (!temp) return;
-    let rootnode = callermap.buildTree(temp);
-    if (!rootnode) return;
+    if (!data.root) return;
 
-    this.root = d3_hierarchy(rootnode, function(d) { return d.children; }) as VisibleTrialNode;
+    this.root = d3_hierarchy(data.root, function(d) { return d.children; }) as VisibleTrialNode;
     this.root.x0 = 0;
     this.root.y0 = (this.config.width) / 2;
 
-    this.alledges = edges;
-    this.allnodes = nodes;
+    this.alledges = data.edges;
     this.update(this.root);
   }
 
@@ -339,7 +336,7 @@ class TrialGraph {
   }
 
   load(data: TrialGraphData, t1: number, t2: number) {
-    this.init(data.nodes, data.edges, data.min_duration, data.max_duration, t1, t2);
+    this.init(data, t1, t2);
     this.updateWindow();
   }
 
@@ -435,11 +432,8 @@ class TrialGraph {
     }
   }
 
-  private calculateColor(d: TrialNodeInfoData | undefined): any {
-    if (d == undefined) {
-      return d3_rgb(0, 255, 255, 255).toString();
-    }
-    var proportion = Math.round(255 * (1.0 - (d.duration / this.maxTotalDuration)));
+  private calculateColor(d: TrialNodeData, trial_id: number): any {
+    var proportion = Math.round(255 * (1.0 - (d.duration[trial_id] / this.maxTotalDuration)));
     //Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
     return d3_rgb(255, proportion, proportion, 255).toString();
   }
@@ -451,12 +445,12 @@ class TrialGraph {
     this.tooltipDiv.classed("hidden", true);
   }
 
-  private showTooltip(d: TrialNodeInfoData) {
+  private showTooltip(d: TrialNodeData, trial_id: number) {
     this.tooltipDiv.classed("hidden", false);
     this.tooltipDiv.transition()
       .duration(200)
       .style("opacity", 0.9);
-    this.tooltipDiv.html(d.info)
+    this.tooltipDiv.html(d.tooltip[trial_id])
       .style("left", (d3_event.pageX - 3) + "px")
       .style("top", (d3_event.pageY - 28) + "px");
   }
@@ -479,14 +473,14 @@ class TrialGraph {
   }
 
   private defaultNodeStroke(d: VisibleTrialNode) {
-    if (this.t1 != this.t2 && d.data.node) {
-      if (d.data.node.trial_id == this.t1) {
-        return "red";
-      } else if (d.data.node.trial_id == this.t2) {
-        return "green";
-      }
+    let color = this.colors[d.data.trial_ids[0]];
+    if (d.data.trial_ids.length > 1 || color == 0) {
+      return "#000";
     }
-    return "#000";
+    if (color == 1) {
+      return "red";
+    }
+    return "green";
   }
 
   private nodeClick(d: VisibleTrialNode) {
@@ -515,16 +509,10 @@ class TrialGraph {
       .on('mouseover', function(d: VisibleTrialNode) {
         if (self.config.useTooltip) {
           self.closeTooltip();
-          if (d.data.node) {
-            self.showTooltip(d.data.node);
-          } else if (d3_mouse(this)[0] < 10) {
-            if (d.data.node1 != undefined) {
-              self.showTooltip(d.data.node1);
-            }
+          if (d3_mouse(this)[0] < 10) {
+            self.showTooltip(d.data, self.t1);
           } else {
-            if (d.data.node2 != undefined) {
-              self.showTooltip(d.data.node2);
-            }
+            self.showTooltip(d.data, self.t2);
           }
         }
         self.config.customMouseOver(self, d, name);
@@ -543,8 +531,8 @@ class TrialGraph {
       .attr("stroke", (d: VisibleTrialNode) => this.defaultNodeStroke(d))
       .attr("stroke-width", "3px")
       .attr("fill", (d: VisibleTrialNode) => {
-        if (d.data.node) {
-          return this.calculateColor(d.data.node);
+        if (d.data.trial_ids.length == 1) {
+          return this.calculateColor(d.data, this.t1);
         }
         var grad = this.svg.append("svg:defs")
           .append("linearGradient")
@@ -555,10 +543,10 @@ class TrialGraph {
           .attr("y2", "0%");
         grad.append("stop")
           .attr("offset", "50%")
-          .attr("stop-color", this.calculateColor(d.data.node2));
+          .attr("stop-color", this.calculateColor(d.data, this.t2));
         grad.append("stop")
           .attr("offset", "50%")
-          .attr("stop-color", this.calculateColor(d.data.node1));
+          .attr("stop-color", this.calculateColor(d.data, this.t1));
 
         return "url(#grad-" + this.graphId + "-" + d.data.index + ")";
       });
@@ -578,7 +566,7 @@ class TrialGraph {
     nodeEnter.append("path")
       .attr("stroke", "#000")
       .attr("d", function (d: VisibleTrialNode) {
-        if (!d.data.node) {
+        if (d.data.trial_ids.length > 1) {
           return "M10," + 0 +
                "L10," + 20;
         }
@@ -592,10 +580,11 @@ class TrialGraph {
     nodeUpdate.transition()
       .duration(this.config.duration)
       .attr("transform", (d: VisibleTrialNode) => {
+        let color = this.colors[d.data.trial_ids[0]];
         d.dy = 0;
-        if (d.data.graph == 1) {
+        if (color == 1){
           d.dy = -40;
-        } else if (d.data.graph == 2) {
+        } else if (color == 2) {
           d.dy = 40;
         }
         return "translate(" + (d.x - 10) + "," + (d.y + d.dy - 10) + ")";
@@ -652,13 +641,22 @@ class TrialGraph {
         return diagonal(o, o)
       })
       .attr("marker-end", (d: VisibleTrialEdge) => {
-        if (!d.trial) {
+        let count = 0;
+        for (let trial_id in d.count) {
+          if (trial_id == this.t1.toString()) {
+            count += 1;
+          }
+          if (trial_id == this.t2.toString()) {
+            count += 2;
+          }
+        }
+        if (count == 0 || count == 3) { // Single trial or diff
           return "url(#" + this.graphId + "-end)";
         }
-        if (d.trial === 1) {
+        if (count == 1) { // First trial
           return "url(#" + this.graphId + "-endbefore)";
         }
-        if (d.trial === 2) {
+        if (count == 2) { // Second trial
           return "url(#" + this.graphId + "-endafter)";
         }
         return "";
@@ -814,7 +812,13 @@ class TrialGraph {
         return "#pathId-" + this.graphId + "-" + d.id;
       })
       .text((d: VisibleTrialEdge) => {
-        return (d.type === 'initial') ? '' : d.count;
+        if (d.type === 'initial') {
+          return '';
+        }
+        if (this.t1 == this.t2) {
+          return d.count[this.t1].toString();
+        }
+        return d.count[this.t1] + ', ' + d.count[this.t2];
       });
 
     labelEnter.merge(labelPath)

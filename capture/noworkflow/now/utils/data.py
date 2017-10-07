@@ -50,3 +50,13 @@ class OrderedDefaultDict(OrderedDict):
     def __missing__(self, key):
         self[key] = value = self.default_factory()
         return value
+
+
+class DotDict(dict):
+    """Dict that can be accessed by attributes"""
+    def __getattr__(self, attr):
+        if attr in self:
+            return self[attr]
+        return dict.__getattr__(self, attr)
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__

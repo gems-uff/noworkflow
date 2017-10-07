@@ -3,52 +3,42 @@ import {
 } from 'd3-hierarchy';
 
 export
-interface TrialNodeInfoData {
-  count: number;
-  diff?: number;
-  duration: number;
-  finished: boolean;
-  info: string;
-  level: number;
-  line: number;
-  mean: number;
-  original: number;
-  trial_id: number;
-}
-
-export
 interface TrialNodeData {
-  graph?: number;
-  caller_id: number;
-  parent_index: number;
-  index: number;
-  name: string;
-  node: TrialNodeInfoData;
-  node1: TrialNodeInfoData;
-  node2: TrialNodeInfoData;
-  repr: string;
-
+  activations: { [trial: string]: number; }[];
   children: TrialNodeData[];
+  children_index: number; // Position in parent list
+  duration: { [trial: string]: number; };
+  full_tooltip: boolean;
+  name: string;
+  tooltip: { [trial: string]: string; };
+  trial_ids: number[];
+
+  // Do not use it
+  index: number; // Represents parent index in preorder list
+  caller_id: number; // Represents activation id
+  parent_index: number; // Represents parent index in preorder list
+  repr?: string; // Represents structure repr in structure summarization
+
+  // Other
   x0?: number;
   y0?: number;
-  children_index: number;
 }
 
 export
 interface TrialEdgeData {
-  count: number | { [trial: string]: number; }[];
+  count: { [trial: string]: number; };
   source: number;
   target: number;
-  trial?: number;
   type: number;
 }
 
 export
 interface TrialGraphData {
-  nodes: TrialNodeData[];
+  root: TrialNodeData;
   edges: TrialEdgeData[];
   max_duration: { [trial: string]: number; };
   min_duration: { [trial: string]: number; };
+  colors: { [trial: string]: number; };
 }
 
 export
@@ -70,10 +60,9 @@ interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
 
 export
 interface VisibleTrialEdge {
-  count: number;
+  count: { [trial: string]: string; };
   source: VisibleTrialNode;
   target: VisibleTrialNode;
-  trial: number;
   type: string;
   id: string;
 }
