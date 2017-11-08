@@ -70,9 +70,9 @@ class History(Model):
         """Return a set of scripts used for trials"""
         return Trial.distinct_scripts()
 
-    def _repr_html_(self):
-        """Display d3 graph on ipython notebook"""
-        return self.graph._repr_html_()                                          # pylint: disable=protected-access
+    def _ipython_display_(self):
+        """Display history graph"""
+        self.graph._ipython_display_()
 
     def __repr__(self):
         return repr(self.graph)

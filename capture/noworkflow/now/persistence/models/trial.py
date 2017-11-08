@@ -796,12 +796,15 @@ class Trial(AlchemyProxy):
                 t=self, status=self.status.capitalize()
             ))
 
-    def _repr_html_(self):
-        """Display d3 graph on ipython notebook"""
+    def _ipython_display_(self):
+        """Display history graph"""
         if hasattr(self, "graph"):
             # pylint: disable=protected-access
-            return self.graph._repr_html_()
-        return repr(self)
+            return self.graph._ipython_display_()
+        from IPython.display import display
+        display({
+            'text/plain': 'Trial {}'.format(self.id)
+        }, raw=True)
 
     @classmethod  # query
     def distinct_scripts(cls):

@@ -7,7 +7,6 @@ import {
 } from 'd3-selection';
 
 import {BaseActivationGraphWidget} from './graph/base_activation_graph';
-import {DiffGraphWidget} from './graph/diff_graph';
 
 
 export
@@ -67,12 +66,6 @@ class ConfigWidget extends Widget {
     BaseActivationGraphWidget.graphTypeForm("config", trialdiv);
     BaseActivationGraphWidget.useCacheForm("config", trialdiv);
 
-    let diffdiv = content.append("div")
-    diffdiv.append("h2")
-      .text("Diff Graph")
-
-    DiffGraphWidget.createForm("config", diffdiv);
-
     return node;
   }
 
@@ -97,14 +90,6 @@ class ConfigWidget extends Widget {
 
   graphType(): string {
     return this.d3node.select(".graph-type").property("value");
-  }
-
-  diffLevel(): number {
-    return this.d3node.select(".diff-level").property("value");
-  }
-
-  timeLimit(): number {
-    return this.d3node.select(".timelimit").property("value");
   }
 
   useCache(): boolean {

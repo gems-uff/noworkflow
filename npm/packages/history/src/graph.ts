@@ -193,7 +193,6 @@ class HistoryGraph {
       .on("change", () => {
         this.config.fontSize = fontSize.property("value");
         this.svg.selectAll("text.trial-id")
-          .attr('y', this.config.fontSize / 3)
           .attr("font-size", this.config.fontSize);
       })
 

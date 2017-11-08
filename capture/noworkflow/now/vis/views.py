@@ -37,16 +37,16 @@ app = WebServer().app  # pylint: disable=invalid-name
 
 
 @app.after_request
-def add_header(request):
+def add_header(req):
     """
     Add headers to both force latest IE rendering engine or Chrome Frame,
     and also to cache the rendered page for 10 minutes.
     """
-    request.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    request.headers["Pragma"] = "no-cache"
-    request.headers["Expires"] = "0"
-    request.headers['Cache-Control'] = 'public, max-age=0'
-    return request
+    req.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    req.headers["Pragma"] = "no-cache"
+    req.headers["Expires"] = "0"
+    req.headers['Cache-Control'] = 'public, max-age=0'
+    return req
 
 
 @app.route("/<path:path>")
@@ -84,7 +84,8 @@ def trial_graph(tid, graph_mode, cache):
     trial = Trial(tid)
     graph = trial.graph
     graph.use_cache &= bool(int(cache))
-    _, tgraph = getattr(graph, graph_mode)()
+    _, tgraph, _ = getattr(graph, graph_mode)()
+
     return jsonify(**tgraph)
 
 
@@ -160,25 +161,19 @@ def diff_accesses(trial1, trial2):
     )
 
 
-@app.route("/diff/<trial1>/<trial2>/<graph_mode>/"
-           "<tlimit>-<neighborhoods>-<cache>.json")                              # pylint: disable=too-many-arguments
-def diff_graph(trial1, trial2, graph_mode, tlimit, neighborhoods, cache):
+@app.route("/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
+def diff_graph(trial1, trial2, graph_mode, cache):
     """Respond trial diff as JSON"""
     diff_object = Diff(trial1, trial2)
     graph = diff_object.graph
     graph.use_cache &= bool(int(cache))
 
-    _, diff_result, trial1, trial2 = getattr(graph, graph_mode)(
-        time_limit=int(tlimit), neighborhoods=int(neighborhoods)
-    )
-    return jsonify(
-        diff=diff_result,
-        trial1=trial1,
-        trial2=trial2,
-    )
+    _, diff_result, _ = getattr(graph, graph_mode)()
+    return jsonify(**diff_result)
 
 
 @app.teardown_appcontext
-def shutdown_session(exception=None):                                            # pylint: disable=unused-argument
+def shutdown_session(exception=None):
     """Shutdown SQLAlchemy session"""
+    # pylint: disable=unused-argument
     relational.session.remove()

@@ -157,7 +157,6 @@ class TrialGraph {
   }
 
   init(data: TrialGraphData, t1: number, t2: number) {
-    console.log(data)
     this.t1 = t1;
     this.t2 = t2;
 
@@ -268,8 +267,7 @@ class TrialGraph {
     let setDistances = function() {
       self.config.nodeSizeX = distanceX.property("value");
       self.config.nodeSizeY = distanceY.property("value");
-      self.svg.selectAll(".node text")
-        .call(wrap, self.config.nodeSizeX);
+      self.wrapText()
       self.tree
         .nodeSize([
           self.config.nodeSizeX,
@@ -341,6 +339,7 @@ class TrialGraph {
   }
 
   restorePosition(): void {
+    this.wrapText();
     this.svg
         .call(this.zoom.transform, d3_zoomIdentity.translate(
           this.config.left + this.config.width / 2,
@@ -397,8 +396,7 @@ class TrialGraph {
       d.y0 = d.y;
     });
 
-    this.svg.selectAll(".node text")
-      .call(wrap, this.config.nodeSizeX - 2);
+    this.wrapText();
   }
 
   download(name?: string) {
@@ -430,6 +428,11 @@ class TrialGraph {
       var blob = new Blob([html], {type: "image/svg+xml"});
       fs.saveAs(blob, name);
     }
+  }
+
+  wrapText() {
+    this.svg.selectAll(".node text")
+        .call(wrap, this.config.nodeSizeX);
   }
 
   private calculateColor(d: TrialNodeData, trial_id: number): any {
@@ -486,10 +489,10 @@ class TrialGraph {
   private nodeClick(d: VisibleTrialNode) {
     if (d.children) {
       d._children = d.children;
-      d.children = [];
+      delete d.children;
     } else {
       d.children = d._children;
-      d._children = [];
+      delete d._children;
     }
     this.update(d);
   }
@@ -561,7 +564,7 @@ class TrialGraph {
       .attr("y", 24)
       .attr("x", 10)
       .attr("text-anchor", "middle")
-      .text((d: VisibleTrialNode) => { return d.data.name; });
+      .text((d: VisibleTrialNode) => { return d.data.name; })
 
     nodeEnter.append("path")
       .attr("stroke", "#000")
@@ -815,8 +818,10 @@ class TrialGraph {
         if (d.type === 'initial') {
           return '';
         }
-        if (this.t1 == this.t2) {
+        if (this.t1 == this.t2 || !d.count[this.t2]) {
           return d.count[this.t1].toString();
+        } else if (!d.count[this.t1]) {
+          return d.count[this.t2].toString();
         }
         return d.count[this.t1] + ', ' + d.count[this.t2];
       });

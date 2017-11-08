@@ -39,20 +39,14 @@ interface TrialGraphData {
   max_duration: { [trial: string]: number; };
   min_duration: { [trial: string]: number; };
   colors: { [trial: string]: number; };
+  trial1: number;
+  trial2: number;
 }
-
-export
-interface MultiGraphData {
-  diff: TrialGraphData;
-  trial1: TrialGraphData;
-  trial2: TrialGraphData;
-}
-
 
 export
 interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
-  _children: d3_HierarchyPointNode<TrialNodeData>[];
-  children: d3_HierarchyPointNode<TrialNodeData>[];
+  _children?: d3_HierarchyPointNode<TrialNodeData>[];
+  children?: d3_HierarchyPointNode<TrialNodeData>[];
   dy?: number;
   x0?: number;
   y0?: number;

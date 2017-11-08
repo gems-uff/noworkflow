@@ -94,6 +94,8 @@ class HistoryGraph(Graph):
             "edges": result["edges"],
             "nodes": final,
             "scripts": result["scripts"],
+            "width": self.width,
+            "height": self.height,
         }
 
     def _load_trials(self, trial_gen):  # pylint: disable=no-self-use
@@ -384,20 +386,13 @@ class HistoryGraph(Graph):
                 level = max(level, trial.level + 1)
             add_script(script, level, min_id, max_id)
 
-    def _repr_html_(self):
-        """Display d3 graph on ipython notebook"""
-        uid = str(int(time.time() * 1000000))
-
-        result = """
-            <div class="nowip-history" data-width="{width}"
-                 data-height="{height}" data-uid="{uid}">
-                {data}
-            </div>
-        """.format(
-            uid=uid,
-            data=self.escape_json(self.graph()),
-            width=self.width, height=self.height)
-        return result
+    def _ipython_display_(self):
+        from IPython.display import display
+        bundle = {
+            'application/noworkflow.history+json': self.graph(),
+            'text/plain': repr(self),
+        }
+        display(bundle, raw=True)
 
     def __repr__(self):
         width = max(len(s) for s in self.history.scripts)

@@ -6,13 +6,11 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import time
 import weakref
 
-from collections import namedtuple, defaultdict
-from functools import partial
+from collections import defaultdict
 
-from future.utils import viewitems, viewvalues, viewkeys
+from future.utils import viewitems
 
 from ...utils.data import DotDict
 
@@ -42,17 +40,19 @@ class Summarization(object):
 
         self(preorder)
 
-    def graph(self, colors):
+    def graph(self, colors, width=0, height=0):  # pylint: disable=too-many-locals
         """Generate JSON"""
         min_duration = {}
         max_duration = {}
         edges = []
+        trials = set()
         for node in self.nodes:
             for trial_id, duration in viewitems(node.duration):
                 min_duration[trial_id] = min(
                     min_duration.get(trial_id, float('inf')), duration)
                 max_duration[trial_id] = max(
                     max_duration.get(trial_id, float('-inf')), duration)
+                trials.add(trial_id)
         for source_nid, targets in viewitems(self.edges):
             for target_nid, types in viewitems(targets):
                 for type_, count in viewitems(types):
@@ -62,12 +62,19 @@ class Summarization(object):
                         'target': target_nid,
                         'type': type_,
                     })
+        tlist = list(trials)
+        if not tlist:
+            tlist.append(0)
         return {
             'root': self.root,
             'edges': edges,
             'min_duration': min_duration,
             'max_duration': max_duration,
             'colors': colors,
+            'trial1': tlist[0],
+            'trial2': tlist[-1],
+            'width': width,
+            'height': height,
         }
 
     def merge(self, node, activation):
@@ -292,7 +299,6 @@ class TrialGraph(Graph):
        Present trial graph on Jupyter"""
 
     def __init__(self, trial):
-        self._graph = None
         self.trial = weakref.proxy(trial)
 
         self.use_cache = True
@@ -306,42 +312,36 @@ class TrialGraph(Graph):
             3: self.namespace_match
         }
 
+    def result(self, summarization):
+        """Get summarization graph result"""
+        return self.trial.finished, summarization.graph(
+            {self.trial.id: 0}, self.width, self.height
+        ), summarization.nodes
+
     @cache("tree")
     def tree(self):
         """Convert tree structure into dict tree structure"""
-        summarization = TreeSummarization(self.trial.activations)
-        return self.trial.finished, summarization.graph({self.trial.id: 0})
+        return self.result(TreeSummarization(self.trial.activations))
 
     @cache("no_match")
     def no_match(self):
         """Convert tree structure into dict graph without node matchings"""
-        summarization = NoMatchSummarization(self.trial.activations)
-        return self.trial.finished, summarization.graph({self.trial.id: 0})
+        return self.result(NoMatchSummarization(self.trial.activations))
 
     @cache("exact_match")
     def exact_match(self):
         """Convert tree structure into dict graph and match equal calls"""
-        summarization = StructureSummarization(self.trial.activations)
-        return self.trial.finished, summarization.graph({self.trial.id: 0})
+        return self.result(StructureSummarization(self.trial.activations))
 
     @cache("namespace_match")
     def namespace_match(self):
         """Convert tree structure into dict graph and match namespaces"""
-        summarization = LineNameSummarization(self.trial.activations)
-        return self.trial.finished, summarization.graph({self.trial.id: 0})
+        return self.result(LineNameSummarization(self.trial.activations))
 
-    def _repr_html_(self):
-        """Display d3 graph on jupyter notebook"""
-        uid = str(int(time.time() * 1000000))
-
-        result = """
-            <div class="nowip-trial" data-width="{width}"
-                 data-height="{height}" data-uid="{uid}"
-                 data-id="{id}">
-                {data}
-            </div>
-        """.format(
-            uid=uid, id=self.trial.id,
-            data=self.escape_json(self._modes[self.mode]()[1]),
-            width=self.width, height=self.height)
-        return result
+    def _ipython_display_(self):
+        from IPython.display import display
+        bundle = {
+            'application/noworkflow.trial+json': self._modes[self.mode]()[1],
+            'text/plain': 'Trial {}'.format(self.trial.id),
+        }
+        display(bundle, raw=True)

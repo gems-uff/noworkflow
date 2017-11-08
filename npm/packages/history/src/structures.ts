@@ -45,6 +45,8 @@ interface HistoryGraphData {
   edges: HistoryEdgeData[];
   nodes: HistoryNodeData[];
   scripts: string[];
+  width: number;
+  height: number;
 }
 
 export

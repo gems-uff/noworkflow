@@ -37,11 +37,23 @@ class Module:
         self.old_sum = new_sum
         return result
 
-    def check(self, run=True, visited=set()):
+    def run(self):
+        print("Building", self.name)
+        process = subprocess.Popen(
+            "npm run build",
+            shell=True,
+            cwd=self.path,
+        )
+
+        status = process.wait()
+        if status:
+            raise Exception("NPM run failed")
+
+    def check(self, run=True, visited={}):
         """Check if the module or its dependencies has changed"""
         if self in visited:
-            return True
-        visited.add(self)
+            return visited[self]
+        visited[self] = True
         invalid = False
         for dependency in self.dependencies:
             if not dependency.check(run, visited):
@@ -50,16 +62,8 @@ class Module:
         invalid |= self.check_dir()
 
         if run and invalid:
-            print("Building", self.name)
-            process = subprocess.Popen(
-                "npm run build",
-                shell=True,
-                cwd=self.path,
-            )
-
-            status = process.wait()
-            if status:
-                raise Exception("NPM run failed")
+            visited[self] = False
+            self.run()
 
         return not invalid
 
@@ -70,17 +74,28 @@ class Module:
         return "Module({})".format(self.name)
 
 
+class NoFileModule(Module):
+
+    def check_dir(self):
+        return False
+
+    def run(self):
+        pass
+
+
 utils = Module("utils")
 history = Module("history", dependencies=[utils])
 trial = Module("trial", dependencies=[utils])
 nowvis = Module("nowvis", dependencies=[history, trial])
+nbextension = Module("nbextension", dependencies=[history, trial])
 
+ALL = NoFileModule("ALL", dependencies=[nowvis, nbextension])
 
 print("Monitoring packages...")
 while True:
-    visited = set()
+    visited = {}
     try:
-        nowvis.check(visited=visited)
+        ALL.check(visited=visited)
     except:
         print("Failed")
     sleep(1.0)

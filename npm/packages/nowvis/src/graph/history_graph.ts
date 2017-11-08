@@ -170,8 +170,6 @@ class HistoryWidget extends Widget {
             parentDock.activateWidget(diffGraphWidget);
             diffGraphWidget.load(
               this.config.graphType(),
-              this.config.diffLevel(),
-              this.config.timeLimit(),
               this.config.useCache()
             );
           }

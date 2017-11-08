@@ -86,12 +86,13 @@ class CustomInstallCommand(install):
 
 
 setup(
-    name="noworkflow-alpha",
+    name="noworkflow            ",
     version=__version__,
     packages=find_packages(),
     package_data={
         "noworkflow": (
             recursive_path("noworkflow", "resources")
+            + recursive_path("noworkflow", "jupyter")
             + recursive_path("noworkflow", "now/vis/static")
             + recursive_path("noworkflow", "now/vis/templates")
         ),
@@ -108,7 +109,9 @@ setup(
     license="MIT",
     keywords="scientific experiments provenance python",
     url="https://github.com/gems-uff/noworkflow",
-    install_requires=["pyposast>=1.1.3", "future", "SQLAlchemy"],
+    install_requires=[
+        "pyposast>=1.1.3", "apted", "future", "SQLAlchemy",
+    ],
     extras_require={
         "vis": ["pyposast", "flask"],
         "notebook": ["pyposast", "ipython", "jupyter", "sphinx"],
