@@ -40,7 +40,7 @@ def children_cmp(node1, node2):
         return node1.original1 - node2.original1
     elif node1.original2 is not None and node2.original2 is not None:
         return node1.original2 - node2.original2
-    return 0
+    return -1
 
 
 def merge(node1, node2, id_to_node1, id_to_node2):
