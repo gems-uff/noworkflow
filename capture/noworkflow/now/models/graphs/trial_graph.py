@@ -140,8 +140,13 @@ class Summarization(object):
         Insert node, create match, and create call edge
         """
         self.stack.append(last)
+        
         match = self.calculate_match(call)
-        node = self.insert_node(call, last, match)
+        node = self.matches[last.index].get(match)
+        if node is None:
+            node = self.insert_node(call, last, match)
+        else:
+            self.merge(node, call)
         self.add_edge(last, node, 'call')
         return node
 
