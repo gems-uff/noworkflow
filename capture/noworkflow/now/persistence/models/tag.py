@@ -147,7 +147,7 @@ class Tag(AlchemyProxy):
             results = session.execute(_query.where(condition), info).fetchall()
             tags = [lmap(int, tag[0].split(".")) for tag in results]
             if tags:
-                print(type_, max(tags))
+                #print(type_, max(tags))
                 return type_, max(tags)
 
         return 0, [1, 1, 1]
