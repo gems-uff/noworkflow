@@ -33,7 +33,6 @@ def remove_outliers(data, thresh=2.5):
                                  for i in sorted(data.keys()))))
     non_zeros = full_data != 0
     median = np.median(full_data[non_zeros])
-
     result = {}
     for month in data:
         values = np.asarray(data[month])[:, None]
@@ -44,10 +43,10 @@ def remove_outliers(data, thresh=2.5):
         modified_z_score = 0.6745 * diff / med_abs_deviation
 
         outliers = modified_z_score > thresh
-        non_outliers = modified_z_score < thresh
+        non_outliers = modified_z_score <= thresh
 
         new_data = np.zeros(len(values))
-        new_data[non_outliers] = values[non_outliers]
+        new_data[non_outliers] = np.transpose(values[non_outliers])[0]
         new_data[outliers] = median
 
         result[month] = new_data.tolist()

@@ -7,33 +7,37 @@ All rights reserved.
 
 The noWorkflow project aims at allowing scientists to benefit from provenance data analysis even when they don't use a workflow system. Also, the goal is to allow them to avoid using naming conventions to store files originated in previous executions. Currently, when this is not done, the result and intermediate files are overwritten by every new execution of the pipeline.
 
+
 noWorkflow was developed in Python and it currently is able to capture provenance of Python scripts using Software Engineering techniques such as abstract syntax tree (AST) analysis, reflection, and profiling, to collect provenance without the need of a version control system or any other environment.
 
 Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below, and the [tutorial videos at our Wiki page](https://github.com/gems-uff/noworkflow/wiki/Videos).
 
-noWorkflow supports Python 2.7 and Python 3.5.
 
 Team
 ----
 
-The noWorkflow team is composed by researchers from Universidade Federal Fluminense (UFF) in Brazil and New York University (NYU), in the USA.
+The main noWorkflow team is composed by researchers from Universidade Federal Fluminense (UFF) in Brazil and New York University (NYU), in the USA.
 
-* Vanessa Braganholo (UFF)
-* Fernando Chirigati (NYU)
-* Juliana Freire (NYU)
-* David Koop (NYU)
-* Leonardo Murta (UFF)
-* João Felipe Pimentel (UFF)
+- João Felipe Pimentel (UFF) (main developer)
+- Juliana Freire (NYU)
+- Leonardo Murta (UFF)
+- Vanessa Braganholo (UFF)
+
+Collaborators
+
+- David Koop (University of Massachusetts Dartmouth)
+- Fernando Chirigati (NYU)
+- Paolo Missier (Newcastle University)
 
 Publications
 ------------
 
-* [MURTA, L. G. P.; BRAGANHOLO, V.; CHIRIGATI, F. S.; KOOP, D.; FREIRE, J.; noWorkflow: Capturing and Analyzing Provenance of Scripts. In: International Provenance and Annotation Workshop (IPAW), 2014, Cologne, Germany.] (https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2014.pdf)
-* [PIMENTEL, J. F. N.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; Collecting and Analyzing Provenance on Interactive Notebooks: when IPython meets noWorkflow. In: Theory and Practice of Provenance (TaPP), 2015, Edinburgh, Scotland.] (https://github.com/gems-uff/noworkflow/raw/master/docs/tapp2015.pdf)
-* [PIMENTEL, J. F. N.; FREIRE, J.; BRAGANHOLO, V.; MURTA, L. G. P.; Tracking and Analyzing the Evolution of Provenance from Scripts. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.] (https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016a.pdf)
-* [PIMENTEL, J. F. N.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; Fine-grained Provenance Collection over Scripts Through Program Slicing. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.] (https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016b.pdf)
-* [PIMENTEL, J. F. N.; DEY, S.; MCPHILLIPS, T.; BELHAJJAME, K.; KOOP, D.; MURTA, L. G. P.; BRAGANHOLO, V.; LUDÄSCHER B.; Yin & Yang: Demonstrating Complementary Provenance from noWorkflow & YesWorkflow. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.] (https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016c.pdf)
-
+* [MURTA, L. G. P.; BRAGANHOLO, V.; CHIRIGATI, F. S.; KOOP, D.; FREIRE, J.; noWorkflow: Capturing and Analyzing Provenance of Scripts. In: International Provenance and Annotation Workshop (IPAW), 2014, Cologne, Germany.](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2014.pdf)
+* [PIMENTEL, J. F. N.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; Collecting and Analyzing Provenance on Interactive Notebooks: when IPython meets noWorkflow. In: Theory and Practice of Provenance (TaPP), 2015, Edinburgh, Scotland.](https://github.com/gems-uff/noworkflow/raw/master/docs/tapp2015.pdf)
+* [PIMENTEL, J. F.; FREIRE, J.; BRAGANHOLO, V.; MURTA, L. G. P.; Tracking and Analyzing the Evolution of Provenance from Scripts. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016a.pdf)
+* [PIMENTEL, J. F.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; Fine-grained Provenance Collection over Scripts Through Program Slicing. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016b.pdf)
+* [PIMENTEL, J. F.; DEY, S.; MCPHILLIPS, T.; BELHAJJAME, K.; KOOP, D.; MURTA, L. G. P.; BRAGANHOLO, V.; LUDÄSCHER B.; Yin & Yang: Demonstrating Complementary Provenance from noWorkflow & YesWorkflow. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016c.pdf)
+* [PIMENTEL, J. F.; MURTA, L. G. P.; BRAGANHOLO, V.; FREIRE, J.; noWorkflow: a Tool for Collecting, Analyzing, and Managing Provenance from Python Scripts. In: International Conference on Very Large Data Bases (VLDB), 2017, Munich, Germany.](https://github.com/gems-uff/noworkflow/raw/master/docs/vldb2017.pdf)
 
 History
 ------------------
@@ -253,6 +257,8 @@ To install Jupyter notebook and IPython kernel, you can run
 ```bash
 $ pip install jupyter
 $ pip install ipython
+$ jupyter nbextension install --py --sys-prefix noworkflow
+$ jupyter nbextension enable noworkflow --py --sys-prefix
 ```
 
 Then, to run Jupyter notebook, go to the project directory and execute:

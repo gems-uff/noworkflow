@@ -25,7 +25,6 @@ def init(path=None, ipython=None):
     """
 
     import os
-    from ..utils.functions import resource
     from .magics import register_magics
     try:
         from .hierarchymagic import load_ipython_extension as load_hierarchy

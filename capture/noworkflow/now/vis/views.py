@@ -85,7 +85,6 @@ def trial_graph(tid, graph_mode, cache):
     graph = trial.graph
     graph.use_cache &= bool(int(cache))
     _, tgraph, _ = getattr(graph, graph_mode)()
-
     return jsonify(**tgraph)
 
 

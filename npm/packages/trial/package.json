@@ -10,7 +10,8 @@
     "style/*.css"
   ],
   "directories": {
-    "lib": "lib/"
+    "lib": "lib/",
+    "style": "style/"
   },
   "dependencies": {
     "@noworkflow/utils": "0.0.7",

@@ -10,7 +10,8 @@
     "style/*.css"
   ],
   "directories": {
-    "lib": "lib/"
+    "lib": "lib/",
+    "style": "style/"
   },
   "dependencies": {
     "@types/d3": "^4.10.1",

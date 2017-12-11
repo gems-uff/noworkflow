@@ -752,7 +752,6 @@ class Trial(AlchemyProxy):
         >>> trial.create_head()
         >>> count(Head)
         2
-
         """
         # pylint: disable=no-member, not-callable
         session = relational.make_session()
