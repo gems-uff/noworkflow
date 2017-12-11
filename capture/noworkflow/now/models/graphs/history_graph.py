@@ -10,13 +10,13 @@ import time
 import weakref
 
 from collections import OrderedDict, defaultdict
-from itertools import zip_longest
 
 from future.utils import viewvalues
 
-from .structures import Graph
 from ...persistence.models.trial import Trial
 from ...persistence.models.tag import Tag
+from ...utils.cross_version import zip_longest
+from .structures import Graph
 
 
 
@@ -255,7 +255,7 @@ class HistoryGraph(Graph):
         nodes = []
         scripts = defaultdict(list)
         nid = 0
-        for trial in reversed(viewvalues(trial_map)):
+        for trial in reversed(list(trial_map.values())):
             if not trial.match_status(status) or not trial.match_script(script):
                 for tid in trial_map:
                     graph[tid][trial.id] = MAX_IN_GRAPH
