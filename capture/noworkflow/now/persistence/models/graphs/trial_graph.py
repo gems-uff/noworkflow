@@ -112,6 +112,7 @@ class Summarization(object):
             tooltip=defaultdict(str),
             children_index=-1,
             trial_ids=[],
+            has_return=False,
         )
         self.merge(node, activation)
         self.nid += 1
@@ -145,9 +146,10 @@ class Summarization(object):
         node = self.matches[last.index].get(match)
         if node is None:
             node = self.insert_node(call, last, match)
+            self.add_edge(last, node, 'call')
         else:
             self.merge(node, call)
-        self.add_edge(last, node, 'call')
+            node.caller_id = max(node.caller_id, call.caller_id)
         return node
 
     def insert_return(self, last):
@@ -156,7 +158,9 @@ class Summarization(object):
         Create return edge
         """
         temp = self.stack.pop()
-        self.add_edge(last, temp, 'return')
+        if not last.has_return:
+            self.add_edge(last, temp, 'return')
+            last.has_return = True
         return temp
 
     def insert_sequence(self, call, last):
@@ -171,6 +175,7 @@ class Summarization(object):
             node = self.insert_node(call, self.nodes[last.parent_index], match)
         else:
             self.merge(node, call)
+            node.caller_id = max(node.caller_id, call.caller_id)
         self.add_edge(last, node, 'sequence')
         return node
 
