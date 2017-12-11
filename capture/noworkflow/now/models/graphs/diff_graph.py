@@ -46,6 +46,8 @@ def children_cmp(node1, node2):
 def merge(node1, node2, id_to_node1, id_to_node2):
     """Creates a merged node based on node1 combined to node2"""
     new_node = copy(node1)
+    if node1.name != node2.name:
+        new_node.name = "{}|{}".format(node1.name, node2.name)
     new_node.children1 = node1.children
     new_node.children2 = node2.children
     new_node.activations.update(node2.activations)
@@ -93,7 +95,7 @@ def create_mapping(root1, root2):
             node.original2 = None
         else:
             if node1.name != node2.name:
-                print("Warning. Mismatch?")
+                print("Warning. Mismatch?", node1.name, node2.name)
             merge(node1, node2, id_to_node1, id_to_node2)
             # Note that it overrides node1 attributes
 
