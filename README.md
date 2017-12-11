@@ -259,6 +259,8 @@ To install Jupyter notebook and IPython kernel, you can run
 ```bash
 $ pip install jupyter
 $ pip install ipython
+$ jupyter nbextension install --py --sys-prefix noworkflow
+$ jupyter nbextension enable noworkflow --py --sys-prefix
 ```
 
 Then, to run Jupyter notebook, go to the project directory and execute:

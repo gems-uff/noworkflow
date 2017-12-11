@@ -6,348 +6,293 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import time
 import weakref
 
-from collections import namedtuple, defaultdict
-from functools import partial
+from collections import defaultdict
 
-from future.utils import viewitems, viewvalues, viewkeys
+from future.utils import viewitems
 
-from .structures import Single, Call, Group, Mixed, TreeElement, prepare_cache
+from ....utils.data import DotDict
+
+from .structures import prepare_cache
 from .structures import Graph
 
 
-Edge = namedtuple("Edge", "node count")
+Node = DotDict  # pylint: disable=invalid-name
 
 
-class TreeVisitor(object):
-    """Create Dict Tree from Intermediate Tree"""
+class Summarization(object):
+    """Summarization algorithm
 
-    def __init__(self):
-        self.nodes = []
-        self.edges = []
-        self.delegated = {
-            "initial": Edge(0, 1)
-        }
+    Traverses activation tree nodes in preorder.
+    Creates graph based on caller_id
+    """
+
+    def __init__(self, preorder):
         self.nid = 0
-        self.min_duration = defaultdict(partial(int, 1000 ** 10))
-        self.max_duration = defaultdict(partial(int, 0))
-        self.keep = None
+        self.root = None
+        self.stack = []
+        self.nodes = []
+        self.matches = defaultdict(dict)
+        self.edges = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+        )
 
-    def update_durations(self, duration, tid):
-        """Update min and max duration"""
-        self.max_duration[tid] = max(self.max_duration[tid], duration)
-        self.min_duration[tid] = min(self.min_duration[tid], duration)
+        self(preorder)
 
-    def update_node(self, node):                                                 # pylint: disable=no-self-use
-        """Update node with info and mean duration"""
-        node["mean"] = node["duration"] / node["count"]
-        node["info"].update_by_node(node)
-        node["info"] = repr(node["info"])
-
-    def to_dict(self):
-        """Convert graph to dict"""
+    def graph(self, colors, width=0, height=0):  # pylint: disable=too-many-locals
+        """Generate JSON"""
+        min_duration = {}
+        max_duration = {}
+        edges = []
+        trials = set()
         for node in self.nodes:
-            nnode = node["node"]
-            self.update_node(nnode)
-            self.update_durations(nnode["duration"], nnode["trial_id"])
-
-        self.update_edges()
+            for trial_id, duration in viewitems(node.duration):
+                min_duration[trial_id] = min(
+                    min_duration.get(trial_id, float('inf')), duration)
+                max_duration[trial_id] = max(
+                    max_duration.get(trial_id, float('-inf')), duration)
+                trials.add(trial_id)
+        for source_nid, targets in viewitems(self.edges):
+            for target_nid, types in viewitems(targets):
+                for type_, count in viewitems(types):
+                    edges.append({
+                        'count': count,
+                        'source': source_nid,
+                        'target': target_nid,
+                        'type': type_,
+                    })
+        tlist = list(trials)
+        if not tlist:
+            tlist.append(0)
         return {
-            "nodes": self.nodes,
-            "edges": self.edges,
-            "min_duration": self.min_duration,
-            "max_duration": self.max_duration
+            'root': self.root,
+            'edges': edges,
+            'min_duration': min_duration,
+            'max_duration': max_duration,
+            'colors': colors,
+            'trial1': tlist[0],
+            'trial2': tlist[-1],
+            'width': width,
+            'height': height,
         }
 
-    def update_edges(self):
-        """Update edges"""
-        pass
+    def merge(self, node, activation):
+        """Abstract: Merge activation into node"""
+        raise NotImplementedError("merge is not implemented")
 
-    def add_node(self, node):
-        """Add node to result"""
-        self.nodes.append(node.to_dict(self.nid))
-        original = self.nid
+    def calculate_match(self, node):
+        """Abstract: Calculate match. Return tuple"""
+        raise NotImplementedError("calculate_match is not implemented")
+
+    def add_edge(self, source, target, type_, count=1):
+        """Add edge"""
+        ids = target.trial_ids
+        trial_id = 0 if len(ids) > 1 else next(iter(ids))
+        self.edges[source.index][target.index][type_][trial_id] += count
+
+    def insert_node(self, activation, parent, match=None):
+        """Create node for activation
+
+        Arguments:
+
+        activation -- activation element
+        parent -- previously created parent node
+        match -- matching key
+        """
+        node = Node(
+            index=self.nid,
+            parent_index=-1,
+            name=activation.name,
+            caller_id=activation.caller_id or 0,
+            children=[],
+            activations=defaultdict(list),
+            duration=defaultdict(int),
+            full_tooltip=False,
+            tooltip=defaultdict(str),
+            children_index=-1,
+            trial_ids=[],
+        )
+        self.merge(node, activation)
         self.nid += 1
-        return original
+        if parent is not None:
+            node.parent_index = parent.index
+            node.children_index = len(parent.children)
+            parent.children.append(node)
+            if match is not None:
+                self.matches[parent.index][match] = node
 
-    def add_edge(self, source, target, count, typ):
-        """Add edge to result"""
-        self.edges.append({
-            "source": source,
-            "target": target,
-            "count": count,
-            "type": typ
-        })
+        self.nodes.append(node)
+        return node
 
-    def visit_call(self, call):
-        """Visit Call Node (Visitor Pattern)"""
-        caller_id = self.add_node(call.caller)
-        self.nodes[caller_id]["repr"] = repr(call)
-        callees = call.called.visit(self)
-        pos = 1
-        for callee_id in callees:
-            self.add_edge(caller_id, callee_id, pos, "call")
-            pos += 1
-        return [caller_id]
+    def insert_first(self, call):
+        """Insert first node
 
-    def visit_group(self, group):
-        """Visit Group Node (Visitor Pattern)"""
-        result = []
-        for element in viewvalues(group.nodes):
-            result += element.visit(self)
-        return result
+        Insert node and create initial edge
+        """
+        self.root = node = self.insert_node(call, None)
+        self.add_edge(node, node, 'initial')
+        return node
 
-    def visit_single(self, single):
-        """Visit Single Node (Visitor Pattern)"""
-        return [self.add_node(single)]
+    def insert_call(self, call, last):
+        """Insert call
 
-    def visit_mixed(self, mixed):
-        """Visit Mixed Node (Visitor Pattern)"""
-        mixed.mix_results()
-        node_id = mixed.first.visit(self)
-        self.nodes[node_id[0]]["duration"] = mixed.duration
-        return node_id
-
-    def visit_treeelement(self, tree_element):                                   # pylint: disable=no-self-use, unused-argument
-        """Visit TreeElement Node (Visitor Pattern)"""
-        return []
-
-
-class NoMatchVisitor(TreeVisitor):
-    """Create Dict No Match from Intermediate Tree"""
-    def update_edges(self):
-        for edge in self.edges:
-            if edge["type"] in ["return", "call"]:
-                edge["count"] = ""
-
-    def use_delegated(self):
-        """Process delegated edge"""
-        result = self.delegated
-        self.delegated = {}
-        return result
-
-    def solve_delegation(self, node_id, node_count, delegated):
-        """Solve edge delegation"""
-        self.solve_cis_delegation(node_id, node_count, delegated)
-        self.solve_ret_delegation(node_id, node_count, delegated)
-
-    def solve_cis_delegation(self, node_id, node_count, delegated):
-        """Solve edge (call, initial, sequence) delegation"""
-        # call initial sequence
-        for typ in ["call", "initial", "sequence"]:
-            if typ in delegated:
-                edge = delegated[typ]
-                self.add_edge(edge.node, node_id, node_count, typ)
-
-    def solve_ret_delegation(self, node_id, node_count, delegated):              # pylint: disable=unused-argument
-        """Solve edge (return) delegation"""
-        if not self.nodes[node_id]["node"]["finished"]:
-            return
-        if "return" in delegated:
-            edge = delegated["return"]
-            self.add_edge(node_id, edge.node, edge.count, "return")
-
-    def visit_call(self, call):
-        delegated = self.use_delegated()
-        caller_id = self.add_node(call.caller)
-        self.nodes[caller_id]["repr"] = repr(call)
-
-        if delegated:
-            self.solve_delegation(caller_id, call.count, delegated)
-
-        self.delegated["call"] = Edge(caller_id, 1)
-        self.delegated["return"] = Edge(caller_id, 1)
-
-        call.called.visit(self)
-        return caller_id, call
-
-    def visit_group(self, group):
-        delegated = self.use_delegated()
-
-        node_map = {}
-        for element in viewvalues(group.nodes):
-            node_id, node = element.visit(self)
-            node_map[node] = node_id
-
-        self.solve_cis_delegation(node_map[group.next_element],
-                                  group.count, delegated)
-        self.solve_ret_delegation(node_map[group.last], group.count, delegated)
-
-        for previous, edges in viewitems(group.edges):
-            for nnext, count in viewitems(edges):
-                self.add_edge(node_map[previous], node_map[nnext],
-                              count, "sequence")
-
-        return node_map[group.next_element], group.next_element
-
-    def visit_single(self, single):
-        delegated = self.use_delegated()
-        node_id = self.add_node(single)
-        self.nodes[node_id]["repr"] = repr(single)
-
-        if delegated:
-            self.solve_delegation(node_id, single.count, delegated)
-        return node_id, single
-
-    def visit_mixed(self, mixed):
-        mixed.mix_results()
-        node_id, node = mixed.first.visit(self)
-        self.nodes[node_id]["duration"] = mixed.duration
-        return node_id, node
-
-    def visit_treeelement(self, tree_element):
-        return None, tree_element
-
-
-class ExactMatchVisitor(NoMatchVisitor):
-    """Create Dict Exact Match from Intermediate Tree"""
-
-    def visit_single(self, single):
-        _single = Single(single.activation)
-        _single.level = single.level
-        _single.use_id = False
-        return _single
-
-    def visit_mixed(self, mixed):
-        mixed.use_id = False
-        _mixed = Mixed(mixed.elements[0].visit(self))
-        for element in mixed.elements[1:]:
-            _mixed.add_element(element.visit(self))
-        _mixed.level = mixed.level
-        return _mixed
-
-    def visit_group(self, group):
-        nodes = list(viewkeys(group.nodes))
-        _group = Group()
-        _group.use_id = False
-        _group.initialize(nodes[1].visit(self), nodes[0].visit(self))
-        for element in nodes[2:]:
-            _group.add_subelement(element.visit(self))
-        _group.level = group.level
-        return _group
-
-    def visit_call(self, call):
-        caller = call.caller.visit(self)
-        called = call.called.visit(self)
-        _call = Call(caller, called)
-        _call.use_id = False
-        _call.level = call.level
-        return _call
-
-    def visit_treeelement(self, tree_element):
-        return tree_element
-
-
-def update_namespace_node(node, single):
-    """Update node information"""
-    node["count"] += single.count
-    node["duration"] += single.duration
-    node["info"].add_activation(single.activation)
-
-
-class NamespaceVisitor(NoMatchVisitor):
-    """Create Dict Namespace from Intermediate Tree"""
-
-    def __init__(self):
-        super(NamespaceVisitor, self).__init__()
-        self.context = {}
-        self.context_edges = {}
-        self.namestack = []
-
-    def update_edges(self):
-        pass
-
-    def namespace(self):
-        """Return current namespace"""
-        return " ".join(self.namestack)
-
-    def add_node(self, single):
-        self.namestack.append(single.name_id())
-        namespace = self.namespace()
-        self.namestack.pop()
-        if namespace in self.context:
-            context = self.context[namespace]
-            update_namespace_node(context["node"], single)
-
-            return self.context[namespace]["index"]
-
-        single.namespace = namespace
-        result = super(NamespaceVisitor, self).add_node(single)
-        self.context[namespace] = self.nodes[-1]
-        return result
-
-    def add_edge(self, source, target, count, typ):
-
-        edge = "{} {} {}".format(source, target, typ)
-        if edge not in self.context_edges:
-            super(NamespaceVisitor, self).add_edge(source, target,
-                                                   count, typ)
-            self.context_edges[edge] = self.edges[-1]
+        Insert node, create match, and create call edge
+        """
+        self.stack.append(last)
+        
+        match = self.calculate_match(call)
+        node = self.matches[last.index].get(match)
+        if node is None:
+            node = self.insert_node(call, last, match)
         else:
-            _edge = self.context_edges[edge]
-            _edge["count"] += count
+            self.merge(node, call)
+        self.add_edge(last, node, 'call')
+        return node
 
-    def visit_call(self, call):
-        self.namestack.append(call.caller.name_id())
-        result = super(NamespaceVisitor, self).visit_call(call)
-        self.namestack.pop()
+    def insert_return(self, last):
+        """Insert return
+
+        Create return edge
+        """
+        temp = self.stack.pop()
+        self.add_edge(last, temp, 'return')
+        return temp
+
+    def insert_sequence(self, call, last):
+        """Insert sequence
+
+        Check if match exists in last.parent. Create node if it doesn't.
+        Insert sequence edge from last to call
+        """
+        match = self.calculate_match(call)
+        node = self.matches[last.parent_index].get(match)
+        if node is None:
+            node = self.insert_node(call, self.nodes[last.parent_index], match)
+        else:
+            self.merge(node, call)
+        self.add_edge(last, node, 'sequence')
+        return node
+
+    def __call__(self, preorder):
+
+        for call in preorder:
+            if not call.caller_id:
+                last = self.insert_first(call)
+                continue
+            if call.caller_id > last.caller_id:
+                last = self.insert_call(call, last)
+                continue
+
+            while call.caller_id < last.caller_id:
+                last = self.insert_return(last)
+
+            if call.caller_id == last.caller_id:
+                last = self.insert_sequence(call, last)
+
+        while self.stack:
+            last = self.insert_return(last)
+
+        return self
+
+
+class LineNameSummarization(Summarization):
+    """Summarize Activations by line and name"""
+    # ToDo: Diff equivalent
+
+    def merge(self, node, activation):
+        """Extract id from activation and insert into idlist"""
+        trial_id = activation.trial_id
+        if trial_id not in node.trial_ids:
+            node.trial_ids.append(trial_id)
+        node.activations[trial_id].append(activation.id)
+        node.duration[trial_id] += activation.duration
+
+        node.tooltip[trial_id] += "T{} - {}<br>Line {}<br>".format(
+            trial_id, activation.id, activation.line
+        )
+
+    def calculate_match(self, node):
+        """Calculate match. Use line and name"""
+        return (node.line, node.name)
+
+
+class NoMatchSummarization(LineNameSummarization):
+    """Create repr for all nodes. Does not summarize tree"""
+    # ToDo: Diff equivalent
+
+    def __init__(self, preorder):
+        self.match_id = 0
+        super(NoMatchSummarization, self).__init__(preorder)
+
+    def calculate_match(self, node):
+        """No match"""
+        self.match_id += 1
+        return self.match_id
+
+    def insert_node(self, activation, parent, match=None):
+        """Insert node. Create base repr"""
+        node = super(NoMatchSummarization, self).insert_node(
+            activation, parent, match
+        )
+        node.repr = '{0.line}-{0.name}'.format(activation)
+        return node
+
+    def insert_call(self, call, last):
+        """Insert call.
+        Add opening parenthesis to caller"""
+        last.repr += "("
+        return super(NoMatchSummarization, self).insert_call(call, last)
+
+    def insert_return(self, last):
+        """Insert return.
+        Add last activation to caller and close parenthesis"""
+        parent = super(NoMatchSummarization, self).insert_return(last)
+        parent.repr += last.repr + ")"
+        return parent
+
+    def insert_sequence(self, call, last):
+        """Inser last caller and comma to caller"""
+        if not last.children:
+            self.nodes[last.parent_index].repr += last.repr + ","
+        return super(NoMatchSummarization, self).insert_sequence(call, last)
+
+
+class StructureSummarization(Summarization):
+    """Summarize by substructure"""
+
+    def merge(self, node, activation):
+        """Extract ids from activation node and insert into idlist"""
+        for trial_id in activation.trial_ids:
+            node.activations[trial_id].extend(activation.activations[trial_id])
+            node.duration[trial_id] += activation.duration[trial_id]
+            node.tooltip[trial_id] += activation.tooltip[trial_id] + "<br>"
+            if trial_id not in node.trial_ids:
+                node.trial_ids.append(trial_id)
+
+    def calculate_match(self, node):
+        """Match by repr"""
+        return (node.repr,)
+
+    def __call__(self, preorder):
+        return super(StructureSummarization, self).__call__(
+            NoMatchSummarization(preorder).nodes
+        )
+
+
+class TreeSummarization(NoMatchSummarization):
+    """Build tree"""
+
+    def __call__(self, preorder):
+        result = super(TreeSummarization, self).__call__(preorder)
+        self.edges.clear()
+        stack = [self.root]
+        while stack:
+            current = stack.pop()
+            for index, child in enumerate(current.children):
+                self.add_edge(current, child, 'call', index)
+                stack.append(child)
         return result
-
-    def visit_mixed(self, mixed):
-        node_id, node = None, None
-        for element in mixed.elements:
-            node_id, node = element.visit(self)
-        return node_id, node
-
-
-def sequence(previous, nnext):
-    """Create Group or add Node to it"""
-    if isinstance(nnext, Group):
-        nnext.add_subelement(previous)
-        return nnext
-    return Group().initialize(previous, nnext)
-
-
-def create_group(group_list):
-    """Transform a list of Single activations into a group"""
-    _next = group_list.pop()
-    while group_list:
-        _previous = group_list.pop()
-        _next = sequence(_previous, _next)
-    return _next
-
-
-def recursive_generate_graph(trial, single, depth):
-    """Generate Graph up to the depth"""
-    if not depth:
-        return single
-    children = []
-    for act in single.activation.children:
-        child = Single(act)
-        child.level = single.level + 1
-        children.append(recursive_generate_graph(trial, child, depth - 1))
-
-    if children:
-        group = create_group(children)
-        call = Call(single, group)
-        call.level = single.level
-        group.level = single.level + 1
-        return call
-
-    return single
-
-
-def generate_graph(trial, depth=1000):
-    """Return the activation graph"""
-    activations = list(trial.initial_activations)
-    if not activations:
-        tree = TreeElement(level=0)
-        tree.trial_id = trial.id
-        return tree
-
-    return recursive_generate_graph(trial, Single(activations[0]), depth - 1)
 
 
 cache = prepare_cache(                                                           # pylint: disable=invalid-name
@@ -359,7 +304,6 @@ class TrialGraph(Graph):
        Present trial graph on Jupyter"""
 
     def __init__(self, trial):
-        self._graph = None
         self.trial = weakref.proxy(trial)
 
         self.use_cache = True
@@ -373,58 +317,36 @@ class TrialGraph(Graph):
             3: self.namespace_match
         }
 
-    @cache("graph")
-    def graph(self):
-        """Generate an activation tree structure"""
-        if self._graph is None:
-            self._graph = generate_graph(self.trial)
-        return self.trial.finished, self._graph
+    def result(self, summarization):
+        """Get summarization graph result"""
+        return self.trial.finished, summarization.graph(
+            {self.trial.id: 0}, self.width, self.height
+        ), summarization.nodes
 
     @cache("tree")
     def tree(self):
         """Convert tree structure into dict tree structure"""
-        finished, graph = self.graph()
-        visitor = TreeVisitor()
-        graph.visit(visitor)
-        return finished, visitor.to_dict()
+        return self.result(TreeSummarization(self.trial.activations))
 
     @cache("no_match")
     def no_match(self):
         """Convert tree structure into dict graph without node matchings"""
-        finished, graph = self.graph()
-        visitor = NoMatchVisitor()
-        graph.visit(visitor)
-        return finished, visitor.to_dict()
+        return self.result(NoMatchSummarization(self.trial.activations))
 
     @cache("exact_match")
     def exact_match(self):
         """Convert tree structure into dict graph and match equal calls"""
-        finished, graph = self.graph()
-        graph = graph.visit(ExactMatchVisitor())
-        visitor = NoMatchVisitor()
-        graph.visit(visitor)
-        return finished, visitor.to_dict()
+        return self.result(StructureSummarization(self.trial.activations))
 
     @cache("namespace_match")
     def namespace_match(self):
         """Convert tree structure into dict graph and match namespaces"""
-        finished, graph = self.graph()
-        visitor = NamespaceVisitor()
-        graph.visit(visitor)
-        return finished, visitor.to_dict()
+        return self.result(LineNameSummarization(self.trial.activations))
 
-    def _repr_html_(self):
-        """Display d3 graph on jupyter notebook"""
-        uid = str(int(time.time() * 1000000))
-
-        result = """
-            <div class="nowip-trial" data-width="{width}"
-                 data-height="{height}" data-uid="{uid}"
-                 data-id="{id}">
-                {data}
-            </div>
-        """.format(
-            uid=uid, id=self.trial.id,
-            data=self.escape_json(self._modes[self.mode]()[1]),
-            width=self.width, height=self.height)
-        return result
+    def _ipython_display_(self):
+        from IPython.display import display
+        bundle = {
+            'application/noworkflow.trial+json': self._modes[self.mode]()[1],
+            'text/plain': 'Trial {}'.format(self.trial.id),
+        }
+        display(bundle, raw=True)

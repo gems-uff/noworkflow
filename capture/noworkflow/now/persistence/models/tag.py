@@ -148,3 +148,13 @@ class Tag(AlchemyProxy):
             name=new_tag, timestamp=datetime.now()
         ))
         session.commit()
+
+    @classmethod  # query
+    def auto_tags(cls, session=None):
+        """Return auto tags
+        Keyword arguments:
+        session -- specify session for loading (default=relational.session)
+        """
+        model = cls.m
+        session = session or relational.session
+        return session.query(model).filter(model.type == "AUTO")

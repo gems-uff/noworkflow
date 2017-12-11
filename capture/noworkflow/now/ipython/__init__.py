@@ -22,8 +22,6 @@ def init(path=None, ipython=None):
     """
 
     import os
-    from IPython.display import display_html
-    from ..utils.functions import resource
     from .magics import register_magics
     try:
         from .hierarchymagic import load_ipython_extension as load_hierarchy
@@ -37,42 +35,5 @@ def init(path=None, ipython=None):
     if path is None:
         path = os.getcwd()
     persistence_config.connect(path)
-
-    js_files = [
-        u"vis/static/d3-v3.4.11/d3.min.js",
-        u"vis/static/trial_graph.js",
-        u"vis/static/history_graph.js",
-        u"vis/static/ipython.js",
-    ]
-
-    require_js = u"""
-        <!DOCTYPE html>
-        <meta charset="utf-8">
-        <body>
-            <script charset="utf-8">
-            var now_temp = define;
-            define = undefined;
-            {0}
-            define = now_temp;
-            </script>
-        </body
-    """
-    js_text = [resource(js_file, u"utf-8") for js_file in js_files]
-
-    display_html(
-        require_js.format(";\n".join(js_text)),
-        raw=True
-    )
-
-    css_files = [
-        u"vis/static/font-awesome-4.3.0/css/font-awesome-ip.css",
-        u"vis/static/shared_graph.css",
-    ]
-
-    css_lines = [u"<style>"]
-    for css_file in css_files:
-        css_lines.append(resource(css_file, u"utf-8"))
-    css_lines.append(u"</style>")
-    display_html(u"\n".join(css_lines), raw=True)
 
     return u"ok"

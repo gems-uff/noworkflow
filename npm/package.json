@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {
+    "lerna": "^2.3.1"
+  },
+  "scripts": {
+    "install": "lerna bootstrap --hoist",
+    "build": "lerna run build",
+    "clean": "lerna run clean",
+    "publish": "npm run clean && npm run build && lerna publish -m \"Publish\""
+  }
+}

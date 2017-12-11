@@ -325,11 +325,15 @@ class Trial(AlchemyProxy):
         """Run prolog query"""
         return self.prolog.query(query)
 
-    def _repr_html_(self):
-        """Display d3 graph on ipython notebook"""
+    def _ipython_display_(self):
+        """Display history graph"""
         if hasattr(self, "graph"):
-            return self.graph._repr_html_()                                      # pylint: disable=protected-access
-        return repr(self)
+            # pylint: disable=protected-access
+            return self.graph._ipython_display_()
+        from IPython.display import display
+        display({
+            'text/plain': 'Trial {}'.format(self.id)
+        }, raw=True)
 
     def show(self, _print=print):
         """Print trial information"""
@@ -555,3 +559,34 @@ class Trial(AlchemyProxy):
         """
         session = session or relational.session
         return proxy_gen(session.query(cls.m))
+
+    def match_status(self, status):
+        """Check if trial statuses matches
+        """
+        if status == "*":
+            return True
+        return self.status == status
+
+    def match_script(self, script):
+        """Check if trial scripts matches
+        """
+        if script == "*":
+            return True
+        return self.script == script
+
+    @property
+    def str_start(self):
+        """Return start date as string"""
+        return str(self.start)
+
+    @property
+    def str_finish(self):
+        """Return start date as string"""
+        return str(self.finish)
+
+    @classmethod  # query
+    def count(cls, session=None):
+        """Count number of trials on database
+        """
+        session = session or relational.session
+        return session.query(cls.m).count()

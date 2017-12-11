@@ -11,14 +11,14 @@ from collections import OrderedDict
 from future.utils import viewkeys
 
 from .base import Model, proxy_gen
-from .graphs.diff_graph import DiffGraph
 from .trial import Trial
+from .graphs.diff_graph import DiffGraph
 
 
 class Diff(Model):
     """This model represents a diff between two trials
     Initialize it by passing both trials ids:
-        diff = Diff(2)
+        diff = Diff(1, 2)
 
     There are four visualization modes for the graph:
         tree: activation tree without any filters
@@ -32,15 +32,6 @@ class Diff(Model):
             diff.graph.mode = 3
 
 
-    There are also three visualization modes for the diff:
-        combine graphs: combines both trial graphs
-            diff.graph.view = 0
-        side by side: displays both graphs side by side
-            diff.graph.view = 1
-        combined and side by side: combine graphs and displays both separated
-            diff.graph.view = 2
-
-
     You can change the graph width and height by the variables:
         diff.graph.width = 600
         diff.graph.height = 400
@@ -52,8 +43,6 @@ class Diff(Model):
         "graph.width": 500,
         "graph.height": 500,
         "graph.mode": 3,
-        "graph.view": 0,
-        "graph.neighborhoods": 3,
         "graph.time_limit": None,
     }
 
@@ -61,8 +50,6 @@ class Diff(Model):
         "graph_width": "graph.width",
         "graph_height": "graph.height",
         "graph_mode": "graph.mode",
-        "graph_view": "graph.view",
-        "graph_neighborhoods": "graph.neighborhoods",
         "graph_time_limit": "graph.time_limit",
     }
 
@@ -105,8 +92,18 @@ class Diff(Model):
             set(self.trial2.file_accesses),
             create_replaced=False)
 
-    def _repr_html_(self):
-        return self.graph._repr_html_()                                          # pylint: disable=protected-access
+    def _ipython_display_(self):
+        """Display history graph"""
+        if hasattr(self, "graph"):
+            # pylint: disable=protected-access
+            return self.graph._ipython_display_()
+        from IPython.display import display
+        display({
+            'text/plain': 'Diff {}:{}'.format(
+                self.trial1.id,
+                self.trial2.id
+            )
+        })
 
 
 def diff_dict(before, after):

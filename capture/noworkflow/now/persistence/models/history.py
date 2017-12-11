@@ -6,9 +6,10 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from ..models.base import Model
+from ..models.trial import Trial
+
 from .graphs.history_graph import HistoryGraph
-from .base import Model
-from .trial import Trial
 
 
 class History(Model):
@@ -46,6 +47,7 @@ class History(Model):
         "graph.use_cache": True,
         "script": "*",
         "status": "*",
+        "summarize": False,
     }
 
     REPLACE = {
@@ -58,6 +60,7 @@ class History(Model):
         super(History, self).__init__(**kwargs)
         self.script = "*"
         self.status = "*"
+        self.summarize = False
         self.graph = HistoryGraph(self)
         self.initialize_default(kwargs)
         self.status_options = ["*", "finished", "unfinished", "backup"]
@@ -67,9 +70,9 @@ class History(Model):
         """Return a set of scripts used for trials"""
         return Trial.distinct_scripts()
 
-    def _repr_html_(self):
-        """Display d3 graph on ipython notebook"""
-        return self.graph._repr_html_()                                          # pylint: disable=protected-access
+    def _ipython_display_(self):
+        """Display history graph"""
+        self.graph._ipython_display_()
 
     def __repr__(self):
         return repr(self.graph)

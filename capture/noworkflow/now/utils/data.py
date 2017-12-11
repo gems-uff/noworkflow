@@ -45,3 +45,13 @@ class HashableDict(dict):
 
     def __eq__(self, other):
         return self.key() == other.key()
+
+
+class DotDict(dict):
+    """Dict that can be accessed by attributes"""
+    def __getattr__(self, attr):
+        if attr in self:
+            return self[attr]
+        return dict.__getattr__(self, attr)
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__

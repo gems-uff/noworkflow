@@ -1,87 +1,12 @@
-{% extends "base.html" %}
-{% block css %}
-<link rel="stylesheet" href="shared_graph.css">
-<link rel="stylesheet" href="index.css">
-{% endblock %}
-{% block body %}
-      <div id="splitter">
-        <div id="top">
-          <div class="filter" style="display: none;">
-            <div class="internal">
-              <select name="script" class="select-style">
-                <option value="*"> All Scripts </option>
-                {% for script in scripts %}
-                  <option value="{{ script }}">{{ script }}</option>
-                {% endfor %}
-              </select>
-              <select name="execution" class="select-style exec-selection">
-                <option value="*"> All Statuses </option>
-                <option value="finished"> Finished Trials </option>
-                <option value="unfinished"> Unfinished Trials </option>
-                <option value="backup"> Backup Trials </option>
-              </select>
-
-              <a href="#" class="link-button" id="reload"><i class="fa fa-refresh"></i> Reload</a>
-            </div>
-          </div>
-          <div id="history" class="now-history now" style="overflow: auto">
-            <div class="toolbar">
-               <input id="show-filter-check" type="checkbox" name="show-filter-check" value="show">
-               <label title="Filter" id="show-filter-toolbar"><i class="fa fa-circle"></i></label>
-               <a class="toollink" id="restore-history-zoom" href="#" title="Restore zoom"><i class="fa fa-eye"></i></a>
-               <input id="show-history-tooltips" type="checkbox" name="show-history-tooltips" value="show">
-               <label for="show-history-tooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
-               <a href="#" class="toollink" id="download-history" title="Download history SVG"><i class="fa fa-download"></i></a>
-            </div>
-            <div id="historygraph" class="now-history-graph">
-            </div>
-          </div>
-        </div>
-        <div id="show" class="now-trial now">
-          <div id="graphbox">
-            <div id="graphselector" style="display: none;">
-              <div class="graph-attr">
-                <label for="graphtype" title="Select the graph type">Graph Type:</label>
-                <select id="graphtype" class="select-style">
-                  <option value="tree" data-description="Activation tree. Edges represent order of execution">Tree</option>
-                  <option value="no_match" data-description="Activation tree presented as a Graph">No Match</option>
-                  <option value="exact_match" data-description="Calls have counting independent from caller activations">Exact Match</option>
-                  <option selected value="namespace_match" data-description="Calls are combined and a function may have more than one call workflow">Namespace Match</option>
-                </select>
-              </div>
-              <div class="graph-attr">
-                <input type="checkbox" name="use_cache" value="on" checked id="use_cache">
-                <label for="use_cache" title="Select the graph type">Use Cache</label>
-              </div>
-              <a href="#" class="link-button" id="reload_graph"><i class="fa fa-refresh"></i> Reload Graph</a>
-            </div>
-            <form class="toolbar">
-              <label title="Change graph type" id="show-graph-toolbar"><span id="graph-title">Namespace Match</span> <i class="fa fa-circle"></i></label>
-
-              <input id="trial-toolbar-trial-fullname" type="checkbox" name="trial-toolbar-trial-fullname" value="show">
-              <label for="trial-toolbar-trial-fullname" title="Hide activations full name"><i class="fa fa-font"></i></label>
-
-              <input id="trial-toolbar-tooltips" type="checkbox" name="trial-toolbar-tooltips" value="show">
-              <label for="trial-toolbar-tooltips" title="Show tooltips on mouse hover"><i class="fa fa-comment"></i></label>
-              <a href="#" class="toollink" id="download-trial" title="Download graph SVG"><i class="fa fa-download"></i></a>
-            </form>
-            <div id="loadingDiv">
-              <i class="fa fa-spinner fa-pulse"></i>
-            </div>
-            <div id="graph" class="now-trial-graph"></div>
-          </div>
-          <div id="side">
-            <div id="side-internal"></div>
-
-          </div>
-        </div>
-      </div>
-{% endblock %}
-{% block js %}
-  <script src="d3-v3.4.11/d3.min.js" charset="utf-8"></script>
-  <script src="external/Blob.js" charset="utf-8"></script>
-  <script src="external/FileSaver.min.js" charset="utf-8"></script>
-  <script src="history_graph.js" charset="utf-8"></script>
-  <script src="trial_graph.js" charset="utf-8"></script>
-  <script src="index.js" charset="utf-8"></script>
-{% endblock %}
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Graph</title>
+  <link rel="stylesheet" href="font-awesome-4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+  <div id="graph">
+  </div>
+  <script src="dist/bundle.js"></script>
+</body>
+</html>
