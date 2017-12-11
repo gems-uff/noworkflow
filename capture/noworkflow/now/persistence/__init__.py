@@ -7,12 +7,15 @@ from __future__ import (absolute_import, print_function,
                         division)
 
 from .config import PersistenceConfig
-from .content_database import ContentDatabase
+from .content_database_factory import ContentDatabaseFactory
 from .relational_database import RelationalDatabase
 
-persistence_config = PersistenceConfig()                                         # pylint: disable=invalid-name
-content = ContentDatabase(persistence_config)                                    # pylint: disable=invalid-name
-relational = RelationalDatabase(persistence_config)                              # pylint: disable=invalid-name
+persistence_config = PersistenceConfig(
+)                                         # pylint: disable=invalid-name
+content = ContentDatabaseFactory.factory(
+    persistence_config)                                    # pylint: disable=invalid-name
+relational = RelationalDatabase(
+    persistence_config)                              # pylint: disable=invalid-name
 
 
 def get_serializer(arg):                                                         # pylint: disable=unused-argument
@@ -30,5 +33,5 @@ __all__ = [
     "persistence_config",
     "content",
     "relational",
-    "get_serializer",
+    "get_serializer"
 ]

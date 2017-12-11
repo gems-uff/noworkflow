@@ -13,6 +13,7 @@ import sys
 from ..collection.metadata import Metascript
 from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
+from ..persistence import content
 from ..utils.cross_version import PY3
 
 from .command import Command
@@ -45,7 +46,7 @@ class ScriptArgs(argparse.Action):                                              
         setattr(namespace, "argv", values)
 
 
-def run(metascript):
+def run(metascript, args=None):
     """Execute noWokflow to capture provenance from script"""
     try:
         metascript.trial_id = Trial.store(*metascript.create_trial_args())
@@ -62,6 +63,17 @@ def run(metascript):
         io.print_msg("collection execution provenance")
         metascript.execution.collect_provenance()
         metascript.execution.store_provenance()
+
+        if args.message:
+            message = args.message
+        else:
+            message = 'No message'
+
+        content.commit_content(message)
+
+        if args.gargabe_collection:
+            print("garbage collection")
+            content.gc()
 
         metaprofiler.meta_profiler.save()
 
@@ -146,6 +158,11 @@ class Run(Command):
                      "be created in this path. Default to script directory")
         add_arg("-v", "--verbose", action="store_true",
                 help="increase output verbosity")
+        add_arg("-gc", "--gargabe_collection", action="store_true",
+                help="collect the garbage on content database")
+
+        add_arg("--message", type=str,
+                help="This option allow add a message to the commit of the trial")
 
         # Internal
         add_arg("--disasm0", action="store_true", help=argparse.SUPPRESS)
@@ -173,4 +190,4 @@ class Run(Command):
         metascript.clear_namespace()
 
         # Run script
-        run(metascript)
+        run(metascript, args)
