@@ -46,7 +46,6 @@ class ContentDatbaseDulwich(ContentDatabase):
         if not isdir(self.content_path):
             os.makedirs(self.content_path)
             Repo.init_bare(self.content_path)
-            print('connect')
             self.__create_initial_commit()
 
 
@@ -142,6 +141,7 @@ class ContentDatbaseDulwich(ContentDatabase):
         self.__get_repo().refs[b'refs/heads/master'] = commit_hash
 
     def gc(self, aggressive=False):
+        print("content path: {0}".format(self.content_path))
         git_system.garbage_collection(self.content_path, aggressive)
 
     def __get_repo(self):
