@@ -82,9 +82,14 @@ def commit_tree(git_path, tree_hash, commit_message):
         return out.decode().replace("\n", "")
 
 
-def garbage_collection(git_path):
-    p = subprocess.Popen(['git gc', '--quiet'], cwd=git_path, shell=True,
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def garbage_collection(git_path, aggressive=False):
+    if not aggressive:
+        p = subprocess.Popen(['git gc', '--quiet'], cwd=git_path, shell=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        p = subprocess.Popen(['git gc', "--aggressive", '--quiet'], cwd=git_path, shell=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     out, err = p.communicate()
     p.wait()
     if err:

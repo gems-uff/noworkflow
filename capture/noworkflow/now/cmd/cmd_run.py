@@ -74,6 +74,10 @@ def run(metascript, args=None):
         if args.gargabe_collection:
             print("garbage collection")
             content.gc()
+        elif args.garbage_collection_aggressive:
+            print("garbage collection aggressive")
+            content.gc(True)
+
 
         metaprofiler.meta_profiler.save()
 
@@ -160,6 +164,8 @@ class Run(Command):
                 help="increase output verbosity")
         add_arg("-gc", "--gargabe_collection", action="store_true",
                 help="collect the garbage on content database")
+        add_arg("-gca", "--garbage_collection_aggressive", action="store_true",
+                help="collect aggressively the garbage on content database")
 
         add_arg("--message", type=str,
                 help="This option allow add a message to the commit of the trial")

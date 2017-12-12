@@ -141,8 +141,8 @@ class ContentDatbaseDulwich(ContentDatabase):
                         """
         self.__get_repo().refs[b'refs/heads/master'] = commit_hash
 
-    def gc(self):
-        git_system.garbage_collection(self.content_path)
+    def gc(self, aggressive=False):
+        git_system.garbage_collection(self.content_path, aggressive)
 
     def __get_repo(self):
         """Returns the current git repository object"""
