@@ -9,6 +9,7 @@ from .content_database_standart import ContentDatabaseStandart
 
 from .content_database_pure_git import ContentDatabasePureGit
 from .content_database_dulwich import ContentDatbaseDulwich
+from .content_database_pygit import ContentDatbasePyGit
 
 
 CONTENT_DIRNAME = "content"
@@ -18,4 +19,4 @@ class ContentDatabaseFactory(object):
 
     @staticmethod
     def factory(persistence_config):
-        return ContentDatbaseDulwich(persistence_config)
+        return ContentDatbasePyGit(persistence_config)

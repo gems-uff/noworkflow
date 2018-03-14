@@ -10,7 +10,6 @@ import os
 
 from os.path import join, isdir, isfile
 
-
 CONTENT_DIRNAME = "content"
 
 
@@ -30,4 +29,10 @@ class ContentDatabase(object):
         pass
 
     def gc(self):
+        pass
+
+    def put(self, content):
+        pass
+
+    def get(self, content_hash):
         pass

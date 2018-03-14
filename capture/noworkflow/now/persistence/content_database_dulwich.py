@@ -40,6 +40,7 @@ class ContentDatbaseDulwich(ContentDatabase):
             return self.temp[content_hash]
         ContentDatabaseStandart.put = put
         ContentDatabaseStandart.get = get'''
+        pass
 
     def connect(self, config):
         """Create content directory"""
