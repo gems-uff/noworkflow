@@ -67,6 +67,10 @@ class DependencyConfig(object):                                                 
         self.max_depth = float("inf")
         self.show_internal_use = True
         self.mode = "simulation"
+        self.rankdir = "RL"
+        self.hide_lines = False
+        self.node_fontsize = "20"
+        self.cluster_fontsize = "30"
 
     @classmethod
     def create_arguments(cls, add_arg, mode="prospective"):
@@ -110,7 +114,15 @@ class DependencyConfig(object):                                                 
                      "It shows all dependencies between calls that we do\n"
                      "do not have definitions and that could change some \n"
                      "program state, creating an implicit dependency")
-
+        add_arg("--rankdir", type=str, default="RL",
+                help="set rankdir of dataflow graph")
+        add_arg("--node-fontsize", type=str, default="20",
+                help="set node fontsize")
+        add_arg("--cluster-fontsize", type=str, default="30",
+                help="set cluster fontsize")
+        add_arg("--hide-lines", action="store_true",
+                help="hide lines in output graph")
+        
 
     def read_args(self, args):
         """Read config from args"""
@@ -122,6 +134,10 @@ class DependencyConfig(object):                                                 
         self.rank_line = bool(args.rank_line)
         self.mode = args.mode
         self.show_blackbox_dependencies = bool(args.black_box)
+        self.rankdir = args.rankdir
+        self.hide_lines = bool(args.hide_lines)
+        self.node_fontsize = bool(args.node_fontsize)
+        self.cluster_fontsize = bool(args.cluster_fontsize)
 
 
 class DependencyFilter(object):                                                  # pylint: disable=too-many-instance-attributes
@@ -216,7 +232,7 @@ class DependencyFilter(object):                                                 
                     self._add_variable(access, fcluster)
                 else:
                     access = accesses[access.name]
-                if set("r+") & set(access.mode):
+                if set("Ur+") & set(access.mode):
                     self.departing_arrows[variable][access] = "dashed"
                     self.arriving_arrows[access][variable] = "dashed"
                 if set("wxa+") & set(access.mode):
@@ -523,8 +539,8 @@ class DotVisitor(ActivationClusterVisitor):
     def visit_initial(self, cluster, ranks):
         """Visit initial activation"""
         self.result.append("digraph dependency {")
-        self.result.append("    rankdir=RL;")
-        self.result.append("    node[fontsize=20]")
+        self.result.append("    rankdir={};".format(self.filter.config.rankdir))
+        self.result.append("    node[fontsize={}]".format(self.filter.config.node_fontsize))
 
         for component in cluster.components:
             self.depth = cluster.depth
@@ -549,7 +565,7 @@ class DotVisitor(ActivationClusterVisitor):
             "subgraph cluster_{}  {{".format(cluster.activation_id)
         )
         self.result.append("    " * cluster.depth + 'color="#3A85B9";')
-        self.result.append("    " * cluster.depth + 'fontsize=30;')
+        self.result.append("    " * cluster.depth + 'fontsize={};'.format(self.filter.config.cluster_fontsize))
         self.result.append("    " * cluster.depth +
                            'label = "{}";'.format(cluster.name))
 
@@ -581,7 +597,7 @@ class DotVisitor(ActivationClusterVisitor):
             value = ""
 
         label_list = []
-        if variable.line:
+        if variable.line and not self.filter.config.hide_lines:
             label_list.append("{} ".format(variable.line))
         label_list.append(name)
         if value:
