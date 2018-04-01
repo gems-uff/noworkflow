@@ -12,7 +12,7 @@ def is_git_installed():
 
 
 def init(path):
-    p = subprocess.Popen(["git", "init", path],
+    p = subprocess.Popen(["git", "init", "--bare", path],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     if err:
