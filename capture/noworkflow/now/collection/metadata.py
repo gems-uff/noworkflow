@@ -21,7 +21,8 @@ from ..persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 from ..persistence.lightweight import CodeComponentLW, CodeBlockLW
 from ..persistence.lightweight import CompositionLW
 from ..persistence.lightweight import EvaluationLW, ActivationLW, DependencyLW
-from ..persistence.lightweight import ValueLW, CompartmentLW, FileAccessLW
+from ..persistence.lightweight import ValueLW, CompartmentLW
+from ..persistence.lightweight import MemberLW, FileAccessLW
 from ..persistence.lightweight import ExceptionLW
 from ..utils import io
 
@@ -58,6 +59,7 @@ class Metascript(object):                                                       
         self.evaluations_store = ObjectStore(EvaluationLW)
         self.activations_store = SharedObjectStore(ActivationLW)
         self.dependencies_store = ObjectStore(DependencyLW)
+        self.members_store = ObjectStore(MemberLW)
         self.values_store = ObjectStore(ValueLW)
         self.compartments_store = ObjectStore(CompartmentLW)
         self.file_accesses_store = ObjectStore(FileAccessLW)

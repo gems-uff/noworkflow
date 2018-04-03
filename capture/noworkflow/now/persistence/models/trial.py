@@ -121,6 +121,8 @@ class Trial(AlchemyProxy):
     [value(...)., ...]
     >>> list(trial.compartments)  # doctest: +ELLIPSIS
     [compartment(...).]
+    >>> list(trial.members)  # doctest: +ELLIPSIS
+    [member(...).]
     >>> list(trial.dependencies)  # doctest: +ELLIPSIS
     [dependency(...)., ...]
     >>> list(trial.tags)  # doctest: +ELLIPSIS
@@ -192,6 +194,7 @@ class Trial(AlchemyProxy):
     values = many_viewonly_ref("trial", "Value")
 
     compartments = many_viewonly_ref("trial", "Compartment")
+    members = many_viewonly_ref("trial", "Member")
 
     dependencies = many_viewonly_ref("trial", "Dependency")
     compositions = many_viewonly_ref("trial", "Composition")

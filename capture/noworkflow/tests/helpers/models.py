@@ -19,6 +19,7 @@ from ...now.persistence.lightweight import ActivationLW, EvaluationLW
 from ...now.persistence.lightweight import ValueLW, CompartmentLW
 from ...now.persistence.lightweight import DependencyLW, FileAccessLW
 from ...now.persistence.lightweight import ModuleLW
+from ...now.persistence.lightweight import MemberLW
 from ...now.persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 
 from ...now.persistence.models.trial import Trial
@@ -36,7 +37,7 @@ m1, m2 = 1, 2
 def restart_object_store(trial_id=None):
     """Restart all object store"""
     global components, blocks, evaluations, activations, dependencies
-    global file_accesses, values, compartments, modules
+    global file_accesses, values, compartments, modules, members
     global environment_attrs, arguments
     global meta
 
@@ -53,6 +54,7 @@ def restart_object_store(trial_id=None):
     file_accesses = meta.file_accesses_store
     values = meta.values_store
     compartments = meta.compartments_store
+    members = meta.members_store
     modules = meta.modules_store
     environment_attrs = meta.environment_attrs_store
     arguments = meta.arguments_store
@@ -74,6 +76,7 @@ def erase_database():
     relational.session.execute(FileAccessLW.model.t.delete())
     relational.session.execute(ValueLW.model.t.delete())
     relational.session.execute(CompartmentLW.model.t.delete())
+    relational.session.execute(MemberLW.model.t.delete())
     relational.session.execute(ModuleLW.model.t.delete())
     relational.session.execute(EnvironmentAttrLW.model.t.delete())
     relational.session.execute(ArgumentLW.model.t.delete())
@@ -223,6 +226,17 @@ class ConfigObj(object):
             code_component_id, activation_id, value_id=value_id, moment=moment
         ))
 
+    def member(self, collection_activation_id, collection_id,
+               member_activation_id, member_id, delta,
+               key="[0]", type_="Put"):
+        meta = self.meta
+        moment = self.start + timedelta(seconds=delta)
+        return meta.members_store.add(
+            meta.trial_id, collection_activation_id, collection_id,
+            member_activation_id, member_id, key, moment, type_ 
+        )
+
+
 class FuncConfig(ConfigObj):
 
     def __init__(self, name="f", first_line=1, first_column=0,
@@ -307,6 +321,8 @@ class AssignConfig(ConfigObj):
         self.call_line = call_line
         self.duration = duration
         self.code = None
+        self.list_id = None
+        self.list0_id = None
         self.write_variable_id = None
         self.read_variable_id = None
         self.arg_id = None
@@ -320,6 +336,8 @@ class AssignConfig(ConfigObj):
         self.array0_value = None
         self.a0comp = None
         self.start = None
+        self.list_eval = None
+        self.list0_eval = None
         self.a_write_eval = None
         self.f_variable_eval = None
         self.f_func_eval = None
@@ -327,6 +345,8 @@ class AssignConfig(ConfigObj):
         self.a_arg_eval = None
         self.f_activation = None
         self.b_write_eval = None
+
+        self.list0_member = None
 
         self.return_dependency = None
         self.b_dependency = None
@@ -342,6 +362,8 @@ class AssignConfig(ConfigObj):
         call = "{}({})".format(function.name, self.arg)
         self.meta = meta
         id_ = container_id
+        self.list_id = self.comp("[1]", "list", "r", id_)
+        self.list0_id = self.comp("1", "number", "r", id_)
         self.write_variable_id = self.comp(self.arg, "variable", "w", id_)
         self.read_variable_id = self.comp(self.arg, "variable", "r", id_,
                                           first_char_line=self.call_line)
@@ -355,6 +377,7 @@ class AssignConfig(ConfigObj):
                                  first_char_line=self.call_line)
         self.result_id = self.comp(self.result, "variable", "w", id_,
                                    first_char_line=self.call_line)
+
 
         return (
             self.write_variable_id, self.read_variable_id, self.arg_id,
@@ -379,38 +402,51 @@ class AssignConfig(ConfigObj):
         main_act = trial.main_act
         function = trial.function
 
+        self.list0_eval = self.evaluation(
+            self.list0_id, main_act, self.array0_value, 3)
+        self.list_eval = self.evaluation(
+            self.list_id, main_act, self.array_value, 4)
+        self.list0_member = self.member(main_act, self.list_eval, main_act, self.list0_eval,
+                    key="[0]", delta=4)
+
         self.a_write_eval = self.evaluation(
-            self.write_variable_id, main_act, self.array_value, 3)
+            self.write_variable_id, main_act, self.array_value, 4)
         self.f_variable_eval = self.evaluation(
-            self.func_variable_id, main_act, function.function_value, 4)
+            self.func_variable_id, main_act, function.function_value, 5)
         self.f_func_eval = self.evaluation(
-            self.func_id, main_act, function.function_value, 5)
+            self.func_id, main_act, function.function_value, 6)
         self.a_read_eval = self.evaluation(
-            self.read_variable_id, main_act, self.array_value, 5)
+            self.read_variable_id, main_act, self.array_value, 6)
         self.a_arg_eval = self.evaluation(
-            self.arg_id, main_act, self.array_value, 6)
+            self.arg_id, main_act, self.array_value, 7)
 
         self.f_activation = self.evaluation(
-            self.call_id, main_act, self.array_value, 7 + self.duration)
+            self.call_id, main_act, self.array_value, 8 + self.duration)
         self.meta.activations_store.add(*activation_params(
             self.meta.evaluations_store[self.f_activation], self.meta.trial_id,
             function.id, name=function.name,
-            start=self.start + timedelta(seconds=7)
+            start=self.start + timedelta(seconds=9)
         ))
 
         function.x_param_eval = self.evaluation(
-            function.param_variable, self.f_activation, self.array_value, 8)
+            function.param_variable, self.f_activation, self.array_value, 10)
         function.x_return_eval = self.evaluation(
-            function.param_return, self.f_activation, self.array_value, 9)
+            function.param_return, self.f_activation, self.array_value, 11)
         function.return_eval = self.evaluation(
-            function.return_, self.f_activation, self.array_value, 10)
+            function.return_, self.f_activation, self.array_value, 12)
         if function.global_name:
             function.global_eval = self.evaluation(
-                function.global_var, self.f_activation, self.array_value, 8)
+                function.global_var, self.f_activation, self.array_value, 13)
 
         self.b_write_eval = self.evaluation(
-            self.result_id, main_act, self.array_value, 11)
+            self.result_id, main_act, self.array_value, 14)
 
+        
+
+        self.meta.dependencies_store.add(
+            self.meta.trial_id,
+            main_act, self.a_write_eval,
+            main_act, self.list_eval, "bind")
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.a_read_eval,
@@ -635,6 +671,7 @@ def create_trial(
         trial.finished()
         meta.values_store.do_store()
         meta.compartments_store.do_store()
+        meta.members_store.do_store()
         meta.evaluations_store.do_store()
         meta.activations_store.do_store()
         meta.dependencies_store.do_store()

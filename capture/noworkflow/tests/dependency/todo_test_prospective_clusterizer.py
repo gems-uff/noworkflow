@@ -104,7 +104,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
                     "    return x\n"
                     "y = f('1')\n")
         self.clean_execution()
-
+        self.pdebug()
         trial = Trial()
         clusterizer = ProspectiveClusterizer(trial)
         clusterizer.run()

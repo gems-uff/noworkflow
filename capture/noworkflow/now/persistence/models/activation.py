@@ -19,6 +19,7 @@ from .base import backref_one, backref_many, backref_one_uselist
 from .base import query_many_property
 
 from .dependency import Dependency
+from .member import Member
 
 
 @proxy_class
@@ -64,6 +65,16 @@ class Activation(AlchemyProxy):
     Load evaluations that occured in the Activation:
     >>> list(activation.evaluations)  # doctest: +ELLIPSIS
     [evaluation(...)., ...]
+
+    >>> activation = trial.main.this_component.first_evaluation.this_activation
+
+    Load members in which an evaluation from Activation is the collection:
+    >>> list(activation.collection_membership)  # doctest: +ELLIPSIS
+    [member(...]
+
+    Load members in which an evaluation from Activation is the member:
+    >>> list(activation.member_membership)  # doctest: +ELLIPSIS
+    [member(...]
     """
     __tablename__ = "activation"
     __table_args__ = (
@@ -92,6 +103,16 @@ class Activation(AlchemyProxy):
         "dependency_activation", "Dependency",
         primaryjoin=((id == Dependency.m.dependency_activation_id) &
                      (trial_id == Dependency.m.trial_id)))
+
+
+    collection_membership = many_viewonly_ref(
+        "collection_activation", "Member",
+        primaryjoin=((id == Member.m.collection_activation_id) &
+                     (trial_id == Member.m.trial_id)))
+    member_membership = many_viewonly_ref(
+        "member_activation", "Member",
+        primaryjoin=((id == Member.m.member_activation_id) &
+                     (trial_id == Member.m.trial_id)))
 
 
     trial = backref_one("trial")  # Trial.activations
@@ -317,7 +338,7 @@ class Activation(AlchemyProxy):
         >>> activation = Activation((trial_id, assign.f_activation))
 
         Return activation finish time:
-        >>> activation.finish == activation.start + timedelta(seconds=50)
+        >>> activation.finish == activation.start + timedelta(seconds=49)
         True
         """
         return self.this_evaluation.moment
@@ -337,7 +358,7 @@ class Activation(AlchemyProxy):
 
         Return activation finish time:
         >>> activation.duration
-        43000000
+        42000000
         """
         return int((self.finish - self.start).total_seconds() * 1000000)
 

@@ -24,6 +24,7 @@ from .evaluation import Evaluation
 from .file_access import FileAccess, UniqueFileAccess
 from .graph_cache import GraphCache
 from .head import Head
+from .member import Member
 from .module import Module
 from .tag import Tag
 from .trial import Trial
@@ -34,7 +35,7 @@ ORDER = [
     Trial, Head, Tag, GraphCache, Argument, # Trial
     Module, EnvironmentAttr,  # Deployment
     CodeComponent, CodeBlock, Composition,  # Definition
-    Value, Compartment, Evaluation, Activation, Dependency,  # Execution
+    Value, Compartment, Evaluation, Activation, Dependency, Member,  # Execution
     FileAccess  # Execution
 ]
 

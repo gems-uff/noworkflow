@@ -19,6 +19,7 @@ from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
 from .base import backref_one, backref_many, proxy
 
 from .dependency import Dependency
+from .member import Member
 from .activation import Activation
 
 
@@ -144,7 +145,37 @@ class Evaluation(AlchemyProxy):
             (activation_id == Dependency.m.dependency_activation_id) &
             (trial_id == Dependency.m.trial_id)))
 
-    dependents = backref_many("dependents")  # Evaluation.dependencies
+    # memberships in which this evaluation is the collection
+    memberships_as_collection = many_viewonly_ref(
+        "collection", "Member",
+        primaryjoin=(
+            (id == Member.m.collection_id) &
+            (activation_id == Member.m.collection_activation_id) &
+            (trial_id == Member.m.trial_id))
+    )
+
+    # memberships in which this evaluation is the member
+    memberships_as_member = many_viewonly_ref(
+        "member", "Member",
+        primaryjoin=(
+            (id == Member.m.member_id) &
+            (activation_id == Member.m.member_activation_id) &
+            (trial_id == Member.m.trial_id)))
+
+    members = many_viewonly_ref(
+        "collections", "Evaluation",
+        secondary=Member.__table__,
+        primaryjoin=(
+            (id == Member.m.collection_id) &
+            (activation_id == Member.m.collection_activation_id) &
+            (trial_id == Member.m.trial_id)),
+        secondaryjoin=(
+            (id == Member.m.member_id) &
+            (activation_id == Member.m.member_activation_id) &
+            (trial_id == Member.m.trial_id)))
+
+    dependents = backref_many("dependencies")  # Evaluation.dependencies
+    collections = backref_many("members")  # Evaluation.members
     trial = backref_one("trial")  # Trial.evaluations
     code_component = backref_one("code_component")  # CodeComponent.evaluations
     value = backref_one("value") # Value.evaluations
@@ -211,7 +242,7 @@ class Evaluation(AlchemyProxy):
         >>> act == config.main_act
         True
 
-        >>> eid == assign.a_write_eval
+        >>> eid == assign.list_eval
         True
         """
         model = cls.m

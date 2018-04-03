@@ -18,6 +18,7 @@ from .environment_attr import EnvironmentAttrLW
 from .evaluation import EvaluationLW
 from .exception import ExceptionLW
 from .file_access import FileAccessLW
+from .member import MemberLW
 from .module import ModuleLW
 from .value import ValueLW
 
@@ -36,6 +37,7 @@ __all__ = [
     "EvaluationLW",
     "ExceptionLW",
     "FileAccessLW",
+    "MemberLW",
     "ModuleLW",
     "ValueLW",
 ]

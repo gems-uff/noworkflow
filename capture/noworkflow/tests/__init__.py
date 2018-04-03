@@ -27,7 +27,7 @@ from .prov_definition import TestReconstruction
 from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
 from .prov_execution import TestDepthExecution
 from .dependency import TestClusterizer, TestClusterizerConfig
-from .dependency import TestProspectiveClusterizer
+#from .dependency import TestProspectiveClusterizer
 from .dependency import TestActivationClusterizer, TestDependencyClusterizer
 from .cross_version_test import TestCrossVersion
 
@@ -70,6 +70,6 @@ def load_tests(loader, tests, pattern):
     suite.addTests(loader.loadTestsFromTestCase(TestClusterizer))
     suite.addTests(loader.loadTestsFromTestCase(TestDependencyClusterizer))
     suite.addTests(loader.loadTestsFromTestCase(TestActivationClusterizer))
-    suite.addTests(loader.loadTestsFromTestCase(TestProspectiveClusterizer))
+    #suite.addTests(loader.loadTestsFromTestCase(TestProspectiveClusterizer))
     suite.addTests(loader.loadTestsFromTestCase(TestClusterizerConfig))
     return suite

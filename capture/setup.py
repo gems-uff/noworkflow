@@ -83,7 +83,7 @@ class CustomInstallCommand(install):
 
 
 setup(
-    name="noworkflow            ",
+    name="noworkflow",
     version=__version__,
     packages=find_packages(),
     package_data={
