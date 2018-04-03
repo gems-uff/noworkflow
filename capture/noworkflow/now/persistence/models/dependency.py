@@ -6,11 +6,12 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, Text, Boolean
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr
+from ...utils.prolog import PrologRepr, PrologNullable, PrologBoolean
+from ...utils.prolog import PrologNullableRepr
 
 from .base import AlchemyProxy, proxy_class, backref_one
 
@@ -35,7 +36,7 @@ class Dependency(AlchemyProxy):
     Load Dependency by (trial_id, id):
     >>> dependency = Dependency((trial_id, assign.return_dependency))
     >>> dependency  # doctest: +ELLIPSIS
-    dependency(..., ..., ..., ..., ..., 'bind').
+    dependency(..., ..., ..., ..., ..., 'assign', 1, nil, nil, nil).
 
     Load Dependency trial;
     >>> dependency.trial.id == trial_id
@@ -85,6 +86,10 @@ class Dependency(AlchemyProxy):
     dependency_activation_id = Column(Integer, index=True)
     dependency_id = Column(Integer, index=True)
     type = Column(Text)  # pylint: disable=invalid-name
+    reference = Column(Boolean, default=False)
+    collection_activation_id = Column(Integer, index=True)
+    collection_id = Column(Integer, index=True)
+    key = Column(Text)  # pylint: disable=invalid-name
 
     trial = backref_one("trial")  # Trial.dependencies
     # Activation.dependent_variables, Evaluation.dependencies_as_dependent
@@ -93,6 +98,7 @@ class Dependency(AlchemyProxy):
     # Activation.dependency_variables, Evaluation.dependencies_as_dependency
     dependency_activation = backref_one("dependency_activation")
     dependency = backref_one("dependency")
+
 
     prolog_description = PrologDescription("dependency", (
         PrologTrial("trial_id", link="evaluation.trial_id"),
@@ -103,6 +109,10 @@ class Dependency(AlchemyProxy):
                         link="evaluation.activation_id"),
         PrologAttribute("dependency_id", link="evaluation.id"),
         PrologRepr("type"),
+        PrologBoolean("reference"),
+        PrologNullable("collection_activation_id"),
+        PrologNullable("collection_id"),
+        PrologNullableRepr("key"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
         "the value of a evaluation (*DependentId*),\n"
@@ -110,6 +120,9 @@ class Dependency(AlchemyProxy):
         "was influenced somehow\n"
         "by the value of another evaluation (*DependencyId*),\n"
         "in another activation (*DependencyActivationId*).\n"
-        "This influence *Type* is one of following:\n"
-        "bind/influence/conditional/loop/assignment."
+        "This influence has a *Type*, \n"
+        "it may represent a *Reference* sharing, \n"
+        "and it may be an access of the *Key* \n"
+        "from a collection (*CollectionId*), \n"
+        "from a specific activation (*CollectionActivationId*)."
     ))

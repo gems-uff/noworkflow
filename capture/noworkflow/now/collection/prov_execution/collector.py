@@ -355,7 +355,8 @@ class Collector(object):
             if old_eval:
                 self.dependencies.add(
                     self.trial_id, activation.id, evaluation.id,
-                    old_eval.activation_id, old_eval.id, "assignment"
+                    old_eval.activation_id, old_eval.id, "assignment",
+                    True, None, None, None
                 )
 
         return value
@@ -1341,12 +1342,12 @@ class Collector(object):
                 not isinstance(value, IMMUTABLE) or
                 len(depa.dependencies) == 1):
             for dep in depa.dependencies:
+                dep.reference = False
                 if dep.value is value:
                     value_id = dep.value_id
                     if dep.mode.startswith("dependency"):
                         dep.mode = "assign"
-                    elif not dep.mode.endswith("-bind"):
-                        dep.mode += "-bind"
+                    dep.reference = True
                     break
         if create and not value_id:
             value_id = self.add_value(value)
@@ -1372,7 +1373,7 @@ class Collector(object):
                     self.dependencies.add(
                         self.trial_id, activation_id, evaluation_id,
                         dep.activation_id, dep.evaluation_id,
-                        dep.mode
+                        dep.mode, dep.reference, None, None, None
                     )
 
     def create_argument_dependencies(self, evaluation, depa):
@@ -1382,7 +1383,7 @@ class Collector(object):
                 self.dependencies.add(
                     self.trial_id, evaluation.activation_id, evaluation.id,
                     dep.activation_id, dep.evaluation_id,
-                    "dependency"
+                    "dependency", dep.reference, None, None, None
                 )
 
     def eval_dep(self, activation, code, value, mode, depa=None, moment=None):

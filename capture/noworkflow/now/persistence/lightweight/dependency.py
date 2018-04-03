@@ -16,13 +16,15 @@ class DependencyLW(BaseLW):
     # pylint: disable=too-many-instance-attributes
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "dependent_activation_id", "dependent_id",
-         "dependency_activation_id", "dependency_id", "type"]
+         "dependency_activation_id", "dependency_id", "type", "reference",
+         "collection_activation_id", "collection_id", "key"]
     )
     nullable = set()
     model = Dependency
 
     def __init__(self, id_, trial_id, dependent_activation_id, dependent_id,
-                 dependency_activation_id, dependency_id, type_):
+                 dependency_activation_id, dependency_id, type_, reference,
+                 collection_activation_id, collection_id, key):
         # pylint: disable=too-many-arguments
         self.id = id_  # pylint: disable=invalid-name
         self.dependent_activation_id = dependent_activation_id
@@ -31,6 +33,10 @@ class DependencyLW(BaseLW):
         self.dependency_id = dependency_id
         self.trial_id = trial_id
         self.type = type_
+        self.reference = reference
+        self.collection_activation_id = collection_activation_id
+        self.collection_id = collection_id
+        self.key = key
 
     def is_complete(self):
         """Variable Dependency can always be removed"""
@@ -43,5 +49,8 @@ class DependencyLW(BaseLW):
             "dependent_activation_id={0.dependent_activation_id}, "
             "dependent_id={0.dependent_id}, "
             "dependency_activation_id={0.dependency_activation_id}, "
-            "dependency_id={0.dependency_id}, type={0.type})"
+            "dependency_id={0.dependency_id}, type={0.type}, "
+            "reference={0.reference}, "
+            "collection_activation_id={0.collection_activation_id}, "
+            "collection_id={0.collection_id}, key={0.key})"
         ).format(self)

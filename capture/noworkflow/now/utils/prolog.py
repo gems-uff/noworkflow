@@ -154,3 +154,11 @@ class PrologNullableRepr(PrologRepr):
         if self.value(obj) is None:
             return "nil"
         return super(PrologNullableRepr, self).fact(obj)
+
+
+class PrologBoolean(PrologAttribute):
+    """Represent a boolean attribute"""
+
+    def fact(self, obj):
+        """Replace None by nil if attribute self.attr_name of obj"""
+        return "1" if self.value(obj) else "0"

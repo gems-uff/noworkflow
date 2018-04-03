@@ -125,7 +125,7 @@ class CollectionTestCase(unittest.TestCase):
             component.name, evaluation.id, component.first_char_line
         )
 
-    def assert_dependency(self, dependent, dependency, type_=None):
+    def assert_dependency(self, dependent, dependency, type_=None, reference=False):
         """Check if dependency exists"""
         dep = self.find_dependency(dependent_id=dependent.id,
                                    dependency_id=dependency.id)
@@ -137,13 +137,15 @@ class CollectionTestCase(unittest.TestCase):
         if type_ is not None:
             full_dep = self.find_dependency(
                 dependent_id=dependent.id, dependency_id=dependency.id,
-                type=type_)
+                reference=reference, type=type_)
             if not full_dep:
                 self.fail(
                     "Dependency not found {} -({})> {}. "
-                    "Found dependency with type '{}'".format(
+                    "Found {} with type '{}'".format(
                         self.evaluation_repr(dependent), type_,
-                        self.evaluation_repr(dependency), dep.type
+                        self.evaluation_repr(dependency),
+                        'reference' if dep.reference else 'dependency',
+                        dep.type
                     )
                 )
 

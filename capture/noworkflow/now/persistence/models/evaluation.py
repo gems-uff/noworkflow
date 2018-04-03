@@ -70,11 +70,11 @@ class Evaluation(AlchemyProxy):
 
     Load Evaluation dependencies in which the evaluation is the dependent:
     >>> list(evaluation2.dependencies_as_dependent)  # doctest: +ELLIPSIS
-    [dependency(..., ..., ..., ..., ..., 'assignment').]
+    [dependency(..., ..., ..., ..., ..., 'same', 1, nil, nil, nil).]
 
     Load Evaluation dependencies in which the evaluation is the dependency:
     >>> list(evaluation2.dependencies_as_dependency)  # doctest: +ELLIPSIS
-    [dependency(..., ..., ..., ..., ..., 'bind').]
+    [dependency(..., ..., ..., ..., ..., 'same', 1, nil, nil, nil).]
 
     Load Evaluation dependents evaluations:
     >>> list(evaluation2.dependents)  # doctest: +ELLIPSIS
@@ -218,7 +218,7 @@ class Evaluation(AlchemyProxy):
         """
         return getattr(proxy(
             self._get_instance().dependencies_as_dependent
-            .filter(Dependency.m.type == "assignment")
+            .filter(Dependency.m.type == "same")
             .first()
         ), "dependency", None)
 

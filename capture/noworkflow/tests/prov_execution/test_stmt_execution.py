@@ -80,8 +80,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(b_value.value, "2")
         self.assertEqual(a_type.id, b_type.id)
 
-        self.assert_dependency(read_a_eval, write_a_eval, "assignment")
-        self.assert_dependency(write_b_eval, read_a_eval, "assign-bind")
+        self.assert_dependency(read_a_eval, write_a_eval, "assignment", True)
+        self.assert_dependency(write_b_eval, read_a_eval, "assign", True)
 
     def test_augassign_to_name(self):
         """Test augmented assign collection"""
@@ -110,7 +110,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a2r, var_a1, "assignment")
+        self.assert_dependency(var_a2r, var_a1, "assignment", True)
         self.assert_dependency(var_a2w, var_a2r, "add_assign")
         self.assert_dependency(var_a2w, var_1, "add_assign")
 
@@ -156,7 +156,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(script_act.context['f'], write_f_eval)
         self.assertEqual(activation.context['x'], param_x_eval)
 
-        self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
+        self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
 
     def test_function_definition_with_return(self):
         """Test return collection"""
@@ -201,9 +201,9 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(script_act.context['f'], write_f_eval)
         self.assertEqual(activation.context['x'], param_x_eval)
 
-        self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
-        self.assert_dependency(read_x_eval, param_x_eval, "assignment")
-        self.assert_dependency(call, read_x_eval, "use-bind")
+        self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
+        self.assert_dependency(read_x_eval, param_x_eval, "assignment", True)
+        self.assert_dependency(call, read_x_eval, "use", True)
 
     def test_tuple_assign(self):
         """Test tuple assignment"""
@@ -248,9 +248,9 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_a_key_0.id)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a_e, "assign-bind")
-        self.assert_dependency(var_c, var_list, "assign-bind")
-        self.assert_dependency(var_a, var_tuple, "assign-bind")
+        self.assert_dependency(var_b, var_a_e, "assign", True)
+        self.assert_dependency(var_c, var_list, "assign", True)
+        self.assert_dependency(var_a, var_tuple, "assign", True)
         self.assert_dependency(var_tuple, var_a_e, "item")
         self.assert_dependency(var_tuple, var_list, "item")
         self.assert_dependency(var_list, var_a_i10, "item")
@@ -280,7 +280,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_ef, var_f, "use")
         self.assert_dependency(var_e, var_a_e, "item")
         self.assert_dependency(var_f, var_a_f, "item")
-        self.assert_dependency(var_a, var_ef, "assign-bind")
+        self.assert_dependency(var_a, var_ef, "assign", True)
         self.assert_dependency(var_b, var_ef, "dependency")
         self.assert_dependency(var_c, var_ef, "dependency")
 
@@ -327,9 +327,9 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_a_key_0.id)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a_e, "assign-bind")
-        self.assert_dependency(var_c, var_list, "assign-bind")
-        self.assert_dependency(var_a, var_tuple, "assign-bind")
+        self.assert_dependency(var_b, var_a_e, "assign", True)
+        self.assert_dependency(var_c, var_list, "assign", True)
+        self.assert_dependency(var_a, var_tuple, "assign", True)
         self.assert_dependency(var_tuple, var_a_e, "item")
         self.assert_dependency(var_tuple, var_list, "item")
         self.assert_dependency(var_list, var_a_i10, "item")
@@ -394,9 +394,9 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_3_part, var_a_key_3.id)
         self.assertEqual(var_a_key_4_part, var_a_key_4.id)
 
-        self.assert_dependency(var_a, var_tuple, "assign-bind")
-        self.assert_dependency(var_b, var_a_i0, "assign-bind")
-        self.assert_dependency(var_d, var_a_i4, "assign-bind")
+        self.assert_dependency(var_a, var_tuple, "assign", True)
+        self.assert_dependency(var_b, var_a_i0, "assign", True)
+        self.assert_dependency(var_d, var_a_i4, "assign", True)
         self.assert_dependency(var_c, var_a_i3, "assign")
         self.assert_dependency(var_c, var_a_i2, "assign")
         self.assert_dependency(var_c, var_a_i1, "assign")
@@ -430,7 +430,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_a0_val.id)
 
 
-        self.assert_dependency(var_a0, var_3, "assign-bind")
+        self.assert_dependency(var_a0, var_3, "assign", True)
         self.assert_dependency(var_a0, var_a, "value")
         self.assert_dependency(var_a0, var_0, "slice")
 
@@ -457,7 +457,7 @@ class TestStmtExecution(CollectionTestCase):
         var_a_key_0_part = get_compartment(meta, var_a.value_id, "[0]")
         self.assertEqual(var_a_key_0_part, var_a0_val.id)
 
-        self.assert_dependency(var_a0, var_3, "assign-bind")
+        self.assert_dependency(var_a0, var_3, "assign", True)
         self.assert_dependency(var_a0, var_a, "value")
         self.assert_dependency(var_a0, var_m2, "slice")
 
@@ -488,7 +488,7 @@ class TestStmtExecution(CollectionTestCase):
         # ToDo: Transform it in a white box operation
         self.assertNotEqual(var_a_key_0_part, var_3_val.id)
 
-        self.assert_dependency(var_a01, var_34, "assign-bind")
+        self.assert_dependency(var_a01, var_34, "assign", True)
         self.assert_dependency(var_a01, var_a, "value")
         self.assert_dependency(var_a01, var_01, "slice")
 
@@ -522,7 +522,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a01_val.value, '[3]')
         self.assertEqual(var_b_val, var_4_val)
 
-        self.assert_dependency(var_b, var_4, "assign-bind")
+        self.assert_dependency(var_b, var_4, "assign", True)
         self.assert_dependency(var_a01, var_3, "assign")
         self.assert_dependency(var_a01, var_a, "value")
         self.assert_dependency(var_a01, var_01, "slice")
@@ -546,7 +546,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_ax_val.id)
 
 
-        self.assert_dependency(var_ax, var_3, "assign-bind")
+        self.assert_dependency(var_ax, var_3, "assign", True)
         self.assert_dependency(var_ax, var_a, "value")
 
     def test_for_loop(self):
@@ -585,12 +585,12 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_l, var_2, "item")
         self.assert_dependency(var_x1_w, var_l, "dependency")
         self.assert_dependency(var_x2_w, var_l, "dependency")
-        self.assert_dependency(var_x1_w, var_1, "assign-bind")
-        self.assert_dependency(var_x2_w, var_2, "assign-bind")
-        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
-        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
-        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
-        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+        self.assert_dependency(var_x1_w, var_1, "assign", True)
+        self.assert_dependency(var_x2_w, var_2, "assign", True)
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment", True)
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment", True)
+        self.assert_dependency(var_y1_w, var_x1_r, "assign", True)
+        self.assert_dependency(var_y2_w, var_x2_r, "assign", True)
 
     def test_for_loop_variable(self):
         """Test for loop"""
@@ -629,16 +629,16 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_dependency(var_l, var_1, "item")
         self.assert_dependency(var_l, var_2, "item")
-        self.assert_dependency(var_lis_w, var_l, "assign-bind")
-        self.assert_dependency(var_lis_r, var_lis_w, "assignment")
+        self.assert_dependency(var_lis_w, var_l, "assign", True)
+        self.assert_dependency(var_lis_r, var_lis_w, "assignment", True)
         self.assert_dependency(var_x1_w, var_lis_r, "dependency")
         self.assert_dependency(var_x2_w, var_lis_r, "dependency")
-        self.assert_dependency(var_x1_w, var_1, "assign-bind")
-        self.assert_dependency(var_x2_w, var_2, "assign-bind")
-        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
-        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
-        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
-        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+        self.assert_dependency(var_x1_w, var_1, "assign", True)
+        self.assert_dependency(var_x2_w, var_2, "assign", True)
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment", True)
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment", True)
+        self.assert_dependency(var_y1_w, var_x1_r, "assign", True)
+        self.assert_dependency(var_y2_w, var_x2_r, "assign", True)
 
     def test_for_loop_multiple_assignment(self):
         """Test for loop"""
@@ -672,10 +672,10 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_dependency(var_x1_w, var_lis_r, "dependency")
         self.assert_dependency(var_y1_w, var_lis_r, "dependency")
-        self.assert_dependency(var_lis_w, var_l, "assign-bind")
-        self.assert_dependency(var_lis_r, var_lis_w, "assignment")
-        self.assert_dependency(var_x1_w, var_1, "assign-bind")
-        self.assert_dependency(var_y1_w, var_2, "assign-bind")
+        self.assert_dependency(var_lis_w, var_l, "assign", True)
+        self.assert_dependency(var_lis_r, var_lis_w, "assignment", True)
+        self.assert_dependency(var_x1_w, var_1, "assign", True)
+        self.assert_dependency(var_y1_w, var_2, "assign", True)
 
     def test_if(self):
         """Test if condition"""
@@ -696,9 +696,9 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assertEqual(var_y.value_id, var_3.value_id)
 
-        self.assert_dependency(var_y, var_3, "assign-bind")
+        self.assert_dependency(var_y, var_3, "assign", True)
         self.assert_dependency(var_y, var_x, "condition")
-        self.assert_dependency(var_z, var_4, "assign-bind")
+        self.assert_dependency(var_z, var_4, "assign", True)
         self.assert_no_dependency(var_z, var_x)
 
     def test_while(self):
@@ -744,19 +744,19 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(y1_w.value_id, y1_r.value_id)
         self.assertEqual(y2_w.value_id, y2_r.value_id)
 
-        self.assert_dependency(x1_w, var_2, "assign-bind")
-        self.assert_dependency(x1_r, x1_w, "assignment")
+        self.assert_dependency(x1_w, var_2, "assign", True)
+        self.assert_dependency(x1_r, x1_w, "assignment", True)
         self.assert_dependency(y1_w, x1_r, "condition")
-        self.assert_dependency(y1_w, v11, "assign-bind")
+        self.assert_dependency(y1_w, v11, "assign", True)
         self.assert_dependency(x2_w, x1_r, "condition")
         self.assert_dependency(x2_w, y1_r, "sub_assign")
-        self.assert_dependency(y1_r, y1_w, "assignment")
-        self.assert_dependency(x2_r, x2_w, "assignment")
+        self.assert_dependency(y1_r, y1_w, "assignment", True)
+        self.assert_dependency(x2_r, x2_w, "assignment", True)
         self.assert_dependency(y2_w, x2_r, "condition")
-        self.assert_dependency(y2_w, v12, "assign-bind")
+        self.assert_dependency(y2_w, v12, "assign", True)
         self.assert_dependency(x3_w, x2_r, "condition")
         self.assert_dependency(x3_w, y2_r, "sub_assign")
-        self.assert_dependency(y2_r, y2_w, "assignment")
+        self.assert_dependency(y2_r, y2_w, "assignment", True)
         self.assert_no_dependency(var_z, x1_r)
         self.assert_no_dependency(var_z, x2_r)
         self.assert_no_dependency(var_z, x3_r)
@@ -796,10 +796,10 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(z2_2.value_id, var_b_w.value_id)
 
 
-        self.assert_dependency(var_z1_w, var_3, "assign-bind")
-        self.assert_dependency(var_z2_w, var_4, "assign-bind")
-        self.assert_dependency(var_z1_r, var_z1_w, "assignment")
-        self.assert_dependency(var_z2_r, var_z2_w, "assignment")
+        self.assert_dependency(var_z1_w, var_3, "assign", True)
+        self.assert_dependency(var_z2_w, var_4, "assign", True)
+        self.assert_dependency(var_z1_r, var_z1_w, "assignment", True)
+        self.assert_dependency(var_z2_r, var_z2_w, "assignment", True)
 
         self.assert_dependency(z2_1, var_z1_r, "use")
         self.assert_dependency(z2_1, v1_1, "condition")
@@ -809,8 +809,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_gen, z2_1, "item")
         self.assert_dependency(var_gen, z2_2, "item")
 
-        self.assert_dependency(var_a_w, z2_1, "assign-bind")
-        self.assert_dependency(var_b_w, z2_2, "assign-bind")
+        self.assert_dependency(var_a_w, z2_1, "assign", True)
+        self.assert_dependency(var_b_w, z2_2, "assign", True)
 
     def test_for_loop_multiple_generator_assignment(self):
         """Test for loop"""
@@ -859,10 +859,10 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_x1_w.value_id, z2_1.value_id)
         self.assertEqual(var_y1_w.value_id, z2_2.value_id)
 
-        self.assert_dependency(var_z1_w, var_3, "assign-bind")
-        self.assert_dependency(var_z2_w, var_4, "assign-bind")
-        self.assert_dependency(var_z1_r, var_z1_w, "assignment")
-        self.assert_dependency(var_z2_r, var_z2_w, "assignment")
+        self.assert_dependency(var_z1_w, var_3, "assign", True)
+        self.assert_dependency(var_z2_w, var_4, "assign", True)
+        self.assert_dependency(var_z1_r, var_z1_w, "assignment", True)
+        self.assert_dependency(var_z2_r, var_z2_w, "assignment", True)
 
         self.assert_dependency(z2_1, var_z1_r, "use")
         self.assert_dependency(z2_1, v1_1, "condition")
@@ -872,10 +872,10 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_gen, z2_1, "item")
         self.assert_dependency(var_gen, z2_2, "item")
 
-        self.assert_dependency(var_lis_w, var_l, "assign-bind")
-        self.assert_dependency(var_lis_r, var_lis_w, "assignment")
-        self.assert_dependency(var_x1_w, z2_1, "assign-bind")
-        self.assert_dependency(var_y1_w, z2_2, "assign-bind")
+        self.assert_dependency(var_lis_w, var_l, "assign", True)
+        self.assert_dependency(var_lis_r, var_lis_w, "assignment", True)
+        self.assert_dependency(var_x1_w, z2_1, "assign", True)
+        self.assert_dependency(var_y1_w, z2_2, "assign", True)
 
     def test_generator_function_variable(self):
         """Test for loop"""
@@ -923,21 +923,21 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_x2_w.value_id, var_y2_w.value_id)
 
 
-        self.assert_dependency(var_a_w, var_gen, "assign-bind")
-        self.assert_dependency(var_a_r, var_a_w, "assignment")
+        self.assert_dependency(var_a_w, var_gen, "assign", True)
+        self.assert_dependency(var_a_r, var_a_w, "assignment", True)
         self.assert_dependency(var_x1_w, var_b_r, "dependency")
         self.assert_dependency(var_x2_w, var_b_r, "dependency")
 
-        self.assert_dependency(var_b_r, var_b_w, "assignment")
+        self.assert_dependency(var_b_r, var_b_w, "assignment", True)
         self.assert_dependency(var_b_r, var_3, "item")
         self.assert_dependency(var_b_r, var_4, "item")
 
-        self.assert_dependency(var_x1_w, var_3, "assign-bind")
-        self.assert_dependency(var_x2_w, var_4, "assign-bind")
-        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
-        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
-        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
-        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+        self.assert_dependency(var_x1_w, var_3, "assign", True)
+        self.assert_dependency(var_x2_w, var_4, "assign", True)
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment", True)
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment", True)
+        self.assert_dependency(var_y1_w, var_x1_r, "assign", True)
+        self.assert_dependency(var_y2_w, var_x2_r, "assign", True)
 
         self.assert_dependency(yield_3, var_3, "use")
         self.assert_dependency(yield_4, var_4, "use")
@@ -983,10 +983,10 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(b_value.value, "2")
         self.assertEqual(a_type.id, b_type.id)
 
-        self.assert_dependency(read_a_eval, write_a_eval, "assignment")
-        self.assert_dependency(write_b_eval, read_a_eval, "assign-bind")
-        self.assert_dependency(write_c_eval, read_err_eval, "assign-bind")
-        self.assert_dependency(read_err_eval, write_err_eval, "assignment")
+        self.assert_dependency(read_a_eval, write_a_eval, "assignment", True)
+        self.assert_dependency(write_b_eval, read_a_eval, "assign", True)
+        self.assert_dependency(write_c_eval, read_err_eval, "assign", True)
+        self.assert_dependency(read_err_eval, write_err_eval, "assignment", True)
 
     @only(PY2)
     def test_print(self):

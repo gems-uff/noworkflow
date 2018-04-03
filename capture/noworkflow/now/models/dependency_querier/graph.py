@@ -176,7 +176,7 @@ class DependencyQuerier(object):
         arrow = self.get_arrow(from_, to_, "<A>")
         # Add restriction: to_ to return dependencies
         new_block_set = frozenset(chain(
-            context.block_set, {(to_, "use"), (to_, "use-bind")}
+            context.block_set, {(to_, "use")}
         ))
         # Moment is always None, when going to a evaluation
         yield Context(to_, None, new_block_set), arrow

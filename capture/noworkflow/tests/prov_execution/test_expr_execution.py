@@ -42,7 +42,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_2, "assign-bind")
+        self.assert_dependency(var_a, var_2, "assign", True)
 
     def test_str(self):
         """Test str collection"""
@@ -63,7 +63,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("str"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_2, "assign-bind")
+        self.assert_dependency(var_a, var_2, "assign", True)
 
     def test_bytes(self):
         """Test bytes collection"""
@@ -87,7 +87,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bytes" if PY3 else "str"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_2, "assign-bind")
+        self.assert_dependency(var_a, var_2, "assign", True)
 
     @only(PY3)
     def test_ellipsis(self):
@@ -109,7 +109,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("ellipsis"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_ellipsis, "assign-bind")
+        self.assert_dependency(var_a, var_ellipsis, "assign", True)
 
     def test_true(self):
         """Test True collection"""
@@ -130,7 +130,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bool"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_true, "assign-bind")
+        self.assert_dependency(var_a, var_true, "assign", True)
 
     def test_false(self):
         """Test False collection"""
@@ -151,7 +151,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bool"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_false, "assign-bind")
+        self.assert_dependency(var_a, var_false, "assign", True)
 
     def test_none(self):
         """Test None collection"""
@@ -172,7 +172,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("NoneType"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_none, "assign-bind")
+        self.assert_dependency(var_a, var_none, "assign", True)
 
     def test_global(self):
         """Test global collection"""
@@ -191,7 +191,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_int, "assign-bind")
+        self.assert_dependency(var_a, var_int, "assign", True)
 
     def test_name(self):
         """Test name collection"""
@@ -204,7 +204,7 @@ class TestExprExecution(CollectionTestCase):
         var_b = self.get_evaluation(name="b")
 
         self.assertEqual(var_a.value_id, var_b.value_id)
-        self.assert_dependency(var_b, var_a, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
 
     def test_bool_op(self):
         """Test bool expr collection"""
@@ -226,7 +226,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_a_and_b, var_b, "use")
         self.assert_dependency(var_a_and_b_or_c, var_c, "use")
         self.assert_dependency(var_a_and_b_or_c, var_a_and_b, "use")
-        self.assert_dependency(var_d, var_a_and_b_or_c, "assign-bind")
+        self.assert_dependency(var_d, var_a_and_b_or_c, "assign", True)
 
     def test_bool_op_cut(self):
         """Test bool expr collection. 'b' is not evaluated"""
@@ -244,11 +244,11 @@ class TestExprExecution(CollectionTestCase):
         var_a_and_b_or_c = self.get_evaluation(name="a and b or c")
         var_d = self.get_evaluation(name="d")
 
-        self.assert_dependency(var_a_and_b, var_a, "use-bind")
+        self.assert_dependency(var_a_and_b, var_a, "use", True)
         self.assert_no_dependency(var_a_and_b, var_b)
         self.assert_dependency(var_a_and_b_or_c, var_c, "use")
         self.assert_dependency(var_a_and_b_or_c, var_a_and_b, "use")
-        self.assert_dependency(var_d, var_a_and_b_or_c, "assign-bind")
+        self.assert_dependency(var_d, var_a_and_b_or_c, "assign", True)
 
     def test_bin_op(self):
         """Test bin expr collection"""
@@ -265,7 +265,7 @@ class TestExprExecution(CollectionTestCase):
 
         self.assert_dependency(var_a_plus_b, var_a, "use")
         self.assert_dependency(var_a_plus_b, var_b, "use")
-        self.assert_dependency(var_c, var_a_plus_b, "assign-bind")
+        self.assert_dependency(var_c, var_a_plus_b, "assign", True)
 
     def test_compare(self):
         """Test bin expr collection"""
@@ -285,7 +285,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_comp, var_a, "use")
         self.assert_dependency(var_comp, var_b, "use")
         self.assert_dependency(var_comp, var_c, "use")
-        self.assert_dependency(var_d, var_comp, "assign-bind")
+        self.assert_dependency(var_d, var_comp, "assign", True)
 
     def test_compare_cut(self):
         """Test bin expr collection"""
@@ -305,7 +305,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_comp, var_a, "use")
         self.assert_dependency(var_comp, var_b, "use")
         self.assert_no_dependency(var_comp, var_c)
-        self.assert_dependency(var_d, var_comp, "assign-bind")
+        self.assert_dependency(var_d, var_comp, "assign", True)
 
     def test_unary_op(self):
         """Test unary expr collection"""
@@ -319,7 +319,7 @@ class TestExprExecution(CollectionTestCase):
         var_b = self.get_evaluation(name="b")
 
         self.assert_dependency(var_na, var_a, "use")
-        self.assert_dependency(var_b, var_na, "assign-bind")
+        self.assert_dependency(var_b, var_na, "assign", True)
 
     def test_external_call(self):
         """Test external call collection"""
@@ -355,7 +355,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_type.value, self.rtype("str"))
         self.assertEqual(var_b_type.value, self.rtype("int"))
 
-        self.assert_dependency(var_b, call, "assign-bind")
+        self.assert_dependency(var_b, call, "assign", True)
         self.assert_dependency(call, var_a, "argument")
 
     def test_external_call_with_func(self):
@@ -381,7 +381,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(activation.code_block_id, -1)
         self.assertEqual(activation.name, "int")
 
-        self.assert_dependency(var_b, call, "assign-bind")
+        self.assert_dependency(var_b, call, "assign", True)
         self.assert_dependency(call, var_a, "argument")
         self.assert_dependency(call, var_int, "func")
 
@@ -428,12 +428,12 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_a_part, var_b_key_a_part)
         self.assertEqual(var_a_key_b_part, var_a_key_b.id)
 
-        self.assert_dependency(var_b, var_a, "assign-bind")
-        self.assert_dependency(var_aw, var_dict, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
+        self.assert_dependency(var_aw, var_dict, "assign", True)
         self.assert_dependency(var_dict, var_a_kv_a, "item")
         self.assert_dependency(var_dict, var_a_kv_b, "item")
         self.assert_dependency(var_a_kv_a, var_e, "key")
-        self.assert_dependency(var_a_kv_a, var_f, "value-bind")
+        self.assert_dependency(var_a_kv_a, var_f, "value", True)
 
     def test_list_definition(self):
         """Test list definition"""
@@ -475,8 +475,8 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_b_key_0_part)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a, "assign-bind")
-        self.assert_dependency(var_aw, var_list, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
+        self.assert_dependency(var_aw, var_list, "assign", True)
         self.assert_dependency(var_list, var_a_e, "item")
         self.assert_dependency(var_list, var_a_i1, "item")
 
@@ -520,8 +520,8 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_b_key_0_part)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a, "assign-bind")
-        self.assert_dependency(var_aw, var_list, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
+        self.assert_dependency(var_aw, var_list, "assign", True)
         self.assert_dependency(var_list, var_a_e, "item")
         self.assert_dependency(var_list, var_a_i1, "item")
 
@@ -565,8 +565,8 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_b_key_0_part)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a, "assign-bind")
-        self.assert_dependency(var_aw, var_list, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
+        self.assert_dependency(var_aw, var_list, "assign", True)
         self.assert_dependency(var_list, var_a_e, "item")
         self.assert_dependency(var_list, var_a_i1, "item")
 
@@ -597,7 +597,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_b.value_id)
         self.assertEqual(var_b.value_id, var_a0.value_id)
 
-        self.assert_dependency(var_b, var_a0, "assign-bind")
+        self.assert_dependency(var_b, var_a0, "assign", True)
         self.assert_dependency(var_a0, var_a, "value")
         self.assert_dependency(var_a0, var_0, "slice")
 
@@ -617,7 +617,7 @@ class TestExprExecution(CollectionTestCase):
         var_a01_key_0 = self.get_compartment_value(var_a01, "[0]")
         self.assertEqual(var_a_key_1.id, var_a01_key_0.id)
 
-        self.assert_dependency(var_b, var_a01, "assign-bind")
+        self.assert_dependency(var_b, var_a01, "assign", True)
         self.assert_dependency(var_a01, var_a, "value")
         self.assert_dependency(var_a01, var_slice, "slice")
 
@@ -646,7 +646,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_x_part, var_b.value_id)
         self.assertEqual(var_b.value_id, var_ax.value_id)
 
-        self.assert_dependency(var_b, var_ax, "assign-bind")
+        self.assert_dependency(var_b, var_ax, "assign", True)
         self.assert_dependency(var_ax, var_a, "value")
 
     def test_lambda_definition(self):
@@ -694,11 +694,11 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(activation.context['x'], param_x_eval)
         self.assertEqual(call.value_id, write_b_eval.value_id)
 
-        self.assert_dependency(write_f_eval, lambda_eval, "assign-bind")
-        self.assert_dependency(param_x_eval, arg_a_eval, "argument-bind")
-        self.assert_dependency(read_x_eval, param_x_eval, "assignment")
-        self.assert_dependency(call, read_x_eval, "use-bind")
-        self.assert_dependency(write_b_eval, call, "assign-bind")
+        self.assert_dependency(write_f_eval, lambda_eval, "assign", True)
+        self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
+        self.assert_dependency(read_x_eval, param_x_eval, "assignment", True)
+        self.assert_dependency(call, read_x_eval, "use", True)
+        self.assert_dependency(write_b_eval, call, "assign", True)
 
     def test_ifexp_true_definition(self):
         """Test return collection"""
@@ -719,9 +719,9 @@ class TestExprExecution(CollectionTestCase):
         var_value = self.metascript.values_store[var_x.value_id]
         self.assertEqual(var_value.value, "2")
 
-        self.assert_dependency(ifexp, var_2, "use-bind")
+        self.assert_dependency(ifexp, var_2, "use", True)
         self.assert_dependency(ifexp, var_1, "condition")
-        self.assert_dependency(var_x, ifexp, "assign-bind")
+        self.assert_dependency(var_x, ifexp, "assign", True)
         self.assert_dependency(var_2, var_1, "condition")
 
     def test_ifexp_false_definition(self):
@@ -743,9 +743,9 @@ class TestExprExecution(CollectionTestCase):
         var_value = self.metascript.values_store[var_x.value_id]
         self.assertEqual(var_value.value, "3")
 
-        self.assert_dependency(ifexp, var_3, "use-bind")
+        self.assert_dependency(ifexp, var_3, "use", True)
         self.assert_dependency(ifexp, var_0, "condition")
-        self.assert_dependency(var_x, ifexp, "assign-bind")
+        self.assert_dependency(var_x, ifexp, "assign", True)
         self.assert_dependency(var_3, var_0, "condition")
 
     def test_list_comprehension_definition(self):
@@ -800,16 +800,16 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_b_key_0_part)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a, "assign-bind")
-        self.assert_dependency(var_aw, var_comp, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
+        self.assert_dependency(var_aw, var_comp, "assign", True)
         self.assert_dependency(var_comp, x2_1, "item")
         self.assert_dependency(var_comp, x2_2, "item")
         self.assert_dependency(x2_1, v1_1, "condition")
         self.assert_dependency(x2_1, x1r, "use")
         self.assert_dependency(x2_2, x2r, "use")
         self.assert_dependency(x2_2, v1_2, "condition")
-        self.assert_dependency(x1r, x1w, "assignment")
-        self.assert_dependency(x2r, x2w, "assignment")
+        self.assert_dependency(x1r, x1w, "assignment", True)
+        self.assert_dependency(x2r, x2w, "assignment", True)
 
     def test_set_comprehension_definition(self):
         """Test set comprehension definition"""
@@ -863,16 +863,16 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_b_key_0_part)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a, "assign-bind")
-        self.assert_dependency(var_aw, var_comp, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
+        self.assert_dependency(var_aw, var_comp, "assign", True)
         self.assert_dependency(var_comp, x2_1, "item")
         self.assert_dependency(var_comp, x2_2, "item")
         self.assert_dependency(x2_1, v1_1, "condition")
         self.assert_dependency(x2_1, x1r, "use")
         self.assert_dependency(x2_2, x2r, "use")
         self.assert_dependency(x2_2, v1_2, "condition")
-        self.assert_dependency(x1r, x1w, "assignment")
-        self.assert_dependency(x2r, x2w, "assignment")
+        self.assert_dependency(x1r, x1w, "assignment", True)
+        self.assert_dependency(x2r, x2w, "assignment", True)
 
     def test_dict_comprehension_definition(self):
         """Test set comprehension definition"""
@@ -932,20 +932,20 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_key_0_part, var_b_key_0_part)
         self.assertEqual(var_a_key_1_part, var_a_key_1.id)
 
-        self.assert_dependency(var_b, var_a, "assign-bind")
-        self.assert_dependency(var_aw, var_comp, "assign-bind")
+        self.assert_dependency(var_b, var_a, "assign", True)
+        self.assert_dependency(var_aw, var_comp, "assign", True)
         self.assert_dependency(var_comp, vi_1, "item")
         self.assert_dependency(var_comp, vi_2, "item")
         self.assert_dependency(vi_1, x2_1, "key")
         self.assert_dependency(vi_2, x2_2, "key")
-        self.assert_dependency(vi_1, v5_1, "value-bind")
-        self.assert_dependency(vi_2, v5_2, "value-bind")
+        self.assert_dependency(vi_1, v5_1, "value", True)
+        self.assert_dependency(vi_2, v5_2, "value", True)
         self.assert_dependency(vi_1, v1_1, "condition")
         self.assert_dependency(x2_1, x1r, "use")
         self.assert_dependency(x2_2, x2r, "use")
         self.assert_dependency(vi_2, v1_2, "condition")
-        self.assert_dependency(x1r, x1w, "assignment")
-        self.assert_dependency(x2r, x2w, "assignment")
+        self.assert_dependency(x1r, x1w, "assignment", True)
+        self.assert_dependency(x2r, x2w, "assignment", True)
 
     def test_generator_expression_variable(self):
         """Test for loop"""
@@ -998,31 +998,31 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_x2_w.value_id, var_y2_w.value_id)
 
 
-        self.assert_dependency(var_a_w, var_gen, "assign-bind")
-        self.assert_dependency(var_a_r, var_a_w, "assignment")
+        self.assert_dependency(var_a_w, var_gen, "assign", True)
+        self.assert_dependency(var_a_r, var_a_w, "assignment", True)
         self.assert_dependency(var_x1_w, var_b_r, "dependency")
         self.assert_dependency(var_x2_w, var_b_r, "dependency")
 
-        self.assert_dependency(var_z1_w, var_3, "assign-bind")
-        self.assert_dependency(var_z2_w, var_4, "assign-bind")
-        self.assert_dependency(var_z1_r, var_z1_w, "assignment")
-        self.assert_dependency(var_z2_r, var_z2_w, "assignment")
+        self.assert_dependency(var_z1_w, var_3, "assign", True)
+        self.assert_dependency(var_z2_w, var_4, "assign", True)
+        self.assert_dependency(var_z1_r, var_z1_w, "assignment", True)
+        self.assert_dependency(var_z2_r, var_z2_w, "assignment", True)
 
         self.assert_dependency(z2_1, var_z1_r, "use")
         self.assert_dependency(z2_1, v1_1, "condition")
         self.assert_dependency(z2_2, var_z2_r, "use")
         self.assert_dependency(z2_2, v1_2, "condition")
 
-        self.assert_dependency(var_b_r, var_b_w, "assignment")
+        self.assert_dependency(var_b_r, var_b_w, "assignment", True)
         self.assert_dependency(var_b_r, z2_1, "item")
         self.assert_dependency(var_b_r, z2_2, "item")
 
-        self.assert_dependency(var_x1_w, z2_1, "assign-bind")
-        self.assert_dependency(var_x2_w, z2_2, "assign-bind")
-        self.assert_dependency(var_x1_r, var_x1_w, "assignment")
-        self.assert_dependency(var_x2_r, var_x2_w, "assignment")
-        self.assert_dependency(var_y1_w, var_x1_r, "assign-bind")
-        self.assert_dependency(var_y2_w, var_x2_r, "assign-bind")
+        self.assert_dependency(var_x1_w, z2_1, "assign", True)
+        self.assert_dependency(var_x2_w, z2_2, "assign", True)
+        self.assert_dependency(var_x1_r, var_x1_w, "assignment", True)
+        self.assert_dependency(var_x2_r, var_x2_w, "assignment", True)
+        self.assert_dependency(var_y1_w, var_x1_r, "assign", True)
+        self.assert_dependency(var_y2_w, var_x2_r, "assign", True)
 
     @only(PY2)
     def test_repr(self):
@@ -1057,7 +1057,7 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_type.value, self.rtype("str"))
         self.assertEqual(var_b_type.value, self.rtype("str"))
 
-        self.assert_dependency(var_b, call, "assign-bind")
+        self.assert_dependency(var_b, call, "assign", True)
         self.assert_dependency(call, var_a, "argument")
 
     @unittest.skip("ToDo: fix pyposast")
@@ -1081,4 +1081,4 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_fb, var_b, "use")
         self.assert_dependency(var_fstring, var_fa, "use")
         self.assert_dependency(var_fstring, var_fb, "use")
-        self.assert_dependency(var_d, var_fstring, "assign-bind")
+        self.assert_dependency(var_d, var_fstring, "assign", True)

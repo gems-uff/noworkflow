@@ -446,48 +446,59 @@ class AssignConfig(ConfigObj):
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.a_write_eval,
-            main_act, self.list_eval, "bind")
+            main_act, self.list_eval,
+            "assign", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.a_read_eval,
-            main_act, self.a_write_eval, "assignment")
+            main_act, self.a_write_eval,
+            "same", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.f_variable_eval,
-            main_act, function.f_eval, "assignment")
+            main_act, function.f_eval,
+            "same", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.f_func_eval,
-            self.f_variable_eval, function.f_eval, "bind")
+            self.f_variable_eval, function.f_eval,
+            "assign", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.a_arg_eval,
-            main_act, self.a_read_eval, "bind")
+            main_act, self.a_read_eval,
+            "same", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             self.f_activation, function.x_param_eval,
-            main_act, self.a_arg_eval, "bind")
+            main_act, self.a_arg_eval,
+            "param", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             self.f_activation, function.x_return_eval,
-            self.f_activation, function.x_param_eval, "assignment")
+            self.f_activation, function.x_param_eval,
+            "same", True, None, None, None)
         if function.global_name:
             self.meta.dependencies_store.add(
                 self.meta.trial_id,
                 self.f_activation, function.global_eval,
-                main_act, self.a_write_eval, "assignment")
+                main_act, self.a_write_eval,
+                "same", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             self.f_activation, function.return_eval,
-            self.f_activation, function.x_return_eval, "bind")
+            self.f_activation, function.x_return_eval,
+            "assign", True, None, None, None)
         self.return_dependency = self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.f_activation,
-            self.f_activation, function.return_eval, "bind")
+            self.f_activation, function.return_eval,
+            "assign", True, None, None, None)
         self.b_dependency = self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.b_write_eval,
-            main_act, self.f_activation, "bind")
+            main_act, self.f_activation,
+            "assing", True, None, None, None)
 
         return (
             self.a_write_eval, self.f_variable_eval, self.f_func_eval,

@@ -225,4 +225,4 @@ class TestDepthExecution(CollectionTestCase):
         self.assertEqual(activation_g.name, "g")
         self.assertEqual(activation_f.name, "f")
 
-        self.assert_dependency(var_y, var_f, "assign-bind")
+        self.assert_dependency(var_y, var_f, "assign", True)
