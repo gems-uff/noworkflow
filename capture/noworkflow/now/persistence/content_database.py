@@ -10,8 +10,6 @@ import os
 
 from os.path import join, isdir, isfile
 
-CONTENT_DIRNAME = "content"
-
 
 class ContentDatabase(object):
     """Content Database deal with storage of file content in disk"""
@@ -23,7 +21,7 @@ class ContentDatabase(object):
 
     def set_path(self, config):
         """Set content_path"""
-        self.content_path = join(config.provenance_path, CONTENT_DIRNAME)
+        self.content_path = join(config.provenance_path, config.content_dir)
 
     def commit_content(self, message):
         pass

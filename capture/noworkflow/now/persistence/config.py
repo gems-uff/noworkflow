@@ -24,6 +24,7 @@ class PersistenceConfig(object):
         self.provenance_path = None  # Base .noworkflow path
         self.db_conn = None  # Connection to the database
         self.should_mock = False
+        self.content_dir = None
 
         if path:
             self.path = path

@@ -15,11 +15,11 @@ from os.path import isdir
 from . import git_system
 
 
-class ContentDatbaseDulwich(ContentDatabase):
+class ContentDatabaseDulwich(ContentDatabase):
     """Content database that uses git library Dulwich"""
 
     def __init__(self, persistence_config):
-        super(ContentDatbaseDulwich, self).__init__(persistence_config)
+        super(ContentDatabaseDulwich, self).__init__(persistence_config)
         self.__repo = None
         self.__tree = Tree()
         self.__commit_name_email = 'Noworkflow <now@nowokflow.com>'

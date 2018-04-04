@@ -8,11 +8,11 @@ from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository
 from pygit2 import Signature
 
 
-class ContentDatbasePyGit(ContentDatabase):
+class ContentDatabasePyGit(ContentDatabase):
     """Content database that uses git library PyGit2"""
 
     def __init__(self, persistence_config):
-        super(ContentDatbasePyGit, self).__init__(persistence_config)
+        super(ContentDatabasePyGit, self).__init__(persistence_config)
         self.__repo = None
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
