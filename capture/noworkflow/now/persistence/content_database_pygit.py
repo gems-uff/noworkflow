@@ -52,7 +52,7 @@ class ContentDatabasePyGit(ContentDatabase):
         Arguments:
         content_hash -- content hash code
         """
-        return_data = self.__get_repo()[content_hash]
+        return_data = self.__get_repo()[content_hash].data
         return return_data
 
     def commit_content(self, message):
