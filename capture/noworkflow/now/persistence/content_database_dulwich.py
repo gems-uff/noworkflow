@@ -13,6 +13,7 @@ from dulwich.repo import Repo
 from dulwich.objects import Tree, Commit, Blob, parse_timezone
 from os.path import isdir
 from . import git_system
+from ..utils import func_profiler
 
 
 class ContentDatabaseDulwich(ContentDatabase):
@@ -42,6 +43,7 @@ class ContentDatabaseDulwich(ContentDatabase):
         ContentDatabaseStandart.get = get'''
         pass
 
+    @func_profiler.profile
     def connect(self, config):
         """Create content directory"""
         if not isdir(self.content_path):
@@ -49,7 +51,7 @@ class ContentDatabaseDulwich(ContentDatabase):
             Repo.init_bare(self.content_path)
             self.__create_initial_commit()
 
-
+    @func_profiler.profile
     def put(self, content):
         """Put content in the content database
 
@@ -107,6 +109,7 @@ class ContentDatabaseDulwich(ContentDatabase):
 
         return commit
 
+    @func_profiler.profile
     def commit_content(self, message):
         """Commit the current files of content database
 

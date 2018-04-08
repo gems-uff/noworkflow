@@ -15,6 +15,7 @@ from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
 from ..persistence import content
 from ..utils.cross_version import PY3
+from ..utils import func_profiler
 
 from .command import Command
 
@@ -72,6 +73,8 @@ def run(metascript, args=None):
         content.commit_content(message)
 
         metaprofiler.meta_profiler.save()
+
+        func_profiler.print_prof_data()
 
     finally:
         metascript.create_last()
