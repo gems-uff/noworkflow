@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "@noworkflow/nowvis",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "description": "noWorkflow - Visualization Tool",
   "main": "../../../capture/noworkflow/now/vis/static/dist/bundle.js",
   "files": [

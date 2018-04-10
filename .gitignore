@@ -6,7 +6,7 @@
 # Packages
 *.egg
 *.egg-info
-dist
+capture/dist
 build
 eggs
 parts

@@ -96,6 +96,6 @@ while True:
     visited = {}
     try:
         ALL.check(visited=visited)
-    except:
-        print("Failed")
+    except Exception as e:
+        print("Failed: {}".format(e))
     sleep(1.0)
