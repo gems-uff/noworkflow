@@ -6,6 +6,9 @@ from . import git_system
 from os.path import isdir
 from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository
 from pygit2 import Signature
+from gitdb import LooseObjectDB, IStream
+import StringIO
+from ..utils import func_profiler
 
 
 class ContentDatabasePyGit(ContentDatabase):
@@ -28,6 +31,8 @@ class ContentDatabasePyGit(ContentDatabase):
             init_repository(self.content_path, bare=True)
             self.__create_initial_commit()
 
+
+    @func_profiler.profile
     def put(self, content):
         """Put content in the content database
 
@@ -36,10 +41,19 @@ class ContentDatabasePyGit(ContentDatabase):
         Arguments:
         content -- binary text to be saved
         """
-        id = self.__get_repo().create_blob(content)
+
+        ldb = LooseObjectDB("./{}/objects/".format(self.content_path))
+
+        istream = IStream("blob", len(content), StringIO.StringIO(content))
+
+        ldb.store(istream)
+
+        return istream.hexsha
+
+        '''id = self.__get_repo().create_blob(content)
         self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
 
-        return id.__str__()
+        return id.__str__()'''
 
     def find_subhash(self, content_hash):
         return None

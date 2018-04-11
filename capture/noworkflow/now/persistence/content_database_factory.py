@@ -21,6 +21,6 @@ class ContentDatabaseFactory(object):
     def factory(persistence_config):
 
         persistence_config.content_dir = CONTENT_GIT_DIRNAME
-        return ContentDatabaseDulwich(persistence_config)
+        return ContentDatabasePyGit(persistence_config)
 
 
