@@ -13,7 +13,7 @@ from dulwich.repo import Repo
 from dulwich.objects import Tree, Commit, Blob, parse_timezone
 from os.path import isdir
 from . import git_system
-
+from ..utils import func_profiler
 
 class ContentDatabaseDulwich(ContentDatabase):
     """Content database that uses git library Dulwich"""
@@ -49,7 +49,7 @@ class ContentDatabaseDulwich(ContentDatabase):
             Repo.init_bare(self.content_path)
             self.__create_initial_commit()
 
-
+    @func_profiler.profile
     def put(self, content):
         """Put content in the content database
 
