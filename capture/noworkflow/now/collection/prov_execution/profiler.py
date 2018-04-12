@@ -24,21 +24,41 @@ from .base import ExecutionProvider
 from .argument_captors import ProfilerArgumentCaptor
 
 
+
 MODES = {
-    os.O_RDONLY: "r",
-    os.O_WRONLY: "w",
-    os.O_RDWR: "+",
-    os.O_APPEND: "a",
-    os.O_NONBLOCK: "n",
-    os.O_CREAT: "c",
-    os.O_TRUNC: "t",
-    os.O_EXCL: "e",
-    os.O_DIRECT: "d",
-    os.O_NOFOLLOW: "k",
-    os.O_SYNC: "S",
-    os.O_DSYNC: "D",
-    os.O_RSYNC: "R",
-    os.O_NOCTTY: "T",
+    # All
+    "O_RDONLY": "r",
+    "O_WRONLY": "w",
+    "O_RDWR": "+",
+    "O_APPEND": "a",
+    "O_CREAT": None,
+    "O_TRUNC": None,
+    # Linux
+    "O_DSYNC": None,
+    "O_RSYNC": None,
+    "O_SYNC": None,
+    "O_NDELAY": None,
+    "O_NONBLOCK": None,
+    "O_NOCTTY": None,
+    "O_CLOEXEC": None,
+    # Windowns
+    "O_BINARY": None,
+    "O_NOINHERIT": None,
+    "O_SHORT_LIVED": None,
+    "O_TEMPORARY": None,
+    "O_RANDOM": None,
+    "O_SEQUENTIAL": None,
+    "O_TEXT": None,
+    # Extensions that must be defined by the C library
+    "O_ASYNC": None,
+    "O_DIRECT": None,
+    "O_DIRECTORY": None,
+    "O_NOFOLLOW": None,
+    "O_NOATIME": None,
+    "O_PATH": None,
+    "O_TMPFILE": None,
+    "O_SHLOCK": None,
+    "O_EXLOCK": None,
 }
 
 
@@ -151,7 +171,9 @@ class Profiler(ExecutionProvider):                                              
                     if osopen:
                         mode = ""
                         for key, value in MODES.items():
-                            if args[0] & key:
+                            flag = getattr(os, key, 0)
+                            if args[0] & flag:
+                                value = value or "({})".format(key)
                                 mode += value
 
                     file_access.mode = mode
