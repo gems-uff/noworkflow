@@ -46,6 +46,7 @@ class Collector(object):
         self.dependencies = self.metascript.dependencies_store
         self.values = self.metascript.values_store
         self.compartments = self.metascript.compartments_store
+        self.members = self.metascript.members_store
         self.file_accesses = self.metascript.file_accesses_store
 
         self.exceptions = self.metascript.exceptions_store
@@ -64,6 +65,7 @@ class Collector(object):
         self.first_activation.depth = 0
         self.last_activation = self.first_activation
         self.shared_types = {}
+        self.vshared_types = {} # VToDo
 
         # Original globals
         self.globals = copy(__builtins__)
@@ -150,7 +152,7 @@ class Collector(object):
             eva = self.evaluate_vid(activation, code_id, part_id, None, depa)
         else:
             # Create new value_id
-            eva = self.evaluate(activation, code_id, value, None, depa)
+            eva = self.evaluate_depa(activation, code_id, value, None, depa)
 
         is_whitebox_slice = (
             isinstance(vindex, self.pyslice) and
@@ -245,11 +247,12 @@ class Collector(object):
         self.last_activation = activation
         return activation
 
-    def close_activation(self, activation, value_id):
+    def close_activation(self, activation, value, reference_id, value_id):
         """Close activation. Set moment and value"""
         evaluation = activation.evaluation
         evaluation.moment = self.time()
         evaluation.value_id = value_id
+        self.add_type(evaluation, value, reference_id)
         self.last_activation = activation.last_activation
         for file_access in activation.file_accesses:
             if os.path.exists(file_access.name):
@@ -260,20 +263,21 @@ class Collector(object):
         #    evaluation.activation_id, self.first_activation
         #)
 
-    def add_value(self, value):
+    def add_value(self, value): 
         """Add value. Create type value recursively. Return value id"""
+        # VToDo
         if value is type:
             value_object = self.values.add_object(
                 self.trial_id, repr(value), -1
             )
             value_object.type_id = value_object.id
-            self.shared_types[value] = value_object.id
+            self.vshared_types[value] = value_object.id
             return value_object.id
 
         value_type = type(value)
-        if value_type not in self.shared_types:
-            self.shared_types[value_type] = self.add_value(value_type)
-        type_id = self.shared_types[value_type]
+        if value_type not in self.vshared_types:
+            self.vshared_types[value_type] = self.add_value(value_type)
+        type_id = self.vshared_types[value_type]
         return self.values.add(self.trial_id, repr(value), type_id)
 
     def start_script(self, module_name, code_component_id):
@@ -289,7 +293,7 @@ class Collector(object):
             result = sys.modules[now_activation.name]
 
         self.close_activation(
-            now_activation, self.add_value(result)
+            now_activation, result, None, self.add_value(result)
         )
 
     def collect_exception(self, activation, exc_handler=None):
@@ -309,7 +313,7 @@ class Collector(object):
         """Collection activation exc value"""
         # pylint: disable=too-many-arguments, unused-argument
         # ToDo: relate evaluation to exception
-        evaluation = self.evaluate(activation, code_id, value, None)
+        evaluation = self.evaluate_depa(activation, code_id, value, None)
         if name:
             activation.context[name] = evaluation
 
@@ -325,10 +329,11 @@ class Collector(object):
             return evaluation
         if name in self.globals:
             trial_id = self.trial_id
-            evaluation = self.evaluations.add_object(
-                trial_id, self.code_components.add(
+            evaluation = self.evaluate(
+                -1, self.code_components.add(
                     trial_id, name, 'global', 'w', -1, -1, -1, -1, -1
-                ), -1, self.time(), self.add_value(self.globals[name]))
+                ), self.globals[name], self.time()
+            )
             self.global_evaluations[name] = evaluation
         return evaluation
 
@@ -483,7 +488,7 @@ class Collector(object):
         # pylint: disable=no-self-use
         depa = activation.dependencies.pop()
         if activation.active:
-            evaluation = self.evaluate(activation, code_id, value, None, depa)
+            evaluation = self.evaluate_depa(activation, code_id, value, None, depa)
             dependency = Dependency(
                 activation.id, evaluation.id, code_id,
                 value, evaluation.value_id, mode
@@ -533,7 +538,7 @@ class Collector(object):
             if len(value_depa.dependencies) == 1:
                 dependency = value_depa.dependencies[0]
             else:
-                evaluation = self.evaluate(
+                evaluation = self.evaluate_depa(
                     activation, code_id, value, None, value_depa
                 )
                 dependency = Dependency(
@@ -566,7 +571,7 @@ class Collector(object):
             depa = activation.dependencies.pop()
             gen.value = value
             if activation.active:
-                eva = self.evaluate(activation, code_id, value, None, depa)
+                eva = self.evaluate_depa(activation, code_id, value, None, depa)
                 dependency = Dependency(
                     activation.id, eva.id, code_id,
                     value, eva.value_id, mode
@@ -592,7 +597,7 @@ class Collector(object):
             if len(value_depa.dependencies) == 1:
                 dependency = value_depa.dependencies[0]
             else:
-                evaluation = self.evaluate(
+                evaluation = self.evaluate_depa(
                     activation, code_id, value, None, value_depa
                 )
                 dependency = Dependency(
@@ -715,7 +720,7 @@ class Collector(object):
         """Create dependencies for assignment to single name"""
         moment = assign.moment
         code, name, value = info
-        evaluation = self.evaluate(activation, code, value, moment, depa)
+        evaluation = self.evaluate_depa(activation, code, value, moment, depa)
         if name:
             activation.context[name] = evaluation
         return 1
@@ -728,7 +733,7 @@ class Collector(object):
         if code in assign.accesses:
             # Replaces information for more precise subscript
             value, access_depa, addr, value_dep, moment = assign.accesses[code]
-        evaluation = self.evaluate(activation, code, value, moment, depa)
+        evaluation = self.evaluate_depa(activation, code, value, moment, depa)
         if value_dep:
             self.make_dependencies(activation, evaluation, access_depa)
             self.compartments.add_object(
@@ -884,7 +889,7 @@ class Collector(object):
             if len(depa.dependencies) == 1:
                 dependency = depa.dependencies[0]
             else:
-                evaluation = self.evaluate(
+                evaluation = self.evaluate_depa(
                     activation, func_id, func, self.time(), depa
                 )
                 dependency = Dependency(
@@ -928,15 +933,17 @@ class Collector(object):
             raise
         finally:
             # Find value in activation result
-            value_id = None
+            reference_id = None
+            value_id = None # VTodo
             for depa in activation.dependencies:
+                reference_id = self.find_reference_dependency(result, depa)
                 value_id = self.find_value_id(result, depa, create=False)
-                if value_id:
+                if reference_id:
                     break
             if not value_id:
                 value_id = self.add_value(result)
             # Close activation
-            self.close_activation(activation, value_id)
+            self.close_activation(activation, result, reference_id, value_id)
 
             if activation.parent.active:
                 # Create dependencies
@@ -991,7 +998,7 @@ class Collector(object):
             if len(dependency_aware.dependencies) == 1:
                 dependency = dependency_aware.dependencies[0]
             else:
-                eva = self.evaluate(
+                eva = self.evaluate_depa(
                     activation, code_id, value, self.time(), dependency_aware
                 )
                 dependency = Dependency(
@@ -1107,7 +1114,7 @@ class Collector(object):
             arg.mode = "argument"
             depa = DependencyAware()
             depa.add(arg)
-            evaluation = self.evaluate(
+            evaluation = self.evaluate_depa(
                 activation, param.code_id, arg.value, time, depa
             )
             arg.mode = "argument"
@@ -1335,20 +1342,28 @@ class Collector(object):
         exec_.__name__ = "exec"
         return self.call(activation, code_id, exc_handler, exec_, mode)
 
-    def find_value_id(self, value, depa, create=True):
+    def find_reference_dependency(self, value, depa):
         """Find bound dependency in dependency aware"""
-        value_id = None
+        eva_id = None
         if depa and (
                 not isinstance(value, IMMUTABLE) or
                 len(depa.dependencies) == 1):
             for dep in depa.dependencies:
                 dep.reference = False
                 if dep.value is value:
-                    value_id = dep.value_id
+                    eva_id = dep.evaluation_id
                     if dep.mode.startswith("dependency"):
                         dep.mode = "assign"
                     dep.reference = True
                     break
+        return eva_id
+
+    def find_value_id(self, value, depa, create=True):
+        """Find bound dependency in dependency aware"""
+        value_id = None
+        eva_id = self.find_reference_dependency(value, depa)
+        if eva_id is not None:
+            value_id = self.evaluations[eva_id].value_id
         if create and not value_id:
             value_id = self.add_value(value)
         return value_id
@@ -1389,18 +1404,76 @@ class Collector(object):
     def eval_dep(self, activation, code, value, mode, depa=None, moment=None):
         """Create evaluation and dependency"""
         # pylint: disable=too-many-arguments
-        evaluation = self.evaluate(activation, code, value, moment, depa)
+        evaluation = self.evaluate_depa(activation, code, value, moment, depa)
         activation.dependencies[-1].add(Dependency(
             activation.id, evaluation.id, evaluation.code_component_id,
             value, evaluation.value_id, mode
         ))
         return evaluation
 
-    def evaluate(self, activation, code_id, value, moment, depa=None):
+    def evaluate_type(self, value, moment):
+        """Add type evaluation. Create type value recursively.
+        Return evaluation"""
+        if value in self.shared_types:
+            return self.shared_types[value]
+        trial_id = self.trial_id
+        tevaluation = self.evaluations.add_object(
+            trial_id, self.code_components.add(
+                trial_id, repr(value), 'type', 'w', -1, -1, -1, -1, -1
+            ), -1, self.time(),
+            self.add_value(value)
+        )
+        self.shared_types[value] = tevaluation
+        if value is type:
+            parent_activation = tevaluation.activation_id
+            parent_id = tevaluation.id
+        else:
+            value_type = self.evaluate_type(type(value), moment)
+            parent_activation = value_type.activation_id
+            parent_id = value_type.id 
+        self.members.add(
+            trial_id, tevaluation.activation_id, tevaluation.id,
+            parent_activation, parent_id,
+            '.__class__', moment, 'add'
+        )
+        return tevaluation
+
+    def evaluate_depa(self, activation, code_id, value, moment, depa=None):
         """Create evaluation for code component"""
         # pylint: disable=too-many-arguments
-        value_id = self.find_value_id(value, depa)
-        return self.evaluate_vid(activation, code_id, value_id, moment, depa)
+        reference_id = self.find_reference_dependency(value, depa)
+        evaluation = self.evaluate(activation.id, code_id, value, moment, reference_id, depa)
+        self.make_dependencies(activation, evaluation, depa)
+        return evaluation
+
+    def add_type(self, evaluation, value, reference_id):
+        """Create type for evaluation"""
+        if isinstance(value, type):
+            if value not in self.shared_types:
+                self.shared_types[value] = evaluation
+            else:
+                pass # ToDo: add reference to existing type evaluation
+        if reference_id is None:
+            type_eval = self.evaluate_type(type(value), evaluation.moment)
+            self.members.add(
+                self.trial_id, evaluation.activation_id, evaluation.id,
+                type_eval.activation_id, type_eval.id,
+                '.__class__', evaluation.moment, 'add'
+            )
+
+    def evaluate(self, activation_id, code_id, value, moment, reference_id=None, depa=None):
+        """Create evaluation for code component"""
+        # pylint: disable=too-many-arguments
+        value_id = self.find_value_id(value, depa) # VToDo
+        if moment is None:
+            moment = self.time()
+        evaluation = self.evaluations.add_object(
+            self.trial_id, code_id, activation_id, moment,
+            value_id # VToDo
+        )
+        self.add_type(evaluation, value, reference_id)
+        return evaluation
+
 
     def evaluate_vid(self, activation, code_id, value_id, moment, depa=None):
         """Create evaluation for code component using a given value_id"""

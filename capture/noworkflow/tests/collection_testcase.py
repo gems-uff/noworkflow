@@ -66,6 +66,10 @@ class CollectionTestCase(unittest.TestCase):
         """Find compartment by attributes in kwargs"""
         return self.find(self.metascript.compartments_store.store, **kwargs)
 
+    def find_member(self, **kwargs):
+        """Find members by attributes in kwargs"""
+        return self.find(self.metascript.members_store.store, **kwargs)
+
     def get_evaluations(self, **kwargs):
         """Execute and get evaluation"""
         self.execute()
@@ -125,6 +129,27 @@ class CollectionTestCase(unittest.TestCase):
             component.name, evaluation.id, component.first_char_line
         )
 
+    def assert_type(self, evaluation, type_evaluation):
+        original = evaluation
+        eva_id = evaluation.id
+        type_id = type_evaluation.id
+        while eva_id is not None:
+            member = self.find_member(
+                collection_id=eva_id,
+                member_id=type_id,
+                key=".__class__")
+            if member:
+                return
+            dep = self.find_dependency(
+                dependent_id=eva_id,
+                reference=True)
+            eva_id = dep.dependency_id if dep else None
+
+        self.fail("Evaluation {} does not have type {}".format(
+            self.evaluation_repr(original),
+            self.evaluation_repr(type_evaluation),
+        ))
+
     def assert_dependency(self, dependent, dependency, type_=None, reference=False):
         """Check if dependency exists"""
         dep = self.find_dependency(dependent_id=dependent.id,
@@ -149,8 +174,9 @@ class CollectionTestCase(unittest.TestCase):
                     )
                 )
 
-    def pdebug(self):
+    def pdebug(self, members=False):
         """Print current dependencies"""
+        from collections import defaultdict
         used_evals = set()
         print()
         print("Dependencies")
@@ -160,9 +186,10 @@ class CollectionTestCase(unittest.TestCase):
             edependency = self.metascript.evaluations_store[dependency]
             used_evals.add(dependent)
             used_evals.add(dependency)
-            print("  {} -({})> {}".format(
+            print("  {} -({})> {}{}".format(
                 self.evaluation_repr(edependent), dep.type,
-                self.evaluation_repr(edependency)
+                self.evaluation_repr(edependency),
+                " (R)" if dep.reference else "",
             ))
         print("Evaluations")
         for eva in viewvalues(self.metascript.evaluations_store.store):
@@ -170,6 +197,23 @@ class CollectionTestCase(unittest.TestCase):
                 print("  {}".format(
                     self.evaluation_repr(eva),
                 ))
+        if members:
+            print("Members")
+            collections = defaultdict(list)
+            for member in viewvalues(self.metascript.members_store.store):
+                collections[member.collection_id].append((member.member_id, member.key, member.moment))
+            for collection_id, members in viewitems(collections):
+                collection = self.metascript.evaluations_store[collection_id]
+                print("  {}".format(
+                    self.evaluation_repr(collection),
+                ))
+                for member_id, key, moment in members:
+                    member = self.metascript.evaluations_store[member_id]
+                    print("    {} = {} ({})".format(
+                        key,
+                        self.evaluation_repr(member),
+                        moment
+                    ))
 
     def assert_no_dependency(self, dependent, dependency, type_=None):
         """Check if dependency exists"""

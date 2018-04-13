@@ -18,6 +18,7 @@ class TestScript(CollectionTestCase):
         self.script("# script.py\n"
                     "# other")
         self.metascript.execution.collect_provenance()
+        self.executed = True
         self.assertEqual(self.metascript.execution.msg,
                          "the execution of trial -1 finished successfully")
 
@@ -26,11 +27,19 @@ class TestScript(CollectionTestCase):
         script_activation = self.metascript.activations_store[
             script_evaluation.id
         ]
+        var_module = self.get_evaluation(name=self.rtype('module'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
         self.assertEqual(script_evaluation.activation_id, -1)
         self.assertTrue(script_activation.start < script_evaluation.moment)
         self.assertEqual(script_activation.code_block_id, script.id)
         self.assertEqual(script_activation.name, "__main__")
+        self.assertEqual(len(self.metascript.exceptions_store.store), 0)
+        self.assert_type(script_evaluation, var_module)
+        self.assert_type(var_module, var_type)
+        self.assert_type(var_type, var_type)
+
+        # vtodo: add repr
 
         script_value = self.metascript.values_store[script_evaluation.value_id]
         script_type = self.metascript.values_store[script_value.type_id]
@@ -41,7 +50,6 @@ class TestScript(CollectionTestCase):
         self.assertEqual(type_type.value, self.rtype("type"))
         self.assertEqual(type_type.type_id, type_type.id)
 
-        self.assertEqual(len(self.metascript.exceptions_store.store), 0)
 
     def test_script_with_error(self):
         """Test script collection with exception"""
@@ -49,6 +57,7 @@ class TestScript(CollectionTestCase):
                     "1 / 0\n"
                     "# other")
         self.metascript.execution.collect_provenance()
+        self.executed = True
         self.assertNotEqual(self.metascript.execution.msg,
                             "the execution of trial -1 finished successfully")
 
@@ -57,12 +66,21 @@ class TestScript(CollectionTestCase):
         script_activation = self.metascript.activations_store[
             script_evaluation.id
         ]
+        var_module = self.get_evaluation(name=self.rtype('module'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
         self.assertEqual(script_evaluation.activation_id, -1)
         self.assertTrue(script_activation.start < script_evaluation.moment)
         self.assertEqual(script_activation.code_block_id, script.id)
         self.assertEqual(script_activation.name, "__main__")
 
+        self.assertEqual(len(self.metascript.exceptions_store.store), 1)
+        # ToDo #77: check exception
+        self.assert_type(script_evaluation, var_module)
+        self.assert_type(var_module, var_type)
+        self.assert_type(var_type, var_type)
+
+        # vtodo: add repr
         script_value = self.metascript.values_store[script_evaluation.value_id]
         script_type = self.metascript.values_store[script_value.type_id]
         type_type = self.metascript.values_store[script_type.type_id]
@@ -72,6 +90,3 @@ class TestScript(CollectionTestCase):
         self.assertEqual(type_type.value, self.rtype("type"))
         self.assertEqual(type_type.type_id, type_type.id)
 
-        self.assertEqual(len(self.metascript.exceptions_store.store), 1)
-
-        # ToDo #77: check exception

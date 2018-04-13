@@ -31,7 +31,16 @@ class TestExprExecution(CollectionTestCase):
 
         var_a = self.get_evaluation(name="a")
         var_2 = self.get_evaluation(name="2")
+        var_int = self.get_evaluation(name=self.rtype('int'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        
+        self.assert_dependency(var_a, var_2, "assign", True)
+        self.assert_type(var_2, var_int)
+        self.assert_type(var_a, var_int)
+        self.assert_type(var_int, var_type)
+        self.assert_type(var_type, var_type)
 
+        # VTodo: add repr
         self.assertEqual(var_2.value_id, var_a.value_id)
 
         var_value = self.metascript.values_store[var_a.value_id]
@@ -42,8 +51,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_2, "assign", True)
-
     def test_str(self):
         """Test str collection"""
         self.script("# script.py\n"
@@ -52,7 +59,16 @@ class TestExprExecution(CollectionTestCase):
 
         var_a = self.get_evaluation(name="a")
         var_2 = self.get_evaluation(name="'2'")
+        var_str = self.get_evaluation(name=self.rtype('str'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
+        self.assert_dependency(var_a, var_2, "assign", True)
+        self.assert_type(var_2, var_str)
+        self.assert_type(var_a, var_str)
+        self.assert_type(var_str, var_type)
+        self.assert_type(var_type, var_type)
+
+        # VTodo: add repr
         self.assertEqual(var_2.value_id, var_a.value_id)
 
         var_value = self.metascript.values_store[var_a.value_id]
@@ -63,8 +79,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("str"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_2, "assign", True)
-
     def test_bytes(self):
         """Test bytes collection"""
         self.script("# script.py\n"
@@ -74,9 +88,21 @@ class TestExprExecution(CollectionTestCase):
         var_a = self.get_evaluation(name="a")
         var_2 = (
             self.get_evaluation(name="'2'") or
-            self.get_evaluation(name="b'2'")
+            self.get_evaluation(name="b'2'") # Python 2
         )
+        var_bytes = (
+            self.get_evaluation(name=self.rtype('bytes')) or
+            self.get_evaluation(name=self.rtype('str')) # Python 2
+        )
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
+        self.assert_dependency(var_a, var_2, "assign", True)
+        self.assert_type(var_2, var_bytes)
+        self.assert_type(var_a, var_bytes)
+        self.assert_type(var_bytes, var_type)
+        self.assert_type(var_type, var_type)
+
+        # VTodo: add repr
         self.assertEqual(var_2.value_id, var_a.value_id)
 
         var_value = self.metascript.values_store[var_a.value_id]
@@ -87,8 +113,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bytes" if PY3 else "str"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_2, "assign", True)
-
     @only(PY3)
     def test_ellipsis(self):
         """Test ... collection"""
@@ -98,7 +122,15 @@ class TestExprExecution(CollectionTestCase):
 
         var_a = self.get_evaluation(name="a")
         var_ellipsis = self.get_evaluation(name="...")
+        var_ellipsis_type = self.get_evaluation(name=self.rtype('ellipsis'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        self.assert_dependency(var_a, var_ellipsis, "assign", True)
+        self.assert_type(var_ellipsis, var_ellipsis_type)
+        self.assert_type(var_a, var_ellipsis_type)
+        self.assert_type(var_ellipsis_type, var_type)
+        self.assert_type(var_ellipsis_type, var_type)
 
+        # VTodo: add repr
         self.assertEqual(var_ellipsis.value_id, var_a.value_id)
 
         var_value = self.metascript.values_store[var_a.value_id]
@@ -109,8 +141,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("ellipsis"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_ellipsis, "assign", True)
-
     def test_true(self):
         """Test True collection"""
         self.script("# script.py\n"
@@ -119,7 +149,16 @@ class TestExprExecution(CollectionTestCase):
 
         var_a = self.get_evaluation(name="a")
         var_true = self.get_evaluation(name="True")
+        var_bool = self.get_evaluation(name=self.rtype('bool'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
+        self.assert_dependency(var_a, var_true, "assign", True)
+        self.assert_type(var_true, var_bool)
+        self.assert_type(var_a, var_bool)
+        self.assert_type(var_bool, var_type)
+        self.assert_type(var_type, var_type)
+
+        # VTodo: add repr
         self.assertEqual(var_true.value_id, var_a.value_id)
 
         var_value = self.metascript.values_store[var_a.value_id]
@@ -130,8 +169,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bool"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_true, "assign", True)
-
     def test_false(self):
         """Test False collection"""
         self.script("# script.py\n"
@@ -140,7 +177,16 @@ class TestExprExecution(CollectionTestCase):
 
         var_a = self.get_evaluation(name="a")
         var_false = self.get_evaluation(name="False")
+        var_bool = self.get_evaluation(name=self.rtype('bool'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
+        self.assert_dependency(var_a, var_false, "assign", True)
+        self.assert_type(var_false, var_bool)
+        self.assert_type(var_a, var_bool)
+        self.assert_type(var_bool, var_type)
+        self.assert_type(var_type, var_type)
+
+        # VTodo: add repr
         self.assertEqual(var_false.value_id, var_a.value_id)
 
         var_value = self.metascript.values_store[var_a.value_id]
@@ -151,8 +197,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("bool"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_false, "assign", True)
-
     def test_none(self):
         """Test None collection"""
         self.script("# script.py\n"
@@ -161,6 +205,16 @@ class TestExprExecution(CollectionTestCase):
 
         var_a = self.get_evaluation(name="a")
         var_none = self.get_evaluation(name="None")
+        var_nonetype = self.get_evaluation(name=self.rtype('NoneType'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
+
+        self.assert_dependency(var_a, var_none, "assign", True)
+        self.assert_type(var_none, var_nonetype)
+        self.assert_type(var_a, var_nonetype)
+        self.assert_type(var_nonetype, var_type)
+        self.assert_type(var_type, var_type)
+
+        # VTodo: add repr
 
         self.assertEqual(var_none.value_id, var_a.value_id)
 
@@ -172,17 +226,21 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_type.value, self.rtype("NoneType"))
         self.assertEqual(type_type.value, self.rtype("type"))
 
-        self.assert_dependency(var_a, var_none, "assign", True)
-
     def test_global(self):
         """Test global collection"""
         self.script("# script.py\n"
                     "a = int\n"
                     "# other")
-
         var_a = self.get_evaluation(name="a")
         var_int = self.get_evaluation(name="int")
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
+        self.assert_dependency(var_a, var_int, "assign", True)
+        self.assert_type(var_a, var_type)
+        self.assert_type(var_int, var_type)
+        self.assert_type(var_type, var_type)
+
+        # VTodo: add repr
         self.assertEqual(var_a.value_id, var_int.value_id)
 
         var_type = self.metascript.values_store[var_a.value_id]
@@ -190,8 +248,6 @@ class TestExprExecution(CollectionTestCase):
 
         self.assertEqual(var_type.value, self.rtype("int"))
         self.assertEqual(type_type.value, self.rtype("type"))
-
-        self.assert_dependency(var_a, var_int, "assign", True)
 
     def test_name(self):
         """Test name collection"""
@@ -332,6 +388,9 @@ class TestExprExecution(CollectionTestCase):
         var_b = self.get_evaluation(name="b")
         var_int = self.get_evaluation(name="int", type="name")
         call = self.get_evaluation(name="int(a)", type="call")
+        var_int_type = self.get_evaluation(name=self.rtype('int'))
+        var_str = self.get_evaluation(name=self.rtype('str'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
         self.assertIsNone(var_int)
 
@@ -345,6 +404,15 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(activation.code_block_id, -1)
         self.assertEqual(activation.name, "int")
 
+        self.assert_dependency(var_b, call, "assign", True)
+        self.assert_dependency(call, var_a, "argument")
+        self.assert_type(var_a, var_str)
+        self.assert_type(var_b, var_int_type)
+        self.assert_type(var_str, var_type)
+        self.assert_type(var_int_type, var_type)
+
+        # VTodo: add repr
+
         var_a_value = self.metascript.values_store[var_a.value_id]
         var_a_type = self.metascript.values_store[var_a_value.type_id]
         var_b_value = self.metascript.values_store[var_b.value_id]
@@ -354,9 +422,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_b_value.value, "1")
         self.assertEqual(var_a_type.value, self.rtype("str"))
         self.assertEqual(var_b_type.value, self.rtype("int"))
-
-        self.assert_dependency(var_b, call, "assign", True)
-        self.assert_dependency(call, var_a, "argument")
 
     def test_external_call_with_func(self):
         """Test external call collection with func collection"""
@@ -370,6 +435,9 @@ class TestExprExecution(CollectionTestCase):
         var_b = self.get_evaluation(name="b")
         call = self.get_evaluation(name="int(a)", type="call")
         var_int = self.get_evaluation(name="int", type="name")
+        var_int_type = self.get_evaluation(name="int", type="global")
+        var_str = self.get_evaluation(name=self.rtype('str'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
@@ -384,6 +452,11 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_b, call, "assign", True)
         self.assert_dependency(call, var_a, "argument")
         self.assert_dependency(call, var_int, "func")
+
+        self.assert_type(var_a, var_str)
+        self.assert_type(var_b, var_int_type)
+        self.assert_type(var_str, var_type)
+        self.assert_type(var_int_type, var_type)
 
     def test_dict_definition(self):
         """Test dict definition"""
@@ -1035,8 +1108,9 @@ class TestExprExecution(CollectionTestCase):
         var_a = self.get_evaluation(name="a", mode="r", type="name")
         var_b = self.get_evaluation(name="b")
         call = self.get_evaluation(name="`a`", type="call")
-
-
+        var_str = self.get_evaluation(name=self.rtype('str'))
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
 
@@ -1046,6 +1120,15 @@ class TestExprExecution(CollectionTestCase):
         self.assertTrue(activation.start < call.moment)
         self.assertEqual(activation.code_block_id, -1)
         self.assertEqual(activation.name, "repr")
+
+        self.assert_dependency(var_b, call, "assign", True)
+        self.assert_dependency(call, var_a, "argument")
+        self.assert_type(var_b, var_str)
+        self.assert_type(var_a, var_str)
+        self.assert_type(var_str, var_type)
+        self.assert_type(var_type, var_type)
+
+        # vtodo: add repr
 
         var_a_value = self.metascript.values_store[var_a.value_id]
         var_a_type = self.metascript.values_store[var_a_value.type_id]
@@ -1057,11 +1140,9 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_type.value, self.rtype("str"))
         self.assertEqual(var_b_type.value, self.rtype("str"))
 
-        self.assert_dependency(var_b, call, "assign", True)
-        self.assert_dependency(call, var_a, "argument")
-
-    @unittest.skip("ToDo: fix pyposast")
+        
     @only(PY36)
+    @unittest.skip("ToDo: fix pyposast")
     def test_joined_str_and_formatted_value(self):
         """Test bool expr collection"""
         self.script("# script.py\n"
