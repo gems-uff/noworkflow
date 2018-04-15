@@ -11,7 +11,6 @@ from .activation import ActivationLW
 from .argument import ArgumentLW
 from .code_block import CodeBlockLW
 from .code_component import CodeComponentLW
-from .compartment import CompartmentLW
 from .composition import CompositionLW
 from .dependency import DependencyLW
 from .environment_attr import EnvironmentAttrLW
@@ -30,7 +29,6 @@ __all__ = [
     "ArgumentLW",
     "CodeBlockLW",
     "CodeComponentLW",
-    "CompartmentLW",
     "CompositionLW",
     "DependencyLW",
     "EnvironmentAttrLW",

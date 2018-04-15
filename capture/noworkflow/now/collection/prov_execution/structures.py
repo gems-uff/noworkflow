@@ -10,8 +10,14 @@ from copy import copy
 from collections import namedtuple, defaultdict
 
 
+FakeEvaluation = namedtuple(
+    "FakeEvaluation", "activation_id id")
+FAKE = FakeEvaluation(None, None)
+
+
 AssignAccess = namedtuple(
     "AssignAccess", "value dependency addr value_dep moment")
+
 
 
 class Assign(namedtuple("Assign", "moment value dependency")):
@@ -132,12 +138,16 @@ class Generator(object):
 class Dependency(object):
     """Represent a dependency"""
 
-    def __init__(self, act_id, evaluation_id, code_id, value, value_id, mode):
-        self.activation_id = act_id
-        self.evaluation_id = evaluation_id
-        self.code_id = code_id
+    def __init__(self, evaluation, value, mode, collection=FAKE, addr=None):
+        self.activation_id = evaluation.activation_id
+        self.evaluation_id = evaluation.id
+        self.code_id = evaluation.code_component_id
+        self.value_id = evaluation.value_id
+
+        self.collection = collection
+        self.addr = addr
+        self.evaluation = evaluation
         self.value = value
-        self.value_id = value_id
         self.mode = mode
 
         self.reference = False
@@ -166,11 +176,11 @@ class Parameter(object):
         return "{}".format(self.name)
 
 
-class CompartmentDependencyAware(DependencyAware):
-    """Store dependencies of a compartment element"""
+class MemberDependencyAware(DependencyAware):
+    """Store dependencies of a member element"""
 
     def __init__(self, active=True, exc_handler=-1, code_id=None):
-        super(CompartmentDependencyAware, self).__init__(
+        super(MemberDependencyAware, self).__init__(
             active=active,
             exc_handler=exc_handler,
             code_id=code_id,
@@ -179,7 +189,7 @@ class CompartmentDependencyAware(DependencyAware):
         self.value = None
 
 class CollectionDependencyAware(DependencyAware):
-    """Store dependencies of a compartment element"""
+    """Store dependencies of a collection element"""
 
     def __init__(self, active=True, exc_handler=-1, code_id=None):
         super(CollectionDependencyAware, self).__init__(

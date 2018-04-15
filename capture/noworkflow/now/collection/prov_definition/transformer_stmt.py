@@ -1090,7 +1090,7 @@ class RewriteAST(ast.NodeTransformer):
             self.composition_edge = (component_id, arg)
             if no:
                 return rewriter._call_arg(no, False)
-            return call(ast.Name(arg, L()), []), new_node
+            return ast_copy(call(ast.Name(arg, L()), []), new_node)
 
         keywords = [
             key("globals", new_node.globals),

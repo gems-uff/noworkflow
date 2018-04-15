@@ -208,7 +208,7 @@ class TestClusterizer(CollectionTestCase):
             ((created["v_3"][1], created["v_2"][1]), TYPE_ATTR),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
-    def test_evaluation_with_compartments(self):
+    def test_evaluation_with_members(self):
         self.script("# script.py\n"
                     "[1]\n")
         self.clean_execution()

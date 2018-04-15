@@ -9,9 +9,8 @@
 from ..machinery import prolog_rule, create_rule, restrict_rule, BLANK, var
 from ..machinery import set_options_in_rule
 from ..models import evaluation, activation, access
-from ..models import compartment, trial
+from ..models import trial
 from .helpers import _apply, _match
-from .id_rules import compartment_id
 from .name_rules import name as _name
 
 
@@ -29,10 +28,8 @@ from .name_rules import name as _name
 @prolog_rule("    evaluation(TrialId, Id, Moment, _, _, _).")
 @prolog_rule("timestamp_id(TrialId, 0, Moment, access) :-")
 @prolog_rule("    access(TrialId, Id, _, _, _, _, Moment, _).")
-@prolog_rule("timestamp_id(TrialId, [WholeId, PartId], Moment, compartment) :-")
-@prolog_rule("    compartment(TrialId, _, Moment, WholeId, PartId).")
 @restrict_rule(model_moment=[
-    "start", "finish", "activation", "evaluation", "access", "compartment",
+    "start", "finish", "activation", "evaluation", "access",
 ])
 @set_options_in_rule(id=[0, BLANK])
 @create_rule
@@ -44,22 +41,13 @@ def timestamp_id(trial_id, id, timestamp, model_moment):
       evaluation: evaluation timestamp
       activation: activation timestamp
       access: access timestamp
-      compartment: compartment timestamp
     Use Id == 0 to match the trial itself
-    Use Id == [WholeId, PartId] to match compartments
     """
     if id == 0:
         if model_moment == "start":
             return trial(trial_id, start=timestamp)
         elif model_moment == "finish":
             return trial(trial_id, finish=timestamp)
-
-    if model_moment == "compartment":
-        whole_id, part_id = var("_1 _2")
-        return (
-            compartment(trial_id, BLANK, timestamp, whole_id, part_id) &
-            compartment_id(whole_id, part_id, id)
-        )
 
     model_map = {
         "start": activation(trial_id, id, start=timestamp),
@@ -109,11 +97,11 @@ def duration_id(trial_id, id, duration, _binds):
 @prolog_rule("    successor_id(TrialId, BeforeModel, BeforeId, evaluation, Id),")
 @prolog_rule("    activation(TrialId, Id, _, _, _).")
 @restrict_rule(before_model=[
-    "start", "finish", "activation", "evaluation", "access", "compartment", "trial"
+    "start", "finish", "activation", "evaluation", "access", "trial"
 ])
 @set_options_in_rule(before_id=[0, BLANK])
 @restrict_rule(after_model=[
-    "start", "finish", "activation", "evaluation", "access", "compartment", "trial"
+    "start", "finish", "activation", "evaluation", "access", "trial"
 ])
 @set_options_in_rule(after_id=[0, BLANK])
 @create_rule
@@ -158,7 +146,7 @@ def successor_id(trial_id, before_model, before_id, after_model, after_id, _bind
 @prolog_rule("    timestamp_id(TrialId, Id, Timestamp, finish),")
 @prolog_rule("    name(TrialId, activation, Id, Name).")
 @restrict_rule(model_moment=[
-    "start", "finish", "activation", "evaluation", "access", "compartment",
+    "start", "finish", "activation", "evaluation", "access",
 ])
 @set_options_in_rule(name=["trial", BLANK])
 @set_options_in_rule(model_moment=["start", "finish", BLANK])
@@ -204,10 +192,10 @@ def duration(trial_id, name, duration):
 @prolog_rule("    name(TrialId, BeforeModel, BeforeId, BeforeName),")
 @prolog_rule("    name(TrialId, AfterModel, AfterId, AfterName).")
 @restrict_rule(before_model=[
-    "start", "finish", "activation", "evaluation", "access", "compartment", "trial"
+    "start", "finish", "activation", "evaluation", "access", "trial"
 ])
 @restrict_rule(after_model=[
-    "start", "finish", "activation", "evaluation", "access", "compartment", "trial"
+    "start", "finish", "activation", "evaluation", "access", "trial"
 ])
 @create_rule
 def successor(trial_id, before_model, before_name, after_model, after_name):

@@ -106,7 +106,7 @@ class Trial(AlchemyProxy):
     True
 
     For a list of all code blocks, code components, evaluations, activations,
-    accesses, values, compartments, dependencies and tags:
+    accesses, values, members, dependencies and tags:
     >>> list(trial.code_blocks)  # doctest: +ELLIPSIS
     [code_block(...)., ...]
     >>> list(trial.code_components)  # doctest: +ELLIPSIS
@@ -119,8 +119,6 @@ class Trial(AlchemyProxy):
     [access(...)., ...]
     >>> list(trial.values)  # doctest: +ELLIPSIS
     [value(...)., ...]
-    >>> list(trial.compartments)  # doctest: +ELLIPSIS
-    [compartment(...).]
     >>> list(trial.members)  # doctest: +ELLIPSIS
     [member(...).]
     >>> list(trial.dependencies)  # doctest: +ELLIPSIS
@@ -193,7 +191,6 @@ class Trial(AlchemyProxy):
     file_accesses = many_viewonly_ref("trial", "FileAccess")
     values = many_viewonly_ref("trial", "Value")
 
-    compartments = many_viewonly_ref("trial", "Compartment")
     members = many_viewonly_ref("trial", "Member")
 
     dependencies = many_viewonly_ref("trial", "Dependency")

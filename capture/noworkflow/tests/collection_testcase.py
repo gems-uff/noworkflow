@@ -62,10 +62,6 @@ class CollectionTestCase(unittest.TestCase):
         """Find dependency by attributes in kwargs"""
         return self.find(self.metascript.dependencies_store.store, **kwargs)
 
-    def find_compartment(self, **kwargs):
-        """Find compartment by attributes in kwargs"""
-        return self.find(self.metascript.compartments_store.store, **kwargs)
-
     def find_member(self, **kwargs):
         """Find members by attributes in kwargs"""
         return self.find(self.metascript.members_store.store, **kwargs)
@@ -112,14 +108,6 @@ class CollectionTestCase(unittest.TestCase):
             return evaluation
         return None
 
-    def get_compartment_value(self, whole, name, **kwargs):
-        """Return compartment value"""
-        compartment = self.find_compartment(
-            whole_id=whole.value_id, name=name, **kwargs)
-        if not compartment:
-            return None
-        return self.metascript.values_store[compartment.part_id]
-
     def evaluation_repr(self, evaluation):
         """Get evaluation friendly representation"""
         component = self.metascript.code_components_store[
@@ -128,6 +116,34 @@ class CollectionTestCase(unittest.TestCase):
         return "{}({}:l{})".format(
             component.name, evaluation.id, component.first_char_line
         )
+
+    def assert_member(self, collection, member, key):
+        result = self.find_member(
+            collection_id=collection.id,
+            member_id=member.id, key=key)
+        if result is None:
+            self.fail(
+                "The collection {} does not have the member {} at {}".format(
+                    self.evaluation_repr(collection),
+                    self.evaluation_repr(member),
+                    key
+                )
+            )
+        return result
+
+    def assert_no_member(self, collection, member, key):
+        result = self.find_member(
+            collection_id=collection.id,
+            member_id=member.id, key=key)
+        if result is not None:
+            self.fail(
+                "The collection {} has the member {} at {}".format(
+                    self.evaluation_repr(collection),
+                    self.evaluation_repr(member),
+                    key
+                )
+            )
+        return result
 
     def assert_type(self, evaluation, type_evaluation):
         original = evaluation
@@ -150,10 +166,14 @@ class CollectionTestCase(unittest.TestCase):
             self.evaluation_repr(type_evaluation),
         ))
 
-    def assert_dependency(self, dependent, dependency, type_=None, reference=False):
+    def assert_dependency(self, dependent, dependency, type_=None,
+                          reference=False, collection=None, key=None):
         """Check if dependency exists"""
+        collection_id = getattr(collection, "id", None)
         dep = self.find_dependency(dependent_id=dependent.id,
-                                   dependency_id=dependency.id)
+                                   dependency_id=dependency.id,
+                                   collection_id=collection_id,
+                                   key=key)
         if not dep:
             self.fail("Dependency not found {} -> {}".format(
                 self.evaluation_repr(dependent),
@@ -162,7 +182,8 @@ class CollectionTestCase(unittest.TestCase):
         if type_ is not None:
             full_dep = self.find_dependency(
                 dependent_id=dependent.id, dependency_id=dependency.id,
-                reference=reference, type=type_)
+                reference=reference, type=type_,
+                collection_id=collection_id, key=key)
             if not full_dep:
                 self.fail(
                     "Dependency not found {} -({})> {}. "
@@ -186,10 +207,15 @@ class CollectionTestCase(unittest.TestCase):
             edependency = self.metascript.evaluations_store[dependency]
             used_evals.add(dependent)
             used_evals.add(dependency)
-            print("  {} -({})> {}{}".format(
+            extra = ""
+            if dep.key is not None:
+                col = self.metascript.evaluations_store[dep.collection_id]
+                extra = " {}{}".format(self.evaluation_repr(col), dep.key)
+            print("  {} -({})> {}{}{}".format(
                 self.evaluation_repr(edependent), dep.type,
                 self.evaluation_repr(edependency),
                 " (R)" if dep.reference else "",
+                extra
             ))
         print("Evaluations")
         for eva in viewvalues(self.metascript.evaluations_store.store):

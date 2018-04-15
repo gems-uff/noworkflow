@@ -9,12 +9,12 @@ from ..now.persistence.models import Activation
 from ..now.persistence.models import Argument
 from ..now.persistence.models import CodeBlock
 from ..now.persistence.models import CodeComponent
-from ..now.persistence.models import Compartment
 from ..now.persistence.models import Composition
 from ..now.persistence.models import Dependency
 from ..now.persistence.models import EnvironmentAttr
 from ..now.persistence.models import Evaluation
 from ..now.persistence.models import FileAccess
+from ..now.persistence.models import Member
 from ..now.persistence.models import Module
 from ..now.persistence.models import Tag
 from ..now.persistence.models import Trial
@@ -27,12 +27,12 @@ activation = ModelRule(Activation)
 argument = ModelRule(Argument)
 code_block = ModelRule(CodeBlock)
 code_component = ModelRule(CodeComponent)
-compartment = ModelRule(Compartment)
 composition = ModelRule(Composition)
 dependency = ModelRule(Dependency)
 environment = ModelRule(EnvironmentAttr)
 evaluation = ModelRule(Evaluation)
 access = ModelRule(FileAccess)
+member = ModelRule(Member)
 module = ModelRule(Module)
 tag = ModelRule(Tag)
 trial = ModelRule(Trial)

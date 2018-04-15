@@ -8,7 +8,6 @@ from __future__ import (absolute_import, print_function,
 
 
 from ...now.utils.cross_version import PY3, only
-from ...now.collection.helper import get_compartment
 
 from ..collection_testcase import CollectionTestCase
 

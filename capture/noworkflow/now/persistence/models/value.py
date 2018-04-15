@@ -17,7 +17,6 @@ from ...utils.prolog import PrologAttribute, PrologRepr
 from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
 from .base import backref_one, backref_many
 
-from .compartment import Compartment
 from .evaluation import Evaluation
 
 @proxy_class
@@ -41,20 +40,6 @@ class Value(AlchemyProxy):
     Get value type:
     >>> value.type  # doctest: +ELLIPSIS
     value(..., ..., '<class \'\'int\'\'>', 1).
-
-    Get value wholes:
-    >>> wholes = list(value.wholes)
-    >>> wholes  # doctest: +ELLIPSIS
-    [value(..., ..., '[1]', ...).]
-
-    Get value parts:
-    >>> whole = wholes[0]
-    >>> list(whole.parts)  # doctest: +ELLIPSIS
-    [value(..., ..., '1', ...).]
-
-    Get value evaluations:
-    >>> list(whole.evaluations)  # doctest: +ELLIPSIS
-    [evaluation(...)., ...]
 
     Get value instances:
     >>> list(value.type.instances)[0].id == value.id
@@ -82,28 +67,6 @@ class Value(AlchemyProxy):
         "Value", remote_side=[trial_id, id],
         backref=_instances, viewonly=True
     )
-    _as_part = many_viewonly_ref(
-        "part", "Compartment",
-        primaryjoin=(
-            (id == Compartment.m.part_id) &
-            (trial_id == Compartment.m.trial_id))
-    )
-
-    _as_whole = many_viewonly_ref(
-        "whole", "Compartment",
-        primaryjoin=(
-            (id == Compartment.m.whole_id) &
-            (trial_id == Compartment.m.trial_id)))
-
-    parts = many_viewonly_ref(
-        "wholes", "Value",
-        secondary=Compartment.__table__,
-        primaryjoin=(
-            (id == Compartment.m.whole_id) &
-            (trial_id == Compartment.m.trial_id)),
-        secondaryjoin=(
-            (id == Compartment.m.part_id) &
-            (trial_id == Compartment.m.trial_id)))
 
     evaluations = many_viewonly_ref(
         "value", "Evaluation",
@@ -113,7 +76,6 @@ class Value(AlchemyProxy):
 
     trial = backref_one("trial")  # Trial.activations
     instances = backref_many("instances")  # Value.type
-    wholes = backref_many("wholes")  # Value.parts
 
     prolog_description = PrologDescription("value", (
         PrologTrial("trial_id", link="trial.id"),

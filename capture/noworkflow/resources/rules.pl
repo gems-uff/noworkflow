@@ -10,11 +10,6 @@
 
 %%% ID RULES
 
-    % compartment_id(WholeId, PartId, CombinedId)/3
-        % DESCRIPTION: get the *CombinedId* of a compartment defined by *WholeId* and *PartId*
-
-        compartment_id(WholeId, PartId, [WholeId, PartId]).
-
     % evaluation_code_id(TrialId, Id, CodeId)/3
         % DESCRIPTION: match *CodeId* of evalation *Id*
         %              in a given trial (*TrialId*).
@@ -65,14 +60,6 @@
         value_name(TrialId, [Id|Ids], [Name|Names]) :- value_name(TrialId, Id, Name), value_name(TrialId, Ids, Names).
         value_name(TrialId, Id, Name) :- value(TrialId, Id, Name, _).
 
-    % compartment_name(TrialId, [WholeId, PartId], Name)/3
-        % DESCRIPTION: get the *Name* of a compartment ([*WholeId*, *PartId*])
-        %              in a given trial (*TrialId*).
-
-        compartment_name(_, [], []).
-        compartment_name(TrialId, [Id|Ids], [Name|Names]) :- compartment_name(TrialId, Id, Name), compartment_name(TrialId, Ids, Names).
-        compartment_name(TrialId, [WholeId, PartId], Name) :- compartment(TrialId, Name, _, WholeId, PartId).
-
     % name(TrialId, Model, Id, Name)/4
         % DESCRIPTION: get the *Name* of a *Model* (*Id*)
         %              in a given trial (*TrialId*).
@@ -83,7 +70,6 @@
         name(TrialId, activation, Id, Name) :- activation_name(TrialId, Id, Name).
         name(TrialId, access, Id, Name) :- access_name(TrialId, Id, Name).
         name(TrialId, value, Id, Name) :- value_name(TrialId, Id, Name).
-        name(TrialId, compartment, Id, Name) :- compartment_name(TrialId, Id, Name).
         name(TrialId, trial, 0, Name) :- trial(TrialId, Name, _, _, _, _, _, _, _).
 
     % map_names(TrialId, Model, Ids, Names)/4
@@ -105,7 +91,6 @@
         %                activation: activation timestamp
         %                access: access timestamp
         %              Use Id == 0 to match the trial itself
-        %              Use Id == [WholeId, PartId] to match compartments
 
         timestamp_id(TrialId, 0, Start, start) :- trial(TrialId, _, Start, _, _, _, _, _, _).
         timestamp_id(TrialId, 0, Finish, finish) :- trial(TrialId, _, _, Finish, _, _, _, _, _).
@@ -114,7 +99,6 @@
         timestamp_id(TrialId, Id, Moment, activation) :- activation(TrialId, Id, _, Moment, _).
         timestamp_id(TrialId, Id, Moment, evaluation) :- evaluation(TrialId, Id, Moment, _, _, _).
         timestamp_id(TrialId, Id, Moment, access) :- access(TrialId, Id, _, _, _, _, Moment, _).
-        timestamp_id(TrialId, [WholeId, PartId], Moment, compartment) :- compartment(TrialId, _, Moment, WholeId, PartId).
 
     % duration_id(TrialId, Id, Duration)/3
         % DESCRIPTION: get the *Duration* of an activation (*Id*)

@@ -8,9 +8,8 @@
 
 from ..machinery import prolog_rule, create_rule, restrict_rule, var
 from ..models import code_component, evaluation, activation, access, value
-from ..models import compartment, trial
+from ..models import trial
 from .helpers import _list_matcher
-from .id_rules import compartment_id
 
 
 @prolog_rule("code_name(_, [], []).")
@@ -103,30 +102,6 @@ def value_name(trial_id, id, name, _binds):
     )
 
 
-@prolog_rule("compartment_name(_, [], []).")
-@prolog_rule("compartment_name(TrialId, [Id|Ids], [Name|Names]) :-")
-@prolog_rule("    compartment_name(TrialId, Id, Name),")
-@prolog_rule("    compartment_name(TrialId, Ids, Names).")
-@prolog_rule("compartment_name(TrialId, [WholeId, PartId], Name) :-")
-@prolog_rule("    compartment(TrialId, Name, _, WholeId, PartId).")
-@create_rule
-def compartment_name(trial_id, id, name, _binds):
-    """Get the *Name* of a compartment ([*WholeId*, *PartId*])
-    in a given trial (*TrialId*)."""
-    @create_rule
-    def single_compartment_name(id, name):
-        """Get name of a single compartment"""
-        whole_id, part_id = var("_1 _2")
-        return (
-            compartment(trial_id, name, whole_id=whole_id, part_id=part_id) &
-            compartment_id(whole_id, part_id, id)
-        )
-    return _list_matcher(
-        single_compartment_name,
-        _binds, id, name
-    )
-
-
 @prolog_rule("name(TrialId, code_component, Id, Name) :-")
 @prolog_rule("    code_name(TrialId, Id, Name).")
 @prolog_rule("name(TrialId, code_block, Id, Name) :-")
@@ -139,8 +114,6 @@ def compartment_name(trial_id, id, name, _binds):
 @prolog_rule("    access_name(TrialId, Id, Name).")
 @prolog_rule("name(TrialId, value, Id, Name) :-")
 @prolog_rule("    value_name(TrialId, Id, Name).")
-@prolog_rule("name(TrialId, compartment, Id, Name) :-")
-@prolog_rule("    compartment_name(TrialId, Id, Name).")
 @prolog_rule("name(TrialId, trial, _, Name) :-")
 @prolog_rule("    trial(TrialId, Name, _, _, _, _, _, _, _).")
 @restrict_rule(model=[
@@ -150,7 +123,6 @@ def compartment_name(trial_id, id, name, _binds):
     "activation",
     "access",
     "value",
-    "compartment",
     "trial",
 ])
 @create_rule
@@ -166,7 +138,6 @@ def name(trial_id, model, id, name):
         "activation": activation_name,
         "access": access_name,
         "value": value_name,
-        "compartment": compartment_name,
     }
     if model not in model_map:
         return

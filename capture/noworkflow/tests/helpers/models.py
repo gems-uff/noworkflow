@@ -16,7 +16,7 @@ from collections import namedtuple
 from ...now.persistence.lightweight import ObjectStore, SharedObjectStore
 from ...now.persistence.lightweight import CodeBlockLW, CodeComponentLW
 from ...now.persistence.lightweight import ActivationLW, EvaluationLW
-from ...now.persistence.lightweight import ValueLW, CompartmentLW
+from ...now.persistence.lightweight import ValueLW
 from ...now.persistence.lightweight import DependencyLW, FileAccessLW
 from ...now.persistence.lightweight import ModuleLW
 from ...now.persistence.lightweight import MemberLW
@@ -37,7 +37,7 @@ m1, m2 = 1, 2
 def restart_object_store(trial_id=None):
     """Restart all object store"""
     global components, blocks, evaluations, activations, dependencies
-    global file_accesses, values, compartments, modules, members
+    global file_accesses, values, modules, members
     global environment_attrs, arguments
     global meta
 
@@ -53,7 +53,6 @@ def restart_object_store(trial_id=None):
     dependencies = meta.dependencies_store
     file_accesses = meta.file_accesses_store
     values = meta.values_store
-    compartments = meta.compartments_store
     members = meta.members_store
     modules = meta.modules_store
     environment_attrs = meta.environment_attrs_store
@@ -75,7 +74,6 @@ def erase_database():
     relational.session.execute(DependencyLW.model.t.delete())
     relational.session.execute(FileAccessLW.model.t.delete())
     relational.session.execute(ValueLW.model.t.delete())
-    relational.session.execute(CompartmentLW.model.t.delete())
     relational.session.execute(MemberLW.model.t.delete())
     relational.session.execute(ModuleLW.model.t.delete())
     relational.session.execute(EnvironmentAttrLW.model.t.delete())
@@ -178,19 +176,10 @@ def activation_params(evaluation, trial_id, code_block_id, name="main.py",
         )
     return [evaluation, trial_id, name, start, code_block_id]
 
+
 def value_params(trial_id, value="<class 'type'>", type_id=1):
     """Return value params"""
     return [trial_id, value, type_id]
-
-
-def compartment_params(trial_id, whole_id, part_id, name="[0]",
-                       year=2016, month=4, day=8, hour=1, minute=19, second=5):
-    """Return compartment params"""
-    moment = datetime(
-        year=year, month=month, day=day,
-        hour=hour, minute=minute, second=second
-    )
-    return [trial_id, name, moment, whole_id, part_id]
 
 
 def access_params(trial_id, name="file.txt"):
@@ -390,9 +379,6 @@ class AssignConfig(ConfigObj):
         self.array_value = self.value("[1]", self.list_type)
         self.int_type = self.value("<class 'int'>", type_value_id)
         self.array0_value = self.value("1", self.int_type)
-        self.a0comp = self.meta.compartments_store.add(*compartment_params(
-            self.meta.trial_id, self.array_value, self.array0_value
-        ))
         return (
             self.list_type, self.array_value, self.int_type, self.array0_value,
         )
@@ -681,7 +667,6 @@ def create_trial(
     if trial.status == "finished":
         trial.finished()
         meta.values_store.do_store()
-        meta.compartments_store.do_store()
         meta.members_store.do_store()
         meta.evaluations_store.do_store()
         meta.activations_store.do_store()
