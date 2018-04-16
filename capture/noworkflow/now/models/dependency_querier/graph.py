@@ -7,7 +7,7 @@
 from collections import defaultdict
 from itertools import chain
 from future.utils import viewitems
-from ...persistence.models import Evaluation, Value
+from ...persistence.models import Evaluation
 from .helpers import Arrow, Context, ValueState
 
 class DependencyQuerier(object):

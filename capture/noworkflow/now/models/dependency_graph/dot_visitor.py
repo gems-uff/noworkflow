@@ -127,16 +127,3 @@ class DotVisitor(ClusterVisitor):
             "style": "rounded,filled",
         })
         self.insert("{} {};".format(node.node_id, attrs))
-
-    def visit_value(self, node):
-        """Create value node for graph"""
-        label = escape(node.name, self.name_length)
-
-        attrs = Attributes({
-            "label": label,
-            "fillcolor": "white",
-            "fontcolor": "blue",
-            "shape": "box",
-            "style": "rounded,filled",
-        })
-        self.insert("{} {};".format(node.node_id, attrs))

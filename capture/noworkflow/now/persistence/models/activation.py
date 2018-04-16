@@ -394,17 +394,11 @@ class Activation(AlchemyProxy):
         """
         from .evaluation import Evaluation
         from .code_component import CodeComponent
-        from .value import Value
 
         joined_eval = join(
             Evaluation.t, CodeComponent.t,
             ((Evaluation.m.trial_id == CodeComponent.m.trial_id) &
              (Evaluation.m.code_component_id == CodeComponent.m.id))
-        )
-        joined_eval = join(
-            joined_eval, Value.t,
-            ((Evaluation.m.trial_id == Value.m.trial_id) &
-             (Evaluation.m.value_id == Value.m.id))
         )
         joined = join(
             Activation.t, joined_eval,
@@ -412,7 +406,7 @@ class Activation(AlchemyProxy):
              (Evaluation.m.activation_id == Activation.m.id))
         )
         query = (
-            select([CodeComponent.m.name, Value.m.value])
+            select([CodeComponent.m.name, Evaluation.m.repr])
             .select_from(joined)
             .where((Activation.m.trial_id == self.trial_id) &
                    (Activation.m.id == self.id) &
@@ -468,6 +462,6 @@ class Activation(AlchemyProxy):
                 )
             ))
 
-        return_value = self.this_evaluation.value.value
+        return_value = self.this_evaluation.repr
         if return_value:
             print_("Return value: {ret}".format(ret=return_value))

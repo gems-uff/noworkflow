@@ -4,7 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 """Base Cluster Visitor"""
 
-from .node_types import AccessNode, ValueNode
+from .node_types import AccessNode
 from .node_types import ActivationNode, ClusterNode, EvaluationNode
 from .clusterizer import Clusterizer
 
@@ -18,7 +18,6 @@ class ClusterVisitor(object):
             EvaluationNode: self.visit_evaluation,
             ActivationNode: self.visit_activation,
             AccessNode: self.visit_access,
-            ValueNode: self.visit_value,
         }
         self.dependencies = clusterizer.dependencies
 
@@ -41,5 +40,4 @@ class ClusterVisitor(object):
     visit_evaluation = _default_visitor
     visit_activation = _default_visitor
     visit_access = _default_visitor
-    visit_value = _default_visitor
     visit_else = _default_visitor

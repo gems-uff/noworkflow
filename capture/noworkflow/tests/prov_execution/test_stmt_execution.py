@@ -43,9 +43,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_type(var_type, var_type)
         self.assert_dependency(var_evaluation, var_2, "assign", True)
 
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_evaluation.value_id]
-        self.assertEqual(var_value.value, "2")
+        self.assertEqual(var_evaluation.repr, "2")
 
     def test_assign_name_to_name(self):
         """Test assign collection"""
@@ -71,11 +69,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(read_a_eval, write_a_eval, "assignment", True)
         self.assert_dependency(write_b_eval, read_a_eval, "assign", True)
 
-        # VTodo: add repr
-        a_value = self.metascript.values_store[read_a_eval.value_id]
-        b_value = self.metascript.values_store[write_b_eval.value_id]
-        self.assertEqual(a_value.value, "2")
-        self.assertEqual(b_value.value, "2")
+        self.assertEqual(read_a_eval.repr, "2")
+        self.assertEqual(write_b_eval.repr, "2")
 
     def test_augassign_to_name(self):
         """Test augmented assign collection"""
@@ -108,9 +103,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_type(var_int, var_type)
         self.assert_type(var_type, var_type)
         
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a2w.value_id]
-        self.assertEqual(var_value.value, "3")
+        self.assertEqual(var_a2w.repr, "3")
 
     def test_function_definition(self):
         """Test function_def collection"""
@@ -230,16 +223,12 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_member(var_list, var_a_i11, "[1]")
         self.assert_member(var_tuple, var_a_e, "[0]")
         self.assert_member(var_tuple, var_list, "[1]")
-        
-        # VTodo: add repr
-        var_a_i0_val = self.metascript.values_store[var_a_e.value_id]
-        var_a_i1_val = self.metascript.values_store[var_list.value_id]
-        var_a_i10_val = self.metascript.values_store[var_a_i10.value_id]
-        var_a_i11_val = self.metascript.values_store[var_a_i11.value_id]
-        self.assertEqual(var_a_i0_val.value, '1')
-        self.assertEqual(var_a_i1_val.value, '[1, 2]')
-        self.assertEqual(var_a_i10_val.value, '1')
-        self.assertEqual(var_a_i11_val.value, '2')
+
+        self.assertEqual(var_tuple.repr, "(1, [1, 2])")
+        self.assertEqual(var_list.repr, "[1, 2]")
+        self.assertEqual(var_a_e.repr, "1")
+        self.assertEqual(var_a_i10.repr, "1")
+        self.assertEqual(var_a_i11.repr, "2")
 
     def test_tuple_assign_not_bound(self):
         """Test tuple assignment"""
@@ -298,15 +287,11 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_member(var_tuple, var_a_e, "[0]")
         self.assert_member(var_tuple, var_list, "[1]")
         
-        # VTodo: add repr
-        var_a_i0_val = self.metascript.values_store[var_a_e.value_id]
-        var_a_i1_val = self.metascript.values_store[var_list.value_id]
-        var_a_i10_val = self.metascript.values_store[var_a_i10.value_id]
-        var_a_i11_val = self.metascript.values_store[var_a_i11.value_id]
-        self.assertEqual(var_a_i0_val.value, '1')
-        self.assertEqual(var_a_i1_val.value, '[1, 2]')
-        self.assertEqual(var_a_i10_val.value, '1')
-        self.assertEqual(var_a_i11_val.value, '2')
+        self.assertEqual(var_tuple.repr, "(1, [1, 2])")
+        self.assertEqual(var_list.repr, "[1, 2]")
+        self.assertEqual(var_a_e.repr, "1")
+        self.assertEqual(var_a_i10.repr, "1")
+        self.assertEqual(var_a_i11.repr, "2")
 
     @only(PY3)
     def test_star_assign(self):
@@ -345,17 +330,11 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_member(var_tuple, var_a_i3, "[3]")
         self.assert_member(var_tuple, var_a_i4, "[4]")
 
-        # VTodo: add repr
-        var_a_i0_val = self.metascript.values_store[var_a_i0.value_id]
-        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
-        var_a_i2_val = self.metascript.values_store[var_a_i2.value_id]
-        var_a_i3_val = self.metascript.values_store[var_a_i3.value_id]
-        var_a_i4_val = self.metascript.values_store[var_a_i4.value_id]
-        self.assertEqual(var_a_i0_val.value, '1')
-        self.assertEqual(var_a_i1_val.value, '2')
-        self.assertEqual(var_a_i2_val.value, '3')
-        self.assertEqual(var_a_i3_val.value, '1')
-        self.assertEqual(var_a_i4_val.value, '4')
+        self.assertEqual(var_a_i0.repr, "1")
+        self.assertEqual(var_a_i1.repr, "2")
+        self.assertEqual(var_a_i2.repr, "3")
+        self.assertEqual(var_a_i3.repr, "1")
+        self.assertEqual(var_a_i4.repr, "4")
 
     def test_item_assign(self):
         """Test item assignment"""
@@ -378,14 +357,9 @@ class TestStmtExecution(CollectionTestCase):
         m3 = self.assert_member(var_list, var_a0, "[0]")
         self.assertTrue(m1.moment < m3.moment)
 
-        # VTodo: add repr
-        var_a_val = self.metascript.values_store[var_a.value_id]
-        var_0_val = self.metascript.values_store[var_0.value_id]
-        var_3_val = self.metascript.values_store[var_3.value_id]
-        var_a0_val = self.metascript.values_store[var_a0.value_id]
-        self.assertEqual(var_a_val.value, '[1, 2]')
-        self.assertEqual(var_0_val.value, '0')
-        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_a.repr, "[1, 2]")
+        self.assertEqual(var_0.repr, "0")
+        self.assertEqual(var_3.repr, "3")
 
     def test_negative_item_assign(self):
         """Test negative item assignment"""
@@ -408,14 +382,11 @@ class TestStmtExecution(CollectionTestCase):
         m3 = self.assert_member(var_list, var_a0, "[0]")
         self.assertTrue(m1.moment < m3.moment)
 
-        # VTodo: add repr
-        var_a_val = self.metascript.values_store[var_a.value_id]
-        var_0_val = self.metascript.values_store[var_m2.value_id]
-        var_3_val = self.metascript.values_store[var_3.value_id]
-        var_a0_val = self.metascript.values_store[var_a0.value_id]
-        self.assertEqual(var_a_val.value, '[1, 2]')
-        self.assertEqual(var_0_val.value, '-2')
-        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_list.repr, "[1, 2]")
+        self.assertEqual(var_a.repr, "[1, 2]")
+        self.assertEqual(var_m2.repr, "-2")
+        self.assertEqual(var_3.repr, "3")
+        self.assertEqual(var_a0.repr, "3")
 
     def test_slice_item_assign(self):
         """Test slice assignment. Blackbox operation"""
@@ -442,16 +413,10 @@ class TestStmtExecution(CollectionTestCase):
         # ToDo: Transform it in a white box operation
         self.assert_member(var_list, var_a01, "[slice(0, 1, None)]")
 
-        # VTodo: add repr
-        var_a_val = self.metascript.values_store[var_a.value_id]
-        var_01_val = self.metascript.values_store[var_01.value_id]
-        var_34_val = self.metascript.values_store[var_34.value_id]
-        var_3_val = self.metascript.values_store[var_3.value_id]
-        var_a01_val = self.metascript.values_store[var_a01.value_id]
-        self.assertEqual(var_a_val.value, '[1, 2]')
-        self.assertEqual(var_01_val.value, 'slice(0, 1, None)')
-        self.assertEqual(var_34_val.value, '(3, 4)')
-        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_a.repr, "[1, 2]")
+        self.assertEqual(var_01.repr, "slice(0, 1, None)")
+        self.assertEqual(var_34.repr, "(3, 4)")
+        self.assertEqual(var_3.repr, "3")
 
     @only(PY3)
     def test_starred_item_assign(self):
@@ -473,20 +438,13 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_a01, var_a, "value")
         self.assert_dependency(var_a01, var_01, "slice")
 
-        # VTodo: add repr
-        var_a_val = self.metascript.values_store[var_a.value_id]
-        var_b_val = self.metascript.values_store[var_b.value_id]
-        var_01_val = self.metascript.values_store[var_01.value_id]
-        var_34_val = self.metascript.values_store[var_34.value_id]
-        var_3_val = self.metascript.values_store[var_3.value_id]
-        var_4_val = self.metascript.values_store[var_4.value_id]
-        var_a01_val = self.metascript.values_store[var_a01.value_id]
-        self.assertEqual(var_a_val.value, '[]')
-        self.assertEqual(var_01_val.value, 'slice(0, 1, None)')
-        self.assertEqual(var_34_val.value, '(3, 4)')
-        self.assertEqual(var_3_val.value, '3')
-        self.assertEqual(var_4_val.value, '4')
-        self.assertEqual(var_a01_val.value, '[3]')
+        self.assertEqual(var_a.repr, "[]")
+        self.assertEqual(var_01.repr, "slice(0, 1, None)")
+        self.assertEqual(var_34.repr, "(3, 4)")
+        self.assertEqual(var_3.repr, "3")
+        self.assertEqual(var_4.repr, "4")
+        self.assertEqual(var_a01.repr, "[3]")
+        self.assertEqual(var_b.repr, "4")
 
     def test_attribute_assign(self):
         """Test item assignment"""
@@ -505,9 +463,8 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_member(var_a_first, var_ax, ".x")
 
-        # vtodo: add repr
-        var_3_val = self.metascript.values_store[var_3.value_id]
-        self.assertEqual(var_3_val.value, '3')
+        self.assertEqual(var_3.repr, "3")
+        self.assertEqual(var_ax.repr, "3")
 
     def test_for_loop(self):
         """Test for loop"""
@@ -542,11 +499,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_x1_r, "assign", True)
         self.assert_dependency(var_y2_w, var_x2_r, "assign", True)
 
-        # vtodo: add repr
-        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
-        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
-        self.assertEqual(var_x1_val.value, '1')
-        self.assertEqual(var_x2_val.value, '2')
+        self.assertEqual(var_x1_w.repr, "1")
+        self.assertEqual(var_x2_w.repr, "2")
 
     def test_for_loop_variable(self):
         """Test for loop"""
@@ -586,11 +540,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_x1_r, "assign", True)
         self.assert_dependency(var_y2_w, var_x2_r, "assign", True)
 
-        # Vtodo: add repr
-        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
-        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
-        self.assertEqual(var_x1_val.value, '1')
-        self.assertEqual(var_x2_val.value, '2')
+        self.assertEqual(var_x1_w.repr, "1")
+        self.assertEqual(var_x2_w.repr, "2")
 
     def test_for_loop_multiple_assignment(self):
         """Test for loop"""
@@ -621,11 +572,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_x1_w, var_1, "assign", True)
         self.assert_dependency(var_y1_w, var_2, "assign", True)
 
-        # vtodo: add repr
-        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
-        var_y1_val = self.metascript.values_store[var_y1_w.value_id]
-        self.assertEqual(var_x1_val.value, '1')
-        self.assertEqual(var_y1_val.value, '2')
+        self.assertEqual(var_x1_w.repr, "1")
+        self.assertEqual(var_y1_w.repr, "2")
         
     def test_if(self):
         """Test if condition"""
@@ -646,9 +594,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_z, var_4, "assign", True)
         self.assert_no_dependency(var_z, var_x)
 
-        # vtodo: add repr
-        var_y_val = self.metascript.values_store[var_y.value_id]
-        self.assertEqual(var_y_val.value, '3')
+        self.assertEqual(var_y.repr, "3")
 
     def test_while(self):
         """Test while loop"""
@@ -696,13 +642,11 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_no_dependency(var_z, x2_r)
         self.assert_no_dependency(var_z, x3_r)
 
-        # vtodo: add repr
-        meta = self.metascript
-        self.assertEqual(meta.values_store[x1_w.value_id].value, '2')
-        self.assertEqual(meta.values_store[x2_w.value_id].value, '1')
-        self.assertEqual(meta.values_store[x3_w.value_id].value, '0')
-        self.assertEqual(meta.values_store[y1_w.value_id].value, '1')
-        self.assertEqual(meta.values_store[y2_w.value_id].value, '1')
+        self.assertEqual(x1_w.repr, "2")
+        self.assertEqual(x2_w.repr, "1")
+        self.assertEqual(x3_w.repr, "0")
+        self.assertEqual(y1_w.repr, "1")
+        self.assertEqual(y2_w.repr, "1")
 
     def test_assign_multiple_generator_expression_variable(self):
         """Test for loop"""
@@ -746,11 +690,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_a_w, z2_1, "assign", True)
         self.assert_dependency(var_b_w, z2_2, "assign", True)
 
-        # vtodo: add repr
-        var_z2_1_val = self.metascript.values_store[z2_1.value_id]
-        var_z2_2_val = self.metascript.values_store[z2_2.value_id]
-        self.assertEqual(var_z2_1_val.value, '6')
-        self.assertEqual(var_z2_2_val.value, '8')
+        self.assertEqual(z2_1.repr, "6")
+        self.assertEqual(z2_2.repr, "8")
 
     def test_for_loop_multiple_generator_assignment(self):
         """Test for loop"""
@@ -809,11 +750,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_x1_w, z2_1, "assign", True)
         self.assert_dependency(var_y1_w, z2_2, "assign", True)
 
-        # vtodo: add repr
-        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
-        var_y1_val = self.metascript.values_store[var_y1_w.value_id]
-        self.assertEqual(var_x1_val.value, '6')
-        self.assertEqual(var_y1_val.value, '8')
+        self.assertEqual(var_x1_w.repr, "6")
+        self.assertEqual(var_y1_w.repr, "8")
 
     def test_generator_function_variable(self):
         """Test for loop"""
@@ -867,11 +805,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(yield_3, var_3, "use")
         self.assert_dependency(yield_4, var_4, "use")
 
-        # vtodo: add repr
-        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
-        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
-        self.assertEqual(var_x1_val.value, '3')
-        self.assertEqual(var_x2_val.value, '4')
+        self.assertEqual(var_x1_w.repr, "3")
+        self.assertEqual(var_x2_w.repr, "4")
 
     def test_collect_try(self):
         """Test assign collection"""
@@ -909,11 +844,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_type(read_a_eval, var_int)
         self.assert_type(write_b_eval, var_int)
 
-        # vtodo: add repr
-        a_value = self.metascript.values_store[read_a_eval.value_id]
-        b_value = self.metascript.values_store[write_b_eval.value_id]
-        self.assertEqual(a_value.value, "2")
-        self.assertEqual(b_value.value, "2")
+        self.assertEqual(read_a_eval.repr, "2")
+        self.assertEqual(write_b_eval.repr, "2")
 
     @only(PY2)
     def test_print(self):
@@ -941,9 +873,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(call, var_a, "argument")
         self.assert_type(var_a, var_str)
 
-        # vtodo: add repr
-        var_a_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_a_value.value, "''")
+        self.assertEqual(var_a.repr, "''")
 
     @only(PY2)
     def test_exec(self):
@@ -971,10 +901,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(call, var_a, "argument")
         self.assert_type(var_a, var_str)
 
-        # vtodo: add repr
-        var_a_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_a_value.value, "'x = 2'")
-
+        self.assertEqual(var_a.repr, "'x = 2'")
+        
     @only(PY36)
     def test_annassign_to_name(self):
         """Test assign collection"""
@@ -999,10 +927,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_type(var_int, var_type)
         self.assert_type(var_type, var_type)
 
-        # vtodo: add repr
-        var_value = self.metascript.values_store[var_evaluation.value_id]
-        self.assertEqual(var_value.value, "2")
-
+        self.assertEqual(var_evaluation.repr, "2")
 
     # ToDo: expr/YieldFrom
     # ToDo: expr/Await

@@ -72,5 +72,3 @@ class Attributes(object):
 EMPTY_ATTR = Attributes({})
 PROPAGATED_ATTR = Attributes({"style": "dashed"})
 ACCESS_ATTR = Attributes({"style": "dashed"})
-VALUE_ATTR = Attributes({"style": "dotted", "color": "blue"})
-TYPE_ATTR = Attributes({"style": "dotted", "color": "blue"})

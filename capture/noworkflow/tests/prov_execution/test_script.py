@@ -39,9 +39,7 @@ class TestScript(CollectionTestCase):
         self.assert_type(var_module, var_type)
         self.assert_type(var_type, var_type)
 
-        # vtodo: add repr
-        script_value = self.metascript.values_store[script_evaluation.value_id]
-        self.assertEqual(script_value.value[:19], "<module '__main__' ")
+        self.assertEqual(script_evaluation.repr[:19], "<module '__main__' ")
 
     def test_script_with_error(self):
         """Test script collection with exception"""
@@ -72,6 +70,4 @@ class TestScript(CollectionTestCase):
         self.assert_type(var_module, var_type)
         self.assert_type(var_type, var_type)
 
-        # vtodo: add repr
-        script_value = self.metascript.values_store[script_evaluation.value_id]
-        self.assertEqual(script_value.value[:19], "<module '__main__' ")
+        self.assertEqual(script_evaluation.repr[:19], "<module '__main__' ")

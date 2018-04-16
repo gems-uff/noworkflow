@@ -75,7 +75,6 @@ class OverrideShell(object):
             "__main__", id_
         )
         evaluation = self.activation.evaluation
-        evaluation.value_id = metascript.execution.collector.add_value(None)
         # Never remove main evaluation from store
         evaluation.is_complete = lambda: False 
         self.now_save()

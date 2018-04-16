@@ -6,12 +6,12 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, TIMESTAMP
+from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import remote, foreign
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
-from ...utils.prolog import PrologAttribute, PrologNullable
+from ...utils.prolog import PrologAttribute, PrologNullable, PrologRepr
 
 from .. import relational
 
@@ -64,10 +64,6 @@ class Evaluation(AlchemyProxy):
     >>> evaluation.code_component  # doctest: +ELLIPSIS
     code_component(..., ..., 'f(a)', 'call', 'r', ..., ..., ..., ..., ...).
 
-    Load Evaluation value:
-    >>> evaluation.value  # doctest: +ELLIPSIS
-    value(..., ..., '[1]', ...).
-
     Load Evaluation dependencies in which the evaluation is the dependent:
     >>> list(evaluation2.dependencies_as_dependent)  # doctest: +ELLIPSIS
     [dependency(..., ..., ..., ..., ..., 'same', 1, nil, nil, nil).]
@@ -94,16 +90,13 @@ class Evaluation(AlchemyProxy):
         ForeignKeyConstraint(["trial_id", "activation_id"],
                              ["activation.trial_id", "activation.id"],
                              ondelete="CASCADE", use_alter=True),
-        ForeignKeyConstraint(["trial_id", "value_id"],
-                             ["value.trial_id", "value.id"],
-                             ondelete="CASCADE"),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     moment = Column(TIMESTAMP)
     code_component_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
-    value_id = Column(Integer, index=True)
+    repr = Column(Text)
 
     this_activation = one(
         "Activation", backref="this_evaluation",
@@ -178,7 +171,6 @@ class Evaluation(AlchemyProxy):
     collections = backref_many("members")  # Evaluation.members
     trial = backref_one("trial")  # Trial.evaluations
     code_component = backref_one("code_component")  # CodeComponent.evaluations
-    value = backref_one("value") # Value.evaluations
 
     prolog_description = PrologDescription("evaluation", (
         PrologTrial("trial_id", link="trial.id"),
@@ -186,11 +178,11 @@ class Evaluation(AlchemyProxy):
         PrologTimestamp("moment"),
         PrologAttribute("code_component_id", link="code_component.id"),
         PrologNullable("activation_id", link="activation.id"),
-        PrologAttribute("value_id", link="value.id"),
+        PrologRepr("repr"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "an evaluation *Id* of *CodeComponentId* finalized at *Moment*\n"
-        "in *ActivationId*, returning *ValueId*."
+        "in *ActivationId*, with value *Repr*."
     ))
 
     @property
@@ -221,45 +213,3 @@ class Evaluation(AlchemyProxy):
             .filter(Dependency.m.type == "same")
             .first()
         ), "dependency", None)
-
-    @classmethod
-    def find_by_value_id(cls, trial_id, value_id, order="asc", session=None):
-        """Find Evaluation by value_id
-
-        Doctest:
-        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
-        >>> from noworkflow.tests.helpers.models import AssignConfig
-        >>> from noworkflow.now.persistence.models import Trial
-        >>> assign = AssignConfig()
-        >>> config = TrialConfig("finished")
-        >>> trial_id = new_trial(config,
-        ...                      assignment=assign, erase=True)
-
-
-        Find Evaluation
-        >>> vid = assign.array_value
-        >>> act, eid, cid = Evaluation.find_by_value_id(trial_id, vid)
-        >>> act == config.main_act
-        True
-
-        >>> eid == assign.list_eval
-        True
-        """
-        model = cls.m
-        session = session or relational.session
-
-        evaluation = (
-            session.query(model)
-            .filter(
-                (model.trial_id == trial_id) &
-                (model.value_id == value_id)
-            )
-            .order_by(getattr(model.moment, order)())
-        ).first()
-        if evaluation:
-            return (
-                evaluation.activation_id,
-                evaluation.id,
-                evaluation.code_component_id
-            )
-        return None, None, None

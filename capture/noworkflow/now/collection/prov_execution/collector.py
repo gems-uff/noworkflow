@@ -42,7 +42,6 @@ class Collector(object):
         self.evaluations = self.metascript.evaluations_store
         self.activations = self.metascript.activations_store
         self.dependencies = self.metascript.dependencies_store
-        self.values = self.metascript.values_store
         self.members = self.metascript.members_store
         self.file_accesses = self.metascript.file_accesses_store
 
@@ -62,7 +61,6 @@ class Collector(object):
         self.first_activation.depth = 0
         self.last_activation = self.first_activation
         self.shared_types = {}
-        self.vshared_types = {} # VToDo
 
         # Original globals
         self.globals = copy(__builtins__)
@@ -266,11 +264,7 @@ class Collector(object):
         """Close activation. Set moment and value"""
         evaluation = activation.evaluation
         evaluation.moment = self.time()
-        if reference is None:  # vtodo
-            value_id = self.add_value(value) # vtodo
-        else: # vtodo
-            value_id = reference.value_id # vtodo
-        evaluation.value_id = value_id # vtodo
+        evaluation.repr = repr(value)
         evaluation.set_reference(reference)
         self.add_type(evaluation, value)
         self.last_activation = activation.last_activation
@@ -282,23 +276,6 @@ class Collector(object):
         #self.activations.store.get(
         #    evaluation.activation_id, self.first_activation
         #)
-
-    def add_value(self, value): 
-        """Add value. Create type value recursively. Return value id"""
-        # VToDo
-        if value is type:
-            value_object = self.values.add_object(
-                self.trial_id, repr(value), -1
-            )
-            value_object.type_id = value_object.id
-            self.vshared_types[value] = value_object.id
-            return value_object.id
-
-        value_type = type(value)
-        if value_type not in self.vshared_types:
-            self.vshared_types[value_type] = self.add_value(value_type)
-        type_id = self.vshared_types[value_type]
-        return self.values.add(self.trial_id, repr(value), type_id)
 
     def start_script(self, module_name, code_component_id):
         """Start script collection. Create new activation"""
@@ -1161,11 +1138,8 @@ class Collector(object):
         dependency_aware = activation.dependencies.pop()
         evaluation = activation.evaluation
         reference = self.find_reference_dependency(value, dependency_aware)
+        evaluation.repr = repr(value)
         evaluation.set_reference(reference)
-
-        evaluation.value_id = self.find_value_id(
-            value, dependency_aware, create=False
-        ) # vtodo
         self.make_dependencies(activation, evaluation, dependency_aware)
         return value
 
@@ -1348,16 +1322,6 @@ class Collector(object):
                     break
         return evaluation
 
-    def find_value_id(self, value, depa, create=True):
-        """Find bound dependency in dependency aware"""
-        value_id = None
-        reference = self.find_reference_dependency(value, depa)
-        if reference is not None:
-            value_id = reference.value_id
-        if create and not value_id:
-            value_id = self.add_value(value)
-        return value_id
-
     def make_dependencies(self, activation, evaluation, depa):
         """Create dependencies. Evaluation depends on depa and on conditions"""
         self.create_dependencies(evaluation, depa)
@@ -1410,7 +1374,7 @@ class Collector(object):
             trial_id, self.code_components.add(
                 trial_id, repr(value), 'type', 'w', -1, -1, -1, -1, -1
             ), -1, self.time(),
-            self.add_value(value)
+            repr(value)
         )
         self.shared_types[value] = tevaluation
         if value is type:
@@ -1454,26 +1418,14 @@ class Collector(object):
     def evaluate(self, activation_id, code_id, value, moment, reference=None, depa=None):
         """Create evaluation for code component"""
         # pylint: disable=too-many-arguments
-        value_id = self.find_value_id(value, depa) # VToDo
         if moment is None:
             moment = self.time()
         evaluation = self.evaluations.add_object(
             self.trial_id, code_id, activation_id, moment,
-            value_id # VToDo
+            repr(value)
         )
         evaluation.set_reference(reference)
         self.add_type(evaluation, value)
-        return evaluation
-
-    def evaluate_vid(self, activation, code_id, value_id, moment, depa=None):
-        """Create evaluation for code component using a given value_id"""
-        # pylint: disable=too-many-arguments
-        if moment is None:
-            moment = self.time()
-        evaluation = self.evaluations.add_object(
-            self.trial_id, code_id, activation.id, moment, value_id
-        )
-        self.make_dependencies(activation, evaluation, depa)
         return evaluation
 
     def store(self, partial, status="running"):

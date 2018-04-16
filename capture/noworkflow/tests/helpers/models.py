@@ -16,7 +16,6 @@ from collections import namedtuple
 from ...now.persistence.lightweight import ObjectStore, SharedObjectStore
 from ...now.persistence.lightweight import CodeBlockLW, CodeComponentLW
 from ...now.persistence.lightweight import ActivationLW, EvaluationLW
-from ...now.persistence.lightweight import ValueLW
 from ...now.persistence.lightweight import DependencyLW, FileAccessLW
 from ...now.persistence.lightweight import ModuleLW
 from ...now.persistence.lightweight import MemberLW
@@ -37,7 +36,7 @@ m1, m2 = 1, 2
 def restart_object_store(trial_id=None):
     """Restart all object store"""
     global components, blocks, evaluations, activations, dependencies
-    global file_accesses, values, modules, members
+    global file_accesses, modules, members
     global environment_attrs, arguments
     global meta
 
@@ -52,7 +51,6 @@ def restart_object_store(trial_id=None):
     activations = meta.activations_store
     dependencies = meta.dependencies_store
     file_accesses = meta.file_accesses_store
-    values = meta.values_store
     members = meta.members_store
     modules = meta.modules_store
     environment_attrs = meta.environment_attrs_store
@@ -73,7 +71,6 @@ def erase_database():
     relational.session.execute(ActivationLW.model.t.delete())
     relational.session.execute(DependencyLW.model.t.delete())
     relational.session.execute(FileAccessLW.model.t.delete())
-    relational.session.execute(ValueLW.model.t.delete())
     relational.session.execute(MemberLW.model.t.delete())
     relational.session.execute(ModuleLW.model.t.delete())
     relational.session.execute(EnvironmentAttrLW.model.t.delete())
@@ -153,7 +150,7 @@ def block_params(id_, trial_id, code="'block'", docstring="block"):
     return [id_, trial_id, code, False, docstring]
 
 
-def evaluation_params(trial_id, code_component_id, activation_id, value_id=-1,
+def evaluation_params(trial_id, code_component_id, activation_id, repr_=None,
                       year=2016, month=4, day=8, hour=1, minute=19, second=5,
                       moment=None):
     """Return evaluation params"""
@@ -162,7 +159,7 @@ def evaluation_params(trial_id, code_component_id, activation_id, value_id=-1,
             year=year, month=month, day=day,
             hour=hour, minute=minute, second=second
         )
-    return [trial_id, code_component_id, activation_id, moment, value_id]
+    return [trial_id, code_component_id, activation_id, moment, repr_]
 
 
 def activation_params(evaluation, trial_id, code_block_id, name="main.py",
@@ -175,11 +172,6 @@ def activation_params(evaluation, trial_id, code_block_id, name="main.py",
             hour=hour, minute=minute, second=second
         )
     return [evaluation, trial_id, name, start, code_block_id]
-
-
-def value_params(trial_id, value="<class 'type'>", type_id=1):
-    """Return value params"""
-    return [trial_id, value, type_id]
 
 
 def access_params(trial_id, name="file.txt"):
@@ -201,18 +193,12 @@ class ConfigObj(object):
             **kwargs
         ))
 
-    def value(self, value, type_id):
-        meta = self.meta
-        return meta.values_store.add(*value_params(
-            meta.trial_id,
-            value=value, type_id=type_id))
-
-    def evaluation(self, code_component_id, activation_id, value_id, delta):
+    def evaluation(self, code_component_id, activation_id, repr_, delta):
         meta = self.meta
         moment = self.start + timedelta(seconds=delta)
         return meta.evaluations_store.add(*evaluation_params(
             meta.trial_id,
-            code_component_id, activation_id, value_id=value_id, moment=moment
+            code_component_id, activation_id, repr_=repr_, moment=moment
         ))
 
     def member(self, collection_activation_id, collection_id,
@@ -252,8 +238,7 @@ class FuncConfig(ConfigObj):
         self.param_return = None
         self.return_ = None
         self.f_eval = None
-        self.function_type = None
-        self.function_value = None
+        self.function_repr = None
         self.global_var = None
         self.start = None
         self.x_param_eval = None
@@ -285,18 +270,15 @@ class FuncConfig(ConfigObj):
                 self.global_name, "global", "r", self.id)
         return self.param_variable, self.param_return, self.return_
 
-    def create_values(self, trial):
-        type_value_id = trial.type_value_id
-        self.function_type = self.value("<class 'function'>", type_value_id)
-        self.function_value = self.value("<function f at 0x...>",
-                                         self.function_type)
-        return self.function_type, self.function_value
+    def create_reprs(self, trial):
+        self.function_repr = "<function f at 0x...>"
+        return self.function_repr,
 
     def create_evaluations(self, trial):
         main_act = trial.main_act
         self.start = trial.start
         self.f_eval = self.evaluation(
-            self.id, main_act, self.function_value, 2)
+            self.id, main_act, self.function_repr, 2)
 
         return self.f_eval
 
@@ -319,10 +301,8 @@ class AssignConfig(ConfigObj):
         self.func_id = None
         self.call_id = None
         self.result_id = None
-        self.list_type = None
-        self.array_value = None
-        self.int_type = None
-        self.array0_value = None
+        self.array_repr = None
+        self.array0_repr = None
         self.a0comp = None
         self.start = None
         self.list_eval = None
@@ -367,21 +347,15 @@ class AssignConfig(ConfigObj):
         self.result_id = self.comp(self.result, "variable", "w", id_,
                                    first_char_line=self.call_line)
 
-
         return (
             self.write_variable_id, self.read_variable_id, self.arg_id,
             self.func_variable_id, self.func_id, self.call_id, self.result_id,
         )
 
-    def create_values(self, trial):
-        type_value_id = trial.type_value_id
-        self.list_type = self.value("<class 'list'>", type_value_id)
-        self.array_value = self.value("[1]", self.list_type)
-        self.int_type = self.value("<class 'int'>", type_value_id)
-        self.array0_value = self.value("1", self.int_type)
-        return (
-            self.list_type, self.array_value, self.int_type, self.array0_value,
-        )
+    def create_reprs(self, trial):
+        self.array_repr = "[1]"
+        self.array0_repr = "1"
+        return self.array_repr, self.array0_repr
 
     def create_evaluations(self, trial):
         self.start = trial.start
@@ -389,25 +363,25 @@ class AssignConfig(ConfigObj):
         function = trial.function
 
         self.list0_eval = self.evaluation(
-            self.list0_id, main_act, self.array0_value, 3)
+            self.list0_id, main_act, self.array0_repr, 3)
         self.list_eval = self.evaluation(
-            self.list_id, main_act, self.array_value, 4)
+            self.list_id, main_act, self.array_repr, 4)
         self.list0_member = self.member(main_act, self.list_eval, main_act, self.list0_eval,
                     key="[0]", delta=4)
 
         self.a_write_eval = self.evaluation(
-            self.write_variable_id, main_act, self.array_value, 4)
+            self.write_variable_id, main_act, self.array_repr, 4)
         self.f_variable_eval = self.evaluation(
-            self.func_variable_id, main_act, function.function_value, 5)
+            self.func_variable_id, main_act, function.function_repr, 5)
         self.f_func_eval = self.evaluation(
-            self.func_id, main_act, function.function_value, 6)
+            self.func_id, main_act, function.function_repr, 6)
         self.a_read_eval = self.evaluation(
-            self.read_variable_id, main_act, self.array_value, 6)
+            self.read_variable_id, main_act, self.array_repr, 6)
         self.a_arg_eval = self.evaluation(
-            self.arg_id, main_act, self.array_value, 7)
+            self.arg_id, main_act, self.array_repr, 7)
 
         self.f_activation = self.evaluation(
-            self.call_id, main_act, self.array_value, 8 + self.duration)
+            self.call_id, main_act, self.array_repr, 8 + self.duration)
         self.meta.activations_store.add(*activation_params(
             self.meta.evaluations_store[self.f_activation], self.meta.trial_id,
             function.id, name=function.name,
@@ -415,17 +389,17 @@ class AssignConfig(ConfigObj):
         ))
 
         function.x_param_eval = self.evaluation(
-            function.param_variable, self.f_activation, self.array_value, 10)
+            function.param_variable, self.f_activation, self.array_repr, 10)
         function.x_return_eval = self.evaluation(
-            function.param_return, self.f_activation, self.array_value, 11)
+            function.param_return, self.f_activation, self.array_repr, 11)
         function.return_eval = self.evaluation(
-            function.return_, self.f_activation, self.array_value, 12)
+            function.return_, self.f_activation, self.array_repr, 12)
         if function.global_name:
             function.global_eval = self.evaluation(
-                function.global_var, self.f_activation, self.array_value, 13)
+                function.global_var, self.f_activation, self.array_repr, 13)
 
         self.b_write_eval = self.evaluation(
-            self.result_id, main_act, self.array_value, 14)
+            self.result_id, main_act, self.array_repr, 14)
 
         
 
@@ -560,7 +534,6 @@ class TrialConfig(ConfigObj):
         self.assignment = None
         self.access = None
         self.main_id = None
-        self.type_value_id = None
         self.main_act = None
 
     def create(self, function, assignment, access):
@@ -596,16 +569,6 @@ class TrialConfig(ConfigObj):
         params["finish"] = self.finish
         Trial.fast_update(self.trial_id, **params)
 
-    def create_values(self):
-        """Create values"""
-        meta = self.meta
-        self.type_value_id = meta.values_store.add(*value_params(
-            meta.trial_id
-        ))
-        type_object = meta.values_store[self.type_value_id]
-        type_object.type_id = self.type_value_id
-        return self.type_value_id
-
     def create_evaluations(self):
         """Create evaluations"""
         self.main_act = self.meta.evaluations_store.add(*evaluation_params(
@@ -623,10 +586,8 @@ class TrialConfig(ConfigObj):
 
     def finished(self):
         """Create execution provenance for finished trial"""
-        self.create_values()
-
-        self.function.create_values(self)
-        self.assignment.create_values(self)
+        self.function.create_reprs(self)
+        self.assignment.create_reprs(self)
 
         self.create_evaluations()
         self.function.create_evaluations(self)
@@ -666,10 +627,9 @@ def create_trial(
 
     if trial.status == "finished":
         trial.finished()
-        meta.values_store.do_store()
-        meta.members_store.do_store()
         meta.evaluations_store.do_store()
         meta.activations_store.do_store()
+        meta.members_store.do_store()
         meta.dependencies_store.do_store()
         meta.file_accesses_store.do_store()
 

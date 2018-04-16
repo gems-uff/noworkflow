@@ -4,7 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 """Filters for dependency graph"""
 
-from .node_types import AccessNode, ValueNode, ClusterNode
+from .node_types import AccessNode, ClusterNode
 from .node_types import EvaluationNode
 
 
@@ -15,7 +15,7 @@ class Filter(object):
         if isinstance(item, tuple):
             (source, target), attrs = item
             same_id = source.node_id == target.node_id
-            if same_id and not isinstance(source, ValueNode):
+            if same_id:
                 return False
             isargument = attrs.get("_type").startswith("argument")
             if isinstance(source, ClusterNode) and isargument:
@@ -44,17 +44,6 @@ class Filter(object):
 
 
 AcceptAllNodesFilter = Filter
-
-
-class FilterValuesOut(AcceptAllNodesFilter):
-    """Filter that ignores values"""
-    # pylint: disable=too-few-public-methods
-    def __contains__(self, node):
-        if isinstance(node, ValueNode):
-            return False
-        return super(FilterValuesOut, self).__contains__(node)
-
-    show_values = False
 
 
 class FilterAccessesOut(AcceptAllNodesFilter):
@@ -110,7 +99,7 @@ class JoinedFilter(Filter):
     def create(cls, *args):
         """Named constructor. Might return a joined synonymer or not"""
         if not args:
-            return FilterValuesOut()
+            return FilterInternalsOut()
         elif len(args) == 1:
             return args[0]
 

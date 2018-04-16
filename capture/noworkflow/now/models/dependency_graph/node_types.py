@@ -69,7 +69,7 @@ class EvaluationNode(Node):
         self.line = code_component.first_char_line
         self.column = code_component.first_char_column
         self.name = code_component.name
-        self.value = ""
+        self.value = evaluation.repr
 
     @staticmethod
     def get_node_id(id_):
@@ -111,16 +111,3 @@ class ClusterNode(ActivationNode):
         return (
             self.node_id, self.cluster_id, [x.to_tree() for x in self.elements]
         )
-
-
-class ValueNode(Node):
-    """Value node"""
-    def __init__(self, value):
-        super(ValueNode, self).__init__(self.get_node_id(value.id))
-        self.value = value
-        self.name = value.value
-
-    @staticmethod
-    def get_node_id(id_):
-        """Return node_id for a value id"""
-        return "v_{}".format(id_)

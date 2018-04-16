@@ -142,7 +142,6 @@ class Dependency(object):
         self.activation_id = evaluation.activation_id
         self.evaluation_id = evaluation.id
         self.code_id = evaluation.code_component_id
-        self.value_id = evaluation.value_id
 
         self.collection = collection
         self.addr = addr

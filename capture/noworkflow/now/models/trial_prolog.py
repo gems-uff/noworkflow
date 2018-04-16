@@ -15,7 +15,7 @@ from ..persistence.models import Tag, Argument
 from ..persistence.models import Module, EnvironmentAttr
 from ..persistence.models import CodeComponent, CodeBlock
 from ..persistence.models import Activation, Evaluation, Dependency
-from ..persistence.models import FileAccess, Value
+from ..persistence.models import FileAccess
 from ..persistence.models import Member
 
 from .graphs.diagram import ViewPrologDiagram
@@ -53,7 +53,6 @@ class TrialProlog(Model):
             (Evaluation, lambda: trial.evaluations),
             (Dependency, lambda: trial.dependencies),
             (FileAccess, lambda: trial.file_accesses),
-            (Value, lambda: trial.values),
             (Member, lambda: trial.members),
         ]
 

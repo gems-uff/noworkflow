@@ -16,11 +16,11 @@ from .models import (
     dependency,
     environment,
     evaluation,
+    member,
     access,
     module,
     tag,
     trial,
-    value,
 )
 
 # ToDo: Slicing inference rules
@@ -51,9 +51,9 @@ __all__ = [
     "dependency",
     "environment",
     "evaluation",
+    "member",
     "access",
     "module",
     "tag",
     "trial",
-    "value",
 ]

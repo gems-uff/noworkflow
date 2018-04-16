@@ -15,19 +15,18 @@ class EvaluationLW(BaseLW):                                                     
 
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "moment", "code_component_id", "activation_id",
-         "value_id",], ["_same", "members"]
+         "repr"], ["_same", "members"]
     )
-    nullable = {"moment", "activation_id", "value_id"}
+    nullable = {"moment", "activation_id"}
     model = Evaluation
 
-    def __init__(self, id_, trial_id, code_component_id, activation_id, moment,
-                 value):
+    def __init__(self, id_, trial_id, code_id, activation_id, moment, repr_):
         self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
-        self.code_component_id = code_component_id
+        self.code_component_id = code_id
         self.activation_id = activation_id if activation_id else -1
         self.moment = -1 if not moment else moment
-        self.value_id = -1 if not value else value
+        self.repr = repr_
         self._same = None
         self.members = {}
 
@@ -56,5 +55,5 @@ class EvaluationLW(BaseLW):                                                     
         return (
             "Evaluation(id={0.id}, moment={0.moment}, "
             "code_component_id={0.code_component_id}, "
-            "activation_id={0.activation_id}, value_id={0.value_id})"
+            "activation_id={0.activation_id}, repr={0.repr})"
         ).format(self)

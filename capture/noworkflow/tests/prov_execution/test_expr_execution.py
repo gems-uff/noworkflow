@@ -38,10 +38,8 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_a, var_int)
         self.assert_type(var_int, var_type)
         self.assert_type(var_type, var_type)
-
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_value.value, "2")
+        self.assertEqual(var_a.repr, "2")
+        self.assertEqual(var_2.repr, "2")
 
     def test_str(self):
         """Test str collection"""
@@ -59,10 +57,8 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_a, var_str)
         self.assert_type(var_str, var_type)
         self.assert_type(var_type, var_type)
-
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_value.value, "'2'")
+        self.assertEqual(var_a.repr, "'2'")
+        self.assertEqual(var_2.repr, "'2'")
 
     def test_bytes(self):
         """Test bytes collection"""
@@ -87,9 +83,9 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_bytes, var_type)
         self.assert_type(var_type, var_type)
 
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_value.value, "b'2'" if PY3 else "'2'")
+        vrepr = "b'2'" if PY3 else "'2'"
+        self.assertEqual(var_a.repr, vrepr)
+        self.assertEqual(var_2.repr, vrepr)
 
     @only(PY3)
     def test_ellipsis(self):
@@ -107,10 +103,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_a, var_ellipsis_type)
         self.assert_type(var_ellipsis_type, var_type)
         self.assert_type(var_ellipsis_type, var_type)
-
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_value.value, "Ellipsis")
+        self.assertEqual(var_a.repr, "Ellipsis")
 
     def test_true(self):
         """Test True collection"""
@@ -128,10 +121,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_a, var_bool)
         self.assert_type(var_bool, var_type)
         self.assert_type(var_type, var_type)
-
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_value.value, "True")
+        self.assertEqual(var_a.repr, "True")
 
     def test_false(self):
         """Test False collection"""
@@ -149,10 +139,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_a, var_bool)
         self.assert_type(var_bool, var_type)
         self.assert_type(var_type, var_type)
-
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_value.value, "False")
+        self.assertEqual(var_a.repr, "False")
 
     def test_none(self):
         """Test None collection"""
@@ -170,10 +157,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_a, var_nonetype)
         self.assert_type(var_nonetype, var_type)
         self.assert_type(var_type, var_type)
-
-        # VTodo: add repr
-        var_value = self.metascript.values_store[var_a.value_id]
-        self.assertEqual(var_value.value, "None")
+        self.assertEqual(var_a.repr, "None")
 
     def test_global(self):
         """Test global collection"""
@@ -349,11 +333,8 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_str, var_type)
         self.assert_type(var_int_type, var_type)
 
-        # VTodo: add repr
-        var_a_value = self.metascript.values_store[var_a.value_id]
-        var_b_value = self.metascript.values_store[var_b.value_id]
-        self.assertEqual(var_a_value.value, "'1'")
-        self.assertEqual(var_b_value.value, "1")
+        self.assertEqual(var_a.repr, "'1'")
+        self.assertEqual(var_b.repr, "1")
 
     def test_external_call_with_func(self):
         """Test external call collection with func collection"""
@@ -418,11 +399,9 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_dict, var_a_kv_a, "['a']")
         self.assert_member(var_dict, var_a_kv_b, "['b']")
 
-        # vtodo: add repr
-        var_a_kv_a_val = self.metascript.values_store[var_a_kv_a.value_id]
-        var_a_kv_b_val = self.metascript.values_store[var_a_kv_b.value_id]
-        self.assertEqual(var_a_kv_a_val.value, '1')
-        self.assertEqual(var_a_kv_b_val.value, '2')
+        self.assertEqual(var_dict.repr, "{'a': 1, 'b': 2}")
+        self.assertEqual(var_a_kv_a.repr, '1')
+        self.assertEqual(var_a_kv_b.repr, '2')
 
     def test_list_definition(self):
         """Test list definition"""
@@ -447,11 +426,9 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_list, var_a_e, "[0]")
         self.assert_member(var_list, var_a_i1, "[1]")
 
-        # vtodo: add repr
-        var_a_i0_val = self.metascript.values_store[var_a_e.value_id]
-        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
-        self.assertEqual(var_a_i0_val.value, '1')
-        self.assertEqual(var_a_i1_val.value, '2')
+        self.assertEqual(var_list.repr, "[1, 2]")
+        self.assertEqual(var_a_e.repr, '1')
+        self.assertEqual(var_a_i1.repr, '2')
 
     def test_tuple_definition(self):
         """Test list definition"""
@@ -476,11 +453,9 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_list, var_a_e, "[0]")
         self.assert_member(var_list, var_a_i1, "[1]")
 
-        # vtodo: add repr
-        var_a_i0_val = self.metascript.values_store[var_a_e.value_id]
-        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
-        self.assertEqual(var_a_i0_val.value, '1')
-        self.assertEqual(var_a_i1_val.value, '2')
+        self.assertEqual(var_list.repr, "(1, 2)")
+        self.assertEqual(var_a_e.repr, '1')
+        self.assertEqual(var_a_i1.repr, '2')
 
     def test_set_definition(self):
         """Test set definition"""
@@ -505,11 +480,10 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_list, var_a_e, "[1]")
         self.assert_member(var_list, var_a_i1, "[2]")
 
-        # vtodo: add repr
-        var_a_i0_val = self.metascript.values_store[var_a_e.value_id]
-        var_a_i1_val = self.metascript.values_store[var_a_i1.value_id]
-        self.assertEqual(var_a_i0_val.value, '1')
-        self.assertEqual(var_a_i1_val.value, '2')
+        vrepr = "{1, 2}" if PY3 else "set([1, 2])"
+        self.assertEqual(var_list.repr, vrepr)
+        self.assertEqual(var_a_e.repr, '1')
+        self.assertEqual(var_a_i1.repr, '2')
 
     def test_subscript_definition(self):
         """Test subscript definition"""
@@ -633,11 +607,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_x, ifexp, "assign", True)
         self.assert_dependency(var_2, var_1, "condition")
 
-        # vtodo: add repr
-        var_value = self.metascript.values_store[var_x.value_id]
-        self.assertEqual(var_value.value, "2")
-
-        
+        self.assertEqual(var_x.repr, "2")
 
     def test_ifexp_false_definition(self):
         """Test return collection"""
@@ -657,11 +627,7 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_x, ifexp, "assign", True)
         self.assert_dependency(var_3, var_0, "condition")
 
-        # vtodo: add repr
-        var_value = self.metascript.values_store[var_x.value_id]
-        self.assertEqual(var_value.value, "3")
-
-        
+        self.assertEqual(var_x.repr, "3")
 
     def test_list_comprehension_definition(self):
         """Test list comprehension definition"""
@@ -703,11 +669,9 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_comp, x2_1, "[0]")
         self.assert_member(var_comp, x2_2, "[1]")
 
-        # vtodo: add repr
-        var_c_i0_val = self.metascript.values_store[x2_1.value_id]
-        var_c_i1_val = self.metascript.values_store[x2_2.value_id]
-        self.assertEqual(var_c_i0_val.value, '6')
-        self.assertEqual(var_c_i1_val.value, '8')        
+        self.assertEqual(var_comp.repr, "[6, 8]")
+        self.assertEqual(x2_1.repr, "6")
+        self.assertEqual(x2_2.repr, "8")
 
     def test_set_comprehension_definition(self):
         """Test set comprehension definition"""
@@ -749,11 +713,10 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_comp, x2_1, "[6]")
         self.assert_member(var_comp, x2_2, "[8]")
 
-        # vtodo: add repr
-        var_c_i0_val = self.metascript.values_store[x2_1.value_id]
-        var_c_i1_val = self.metascript.values_store[x2_2.value_id]
-        self.assertEqual(var_c_i0_val.value, '6')
-        self.assertEqual(var_c_i1_val.value, '8')
+        vrepr = "{8, 6}" if PY3 else "set([8, 6])"
+        self.assertEqual(var_comp.repr, vrepr)
+        self.assertEqual(x2_1.repr, "6")
+        self.assertEqual(x2_2.repr, "8")
 
     def test_dict_comprehension_definition(self):
         """Test set comprehension definition"""
@@ -802,15 +765,13 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(x1r, x1w, "assignment", True)
         self.assert_dependency(x2r, x2w, "assignment", True)
 
-
         self.assert_member(var_comp, vi_1, "[6]")
         self.assert_member(var_comp, vi_2, "[8]")
 
-        # vtodo: add repr
-        var_c_i0_val = self.metascript.values_store[vi_1.value_id]
-        var_c_i1_val = self.metascript.values_store[vi_2.value_id]
-        self.assertEqual(var_c_i0_val.value, '5')
-        self.assertEqual(var_c_i1_val.value, '5')        
+        vrepr = "{6: 5, 8: 5}" if PY36 else "{8: 5, 6: 5}"
+        self.assertEqual(var_comp.repr, vrepr)
+        self.assertEqual(vi_1.repr, "5")
+        self.assertEqual(vi_2.repr, "5")
 
     def test_generator_expression_variable(self):
         """Test for loop"""
@@ -878,11 +839,9 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_y1_w, var_x1_r, "assign", True)
         self.assert_dependency(var_y2_w, var_x2_r, "assign", True)
         
-        # vtodo: add repr
-        var_x1_val = self.metascript.values_store[var_x1_w.value_id]
-        var_x2_val = self.metascript.values_store[var_x2_w.value_id]
-        self.assertEqual(var_x1_val.value, '6')
-        self.assertEqual(var_x2_val.value, '8')
+        self.assertTrue(var_gen.repr.startswith("<generator object"))
+        self.assertEqual(var_x1_w.repr, "6")
+        self.assertEqual(var_x2_w.repr, "8")
 
     @only(PY2)
     def test_repr(self):
@@ -915,13 +874,9 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_str, var_type)
         self.assert_type(var_type, var_type)
 
-        # vtodo: add repr
-        var_a_value = self.metascript.values_store[var_a.value_id]
-        var_b_value = self.metascript.values_store[var_b.value_id]
-        self.assertEqual(var_a_value.value, "'1'")
-        self.assertEqual(var_b_value.value, '"\'1\'"')
+        self.assertEqual(var_a.repr, "'1'")
+        self.assertEqual(var_b.repr, '"\'1\'"')
 
-        
     @only(PY36)
     @unittest.skip("ToDo: fix pyposast")
     def test_joined_str_and_formatted_value(self):

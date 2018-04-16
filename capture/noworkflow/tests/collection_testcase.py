@@ -54,10 +54,6 @@ class CollectionTestCase(unittest.TestCase):
         """Find evaluation by attributes in kwargs"""
         return self.find(self.metascript.evaluations_store.store, **kwargs)
 
-    def find_value(self, **kwargs):
-        """Find value by attributes in kwargs"""
-        return self.find(self.metascript.values_store.store, **kwargs)
-
     def find_dependency(self, **kwargs):
         """Find dependency by attributes in kwargs"""
         return self.find(self.metascript.dependencies_store.store, **kwargs)
@@ -75,10 +71,12 @@ class CollectionTestCase(unittest.TestCase):
             result.extend(self.find_all_evaluations(code_component_id=var.id))
         return result
 
-    def execute(self):
+    def execute(self, set_max_diff=True):
         """Execute script"""
         # pylint: disable=attribute-defined-outside-init
         if not hasattr(self, 'executed'):
+            if set_max_diff:
+                self.maxDiff = None
             self.metascript.execution.collect_provenance()
             self.assertEqual(self.metascript.execution.msg,
                              "the execution of trial -1 finished successfully")

@@ -9,14 +9,13 @@ import weakref
 from collections import defaultdict
 from itertools import chain
 
-from future.utils import viewitems, viewvalues
+from future.utils import viewitems
 
 from ...persistence.models import UniqueFileAccess
 
-from .attributes import VALUE_ATTR, TYPE_ATTR
 from .attributes import EMPTY_ATTR, ACCESS_ATTR, PROPAGATED_ATTR
 from .config import DependencyConfig
-from .node_types import AccessNode, ValueNode
+from .node_types import AccessNode
 from .node_types import ActivationNode, ClusterNode, EvaluationNode
 
 
@@ -70,43 +69,12 @@ class Clusterizer(object):
         synonymer.set(node)
         return node, "done"
 
-    def add_evaluation_node(self, node, cluster, value=None):
-        """Add evaluation node with its value"""
+    def add_evaluation_node(self, node, cluster):
+        """Add evaluation node"""
         node, reason = self.add_node(node, cluster)
         if reason != "done":
             return None
 
-        if value is None:
-            return node
-
-        if self.filter.show_values:
-            value_node = self.process_value(value, cluster)
-            if value_node:
-                self.add_dependency(node, value_node, VALUE_ATTR)
-        else:
-            node.value = value.value
-
-        return node
-
-    def process_value(self, value, cluster):
-        """Process node and add it to cluster"""
-        type_node = None
-        node, reason = self.add_node(ValueNode(value), cluster)
-        if reason == "exists":
-            # Value exists elsewhere. Add value type and create dependency
-            if value.id == value.type.id:
-                # Value is its type (Python's "type")
-                # Stop the dependency creation
-                return node
-            nid = node.node_id
-            type_node = self.process_value(value.type, self.created[nid][0])
-        elif reason == "done":
-            type_node = self.process_value(value.type, cluster)
-        else:
-            return None
-
-        if type_node:
-            self.add_dependency(node, type_node, TYPE_ATTR)
         return node
 
     def process_evaluation(self, evaluation, cluster):
@@ -116,7 +84,7 @@ class Clusterizer(object):
             return self.process_activation(act, evaluation, cluster)
 
         return self.add_evaluation_node(
-            EvaluationNode(evaluation), cluster, evaluation.value
+            EvaluationNode(evaluation), cluster
         )
 
     def _activation_node_condition(self, activation, cluster):
@@ -128,8 +96,7 @@ class Clusterizer(object):
         """Process activation and add it to cluster"""
         if self._activation_node_condition(activation, cluster):
             node = self.add_evaluation_node(
-                ActivationNode(activation, evaluation),
-                cluster, evaluation.value
+                ActivationNode(activation, evaluation), cluster, 
             )
         else:
             node = self.add_cluster_node(activation, evaluation, cluster)
@@ -170,8 +137,7 @@ class Clusterizer(object):
     def add_cluster_node(self, activation, evaluation, cluster):
         """Create new cluster"""
         node = self.add_evaluation_node(
-            ClusterNode(activation, evaluation, cluster.depth + 1),
-            cluster, evaluation.value
+            ClusterNode(activation, evaluation, cluster.depth + 1), cluster
         )
         if isinstance(node, ClusterNode):
             self.process_cluster(node)
@@ -268,8 +234,7 @@ class DependencyClusterizer(Clusterizer):
         """Create new cluster"""
         old_depth = cluster.depth
         node = self.add_evaluation_node(
-            ActivationNode(activation, evaluation),
-            cluster, evaluation.value
+            ActivationNode(activation, evaluation), cluster
         )
         cluster.depth += 1
         if node is not None and self.config.max_depth != float('inf'):

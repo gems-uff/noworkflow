@@ -20,7 +20,6 @@ from ...now.models.dependency_graph.filters import FilterAccessesOut
 from ...now.models.dependency_graph.filters import JoinedFilter
 from ...now.models.dependency_graph.attributes import EMPTY_ATTR, ACCESS_ATTR
 from ...now.models.dependency_graph.attributes import PROPAGATED_ATTR
-from ...now.models.dependency_graph.attributes import VALUE_ATTR, TYPE_ATTR
 from ...now.models.dependency_graph.clusterizer import Clusterizer
 from ...now.models.dependency_graph.node_types import ValueNode, EvaluationNode
 

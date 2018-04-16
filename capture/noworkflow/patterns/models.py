@@ -18,7 +18,6 @@ from ..now.persistence.models import Member
 from ..now.persistence.models import Module
 from ..now.persistence.models import Tag
 from ..now.persistence.models import Trial
-from ..now.persistence.models import Value
 
 from .machinery import ModelRule
 
@@ -36,4 +35,3 @@ member = ModelRule(Member)
 module = ModelRule(Module)
 tag = ModelRule(Tag)
 trial = ModelRule(Trial)
-value = ModelRule(Value)

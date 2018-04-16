@@ -52,37 +52,6 @@ class SameSynonymer(Synonymer):
         return self.synonym_ids.get(node_id, node_id)
 
 
-class ValueSynonymer(Synonymer):
-    """Synonymer that combines nodes with the same values"""
-
-    def __init__(self):
-        super(ValueSynonymer, self).__init__()
-        self.synonyms = {}
-        self.synonym_ids = {}
-
-    def get(self, node):
-        """Get synonym for node"""
-        if isinstance(node, EvaluationNode):
-            synonym = self.synonyms.get(node.evaluation.value_id)
-            if synonym is not None:
-                self.synonym_ids[node.node_id] = synonym.node_id
-                return synonym
-        return node
-
-    def set(self, node):
-        """Set synonym for node"""
-        if isinstance(node, EvaluationNode):
-            value_id = node.evaluation.value_id
-            if value_id not in self.synonyms:
-                self.synonyms[value_id] = node
-            return self.synonyms[value_id]
-        return node
-
-    def from_node_id(self, node_id):
-        """Get synonym node_id from node_id"""
-        return self.synonym_ids.get(node_id, node_id)
-
-
 class AccessNameSynonymer(Synonymer):
     """Synonymer that combines access nodes with the same names"""
 
