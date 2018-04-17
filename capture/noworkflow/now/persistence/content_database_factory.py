@@ -5,11 +5,13 @@
 """Content Database Factory"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
-from .content_database_standart import ContentDatabaseStandart
 
+from .content_database_standart import ContentDatabaseStandart
 from .content_database_pure_git import ContentDatabasePureGit
 from .content_database_dulwich import ContentDatabaseDulwich
 from .content_database_pygit import ContentDatabasePyGit
+from .content_database_pygit_db import ContentDatabasePyGitDB
+from .content_database_pygit_threading import ContentDatabasePyGitThreading
 
 CONTENT_GIT_DIRNAME = "content.git"
 CONTENT_DIRNAME = "content"
@@ -21,6 +23,6 @@ class ContentDatabaseFactory(object):
     def factory(persistence_config):
 
         persistence_config.content_dir = CONTENT_GIT_DIRNAME
-        return ContentDatabaseDulwich(persistence_config)
+        return ContentDatabasePyGitThreading(persistence_config)
 
 

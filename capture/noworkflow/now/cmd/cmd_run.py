@@ -74,6 +74,8 @@ def run(metascript, args=None):
 
         metaprofiler.meta_profiler.save()
 
+        content.join_persistence_threads()
+
         func_profiler.print_prof_data()
 
     finally:
