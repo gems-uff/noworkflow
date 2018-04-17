@@ -12,7 +12,7 @@ from ...now.models.dependency_graph.clusterizer import Clusterizer
 from ...now.models.dependency_graph.clusterizer import ActivationClusterizer
 from ...now.models.dependency_graph.clusterizer import DependencyClusterizer
 from ...now.models.dependency_graph.clusterizer import ProspectiveClusterizer
-from ...now.models.dependency_graph.filters import FilterValuesOut
+from ...now.models.dependency_graph.filters import FilterTypesOut
 from ...now.models.dependency_graph.filters import FilterAccessesOut
 from ...now.models.dependency_graph.filters import FilterExternalAccessesOut
 from ...now.models.dependency_graph.filters import FilterInternalsOut
@@ -21,7 +21,7 @@ from ...now.models.dependency_graph.filters import JoinedFilter
 from ...now.models.dependency_graph.synonymers import Synonymer
 from ...now.models.dependency_graph.synonymers import AccessNameSynonymer
 from ...now.models.dependency_graph.synonymers import SameSynonymer
-from ...now.models.dependency_graph.synonymers import ValueSynonymer
+from ...now.models.dependency_graph.synonymers import ReferenceSynonymer
 from ...now.models.dependency_graph.synonymers import JoinedSynonymer
 
 from ..collection_testcase import CollectionTestCase
@@ -39,27 +39,27 @@ class TestClusterizerConfig(CollectionTestCase):
     # pylint: disable=invalid-name
     # pylint: disable=too-many-public-methods
 
-    def test_default_filter_hide_values_show_accesses_hide_internals(self):
+    def test_default_filter_hide_types_show_accesses_hide_internals(self):
         # pylint: disable=protected-access
         config = DependencyConfig()
         filter_ = config.filter()
         self.assertEqual(JoinedFilter, type(filter_))
-        self.assertEqual(FilterValuesOut, type(filter_._filters[0]))
+        self.assertEqual(FilterTypesOut, type(filter_._filters[0]))
         self.assertEqual(FilterExternalAccessesOut, type(filter_._filters[1]))
         self.assertEqual(FilterInternalsOut, type(filter_._filters[2]))
 
-    def test_filter_show_values_show_accesses_hide_internals(self):
+    def test_filter_show_types_show_accesses_hide_internals(self):
         # pylint: disable=protected-access
         config = DependencyConfig()
-        config.show_values = True
+        config.show_types = True
         config.show_external_files = True
         filter_ = config.filter()
         self.assertEqual(FilterInternalsOut, type(filter_))
 
-    def test_filter_show_values_hide_accesses_hide_internals(self):
+    def test_filter_show_types_hide_accesses_hide_internals(self):
         # pylint: disable=protected-access
         config = DependencyConfig()
-        config.show_values = True
+        config.show_types = True
         config.show_accesses = False
         config.show_external_files = True
         filter_ = config.filter()
@@ -67,34 +67,34 @@ class TestClusterizerConfig(CollectionTestCase):
         self.assertEqual(FilterAccessesOut, type(filter_._filters[0]))
         self.assertEqual(FilterInternalsOut, type(filter_._filters[1]))
 
-    def test_filter_hide_values_hide_accesses_hide_internals(self):
+    def test_filter_hide_types_hide_accesses_hide_internals(self):
         # pylint: disable=protected-access
         config = DependencyConfig()
         config.show_accesses = False
         config.show_external_files = True
         filter_ = config.filter()
         self.assertEqual(JoinedFilter, type(filter_))
-        self.assertEqual(FilterValuesOut, type(filter_._filters[0]))
+        self.assertEqual(FilterTypesOut, type(filter_._filters[0]))
         self.assertEqual(FilterAccessesOut, type(filter_._filters[1]))
         self.assertEqual(FilterInternalsOut, type(filter_._filters[2]))
 
-    def test_filter_show_values_show_accesses_show_internals(self):
+    def test_filter_show_types_show_accesses_show_internals(self):
         config = DependencyConfig()
-        config.show_values = True
+        config.show_types = True
         config.show_internals = True
         config.show_external_files = True
         self.assertEqual(AcceptAllNodesFilter, type(config.filter()))
 
     def test_filter_hide_external_accesses(self):
         config = DependencyConfig()
-        config.show_values = True
+        config.show_types = True
         config.show_internals = True
         config.show_external_files = False
         self.assertEqual(FilterExternalAccessesOut, type(config.filter()))
 
     def test_filter_extra(self):
         config = DependencyConfig()
-        config.show_values = True
+        config.show_types = True
         config.show_internals = True
         config.show_external_files = True
         self.assertEqual(
@@ -127,7 +127,7 @@ class TestClusterizerConfig(CollectionTestCase):
         synonymer = config.synonymer()
         self.assertEqual(JoinedSynonymer, type(synonymer))
         self.assertEqual(AccessNameSynonymer, type(synonymer.synonymers[0]))
-        self.assertEqual(ValueSynonymer, type(synonymer.synonymers[1]))
+        self.assertEqual(ReferenceSynonymer, type(synonymer.synonymers[1]))
 
     def test_synonymer_extra(self):
         config = DependencyConfig()

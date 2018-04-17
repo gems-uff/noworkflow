@@ -70,6 +70,7 @@ class EvaluationNode(Node):
         self.column = code_component.first_char_column
         self.name = code_component.name
         self.value = evaluation.repr
+        self.is_type = False
 
     @staticmethod
     def get_node_id(id_):

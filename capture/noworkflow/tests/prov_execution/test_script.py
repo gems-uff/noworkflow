@@ -30,7 +30,7 @@ class TestScript(CollectionTestCase):
         var_module = self.get_evaluation(name=self.rtype('module'))
         var_type = self.get_evaluation(name=self.rtype('type'))
 
-        self.assertEqual(script_evaluation.activation_id, -1)
+        self.assertEqual(script_evaluation.activation_id, 0)
         self.assertTrue(script_activation.start < script_evaluation.moment)
         self.assertEqual(script_activation.code_block_id, script.id)
         self.assertEqual(script_activation.name, "__main__")
@@ -59,7 +59,7 @@ class TestScript(CollectionTestCase):
         var_module = self.get_evaluation(name=self.rtype('module'))
         var_type = self.get_evaluation(name=self.rtype('type'))
 
-        self.assertEqual(script_evaluation.activation_id, -1)
+        self.assertEqual(script_evaluation.activation_id, 0)
         self.assertTrue(script_activation.start < script_evaluation.moment)
         self.assertEqual(script_activation.code_block_id, script.id)
         self.assertEqual(script_activation.name, "__main__")

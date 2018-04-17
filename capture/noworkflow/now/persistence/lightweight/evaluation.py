@@ -17,14 +17,14 @@ class EvaluationLW(BaseLW):                                                     
         ["trial_id", "id", "moment", "code_component_id", "activation_id",
          "repr"], ["_same", "members"]
     )
-    nullable = {"moment", "activation_id"}
+    nullable = {"moment"}
     model = Evaluation
 
     def __init__(self, id_, trial_id, code_id, activation_id, moment, repr_):
         self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.code_component_id = code_id
-        self.activation_id = activation_id if activation_id else -1
+        self.activation_id = activation_id if int(activation_id) > 0 else 0
         self.moment = -1 if not moment else moment
         self.repr = repr_
         self._same = None

@@ -18,7 +18,7 @@ class MemberLW(BaseLW):
         ["trial_id", "id", "collection_activation_id", "collection_id",
          "member_activation_id", "member_id", "key", "moment", "type"]
     )
-    nullable = set()
+    nullable = {}
     model = Member
 
     def __init__(self, id_, trial_id, collection_activation_id, collection_id,

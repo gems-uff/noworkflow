@@ -66,11 +66,11 @@ class Evaluation(AlchemyProxy):
 
     Load Evaluation dependencies in which the evaluation is the dependent:
     >>> list(evaluation2.dependencies_as_dependent)  # doctest: +ELLIPSIS
-    [dependency(..., ..., ..., ..., ..., 'same', 1, nil, nil, nil).]
+    [dependency(..., ..., ..., ..., ..., 'assignment', 1, nil, nil, nil).]
 
     Load Evaluation dependencies in which the evaluation is the dependency:
     >>> list(evaluation2.dependencies_as_dependency)  # doctest: +ELLIPSIS
-    [dependency(..., ..., ..., ..., ..., 'same', 1, nil, nil, nil).]
+    [dependency(..., ..., ..., ..., ..., 'assignment', 1, nil, nil, nil).]
 
     Load Evaluation dependents evaluations:
     >>> list(evaluation2.dependents)  # doctest: +ELLIPSIS
@@ -167,8 +167,8 @@ class Evaluation(AlchemyProxy):
             (activation_id == Member.m.member_activation_id) &
             (trial_id == Member.m.trial_id)))
 
-    dependents = backref_many("dependencies")  # Evaluation.dependencies
-    collections = backref_many("members")  # Evaluation.members
+    dependents = backref_many("dependents")  # Evaluation.dependencies
+    collections = backref_many("collections")  # Evaluation.members
     trial = backref_one("trial")  # Trial.evaluations
     code_component = backref_one("code_component")  # CodeComponent.evaluations
 
@@ -210,6 +210,46 @@ class Evaluation(AlchemyProxy):
         """
         return getattr(proxy(
             self._get_instance().dependencies_as_dependent
-            .filter(Dependency.m.type == "same")
+            .filter(Dependency.m.type == "assignment")
             .first()
         ), "dependency", None)
+
+    @property
+    def reference_evaluation(self):
+        """Return "reference" dependency.
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> config = TrialConfig("finished")
+        >>> trial_id = new_trial(config,
+        ...                      assignment=assign, erase=True)
+
+
+        Find Evaluation
+        >>> list_eval = Evaluation((trial_id, assign.list_eval))
+        >>> list_eval.reference_evaluation is list_eval
+        True
+
+        >>> a_read = Evaluation((trial_id, assign.a_read_eval))
+        >>> a_read.reference_evaluation.id == list_eval.id
+        True
+        """
+        found = set()
+        previous = None
+        current = self
+        while current:
+            if current.id in found:
+                break
+            previous = current
+            found.add(current.id)
+            current = getattr(proxy(
+                current._get_instance().dependencies_as_dependent
+                .filter(Dependency.m.reference == True)
+                .first()
+            ), "dependency", None)
+
+        return previous
+         

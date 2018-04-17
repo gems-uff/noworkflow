@@ -412,12 +412,12 @@ class AssignConfig(ConfigObj):
             self.meta.trial_id,
             main_act, self.a_read_eval,
             main_act, self.a_write_eval,
-            "same", True, None, None, None)
+            "assignment", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.f_variable_eval,
             main_act, function.f_eval,
-            "same", True, None, None, None)
+            "assignment", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             main_act, self.f_func_eval,
@@ -427,7 +427,7 @@ class AssignConfig(ConfigObj):
             self.meta.trial_id,
             main_act, self.a_arg_eval,
             main_act, self.a_read_eval,
-            "same", True, None, None, None)
+            "assignment", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             self.f_activation, function.x_param_eval,
@@ -437,13 +437,13 @@ class AssignConfig(ConfigObj):
             self.meta.trial_id,
             self.f_activation, function.x_return_eval,
             self.f_activation, function.x_param_eval,
-            "same", True, None, None, None)
+            "assignment", True, None, None, None)
         if function.global_name:
             self.meta.dependencies_store.add(
                 self.meta.trial_id,
                 self.f_activation, function.global_eval,
                 main_act, self.a_write_eval,
-                "same", True, None, None, None)
+                "assignment", True, None, None, None)
         self.meta.dependencies_store.add(
             self.meta.trial_id,
             self.f_activation, function.return_eval,

@@ -77,6 +77,15 @@ class FilterInternalsOut(AcceptAllNodesFilter):
         return super(FilterInternalsOut, self).__contains__(node)
 
 
+class FilterTypesOut(AcceptAllNodesFilter):
+    """Filter that ignores evaluations that start with _"""
+    # pylint: disable=too-few-public-methods
+    def __contains__(self, node):
+        if isinstance(node, EvaluationNode):
+            return not node.is_type
+        return super(FilterTypesOut, self).__contains__(node)
+
+
 class _JoinedFilterAttribute(object):
     """Joined attribute"""
     # pylint: disable=too-few-public-methods
@@ -99,7 +108,7 @@ class JoinedFilter(Filter):
     def create(cls, *args):
         """Named constructor. Might return a joined synonymer or not"""
         if not args:
-            return FilterInternalsOut()
+            return FilterTypesOut()
         elif len(args) == 1:
             return args[0]
 

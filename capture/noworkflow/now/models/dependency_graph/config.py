@@ -10,10 +10,10 @@ from future.utils import viewvalues
 
 from ...utils.data import OrderedDefaultDict
 
-from .synonymers import SameSynonymer
+from .synonymers import SameSynonymer, ReferenceSynonymer
 from .synonymers import AccessNameSynonymer, JoinedSynonymer
 from .filters import FilterAccessesOut, FilterInternalsOut
-from .filters import FilterExternalAccessesOut
+from .filters import FilterExternalAccessesOut, FilterTypesOut
 from .filters import JoinedFilter, AcceptAllNodesFilter
 from .node_types import ClusterNode, EvaluationNode
 
@@ -29,6 +29,8 @@ class DependencyConfig(object):
         self.show_accesses = True
         self.show_internals = False
         self.show_external_files = False
+        self.show_types = False
+        self.show_timestamps = False
         self.combine_accesses = True
         self.combine_assignments = True
         self.combine_values = False
@@ -49,6 +51,10 @@ class DependencyConfig(object):
                      "2 shows each file once (show external accesses)\n"
                      "3 shows all accesses (except external accesses)\n"
                      "4 shows all accesses (including external accesses)")
+        add_arg("-T", "--types", action="store_true",
+                help="R|show type nodes.")
+        add_arg("-t", "--hide-timestamps", action="store_false",
+                help="hide timestamps")
         add_arg("-H", "--hide-internals", action="store_false",
                 help="show variables and functions which name starts with a "
                      "leading underscore")
@@ -86,6 +92,8 @@ class DependencyConfig(object):
     def read_args(self, args):
         """Read config from args"""
         self.show_accesses = bool(args.accesses)
+        self.show_types = bool(args.types)
+        self.show_timestamps = not bool(args.hide_timestamps)
         self.show_internals = not bool(args.hide_internals)
         self.show_external_files = args.accesses in {2, 4}
 
@@ -124,14 +132,16 @@ class DependencyConfig(object):
             synonymers.append(AccessNameSynonymer())
         if self.combine_assignments:
             synonymers.append(SameSynonymer())
-        #if self.combine_values:
-        #    synonymers.append(ValueSynonymer())
+        if self.combine_values:
+            synonymers.append(ReferenceSynonymer())
         synonymers.extend(extra or [])
         return JoinedSynonymer.create(*synonymers)
 
     def filter(self, extra=None):
         """Return filter based on config"""
         filters = []
+        if not self.show_types:
+            filters.append(FilterTypesOut())
         if not self.show_accesses:
             filters.append(FilterAccessesOut())
         elif not self.show_external_files:

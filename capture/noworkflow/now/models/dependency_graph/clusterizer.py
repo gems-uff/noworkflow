@@ -11,9 +11,10 @@ from itertools import chain
 
 from future.utils import viewitems
 
-from ...persistence.models import UniqueFileAccess
+from ...persistence.models import UniqueFileAccess, Evaluation
 
 from .attributes import EMPTY_ATTR, ACCESS_ATTR, PROPAGATED_ATTR
+from .attributes import REFERENCE_ATTR
 from .config import DependencyConfig
 from .node_types import AccessNode
 from .node_types import ActivationNode, ClusterNode, EvaluationNode
@@ -69,22 +70,31 @@ class Clusterizer(object):
         synonymer.set(node)
         return node, "done"
 
-    def add_evaluation_node(self, node, cluster):
+    def add_evaluation_node(self, node, cluster, is_type=False):
         """Add evaluation node"""
+        node.is_type = is_type
         node, reason = self.add_node(node, cluster)
         if reason != "done":
             return None
 
+        for member in node.evaluation.memberships_as_collection:
+            self.process_evaluation(member.member, self.main_cluster, True)
+
+        if not is_type:
+            for member in node.evaluation.memberships_as_member:
+                self.process_evaluation(
+                    member.collection, self.main_cluster, False)
+
         return node
 
-    def process_evaluation(self, evaluation, cluster):
+    def process_evaluation(self, evaluation, cluster, is_type):
         """Process evaluation and add it to cluster"""
         act = evaluation.this_activation
         if act is not None:
-            return self.process_activation(act, evaluation, cluster)
+            return self.process_activation(act, evaluation, cluster, is_type)
 
         return self.add_evaluation_node(
-            EvaluationNode(evaluation), cluster
+            EvaluationNode(evaluation), cluster, is_type
         )
 
     def _activation_node_condition(self, activation, cluster):
@@ -92,14 +102,16 @@ class Clusterizer(object):
         at_maximum_depth = cluster.depth + 1 > self.config.max_depth
         return not activation.has_evaluations or at_maximum_depth
 
-    def process_activation(self, activation, evaluation, cluster):
+    def process_activation(self, activation, evaluation, cluster, is_type):
         """Process activation and add it to cluster"""
         if self._activation_node_condition(activation, cluster):
             node = self.add_evaluation_node(
-                ActivationNode(activation, evaluation), cluster, 
+                ActivationNode(activation, evaluation), cluster, is_type
             )
         else:
-            node = self.add_cluster_node(activation, evaluation, cluster)
+            node = self.add_cluster_node(
+                activation, evaluation, cluster, is_type
+            )
 
         if node is None or not self.filter.show_accesses:
             return node
@@ -134,10 +146,11 @@ class Clusterizer(object):
         )
         return node
 
-    def add_cluster_node(self, activation, evaluation, cluster):
+    def add_cluster_node(self, activation, evaluation, cluster, is_type):
         """Create new cluster"""
         node = self.add_evaluation_node(
-            ClusterNode(activation, evaluation, cluster.depth + 1), cluster
+            ClusterNode(activation, evaluation, cluster.depth + 1), cluster,
+            is_type
         )
         if isinstance(node, ClusterNode):
             self.process_cluster(node)
@@ -146,7 +159,7 @@ class Clusterizer(object):
     def process_cluster(self, cluster):
         """Process cluster"""
         for evaluation in cluster.activation.evaluations:
-            self.process_evaluation(evaluation, cluster)
+            self.process_evaluation(evaluation, cluster, False)
         self.config.rank(cluster)
 
     def dep_iter(self, dependencies):
@@ -159,13 +172,36 @@ class Clusterizer(object):
             dependent_nid = synonymer.from_node_id(dependent_nid)
             yield dep, dependent_nid, dependency_nid
 
+    def member_iter(self, members):
+        """Iterate on members and get node_ids"""
+        synonymer = self.synonymer
+        for member in members:
+            dependency_nid = EvaluationNode.get_node_id(member.member_id)
+            dependent_nid = EvaluationNode.get_node_id(member.collection_id)
+            dependency_nid = synonymer.from_node_id(dependency_nid)
+            dependent_nid = synonymer.from_node_id(dependent_nid)
+            yield member, dependent_nid, dependency_nid
+
     def _create_evaluation_dependencies(self):
         """Load propagatable dependencies from database into a graph"""
         departing_arrows = self.departing_arrows
         arriving_arrows = self.arriving_arrows
         attributes = EMPTY_ATTR
+        reference = REFERENCE_ATTR
         for dep, source, target in self.dep_iter(self.trial().dependencies):
-            dep_attributes = attributes.update({"_type": dep.type})
+            attr = (reference if dep.reference else attributes)
+            dep_attributes = attr.update({"_type": dep.type})
+            departing_arrows[source][target] = dep_attributes
+            arriving_arrows[target][source] = dep_attributes
+
+        for member, source, target in self.member_iter(self.trial().members):
+            extra = ""
+            if self.config.show_timestamps:
+                extra = "\n{}".format(member.moment)
+            dep_attributes = attributes.update({
+                "label": "{}{}".format(member.key, extra),
+                "_type": "member",
+            })
             departing_arrows[source][target] = dep_attributes
             arriving_arrows[target][source] = dep_attributes
 
@@ -183,7 +219,6 @@ class Clusterizer(object):
         for nid in self._all_nodes():
             if nid in created:
                 continue  # Node exists in the graph, nothing to fix here
-
             for source, attr_arriving in viewitems(arriving_arrows[nid]):
                 for target, attr_departing in viewitems(departing_arrows[nid]):
                     attrs = attr_arriving | attr_departing | PROPAGATED_ATTR
@@ -211,11 +246,14 @@ class Clusterizer(object):
             _, source = created.get(source_nid, empty)
             if source is None or source not in filter_.after_synonym:
                 continue
+            if source_nid == "e_1":
+                continue
             for target_nid, style in viewitems(targets):
                 _, target = created.get(target_nid, empty)
                 if target is None or target not in filter_.after_synonym:
                     continue
-
+                if target_nid == "e_1":
+                    continue
                 self.add_dependency(source, target, style)
 
     def run(self):
@@ -230,16 +268,16 @@ class Clusterizer(object):
 
 class DependencyClusterizer(Clusterizer):
     """Create a dependency graph with a single cluster"""
-    def add_cluster_node(self, activation, evaluation, cluster):
+    def add_cluster_node(self, activation, evaluation, cluster, is_type):
         """Create new cluster"""
         old_depth = cluster.depth
         node = self.add_evaluation_node(
-            ActivationNode(activation, evaluation), cluster
+            ActivationNode(activation, evaluation), cluster, is_type,
         )
         cluster.depth += 1
         if node is not None and self.config.max_depth != float('inf'):
             for subeval in activation.evaluations:
-                self.process_evaluation(subeval, cluster)
+                self.process_evaluation(subeval, cluster, False)
         cluster.depth = old_depth
         return node
 
@@ -250,7 +288,7 @@ class DependencyClusterizer(Clusterizer):
         for evaluation in obj.evaluations:
             if evaluation.id == cluster.evaluation.id:
                 continue
-            self.process_evaluation(evaluation, cluster)
+            self.process_evaluation(evaluation, cluster, False)
         self.config.rank(cluster)
 
 class ActivationClusterizer(Clusterizer):
@@ -265,7 +303,7 @@ class ActivationClusterizer(Clusterizer):
         """Process cluster"""
         for activation in cluster.activation.activations:
             evaluation = activation.this_evaluation
-            self.process_activation(activation, evaluation, cluster)
+            self.process_activation(activation, evaluation, cluster, False)
         self.config.rank(cluster)
 
 
@@ -282,14 +320,13 @@ class ProspectiveClusterizer(Clusterizer):
         created = self.created
         for activation in cluster.activation.activations:
             evaluation = activation.this_evaluation
-            self.process_activation(activation, evaluation, cluster)
+            self.process_activation(activation, evaluation, cluster, False)
             for dep in chain(evaluation.dependencies, evaluation.dependents):
-
                 dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
                 dep_cluster = created[dep_act_node_id][1]
                 if not isinstance(dep_cluster, ClusterNode):
                     continue
-                self.process_evaluation(dep, dep_cluster)
+                self.process_evaluation(dep, dep_cluster, False)
 
     def run(self):
         """Process main_cluster to create nodes"""

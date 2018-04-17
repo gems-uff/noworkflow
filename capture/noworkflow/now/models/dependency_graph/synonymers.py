@@ -52,6 +52,28 @@ class SameSynonymer(Synonymer):
         return self.synonym_ids.get(node_id, node_id)
 
 
+class ReferenceSynonymer(Synonymer):
+    """Synonymer that combines evaluations of the same reference"""
+
+    def __init__(self):
+        super(ReferenceSynonymer, self).__init__()
+        self.synonym_ids = {}
+
+    def get(self, node):
+        """Get synonym for node"""
+        if isinstance(node, EvaluationNode):
+            reference_evaluation = node.evaluation.reference_evaluation
+            if reference_evaluation is not None:
+                synonym = EvaluationNode(reference_evaluation)
+                self.synonym_ids[node.node_id] = synonym.node_id
+                return synonym
+        return node
+
+    def from_node_id(self, node_id):
+        """Get synonym node_id from node_id"""
+        return self.synonym_ids.get(node_id, node_id)
+
+
 class AccessNameSynonymer(Synonymer):
     """Synonymer that combines access nodes with the same names"""
 

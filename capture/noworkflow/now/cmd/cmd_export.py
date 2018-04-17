@@ -10,7 +10,6 @@ import os
 
 from argparse import Namespace
 
-from ..models.dependency_graph.config import DependencyConfig
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 
@@ -28,7 +27,6 @@ class Export(NotebookCommand):
         add_arg = self.add_argument
         add_arg("-r", "--rules", action="store_true",
                 help="also exports inference rules")
-        DependencyConfig.create_arguments(add_arg, mode="simulation")
         add_arg("trial", type=str, nargs="?",
                 help="trial id or none for last trial. If you are generation "
                      "ipython notebook files, it is also possible to use "
@@ -45,7 +43,6 @@ class Export(NotebookCommand):
             from ..utils.prolog import PrologTimestamp
             PrologTimestamp.use_nil = True
         trial = Trial(trial_ref=args.trial)
-        trial.dependency_config.read_args(args)
         print(trial.prolog.export_text_facts())
         if args.rules:
             print("\n".join(trial.prolog.rules()))

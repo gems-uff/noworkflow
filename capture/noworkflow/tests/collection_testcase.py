@@ -20,6 +20,11 @@ from .helpers import models
 NAME = "noworkflow/tests/examples/script.py"
 
 
+def cluster(evaluation_nid):
+    """Get cluster id"""
+    return "cluster_" + evaluation_nid.split("_")[-1]
+
+
 class CollectionTestCase(unittest.TestCase):
     """Helpers to test noWorkflow collection"""
 
@@ -105,6 +110,13 @@ class CollectionTestCase(unittest.TestCase):
         for evaluation in self.get_evaluations(**kwargs):
             return evaluation
         return None
+
+    def evaluation_node(self, **kwargs):
+        """Execute and get evaluation id"""
+        evaluation = self.get_evaluation(**kwargs)
+        if not evaluation:
+            return self.fail("Evaluation not found for {}".format(kwargs))
+        return "e_{}".format(evaluation.id)
 
     def evaluation_repr(self, evaluation):
         """Get evaluation friendly representation"""

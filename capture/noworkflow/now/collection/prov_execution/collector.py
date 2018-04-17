@@ -1373,8 +1373,7 @@ class Collector(object):
         tevaluation = self.evaluations.add_object(
             trial_id, self.code_components.add(
                 trial_id, repr(value), 'type', 'w', -1, -1, -1, -1, -1
-            ), -1, self.time(),
-            repr(value)
+            ), -1, self.time(), repr(value)
         )
         self.shared_types[value] = tevaluation
         if value is type:
@@ -1421,8 +1420,7 @@ class Collector(object):
         if moment is None:
             moment = self.time()
         evaluation = self.evaluations.add_object(
-            self.trial_id, code_id, activation_id, moment,
-            repr(value)
+            self.trial_id, code_id, activation_id, moment, repr(value)
         )
         evaluation.set_reference(reference)
         self.add_type(evaluation, value)
@@ -1437,7 +1435,6 @@ class Collector(object):
         metascript.evaluations_store.do_store(partial)
         metascript.activations_store.do_store(partial)
         metascript.dependencies_store.do_store(partial)
-        metascript.values_store.do_store(partial)
         metascript.members_store.do_store(partial)
         metascript.file_accesses_store.do_store(partial)
 
