@@ -44,32 +44,44 @@ tests_modules = {
 tests_modules["formatter"] = formatter.__name__
 tests_modules["functions"] = functions.__name__
 
-suites = []
+loader = unittest.TestLoader()
+doctests = unittest.TestSuite()
 for name, module in viewitems(tests_modules):
     model_test = doctest.DocTestSuite(
         sys.modules[module],
         optionflags=doctest.REPORT_ONLY_FIRST_FAILURE)
     locals()[name] = model_test
-    suites.append(model_test)
+    doctests.addTests(model_test)
+
+definition = unittest.TestSuite()
+definition.addTests(loader.loadTestsFromTestCase(TestCodeBlockDefinition))
+definition.addTests(loader.loadTestsFromTestCase(TestCodeComponentDefinition))
+definition.addTests(loader.loadTestsFromTestCase(TestReconstruction))
+
+execution = unittest.TestSuite()
+execution.addTests(loader.loadTestsFromTestCase(TestScript))
+execution.addTests(loader.loadTestsFromTestCase(TestStmtExecution))
+execution.addTests(loader.loadTestsFromTestCase(TestExprExecution))
+execution.addTests(loader.loadTestsFromTestCase(TestDepthExecution))
+
+collection = unittest.TestSuite()
+collection.addTests(definition)
+collection.addTests(execution)
+
+dataflow = unittest.TestSuite()
+dataflow.addTests(loader.loadTestsFromTestCase(TestClusterizer))
+dataflow.addTests(loader.loadTestsFromTestCase(TestDependencyClusterizer))
+dataflow.addTests(loader.loadTestsFromTestCase(TestActivationClusterizer))
+dataflow.addTests(loader.loadTestsFromTestCase(TestProspectiveClusterizer))
+dataflow.addTests(loader.loadTestsFromTestCase(TestClusterizerConfig))
 
 
 def load_tests(loader, tests, pattern):
     """Create test suite"""
     # pylint: disable=unused-argument
     suite = unittest.TestSuite()
-    for test_suite in suites:
-        suite.addTest(test_suite)
+    suite.addTests(doctests)
+    suite.addTests(collection)
+    suite.addTests(dataflow)
     suite.addTests(loader.loadTestsFromTestCase(TestCrossVersion))
-    suite.addTests(loader.loadTestsFromTestCase(TestCodeBlockDefinition))
-    suite.addTests(loader.loadTestsFromTestCase(TestCodeComponentDefinition))
-    suite.addTests(loader.loadTestsFromTestCase(TestReconstruction))
-    suite.addTests(loader.loadTestsFromTestCase(TestScript))
-    suite.addTests(loader.loadTestsFromTestCase(TestStmtExecution))
-    suite.addTests(loader.loadTestsFromTestCase(TestExprExecution))
-    suite.addTests(loader.loadTestsFromTestCase(TestDepthExecution))
-    suite.addTests(loader.loadTestsFromTestCase(TestClusterizer))
-    suite.addTests(loader.loadTestsFromTestCase(TestDependencyClusterizer))
-    suite.addTests(loader.loadTestsFromTestCase(TestActivationClusterizer))
-    suite.addTests(loader.loadTestsFromTestCase(TestProspectiveClusterizer))
-    suite.addTests(loader.loadTestsFromTestCase(TestClusterizerConfig))
     return suite
