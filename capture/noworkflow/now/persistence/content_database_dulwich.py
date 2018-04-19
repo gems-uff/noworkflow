@@ -26,6 +26,7 @@ class ContentDatabaseDulwich(ContentDatabase):
         self.__commit_name_email = 'Noworkflow <now@nowokflow.com>'
         self.__commit_encoding = 'UTF-8'
 
+
     def mock(self, config):  # pylint: disable=unused-argument, no-self-use
         '''"""Mock storage for tests"""
         self.temp = {}
@@ -43,7 +44,6 @@ class ContentDatabaseDulwich(ContentDatabase):
         ContentDatabaseStandart.get = get'''
         pass
 
-    @func_profiler.profile
     def connect(self, config):
         """Create content directory"""
         if not isdir(self.content_path):
@@ -109,7 +109,6 @@ class ContentDatabaseDulwich(ContentDatabase):
 
         return commit
 
-    @func_profiler.profile
     def commit_content(self, message):
         """Commit the current files of content database
 

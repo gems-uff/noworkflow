@@ -6,7 +6,7 @@ from . import git_system
 from os.path import isdir
 from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository
 from pygit2 import Signature
-
+from ..utils import func_profiler
 
 class ContentDatabasePyGit(ContentDatabase):
     """Content database that uses git library PyGit2"""
@@ -28,6 +28,7 @@ class ContentDatabasePyGit(ContentDatabase):
             init_repository(self.content_path, bare=True)
             self.__create_initial_commit()
 
+    @func_profiler.profile
     def put(self, content):
         """Put content in the content database
 

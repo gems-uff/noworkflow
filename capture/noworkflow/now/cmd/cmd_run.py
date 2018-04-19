@@ -76,7 +76,7 @@ def run(metascript, args=None):
 
         content.join_persistence_threads()
 
-        func_profiler.print_prof_data()
+        func_profiler.print_prof_data(content.__repr__())
 
     finally:
         metascript.create_last()
