@@ -90,3 +90,9 @@ a.link-button:active {
 .visible {
   border-bottom: 1px solid black;
 }
+
+.info-filter input, .info-filter select {
+  display: block;
+  width: 250px;
+  margin: 7px 0;
+}

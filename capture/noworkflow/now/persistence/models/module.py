@@ -89,7 +89,7 @@ class Module(AlchemyProxy):
 
 
     def __key(self):
-        return (self.name, self.version, self.path, self.code_hash)
+        return (self.name, self.version, self.code_hash)
 
     def __hash__(self):
         return hash(self.__key())

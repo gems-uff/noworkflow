@@ -28,6 +28,43 @@ from .structures import MemberDependencyAware, CollectionDependencyAware
 from .structures import ConditionExceptions
 
 
+OPEN_MODES = {
+    # All
+    "O_RDONLY": "r",
+    "O_WRONLY": "w",
+    "O_RDWR": "+",
+    "O_APPEND": "a",
+    "O_CREAT": None,
+    "O_TRUNC": None,
+    # Linux
+    "O_DSYNC": None,
+    "O_RSYNC": None,
+    "O_SYNC": None,
+    "O_NDELAY": None,
+    "O_NONBLOCK": None,
+    "O_NOCTTY": None,
+    "O_CLOEXEC": None,
+    # Windowns
+    "O_BINARY": None,
+    "O_NOINHERIT": None,
+    "O_SHORT_LIVED": None,
+    "O_TEMPORARY": None,
+    "O_RANDOM": None,
+    "O_SEQUENTIAL": None,
+    "O_TEXT": None,
+    # Extensions that must be defined by the C library
+    "O_ASYNC": None,
+    "O_DIRECT": None,
+    "O_DIRECTORY": None,
+    "O_NOFOLLOW": None,
+    "O_NOATIME": None,
+    "O_PATH": None,
+    "O_TMPFILE": None,
+    "O_SHLOCK": None,
+    "O_EXLOCK": None,
+}
+
+
 class Collector(object):
     """Collector called by the transformed AST. __noworkflow__ object"""
     # pylint: disable=too-many-instance-attributes
@@ -71,7 +108,7 @@ class Collector(object):
 
         self.condition_exceptions = ConditionExceptions()
 
-    def new_open(self, old_open):
+    def new_open(self, old_open, osopen=False):
         """Wrap the open builtin function to register file access"""
         def open(name, *args, **kwargs):  # pylint: disable=redefined-builtin
             """Open file and add it to file_accesses"""
@@ -85,7 +122,7 @@ class Collector(object):
             file_access = self.file_accesses.add_object(self.trial_id, name)
             if os.path.exists(name):
                 # Read previous content if file exists
-                with old_open(name, "rb") as fil:
+                with content.std_open(name, "rb") as fil:
                     file_access.content_hash_before = content.put(fil.read())
             file_access.activation_id = activation.id
             # Update with the informed keyword arguments (mode / buffering)
@@ -94,7 +131,16 @@ class Collector(object):
             if len(args) > 1:
                 file_access.buffering = args[1]
             elif args:
-                file_access.mode = args[0]
+                mode = args[0]
+                if osopen:
+                    mode = ""
+                    for key, value in OPEN_MODES.items():
+                        flag = getattr(os, key, 0)
+                        if args[0] & flag:
+                            value = value or "({})".format(key)
+                            mode += value
+
+                file_access.mode = mode
             activation.file_accesses.append(file_access)
             return old_open(name, *args, **kwargs)
         return open

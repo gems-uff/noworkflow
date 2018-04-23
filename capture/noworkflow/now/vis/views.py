@@ -94,9 +94,9 @@ def dependencies(tid):
     """Respond trial module dependencies as JSON"""
     # pylint: disable=not-an-iterable
     trial = Trial(tid)
-    local = [x.to_dict(extra=("code_hash",)) for x in trial.local_modules]
     result = [x.to_dict(extra=("code_hash",)) for x in trial.modules]
-    return jsonify(local=local, all=result)
+    trial_path = trial.path
+    return jsonify(all=result, trial_path=trial_path)
 
 
 @app.route("/trials/<tid>/environment.json")
@@ -104,7 +104,8 @@ def dependencies(tid):
 def environment(tid):
     """Respond trial environment variables as JSON"""
     trial = Trial(tid)
-    return jsonify(env=trial.environment)
+    result = {x.name: x.to_dict() for x in trial.environment_attrs}
+    return jsonify(all=list(result.values()))
 
 
 @app.route("/trials/<tid>/file_accesses.json")
@@ -112,8 +113,10 @@ def environment(tid):
 def file_accesses(tid):
     """Respond trial file accesses as JSON"""
     trial = Trial(tid)
+    trial_path = trial.path
     return jsonify(file_accesses=[x.to_dict(extra=("stack",))
-                                  for x in trial.file_accesses])
+                                  for x in trial.file_accesses],
+                   trial_path=trial_path)
 
 
 @app.route("/diff/<trial1>/<trial2>/info.json")
@@ -131,10 +134,14 @@ def diff_modules(trial1, trial2):
     """Respond modules diff as JSON"""
     diff_object = Diff(trial1, trial2)
     modules_added, modules_removed, modules_replaced = diff_object.modules
+    t1_path = diff_object.trial1.path
+    t2_path = diff_object.trial2.path
     return jsonify(
         modules_added=[x.to_dict(extra=("code_hash",)) for x in modules_added],
         modules_removed=[x.to_dict(extra=("code_hash",)) for x in modules_removed],
         modules_replaced=[[y.to_dict(extra=("code_hash",)) for y in x] for x in modules_replaced],
+        t1_path=t1_path,
+        t2_path=t2_path,
     )
 
 @app.route("/diff/<trial1>/<trial2>/environment.json")
@@ -153,10 +160,14 @@ def diff_accesses(trial1, trial2):
     """Respond trial diff as JSON"""
     diff_object = Diff(trial1, trial2)
     fa_added, fa_removed, fa_replaced = diff_object.file_accesses
+    t1_path = diff_object.trial1.path
+    t2_path = diff_object.trial2.path
     return jsonify(
         fa_added=[x.to_dict() for x in fa_added],
         fa_removed=[x.to_dict() for x in fa_removed],
         fa_replaced=[[y.to_dict() for y in x] for x in fa_replaced],
+        t1_path=t1_path,
+        t2_path=t2_path,
     )
 
 

@@ -9,6 +9,9 @@ from __future__ import (absolute_import, print_function,
 import sys
 import traceback
 import weakref
+import io
+import os
+import codecs
 
 from ...persistence import content
 from ...utils.io import print_msg
@@ -38,6 +41,10 @@ class Execution(object):
         except TypeError:
             builtin.__noworkflow__ = self.collector
             builtin.open = self.collector.new_open(content.std_open)
+        io.open = self.collector.new_open(content.io_open)
+        codecs.open = self.collector.new_open(content.codecs_open)
+        os.open = self.collector.new_open(content.os_open, osopen=True)
+
         debugger_builtins(
             self.collector, builtin, self.metascript
         )

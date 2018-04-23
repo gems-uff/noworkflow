@@ -1,3 +1,9 @@
+import {
+  Selection as d3_Selection,
+  BaseType as d3_BaseType,
+} from 'd3-selection';
+
+
 export
 interface ModuleData {
   name: string;
@@ -12,19 +18,19 @@ interface ModuleData {
 
 export
 interface ModuleListData {
-  local: ModuleData[];
   all: ModuleData[];
-}
-
-export
-interface EnvironmentData {
-  env: { [key: string]: string };
+  trial_path: string;
 }
 
 export
 interface EnvironmentItemData {
   name: string;
   value: string;
+}
+
+export
+interface EnvironmentData {
+  all: EnvironmentItemData[];
 }
 
 
@@ -44,6 +50,7 @@ interface FileAccessData {
 export
 interface FileAccessListData {
   file_accesses: FileAccessData[];
+  trial_path: string;
 }
 
 export
@@ -70,6 +77,8 @@ interface DiffModuleData {
   modules_added: ModuleData[];
   modules_removed: ModuleData[];
   modules_replaced: ModuleData[][];
+  t1_path: string;
+  t2_path: string;
 }
 
 export
@@ -84,4 +93,13 @@ interface DiffAccessData {
   fa_added: FileAccessData[];
   fa_removed: FileAccessData[];
   fa_replaced: FileAccessData[][];
+  t1_path: string;
+  t2_path: string;
+}
+
+export
+interface FilterObject {
+  filterdiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  valid: any;
+  on_change: (filterfn: () => void) => void;
 }

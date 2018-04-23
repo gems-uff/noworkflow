@@ -377,9 +377,9 @@ Included Software
 
 Parts of the following software were used by noWorkflow directly or in an adapted form:
 
-The Python Debugger
-Copyright (c) 2001-2016 Python Software Foundation.
-All Rights Reserved.
+The Python Debugger  
+Copyright (c) 2001-2016 Python Software Foundation.  
+All Rights Reserved.  
 
 Acknowledgements
 ----------------
@@ -388,6 +388,10 @@ We would like to thank CNPq, FAPERJ, and the National Science Foundation (CNS-12
 
 License Terms
 -------------
+
+The MIT License (MIT)
+
+Copyright (c) 2013 Universidade Federal Fluminense (UFF), Polytechnic Institute of New York University.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in

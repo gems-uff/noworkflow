@@ -8,6 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 import hashlib
 import os
+import io
+import codecs
 
 from os.path import join, isdir, isfile
 
@@ -21,6 +23,9 @@ class ContentDatabase(object):
     def __init__(self, persistence_config):
         self.content_path = None  # Base path for storing content of files
         self.std_open = open  # Original Python open function.
+        self.io_open = io.open  # Original Python open function in Python 3
+        self.codecs_open = codecs.open  # Alternative open function
+        self.os_open = os.open  # Low level open function
 
         persistence_config.add(self)
 

@@ -10,10 +10,9 @@ import {
   VisibleHistoryNode, HistoryTrialNodeData
 } from '@noworkflow/history';
 import {json} from '@noworkflow/utils';
-import {NowVisPanel} from '../nowpanel';
 
 
-import {ModuleListData, EnvironmentData, FileAccessListData} from './structures';
+import {ModuleListData, EnvironmentData, FileAccessListData, FilterObject} from './structures';
 
 import {ModulesInfoWidget} from './modules_info';
 import {EnvironmentInfoWidget} from './environment_info';
@@ -130,25 +129,15 @@ class TrialInfoWidget extends Widget {
     this.loadFileAccess();
   }
 
-  createFold(parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, title: string, fn:(parentDock: NowVisPanel) => void) {
+  static createFold(parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, title: string) {
     let fold = parent.append("div")
       .classed("fold", true)
     let foldI = fold.append("i")
       .classed("fa fa-minus", true)
-    fold.append("span")
+    let spanI = fold.append("span")
       .text(title)
-    fold.append("a")
-      .attr("href", "#")
-      .attr("title", "Show all")
-      .classed("show-all", true)
-      .on("click", () => {
-        fn(this.parent as NowVisPanel);
-        return false;
-      })
-    .append("i")
-      .classed("fa fa-binoculars", true)
-
-    fold.on("click", () => {
+    
+    let click = () => {
       let visible = foldI.classed("fa-plus");
       foldI.classed("fa-plus", !visible);
       foldI.classed("fa-minus", visible);
@@ -156,7 +145,35 @@ class TrialInfoWidget extends Widget {
         .classed("show-toolbar", visible)
         .classed("hide-toolbar", !visible)
       return false;
-    })
+    };
+    foldI.on("click", click);
+    spanI.on("click", click);
+    return fold;
+  }
+
+  static createFilterFold(fold: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, filter: FilterObject) {
+    filter.filterdiv
+      .classed("info-filter", true)
+      .classed("show-toolbar", false)
+      .classed("hide-toolbar", true);
+
+    let foldA = fold.append("a")
+      .attr("href", "#")
+      .attr("title", "Search")
+      .classed("show-all", true);
+
+    let foldAI = foldA.append("i")
+      .classed("fa fa-search-plus", true);
+     
+    foldA.on("click", () => {
+      let visible = foldAI.classed("fa-search-plus");
+      foldAI.classed("fa-search-plus", !visible);
+      foldAI.classed("fa-search-minus", visible);
+      filter.filterdiv
+        .classed("show-toolbar", visible)
+        .classed("hide-toolbar", !visible)
+      return false;
+    });
   }
 
   loadModules() {
@@ -164,17 +181,13 @@ class TrialInfoWidget extends Widget {
     json("Modules", sub, ModulesInfoWidget.url(this.trial.title), (data: ModuleListData) => {
       let modules = this.d3node.select(".modules").html("");
       if (data.all.length > 0) {
-        this.createFold(modules, "Modules", (parentDock: NowVisPanel) => {
-          var widget = new ModulesInfoWidget(this.trial.display, data.all);
-
-          parentDock.addInfoWidget(widget);
-          parentDock.activateWidget(widget);
-        })
-
-        ModulesInfoWidget.createList(
+        
+        let fold = TrialInfoWidget.createFold(modules, "Modules");
+        let filter = ModulesInfoWidget.createList(
           modules.append("div").classed("foldable show-toolbar", true),
-          data.local
+          data.all, data.trial_path, "1"
         );
+        TrialInfoWidget.createFilterFold(fold, filter);
       }
     });
   }
@@ -185,32 +198,12 @@ class TrialInfoWidget extends Widget {
     json("Environment", sub, EnvironmentInfoWidget.url(this.trial.title), (data: EnvironmentData) => {
       let environment = this.d3node.select(".environment").html("");
 
-      this.createFold(environment, "Environment", (parentDock: NowVisPanel) => {
-        var widget = new EnvironmentInfoWidget(this.trial.display, data.env);
-
-        parentDock.addInfoWidget(widget);
-        parentDock.activateWidget(widget);
-      })
-
-      var list = environment.append("div")
-        .classed("foldable show-toolbar", true)
-      .append("ul")
-        .classed("env-list", true);
-
-      function li(key: string) {
-        EnvironmentInfoWidget.createItem(list, key, data.env[key]);
-      }
-      li('PYTHON_IMPLEMENTATION');
-      li('PYTHON_VERSION');
-      li('OS_NAME');
-      li('OS_RELEASE');
-      li('OS_VERSION');
-      li('OS_USER');
-      li('PWD');
-      li('PID');
-      li('HOSTNAME');
-      li('ARCH');
-      li('PROCESSOR');
+      let fold = TrialInfoWidget.createFold(environment, "Environment");
+      let filter = EnvironmentInfoWidget.createList(
+        environment.append("div").classed("foldable show-toolbar", true),
+        data.all, "1"
+      );
+      TrialInfoWidget.createFilterFold(fold, filter);
     })
   }
 
@@ -222,17 +215,12 @@ class TrialInfoWidget extends Widget {
 
       if (data.file_accesses.length > 0) {
 
-        this.createFold(accesses, "File Accesses", (parentDock: NowVisPanel) => {
-          var widget = new FileAccessesInfoWidget(this.trial.display, data.file_accesses);
-
-          parentDock.addInfoWidget(widget);
-          parentDock.activateWidget(widget);
-        });
-
-        FileAccessesInfoWidget.createList(
+        let fold = TrialInfoWidget.createFold(accesses, "File Accesses");
+        let filter = FileAccessesInfoWidget.createList(
           accesses.append("div").classed("foldable show-toolbar", true),
-          data.file_accesses
+          data.file_accesses, data.trial_path
         );
+        TrialInfoWidget.createFilterFold(fold, filter);
       }
     });
   }
