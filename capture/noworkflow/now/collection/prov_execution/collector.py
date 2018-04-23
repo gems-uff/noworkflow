@@ -273,9 +273,6 @@ class Collector(object):
                 with content.std_open(file_access.name, "rb") as fil:
                     file_access.content_hash_after = content.put(fil.read())
             file_access.done = True
-        #self.activations.store.get(
-        #    evaluation.activation_id, self.first_activation
-        #)
 
     def start_script(self, module_name, code_component_id):
         """Start script collection. Create new activation"""
@@ -780,7 +777,7 @@ class Collector(object):
                     new_depa = clone_depa.clone(extra_only=True)
                     new_depa.add(idep)
                     self.create_dependencies_id(
-                        activation, dep.evaluation_id, new_depa
+                        activation, dep.evaluation.id, new_depa
                     )
                     return new_depa.clone("assign"), idep.evaluation
                     #return self.sub_dependency(dep, value, index, clone_depa)
@@ -1030,10 +1027,75 @@ class Collector(object):
             dependency_aware = activation.dependencies.pop()
             if activation.active:
                 dependency = dependency_aware.dependencies.pop()
-                activation.context[function_name] = self.evaluations[
-                    dependency.evaluation_id
-                ]
+                activation.context[function_name] = dependency.evaluation
             return function_def
+        return dec
+
+    def start_class(self, last_activation, class_name, code_component_id):
+        """Start script collection. Create new activation"""
+        activation = self.start_activation(
+            class_name, code_component_id, code_component_id,
+            last_activation
+        )
+        activation.closure = last_activation
+        return activation
+
+    def class_def(self, activation, code_id, exc_handler):
+        """Decorate class definition.
+        Start collecting base dependencies
+        """
+        activation.dependencies.append(DependencyAware(
+            exc_handler=exc_handler,
+            code_id=code_id,
+        ))
+        return self._class_def
+
+    def _class_def(self, mode, bases=(object,), metaclass=type, **kwargs):
+        """Decorate class definition with then new activation.
+        Collect arguments and match to parameters.
+        """
+        def dec(cls):
+            """Decorate class definition. Based on six.add_metaclass"""
+            orig_vars = cls.__dict__.copy()
+            slots = orig_vars.get('__slots__')
+            if slots is not None:
+                if isinstance(slots, str):
+                    slots = [slots]
+                for slots_var in slots:
+                    orig_vars.pop(slots_var)
+            orig_vars.pop('__dict__', None)
+            orig_vars.pop('__weakref__', None)
+            class_def = metaclass(cls.__name__, bases, orig_vars, **kwargs)
+
+            activation = orig_vars['__now_activation__']
+            evaluation = activation.evaluation
+            closure_activation = activation.closure
+            block_id = activation.code_block_id
+
+            defaults = closure_activation.dependencies.pop()
+            closure_activation.dependencies.append(DependencyAware(
+                exc_handler=defaults.exc_handler,
+                code_id=block_id,
+            ))
+            if closure_activation.active:
+                self.make_dependencies(closure_activation, evaluation, defaults)
+                closure_activation.dependencies[-1].add(Dependency(
+                    evaluation, class_def, mode
+                ))
+            self.close_activation(activation, class_def, None)
+            return class_def
+        return dec
+
+    def collect_class_def(self, activation, class_name):
+        """Collect class definition after all decorators. Set context"""
+        def dec(class_def):
+            """Decorate function definition again"""
+            dependency_aware = activation.dependencies.pop()
+            if activation.active:
+                dependency = dependency_aware.dependencies.pop()
+                activation.context[class_name] = dependency.evaluation
+                self.shared_types[class_def] = dependency.evaluation
+            return class_def
         return dec
 
     def _match_arguments(self, activation, arguments, default_dependencies):
@@ -1199,7 +1261,7 @@ class Collector(object):
             if len(dependency.dependencies) == 1 and activation.active:
                 dep = dependency.dependencies[0]
                 self.create_dependencies_id(
-                    activation.id, dep.evaluation_id, depa
+                    activation.id, dep.evaluation.id, depa
                 )
                 bind = False
                 if len(depa.dependencies) == 1:

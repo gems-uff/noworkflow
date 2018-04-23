@@ -128,7 +128,7 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assertEqual(call.activation_id, script_act.id)
         self.assertTrue(activation.start < call.moment)
-        self.assertEqual(activation.code_block_id, write_f_eval.id)
+        self.assertEqual(activation.code_block_id, write_f_eval.code_component_id)
         self.assertEqual(activation.name, "f")
 
         self.assertEqual(write_f_eval.activation_id, script_eval.id)
@@ -928,6 +928,35 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_type(var_type, var_type)
 
         self.assertEqual(var_evaluation.repr, "2")
+
+    def test_class_definition(self):
+        """Test return collection"""
+        self.script("# script.py\n"
+                    "class C(object):\n"
+                    "    'cdoc'\n"
+                    "    pass\n"
+                    "# other")
+
+        var_c = self.get_evaluation(name="C", mode="w")
+        param_object_eval = self.get_evaluation(name="object", mode="r")
+        var_type = self.get_evaluation(name=self.rtype('type'))
+
+        script_eval = self.get_evaluation(name="script.py")
+
+
+        script_act = self.metascript.activations_store[script_eval.id]
+        activation = self.metascript.activations_store[var_c.id]
+
+        self.assertTrue(bool(var_c.moment))
+        self.assertTrue(activation.start < var_c.moment)
+        self.assertEqual(activation.code_block_id, var_c.code_component_id)
+        self.assertEqual(activation.name, "C")
+
+        self.assertEqual(var_c.activation_id, script_eval.id)
+        self.assertEqual(script_act.context['C'], var_c)
+
+        self.assert_dependency(var_c, param_object_eval, "base", False)
+        self.assert_type(var_c, var_type)
 
     # ToDo: expr/YieldFrom
     # ToDo: expr/Await

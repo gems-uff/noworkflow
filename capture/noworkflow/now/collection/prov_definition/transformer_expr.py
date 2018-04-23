@@ -718,7 +718,7 @@ class RewriteDependencies(ast.NodeTransformer):
             ]
         ), node)
 
-    def _call_arg(self, node, star):
+    def _call_arg(self, node, star, mode="argument"):
         """Create <now>.argument(<act>, argument_id)(|node|)"""
         if not node:
             return None
@@ -728,7 +728,7 @@ class RewriteDependencies(ast.NodeTransformer):
         if star:
             node.name = "*" + node.name
             arg = ast.Str("*")
-        cnode = rewriter.capture(node, mode="argument")
+        cnode = rewriter.capture(node, mode=mode)
         if hasattr(cnode, "code_component_id"):
             id_node = none()
         else:
@@ -745,18 +745,18 @@ class RewriteDependencies(ast.NodeTransformer):
                 activation(),
                 id_node,
                 cnode,
-                ast.Str("argument"), arg, ast.Str("argument")
+                ast.Str(mode), arg, ast.Str("argument")
             ]
         ), node)
 
-    def _call_keyword(self, arg, node):
+    def _call_keyword(self, arg, node, mode="argument"):
         """Create <now>.argument(<act>, argument_id)(|node|)"""
         if not node:
             return None
         rewriter = self.rewriter
         node.name = (("{}=".format(arg) if arg else "**") +
                      pyposast.extract_code(rewriter.lcode, node))
-        cnode = rewriter.capture(node, mode="argument")
+        cnode = rewriter.capture(node, mode=mode)
         if hasattr(cnode, "code_component_id"):
             id_node = none()
         else:
@@ -773,29 +773,29 @@ class RewriteDependencies(ast.NodeTransformer):
                 activation(),
                 id_node,
                 cnode,
-                ast.Str("argument"), ast.Str(arg if arg else "**"),
+                ast.Str(mode), ast.Str(arg if arg else "**"),
                 ast.Str("keyword")
             ]
         ), node)
 
-    def process_call_arg(self, node, is_star=False):
+    def process_call_arg(self, node, is_star=False, mode="argument"):
         """Process call argument
         Transform (star?)value into <now>.argument(<act>, argument_id)(value)
         """
         if PY3 and isinstance(node, ast.Starred):
             return ast_copy(ast.Starred(self._call_arg(
-                node.value, True
+                node.value, True, mode=mode
             ), node.ctx), node)
 
 
-        return self._call_arg(node, is_star)
+        return self._call_arg(node, is_star, mode=mode)
 
-    def process_call_keyword(self, node):
+    def process_call_keyword(self, node, mode="argument"):
         """Process call keyword
         Transform arg=value into arg=<now>.argument(<act>, argument_id)(value)
         """
         return ast_copy(ast.keyword(node.arg, self._call_keyword(
-            node.arg, node.value
+            node.arg, node.value, mode=mode
         )), node)
 
     def process_kwargs(self, node):

@@ -281,3 +281,85 @@ class TestCodeBlockDefinition(CollectionTestCase):
                          "        pass")
         self.assertEqual(closure_def_block.docstring, "cdoc")
         self.assertTrue(bool(closure_def_block.code_hash))
+
+    def test_class_definition_with_base(self):
+        """Test class definition collection with arguments"""
+        self.script("# script.py\n"
+                    "class C(object):\n"
+                    "    'cdoc'\n"
+                    "    pass\n")
+        self.compile()
+
+        script = self.find_code_component(name="script.py")
+        class_def = self.find_code_component(name="C")
+        var_object = self.find_code_component(name="object")
+
+        self.assertEqual(class_def.type, "class_def")
+        self.assertEqual(class_def.mode, "w")
+        self.assertEqual(class_def.first_char_line, 2)
+        self.assertEqual(class_def.first_char_column, 0)
+        self.assertEqual(class_def.last_char_line, 4)
+        self.assertEqual(class_def.last_char_column, 8)
+        self.assertEqual(class_def.container_id, script.id)
+
+        self.assertEqual(var_object.type, "name")
+        self.assertEqual(var_object.mode, "r")
+        self.assertEqual(var_object.first_char_line, 2)
+        self.assertEqual(var_object.first_char_column, 8)
+        self.assertEqual(var_object.last_char_line, 2)
+        self.assertEqual(var_object.last_char_column, 14)
+        self.assertEqual(var_object.container_id, class_def.id)
+
+        class_def_block = self.metascript.code_blocks_store[class_def.id]
+        self.assertEqual(class_def_block.code,
+                         "class C(object):\n"
+                         "    'cdoc'\n"
+                         "    pass")
+        self.assertEqual(class_def_block.docstring, "cdoc")
+        self.assertTrue(bool(class_def_block.code_hash))
+
+    @only(PY35)
+    def test_class_definition_with_metaclass(self):
+        """Test class definition collection with arguments"""
+        self.script("# script.py\n"
+                    "class C(object, metaclass=type):\n"
+                    "    'cdoc'\n"
+                    "    pass\n")
+        self.compile()
+
+        script = self.find_code_component(name="script.py")
+        class_def = self.find_code_component(name="C")
+        var_object = self.find_code_component(name="object")
+        var_type = self.find_code_component(name="type")
+
+        self.assertEqual(class_def.type, "class_def")
+        self.assertEqual(class_def.mode, "w")
+        self.assertEqual(class_def.first_char_line, 2)
+        self.assertEqual(class_def.first_char_column, 0)
+        self.assertEqual(class_def.last_char_line, 4)
+        self.assertEqual(class_def.last_char_column, 8)
+        self.assertEqual(class_def.container_id, script.id)
+
+        self.assertEqual(var_object.type, "name")
+        self.assertEqual(var_object.mode, "r")
+        self.assertEqual(var_object.first_char_line, 2)
+        self.assertEqual(var_object.first_char_column, 8)
+        self.assertEqual(var_object.last_char_line, 2)
+        self.assertEqual(var_object.last_char_column, 14)
+        self.assertEqual(var_object.container_id, class_def.id)
+
+        self.assertEqual(var_type.type, "name")
+        self.assertEqual(var_type.mode, "r")
+        self.assertEqual(var_type.first_char_line, 2)
+        self.assertEqual(var_type.first_char_column, 26)
+        self.assertEqual(var_type.last_char_line, 2)
+        self.assertEqual(var_type.last_char_column, 30)
+        self.assertEqual(var_type.container_id, class_def.id)
+
+        class_def_block = self.metascript.code_blocks_store[class_def.id]
+        self.assertEqual(class_def_block.code,
+                         "class C(object, metaclass=type):\n"
+                         "    'cdoc'\n"
+                         "    pass")
+        self.assertEqual(class_def_block.docstring, "cdoc")
+        self.assertTrue(bool(class_def_block.code_hash))

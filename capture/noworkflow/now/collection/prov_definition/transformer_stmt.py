@@ -411,16 +411,93 @@ class RewriteAST(ast.NodeTransformer):
         return self.visit_FunctionDef(node, cls=ast.AsyncFunctionDef)
 
     def visit_ClassDef(self, node):
-        """Visit Class Definition"""
+        """Visit Class Definition
+
+        Transform:
+        @dec
+        class c(object. metaclass=meta):
+            ...
+        Into:
+        @<now>.collect_class_def(<act>, "c")
+        @<now>.decorator(__now_activation__)(|dec|)
+        @<now>.class_def(<act>)(<act>, <block_id>, <parameterss>)
+        class c(object):
+            __now_activation__ = <now>.start_class(<act>, "c", <block_id>)
+            ...
+        """
         # pylint: disable=invalid-name
         # ToDo: collect dependencies
-        with self.container(node, "class_def") as class_id:
+        old_exc_handler = self.current_exc_handler
+        with self.container(node, "class_def") as class_id, self.exc_handler():
             self.create_composition(class_id, *self.composition_edge)
-            return ast_copy(class_def(
-                node.name, node.bases, self.process_body(node.body, class_id),
-                node.decorator_list,
+            
+            self.create_composition(
+                self.create_ast_component(node.name_node, "identifier"),
+                class_id, "name_node"
+            )
+            new_node = copy(node)
+            decorators = [ast_copy(noworkflow("collect_class_def", [
+                activation(),
+                ast.Str(new_node.name)
+            ]), new_node)]
+            for index, dec in enumerate(new_node.decorator_list):
+                self.composition_edge = (class_id, "*decorator_list", index)
+                decorators.append(self.process_decorator(dec))
+
+            self.composition_edge = (class_id, "args")
+            rewriter = RewriteDependencies(self, mode="dependency")
+
+            bases = []
+            for index, base in enumerate(new_node.bases):
+                self.composition_edge = (class_id, "*bases", index)
+                bases.append(rewriter.process_call_arg(base, mode="base"))
+
+            class_def_fn = ast_copy(double_noworkflow(
+                "class_def",
+                [
+                    activation(),
+                    ast.Num(self.container_id),
+                    ast.Num(old_exc_handler)
+                ], [
+                    ast.Str("decorate"),
+                    ast.Tuple(bases, L()),
+                ]
+            ), new_node)
+
+            if hasattr(new_node, "keywords"): # Python 3
+                keywords = []
+                for index, keyword in enumerate(new_node.keywords):
+                    self.composition_edge = (class_id, "*keywords", index)
+                    keywords.append(rewriter.process_call_keyword(keyword))
+                class_def_fn.keywords = keywords
+
+            decorators.append(class_def_fn)
+            old_body = node.body
+            docstring = []
+            has_doc = (
+                old_body
+                and isinstance(old_body[0], ast.Expr)
+                and isinstance(old_body[0].value, ast.Str)
+            ) 
+            if has_doc:
+                docstring, old_body = old_body[:1], old_body[1:]
+            body = docstring + [
+                ast_copy(ast.Assign(
+                    [ast.Name("__now_activation__", S())],
+                    noworkflow("start_class", [
+                        activation(), 
+                        ast.Str(new_node.name), 
+                        ast.Num(class_id)
+                    ])
+                ), new_node),
+            ] + self.process_body(old_body, class_id)
+
+            result = ast_copy(class_def(
+                node.name, node.bases, body, decorators,
                 keywords=maybe(node, "keywords")
             ), node)
+            
+            return result
 
     def visit_Return(self, node):
         """Visit Return
