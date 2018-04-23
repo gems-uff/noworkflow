@@ -7,11 +7,13 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import hashlib
-import os
 import io
 import codecs
+import os
+import builtins
 
 from os.path import join, isdir, isfile
+from contextlib import contextmanager
 
 
 CONTENT_DIRNAME = "content"
@@ -28,6 +30,24 @@ class ContentDatabase(object):
         self.os_open = os.open  # Low level open function
 
         persistence_config.add(self)
+
+    @contextmanager
+    def restore_open(self):
+        try:
+            mock_open = builtins.open
+            mock_io_open = io.open
+            mock_codecs_open = codecs.open
+            mock_os_open = os.open
+            builtins.open = self.std_open
+            io.open = self.io_open
+            codecs.open = self.codecs_open
+            os.open = self.os_open
+            yield
+        finally:
+            builtins.open = mock_open
+            io.open = mock_io_open
+            codecs.open = mock_codecs_open
+            os.open = mock_os_open
 
     def set_path(self, config):
         """Set content_path"""

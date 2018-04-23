@@ -7,6 +7,7 @@
 import imp
 import sys
 import pkgutil
+from ...persistence import content
 
 
 
@@ -35,74 +36,76 @@ def finder(metascript):
 
             I removed many error handling
             """
-            if name in sys.modules:
-                return sys.modules[name]
+            with content.restore_open():
+                if name in sys.modules:
+                    return sys.modules[name]
 
-            mod = imp.new_module(name)
-            if mod is not None:
-                sys.modules[name] = mod
-            return mod
+                mod = imp.new_module(name)
+                if mod is not None:
+                    sys.modules[name] = mod
+                return mod
 
         def load_module(self, fullname):
             """Mimics Python's load_module"""
-            self._reopen()
-            create_module = not metascript.bypass_modules
-            required = 2
-            required -= int(self.filename.startswith(metascript.dir))
-            try:
-                module = None
-                suffix, mode, type_ = self.etc
-                if mode and (not mode.startswith(('r', 'U')) or '+' in mode):
-                    raise ValueError('invalid file open mode {!r}'.format(mode))
-                elif file is None and type_ in {PY_SOURCE, PY_COMPILED}:
-                    raise ValueError(
-                        'file object required for import (type code {})'
-                        .format(type_)
-                    )
-                elif type_ == PY_SOURCE and metascript.context >= required:
-                    # load_source_module
-                    # https://github.com/python/cpython/blob/2.7/Python/import.c#L1054
-                    code, id_, transformed = metascript.definition.collect(
-                        None, self.filename, "exec"
-                    )
-                    # PyImport_ExecCodeModuleEx
-                    # https://github.com/python/cpython/blob/2.7/Python/import.c#L700
-                    module = self.add_module(fullname)
-                    if module is not None:
-                        if not hasattr(module, "__builtins__"):
-                            module.__builtins__ = __builtins__
-                        pathname = self.filename
-                        if pathname is None:
-                            pathname = code.co_filename
-                        module.__file__ = pathname
-                        try:
-                            exec(code, module.__dict__)
-                        except:
-                            del sys.modules[fullname]
-                            raise
-                    create_module = True # Override bypass_modules
+            with content.restore_open():
+                self._reopen()
+                create_module = not metascript.bypass_modules
+                required = 2
+                required -= int(self.filename.startswith(metascript.dir))
+                try:
+                    module = None
+                    suffix, mode, type_ = self.etc
+                    if mode and (not mode.startswith(('r', 'U')) or '+' in mode):
+                        raise ValueError('invalid file open mode {!r}'.format(mode))
+                    elif file is None and type_ in {PY_SOURCE, PY_COMPILED}:
+                        raise ValueError(
+                            'file object required for import (type code {})'
+                            .format(type_)
+                        )
+                    elif type_ == PY_SOURCE and metascript.context >= required:
+                        # load_source_module
+                        # https://github.com/python/cpython/blob/2.7/Python/import.c#L1054
+                        code, id_, transformed = metascript.definition.collect(
+                            None, self.filename, "exec"
+                        )
+                        # PyImport_ExecCodeModuleEx
+                        # https://github.com/python/cpython/blob/2.7/Python/import.c#L700
+                        module = self.add_module(fullname)
+                        if module is not None:
+                            if not hasattr(module, "__builtins__"):
+                                module.__builtins__ = __builtins__
+                            pathname = self.filename
+                            if pathname is None:
+                                pathname = code.co_filename
+                            module.__file__ = pathname
+                            try:
+                                exec(code, module.__dict__)
+                            except:
+                                del sys.modules[fullname]
+                                raise
+                        create_module = True # Override bypass_modules
 
-                if module is None:
-                    if create_module:
-                        transformed = False
-                        id_ = metascript.definition.create_code_block(
-                            None, self.filename, "module", False, True
-                        )[1]
-                    module = imp.load_module(
-                        fullname, self.file, self.filename, self.etc
+                    if module is None:
+                        if create_module:
+                            transformed = False
+                            id_ = metascript.definition.create_code_block(
+                                None, self.filename, "module", False, True
+                            )[1]
+                        module = imp.load_module(
+                            fullname, self.file, self.filename, self.etc
+                        )
+                finally:
+                    if self.file:
+                        self.file.close()
+                if create_module:
+                    # To get version, the module must execute first
+                    metascript.deployment.add_module(
+                        module.__name__,
+                        metascript.deployment.get_version(module),
+                        self.filename,
+                        id_,
+                        transformed
                     )
-            finally:
-                if self.file:
-                    self.file.close()
-            if create_module:
-                # To get version, the module must execute first
-                metascript.deployment.add_module(
-                    module.__name__,
-                    metascript.deployment.get_version(module),
-                    self.filename,
-                    id_,
-                    transformed
-                )
-            return module
+                return module
 
     return Finder
