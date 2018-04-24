@@ -112,6 +112,9 @@ class Collector(object):
         """Wrap the open builtin function to register file access"""
         def open(name, *args, **kwargs):  # pylint: disable=redefined-builtin
             """Open file and add it to file_accesses"""
+            if isinstance(name, int):
+                # ToDo: support file descriptor
+                return old_open(name, *args, **kwargs)
             activation = self.last_activation
             while activation and not activation.active:
                 activation = activation.parent
