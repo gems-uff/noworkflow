@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 import os
+import threading
 from .content_database import ContentDatabase
 from . import git_system
 from os.path import isdir
@@ -10,16 +11,19 @@ from gitdb import LooseObjectDB, IStream
 import StringIO
 from ..utils import func_profiler
 
+LIMIT_CONTENT_SIZE = 20000000
 
-class ContentDatabasePyGitDB(ContentDatabase):
+
+class ContentDatabasePyGitDBHybridThreading(ContentDatabase):
     """Content database that uses git library PyGit2"""
 
     def __init__(self, persistence_config):
-        super(ContentDatabasePyGitDB, self).__init__(persistence_config)
+        super(ContentDatabasePyGitDBHybridThreading, self).__init__(persistence_config)
         self.__repo = None
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
         self.__commit_email = 'noworkflow@noworkflow.com'
+        self.__persistence_threads = []
 
     def mock(self, config):
         pass
@@ -31,6 +35,9 @@ class ContentDatabasePyGitDB(ContentDatabase):
             init_repository(self.content_path, bare=True)
             self.__create_initial_commit()
 
+    def join_persistence_threads(self):
+        for t in self.__persistence_threads:
+            t.join()
 
     @func_profiler.profile
     def put(self, content):
@@ -42,15 +49,21 @@ class ContentDatabasePyGitDB(ContentDatabase):
         content -- binary text to be saved
         """
 
-        print(len(content))
+        content_size = len(content)
 
-        ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
+        id = self.__get_repo().create_blob(content)
 
-        istream = IStream("blob", len(content), StringIO.StringIO(content))
+        if content_size <= LIMIT_CONTENT_SIZE:
+            self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
 
-        ldb.store(istream)
+            return id.__str__()
+        else:
 
-        return istream.hexsha
+            t = threading.Thread(target=self.__get_tree_builder().insert, args=(str(id), id, GIT_FILEMODE_BLOB,))
+            self.__persistence_threads.append(t)
+            t.start()
+
+            return id.__str__()
 
         '''id = self.__get_repo().create_blob(content)
         self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)

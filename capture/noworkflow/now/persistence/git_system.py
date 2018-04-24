@@ -5,7 +5,7 @@ import os
 def is_git_installed():
     try:
         p = subprocess.Popen("git")
-        p.kill()
+        p.wait()
         return True
     except OSError:
         return False
@@ -42,7 +42,7 @@ def update_index(content_hash, git_path):
     p = subprocess.Popen(["git", "update-index", "--add", "--cacheinfo", "100644", content_hash, content_hash],
                          cwd=git_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
-    p.kill()
+    p.wait()
     if err:
         raise OSError(err.decode())
     elif out:
@@ -53,7 +53,7 @@ def write_tree(git_path):
     p = subprocess.Popen(["git", "write-tree"], cwd=git_path,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
-    p.kill
+    p.wait
     if err:
         raise OSError(err.decode())
     elif out:
@@ -64,7 +64,7 @@ def commit_tree_parent(tree_hash, parent_commit_hash, commit_message, git_path):
     p = subprocess.Popen(["git", "commit-tree", tree_hash, "-p", parent_commit_hash,
                           "-m", commit_message], cwd=git_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
-    p.kill()
+    p.wait()
     if err:
         raise OSError(err.decode())
     elif out:
@@ -100,7 +100,7 @@ def count_loose_objects(git_path):
     p = subprocess.Popen(["git", "count-objects", "-v"], cwd=git_path,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
-    p.kill()
+    p.wait()
     if err:
         raise OSError(err.decode())
     if out:

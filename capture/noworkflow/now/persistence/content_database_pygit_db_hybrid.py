@@ -10,12 +10,14 @@ from gitdb import LooseObjectDB, IStream
 import StringIO
 from ..utils import func_profiler
 
+LIMIT_CONTENT_SIZE = 20000000
 
-class ContentDatabasePyGitDB(ContentDatabase):
+
+class ContentDatabasePyGitDBHybrid(ContentDatabase):
     """Content database that uses git library PyGit2"""
 
     def __init__(self, persistence_config):
-        super(ContentDatabasePyGitDB, self).__init__(persistence_config)
+        super(ContentDatabasePyGitDBHybrid, self).__init__(persistence_config)
         self.__repo = None
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
@@ -31,7 +33,6 @@ class ContentDatabasePyGitDB(ContentDatabase):
             init_repository(self.content_path, bare=True)
             self.__create_initial_commit()
 
-
     @func_profiler.profile
     def put(self, content):
         """Put content in the content database
@@ -42,15 +43,22 @@ class ContentDatabasePyGitDB(ContentDatabase):
         content -- binary text to be saved
         """
 
-        print(len(content))
+        content_size = len(content)
 
-        ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
+        if content_size <= LIMIT_CONTENT_SIZE:
+            id = self.__get_repo().create_blob(content)
+            self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
 
-        istream = IStream("blob", len(content), StringIO.StringIO(content))
+            return id.__str__()
+        else:
 
-        ldb.store(istream)
+            ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
 
-        return istream.hexsha
+            istream = IStream("blob", len(content), StringIO.StringIO(content))
+
+            ldb.store(istream)
+
+            return istream.hexsha
 
         '''id = self.__get_repo().create_blob(content)
         self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)

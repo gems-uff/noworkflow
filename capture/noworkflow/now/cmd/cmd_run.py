@@ -72,15 +72,10 @@ def run(metascript, args=None):
 
         content.commit_content(message)
 
-        metaprofiler.meta_profiler.save()
-
-        content.join_persistence_threads()
-
-        func_profiler.print_prof_data(content.__repr__())
-
     finally:
         metascript.create_last()
-
+        func_profiler.print_prof_data(content.__str__())
+        #content.join_persistence_threads()
 
 class Run(Command):
     """Run a script collecting its provenance"""
