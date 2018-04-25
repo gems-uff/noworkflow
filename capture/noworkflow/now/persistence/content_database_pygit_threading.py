@@ -1,6 +1,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 import os
+import StringIO
+import threading
 from .content_database import ContentDatabase
 from . import git_system
 from os.path import isdir
@@ -8,15 +10,17 @@ from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository
 from pygit2 import Signature
 from ..utils import func_profiler
 
-class ContentDatabasePyGit(ContentDatabase):
+
+class ContentDatabasePyGitThreading(ContentDatabase):
     """Content database that uses git library PyGit2"""
 
     def __init__(self, persistence_config):
-        super(ContentDatabasePyGit, self).__init__(persistence_config)
+        super(ContentDatabasePyGitThreading, self).__init__(persistence_config)
         self.__repo = None
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
         self.__commit_email = 'noworkflow@noworkflow.com'
+        self.__persistence_threads = []
 
     def mock(self, config):
         pass
@@ -28,6 +32,7 @@ class ContentDatabasePyGit(ContentDatabase):
             init_repository(self.content_path, bare=True)
             self.__create_initial_commit()
 
+
     @func_profiler.profile
     def put(self, content):
         """Put content in the content database
@@ -37,19 +42,13 @@ class ContentDatabasePyGit(ContentDatabase):
         Arguments:
         content -- binary text to be saved
         """
+        id = self.__get_repo().create_blob(content)
 
-        ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
+        t = threading.Thread(target=self.__get_tree_builder().insert, args=(str(id), id, GIT_FILEMODE_BLOB,))
+        self.__persistence_threads.append(t)
+        t.start()
 
-        istream = IStream("blob", len(content), StringIO.StringIO(content))
-
-        ldb.store(istream)
-
-        return istream.hexsha
-
-        '''id = self.__get_repo().create_blob(content)
-        self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
-
-        return id.__str__()'''
+        return id.__str__()
 
     def find_subhash(self, content_hash):
         return None
@@ -65,13 +64,16 @@ class ContentDatabasePyGit(ContentDatabase):
         return_data = self.__get_repo()[content_hash].data
         return return_data
 
+    def join_persistence_threads(self):
+        for t in self.__persistence_threads:
+            t.join()
+
     def commit_content(self, message):
         """Commit the current files of content database
 
                         Arguments:
                         message -- commit message
                         """
-
         return self.__create_commit_object(message, self.__get_tree_builder().write())
 
     def gc(self, aggressive=False):

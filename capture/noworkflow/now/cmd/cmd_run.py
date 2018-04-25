@@ -71,14 +71,13 @@ def run(metascript, args=None):
             message = 'No message'
 
         content.commit_content(message)
-
-        metaprofiler.meta_profiler.save()
+        func_profiler.print_prof_data(content.__str__())
+        content.join_persistence_threads()
 
         func_profiler.print_prof_data()
 
     finally:
         metascript.create_last()
-
 
 class Run(Command):
     """Run a script collecting its provenance"""
@@ -168,7 +167,7 @@ class Run(Command):
 
     def execute(self, args):
         if args.meta:
-            metaprofiler.meta_profiler.active = True
+            metaprofiler.meta_profiler.active = False
             metaprofiler.meta_profiler.data["cmd"] = " ".join(sys.argv)
 
         io.verbose = args.verbose

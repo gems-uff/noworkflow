@@ -25,6 +25,7 @@ class ContentDatabaseDulwich(ContentDatabase):
         self.__commit_name_email = 'Noworkflow <now@nowokflow.com>'
         self.__commit_encoding = 'UTF-8'
 
+
     def mock(self, config):  # pylint: disable=unused-argument, no-self-use
         '''"""Mock storage for tests"""
         self.temp = {}

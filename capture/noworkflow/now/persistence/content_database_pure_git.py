@@ -10,6 +10,7 @@ from __future__ import (absolute_import, print_function,
 from . import git_system
 from os.path import join, isdir, isfile
 from .content_database import ContentDatabase
+from ..utils import func_profiler
 
 CONTENT_DIRNAME = "content"
 
@@ -38,6 +39,7 @@ class ContentDatabasePureGit(ContentDatabase):
         if not config.should_mock and not isdir(self.content_path):
             git_system.init(self.content_path)
 
+    @func_profiler.profile
     def put(self, content):
         """Put content in the content database
 

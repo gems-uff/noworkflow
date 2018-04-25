@@ -25,14 +25,14 @@ def profile(fn):
     return with_profiling
 
 
-def print_prof_data():
+def print_prof_data(content_database_name):
     print('exporting results...')
 
     csv_file = 'put_time.csv'
     if not isfile(csv_file):
         file = open(csv_file, "w+")
         writer = csv.writer(file, delimiter=';')
-        writer.writerow(['function', 'called_times', 'max_time', 'avg_time'])
+        writer.writerow(['function', 'called_times', 'max_time', 'avg_time', 'content_database'])
     else:
         file = open(csv_file, "a")
         writer = csv.writer(file, delimiter=';')
@@ -41,7 +41,7 @@ def print_prof_data():
         max_time = max(data[1])
         avg_time = sum(data[1]) / len(data[1])
 
-        writer.writerow([fname, data[0], max_time, avg_time])
+        writer.writerow([fname, data[0], max_time, avg_time, content_database_name])
 
     file.close()
 

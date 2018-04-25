@@ -6,13 +6,18 @@ from . import git_system
 from os.path import isdir
 from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository
 from pygit2 import Signature
+from gitdb import LooseObjectDB, IStream
+import StringIO
 from ..utils import func_profiler
 
-class ContentDatabasePyGit(ContentDatabase):
+LIMIT_CONTENT_SIZE = 20000000
+
+
+class ContentDatabasePyGitDBHybrid(ContentDatabase):
     """Content database that uses git library PyGit2"""
 
     def __init__(self, persistence_config):
-        super(ContentDatabasePyGit, self).__init__(persistence_config)
+        super(ContentDatabasePyGitDBHybrid, self).__init__(persistence_config)
         self.__repo = None
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
@@ -38,13 +43,22 @@ class ContentDatabasePyGit(ContentDatabase):
         content -- binary text to be saved
         """
 
-        ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
+        content_size = len(content)
 
-        istream = IStream("blob", len(content), StringIO.StringIO(content))
+        if content_size <= LIMIT_CONTENT_SIZE:
+            id = self.__get_repo().create_blob(content)
+            self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
 
-        ldb.store(istream)
+            return id.__str__()
+        else:
 
-        return istream.hexsha
+            ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
+
+            istream = IStream("blob", len(content), StringIO.StringIO(content))
+
+            ldb.store(istream)
+
+            return istream.hexsha
 
         '''id = self.__get_repo().create_blob(content)
         self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)

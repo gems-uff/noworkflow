@@ -6,13 +6,16 @@ from . import git_system
 from os.path import isdir
 from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository
 from pygit2 import Signature
+from gitdb import LooseObjectDB, IStream
+import StringIO
 from ..utils import func_profiler
 
-class ContentDatabasePyGit(ContentDatabase):
+
+class ContentDatabasePyGitDB(ContentDatabase):
     """Content database that uses git library PyGit2"""
 
     def __init__(self, persistence_config):
-        super(ContentDatabasePyGit, self).__init__(persistence_config)
+        super(ContentDatabasePyGitDB, self).__init__(persistence_config)
         self.__repo = None
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
@@ -28,6 +31,7 @@ class ContentDatabasePyGit(ContentDatabase):
             init_repository(self.content_path, bare=True)
             self.__create_initial_commit()
 
+
     @func_profiler.profile
     def put(self, content):
         """Put content in the content database
@@ -37,6 +41,8 @@ class ContentDatabasePyGit(ContentDatabase):
         Arguments:
         content -- binary text to be saved
         """
+
+        print(len(content))
 
         ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
 
