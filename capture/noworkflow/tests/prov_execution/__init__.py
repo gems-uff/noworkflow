@@ -8,12 +8,14 @@ from __future__ import (absolute_import, print_function,
                         division)
 
 from .test_script import TestScript
+from .test_class_execution import TestClassExecution
 from .test_stmt_execution import TestStmtExecution
 from .test_expr_execution import TestExprExecution
 from .test_depth_execution import TestDepthExecution
 
 __all__ = [
     "TestScript",
+    "TestClassExecution",
     "TestStmtExecution",
     "TestExprExecution",
     "TestDepthExecution",

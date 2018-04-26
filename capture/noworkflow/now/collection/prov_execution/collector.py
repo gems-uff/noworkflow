@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from types import GeneratorType
 
-from future.utils import viewvalues, viewkeys, exec_
+from future.utils import viewvalues, viewkeys, viewitems, exec_
 
 from ...persistence import content
 from ...persistence.models import Trial
@@ -137,7 +137,7 @@ class Collector(object):
                 mode = args[0]
                 if osopen:
                     mode = ""
-                    for key, value in OPEN_MODES.items():
+                    for key, value in viewitems(OPEN_MODES):
                         flag = getattr(os, key, 0)
                         if args[0] & flag:
                             value = value or "({})".format(key)
@@ -163,20 +163,56 @@ class Collector(object):
         ))
         return self
 
+    def simple_member_lookup(self, collection, addr, value, depa, source=None):
+        """Lookup for member in evaluation.members"""
+        source = source or collection
+        same = collection.same()
+        part = same.members.get(addr)
+        if part is not None:
+            depa.add(Dependency(part, value, "access", source, addr))
+            return True
+        return False
+
+    def full_member_lookup(self, collection, vcontainer, vindex, value, depa):
+        """Lookup for attribute member using the full rule"""
+        cls_value = type(vcontainer)
+        addr = ".{}".format(vindex)
+        if cls_value.__getattribute__ is object.__getattribute__:
+            # Default implementation
+            if vindex in cls_value.__dict__:
+                accessor = cls_value.__dict__[vindex]
+                if hasattr(accessor, '__get__'):
+                    # ToDo: accessor provenance
+                    return False
+            if vindex in vcontainer.__dict__:
+                # In instance
+                if isinstance(vcontainer, type):
+                    accessor = vcontainer.__dict__[vindex]
+                    if hasattr(accessor, '__get__'):
+                        # ToDo: accessor provenance
+                        return False
+                return self.simple_member_lookup(collection, addr, value, depa)
+            same = collection.same()
+            cls_eval = (
+                same.members.get(".__class__")
+                or self.shared_types[cls_value]
+            )
+            in_class = self.simple_member_lookup(
+                cls_eval, addr, value, depa, source=collection
+            )
+            if in_class:
+                # In instance
+                return True
+            # ToDo: __getattr__ provenance
+            return False
+        else:
+            # ToDo: __getattribute__ provenance
+            return self.simple_member_lookup(collection, addr, value, depa)
+
     def __getitem__(self, index):
         # pylint: disable=too-many-locals
         activation, code_id, vcontainer, vindex, access, mode = index
         depa = activation.dependencies.pop()
-
-        if access == "[]":
-            nvindex = vindex
-            if isinstance(vindex, int) and vindex < 0:
-                nvindex = len(vcontainer) + vindex
-            addr = "[{}]".format(nvindex)
-            value = vcontainer[vindex]
-        elif access == ".":
-            value = getattr(vcontainer, vindex)
-            addr = ".{}".format(vindex)
 
         value_dep = part_id = None
         for dep in depa.dependencies:
@@ -184,16 +220,27 @@ class Collector(object):
                 value_dep = dep
                 break
 
-        if not activation.active:
-            return value
+        if access == "[]":
+            nvindex = vindex
+            if isinstance(vindex, int) and vindex < 0:
+                nvindex = len(vcontainer) + vindex
+            addr = "[{}]".format(nvindex)
+            value = vcontainer[vindex]
+            if not activation.active:
+                return value
+            if value_dep is not None:
+                collection = value_dep.evaluation
+                self.simple_member_lookup(collection, addr, value, depa)
 
-        if value_dep is not None:
-            meta = self.metascript
-            collection = value_dep.evaluation
-            same = collection.same()
-            part = same.members.get(addr)
-            if part is not None:
-                depa.add(Dependency(part, value, "access", collection, addr))
+        elif access == ".":
+            addr = ".{}".format(vindex)
+            value = getattr(vcontainer, vindex)
+            if not activation.active:
+                return value
+            if value_dep is not None:
+                self.full_member_lookup(
+                    value_dep.evaluation, vcontainer, vindex, value, depa
+                )
 
         eva = self.evaluate_depa(activation, code_id, value, None, depa)
 
@@ -1120,6 +1167,18 @@ class Collector(object):
             evaluation = activation.evaluation
             closure_activation = activation.closure
             block_id = activation.code_block_id
+
+            trial_id = self.trial_id
+            same = evaluation.same()
+            moment = evaluation.moment
+            for key, value in viewitems(activation.context):
+                tkey = '.' + key
+                same.members[tkey] = value
+                self.members.add(
+                    trial_id, same.activation_id, same.id,
+                    value.activation_id, value.id,
+                    tkey, moment, 'add'
+                )
 
             defaults = closure_activation.dependencies.pop()
             closure_activation.dependencies.append(DependencyAware(
