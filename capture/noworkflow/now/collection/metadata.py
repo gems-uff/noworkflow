@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 
 import os
 import sys
+import time
 
 from argparse import Namespace
 from datetime import datetime
@@ -24,6 +25,7 @@ from ..persistence.lightweight import EvaluationLW, ActivationLW, DependencyLW
 from ..persistence.lightweight import MemberLW, FileAccessLW
 from ..persistence.lightweight import ExceptionLW
 from ..utils import io
+from ..utils.cross_version import perf_counter
 
 from .prov_definition.definition import Definition
 from .prov_execution.execution import Execution
@@ -112,6 +114,9 @@ class Metascript(object):                                                       
         self.jupyter_original = False
 
 
+        # Trial time
+        self._trial_start_checkpoint = 0
+
         # Definition object : Definition
         self.definition = Definition(self)
         self.execution = Execution(self)
@@ -140,6 +145,10 @@ class Metascript(object):                                                       
             "__file__": self.path,
             "__builtins__": __builtins__,
         })
+
+    def get_time(self):
+        """Get perf time in seconds (float)"""
+        return perf_counter() - self._trial_start_checkpoint
 
     def clear_sys(self):
         """Clear sys variables"""
@@ -247,8 +256,9 @@ class Metascript(object):                                                       
 
     def create_trial_args(self):
         """Return arguments for Trial.create"""
+        start, self._trial_start_checkpoint = datetime.now(), perf_counter()
         return (
-            self.name, datetime.now(), self.command,
+            self.name, start, self.command,
             os.path.dirname(self.path),
             self.bypass_modules
         )

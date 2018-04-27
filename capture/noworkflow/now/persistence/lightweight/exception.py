@@ -27,8 +27,7 @@ class ExceptionLW(BaseLW):                                                      
         self.exception = exception
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
-        """Evaluation can only be removed from object store
-        if it has a moment
+        """Exception can always be removed
         """
         return True
 

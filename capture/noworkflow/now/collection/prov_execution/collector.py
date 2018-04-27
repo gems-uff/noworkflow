@@ -8,6 +8,7 @@
 import sys
 import weakref
 import os
+import time
 
 from collections import OrderedDict
 from copy import copy
@@ -72,6 +73,7 @@ class Collector(object):
 
     def __init__(self, metascript):
         self.metascript = weakref.proxy(metascript)
+        self.get_time = metascript.get_time
 
         self.trial_id = -1  # It should be updated
 
@@ -85,11 +87,9 @@ class Collector(object):
         self.exceptions = self.metascript.exceptions_store
         # Partial save
         self.partial_save_frequency = None
-        if metascript.save_frequency:
-            self.partial_save_frequency = timedelta(
-                milliseconds=metascript.save_frequency
-            )
-        self.last_partial_save = datetime.now()
+        if metascript.save_frequency:  # milliseconds
+            self.partial_save_frequency = metascript.save_frequency / 1000.0
+        self.last_partial_save = self.get_time()
 
         self.first_activation = self.activations.dry_add(
             self.evaluations.dry_add(self.trial_id, -1, -1, None, None),
@@ -122,7 +122,9 @@ class Collector(object):
             if not activation:
                 return old_open(name, *args, **kwargs)
             # Create a file access object with default values
-            file_access = self.file_accesses.add_object(self.trial_id, name)
+            file_access = self.file_accesses.add_object(
+                self.trial_id, name, self.get_time()
+            )
             if os.path.exists(name):
                 # Read previous content if file exists
                 with content.std_open(name, "rb") as fil:
@@ -273,13 +275,13 @@ class Collector(object):
                     activation, self.code_components.add(
                         trial_id, "{}{}".format(component.name, naddr),
                         'subscript_item', 'w', -1, -1, -1, -1, -1,
-                    ), svalue, eva.moment, depa
+                    ), svalue, eva.checkpoint, depa
                 )
 
                 nsame.members[naddr] = spart
                 self.members.add_object(
                     self.trial_id, nsame.activation_id, nsame.id,
-                    spart.activation_id, spart.id, naddr, eva.moment, "add"
+                    spart.activation_id, spart.id, naddr, eva.checkpoint, "add"
                 )
 
         activation.dependencies[-1].add(Dependency(eva, value, mode))
@@ -317,7 +319,7 @@ class Collector(object):
         # ToDo #76: Processor load. Should be collected from time to time
         #                         (there are static and dynamic metadata)
         # print os.getloadavg()
-        now = datetime.now()
+        now = self.get_time()
         if (self.partial_save_frequency and
                 (now - self.last_partial_save > self.partial_save_frequency)):
             self.store(partial=True)
@@ -357,9 +359,9 @@ class Collector(object):
         return activation
 
     def close_activation(self, activation, value, reference):
-        """Close activation. Set moment and value"""
+        """Close activation. Set checkpoint and value"""
         evaluation = activation.evaluation
-        evaluation.moment = self.time()
+        evaluation.checkpoint = self.time()
         evaluation.repr = repr(value)
         evaluation.set_reference(reference)
         self.add_type(evaluation, value)
@@ -478,12 +480,12 @@ class Collector(object):
         if activation.active:
             evaluation = self.eval_dep(activation, code_id, value, mode, depa)
             same = evaluation.same()
-            for key, part, moment in depa.items:
+            for key, part, checkpoint in depa.items:
                 tkey = "[{0!r}]".format(key)
                 same.members[tkey] = part
                 self.members.add_object(
                     self.trial_id, same.activation_id, same.id,
-                    part.activation_id, part.id, tkey, moment, "add"
+                    part.activation_id, part.id, tkey, checkpoint, "add"
                 )
         return value
 
@@ -554,7 +556,7 @@ class Collector(object):
             eva = self.eval_dep(activation, code_id, value, "item", value_depa)
             self.make_dependencies(activation, eva, member_depa)
             activation.dependencies[-1].items.append((
-                member_depa.key, eva, eva.moment
+                member_depa.key, eva, eva.checkpoint
             ))
 
     def list(self, activation, code_id, exc_handler):
@@ -575,12 +577,12 @@ class Collector(object):
             dependency = Dependency(evaluation, value, mode)
             dependency.sub_dependencies.extend(depa.dependencies)
             activation.dependencies[-1].add(dependency)
-            for key, part, moment in depa.items:
+            for key, part, checkpoint in depa.items:
                 tkey = "[{0!r}]".format(key)
                 same.members[tkey] = part
                 self.members.add_object(
                     self.trial_id, same.activation_id, same.id,
-                    part.activation_id, part.id, tkey, moment, "add"
+                    part.activation_id, part.id, tkey, checkpoint, "add"
                 )
         return value
 
@@ -624,10 +626,10 @@ class Collector(object):
                     activation, code_id, value, None, value_depa
                 )
                 dependency = Dependency(evaluation, value, "item")
-            moment = self.time()
+            checkpoint = self.time()
             activation.dependencies[-1].add(dependency)
             activation.dependencies[-1].items.append((
-                key, dependency.evaluation, moment
+                key, dependency.evaluation, checkpoint
             ))
         return value
 
@@ -676,11 +678,11 @@ class Collector(object):
                     activation, code_id, value, None, value_depa
                 )
                 dependency = Dependency(evaluation, value, "item")
-            moment = self.time()
+            checkpoint = self.time()
             if activation.assignments:
                 assign = activation.assignments[-1]
                 assign.generators[id(generator.value)].append(
-                    (code_id, value, moment, dependency)
+                    (code_id, value, checkpoint, dependency)
                 )
         return value
 
@@ -789,30 +791,31 @@ class Collector(object):
 
     def assign_single(self, activation, assign, info, depa):
         """Create dependencies for assignment to single name"""
-        moment = assign.moment
+        checkpoint = assign.checkpoint
         code, name, value = info
-        evaluation = self.evaluate_depa(activation, code, value, moment, depa)
+        eva = self.evaluate_depa(activation, code, value, checkpoint, depa)
         if name:
-            activation.context[name] = evaluation
+            activation.context[name] = eva
         return 1
 
     def assign_access(self, activation, assign, info, depa):
         """Create dependencies for assignment to subscript"""
-        moment = assign.moment
+        checkpoint = assign.checkpoint
         code, value = info
         addr = value_dep = None
         if code in assign.accesses:
             # Replaces information for more precise subscript
-            value, access_depa, addr, value_dep, moment = assign.accesses[code]
-        evaluation = self.evaluate_depa(activation, code, value, moment, depa)
+            value, access_depa, addr, value_dep, checkpoint = (
+                assign.accesses[code])
+        eva = self.evaluate_depa(activation, code, value, checkpoint, depa)
         if value_dep:
             same = value_dep.evaluation.same()
-            same.members[addr] = evaluation
+            same.members[addr] = eva
             self.members.add_object(
                 self.trial_id, same.activation_id, same.id,
-                evaluation.activation_id, evaluation.id, addr, moment, "add"
+                eva.activation_id, eva.id, addr, checkpoint, "add"
             )
-            self.make_dependencies(activation, evaluation, access_depa)
+            self.make_dependencies(activation, eva, access_depa)
         return 1
 
     def sub_dependency(self, dep, value, index, clone_depa):
@@ -1170,14 +1173,14 @@ class Collector(object):
 
             trial_id = self.trial_id
             same = evaluation.same()
-            moment = evaluation.moment
+            checkpoint = evaluation.checkpoint
             for key, value in viewitems(activation.context):
                 tkey = '.' + key
                 same.members[tkey] = value
                 self.members.add(
                     trial_id, same.activation_id, same.id,
                     value.activation_id, value.id,
-                    tkey, moment, 'add'
+                    tkey, checkpoint, 'add'
                 )
 
             defaults = closure_activation.dependencies.pop()
@@ -1527,14 +1530,14 @@ class Collector(object):
                     "dependency", dep.reference, None, None, None
                 )
 
-    def eval_dep(self, activation, code, value, mode, depa=None, moment=None):
+    def eval_dep(self, activation, code, value, mode, depa=None, checkpoint=None):
         """Create evaluation and dependency"""
         # pylint: disable=too-many-arguments
-        evaluation = self.evaluate_depa(activation, code, value, moment, depa)
+        evaluation = self.evaluate_depa(activation, code, value, checkpoint, depa)
         activation.dependencies[-1].add(Dependency(evaluation, value, mode))
         return evaluation
 
-    def evaluate_type(self, value, moment):
+    def evaluate_type(self, value, checkpoint):
         """Add type evaluation. Create type value recursively.
         Return evaluation"""
         if value in self.shared_types:
@@ -1549,21 +1552,23 @@ class Collector(object):
         if value is type:
             cls_evaluation = tevaluation
         else:
-            cls_evaluation = self.evaluate_type(type(value), moment)
+            cls_evaluation = self.evaluate_type(type(value), checkpoint)
         same = tevaluation.same()
         same.members['.__class__'] = cls_evaluation
         self.members.add(
             trial_id, same.activation_id, same.id,
             cls_evaluation.activation_id, cls_evaluation.id,
-            '.__class__', moment, 'add'
+            '.__class__', checkpoint, 'add'
         )
         return tevaluation
 
-    def evaluate_depa(self, activation, code_id, value, moment, depa=None):
+    def evaluate_depa(self, activation, code_id, value, checkpoint, depa=None):
         """Create evaluation for code component"""
         # pylint: disable=too-many-arguments
         reference = self.find_reference_dependency(value, depa)
-        evaluation = self.evaluate(activation.id, code_id, value, moment, reference, depa)
+        evaluation = self.evaluate(
+            activation.id, code_id, value, checkpoint, reference, depa
+        )
         self.make_dependencies(activation, evaluation, depa)
         return evaluation
 
@@ -1576,21 +1581,21 @@ class Collector(object):
                 pass # ToDo: add reference to existing type evaluation
         same = evaluation.same()
         if same is evaluation:
-            cls_evaluation = self.evaluate_type(type(value), evaluation.moment)
+            cls_evaluation = self.evaluate_type(type(value), evaluation.checkpoint)
             same.members['.__class__'] = cls_evaluation
             self.members.add(
                 self.trial_id, same.activation_id, same.id,
                 cls_evaluation.activation_id, cls_evaluation.id,
-                '.__class__', evaluation.moment, 'add'
+                '.__class__', evaluation.checkpoint, 'add'
             )
 
-    def evaluate(self, activation_id, code_id, value, moment, reference=None, depa=None):
+    def evaluate(self, activation_id, code_id, value, checkpoint, reference=None, depa=None):
         """Create evaluation for code component"""
         # pylint: disable=too-many-arguments
-        if moment is None:
-            moment = self.time()
+        if checkpoint is None:
+            checkpoint = self.time()
         evaluation = self.evaluations.add_object(
-            self.trial_id, code_id, activation_id, moment, repr(value)
+            self.trial_id, code_id, activation_id, checkpoint, repr(value)
         )
         evaluation.set_reference(reference)
         self.add_type(evaluation, value)
@@ -1608,8 +1613,8 @@ class Collector(object):
         metascript.members_store.do_store(partial)
         metascript.file_accesses_store.do_store(partial)
 
-        now = datetime.now()
+        now = self.get_time()
         if not partial:
-            Trial.fast_update(tid, metascript.main_id, now, status)
+            Trial.fast_update(tid, metascript.main_id, datetime.now(), status)
 
         self.last_partial_save = now

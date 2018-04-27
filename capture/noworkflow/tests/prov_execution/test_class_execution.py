@@ -32,8 +32,8 @@ class TestClassExecution(CollectionTestCase):
         script_act = self.metascript.activations_store[script_eval.id]
         activation = self.metascript.activations_store[var_c.id]
 
-        self.assertTrue(bool(var_c.moment))
-        self.assertTrue(activation.start < var_c.moment)
+        self.assertTrue(bool(var_c.checkpoint))
+        self.assertTrue(activation.start_checkpoint < var_c.checkpoint)
         self.assertEqual(activation.code_block_id, var_c.code_component_id)
         self.assertEqual(activation.name, "C")
 

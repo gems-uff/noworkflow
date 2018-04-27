@@ -35,7 +35,7 @@ class TestDepthExecution(CollectionTestCase):
 
         self.assertEqual(var_f.activation_id, script_act.id)
 
-        self.assertTrue(activation.start < var_f.moment)
+        self.assertTrue(activation.start_checkpoint < var_f.checkpoint)
         self.assertEqual(activation.name, "f")
 
     def test_depth_1_should_ignore_structures_and_accesses(self):
@@ -75,7 +75,7 @@ class TestDepthExecution(CollectionTestCase):
 
         self.assertEqual(var_f.activation_id, script_act.id)
 
-        self.assertTrue(activation.start < var_f.moment)
+        self.assertTrue(activation.start_checkpoint < var_f.checkpoint)
         self.assertEqual(activation.name, "f")
 
     def test_depth_1_should_ignore_loops_and_conditions(self):
@@ -111,7 +111,7 @@ class TestDepthExecution(CollectionTestCase):
 
         self.assertEqual(var_f.activation_id, script_act.id)
 
-        self.assertTrue(activation.start < var_f.moment)
+        self.assertTrue(activation.start_checkpoint < var_f.checkpoint)
         self.assertEqual(activation.name, "f")
 
     def test_depth_1_should_ignore_internal_calls(self):
@@ -136,7 +136,7 @@ class TestDepthExecution(CollectionTestCase):
 
         self.assertEqual(var_f.activation_id, script_act.id)
 
-        self.assertTrue(activation.start < var_f.moment)
+        self.assertTrue(activation.start_checkpoint < var_f.checkpoint)
         self.assertEqual(activation.name, "f")
 
     def test_depth_1_should_ignore_internal_definitions(self):
@@ -159,7 +159,7 @@ class TestDepthExecution(CollectionTestCase):
 
         self.assertEqual(var_f.activation_id, script_act.id)
 
-        self.assertTrue(activation.start < var_f.moment)
+        self.assertTrue(activation.start_checkpoint < var_f.checkpoint)
         self.assertEqual(activation.name, "f")
 
 
@@ -184,7 +184,7 @@ class TestDepthExecution(CollectionTestCase):
 
         self.assertEqual(var_f.activation_id, script_act.id)
 
-        self.assertTrue(activation.start < var_f.moment)
+        self.assertTrue(activation.start_checkpoint < var_f.checkpoint)
         self.assertEqual(activation.name, "f")
 
         self.assert_dependency(var_f, var_1, "argument")
@@ -219,8 +219,8 @@ class TestDepthExecution(CollectionTestCase):
         self.assertEqual(var_y.activation_id, activation_g.id)
         self.assertEqual(var_g.activation_id, script_act.id)
 
-        self.assertTrue(activation_g.start < var_g.moment)
-        self.assertTrue(activation_f.start < var_f.moment)
+        self.assertTrue(activation_g.start_checkpoint < var_g.checkpoint)
+        self.assertTrue(activation_f.start_checkpoint < var_f.checkpoint)
         self.assertEqual(activation_g.name, "g")
         self.assertEqual(activation_f.name, "f")
 

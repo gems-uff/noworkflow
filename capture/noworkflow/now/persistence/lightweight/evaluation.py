@@ -14,18 +14,18 @@ class EvaluationLW(BaseLW):                                                     
     """Evaluation lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "moment", "code_component_id", "activation_id",
+        ["trial_id", "id", "checkpoint", "code_component_id", "activation_id",
          "repr"], ["_same", "members"]
     )
-    nullable = {"moment"}
+    nullable = {"checkpoint"}
     model = Evaluation
 
-    def __init__(self, id_, trial_id, code_id, activation_id, moment, repr_):
+    def __init__(self, id_, trial_id, code_id, activation_id, checkpoint, repr_):
         self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.code_component_id = code_id
         self.activation_id = activation_id if int(activation_id) > 0 else 0
-        self.moment = -1 if not moment else moment
+        self.checkpoint = -1 if not checkpoint else checkpoint
         self.repr = repr_
         self._same = None
         self.members = {}
@@ -47,13 +47,13 @@ class EvaluationLW(BaseLW):                                                     
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Evaluation can only be removed from object store
-        if it has a moment
+        if it has a checkpoint
         """
-        return self.moment != -1
+        return self.checkpoint != -1
 
     def __repr__(self):
         return (
-            "Evaluation(id={0.id}, moment={0.moment}, "
+            "Evaluation(id={0.id}, checkpoint={0.checkpoint}, "
             "code_component_id={0.code_component_id}, "
             "activation_id={0.activation_id}, repr={0.repr})"
         ).format(self)

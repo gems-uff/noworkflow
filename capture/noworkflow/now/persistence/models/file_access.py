@@ -8,7 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from datetime import timedelta
+from sqlalchemy import Column, Integer, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
@@ -66,10 +67,10 @@ class FileAccess(AlchemyProxy):
     buffering = Column(Text)
     content_hash_before = Column(Text)
     content_hash_after = Column(Text)
-    timestamp = Column(TIMESTAMP)
+    checkpoint = Column(Float)
     activation_id = Column(Integer, index=True)
 
-    trial = backref_one("trial")  # Trial.file_accesses
+    trial = backref_one("trial")  # Float.file_accesses
     activation = backref_one("activation")  # Activation.file_accesses
 
     prolog_description = PrologDescription("access", (
@@ -79,7 +80,7 @@ class FileAccess(AlchemyProxy):
         PrologRepr("mode"),
         PrologNullableRepr("content_hash_before"),
         PrologNullableRepr("content_hash_after"),
-        PrologTimestamp("timestamp"),
+        PrologAttribute("checkpoint"),
         PrologNullable("activation_id", link="activation.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
@@ -88,9 +89,29 @@ class FileAccess(AlchemyProxy):
         "The content of the file\n"
         "was captured before (*ContentHashBefore*)\n"
         "and after (*ContentHashAfter*) the access."
-        "The file was accessed at a specific *Timestamp*\n"
+        "The file was accessed at a specific *Checkpoint*\n"
         "by a function activation (*ActivationId*)."
     ))
+
+    @property
+    def timestamp(self):
+        """Return activation finish time
+
+
+        Doctest:
+         >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AccessConfig
+        >>> from noworkflow.now.persistence.models import Activation
+        >>> access_config = AccessConfig(read_timestamp=3)
+        >>> config = TrialConfig("finished")
+        >>> trial_id = new_trial(config, access=access_config, erase=True)
+        >>> access = FileAccess((trial_id, access_config.r_access.id))
+
+        Return access timestamp:
+        >>> access.timestamp == config.trial_start + timedelta(seconds=3)
+        True
+        """
+        return self.trial.start + timedelta(seconds=self.checkpoint)
 
     @property
     def stack(self):
@@ -185,7 +206,7 @@ class FileAccess(AlchemyProxy):
 
         Arguments:
         name -- specify the desired file
-        timestamp -- specify the start of finish time of trial
+        checkpoint -- specify the start of finish time of trial
 
         Keyword Arguments:
         trial -- limit search in a specific trial_id
@@ -200,19 +221,18 @@ class FileAccess(AlchemyProxy):
         >>> access_config = AccessConfig(
         ...     read_file="a.txt", read_hash="ab", write_file="a.txt",
         ...     write_hash_before=None,
-        ...     read_timestamp=datetime(year=2016, month=5, day=26,
-        ...                              hour=15, minute=53, second=51),
-        ...     write_timestamp=datetime(year=2016, month=4, day=26,
-        ...                              hour=15, minute=48, second=55))
+        ...     read_timestamp=4199751.0, # 2016-05-26 15:53:51
+        ...     write_timestamp=1607455.0, # 2016-04-26 15:48:55
+        ... )
         >>> trial_id = new_trial(TrialConfig("finished"),
         ...                      access=access_config, erase=True)
 
-        Find accesses by name and timestamp:
+        Find accesses by name and checkpoint:
         >>> FileAccess.find_by_name_and_time(
         ... 'a.txt', '2016-04-26 15:48:55')  # doctest: +ELLIPSIS
         access(..., ..., 'a.txt', 'w', nil, 'b', ..., ...).
 
-        Find accesses by name and partial timestamp:
+        Find accesses by name and partial checkpoint:
         >>> FileAccess.find_by_name_and_time(
         ... 'a.txt', '2016-05') # doctest: +ELLIPSIS
         access(..., ..., 'a.txt', 'r', 'ab', 'ab', ..., ...).
@@ -226,13 +246,17 @@ class FileAccess(AlchemyProxy):
         query = (
             session.query(model)
             .filter(
-                (model.name == name) &
-                (model.timestamp.like(timestamp + "%"))
-            ).order_by(model.timestamp)
+                (model.name == name)
+                # &(model.checkpoint.like(checkpoint + "%"))
+            ).order_by(model.checkpoint)
         )
         if trial:
             query = query.filter(model.trial_id == trial)
-        return proxy(query.first())
+        for access in query:
+            paccess = proxy(access)
+            if str(paccess.timestamp).startswith(timestamp):
+                return paccess
+        return None
 
     def __key(self):
         return (self.name, self.content_hash_before, self.content_hash_after,
@@ -264,8 +288,7 @@ class FileAccess(AlchemyProxy):
         >>> from noworkflow.now.persistence.models import Activation
         >>> access_config = AccessConfig(
         ...     read_file="a.txt", read_hash="ab",
-        ...     read_timestamp=datetime(year=2016, month=5, day=26,
-        ...                              hour=15, minute=53, second=51))
+        ...     read_timestamp=4199751.0) # 2016-05-26 15:53:51
         >>> trial_id = new_trial(TrialConfig("finished"),
         ...                      access=access_config, erase=True)
 

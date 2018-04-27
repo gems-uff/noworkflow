@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from sqlalchemy import Column, Integer, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
@@ -84,7 +84,7 @@ class Member(AlchemyProxy):
     member_activation_id = Column(Integer, index=True)
     member_id = Column(Integer, index=True)
     key = Column(Text)
-    moment = Column(TIMESTAMP)
+    checkpoint = Column(Float)
     type = Column(Text)  # pylint: disable=invalid-name
 
     trial = backref_one("trial")  # Trial.dependencies
@@ -104,7 +104,7 @@ class Member(AlchemyProxy):
                         link="evaluation.activation_id"),
         PrologAttribute("member_id", link="evaluation.id"),
         PrologRepr("key"),
-        PrologTimestamp("moment"),
+        PrologAttribute("checkpoint"),
         PrologRepr("type"),
     ), description=(
         "informs that in a given trial (*trial_id*),\n"
@@ -113,6 +113,6 @@ class Member(AlchemyProxy):
         "had the member evaluation (*MemberId*),\n"
         "in another activation (*MemberActivationId*),\n"
         "at the position *Key*,\n"
-        "after the moment *Moment*,\n"
+        "after the moment *Checkpoint*,\n"
         "by a *Type* operation."
     ))

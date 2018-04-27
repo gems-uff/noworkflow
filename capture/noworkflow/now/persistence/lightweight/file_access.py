@@ -20,13 +20,13 @@ class FileAccessLW(BaseLW):                                                     
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "mode", "buffering",
          "content_hash_before", "content_hash_after",
-         "timestamp", "activation_id"],
+         "checkpoint", "activation_id"],
         ["done"]
     )
     nullable = {"activation_id"}
     model = FileAccess
 
-    def __init__(self, id_, trial_id, name):
+    def __init__(self, id_, trial_id, name, checkpoint):
         self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
@@ -34,7 +34,7 @@ class FileAccessLW(BaseLW):                                                     
         self.buffering = "default"
         self.content_hash_before = None
         self.content_hash_after = None
-        self.timestamp = datetime.now()
+        self.checkpoint = checkpoint
         self.activation_id = -1
         self.done = False
 
@@ -48,4 +48,5 @@ class FileAccessLW(BaseLW):                                                     
         return self.done
 
     def __repr__(self):
-        return ("FileAccess(id={0.id}, name={0.name}").format(self)
+        return ("FileAccess(id={0.id}, name={0.name}, "
+                "checkpoint={0.checkpoint}").format(self)

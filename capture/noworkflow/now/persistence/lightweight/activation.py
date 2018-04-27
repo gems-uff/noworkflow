@@ -44,7 +44,7 @@ class ActivationLW(BaseLW):
     # pylint: disable=too-many-instance-attributes
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "name", "start", "code_block_trial_id",
+        ["trial_id", "id", "name", "start_checkpoint", "code_block_trial_id",
          "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
          "evaluation", "assignments", "closure", "func", "dependency_type",
@@ -53,12 +53,12 @@ class ActivationLW(BaseLW):
     nullable = {"code_block_id"}
     model = Activation
 
-    def __init__(self, evaluation, trial_id, name, start, code_block_id):\
+    def __init__(self, evaluation, trial_id, name, start, code_block_id):
         # pylint: disable=too-many-arguments
         self.trial_id = trial_id
         self.id = evaluation.id  # pylint: disable=invalid-name
         self.name = name
-        self.start = start
+        self.start_checkpoint = start
         self.code_block_id = code_block_id if code_block_id else -1
         self.code_block_trial_id = trial_id
 
@@ -106,6 +106,7 @@ class ActivationLW(BaseLW):
 
     def __repr__(self):
         return (
-            "Activation(id={0.id}, name={0.name}, start={0.start}, "
+            "Activation(id={0.id}, name={0.name}, "
+            "start_checkpoint={0.start_checkpoint}, "
             "code_block_id={0.code_block_id})"
         ).format(self)

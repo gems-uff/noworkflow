@@ -1,6 +1,7 @@
 
 import os
 import sys
+import datetime
 
 from ast import PyCF_ONLY_AST
 from datetime import datetime
@@ -41,7 +42,7 @@ class OverrideShell(object):
 
     def __init__(self, shell):
         self.shell = shell
-        
+
         self.metascript = Metascript().read_jupyter_args()
         self.metascript.namespace = self.shell.user_global_ns
         self.metascript.definition.first = False
@@ -76,20 +77,21 @@ class OverrideShell(object):
         )
         evaluation = self.activation.evaluation
         # Never remove main evaluation from store
-        evaluation.is_complete = lambda: False 
+        evaluation.is_complete = lambda: False
         self.now_save()
 
     def now_save(self):
         """Save noWorkflow provenance"""
-        now = datetime.now()
-        self.activation.evaluation.moment = now
-        self.metascript.deployment.store_provenance()
-        self.metascript.definition.store_provenance()
-        self.metascript.execution.collector.store(partial=True, status="cell")
-        
+        metascript = self.metascript
+        tnow, now = datetime.now(), metascript.execution.collector.get_time()
+        self.activation.evaluation.checkpoint = now
+        metascript.deployment.store_provenance()
+        metascript.definition.store_provenance()
+        metascript.execution.collector.store(partial=True, status="cell")
+
         Trial.fast_update(
-            self.metascript.trial_id,
-            self.metascript.main_id, now, "finished")
+            metascript.trial_id,
+            metascript.main_id, tnow, "finished")
 
     def run_cell(self, raw_cell, store_history=False, silent=False,
                  shell_futures=True):

@@ -22,7 +22,7 @@ class DependencyQuerier(object):
         self.activations = {}
         # Cache all trial values
         self.values = {}
-        # ValueState Map: M[Value][Compartment.name][Moment] = Part
+        # ValueState Map: M[Value][Compartment.name][Checkpoint] = Part
         self.compartments = defaultdict(lambda: defaultdict(ValueState))
         # Map part to evaluation that created it
         self.part_to_evaluation = {}
@@ -42,15 +42,15 @@ class DependencyQuerier(object):
         # Stack of last search
         self.search_stack = []
 
-    def add_static_arrow(self, from_, to_, name, moment=None, part=None):
+    def add_static_arrow(self, from_, to_, name, checkpoint=None, part=None):
         """Do nothing by default. Override for debugging"""
         # pylint: disable=unused-argument, no-self-use, too-many-arguments
         pass
 
-    def get_arrow(self, from_, to_, name, moment=None, part=None):
+    def get_arrow(self, from_, to_, name, checkpoint=None, part=None):
         """Get arrow used to go from a node to another"""
         # pylint: disable=unused-argument, no-self-use, too-many-arguments
-        return Arrow(name, moment, part)
+        return Arrow(name, checkpoint, part)
 
     def visit_arrow(self, arrow, index, new_context):
         """Do nothing by default. Override for debugging"""
@@ -63,18 +63,18 @@ class DependencyQuerier(object):
     def initialize_compartments(self):
         """Initialize compartments.
         Return parts map
-        -- parts map compartment moments to parts
+        -- parts map compartment checkpoints to parts
         -- use it to identify evaluations that create compartments"""
         parts = {}
         self.values = {val.id: val for val in self.trial.values}
         for compartment in self.trial.compartments:
             whole = self.values[compartment.whole_id]
             part = self.values[compartment.part_id]
-            moment = compartment.moment
+            checkpoint = compartment.checkpoint
             # Dependency to compartments
-            self.add_static_arrow(whole, part, "<C>", moment, compartment.name)
-            self.compartments[whole][compartment.name][moment] = part
-            parts[moment] = part
+            self.add_static_arrow(whole, part, "<C>", checkpoint, compartment.name)
+            self.compartments[whole][compartment.name][checkpoint] = part
+            parts[checkpoint] = part
         return parts
 
     def initialize_evaluations(self, parts):
@@ -83,9 +83,9 @@ class DependencyQuerier(object):
         for evaluation in self.trial.evaluations:
             self.evaluations[evaluation.id] = evaluation
             value = self.values[evaluation.value_id]
-            moment = evaluation.moment
+            checkpoint = evaluation.checkpoint
             # Dependency to value
-            self.add_static_arrow(evaluation, value, "<V>", moment)
+            self.add_static_arrow(evaluation, value, "<V>", checkpoint)
             self.evaluation_to_value[evaluation] = value
 
             if evaluation.activation_id is not None:
@@ -94,9 +94,9 @@ class DependencyQuerier(object):
                 self.add_static_arrow(evaluation, activation, "<A>")
                 self.evaluation_to_activation[evaluation] = activation
 
-            if moment in parts:
+            if checkpoint in parts:
                 # Dependency from part created by this evaluation
-                self.add_static_arrow(value, evaluation, "<P>", moment)
+                self.add_static_arrow(value, evaluation, "<P>", checkpoint)
                 self.part_to_evaluation[value] = evaluation
 
     def initialize_dependencies(self):
@@ -126,12 +126,12 @@ class DependencyQuerier(object):
                 continue  # This part is being altered. Thus, it is blocked
             if (from_, "<C>") in context.block_set:
                 continue  # Going to compartments is blocked
-            to_, moment = value_state.current_pair(context.moment)
+            to_, checkpoint = value_state.current_pair(context.checkpoint)
             if to_ is None:
                 continue  # Value were created after the explored node
-            arrow = self.get_arrow(from_, to_, "<C>", moment, name)
-            # Keep the context moment and the block_set
-            yield Context(to_, context.moment, context.block_set), arrow
+            arrow = self.get_arrow(from_, to_, "<C>", checkpoint, name)
+            # Keep the context checkpoint and the block_set
+            yield Context(to_, context.checkpoint, context.block_set), arrow
 
         # Part to evaluation that created it
         to_ = self.part_to_evaluation.get(from_)
@@ -139,10 +139,10 @@ class DependencyQuerier(object):
             return  # Part is just an access
         if (from_, "<P>") in context.block_set:
             return  # Moving from part to evaluation is blocked
-        if context.moment < to_.moment:
+        if context.checkpoint < to_.checkpoint:
             return  # Part were accessed before definition (?)
-        arrow = self.get_arrow(from_, to_, "<P>", to_.moment)
-        # Going to evaluation, reset moment restriction. Keep block_set
+        arrow = self.get_arrow(from_, to_, "<P>", to_.checkpoint)
+        # Going to evaluation, reset checkpoint restriction. Keep block_set
         yield Context(to_, None, context.block_set), arrow
 
     def _evaluation_to_evaluations_neighborhood(self, context):
@@ -162,7 +162,7 @@ class DependencyQuerier(object):
                     new_block_set, {(whole_value, "<C>")}
                 ))
             arrow = self.get_arrow(from_, to_, dependency.type)
-            # Moment is always None, when going to a evaluation
+            # Checkpoint is always None, when going to a evaluation
             yield Context(to_, None, new_block_set), arrow
 
     def _evaluation_to_activation_neighborhood(self, context):
@@ -178,7 +178,7 @@ class DependencyQuerier(object):
         new_block_set = frozenset(chain(
             context.block_set, {(to_, "use")}
         ))
-        # Moment is always None, when going to a evaluation
+        # Checkpoint is always None, when going to a evaluation
         yield Context(to_, None, new_block_set), arrow
 
     def _evaluation_to_value_neighborhood(self, context):
@@ -188,10 +188,10 @@ class DependencyQuerier(object):
         if (from_, "<V>") in context.block_set:
             # Moving from evaluation to value is blocked
             return
-        # Going to value, set moment restriction as the evaluation moment
-        moment = from_.moment
-        arrow = self.get_arrow(from_, to_, "<V>", moment)
-        yield Context(to_, moment, context.block_set), arrow
+        # Going to value, set checkpoint restriction as the evaluation checkpoint
+        checkpoint = from_.checkpoint
+        arrow = self.get_arrow(from_, to_, "<V>", checkpoint)
+        yield Context(to_, checkpoint, context.block_set), arrow
 
     def neighborhood(self, context):
         """Get neighborhood of context"""

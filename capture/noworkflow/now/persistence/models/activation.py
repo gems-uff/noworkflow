@@ -6,7 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP, select, join
+from datetime import timedelta
+from sqlalchemy import Column, Integer, Text, Float, select, join
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
@@ -90,7 +91,7 @@ class Activation(AlchemyProxy):
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
-    start = Column(TIMESTAMP)
+    start_checkpoint = Column(Float)
     code_block_id = Column(Integer, index=True)
 
     file_accesses = many_viewonly_ref("activation", "FileAccess")
@@ -125,7 +126,7 @@ class Activation(AlchemyProxy):
         PrologTrial("trial_id", link="evaluation.trial_id"),
         PrologAttribute("id", link="evaluation.id"),
         PrologRepr("name"),
-        PrologTimestamp("start"),
+        PrologAttribute("start_checkpoint"),
         PrologNullable("code_block_id", link="code_block.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
@@ -323,12 +324,50 @@ class Activation(AlchemyProxy):
         return self.this_evaluation.code_component.first_char_line
 
     @property
+    def start(self):
+        """Return activation finish time
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig(duration=50)
+        >>> config = TrialConfig("finished")
+        >>> trial_id = new_trial(config, assignment=assign, erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+
+        Return activation start time:
+        >>> activation.start == config.trial_start + timedelta(seconds=9)
+        True
+        """
+        return self.trial.start + timedelta(seconds=self.start_checkpoint)
+
+    @property
+    def finish_checkpoint(self):
+        """Return activation finish checkpoint
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig(duration=50)
+        >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+        ...                      erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+
+        Return activation finish time:
+        >>> activation.finish_checkpoint == activation.start_checkpoint + 49
+        True
+        """
+        return self.this_evaluation.checkpoint
+
+    @property
     def finish(self):
         """Return activation finish time
 
 
         Doctest:
-        >>> from datetime import timedelta
         >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
         >>> from noworkflow.tests.helpers.models import AssignConfig
         >>> from noworkflow.now.persistence.models import Trial
@@ -360,7 +399,9 @@ class Activation(AlchemyProxy):
         >>> activation.duration
         42000000
         """
-        return int((self.finish - self.start).total_seconds() * 1000000)
+        return int(
+            (self.finish_checkpoint - self.start_checkpoint) * 1000000
+        )
 
     def __key(self):
         return (self.trial_id, self.name, self.line)

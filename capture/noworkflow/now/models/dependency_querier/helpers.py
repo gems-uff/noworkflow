@@ -22,27 +22,27 @@ class Arrow(object):
         return '[label="{}" color="blue"]'.format(self.label)
 
 
-Context = namedtuple("Context", "element moment block_set")
+Context = namedtuple("Context", "element checkpoint block_set")
 
 
 class ValueState(dict):
-    """Represent the state of a value at a given moment"""
+    """Represent the state of a value at a given checkpoint"""
     def __init__(self, *args, **kwargs):
         super(ValueState, self).__init__(*args, **kwargs)
         self.ordered_list = []
 
-    def __setitem__(self, moment, value):
-        super(ValueState, self).__setitem__(moment, value)
-        bisect.insort_right(self.ordered_list, moment)
+    def __setitem__(self, checkpoint, value):
+        super(ValueState, self).__setitem__(checkpoint, value)
+        bisect.insort_right(self.ordered_list, checkpoint)
 
-    def current_value(self, moment):
-        """Get value at a specific moment"""
-        return self.current_pair(moment)[0]
+    def current_value(self, checkpoint):
+        """Get value at a specific checkpoint"""
+        return self.current_pair(checkpoint)[0]
 
-    def current_pair(self, moment):
-        """Get value and its moment at a specific moment"""
-        index = bisect.bisect_right(self.ordered_list, moment) - 1
+    def current_pair(self, checkpoint):
+        """Get value and its checkpoint at a specific checkpoint"""
+        index = bisect.bisect_right(self.ordered_list, checkpoint) - 1
         if index == -1:
             return None, None
-        the_moment = self.ordered_list[index]
-        return self[the_moment], the_moment
+        the_checkpoint = self.ordered_list[index]
+        return self[the_checkpoint], the_checkpoint

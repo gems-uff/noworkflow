@@ -16,11 +16,11 @@ FAKE = FakeEvaluation(None, None)
 
 
 AssignAccess = namedtuple(
-    "AssignAccess", "value dependency addr value_dep moment")
+    "AssignAccess", "value dependency addr value_dep checkpoint")
 
 
 
-class Assign(namedtuple("Assign", "moment value dependency")):
+class Assign(namedtuple("Assign", "checkpoint value dependency")):
     """Represent an assignment for further processing"""
 
     def __new__(cls, *args, **kwargs):
@@ -33,7 +33,7 @@ class Assign(namedtuple("Assign", "moment value dependency")):
     def sub(self, value, dependency):
         """Create a new Assign with the same access for propagation in
         multiple assignments"""
-        assign = Assign(self.moment, value, dependency)
+        assign = Assign(self.checkpoint, value, dependency)
         assign.index = self.index
         assign.accesses = self.accesses
         return assign

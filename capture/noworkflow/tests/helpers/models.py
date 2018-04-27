@@ -150,40 +150,25 @@ def block_params(id_, trial_id, code="'block'", docstring="block"):
     return [id_, trial_id, code, False, docstring]
 
 
-def evaluation_params(trial_id, code_component_id, activation_id, repr_=None,
-                      year=2016, month=4, day=8, hour=1, minute=19, second=5,
-                      moment=None):
+def evaluation_params(trial_id, code_component_id, activation_id, repr_=None, checkpoint=65):
     """Return evaluation params"""
-    if moment is None:
-        moment = datetime(
-            year=year, month=month, day=day,
-            hour=hour, minute=minute, second=second
-        )
-    return [trial_id, code_component_id, activation_id, moment, repr_]
+    return [trial_id, code_component_id, activation_id, checkpoint, repr_]
 
 
-def activation_params(evaluation, trial_id, code_block_id, name="main.py",
-                      year=2016, month=4, day=8, hour=1, minute=18, second=5,
-                      start=None):
+def activation_params(evaluation, trial_id, code_block_id, name="main.py", start=65):
     """Return activation params"""
-    if start is None:
-        start = datetime(
-            year=year, month=month, day=day,
-            hour=hour, minute=minute, second=second
-        )
     return [evaluation, trial_id, name, start, code_block_id]
 
 
-def access_params(trial_id, name="file.txt"):
-    return [trial_id, name]
+def access_params(trial_id, name="file.txt", checkpoint=0):
+    return [trial_id, name, checkpoint]
 
 
 class ConfigObj(object):
 
     def __init__(self):
         self.meta = None
-        self.start = datetime(year=2016, month=4, day=8,
-                              hour=1, minute=18, second=5)
+        self.start = 65
 
     def comp(self, name, type_, mode, container_id, **kwargs):
         meta = self.meta
@@ -195,20 +180,20 @@ class ConfigObj(object):
 
     def evaluation(self, code_component_id, activation_id, repr_, delta):
         meta = self.meta
-        moment = self.start + timedelta(seconds=delta)
+        checkpoint = self.start + delta
         return meta.evaluations_store.add(*evaluation_params(
             meta.trial_id,
-            code_component_id, activation_id, repr_=repr_, moment=moment
+            code_component_id, activation_id, repr_=repr_, checkpoint=checkpoint
         ))
 
     def member(self, collection_activation_id, collection_id,
                member_activation_id, member_id, delta,
                key="[0]", type_="Put"):
         meta = self.meta
-        moment = self.start + timedelta(seconds=delta)
+        checkpoint = self.start + delta
         return meta.members_store.add(
             meta.trial_id, collection_activation_id, collection_id,
-            member_activation_id, member_id, key, moment, type_ 
+            member_activation_id, member_id, key, checkpoint, type_
         )
 
 
@@ -240,7 +225,7 @@ class FuncConfig(ConfigObj):
         self.f_eval = None
         self.function_repr = None
         self.global_var = None
-        self.start = None
+        self.start = 0
         self.x_param_eval = None
         self.x_return_eval = None
         self.return_eval = None
@@ -276,7 +261,7 @@ class FuncConfig(ConfigObj):
 
     def create_evaluations(self, trial):
         main_act = trial.main_act
-        self.start = trial.start
+        self.start = 0
         self.f_eval = self.evaluation(
             self.id, main_act, self.function_repr, 2)
 
@@ -304,7 +289,7 @@ class AssignConfig(ConfigObj):
         self.array_repr = None
         self.array0_repr = None
         self.a0comp = None
-        self.start = None
+        self.start = 0
         self.list_eval = None
         self.list0_eval = None
         self.a_write_eval = None
@@ -358,7 +343,7 @@ class AssignConfig(ConfigObj):
         return self.array_repr, self.array0_repr
 
     def create_evaluations(self, trial):
-        self.start = trial.start
+        self.start = 0
         main_act = trial.main_act
         function = trial.function
 
@@ -385,7 +370,7 @@ class AssignConfig(ConfigObj):
         self.meta.activations_store.add(*activation_params(
             self.meta.evaluations_store[self.f_activation], self.meta.trial_id,
             function.id, name=function.name,
-            start=self.start + timedelta(seconds=9)
+            start=self.start + 9
         ))
 
         function.x_param_eval = self.evaluation(
@@ -474,7 +459,7 @@ class AccessConfig(ConfigObj):
             self,
             read_file="file.txt", write_file="file2.txt",
             read_hash="a", write_hash_before=None, write_hash_after="b",
-            read_timestamp=None, write_timestamp=None):
+            read_timestamp=0, write_timestamp=0):
         super(AccessConfig, self).__init__()
         self.read_file = read_file
         self.read_hash = read_hash
@@ -490,20 +475,18 @@ class AccessConfig(ConfigObj):
         assign = trial.assignment
         meta = trial.meta
         self.r_access = meta.file_accesses_store.add_object(*access_params(
-            meta.trial_id, name=self.read_file))
+            meta.trial_id, name=self.read_file, checkpoint=self.read_timestamp
+        ))
         self.r_access.activation_id = assign.f_activation
         self.r_access.content_hash_before = self.read_hash
         self.r_access.content_hash_after = self.read_hash
-        if self.read_timestamp:
-            self.r_access.timestamp = self.read_timestamp
         self.w_access = meta.file_accesses_store.add_object(*access_params(
-            meta.trial_id, name=self.write_file))
+            meta.trial_id, name=self.write_file, checkpoint=self.write_timestamp
+        ))
         self.w_access.activation_id = assign.f_activation
         self.w_access.mode = "w"
         self.w_access.content_hash_before = self.write_hash_before
         self.w_access.content_hash_after = self.write_hash_after
-        if self.write_timestamp:
-            self.w_access.timestamp = self.write_timestamp
 
 class TrialConfig(ConfigObj):
     """Configure Trial object"""
@@ -516,11 +499,12 @@ class TrialConfig(ConfigObj):
             path="/home/now", bypass_modules=False):
         # pylint: disable=too-many-arguments
         super(TrialConfig, self).__init__()
-        self.start = datetime(
+        self.trial_start = datetime(
             year=year, month=month, day=day,
             hour=hour, minute=minute, second=second
         )
-        self.finish = self.start + timedelta(seconds=duration)
+        self.trial_finish = self.trial_start + timedelta(seconds=duration)
+        self.start = 0
         self.script = script
         self.docstring = docstring
         self.status = status
@@ -547,7 +531,7 @@ class TrialConfig(ConfigObj):
             script=self.script, bypass_modules=self.bypass_modules,
             path=self.path
         )
-        params["start"] = self.start
+        params["start"] = self.trial_start
 
         self.trial_id = Trial.create(**params)
         self.meta.trial_id = self.trial_id
@@ -566,20 +550,20 @@ class TrialConfig(ConfigObj):
     def update(self):
         """Update trial to set finished"""
         params = trial_update_params(main_id=self.main_id, status=self.status)
-        params["finish"] = self.finish
+        params["finish"] = self.trial_finish
         Trial.fast_update(self.trial_id, **params)
 
     def create_evaluations(self):
         """Create evaluations"""
         self.main_act = self.meta.evaluations_store.add(*evaluation_params(
             self.meta.trial_id, self.main_id, -1,
-            moment=self.start + timedelta(seconds=self.main_duration)
+            checkpoint=self.start + self.main_duration
         ))
 
         self.meta.activations_store.add(*activation_params(
-            self.meta.evaluations_store[self.main_act], 
+            self.meta.evaluations_store[self.main_act],
             self.meta.trial_id, self.main_id,
-            start=self.start + timedelta(seconds=self.main_start)
+            start=self.start + self.main_start
         ))
 
         return self.main_act

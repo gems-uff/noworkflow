@@ -34,7 +34,7 @@ class TestStmtExecution(CollectionTestCase):
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(var_evaluation.activation_id, script_eval.id)
-        self.assertTrue(bool(var_evaluation.moment))
+        self.assertTrue(bool(var_evaluation.checkpoint))
         self.assertEqual(script_act.context['a'], var_evaluation)
 
         self.assert_type(var_2, var_int)
@@ -60,12 +60,12 @@ class TestStmtExecution(CollectionTestCase):
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(read_a_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(read_a_eval.moment))
+        self.assertTrue(bool(read_a_eval.checkpoint))
         self.assertEqual(write_b_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(write_b_eval.moment))
+        self.assertTrue(bool(write_b_eval.checkpoint))
         self.assertEqual(script_act.context['a'], write_a_eval)
         self.assertEqual(script_act.context['b'], write_b_eval)
-        
+
         self.assert_dependency(read_a_eval, write_a_eval, "assignment", True)
         self.assert_dependency(write_b_eval, read_a_eval, "assign", True)
 
@@ -90,7 +90,7 @@ class TestStmtExecution(CollectionTestCase):
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(var_a2w.activation_id, script_eval.id)
-        self.assertTrue(bool(var_a2w.moment))
+        self.assertTrue(bool(var_a2w.checkpoint))
         self.assertEqual(script_act.context['a'], var_a2w)
 
         self.assert_dependency(var_a2r, var_a1, "assignment", True)
@@ -102,7 +102,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_type(var_1, var_int)
         self.assert_type(var_int, var_type)
         self.assert_type(var_type, var_type)
-        
+
         self.assertEqual(var_a2w.repr, "3")
 
     def test_function_definition(self):
@@ -127,20 +127,20 @@ class TestStmtExecution(CollectionTestCase):
         activation = self.metascript.activations_store[call.id]
 
         self.assertEqual(call.activation_id, script_act.id)
-        self.assertTrue(activation.start < call.moment)
+        self.assertTrue(activation.start_checkpoint < call.checkpoint)
         self.assertEqual(activation.code_block_id, write_f_eval.code_component_id)
         self.assertEqual(activation.name, "f")
 
         self.assertEqual(write_f_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(write_f_eval.moment))
+        self.assertTrue(bool(write_f_eval.checkpoint))
         self.assertEqual(arg_a_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(arg_a_eval.moment))
+        self.assertTrue(bool(arg_a_eval.checkpoint))
         self.assertEqual(write_b_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(write_b_eval.moment))
+        self.assertTrue(bool(write_b_eval.checkpoint))
         self.assertEqual(call.activation_id, script_eval.id)
-        self.assertTrue(bool(call.moment))
+        self.assertTrue(bool(call.checkpoint))
         self.assertEqual(param_x_eval.activation_id, activation.id)
-        self.assertTrue(bool(param_x_eval.moment))
+        self.assertTrue(bool(param_x_eval.checkpoint))
         self.assertEqual(script_act.context['a'], write_a_eval)
         self.assertEqual(script_act.context['b'], write_b_eval)
         self.assertEqual(script_act.context['f'], write_f_eval)
@@ -171,20 +171,20 @@ class TestStmtExecution(CollectionTestCase):
         activation = self.metascript.activations_store[call.id]
 
         self.assertEqual(call.activation_id, script_act.id)
-        self.assertTrue(activation.start < call.moment)
+        self.assertTrue(activation.start_checkpoint < call.checkpoint)
         self.assertEqual(activation.code_block_id, write_f_eval.id)
         self.assertEqual(activation.name, "f")
 
         self.assertEqual(write_f_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(write_f_eval.moment))
+        self.assertTrue(bool(write_f_eval.checkpoint))
         self.assertEqual(arg_a_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(arg_a_eval.moment))
+        self.assertTrue(bool(arg_a_eval.checkpoint))
         self.assertEqual(write_b_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(write_b_eval.moment))
+        self.assertTrue(bool(write_b_eval.checkpoint))
         self.assertEqual(call.activation_id, script_eval.id)
-        self.assertTrue(bool(call.moment))
+        self.assertTrue(bool(call.checkpoint))
         self.assertEqual(param_x_eval.activation_id, activation.id)
-        self.assertTrue(bool(param_x_eval.moment))
+        self.assertTrue(bool(param_x_eval.checkpoint))
         self.assertEqual(script_act.context['a'], write_a_eval)
         self.assertEqual(script_act.context['b'], write_b_eval)
         self.assertEqual(script_act.context['f'], write_f_eval)
@@ -355,7 +355,7 @@ class TestStmtExecution(CollectionTestCase):
 
         m1 = self.assert_member(var_list, var_1, "[0]")
         m3 = self.assert_member(var_list, var_a0, "[0]")
-        self.assertTrue(m1.moment < m3.moment)
+        self.assertTrue(m1.checkpoint < m3.checkpoint)
 
         self.assertEqual(var_a.repr, "[1, 2]")
         self.assertEqual(var_0.repr, "0")
@@ -380,7 +380,7 @@ class TestStmtExecution(CollectionTestCase):
 
         m1 = self.assert_member(var_list, var_1, "[0]")
         m3 = self.assert_member(var_list, var_a0, "[0]")
-        self.assertTrue(m1.moment < m3.moment)
+        self.assertTrue(m1.checkpoint < m3.checkpoint)
 
         self.assertEqual(var_list.repr, "[1, 2]")
         self.assertEqual(var_a.repr, "[1, 2]")
@@ -831,9 +831,9 @@ class TestStmtExecution(CollectionTestCase):
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(read_a_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(read_a_eval.moment))
+        self.assertTrue(bool(read_a_eval.checkpoint))
         self.assertEqual(write_b_eval.activation_id, script_eval.id)
-        self.assertTrue(bool(write_b_eval.moment))
+        self.assertTrue(bool(write_b_eval.checkpoint))
         self.assertEqual(script_act.context['a'], write_a_eval)
         self.assertEqual(script_act.context['b'], write_b_eval)
 
@@ -866,7 +866,7 @@ class TestStmtExecution(CollectionTestCase):
         activation = self.metascript.activations_store[call.id]
 
         self.assertEqual(call.activation_id, script_act.id)
-        self.assertTrue(activation.start < call.moment)
+        self.assertTrue(activation.start_checkpoint < call.checkpoint)
         self.assertEqual(activation.code_block_id, -1)
         self.assertEqual(activation.name, "print")
 
@@ -894,7 +894,7 @@ class TestStmtExecution(CollectionTestCase):
         activation = self.metascript.activations_store[call.id]
 
         self.assertEqual(call.activation_id, script_act.id)
-        self.assertTrue(activation.start < call.moment)
+        self.assertTrue(activation.start_checkpoint < call.checkpoint)
         self.assertEqual(activation.code_block_id, -1)
         self.assertEqual(activation.name, "exec")
 
@@ -919,7 +919,7 @@ class TestStmtExecution(CollectionTestCase):
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(var_evaluation.activation_id, script_eval.id)
-        self.assertTrue(bool(var_evaluation.moment))
+        self.assertTrue(bool(var_evaluation.checkpoint))
         self.assertEqual(script_act.context['a'], var_evaluation)
 
         self.assert_dependency(var_evaluation, var_2, "assign", True)

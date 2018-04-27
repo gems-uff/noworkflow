@@ -171,4 +171,4 @@ class CodeComponent(AlchemyProxy):
         True
         """
         from .evaluation import Evaluation
-        return self.evaluations.order_by(Evaluation.m.moment).first()
+        return self.evaluations.order_by(Evaluation.m.checkpoint).first()

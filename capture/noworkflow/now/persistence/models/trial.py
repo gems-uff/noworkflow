@@ -185,7 +185,7 @@ class Trial(AlchemyProxy):
     code_components = many_viewonly_ref("trial", "CodeComponent")
     evaluations = many_viewonly_ref("trial", "Evaluation")
     activations = many_viewonly_ref(
-        "trial", "Activation", order_by=Activation.m.start)
+        "trial", "Activation", order_by=Activation.m.start_checkpoint)
     file_accesses = many_viewonly_ref("trial", "FileAccess")
 
     members = many_viewonly_ref("trial", "Member")

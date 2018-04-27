@@ -96,9 +96,9 @@
         timestamp_id(TrialId, 0, Finish, finish) :- trial(TrialId, _, _, Finish, _, _, _, _, _).
         timestamp_id(TrialId, Id, Start, start) :- timestamp_id(TrialId, Id, Start, activation).
         timestamp_id(TrialId, Id, Finish, finish) :- timestamp_id(TrialId, Id, Finish, evaluation).
-        timestamp_id(TrialId, Id, Moment, activation) :- activation(TrialId, Id, _, Moment, _).
-        timestamp_id(TrialId, Id, Moment, evaluation) :- evaluation(TrialId, Id, Moment, _, _, _).
-        timestamp_id(TrialId, Id, Moment, access) :- access(TrialId, Id, _, _, _, _, Moment, _).
+        timestamp_id(TrialId, Id, Checkpoint, activation) :- activation(TrialId, Id, _, Checkpoint, _).
+        timestamp_id(TrialId, Id, Checkpoint, evaluation) :- evaluation(TrialId, Id, Checkpoint, _, _, _).
+        timestamp_id(TrialId, Id, Checkpoint, access) :- access(TrialId, Id, _, _, _, _, Checkpoint, _).
 
     % duration_id(TrialId, Id, Duration)/3
         % DESCRIPTION: get the *Duration* of an activation (*Id*)

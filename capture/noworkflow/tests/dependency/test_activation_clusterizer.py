@@ -111,13 +111,14 @@ class TestActivationClusterizer(CollectionTestCase):
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
 
-        acc1 = self.metascript.file_accesses_store.add_object(1, "teste")
+        fas = self.metascript.file_accesses_store
+        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = self.metascript.file_accesses_store.add_object(1, "teste2")
+        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
-        self.metascript.file_accesses_store.do_store()
+        fas.do_store()
         trial = Trial()
 
         var_acc1 = "a_{}".format(acc1.id)
@@ -153,18 +154,19 @@ class TestActivationClusterizer(CollectionTestCase):
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
 
-        acc1 = self.metascript.file_accesses_store.add_object(1, "teste")
+        fas = self.metascript.file_accesses_store
+        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = self.metascript.file_accesses_store.add_object(1, "teste2")
+        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
-        self.metascript.file_accesses_store.do_store()
-        trial = Trial()
+        fas.do_store()
 
         var_acc1 = "a_{}".format(acc1.id)
         var_acc2 = "a_{}".format(acc2.id)
 
+        trial = Trial()
         clusterizer = ActivationClusterizer(trial)
         clusterizer.config.max_depth = 1
         clusterizer.run()

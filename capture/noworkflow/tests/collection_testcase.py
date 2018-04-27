@@ -237,18 +237,19 @@ class CollectionTestCase(unittest.TestCase):
             print("Members")
             collections = defaultdict(list)
             for member in viewvalues(self.metascript.members_store.store):
-                collections[member.collection_id].append((member.member_id, member.key, member.moment))
+                collections[member.collection_id].append(
+                    (member.member_id, member.key, member.checkpoint))
             for collection_id, members in viewitems(collections):
                 collection = self.metascript.evaluations_store[collection_id]
                 print("  {}".format(
                     self.evaluation_repr(collection),
                 ))
-                for member_id, key, moment in members:
+                for member_id, key, checkpoint in members:
                     member = self.metascript.evaluations_store[member_id]
                     print("    {} = {} ({})".format(
                         key,
                         self.evaluation_repr(member),
-                        moment
+                        checkpoint
                     ))
 
     def assert_no_dependency(self, dependent, dependency, type_=None):

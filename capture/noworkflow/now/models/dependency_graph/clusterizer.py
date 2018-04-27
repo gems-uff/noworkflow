@@ -197,7 +197,7 @@ class Clusterizer(object):
         for member, source, target in self.member_iter(self.trial().members):
             extra = ""
             if self.config.show_timestamps:
-                extra = "\n{}".format(member.moment)
+                extra = "\n{}".format(member.checkpoint)
             dep_attributes = attributes.update({
                 "label": "{}{}".format(member.key, extra),
                 "_type": "member",

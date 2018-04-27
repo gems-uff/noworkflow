@@ -191,13 +191,14 @@ class TestDependencyClusterizer(CollectionTestCase):
         var_function = self.evaluation_node(name=self.rtype('function'))
         var_module = self.evaluation_node(name=self.rtype('module'))
 
-        acc1 = self.metascript.file_accesses_store.add_object(1, "teste")
+        fas = self.metascript.file_accesses_store
+        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = self.metascript.file_accesses_store.add_object(1, "teste2")
+        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
-        self.metascript.file_accesses_store.do_store()
+        fas.do_store()
         trial = Trial()
 
         var_acc1 = "a_{}".format(acc1.id)
@@ -254,13 +255,14 @@ class TestDependencyClusterizer(CollectionTestCase):
         var_fx_w = self.evaluation_node(name="x", mode="w", first_char_line=2)
         var_fx_r = self.evaluation_node(name="x", mode="r", first_char_line=3)
 
-        acc1 = self.metascript.file_accesses_store.add_object(1, "teste")
+        fas = self.metascript.file_accesses_store
+        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = self.metascript.file_accesses_store.add_object(1, "teste2")
+        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
-        self.metascript.file_accesses_store.do_store()
+        fas.do_store()
         trial = Trial()
 
         var_acc1 = "a_{}".format(acc1.id)
@@ -307,13 +309,14 @@ class TestDependencyClusterizer(CollectionTestCase):
         var_param = self.evaluation_node(name="'1'")
         var_y = self.evaluation_node(name="y")
 
-        acc1 = self.metascript.file_accesses_store.add_object(1, "teste")
+        fas = self.metascript.file_accesses_store
+        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = self.metascript.file_accesses_store.add_object(1, "teste2")
+        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
-        self.metascript.file_accesses_store.do_store()
+        fas.do_store()
         trial = Trial()
 
         var_acc1 = "a_{}".format(acc1.id)

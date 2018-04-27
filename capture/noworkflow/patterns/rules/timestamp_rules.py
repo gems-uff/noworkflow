@@ -22,12 +22,12 @@ from .name_rules import name as _name
 @prolog_rule("    timestamp_id(TrialId, Id, Start, activation).")
 @prolog_rule("timestamp_id(TrialId, 0, Finish, finish) :-")
 @prolog_rule("    timestamp_id(TrialId, Id, Finish, evaluation).")
-@prolog_rule("timestamp_id(TrialId, 0, Moment, activation) :-")
-@prolog_rule("    activation(TrialId, Id, _, Moment, _).")
-@prolog_rule("timestamp_id(TrialId, 0, Moment, evaluation) :-")
-@prolog_rule("    evaluation(TrialId, Id, Moment, _, _, _).")
-@prolog_rule("timestamp_id(TrialId, 0, Moment, access) :-")
-@prolog_rule("    access(TrialId, Id, _, _, _, _, Moment, _).")
+@prolog_rule("timestamp_id(TrialId, 0, Checkpoint, activation) :-")
+@prolog_rule("    activation(TrialId, Id, _, Checkpoint, _).")
+@prolog_rule("timestamp_id(TrialId, 0, Checkpoint, evaluation) :-")
+@prolog_rule("    evaluation(TrialId, Id, Checkpoint, _, _, _).")
+@prolog_rule("timestamp_id(TrialId, 0, Checkpoint, access) :-")
+@prolog_rule("    access(TrialId, Id, _, _, _, _, Checkpoint, _).")
 @restrict_rule(model_moment=[
     "start", "finish", "activation", "evaluation", "access",
 ])
@@ -51,8 +51,8 @@ def timestamp_id(trial_id, id, timestamp, model_moment):
 
     model_map = {
         "start": activation(trial_id, id, start=timestamp),
-        "finish": evaluation(trial_id, id, moment=timestamp),
-        "evaluation": evaluation(trial_id, id, moment=timestamp),
+        "finish": evaluation(trial_id, id, checkpoint=timestamp),
+        "evaluation": evaluation(trial_id, id, checkpoint=timestamp),
         "activation": activation(trial_id, id, start=timestamp),
         "access": access(trial_id, id, timestamp=timestamp),
     }

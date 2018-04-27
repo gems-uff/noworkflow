@@ -31,7 +31,8 @@ class TestScript(CollectionTestCase):
         var_type = self.get_evaluation(name=self.rtype('type'))
 
         self.assertEqual(script_evaluation.activation_id, 0)
-        self.assertTrue(script_activation.start < script_evaluation.moment)
+        self.assertTrue(
+            script_activation.start_checkpoint < script_evaluation.checkpoint)
         self.assertEqual(script_activation.code_block_id, script.id)
         self.assertEqual(script_activation.name, "__main__")
         self.assertEqual(len(self.metascript.exceptions_store.store), 0)
@@ -60,7 +61,8 @@ class TestScript(CollectionTestCase):
         var_type = self.get_evaluation(name=self.rtype('type'))
 
         self.assertEqual(script_evaluation.activation_id, 0)
-        self.assertTrue(script_activation.start < script_evaluation.moment)
+        self.assertTrue(
+            script_activation.start_checkpoint < script_evaluation.checkpoint)
         self.assertEqual(script_activation.code_block_id, script.id)
         self.assertEqual(script_activation.name, "__main__")
 

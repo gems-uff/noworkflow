@@ -6,7 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from datetime import timedelta
+from sqlalchemy import Column, Integer, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import remote, foreign
 
@@ -93,7 +94,7 @@ class Evaluation(AlchemyProxy):
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
-    moment = Column(TIMESTAMP)
+    checkpoint = Column(Float)
     code_component_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
     repr = Column(Text)
@@ -175,13 +176,13 @@ class Evaluation(AlchemyProxy):
     prolog_description = PrologDescription("evaluation", (
         PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
-        PrologTimestamp("moment"),
+        PrologAttribute("checkpoint"),
         PrologAttribute("code_component_id", link="code_component.id"),
         PrologNullable("activation_id", link="activation.id"),
         PrologRepr("repr"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
-        "an evaluation *Id* of *CodeComponentId* finalized at *Moment*\n"
+        "an evaluation *Id* of *CodeComponentId* finalized at *Checkpoint*\n"
         "in *ActivationId*, with value *Repr*."
     ))
 
@@ -252,4 +253,23 @@ class Evaluation(AlchemyProxy):
             ), "dependency", None)
 
         return previous
-         
+
+    @property
+    def moment(self):
+        """Return activation finish time
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig()
+        >>> config = TrialConfig("finished")
+        >>> trial_id = new_trial(config, assignment=assign, erase=True)
+
+        Find Evaluation
+        >>> list_eval = Evaluation((trial_id, assign.list_eval))
+        >>> list_eval.moment == config.trial_start + timedelta(seconds=4)
+        True
+        """
+        return self.trial.start + timedelta(seconds=self.checkpoint)

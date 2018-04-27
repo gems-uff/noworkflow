@@ -11,6 +11,7 @@
 
 import sys
 import numbers
+import time
 
 try:
     from cStringIO import StringIO
@@ -34,6 +35,7 @@ if PY3:
                  type(Ellipsis))
     string = (str, bytes)
     raw_bytes = (bytes, bytearray)
+    perf_counter = time.perf_counter
 else:
     import __builtin__ as builtins
     try:
@@ -46,6 +48,7 @@ else:
     IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)
     string = (basestring,)
     raw_bytes = (str,)
+    perf_counter = time.clock
 
 cross_compile = compile
 

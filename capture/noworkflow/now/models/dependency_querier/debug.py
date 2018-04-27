@@ -24,32 +24,32 @@ class StaticDebugDependencyQuerier(DependencyQuerier):
         if not initial_activation:
             # There is no activation in this trial
             return
-        self.start = initial_activation.start
+        self.start = initial_activation.start_checkpoint
 
     def _elapsed_time(self, current):
-        """Get elapsed time in microseconds from start to current moment
+        """Get elapsed time in microseconds from start to current checkpoint
         Use for debug
         """
         if current is None:
             return ""
-        return str((current - self.start).microseconds)
+        return str((current - self.start))
 
-    def add_static_arrow(self, from_, to_, name, moment=None, part=None):
+    def add_static_arrow(self, from_, to_, name, checkpoint=None, part=None):
         """Add static arrow *name* *from_* node *to_* another node
-        at a given moment.
+        at a given checkpoint.
         Only add in debug mode
         """
         # pylint: disable=too-many-arguments
-        arrow = self.arrows[from_][to_] = Arrow(name, moment, part)
-        if moment is not None:
-            arrow.label += "\n" + self._elapsed_time(moment)
+        arrow = self.arrows[from_][to_] = Arrow(name, checkpoint, part)
+        if checkpoint is not None:
+            arrow.label += "\n" + self._elapsed_time(checkpoint)
 
-    def get_arrow(self, from_, to_, name, moment=None, part=None):
+    def get_arrow(self, from_, to_, name, checkpoint=None, part=None):
         """Get arrow used to go from a node to another"""
         # pylint: disable=unused-argument, too-many-arguments
-        #arrow = Arrow(name, moment)
-        #if moment is not None:
-        #    arrow.label += "\n" + self._elapsed_time(moment)
+        #arrow = Arrow(name, checkpoint)
+        #if checkpoint is not None:
+        #    arrow.label += "\n" + self._elapsed_time(checkpoint)
         return self.arrows[from_][to_]
 
     def visit_arrow(self, arrow, index, new_context):
@@ -57,7 +57,7 @@ class StaticDebugDependencyQuerier(DependencyQuerier):
         arrow.marked = True
         arrow.label += "\n{} {} {}".format(
             index,
-            self._elapsed_time(new_context.moment),
+            self._elapsed_time(new_context.checkpoint),
             {(x[0].id, x[1]) for x in new_context.block_set}
         )
 
@@ -130,19 +130,19 @@ class StaticDebugDependencyQuerier(DependencyQuerier):
 class DynamicDebugDependencyQuerier(StaticDebugDependencyQuerier):
     """Creates arrows during search"""
 
-    def add_static_arrow(self, from_, to_, name, moment=None, part=None):
+    def add_static_arrow(self, from_, to_, name, checkpoint=None, part=None):
         """Do Nothing"""
         # pylint: disable=too-many-arguments, no-self-use
         pass
 
-    def get_arrow(self, from_, to_, name, moment=None, part=None):
+    def get_arrow(self, from_, to_, name, checkpoint=None, part=None):
         """Get arrow used to go from a node to another or create a new one"""
         # pylint: disable=too-many-arguments
         arrow = self.arrows[from_].get(to_)
         if arrow is None:
-            arrow = self.arrows[from_][to_] = Arrow(name, moment, part)
-            if moment is not None:
-                arrow.label += "\n" + self._elapsed_time(moment)
+            arrow = self.arrows[from_][to_] = Arrow(name, checkpoint, part)
+            if checkpoint is not None:
+                arrow.label += "\n" + self._elapsed_time(checkpoint)
         return arrow
 
     def reset_arrows(self):
