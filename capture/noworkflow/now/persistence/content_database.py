@@ -34,3 +34,6 @@ class ContentDatabase(object):
 
     def get(self, content_hash):
         pass
+
+    def join_persistence_threads(self):
+        pass

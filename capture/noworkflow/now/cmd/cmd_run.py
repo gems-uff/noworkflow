@@ -13,9 +13,11 @@ import sys
 from ..collection.metadata import Metascript
 from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
-from ..persistence import content
+from ..persistence import content, put_content_worker
 from ..utils.cross_version import PY3
 from ..utils import func_profiler
+
+
 
 from .command import Command
 
@@ -72,12 +74,13 @@ def run(metascript, args=None):
 
         content.commit_content(message)
         func_profiler.print_prof_data(content.__str__())
-        content.join_persistence_threads()
 
         func_profiler.print_prof_data()
 
     finally:
         metascript.create_last()
+        content.join_persistence_threads()
+        #put_content_worker.do_map(content)
 
 class Run(Command):
     """Run a script collecting its provenance"""
