@@ -84,6 +84,9 @@ class ContentDatabasePyGitProcessing(ContentDatabase):
         for id in self.ids_to_insert:
             self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
 
+        self.pool.close()
+        self.pool.join()
+
         return self.__create_commit_object(message, self.__get_tree_builder().write())
 
     def gc(self, aggressive=False):
