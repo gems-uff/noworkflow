@@ -41,9 +41,6 @@ class ContentDatabasePyGitDB(ContentDatabase):
         Arguments:
         content -- binary text to be saved
         """
-
-        print(len(content))
-
         ldb = LooseObjectDB("/{}/objects/".format(self.content_path))
 
         istream = IStream("blob", len(content), StringIO.StringIO(content))
