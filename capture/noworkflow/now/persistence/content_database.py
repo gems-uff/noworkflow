@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
+import hashlib
 
 from os.path import join, isdir, isfile
 
@@ -26,6 +27,12 @@ class ContentDatabase(object):
     def commit_content(self, message):
         pass
 
+    def mock(self, config):
+        pass
+
+    def find_subhash(self, content_hash):
+        return None
+
     def gc(self):
         pass
 
@@ -37,3 +44,8 @@ class ContentDatabase(object):
 
     def join_persistence_threads(self):
         pass
+
+    def get_hash_from_content(self, content):
+        git_content = b'blob ' + str(len(content)) + b'\0'
+        hash = hashlib.sha1(git_content + content).hexdigest()
+        return hash

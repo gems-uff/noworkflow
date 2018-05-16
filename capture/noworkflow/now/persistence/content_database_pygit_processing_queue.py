@@ -1,33 +1,58 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 import os
+from multiprocessing import Process, JoinableQueue, cpu_count
 from .content_database import ContentDatabase
 from . import git_system
 from os.path import isdir
-from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository
+from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository, hash
 from pygit2 import Signature
 from ..utils import func_profiler
+from ..utils.processing_queue import Consumer
 
 
-class ContentDatabasePyGit(ContentDatabase):
+class Task(object):
+    def __init__(self, content):
+        self.content = content
+
+    def __call__(self, repo):
+        repo.create_blob(self.content)
+
+    def __str__(self):
+        return 'task'
+
+
+class ContentDatabasePyGitProcessingQueue(ContentDatabase):
     """Content database that uses git library PyGit2"""
 
     def __init__(self, persistence_config):
-        super(ContentDatabasePyGit, self).__init__(persistence_config)
+        super(ContentDatabasePyGitProcessingQueue, self).__init__(persistence_config)
         self.__repo = None
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
         self.__commit_email = 'noworkflow@noworkflow.com'
+        self.ids_to_insert = []
+        self.tasks = None
+        self.consumers = []
+        self.num_consumers = None
 
     def mock(self, config):
         pass
 
     def connect(self, config):
         """Create content directory"""
+
         if not isdir(self.content_path):
             os.makedirs(self.content_path)
             init_repository(self.content_path, bare=True)
             self.__create_initial_commit()
+
+        self.num_consumers = cpu_count()
+        self.tasks = JoinableQueue()
+        self.consumers = [Consumer(task_queue=self.tasks, repo=self.__get_repo())
+                          for i in xrange(self.num_consumers)]
+        for w in self.consumers:
+            w.start()
 
     @func_profiler.profile
     def put(self, content):
@@ -39,13 +64,12 @@ class ContentDatabasePyGit(ContentDatabase):
         content -- binary text to be saved
         """
 
-        id = self.__get_repo().create_blob(content)
-        self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
+        self.tasks.put(Task(content))
 
-        return id.__str__()
+        content_hash = self.get_hash_from_content(content)
 
-    def find_subhash(self, content_hash):
-        return None
+        self.ids_to_insert.append(content_hash)
+        return content_hash
 
     def get(self, content_hash):
         """Get content from the content database
@@ -64,6 +88,15 @@ class ContentDatabasePyGit(ContentDatabase):
                         Arguments:
                         message -- commit message
                         """
+        # Add a poison pill for each consumer
+        for i in xrange(self.num_consumers):
+            self.tasks.put(None)
+
+        # Wait for all of the tasks to finish
+        self.tasks.join()
+
+        for id in self.ids_to_insert:
+            self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
 
         return self.__create_commit_object(message, self.__get_tree_builder().write())
 
