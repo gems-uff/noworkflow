@@ -72,8 +72,6 @@ class ContentDatabasePyGitProcessing(ContentDatabase):
         return_data = self.__get_repo()[content_hash].data
         return return_data
 
-    def join_persistence_threads(self):
-        pass
 
     def commit_content(self, message):
         """Commit the current files of content database

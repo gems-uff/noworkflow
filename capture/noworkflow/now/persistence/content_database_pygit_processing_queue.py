@@ -8,15 +8,35 @@ from os.path import isdir
 from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository, hash
 from pygit2 import Signature
 from ..utils import func_profiler
-from ..utils.processing_queue import Consumer
 
+
+class Consumer(Process):
+
+    def __init__(self, task_queue, repo, tree):
+        Process.__init__(self)
+        self.task_queue = task_queue
+        self.repo = repo
+        self.tree = tree
+
+    def run(self):
+        while True:
+            next_task = self.task_queue.get()
+            if next_task is None:
+                # Poison pill means shutdown
+                self.task_queue.task_done()
+                break
+            next_task(self.repo, self.tree)
+            self.task_queue.task_done()
+        return
 
 class Task(object):
-    def __init__(self, content):
+    def __init__(self, content, content_hash):
         self.content = content
+        self.content_hash = content_hash
 
-    def __call__(self, repo):
+    def __call__(self, repo, tree):
         repo.create_blob(self.content)
+        tree.insert(str(self.content_hash), self.content_hash, GIT_FILEMODE_BLOB)
 
     def __str__(self):
         return 'task'
@@ -49,7 +69,7 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
 
         self.num_consumers = cpu_count()
         self.tasks = JoinableQueue()
-        self.consumers = [Consumer(task_queue=self.tasks, repo=self.__get_repo())
+        self.consumers = [Consumer(task_queue=self.tasks, repo=self.__get_repo(), tree=self.__get_tree_builder())
                           for i in xrange(self.num_consumers)]
         for w in self.consumers:
             w.start()
@@ -64,11 +84,11 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
         content -- binary text to be saved
         """
 
-        self.tasks.put(Task(content))
-
         content_hash = self.get_hash_from_content(content)
 
-        self.ids_to_insert.append(content_hash)
+        self.tasks.put(Task(content, content_hash))
+
+        #self.ids_to_insert.append(content_hash)
         return content_hash
 
     def get(self, content_hash):
@@ -94,9 +114,6 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
 
         # Wait for all of the tasks to finish
         self.tasks.join()
-
-        for id in self.ids_to_insert:
-            self.__get_tree_builder().insert(str(id), id, GIT_FILEMODE_BLOB)
 
         return self.__create_commit_object(message, self.__get_tree_builder().write())
 

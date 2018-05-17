@@ -77,8 +77,6 @@ def run(metascript, args=None):
 
     finally:
         metascript.create_last()
-        content.join_persistence_threads()
-        #put_content_worker.do_map(content)
 
 class Run(Command):
     """Run a script collecting its provenance"""
