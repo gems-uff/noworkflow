@@ -12,11 +12,10 @@ from ..utils import func_profiler
 
 class Consumer(Process):
 
-    def __init__(self, task_queue, repo, tree):
+    def __init__(self, task_queue, repo):
         Process.__init__(self)
         self.task_queue = task_queue
         self.repo = repo
-        self.tree = tree
 
     def run(self):
         while True:
@@ -25,18 +24,16 @@ class Consumer(Process):
                 # Poison pill means shutdown
                 self.task_queue.task_done()
                 break
-            next_task(self.repo, self.tree)
+            next_task(self.repo)
             self.task_queue.task_done()
         return
 
 class Task(object):
-    def __init__(self, content, content_hash):
+    def __init__(self, content):
         self.content = content
-        self.content_hash = content_hash
 
-    def __call__(self, repo, tree):
+    def __call__(self, repo):
         repo.create_blob(self.content)
-        tree.insert(str(self.content_hash), self.content_hash, GIT_FILEMODE_BLOB)
 
     def __str__(self):
         return 'task'
@@ -51,13 +48,10 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
         self.__tree_builder = None
         self.__commit_name = 'Noworkflow'
         self.__commit_email = 'noworkflow@noworkflow.com'
-        self.ids_to_insert = []
+        self.hashes_to_insert = []
         self.tasks = None
         self.consumers = []
         self.num_consumers = None
-
-    def mock(self, config):
-        pass
 
     def connect(self, config):
         """Create content directory"""
@@ -69,12 +63,11 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
 
         self.num_consumers = cpu_count()
         self.tasks = JoinableQueue()
-        self.consumers = [Consumer(task_queue=self.tasks, repo=self.__get_repo(), tree=self.__get_tree_builder())
+        self.consumers = [Consumer(task_queue=self.tasks, repo=self.__get_repo())
                           for i in xrange(self.num_consumers)]
         for w in self.consumers:
             w.start()
 
-    @func_profiler.profile
     def put(self, content):
         """Put content in the content database
 
@@ -84,11 +77,11 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
         content -- binary text to be saved
         """
 
+        self.tasks.put(Task(content))
+
         content_hash = self.get_hash_from_content(content)
 
-        self.tasks.put(Task(content, content_hash))
-
-        #self.ids_to_insert.append(content_hash)
+        self.hashes_to_insert.append(content_hash)
         return content_hash
 
     def get(self, content_hash):
@@ -112,8 +105,11 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
         for i in xrange(self.num_consumers):
             self.tasks.put(None)
 
-        # Wait for all of the tasks to finish
+            # Wait for all of the tasks to finish
         self.tasks.join()
+
+        for content_hash in self.hashes_to_insert:
+            self.__get_tree_builder().insert(str(content_hash), content_hash, GIT_FILEMODE_BLOB)
 
         return self.__create_commit_object(message, self.__get_tree_builder().write())
 
