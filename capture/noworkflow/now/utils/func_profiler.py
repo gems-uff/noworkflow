@@ -19,6 +19,7 @@ def profile(fn):
             PROF_DATA[fn.__name__] = [0, []]
         PROF_DATA[fn.__name__][0] += 1
         PROF_DATA[fn.__name__][1].append(elapsed_time)
+        #PROF_DATA[fn.__name__][2].append(len(args[1].encode('utf-8')))
 
         return ret
 
@@ -26,8 +27,33 @@ def profile(fn):
 
 
 def print_prof_data(content_database_name):
-    print('exporting results...')
+    print_put_file(content_database_name)
+    #print_time_size(content_database_name)
 
+
+def print_time_size(content_database_name):
+    csv_file = 'put_time_size.csv'
+    if not isfile(csv_file):
+        file = open(csv_file, "w+")
+        writer = csv.writer(file, delimiter=';')
+        writer.writerow(['content_database', 'function', 'time', 'size'])
+    else:
+        file = open(csv_file, "a")
+        writer = csv.writer(file, delimiter=';')
+
+    print(PROF_DATA)
+
+    calls = PROF_DATA['put'][0]
+    times = PROF_DATA['put'][1]
+    sizes = PROF_DATA['put'][2]
+
+    for i in xrange(0, calls):
+        writer.writerow([str(content_database_name), 'put', times[i], sizes[i]])
+
+    file.close()
+
+
+def print_put_file(content_database_name):
     csv_file = 'put_time.csv'
     if not isfile(csv_file):
         file = open(csv_file, "w+")

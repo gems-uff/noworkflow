@@ -73,7 +73,7 @@ def run(metascript, args=None):
             message = 'No message'
 
         content.commit_content(message)
-        func_profiler.print_prof_data(content.__str__())
+        #func_profiler.print_prof_data(content.__str__())
 
     finally:
         metascript.create_last()

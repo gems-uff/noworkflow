@@ -41,6 +41,7 @@ class PersistenceConfig(object):
 
     @path.setter
     def path(self, path):
+        print('setting path -> {}'.format(path))
         self.base_path = path
         self.provenance_path = join(path, PROVENANCE_DIRNAME)
 
@@ -79,4 +80,5 @@ class PersistenceConfig(object):
 
     def add(self, obj):
         """Add database manager to config for delegation"""
+        print('adding object to delegate -> {}'.format(obj))
         self.delegate.append(obj)

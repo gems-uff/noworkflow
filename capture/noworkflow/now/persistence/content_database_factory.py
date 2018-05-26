@@ -16,7 +16,6 @@ from .content_database_pygit_processing_queue import ContentDatabasePyGitProcess
 
 
 CONTENT_GIT_DIRNAME = "content.git"
-CONTENT_DIRNAME = "content"
 
 
 class ContentDatabaseFactory(object):

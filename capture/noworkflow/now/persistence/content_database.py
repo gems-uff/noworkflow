@@ -6,11 +6,12 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import os
-import hashlib
-
 from os.path import join, isdir, isfile
+from ..persistence.content_database_engine import PyGitContentDatabaseEngine, StandartContentDatabaseEngine
 
+
+STANDART_DATABASE_DIR = 'content'
+GIT_DATABASE_DIR = 'content.git'
 
 class ContentDatabase(object):
     """Content Database deal with storage of file content in disk"""
@@ -19,13 +20,30 @@ class ContentDatabase(object):
         self.content_path = None  # Base path for storing content of files
         self.std_open = open  # Original Python open function.
         persistence_config.add(self)
+        self.content_database_engine = None
 
     def set_path(self, config):
         """Set content_path"""
-        self.content_path = join(config.provenance_path, config.content_dir)
+
+        if isdir(join(config.provenance_path, STANDART_DATABASE_DIR)):
+            """Standart content database found"""
+            config.content_dir = STANDART_DATABASE_DIR
+            self.content_path = join(config.provenance_path, config.content_dir)
+        else:
+            """if not use git content database"""
+            config.content_dir = GIT_DATABASE_DIR
+            self.content_path = join(config.provenance_path, config.content_dir)
+
+    def connect(self, config):
+        if config.content_dir == GIT_DATABASE_DIR:
+            self.content_database_engine = PyGitContentDatabaseEngine(self.content_path)
+        else:
+            self.content_database_engine = StandartContentDatabaseEngine(self.content_path)
+        self.content_database_engine.connect()
 
     def commit_content(self, message):
-        pass
+        if isinstance(self.content_database_engine, PyGitContentDatabaseEngine):
+            self.content_database_engine.commit_content(message)
 
     def mock(self, config):
         pass
@@ -34,18 +52,12 @@ class ContentDatabase(object):
         return None
 
     def gc(self):
-        pass
+        if isinstance(self.content_database_engine, PyGitContentDatabaseEngine):
+            self.content_database_engine.gc()
 
     def put(self, content):
-        pass
+        print('putting content')
+        return self.content_database_engine.put(content)
 
     def get(self, content_hash):
-        pass
-
-    def join_persistence_threads(self):
-        pass
-
-    def get_hash_from_content(self, content):
-        git_content = b'blob ' + str(len(content)) + b'\0'
-        hash = hashlib.sha1(git_content + content).hexdigest()
-        return hash
+        return self.content_database_engine.get(content_hash)
