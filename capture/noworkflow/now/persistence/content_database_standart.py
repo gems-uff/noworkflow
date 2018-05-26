@@ -40,7 +40,7 @@ class ContentDatabaseStandart(ContentDatabase):
         if not config.should_mock and not isdir(self.content_path):
             os.makedirs(self.content_path)
 
-    @func_profiler.profile
+    #@func_profiler.profile
     def put(self, content):
         """Put content in the content database
 

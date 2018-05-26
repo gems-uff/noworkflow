@@ -7,10 +7,10 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from os.path import join, isdir, isfile
-from ..persistence.content_database_engine import PyGitContentDatabaseEngine, StandartContentDatabaseEngine
+from ..persistence.content_database_engine import PyGitContentDatabaseEngine, StandardContentDatabaseEngine
 
 
-STANDART_DATABASE_DIR = 'content'
+STANDARD_DATABASE_DIR = 'content'
 GIT_DATABASE_DIR = 'content.git'
 
 class ContentDatabase(object):
@@ -18,16 +18,15 @@ class ContentDatabase(object):
 
     def __init__(self, persistence_config):
         self.content_path = None  # Base path for storing content of files
-        self.std_open = open  # Original Python open function.
         persistence_config.add(self)
         self.content_database_engine = None
 
     def set_path(self, config):
         """Set content_path"""
 
-        if isdir(join(config.provenance_path, STANDART_DATABASE_DIR)):
-            """Standart content database found"""
-            config.content_dir = STANDART_DATABASE_DIR
+        if not isdir(join(config.provenance_path, STANDARD_DATABASE_DIR)):
+            """Standard content database found"""
+            config.content_dir = STANDARD_DATABASE_DIR
             self.content_path = join(config.provenance_path, config.content_dir)
         else:
             """if not use git content database"""
@@ -38,7 +37,8 @@ class ContentDatabase(object):
         if config.content_dir == GIT_DATABASE_DIR:
             self.content_database_engine = PyGitContentDatabaseEngine(self.content_path)
         else:
-            self.content_database_engine = StandartContentDatabaseEngine(self.content_path)
+            self.content_database_engine = StandardContentDatabaseEngine(self.content_path)
+
         self.content_database_engine.connect()
 
     def commit_content(self, message):

@@ -1,7 +1,11 @@
 import os
-from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository, hash, Signature
+import hashlib
+import hashlib
+import os
+
+from os.path import join, isdir, isfile
+from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository, Signature
 from multiprocessing import Process, JoinableQueue, cpu_count
-from os.path import isdir
 
 
 class ContentDatabaseEngine(object):
@@ -15,10 +19,77 @@ class ContentDatabaseEngine(object):
         pass
 
 
-class StandartContentDatabaseEngine(ContentDatabaseEngine):
+class StandardContentDatabaseEngine(ContentDatabaseEngine):
     def __init__(self, content_path):
-        super(StandartContentDatabaseEngine, self).__init__(content_path)
-        pass
+        super(StandardContentDatabaseEngine, self).__init__(content_path)
+        self.std_open = open  # Original Python open function.
+
+    def mock(self):
+        """Mock storage for tests"""
+        self.temp = {}
+
+        def put(self, content):
+            """Mock put"""
+            hash_code = hashlib.sha1(content).hexdigest()
+            self.temp[hash_code] = content
+            return hash_code
+
+        def get(self, content_hash):
+            """Mock get"""
+            return self.temp[content_hash]
+
+        StandardContentDatabaseEngine.put = put
+        StandardContentDatabaseEngine.get = get
+
+    def connect(self, should_mock=False):
+        """Create content directory"""
+        if not should_mock and not isdir(self.content_path):
+            os.makedirs(self.content_path)
+
+    def put(self, content):
+        """Put content in the content database
+
+        Return: content hash code
+
+        Arguments:
+        content -- binary text to be saved
+        """
+        content_hash = hashlib.sha1(content).hexdigest()
+        content_dirname = join(self.content_path, content_hash[:2])
+        if not isdir(content_dirname):
+            os.makedirs(content_dirname)
+        content_filename = join(content_dirname, content_hash[2:])
+        if not isfile(content_filename):
+            with self.std_open(content_filename, "wb") as content_file:
+                content_file.write(content)
+        return content_hash
+
+    def find_subhash(self, content_hash):
+        """Get hash that starts by content_hash"""
+        content_dirname = content_hash[:2]
+        content_filename = content_hash[2:]
+        content_dir = join(self.content_path, content_dirname)
+        if not isdir(content_dir):
+            return None
+        for _, _, filenames in os.walk(content_dir):
+            for name in filenames:
+                if name.startswith(content_filename):
+                    return content_dirname + name
+        return None
+
+    def get(self, content_hash):
+        """Get content from the content database
+
+        Return: content
+
+        Arguments:
+        content_hash -- content hash code
+        """
+        content_filename = join(self.content_path,
+                                content_hash[:2],
+                                content_hash[2:])
+        with self.std_open(content_filename, "rb") as content_file:
+            return content_file.read()
 
 
 class PyGitContentDatabaseEngine(ContentDatabaseEngine):
@@ -75,9 +146,14 @@ class PyGitContentDatabaseEngine(ContentDatabaseEngine):
 
         self.tasks.put(content)
 
-        content_hash = str(hash(content))
+        content_hash = self.__get_hash_from_content(content)
 
         return content_hash
+
+    def __get_hash_from_content(self, content):
+        git_content = b'blob ' + str(len(content)) + b'\0'
+        hash = hashlib.sha1(git_content + content).hexdigest()
+        return hash
 
     def commit_content(self, message):
         """Commit the current files of content database
