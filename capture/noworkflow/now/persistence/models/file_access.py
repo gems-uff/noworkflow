@@ -339,4 +339,4 @@ class UniqueFileAccess(FileAccess):
         fcluster = clusterizer.main_cluster
         if not self.is_internal:
             fcluster = cluster
-        return cluster, nid
+        return fcluster, nid

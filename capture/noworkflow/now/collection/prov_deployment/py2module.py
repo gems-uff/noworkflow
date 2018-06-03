@@ -54,10 +54,10 @@ def finder(metascript):
                 required -= int(self.filename.startswith(metascript.dir))
                 try:
                     module = None
-                    suffix, mode, type_ = self.etc
+                    _, mode, type_ = self.etc
                     if mode and (not mode.startswith(('r', 'U')) or '+' in mode):
                         raise ValueError('invalid file open mode {!r}'.format(mode))
-                    elif file is None and type_ in {PY_SOURCE, PY_COMPILED}:
+                    elif self.file is None and type_ in {PY_SOURCE, PY_COMPILED}:
                         raise ValueError(
                             'file object required for import (type code {})'
                             .format(type_)

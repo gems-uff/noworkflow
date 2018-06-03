@@ -162,6 +162,7 @@ def class_def(name, bases, body, decorators, keywords=None):
 
 def try_def(body, handlers, orelse, finalbody, node=None):
     """Create try block"""
+    # python 2 # pylint: disable=E1101
     if PY3:
         result = ast.Try(body, handlers, orelse, finalbody)
         return ast.copy_location(result, node) if node else result
