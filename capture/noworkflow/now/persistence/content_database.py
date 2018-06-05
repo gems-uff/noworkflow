@@ -27,17 +27,14 @@ class ContentDatabase(object):
     def set_path(self, config):
         """Set content_path"""
 
-        config.content_dir = GIT_DATABASE_DIR
-        self.content_path = join(config.provenance_path, config.content_dir)
-
-        '''if isdir(join(config.provenance_path, STANDARD_DATABASE_DIR)):
+        if isdir(join(config.provenance_path, STANDARD_DATABASE_DIR)):
             """Standard content database found"""
             config.content_dir = STANDARD_DATABASE_DIR
             self.content_path = join(config.provenance_path, config.content_dir)
         else:
             """if not use git content database"""
             config.content_dir = GIT_DATABASE_DIR
-            self.content_path = join(config.provenance_path, config.content_dir)'''
+            self.content_path = join(config.provenance_path, config.content_dir)
 
     def connect(self, config):
         if config.content_dir == GIT_DATABASE_DIR:
