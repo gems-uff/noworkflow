@@ -233,7 +233,7 @@ def file_hash(path):
         return None
     else:
         with open(abs_path, "rb") as fil:
-            return content.put(fil.read())
+            return content.put(abs_path, fil.read())
 
 
 def skip_dict(args):

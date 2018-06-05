@@ -111,7 +111,7 @@ class Profiler(ExecutionProvider):                                              
                 if os.path.exists(name):
                     # Read previous content if file exists
                     with old_open(name, "rb") as fil:
-                        file_access.content_hash_before = content.put(
+                        file_access.content_hash_before = content.put(name,
                             fil.read()
                         )
 
@@ -177,7 +177,7 @@ class Profiler(ExecutionProvider):                                              
             # Checks if file still exists
             if os.path.exists(file_access.name):
                 with content.std_open(file_access.name, "rb") as fil:
-                    file_access.content_hash_after = content.put(fil.read())
+                    file_access.content_hash_after = content.put(file_access.name, fil.read())
             file_access.done = True
         self.closed_activations += 1
         if (self.call_storage_frequency and

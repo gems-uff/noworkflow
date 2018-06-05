@@ -5,11 +5,15 @@
 """Content Database"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
-
-import os
-import hashlib
+import sys
 
 from os.path import join, isdir, isfile
+from ..persistence.content_database_engine import DistributedPyGitContentDatabaseEngine, \
+    StandardContentDatabaseEngine, PyGitContentDatabaseEngine
+from ..utils.io import print_msg
+
+STANDARD_DATABASE_DIR = 'content'
+GIT_DATABASE_DIR = 'content.git'
 
 
 class ContentDatabase(object):
@@ -17,35 +21,57 @@ class ContentDatabase(object):
 
     def __init__(self, persistence_config):
         self.content_path = None  # Base path for storing content of files
-        self.std_open = open  # Original Python open function.
         persistence_config.add(self)
+        self.content_database_engine = None
 
     def set_path(self, config):
         """Set content_path"""
-        self.content_path = join(config.provenance_path, config.content_dir)
+
+        if isdir(join(config.provenance_path, STANDARD_DATABASE_DIR)):
+            """Standard content database found"""
+            config.content_dir = STANDARD_DATABASE_DIR
+            self.content_path = join(config.provenance_path, config.content_dir)
+        else:
+            """if not use git content database"""
+            config.content_dir = GIT_DATABASE_DIR
+            self.content_path = join(config.provenance_path, config.content_dir)
+
+    def connect(self, config):
+        if config.content_dir == GIT_DATABASE_DIR:
+            self.content_database_engine = DistributedPyGitContentDatabaseEngine(self.content_path)
+            # self.content_database_engine = PyGitContentDatabaseEngine(self.content_path)
+        else:
+            self.content_database_engine = StandardContentDatabaseEngine(self.content_path)
+
+        self.content_database_engine.connect()
+
 
     def commit_content(self, message):
-        pass
+        if isinstance(self.content_database_engine, DistributedPyGitContentDatabaseEngine):
+            self.content_database_engine.commit_content(message)
 
     def mock(self, config):
-        pass
+        if config.content_dir == STANDARD_DATABASE_DIR:
+            self.content_database_engine.mock()
+        else:
+            raise ValueError('Method not supported for Git content database engine')
 
     def find_subhash(self, content_hash):
-        return None
+        if isinstance(self.content_database_engine, StandardContentDatabaseEngine):
+            return self.content_database_engine.find_subhash(content_hash)
+        else:
+            raise ValueError('Method not supported for Git content database engine')
 
-    def gc(self):
-        pass
+    def gc(self, aggressive=None):
+        if isinstance(self.content_database_engine, DistributedPyGitContentDatabaseEngine):
+            self.content_database_engine.gc(aggressive)
+        else:
+            print_msg('Garbage Collection not supported for Git content database engine',
+                      True)
+            sys.exit(1)
 
-    def put(self, content):
-        pass
+    def put(self, name=None, content=None):
+        return self.content_database_engine.put(name, content)
 
     def get(self, content_hash):
-        pass
-
-    def join_persistence_threads(self):
-        pass
-
-    def get_hash_from_content(self, content):
-        git_content = b'blob ' + str(len(content)) + b'\0'
-        hash = hashlib.sha1(git_content + content).hexdigest()
-        return hash
+        return self.content_database_engine.get(content_hash)

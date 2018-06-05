@@ -19,6 +19,10 @@ class ContentDatabasePyGit(ContentDatabase):
         self.__commit_name = 'Noworkflow'
         self.__commit_email = 'noworkflow@noworkflow.com'
 
+    def __str__(self):
+        return "ContentDatabasePyGit"
+
+
     def mock(self, config):
         pass
 

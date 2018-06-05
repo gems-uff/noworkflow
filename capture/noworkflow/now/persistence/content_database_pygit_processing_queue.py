@@ -5,8 +5,7 @@ from multiprocessing import Process, JoinableQueue, cpu_count
 from .content_database import ContentDatabase
 from . import git_system
 from os.path import isdir
-from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository, hash
-from pygit2 import Signature
+from pygit2 import init_repository, GIT_FILEMODE_BLOB, Repository, hash, Signature
 from ..utils import func_profiler
 
 
@@ -20,12 +19,13 @@ class Consumer(Process):
 
     def run(self):
         while True:
-            next_task = self.task_queue.get()
-            if next_task is None:
+            next_task_content = self.task_queue.get()
+
+            if next_task_content is None:
                 # Poison pill means shutdown
                 self.task_queue.task_done()
                 break
-            next_task(self.repo, self.tree)
+            create_git_objects(next_task_content, self.repo, self.tree)
             self.task_queue.task_done()
         return
 
@@ -38,9 +38,10 @@ class Task(object):
         object_id = repo.create_blob(self.content)
         tree.insert(str(object_id), object_id, GIT_FILEMODE_BLOB)
 
-    def __str__(self):
-        return 'task'
 
+def create_git_objects(content, repo=None, tree=None):
+    object_id = repo.create_blob(content)
+    tree.insert(str(object_id), object_id, GIT_FILEMODE_BLOB)
 
 class ContentDatabasePyGitProcessingQueue(ContentDatabase):
     """Content database that uses git library PyGit2"""
@@ -89,7 +90,7 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
         return_data = self.__get_repo()[content_hash].data
         return return_data
 
-    @func_profiler.profile
+    #@func_profiler.profile
     def put(self, content):
         """Put content in the content database
 
@@ -98,10 +99,9 @@ class ContentDatabasePyGitProcessingQueue(ContentDatabase):
         Arguments:
         content -- binary text to be saved
         """
+        self.tasks.put(content)
 
-        self.tasks.put(Task(content))
-
-        content_hash = self.get_hash_from_content(content)
+        content_hash = str(hash(content))
 
         return content_hash
 
