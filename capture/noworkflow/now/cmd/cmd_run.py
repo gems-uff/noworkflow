@@ -13,7 +13,7 @@ import sys
 from ..collection.metadata import Metascript
 from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
-from ..persistence import content, put_content_worker
+from ..persistence import content
 from ..utils.cross_version import PY3
 from ..utils import func_profiler
 
@@ -52,6 +52,7 @@ class ScriptArgs(argparse.Action):                                              
 def run(metascript, args=None):
     """Execute noWokflow to capture provenance from script"""
     try:
+
         metascript.trial_id = Trial.store(*metascript.create_trial_args())
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
 

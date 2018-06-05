@@ -27,23 +27,27 @@ class ContentDatabase(object):
     def set_path(self, config):
         """Set content_path"""
 
-        if not isdir(join(config.provenance_path, STANDARD_DATABASE_DIR)):
+        config.content_dir = GIT_DATABASE_DIR
+        self.content_path = join(config.provenance_path, config.content_dir)
+
+        '''if isdir(join(config.provenance_path, STANDARD_DATABASE_DIR)):
             """Standard content database found"""
             config.content_dir = STANDARD_DATABASE_DIR
             self.content_path = join(config.provenance_path, config.content_dir)
         else:
             """if not use git content database"""
             config.content_dir = GIT_DATABASE_DIR
-            self.content_path = join(config.provenance_path, config.content_dir)
+            self.content_path = join(config.provenance_path, config.content_dir)'''
 
     def connect(self, config):
         if config.content_dir == GIT_DATABASE_DIR:
-            #self.content_database_engine = DistributedPyGitContentDatabaseEngine(self.content_path)
-            self.content_database_engine = PyGitContentDatabaseEngine(self.content_path)
+            self.content_database_engine = DistributedPyGitContentDatabaseEngine(self.content_path)
+            # self.content_database_engine = PyGitContentDatabaseEngine(self.content_path)
         else:
             self.content_database_engine = StandardContentDatabaseEngine(self.content_path)
 
         self.content_database_engine.connect()
+
 
     def commit_content(self, message):
         if isinstance(self.content_database_engine, DistributedPyGitContentDatabaseEngine):
@@ -61,17 +65,16 @@ class ContentDatabase(object):
         else:
             raise ValueError('Method not supported for Git content database engine')
 
-
-    def gc(self):
+    def gc(self, aggressive=None):
         if isinstance(self.content_database_engine, DistributedPyGitContentDatabaseEngine):
-            self.content_database_engine.gc()
+            self.content_database_engine.gc(aggressive)
         else:
             print_msg('Garbage Collection not supported for Git content database engine',
                       True)
             sys.exit(1)
 
-    def put(self, content):
-        return self.content_database_engine.put(content)
+    def put(self, name=None, content=None):
+        return self.content_database_engine.put(name, content)
 
     def get(self, content_hash):
         return self.content_database_engine.get(content_hash)

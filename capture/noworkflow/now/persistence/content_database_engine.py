@@ -1,4 +1,3 @@
-
 import hashlib
 import os
 from . import git_system
@@ -185,24 +184,14 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
         self.tasks = None
         self.consumers = []
         self.num_consumers = None
+        self.object_hashes = {}
+        self.start_processes = True
 
     def connect(self):
         """Create content directory"""
         super(DistributedPyGitContentDatabaseEngine, self).connect()
 
-        self.num_consumers = cpu_count()
-        self.tasks = JoinableQueue()
-        self.consumers = []
-
-        for i in xrange(0, self.num_consumers):
-            repo = Repository(self.content_path)
-            tree = repo.TreeBuilder()
-            consumer = Worker(task_queue=self.tasks, repo=repo,
-                              tree=tree)
-            self.consumers.append(consumer)
-            consumer.start()
-
-    def put(self, content):
+    def put(self, name, content):
         """Put content in the content database
 
         Return: content hash code
@@ -211,9 +200,23 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
         content -- binary text to be saved
         """
 
-        self.tasks.put(content)
+        if self.start_processes:
+            self.num_consumers = cpu_count()
+            self.tasks = JoinableQueue()
+            self.consumers = []
+
+            repo = self._get_repo()
+
+            for i in xrange(0, self.num_consumers):
+                consumer = Worker(task_queue=self.tasks, repo=repo)
+                self.consumers.append(consumer)
+                consumer.start()
+            self.start_processes = False
+
+        self.tasks.put((content, name, self.object_hashes,))
 
         content_hash = self._get_hash_from_content(content)
+
 
         return content_hash
 
@@ -222,7 +225,8 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
 
                         Arguments:
                         message -- commit message
-                        """
+
+           """
         # Add a poison pill for each consumer
         for i in xrange(self.num_consumers):
             self.tasks.put(None)
@@ -230,27 +234,35 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
         # Wait for all of the tasks to finish
         self.tasks.join()
 
+        for key, value in self.object_hashes.items():
+            self._get_tree_builder().insert(key, value, GIT_FILEMODE_BLOB)
+
         return self._create_commit_object(message, self._get_tree_builder().write())
 
 
 class Worker(Process):
 
-    def __init__(self, task_queue, repo, tree):
+    def __init__(self, task_queue, repo):
         Process.__init__(self)
         self.task_queue = task_queue
         self.repo = repo
-        self.tree = tree
 
     def run(self):
         while True:
-            next_content = self.task_queue.get()
 
-            if next_content is None:
+            queue_content = self.task_queue.get()
+
+            if queue_content is None:
                 # Poison pill means shutdown
                 self.task_queue.task_done()
                 break
 
+            next_content, name, object_hashes = queue_content
+
+            file_name_hash = hashlib.sha1(name).hexdigest()
+
             object_id = self.repo.create_blob(next_content)
-            self.tree.insert(str(object_id), object_id, GIT_FILEMODE_BLOB)
+            object_hashes[file_name_hash] = object_id
+
             self.task_queue.task_done()
         return

@@ -28,6 +28,7 @@ class GC(Command):
                 help="executes aggressively the garbage collection in the content database")
 
     def execute(self, args):
+        #persistence_config.connect_existing(args.dir or os.getcwd())
         persistence_config.connect_existing(args.dir or os.getcwd())
-
-        content.gc(args.aggressive)
+        #persistence_config.connect(path)
+        content.gc()
