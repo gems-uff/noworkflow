@@ -156,6 +156,7 @@ class Dependency(object):
         self.sub_dependencies = []
 
     def __repr__(self):
+        # pylint: disable=undefined-variable
         evaluation = __noworkflow__.evaluations[self.evaluation_id]
         code_component = __noworkflow__.code_components[
             evaluation.code_component_id]

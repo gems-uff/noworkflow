@@ -622,8 +622,8 @@ class Trial(AlchemyProxy):
         ...     trial.versioned_files(script=False, local=False).items()
         ...  )
         ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
-         ('file2.txt', [('code_hash', None), ('type', 'access')])]
+        [('file.txt', [('checkpoint', ...), ('code_hash', 'abc'), ('type', 'access')]),
+         ('file2.txt', [('checkpoint', ...), ('code_hash', None), ('type', 'access')])]
 
         Get everythin:
         >>> print(repr([(path, sorted(dic.items()))
@@ -631,8 +631,8 @@ class Trial(AlchemyProxy):
         ...     trial.versioned_files().items()
         ...  )
         ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
-         ('file2.txt', [('code_hash', None), ('type', 'access')]),
+        [('file.txt', [('checkpoint', ...), ('code_hash', 'abc'), ('type', 'access')]),
+         ('file2.txt', [('checkpoint', ...), ('code_hash', None), ('type', 'access')]),
          ('internal.py', [('code_hash', '...'), ('name', 'internal'),
                           ('type', 'module')]),
          ('main.py', [('code_hash', '...'), ('type', 'script')])]
@@ -661,7 +661,9 @@ class Trial(AlchemyProxy):
         if access:
             for faccess in reversed(list(self.file_accesses)):
                 add(faccess.name, {
-                    "code_hash": faccess.content_hash_before, "type": "access",
+                    "code_hash": faccess.content_hash_before,
+                    "type": "access",
+                    "checkpoint": faccess.checkpoint,
                 })
 
         return files
@@ -688,17 +690,17 @@ class Trial(AlchemyProxy):
         [('main.py', [('code_hash', '...'), ('type', 'script')]),
          ('internal.py', [('code_hash', '...'), ('name', 'internal'),
                           ('type', 'module')]),
-         ('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
-         ('file.txt', [('code_hash', 'abc'), ('type', 'access')]),
-         ('file2.txt', [('code_hash', None), ('type', 'access')]),
-         ('file2.txt', [('code_hash', 'def'), ('type', 'access')])]
+         ('file.txt', [('checkpoint', ...), ('code_hash', 'abc'), ('type', 'access')]),
+         ('file.txt', [('checkpoint', ...), ('code_hash', 'abc'), ('type', 'access')]),
+         ('file2.txt', [('checkpoint', ...), ('code_hash', None), ('type', 'access')]),
+         ('file2.txt', [('checkpoint', ...), ('code_hash', 'def'), ('type', 'access')])]
 
         Filter by path:
         >>> print(repr([(name, sorted(dic.items()))
         ...  for name, dic in trial.iterate_accesses("file2.txt")
         ... ]).replace("u'", "'")) #doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [('file2.txt', [('code_hash', None), ('type', 'access')]),
-         ('file2.txt', [('code_hash', 'def'), ('type', 'access')])]
+        [('file2.txt', [('checkpoint', ...), ('code_hash', None), ('type', 'access')]),
+         ('file2.txt', [('checkpoint', ...), ('code_hash', 'def'), ('type', 'access')])]
         """
         if not path or self.script.endswith(path):
             yield self.script, {"code_hash": self.code_hash, "type": "script"}
@@ -713,10 +715,14 @@ class Trial(AlchemyProxy):
         for faccess in list(self.file_accesses):
             if not path or faccess.name.endswith(path):
                 yield faccess.name, {
-                    "code_hash": faccess.content_hash_before, "type": "access",
+                    "code_hash": faccess.content_hash_before,
+                    "type": "access",
+                    "checkpoint": faccess.checkpoint,
                 }
                 yield faccess.name, {
-                    "code_hash": faccess.content_hash_after, "type": "access",
+                    "code_hash": faccess.content_hash_after,
+                    "type": "access",
+                    "checkpoint": faccess.checkpoint,
                 }
 
     def create_head(self):

@@ -97,13 +97,12 @@ class Restore(Command):
                         module = imp.load_source(info["name"], path)
                     version = metascript.deployment.get_version(module)
                 except Exception:
-                    # pylint: disable=too-broad-exception
                     pass
                 metascript.deployment.add_module(
                     info["name"], version, path, cid, False
                 )
             elif info["type"] == "access":
-                aid = accesses.add(tid, path)
+                aid = accesses.add(tid, path, info["checkpoint"])
                 access = accesses[aid]
                 access.content_hash_before = info["code_hash"]
                 access.content_hash_after = info["code_hash"]

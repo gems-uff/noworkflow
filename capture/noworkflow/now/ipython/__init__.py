@@ -26,13 +26,8 @@ def init(path=None, ipython=None):
 
     import os
     from .magics import register_magics
-    try:
-        from .hierarchymagic import load_ipython_extension as load_hierarchy
-        load_hierarchy(ipython)
-    except ImportError:
-        print("Warning: Sphinx is not installed. Dot "
-              "graphs won't work")
-
+    from .dotmagic import load_ipython_extension as load_dot
+    load_dot(ipython)
     register_magics(ipython)
 
     if path is None:
