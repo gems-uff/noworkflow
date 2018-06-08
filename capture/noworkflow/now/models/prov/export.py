@@ -3,26 +3,37 @@ from itertools import groupby
 
 from .save_output import SaveOutput
 
-OPERATIONS = ("add", "sub", "mult", "div", "mod", 
-              "floordiv", "pow", "bitand", "bitor", 
-              "bitxor", "rshift", "lshift", "add_assign", 
-              "sub_assign", "mult_assign", "div_assign",
-              "mod_assign", "floordiv_assign", "pow_assign",
-              "bitand_assign", "bitor_assign", "bitxor_assign",
-              "rshift_assign", "lshift_assign")
+OPERATIONS = ("add", "sub", "mult", "div", "mod", "pow", "floordiv", # arithmetic operators
+              "add_assign", "sub_assign", "mult_assign", "div_assign", # assignment operators 1
+              "mod_assign", "pow_assign", "floordiv_assign", # assignment operators 2
+              "bitand_assign", "bitor_assign", "bitxor_assign", # assignment operators 3
+              "rshift_assign", "lshift_assign", # assignment operators 4
+              "eq", "noteq", "gt", "lt", "gte", "lte", # comparison operators
+              "and", "or", "not", # logical operators
+              "is", "isnot", # identity operators
+              "in", "notin", # membership operators
+              "bitand", "bitor", "bitxor", "invert", "rshift", "lshift" # bitwise operators
+             )
+
+
+def escape_parentheses(string):
+    return string.replace("(", "\(").replace(")", "\)")
 
 
 def entity_name(evaluation):
     component = evaluation.code_component
+    ent_name_str = ""
     
     if component.type in ("name", "literal", "param"):
-        return str(component.first_char_line) + "_" + component.name
+        ent_name_str = str(component.first_char_line) + "_" + component.name
     elif component.type == "subscript":
         ent_name = component.name.split("[")[0]
         ent_name += "@" + component.name.split("[")[1].split("]")[0]
-        return str(component.first_char_line) + "_" + ent_name
+        ent_name_str = str(component.first_char_line) + "_" + ent_name
     else:
-        return component.type + str(component.id)
+        ent_name_str = component.type + str(component.id)
+        
+    return escape_parentheses(ent_name_str)
 
 
 def entity_type(evaluation):
@@ -55,6 +66,8 @@ def is_float(value):
 
 def export_prov(trial, name="temp", formats="svg"):
     output = SaveOutput(name=name, formats=formats)
+    output("prefix script <https://dew-uff.github.io/versioned-prov/ns/script#>")
+    output("prefix version <https://dew-uff.github.io/versioned-prov/ns#>\n")
     ckpt_list = []
     assignments = {}
     entity_generated_by_activity = []
@@ -140,7 +153,7 @@ def export_prov(trial, name="temp", formats="svg"):
                 key = entity_name(dep.dependent)
                 value = entity_name(dep.dependency)
                 assignments[key] = value
-        elif type_ == "argument":
+        elif type_ == "argument" and activity_name(dep_id) != "param":
             act_name = activity_name(dep_id)
             counter[act_name] += 1
             act_type = act_name
@@ -215,8 +228,8 @@ def export_prov(trial, name="temp", formats="svg"):
                 
                 if act_name in OPERATIONS:
                     act_type = "operation"
-            elif type_ in OPERATIONS: #new
-                act_type = "operation" #new
+            elif type_ in OPERATIONS:
+                act_type = "operation"
             
             if act_type != "use":
                 counter[act_name] += 1
