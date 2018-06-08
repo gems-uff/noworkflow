@@ -17,7 +17,7 @@ OPERATIONS = ("add", "sub", "mult", "div", "mod", "pow", "floordiv", # arithmeti
 
 
 def escape_parentheses(string):
-    return string.replace("(", "\(").replace(")", "\)")
+    return string.replace("(", r"\(").replace(")", r"\)")
 
 
 def entity_name(evaluation):
