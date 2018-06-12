@@ -45,7 +45,6 @@ class ContentDatabase(object):
 
         self.content_database_engine.connect()
 
-
     def commit_content(self, message):
         if isinstance(self.content_database_engine, DistributedPyGitContentDatabaseEngine):
             self.content_database_engine.commit_content(message)
@@ -70,8 +69,8 @@ class ContentDatabase(object):
                       True)
             sys.exit(1)
 
-    def put(self, name=None, content=None):
-        return self.content_database_engine.put(name, content)
+    def put(self, file_name=None, content=None):
+        return self.content_database_engine.put(file_name=file_name, content=content)
 
     def get(self, content_hash):
         return self.content_database_engine.get(content_hash)

@@ -11,7 +11,7 @@ class ContentDatabaseEngine(object):
     def __init__(self, content_path):
         self.content_path = content_path
 
-    def put(self, content):
+    def put(self, file_name, content):
         pass
 
     def get(self, content_hash):
@@ -45,7 +45,7 @@ class StandardContentDatabaseEngine(ContentDatabaseEngine):
         if not should_mock and not isdir(self.content_path):
             os.makedirs(self.content_path)
 
-    def put(self, content):
+    def put(self, file_name, content):
         """Put content in the content database
 
         Return: content hash code
@@ -184,7 +184,7 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
         RepoTools(self.content_path)
         self.object_hashes = Manager().dict()
 
-    def put(self, name, content):
+    def put(self, file_name, content):
         """Put content in the content database
 
         Return: content hash code
@@ -204,7 +204,7 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
                 consumer.start()
             self.start_processes = False
 
-        self.tasks.put((content, name, self.object_hashes, ))
+        self.tasks.put((content, file_name, self.object_hashes,))
 
         content_hash = self._get_hash_from_content(content)
 
