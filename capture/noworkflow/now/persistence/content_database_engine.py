@@ -177,6 +177,7 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
         self.object_hashes = None
         self.start_processes = True
         self.repo_tools = None
+        self.name_counter = {}
 
     def connect(self):
         """Create content directory"""
@@ -203,6 +204,14 @@ class DistributedPyGitContentDatabaseEngine(PyGitContentDatabaseEngine):
                 self.consumers.append(consumer)
                 consumer.start()
             self.start_processes = False
+
+        if file_name in self.name_counter:
+            self.name_counter[file_name] += 1
+            file_name = file_name + ' - v' + str(self.name_counter[file_name])
+        else:
+            self.name_counter[file_name] = 1
+
+        print(file_name)
 
         self.tasks.put((content, file_name, self.object_hashes,))
 
