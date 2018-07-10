@@ -23,6 +23,7 @@ from .cmd_vis import Vis
 from .cmd_demo import Demo
 from .cmd_helper import Helper
 from .cmd_history import History
+from .cmd_prov import Prov
 from .cmd_schema import Schema
 from .cmd_kernel import Kernel
 from ..utils.io import print_msg
@@ -49,6 +50,7 @@ def main():
         Demo(),
         Helper(),
         History(),
+        Prov(),
         Schema(),
         Kernel(),
     ]
@@ -82,6 +84,7 @@ __all__ = [
     "Demo",
     "Helper",
     "History",
+    "Prov",
     "Kernel",
     "main",
 ]
