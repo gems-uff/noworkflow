@@ -83,8 +83,8 @@ class TestProspectiveClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_act][1], created[var_param][1]), EMPTY_ATTR),
-            ((created[var_x][1], created[var_act][1]), REFERENCE_ATTR),
+            ((created[var_act][1], created[var_param][1]), {EMPTY_ATTR}),
+            ((created[var_x][1], created[var_act][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_max_depth_1(self):
@@ -109,9 +109,9 @@ class TestProspectiveClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_y][1], created[var_act][1]), REFERENCE_ATTR),
+            ((created[var_y][1], created[var_act][1]), {REFERENCE_ATTR}),
             ((created[var_act][1], created[var_param][1]),
-                REFERENCE_ATTR | PROPAGATED_ATTR),
+                {REFERENCE_ATTR, PROPAGATED_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_no_max_depth(self):
@@ -140,9 +140,9 @@ class TestProspectiveClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_y][1], created[var_act][1]), REFERENCE_ATTR),
-            ((created[var_act][1], created[var_x_w][1]), REFERENCE_ATTR),
-            ((created[var_x_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_y][1], created[var_act][1]), {REFERENCE_ATTR}),
+            ((created[var_act][1], created[var_x_w][1]), {REFERENCE_ATTR}),
+            ((created[var_x_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_no_dependency(self):
@@ -172,7 +172,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_y][1], created[var_act][1]), REFERENCE_ATTR),
+            ((created[var_y][1], created[var_act][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses(self):
@@ -222,13 +222,13 @@ class TestProspectiveClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_acc2][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_gx_w][1]), REFERENCE_ATTR),
-            ((created[var_gx_w][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_acc2][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_w][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_max_depth_2(self):
@@ -275,12 +275,12 @@ class TestProspectiveClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_acc2][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_fx_w][1]), REFERENCE_ATTR | PROPAGATED_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_acc2][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_fx_w][1]), {REFERENCE_ATTR, PROPAGATED_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_max_depth_1(self):
@@ -324,11 +324,11 @@ class TestProspectiveClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_acc2][1]), ACCESS_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_acc2][1]), {ACCESS_ATTR}),
             ((created[var_act_f][1], created[var_param][1]),
-                REFERENCE_ATTR | PROPAGATED_ATTR),
+                {REFERENCE_ATTR, PROPAGATED_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_rank_lines(self):
@@ -364,9 +364,9 @@ class TestProspectiveClusterizer(CollectionTestCase):
         created = clusterizer.created
         self.assertEqual([
             ((created[var_x_sum][1], created[var_param][1]),
-                REFERENCE_ATTR | PROPAGATED_ATTR),
-            ((created[var_concat][1], created[var_act][1]), EMPTY_ATTR),
-            ((created[var_act][1], created[var_x_sum][1]), REFERENCE_ATTR),
+                {EMPTY_ATTR, REFERENCE_ATTR, PROPAGATED_ATTR}),
+            ((created[var_concat][1], created[var_act][1]), {EMPTY_ATTR}),
+            ((created[var_act][1], created[var_x_sum][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
         self.assertEqual([

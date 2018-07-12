@@ -31,8 +31,8 @@ class Clusterizer(object):
         # Map of dependencies as (node1, node2): style
         self.dependencies = {}
         # Complete map of dependencies as node_id1: {node_id2: style}
-        self.departing_arrows = defaultdict(dict)
-        self.arriving_arrows = defaultdict(dict)
+        self.departing_arrows = defaultdict(lambda: defaultdict(set))
+        self.arriving_arrows = defaultdict(lambda: defaultdict(set))
         # Map of node_id to nodes
         self.created = {}
         # Filter and synonymer
@@ -130,12 +130,16 @@ class Clusterizer(object):
             if access_node is None:
                 continue
             acc_nid = access_node.node_id
+            access_attr = ACCESS_ATTR.update({
+                "_checkpoint": access.checkpoint,
+                "_type": "access",
+            })
             if set("r+") & set(access.mode):
-                departing_arrows[nid][acc_nid] = ACCESS_ATTR
-                arriving_arrows[acc_nid][nid] = ACCESS_ATTR
+                departing_arrows[nid][acc_nid].add(access_attr)
+                arriving_arrows[acc_nid][nid].add(access_attr)
             if set("wxa+") & set(access.mode):
-                arriving_arrows[nid][acc_nid] = ACCESS_ATTR
-                departing_arrows[acc_nid][nid] = ACCESS_ATTR
+                arriving_arrows[nid][acc_nid].add(access_attr)
+                departing_arrows[acc_nid][nid].add(access_attr)
         return node
 
     def process_access(self, access, cluster):
@@ -190,9 +194,12 @@ class Clusterizer(object):
         reference = REFERENCE_ATTR
         for dep, source, target in self.dep_iter(self.trial().dependencies):
             attr = (reference if dep.reference else attributes)
-            dep_attributes = attr.update({"_type": dep.type})
-            departing_arrows[source][target] = dep_attributes
-            arriving_arrows[target][source] = dep_attributes
+            dep_attributes = attr.update({
+                "_type": dep.type,
+                "_checkpoint": dep.dependent.checkpoint, # slow
+            })
+            departing_arrows[source][target].add(dep_attributes)
+            arriving_arrows[target][source].add(dep_attributes)
 
         for member, source, target in self.member_iter(self.trial().members):
             extra = ""
@@ -201,9 +208,12 @@ class Clusterizer(object):
             dep_attributes = attributes.update({
                 "label": "{}{}".format(member.key, extra),
                 "_type": "member",
+                "_checkpoint": member.checkpoint,
+                "_key": member.key,
+                "_mode": member.type,
             })
-            departing_arrows[source][target] = dep_attributes
-            arriving_arrows[target][source] = dep_attributes
+            departing_arrows[source][target].add(dep_attributes)
+            arriving_arrows[target][source].add(dep_attributes)
 
     def _all_nodes(self):
         """Iterate on all possible nodes"""
@@ -221,16 +231,16 @@ class Clusterizer(object):
                 continue  # Node exists in the graph, nothing to fix here
             for source, attr_arriving in viewitems(arriving_arrows[nid]):
                 for target, attr_departing in viewitems(departing_arrows[nid]):
-                    attrs = attr_arriving | attr_departing | PROPAGATED_ATTR
-                    departing_arrows[source][target] = attrs
-                    arriving_arrows[target][source] = attrs
+                    attrs = attr_arriving | attr_departing | {PROPAGATED_ATTR}
+                    departing_arrows[source][target] |= attrs
+                    arriving_arrows[target][source] |= attrs
 
             del arriving_arrows[nid]
             for target, attr_departing in viewitems(departing_arrows[nid]):
                 for source, attr_arriving in viewitems(arriving_arrows[nid]):
-                    attrs = attr_arriving | attr_departing | PROPAGATED_ATTR
-                    departing_arrows[source][target] = attrs
-                    arriving_arrows[target][source] = attrs
+                    attrs = attr_arriving | attr_departing | {PROPAGATED_ATTR}
+                    departing_arrows[source][target] |= attrs
+                    arriving_arrows[target][source] |= attrs
             del departing_arrows[nid]
 
     def process_dependencies(self):
@@ -248,13 +258,13 @@ class Clusterizer(object):
                 continue
             if source_nid == "e_1":
                 continue
-            for target_nid, style in viewitems(targets):
+            for target_nid, styles in viewitems(targets):
                 _, target = created.get(target_nid, empty)
                 if target is None or target not in filter_.after_synonym:
                     continue
                 if target_nid == "e_1":
                     continue
-                self.add_dependency(source, target, style)
+                self.add_dependency(source, target, styles)
 
     def run(self):
         """Process main_cluster to create nodes"""

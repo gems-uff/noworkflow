@@ -103,7 +103,7 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[vara][1], created[num1][1]), REFERENCE_ATTR),
+            ((created[vara][1], created[num1][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_chain_of_evaluations(self):
@@ -132,11 +132,11 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[vara_w][1], created[num1][1]), REFERENCE_ATTR),
-            ((created[vara_r][1], created[vara_w][1]), REFERENCE_ATTR),
-            ((created[varb_w][1], created[vara_r][1]), REFERENCE_ATTR),
-            ((created[varb_r][1], created[varb_w][1]), REFERENCE_ATTR),
-            ((created[varc_w][1], created[varb_r][1]), REFERENCE_ATTR),
+            ((created[vara_w][1], created[num1][1]), {REFERENCE_ATTR}),
+            ((created[vara_r][1], created[vara_w][1]), {REFERENCE_ATTR}),
+            ((created[varb_w][1], created[vara_r][1]), {REFERENCE_ATTR}),
+            ((created[varb_r][1], created[varb_w][1]), {REFERENCE_ATTR}),
+            ((created[varc_w][1], created[varb_r][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_chain_of_evaluations_with_custom_filter(self):
@@ -167,10 +167,16 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[vara_r][1], created[vara_w][1]), REFERENCE_ATTR),
+            ((created[vara_r][1], created[vara_w][1]), {REFERENCE_ATTR}),
             ((created[varc_w][1], created[vara_r][1]), 
-                REFERENCE_ATTR | PROPAGATED_ATTR),
+                {REFERENCE_ATTR, PROPAGATED_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        from ...now.models.dependency_graph.prov_visitor import ProvVisitor
+        visitor = ProvVisitor(clusterizer, create_activities=True)
+        visitor.visit(clusterizer)
+        prov = "\n".join(visitor.result)
+        with open("/home/joao/vprov.provn", "w") as f:
+            f.write(prov)
 
     def test_chain_of_evaluations_with_same_assignment_synonymer(self):
         self.script("# script.py\n"
@@ -196,9 +202,9 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[vara_w][1], created[num1][1]), REFERENCE_ATTR),
-            ((created[varb_w][1], created[vara_w][1]), REFERENCE_ATTR),
-            ((created[varc_w][1], created[varb_w][1]), REFERENCE_ATTR),
+            ((created[vara_w][1], created[num1][1]), {REFERENCE_ATTR}),
+            ((created[varb_w][1], created[vara_w][1]), {REFERENCE_ATTR}),
+            ((created[varc_w][1], created[varb_w][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_chain_of_evaluations_with_same_value_synonymer(self):
@@ -244,8 +250,8 @@ class TestClusterizer(CollectionTestCase):
         created = clusterizer.created
         class_attr = EMPTY_ATTR.update({"label": ".__class__"})
         self.assertEqual([
-            ((created[num1][1], created[var_int][1]), class_attr),
-            ((created[var_int][1], created[var_type][1]), class_attr),
+            ((created[num1][1], created[var_int][1]), {class_attr}),
+            ((created[var_int][1], created[var_type][1]), {class_attr}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_evaluation_with_members(self):
@@ -274,12 +280,12 @@ class TestClusterizer(CollectionTestCase):
         created = clusterizer.created
         class_attr = EMPTY_ATTR.update({"label": ".__class__"})
         self.assertEqual([
-            ((created[var_num][1], created[var_int][1]), class_attr),
-            ((created[var_int][1], created[var_type][1]), class_attr),
-            ((created[var_list][1], created[var_num][1]), 
-                EMPTY_ATTR.update({"label": "[0]"})),
-            ((created[var_list][1], created[var_list_type][1]), class_attr),
-            ((created[var_list_type][1], created[var_type][1]), class_attr),
+            ((created[var_num][1], created[var_int][1]), {class_attr}),
+            ((created[var_int][1], created[var_type][1]), {class_attr}),
+            ((created[var_list][1], created[var_num][1]),
+                {EMPTY_ATTR.update({"label": "[0]"}), EMPTY_ATTR}),
+            ((created[var_list][1], created[var_list_type][1]), {class_attr}),
+            ((created[var_list_type][1], created[var_type][1]), {class_attr}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_single_activation(self):
@@ -318,8 +324,8 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_act][1], created[var_param][1]), EMPTY_ATTR),
-            ((created[var_x][1], created[var_act][1]), REFERENCE_ATTR),
+            ((created[var_act][1], created[var_param][1]), {EMPTY_ATTR}),
+            ((created[var_x][1], created[var_act][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_max_depth_1(self):
@@ -347,8 +353,8 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_y][1], created[var_act][1]), REFERENCE_ATTR),
-            ((created[var_act][1], created[var_param][1]), REFERENCE_ATTR | PROPAGATED_ATTR),
+            ((created[var_y][1], created[var_act][1]), {REFERENCE_ATTR}),
+            ((created[var_act][1], created[var_param][1]), {REFERENCE_ATTR, PROPAGATED_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_no_max_depth(self):
@@ -380,10 +386,10 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_y][1], created[var_act][1]), REFERENCE_ATTR),
-            ((created[var_act][1], created[var_x_r][1]), REFERENCE_ATTR),
-            ((created[var_x_w][1], created[var_param][1]), REFERENCE_ATTR),
-            ((created[var_x_r][1], created[var_x_w][1]), REFERENCE_ATTR),
+            ((created[var_y][1], created[var_act][1]), {REFERENCE_ATTR}),
+            ((created[var_act][1], created[var_x_r][1]), {REFERENCE_ATTR}),
+            ((created[var_x_w][1], created[var_param][1]), {REFERENCE_ATTR}),
+            ((created[var_x_r][1], created[var_x_w][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses(self):
@@ -439,15 +445,15 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_acc2][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_gx_r][1]), REFERENCE_ATTR),
-            ((created[var_fx_r][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_gx_w][1], created[var_fx_r][1]), REFERENCE_ATTR),
-            ((created[var_gx_r][1], created[var_gx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_acc2][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_w][1], created[var_fx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_r][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_max_depth_2(self):
@@ -499,14 +505,14 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_acc2][1]), ACCESS_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_acc2][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_fx_r][1]),
-                REFERENCE_ATTR | PROPAGATED_ATTR),
-            ((created[var_fx_r][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+                {REFERENCE_ATTR, PROPAGATED_ATTR}),
+            ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_max_depth_1(self):
@@ -552,12 +558,12 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
             ((created[var_act_f][1], created[var_acc2][1]),
-                ACCESS_ATTR | PROPAGATED_ATTR),
+                {ACCESS_ATTR, PROPAGATED_ATTR}),
             ((created[var_act_f][1], created[var_param][1]),
-                REFERENCE_ATTR | PROPAGATED_ATTR),
+                {REFERENCE_ATTR, PROPAGATED_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_separate_accesses(self):
@@ -613,15 +619,15 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_gx_r][1]), REFERENCE_ATTR),
-            ((created[var_fx_r][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_gx_w][1], created[var_fx_r][1]), REFERENCE_ATTR),
-            ((created[var_gx_r][1], created[var_gx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_acc2][1]), ACCESS_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_w][1], created[var_fx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_r][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_acc2][1]), {ACCESS_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_combine_accesses_synonymer(self):
@@ -677,15 +683,15 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_gx_r][1]), REFERENCE_ATTR),
-            ((created[var_fx_r][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_gx_w][1], created[var_fx_r][1]), REFERENCE_ATTR),
-            ((created[var_gx_r][1], created[var_gx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_acc1][1]), ACCESS_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_w][1], created[var_fx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_r][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_acc1][1]), {ACCESS_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_joined_synonymer(self):
@@ -740,13 +746,13 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_gx_w][1]), REFERENCE_ATTR),
-            ((created[var_gx_w][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_acc1][1]), ACCESS_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_w][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_acc1][1]), {ACCESS_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_filter_no_accesses(self):
@@ -806,18 +812,18 @@ class TestClusterizer(CollectionTestCase):
         class_attr = EMPTY_ATTR.update({"label": ".__class__"})
         self.maxDiff = None
         self.assertEqual([
-            ((created[var_act_g][1], created[var_gx_r][1]), REFERENCE_ATTR),
-            ((created[var_fx_r][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_gx_w][1], created[var_fx_r][1]), REFERENCE_ATTR),
-            ((created[var_gx_r][1], created[var_gx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[write_f_eval][1], created[var_function][1]), class_attr),
-            ((created[var_function][1], created[var_type][1]), class_attr),
-            ((created[write_g_eval][1], created[var_function][1]), class_attr),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_param][1], created[var_str][1]), class_attr),
-            ((created[var_str][1], created[var_type][1]), class_attr),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_w][1], created[var_fx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_r][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[write_f_eval][1], created[var_function][1]), {class_attr}),
+            ((created[var_function][1], created[var_type][1]), {class_attr}),
+            ((created[write_g_eval][1], created[var_function][1]), {class_attr}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_param][1], created[var_str][1]), {class_attr}),
+            ((created[var_str][1], created[var_type][1]), {class_attr}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_joined_filter_no_accesses_no_types(self):
@@ -873,13 +879,13 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_act_g][1], created[var_gx_r][1]), REFERENCE_ATTR),
-            ((created[var_fx_r][1], created[var_fx_w][1]), REFERENCE_ATTR),
-            ((created[var_gx_w][1], created[var_fx_r][1]), REFERENCE_ATTR),
-            ((created[var_gx_r][1], created[var_gx_w][1]), REFERENCE_ATTR),
-            ((created[var_y][1], created[var_act_f][1]), REFERENCE_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
-            ((created[var_fx_w][1], created[var_param][1]), REFERENCE_ATTR),
+            ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_w][1], created[var_fx_r][1]), {REFERENCE_ATTR}),
+            ((created[var_gx_r][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
+            ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_rank_lines(self):
@@ -917,15 +923,15 @@ class TestClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_x_r2][1], created[var_x_w][1]), REFERENCE_ATTR),
-            ((created[var_x_sum][1], created[var_x_r2][1]), EMPTY_ATTR),
-            ((created[var_x_sum][1], created[var_x_r1][1]), EMPTY_ATTR),
-            ((created[var_concat][1], created[var_add_1][1]), EMPTY_ATTR),
-            ((created[var_concat][1], created[var_act][1]), EMPTY_ATTR),
-            ((created[var_y][1], created[var_concat][1]), REFERENCE_ATTR),
-            ((created[var_act][1], created[var_x_sum][1]), REFERENCE_ATTR),
-            ((created[var_x_w][1], created[var_param][1]), REFERENCE_ATTR),
-            ((created[var_x_r1][1], created[var_x_w][1]), REFERENCE_ATTR),
+            ((created[var_x_r2][1], created[var_x_w][1]), {REFERENCE_ATTR}),
+            ((created[var_x_sum][1], created[var_x_r2][1]), {EMPTY_ATTR}),
+            ((created[var_x_sum][1], created[var_x_r1][1]), {EMPTY_ATTR}),
+            ((created[var_concat][1], created[var_add_1][1]), {EMPTY_ATTR}),
+            ((created[var_concat][1], created[var_act][1]), {EMPTY_ATTR}),
+            ((created[var_y][1], created[var_concat][1]), {REFERENCE_ATTR}),
+            ((created[var_act][1], created[var_x_sum][1]), {REFERENCE_ATTR}),
+            ((created[var_x_w][1], created[var_param][1]), {REFERENCE_ATTR}),
+            ((created[var_x_r1][1], created[var_x_w][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
         self.assertEqual([created[write_f_eval][1]], created[script][1].ranks[0])

@@ -281,7 +281,7 @@ class Collector(object):
                 nsame.members[naddr] = spart
                 self.members.add_object(
                     self.trial_id, nsame.activation_id, nsame.id,
-                    spart.activation_id, spart.id, naddr, eva.checkpoint, "add"
+                    spart.activation_id, spart.id, naddr, eva.checkpoint, "Put"
                 )
 
         activation.dependencies[-1].add(Dependency(eva, value, mode))
@@ -485,7 +485,7 @@ class Collector(object):
                 same.members[tkey] = part
                 self.members.add_object(
                     self.trial_id, same.activation_id, same.id,
-                    part.activation_id, part.id, tkey, checkpoint, "add"
+                    part.activation_id, part.id, tkey, checkpoint, "Put"
                 )
         return value
 
@@ -582,7 +582,7 @@ class Collector(object):
                 same.members[tkey] = part
                 self.members.add_object(
                     self.trial_id, same.activation_id, same.id,
-                    part.activation_id, part.id, tkey, checkpoint, "add"
+                    part.activation_id, part.id, tkey, checkpoint, "Put"
                 )
         return value
 
@@ -813,7 +813,7 @@ class Collector(object):
             same.members[addr] = eva
             self.members.add_object(
                 self.trial_id, same.activation_id, same.id,
-                eva.activation_id, eva.id, addr, checkpoint, "add"
+                eva.activation_id, eva.id, addr, checkpoint, "Put"
             )
             self.make_dependencies(activation, eva, access_depa)
         return 1
@@ -1180,7 +1180,7 @@ class Collector(object):
                 self.members.add(
                     trial_id, same.activation_id, same.id,
                     value.activation_id, value.id,
-                    tkey, checkpoint, 'add'
+                    tkey, checkpoint, "Put"
                 )
 
             defaults = closure_activation.dependencies.pop()
@@ -1558,7 +1558,7 @@ class Collector(object):
         self.members.add(
             trial_id, same.activation_id, same.id,
             cls_evaluation.activation_id, cls_evaluation.id,
-            '.__class__', checkpoint, 'add'
+            '.__class__', checkpoint, "Put"
         )
         return tevaluation
 
@@ -1586,7 +1586,7 @@ class Collector(object):
             self.members.add(
                 self.trial_id, same.activation_id, same.id,
                 cls_evaluation.activation_id, cls_evaluation.id,
-                '.__class__', evaluation.checkpoint, 'add'
+                '.__class__', evaluation.checkpoint, "Put"
             )
 
     def evaluate(self, activation_id, code_id, value, checkpoint, reference=None, depa=None):

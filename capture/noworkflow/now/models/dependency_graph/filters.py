@@ -17,7 +17,8 @@ class Filter(object):
             same_id = source.node_id == target.node_id
             if same_id:
                 return False
-            isargument = attrs.get("_type").startswith("argument")
+            isargument = any(attr.get("_type").startswith("argument")
+                             for attr in attrs)
             if isinstance(source, ClusterNode) and isargument:
                 return False
         return True

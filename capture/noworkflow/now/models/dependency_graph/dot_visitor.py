@@ -5,6 +5,7 @@
 """Dot Cluster Visitor"""
 
 from contextlib import contextmanager
+from functools import reduce
 
 from future.utils import viewitems
 
@@ -64,7 +65,8 @@ class DotVisitor(ClusterVisitor):
 
             self.process_cluster_content(cluster)
 
-            for (source, target), style in viewitems(self.dependencies):
+            for (source, target), styles in viewitems(self.dependencies):
+                style = reduce((lambda x,y: x.join(y)), styles)
                 self.insert("{} -> {} {};".format(source, target, style))
 
     def visit_cluster(self, cluster):

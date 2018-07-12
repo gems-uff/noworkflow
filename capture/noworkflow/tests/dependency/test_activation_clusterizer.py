@@ -136,9 +136,9 @@ class TestActivationClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_g][1], created[var_acc2][1]), ACCESS_ATTR),
-            ((created[var_act_f][1], created[var_act_g][1]), REFERENCE_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_g][1], created[var_acc2][1]), {ACCESS_ATTR}),
+            ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_max_depth_1(self):
@@ -179,6 +179,6 @@ class TestActivationClusterizer(CollectionTestCase):
         )
         created = clusterizer.created
         self.assertEqual([
-            ((created[var_acc1][1], created[var_act_f][1]), ACCESS_ATTR),
-            ((created[var_act_f][1], created[var_acc2][1]), ACCESS_ATTR),
+            ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
+            ((created[var_act_f][1], created[var_acc2][1]), {ACCESS_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))

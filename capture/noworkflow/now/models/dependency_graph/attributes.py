@@ -70,6 +70,6 @@ class Attributes(object):
 
 
 EMPTY_ATTR = Attributes({})
-REFERENCE_ATTR = Attributes({"arrowhead": "empty"})
-PROPAGATED_ATTR = Attributes({"style": "dashed"})
+REFERENCE_ATTR = Attributes({"arrowhead": "empty", "_reference": True})
+PROPAGATED_ATTR = Attributes({"style": "dashed", "_type": "propagated"})
 ACCESS_ATTR = Attributes({"style": "dashed"})
