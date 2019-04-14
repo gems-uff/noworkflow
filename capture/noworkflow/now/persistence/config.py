@@ -68,10 +68,12 @@ class PersistenceConfig(object):
 
     def connect_existing(self, path=None):
         """Connect to existing persistence. Exit if it does not exist."""
+        error_msg="there is no provenance store in the current directory"
         if path:
             self.path = path
+            error_msg="there is no provenance store in the informed directory"
         if not self._has_provenance():
-            print_msg("there is no provenance store in the current directory",
+            print_msg(error_msg,
                       True)
             sys.exit(1)
         self.connect()

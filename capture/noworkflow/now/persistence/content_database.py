@@ -117,3 +117,13 @@ class ContentDatabase(object):
                                 content_hash[2:])
         with self.std_open(content_filename, "rb") as content_file:
             return content_file.read()
+    def listAll(self):
+        files = []
+        for r,d, f in os.walk(self.content_path):
+            for file in f:
+                fileName=os.path.basename(r)
+                fileName+=file
+                files.append(fileName)
+        return files
+                
+            

@@ -13,6 +13,7 @@ import sqlalchemy
 from .command import Command, SmartFormatter
 from .cmd_run import Run
 from .cmd_debug import Debug
+from .cmd_import import Import
 from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
@@ -45,6 +46,7 @@ def main():
         Diff(),
         Dataflow(),
         Export(),
+        Import(),
         Restore(),
         Vis(),
         Demo(),
