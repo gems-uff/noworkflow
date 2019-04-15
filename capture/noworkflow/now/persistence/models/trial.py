@@ -9,7 +9,8 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+import uuid
+from sqlalchemy import Column, Integer,String, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
 
 from ...utils.formatter import PrettyLines
@@ -27,6 +28,9 @@ from .code_block import CodeBlock
 from .activation import Activation
 from .head import Head
 
+
+def uuid_gen():
+    return str(uuid.uuid4())
 
 @proxy_class
 class Trial(AlchemyProxy):
@@ -148,6 +152,7 @@ class Trial(AlchemyProxy):
     id = Column(  # pylint: disable=invalid-name
         Integer, primary_key=True, autoincrement=True
     )
+    uuid = Column(String, default=uuid_gen)
     script = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
@@ -157,7 +162,6 @@ class Trial(AlchemyProxy):
     modules_inherited_from_trial_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
     main_id = Column(Integer, index=True)
-
 
     modules_inherited_from_trial = one(
         "Trial", backref="bypass_children", viewonly=True,
@@ -1139,7 +1143,19 @@ class Trial(AlchemyProxy):
             .where(ttrial.c.id == trial_id)
         )
         session.commit()
+    @classmethod  # query
+    def createImport(cls, uuid, script, start, finish, command, path, status, session=None):
+        session = session or relational.session
 
+        ttrial = cls.t
+        result = session.execute(
+            ttrial.insert(),
+            {"uuid": uuid,"script": script, "start": start, "command": command,
+             "finish": finish, "path": path,
+             "status": status})
+        tid = result.lastrowid
+        session.commit()
+        return tid
     @classmethod  # query
     def create(cls, script, start, command, path, bypass_modules, session=None):
         """Create trial and assign a new id to it
