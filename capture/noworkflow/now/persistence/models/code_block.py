@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 
@@ -65,7 +65,7 @@ class CodeBlock(AlchemyProxy):
                               "code_component.id"], ondelete="CASCADE"),
     )
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     code_hash = Column(Text)
     docstring = Column(Text)
 

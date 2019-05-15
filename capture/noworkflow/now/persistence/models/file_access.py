@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from datetime import timedelta
-from sqlalchemy import Column, Integer, Text, Float
+from sqlalchemy import Column, Integer, String, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
@@ -60,7 +60,7 @@ class FileAccess(AlchemyProxy):
                               "activation.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
     )
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     mode = Column(Text)

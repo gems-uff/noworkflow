@@ -10,7 +10,7 @@ from datetime import datetime
 
 from future.utils import lmap
 from future.builtins import map as cvmap
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, bindparam
 
 from ...utils.prolog import PrologDescription, PrologTrial
@@ -47,7 +47,7 @@ class Tag(AlchemyProxy):
         {"sqlite_autoincrement": True},
     )
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     type = Column(Text)  # pylint: disable=invalid-name
     name = Column(Text)
     timestamp = Column(TIMESTAMP)

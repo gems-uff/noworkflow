@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from datetime import timedelta
-from sqlalchemy import Column, Integer, Text, Float
+from sqlalchemy import Column, Integer, String, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import remote, foreign
 
@@ -92,7 +92,7 @@ class Evaluation(AlchemyProxy):
                              ["activation.trial_id", "activation.id"],
                              ondelete="CASCADE", use_alter=True),
     )
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     checkpoint = Column(Float)
     code_component_id = Column(Integer, index=True)

@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
@@ -43,7 +43,7 @@ class EnvironmentAttr(AlchemyProxy):
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
     )
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     value = Column(Text)

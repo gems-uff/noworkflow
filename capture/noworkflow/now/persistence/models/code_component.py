@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
 from sqlalchemy.orm import remote, foreign
@@ -75,7 +75,7 @@ class CodeComponent(AlchemyProxy):
                              ["code_block.trial_id", "code_block.id"],
                              ondelete="CASCADE", use_alter=True),
     )
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
     name = Column(Text)
     type = Column(Text)  # ToDo: CheckConstraint?

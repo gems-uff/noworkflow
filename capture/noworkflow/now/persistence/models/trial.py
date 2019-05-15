@@ -150,9 +150,11 @@ class Trial(AlchemyProxy):
     )
 
     id = Column(  # pylint: disable=invalid-name
-        Integer, primary_key=True, autoincrement=True
+        String, primary_key=True
     )
-    uuid = Column(String, default=uuid_gen)
+    incremental = Column(  # pylint: disable=invalid-name
+        Integer, autoincrement=True
+    )
     script = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
@@ -1233,13 +1235,14 @@ class Trial(AlchemyProxy):
         if bypass_modules:
             inherited_id = cls.fast_last_trial_id()
         ttrial = cls.t
+        tid=uuid_gen()
         result = session.execute(
             ttrial.insert(),
-            {"script": script, "start": start, "command": command,
+            {"id": tid, "script": script, "start": start, "command": command,
              "path": path,
              "status": "ongoing", "parent_id": parent_id,
              "modules_inherited_from_trial_id": inherited_id})
-        tid = result.lastrowid
+
         session.commit()
         return tid
 

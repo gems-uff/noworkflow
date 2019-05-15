@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text, Boolean
+from sqlalchemy import Column, Integer, String, Text, Boolean
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
@@ -79,7 +79,7 @@ class Dependency(AlchemyProxy):
                              ["evaluation.trial_id", "evaluation.activation_id",
                               "evaluation.id"], ondelete="CASCADE"),
     )
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
     dependent_activation_id = Column(Integer, index=True)
     dependent_id = Column(Integer, index=True)

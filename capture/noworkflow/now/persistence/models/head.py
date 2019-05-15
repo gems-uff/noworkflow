@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy import ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologRepr, PrologAttribute
@@ -48,7 +48,7 @@ class Head(AlchemyProxy):
     )
     id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
     script = Column(Text)
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
 
     trial = one("Trial")
 

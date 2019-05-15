@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from datetime import timedelta
-from sqlalchemy import Column, Integer, Text, Float, select, join
+from sqlalchemy import Column, Integer, String, Text, Float, select, join
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
@@ -88,7 +88,7 @@ class Activation(AlchemyProxy):
                              ["code_block.trial_id", "code_block.id"],
                              ondelete="CASCADE"),
     )
-    trial_id = Column(Integer, index=True)
+    trial_id = Column(String, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
     start_checkpoint = Column(Float)
