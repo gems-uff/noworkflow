@@ -904,7 +904,7 @@ class RewriteAST(ast.NodeTransformer):
         handlers = []
         def access_if(ifnod, exc_id):
             """Create ifexp considering elif"""
-            if_id = self.create_ast_component(node, "if")
+            if_id = self.create_ast_component(ifnod, "if")
             self.create_composition(if_id, *self.composition_edge)
             subscript = ast.Subscript(
                 now_attribute("condition_exceptions"),
