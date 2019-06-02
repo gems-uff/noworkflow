@@ -1146,19 +1146,6 @@ class Trial(AlchemyProxy):
         )
         session.commit()
     @classmethod  # query
-    def createImport(cls, uuid, script, start, finish, command, path, status, session=None):
-        session = session or relational.session
-
-        ttrial = cls.t
-        result = session.execute(
-            ttrial.insert(),
-            {"uuid": uuid,"script": script, "start": start, "command": command,
-             "finish": finish, "path": path,
-             "status": status})
-        tid = result.lastrowid
-        session.commit()
-        return tid
-    @classmethod  # query
     def create(cls, script, start, command, path, bypass_modules, session=None):
         """Create trial and assign a new id to it
         Use core sqlalchemy

@@ -19,6 +19,7 @@ from .exception import ExceptionLW
 from .file_access import FileAccessLW
 from .member import MemberLW
 from .module import ModuleLW
+from .trial import TrialLW
 
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "FileAccessLW",
     "MemberLW",
     "ModuleLW",
+    "TrialLW",
 ]

@@ -259,7 +259,13 @@ class AlchemyProxy(Model):
             )
             if conn is None:
                 _conn.close()
-
+    @classmethod
+    def load_by_trials(cls, trial_ids_list, session=None):
+        session = session or relational.session
+        return (
+            session.query(cls.m)
+            .filter((cls.m.trial_id.in_(trial_ids_list))).all()
+        )
     @classmethod  # query
     def all(cls, session=None):
         """Return all tuples

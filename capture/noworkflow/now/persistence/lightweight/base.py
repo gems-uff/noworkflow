@@ -40,6 +40,14 @@ class ObjectStore(object):
         self.store[self.id] = self.cls(self.id, *args)
         self.order.append(self.id)
         return self.id
+    
+    def add_explicit_id(self, *args):
+        """Add object using its __init__ arguments and return id"""
+        self.id += 1
+        self.count += 1
+        self.store[self.id] = self.cls(*args)
+        self.order.append(self.id)
+        return self.id
 
     def add_object(self, *args):
         """Add object using its __init__ arguments and return object"""
