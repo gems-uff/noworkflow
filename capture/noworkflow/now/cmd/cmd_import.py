@@ -21,7 +21,7 @@ from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeCo
 from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW
 
 from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
-from ..persistence.models import FileAccess,Member,Module
+from ..persistence.models import FileAccess,Member,Module,Tag
 
 from .command import Command
 
@@ -125,7 +125,7 @@ class Import(Command):
         [trials_store.add_explicit_id(x.id,x.script,x.start,x.finish,x.command,x.path,x.status,x.modules_inherited_from_trial_id,\
             x.parent_id,x.main_id) for x in trialsToImport]
         [arguments_store.add_explicit_id(x.id,x.trial_id,x.name,x.value) for x in argsToImport]
-        [codeBlock_store.add_explicit_id(x.id,x.trial_id,x.code_hash,False,x.docstring) for x in codeBlockToImport]
+        [codeBlock_store.add_explicit_id(x.id,x.trial_id,x.code_hash,False,x.docstring,x.code_hash) for x in codeBlockToImport]
         [codeComponent_store.add_explicit_id(x.id,x.trial_id,x.name,x.type,x.mode,x.first_char_line, \
             x.first_char_column,x.last_char_line,x.last_char_column,x.container_id) for x in codeComponentToImport]
         [activation_store.add_explicit_id(x,x.trial_id,x.name,x.start_checkpoint,x.code_block_id) for x in actvsToImport]
@@ -154,6 +154,10 @@ class Import(Command):
         member_store.do_store()
         module_store.do_store()
 
+        for x in trialsToImport:
+            main_block=[c for c in codeBlockToImport if c.trial_id==x.id and x.main_id==c.id]
+            main_block=main_block[0]
+            Tag.create_automatic_tag(x.id,main_block.code_hash,x.command)
 
         print("Finish importing")
        

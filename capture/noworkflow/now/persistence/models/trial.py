@@ -148,13 +148,13 @@ class Trial(AlchemyProxy):
                              ondelete="SET NULL", use_alter=True),
         {"sqlite_autoincrement": True},
     )
-
+    sequence_key = Column(  # pylint: disable=invalid-name
+        Integer, primary_key=True, autoincrement=True
+    )
     id = Column(  # pylint: disable=invalid-name
-        String, primary_key=True
+        String, unique=True
     )
-    incremental = Column(  # pylint: disable=invalid-name
-        Integer, autoincrement=True
-    )
+
     script = Column(Text)
     start = Column(TIMESTAMP)
     finish = Column(TIMESTAMP)
@@ -794,6 +794,7 @@ class Trial(AlchemyProxy):
         """
         print_("""\
             Id: {t.id}
+            Sequence Key: {t.sequence_key}
             Status: {status}
             Inherited Id: {t.modules_inherited_from_trial_id}
             Script: {t.script}
@@ -984,7 +985,7 @@ class Trial(AlchemyProxy):
         return (
             session.query(cls.m)
             .outerjoin(Tag.m)
-            .filter((cls.m.id == trial_ref) | (Tag.m.name == trial_ref))
+            .filter((cls.m.id == trial_ref) | (Tag.m.name == trial_ref) | (cls.m.sequence_key == trial_ref))
         ).first()
 
     @classmethod  # query
