@@ -155,7 +155,7 @@ class HistoryWidget extends Widget {
           let diffGraphWidget = new DiffGraphWidget(
             "Diff " + redTrial.display + "-" + greenTrial.display,
             "diff-" + redTrial.title + "-" + greenTrial.title + makeid(),
-            +redTrial.title, +greenTrial.title
+            redTrial.title, greenTrial.title
           );
           let parentDock: NowVisPanel = this.parent as NowVisPanel;
 
@@ -176,7 +176,7 @@ class HistoryWidget extends Widget {
           return true;
         },
         customSelectNode: (g: HistoryGraph, d: VisibleHistoryNode) => {
-          let trialGraphWidget = new TrialGraphWidget("Trial " + d.display, "trial-" + d.title + makeid(), +d.title, +d.title);
+          let trialGraphWidget = new TrialGraphWidget("Trial " + d.display, "trial-" + d.title + makeid(), d.title, d.title);
           let parentDock: NowVisPanel = this.parent as NowVisPanel;
 
           if (this.config.showInfo()) {

@@ -63421,7 +63421,7 @@ class HistoryWidget extends widgets_1.Widget {
                         return true;
                     }
                     var greenTrial = d;
-                    let diffGraphWidget = new diff_graph_1.DiffGraphWidget("Diff " + redTrial.display + "-" + greenTrial.display, "diff-" + redTrial.title + "-" + greenTrial.title + utils_1.makeid(), +redTrial.title, +greenTrial.title);
+                    let diffGraphWidget = new diff_graph_1.DiffGraphWidget("Diff " + redTrial.display + "-" + greenTrial.display, "diff-" + redTrial.title + "-" + greenTrial.title + utils_1.makeid(), redTrial.title, greenTrial.title);
                     let parentDock = this.parent;
                     if (this.config.showInfo()) {
                         let diffInfoWidget = new diff_info_1.DiffInfoWidget(redTrial.display, greenTrial.display, redTrial.title, greenTrial.title);
@@ -63436,7 +63436,7 @@ class HistoryWidget extends widgets_1.Widget {
                     return true;
                 },
                 customSelectNode: (g, d) => {
-                    let trialGraphWidget = new trial_graph_1.TrialGraphWidget("Trial " + d.display, "trial-" + d.title + utils_1.makeid(), +d.title, +d.title);
+                    let trialGraphWidget = new trial_graph_1.TrialGraphWidget("Trial " + d.display, "trial-" + d.title + utils_1.makeid(), d.title, d.title);
                     let parentDock = this.parent;
                     if (this.config.showInfo()) {
                         let trialInfoWidget = new trial_info_1.TrialInfoWidget(d);
