@@ -53,10 +53,10 @@ class ActivationLW(BaseLW):
     nullable = {"code_block_id"}
     model = Activation
 
-    def __init__(self, evaluation, trial_id, name, start, code_block_id):
+    def __init__(self, evaluation, trial_id, name, start, code_block_id,id=None):
         # pylint: disable=too-many-arguments
         self.trial_id = trial_id
-        self.id = evaluation.id  # pylint: disable=invalid-name
+        self.id=id if id else  evaluation.id  # pylint: disable=invalid-name
         self.name = name
         self.start_checkpoint = start
         self.code_block_id = code_block_id if code_block_id else -1
@@ -110,3 +110,12 @@ class ActivationLW(BaseLW):
             "start_checkpoint={0.start_checkpoint}, "
             "code_block_id={0.code_block_id})"
         ).format(self)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'name': self.name,
+            'start_checkpoint': self.start_checkpoint,
+            'code_block_id': self.code_block_id
+        }

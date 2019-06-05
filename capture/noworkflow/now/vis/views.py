@@ -10,7 +10,8 @@ import os
 
 from flask import render_template, jsonify, request
 
-from ..persistence.models import Trial
+from ..persistence.models import Trial,Activation
+from ..persistence.lightweight import ActivationLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational
@@ -32,7 +33,7 @@ class WebServer(object):
 
         self.app = Flask(__name__)
 
-
+    
 app = WebServer().app  # pylint: disable=invalid-name
 
 
@@ -66,7 +67,29 @@ def index(tid=None, graph_mode=None):
         cwd=os.getcwd(),
         scripts=history.scripts
     )
+    
+@app.route("/collab/trials") # remove
+def export():
+    """Respond trials ids"""
+    trialsToExport=request.args.getlist("id")
+    actvsToImport=Activation.load_by_trials(trialsToExport)
+    actvsToImport=[ActivationLW(x,x.trial_id,x.name,x.start_checkpoint,x.code_block_id) for x in actvsToImport]
+    print(actvsToImport)
+    actvsToImport=[a.__json__() for a in actvsToImport]
+    resp=[]
+    resp.append(
+            {
+                "trials": trialsToExport,
+                "activations": actvsToImport
+            }
+        )
 
+    return jsonify(resp)
+@app.route("/collab/trialsids") # remove
+def trialsId():
+    """Respond trials ids"""
+    resp=[t.id for t in Trial.all()]
+    return jsonify(resp)
 
 @app.route("/trials.json")
 @app.route("/trials") # remove
