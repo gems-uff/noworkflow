@@ -5,33 +5,65 @@
 """Define dependency constants"""
 
 ARGUMENT = "argument"
-#  def process_default
+#  stmt.process_default
+#  expr._call_arg
+#  expr._call_keyword
+#  expr.process_call_arg
+#  expr.process_call_keyword
 ASSIGN = "assign"
-#  def visit_assign
-#  def visit_annassign
+#  stmt.visit_assign
+#  stmt.visit_annassign
 BASE = "base"
-#  def visit_ClassDef
+#  stmt.visit_ClassDef
 CONDITION = "condition"
-#  def visit_While
-#  def visit_If
+#  stmt.visit_While
+#  stmt.visit_If
+#  expr.visit_IfExp
+#  expr.visit_generator
 DECORATE = "decorate"
-#  def visit_FunctionDef
-#  def visit_ClassDef
+#  stmt.visit_FunctionDef
+#  stmt.visit_ClassDef
 DECORATOR = "decorator"
-#  def process_decorator
+#  stmt.process_decorator
 DEPENDENCY = "dependency"
-#  def visit_ClassDef
-#  def visit_Print
-#  def visit_For
-#  def visit_Exec
-#  def capture
+#  stmt.visit_ClassDef
+#  stmt.visit_Print
+#  stmt.visit_For
+#  stmt.visit_Exec
+#  stmt.capture
+#  expr.RewriteDependencies.__init__
+#  expr.visit_generator
+#  expr.visit_Attribute
+#  expr.visit_Subscript
+FUNC = "func"
+#  expr.visit_Call
+ITEM = "item"
+#  expr._itemize
+#  expr.yield
+KEY = "key"
+#  expr._dict_itemize
+SLICE = "slice"
+#  expr.visit_Subscript
 USE = "use"
-#  def process_decorator
-#  def visit_Return
+#  stmt.process_decorator
+#  stmt.visit_Return
+#  expr.visit_BoolOp
+#  expr.visit_BinOp
+#  expr.visit_UnaryOp
+#  expr.visit_Lambda
+#  expr.visit_IfExp
+#  expr.visit_Compare
+#  expr.visit_FormattedValue
+#  expr.visit_JoinedStr
+#  expr.visit_Slice
+#  expr.visit_ExtSlice
+VALUE = "value"
+#  expr._dict_itemize
+#  expr.visit_Attribute
+#  expr.visit_Subscript
 
 
-
-# def visit_augassign:
+# stmt.visit_augassign:
 #   add_assign
 #   mult_assign
 #   div_assign

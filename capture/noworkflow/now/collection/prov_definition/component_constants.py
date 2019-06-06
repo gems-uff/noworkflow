@@ -8,152 +8,285 @@
 # Code Component
 
 ANNOTATION = "annotation"
-#  def visit_annassign
+#  stmt.visit_annassign
+ARGUMENT = "argument"
+#  expr._call_arg
+#  expr._call_keyword
 ARGUMENTS = "arguments"
-#  def process_parameters
+#  stmt.process_parameters
 ASSERT = "assert"
-#  def visit_Assert
+#  stmt.visit_Assert
 ASSIGN = "assign"
-#  def visit_assign
+#  stmt.visit_assign
 ANN_ASSIGN = "ann_assign"
-#  def visit_annassign
+#  stmt.visit_annassign
 ANN_TARGET = "ann_target"
-#  def visit_annassign
+#  stmt.visit_annassign
 ASYNC_FOR = "async_for"
-#  def visit_AsyncFor
+#  stmt.visit_AsyncFor
 ASYNC_WITH = "async_with"
-#  def visit_AsyncWith
+#  stmt.visit_AsyncWith
 AUG_ASSIGN = "aug_assign"
-#  def visit_augassign
+#  stmt.visit_augassign
+AWAIT = "await"
+#  expr.visit_Await
+ATTRIBUTE = "attribute"
+#  expr.visit_Attribute 
 BREAK = "break"
-#  def visit_Break
+#  stmt.visit_Break
 CALL = "call"
-#  def visit_Exec
+#  stmt.visit_Exec
+#  expr.visit_Call
 CLASS_DEF = "class_def"
-#  def visit_ClassDef
+#  stmt.visit_ClassDef
 CONTINUE = "continue"
-#  def visit_Continue
+#  stmt.visit_Continue
+CONVERSION = "conversion"
+#  expr.visit_FormattedValue
+COMPREHENSION = "comprehension"
+#  expr.visit_generator
 DECORATOR = "decorator"
-#  def process_decorator
+#  stmt.process_decorator
 DEFAULT = "default"
-#  def process_default
+#  stmt.process_default
 DELETE = "delete"
-#  def visit_Delete
+#  stmt.visit_Delete
+DICT = "dict"
+#  expr.visit_Dict
+DICTCOMP = "dictcomp"
+#  expr.visit_DictComp
 EXCEPTION = "exception"
-#  def visit_exchandler
+#  stmt.visit_exchandler
 EXPR = "expr"
-#  def visit_Expr
+#  stmt.visit_Expr
+EXTSLICE = "extslice"
+#  expr.visit_ExtSlice
 FOR = "for"
-#  def visit_For
+#  stmt.visit_For
+FSTRING = "fstring"
+#  expr.visit_JoinedStr
+FUNC = "func"
+#  expr.visit_Call
 FUNCTION_DEF = "function_def"
-#  def visit_FunctionDef
+#  stmt.visit_FunctionDef
 FUTURE_IMPORT = "future_import"
-#  def process_script
+#  stmt.process_script
+F_VALUE = "fvalue"
+#  expr.visit_FormattedValue
 GLOBAL = "global"
-#  def visit_Global
+#  stmt.visit_Global
 IDENTIFIER = "identifier"
-#  def visit_FunctionDef
-#  def visit_ClassDef
+#  stmt.visit_FunctionDef
+#  stmt.visit_ClassDef
 IF = "if"
-#  def visit_If
+#  stmt.visit_If
+IFEXP = "ifexp"
+#  expr.visit_IfExp
+INDEX = "index"
+#  expr.visit_Index
 IMPORT = "import"
-#  def visit_Import
+#  stmt.visit_Import
 IMPORT_FROM = "import_from"
-#  def visit_ImportFrom
+#  stmt.visit_ImportFrom
+ITEM = "item"
+#  expr.visit_Yield
+KEY_VALUE = "key_value"
+#  expr._dict_itemize
+LAMBDA_DEF = "lambda_def"
+#  expr.visit_Lambda
+LITERAL = "literal"
+#  expr.visit_JoinedStr
+#  expr.visit_Ellipsis
+#  expr.visit_literal
+NAME = "name"
+#  expr.visit_Name
 NONLOCAL = "nonlocal"
-#  def visit_Nonlocal
+#  stmt.visit_Nonlocal
 PASS = "pass"
-#  def visit_Pass
+#  stmt.visit_Pass
 PARAM = "param"
-#  def process_arg
+#  stmt.process_arg
 PRINT = "print"
-#  def visit_Print
+#  stmt.visit_Print
 RAISE = "raise"
-#  def visit_Raise
+#  stmt.visit_Raise
 RETURN = "return"
-#  def visit_Return
+#  stmt.visit_Return
+SLICE = "slice"
+#  expr.visit_Slice
+STARRED = "starred"
+#  expr.visit_Starred
+SUBSCRIPT = "subscript"
+#  expr.visit_Subscript
 SYNTAX = "syntax"
-#  def create_code_component
+#  stmt.create_code_component
 TRY = "try"
-#  def visit_Try
+#  stmt.visit_Try
 TRY_EXCEPT = "try_except"
-#  def visit_TryExcept
+#  stmt.visit_TryExcept
 TRY_FINALLY = "try_finally"
-#  def visit_TryFinally
+#  stmt.visit_TryFinally
 WHILE = "while"
-#  def visit_While
+#  stmt.visit_While
 WITH = "with"
-#  def visit_With
+#  stmt.visit_With
+YIELD = "yield"
+#  expr.visit_Yield
+YIELD_FROM = "yield_from"
+#  expr.visit_YieldFrom
 
+# expr.visit_BoolOp:
+#  and, or
+
+# expr.visit_BinOp:
+#  add, sub, div, floordiv, mult, matmul, ...
+
+# expr.visit_UnaryOp:
+#  inv
+
+# expr.visit_ListComp:
+#  listcomp, setcomp, dictcomp
+
+# expr.visit_Compare:
+#  eq, gt, lt, ge, le
 
 # Composition
 
 S_ANNOTATION = "annotation"
-S_ARGS = "args"
-#  def visit_FunctionDef
-#  def visit_ClassDef
 M_ARGS = "*args"
-#  def process_parameters
+#  stmt.process_parameters
+#  expr.visit_Call
+S_ARGS = "args"
+#  stmt.visit_FunctionDef
+#  stmt.visit_ClassDef
+#  stmt.visit_Lambda
+S_ATTR = "attr"
+#  expr.visit_Attribute
 M_BASES = "*bases"
-#  def visit_ClassDef
+#  stmt.visit_ClassDef
 M_BODY = "*body"
-#  def process_script
-#  def process_body
+#  stmt.process_script
+#  stmt.process_body
+S_BODY = "body"
+#  expr.visit_Lambda
+#  expr.visit_IfExp
+M_COMPARATORS = "*comparators"
+#  expr.visit_Compare
 M_DECORATOR_LIST = "*decorator_list"
-#  def visit_FunctionDef
-#  def visit_ClassDef
+#  stmt.visit_FunctionDef
+#  stmt.visit_ClassDef
 M_DEFAULTS = "*defaults"
-#  def process_parameters
+#  stmt.process_parameters
 S_DEST = "dest"
-#  def visit_Print
+#  stmt.visit_Print
+M_DIMS = "*dims"
+#  expr.visit_ExtSlice
+S_ELT = "elt"
+#  expr.visit_ListComp
+M_ELTS = "*elts"
+#  expr.visit_List
 M_FINALBODY = "*finalbody"
-#  def visit_Try
-#  def visit_TryFinally
+#  stmt.visit_Try
+#  stmt.visit_TryFinally
+S_FORMAT_SPEC = "format_spec"
+#  expr.visit_FormattedValue
+S_FUNC = "func"
+#  expr.visit_Call
+M_GENERATORS = "*generators"
+#  expr.visit_ListComp
+#  expr.visit_DictComp
 M_HANDLERS = "*handlers"
-#  def visit_Try
-#  def visit_TryExcept
+#  stmt.visit_Try
+#  stmt.visit_TryExcept
 S_ITER = "iter"
-#  def visit_For
+#  stmt.visit_For
+#  expr.visit_generator
+M_IFS = "*ifs"
+#  expr.visit_generator
+S_ITEM = "item"
+#  expr._itemize
+S_KEY = "key"
+#  expr._dict_itemize
 M_KEYWORDS = "*keywords"
-#  def visit_ClassDef
+#  stmt.visit_ClassDef
+#  expr.visit_Call
 S_KWARG = "kwarg"
-#  def process_parameters
+#  stmt.process_parameters
+S_KWARGS = "kwargs"
+#  expr.visit_Call
 M_KWONLYARGS = "*kwonlyargs"
-#  def process_parameters
+#  stmt.process_parameters
 M_KW_DEFAULTS = "*kw_defaults"
-#  def process_parameters
+#  stmt.process_parameters
+S_KEY_VALUE = "key_value"
+#  expr.visit_Dict
+#  expr.visit_DictComp
+S_LEFT = "left"
+#  expr.visit_BinOp
+#  expr.visit_Compare
 S_LOCALS = "locals"
-#  def visit_Exect
+#  stmt.visit_Exect
+S_LOWER = "lower"
+#  expr.visit_Slice
 S_NAME_NODE = "name_node"
-#  def visit_FunctionDef
-#  def visit_ClassDef
+#  stmt.visit_FunctionDef
+#  stmt.visit_ClassDef
 S_NL = "nl"
-#  def visit_Print
+#  stmt.visit_Print
 M_OP_POS = "*op_pos"
-#  def create_code_component
+#  stmt.create_code_component
+S_OPERAND = "operand"
+#  expr.visit_UnaryOp
 M_ORELSE = "*orelse"
-#  def visit_For
-#  def visit_While
-#  def visit_If
-#  def visit_Try
+#  stmt.visit_For
+#  stmt.visit_While
+#  stmt.visit_If
+#  stmt.visit_Try
+S_ORELSE = "orelse"
+#  expr.visit_IfExp
+S_RIGHT = "right"
+#  expr.visit_BinOp
 S_SIMPLE = "simple"
-#  def visit_annassign
+#  stmt.visit_annassign
+S_SLICE = "slice"
+#  expr.visit_Subscript
+S_STARARGS = "starargs"
+#  expr.visit_starargs
+S_STEP = "step"
+#  expr.visit_Slice
 S_TARGET = "target"
-#  def visit_augassign
-#  def visit_annassign
-#  def visit_For
+#  stmt.visit_augassign
+#  stmt.visit_annassign
+#  stmt.visit_For
+#  expr.visit_generator
 M_TARGETS = "*targets"
-#  def visit_assign
+#  stmt.visit_assign
 S_TEST = "test"
-#  def visit_While
-#  def visit_If
+#  stmt.visit_While
+#  stmt.visit_If
+#  expr.visit_IfExp
+S_UPPER = "upper"
+#  expr.visit_Slice
 S_VALUE = "value"
-#  def visit_Return
-#  def visit_assign
-#  def visit_augassign
-#  def visit_annassign
-#  def visit_Expr
+#  stmt.visit_Return
+#  stmt.visit_assign
+#  stmt.visit_augassign
+#  stmt.visit_annassign
+#  stmt.visit_Expr
+#  expr._dict_itemize
+#  expr.visit_Yield
+#  expr.visit_Repr
+#  expr.visit_FormattedValue
+#  expr.visit_Attribute
+#  expr.visit_Subscript
+#  expr.visit_Starred
+#  expr.visit_Index
 M_VALUES = "*values"
-#  def visit_Print
+#  stmt.visit_Print
+#  expr.visit_BoolOp
+#  expr.visit_JoinedStr
 S_VARARG = "vararg"
-#  def process_parameters
+#  stmt.process_parameters
+
+
+
