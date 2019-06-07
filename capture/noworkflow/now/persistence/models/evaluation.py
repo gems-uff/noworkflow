@@ -91,6 +91,11 @@ class Evaluation(AlchemyProxy):
         ForeignKeyConstraint(["trial_id", "activation_id"],
                              ["activation.trial_id", "activation.id"],
                              ondelete="CASCADE", use_alter=True),
+        ForeignKeyConstraint(["trial_id", "activation_id", "id"],
+                             ["evaluation.trial_id",
+                              "evaluation.member_container_activation_id",
+                              "evaluation.member_container_id"],
+                             ondelete="CASCADE", use_alter=True),
     )
     trial_id = Column(Integer, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
@@ -98,6 +103,8 @@ class Evaluation(AlchemyProxy):
     code_component_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
     repr = Column(Text)
+    member_container_activation_id = Column(Integer, index=True)
+    member_container_id = Column(Integer, index=True)
 
     this_activation = one(
         "Activation", backref="this_evaluation",
@@ -168,11 +175,25 @@ class Evaluation(AlchemyProxy):
             (activation_id == Member.m.member_activation_id) &
             (trial_id == Member.m.trial_id)))
 
+    # ToDo: Add variable
+    #member_cointainer = one(
+    #    "Evaluation", backref="container_members", viewonly=True,
+    #    remote_side=[trial_id, activation_id, id], primaryjoin=(
+    #        (id == member_container_id) &
+    #        (activation_id == activation_id) &
+    #        (trial_id == trial_id)
+    #    )
+    #)
+
+
     dependents = backref_many("dependents")  # Evaluation.dependencies
     collections = backref_many("collections")  # Evaluation.members
     trial = backref_one("trial")  # Trial.evaluations
     code_component = backref_one("code_component")  # CodeComponent.evaluations
+    # Evaluation.member_cointainer
+    #container_members = backref_many("container_members")
 
+    
     prolog_description = PrologDescription("evaluation", (
         PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
@@ -180,6 +201,7 @@ class Evaluation(AlchemyProxy):
         PrologAttribute("code_component_id", link="code_component.id"),
         PrologNullable("activation_id", link="activation.id"),
         PrologRepr("repr"),
+        PrologNullable("member_container_id", link="evaluation.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "an evaluation *Id* of *CodeComponentId* finalized at *Checkpoint*\n"
