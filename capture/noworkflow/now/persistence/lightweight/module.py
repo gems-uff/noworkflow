@@ -37,3 +37,14 @@ class ModuleLW(BaseLW):
     def __repr__(self):
         return ("Module(id={}, name={}, version={})").format(
             self.id, self.name, self.version)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'name': self.name,
+            'version': self.version,
+            'path': self.path,
+            'code_block_id': self.code_block_id,
+            'transformed': self.transformed
+        }

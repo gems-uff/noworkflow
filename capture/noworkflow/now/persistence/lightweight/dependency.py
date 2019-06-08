@@ -54,3 +54,19 @@ class DependencyLW(BaseLW):
             "collection_activation_id={0.collection_activation_id}, "
             "collection_id={0.collection_id}, key={0.key})"
         ).format(self)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'dependent_activation_id': self.dependent_activation_id,
+            'dependent_id': self.dependent_id,
+            'dependency_activation_id': self.dependency_activation_id,
+            'dependency_id': self.dependency_id,
+            'type': self.type,
+            'reference': self.reference,
+            'collection_activation_id': self.collection_activation_id,
+            'collection_id': self.collection_id,
+            'key': self.key
+
+        }

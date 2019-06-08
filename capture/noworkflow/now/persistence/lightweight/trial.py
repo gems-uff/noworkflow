@@ -42,3 +42,18 @@ class TrialLW(BaseLW):
 
     def __repr__(self):
         return ("TrialLW(id={0.id})").format(self)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'script': self.script,
+            'start': self.start,
+            'finish': self.finish,
+            'command': self.command,
+            'path': self.path,
+            'status': self.status,
+            'modules_inherited_from_trial_id': self.modules_inherited_from_trial_id,
+            'parent_id': self.parent_id,
+            'main_id': self.main_id
+        }

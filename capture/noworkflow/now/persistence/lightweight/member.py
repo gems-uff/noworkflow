@@ -48,3 +48,16 @@ class MemberLW(BaseLW):
             "member_id={0.member_id}, "
             "key={0.key}, checkpoint={0.checkpoint}, type={0.type})"
         ).format(self)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'collection_activation_id': self.collection_activation_id,
+            'collection_id': self.collection_id,
+            'member_activation_id': self.member_activation_id,
+            'member_id': self.member_id,
+            'key': self.key,
+            'checkpoint': self.checkpoint,
+            'type': self.type
+        }

@@ -20,6 +20,7 @@ from .file_access import FileAccessLW
 from .member import MemberLW
 from .module import ModuleLW
 from .trial import TrialLW
+from .bundle import BundleLW
 
 
 __all__ = [
@@ -38,4 +39,5 @@ __all__ = [
     "MemberLW",
     "ModuleLW",
     "TrialLW",
+    "BundleLW",
 ]

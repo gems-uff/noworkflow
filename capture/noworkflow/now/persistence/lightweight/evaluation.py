@@ -57,3 +57,13 @@ class EvaluationLW(BaseLW):                                                     
             "code_component_id={0.code_component_id}, "
             "activation_id={0.activation_id}, repr={0.repr})"
         ).format(self)
+    
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'code_component_id': self.code_component_id,
+            'activation_id': self.activation_id,
+            'checkpoint': self.checkpoint,
+            'repr': self.repr
+        }

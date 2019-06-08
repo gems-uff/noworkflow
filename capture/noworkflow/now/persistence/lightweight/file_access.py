@@ -51,3 +51,16 @@ class FileAccessLW(BaseLW):                                                     
     def __repr__(self):
         return ("FileAccess(id={0.id}, name={0.name}, "
                 "checkpoint={0.checkpoint}").format(self)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'name': self.name,
+            'mode': self.mode,
+            'buffering': self.buffering,
+            'content_hash_before': self.content_hash_before,
+            'content_hash_after': self.content_hash_after,
+            'checkpoint': self.checkpoint,
+            'activation_id': self.activation_id
+        }

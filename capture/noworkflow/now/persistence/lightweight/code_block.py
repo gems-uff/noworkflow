@@ -39,3 +39,12 @@ class CodeBlockLW(BaseLW):
 
     def __repr__(self):
         return ("CodeBlockLW(id={0.id})").format(self)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'code': self.code,
+            'code_hash': self.code_hash,
+            'docstring': self.docstring
+        }

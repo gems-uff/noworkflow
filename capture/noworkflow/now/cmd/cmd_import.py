@@ -14,6 +14,8 @@ from ..persistence.config import PersistenceConfig
 from ..persistence.content_database import ContentDatabase
 from ..persistence.relational_database import RelationalDatabase
 from ..persistence import persistence_config, relational
+from ..utils.collab import exportBundle
+
 
 
 from ..persistence.lightweight import ObjectStore, SharedObjectStore
@@ -89,22 +91,8 @@ class Import(Command):
         trialsToImport=[x for x in sourceTrials if x.id not in targetUuids]
         trialsToImportIds=[x.id for x in trialsToImport]
 
-        print("Load dependencies")
-        
-        actvsToImport=Activation.load_by_trials(trialsToImportIds)
-        argsToImport=Argument.load_by_trials(trialsToImportIds)
-        codeBlockToImport=CodeBlock.load_by_trials(trialsToImportIds)
-        codeComponentToImport=CodeComponent.load_by_trials(trialsToImportIds)
-        compositionToImport=Composition.load_by_trials(trialsToImportIds)
-        dependencyToImport=Dependency.load_by_trials(trialsToImportIds)
-        envToImport=EnvironmentAttr.load_by_trials(trialsToImportIds)
-        evaluationToImport=Evaluation.load_by_trials(trialsToImportIds)
-        fileAccessToImport=FileAccess.load_by_trials(trialsToImportIds)
-        memberToImport=Member.load_by_trials(trialsToImportIds)
-        moduleToImport=Module.load_by_trials(trialsToImportIds)
-        print("Finish Load dependencies")
-
-        
+        bundle=exportBundle(trialsToImportIds)
+       
         persistence_config.connect(args.target or os.getcwd())
 
         
@@ -122,23 +110,19 @@ class Import(Command):
         member_store=ObjectStore(MemberLW)
         module_store=ObjectStore(ModuleLW)
 
-        [trials_store.add_explicit_id(x.id,x.script,x.start,x.finish,x.command,x.path,x.status,x.modules_inherited_from_trial_id,\
-            x.parent_id,x.main_id) for x in trialsToImport]
-        [arguments_store.add_explicit_id(x.id,x.trial_id,x.name,x.value) for x in argsToImport]
-        [codeBlock_store.add_explicit_id(x.id,x.trial_id,x.code_hash,False,x.docstring,x.code_hash) for x in codeBlockToImport]
-        [codeComponent_store.add_explicit_id(x.id,x.trial_id,x.name,x.type,x.mode,x.first_char_line, \
-            x.first_char_column,x.last_char_line,x.last_char_column,x.container_id) for x in codeComponentToImport]
-        [activation_store.add_explicit_id(x,x.trial_id,x.name,x.start_checkpoint,x.code_block_id) for x in actvsToImport]
-        [composition_store.add_explicit_id(x.id,x.trial_id,x.part_id,x.whole_id,x.type,x.position,x.extra) for x in compositionToImport]
-        [dependency_store.add_explicit_id(x.id,x.trial_id,x.dependent_activation_id,x.dependent_id,x.dependency_activation_id,x.dependency_id,\
-            x.type,x.reference,x.collection_activation_id,x.collection_id,x.key) for x in dependencyToImport]
-        [env_store.add_explicit_id(x.id,x.trial_id,x.name,x.value) for x in envToImport]
-        [evaluation_store.add_explicit_id(x.id,x.trial_id,x.code_component_id,x.activation_id,x.checkpoint,x.repr) for x in evaluationToImport]
-        [fileAccess_store.add_explicit_id(x.id,x.trial_id,x.name,x.checkpoint,x.mode,x.buffering,\
-            x.content_hash_before,x.content_hash_after,x.activation_id) for x in fileAccessToImport]
-        [member_store.add_explicit_id(x.id,x.trial_id,x.collection_activation_id,x.collection_id,x.member_activation_id,\
-            x.member_id,x.key,x.checkpoint,x.type) for x in memberToImport]
-        [module_store.add_explicit_id(x.id,x.trial_id,x.name,x.version,x.path,x.code_block_id,x.transformed) for x in moduleToImport]
+
+        [trials_store.add_from_object(x) for x in bundle.trials]
+        [codeBlock_store.add_from_object(x) for x in bundle.codeBlocks]
+        [arguments_store.add_from_object(x) for x in bundle.arguments]
+        [codeComponent_store.add_from_object(x) for x in bundle.codeComponents]
+        [activation_store.add_from_object(x) for x in bundle.activations]
+        [composition_store.add_from_object(x) for x in bundle.compositions]
+        [dependency_store.add_from_object(x) for x in bundle.dependencies]
+        [env_store.add_from_object(x) for x in bundle.environmentAttrs]
+        [evaluation_store.add_from_object(x) for x in bundle.evaluations]
+        [fileAccess_store.add_from_object(x) for x in bundle.fileAccesses]
+        [member_store.add_from_object(x) for x in bundle.members]
+        [module_store.add_from_object(x) for x in bundle.modules]
 
         print("Saving Stores")
         trials_store.do_store()
@@ -155,7 +139,7 @@ class Import(Command):
         module_store.do_store()
 
         for x in trialsToImport:
-            main_block=[c for c in codeBlockToImport if c.trial_id==x.id and x.main_id==c.id]
+            main_block=[c for c in bundle.codeBlocks if c.trial_id==x.id and x.main_id==c.id]
             main_block=main_block[0]
             Tag.create_automatic_tag(x.id,main_block.code_hash,x.command)
 

@@ -35,3 +35,11 @@ class EnvironmentAttrLW(BaseLW):
         return (
             "EnvironmentAttr(id={0.id}, name={0.name}, value={0.value})"
         ).format(self)
+    
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'name': self.name,
+            'value': self.value
+        }

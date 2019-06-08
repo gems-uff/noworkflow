@@ -8,14 +8,17 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from flask import render_template, jsonify, request
+import gzip, functools
+from io import BytesIO as IO
+
+from flask import render_template, jsonify, request, after_this_request
 
 from ..persistence.models import Trial,Activation
 from ..persistence.lightweight import ActivationLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational
-
+from ..utils.collab import exportBundle
 
 class WebServer(object):
     """Flask WebServer"""
@@ -33,7 +36,39 @@ class WebServer(object):
 
         self.app = Flask(__name__)
 
-    
+def gzipped(f):
+    @functools.wraps(f)
+    def view_func(*args, **kwargs):
+        @after_this_request
+        def zipper(response):
+            accept_encoding = request.headers.get('Accept-Encoding', '')
+
+            if 'gzip' not in accept_encoding.lower():
+                return response
+
+            response.direct_passthrough = False
+
+            if (response.status_code < 200 or
+                response.status_code >= 300 or
+                'Content-Encoding' in response.headers):
+                return response
+            gzip_buffer = IO()
+            gzip_file = gzip.GzipFile(mode='wb',
+                                      fileobj=gzip_buffer)
+            gzip_file.write(response.data)
+            gzip_file.close()
+
+            response.data = gzip_buffer.getvalue()
+            response.headers['Content-Encoding'] = 'gzip'
+            response.headers['Vary'] = 'Accept-Encoding'
+            response.headers['Content-Length'] = len(response.data)
+
+            return response
+
+        return f(*args, **kwargs)
+
+    return view_func
+
 app = WebServer().app  # pylint: disable=invalid-name
 
 
@@ -68,24 +103,16 @@ def index(tid=None, graph_mode=None):
         scripts=history.scripts
     )
     
-@app.route("/collab/trials") # remove
+@app.route("/collab/bundle")
+@gzipped
 def export():
     """Respond trials ids"""
     trialsToExport=request.args.getlist("id")
-    actvsToImport=Activation.load_by_trials(trialsToExport)
-    actvsToImport=[ActivationLW(x,x.trial_id,x.name,x.start_checkpoint,x.code_block_id) for x in actvsToImport]
-    print(actvsToImport)
-    actvsToImport=[a.__json__() for a in actvsToImport]
-    resp=[]
-    resp.append(
-            {
-                "trials": trialsToExport,
-                "activations": actvsToImport
-            }
-        )
-
+    bundle=exportBundle(trialsToExport)
+    resp=bundle.__json__()
     return jsonify(resp)
-@app.route("/collab/trialsids") # remove
+
+@app.route("/collab/trialsids")
 def trialsId():
     """Respond trials ids"""
     resp=[t.id for t in Trial.all()]

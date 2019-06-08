@@ -35,3 +35,11 @@ class ExceptionLW(BaseLW):                                                      
         return (
             "Exception(id={0.id}, {0.exception})"
         ).format(self)
+
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'activation_id': self.activation_id,
+            'exception': self.exception
+        }

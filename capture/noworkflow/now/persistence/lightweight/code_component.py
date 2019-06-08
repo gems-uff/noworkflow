@@ -46,3 +46,17 @@ class CodeComponentLW(BaseLW):                                                  
             "CodeComponentLW(id={0.id}, name={0.name}, type={0.type}, "
             "mode={0.mode}, container_id={0.container_id})"
         ).format(self)
+    
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'mode': self.mode,
+            'first_char_line': self.first_char_line,
+            'first_char_column': self.first_char_column,
+            'last_char_line': self.last_char_line,
+            'last_char_column': self.last_char_line,
+            'container_id': self.container_id
+        }

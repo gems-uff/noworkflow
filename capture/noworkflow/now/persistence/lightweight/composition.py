@@ -42,3 +42,14 @@ class CompositionLW(BaseLW):
             "whole_id={0.whole_id}, "
             "part_id={0.part_id}, type={0.type})"
         ).format(self)
+    
+    def __json__(self):
+        return {
+            'trial_id': self.trial_id,
+            'id': self.id,
+            'part_id': self.part_id,
+            'whole_id': self.whole_id,
+            'type': self.type,
+            'position': self.position,
+            'extra': self.extra
+        }
