@@ -1219,7 +1219,19 @@ class RewriteAST(ast.NodeTransformer):
         expr_id = self.create_ast_component(new_node, Component.EXPR)
         self.create_composition(expr_id, *self.composition_edge)
         self.composition_edge = (expr_id, Component.S_VALUE)
-        new_node.value = self.capture(new_node.value)
+        cnode = self.capture(new_node.value)
+        new_node.value = ast_copy(double_noworkflow(
+            'expression',
+            [
+                activation(),
+                ast.Num(expr_id),
+                ast.Num(self.current_exc_handler),
+            ], [
+                activation(),
+                ast.Num(expr_id),
+                cnode,
+            ],
+        ), new_node.value)
         return new_node
 
     def visit_Pass(self, node):

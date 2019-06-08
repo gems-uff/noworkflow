@@ -462,6 +462,22 @@ class Collector(object):
             self.eval_dep(activation, code_id, value, mode, depa)
         return value
 
+    def expression(self, activation, code_id, exc_handler):
+        """Capture expression before"""
+        activation.dependencies.append(DependencyAware(
+            exc_handler=exc_handler,
+            code_id=code_id,
+        ))
+        return self._expression
+
+    def _expression(self, activation, code_id, value):
+        """Capture expression after"""
+        depa = activation.dependencies.pop()
+        #if activation.active:
+        #    self.eval_dep(activation, code_id, value, mode, depa)
+        return value
+
+
     joined_str = operation
     formatted_value = operation
 
