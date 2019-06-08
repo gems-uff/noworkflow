@@ -1123,7 +1123,7 @@ class Collector(object):
                     activation.generator.value = result
                 return result
             if arguments[1]:
-                new_function_def.__defaults__ = arguments[1]
+                function_def.__defaults__ = arguments[1]
             closure_activation.dependencies.append(DependencyAware(
                 exc_handler=defaults.exc_handler,
                 code_id=block_id,
@@ -1236,6 +1236,9 @@ class Collector(object):
         arguments = []
         keywords = []
 
+        new_args = []
+        new_kwargs = {}
+
         for dependency in activation.dependencies[1].dependencies:
             if dependency.mode.startswith("argument"):
                 kind = dependency.kind
@@ -1249,7 +1252,7 @@ class Collector(object):
         len_positional = len(args) - len(defaults)
         for pos, arg in enumerate(args):
             param = parameters[arg[0]] = Parameter(*arg)
-            if pos > len_positional:
+            if pos >= len_positional:
                 param.default = defaults[pos - len_positional]
         if vararg:
             parameters[vararg[0]] = Parameter(*vararg, is_vararg=True)
@@ -1276,6 +1279,7 @@ class Collector(object):
         # Match args
         for arg in arguments:
             if arg.arg == "*":
+                new_args.extend(arg.value)
                 for _ in range(len(arg.value)):
                     param = parameter_order[last_unfilled]
                     match(arg, param)
@@ -1284,6 +1288,7 @@ class Collector(object):
                     param.filled = True
                     last_unfilled += 1
             else:
+                new_args.append(arg.value)
                 param = parameter_order[last_unfilled]
                 match(arg, param)
                 if not param.is_vararg:
@@ -1297,23 +1302,29 @@ class Collector(object):
         for keyword in keywords:
             param = None
             if keyword.arg in parameters:
-                param = parameters[keyword.arg]
+                key = keyword.arg
+                param = parameters[key]
             elif kwarg:
-                param = parameters[kwarg[0]]
+                key = kwarg[0]
+                param = parameters[key]
             if param is not None:
                 match(keyword, param)
+                new_kwargs[key] = keyword.value
                 param.filled = True
             elif keyword.arg == "**":
                 for key in viewkeys(keyword.value):
                     if key in parameters:
                         param = parameters[key]
                         match(keyword, param)
+                        new_kwargs[key] = keyword.value
                         param.filled = True
 
         # Default parameters
         for param in viewvalues(parameters):
             if not param.filled and param.default is not None:
                 match(param.default, param)
+                new_kwargs[param.name] = param.default.value
+        return new_args, new_kwargs
 
     def return_(self, activation, exc_handler):
         """Capture return before"""
