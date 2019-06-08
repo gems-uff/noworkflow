@@ -79,28 +79,19 @@ class RewriteDependencies(ast.NodeTransformer):
         """Create List/Tuple/Set Item"""
         citem = ast_copy(self.rewriter.capture(item, mode=Dependency.ITEM), item)
         if ctx.startswith('r'):
-            if hasattr(citem, 'code_component_id'):
-                item_component = ast.Num(citem.code_component_id)
-            else:
-                name = pyposast.extract_code(self.rewriter.lcode, item)
-                id_ = self.rewriter.code_components.add(
-                    self.rewriter.trial_id, name, Component.S_ITEM, 'r',
-                    item.first_line, item.first_col,
-                    item.last_line, item.last_col,
-                    self.rewriter.container_id
-                )
-                self.create_composition(id_, *self.composition_edge)
-                item_component = ast.Num(id_)
+            citem_component_id = self.rewriter._ast_num_from_component_id(
+                citem, item, Component.ITEM, 'r'
+            )
             fname, key = set_key()
             return ast_copy(double_noworkflow(
                 fname,
                 [
                     activation(),
-                    item_component,
+                    citem_component_id,
                     ast.Num(self.rewriter.current_exc_handler)
                 ], [
                     activation(),
-                    item_component,
+                    citem_component_id,
                     citem,
                     key,
                 ]
@@ -642,23 +633,18 @@ class RewriteDependencies(ast.NodeTransformer):
         if new_node.value:
             self.composition_edge = (yield_component, Component.S_VALUE)
             value = self.rewriter.capture(new_node.value, mode=Dependency.ITEM)
-            if hasattr(value, 'code_component_id'):
-                value_component = value.code_component_id
-            else:
-                value.name = pyposast.extract_code(self.rewriter.lcode, value)
-                value_component = self.rewriter.create_code_component(
-                    new_node, Component.ITEM, 'r'
-                )
-                self.create_composition(value_component, *self.composition_edge)
+            value_component_id = self.rewriter._ast_num_from_component_id(
+                value, new_node.value, Component.ITEM, 'r'
+            )
             new_node.value = ast_copy(double_noworkflow(
                 'yielditem',
                 [
                     activation(),
-                    ast.Num(value_component),
+                    value_component_id,
                     ast.Num(self.rewriter.current_exc_handler)
                 ], [
                     activation(),
-                    ast.Num(value_component),
+                    value_component_id,
                     value,
                     act_attribute('generator')
                 ]
@@ -732,21 +718,18 @@ class RewriteDependencies(ast.NodeTransformer):
             node.name = '*' + node.name
             arg = ast.Str('*')
         cnode = rewriter.capture(node, mode=mode)
-        if hasattr(cnode, 'code_component_id'):
-            id_node = none()
-        else:
-            id_ = rewriter.create_code_component(node, Component.ARGUMENT, 'r')
-            self.create_composition(id_, *self.composition_edge)
-            id_node = ast.Num(id_)
+        cnode_component_id = self.rewriter._ast_num_from_component_id(
+            cnode, node, Component.ARGUMENT, 'r'
+        )
         return ast_copy(double_noworkflow(
             'argument',
             [
                 activation(),
-                id_node,
+                cnode_component_id,
                 ast.Num(rewriter.current_exc_handler)
             ], [
                 activation(),
-                id_node,
+                cnode_component_id,
                 cnode,
                 ast.Str(mode), arg, ast.Str('argument')
             ]
@@ -760,21 +743,18 @@ class RewriteDependencies(ast.NodeTransformer):
         node.name = (('{}='.format(arg) if arg else '**') +
                      pyposast.extract_code(rewriter.lcode, node))
         cnode = rewriter.capture(node, mode=mode)
-        if hasattr(cnode, 'code_component_id'):
-            id_node = none()
-        else:
-            id_ = rewriter.create_code_component(node, Component.ARGUMENT, 'r')
-            self.create_composition(id_, *self.composition_edge)
-            id_node = ast.Num(id_)
+        cnode_component_id = self.rewriter._ast_num_from_component_id(
+            cnode, node, Component.ARGUMENT, 'r'
+        )
         return ast_copy(double_noworkflow(
             'argument',
             [
                 activation(),
-                id_node,
+                cnode_component_id,
                 ast.Num(rewriter.current_exc_handler)
             ], [
                 activation(),
-                id_node,
+                cnode_component_id,
                 cnode,
                 ast.Str(mode), ast.Str(arg if arg else '**'),
                 ast.Str('keyword')
@@ -829,12 +809,9 @@ class RewriteDependencies(ast.NodeTransformer):
             self.composition_edge = (id_, Component.S_FUNC)
             old_func.name = pyposast.extract_code(rewriter.lcode, old_func)
             cnode = rewriter.capture(old_func, mode=Dependency.FUNC)
-            if hasattr(cnode, 'code_component_id'):
-                func_id = none()
-            else:
-                func_id = ast.Num(
-                    rewriter.create_code_component(node, Component.FUNC, 'r')
-                )
+            cnode_component_id = self.rewriter._ast_num_from_component_id(
+                cnode, node, Component.FUNC, 'r'
+            )
             func = ast_copy(double_noworkflow(
                 'func',
                 [
@@ -844,7 +821,7 @@ class RewriteDependencies(ast.NodeTransformer):
                 ], [
                     activation(),
                     ast.Num(id_),
-                    func_id,
+                    cnode_component_id,
                     cnode,
                     ast.Str(self.mode)
                 ]

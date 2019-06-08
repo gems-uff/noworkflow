@@ -49,6 +49,20 @@ class RewriteAST(ast.NodeTransformer):
 
     # data
 
+    def _ast_num_from_component_id(self, citem, node, node_type, mode, fallback=True):
+        """Get ast.Num from code_component_id. Create component if it does not exist"""
+        if hasattr(citem, 'code_component_id'):
+            return ast.Num(citem.code_component_id)
+        elif fallback:
+            name = pyposast.extract_code(self.lcode, node)
+            id_ = self.create_code_component(
+                node, name, mode
+            )
+            self.create_composition(id_, *self.composition_edge)
+            return ast.Num(id_)
+        else:
+            raise Exception('Attribute code_component_id not found for {}'.format(citem))
+
     def create_code_component(self, node, type_, mode):
         """Create code_component. Return component id"""
         num = self.code_components.add(
@@ -257,22 +271,18 @@ class RewriteAST(ast.NodeTransformer):
         if not hasattr(default, 'name'):
             default.name = pyposast.extract_code(self.lcode, default)
         cnode = self.capture(default, mode=Dependency.ARGUMENT)
-        if hasattr(cnode, 'code_component_id'):
-            id_ = ast.Num(cnode.code_component_id)
-        else:
-            def_id = self.create_code_component(
-                default, Component.DEFAULT, context(default))
-            self.create_composition(def_id, *self.composition_edge)
-            id_ = ast.Num(def_id)
+        cnode_component_id = self._ast_num_from_component_id(
+            cnode, default, Component.DEFAULT, context(default)
+        )
         return ast_copy(double_noworkflow(
             'argument',
             [
                 activation(),
-                id_,
+                cnode_component_id,
                 ast.Num(self.current_exc_handler)
             ], [
                 activation(),
-                id_,
+                cnode_component_id,
                 cnode,
                 ast.Str(Dependency.ARGUMENT),
             ]
@@ -281,24 +291,18 @@ class RewriteAST(ast.NodeTransformer):
     def process_decorator(self, decorator):
         """Transform @dec into @__noworkflow__.decorator(<act>)(|dec|)"""
         cnode = self.capture(decorator, Dependency.USE)
-        if hasattr(cnode, 'code_component_id'):
-            dec_id = cnode.code_component_id
-        else:
-            dec_id = self.create_code_component(
-                decorator, Component.DECORATOR, context(decorator)
-            )
-            self.create_composition(dec_id, *self.composition_edge)
-        id_ = ast.Num(dec_id)
-
+        cnode_component_id = self._ast_num_from_component_id(
+            cnode, decorator, Component.DECORATOR, context(decorator)
+        )
         return ast_copy(double_noworkflow(
             'decorator',
             [
                 activation(),
-                id_,
+                cnode_component_id,
                 ast.Num(self.current_exc_handler)
             ], [
                 activation(),
-                id_,
+                cnode_component_id,
                 cnode,
                 ast.Str(Dependency.DECORATOR),
             ]
