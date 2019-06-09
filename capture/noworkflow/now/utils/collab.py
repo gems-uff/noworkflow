@@ -1,10 +1,61 @@
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
+
 from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
 from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW,BundleLW
 
 from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
 from ..persistence.models import FileAccess,Member,Module,Tag
+from ..persistence.lightweight import ObjectStore
 
-def exportBundle(trialIds):
+def import_bundle(bundle):
+    trials_store=ObjectStore(TrialLW)
+    codeBlock_store=ObjectStore(CodeBlockLW)
+    arguments_store=ObjectStore(ArgumentLW)
+    codeComponent_store=ObjectStore(CodeComponentLW)
+    activation_store=ObjectStore(ActivationLW)
+    composition_store=ObjectStore(CompositionLW)
+    dependency_store=ObjectStore(DependencyLW)
+    env_store=ObjectStore(EnvironmentAttrLW)
+    evaluation_store=ObjectStore(EvaluationLW)
+    fileAccess_store=ObjectStore(FileAccessLW)
+    member_store=ObjectStore(MemberLW)
+    module_store=ObjectStore(ModuleLW)
+
+    [trials_store.add_from_object(x) for x in bundle.trials]
+    [codeBlock_store.add_from_object(x) for x in bundle.codeBlocks]
+    [arguments_store.add_from_object(x) for x in bundle.arguments]
+    [codeComponent_store.add_from_object(x) for x in bundle.codeComponents]
+    [activation_store.add_from_object(x) for x in bundle.activations]
+    [composition_store.add_from_object(x) for x in bundle.compositions]
+    [dependency_store.add_from_object(x) for x in bundle.dependencies]
+    [env_store.add_from_object(x) for x in bundle.environmentAttrs]
+    [evaluation_store.add_from_object(x) for x in bundle.evaluations]
+    [fileAccess_store.add_from_object(x) for x in bundle.fileAccesses]
+    [member_store.add_from_object(x) for x in bundle.members]
+    [module_store.add_from_object(x) for x in bundle.modules]
+
+    trials_store.do_store()
+    arguments_store.do_store()
+    codeBlock_store.do_store()
+    codeComponent_store.do_store()
+    activation_store.do_store()
+    composition_store.do_store()
+    dependency_store.do_store()
+    env_store.do_store()
+    evaluation_store.do_store()
+    fileAccess_store.do_store()
+    member_store.do_store()
+    module_store.do_store()
+    
+    for x in bundle.trials:
+        main_block=[c for c in bundle.codeBlocks if c.trial_id==x.id and x.main_id==c.id]
+        main_block=main_block[0]
+        Tag.create_automatic_tag(x.id,main_block.code_hash,x.command)
+    
+def export_bundle(trialIds):
     #Load dependencies
     trialsToImport=[t for t in Trial.all() if t.id in trialIds ]
     actsToImport=Activation.load_by_trials(trialIds)
@@ -36,7 +87,7 @@ def exportBundle(trialIds):
             x.last_char_line,x.last_char_column,x.container_id) for x in codeComponentToImport]
     )
     bundle.activations.extend(
-        [ActivationLW(x,x.trial_id,x.name,x.start_checkpoint,x.code_block_id) for x in actsToImport]
+        [ActivationLW(x,x.trial_id,x.name,x.start_checkpoint,x.code_block_id,x.id) for x in actsToImport]
     )
     bundle.compositions.extend(
         [CompositionLW(x.id,x.trial_id,x.part_id,x.whole_id,x.type,x.position,x.extra) for x in compositionToImport]

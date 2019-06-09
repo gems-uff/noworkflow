@@ -7,18 +7,17 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
+import json
 
-import gzip, functools
-from io import BytesIO as IO
-
-from flask import render_template, jsonify, request, after_this_request
+from flask import render_template, jsonify, request  
 
 from ..persistence.models import Trial,Activation
-from ..persistence.lightweight import ActivationLW
+from ..persistence.lightweight import ActivationLW, BundleLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational
-from ..utils.collab import exportBundle
+from ..utils.collab import export_bundle, import_bundle
+from ..utils.compression import gzip_compress,gzip_uncompress
 
 class WebServer(object):
     """Flask WebServer"""
@@ -36,41 +35,8 @@ class WebServer(object):
 
         self.app = Flask(__name__)
 
-def gzipped(f):
-    @functools.wraps(f)
-    def view_func(*args, **kwargs):
-        @after_this_request
-        def zipper(response):
-            accept_encoding = request.headers.get('Accept-Encoding', '')
-
-            if 'gzip' not in accept_encoding.lower():
-                return response
-
-            response.direct_passthrough = False
-
-            if (response.status_code < 200 or
-                response.status_code >= 300 or
-                'Content-Encoding' in response.headers):
-                return response
-            gzip_buffer = IO()
-            gzip_file = gzip.GzipFile(mode='wb',
-                                      fileobj=gzip_buffer)
-            gzip_file.write(response.data)
-            gzip_file.close()
-
-            response.data = gzip_buffer.getvalue()
-            response.headers['Content-Encoding'] = 'gzip'
-            response.headers['Vary'] = 'Accept-Encoding'
-            response.headers['Content-Length'] = len(response.data)
-
-            return response
-
-        return f(*args, **kwargs)
-
-    return view_func
-
 app = WebServer().app  # pylint: disable=invalid-name
-
+app.config['MAX_CONTENT_LENGTH'] = 1600 * 1024 * 1024
 
 @app.after_request
 def add_header(req):
@@ -84,6 +50,28 @@ def add_header(req):
     req.headers['Cache-Control'] = 'public, max-age=0'
     return req
 
+@app.after_request
+def zipper(response):
+    accept_encoding = request.headers.get('Accept-Encoding', '')
+    if 'gzip' not in accept_encoding.lower():
+        return response
+    response.direct_passthrough = False
+    if (response.status_code < 200 or
+        response.status_code >= 300 or
+        'Content-Encoding' in response.headers):
+        return response
+    response.data = gzip_compress(response.data)
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Vary'] = 'Accept-Encoding'
+    response.headers['Content-Length'] = len(response.data)
+    return response
+
+def getRequestContent():
+    encoding = request.headers.get('Content-Encoding', '')
+    if 'gzip' in encoding.lower():
+        content=gzip_uncompress(request.data)
+        return json.loads(content)
+    return request.get_json()
 
 @app.route("/<path:path>")
 def static_proxy(path):
@@ -103,14 +91,23 @@ def index(tid=None, graph_mode=None):
         scripts=history.scripts
     )
     
-@app.route("/collab/bundle")
-@gzipped
-def export():
-    """Respond trials ids"""
+@app.route("/collab/bundle", methods=['GET'])
+def getBundle():
+    """Return bundle with trials from trials ids"""
     trialsToExport=request.args.getlist("id")
-    bundle=exportBundle(trialsToExport)
+    bundle=export_bundle(trialsToExport)
     resp=bundle.__json__()
     return jsonify(resp)
+
+@app.route("/collab/bundle", methods=['Post'])
+def postBundle():
+    """Import Bundle of trials"""
+    data =  getRequestContent()
+    bundle=BundleLW()
+    bundle.from_json(data)
+    import_bundle(bundle)
+    return "",201
+
 
 @app.route("/collab/trialsids")
 def trialsId():

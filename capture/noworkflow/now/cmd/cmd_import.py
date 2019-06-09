@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""""now list" command"""
+""""now import" command"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -14,11 +14,8 @@ from ..persistence.config import PersistenceConfig
 from ..persistence.content_database import ContentDatabase
 from ..persistence.relational_database import RelationalDatabase
 from ..persistence import persistence_config, relational
-from ..utils.collab import exportBundle
+from ..utils.collab import export_bundle,import_bundle
 
-
-
-from ..persistence.lightweight import ObjectStore, SharedObjectStore
 from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
 from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW
 
@@ -80,7 +77,6 @@ class Import(Command):
             
         self.import_content(args)
              
-        print("Load Trials")
         persistence_config.connect(args.target or os.getcwd())
         targetTrials=[t for t in Trial.all()]
        
@@ -91,59 +87,13 @@ class Import(Command):
         trialsToImport=[x for x in sourceTrials if x.id not in targetUuids]
         trialsToImportIds=[x.id for x in trialsToImport]
 
-        bundle=exportBundle(trialsToImportIds)
+        bundle=export_bundle(trialsToImportIds)
        
         persistence_config.connect(args.target or os.getcwd())
 
-        
-        print("Preparing Stores")
-        trials_store=ObjectStore(TrialLW)
-        codeBlock_store=ObjectStore(CodeBlockLW)
-        arguments_store=ObjectStore(ArgumentLW)
-        codeComponent_store=ObjectStore(CodeComponentLW)
-        activation_store=ObjectStore(ActivationLW)
-        composition_store=ObjectStore(CompositionLW)
-        dependency_store=ObjectStore(DependencyLW)
-        env_store=ObjectStore(EnvironmentAttrLW)
-        evaluation_store=ObjectStore(EvaluationLW)
-        fileAccess_store=ObjectStore(FileAccessLW)
-        member_store=ObjectStore(MemberLW)
-        module_store=ObjectStore(ModuleLW)
+        import_bundle(bundle)
 
-
-        [trials_store.add_from_object(x) for x in bundle.trials]
-        [codeBlock_store.add_from_object(x) for x in bundle.codeBlocks]
-        [arguments_store.add_from_object(x) for x in bundle.arguments]
-        [codeComponent_store.add_from_object(x) for x in bundle.codeComponents]
-        [activation_store.add_from_object(x) for x in bundle.activations]
-        [composition_store.add_from_object(x) for x in bundle.compositions]
-        [dependency_store.add_from_object(x) for x in bundle.dependencies]
-        [env_store.add_from_object(x) for x in bundle.environmentAttrs]
-        [evaluation_store.add_from_object(x) for x in bundle.evaluations]
-        [fileAccess_store.add_from_object(x) for x in bundle.fileAccesses]
-        [member_store.add_from_object(x) for x in bundle.members]
-        [module_store.add_from_object(x) for x in bundle.modules]
-
-        print("Saving Stores")
-        trials_store.do_store()
-        arguments_store.do_store()
-        codeBlock_store.do_store()
-        codeComponent_store.do_store()
-        activation_store.do_store()
-        composition_store.do_store()
-        dependency_store.do_store()
-        env_store.do_store()
-        evaluation_store.do_store()
-        fileAccess_store.do_store()
-        member_store.do_store()
-        module_store.do_store()
-
-        for x in trialsToImport:
-            main_block=[c for c in bundle.codeBlocks if c.trial_id==x.id and x.main_id==c.id]
-            main_block=main_block[0]
-            Tag.create_automatic_tag(x.id,main_block.code_hash,x.command)
-
-        print("Finish importing")
+        print("Imported successfully")
        
 
 

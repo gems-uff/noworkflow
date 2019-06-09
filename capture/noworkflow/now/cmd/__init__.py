@@ -14,6 +14,7 @@ from .command import Command, SmartFormatter
 from .cmd_run import Run
 from .cmd_debug import Debug
 from .cmd_import import Import
+from .cmd_push import Push
 from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
@@ -47,6 +48,7 @@ def main():
         Dataflow(),
         Export(),
         Import(),
+        Push(),
         Restore(),
         Vis(),
         Demo(),
@@ -89,4 +91,6 @@ __all__ = [
     "Prov",
     "Kernel",
     "main",
+    "Push",
+    "Import",
 ]
