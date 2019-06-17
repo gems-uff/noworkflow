@@ -8,12 +8,14 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from flask import render_template, jsonify, request
+from flask import render_template, jsonify, request, make_response, send_file
 
 from ..persistence.models import Trial
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational
+
+import subprocess #modulo p chamada de script bash
 
 
 class WebServer(object):
@@ -77,6 +79,26 @@ def trials():
                       summarize=bool(int(request.args.get("summarize"))))
     return jsonify(**history.graph.graph())
 
+@app.route("/trials/<tid>/dataflow.pdf")
+def dataflow(tid):
+    """Generates the dafalow of a trial """ 
+    trial = Trial(tid)
+    dest = 'flow.pdf'
+    temp = 'flow.dot'
+    print(dest)
+    args = ['/bin/sh',"/usr/local/lib/python3.5/dist-packages/noworkflow-2.0.0a0-py3.5.egg/noworkflow/now/vis/static/mydataflow.sh",os.getcwd(),str(tid),temp,dest] 
+    #esse endereço hardcoded tá feio
+    ret = subprocess.Popen(args)
+    #ret = subprocess.check_call(args)
+    #print("deu ruim? " + str(ret))
+    #output = open(dest,'rb')
+    #response = make_response(output)
+    #response.headers.set('Content-Disposition','attachment',filename=dest)
+    #response.headers.set('Content-Type','application/pdf')
+    
+    return send_file(os.getcwd() + '/' + dest,attachment_filename=dest)
+    
+    
 
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
 def trial_graph(tid, graph_mode, cache):
@@ -174,6 +196,7 @@ def diff_accesses(trial1, trial2):
 @app.route("/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
 def diff_graph(trial1, trial2, graph_mode, cache):
     """Respond trial diff as JSON"""
+    print("private dancer")
     diff_object = Diff(trial1, trial2)
     graph = diff_object.graph
     graph.use_cache &= bool(int(cache))

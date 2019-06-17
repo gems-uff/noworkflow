@@ -181,7 +181,7 @@ class HistoryGraph {
       });
     form.append("label")
       .attr("for", "history-" + this.graphId + "-toolbar-fonts")
-      .attr("title", "Set font size")
+      .attr("title", "Set font sizetete")
     .append("i")
       .classed("fa fa-font", true)
     let fontSize = form.append("input")
@@ -380,6 +380,7 @@ class HistoryGraph {
   selectTrial(trialId: string) {
     for (var node of this.nodes) {
       if (node.title == trialId) {
+        console.log("scarface");
         this.selectNode(node);
         return;
       }
