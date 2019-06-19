@@ -79,26 +79,38 @@ def trials():
                       summarize=bool(int(request.args.get("summarize"))))
     return jsonify(**history.graph.graph())
 
-@app.route("/trials/<tid>/dataflow.pdf")
+#erick: dataflow
+@app.route("/trials/<tid>/flow.pdf")
 def dataflow(tid):
     """Generates the dafalow of a trial """ 
     trial = Trial(tid)
     dest = 'flow.pdf'
     temp = 'flow.dot'
-    print(dest)
     args = ['/bin/sh',"/usr/local/lib/python3.5/dist-packages/noworkflow-2.0.0a0-py3.5.egg/noworkflow/now/vis/static/mydataflow.sh",os.getcwd(),str(tid),temp,dest] 
-    #esse endereço hardcoded tá feio
-    ret = subprocess.Popen(args)
-    #ret = subprocess.check_call(args)
-    #print("deu ruim? " + str(ret))
-    #output = open(dest,'rb')
-    #response = make_response(output)
-    #response.headers.set('Content-Disposition','attachment',filename=dest)
-    #response.headers.set('Content-Type','application/pdf')
-    
+    #ret = subprocess.Popen(args)
+    subprocess.run(args)      
     return send_file(os.getcwd() + '/' + dest,attachment_filename=dest)
-    
-    
+
+@app.route("/trials/<tid>/<scriptHash>")    
+def get_script(tid,scriptHash):
+    """Returns the executed script"""
+    dirHash = scriptHash[0] + scriptHash[1]
+    objHash = scriptHash[2::]
+    dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
+    return send_file(dir, attachment_filename=objHash + '.py') #for the script to be executed be recognized as a python script
+
+@app.route("/trials/files/<fileHash>/<fileExt>")
+def get_file(fileHash, fileExt):
+    """Returns a file used in the trial"""
+    #filename: necessário p/ saber a extensão do arquivo.
+    #filehash: p pegar o arquivo no diretório do noworkflow
+    dirHash = fileHash[0] + fileHash[1]
+    objHash = fileHash[2::]
+    #extension = fileName[(len(fileName) - 4)::]
+    dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
+    objName = objHash + fileExt
+    return send_file(dir, attachment_filename=objName) # a falta de extensão no save do arquivo no .noworkflow pede isos p abrir com o cara certo.
+
 
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
 def trial_graph(tid, graph_mode, cache):

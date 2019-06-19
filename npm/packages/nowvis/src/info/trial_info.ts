@@ -41,11 +41,11 @@ class TrialInfoWidget extends Widget {
 
     main.append("h1")
       .text("Trial " + trial.display);
-    alert("gretchen");
 
-    main.append("h3")
+    main.append("a")
       .classed("hash", true)
-      .text(info.code_hash || "");
+      .text(info.code_hash || "")
+      .attr('href','trials/'+ trial.id + '/' + info.code_hash);//erick; href p script
 
     let idAttr = main.append("span")
       .classed("attr", true);
@@ -61,9 +61,10 @@ class TrialInfoWidget extends Widget {
     scriptAttr.append("span")
       .classed("desc", true)
       .text("Script: ");
-    scriptAttr.append("span")
+    scriptAttr.append("a")
       .classed("script", true)
-      .text(info.script);
+      .text(info.script)
+      .attr('href','trials/'+ trial.id + '/' + info.code_hash ); //erick: href pro script
 
     let startAttr = main.append("span")
       .classed("attr", true);
@@ -128,43 +129,6 @@ class TrialInfoWidget extends Widget {
     this.loadModules();
     this.loadEnvironment();
     this.loadFileAccess();
-    //this.addButtonToToolbar();
-
-    //erick: adiciono o botão ao form:
-  }
-
-  addButtonToToolbar(){
-    let form = document.getElementsByClassName("buttonsGraph")[0];
-    //TODO: olhar no log do console quem é o div que quero dentro desse cara.
-    //pegou o cara errado, essa é a toolbar do history.
-    //agora ok: ver como recuperar o d3 de forma oa classed funcionar.
-    //form is undefidned: a div não existe aqui ainda. Essa abordagem nao funciona
-    console.log(form);
-
-    let button = document.createElement("a");
-    button.classList.add("toollink");
-    button.setAttribute("id","trial-" + this.trial.id + "-dataflow");
-    button.setAttribute("href","trials/" + this.trial.id + "/dataflow.pdf");
-    button.setAttribute("title","Generate dataflow");
-
-    let i = document.createElement("i");
-    i.classList.add("fa");
-    i.classList.add("fa-book");
-
-    button.appendChild(i);
-    form.appendChild(button);
-   /*form.append("a")
-    .classed("toollink", true)
-    .attr("id", "trial-" + this.trial.id + "-dataflow")
-    .attr("href", "trials/" + this.trial.id + "/dataflow.pdf")
-    .attr("title", "Generate dataflow")
-    .on("click", () => {
-      alert("private dancer");
-
-    })
-  .append("i")
-    .classed("fa fa-book", true)
-  */
   }
 
   static createFold(parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, title: string) {

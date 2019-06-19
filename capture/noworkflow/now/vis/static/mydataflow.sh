@@ -1,6 +1,5 @@
-#!/bin/bash -x
-pwd
+#!/bin/bash 
+
 cd $1
-now dataflow $2 -b >$3
+now dataflow $2 >$3
 dot -T pdf $3 -o $4
-pwd

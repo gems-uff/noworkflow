@@ -129,9 +129,17 @@ class FileAccessesInfoWidget extends Widget {
           continue;
         }
         var li = list.append("li");
-        li.append("div").classed("name", true)
+
+        //retornar o nome do arquivo pro back.
+        var name = element.name.split("/");
+        var pos = name.length -1;
+        var fileName = name[pos];
+        //var extension = element.name.substring(element.name.length - 4); //aqui passo só a extensão
+        //console.log(extension)
+        li.append("a").classed("name", true)
           .attr("title", "Name")
-          .text(element.name);
+          .text(element.name)
+          .attr("href","/trials/files/" + element.content_hash_after + "/" + fileName); //arquivo após a execução
         li.append("div").classed("mode", true)
           .attr("title", "Mode")
           .text(element.mode);
@@ -142,12 +150,15 @@ class FileAccessesInfoWidget extends Widget {
         li.append("div").classed("timestamp", true)
           .attr("title", "Time")
           .text(element.timestamp);
-        li.append("div").classed("content_hash_before hash", true)
+        li.append("a").classed("content_hash_before hash", true)
           .attr("title", "Content hash before")
-          .text(element.content_hash_before);
-        li.append("div").classed("content_hash_after hash", true)
+          .text(element.content_hash_before)
+          .attr("href","/trials/files/" + element.content_hash_before + "/" + fileName);
+        li.append("div"); //espaçmento entre hash de files
+        li.append("a").classed("content_hash_after hash", true)
           .attr("title", "Content hash after")
-          .text(element.content_hash_after);
+          .text(element.content_hash_after)
+          .attr("href","/trials/files/" + element.content_hash_after + "/" + fileName);
         li.append("div").classed("stack", true)
           .attr("title", "Stack")
           .text(element.stack);

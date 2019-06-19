@@ -35,7 +35,7 @@ import {
   TrialEdgeData
 } from './structures';
 
-import $ = require("jquery");
+//import $ = require("jquery");
 
 export
 class TrialGraph {
@@ -229,15 +229,15 @@ class TrialGraph {
     // Generate Dataflow
     //nota: esse cara talvez tenha que ter o append dentro do trial widget, para pegar o id.
     //abordagem acima nao funciona: a div ainda nao existe p dar append no button
-
+    var trialId = document.getElementsByClassName("id")[0].innerHTML;
     form.append("a")
     .classed("toollink", true)
     .attr("id", "trial-" + this.graphId + "-dataflow")
-    .attr("href", "#")
+    .attr("href", "trials/" + trialId + "/flow.pdf")
     .attr("title", "Generate dataflow")
     .on("click", () => {
-      var trialId = document.getElementsByClassName("id")[0].innerHTML;
-      $.get("trials/" + trialId + "/dataflow.pdf");
+      //var trialId = document.getElementsByClassName("id")[0].innerHTML;
+      //$.get("trials/" + trialId + "/dataflow.pdf");
     })
   .append("i")
     .classed("fa fa-book", true)
