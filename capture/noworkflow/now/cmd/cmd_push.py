@@ -12,7 +12,7 @@ from ..utils.collab import export_bundle,import_bundle
 from ..utils.compression import gzip_compress
 
 from ..persistence.models import Trial
-
+from ..persistence import content
 
 from .command import Command
 
@@ -33,15 +33,15 @@ class Push(Command):
         if not (args.url):  
             raise ValueError("--url can't be empty")  
         self.url=args.url
+    
+    def get(self,url):
+        headers = {'Accept-Encoding': 'gzip'}
+        response=requests.get(url, headers=headers)
+        return json.loads(response.content)
 
-    def execute(self, args):
-
-        self.populate(args)
+    def exportTrials(self):
         url=self.url+"/collab/trialsids"
-        response = requests.get(url)
-        targetUuids=json.loads(response.content)
-        
-        persistence_config.connect(os.getcwd())
+        targetUuids=self.get(url)
 
         trials=[t for t in Trial.all()]
         trialsToExport=[x.id for x in trials if x.id not in targetUuids]
@@ -51,13 +51,34 @@ class Push(Command):
         headers = {'Content-Encoding': 'gzip'}
         url=self.url+"/collab/bundle"
         
-
         ziped_data=gzip_compress(json.dumps(bundle.__json__()).encode())
+        response=requests.post(url, data= ziped_data, headers=headers)
+        return response.status_code
+    def exportFile(self,fileName,url):
+        print("Sending file: "+fileName)
+        headers = {'Content-Encoding': 'gzip'}
+        ziped_data=gzip_compress(content.get(fileName))
+        response=requests.post(url, data= ziped_data, headers=headers)
+        if(response.status_code!=201):
+            print("Error sending file: "+fileName)
+    def exportFiles(self):
+        filesUrl=self.url+"/collab/files"
+        targetFiles=self.get(filesUrl)
+        sourceFiles=content.listAll()
+        filesToImport=[x for x in sourceFiles if x not in targetFiles]
+        [self.exportFile(x,filesUrl) for x in filesToImport]
+
+    def execute(self, args):
+
+        self.populate(args)
+
+        persistence_config.connect(os.getcwd())
+        
+        self.exportFiles()
+        status_code=self.exportTrials()
         
 
-        response=requests.post(url, data= ziped_data, headers=headers)
-
-        if(response.status_code==201):
+        if(status_code==201):
             print("Pushed successfully")
         else:
             print("Error pushing")

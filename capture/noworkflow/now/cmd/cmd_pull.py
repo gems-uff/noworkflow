@@ -12,7 +12,7 @@ from ..utils.collab import export_bundle,import_bundle
 from ..utils.compression import gzip_uncompress
 from ..persistence.lightweight import BundleLW
 from ..persistence.models import Trial
-
+from ..persistence import content
 
 from .command import Command
 
@@ -34,34 +34,52 @@ class Pull(Command):
             raise ValueError("--url can't be empty")  
         self.url=args.url
 
-    def execute(self, args):
+    def get(self,url):
+        headers = {'Accept-Encoding': 'gzip'}
+        response=requests.get(url, headers=headers)
+        return json.loads(response.content)
 
-        self.populate(args)
-        url=self.url+"/collab/trialsids"
-
-        response = requests.get(url)
-        targetUuids=json.loads(response.content)
-        
-        persistence_config.connect(os.getcwd())
+    def importTrials(self,url):
+        trialUrls=self.url+"/collab/trialsids"
+        targetUuids=self.get(trialUrls)
 
         trialsIds=[t.id for t in Trial.all()]
         trialsToImport=[x for x in targetUuids if x not in trialsIds]
 
- 
-
-        headers = {'Accept-Encoding': 'gzip'}
-        url=self.url+"/collab/bundle?id=0&"
+        bundleUrls=self.url+"/collab/bundle?id=0&"
         for x in trialsToImport:
             url=url+"&id="+x
 
-        response=requests.get(url, headers=headers)
-        content= json.loads(response.content)
-
+        pvContent=self.get(bundleUrls)
         
         bundle=BundleLW()
-        bundle.from_json(content)
+        bundle.from_json(pvContent)
         
         import_bundle(bundle)
+    
+    def importFile(self,url):
+        print("Importing file: "+url)
+        headers = {'Accept-Encoding': 'gzip'}
+        response=requests.get(url, headers=headers)
+        content.put(response.content)
+
+    def importFiles(self,url):
+        filesUrl=self.url+"/collab/files"
+        sourceFiles=self.get(filesUrl)
+        targetFiles=content.listAll()
+        filesToImport=[x for x in sourceFiles if x not in targetFiles]
+        [self.importFile(filesUrl+"/"+x) for x in filesToImport]
+
+    def execute(self, args):
+
+        self.populate(args)
+        
+        persistence_config.connect(os.getcwd())
+
+        self.importFiles(self.url)
+        print("Importing trials")
+        self.importTrials(self.url)
+        
 
         print("Pulled successfully")
 

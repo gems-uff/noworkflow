@@ -9,7 +9,8 @@ from __future__ import (absolute_import, print_function,
 import os
 import json
 
-from flask import render_template, jsonify, request  
+from flask import render_template, jsonify, request,send_file  
+from io import BytesIO as IO
 
 from ..persistence.models import Trial,Activation
 from ..persistence.lightweight import ActivationLW, BundleLW
@@ -18,6 +19,8 @@ from ..models.diff import Diff
 from ..persistence import relational
 from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
+from ..persistence import content
+
 
 class WebServer(object):
     """Flask WebServer"""
@@ -69,8 +72,8 @@ def zipper(response):
 def getRequestContent():
     encoding = request.headers.get('Content-Encoding', '')
     if 'gzip' in encoding.lower():
-        content=gzip_uncompress(request.data)
-        return json.loads(content)
+        contentData=gzip_uncompress(request.data)
+        return json.loads(contentData)
     return request.get_json()
 
 @app.route("/<path:path>")
@@ -108,6 +111,24 @@ def postBundle():
     import_bundle(bundle)
     return "",201
 
+@app.route("/collab/files", methods=['Post'])
+def receiveFile():
+    """Respond files hash"""
+    contFile=gzip_uncompress(request.data)
+    content.put(contFile)
+    return "",201
+
+@app.route("/collab/files/<fid>", methods=['Get'])
+def downloadFile(fid):
+    """Respond files hash"""
+    resp=content.get(fid)
+    return send_file(IO(resp),mimetype='application/octet-stream')
+
+@app.route("/collab/files", methods=['Get'])
+def listFiles():
+    """Respond files hash"""
+    resp=content.listAll()
+    return jsonify(resp)
 
 @app.route("/collab/trialsids")
 def trialsId():
