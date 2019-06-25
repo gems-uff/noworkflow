@@ -91,13 +91,13 @@ def dataflow(tid):
     subprocess.run(args)      
     return send_file(os.getcwd() + '/' + dest,attachment_filename=dest)
 
-@app.route("/trials/<tid>/<scriptHash>")    
-def get_script(tid,scriptHash):
+@app.route("/trials/<tid>/<scriptHash>/<name>")    
+def get_script(tid,scriptHash,name):
     """Returns the executed script"""
     dirHash = scriptHash[0] + scriptHash[1]
     objHash = scriptHash[2::]
     dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
-    return send_file(dir, attachment_filename=objHash + '.py') #for the script to be executed be recognized as a python script
+    return send_file(dir, attachment_filename=name + '.py') #for the script to be executed be recognized as a python script
 
 @app.route("/trials/files/<fileHash>/<fileExt>")
 def get_file(fileHash, fileExt):
