@@ -86,9 +86,10 @@ def dataflow(tid):
     trial = Trial(tid)
     dest = 'flow.pdf'
     temp = 'flow.dot'
-    args = ['/bin/sh',"/usr/local/lib/python3.5/dist-packages/noworkflow-2.0.0a0-py3.5.egg/noworkflow/now/vis/static/mydataflow.sh",os.getcwd(),str(tid),temp,dest] 
+    # args = ['/bin/sh',"/usr/local/lib/python3.5/dist-packages/noworkflow-2.0.0a0-py3.5.egg/noworkflow/now/vis/static/mydataflow.sh",os.getcwd(),str(tid),temp,dest] 
     #ret = subprocess.Popen(args)
-    subprocess.run(args)      
+    cmd = 'cd ' + os.getcwd()+ ' && now dataflow ' + str(tid) + ' >' + temp +' && dot -T pdf ' + temp + ' -o ' + dest
+    subprocess.run(cmd, check=True, shell=True)      
     return send_file(os.getcwd() + '/' + dest,attachment_filename=dest)
 
 @app.route("/trials/<tid>/<scriptHash>")    
