@@ -1,0 +1,10 @@
+	Translation	Positive	Negative	EmotionRationale
+ aplicativo der erro conexão internet é reiniciar aparelho instalação	 aplicativo der erro conexão internet é reiniciar aparelho instalação	1	-2	 aplicativo[0] der[0] erro[-1] conexão[0] internet[0] é[0] reiniciar[0] aparelho[0] instalação[0] [[Sentence=-2,1=word max, 1-5]][[[1,-2 max of sentences]]]
+ Diz conexão internet celular conectado wi-fi 4G	 Diz conexão internet celular conectado wi-fi 4G	1	-1	 Diz[0] conexão[0] internet[0] celular[0] conectado[0] wi[0] fi[0] 4G[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ APP dá erro d verificar conexão internet WiFi 3/4G ativos	 AP dá erro d verificar conexão internet WiFi 3/4G ativos	1	-2	 APP/AP[0] dá[0] erro[-1] d[0] verificar[0] conexão[0] internet[0] WiFi[0] 3/4G[0] ativos[0] [[Sentence=-2,1=word max, 1-5]][[[1,-2 max of sentences]]]
+ fala conexão internet	 fala conexão internet	1	-1	 fala[0] conexão[0] internet[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ erro conexão internet	 erro conexão internet	1	-2	 erro[-1] conexão[0] internet[0] [[Sentence=-2,1=word max, 1-5]][[[1,-2 max of sentences]]]
+ Diz verificar conexão internet aparelho conectado via wi-fi	 Diz verificar conexão internet aparelho conectado via wi-fi	1	-1	 Diz[0] verificar[0] conexão[0] internet[0] aparelho[0] conectado[0] via[0] wi[0] fi[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ Diz conexão internet 4G Wi-fi	 Diz conexão internet 4G Wi-fi	1	-1	 Diz[0] conexão[0] internet[0] 4G[0] Wi[0] fi[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ aparece conexão internet	 aparece conexão internet	1	-1	 aparece[0] conexão[0] internet[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ nao funciona erro conexão internet sendo testei redes	 nao funciona erro conexão internet sendo testei redes	1	-2	 nao[0] funciona[0] erro[-1] conexão[0] internet[0] sendo[0] testei[0] redes[0] [[Sentence=-2,1=word max, 1-5]][[[1,-2 max of sentences]]]

@@ -1,0 +1,2 @@
+	Translation	Positive	Negative	EmotionRationale
+ Porem notificação loguei percebi faixa vermelha mensagem CNH VENCIDA nao aparecia CNH exibida CNH antiga	 Porem notificação loguei percebi faixa vermelha mensagem CNH VENCIDA nao aparecia CNH exibida CNH antiga	1	-1	 Porem[0] notificação[0] loguei[0] percebi[0] faixa[0] vermelha[0] mensagem[0] CNH[0] VENCIDA[0] nao[0] aparecia[0] CNH[0] exibida[0] CNH[0] antiga[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]

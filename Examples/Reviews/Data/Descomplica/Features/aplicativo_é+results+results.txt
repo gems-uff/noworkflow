@@ -1,0 +1,4 @@
+	Translation	Positive	Negative	EmotionRationale	Translation	Positive	Negative	EmotionRationale
+ amo curso aplicativo é útil	 amo curso aplicativo é útil	3	-1	 amo[2] curso[0] aplicativo[0] é[0] útil[2] [[Sentence -1,3 word max, 1-5]][[[3,-1 max of sentences]]]	3	1	-1	 3[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ aplicativo é útil	 aplicativo é útil	3	-1	 aplicativo[0] é[0] útil[2] [[Sentence -1,3 word max, 1-5]][[[3,-1 max of sentences]]]	3	1	-1	 3[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ aplicativo celulares é bom tablets é ruim	 aplicativo celulares é bom tablets é ruim	2	-3	 aplicativo[0] celulares[0] é[0] bom[1] tablets[0] é[0] ruim[-2] [[Sentence -3,2 word max, 1-5]][[[2,-3 max of sentences]]]	2	1	-1	 2[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
