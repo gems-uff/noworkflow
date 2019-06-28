@@ -79,7 +79,7 @@ def trials():
                       summarize=bool(int(request.args.get("summarize"))))
     return jsonify(**history.graph.graph())
 
-#erick: dataflow
+#generate dafalowdataflow
 @app.route("/trials/<tid>/flow.pdf")
 def dataflow(tid):
     """Generates the dafalow of a trial """ 
@@ -110,7 +110,7 @@ def get_file(fileHash, fileExt):
     #extension = fileName[(len(fileName) - 4)::]
     dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
     objName = objHash + fileExt
-    return send_file(dir, attachment_filename=objName) # a falta de extensão no save do arquivo no .noworkflow pede isos p abrir com o cara certo.
+    return send_file(dir, attachment_filename=objName)
 
 
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
