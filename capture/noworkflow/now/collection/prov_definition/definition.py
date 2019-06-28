@@ -104,6 +104,8 @@ class Definition(object):
 
             tree = visitor.visit(tree)
             debug_tree(tree, just_print=[], show_code=[])
+            #import astor
+            #print(astor.to_source(tree))
             transformed = True
         except SyntaxError:
             print_msg("Syntax error on file {}. Skipping transformer."

@@ -148,6 +148,58 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
 
+    def test_function_definition_with_named_argument(self):
+        """Test function_def collection with named arguments"""
+        self.script("# script.py\n"
+                    "arg = 2\n"
+                    "def f(x, named=arg):\n"
+                    "    r = named + 1\n"
+                    "a = 2\n"
+                    "f(a)\n"
+                    "# other")
+
+        write_arg_eval = self.get_evaluation(name="arg", mode="w")
+        def_arg_eval = self.get_evaluation(name="arg", mode="r")
+        write_f_eval = self.get_evaluation(name="f", mode="w")
+        param_x_eval = self.get_evaluation(name="x", mode="w")
+        param_named_eval = self.get_evaluation(name="named", mode="w")
+        write_a_eval = self.get_evaluation(name="a", mode="w")
+        arg_a_eval = self.get_evaluation(name="a", mode="r")
+        r_eval = self.get_evaluation(name="r", mode="w")
+        call = self.get_evaluation(name="f(a)", type="call")
+
+        script_eval = self.get_evaluation(name="script.py")
+        script_act = self.metascript.activations_store[script_eval.id]
+        activation = self.metascript.activations_store[call.id]
+
+        self.assertEqual(call.activation_id, script_act.id)
+        self.assertTrue(activation.start_checkpoint < call.checkpoint)
+        self.assertEqual(activation.code_block_id, write_f_eval.code_component_id)
+        self.assertEqual(activation.name, "f")
+
+        self.assertEqual(write_f_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(write_f_eval.checkpoint))
+        self.assertEqual(arg_a_eval.activation_id, script_eval.id)
+        self.assertTrue(bool(arg_a_eval.checkpoint))
+        self.assertEqual(call.activation_id, script_eval.id)
+        self.assertTrue(bool(call.checkpoint))
+        self.assertEqual(param_x_eval.activation_id, activation.id)
+        self.assertTrue(bool(param_x_eval.checkpoint))
+        self.assertEqual(param_named_eval.activation_id, activation.id)
+        self.assertTrue(bool(param_named_eval.checkpoint))
+        self.assertEqual(r_eval.activation_id, activation.id)
+        self.assertTrue(bool(r_eval.checkpoint))
+        self.assertEqual(script_act.context['a'], write_a_eval)
+        self.assertEqual(script_act.context['f'], write_f_eval)
+        self.assertEqual(activation.context['x'], param_x_eval)
+        self.assertEqual(activation.context['named'], param_named_eval)
+        self.assertEqual(activation.context['r'], r_eval)
+
+        self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
+        self.assert_dependency(param_named_eval, def_arg_eval, "argument", True)
+
+    # ToDo: check kwonly defaults
+
     def test_function_definition_with_return(self):
         """Test return collection"""
         self.script("# script.py\n"
