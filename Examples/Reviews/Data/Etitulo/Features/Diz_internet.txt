@@ -1,0 +1,4 @@
+
+ Diz conexão internet celular conectado wi-fi 4G
+ Diz acesso internet
+ Diz conexão internet 4G Wi-fi

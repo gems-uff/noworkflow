@@ -1,0 +1,4 @@
+
+ informar data nascimento digitar barras
+ aplicação pede nome pessoa data nascimento nomes pai mãe precisa número inscrição eleitor
+ Nao opção lembrar número título site oferece recurso nome completo data nascimento permite lembrar

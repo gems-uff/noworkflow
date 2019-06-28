@@ -1,0 +1,101 @@
+,Review,Rating
+0,"[[('bom', 'ADJ'), ('ruim', 'ADJ'), ('atualizar', 'VERB'), ('classificação', 'NOUN')], [('é', 'VERB'), ('melhor', 'ADJ'), ('acompanhar', 'VERB'), ('Brasileirão', 'VERB')]]",5
+1,"[[('Melhor', 'ADJ'), ('acompanhar', 'VERB'), ('campeonato', 'NOUN'), ('brasileiro', 'ADJ')]]",5
+2,"[[('Estão', 'VERB'), ('esperando', 'VERB'), ('atualizarem', 'VERB'), ('escudo', 'NOUN'), ('Flamengo', 'NOUN')]]",2
+3,"[[('gol', 'NOUN'), ('Atlético', 'NOUN'), ('anulado', 'VERB')], [('senhores', 'NOUN'), ('antis', 'ADJ'), ('desse', 'VERB'), ('website', 'NOUN'), ('manteve', 'VERB'), ('1x0', 'NOUN'), ('tempo', 'NOUN')], [('boa', 'ADJ')], [('decepcionou', 'VERB')], [('Fui', 'VERB')]]",2
+4,"[[('App', 'NOUN'), ('caiu', 'VERB'), ('conceito', 'NOUN')], [('atualiza', 'VERB')]]",1
+5,"[[('Top', 'NOUN')]]",5
+6,"[[('APP', 'NOUN')], [('feito', 'VERB'), ('leve', 'VERB')], [('Obrigatório', 'NOUN'), ('curte', 'NOUN'), ('futebol', 'NOUN'), ('quer', 'VERB'), ('acompanhar', 'VERB'), ('Brasileirão', 'VERB')]]",5
+7,"[[('é', 'VERB'), ('ótimo', 'ADJ')], [('respeita', 'VERB'), ('configurações', 'NOUN'), ('notificações', 'NOUN')], [('marquei', 'VERB'), ('aparecer', 'VERB'), ('notificações', 'NOUN'), ('continuo', 'VERB'), ('recebendo', 'VERB'), ('dia', 'NOUN')]]",3
+8,"[[('bom', 'ADJ')]]",5
+9,"[[('Bom', 'ADJ')]]",5
+10,"[[('Very', 'NOUN'), ('good', 'NOUN'), ('application', 'NOUN')]]",5
+11,"[[('faz', 'VERB'), ('tirar', 'VERB'), ('notificação', 'NOUN'), ('fica', 'VERB'), ('cima', 'NOUN'), ('aplicativo', 'ADJ')]]",5
+12,"[[('Very', 'NOUN'), ('good', 'NOUN'), ('vai', 'VERB'), ('Corinthians', 'NOUN')]]",5
+13,"[[('Great', 'NOUN'), ('one', 'NOUN')]]",5
+14,"[[('Great', 'NOUN')]]",5
+15,"[[('Melhor', 'ADJ'), ('Brasileirão', 'VERB')], [('Tô', 'NOUN'), ('impressionada', 'VERB')]]",5
+16,"[[('Good', 'NOUN')]]",5
+17,"[[('I', 'ADJ'), ('liked', 'NOUN'), ('about', 'NOUN'), ('of', 'NOUN')]]",5
+18,"[[('precisa', 'VERB'), ('colocar', 'VERB'), ('opção', 'NOUN'), ('simular', 'VERB'), ('resultados', 'NOUN'), ('gente', 'NOUN'), ('ter', 'VERB'), ('noção', 'NOUN'), ('pode', 'VERB'), ('ser', 'VERB'), ('rodada', 'NOUN'), ('time', 'NOUN'), ('ganhar', 'VERB'), ('perder', 'VERB')]]",5
+19,"[[('Bom', 'ADJ')], [('Tem', 'VERB'), ('potencial', 'ADJ'), ('tornar', 'VERB'), ('otimo', 'ADJ')], [('recomendações', 'NOUN'), ('-adicionar', 'VERB'), ('competições', 'NOUN'), ('-sincronizar', 'VERB'), ('horário', 'NOUN'), ('partida', 'NOUN'), ('celular', 'ADJ'), ('-lance', 'NOUN'), ('lance', 'VERB'), ('informações', 'NOUN'), ('-mostrar', 'VERB'), ('tempo', 'NOUN'), ('partida', 'NOUN'), ('-mostrar', 'VERB'), ('%', 'NOUN'), ('aproveitamento', 'NOUN'), ('time', 'NOUN'), ('competição', 'NOUN'), ('-mostrar', 'VERB'), ('desempenho', 'NOUN'), ('últimos', 'ADJ'), ('jogos', 'NOUN'), ('vitórias', 'NOUN'), ('empate', 'NOUN'), ('derrota', 'NOUN'), ('=', 'NOUN'), ('V', 'NOUN'), ('D', 'NOUN'), ('V', 'NOUN'), ('V', 'NOUN')]]",3
+20,"[[('Uso', 'NOUN'), ('primeira', 'ADJ'), ('versão', 'NOUN'), ('problemas', 'NOUN'), ('longo', 'ADJ'), ('anos', 'NOUN')], [('falta', 'VERB'), ('ter', 'VERB'), ('série', 'NOUN'), ('C', 'NOUN'), ('pro', 'NOUN'), ('ser', 'VERB'), ('completo', 'ADJ')]]",4
+21,"[[('Fraco', 'NOUN')], [('Horario', 'NOUN'), ('DOS', 'NOUN'), ('jogos', 'NOUN'), ('nao', 'NOUN'), ('é', 'VERB'), ('sincronizado', 'VERB'), ('GPS', 'NOUN'), ('celular', 'ADJ')], [('Jogos', 'NOUN'), ('andamento', 'NOUN'), ('nao', 'NOUN'), ('aprsentam', 'VERB'), ('tempo', 'NOUN'), ('partida', 'NOUN')]]",1
+22,"[[('Very', 'NOUN'), ('good', 'NOUN')]]",5
+23,"[[('Great', 'NOUN')]]",5
+24,"[[('It', 'NOUN'), (""'s"", 'NOUN'), ('very', 'NOUN'), ('good', 'NOUN')]]",5
+25,"[[('bom', 'ADJ')]]",5
+26,"[[('Melhor', 'ADJ')], [('Seria', 'VERB'), ('pedir', 'VERB'), ('versão', 'NOUN'), ('brasileirão', 'VERB'), ('libertadores', 'NOUN')]]",5
+27,"[[('melhores', 'ADJ'), ('apps', 'NOUN')], [('poderia', 'VERB'), ('mostrar', 'VERB'), ('tempo', 'NOUN'), ('real', 'ADJ'), ('jogo', 'NOUN'), ('curso', 'NOUN')]]",5
+28,"[[('Mt', 'NOUN'), ('bom', 'ADJ'), ('melhor', 'ADJ'), ('futebol', 'NOUN'), ('brasileiro', 'ADJ')]]",5
+29,"[[('Very', 'NOUN'), ('good', 'NOUN')]]",5
+30,"[[('Very', 'NOUN'), ('good', 'NOUN')]]",5
+31,"[[('Great', 'NOUN')]]",4
+32,"[[('Atende', 'VERB'), ('expectativas', 'NOUN')], [('simples', 'ADJ'), ('objetivo', 'NOUN')]]",5
+33,"[[('Falta', 'VERB'), ('saber', 'VERB'), ('jogo', 'NOUN'), ('intervalo', 'NOUN'), ('encerado', 'VERB')]]",4
+34,"[[('é', 'VERB'), ('bom', 'ADJ'), ('paciência', 'NOUN'), ('receber', 'VERB'), ('phishing', 'NOUN'), ('whatsapp', 'NOUN'), ('manda', 'VERB')]]",3
+35,"[[('ultima', 'ADJ'), ('atualização', 'NOUN'), ('ficou', 'VERB'), ('melhor', 'ADJ')]]",5
+36,"[[('Era', 'VERB'), ('bom', 'ADJ'), ('atualização', 'NOUN'), ('ficou', 'VERB'), ('melhor', 'ADJ')], []]",5
+37,"[[('melhores', 'ADJ'), ('campeonato', 'NOUN'), ('brasileiro', 'ADJ'), ('ja', 'NOUN'), ('utilizei', 'VERB'), ('telefone', 'NOUN')], []]",5
+38,"[[('Ótimo', 'ADJ'), ('aplicativo', 'ADJ')], [('Ótimo', 'ADJ'), ('design', 'NOUN')], [('Parabéns', 'NOUN')]]",5
+39,"[[('Yeah', 'NOUN')]]",5
+40,"[[('Ótimo', 'ADJ'), ('queria', 'VERB'), ('informações', 'NOUN'), ('assistências', 'NOUN'), ('gols', 'NOUN'), ('informações', 'NOUN'), ('jogos', 'NOUN'), ('estatísticas', 'NOUN'), ('roubadas', 'VERB'), ('bola', 'NOUN')], [('Seria', 'VERB'), ('perfeito', 'ADJ'), ('ter', 'VERB'), ('pensando', 'VERB'), ('jogador', 'NOUN'), ('cartola', 'NOUN')]]",4
+41,"[[('Great', 'NOUN')], []]",5
+42,"[[('Very', 'NOUN'), ('useful', 'NOUN')]]",4
+43,"[[('mostra', 'VERB'), ('tempo', 'NOUN'), ('jogo', 'NOUN'), ('ja', 'NOUN'), ('acabou', 'VERB')]]",1
+44,"[[('Cool', 'NOUN')]]",4
+45,"[[('Atualização.As', 'NOUN'), ('vezes', 'NOUN'), ('dá', 'VERB'), ('delay', 'NOUN'), ('atualização', 'NOUN'), ('mostra', 'VERB'), ('infos', 'NOUN'), ('gols', 'NOUN'), ('partidas', 'NOUN')]]",4
+46,[[]],5
+47,"[[('propõe', 'VERB')]]",5
+48,"[[('Zenfone', 'NOUN'), ('5Go..Ótimo', 'ADJ')], [('App', 'NOUN')]]",5
+49,"[[('Ótimo.Entrega', 'VERB'), ('promete', 'VERB'), ('simples', 'ADJ'), ('objetivo', 'NOUN')]]",5
+50,"[[('bom', 'ADJ')]]",5
+51,"[[('Tooooooooooop.Muuuuito', 'NOUN'), ('booommmmmmmmmmm', 'NOUN')]]",5
+52,"[[('bom.Cara', 'NOUN'), ('nao', 'NOUN'), ('bug', 'NOUN'), ('celular', 'ADJ'), ('otimo', 'ADJ'), ('indico', 'ADJ')]]",5
+53,"[[('Excelente..Atualiza', 'VERB'), ('rápido', 'ADJ'), ('interface', 'NOUN'), ('funcional', 'NOUN'), ('prática', 'NOUN')], [('Parabéns', 'NOUN')]]",5
+54,"[[('bom', 'ADJ')], [('Informacoes', 'NOUN'), ('tempo', 'NOUN'), ('real', 'ADJ')]]",5
+55,"[[('Show.App', 'NOUN'), ('bom', 'ADJ')]]",5
+56,"[[('bom', 'ADJ')]]",4
+57,"[[('Otimo.Otimo', 'ADJ')]]",5
+58,"[[('Está', 'VERB'), ('ótimo.Falta', 'NOUN'), ('excelente', 'ADJ')], [('Sugiro', 'NOUN'), ('melhorar', 'VERB'), ('parte', 'NOUN'), ('notícias', 'NOUN'), ('incluir', 'VERB'), ('informações', 'NOUN'), ('BID', 'NOUN'), ('exemplo', 'NOUN')]]",4
+59,"[[('Bom.Simples', 'NOUN'), ('pratico', 'ADJ')]]",5
+60,"[[('Sports.Ok', 'NOUN')]]",3
+61,"[[('Ótimo.Muito', 'NOUN'), ('bom', 'ADJ'), ('gostei', 'VERB'), ('Parabéns', 'NOUN')]]",4
+62,"[[('Voce', 'NOUN'), ('é', 'VERB'), ('Curintianus', 'NOUN')], [('.Tabela', 'NOUN'), ('atualizou', 'VERB'), ('SEU', 'NOUN'), ('time', 'NOUN'), ('ja', 'NOUN'), ('somou', 'VERB'), ('pontos', 'NOUN'), ('dia', 'NOUN'), ('atualizou..shame', 'NOUN'), ('shame', 'NOUN'), ('on', 'NOUN'), ('you', 'NOUN'), ('brother', 'NOUN'), ('Minglini', 'NOUN'), ('kkkkk', 'NOUN')]]",1
+63,"[[('Melhor', 'ADJ'), ('q', 'NOUN'), ('App', 'NOUN'), ('Sportv.Tabela', 'NOUN'), ('classificação', 'NOUN'), ('td', 'NOUN'), ('atualizado', 'VERB'), ('excesso', 'NOUN'), ('publicidade', 'NOUN')], [('Parabéns', 'NOUN')], [('😉', 'NOUN')]]",5
+64,"[[('Parou', 'VERB'), ('atualizar', 'VERB'), ('funcionou', 'VERB'), ('usei', 'VERB'), ('anos', 'NOUN'), ('parou', 'VERB')]]",1
+65,"[[('Good.Very', 'NOUN'), ('very', 'NOUN'), ('good', 'NOUN')]]",5
+66,"[[('So', 'NOUN'), ('acho', 'VERB'), ('q', 'NOUN'), ('x', 'NOUN'), ('atualizacao', 'NOUN'), ('dados', 'NOUN')]]",3
+67,"[[('prático', 'ADJ')]]",5
+68,"[[('App', 'NOUN'), ('bom', 'ADJ'), ('eficiente', 'ADJ')], [('merece', 'VERB'), ('estrelas', 'NOUN')]]",5
+69,"[[('Parabéns.App', 'NOUN'), ('bom', 'ADJ'), ('informações', 'NOUN'), ('jogos', 'NOUN'), ('parabéns', 'NOUN')]]",5
+70,"[[('Falta', 'VERB'), ('adicionar', 'VERB'), ('canais', 'NOUN'), ('TV', 'NOUN'), ('irão', 'VERB'), ('transmitir', 'VERB'), ('jogos', 'NOUN')]]",4
+71,"[[('AQUI', 'NOUN'), ('GALOOOOOO.DOIDOOO', 'NOUN')]]",5
+72,"[[('bom..Leve', 'VERB'), ('intuitivo', 'ADJ'), ('informações', 'NOUN'), ('necessárias', 'ADJ')], [('avalanche', 'NOUN'), ('advertisings', 'NOUN')], [('Parabéns', 'NOUN')]]",5
+73,"[[('bom..', 'NOUN')]]",5
+74,"[[('Bom.Interface', 'NOUN'), ('boa', 'ADJ')]]",4
+75,"[[('.Assertivo', 'ADJ'), ('informações', 'NOUN'), ('interface', 'NOUN'), ('perfeita', 'VERB')], [('Stars', 'NOUN')]]",5
+76,"[[('Fantastico', 'ADJ')]]",5
+77,"[[('So', 'NOUN'), ('falta', 'NOUN'), ('colocar', 'VERB'), ('campeonatos.Muito', 'NOUN'), ('bom', 'ADJ'), ('App', 'NOUN')], [('campeonatos', 'NOUN'), ('melhor', 'ADJ')], [('✌', 'NOUN')]]",4
+78,"[[('Brasileirão', 'VERB'), ('Série', 'NOUN'), ('B.Nice', 'NOUN'), ('App', 'NOUN')]]",5
+79,"[[('bom', 'ADJ')], [('.Facilita', 'VERB'), ('coisas', 'NOUN'), ('quer', 'VERB'), ('acompanhar', 'VERB'), ('brasileirão', 'VERB')]]",5
+80,"[[('🗝️.Bom', 'NOUN'), ('dimaiss', 'NOUN')]]",5
+81,"[[('Parabéns', 'NOUN'), ('Gui.Show', 'NOUN')]]",5
+82,"[[('é', 'VERB'), ('bom', 'ADJ')], [('Atualização', 'NOUN'), ('rápida', 'ADJ'), ('partidas', 'NOUN'), ('classificação', 'NOUN')]]",5
+83,"[[('bom', 'ADJ')], [('Gostei', 'VERB'), ('fácil', 'ADJ'), ('usar', 'VERB'), ('top', 'ADJ')]]",5
+84,"[[('App', 'NOUN'), ('bom', 'ADJ'), ('precisa', 'VERB'), ('melhorar..A', 'NOUN'), ('interessa', 'VERB'), ('acontece', 'VERB'), ('série', 'NOUN'), ('B', 'NOUN'), ('iniciam', 'VERB'), ('jogos', 'NOUN'), ('desta', 'NOUN'), ('divisão', 'NOUN')], [('fato', 'NOUN'), ('dia', 'NOUN'), ('dar', 'VERB'), ('opção', 'NOUN'), ('escolher', 'VERB'), ('noticias', 'NOUN'), ('quer', 'VERB'), ('receber', 'VERB'), ('ajuda', 'VERB'), ('pior', 'ADJ'), ('opção', 'NOUN'), ('ativar/desativar', 'VERB'), ('notificações', 'NOUN')], [('opções', 'NOUN'), ('volto', 'VERB'), ('dar', 'VERB'), ('estrelas', 'NOUN')]]",3
+85,"[[('porq', 'NOUN'), ('fico', 'NOUN'), ('vendo', 'VERB'), ('vascu', 'NOUN'), ('dia', 'NOUN'), ('kkkk', 'NOUN')]]",5
+86,"[[('bom.Acho', 'NOUN'), ('poderia', 'VERB'), ('incluir', 'VERB'), ('status', 'NOUN'), ('partidas', 'NOUN'), ('andamento', 'NOUN'), ('intervalo', 'NOUN'), ('encerrada', 'VERB')]]",5
+87,"[[('redondinho', 'NOUN')]]",5
+88,"[[('Ótima', 'ADJ'), ('App.Funciona', 'NOUN')]]",5
+89,"[[('Baum', 'NOUN'), ('D+', 'ADJ')]]",5
+90,"[[('informação', 'NOUN')]]",5
+91,"[[('Otimo', 'ADJ'), ('faltou', 'VERB'), ('opção', 'NOUN'), ('escolher', 'VERB'), ('clube', 'NOUN'), ('coração', 'NOUN')], []]",5
+92,"[[('bom', 'ADJ')]]",4
+93,"[[('App.Very', 'NOUN'), ('much', 'NOUN')]]",5
+94,"[[('bom', 'ADJ'), ('completão', 'VERB')]]",5
+95,"[[('Good.Muito', 'NOUN'), ('bom', 'ADJ'), ('App', 'NOUN')]]",5
+96,"[[('Santa', 'NOUN'), ('Cruz', 'NOUN'), ('x', 'NOUN'), ('Cruzeiro', 'NOUN'), ('25/05.Cadê', 'NOUN'), ('resultado', 'NOUN')], []]",1
+97,"[[('Excelente.Bem', 'NOUN'), ('feito', 'VERB'), ('fácil', 'ADJ'), ('utilizar', 'VERB')]]",5
+98,"[[('aplicativo.Parabens', 'NOUN'), ('desenvolvedor', 'NOUN'), ('completo', 'ADJ')]]",5
+99,"[[('Brasileiro', 'NOUN'), ('pro.Vai', 'NOUN'), ('Corinthians', 'NOUN')]]",4

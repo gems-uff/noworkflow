@@ -1,0 +1,6 @@
+	Translation	Positive	Negative	EmotionRationale
+ Very good application	 Very good application	1	-1	 Very[0] good[0] application[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ Very good vai Corinthians	 Very good vai Corinthians	1	-1	 Very[0] good[0] vai[0] Corinthians[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ Very good	 Very good	1	-1	 Very[0] good[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ Very good	 Very good	1	-1	 Very[0] good[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
+ Very good	 Very good	1	-1	 Very[0] good[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
