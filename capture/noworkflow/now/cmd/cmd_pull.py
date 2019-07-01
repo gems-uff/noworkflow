@@ -45,10 +45,9 @@ class Pull(Command):
 
         trialsIds=[t.id for t in Trial.all()]
         trialsToImport=[x for x in targetUuids if x not in trialsIds]
-
         bundleUrls=self.url+"/collab/bundle?id=0&"
         for x in trialsToImport:
-            url=url+"&id="+x
+            bundleUrls=bundleUrls+"&id="+x
 
         pvContent=self.get(bundleUrls)
         
