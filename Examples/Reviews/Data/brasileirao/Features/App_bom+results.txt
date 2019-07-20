@@ -1,3 +1,0 @@
-	Translation	Positive	Negative	EmotionRationale
- App bom eficiente	 Ap bom eficiente	2	-1	 App/Ap[0] bom[1] eficiente[1] [[Sentence=-1,2=word max, 1-5]][[[2,-1 max of sentences]]]
- App bom precisa melhorar..A interessa acontece série B iniciam jogos desta divisão	 Ap bom precisa melhorar.<br>A interessa acontece série B iniciam jogos desta divisão	2	-2	 App/Ap[0] bom[1] precisa[0] melhorar[1] [[Sentence=-1,2=word max, 1-5]] A[0] interessa[0] acontece[0] série[0] B[0] iniciam[0] jogos[0] desta[0] divisão[-1] [[Sentence=-2,1=word max, 1-5]][[[2,-2 max of sentences]]]

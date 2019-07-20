@@ -1,4 +1,0 @@
-
- Diz conexão internet celular conectado wi-fi 4G
- Diz verificar conexão internet aparelho conectado via wi-fi
- Diz conexão internet 4G Wi-fi

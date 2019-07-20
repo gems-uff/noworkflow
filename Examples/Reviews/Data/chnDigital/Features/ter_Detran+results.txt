@@ -1,4 +1,0 @@
-	Translation	Positive	Negative	EmotionRationale
- faz sentido ter Detran atualizar dados atualizados	 faz sentido ter Detran atualizar dados atualizados	1	-1	 faz[0] sentido[0] ter[0] Detran[0] atualizar[0] dados[0] atualizados[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
- faz sentido ter ir Detran validar acesso caso ter certificado	 faz sentido ter ir Detran validar acesso caso ter certificado	1	-1	 faz[0] sentido[0] ter[0] ir[0] Detran[0] validar[0] acesso[0] caso[0] ter[0] certificado[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
- UX prejudicada necessidade ter ir Detran	 UX prejudicada necessidade ter ir Detran	1	-2	 UX[0] prejudicada[-1] necessidade[0] ter[0] ir[0] Detran[0] [[Sentence=-2,1=word max, 1-5]][[[1,-2 max of sentences]]]

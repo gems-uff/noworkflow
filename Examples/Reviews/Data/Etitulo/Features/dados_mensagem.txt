@@ -1,4 +1,0 @@
-
- Preenchi dados apresentar mensagem falando Atenção tente dias
- Coloco dados aparece mensagem eleitor encontrado
- preenchimento dados aparece mensagem verifique conexão estando wi-fi ligado

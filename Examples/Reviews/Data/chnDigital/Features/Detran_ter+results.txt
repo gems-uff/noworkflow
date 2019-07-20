@@ -1,4 +1,0 @@
-	Translation	Positive	Negative	EmotionRationale
- Ridiculo dizem precisa pegar fila Detran basta ter certificação digital	 Ridiculo dizem precisa pegar fila Detran basta ter certificação digital	1	-2	 Ridiculo[-1] dizem[0] precisa[0] pegar[0] fila[0] Detran[0] basta[0] ter[0] certificação[0] digital[0] [[Sentence=-2,1=word max, 1-5]][[[1,-2 max of sentences]]]
- Tenho enfrentar mega fila Detran ter CNH celular	 Tenho enfrentar mega fila Detran ter CNH celular	1	-1	 Tenho[0] enfrentar[0] mega[0] fila[0] Detran[0] ter[0] CNH[0] celular[0] [[Sentence=-1,1=word max, 1-5]][[[1,-1 max of sentences]]]
- Perder tempo ir Detran ter CNH celular	 Perder tempo ir Detran ter CNH celular	1	-2	 Perder[-1] tempo[0] ir[0] Detran[0] ter[0] CNH[0] celular[0] [[Sentence=-2,1=word max, 1-5]][[[1,-2 max of sentences]]]
