@@ -36,6 +36,9 @@ class Helper(Command):
         directory = "{}".format(args.id)
         if args.dir:
             directory = args.dir
+        if not args.id:
+            print("Please specify the helper!")
+            sys.exit(1)
         print("Creating Helper {}".format(args.id))
         helper_path = os.path.join(HELPER, args.id)
         recursive_copy(helper_path, directory)

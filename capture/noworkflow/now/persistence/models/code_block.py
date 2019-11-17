@@ -18,7 +18,7 @@ from ...utils.prolog import PrologNullableRepr
 from .. import relational, content
 
 from .base import proxy_class, AlchemyProxy
-from .base import many_ref, backref_many, backref_one_uselist
+from .base import many_ref, backref_many, backref_one_uselist, backref_one
 from .base import query_many_property, many_viewonly_ref
 
 
@@ -73,7 +73,7 @@ class CodeBlock(AlchemyProxy):
 
     modules = many_viewonly_ref("code_block", "Module")
 
-    trial = backref_one_uselist("trial")  # Trial.code_blocks
+    trial = backref_one("trial")  # Trial.code_blocks
     components = backref_many("components") # CodeComponent.container
 
     # CodeComponent.this_block

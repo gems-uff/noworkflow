@@ -17,6 +17,9 @@ class FakeActivation(object):
             name = ""
             first_char_line = 1
             first_char_column = 0
+        repr = "a"
+        checkpoint = None
+    activations = []
 
 
 class Node(object):

@@ -21,7 +21,7 @@ from .. import relational, content, persistence_config
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
 from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
-from .base import proxy
+from .base import proxy, many
 
 from .code_block import CodeBlock
 from .activation import Activation
@@ -172,11 +172,8 @@ class Trial(AlchemyProxy):
         remote_side=[CodeBlock.m.trial_id, CodeBlock.m.id],
         primaryjoin=((main_id == CodeBlock.m.id) &
                      (id == CodeBlock.m.trial_id)))
-    code_blocks = many_viewonly_ref(
-        "trial", "CodeBlock",
-        uselist=True,
-        remote_side=[CodeBlock.m.trial_id],
-        primaryjoin=((id == CodeBlock.m.trial_id)))
+    code_blocks = many_ref("trial", "CodeBlock",
+                           foreign_keys="CodeBlock.trial_id")
 
     arguments = many_ref("trial", "Argument")
     environment_attrs = many_ref("trial", "EnvironmentAttr")
@@ -351,7 +348,7 @@ class Trial(AlchemyProxy):
         >>> trial.initial_activation.id == trial_config.main_act
         True
         """
-        if self.main.this_component.first_evaluation is None:
+        if self.main is None or self.main.this_component.first_evaluation is None:
             return None
         return self.main.this_component.first_evaluation.this_activation
 
@@ -443,6 +440,8 @@ class Trial(AlchemyProxy):
         >>> len(trial.code_hash)
         40
         """
+        if not self.main:
+            return ""
         return self.main.code_hash
 
     @property
