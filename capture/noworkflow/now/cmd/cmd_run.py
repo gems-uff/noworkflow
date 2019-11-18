@@ -154,6 +154,9 @@ class Run(Command):
         add_arg("--meta", action="store_true", help=argparse.SUPPRESS)
 
     def execute(self, args):
+        if args.execution_provenance in ["Tracer", "Tracker"] and sys.version_info > (3, 6):
+            print("The provenance provider {} does not work on Python >= 3.6. Please upgrade to noWorkflow 2".format(args.execution_provenance))
+            sys.exit(1)
         if args.meta:
             metaprofiler.meta_profiler.active = True
             metaprofiler.meta_profiler.data["cmd"] = " ".join(sys.argv)
