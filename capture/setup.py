@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
-from setuptools.command.install import install
-from setuptools.command.develop import develop
 
 import os
 import platform
@@ -27,60 +25,6 @@ except (IOError, ImportError):
     long_description = (
         "Supporting infrastructure to run scientific experiments "
         "without a scientific workflow management system.")
-
-
-def analytics(command_subclass):
-    """Sends install statistics to analytics."""
-    orig_run = command_subclass.run
-
-    def modified_run(self):
-        import sys
-        try:
-            try:
-                from urllib2 import urlopen, Request
-                from urllib import urlencode
-            except ImportError:
-                from urllib.request import urlopen, Request
-                from urllib.parse import urlencode
-
-            os_ver = platform.system()
-            py_ver = "_".join(str(x) for x in sys.version_info)
-            now_ver = __version__.replace(".", "_")
-
-            code = "os:{0},py:{1},now:{2}".format(os_ver, py_ver, now_ver)
-            action = command_subclass.action
-            cid = getnode()
-            payload = {
-                "v": "1",
-                "tid": "UA-61791314-1",
-                "cid": str(cid),
-                "t": "event",
-                "ec": action,
-                "ea": code,
-            }
-
-            url = "http://www.google-analytics.com/collect"
-            data = urlencode(payload).encode("utf-8")
-            request = Request(url, data=data)
-            request.get_method = lambda: "POST"
-            urlopen(request)
-        except:
-            pass
-        orig_run(self)
-
-    command_subclass.run = modified_run
-    return command_subclass
-
-
-@analytics
-class CustomDevelopCommand(develop):
-    action = "develop"
-
-
-@analytics
-class CustomInstallCommand(install):
-    action = "install"
-
 
 setup(
     name="noworkflow",
@@ -114,10 +58,6 @@ setup(
         "notebook": ["pyposast", "ipython", "jupyter", "sphinx"],
         "all": ["pyposast", "ipython", "jupyter", "flask", "pyswip-alt",
                 "jsonpickle", "sphinx"],
-    },
-    cmdclass={
-        "install": CustomInstallCommand,
-        "develop": CustomDevelopCommand,
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',

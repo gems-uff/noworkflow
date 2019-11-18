@@ -15,7 +15,6 @@ from future.builtins import map as cvmap
 from pyposast import extract_code
 
 from ...utils.cross_version import cross_compile
-from ...utils.bytecode.dis import instruction_dis_sorted_by_line
 
 
 class FunctionVisitor(ast.NodeVisitor):                                          # pylint: disable=too-many-instance-attributes
@@ -126,6 +125,7 @@ class FunctionVisitor(ast.NodeVisitor):                                         
 
     def extract_disasm(self):
         """Extract disassembly code"""
+        from ...utils.bytecode.dis import instruction_dis_sorted_by_line
         compiled = cross_compile(
             self.code, self.path, "exec")
         if self.path == self.metascript.path:

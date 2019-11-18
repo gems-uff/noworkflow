@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
+import sys
 import weakref
 
 from collections import defaultdict
@@ -91,7 +92,8 @@ class Definition(object):                                                       
 
         visitor = SlicingVisitor(metascript, file_definition)
         visitor.result = visitor.visit(tree)
-        visitor.extract_disasm()
+        if sys.version_info < (3, 6):
+            visitor.extract_disasm()
         visitor.teardown()
         return visitor
 

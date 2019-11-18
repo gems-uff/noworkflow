@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import sys
 import dis
 from dis import opmap
 
@@ -16,9 +17,13 @@ from .instructions import Instruction
 
 
 CALL_FUNCTIONS = {
-    opmap["CALL_FUNCTION"], opmap["CALL_FUNCTION_VAR"],
-    opmap["CALL_FUNCTION_KW"], opmap["CALL_FUNCTION_VAR_KW"]
+    opmap["CALL_FUNCTION"], 
+    opmap["CALL_FUNCTION_KW"], 
 }
+
+if sys.version_info < (3, 6):
+    CALL_FUNCTIONS.add(opmap["CALL_FUNCTION_VAR"])
+    CALL_FUNCTIONS.add(opmap["CALL_FUNCTION_VAR_KW"])
 
 PRINT_ITEMS = set()
 if "PRINT_ITEM" in opmap:

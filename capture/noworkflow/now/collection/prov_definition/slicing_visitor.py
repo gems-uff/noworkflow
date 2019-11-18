@@ -11,11 +11,6 @@ import sys
 
 from collections import defaultdict, namedtuple
 
-from ...utils.bytecode.interpreter import CALL_FUNCTIONS, PRINT_ITEMS
-from ...utils.bytecode.interpreter import PRINT_NEW_LINES, SETUP_WITH
-from ...utils.bytecode.interpreter import WITH_CLEANUP, SETUP_ASYNC_WITH
-from ...utils.bytecode.interpreter import IMPORT_NAMES
-from ...utils.bytecode.interpreter import FOR_ITERS, GET_ITERS
 
 from .function_visitor import FunctionVisitor
 from .utils import NamedContext, FunctionCall, ClassDef, Decorator, Generator
@@ -607,6 +602,12 @@ class SlicingVisitor(FunctionVisitor):                                          
             __enter__: SETUP_WITH
             __exit__: WITH_CLEANUP
         """
+        from ...utils.bytecode.interpreter import CALL_FUNCTIONS, PRINT_ITEMS
+        from ...utils.bytecode.interpreter import PRINT_NEW_LINES, SETUP_WITH
+        from ...utils.bytecode.interpreter import WITH_CLEANUP, SETUP_ASYNC_WITH
+        from ...utils.bytecode.interpreter import IMPORT_NAMES
+        from ...utils.bytecode.interpreter import FOR_ITERS, GET_ITERS
+
         self.with_list.sort(key=lambda x: (x.line, x.col))
         end_with = {}
         operations = [

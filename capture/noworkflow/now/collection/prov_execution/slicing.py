@@ -21,7 +21,7 @@ from future.utils import viewitems
 from ...persistence.models import Variable, VariableDependency
 from ...persistence.models import VariableUsage
 from ...utils.io import print_fn_msg
-from ...utils.bytecode.f_trace import find_f_trace, get_f_trace
+
 from ...utils.cross_version import IMMUTABLE, builtins
 from ...utils.functions import NOWORKFLOW_DIR
 
@@ -601,6 +601,7 @@ class Tracer(Profiler):                                                         
 
     def trace_line(self, frame, event, arg):                                     # pylint: disable=unused-argument
         """Trace Line event"""
+        from ...utils.bytecode.f_trace import find_f_trace, get_f_trace
         code = frame.f_code
         filename = frame.f_code.co_filename
         lineno = frame.f_lineno
