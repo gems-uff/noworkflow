@@ -56,10 +56,12 @@ class TrialGraphWidget extends BaseActivationGraphWidget {
     sub.innerHTML = "";
     this.graph = new TrialGraph(this.cls, sub, config);
     this.graph.load(data, this.t1, this.t2);
+
   }
 
   configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, data: TrialGraphData) {
     this.setGraph(data, {
+      queryTooltip: true,
       width: this.node.getBoundingClientRect().width - 24,
       height: this.node.getBoundingClientRect().height - 24,
       customForm: (graph: TrialGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => {

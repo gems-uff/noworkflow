@@ -12,11 +12,6 @@ import os
 import tempfile
 from collections import OrderedDict
 
-from IPython.display import display
-from IPython.core.magic import Magics, magics_class, cell_magic
-from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
-from IPython.utils.text import DollarFormatter
-
 LOADED = False
 
 MIME_MAP = {
@@ -173,40 +168,46 @@ class DotDisplay(object):
         return result
 
     def _ipython_display_(self):
+        from IPython.display import display
         result = self.display_result()
         display(result, raw=True)
 
 
-@magics_class
-class DotMagic(Magics):
-    """Dot Magic.
-    Add cell magic %%dot to display dot graph in Jupyter"""
-
-    @magic_arguments()
-    @argument('-p', '--prog', default="dot", type=str, help="Command for rendering (dot, neato, ...)")
-    @argument('-f', '--format', default="png", help="Output format")
-    @argument('-s', '--save', default=[], nargs="+", help="Save files")
-    @argument('extra', default=[], nargs='*', help="Extra options for graphviz")
-    @cell_magic
-    def dot(self, line, cell):
-        """%%dot magic"""
-        # Remove comment on %%provn line
-        pos = line.find("#")
-        line = line[:pos if pos != -1 else None]
-
-        formatter = DollarFormatter()
-        line = formatter.vformat(
-            line, args=[], kwargs=self.shell.user_ns.copy()
-        )
-        args = parse_argstring(self.dot, line)
-        dot_display = DotDisplay(cell, args.format, args.prog, args.extra)
-
-        if args.save:
-            dot_display.save(*args.save)
-        return dot_display
-
 def load_ipython_extension(ipython):
     """Load the extension in IPython."""
+    
+    from IPython.core.magic import Magics, magics_class, cell_magic
+    from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
+    from IPython.utils.text import DollarFormatter
+
+    @magics_class
+    class DotMagic(Magics):
+        """Dot Magic.
+        Add cell magic %%dot to display dot graph in Jupyter"""
+
+        @magic_arguments()
+        @argument('-p', '--prog', default="dot", type=str, help="Command for rendering (dot, neato, ...)")
+        @argument('-f', '--format', default="png", help="Output format")
+        @argument('-s', '--save', default=[], nargs="+", help="Save files")
+        @argument('extra', default=[], nargs='*', help="Extra options for graphviz")
+        @cell_magic
+        def dot(self, line, cell):
+            """%%dot magic"""
+            # Remove comment on %%provn line
+            pos = line.find("#")
+            line = line[:pos if pos != -1 else None]
+
+            formatter = DollarFormatter()
+            line = formatter.vformat(
+                line, args=[], kwargs=self.shell.user_ns.copy()
+            )
+            args = parse_argstring(self.dot, line)
+            dot_display = DotDisplay(cell, args.format, args.prog, args.extra)
+
+            if args.save:
+                dot_display.save(*args.save)
+            return dot_display
+        
     global LOADED                                                               # pylint: disable=global-statement, invalid-name
     if not LOADED:
         ipython.register_magics(DotMagic)

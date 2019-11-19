@@ -31,7 +31,7 @@ class HistoryWidget extends Widget {
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   config: ConfigWidget;
 
-  static url(script = "*", execution = "*", summarize=true) {
+  static url(script = "*", execution = "*", summarize=false) {
     return ("trials.json"
       + "?script=" + encodeURIComponent(script)
       + "&execution=" + encodeURIComponent(execution)
@@ -84,8 +84,8 @@ class HistoryWidget extends Widget {
     summarize.append("input")
       .attr("type", "checkbox")
       .attr("name", "summarize")
-      .attr("value", "on")
-      .attr("checked", true)
+      .attr("value", "")
+      .attr("checked", false)
       .classed("summarize", true)
       .attr("id", "history-summarize")
 
@@ -139,7 +139,7 @@ class HistoryWidget extends Widget {
     this.graph.load(data);
   }
 
-  load(script = "*", execution = "*", summarize=true) {
+  load(script = "*", execution = "*", summarize=false) {
     let sub = this.node.getElementsByClassName("sub-content")[0];
 
     json("History", sub, HistoryWidget.url(script, execution, summarize), (data: HistoryGraphData) => {

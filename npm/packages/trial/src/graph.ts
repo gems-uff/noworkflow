@@ -32,10 +32,11 @@ import {TrialConfig} from './config';
 import {VisibleTrialNode, VisibleTrialEdge} from './structures';
 import {
   TrialGraphData, TrialNodeData,
-  TrialEdgeData
+  TrialEdgeData, ActivationData
 } from './structures';
 
-//import $ = require("jquery");
+import {json} from '@noworkflow/utils';
+
 
 export
 class TrialGraph {
@@ -65,6 +66,7 @@ class TrialGraph {
   totalDuration: { [trial: string]: number };
   maxTotalDuration: number;
   colors: { [trial: string]: number };
+  activationStorage: { [aid: string]: ActivationData; };
 
 
   constructor(graphId:string, div: any, config: any={}) {
@@ -97,6 +99,8 @@ class TrialGraph {
 
       nodeSizeX: 47,
       nodeSizeY: 100,
+
+      queryTooltip: false
     };
     this.config = (Object as any).assign({}, defaultConfig, config);
 
@@ -155,6 +159,8 @@ class TrialGraph {
         this.config.left + this.config.width / 2,
         this.config.top
       ))
+
+    this.activationStorage = {};
   }
 
   init(data: TrialGraphData, t1: number, t2: number) {
@@ -463,13 +469,62 @@ class TrialGraph {
   }
 
   private showTooltip(d: TrialNodeData, trial_id: number) {
+    var self = this;
     this.tooltipDiv.classed("hidden", false);
     this.tooltipDiv.transition()
       .duration(200)
       .style("opacity", 0.9);
-    this.tooltipDiv.html(d.tooltip[trial_id])
+    if (this.config.queryTooltip) {
+      var string = d.tooltip[trial_id]
+      var regexp = (/T(\d*) - (\d*)<br>Line \d*?<br>/g)
+      var match = regexp.exec(string);
+      this.tooltipDiv.html("")
       .style("left", (d3_event.pageX - 3) + "px")
       .style("top", (d3_event.pageY - 28) + "px");
+      while (match != null) {
+        var div = document.createElement("div");
+        //var div2 = document.createElement("div");
+        this.tooltipDiv.append(() => div);
+        //this.tooltipDiv.append(() => div2);
+        var aid = match[2];
+        if (aid in self.activationStorage) {
+          this.updateTooltipDiv(aid, div);
+        } else {
+          var url = "/trials/" + match[1] + "/activations/" + aid + ".json";
+          function createResponse(activationId: string, div2: Element) {
+            return function(data: ActivationData) {
+              self.activationStorage[activationId] = data;
+              self.updateTooltipDiv(activationId, div2);
+            }
+          }
+          json(match[0], div, url, createResponse(aid, div));
+        }
+        match = regexp.exec(string);
+      }
+    } else {
+      this.tooltipDiv.html(d.tooltip[trial_id])
+      .style("left", (d3_event.pageX - 3) + "px")
+      .style("top", (d3_event.pageY - 28) + "px");
+    }
+    
+  }
+
+  private updateTooltipDiv(activationId: string, div: Element) {
+    var data = this.activationStorage[activationId];
+    var title = data.id + " - " + data.name;
+    if (data.hash != "") {
+      title = '<a href="/trials/files/' + data.hash + '/' + data.name + '">' + title + "</a>";
+    }
+    var result = [
+      '<span class="attr"> <span style="font-weight: bold;">' + title  + '</span></span>',
+      '<span class="attr"> <span style="font-weight: bold;"> Line: </span> <span class="line">' + data.line + "</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Start: </span> <span class="start">' + data.start + "</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Finish: </span> <span class="finish">' + data.finish + "</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Duration: </span> <span class="duration">' + data.duration + "ns</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Return: </span> <span class="return">' + data.return_value + "</span></span>",
+    ]
+    // ToDo: parameters and globals
+    div.outerHTML = result.join("<br>") + "<br><br>"
   }
 
   private createMarker(name: string, cls: string, fill: string) {
@@ -855,10 +910,4 @@ class TrialGraph {
     return "trial-graph-" + this.graphId;
   }
 
-  //dataflow:
-
-  generateDataflow() {
-    return 1;
-
-  }
 }

@@ -7,15 +7,17 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
+import io
 
 from flask import render_template, jsonify, request, make_response, send_file
 
-from ..persistence.models import Trial
+from ..persistence.models import Trial, Activation
 from ..models.history import History
 from ..models.diff import Diff
-from ..persistence import relational
+from ..persistence import relational, content
+from ..ipython.dotmagic import DotDisplay
 
-import subprocess #modulo p chamada de script bash
+import subprocess
 
 
 class WebServer(object):
@@ -84,33 +86,29 @@ def trials():
 def dataflow(tid):
     """Generates the dafalow of a trial """ 
     trial = Trial(tid)
-    dest = 'flow.pdf'
-    temp = 'flow.dot'
-    # args = ['/bin/sh',"/usr/local/lib/python3.5/dist-packages/noworkflow-2.0.0a0-py3.5.egg/noworkflow/now/vis/static/mydataflow.sh",os.getcwd(),str(tid),temp,dest] 
-    #ret = subprocess.Popen(args)
-    cmd = 'cd ' + os.getcwd()+ ' && now dataflow ' + str(tid) + ' >' + temp +' && dot -T pdf ' + temp + ' -o ' + dest
-    subprocess.run(cmd, check=True, shell=True)      
-    return send_file(os.getcwd() + '/' + dest,attachment_filename=dest)
+    display = DotDisplay(trial.dot.export_text(), format="pdf")
+    return send_file(
+        io.BytesIO(display.display_result()["application/pdf"]),
+        attachment_filename='flow.pdf',
+        mimetype="application/pdf"
+    )
 
-@app.route("/trials/<tid>/<scriptHash>/<name>")    
-def get_script(tid,scriptHash,name):
+@app.route("/trials/<tid>/<script_hash>/<name>")    
+def get_script(tid, script_hash, name):
     """Returns the executed script"""
-    dirHash = scriptHash[0] + scriptHash[1]
-    objHash = scriptHash[2::]
-    dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
-    return send_file(dir, attachment_filename=name + '.py') #for the script to be executed be recognized as a python script
+    return send_file(
+        io.BytesIO(content.get(script_hash)),
+        attachment_filename=name + '.py'
+    )
 
-@app.route("/trials/files/<fileHash>/<fileExt>")
-def get_file(fileHash, fileExt):
+@app.route("/trials/files/<file_hash>/<file_ext>")
+def get_file(file_hash, file_ext):
     """Returns a file used in the trial"""
-    #filename: necessário p/ saber a extensão do arquivo.
-    #filehash: p pegar o arquivo no diretório do noworkflow
-    dirHash = fileHash[0] + fileHash[1]
-    objHash = fileHash[2::]
-    #extension = fileName[(len(fileName) - 4)::]
-    dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
-    objName = objHash + fileExt
-    return send_file(dir, attachment_filename=objName)
+    name = file_hash + file_ext
+    return send_file(
+        io.BytesIO(content.get(file_hash)),
+        attachment_filename=name
+    )
 
 
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
@@ -153,6 +151,27 @@ def file_accesses(tid):
                                   for x in trial.file_accesses],
                    trial_path=trial_path)
 
+
+
+@app.route("/trials/<tid>/activations/<aid>.json")
+@app.route("/trials/<tid>/activations/<aid>")
+def activations(tid, aid):
+    """Respond trial activation as text"""
+    activation = Activation((tid, aid))
+    global_evaluations = activation.filter_evaluations_by_type("global")
+    param_evaluations = activation.filter_evaluations_by_type("param")
+    return jsonify(
+        id=aid,
+        line=activation.line,
+        name=activation.name,
+        start=activation.start,
+        finish=activation.finish,
+        duration=activation.duration,
+        globals=["{} = {}".format(*evaluation) for evaluation in global_evaluations],
+        parameters=["{} = {}".format(*evaluation) for evaluation in param_evaluations],
+        return_value=activation.this_evaluation.repr,
+        hash=activation.code_block.code_hash if activation.code_block is not None else "",
+    )
 
 @app.route("/diff/<trial1>/<trial2>/info.json")
 def diff(trial1, trial2):
@@ -209,7 +228,6 @@ def diff_accesses(trial1, trial2):
 @app.route("/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
 def diff_graph(trial1, trial2, graph_mode, cache):
     """Respond trial diff as JSON"""
-    print("private dancer")
     diff_object = Diff(trial1, trial2)
     graph = diff_object.graph
     graph.use_cache &= bool(int(cache))

@@ -360,7 +360,7 @@ exports = module.exports = __webpack_require__(0)(undefined);
 
 
 // module
-exports.push([module.i, ".trial-toolbar {\n    margin: 5px;\n    float: left;\n    overflow: none;\n    width: 320px;\n    height: 30px;\n    z-index: 3;\n    position: absolute;\n}\n\n.trial-toolbar input {\n    height: 30px;\n}\n\n.trial-toolbar input[type=checkbox] {\n    display: none\n}\n\n.trial-toolbar label, .trial-toolbar a {\n    margin-right: 8px;\n    margin-top: 8px;\n}\n\n.trial-toolbar input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.trial-toolbar input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active  {\n  color: blue;\n}\n", ""]);
+exports.push([module.i, ".trial-toolbar {\n    margin: 5px;\n    float: left;\n    overflow: none;\n    width: 360px;\n    height: 30px;\n    z-index: 3;\n    position: absolute;\n}\n\n.trial-toolbar input {\n    height: 30px;\n}\n\n.trial-toolbar input[type=checkbox] {\n    display: none\n}\n\n.trial-toolbar label, .trial-toolbar a {\n    margin-right: 8px;\n    margin-top: 8px;\n}\n\n.trial-toolbar input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.trial-toolbar input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active  {\n  color: blue;\n}\n", ""]);
 
 // exports
 

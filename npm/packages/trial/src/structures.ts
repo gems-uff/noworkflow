@@ -60,3 +60,17 @@ interface VisibleTrialEdge {
   type: string;
   id: string;
 }
+
+export
+interface ActivationData {
+  id: string;
+  hash: string;
+  name: string;
+  line: number;
+  parameters: string[];
+  globals: string[];
+  return_value: string;
+  duration: string;
+  start: string;
+  finish: string;
+}

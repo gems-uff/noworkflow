@@ -30,4 +30,6 @@ interface TrialConfig {
 
   nodeSizeX: number;
   nodeSizeY: number;
+
+  queryTooltip: boolean;
 }
