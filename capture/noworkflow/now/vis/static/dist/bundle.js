@@ -63447,7 +63447,7 @@ class HistoryWidget extends widgets_1.Widget {
         executionOptions.append("option").attr("value", "unfinished").text("Unfinished Trials");
         executionOptions.append("option").attr("value", "backup").text("Backup Trials");
         let summarize = filterInternal.append("div").classed("graph-attr", true);
-        summarize.append("input").attr("type", "checkbox").attr("name", "summarize").attr("value", "on").attr("checked", false).classed("summarize", true).attr("id", "history-summarize");
+        summarize.append("input").attr("type", "checkbox").attr("name", "summarize").attr("value", "").attr("checked", false).classed("summarize", true).attr("id", "history-summarize");
         summarize.append("label").attr("for", "history-summarize").attr("title", "Summarize History").text("Summarize");
         let filterReload = filterInternal.append("a").attr("href", "#").classed("link-button reload-button", true);
         filterReload.append('i').classed("fa fa-refresh", true);
