@@ -129,9 +129,16 @@ class FileAccessesInfoWidget extends Widget {
           continue;
         }
         var li = list.append("li");
-        li.append("div").classed("name", true)
+
+        //name of file for request
+        var name = element.name.split("/");
+        var pos = name.length -1;
+        var fileName = name[pos];
+
+        li.append("a").classed("name", true)
           .attr("title", "Name")
-          .text(element.name);
+          .text(element.name)
+          .attr("href","/trials/files/" + element.content_hash_after + "/" + fileName); //file after execution
         li.append("div").classed("mode", true)
           .attr("title", "Mode")
           .text(element.mode);
@@ -142,12 +149,15 @@ class FileAccessesInfoWidget extends Widget {
         li.append("div").classed("timestamp", true)
           .attr("title", "Time")
           .text(element.timestamp);
-        li.append("div").classed("content_hash_before hash", true)
+        li.append("a").classed("content_hash_before hash", true)
           .attr("title", "Content hash before")
-          .text(element.content_hash_before);
-        li.append("div").classed("content_hash_after hash", true)
+          .text(element.content_hash_before)
+          .attr("href","/trials/files/" + element.content_hash_before + "/" + fileName);
+        li.append("div"); //spacing
+        li.append("a").classed("content_hash_after hash", true)
           .attr("title", "Content hash after")
-          .text(element.content_hash_after);
+          .text(element.content_hash_after)
+          .attr("href","/trials/files/" + element.content_hash_after + "/" + fileName);
         li.append("div").classed("stack", true)
           .attr("title", "Stack")
           .text(element.stack);

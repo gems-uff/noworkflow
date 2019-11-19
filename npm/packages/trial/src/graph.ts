@@ -35,6 +35,7 @@ import {
   TrialEdgeData
 } from './structures';
 
+//import $ = require("jquery");
 
 export
 class TrialGraph {
@@ -184,7 +185,7 @@ class TrialGraph {
   createToolbar(form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
     let self = this;
     form = form.append("div")
-      .classed("buttons", true);
+      .classed("buttons buttonsGraph", true);
     this.config.customForm(this, form);
     // Reset zoom
     form.append("a")
@@ -224,6 +225,19 @@ class TrialGraph {
       })
     .append("i")
       .classed("fa fa-download", true)
+
+    // Generate Dataflow
+    var trialId = document.getElementsByClassName("id")[0].innerHTML;
+    form.append("a")
+    .classed("toollink", true)
+    .attr("id", "trial-" + this.graphId + "-dataflow")
+    .attr("href", "trials/" + trialId + "/flow.pdf")
+    .attr("title", "Generate dataflow")
+    .on("click", () => {
+
+    })
+  .append("i")
+    .classed("fa fa-book", true)
 
     // Set Font Size
     let fontToggle = form.append("input")
@@ -839,5 +853,12 @@ class TrialGraph {
 
   private _graphId(): string {
     return "trial-graph-" + this.graphId;
+  }
+
+  //dataflow:
+
+  generateDataflow() {
+    return 1;
+
   }
 }

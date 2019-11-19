@@ -8,12 +8,14 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from flask import render_template, jsonify, request
+from flask import render_template, jsonify, request, make_response, send_file
 
 from ..persistence.models import Trial
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational
+
+import subprocess #modulo p chamada de script bash
 
 
 class WebServer(object):
@@ -76,6 +78,39 @@ def trials():
                       status=request.args.get("execution"),
                       summarize=bool(int(request.args.get("summarize"))))
     return jsonify(**history.graph.graph())
+
+#generate dafalowdataflow
+@app.route("/trials/<tid>/flow.pdf")
+def dataflow(tid):
+    """Generates the dafalow of a trial """ 
+    trial = Trial(tid)
+    dest = 'flow.pdf'
+    temp = 'flow.dot'
+    # args = ['/bin/sh',"/usr/local/lib/python3.5/dist-packages/noworkflow-2.0.0a0-py3.5.egg/noworkflow/now/vis/static/mydataflow.sh",os.getcwd(),str(tid),temp,dest] 
+    #ret = subprocess.Popen(args)
+    cmd = 'cd ' + os.getcwd()+ ' && now dataflow ' + str(tid) + ' >' + temp +' && dot -T pdf ' + temp + ' -o ' + dest
+    subprocess.run(cmd, check=True, shell=True)      
+    return send_file(os.getcwd() + '/' + dest,attachment_filename=dest)
+
+@app.route("/trials/<tid>/<scriptHash>/<name>")    
+def get_script(tid,scriptHash,name):
+    """Returns the executed script"""
+    dirHash = scriptHash[0] + scriptHash[1]
+    objHash = scriptHash[2::]
+    dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
+    return send_file(dir, attachment_filename=name + '.py') #for the script to be executed be recognized as a python script
+
+@app.route("/trials/files/<fileHash>/<fileExt>")
+def get_file(fileHash, fileExt):
+    """Returns a file used in the trial"""
+    #filename: necessário p/ saber a extensão do arquivo.
+    #filehash: p pegar o arquivo no diretório do noworkflow
+    dirHash = fileHash[0] + fileHash[1]
+    objHash = fileHash[2::]
+    #extension = fileName[(len(fileName) - 4)::]
+    dir = os.getcwd() + '/.noworkflow/content/' + dirHash + '/' + objHash
+    objName = objHash + fileExt
+    return send_file(dir, attachment_filename=objName)
 
 
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
@@ -174,6 +209,7 @@ def diff_accesses(trial1, trial2):
 @app.route("/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
 def diff_graph(trial1, trial2, graph_mode, cache):
     """Respond trial diff as JSON"""
+    print("private dancer")
     diff_object = Diff(trial1, trial2)
     graph = diff_object.graph
     graph.use_cache &= bool(int(cache))

@@ -42,9 +42,10 @@ class TrialInfoWidget extends Widget {
     main.append("h1")
       .text("Trial " + trial.display);
 
-    main.append("h3")
+    main.append("a")
       .classed("hash", true)
-      .text(info.code_hash || "");
+      .text(info.code_hash || "")
+      .attr('href','trials/'+ trial.id + '/' + info.code_hash + '/' + info.script);// href for script
 
     let idAttr = main.append("span")
       .classed("attr", true);
@@ -60,9 +61,10 @@ class TrialInfoWidget extends Widget {
     scriptAttr.append("span")
       .classed("desc", true)
       .text("Script: ");
-    scriptAttr.append("span")
+    scriptAttr.append("a")
       .classed("script", true)
-      .text(info.script);
+      .text(info.script)
+      .attr('href','trials/'+ trial.id + '/' + info.code_hash + '/' + info.script ); // href for  script
 
     let startAttr = main.append("span")
       .classed("attr", true);
