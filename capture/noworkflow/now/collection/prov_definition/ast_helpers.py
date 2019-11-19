@@ -15,7 +15,7 @@ def ast_copy(new_node, old_node):
     new_node = ast.copy_location(new_node, old_node)
     attrs = [
         "first_line", "first_col", "last_line", "last_col", "uid",
-        "code_component_id", "code_component_expr"
+        "code_component_id", "code_component_expr", "type_ignores"
     ]
     for attr in attrs:
         if hasattr(old_node, attr):

@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 
 import ast
 import os
+import sys
 import weakref
 import traceback
 
@@ -127,7 +128,6 @@ class Definition(object):
             source, filename, mode
         )
         self.first = False
-
         return compiler(
             tree, filename, mode,
             **kwargs
