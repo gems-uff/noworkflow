@@ -18,35 +18,8 @@ class DulwichEngine(GitContentDatabaseEngine):
 
     def __init__(self, config):
         super(DulwichEngine, self).__init__(config)
-        self.object_hashes = {}
         self._commit_encoding = 'UTF-8'
         self.repo = None
-        self.tree_builder = None
-
-    def _create_initial_commit(self):
-        """Create the initial commit of the git repository"""
-        with self.restore_open():
-            object_store = self.repo.object_store
-            empty_tree = Tree()
-            object_store.add_object(empty_tree)
-            initial_commit = self._create_commit_object(self._initial_message, empty_tree)
-            object_store.add_object(initial_commit)
-            self.__set_master_ref(initial_commit.id)
-
-    def _create_commit_object(self, message, tree, parent=None):
-        """Create a commit object"""
-        commit = Commit()
-        if parent is not None:
-            commit.parents = [parent]
-        commit.tree = tree.id
-        author = (self._commit_name + " <" + self._commit_email + ">").encode()
-        commit.author = commit.committer = author
-        commit.commit_time = commit.author_time = int(time.time())
-        tz = parse_timezone(time.strftime("%z").encode())[0]
-        commit.commit_timezone = commit.author_timezone = tz
-        commit.encoding = self._commit_encoding.encode()
-        commit.message = message.encode()
-        return commit
 
     def connect(self):
         """Create content directory"""
@@ -54,21 +27,18 @@ class DulwichEngine(GitContentDatabaseEngine):
             os.makedirs(self.content_path)
             Repo.init_bare(self.content_path)
             self.repo = Repo(self.content_path)
-            self.tree_builder = Tree()
-            self._create_initial_commit()
+            self.create_initial_commit()
         else:
             self.repo = Repo(self.content_path)
-            self.tree_builder = Tree()
 
     @staticmethod
     def do_put(content_path, object_hashes, content, filename):
         """Perform put operation. This is used in the distributed wrapper"""
         with safeopen.restore_open():
-            filename_hash = hashlib.sha1(filename.encode('utf-8')).hexdigest()
             object_store = Repo(content_path).object_store
             blob = Blob.from_string(content)
             object_store.add_object(blob)
-            result = object_hashes[filename_hash] = blob.id.decode("ascii")
+            result = object_hashes[filename] = blob.id.decode("ascii")
             return result
 
     def put_attr(self, content, filename):
@@ -90,41 +60,6 @@ class DulwichEngine(GitContentDatabaseEngine):
             ).as_pretty_string()
             return return_data
 
-    
-
-    def commit_content(self, message):
-        """Commit the current files of content database"""
-        self.close()
-        with self.restore_open():
-            object_store = self.repo.object_store
-            for key, value in self.object_hashes.items():
-                self.tree_builder.add(key.encode('utf-8'), 0o100644, value.encode("ascii"))
-
-            object_store.add_object(self.tree_builder)
-            commit = self._create_commit_object(
-                message, self.tree_builder, self.__get_master_ref()
-            )
-            object_store.add_object(commit)
-            self.__set_master_ref(commit.id)
-
-    
-
-    def __get_master_ref(self):
-        """Returns the master ref commit hash
-        """
-        return self.repo.get_refs()[
-            self._commit_ref.encode("utf-8")
-        ]
-
-    def __set_master_ref(self, commit_hash):
-        """Set the master ref commit
-                        Arguments:
-                        commit_hash -- hash of commit object
-                        """
-        self.repo.refs[
-            self._commit_ref.encode("utf-8")
-        ] = commit_hash
-
     def find_subhash(self, content_hash):
         """Find hash in git"""
         try:
@@ -134,6 +69,59 @@ class DulwichEngine(GitContentDatabaseEngine):
                 return result.id.decode("utf-8")
         except KeyError:
             return None
+
+    def create_initial_commit(self):
+        """Create the initial commit of the git repository"""
+        with self.restore_open():
+            object_store = self.repo.object_store
+            empty_tree = Tree()
+            object_store.add_object(empty_tree)
+            self.create_commit_object(self._initial_message, empty_tree.id)
+
+    def create_commit_object(self, message, tree):
+        """Create a commit object"""
+        with self.restore_open(): 
+            master_ref = self.repo.get_refs().get(
+                self._commit_ref.encode("utf-8"), None
+            )
+            
+            commit = Commit()
+            if master_ref is not None:
+                commit.parents = [master_ref]
+
+            commit.tree = tree
+            author = (self._commit_name + " <" + self._commit_email + ">").encode()
+            commit.author = commit.committer = author
+            commit.commit_time = commit.author_time = int(time.time())
+            tz = parse_timezone(time.strftime("%z").encode())[0]
+            commit.commit_timezone = commit.author_timezone = tz
+            commit.encoding = self._commit_encoding.encode()
+            commit.message = message.encode()
+
+            self.repo.object_store.add_object(commit)
+            self.repo.refs[
+                self._commit_ref.encode("utf-8")
+            ] = commit.id
+
+            return commit.id
+
+    def new_tree(self, parent):
+        """Create new git tree"""
+        return Tree()
+
+    def insert_blob(self, tree, basename, value):
+        """Insert blob into tree"""
+        tree.add(basename.encode('utf-8'), 0o100644, value.encode("ascii"))
+
+    def insert_tree(self, tree, basename, value):
+        """Insert tree into tree"""
+        tree.add(basename.encode('utf-8'), 0o040000, value)
+
+    def write_tree(self, tree):
+        """Write tree to git directory"""
+        with self.restore_open(): 
+            self.repo.object_store.add_object(tree)
+            return tree.id
 
 
 DistributedDulwichEngine = create_distributed(DulwichEngine)

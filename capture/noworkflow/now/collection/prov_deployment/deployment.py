@@ -129,7 +129,7 @@ class Deployment(object):
                     code_hash = None
                 else:
                     with open(path, "rb") as fil:
-                        code_hash = content.put(fil.read(), name)
+                        code_hash = content.put(fil.read(), path)
                 info = (name, module_version, path, code_hash)
                 mid = Module.fast_load_module_id(*info) or modules.add(*info)
                 dependencies.add(mid)

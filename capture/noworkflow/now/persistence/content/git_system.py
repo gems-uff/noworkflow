@@ -1,7 +1,6 @@
 import subprocess
 import os
 
-
 def execute(cmd, default=None, **kwargs):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
     out = p.communicate()[0]
@@ -28,7 +27,7 @@ def init(path):
     return execute(cmd)
 
 
-def put(content, git_path):
+def hash_object(content, git_path):
     cmd = ["git", "hash-object", "-w", "--stdin"]
     p = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
@@ -45,14 +44,30 @@ def get(content_hash, git_path):
     return execute(cmd, cwd=git_path)    
 
 
-def update_index(content_hash, git_path):
-    cmd = ["git", "update-index", "--add", "--cacheinfo", "100644", content_hash, content_hash]
+def update_index(mode, content_hash, filename, git_path):
+    cmd = ["git", "update-index", "--add", "--cacheinfo", mode, content_hash, filename]
     return execute(cmd, cwd=git_path)
 
 
 def write_tree(git_path):
     cmd = ["git", "write-tree"]
     return execute(cmd, cwd=git_path).decode().replace("\n", "")
+
+
+def read_tree(filename, content_hash, git_path):
+    cmd = ["git", "read-tree", "--prefix={}".format(filename), content_hash]
+    return execute(cmd, cwd=git_path).decode().replace("\n", "")
+
+
+def cat_file(content_hash, git_path):
+    cmd = ["git", "cat-file", "-p", content_hash]
+    return execute(cmd, cwd=git_path).decode()
+
+
+def rm_all(git_path):
+    cmd = ["git", "rm", "-r", "--cached", "."]
+    return execute(cmd, cwd=git_path, default=b"").decode()
+
 
 
 def commit_tree(tree_hash, commit_message, git_path, author=None, parent=None):

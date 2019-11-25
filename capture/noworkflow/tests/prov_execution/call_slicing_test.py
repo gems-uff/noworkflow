@@ -37,6 +37,8 @@ class Args(object):
         self.disasm = False
         self.save_frequency = 0
         self.call_storage_frequency = 10000
+        self.content_engine = "plain"
+        self.message = "<empty>"
 
 
 class TestCallSlicing(unittest.TestCase):

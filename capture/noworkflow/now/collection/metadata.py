@@ -254,7 +254,7 @@ class Metascript(object):                                                       
         self.execution_provenance = args.execution_provenance
         self.save_frequency = args.save_frequency
         self.call_storage_frequency = args.call_storage_frequency
-        self.message = getattr(args, "message", "")
+        self.message = args.message
         self.content_engine = persistence_config.content_engine = args.content_engine
         io.print_msg("setting up local provenance store")
         persistence_config.connect(self.dir)
@@ -266,7 +266,7 @@ class Metascript(object):                                                       
         self.command = " ".join(sys.argv[1:])
 
         self.dir = args.dir
-        self.message = getattr(args, "message", "")
+        self.message = args.message
         self.content_engine = persistence_config.content_engine = args.content_engine
         return self
 

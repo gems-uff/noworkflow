@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 import importlib
 from os.path import join, isdir
 from .content.plain_engine import STANDARD_DATABASE_DIR
+from ..utils.io import print_msg
 
 class ContentDatabase(object):
     """Content Database deal with storage of file content in disk"""
@@ -56,8 +57,11 @@ class ContentDatabase(object):
                 except ImportError:
                     # Use plain
                     engine = "plain"
-        full_name = self.content_engines.get(engine, self.content_engines["plain"])
-        print("Using ", full_name)
+        if '.' in engine:
+            full_name = engine
+        else:
+            full_name = self.content_engines.get(engine, self.content_engines["plain"])
+        print_msg("using content engine " + full_name)
         module_name, class_name = full_name.rsplit(".", 1)
         module = importlib.import_module(module_name) 
         cls = getattr(module, class_name)
