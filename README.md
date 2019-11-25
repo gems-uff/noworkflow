@@ -374,6 +374,24 @@ Out [14]: %
      ...: ...
 ```
 
+
+Contributing
+------------
+
+Pull requests for bugfixes and new features are welcome! If you want to add a new feature, please consider working on the branch `2.0-alpha`. The `master` branch is going to be replaced by it soon and the code base has many changes that make it harder to merge it.
+
+For installing the python dependencies locally, clone the repository and run:
+```
+pip install -e noworkflow/capture
+```
+
+For changes on the now vis or IPython integration files, install nodejs, Python 3 and run:
+```
+cd noworkflow/npm
+python watch.py
+```
+
+
 Included Software
 -----------------
 

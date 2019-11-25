@@ -51,7 +51,7 @@ setup(
     keywords="scientific experiments provenance python",
     url="https://github.com/gems-uff/noworkflow",
     install_requires=[
-        "pyposast>=1.1.3", "apted", "future", "SQLAlchemy"
+        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy"
     ],
     extras_require={
         "vis": ["pyposast", "flask"],
@@ -73,5 +73,8 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ]
 )
