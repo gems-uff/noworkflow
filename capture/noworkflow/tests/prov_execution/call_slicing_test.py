@@ -74,11 +74,13 @@ class TestCallSlicing(unittest.TestCase):
         result = {
             (("a", 1), ("x", 3)),
             (("b", 1), ("y", 3)),
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("y", 3)),
             (("return", 2), ("a", 1)),
             (("return", 2), ("b", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -91,13 +93,15 @@ class TestCallSlicing(unittest.TestCase):
         result = {
             (("a", 1), ("x", 3)),
             (("b", 1), ("y", 3)),
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("y", 3)),
             (("c", 1), ("y", 3)),
             (("return", 2), ("a", 1)),
             (("return", 2), ("b", 1)),
             (("return", 2), ("c", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -115,12 +119,14 @@ class TestCallSlicing(unittest.TestCase):
             (("return", 2), ("a", 1)),
             (("return", 2), ("b", 1)),
             (("return", 2), ("c", 1)),
-            (("call fn", 5), ("return", 2)),
-            (("call fn", 5), ("fn", 1)),
-            (("z", 5), ("x", 3)),
-            (("z", 5), ("y", 3)),
-            (("z", 5), ("z", 4)),
-            (("r", 5), ("call fn", 5)),
+            (("fn", 5), ("return", 2)),
+            (("fn", 5), ("fn", 1)),
+            (("r", 5), ("fn", 5)),
+
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("y", 3)),
+            (("--graybox--", 0), ("z", 4)),
+            (("z", 5), ("--graybox--", 0)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -138,11 +144,14 @@ class TestCallSlicing(unittest.TestCase):
             (("return", 2), ("a", 1)),
             (("return", 2), ("b", 1)),
             (("return", 2), ("c", 1)),
-            (("call fn", 5), ("return", 2)),
-            (("call fn", 5), ("fn", 1)),
-            (("y", 5), ("y", 4)),
-            (("y", 5), ("x", 3)),
-            (("r", 5), ("call fn", 5)),
+            (("fn", 5), ("return", 2)),
+            (("fn", 5), ("fn", 1)),
+            (("r", 5), ("fn", 5)),
+
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("y", 4)),
+            (("y", 5), ("--graybox--", 0)),
+
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -158,9 +167,12 @@ class TestCallSlicing(unittest.TestCase):
             (("args", 1), ("z", 3)),  # ToDo #75: fix?
             (("return", 2), ("a", 1)),
             (("return", 2), ("args", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("r", 4), ("fn", 4)),
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("z", 3)),
+            (("--graybox--", 0), ("y", 3)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -175,11 +187,12 @@ class TestCallSlicing(unittest.TestCase):
             (("args", 1), ("y", 3)),
             (("return", 2), ("a", 1)),
             (("return", 2), ("args", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("y", 4), ("y", 3)),
-            (("y", 4), ("x", 3)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("y", 4), ("--graybox--", 0)),
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("y", 3)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -193,10 +206,11 @@ class TestCallSlicing(unittest.TestCase):
             (("a", 1), ("x", 3)),
             (("args", 1), ("x", 3)),  # ToDo #75: fix?
             (("return", 2), ("a", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("x", 4), ("x", 3)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("x", 4), ("--graybox--", 0)),
+            (("--graybox--", 0), ("x", 3)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -209,11 +223,13 @@ class TestCallSlicing(unittest.TestCase):
         result = {
             (("a", 1), ("x", 3)),
             (("kwargs", 1), ("y", 3)),
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("y", 3)),
             (("return", 2), ("a", 1)),
             (("return", 2), ("kwargs", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -228,10 +244,11 @@ class TestCallSlicing(unittest.TestCase):
             (("kwargs", 1), ("x", 3)),
             (("return", 2), ("a", 1)),
             (("return", 2), ("kwargs", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("x", 4), ("x", 3)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("x", 4), ("--graybox--", 0)),
+            (("--graybox--", 0), ("x", 3)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -257,21 +274,18 @@ class TestCallSlicing(unittest.TestCase):
             (("kwargs", 1), ("z", 3)),  # ToDo #75: fix?
             (("kwargs", 1), ("v", 4)),
             (("return", 2), ("a", 1)),
-            (("call fn", 5), ("return", 2)),
-            (("call fn", 5), ("fn", 1)),
-            (("z", 5), ("x", 3)),
-            (("z", 5), ("y", 3)),
-            (("z", 5), ("z", 3)),
-            (("z", 5), ("w", 3)),
-            (("z", 5), ("u", 3)),
-            (("z", 5), ("v", 4)),
-            (("v", 5), ("x", 3)),
-            (("v", 5), ("y", 3)),
-            (("v", 5), ("z", 3)),
-            (("v", 5), ("w", 3)),
-            (("v", 5), ("u", 3)),
-            (("v", 5), ("v", 4)),
-            (("r", 5), ("call fn", 5)),
+            (("fn", 5), ("return", 2)),
+            (("fn", 5), ("fn", 1)),
+            (("r", 5), ("fn", 5)),
+
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("v", 4)),
+            (("--graybox--", 0), ("y", 3)),
+            (("--graybox--", 0), ("u", 3)),
+            (("--graybox--", 0), ("w", 3)),
+            (("--graybox--", 0), ("z", 3)),
+            (("z", 5), ("--graybox--", 0)),
+            (("v", 5), ("--graybox--", 0)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -283,11 +297,14 @@ class TestCallSlicing(unittest.TestCase):
         run(metascript)
         result = {
             (("a", 1), ("x", 3)),
-            (("a", 1), ("call fn", 4)),
+            (("a", 1), ("fn", 4)),
+            (("--graybox--", 0), ("x", 3)),
+            (("--graybox--", 0), ("fn", 4)),
             (("return", 2), ("a", 1)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("r", 4), ("call fn", 4)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 4)),
+            (("fn", 4), ("--graybox--", 0)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -296,11 +313,13 @@ class TestCallSlicing(unittest.TestCase):
                                   "c = min(a, b)")
         run(metascript)
         result = {
-            (("return", 2), ("a", 1)),
-            (("return", 2), ("b", 1)),
-            (("call {}min".format(PY3_PREFIX), 2), ("return", 2)),
-            (("call {}min".format(PY3_PREFIX), 2), ("min", 0)),
-            (("c", 2), ("call {}min".format(PY3_PREFIX), 2)),
+            (("{}min".format(PY3_PREFIX), 2), ("return", 2)),
+            (("{}min".format(PY3_PREFIX), 2), ("min", 0)),
+            (("c", 2), ("{}min".format(PY3_PREFIX), 2)),
+
+            (("--graybox--", 0), ("a", 1)),
+            (("--graybox--", 0), ("b", 1)),
+            (("return", 2), ("--graybox--", 0)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -312,9 +331,10 @@ class TestCallSlicing(unittest.TestCase):
         run(metascript)
         result = {
             (("a", 1), ("x", 3)),
-            (("call fn", 4), ("return", 2)),
-            (("call fn", 4), ("fn", 1)),
-            (("r", 4), ("call fn", 4)),
+            (("--graybox--", 0), ("x", 3)),
+            (("fn", 4), ("return", 2)),
+            (("fn", 4), ("fn", 1)),
+            (("r", 4), ("fn", 4)),
         }
         self.assertEqual(result, self.extract(metascript))
 
@@ -323,13 +343,14 @@ class TestCallSlicing(unittest.TestCase):
                                   "c = sorted(a, reverse=b)")
         run(metascript)
         result = {
-            (("return", 2), ("a", 1)),
-            (("return", 2), ("b", 1)),
-            (("call {}sorted".format(PY3_PREFIX), 2), ("return", 2)),
-            (("call {}sorted".format(PY3_PREFIX), 2), ("sorted", 0)),
-            (("a", 2), ("a", 1)),
-            (("a", 2), ("b", 1)),
-            (("c", 2), ("call {}sorted".format(PY3_PREFIX), 2)),
+            (("{}sorted".format(PY3_PREFIX), 2), ("return", 2)),
+            (("{}sorted".format(PY3_PREFIX), 2), ("sorted", 0)),
+            (("c", 2), ("{}sorted".format(PY3_PREFIX), 2)),
+
+            (("--graybox--", 0), ("a", 1)),
+            (("--graybox--", 0), ("b", 1)),
+            (("return", 2), ("--graybox--", 0)),
+            (("a", 2), ("--graybox--", 0)),
         }
         if sys.version_info < (3, 0):
             result.add(
@@ -341,6 +362,7 @@ class TestCallSlicing(unittest.TestCase):
         metascript = self.prepare("import csv")
         run(metascript)
         result = {
-            (("csv", 1), ("call import csv", 1)),
+            (("csv", 1), ("import csv", 1)),
+            (("import csv", 1), ("--blackbox--", 1)),
         }
         self.assertEqual(result, self.extract(metascript))
