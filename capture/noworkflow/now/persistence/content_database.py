@@ -1,85 +1,79 @@
-# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2016 Polytechnic Institute of New York University.
+# Copyright (c) 2019 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2019 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Content Database"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import hashlib
-import os
-
-from os.path import join, isdir, isfile
-
-
-CONTENT_DIRNAME = "content"
-
+import importlib
+from os.path import join, isdir
+from .content.plain_engine import STANDARD_DATABASE_DIR
 
 class ContentDatabase(object):
     """Content Database deal with storage of file content in disk"""
 
     def __init__(self, persistence_config):
         self.content_path = None  # Base path for storing content of files
-        self.std_open = open  # Original Python open function.
-
         persistence_config.add(self)
+        self.content_database_engine = None
+
+        self.content_engines = {
+            "plain": "noworkflow.now.persistence.content.plain_engine.PlainEngine",
+            "sequential_plain": "noworkflow.now.persistence.content.plain_engine.PlainEngine",
+            "distributed_plain": "noworkflow.now.persistence.content.plain_engine.PlainEngine",
+            "pool_plain": "noworkflow.now.persistence.content.plain_engine.PlainEngine",
+            "threading_plain": "noworkflow.now.persistence.content.plain_engine.PlainEngine",
+            "pygit": "noworkflow.now.persistence.content.pygit_engine.DistributedPyGitEngine",
+            "sequential_pygit": "noworkflow.now.persistence.content.pygit_engine.PyGitEngine",
+            "distributed_pygit": "noworkflow.now.persistence.content.pygit_engine.DistributedPyGitEngine",
+            "pool_pygit": "noworkflow.now.persistence.content.pygit_engine.PoolPyGitEngine",
+            "threading_pygit": "noworkflow.now.persistence.content.pygit_engine.ThreadingPyGitEngine",
+            "dulwich": "noworkflow.now.persistence.content.dulwich_engine.DulwichEngine",
+            "sequential_dulwich": "noworkflow.now.persistence.content.dulwich_engine.DulwichEngine",
+            "distributed_dulwich": "noworkflow.now.persistence.content.dulwich_engine.DistributedDulwichEngine",
+            "pool_dulwich": "noworkflow.now.persistence.content.dulwich_engine.PoolDulwichEngine",
+            "threading_dulwich": "noworkflow.now.persistence.content.dulwich_engine.ThreadingDulwichEngine",
+            "puregit": "noworkflow.now.persistence.content.puregit_engine.PureGitEngine",
+            "gitdb": "noworkflow.now.persistence.content.gitdb_engine.GitDBPyGitEngine",
+        }
+
+    def define_engine(self, config):
+        if config.content_engine is not None:
+            engine = config.content_engine
+        elif isdir(join(config.provenance_path, STANDARD_DATABASE_DIR)):
+            # Use plain directory
+            engine = "plain"
+        else:
+            # Use git
+            try:
+                import pygit2
+                engine = "pygit"
+            except ImportError:
+                try:
+                    import dulwich
+                    engine = "dulwich"
+                except ImportError:
+                    # Use plain
+                    engine = "plain"
+        full_name = self.content_engines.get(engine, self.content_engines["plain"])
+        print("Using ", full_name)
+        module_name, class_name = full_name.rsplit(".", 1)
+        module = importlib.import_module(module_name) 
+        cls = getattr(module, class_name)
+        self.content_database_engine = cls(config)
+        
+
+    def __getattr__(self, attr):
+        return getattr(self.content_database_engine, attr)
 
     def set_path(self, config):
-        """Set content_path"""
-        self.content_path = join(config.provenance_path, CONTENT_DIRNAME)
+        if self.content_database_engine is None:
+            self.define_engine(config)
+        self.content_database_engine.set_path(config)
 
-    def mock(self, config):                                                      # pylint: disable=unused-argument, no-self-use
-        """Mock storage for tests"""
-        ContentDatabase.put = lambda s, c: hashlib.sha1(c).hexdigest()
-        ContentDatabase.get = lambda s, c: "".encode("utf-8")
 
     def connect(self, config):
-        """Create content directory"""
-        if not config.should_mock and not isdir(self.content_path):
-            os.makedirs(self.content_path)
-
-    def put(self, content):
-        """Put content in the content database
-
-        Return: content hash code
-
-        Arguments:
-        content -- binary text to be saved
-        """
-        content_hash = hashlib.sha1(content).hexdigest()
-        content_dirname = join(self.content_path, content_hash[:2])
-        if not isdir(content_dirname):
-            os.makedirs(content_dirname)
-        content_filename = join(content_dirname, content_hash[2:])
-        if not isfile(content_filename):
-            with self.std_open(content_filename, "wb") as content_file:
-                content_file.write(content)
-        return content_hash
-
-    def find_subhash(self, content_hash):
-        """Get hash that starts by content_hash"""
-        content_dirname = content_hash[:2]
-        contet_filename = content_hash[2:]
-        content_dir = join(self.content_path, content_dirname)
-        if not isdir(content_dir):
-            return None
-        for _, _, filenames in os.walk(content_dir):
-            for name in filenames:
-                if name.startswith(contet_filename):
-                    return content_dirname + name
-        return None
-
-
-    def get(self, content_hash):
-        """Get content from the content database
-
-        Return: content
-
-        Arguments:
-        content_hash -- content hash code
-        """
-        content_filename = join(self.content_path,
-                                content_hash[:2],
-                                content_hash[2:])
-        with self.std_open(content_filename, "rb") as content_file:
-            return content_file.read()
+        if self.content_database_engine is None:
+            self.define_engine(config)
+        self.content_database_engine.connect()

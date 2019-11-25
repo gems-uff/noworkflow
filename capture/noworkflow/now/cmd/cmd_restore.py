@@ -49,6 +49,10 @@ class Restore(Command):
                      "the first access to file. <ID> can be either the \n"
                      "timestamp, the number of access, or the code hash \n"
                      "<TARGET> specifies the target path (default to path)")
+        add_arg("--message", type=str, default=None,
+                help="add a message to the commit of the trial")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
 
     def create_backup(self, metascript, files):
@@ -86,6 +90,7 @@ class Restore(Command):
 
         print_msg("Backup Trial {} created".format(metascript.trial_id),
                   self.print_msg)
+        content.commit_content(metascript.message or "Backup Trial {}".format(metascript.trial_id))
 
     def restore(self, path, code_hash, trial_id, mode="normal"):
         """Restore file with <code_hash> from <trial_id>"""
@@ -131,8 +136,8 @@ class Restore(Command):
         return match, new_files
 
     def execute(self, args):
-        persistence_config.connect_existing(args.dir or os.getcwd())
         metascript = Metascript().read_restore_args(args)
+        persistence_config.connect_existing(args.dir or os.getcwd())
         self.trial = trial = metascript.trial = Trial(trial_ref=args.trial)
         metascript.trial_id = trial.id
         metascript.name = trial.script
@@ -153,6 +158,7 @@ class Restore(Command):
                              mode=info["type"])
 
             trial.create_head()
+            content.close()
         else:
             parser = argparse.ArgumentParser(prog="{} restore {} file".format(
                 os.path.basename(sys.argv[0]), trial.id))
@@ -179,9 +185,16 @@ class Restore(Command):
                 path = parsed.target or parsed.path
                 if not self.restore(path, restore[1], None):
                     print_msg("File has not changed!", self.print_msg)
+            content.close()
 
     def find_file(self, tid, path, fid):                                         # pylint: disable=no-self-use
         """Find file according to timestamp, code_hash, and number of access"""
+        if sys.version_info < (3, 0):
+            if tid:
+                tid = tid.decode("utf-8")
+            path = path.decode("utf-8")
+            fid = fid.decode("utf-8")
+
         splitted = fid.split("|")
         _time = time_str(splitted[-1])
         if _time:
@@ -233,7 +246,7 @@ def file_hash(path):
         return None
     else:
         with open(abs_path, "rb") as fil:
-            return content.put(fil.read())
+            return content.put(fil.read(), abs_path)
 
 
 def skip_dict(args):

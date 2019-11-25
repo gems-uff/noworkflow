@@ -232,7 +232,7 @@ class DefinitionLW(BaseLW):                                                     
         self.parent = (parent if parent is not None else -1)
         self.type = dtype
         self.code = code
-        self.code_hash = content.put(code.encode("utf-8"))
+        self.code_hash = content.put(code.encode("utf-8"), self.name)
         self.first_line = first_line
         self.last_line = last_line
         self.docstring = docstring or ""

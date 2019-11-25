@@ -59,8 +59,11 @@ class Show(NotebookCommand):
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
     def execute(self, args):
+        persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_ref=args.trial)
 
@@ -92,6 +95,7 @@ class Show(NotebookCommand):
             print_trial_relationship(trial.file_accesses)
 
     def execute_export(self, args):
+        persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         Trial(trial_ref=args.trial)
         name = "Trial-{}.ipynb".format(args.trial)

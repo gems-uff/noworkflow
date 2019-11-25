@@ -28,8 +28,11 @@ class History(NotebookCommand):
         add_arg("--dir", type=str,
                 help="set demo path. Default to CWD/demo<number>"
                      "where <number> is the demo identification")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
     def execute(self, args):
+        persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         history = HistoryModel(script=args.script, status=args.status)
         print(history)

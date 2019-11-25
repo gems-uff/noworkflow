@@ -110,8 +110,11 @@ class Diff(NotebookCommand):
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
     def execute(self, args):
+        persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         if args.hide_timestamps:
             skip_in_trial = {"start", "finish", "duration_text"}
@@ -196,6 +199,7 @@ class Diff(NotebookCommand):
 
 
     def execute_export(self, args):
+        persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         DiffModel(args.trial1, args.trial2)
         name = "Diff-{0}-{1}.ipynb".format(args.trial1, args.trial2)

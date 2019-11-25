@@ -13,7 +13,10 @@ import sys
 from ..collection.metadata import Metascript
 from ..persistence.models import Tag, Trial
 from ..utils import io, metaprofiler
+from ..persistence import content
 from ..utils.cross_version import PY3
+
+
 
 from .command import Command
 
@@ -45,9 +48,10 @@ class ScriptArgs(argparse.Action):                                              
         setattr(namespace, "argv", values)
 
 
-def run(metascript):
+def run(metascript, args=None):
     """Execute noWokflow to capture provenance from script"""
     try:
+
         metascript.trial_id = Trial.store(*metascript.create_trial_args())
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
 
@@ -63,11 +67,10 @@ def run(metascript):
         metascript.execution.collect_provenance()
         metascript.execution.store_provenance()
 
-        metaprofiler.meta_profiler.save()
+        content.commit_content(metascript.message or "Trial {}".format(metascript.trial_id))
 
     finally:
         metascript.create_last()
-
 
 class Run(Command):
     """Run a script collecting its provenance"""
@@ -146,6 +149,11 @@ class Run(Command):
                      "be created in this path. Default to script directory")
         add_arg("-v", "--verbose", action="store_true",
                 help="increase output verbosity")
+        add_arg("--message", type=str, default=None,
+                help="add a message to the commit of the trial")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
+                                
 
         # Internal
         add_arg("--disasm0", action="store_true", help=argparse.SUPPRESS)
@@ -158,7 +166,7 @@ class Run(Command):
             print("The provenance provider {} does not work on Python >= 3.6. Please upgrade to noWorkflow 2".format(args.execution_provenance))
             sys.exit(1)
         if args.meta:
-            metaprofiler.meta_profiler.active = True
+            metaprofiler.meta_profiler.active = False
             metaprofiler.meta_profiler.data["cmd"] = " ".join(sys.argv)
 
         io.verbose = args.verbose
@@ -176,4 +184,4 @@ class Run(Command):
         metascript.clear_namespace()
 
         # Run script
-        run(metascript)
+        run(metascript, args)

@@ -33,6 +33,8 @@ class Schema(Command):
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
     def sql_text(self):                                                          # pylint: disable=no-self-use
         """Export database creation schema"""
@@ -72,5 +74,6 @@ class Schema(Command):
         return self.post_process(func(), args)
 
     def execute(self, args):
+        persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         print(self.process(args))

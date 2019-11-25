@@ -11,33 +11,25 @@ import os
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 from ..utils.io import print_msg
+from ..persistence import content
 
 from .command import Command
 
 
-class List(Command):
-    """List all trials registered in the current directory"""
+class GC(Command):
+    """Executes the git garbage collection in the content database"""
 
     def add_arguments(self):
         add_arg = self.add_argument
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
+        add_arg("-agg", "--aggressive", action="store_true",
+                help="executes aggressively the garbage collection in the content database")
         add_arg("--content-engine", type=str,
                 help="set the content database engine")
 
     def execute(self, args):
         persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
-        print_msg("trials available in the provenance store:", True)
-        for trial in Trial.all():
-            text = "  Trial {0.id}: {0.command}".format(trial)
-            indent = text.index(": ") + 2
-            print(text)
-            print("{indent}with code hash {t.code_hash}".format(
-                indent=" " * indent, t=trial))
-            print("{indent}ran from {t.start} to {t.finish}".format(
-                indent=" " * indent, t=trial))
-            if trial.finish:
-                print('{indent}duration: {t.duration_text}'.format(
-                    indent=" " * indent, t=trial))
+        content.gc()

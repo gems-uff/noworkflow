@@ -8,9 +8,8 @@ from __future__ import (absolute_import, print_function,
 
 from ..now.persistence import persistence_config
 
-persistence_config.mock()
 persistence_config.connect(".")
-
+persistence_config.mock()
 
 from .prov_definition import TestSlicingDependencies
 from .prov_execution import TestCallSlicing
