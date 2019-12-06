@@ -172,7 +172,7 @@ class GraphCache(AlchemyProxy):
         0
 
         Create cache with type, name, duration, attributes, and content_hash:
-        >>> g = relational.make_session()
+        >>> g = relational.session
         >>> GraphCache.create(commit=True, session=g, **graph_cache_params())
         >>> count(GraphCache)
         1

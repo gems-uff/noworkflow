@@ -26,6 +26,7 @@ from .cmd_history import History
 from .cmd_prov import Prov
 from .cmd_schema import Schema
 from .cmd_kernel import Kernel
+from .cmd_gc import GC
 from ..utils.io import print_msg
 
 
@@ -53,6 +54,8 @@ def main():
         Prov(),
         Schema(),
         Kernel(),
+        GC()
+
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
@@ -86,5 +89,6 @@ __all__ = [
     "History",
     "Prov",
     "Kernel",
+    "GC",
     "main",
 ]

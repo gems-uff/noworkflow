@@ -28,7 +28,7 @@ class CodeBlockLW(BaseLW):
         self.id = id_  # pylint: disable=invalid-name
         self.code = code
         bin_code = code if binary else code.encode("utf-8")
-        self.code_hash = content.put(bin_code)
+        self.code_hash = content.put(bin_code, 'codeblock')
         self.docstring = docstring or ""
 
     def is_complete(self):

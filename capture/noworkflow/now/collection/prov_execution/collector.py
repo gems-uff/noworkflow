@@ -112,9 +112,14 @@ class Collector(object):
         """Wrap the open builtin function to register file access"""
         def open(name, *args, **kwargs):  # pylint: disable=redefined-builtin
             """Open file and add it to file_accesses"""
+            if content.should_use_safe_open():
+                return old_open(name, *args, **kwargs)
+            print(">", name, type(name), content.should_use_safe_open())
             if isinstance(name, int):
                 # ToDo: support file descriptor
                 return old_open(name, *args, **kwargs)
+            if "file.py" in name:
+                sdasdasd
             activation = self.last_activation
             while activation and not activation.active:
                 activation = activation.parent
@@ -128,7 +133,7 @@ class Collector(object):
             if os.path.exists(name):
                 # Read previous content if file exists
                 with content.std_open(name, "rb") as fil:
-                    file_access.content_hash_before = content.put(fil.read())
+                    file_access.content_hash_before = content.put(fil.read(), name)
             file_access.activation_id = activation.id
             # Update with the informed keyword arguments (mode / buffering)
             file_access.update(kwargs)
@@ -148,6 +153,7 @@ class Collector(object):
                 file_access.mode = mode
             activation.file_accesses.append(file_access)
             return old_open(name, *args, **kwargs)
+
         return open
 
     def augaccess(self, activation, access):
@@ -369,7 +375,7 @@ class Collector(object):
         for file_access in activation.file_accesses:
             if os.path.exists(file_access.name):
                 with content.std_open(file_access.name, "rb") as fil:
-                    file_access.content_hash_after = content.put(fil.read())
+                    file_access.content_hash_after = content.put(fil.read(), file_access.name)
             file_access.done = True
 
     def start_script(self, module_name, code_component_id):

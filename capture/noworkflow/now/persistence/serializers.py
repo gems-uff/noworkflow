@@ -21,7 +21,7 @@ def jsonpickle_content(obj):
     """Use jsonpickle to get objects representation
     Store representation in the content database"""
     import jsonpickle
-    return "now-content:" + content.put(jsonpickle.encode(obj))
+    return "now-content:" + content.put(jsonpickle.encode(obj), "generic")
 
 
 class SimpleSerializer(object):                                                  # pylint: disable=too-few-public-methods

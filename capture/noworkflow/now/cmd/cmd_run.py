@@ -13,6 +13,9 @@ import sys
 from ..collection.metadata import Metascript
 from ..persistence.models import Tag, Trial, Argument
 from ..utils import io, metaprofiler
+from ..persistence import content
+
+
 
 from .command import Command
 
@@ -48,6 +51,7 @@ def run(metascript, args=None):
     """Execute noWokflow to capture provenance from script"""
     args = args or []
     try:
+
         metascript.trial_id = Trial.create(*metascript.create_trial_args())
         metascript.create_arguments(args)
         arguments = metascript.arguments_store
@@ -64,9 +68,9 @@ def run(metascript, args=None):
 
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
         metaprofiler.meta_profiler.save()
+        content.commit_content(metascript.message or "Trial {}".format(metascript.trial_id))
     finally:
         metascript.create_last()
-
 
 class Run(Command):
     """Run a script collecting its provenance"""
@@ -135,6 +139,11 @@ class Run(Command):
                      "be created in this path. Default to script directory")
         add_arg("-v", "--verbose", action="store_true",
                 help="increase output verbosity")
+        add_arg("--message", type=str, default=None,
+                help="add a message to the commit of the trial")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
+                                
 
         # Internal
         add_cmd("--create_last", action="store_true", help=argparse.SUPPRESS)
@@ -142,7 +151,7 @@ class Run(Command):
 
     def execute(self, args):
         if args.meta:
-            metaprofiler.meta_profiler.active = True
+            metaprofiler.meta_profiler.active = False
             metaprofiler.meta_profiler.data["cmd"] = " ".join(sys.argv)
 
         io.verbose = args.verbose
@@ -161,4 +170,3 @@ class Run(Command):
 
         # Run script
         run(metascript, args)
-

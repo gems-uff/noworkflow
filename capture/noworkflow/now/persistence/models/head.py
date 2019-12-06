@@ -28,6 +28,7 @@ class Head(AlchemyProxy):
     >>> session = relational.make_session()
     >>> result = session.execute(Head.t.insert(), {"trial_id": trial.id,
     ...     "script": "main.py"})
+    >>> session.commit()
     >>> head_id = result.lastrowid
 
     Load a Head object by passing its id:

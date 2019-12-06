@@ -74,7 +74,7 @@ def prepare_cache(get_type):
                     GraphCache.remove(*information, session=cache_session)
                     GraphCache.create(
                         typ, name, duration, attributes,
-                        content.put(pickle.dumps(graph)),
+                        content.put(pickle.dumps(graph), name),
                         session=cache_session, commit=True
                     )
                 except exc.SQLAlchemyError:

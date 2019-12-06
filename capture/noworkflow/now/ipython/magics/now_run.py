@@ -97,6 +97,8 @@ class NowRun(IpythonCommandMagic, Run):
                 """)
         add_arg("params", nargs=argparse.REMAINDER,
                 help="params to be passed to script")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
     def execute(self, func, line, cell, magic_cls):
         # Calculate noworkflow params and script params
@@ -108,6 +110,7 @@ class NowRun(IpythonCommandMagic, Run):
         # Create tmp file
         directory = args.dir or os.path.abspath(os.path.curdir)
         original_path = persistence_config.path
+        persistence_config.content_engine = args.content_engine
         try:
             persistence_config.connect(directory)
 
