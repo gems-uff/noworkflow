@@ -116,7 +116,6 @@ class HistoryGraph(Graph):
         tmap = OrderedDict()
         id_s=1
         for trial in trial_gen:
-            print(trial)
             trial.display = str(trial.id)
             trial.level = 0
             trial.tooltip = """

@@ -20,6 +20,7 @@ from ..persistence import relational
 from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
 from ..persistence import content
+import time
 
 
 class WebServer(object):
@@ -87,11 +88,15 @@ def static_proxy(path):
 def index(tid=None, graph_mode=None):
     """Respond history scripts and index page as HTML"""
     # pylint: disable=unused-argument
+    print("start")
+    time.sleep(10000)
+    print("end")
     history = History()
     return render_template(
         "index.html",
         cwd=os.getcwd(),
-        scripts=history.scripts
+        scripts=history.scripts,
+        folders=["folder1","folder2","folder3"]
     )
     
 @app.route("/collab/bundle", methods=['GET'])

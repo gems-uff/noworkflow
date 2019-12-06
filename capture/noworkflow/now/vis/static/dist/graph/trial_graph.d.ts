@@ -5,12 +5,12 @@ import { TrialGraph, TrialGraphData } from '@noworkflow/trial';
 export declare class TrialGraphWidget extends BaseActivationGraphWidget {
     name: string;
     cls: string;
-    t1: number;
-    t2: number;
+    t1: string;
+    t2: string;
     graph: TrialGraph;
     d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-    static url(trialId: number, selectedGraph: string, useCache: boolean): string;
-    constructor(name: string, cls: string, t1: number, t2: number);
+    static url(trialId: string, selectedGraph: string, useCache: boolean): string;
+    constructor(name: string, cls: string, t1: string, t2: string);
     setGraph(data: TrialGraphData, config?: any): void;
     configureGraph(selectedGraph: string | undefined, useCache: boolean | undefined, data: TrialGraphData): void;
     load(selectedGraph?: string, useCache?: boolean): void;

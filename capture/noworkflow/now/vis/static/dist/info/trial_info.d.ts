@@ -7,7 +7,7 @@ export declare class TrialInfoWidget extends Widget {
     trial: VisibleHistoryNode;
     static createNode(trial: VisibleHistoryNode): HTMLElement;
     constructor(trial: VisibleHistoryNode);
-    static createFold(parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, title: string): d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+    static createFold(parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, title: string): d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>;
     static createFilterFold(fold: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, filter: FilterObject): void;
     loadModules(): void;
     loadEnvironment(): void;

@@ -4,8 +4,8 @@ import { TrialGraph, TrialGraphData } from '@noworkflow/trial';
 export declare class BaseActivationGraphWidget extends Widget {
     name: string;
     cls: string;
-    t1: number;
-    t2: number;
+    t1: string;
+    t2: string;
     graph: TrialGraph;
     d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
     static graphTypeForm(name: string, selectorDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>): void;
