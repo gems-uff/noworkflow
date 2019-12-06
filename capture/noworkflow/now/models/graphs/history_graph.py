@@ -114,8 +114,9 @@ class HistoryGraph(Graph):
         trial_gen -- trial generator
         """
         tmap = OrderedDict()
-
+        id_s=1
         for trial in trial_gen:
+            print(trial)
             trial.display = str(trial.id)
             trial.level = 0
             trial.tooltip = """
@@ -130,8 +131,9 @@ class HistoryGraph(Graph):
                 <br>
                 Duration: {duration}
                 """.format(duration=trial.duration_text)
-
+            trial.order=id_s
             tmap[trial.id] = trial
+            id_s=id_s+1
 
         return tmap
 
@@ -362,8 +364,8 @@ class HistoryGraph(Graph):
             min_id = Version.as_version(MAX_IN_GRAPH + 1)
             max_id = Version.as_version(-MAX_IN_GRAPH - 1)
             for trial in scripts[script]:
-                min_id = min(min_id, Version.as_version(trial.id))
-                max_id = max(max_id, Version.as_version(trial.id))
+                min_id = min(min_id, Version.as_version(trial.order))
+                max_id = max(max_id, Version.as_version(trial.order))
                 if trial.id not in actual_graph:
                     # trial is isolated
                     trial.level = level
@@ -443,6 +445,7 @@ class Node(object):
         self.level = 0
         self.script = ""
         self.trials = []
+        self.order=tid
 
     def insert(self, trial):
         """Insert trial to Node"""

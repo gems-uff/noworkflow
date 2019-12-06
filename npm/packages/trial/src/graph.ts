@@ -57,8 +57,8 @@ class TrialGraph {
   nodes: d3_HierarchyPointNode<{}>[];
   alledges: TrialEdgeData[];
 
-  t1: number;
-  t2: number;
+  t1: string;
+  t2: string;
   minDuration: { [trial: string]: number };
   maxDuration: { [trial: string]: number };
   totalDuration: { [trial: string]: number };
@@ -156,7 +156,7 @@ class TrialGraph {
       ))
   }
 
-  init(data: TrialGraphData, t1: number, t2: number) {
+  init(data: TrialGraphData, t1: string, t2: string) {
     this.t1 = t1;
     this.t2 = t2;
 
@@ -333,7 +333,7 @@ class TrialGraph {
       .style("display", "none");
   }
 
-  load(data: TrialGraphData, t1: number, t2: number) {
+  load(data: TrialGraphData, t1: string, t2: string) {
     this.init(data, t1, t2);
     this.updateWindow();
   }
@@ -435,7 +435,7 @@ class TrialGraph {
         .call(wrap, this.config.nodeSizeX);
   }
 
-  private calculateColor(d: TrialNodeData, trial_id: number): any {
+  private calculateColor(d: TrialNodeData, trial_id: string): any {
     var proportion = Math.round(255 * (1.0 - (d.duration[trial_id] / this.maxTotalDuration)));
     //Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
     return d3_rgb(255, proportion, proportion, 255).toString();
@@ -448,7 +448,7 @@ class TrialGraph {
     this.tooltipDiv.classed("hidden", true);
   }
 
-  private showTooltip(d: TrialNodeData, trial_id: number) {
+  private showTooltip(d: TrialNodeData, trial_id: string) {
     this.tooltipDiv.classed("hidden", false);
     this.tooltipDiv.transition()
       .duration(200)

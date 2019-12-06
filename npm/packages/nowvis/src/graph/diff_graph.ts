@@ -14,7 +14,7 @@ import {TrialGraphData} from '@noworkflow/trial';
 export
 class DiffGraphWidget extends BaseActivationGraphWidget {
 
-  static url(trial1: number, trial2: number, selectedGraph: string, useCache: boolean): string {
+  static url(trial1: string, trial2: string, selectedGraph: string, useCache: boolean): string {
     let cache = useCache ? "1" : "0"
     return ("diff/"
       + trial1 + "/" + trial2 + "/" + selectedGraph + "-" + cache + ".json"
@@ -24,7 +24,7 @@ class DiffGraphWidget extends BaseActivationGraphWidget {
   static createForm(name: string, parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>): void {
   }
 
-  constructor(name: string, cls: string, t1: number, t2: number) {
+  constructor(name: string, cls: string, t1: string, t2: string) {
     super({ node: BaseActivationGraphWidget.createNode(cls, DiffGraphWidget.createForm) });
     this.d3node = d3_select(this.node);
     this.d3node.select('.reload-button')

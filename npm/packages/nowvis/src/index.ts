@@ -13,7 +13,7 @@ function main(): void {
   mainpanel.id = 'main';
   var config = new ConfigWidget();
   var history = new HistoryWidget(config, "History", "History");
-
+  console.log("teste");
   mainpanel.addMainWidget(history);
   mainpanel.addMainWidget(config);
 

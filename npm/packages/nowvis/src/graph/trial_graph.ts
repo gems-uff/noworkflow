@@ -18,19 +18,19 @@ class TrialGraphWidget extends BaseActivationGraphWidget {
 
   name: string;
   cls: string;
-  t1: number;
-  t2: number;
+  t1: string;
+  t2: string;
   graph: TrialGraph;
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
 
-  static url(trialId: number, selectedGraph: string, useCache: boolean) {
+  static url(trialId: string, selectedGraph: string, useCache: boolean) {
     let cache = useCache ? "1" : "0"
     return ("trials/"
       + trialId + "/" + selectedGraph + "/" + cache + ".json"
     );
   }
 
-  constructor(name: string, cls: string, t1: number, t2: number) {
+  constructor(name: string, cls: string, t1: string, t2: string) {
     super({ node: BaseActivationGraphWidget.createNode(cls) });
     this.d3node = d3_select(this.node);
     this.d3node.select('.reload-button')
