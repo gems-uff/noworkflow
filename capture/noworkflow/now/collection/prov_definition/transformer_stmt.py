@@ -8,6 +8,7 @@ Collect definition provenance during the transformations"""
 import ast
 import os
 from copy import copy
+from contextlib import contextmanager
 
 import pyposast
 
@@ -39,6 +40,11 @@ class RewriteAST(ast.NodeTransformer):
         self.code_blocks = metascript.code_blocks_store
         self.compositions = metascript.compositions_store
         self.path = path
+        self.nested = [os.path.join(
+            os.path.dirname(self.path),
+            "noworkflow_codeblocks",
+            os.path.basename(self.path)
+        )]
         self.code = code
         self.lcode = code.split("\n")
         self.container_id = container_id
@@ -95,7 +101,8 @@ class RewriteAST(ast.NodeTransformer):
             self.trial_id,
             pyposast.extract_code(self.lcode, node),
             False,
-            ast.get_docstring(node) if has_doc else ""
+            ast.get_docstring(node) if has_doc else "",
+            '.'.join(self.nested)
         )
         return id_
 
@@ -113,10 +120,15 @@ class RewriteAST(ast.NodeTransformer):
         self.exc_handler_counter += 1
         return self.exc_handler_counter
 
+    @contextmanager
     def container(self, node, type_):
         """Create container code_block and sets current"""
-        return temporary(
-            self, 'container_id', self.create_code_block(node, type_))
+        self.nested.append(node.name)
+        with temporary(
+            self, 'container_id', self.create_code_block(node, type_)
+        ):
+            yield
+            self.nested.pop()
 
     def exc_handler(self):
         """Create container code_block and sets current"""

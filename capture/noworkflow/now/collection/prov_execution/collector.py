@@ -114,12 +114,9 @@ class Collector(object):
             """Open file and add it to file_accesses"""
             if content.should_use_safe_open():
                 return old_open(name, *args, **kwargs)
-            print(">", name, type(name), content.should_use_safe_open())
             if isinstance(name, int):
                 # ToDo: support file descriptor
                 return old_open(name, *args, **kwargs)
-            if "file.py" in name:
-                sdasdasd
             activation = self.last_activation
             while activation and not activation.active:
                 activation = activation.parent

@@ -72,15 +72,16 @@ class Definition(object):
         else:
             lines = [code]
 
+        path = os.path.relpath(path, self.metascript.dir) 
         id_ = self.metascript.code_components_store.add(
             self.metascript.trial_id,
-            os.path.relpath(path, self.metascript.dir),
+            path,
             type_,
             "w",
             1, 0, len(lines), len(lines[-1]), -1
         )
         self.metascript.code_blocks_store.add(
-            id_, self.metascript.trial_id, code, binary, None
+            id_, self.metascript.trial_id, code, binary, None, path
         )
         return code, id_
 

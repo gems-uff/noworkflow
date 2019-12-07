@@ -22,13 +22,13 @@ class CodeBlockLW(BaseLW):
     nullable = set()
     model = CodeBlock
 
-    def __init__(self, id_, trial_id, code, binary, docstring):
+    def __init__(self, id_, trial_id, code, binary, docstring, filename):
         # pylint: disable=too-many-arguments
         self.trial_id = trial_id
         self.id = id_  # pylint: disable=invalid-name
         self.code = code
         bin_code = code if binary else code.encode("utf-8")
-        self.code_hash = content.put(bin_code, 'codeblock')
+        self.code_hash = content.put(bin_code, filename)
         self.docstring = docstring or ""
 
     def is_complete(self):
