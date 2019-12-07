@@ -102,7 +102,7 @@ class RewriteAST(ast.NodeTransformer):
             pyposast.extract_code(self.lcode, node),
             False,
             ast.get_docstring(node) if has_doc else "",
-            '.'.join(self.nested)
+            '.'.join(self.nested) + "." + node.name
         )
         return id_
 
