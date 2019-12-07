@@ -7,6 +7,7 @@ Collect definition provenance during the transformations"""
 # pylint: disable=too-many-lines
 
 import ast
+import sys
 from copy import copy
 
 import pyposast
@@ -972,20 +973,7 @@ class RewriteDependencies(ast.NodeTransformer):
         ), new_node)
         return result
 
-    def visit_Ellipsis(self, node):
-        """Visit Ellipsis"""
-        node.name = pyposast.extract_code(self.rewriter.lcode, node)
-        component_id = self.rewriter.create_code_component(
-            node, Component.LITERAL, 'r'
-        )
-        self.create_composition(component_id, *self.composition_edge)
-        return ast_copy(noworkflow('literal', [
-            activation(), ast.Num(component_id), ast.Attribute(
-                ast.Name('__noworkflow__', L()), 'Ellipsis', L()
-            ), ast.Str(self.mode)
-        ]), node)
-
-    def visit_literal(self, node):
+    def visit_Constant(self, node):
         """Visit Num.
         Transform:
             1
@@ -1002,11 +990,11 @@ class RewriteDependencies(ast.NodeTransformer):
             [activation(), ast.Num(component_id), node, ast.Str(self.mode)]
         ), node)
 
-    visit_Num = visit_literal
-    visit_Str = visit_literal
-    visit_Bytes = visit_literal
-    visit_NameConstant = visit_literal
-    visit_Constant = visit_literal
+    visit_Num = visit_Constant
+    visit_Str = visit_Constant
+    visit_Bytes = visit_Constant
+    visit_NameConstant = visit_Constant
+    visit_Ellipsis = visit_Constant
 
     def visit_Attribute(self, node):
         """Visit Attribute

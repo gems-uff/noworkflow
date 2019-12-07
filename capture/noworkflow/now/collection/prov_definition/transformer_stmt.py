@@ -414,7 +414,6 @@ class RewriteAST(ast.NodeTransformer):
             new_node.args.defaults = [
                 ast_copy(none(), arg) for arg in new_node.args.defaults
             ]
-
             return ast_copy(function_def(
                 new_node.name, new_node.args, body, decorators,
                 returns=maybe(new_node, 'returns'), cls=cls

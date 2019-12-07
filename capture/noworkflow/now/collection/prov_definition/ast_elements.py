@@ -5,6 +5,7 @@
 """Helpers to create ast elements"""
 
 import ast
+import sys
 
 from ...utils.cross_version import PY3, PY35
 
@@ -118,7 +119,10 @@ def arguments():
 
 def nlambda(args=None, body=None):
     """Create lambda object"""
-    args = args or arguments()
+    if not args:
+        args = arguments()
+        if sys.version_info >= (3, 8):
+            args.posonlyargs = []
     body = body or none()
     return ast.Lambda(args, body)
 

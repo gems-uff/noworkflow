@@ -96,6 +96,7 @@ class DebugVisitor(ast.NodeVisitor):
     visit_YieldFrom = _visit_expr
     visit_Compare = _visit_expr
     visit_Call = _visit_expr
+    visit_Constant = _visit_expr
     visit_Num = _visit_expr
     visit_Str = _visit_expr
     visit_Bytes = _visit_expr

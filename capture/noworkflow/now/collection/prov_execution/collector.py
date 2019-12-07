@@ -21,7 +21,7 @@ from future.utils import viewvalues, viewkeys, viewitems, exec_
 from ...persistence import content
 from ...persistence.models import Trial
 from ...utils.cross_version import IMMUTABLE, isiterable, PY3
-from ...utils.cross_version import cross_print
+from ...utils.cross_version import cross_print, PY38
 
 from .structures import AssignAccess, Assign, Generator
 from .structures import DependencyAware, Dependency, Parameter
@@ -534,8 +534,9 @@ class Collector(object):
     def _comp_key(self, activation, code_id, value, count):
         """Capture dict comprehension key after"""
         # pylint: disable=no-self-use, unused-argument
-        self._dict_key(activation, code_id, value, final=True)
-        self.remove_conditions(activation, count)
+        self._dict_key(activation, code_id, value, final=not PY38)
+        if not PY38:
+            self.remove_conditions(activation, count)
         return value
 
     def dict_value(self, activation, code_id, exc_handler):
@@ -564,7 +565,9 @@ class Collector(object):
     def _comp_value(self, activation, code_id, value, count):
         """Capture dict comprehension value after"""
         # pylint: disable=no-self-use, unused-argument
-        self._dict_value(activation, code_id, value, final=False)
+        self._dict_value(activation, code_id, value, final=PY38)
+        if PY38:
+            self.remove_conditions(activation, count)
         return value
 
     def after_dict_item(self, activation, value_depa, member_depa):

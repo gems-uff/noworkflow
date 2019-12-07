@@ -20,6 +20,7 @@ except ImportError:
 
 from .future_cross_version import cross_print
 
+PY38 = sys.version_info >= (3, 8)
 PY36 = sys.version_info >= (3, 6)
 PY35 = sys.version_info >= (3, 5)
 PY34 = sys.version_info >= (3, 4)
