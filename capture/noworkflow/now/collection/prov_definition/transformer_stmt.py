@@ -120,15 +120,12 @@ class RewriteAST(ast.NodeTransformer):
         self.exc_handler_counter += 1
         return self.exc_handler_counter
 
-    @contextmanager
     def container(self, node, type_):
         """Create container code_block and sets current"""
-        self.nested.append(node.name)
-        with temporary(
-            self, 'container_id', self.create_code_block(node, type_)
-        ):
-            yield
-            self.nested.pop()
+        return temporary(
+            self, 'container_id', self.create_code_block(node, type_),
+            (self.nested, node.name)
+        )
 
     def exc_handler(self):
         """Create container code_block and sets current"""

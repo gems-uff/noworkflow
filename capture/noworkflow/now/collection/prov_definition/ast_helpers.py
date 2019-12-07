@@ -172,12 +172,20 @@ def debug_tree(tree, just_print=None, show_code=None, methods=None):
 
 
 @contextmanager
-def temporary(obj, name, value):
-    """Set temporary attribute"""
+def temporary(obj, name, value, nested=None):
+    """Set temporary attribute
+    
+    This context manager also may add and remove a value from a nested stack.
+    Pass nested as a tuple of a list and a value
+    """
+    if nested is not None:
+        nested[0].append(nested[1])
     old = getattr(obj, name)
     setattr(obj, name, value)
     yield value
     setattr(obj, name, old)
+    if nested is not None:
+        nested[0].pop()
 
 
 def select_future_imports(body):

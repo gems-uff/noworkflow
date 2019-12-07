@@ -31,7 +31,7 @@ class Module(AlchemyProxy):
     >>> trial_id = new_trial()
     >>> cid = components.add(
     ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1)
-    >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+    >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
     >>> mid = modules.add(
     ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
     >>> components.do_store()
@@ -140,7 +140,7 @@ class Module(AlchemyProxy):
         >>> cid = components.add(
         ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
-        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
         >>> mid = modules.add(
         ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
         >>> components.do_store()
@@ -171,7 +171,7 @@ class Module(AlchemyProxy):
         >>> cid = components.add(
         ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
-        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
         >>> mid = modules.add(
         ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
         >>> components.do_store()
