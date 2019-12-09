@@ -37,16 +37,10 @@ class TrialDot(Model):
         visitor.visit(clusterizer)
         return "\n".join(visitor.result)
 
-    def _repr_svg_(self):
-        if self.format == "svg":
-            ipython = get_ipython()  # pylint: disable=undefined-variable
-            return ipython.run_cell_magic(
-                "dot", "--format {}".format(self.format), self.export_text()
-            )
-
-    def _repr_png_(self):
-        if self.format == "png":
-            ipython = get_ipython()  # pylint: disable=undefined-variable
-            return ipython.run_cell_magic(
-                "dot", "--format {}".format(self.format), self.export_text()
-            )
+    def _ipython_display_(self):
+        from IPython.display import display
+        ipython = get_ipython()
+        obj = ipython.run_cell_magic(
+            "dot", "--format {}".format(self.format), self.export_text()
+        )
+        display(obj)
