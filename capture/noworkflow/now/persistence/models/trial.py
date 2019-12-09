@@ -272,7 +272,7 @@ class Trial(AlchemyProxy):
         from ...models.dependency_graph.config import DependencyConfig
         from ...models.graphs.trial_graph import TrialGraph
         from ...models.trial_prolog import TrialProlog
-        from ...models.trial_dot import TrialDot
+        from ...models.dataflow_model import DataflowModel
 
         self.dependency_config = DependencyConfig()
         self._dependency_clusterizer = None
@@ -280,7 +280,7 @@ class Trial(AlchemyProxy):
         self.graph = TrialGraph(self)
 
         self.prolog = TrialProlog(self)
-        self.dot = TrialDot(self)
+        self.dot = DataflowModel(trial=self)
         self.initialize_default(kwargs)
         self._prolog_visitor = None
 
