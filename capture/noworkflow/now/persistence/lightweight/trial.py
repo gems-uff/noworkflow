@@ -17,12 +17,12 @@ class TrialLW(BaseLW):
 
     __slots__, attributes = define_attrs(
         ["id", "script", "start", "finish", "command",
-        "path","status","modules_inherited_from_trial_id","parent_id","main_id"]
+        "path","status","modules_inherited_from_trial_id","parent_id","main_id","experiment_id"]
     )
     nullable = set()
     model = Trial
 
-    def __init__(self, id_, script, start, finish, command,path,status,modules_inherited_from_trial_id,parent_id,main_id):
+    def __init__(self, id_, script, start, finish, command,path,status,modules_inherited_from_trial_id,parent_id,main_id,experiment=None):
         # pylint: disable=too-many-arguments
         self.id = id_
         self.trial_id = id_
@@ -35,6 +35,7 @@ class TrialLW(BaseLW):
         self.modules_inherited_from_trial_id = modules_inherited_from_trial_id
         self.parent_id = parent_id
         self.main_id = main_id
+        self.experiment=experiment
 
     def is_complete(self):
         """The first TrialLW cannot be removed from object store"""

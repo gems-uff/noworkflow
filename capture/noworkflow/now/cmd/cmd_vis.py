@@ -42,8 +42,13 @@ class Vis(Command):
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
+        add_arg("--force", type=str, default="false",
+                help="If force is set to true, it creates provenance database if not exists.")
 
     def execute(self, args):
-        persistence_config.connect_existing(args.dir or os.getcwd())
+        if args.force == "true":
+                persistence_config.connect(args.dir or os.getcwd())        
+        else:
+                persistence_config.connect_existing(args.dir or os.getcwd())
         run(path=args.dir, browser=args.browser, port=args.port,
             debug=args.debug, host=args.host)

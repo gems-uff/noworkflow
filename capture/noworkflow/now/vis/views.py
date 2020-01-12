@@ -12,7 +12,7 @@ import json
 from flask import render_template, jsonify, request,send_file  
 from io import BytesIO as IO
 
-from ..persistence.models import Trial,Activation
+from ..persistence.models import Trial,Activation, Experiment
 from ..persistence.lightweight import ActivationLW, BundleLW
 from ..models.history import History
 from ..models.diff import Diff
@@ -88,9 +88,6 @@ def static_proxy(path):
 def index(tid=None, graph_mode=None):
     """Respond history scripts and index page as HTML"""
     # pylint: disable=unused-argument
-    print("start")
-    time.sleep(10000)
-    print("end")
     history = History()
     return render_template(
         "index.html",
@@ -99,46 +96,52 @@ def index(tid=None, graph_mode=None):
         folders=["folder1","folder2","folder3"]
     )
     
-@app.route("/collab/bundle", methods=['GET'])
-def getBundle():
+@app.route("/<expCode>/collab/bundle", methods=['GET'])
+def getBundle(expCode):
     """Return bundle with trials from trials ids"""
     trialsToExport=request.args.getlist("id")
     bundle=export_bundle(trialsToExport)
     resp=bundle.__json__()
     return jsonify(resp)
 
-@app.route("/collab/bundle", methods=['Post'])
-def postBundle():
+@app.route("/<expCode>", methods=['Post'])
+def createExperiment(expCode):
+    Experiment.create(expCode)
+    return "",201
+
+@app.route("/<expCode>/collab/bundle", methods=['Post'])
+def postBundle(expCode):
     """Import Bundle of trials"""
+    expCode=Experiment.load_experiment(expCode).id
     data =  getRequestContent()
     bundle=BundleLW()
     bundle.from_json(data)
-    import_bundle(bundle)
+    import_bundle(bundle, expCode)
     return "",201
 
-@app.route("/collab/files", methods=['Post'])
-def receiveFile():
+@app.route("/<expCode>/collab/files", methods=['Post'])
+def receiveFile(expCode):
     """Respond files hash"""
     contFile=gzip_uncompress(request.data)
     content.put(contFile)
     return "",201
 
-@app.route("/collab/files/<fid>", methods=['Get'])
-def downloadFile(fid):
+@app.route("/<expCode>/collab/files/<fid>", methods=['Get'])
+def downloadFile(expCode,fid):
     """Respond files hash"""
     resp=content.get(fid)
     return send_file(IO(resp),mimetype='application/octet-stream')
 
-@app.route("/collab/files", methods=['Get'])
-def listFiles():
+@app.route("/<expCode>/collab/files", methods=['Get'])
+def listFiles(expCode):
     """Respond files hash"""
     resp=content.listAll()
     return jsonify(resp)
 
-@app.route("/collab/trialsids")
-def trialsId():
+@app.route("/<expCode>/collab/trialsids")
+def trialsId(expCode):
     """Respond trials ids"""
-    resp=[t.id for t in Trial.all()]
+    resp=[t.id for t in Trial.list_from_experiment(expCode)]
     return jsonify(resp)
 
 @app.route("/trials.json")

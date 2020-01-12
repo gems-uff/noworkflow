@@ -143,6 +143,7 @@ class Trial(AlchemyProxy):
         ForeignKeyConstraint(["modules_inherited_from_trial_id"],
                              ["trial.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
+        ForeignKeyConstraint(["experiment_id"], ["experiment.id"], ondelete="SET NULL"),
         ForeignKeyConstraint(["id", "main_id"],
                              ["code_block.trial_id", "code_block.id"],
                              ondelete="SET NULL", use_alter=True),
@@ -205,6 +206,8 @@ class Trial(AlchemyProxy):
     bypass_children = backref_many("bypass_children")
     # Trial.parent
     children = backref_many("children")
+
+    experiment_id = Column(Text)
 
     DEFAULT = {
         "dot.format": "png",
@@ -361,6 +364,7 @@ class Trial(AlchemyProxy):
             return None
         return self.main.this_component.first_evaluation.this_activation
 
+        
     @property
     def local_modules(self):
         """Load local modules
@@ -951,7 +955,15 @@ class Trial(AlchemyProxy):
         if trial:
             query = query.filter(model.id == trial)
         return proxy(query.first())
-
+    @classmethod
+    def list_from_experiment(cls,experiment,session=None):
+        from .experiment import Experiment  # avoid circular import
+        session = session or relational.session
+        return (
+            session.query(cls.m)
+            .outerjoin(Experiment.m)
+            .filter((Experiment.m.name == experiment))
+        ).all()
     @classmethod  # query
     def load_trial(cls, trial_ref, session=None):
         """Load trial by trial reference

@@ -27,12 +27,13 @@ from .member import Member
 from .module import Module
 from .tag import Tag
 from .trial import Trial
+from .experiment import Experiment
 
 
 ORDER = [
     Trial, Head, Tag, GraphCache, Argument, # Trial
     Module, EnvironmentAttr,  # Deployment
-    CodeComponent, CodeBlock, Composition,  # Definition
+    CodeComponent, CodeBlock, Composition, Experiment,  # Definition
     Evaluation, Activation, Dependency, Member,  # Execution
     FileAccess  # Execution
 ]

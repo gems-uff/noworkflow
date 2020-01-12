@@ -9,8 +9,11 @@ from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleL
 from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
 from ..persistence.models import FileAccess,Member,Module,Tag
 from ..persistence.lightweight import ObjectStore
+def store_trial_from_experiment(trial,experiment,trial_store):
+    trial.experiment_id=experiment
+    trial_store.add_from_object(trial)
 
-def import_bundle(bundle):
+def import_bundle(bundle, experiment):
     trials_store=ObjectStore(TrialLW)
     codeBlock_store=ObjectStore(CodeBlockLW)
     arguments_store=ObjectStore(ArgumentLW)
@@ -24,7 +27,7 @@ def import_bundle(bundle):
     member_store=ObjectStore(MemberLW)
     module_store=ObjectStore(ModuleLW)
 
-    [trials_store.add_from_object(x) for x in bundle.trials]
+    [store_trial_from_experiment(x,experiment,trials_store) for x in bundle.trials]
     [codeBlock_store.add_from_object(x) for x in bundle.codeBlocks]
     [arguments_store.add_from_object(x) for x in bundle.arguments]
     [codeComponent_store.add_from_object(x) for x in bundle.codeComponents]
