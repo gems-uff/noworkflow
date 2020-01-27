@@ -48,12 +48,14 @@ class HistoryGraph(Graph):
 
         key = (
             self.history.script, self.history.status, self.history.summarize,
-            Trial.count()
+            Trial.count(None,self.history.expId)
         )
+        print("Trial count")
+        print(key[1])
         if self.use_cache and key in self.cache:
             return self.cache[key]
 
-        tmap = self._load_trials(Trial.reverse_trials(MAXTRIALS))
+        tmap = self._load_trials(Trial.reverse_trials(MAXTRIALS,None,self.history.expId))
         graph = self._create_graph(tmap)
 
         tmap, graph = self._summarize(tmap, graph)

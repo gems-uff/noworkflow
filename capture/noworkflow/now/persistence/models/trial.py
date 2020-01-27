@@ -1247,7 +1247,7 @@ class Trial(AlchemyProxy):
         return tid
 
     @classmethod  # query
-    def reverse_trials(cls, limit, session=None):
+    def reverse_trials(cls, limit, session=None,expId=None):
         """Return a generator with <limit> trials ordered by start time desc
 
 
@@ -1267,12 +1267,13 @@ class Trial(AlchemyProxy):
         session = session or relational.session
         return proxy_gen(
             session.query(cls.m)
+            .filter(cls.m.experiment_id == expId)
             .order_by(cls.m.start.desc())
             .limit(limit)
         )
 
     @classmethod  # query
-    def count(cls, session=None):
+    def count(cls, session=None,expId=None):
         """Count number of trials on database
 
 
@@ -1287,7 +1288,7 @@ class Trial(AlchemyProxy):
         2
         """
         session = session or relational.session
-        return session.query(cls.m).count()
+        return session.query(cls.m).filter(cls.m.experiment_id == expId).count()
 
     def match_status(self, status):
         """Check if trial statuses matches

@@ -148,11 +148,21 @@ def trialsId(expCode):
 @app.route("/trials") # remove
 def trials():
     """Respond history graph as JSON"""
+    print("alltrials")
     history = History(script=request.args.get("script"),
                       status=request.args.get("execution"),
                       summarize=bool(int(request.args.get("summarize"))))
     return jsonify(**history.graph.graph())
 
+@app.route("/<expCode>/trials.json")
+def trialsByExpCode(expCode):
+    """Respond history graph as JSON"""
+    expId=Experiment.load_experiment(expCode).id
+    history = History(script=request.args.get("script"),
+                      status=request.args.get("execution"),
+                      summarize=bool(int(request.args.get("summarize"))),
+                      expId=expId)
+    return jsonify(**history.graph.graph())
 
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
 def trial_graph(tid, graph_mode, cache):
