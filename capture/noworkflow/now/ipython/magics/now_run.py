@@ -97,9 +97,7 @@ class NowRun(IpythonCommandMagic, Run):
                 """)
         add_arg("params", nargs=argparse.REMAINDER,
                 help="params to be passed to script")
-        add_arg("--content-engine", type=str,
-                help="set the content database engine")
-
+        
     def execute(self, func, line, cell, magic_cls):
         # Calculate noworkflow params and script params
         # pylint: disable=too-many-locals
