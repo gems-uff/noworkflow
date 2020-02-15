@@ -15,6 +15,7 @@ from .composition import CompositionLW
 from .dependency import DependencyLW
 from .environment_attr import EnvironmentAttrLW
 from .evaluation import EvaluationLW
+from .experiment import ExperimentLW
 from .exception import ExceptionLW
 from .file_access import FileAccessLW
 from .member import MemberLW
@@ -34,6 +35,7 @@ __all__ = [
     "DependencyLW",
     "EnvironmentAttrLW",
     "EvaluationLW",
+    "ExperimentLW",
     "ExceptionLW",
     "FileAccessLW",
     "MemberLW",

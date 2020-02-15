@@ -26,12 +26,14 @@ export
 class HistoryWidget extends Widget {
 
   name: string;
+  expId: string;
   cls: string;
   graph: HistoryGraph;
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   config: ConfigWidget;
 
-  static url(script = "*", execution = "*", summarize=true) {
+  static url(script = "*", execution = "*", summarize=true) 
+  {
     return ("trials.json"
       + "?script=" + encodeURIComponent(script)
       + "&execution=" + encodeURIComponent(execution)
@@ -110,8 +112,9 @@ class HistoryWidget extends Widget {
     return node;
   }
 
-  constructor(config: ConfigWidget, name: string, cls: string) {
+  constructor(config: ConfigWidget, name: string, cls: string, expId: string) {
     super({ node: HistoryWidget.createNode() });
+    this.expId = expId;
     this.config = config;
     this.d3node = d3_select(this.node);
     this.d3node.select('.reload-button')
