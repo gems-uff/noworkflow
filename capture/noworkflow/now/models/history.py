@@ -62,8 +62,6 @@ class History(Model):
         self.status = "*"
         self.summarize = False
         self.expId=kwargs.get('expId', None)
-        print("exp arg")
-        print( self.expId)
         self.graph = HistoryGraph(self)
         self.initialize_default(kwargs)
         self.status_options = ["*", "finished", "unfinished", "backup"]

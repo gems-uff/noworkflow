@@ -83,7 +83,7 @@ def static_proxy(path):
     return app.send_static_file(path)
 
 
-@app.route("/experiment/<expcode>/")
+@app.route("/experiments/<expcode>/")
 @app.route("/")
 @app.route("/<tid>-<graph_mode>")  # todo
 def index(tid=None, graph_mode=None,expcode=None):
@@ -109,7 +109,7 @@ def getBundle(expCode):
     resp=bundle.__json__()
     return jsonify(resp)
 
-@app.route("/experiment/<expCode>", methods=['Post'])
+@app.route("/experiments/<expCode>", methods=['Post'])
 def createExperiment(expCode):
     Experiment.create(expCode)
     return "",201
@@ -149,7 +149,7 @@ def trialsId(expCode):
     resp=[t.id for t in Trial.list_from_experiment(expCode)]
     return jsonify(resp)
 
-@app.route("/experiment/<expCode>/trials.json")
+@app.route("/experiments/<expCode>/trials.json")
 @app.route("/trials.json")
 @app.route("/trials") # remove
 def trials(expCode=None):
@@ -163,7 +163,7 @@ def trials(expCode=None):
                       expId=expId)
     return jsonify(**history.graph.graph())
 
-@app.route("/experiment/<expCode>/trials/<tid>/<graph_mode>/<cache>.json")
+@app.route("/experiments/<expCode>/trials/<tid>/<graph_mode>/<cache>.json")
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
 def trial_graph(tid, graph_mode, cache,expCode=None):
     """Respond trial graph as JSON"""
@@ -173,7 +173,7 @@ def trial_graph(tid, graph_mode, cache,expCode=None):
     _, tgraph, _ = getattr(graph, graph_mode)()
     return jsonify(**tgraph)
 
-@app.route("/experiment/<expCode>/trials/<tid>/dependencies.json")
+@app.route("/experiments/<expCode>/trials/<tid>/dependencies.json")
 @app.route("/trials/<tid>/dependencies.json")
 @app.route("/trials/<tid>/dependencies")  # remove
 def dependencies(tid,expCode=None):
@@ -185,7 +185,7 @@ def dependencies(tid,expCode=None):
     return jsonify(all=result, trial_path=trial_path)
 
 
-@app.route("/experiment/<expCode>/trials/<tid>/environment.json")
+@app.route("/experiments/<expCode>/trials/<tid>/environment.json")
 @app.route("/trials/<tid>/environment.json")
 @app.route("/trials/<tid>/environment")  # remove
 def environment(tid,expCode=None):
@@ -195,7 +195,7 @@ def environment(tid,expCode=None):
     return jsonify(all=list(result.values()))
 
 
-@app.route("/experiment/<expCode>/trials/<tid>/file_accesses.json")
+@app.route("/experiments/<expCode>/trials/<tid>/file_accesses.json")
 @app.route("/trials/<tid>/file_accesses.json")
 @app.route("/trials/<tid>/file_accesses")  # remove
 def file_accesses(tid,expCode=None):
@@ -206,7 +206,7 @@ def file_accesses(tid,expCode=None):
                                   for x in trial.file_accesses],
                    trial_path=trial_path)
 
-@app.route("/experiment/<expCode>/diff/<trial1>/<trial2>/info.json")
+@app.route("/experiments/<expCode>/diff/<trial1>/<trial2>/info.json")
 @app.route("/diff/<trial1>/<trial2>/info.json")
 def diff(trial1, trial2,expCode=None):
     """Respond trial diff as JSON"""
@@ -217,7 +217,7 @@ def diff(trial1, trial2,expCode=None):
         trial=diff_object.trial,
     )
 
-@app.route("/experiment/<expCode>/diff/<trial1>/<trial2>/dependencies.json")
+@app.route("/experiments/<expCode>/diff/<trial1>/<trial2>/dependencies.json")
 @app.route("/diff/<trial1>/<trial2>/dependencies.json")
 def diff_modules(trial1, trial2,expCode=None):
     """Respond modules diff as JSON"""
@@ -233,7 +233,7 @@ def diff_modules(trial1, trial2,expCode=None):
         t2_path=t2_path,
     )
 
-@app.route("/experiment/<expCode>/diff/<trial1>/<trial2>/environment.json")
+@app.route("/experiments/<expCode>/diff/<trial1>/<trial2>/environment.json")
 @app.route("/diff/<trial1>/<trial2>/environment.json")
 def diff_environment(trial1, trial2,expCode=None):
     """Respond environment diff as JSON"""
@@ -245,7 +245,7 @@ def diff_environment(trial1, trial2,expCode=None):
         env_replaced=[[y.to_dict() for y in x] for x in env_replaced],
     )
 
-@app.route("/experiment/<expCode>/diff/<trial1>/<trial2>/file_accesses.json")
+@app.route("/experiments/<expCode>/diff/<trial1>/<trial2>/file_accesses.json")
 @app.route("/diff/<trial1>/<trial2>/file_accesses.json")
 def diff_accesses(trial1, trial2,expCode=None):
     """Respond trial diff as JSON"""
@@ -261,7 +261,7 @@ def diff_accesses(trial1, trial2,expCode=None):
         t2_path=t2_path,
     )
 
-@app.route("/experiment/<expCode>/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
+@app.route("/experiments/<expCode>/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
 @app.route("/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
 def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
     """Respond trial diff as JSON"""

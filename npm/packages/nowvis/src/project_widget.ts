@@ -6,29 +6,33 @@ import {
   BaseType as d3_BaseType,
 } from 'd3-selection';
 
+interface IExperiment {
+  id: string;
+  name: string;
+}
 
 export
 class ProjectWidget extends Widget {
 
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
 
-  folders: Array<String>;
+  experiments: Array<IExperiment>;
   static createNode(): HTMLElement {
     let node = document.createElement('div');
  
     return node;
   }
 
-  constructor(folders: Array<string>) {
+  constructor(experiments: Array<IExperiment>) {
     super({ node: ProjectWidget.createNode() });
     this.d3node = d3_select(this.node);
-    this.folders=folders;
-    //this.setFlag(Widget.Flag.DisallowLayout);
+    this.experiments=experiments;
+    
     this.setNode();
     this.addClass('content');
-    this.title.label = "Project Selection";
+    this.title.label = "Experiment Selection";
     this.title.closable = false
-    this.title.caption = `Project`;
+    this.title.caption = `Experiment`;
   }
   setNode(){
 
@@ -38,18 +42,16 @@ class ProjectWidget extends Widget {
     let projectsDiv = content.append("div")
 
     projectsDiv.append("h2")
-      .text("Projects")
+      .text("Experiments:")
 
     let projectList = projectsDiv.append("ul")
       .classed("graph-attr", true);
 
-    this.folders.forEach(function (value) {
-        let t="";
-        if(value)
-            t=value.toString()
+    this.experiments.forEach(function (obj) {
+
         let item=projectList.append("li").append("a")
-        item.attr("href",t)
-        item.text(t)
+        item.attr("href","experiments/"+obj.name)
+        item.text(obj.name)
         
     });
     
