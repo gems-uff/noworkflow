@@ -89,7 +89,8 @@ def static_proxy(path):
 def index(tid=None, graph_mode=None,expcode=None):
     """Respond history scripts and index page as HTML"""
     # pylint: disable=unused-argument
-    experiments=[ExperimentLW(x.name,x.id).__json__() for x in Experiment.all()]
+    
+    experiments=[ExperimentLW(x.name,x.id,x.description).__json__() for x in Experiment.all()]
     if expcode is None:
         expcode=""
     history = History()
@@ -101,7 +102,7 @@ def index(tid=None, graph_mode=None,expcode=None):
         selectedExperiment=expcode
     )
     
-@app.route("/<expCode>/collab/bundle", methods=['GET'])
+@app.route("/experiments/<expCode>/collab/bundle", methods=['GET'])
 def getBundle(expCode):
     """Return bundle with trials from trials ids"""
     trialsToExport=request.args.getlist("id")
@@ -109,54 +110,58 @@ def getBundle(expCode):
     resp=bundle.__json__()
     return jsonify(resp)
 
-@app.route("/experiments/<expCode>", methods=['Post'])
-def createExperiment(expCode):
-    Experiment.create(expCode)
-    return "",201
+@app.route("/experiments", methods=['Post'])
+def createExperiment():
+    expName=request.json['name']
+    expDesc=request.json['description']
+    if(expName!=""):
+        exp=ExperimentLW(expName,"",expDesc)
+        exp=Experiment.create(exp)
+        return jsonify(exp.__json__()),201
+    else:
+        return "Experiment name must by filled",400
+    
 
-@app.route("/<expCode>/collab/bundle", methods=['Post'])
+@app.route("/experiments/<expCode>/collab/bundle", methods=['Post'])
 def postBundle(expCode):
     """Import Bundle of trials"""
-    expCode=Experiment.load_experiment(expCode).id
     data =  getRequestContent()
     bundle=BundleLW()
     bundle.from_json(data)
     import_bundle(bundle, expCode)
     return "",201
 
-@app.route("/<expCode>/collab/files", methods=['Post'])
+@app.route("/experiments/<expCode>/collab/files", methods=['Post'])
 def receiveFile(expCode):
     """Respond files hash"""
     contFile=gzip_uncompress(request.data)
     content.put(contFile)
     return "",201
 
-@app.route("/<expCode>/collab/files/<fid>", methods=['Get'])
+@app.route("/experiments/<expCode>/collab/files/<fid>", methods=['Get'])
 def downloadFile(expCode,fid):
     """Respond files hash"""
     resp=content.get(fid)
     return send_file(IO(resp),mimetype='application/octet-stream')
 
-@app.route("/<expCode>/collab/files", methods=['Get'])
+@app.route("/experiments/<expCode>/collab/files", methods=['Get'])
 def listFiles(expCode):
     """Respond files hash"""
     resp=content.listAll()
     return jsonify(resp)
 
-@app.route("/<expCode>/collab/trialsids")
+@app.route("/experiments/<expCode>/collab/trialsids")
 def trialsId(expCode):
     """Respond trials ids"""
     resp=[t.id for t in Trial.list_from_experiment(expCode)]
     return jsonify(resp)
 
-@app.route("/experiments/<expCode>/trials.json")
+@app.route("/experiments/<expId>/trials.json")
 @app.route("/trials.json")
 @app.route("/trials") # remove
-def trials(expCode=None):
+def trials(expId=None):
     """Respond history graph as JSON"""
-    expId=None
-    if expCode is not None:
-        expId=Experiment.load_experiment(expCode).id    
+    print(expId)
     history = History(script=request.args.get("script"),
                       status=request.args.get("execution"),
                       summarize=bool(int(request.args.get("summarize"))),

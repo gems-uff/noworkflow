@@ -31,6 +31,7 @@ class Experiment(AlchemyProxy):
         String, unique=True, primary_key=True
     )
     name = Column(String, unique=True)
+    description = Column(String)
 
     @classmethod
     def load_experiment(cls,experiment,session=None):
@@ -40,17 +41,17 @@ class Experiment(AlchemyProxy):
             .filter((cls.m.name == experiment))
         ).first()
     @classmethod  # query
-    def create(cls, name, session=None):
+    def create(cls, expe, session=None):
         
         # pylint: disable=too-many-arguments
         session = session or relational.session
-
 
         exp = cls.t
         id=uuid_gen()
         result = session.execute(
             exp.insert(),
-            {"id": id, "name": name})
+            {"id": id, "name": expe.name, "description": expe.description})
 
         session.commit()
-        return id
+        expe.id=id
+        return expe

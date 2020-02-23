@@ -12,15 +12,17 @@ class ExperimentLW(BaseLW):                                                     
     """Evaluation lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["name", "id"]
+        ["description","name", "id"]
     )
 
-    def __init__(self, name, id):
+    def __init__(self, name, id,description):
+        self.description = description
         self.name = name
         self.id = id
     
     def __json__(self):
         return {
+            'description': self.description,
             'name': self.name,
             'id': self.id
         }

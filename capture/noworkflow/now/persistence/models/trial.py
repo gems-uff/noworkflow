@@ -962,7 +962,7 @@ class Trial(AlchemyProxy):
         return (
             session.query(cls.m)
             .outerjoin(Experiment.m)
-            .filter((Experiment.m.name == experiment))
+            .filter((Experiment.m.id == experiment))
         ).all()
     @classmethod  # query
     def load_trial(cls, trial_ref, session=None):
