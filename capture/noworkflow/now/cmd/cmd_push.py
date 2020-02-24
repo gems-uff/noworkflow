@@ -15,7 +15,8 @@ from ..persistence.models import Trial
 from ..persistence import content
 
 from .command import Command
-
+from zipfile import ZipFile
+from io import BytesIO
 
 class Push(Command):
     """Import trials to a database"""
@@ -65,16 +66,31 @@ class Push(Command):
         filesUrl=self.url+"/collab/files"
         targetFiles=self.get(filesUrl)
         sourceFiles=content.listAll()
-        filesToImport=[x for x in sourceFiles if x not in targetFiles]
-        [self.exportFile(x,filesUrl) for x in filesToImport]
+        filesToExport=[x for x in sourceFiles if x not in targetFiles]
+        if (filesToExport.__len__()>0):
+            zipF=BytesIO()
+            zipObj = ZipFile(zipF, 'w')
+            for fileName in filesToExport:
+                zipObj.writestr(fileName,content.get(fileName))
+            
+            zipObj.close()
+            zipF.seek(0)
+            multipart_form_data = {
+                'files': ('files.zip', zipF,'application/zip')
+            }
+            
+            response = requests.post(filesUrl, files=multipart_form_data)
+
+            zipF.close()
 
     def execute(self, args):
 
         self.populate(args)
 
         persistence_config.connect(os.getcwd())
-        
+        print("Exporting Files...")
         self.exportFiles()
+        print("Exporting Trials...")
         status_code=self.exportTrials()
         
 

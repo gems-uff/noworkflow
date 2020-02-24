@@ -21,7 +21,8 @@ from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
 from ..persistence import content
 import time
-
+from zipfile import ZipFile
+from io import BytesIO
 
 class WebServer(object):
     """Flask WebServer"""
@@ -132,10 +133,19 @@ def postBundle(expCode):
     return "",201
 
 @app.route("/experiments/<expCode>/collab/files", methods=['Post'])
-def receiveFile(expCode):
-    """Respond files hash"""
-    contFile=gzip_uncompress(request.data)
-    content.put(contFile)
+def receiveFiles(expCode):
+    """Receive zipped files"""
+
+    file=request.files['files']
+    filedata=file.read()
+    
+    zF=BytesIO(filedata)
+    zipObj = ZipFile(zF, 'r')
+    for fName in zipObj.namelist():
+        content.put(zipObj.read(fName))
+
+    zipObj.close()
+    zF.close()
     return "",201
 
 @app.route("/experiments/<expCode>/collab/files/<fid>", methods=['Get'])
