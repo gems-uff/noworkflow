@@ -80,7 +80,6 @@ class Push(Command):
             }
             
             response = requests.post(filesUrl, files=multipart_form_data)
-
             zipF.close()
 
     def execute(self, args):

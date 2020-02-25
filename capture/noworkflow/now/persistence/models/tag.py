@@ -66,7 +66,7 @@ class Tag(AlchemyProxy):
     ))
 
     @classmethod  # query
-    def fast_load_auto_tag(cls, trial_id, code_hash, command, session=None):
+    def fast_load_auto_tag(cls, trial_id, code_hash, command, session=None, experiment_id=None):
         """Find automatic by code_hash and command.
         Ignore tags on the same trial_id
 
@@ -128,6 +128,7 @@ class Tag(AlchemyProxy):
             (Trial.m.id == CodeBlock.m.trial_id) &
             (Trial.m.main_id == CodeBlock.m.id) &
             (Trial.m.id != bindparam("trial_id")) &
+            (Trial.m.experiment_id == bindparam("experiment_id")) &
             (cls.m.type == "AUTO")
         )
 
@@ -141,6 +142,7 @@ class Tag(AlchemyProxy):
             "trial_id": trial_id,
             "code_hash": code_hash,
             "command": command,
+            "experiment_id": experiment_id,
         }
 
         for type_, condition in conditions:
@@ -153,7 +155,7 @@ class Tag(AlchemyProxy):
         return 0, [1, 1, 1]
 
     @classmethod  # query
-    def create_automatic_tag(cls, trial_id, code_hash, command, session=None):
+    def create_automatic_tag(cls, trial_id, code_hash, command, session=None, experiment_id=None):
         """Create automatic tag for trial id
 
         Find maximum automatic tag by code_hash and command
@@ -200,7 +202,7 @@ class Tag(AlchemyProxy):
         """
         session = session or relational.session
         tag_type, tag = cls.fast_load_auto_tag(
-            trial_id, code_hash, command, session=session)
+            trial_id, code_hash, command, session=session,experiment_id= experiment_id)
         new_tag = ""
         if tag_type == 1:
             tag[2] += 1

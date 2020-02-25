@@ -171,7 +171,6 @@ def trialsId(expCode):
 @app.route("/trials") # remove
 def trials(expId=None):
     """Respond history graph as JSON"""
-    print(expId)
     history = History(script=request.args.get("script"),
                       status=request.args.get("execution"),
                       summarize=bool(int(request.args.get("summarize"))),

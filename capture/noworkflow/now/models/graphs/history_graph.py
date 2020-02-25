@@ -50,8 +50,7 @@ class HistoryGraph(Graph):
             self.history.script, self.history.status, self.history.summarize,
             Trial.count(None,self.history.expId)
         )
-        print("Trial count")
-        print(key[1])
+        
         if self.use_cache and key in self.cache:
             return self.cache[key]
 
