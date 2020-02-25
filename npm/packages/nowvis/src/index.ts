@@ -13,13 +13,14 @@ function main(): void {
   // ToDo: parse URL to open specific graphs
   var experimentsIn = (<HTMLInputElement>document.getElementById("experimentsIn")).value;
   var selectedExp = (<HTMLInputElement>document.getElementById("selectedExperiment")).value;
+  var server = (<HTMLInputElement>document.getElementById("server")).value;
   var experiments=[];
   if(experimentsIn)
   experiments=JSON.parse(experimentsIn);
 
   var mainpanel = new NowVisPanel();
   mainpanel.id = 'main';
-  if(experiments.length>0 && !selectedExp){
+  if(server=="True"){
     var projectWidget = new ProjectWidget(experiments);
     mainpanel.addMainWidget(projectWidget);
   }

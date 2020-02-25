@@ -92,15 +92,20 @@ def index(tid=None, graph_mode=None,expcode=None):
     # pylint: disable=unused-argument
     
     experiments=[ExperimentLW(x.name,x.id,x.description).__json__() for x in Experiment.all()]
+    trialCoun=Trial.count()
+    server=False
     if expcode is None:
         expcode=""
+        if experiments.__len__() > 0 or trialCoun==0:
+            server=True
     history = History()
     return render_template(
         "index.html",
         cwd=os.getcwd(),
         scripts=history.scripts,
         experiments=experiments,
-        selectedExperiment=expcode
+        selectedExperiment=expcode,
+        server=server
     )
     
 @app.route("/experiments/<expCode>/collab/bundle", methods=['GET'])

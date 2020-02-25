@@ -55299,11 +55299,12 @@ function main() {
     // ToDo: parse URL to open specific graphs
     var experimentsIn = document.getElementById("experimentsIn").value;
     var selectedExp = document.getElementById("selectedExperiment").value;
+    var server = document.getElementById("server").value;
     var experiments = [];
     if (experimentsIn) experiments = JSON.parse(experimentsIn);
     var mainpanel = new nowpanel_1.NowVisPanel();
     mainpanel.id = 'main';
-    if (experiments.length > 0 && !selectedExp) {
+    if (server == "True") {
         var projectWidget = new project_widget_1.ProjectWidget(experiments);
         mainpanel.addMainWidget(projectWidget);
     } else {
@@ -98080,7 +98081,6 @@ class ProjectWidget extends widgets_1.Widget {
         let descIn = this.addFormInput(inputsDiv, "experimentDescInput", "Description", "textarea");
         let confimButton = inputsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Confirm");
         let addExpButton = projectsDiv.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Add Experiment");
-        projectsDiv.append("br");
         let table = projectsDiv.append("table").classed("table", true);
         let header = table.append("thead").append("tr");
         header.append("th").attr("scope", "col").text("id");

@@ -7,6 +7,7 @@
 <body>
   <input type="hidden" id="experimentsIn" name="experimentsIn" value='{{ experiments|tojson }}''>
   <input type="hidden" id="selectedExperiment" name="selectedExperiment" value='{{ selectedExperiment }}''>
+  <input type="hidden" id="server" name="server" value='{{ server }}''>
   <div id="graph">
   </div>
   <script src="/dist/bundle.js"></script>
