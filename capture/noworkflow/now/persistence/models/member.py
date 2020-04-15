@@ -87,13 +87,12 @@ class Member(AlchemyProxy):
     checkpoint = Column(Float)
     type = Column(Text)  # pylint: disable=invalid-name
 
-    trial = backref_one("trial")  # Trial.dependencies
-    # Activation.dependent_variables, Evaluation.dependencies_as_dependent
-    member_activation = backref_one("member_activation")
-    member = backref_one("member")
-    # Activation.dependency_variables, Evaluation.dependencies_as_dependency
-    collection_activation = backref_one("collection_activation")
-    collection = backref_one("collection")
+    # Relationship attributes (see relationships.py):
+    #   trial
+    #   member_activation
+    #   member
+    #   collection_activation
+    #   collection
 
     prolog_description = PrologDescription("member", (
         PrologTrial("trial_id", link="evaluation.trial_id"),

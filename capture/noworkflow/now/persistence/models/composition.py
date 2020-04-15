@@ -44,9 +44,10 @@ class Composition(AlchemyProxy):
     position = Column(Integer)
     extra = Column(Text)
 
-    trial = backref_one("trial")  # Trial.compositions
-    part = backref_one("part")
-    whole = backref_one("whole")
+    # Relationship attributes (see relationships.py):
+    #   trial
+    #   part
+    #   whole
 
     prolog_description = PrologDescription("composition", (
         PrologTrial("trial_id", link="code_component.trial_id"),

@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-
+from sqlalchemy.orm import remote, foreign
 
 from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
@@ -19,7 +19,7 @@ from .. import relational, content
 
 from .base import proxy_class, AlchemyProxy
 from .base import many_ref, backref_many, backref_one_uselist, backref_one
-from .base import query_many_property, many_viewonly_ref
+from .base import query_many_property, many_viewonly_ref, many
 
 
 @proxy_class
@@ -69,15 +69,13 @@ class CodeBlock(AlchemyProxy):
     code_hash = Column(Text)
     docstring = Column(Text)
 
-    activations = many_ref("code_block", "Activation")
 
-    modules = many_viewonly_ref("code_block", "Module")
-
-    trial = backref_one("trial")  # Trial.code_blocks
-    components = backref_many("components") # CodeComponent.container
-
-    # CodeComponent.this_block
-    this_component = backref_one_uselist("this_component")
+    # Relationship attributes (see relationships.py):
+    #   activations
+    #   components
+    #   modules
+    #   this_component
+    #   trial
 
     prolog_description = PrologDescription("code_block", (
         PrologTrial("trial_id", link="code_component.trial_id"),

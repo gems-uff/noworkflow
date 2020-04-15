@@ -87,19 +87,11 @@ class CodeComponent(AlchemyProxy):
     last_char_column = Column(Integer)
     container_id = Column(Integer, index=True)
 
-    evaluations = many_viewonly_ref("code_component", "Evaluation")
-
-    this_block = one(
-        "CodeBlock", backref="this_component",
-        primaryjoin=((foreign(id) == remote(CodeBlock.m.id)) &
-                     (foreign(trial_id) == remote(CodeBlock.m.trial_id))))
-    container = one(
-        "CodeBlock", backref="components",
-        viewonly=True,
-        primaryjoin=((foreign(container_id) == remote(CodeBlock.m.id)) &
-                     (foreign(trial_id) == remote(CodeBlock.m.trial_id))))
-
-    trial = backref_one("trial")  # Trial.code_components
+    # Relationship attributes (see relationships.py):
+    #   container
+    #   evaluations
+    #   this_block
+    #   trial
 
     prolog_description = PrologDescription("code_component", (
         PrologTrial("trial_id", link="trial.id"),
@@ -122,19 +114,19 @@ class CodeComponent(AlchemyProxy):
     ))
 
     # compositions in which this component is the part
-    compositions_as_part = many_viewonly_ref(
-        "part", "Composition",
-        primaryjoin=(
-            (id == Composition.m.part_id) &
-            (trial_id == Composition.m.trial_id))
-    )
+    #compositions_as_part = many_viewonly_ref(
+    #    "part", "Composition",
+    #    primaryjoin=(
+    #        (id == Composition.m.part_id) &
+    #        (trial_id == Composition.m.trial_id))
+    #)
 
     # compositions in which this component is the whole
-    compositions_as_whole = many_viewonly_ref(
-        "whole", "Composition",
-        primaryjoin=(
-            (id == Composition.m.whole_id) &
-            (trial_id == Composition.m.trial_id)))
+    #compositions_as_whole = many_viewonly_ref(
+    #    "whole", "Composition",
+    #    primaryjoin=(
+    #        (id == Composition.m.whole_id) &
+    #        (trial_id == Composition.m.trial_id)))
 
     parents = many_viewonly_ref(
         "children", "CodeComponent",

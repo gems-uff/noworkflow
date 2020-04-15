@@ -106,93 +106,19 @@ class Evaluation(AlchemyProxy):
     member_container_activation_id = Column(Integer, index=True)
     member_container_id = Column(Integer, index=True)
 
-    this_activation = one(
-        "Activation", backref="this_evaluation",
-        primaryjoin=((foreign(id) == remote(Activation.m.id)) &
-                     (foreign(trial_id) == remote(Activation.m.trial_id))))
-
-    activation = one(
-        "Activation", backref="evaluations",
-        remote_side=[Activation.m.trial_id, Activation.m.id],
-        primaryjoin=((foreign(activation_id) == remote(Activation.m.id)) &
-                     (foreign(trial_id) == remote(Activation.m.trial_id))))
-
-    # dependencies in which this variable is the dependent
-    dependencies_as_dependent = many_viewonly_ref(
-        "dependent", "Dependency",
-        primaryjoin=(
-            (id == Dependency.m.dependent_id) &
-            (activation_id == Dependency.m.dependent_activation_id) &
-            (trial_id == Dependency.m.trial_id))
-    )
-
-    # dependencies in which this variable is the dependency
-    dependencies_as_dependency = many_viewonly_ref(
-        "dependency", "Dependency",
-        primaryjoin=(
-            (id == Dependency.m.dependency_id) &
-            (activation_id == Dependency.m.dependency_activation_id) &
-            (trial_id == Dependency.m.trial_id)))
-
-    dependencies = many_viewonly_ref(
-        "dependents", "Evaluation",
-        secondary=Dependency.__table__,
-        primaryjoin=(
-            (id == Dependency.m.dependent_id) &
-            (activation_id == Dependency.m.dependent_activation_id) &
-            (trial_id == Dependency.m.trial_id)),
-        secondaryjoin=(
-            (id == Dependency.m.dependency_id) &
-            (activation_id == Dependency.m.dependency_activation_id) &
-            (trial_id == Dependency.m.trial_id)))
-
-    # memberships in which this evaluation is the collection
-    memberships_as_collection = many_viewonly_ref(
-        "collection", "Member",
-        primaryjoin=(
-            (id == Member.m.collection_id) &
-            (activation_id == Member.m.collection_activation_id) &
-            (trial_id == Member.m.trial_id))
-    )
-
-    # memberships in which this evaluation is the member
-    memberships_as_member = many_viewonly_ref(
-        "member", "Member",
-        primaryjoin=(
-            (id == Member.m.member_id) &
-            (activation_id == Member.m.member_activation_id) &
-            (trial_id == Member.m.trial_id)))
-
-    members = many_viewonly_ref(
-        "collections", "Evaluation",
-        secondary=Member.__table__,
-        primaryjoin=(
-            (id == Member.m.collection_id) &
-            (activation_id == Member.m.collection_activation_id) &
-            (trial_id == Member.m.trial_id)),
-        secondaryjoin=(
-            (id == Member.m.member_id) &
-            (activation_id == Member.m.member_activation_id) &
-            (trial_id == Member.m.trial_id)))
-
-    # ToDo: Add variable
-    #member_cointainer = one(
-    #    "Evaluation", backref="container_members", viewonly=True,
-    #    remote_side=[trial_id, activation_id, id], primaryjoin=(
-    #        (id == member_container_id) &
-    #        (activation_id == activation_id) &
-    #        (trial_id == trial_id)
-    #    )
-    #)
-
-
-    dependents = backref_many("dependents")  # Evaluation.dependencies
-    collections = backref_many("collections")  # Evaluation.members
-    trial = backref_one("trial")  # Trial.evaluations
-    code_component = backref_one("code_component")  # CodeComponent.evaluations
-    # Evaluation.member_cointainer
-    #container_members = backref_many("container_members")
-
+    # Relationship attributes (see relationships.py):
+    #   this_activation
+    #   activation
+    #   dependencies_as_dependent
+    #   dependencies_as_dependency
+    #   dependencies
+    #   dependents
+    #   memberships_as_collection
+    #   memberships_as_member
+    #   members
+    #   collections
+    #   trial
+    #   code_component
     
     prolog_description = PrologDescription("evaluation", (
         PrologTrial("trial_id", link="trial.id"),

@@ -70,8 +70,9 @@ class FileAccess(AlchemyProxy):
     checkpoint = Column(Float)
     activation_id = Column(Integer, index=True)
 
-    trial = backref_one("trial")  # Float.file_accesses
-    activation = backref_one("activation")  # Activation.file_accesses
+    # Relationship attributes (see relationships.py):
+    #   activation
+    #   trial
 
     prolog_description = PrologDescription("access", (
         PrologTrial("trial_id", link="activation.trial_id"),

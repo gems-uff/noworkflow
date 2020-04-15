@@ -51,7 +51,8 @@ class Head(AlchemyProxy):
     script = Column(Text)
     trial_id = Column(Integer, index=True)
 
-    trial = one("Trial")
+    # Relationship attributes (see relationships.py):
+    #   trial
 
     prolog_description = PrologDescription("head", (
         PrologRepr("script"),

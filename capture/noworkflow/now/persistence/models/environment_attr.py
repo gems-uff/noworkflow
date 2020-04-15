@@ -48,7 +48,8 @@ class EnvironmentAttr(AlchemyProxy):
     name = Column(Text)
     value = Column(Text)
 
-    trial = backref_one("trial")  # Trial.environment_attrs
+    # Relationship attributes (see relationships.py):
+    #   trial
 
     prolog_description = PrologDescription("environment", (
         PrologTrial("trial_id", link="trial.id"),

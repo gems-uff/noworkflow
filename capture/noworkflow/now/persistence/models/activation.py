@@ -94,33 +94,16 @@ class Activation(AlchemyProxy):
     start_checkpoint = Column(Float)
     code_block_id = Column(Integer, index=True)
 
-    file_accesses = many_viewonly_ref("activation", "FileAccess")
-
-    dependent_dependencies = many_viewonly_ref(
-        "dependent_activation", "Dependency",
-        primaryjoin=((id == Dependency.m.dependent_activation_id) &
-                     (trial_id == Dependency.m.trial_id)))
-    dependency_dependencies = many_viewonly_ref(
-        "dependency_activation", "Dependency",
-        primaryjoin=((id == Dependency.m.dependency_activation_id) &
-                     (trial_id == Dependency.m.trial_id)))
-
-
-    collection_membership = many_viewonly_ref(
-        "collection_activation", "Member",
-        primaryjoin=((id == Member.m.collection_activation_id) &
-                     (trial_id == Member.m.trial_id)))
-    member_membership = many_viewonly_ref(
-        "member_activation", "Member",
-        primaryjoin=((id == Member.m.member_activation_id) &
-                     (trial_id == Member.m.trial_id)))
-
-
-    trial = backref_one("trial")  # Trial.activations
-    code_block = backref_one("code_block")  # CodeBlock.activations
-    # Evaluation.this_activation
-    this_evaluation = backref_one_uselist("this_evaluation")
-    evaluations = backref_many("evaluations") # Evaluation.activation
+    # Relationship attributes (see relationships.py):
+    #   code_block
+    #   collection_membership
+    #   dependent_dependencies
+    #   dependency_dependencies
+    #   evaluations 
+    #   file_accesses
+    #   member_membership
+    #   this_evaluation
+    #   trial
 
     prolog_description = PrologDescription("activation", (
         PrologTrial("trial_id", link="evaluation.trial_id"),

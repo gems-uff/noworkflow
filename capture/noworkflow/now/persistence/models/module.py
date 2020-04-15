@@ -68,8 +68,9 @@ class Module(AlchemyProxy):
     code_block_id = Column(Text, index=True)
     transformed = Column(Boolean)
 
-    trial = backref_one("trial")  # Trial.modules
-    code_block = backref_one("code_block")  # CodeBlock.modules
+    # Relationship attributes (see relationships.py):
+    #   code_block
+    #   trial
 
     prolog_description = PrologDescription("module", (
         PrologTrial("trial_id", link="trial.id"),

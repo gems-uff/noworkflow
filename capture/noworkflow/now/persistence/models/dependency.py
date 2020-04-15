@@ -91,14 +91,12 @@ class Dependency(AlchemyProxy):
     collection_id = Column(Integer, index=True)
     key = Column(Text)  # pylint: disable=invalid-name
 
-    trial = backref_one("trial")  # Trial.dependencies
-    # Activation.dependent_variables, Evaluation.dependencies_as_dependent
-    dependent_activation = backref_one("dependent_activation")
-    dependent = backref_one("dependent")
-    # Activation.dependency_variables, Evaluation.dependencies_as_dependency
-    dependency_activation = backref_one("dependency_activation")
-    dependency = backref_one("dependency")
-
+    # Relationship attributes (see relationships.py):
+    #   trial
+    #   dependency
+    #   dependency_activation
+    #   dependent
+    #   dependent_activation
 
     prolog_description = PrologDescription("dependency", (
         PrologTrial("trial_id", link="evaluation.trial_id"),

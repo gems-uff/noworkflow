@@ -158,44 +158,24 @@ class Trial(AlchemyProxy):
     parent_id = Column(Integer, index=True)
     main_id = Column(Integer, index=True)
 
-
-    modules_inherited_from_trial = one(
-        "Trial", backref="bypass_children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == modules_inherited_from_trial_id)
-    )
-    parent = one(
-        "Trial", backref="children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == parent_id)
-    )
-    main = one(
-        "CodeBlock",
-        remote_side=[CodeBlock.m.trial_id, CodeBlock.m.id],
-        primaryjoin=((main_id == CodeBlock.m.id) &
-                     (id == CodeBlock.m.trial_id)))
-    code_blocks = many_ref("trial", "CodeBlock",
-                           foreign_keys="CodeBlock.trial_id")
-
-    arguments = many_ref("trial", "Argument")
-    environment_attrs = many_ref("trial", "EnvironmentAttr")
-    _modules = many_ref("trial", "Module")
-
-    code_components = many_viewonly_ref("trial", "CodeComponent")
-    evaluations = many_viewonly_ref("trial", "Evaluation")
-    activations = many_viewonly_ref(
-        "trial", "Activation", order_by=Activation.m.start_checkpoint)
-    file_accesses = many_viewonly_ref("trial", "FileAccess")
-
-    members = many_viewonly_ref("trial", "Member")
-
-    dependencies = many_viewonly_ref("trial", "Dependency")
-    compositions = many_viewonly_ref("trial", "Composition")
-
-    tags = many_ref("trial", "Tag")
-
-    # Trial.modules_inherited_from_trial
-    bypass_children = backref_many("bypass_children")
-    # Trial.parent
-    children = backref_many("children")
+    # Relationship attributes (see relationships.py):
+    #   modules_inherited_from_trial
+    #   parent
+    #   main
+    #   code_blocks
+    #   arguments
+    #   environment_attrs
+    #   _modules
+    #   code_components
+    #   evalulations
+    #   activations
+    #   file_accesses
+    #   members
+    #   dependencies
+    #   compositions
+    #   tags
+    #   bypass_children
+    #   children
 
     DEFAULT = {
         "dot.format": "png",

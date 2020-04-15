@@ -49,7 +49,8 @@ class Argument(AlchemyProxy):
     name = Column(Text)
     value = Column(Text)
 
-    trial = backref_one("trial")  # Trial.arguments
+    # Relationship attributes (see relationships.py):
+    #   trial
 
     prolog_description = PrologDescription("argument", (
         PrologTrial("trial_id", link="trial.id"),
