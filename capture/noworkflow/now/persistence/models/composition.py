@@ -12,7 +12,7 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullable, PrologNullableRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -45,9 +45,9 @@ class Composition(AlchemyProxy):
     extra = Column(Text)
 
     # Relationship attributes (see relationships.py):
-    #   trial
-    #   part
-    #   whole
+    #   trial: 1 Trial
+    #   part: 1 CodeComponent
+    #   whole: 1 CodeComponent
 
     prolog_description = PrologDescription("composition", (
         PrologTrial("trial_id", link="code_component.trial_id"),

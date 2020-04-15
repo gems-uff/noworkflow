@@ -1,9 +1,14 @@
+# Copyright (c) 2020 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2020 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
+
+from copy import copy
 
 from sqlalchemy.orm import remote, foreign
 from sqlalchemy.orm import relationship
 
-from .base import one, backref_one_uselist, Many, One, ModelMethod, proxy_attr
-from .base import backref_one_uselist, backref_one, proxy_gen, proxy, backref_many
+from .base import proxy_attr, proxy_gen, proxy, proxy_gen_first
 
 from .activation import Activation
 from .argument import Argument
@@ -24,21 +29,58 @@ def add(cls, name, relat, proxy=proxy):
     setattr(cls.m, name, relat)
     setattr(cls, name, proxy_attr(name, proxy_func=proxy))
 
+def update_dict(original, new):
+    original = original or {}
+    for key, value in new.items():
+        if key not in original:
+            original[key] = value
+    return original
+
+MTO = "ManyToOne"
+OTM = "OneToMany"
+MTM = "ManyToMany"
+OTO = "OneToOne"
+
+DIRECTIONS = {
+    MTO: (proxy_gen, proxy),
+    OTM: (proxy, proxy_gen),
+    MTM: (proxy_gen, proxy_gen),
+    OTO: (proxy, proxy)
+}
+
+def bidirectional_relationship(
+    model1, attr1, model2, attr2, direction=MTO, proxy1=None, proxy2=None,
+    extra1=None, extra2=None, **extra    
+):
+    proxy1_, proxy2_ = DIRECTIONS[direction]
+    proxy1 = proxy1 or proxy1_
+    proxy2 = proxy2 or proxy2_
+
+    add(model1, attr1, relationship(
+        model2.__name__, **update_dict(extra1, extra)
+    ), proxy=proxy1)
+    if "secondaryjoin" in extra:
+        extra = copy(extra)
+        extra["primaryjoin"], extra["secondaryjoin"] = extra["secondaryjoin"], extra["primaryjoin"]
+    add(model2, attr2, relationship(
+        model1.__name__, **update_dict(extra2, extra)
+    ), proxy=proxy2)
+    
+
 
 ## Activation
 
 # Activation.trial <-> Trial.activations
-add(Trial, "activations", relationship(
-    "Activation", viewonly=True, backref="trial",
-    order_by=Activation.m.start_checkpoint
-), proxy=proxy_gen)
-Activation.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "activations", Activation, "trial", MTO,
+    extra1=dict(order_by=Activation.m.start_checkpoint),
+    viewonly=True,
+)
 
 # Activation.code_block <-> CodeBlock.activations
-add(CodeBlock, "activations", relationship(
-    "Activation", backref="code_block",
-), proxy=proxy_gen)
-Activation.code_block = backref_one("code_block")
+bidirectional_relationship(
+    CodeBlock, "activations", Activation, "code_block", MTO,
+)
 
 # Activation.this_evaluation <-> Evaluation.this_activation
 add(Evaluation, "this_activation", relationship(
@@ -46,81 +88,61 @@ add(Evaluation, "this_activation", relationship(
     primaryjoin=((foreign(Evaluation.m.id) == remote(Activation.m.id)) &
                  (foreign(Evaluation.m.trial_id) == remote(Activation.m.trial_id)))
 ))
-Activation.this_evaluation = backref_one_uselist("this_evaluation")
+Activation.this_evaluation = proxy_attr("this_evaluation", proxy_gen_first)
 
 # Activation.evaluations <-> Evaluation.activation
 add(Evaluation, "activation", relationship(
     "Activation", backref="evaluations",
-    remote_side=[Activation.m.trial_id, Activation.m.id],
     primaryjoin=((foreign(Evaluation.m.activation_id) == remote(Activation.m.id)) &
-                 (foreign(Evaluation.m.trial_id) == remote(Activation.m.trial_id)))
+                 (foreign(Evaluation.m.trial_id) == remote(Activation.m.trial_id))),
 ))
-Activation.evaluations = backref_many("evaluations")
+Activation.evaluations = proxy_attr("evaluations", proxy_gen)
 
 # Activation.file_accesses <-> FileAccess.activation
-add(Activation, "file_accesses", relationship(
-    "FileAccess", viewonly=True
-), proxy=proxy_gen)
-add(FileAccess, "activation", relationship(
-    "Activation", viewonly=True
-))
+bidirectional_relationship(
+    Activation, "file_accesses", FileAccess, "activation", MTO,
+    viewonly=True,
+)
 
 # Activation.dependent_dependencies <-> Dependency.dependent_activation
-add(Activation, "dependent_dependencies", relationship(
-    "Dependency", viewonly=True,
+bidirectional_relationship(
+    Activation, "dependent_dependencies", Dependency, "dependent_activation", MTO,
+    viewonly=True,
     primaryjoin=((Activation.m.id == Dependency.m.dependent_activation_id) &
-                 (Activation.m.trial_id == Dependency.m.trial_id))
-), proxy=proxy_gen)
-add(Dependency, "dependent_activation", relationship(
-    "Activation", viewonly=True,
-    primaryjoin=((remote(Activation.m.id) == foreign(Dependency.m.dependent_activation_id)) &
-                 (remote(Activation.m.trial_id) == foreign(Dependency.m.trial_id)))
-))
+                 (Activation.m.trial_id == Dependency.m.trial_id)),
+)
 
 # Activation.dependency_dependencies <-> Dependency.dependency_activation
-add(Activation, "dependency_dependencies", relationship(
-    "Dependency", viewonly=True,
+bidirectional_relationship(
+    Activation, "dependency_dependencies", Dependency, "dependency_activation", MTO,
+    viewonly=True,
     primaryjoin=((Activation.m.id == Dependency.m.dependency_activation_id) &
-                 (Activation.m.trial_id == Dependency.m.trial_id))
-), proxy=proxy_gen)
-add(Dependency, "dependency_activation", relationship(
-    "Activation", viewonly=True,
-    primaryjoin=((remote(Activation.m.id) == foreign(Dependency.m.dependency_activation_id)) &
-                 (remote(Activation.m.trial_id) == foreign(Dependency.m.trial_id)))
-))
+                    (Activation.m.trial_id == Dependency.m.trial_id)),
+)
 
 # Activation.collection_membership <-> Member.collection_activation
-add(Activation, "collection_membership", relationship(
-    "Member", viewonly=True,
+bidirectional_relationship(
+    Activation, "collection_membership", Member, "collection_activation", MTO,
+    viewonly=True,
     primaryjoin=((Activation.m.id == Member.m.collection_activation_id) &
                  (Activation.m.trial_id == Member.m.trial_id))
-), proxy=proxy_gen)
-add(Member, "collection_activation", relationship(
-    "Activation", viewonly=True,
-    primaryjoin=((remote(Activation.m.id) == foreign(Member.m.collection_activation_id)) &
-                 (remote(Activation.m.trial_id) == foreign(Member.m.trial_id)))
-))
+)
 
 # Activation.member_membership <-> Member.member_activation
-add(Activation, "member_membership", relationship(
-    "Member", viewonly=True,
+bidirectional_relationship(
+    Activation, "member_membership", Member, "member_activation", MTO,
+    viewonly=True,
     primaryjoin=((Activation.m.id == Member.m.member_activation_id) &
                  (Activation.m.trial_id == Member.m.trial_id))
-), proxy=proxy_gen)
-add(Member, "member_activation", relationship(
-    "Activation", viewonly=True,
-    primaryjoin=((remote(Activation.m.id) == foreign(Member.m.member_activation_id)) &
-                 (remote(Activation.m.trial_id) == foreign(Member.m.trial_id)))
-))
+)
 
 
 ## Argument
 
 # Argument.trial <-> Trial.arguments
-add(Trial, "arguments", relationship(
-    "Argument", backref="trial",
-), proxy=proxy_gen)
-Argument.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "arguments", Argument, "trial", MTO,
+)
 
 
 ## CodeBlock
@@ -130,22 +152,27 @@ add(Trial, "code_blocks", relationship(
     "CodeBlock", backref="trial",
     foreign_keys="CodeBlock.trial_id"
 ), proxy=proxy_gen)
-CodeBlock.trial = backref_one("trial")
+CodeBlock.trial = proxy_attr("trial")
 
 # CodeBlock.components <-> CodeComponent.container
+add(CodeBlock, "components", relationship(
+    "CodeComponent",
+    viewonly=True, uselist=True,
+    primaryjoin=((remote(CodeComponent.m.container_id) == foreign(CodeBlock.m.id)) &
+                 (remote(CodeComponent.m.trial_id) == foreign(CodeBlock.m.trial_id)))
+), proxy=proxy_gen)
 add(CodeComponent, "container", relationship(
-    "CodeBlock", backref="components",
+    "CodeBlock",
     viewonly=True,
     primaryjoin=((foreign(CodeComponent.m.container_id) == remote(CodeBlock.m.id)) &
                  (foreign(CodeComponent.m.trial_id) == remote(CodeBlock.m.trial_id)))
 ))
-CodeBlock.components = backref_many("components")
 
 # CodeBlock.modules <-> Module.code_block
-add(CodeBlock, "modules", relationship(
-    "Module", viewonly=True, backref="code_block"
-), proxy=proxy_gen)
-Module.code_block = proxy_attr("code_block")
+bidirectional_relationship(
+    CodeBlock, "modules", Module, "code_block", MTO,
+    viewonly=True
+)
 
 # CodeBlock.this_component <-> CodeComponent.this_block
 add(CodeComponent, "this_block", relationship(
@@ -153,106 +180,118 @@ add(CodeComponent, "this_block", relationship(
     primaryjoin=((foreign(CodeComponent.m.id) == remote(CodeBlock.m.id)) &
                  (foreign(CodeComponent.m.trial_id) == remote(CodeBlock.m.trial_id)))
 ))
-CodeBlock.this_component = backref_one_uselist("this_component")
+CodeBlock.this_component = proxy_attr("this_component", proxy_gen_first)
 
 
 ## CodeComponent
 
 # CodeComponent.trial <-> Trial.code_components
-add(Trial, "code_components", relationship(
-    "CodeComponent", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-CodeComponent.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "code_components", CodeComponent, "trial", MTO,
+    viewonly=True,
+)
 
 # CodeComponent.compositions_as_part <-> Composition.part
 # compositions in which this component is the part
-add(CodeComponent, "compositions_as_part", relationship(
-    "Composition", backref="part",
+bidirectional_relationship(
+    CodeComponent, "compositions_as_part", Composition, "part", MTO,
     viewonly=True,
     primaryjoin=(
         (CodeComponent.m.id == Composition.m.part_id) &
         (CodeComponent.m.trial_id == Composition.m.trial_id))
-), proxy=proxy_gen)
-Composition.part = backref_one("part")
+)
 
 # CodeComponent.compositions_as_whole <-> Composition.whole
 # compositions in which this component is the whole
-add(CodeComponent, "compositions_as_whole", relationship(
-    "Composition", backref="whole",
+bidirectional_relationship(
+    CodeComponent, "compositions_as_whole", Composition, "whole", MTO,
     viewonly=True,
     primaryjoin=(
         (CodeComponent.m.id == Composition.m.whole_id) &
         (CodeComponent.m.trial_id == Composition.m.trial_id))
-), proxy=proxy_gen)
-Composition.whole = backref_one("whole")
+)
 
 # CodeComponent.evaluations <-> Evaluation.code_component
-add(CodeComponent, "evaluations", relationship(
-    "Evaluation", backref="code_component", viewonly=True, lazy="dynamic",
-), proxy=proxy_gen)
-Evaluation.code_component = backref_one("code_component")
+bidirectional_relationship(
+    CodeComponent, "evaluations", Evaluation, "code_component", MTO,
+    extra1=dict(lazy="dynamic"),
+    viewonly=True,
+)
 
+# CodeComponent.parents <-> CodeComponent.children
+bidirectional_relationship(
+    CodeComponent, "parents", CodeComponent, "children", MTM,
+    viewonly=True,
+    secondary=Composition.__table__,
+    primaryjoin=(
+        (CodeComponent.m.id == Composition.m.part_id) &
+        (CodeComponent.m.trial_id == Composition.m.trial_id)),
+    secondaryjoin=(
+        (CodeComponent.m.id == Composition.m.whole_id) &
+        (CodeComponent.m.trial_id == Composition.m.trial_id))
+)
 
 ## Composition
 
 # Composition.trial <-> Trial.compositions
-add(Trial, "compositions", relationship(
-    "Composition", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-Composition.trial = backref_one("trial")
-
+bidirectional_relationship(
+    Trial, "compositions", Composition, "trial", MTO,
+    viewonly=True,
+)
 
 ## Dependency
 
 # Dependency.trial <-> Trial.dependencies
-add(Trial, "dependencies", relationship(
-    "Dependency", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-Dependency.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "dependencies", Dependency, "trial", MTO,
+    viewonly=True,
+)
 
 # Dependency.dependent <-> Evaluation.dependencies_as_dependent
 # dependencies in which the evaluation is the dependent
-add(Evaluation, "dependencies_as_dependent", relationship(
-    "Dependency", backref="dependent", viewonly=True, lazy="dynamic",
+bidirectional_relationship(
+    Dependency, "dependent", Evaluation, "dependencies_as_dependent", OTM,
+    extra2=dict(lazy="dynamic"),
+    viewonly=True, 
     primaryjoin=(
         (Evaluation.m.id == Dependency.m.dependent_id) &
         (Evaluation.m.activation_id == Dependency.m.dependent_activation_id) &
         (Evaluation.m.trial_id == Dependency.m.trial_id))
-), proxy=proxy_gen)
-Dependency.dependent = backref_one("dependent")
+)
 
 # Dependency.dependency <-> Evaluation.dependencies_as_dependency
 # dependencies in which the evaluation is the dependency
-add(Evaluation, "dependencies_as_dependency", relationship(
-    "Dependency", backref="dependency", viewonly=True, lazy="dynamic",
+bidirectional_relationship(
+    Dependency, "dependency", Evaluation, "dependencies_as_dependency", OTM,
+    extra2=dict(lazy="dynamic"),
     primaryjoin=(
         (Evaluation.m.id == Dependency.m.dependency_id) &
         (Evaluation.m.activation_id == Dependency.m.dependency_activation_id) &
         (Evaluation.m.trial_id == Dependency.m.trial_id))
-), proxy=proxy_gen)
-Dependency.dependency = backref_one("dependency")
+)
 
 
 ## EnvironmentAttr
 
 # EnvironmentAttr.trial <-> Trial.environment_attrs
-add(Trial, "environment_attrs", relationship(
-    "EnvironmentAttr", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-EnvironmentAttr.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "environment_attrs", EnvironmentAttr, "trial", MTO,
+    viewonly=True,
+)
 
 
 ## Evaluation
 
 # Evaluation.trial <-> Trial.evaluations
-add(Trial, "evaluations", relationship(
-    "Evaluation", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-Evaluation.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "evaluations", Evaluation, "trial", MTO,
+    viewonly=True,
+)
 
-# Evaluation.dependencies <-> dependencies.dependents
-add(Evaluation, "dependencies", relationship(
-    "Evaluation", backref="dependents", viewonly=True,
+# Evaluation.dependencies <-> Evaluation.dependents
+bidirectional_relationship(
+    Evaluation, "dependencies", Evaluation, "dependents", MTM,
+    viewonly=True,
     secondary=Dependency.__table__,
     primaryjoin=(
         (Evaluation.m.id == Dependency.m.dependent_id) &
@@ -262,35 +301,34 @@ add(Evaluation, "dependencies", relationship(
         (Evaluation.m.id == Dependency.m.dependency_id) &
         (Evaluation.m.activation_id == Dependency.m.dependency_activation_id) &
         (Evaluation.m.trial_id == Dependency.m.trial_id))
-), proxy=proxy_gen)
-Evaluation.dependents = backref_many("dependents")
+)
 
 # Evaluation.memberships_as_collection <-> Member.collection
 # memberships in which this evaluation is the collection
-add(Evaluation, "memberships_as_collection", relationship(
-    "Member", backref="collection", viewonly=True,
+bidirectional_relationship(
+    Evaluation, "memberships_as_collection", Member, "collection", MTO,
+    viewonly=True,
     primaryjoin=(
         (Evaluation.m.id == Member.m.collection_id) &
         (Evaluation.m.activation_id == Member.m.collection_activation_id) &
         (Evaluation.m.trial_id == Member.m.trial_id))
-), proxy=proxy_gen)
-Member.collection = backref_one("collection")
+)
 
 # Evaluation.memberships_as_member <-> Member.member
 # memberships in which this evaluation is the member
-add(Evaluation, "memberships_as_member", relationship(
-    "Member", backref="member", viewonly=True,
+bidirectional_relationship(
+    Evaluation, "memberships_as_member", Member, "member", MTO,
+    viewonly=True,
     primaryjoin=(
         (Evaluation.m.id == Member.m.member_id) &
         (Evaluation.m.activation_id == Member.m.member_activation_id) &
         (Evaluation.m.trial_id == Member.m.trial_id))
-), proxy=proxy_gen)
-Member.member = backref_one("member")
-
+)
 
 # Evaluation.members <-> Evaluation.collections
-add(Evaluation, "members", relationship(
-    "Evaluation", backref="collections", viewonly=True,
+bidirectional_relationship(
+    Evaluation, "members", Evaluation, "collections", MTM,
+    viewonly=True,
     secondary=Member.__table__,
     primaryjoin=(
         (Evaluation.m.id == Member.m.collection_id) &
@@ -300,20 +338,17 @@ add(Evaluation, "members", relationship(
         (Evaluation.m.id == Member.m.member_id) &
         (Evaluation.m.activation_id == Member.m.member_activation_id) &
         (Evaluation.m.trial_id == Member.m.trial_id))
-), proxy=proxy_gen)
-Evaluation.collections = backref_many("collections")
-
+)
 # ToDo: Evaluation.member_container <-> Evaluation.container_members --- member_container_id
 
 
 ## FileAccess
 
 # FileAccess.trial <-> Trial.file_accesses
-add(Trial, "file_accesses", relationship(
-    "FileAccess", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-FileAccess.trial = backref_one("trial")
-
+bidirectional_relationship(
+    Trial, "file_accesses", FileAccess, "trial", MTO,
+    viewonly=True,
+)
 
 ## Head
 
@@ -326,47 +361,49 @@ add(Head, "trial", relationship(
 ## Member
 
 # Member.trial <-> Trial.members
-add(Trial, "members", relationship(
-    "Member", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-Member.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "members", Member, "trial", MTO,
+    viewonly=True,
+)
 
 
 ## Module
 
 # Module.trial <-> Trial._modules
-add(Trial, "_modules", relationship(
-    "Module", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-Module.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "_modules", Module, "trial", MTO,
+    viewonly=True,
+)
 
 
 ## Tag
 
 # Tag.trial <-> Trial.tags
-add(Trial, "tags", relationship(
-    "Tag", backref="trial", viewonly=True,
-), proxy=proxy_gen)
-Tag.trial = backref_one("trial")
+bidirectional_relationship(
+    Trial, "tags", Tag, "trial", MTO,
+    viewonly=True,
+)
 
 
 ## Trial
 
 # Trial.modules_inherited_from_trial <-> Trial.bypass_children
-add(Trial, "modules_inherited_from_trial", relationship(
-    "Trial", backref="bypass_children", viewonly=True,
-    remote_side=[Trial.m.id],
+bidirectional_relationship(
+    Trial, "modules_inherited_from_trial", Trial, "bypass_children", OTM,
+    extra1=dict(remote_side=[Trial.m.id]),
+    extra2=dict(remote_side=[Trial.m.modules_inherited_from_trial_id]),
+    viewonly=True,
     primaryjoin=(Trial.m.id == Trial.m.modules_inherited_from_trial_id)
-))
-Trial.bypass_children = backref_many("bypass_children")
+)
 
 # Trial.parent <-> Trial.children
-add(Trial, "parent", relationship(
-    "Trial", backref="children", viewonly=True,
-    remote_side=[Trial.m.id],
+bidirectional_relationship(
+    Trial, "parent", Trial, "children", OTM,
+    extra1=dict(remote_side=[Trial.m.id]),
+    extra2=dict(remote_side=[Trial.m.parent_id]),
+    viewonly=True,
     primaryjoin=(Trial.m.id == Trial.m.parent_id) 
-))
-Trial.children = backref_many("children")
+)
 
 # Trial.main
 add(Trial, "main", relationship(

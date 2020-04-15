@@ -18,7 +18,7 @@ from ...utils.prolog import PrologRepr, PrologTimestamp
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -53,7 +53,7 @@ class Tag(AlchemyProxy):
     timestamp = Column(TIMESTAMP)
 
     # Relationship attributes (see relationships.py):
-    #   trial
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("tag", (
         PrologTrial("trial_id", link="trial.id"),

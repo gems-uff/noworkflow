@@ -18,8 +18,7 @@ from ...utils.prolog import PrologNullableRepr
 from .. import relational, content
 
 from .base import proxy_class, AlchemyProxy
-from .base import many_ref, backref_many, backref_one_uselist, backref_one
-from .base import query_many_property, many_viewonly_ref, many
+from .base import query_many_property
 
 
 @proxy_class
@@ -71,11 +70,11 @@ class CodeBlock(AlchemyProxy):
 
 
     # Relationship attributes (see relationships.py):
-    #   activations
-    #   components
-    #   modules
-    #   this_component
-    #   trial
+    #   activations: * Activation
+    #   components: * CodeComponent
+    #   modules: * Module
+    #   this_component: 1 CodeComponent
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("code_block", (
         PrologTrial("trial_id", link="code_component.trial_id"),

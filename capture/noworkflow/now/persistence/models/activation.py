@@ -15,8 +15,7 @@ from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, many_viewonly_ref
-from .base import backref_one, backref_many, backref_one_uselist
+from .base import AlchemyProxy, proxy_class
 from .base import query_many_property
 
 from .dependency import Dependency
@@ -95,15 +94,15 @@ class Activation(AlchemyProxy):
     code_block_id = Column(Integer, index=True)
 
     # Relationship attributes (see relationships.py):
-    #   code_block
-    #   collection_membership
-    #   dependent_dependencies
-    #   dependency_dependencies
-    #   evaluations 
-    #   file_accesses
-    #   member_membership
-    #   this_evaluation
-    #   trial
+    #   code_block: 1 CodeBlock
+    #   collection_membership: * Member
+    #   dependent_dependencies: * Dependency
+    #   dependency_dependencies: * Dependency
+    #   evaluations: * Evaluation
+    #   file_accesses: * FileAccess
+    #   member_membership: * Member
+    #   this_evaluation: 1 Evaluation
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("activation", (
         PrologTrial("trial_id", link="evaluation.trial_id"),

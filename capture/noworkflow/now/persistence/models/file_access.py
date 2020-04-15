@@ -18,7 +18,7 @@ from ...utils.prolog import PrologNullableRepr
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_one, proxy
+from .base import AlchemyProxy, proxy_class, proxy
 
 
 @proxy_class
@@ -71,8 +71,8 @@ class FileAccess(AlchemyProxy):
     activation_id = Column(Integer, index=True)
 
     # Relationship attributes (see relationships.py):
-    #   activation
-    #   trial
+    #   activation: 1 Activation
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("access", (
         PrologTrial("trial_id", link="activation.trial_id"),

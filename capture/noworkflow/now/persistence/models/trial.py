@@ -20,8 +20,8 @@ from ...utils.prolog import PrologNullable
 from .. import relational, content, persistence_config
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
-from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
-from .base import proxy, many
+from .base import is_none
+from .base import proxy
 
 from .code_block import CodeBlock
 from .activation import Activation
@@ -159,23 +159,23 @@ class Trial(AlchemyProxy):
     main_id = Column(Integer, index=True)
 
     # Relationship attributes (see relationships.py):
-    #   modules_inherited_from_trial
-    #   parent
-    #   main
-    #   code_blocks
-    #   arguments
-    #   environment_attrs
-    #   _modules
-    #   code_components
-    #   evalulations
-    #   activations
-    #   file_accesses
-    #   members
-    #   dependencies
-    #   compositions
-    #   tags
-    #   bypass_children
-    #   children
+    #   modules_inherited_from_trial: * Module
+    #   parent: 1 Trial
+    #   main: 1 CodeBlock
+    #   code_blocks: * CodeBlock
+    #   arguments: * Argument
+    #   environment_attrs: * EnvironmentAttr
+    #   _modules: * Module
+    #   code_components: * CodeComponent
+    #   evalulations: * Evaluation
+    #   activations: * Activation
+    #   file_accesses: * FileAccess
+    #   members: * Member
+    #   dependencies: * Dependency
+    #   compositions: * Composition
+    #   tags: * Tag
+    #   bypass_children: * Trial
+    #   children: * Trial
 
     DEFAULT = {
         "dot.format": "png",

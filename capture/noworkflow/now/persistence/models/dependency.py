@@ -13,7 +13,7 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullable, PrologBoolean
 from ...utils.prolog import PrologNullableRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -92,11 +92,11 @@ class Dependency(AlchemyProxy):
     key = Column(Text)  # pylint: disable=invalid-name
 
     # Relationship attributes (see relationships.py):
-    #   trial
-    #   dependency
-    #   dependency_activation
-    #   dependent
-    #   dependent_activation
+    #   trial: 1 Trial
+    #   dependency: 1 Evaluation
+    #   dependency_activation: 1 Activation
+    #   dependent: 1 Evaluation
+    #   dependent_activation: 1 Activation
 
     prolog_description = PrologDescription("dependency", (
         PrologTrial("trial_id", link="evaluation.trial_id"),

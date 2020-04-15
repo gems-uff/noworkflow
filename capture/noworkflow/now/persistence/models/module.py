@@ -14,7 +14,7 @@ from ...utils.prolog import PrologAttribute, PrologNullableRepr
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_many, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -69,8 +69,8 @@ class Module(AlchemyProxy):
     transformed = Column(Boolean)
 
     # Relationship attributes (see relationships.py):
-    #   code_block
-    #   trial
+    #   code_block: 1 CodeBlock
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("module", (
         PrologTrial("trial_id", link="trial.id"),

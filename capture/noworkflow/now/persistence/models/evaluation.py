@@ -16,8 +16,7 @@ from ...utils.prolog import PrologAttribute, PrologNullable, PrologRepr
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
-from .base import backref_one, backref_many, proxy
+from .base import AlchemyProxy, proxy_class, proxy
 
 from .dependency import Dependency
 from .member import Member
@@ -107,18 +106,18 @@ class Evaluation(AlchemyProxy):
     member_container_id = Column(Integer, index=True)
 
     # Relationship attributes (see relationships.py):
-    #   this_activation
-    #   activation
-    #   dependencies_as_dependent
-    #   dependencies_as_dependency
-    #   dependencies
-    #   dependents
-    #   memberships_as_collection
-    #   memberships_as_member
-    #   members
-    #   collections
-    #   trial
-    #   code_component
+    #   this_activation: 1 Activation
+    #   activation: 1 Activation
+    #   dependencies_as_dependent: * Dependency 
+    #   dependencies_as_dependency: * Dependency
+    #   dependencies: * Evaluation
+    #   dependents: * Evaluation
+    #   memberships_as_collection: * Member
+    #   memberships_as_member: * Member
+    #   members: * Evaluation
+    #   collections: * Evaluation
+    #   trial: 1 Trial
+    #   code_component: 1 CodeComponent
     
     prolog_description = PrologDescription("evaluation", (
         PrologTrial("trial_id", link="trial.id"),
