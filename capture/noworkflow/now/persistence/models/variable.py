@@ -15,8 +15,7 @@ from .. import relational
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologTimestamp, PrologNullableRepr
 
-from .base import AlchemyProxy, proxy_class, many_ref, many_viewonly_ref, proxy
-from .base import backref_one, backref_many
+from .base import AlchemyProxy, proxy_class, proxy
 from .variable_dependency import VariableDependency
 
 
@@ -41,40 +40,14 @@ class Variable(AlchemyProxy):
     time = Column(TIMESTAMP)
     type = Column(Text)                                                          # pylint: disable=invalid-name
 
-    usages = many_ref("variable", "VariableUsage")
-
-    # dependencies in which this variable is the dependent
-    dependencies_as_source = many_viewonly_ref(
-        "source", "VariableDependency",
-        primaryjoin=(
-            (id == VariableDependency.m.source_id) &
-            (activation_id == VariableDependency.m.source_activation_id) &
-            (trial_id == VariableDependency.m.trial_id))
-    )
-
-    # dependencies in which this variable is the dependency
-    dependencies_as_target = many_viewonly_ref(
-        "target", "VariableDependency",
-        primaryjoin=(
-            (id == VariableDependency.m.target_id) &
-            (activation_id == VariableDependency.m.target_activation_id) &
-            (trial_id == VariableDependency.m.trial_id)))
-
-    dependencies = many_viewonly_ref(
-        "dependents", "Variable",
-        secondary=VariableDependency.__table__,
-        primaryjoin=(
-            (id == VariableDependency.m.source_id) &
-            (activation_id == VariableDependency.m.source_activation_id) &
-            (trial_id == VariableDependency.m.trial_id)),
-        secondaryjoin=(
-            (id == VariableDependency.m.target_id) &
-            (activation_id == VariableDependency.m.target_activation_id) &
-            (trial_id == VariableDependency.m.trial_id)))
-
-    trial = backref_one("trial")  # Trial.variables
-    activation = backref_one("activation")  # Activation.variables
-    dependents = backref_many("dependents")  # Variable.dependencies
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   activation: 1 Activation
+    #   usages: * VariableUsage
+    #   dependencies_as_source: * VariableDepenency
+    #   dependencies_as_target: * VariableDepenency
+    #   dependencies: * Variable
+    #   dependents: * Variable
 
     prolog_description = PrologDescription("variable", (
         PrologTrial("trial_id", link="activation.trial_id"),

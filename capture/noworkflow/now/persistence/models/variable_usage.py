@@ -13,7 +13,7 @@ from sqlalchemy import CheckConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -40,9 +40,10 @@ class VariableUsage(AlchemyProxy):
     line = Column(Integer)
     context = Column(Text, CheckConstraint("context IN ('Load', 'Del')"))
 
-    trial = backref_one("trial")  # Trial.variable_usages
-    activation = backref_one("activation")  # Activation.variables_usages
-    variable = backref_one("variable")  # Variable.usages
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   activation: 1 Activation
+    #   variable: 1 Variable
 
     prolog_description = PrologDescription("usage", (
         PrologTrial("trial_id", link="variable.trial_id"),

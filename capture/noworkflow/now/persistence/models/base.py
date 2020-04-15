@@ -240,24 +240,6 @@ class AlchemyProxy(Model):
             if conn is None:
                 _conn.close()
 
-def create_relationship(proxy_func):
-    """Create proxy descriptor"""
-    class Relationship(object):                                                  # pylint: disable=too-few-public-methods
-        """Create a proxy for relationship
-        Relationship on Model class will be prepended by _
-        """
-        def __init__(self, *args, **kwargs):
-            self.args = args
-            self.kwargs = kwargs
-            self.name = None
-
-        def __get__(self, obj, objtype=None):
-            if obj is None:
-                return self
-            alchemy = obj._get_instance()                                        # pylint: disable=protected-access
-            return proxy_func(getattr(alchemy, self.name))
-    return Relationship
-
 
 ModelMethod = namedtuple("ModelMethod", "func proxy")
 
@@ -265,45 +247,6 @@ ModelMethod = namedtuple("ModelMethod", "func proxy")
 def query_many_property(func):
     """Property is part of the Model class. It should return a generator"""
     return ModelMethod(func, proxy_gen)
-
-
-Many = create_relationship(proxy_gen)
-One = create_relationship(proxy)
-
-
-def one(*args, **kwargs):
-    """Create One relationship"""
-    return One(*args, **kwargs)
-
-
-def many(*args, **kwargs):
-    """Create Many relationship"""
-    if "lazy" not in kwargs:
-        kwargs["lazy"] = "dynamic"
-    return Many(*args, **kwargs)
-
-
-def many_ref(backref, *args, **kwargs):
-    """Create Many relationship with backref"""
-    kwargs["backref"] = backref
-    return many(*args, **kwargs)
-
-
-def many_viewonly_ref(backref, *args, **kwargs):
-    """Create Many relationship with backref and viewonly"""
-    kwargs["backref"] = backref
-    kwargs["viewonly"] = True
-    return many(*args, **kwargs)
-
-
-def backref_many(name):
-    """Create property for backref generator"""
-    return proxy_attr(name, proxy_func=proxy_gen)
-
-
-def backref_one(name):
-    """Create property for backref object"""
-    return proxy_attr(name)
 
 
 def proxy_class(cls):
@@ -320,11 +263,7 @@ def proxy_class(cls):
     for name, var in viewitems(description):
         if isinstance(var, Column):
             to_remove.add(name)
-            #description[name] = None
             attributes[name] = var
-        elif isinstance(var, (Many, One)):
-            var.name = name
-            attributes[var.name] = relationship(*var.args, **var.kwargs)
         elif isinstance(var, ModelMethod):
             new_name = name
             setattr(cls, name, proxy_attr(new_name, proxy_func=var.proxy))

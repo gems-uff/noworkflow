@@ -13,7 +13,7 @@ from sqlalchemy import CheckConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -36,8 +36,9 @@ class Object(AlchemyProxy):
         Text,
         CheckConstraint("type IN ('GLOBAL', 'ARGUMENT', 'FUNCTION_CALL')"))
 
-    trial = backref_one("trial")  # Trial.objects
-    function_def = backref_one("function_def")  # FunctionDef.objects
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   function_def: 1 FunctionDef
 
     prolog_description = PrologDescription("object", (
         PrologTrial("trial_id", link="function_def.trial_id"),

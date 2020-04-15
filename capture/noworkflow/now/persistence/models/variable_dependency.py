@@ -13,7 +13,7 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -52,13 +52,12 @@ class VariableDependency(AlchemyProxy):
     target_id = Column(Integer, index=True)
     type = Column(Text)                                                          # pylint: disable=invalid-name
 
-    trial = backref_one("trial")  # Trial.variable_dependencies
-    # Activation.source_variables, Variable.dependencies_as_source
-    source_activation = backref_one("source_activation")
-    source = backref_one("source")
-    # Activation.target_variables, Variable.dependencies_as_target
-    target_activation = backref_one("target_activation")
-    target = backref_one("target")
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   source_activation: 1 Activation
+    #   source: 1 Variable
+    #   target_activation: 1 Activation
+    #   target: 1 Variable
 
     prolog_description = PrologDescription("dependency", (
         PrologTrial("trial_id", link="variable.trial_id"),

@@ -33,6 +33,7 @@ from .history import History
 from .diff import Diff
 from .trial_prolog import TrialProlog
 
+from . import relationships
 
 ORDER = [
     Trial, Head, Tag, GraphCache,  # Trial

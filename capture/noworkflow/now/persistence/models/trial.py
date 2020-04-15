@@ -19,14 +19,12 @@ from ...utils.prolog import PrologNullable
 from .. import relational, content, persistence_config
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
-from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
-from .base import proxy
+from .base import is_none, proxy
 
 from .trial_prolog import TrialProlog
 from .trial_dot import TrialDot
 
 from .module import Module
-from .dependency import Dependency
 from .activation import Activation
 from .head import Head
 from .graphs.trial_graph import TrialGraph
@@ -78,31 +76,23 @@ class Trial(AlchemyProxy):
     run = Column(Integer)
     docstring = Column(Text)
 
-    inherited = one(
-        "Trial", backref="bypass_children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == inherited_id)
-    )
-    parent = one(
-        "Trial", backref="children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == parent_id)
-    )
-
-    function_defs = many_ref("trial", "FunctionDef")
-    module_dependencies = many_ref("trials", "Dependency")
-    dmodules = many_ref("trials", "Module", secondary=Dependency.t)
-    environment_attrs = many_ref("trial", "EnvironmentAttr")
-    activations = many_ref("trial", "Activation",
-                           order_by=Activation.m.start)
-    file_accesses = many_viewonly_ref("trial", "FileAccess")
-    objects = many_viewonly_ref("trial", "Object")
-    object_values = many_viewonly_ref("trial", "ObjectValue")
-    variables = many_viewonly_ref("trial", "Variable")
-    variable_usages = many_viewonly_ref("trial", "VariableUsage")
-    variable_dependencies = many_viewonly_ref("trial", "VariableDependency")
-    tags = many_ref("trial", "Tag")
-
-    bypass_children = backref_many("bypass_children")  # Trial.inherited
-    children = backref_many("children")  # Trial.parent
+    # Relationship attributes (see relationships.py):
+    #   inherited: 1 Trial
+    #   parent: 1 Trial
+    #   function_defs: * FunctionDef
+    #   module_dependencies: * Dependency
+    #   dmodules: * Module
+    #   environment_attrs: * EnvironmentAttr
+    #   activations: * Activation
+    #   file_accesses: * FileAccess
+    #   objects: * Object
+    #   object_values: * ObjectValues
+    #   variables: * Variable
+    #   variable_usages: * VariableUsage
+    #   variable_dependencies: * VariableDependency
+    #   tags: * tags
+    #   bypass_children: * Trial
+    #   children: * Trial
 
     @query_many_property
     def local_modules(self):

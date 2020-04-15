@@ -12,8 +12,7 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullableRepr
 
-from .base import proxy_class, AlchemyProxy, many_ref, backref_one
-from .base import query_many_property
+from .base import proxy_class, AlchemyProxy, query_many_property
 from .object import Object
 
 
@@ -34,9 +33,9 @@ class FunctionDef(AlchemyProxy):
     last_line = Column(Integer)
     docstring = Column(Text)
 
-    objects = many_ref("function_def", "Object")
-
-    trial = backref_one("trial")  #  Trial.function_defs
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   objects: * Object
 
     @query_many_property
     def globals(self):

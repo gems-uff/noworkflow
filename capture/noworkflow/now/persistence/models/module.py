@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, Text, select, bindparam
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_many, is_none
+from .base import AlchemyProxy, proxy_class, is_none
 
 
 @proxy_class
@@ -27,7 +27,8 @@ class Module(AlchemyProxy):
     path = Column(Text)
     code_hash = Column(Text, index=True)
 
-    trials = backref_many("trials")  # Trial.dmodules
+    # Relationship attributes (see relationships.py):
+    #   trials: * Trial
 
     @property
     def brief(self):

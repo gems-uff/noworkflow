@@ -13,7 +13,7 @@ from sqlalchemy import CheckConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -35,8 +35,9 @@ class ObjectValue(AlchemyProxy):
     value = Column(Text)
     type = Column(Text, CheckConstraint("type IN ('GLOBAL', 'ARGUMENT')"))       # pylint: disable=invalid-name
 
-    trial = backref_one("trial")  # Trial.object_values
-    activation = backref_one("activation")  # Ativation.object_values
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   activation: 1 Activation
 
     prolog_description = PrologDescription("object_value", (
         PrologTrial("trial_id", link="activation.trial_id"),

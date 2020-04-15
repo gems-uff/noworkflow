@@ -13,7 +13,7 @@ from ...utils.prolog import PrologDescription, PrologRepr, PrologAttribute
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, one, proxy
+from .base import AlchemyProxy, proxy_class, proxy
 
 
 @proxy_class
@@ -29,7 +29,8 @@ class Head(AlchemyProxy):
     script = Column(Text)
     trial_id = Column(Integer, index=True)
 
-    trial = one("Trial")
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("head", (
         PrologRepr("script"),

@@ -14,10 +14,7 @@ from sqlalchemy.orm import backref
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
 from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 
-from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref, many_ref
-from .base import backref_one, backref_many, query_many_property
-from .object_value import ObjectValue
-from .variable_dependency import VariableDependency
+from .base import AlchemyProxy, proxy_class, query_many_property
 from .variable import Variable
 
 
@@ -41,28 +38,16 @@ class Activation(AlchemyProxy):
     finish = Column(TIMESTAMP)
     caller_id = Column(Integer, index=True)
 
-    _children = backref("children", order_by="Activation.start")
-    caller = one(
-        "Activation", remote_side=[trial_id, id],
-        backref=_children, viewonly=True
-    )
-
-    object_values = many_viewonly_ref("activation", "ObjectValue")
-    file_accesses = many_viewonly_ref("activation", "FileAccess")
-
-    variables = many_ref("activation", "Variable")
-    variables_usages = many_viewonly_ref("activation", "VariableUsage")
-    source_variables = many_viewonly_ref(
-        "source_activation", "VariableDependency",
-        primaryjoin=((id == VariableDependency.m.source_activation_id) &
-                     (trial_id == VariableDependency.m.trial_id)))
-    target_variables = many_viewonly_ref(
-        "target_activation", "VariableDependency",
-        primaryjoin=((id == VariableDependency.m.target_activation_id) &
-                     (trial_id == VariableDependency.m.trial_id)))
-
-    trial = backref_one("trial")  # Trial.activations
-    children = backref_many("children")  # Activation.caller
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   caller: 1 Activation
+    #   children: * Activation
+    #   object_values: * ObjectValue
+    #   file_accesses: * FileAccess
+    #   variables: * Variable
+    #   variables_usages: * Variable
+    #   source_variables: * VariableDependency
+    #   target_variables: * VariableDependency
 
     @query_many_property
     def globals(self):

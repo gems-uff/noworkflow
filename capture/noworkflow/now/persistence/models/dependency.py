@@ -12,7 +12,7 @@ from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullableRepr
 
-from .base import AlchemyProxy, proxy_class, one, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -32,9 +32,9 @@ class Dependency(AlchemyProxy):
     trial_id = Column(Integer, nullable=False, index=True)
     module_id = Column(Integer, nullable=False, index=True)
 
-    module = one("Module")
-
-    trial = backref_one("trial")  # Trial.module_dependencies
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   module: 1 Module
 
     prolog_description = PrologDescription("module", (
         PrologTrial("trial_id", link="trial.id"),
