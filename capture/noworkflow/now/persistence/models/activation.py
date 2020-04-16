@@ -18,9 +18,6 @@ from .. import relational
 from .base import AlchemyProxy, proxy_class
 from .base import query_many_property
 
-from .dependency import Dependency
-from .member import Member
-
 
 @proxy_class
 class Activation(AlchemyProxy):

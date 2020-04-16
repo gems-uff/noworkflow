@@ -16,9 +16,6 @@ from ...utils.prolog import PrologRepr, PrologNullable
 
 from .base import AlchemyProxy, proxy_class, query_one_property
 
-from .code_block import CodeBlock
-from .composition import Composition
-
 
 @proxy_class
 class CodeComponent(AlchemyProxy):

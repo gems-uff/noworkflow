@@ -19,8 +19,6 @@ from .. import relational
 from .base import AlchemyProxy, proxy_class, proxy
 
 from .dependency import Dependency
-from .member import Member
-from .activation import Activation
 
 
 @proxy_class

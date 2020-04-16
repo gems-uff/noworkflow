@@ -20,10 +20,8 @@ from ...utils.prolog import PrologNullable
 from .. import relational, content, persistence_config
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
-from .base import is_none
-from .base import proxy
+from .base import is_none, proxy
 
-from .code_block import CodeBlock
 from .activation import Activation
 from .head import Head
 
