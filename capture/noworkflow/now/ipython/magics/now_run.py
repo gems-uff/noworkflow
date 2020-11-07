@@ -97,13 +97,8 @@ class NowRun(IpythonCommandMagic, Run):
                 """)
         add_arg("params", nargs=argparse.REMAINDER,
                 help="params to be passed to script")
-<<<<<<< HEAD
         
     def execute(self, func, line, cell, magic_cls):
-=======
-
-    def execute(self, func, line, cell, magic_cls):                              # pylint: disable=too-many-locals
->>>>>>> master
         # Calculate noworkflow params and script params
         # pylint: disable=too-many-locals
         argv, args = self.arguments(func, line)
