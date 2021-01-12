@@ -27,7 +27,7 @@ class DataflowModel(Model):
             self.trial = weakref.proxy(trial)
         self.activation = None
         if activation is not None:
-            self.activation = weakref.proxy(activation)
+            self.activation = activation
         self.format = "svg"
         self.value_length = 0
         self.name_length = 55
@@ -41,7 +41,7 @@ class DataflowModel(Model):
         elif self.activation is not None:
             self.trial = weakref.proxy(self.activation.trial)
         elif self.trial is not None:
-            self.activation = weakref.proxy(self.trial.initial_activation)
+            self.activation = self.trial.initial_activation
 
     def export_text(self):
         """Export facts from trial as text"""

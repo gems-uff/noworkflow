@@ -1138,6 +1138,7 @@ class Collector(object):
                 self.eval_dep(
                     closure_activation, block_id, new_function_def, mode
                 )
+            new_function_def.code_block_id = block_id
             return new_function_def
         return dec
 

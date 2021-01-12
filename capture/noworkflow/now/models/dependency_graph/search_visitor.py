@@ -8,7 +8,7 @@ from .base_visitor import ClusterVisitor
 class SearchEvaluationVisitor(ClusterVisitor):
     """Search evaluation in cluster"""
 
-    def __init__(self, cluseterizer, evaluation_id):
+    def __init__(self, clusterizer, evaluation_id):
         super(SearchEvaluationVisitor, self).__init__(clusterizer)
         self.evaluation_id = evaluation_id
 
