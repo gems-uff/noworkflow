@@ -98,7 +98,7 @@ class Metascript(object):                                                       
         self.bypass_modules = True
 
         # Capture func component : bool
-        self.capture_func_component = False
+        self.capture_func_component = True
 
         # Depth for capturing function activations : int
         self.depth = sys.getrecursionlimit()

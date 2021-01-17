@@ -52,6 +52,7 @@ class RewriteAST(ast.NodeTransformer):
         self.current_exc_handler = 0
         self.cell = cell
         self.composition_edge = None
+        self.in_class = False
 
     # data
 
@@ -317,7 +318,7 @@ class RewriteAST(ast.NodeTransformer):
             ]
         ), decorator)
 
-    def process_parameters(self, arguments):
+    def process_parameters(self, arguments, is_method=False):
         """Return List of arguments for <now>.function_def"""
         # pylint: disable=too-many-locals
         arguments_id = self.create_ast_component(arguments, Component.ARGUMENTS)
@@ -356,6 +357,7 @@ class RewriteAST(ast.NodeTransformer):
             kwonlyargs = none()
             kw_defaults = none()
         return ast.Tuple([
+            true_false(is_method),
             args, defaults, vararg, kwarg, kwonlyargs, kw_defaults
         ], L())
 
@@ -374,6 +376,8 @@ class RewriteAST(ast.NodeTransformer):
         """
         # pylint: disable=invalid-name
         old_exc_handler = self.current_exc_handler
+        old_in_class = self.in_class
+        self.in_class = False
         with self.container(node, typ) as func_id, self.exc_handler():
             self.create_composition(func_id, *self.composition_edge)
 
@@ -401,7 +405,7 @@ class RewriteAST(ast.NodeTransformer):
                 ], [
                     activation(),
                     ast.Num(self.container_id),
-                    self.process_parameters(new_node.args),
+                    self.process_parameters(new_node.args, old_in_class),
                     ast.Str(Dependency.DECORATE)
                 ]
             ), new_node))
@@ -414,6 +418,7 @@ class RewriteAST(ast.NodeTransformer):
             new_node.args.defaults = [
                 ast_copy(none(), arg) for arg in new_node.args.defaults
             ]
+            self.in_class = old_in_class
             return ast_copy(function_def(
                 new_node.name, new_node.args, body, decorators,
                 returns=maybe(new_node, 'returns'), cls=cls
@@ -442,6 +447,8 @@ class RewriteAST(ast.NodeTransformer):
         # pylint: disable=invalid-name
         # ToDo: collect dependencies
         old_exc_handler = self.current_exc_handler
+        old_in_class = self.in_class
+        self.in_class = True
         with self.container(node, Component.CLASS_DEF) as class_id, self.exc_handler():
             self.create_composition(class_id, *self.composition_edge)
             
@@ -510,7 +517,7 @@ class RewriteAST(ast.NodeTransformer):
                 node.name, node.bases, body, decorators,
                 keywords=maybe(node, 'keywords')
             ), node)
-            
+            self.in_class = False
             return result
 
     def visit_Return(self, node):
