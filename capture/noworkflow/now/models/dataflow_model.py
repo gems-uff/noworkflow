@@ -53,7 +53,7 @@ class DataflowModel(Model):
         search = SearchEvaluationVisitor(clusterizer, self.activation.id)
         node = search.visit(clusterizer)
 
-        visitor.visit(node)
+        visitor.visit(node, initial=True)
         return "\n".join(visitor.result)
 
     def _ipython_display_(self):
