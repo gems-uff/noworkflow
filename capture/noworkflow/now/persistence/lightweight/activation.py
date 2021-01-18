@@ -101,6 +101,7 @@ class ActivationLW(BaseLW):
 
         # Method
         self.bound_dependency = None
+        self.func_evaluation = None
 
 
     def is_complete(self):

@@ -1002,11 +1002,7 @@ class Collector(object):
             act.dependencies[-1].add(dependency)
             if hasattr(func, '__self__'):
                 act.bound_dependency = self.current_attr or True
-            if isinstance(func, type) and dependency.value == func:
-                act.bound_dependency = Dependency(
-                    dependency.evaluation, dependency.value, "bound"
-                )
-
+            act.func_evaluation = dependency.evaluation
 
         return result
 
@@ -1147,8 +1143,10 @@ class Collector(object):
                             )
                         else:
                             self.last_activation.bound_dependency = True
-                    if function_def.__name__ == "__new__":
-                        self.last_activation.bound_dependency = activation.bound_dependency
+                    if function_def.__name__ in ("__new__", "__call__"):
+                        self.last_activation.bound_dependency = Dependency(
+                            activation.func_evaluation, activation.func, "bound"
+                        )
                     result = _call(*args, **kwargs)
                     return result
 
@@ -1334,6 +1332,8 @@ class Collector(object):
                 new_bind = True
             arguments.insert(0, activation.bound_dependency)
         bound_dependency = activation.bound_dependency
+        if function_def.__name__ in {'__rdivmod__'}:
+            arguments = arguments[::-1]
 
 
         def match(arg, param):
