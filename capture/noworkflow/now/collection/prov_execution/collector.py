@@ -893,7 +893,7 @@ class Collector(object):
             depa.dependencies[0].mode.startswith("assign") and
             isiterable(value)
         )
-        clone_depa = depa.clone("dependency")
+        clone_depa = depa.clone(mode="dependency")
         def custom_dependency(_):
             """Propagate dependencies"""
             return clone_depa, None
@@ -917,7 +917,7 @@ class Collector(object):
                     self.create_dependencies_id(
                         activation, dep.evaluation.id, new_depa
                     )
-                    return new_depa.clone("assign"), idep.evaluation
+                    return new_depa.clone(mode="assign"), idep.evaluation
                     #return self.sub_dependency(dep, value, index, clone_depa)
             else:
                 def custom_dependency(index):
@@ -1489,7 +1489,7 @@ class Collector(object):
         )
 
         for index, element, depa in it_:
-            clone_depa = dependency.clone("dependency")
+            clone_depa = dependency.clone(mode="dependency")
             if len(dependency.dependencies) == 1 and activation.active:
                 dep = dependency.dependencies[0]
                 self.create_dependencies_id(
@@ -1502,7 +1502,7 @@ class Collector(object):
                 clone_depa, found = self.sub_dependency(
                     dep, value, index, clone_depa
                 )
-                depa = depa.clone("assign")
+                depa = depa.clone(mode="assign")
                 if found is not None:
                     clone_depa.extra_dependencies = dependency.dependencies
                 clone_depa.extra_dependencies += depa.dependencies
