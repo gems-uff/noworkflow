@@ -7,7 +7,7 @@ Collect definition provenance during the transformations"""
 
 import ast
 import os
-from copy import copy
+from copy import copy, deepcopy
 from contextlib import contextmanager
 
 import pyposast
@@ -232,6 +232,12 @@ class RewriteAST(ast.NodeTransformer):
                 self.visit_augassign(new_body, stmt)
             elif PY36 and isinstance(stmt, ast.AnnAssign):
                 self.visit_annassign(new_body, stmt)
+            elif isinstance(stmt, ast.FunctionDef) or (PY36 and isinstance(stmt, ast.AsyncFunctionDef)):
+                old_fd = deepcopy(stmt)
+                old_fd.name = "__now_original_" + stmt.name
+                new_body.append(old_fd) 
+                new_body.append(self.visit(stmt))
+
             else:
                 new_body.append(self.visit(stmt))
             index += 1
@@ -368,7 +374,7 @@ class RewriteAST(ast.NodeTransformer):
         def f(x, y=2, *args, z=3, **kwargs):
             ...
         Into:
-        @<now>.collect_function_def(<act>, 'f')
+        @<now>.collect_function_def(<act>, 'f', __now_original_f)
         @<now>.decorator(__now_activation__)(|dec|)
         @<now>.function_def(<act>)(<act>, <block_id>, <parameters>)
         def f(__now_activation__, x, y=2, *args, z=3, **kwargs):
@@ -389,7 +395,8 @@ class RewriteAST(ast.NodeTransformer):
             new_node = copy(node)
             decorators = [ast_copy(noworkflow('collect_function_def', [
                 activation(),
-                ast.Str(new_node.name)
+                ast.Str(new_node.name),
+                ast.Name("__now_original_" + node.name, L())
             ]), new_node)]
             for index, dec in enumerate(new_node.decorator_list):
                 self.composition_edge = (func_id, Component.M_DECORATOR_LIST, index)

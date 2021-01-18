@@ -110,6 +110,12 @@ class Collector(object):
 
         self.current_attr = None
 
+    def get_value(self, value):
+        """Get value representation from value"""
+        if hasattr(value, '__now_original___repr__') and not isinstance(value, type):
+            return value.__now_original___repr__()
+        return repr(value)
+
     def new_open(self, old_open, osopen=False):
         """Wrap the open builtin function to register file access"""
         def open(name, *args, **kwargs):  # pylint: disable=redefined-builtin
@@ -366,7 +372,7 @@ class Collector(object):
         """Close activation. Set checkpoint and value"""
         evaluation = activation.evaluation
         evaluation.checkpoint = self.time()
-        evaluation.repr = repr(value)
+        evaluation.repr = self.get_value(value)
         evaluation.set_reference(reference)
         self.add_type(evaluation, value)
         self.last_activation = activation.last_activation
@@ -1161,7 +1167,7 @@ class Collector(object):
                     bound_dependency.mode = "init"
                     depa.add(bound_dependency)
                     evaluation = activation.evaluation
-                    evaluation.repr = repr(value)
+                    evaluation.repr = self.get_value(value)
                     self.make_dependencies(activation, evaluation, depa)
                     bound_dependency.mode = old_mode
                     
@@ -1183,7 +1189,7 @@ class Collector(object):
             return new_function_def
         return dec
 
-    def collect_function_def(self, activation, function_name):
+    def collect_function_def(self, activation, function_name, original_def):
         """Collect function definition after all decorators. Set context"""
         def dec(function_def):
             """Decorate function definition again"""
@@ -1191,6 +1197,7 @@ class Collector(object):
             if activation.active:
                 dependency = dependency_aware.dependencies.pop()
                 activation.context[function_name] = dependency.evaluation
+            function_def.original_def = original_def
             return function_def
         return dec
 
@@ -1408,7 +1415,7 @@ class Collector(object):
         dependency_aware = activation.dependencies.pop()
         evaluation = activation.evaluation
         reference = self.find_reference_dependency(value, dependency_aware)
-        evaluation.repr = repr(value)
+        evaluation.repr = self.get_value(value)
         evaluation.set_reference(reference)
         self.make_dependencies(activation, evaluation, dependency_aware)
         return value
@@ -1642,8 +1649,8 @@ class Collector(object):
         trial_id = self.trial_id
         tevaluation = self.evaluations.add_object(
             trial_id, self.code_components.add(
-                trial_id, repr(value), 'type', 'w', -1, -1, -1, -1, -1
-            ), -1, self.time(), repr(value)
+                trial_id, self.get_value(value), 'type', 'w', -1, -1, -1, -1, -1
+            ), -1, self.time(), self.get_value(value)
         )
         self.shared_types[value] = tevaluation
         if value is type:
@@ -1692,7 +1699,7 @@ class Collector(object):
         if checkpoint is None:
             checkpoint = self.time()
         evaluation = self.evaluations.add_object(
-            self.trial_id, code_id, activation_id, checkpoint, repr(value)
+            self.trial_id, code_id, activation_id, checkpoint, self.get_value(value)
         )
         evaluation.set_reference(reference)
         self.add_type(evaluation, value)

@@ -7,6 +7,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+from parameterized import parameterized
 
 from ...now.utils.cross_version import PY2, PY3, PY36, only
 from ..collection_testcase import CollectionTestCase
@@ -310,3 +311,133 @@ class TestClassExecution(CollectionTestCase):
 
         self.assert_member(var_new_act, var_selfa, ".a")
 
+    simple_dunder_methods = [
+        ('str', '__str__', "'a'", True),
+        ('repr', '__repr__', "'a'", True),
+        ('int', '__int__', "1", True),
+        ('len', '__len__', "1", True),
+        ('float', '__float__', "1.0", True,),
+        ('complex', '__complex__', "1j", False),
+        ('hash', '__hash__', "1", True),
+        ('bool', '__bool__', "True", True),
+        ('dir', '__dir__', "['a']", False),
+        ('abs', '__abs__', "1", True),
+        ('iter', '__iter__', "iter([])", True),
+        ('reversed', '__reversed__', "iter([])", True),
+    ]
+    if PY2:
+        simple_dunder_methods.extend([
+            ('oct', '__oct__', "'0o1'", True),
+            ('hex', '__hex__', "'0x1'", True),
+        ])
+    if PY3:
+        simple_dunder_methods.extend([
+            ('bytes', '__bytes__', "b'a'", True),
+        ])
+    @parameterized.expand(simple_dunder_methods)
+    def test_simple_dunder_method(self, call, method, result, reference):
+        self.script("# script.py\n"
+                    "class C(int):\n"
+                    "    'cdoc'\n"
+                    "    def {method}(self):\n"
+                    "        return {result}\n"
+                    "c = C()\n"
+                    "a = {call}(c)\n"
+                    "# other".format(
+                        method=method, 
+                        call=call,
+                        result=result
+                    ))
+        
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        param_object_eval = self.get_evaluation(name="int", mode="r")
+        var_class_c = self.get_evaluation(name="C", mode="w")
+        var_read_class_c = self.get_evaluation(name="C", mode="r")
+        var_inst_c = self.get_evaluation(name="c", mode="w")
+        var_read_c = self.get_evaluation(name="c", mode="r")
+        var_c_act = self.get_evaluation(name="C()")
+        var_call = self.get_evaluation(name=call, mode="r", first_char_line=7)
+        var_dunder_call_act = self.get_evaluation(name=method, skip=1)
+        var_call_act = self.get_evaluation(name="{}(c)".format(call))
+        var_a = self.get_evaluation(name="a", mode="w")
+        var_ta = self.get_evaluation(name=result, mode="r")
+        var_self = self.get_evaluation(name="self", first_char_line=4)
+
+        self.assert_type(var_inst_c, var_class_c)
+        self.assert_type(var_class_c, var_type)
+        self.assert_dependency(var_class_c, param_object_eval, "base", False)
+        self.assert_dependency(var_read_class_c, var_class_c, "assignment", True)
+        self.assert_dependency(var_c_act, var_read_class_c, "func", False)
+        self.assert_dependency(var_inst_c, var_c_act, "assign", True)
+        self.assert_dependency(var_read_c, var_inst_c, "assignment", True)
+        self.assert_dependency(var_self, var_read_c, "argument", True)
+        self.assert_dependency(var_dunder_call_act, var_ta, "use", True)
+        self.assert_dependency(var_dunder_call_act, var_call, "func", False)
+        self.assert_dependency(var_dunder_call_act, var_read_c, "argument", False)
+        self.assert_dependency(var_call_act, var_call, "func", False)
+        self.assert_dependency(var_call_act, var_read_c, "argument", False)
+        self.assert_dependency(var_call_act, var_read_c, "dependency", False)
+        self.assert_dependency(var_call_act, var_dunder_call_act, "internal", reference)
+        self.assert_dependency(var_a, var_call_act, "assign", True)
+
+        activation = self.metascript.activations_store[var_dunder_call_act.id]
+
+        self.assertEqual(activation.context['self'], var_self)
+
+
+    @parameterized.expand([
+        ('floor', '__floor__', "0.0", 'math', True),
+        ('ceil', '__ceil__', "0.0", 'math', True),
+        ('trunc', '__trunc__', "0.0", 'math', True),
+        ('length_hint', '__length_hint__', "0", 'operator', True),
+    ])
+    def test_imported_simple_dunder_method(self, call, method, result, impfrom, reference):
+        self.script("# script.py\n"
+                    "from {impfrom} import {call}\n"
+                    "class C(int):\n"
+                    "    'cdoc'\n"
+                    "    def {method}(self):\n"
+                    "        return {result}\n"
+                    "c = C()\n"
+                    "a = {call}(c)\n"
+                    "# other".format(
+                        method=method, 
+                        call=call,
+                        result=result,
+                        impfrom=impfrom
+                    ))
+        
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        param_object_eval = self.get_evaluation(name="int", mode="r")
+        var_class_c = self.get_evaluation(name="C", mode="w")
+        var_read_class_c = self.get_evaluation(name="C", mode="r")
+        var_inst_c = self.get_evaluation(name="c", mode="w")
+        var_read_c = self.get_evaluation(name="c", mode="r")
+        var_c_act = self.get_evaluation(name="C()")
+        var_call = self.get_evaluation(name=call, mode="r", first_char_line=8)
+        var_dunder_call_act = self.get_evaluation(name=method, skip=1)
+        var_call_act = self.get_evaluation(name="{}(c)".format(call))
+        var_a = self.get_evaluation(name="a", mode="w")
+        var_ta = self.get_evaluation(name=result, mode="r")
+        var_self = self.get_evaluation(name="self", first_char_line=5)
+
+        self.assert_type(var_inst_c, var_class_c)
+        self.assert_type(var_class_c, var_type)
+        self.assert_dependency(var_class_c, param_object_eval, "base", False)
+        self.assert_dependency(var_read_class_c, var_class_c, "assignment", True)
+        self.assert_dependency(var_c_act, var_read_class_c, "func", False)
+        self.assert_dependency(var_inst_c, var_c_act, "assign", True)
+        self.assert_dependency(var_read_c, var_inst_c, "assignment", True)
+        self.assert_dependency(var_self, var_read_c, "argument", True)
+        self.assert_dependency(var_dunder_call_act, var_ta, "use", True)
+        self.assert_dependency(var_dunder_call_act, var_call, "func", False)
+        self.assert_dependency(var_dunder_call_act, var_read_c, "argument", False)
+        self.assert_dependency(var_call_act, var_call, "func", False)
+        self.assert_dependency(var_call_act, var_read_c, "argument", False)
+        self.assert_dependency(var_call_act, var_read_c, "dependency", False)
+        self.assert_dependency(var_call_act, var_dunder_call_act, "internal", reference)
+        self.assert_dependency(var_a, var_call_act, "assign", True)
+
+        activation = self.metascript.activations_store[var_dunder_call_act.id]
+
+        self.assertEqual(activation.context['self'], var_self)
