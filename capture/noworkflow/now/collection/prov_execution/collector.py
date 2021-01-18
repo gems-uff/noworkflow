@@ -108,6 +108,8 @@ class Collector(object):
 
         self.condition_exceptions = ConditionExceptions()
 
+        self.current_attr = None
+
     def new_open(self, old_open, osopen=False):
         """Wrap the open builtin function to register file access"""
         def open(name, *args, **kwargs):  # pylint: disable=redefined-builtin
@@ -224,7 +226,6 @@ class Collector(object):
             if dep.mode == "value":
                 value_dep = dep
                 break
-
         if access == "[]":
             nvindex = vindex
             if isinstance(vindex, int) and vindex < 0:
@@ -246,9 +247,9 @@ class Collector(object):
                 self.full_member_lookup(
                     value_dep.evaluation, vcontainer, vindex, value, depa
                 )
+                self.current_attr = value_dep.evaluation
 
         eva = self.evaluate_depa(activation, code_id, value, None, depa)
-
         is_whitebox_slice = (
             isinstance(vindex, self.pyslice) and
             isinstance(vcontainer, (list, tuple)) and
@@ -1009,6 +1010,10 @@ class Collector(object):
             exc_handler=exc_handler,
             code_id=code_id,
         ))
+        if hasattr(func, '__self__'):
+            act.bound_evaluation = self.current_attr or True
+        if isinstance(func, type):
+            act.bound_evaluation = True
         act.func = func
         act.depedency_type = mode
         return self._call
@@ -1118,18 +1123,39 @@ class Collector(object):
                 Pass __now_activation__ as parameter
                 """
                 activation = self.last_activation
+                if activation.active and activation.name != function_def.__name__: # White box after black box call
+                    _call = self.call(
+                        activation, block_id, defaults.exc_handler, new_function_def, 'internal'
+                    )
+                    self.last_activation.dependencies[1] = activation.dependencies[1]
+                    if function_def.__name__ == "__init__":
+                        # Find value in activation result (__init__ after __new__)
+                        reference = self.find_reference_dependency(args[0], activation.dependencies[1])
+                        self.last_activation.bound_evaluation = reference if reference else True
+                    result = _call(*args, **kwargs)
+                    return result
+
                 if closure_activation != activation:
                     activation.closure = closure_activation
                 activation.code_block_id = block_id
                 if activation.active:
-                    self._match_arguments(activation, arguments, defaults)
+                    self._match_arguments(function_def, activation, arguments, defaults, args)
+                
                 result = function_def(activation, *args, **kwargs)
+                if function_def.__name__ == "__init__" and activation.bound_evaluation:
+                    depa = DependencyAware()
+                    value = args[0]
+                    depa.add(Dependency(activation.bound_evaluation, value, "init"))
+                    evaluation = activation.evaluation
+                    evaluation.repr = repr(value)
+                    self.make_dependencies(activation, evaluation, depa)
+                    
                 if isinstance(result, GeneratorType):
                     activation.generator = Generator()
                     activation.generator.value = result
                 return result
             if arguments[1]:
-                function_def.__defaults__ = arguments[1]
+                function_def.__defaults__ = arguments[2]
             closure_activation.dependencies.append(DependencyAware(
                 exc_handler=defaults.exc_handler,
                 code_id=block_id,
@@ -1232,20 +1258,20 @@ class Collector(object):
             return class_def
         return dec
 
-    def _match_arguments(self, activation, arguments, default_dependencies):
+    def _match_arguments(self, function_def, activation, arguments, default_dependencies, actual_args):
         """Match arguments to parameters. Create Variables"""
         # pylint: disable=too-many-locals, too-many-branches
         # ToDo: use kw_defaults # pylint: disable=unused-variable
         time = self.time()
         defaults = default_dependencies.dependencies
-        args, _, vararg, kwarg, kwonlyargs, kw_defaults = arguments
+        is_method, args, _, vararg, kwarg, kwonlyargs, kw_defaults = arguments
 
         arguments = []
         keywords = []
 
         new_args = []
         new_kwargs = {}
-
+        
         for dependency in activation.dependencies[1].dependencies:
             if dependency.mode.startswith("argument"):
                 kind = dependency.kind
@@ -1271,16 +1297,32 @@ class Collector(object):
 
         parameter_order = list(viewvalues(parameters))
         last_unfilled = 0
+        new_bind = False
+        bound_dependency = None
+
+        # Add bound argument
+        if activation.bound_evaluation:
+
+            if activation.bound_evaluation is True:
+                activation.bound_evaluation = self.evaluate_depa(
+                    activation, parameter_order[0].code_id, actual_args[0], time, None
+                )
+                new_bind = True
+            bound_dependency = Dependency(activation.bound_evaluation, actual_args[0], "bound")
+            arguments.insert(0, bound_dependency)
 
         def match(arg, param):
             """Create dependency"""
             arg.mode = "argument"
-            depa = DependencyAware()
-            depa.add(arg)
-            evaluation = self.evaluate_depa(
-                activation, param.code_id, arg.value, time, depa
-            )
-            arg.mode = "argument"
+            if arg is bound_dependency and new_bind:
+                evaluation = activation.bound_evaluation
+            else: 
+                depa = DependencyAware()
+                depa.add(arg)
+                evaluation = self.evaluate_depa(
+                    activation, param.code_id, arg.value, time, depa
+                )
+                arg.mode = "argument"
             activation.context[param.name] = evaluation
 
         # Match args
@@ -1291,6 +1333,7 @@ class Collector(object):
                     param = parameter_order[last_unfilled]
                     match(arg, param)
                     if param.is_vararg:
+
                         break
                     param.filled = True
                     last_unfilled += 1
@@ -1301,6 +1344,8 @@ class Collector(object):
                 if not param.is_vararg:
                     param.filled = True
                     last_unfilled += 1
+        
+        
 
         if vararg:
             parameters[vararg[0]].filled = True
