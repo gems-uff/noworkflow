@@ -697,3 +697,64 @@ class TestClassExecution(CollectionTestCase):
         activation = self.metascript.activations_store[var_dunder_call_act.id]
 
         self.assertEqual(activation.context['self'], var_self)
+
+    @parameterized.expand([
+        ('iadd', '+', '__iadd__'),
+        ('isub', '-', '__isub__'),
+        ('imult', '*', '__imul__'),
+        ('imatmult', '@', '__imatmul__'),
+        ('idiv', '/', '__itruediv__'),
+        ('ifloordiv', '//', '__ifloordiv__'),
+        ('imod', '%', '__imod__'),
+        ('ipow', '**', '__ipow__'),
+        ('ilshift', '<<', '__ilshift__'),
+        ('irshift', '>>', '__irshift__'),
+        ('ibitand', '&', '__iand__'),
+        ('ibitxor', '^', '__ixor__'),
+        ('ibitor', '|', '__ior__'),
+    ])
+    def test_augassign_dunder_method(self, name, op, method):
+        self.script("# script.py\n"
+                    "class C(int):\n"
+                    "    'cdoc'\n"
+                    "    def {method}(self, other):\n"
+                    "        return self\n"
+                    "c = C()\n"
+                    "c {op}= 1\n"
+                    "# other".format(
+                        method=method, 
+                        op=op,
+                    ))
+        
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        param_object_eval = self.get_evaluation(name="int", mode="r")
+        var_class_c = self.get_evaluation(name="C", mode="w")
+        var_read_class_c = self.get_evaluation(name="C", mode="r")
+        var_inst_c = self.get_evaluation(name="c", mode="w", first_char_line=6)
+        var_aug_cr = self.get_evaluation(name="c", mode="r", first_char_line=7)
+        var_aug_cw = self.get_evaluation(name="c", mode="w", first_char_line=7)
+        var_c_act = self.get_evaluation(name="C()")
+        var_dunder_call_act = self.get_evaluation(name=method, skip=1)
+        var_1 = self.get_evaluation(name="1")
+        var_self = self.get_evaluation(name="self", first_char_line=4)
+        var_other = self.get_evaluation(name="other", first_char_line=4)
+        var_self_ret = self.get_evaluation(name="self", first_char_line=5)
+
+        self.assert_type(var_inst_c, var_class_c)
+        self.assert_type(var_class_c, var_type)
+        self.assert_dependency(var_class_c, param_object_eval, "base", False)
+        self.assert_dependency(var_read_class_c, var_class_c, "assignment", True)
+        self.assert_dependency(var_c_act, var_read_class_c, "func", False)
+        self.assert_dependency(var_inst_c, var_c_act, "assign", True)
+        self.assert_dependency(var_aug_cr, var_inst_c, "assignment", True)
+        self.assert_dependency(var_self, var_aug_cr, "argument", True)
+        self.assert_dependency(var_other, var_1, "argument", True)
+        self.assert_dependency(var_dunder_call_act, var_self_ret, "use", True)
+        self.assert_dependency(var_dunder_call_act, var_aug_cr, "argument", True)
+        self.assert_dependency(var_dunder_call_act, var_1, "argument", False)
+        self.assert_dependency(var_aug_cw, var_aug_cr, name[1:] + "_assign", True)
+        self.assert_dependency(var_aug_cw, var_1, name[1:] + "_assign", False)
+        self.assert_dependency(var_aug_cw, var_dunder_call_act, "internal", False)
+
+        activation = self.metascript.activations_store[var_dunder_call_act.id]
+        self.assertEqual(activation.context['self'], var_self)

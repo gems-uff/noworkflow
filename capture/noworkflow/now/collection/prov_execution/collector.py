@@ -1139,13 +1139,23 @@ class Collector(object):
                 Pass __now_activation__ as parameter
                 """
                 activation = self.last_activation
+                
                 if activation.active and activation.name != function_def.__name__: # White box after black box call
+                    is_augassign = function_def.__name__ in {
+                        '__iadd__', '__isub__', '__imul__', '__imatmul__', '__itruediv__', 
+                        '__ifloordiv__', '__imod__', '__ipow__', '__ilshift__', '__irshift__', 
+                        '__iand__', '__ixor__', '__ior__',
+                    } and activation.assignments
                     _call = self.call(
                         activation, block_id, defaults.exc_handler, new_function_def, 'internal'
                     )
-                    if function_def.__name__ in activation.dependencies[-1].maybe_activation:
+                    if is_augassign:
+                        assign = activation.assignments[-1]
+                        self.last_activation.dependencies[1] = assign.dependency.clone(mode="argument", kind="argument")
+                        activation.dependencies.append(assign.dependency)
+                    elif function_def.__name__ in activation.dependencies[-1].maybe_activation:
                         self.last_activation.dependencies[1] = activation.dependencies[-1].clone(mode="argument", kind="argument")
-                    else:
+                    elif len(activation.dependencies) > 1:
                         self.last_activation.dependencies[1] = activation.dependencies[1]
                     if function_def.__name__ == "__init__":
                         # Find value in activation result (__init__ after __new__)
@@ -1161,6 +1171,8 @@ class Collector(object):
                             activation.func_evaluation, activation.func, "bound"
                         )
                     result = _call(*args, **kwargs)
+                    if is_augassign:
+                        activation.dependencies.pop()
                     return result
 
                 if closure_activation != activation:
@@ -1350,6 +1362,9 @@ class Collector(object):
             '__radd__', '__rsub__', '__rmul__', '__rmatmul__', '__rtruediv__', 
             '__rfloordiv__', '__rmod__', '__rpow__', '__rlshift__', '__rrshift__', 
             '__rand__', '__rxor__', '__ror__',
+            '__iadd__', '__isub__', '__imul__', '__imatmul__', '__itruediv__', 
+            '__ifloordiv__', '__imod__', '__ipow__', '__ilshift__', '__irshift__', 
+            '__iand__', '__ixor__', '__ior__',
         }:
             arguments = arguments[::-1]
 
