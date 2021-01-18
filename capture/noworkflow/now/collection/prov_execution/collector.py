@@ -247,7 +247,7 @@ class Collector(object):
                 self.full_member_lookup(
                     value_dep.evaluation, vcontainer, vindex, value, depa
                 )
-                self.current_attr = value_dep.evaluation
+                self.current_attr = Dependency(value_dep.evaluation, vcontainer, "bound")
 
         eva = self.evaluate_depa(activation, code_id, value, None, depa)
         is_whitebox_slice = (
@@ -992,7 +992,15 @@ class Collector(object):
         result = self.call(activation, code_id, depa.exc_handler, func, mode)
 
         if activation.active:
-            self.last_activation.dependencies[-1].add(dependency)
+            act = self.last_activation # current activation
+            act.dependencies[-1].add(dependency)
+            if hasattr(func, '__self__'):
+                act.bound_dependency = self.current_attr or True
+            if isinstance(func, type) and dependency.value == func:
+                act.bound_dependency = Dependency(
+                    dependency.evaluation, dependency.value, "bound"
+                )
+
 
         return result
 
@@ -1010,10 +1018,6 @@ class Collector(object):
             exc_handler=exc_handler,
             code_id=code_id,
         ))
-        if hasattr(func, '__self__'):
-            act.bound_evaluation = self.current_attr or True
-        if isinstance(func, type):
-            act.bound_evaluation = True
         act.func = func
         act.depedency_type = mode
         return self._call
@@ -1131,7 +1135,14 @@ class Collector(object):
                     if function_def.__name__ == "__init__":
                         # Find value in activation result (__init__ after __new__)
                         reference = self.find_reference_dependency(args[0], activation.dependencies[1])
-                        self.last_activation.bound_evaluation = reference if reference else True
+                        if reference:
+                            self.last_activation.bound_dependency = Dependency(
+                                reference, args[0], "bound"
+                            )
+                        else:
+                            self.last_activation.bound_dependency = True
+                    if function_def.__name__ == "__new__":
+                        self.last_activation.bound_dependency = activation.bound_dependency
                     result = _call(*args, **kwargs)
                     return result
 
@@ -1142,13 +1153,17 @@ class Collector(object):
                     self._match_arguments(function_def, activation, arguments, defaults, args)
                 
                 result = function_def(activation, *args, **kwargs)
-                if function_def.__name__ == "__init__" and activation.bound_evaluation:
+                bound_dependency = activation.bound_dependency
+                if function_def.__name__ == "__init__" and bound_dependency:
+                    old_mode = bound_dependency.mode
                     depa = DependencyAware()
                     value = args[0]
-                    depa.add(Dependency(activation.bound_evaluation, value, "init"))
+                    bound_dependency.mode = "init"
+                    depa.add(bound_dependency)
                     evaluation = activation.evaluation
                     evaluation.repr = repr(value)
                     self.make_dependencies(activation, evaluation, depa)
+                    bound_dependency.mode = old_mode
                     
                 if isinstance(result, GeneratorType):
                     activation.generator = Generator()
@@ -1298,24 +1313,27 @@ class Collector(object):
         parameter_order = list(viewvalues(parameters))
         last_unfilled = 0
         new_bind = False
-        bound_dependency = None
 
         # Add bound argument
-        if activation.bound_evaluation:
+        if activation.bound_dependency:
 
-            if activation.bound_evaluation is True:
-                activation.bound_evaluation = self.evaluate_depa(
+            if activation.bound_dependency is True:
+                bound_evaluation = self.evaluate_depa(
                     activation, parameter_order[0].code_id, actual_args[0], time, None
                 )
+                activation.bound_dependency = Dependency(
+                    bound_evaluation, actual_args[0], "bound"
+                )
                 new_bind = True
-            bound_dependency = Dependency(activation.bound_evaluation, actual_args[0], "bound")
-            arguments.insert(0, bound_dependency)
+            arguments.insert(0, activation.bound_dependency)
+        bound_dependency = activation.bound_dependency
+
 
         def match(arg, param):
             """Create dependency"""
             arg.mode = "argument"
             if arg is bound_dependency and new_bind:
-                evaluation = activation.bound_evaluation
+                evaluation = bound_dependency.evaluation
             else: 
                 depa = DependencyAware()
                 depa.add(arg)

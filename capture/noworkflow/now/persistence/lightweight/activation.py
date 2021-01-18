@@ -100,7 +100,9 @@ class ActivationLW(BaseLW):
         self.generator = None
 
         # Method
-        self.bound_evaluation = None
+        self.bound_dependency = None
+
+
     def is_complete(self):
         """Activation can always be removed from object store"""
         # pylint: disable=no-self-use

@@ -196,6 +196,57 @@ class TestClassExecution(CollectionTestCase):
 
         self.assert_member(var_self, var_selfa, ".a")
 
+    def test_dunder_new(self):
+        self.script("# script.py\n"
+                    "class C(object):\n"
+                    "    'cdoc'\n"
+                    "    def __new__(cls, x):\n"
+                    "        return object.__new__(cls)\n"
+                    "a = 2\n"
+                    "c = C(a)\n"
+                    "# other")
+
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        param_object_eval = self.get_evaluation(name="object", mode="r")
+        var_class_c = self.get_evaluation(name="C", mode="w")
+        var_read_class_c = self.get_evaluation(name="C", mode="r")
+        access_object = self.get_evaluation(name="object", first_char_line=5)
+        var_cls = self.get_evaluation(name="cls", first_char_line=4)
+        var_read_cls = self.get_evaluation(name="cls", first_char_line=5)
+        var_c_act = self.get_evaluation(name="C(a)")
+        var_func_object_new = self.get_evaluation(name="object.__new__")
+        var_object_new = self.get_evaluation(name="object.__new__(cls)")
+        var_new_act = self.get_evaluation(name="__new__", skip=1)
+        var_a = self.get_evaluation(name="a", mode="r")
+        
+        var_write_x = self.get_evaluation(name="x", mode="w")
+        var_inst_c = self.get_evaluation(name="c", mode="w")
+
+        self.assert_type(var_inst_c, var_class_c)
+        self.assert_type(var_class_c, var_type)
+        self.assert_dependency(var_class_c, param_object_eval, "base", False)
+        self.assert_dependency(var_read_class_c, var_class_c, "assignment", True)
+        self.assert_dependency(var_cls, var_read_class_c, "argument", True)
+        self.assert_dependency(var_write_x, var_a, "argument", True)
+        self.assert_dependency(var_func_object_new, access_object, "value", False)
+        self.assert_dependency(var_read_cls, var_cls, "assignment", True)
+        self.assert_dependency(var_object_new, var_func_object_new, "func", False)
+        self.assert_dependency(var_object_new, var_read_cls, "argument", False)
+        self.assert_dependency(var_object_new, var_read_cls, "dependency", False)
+        self.assert_dependency(var_new_act, var_object_new, "use", True)
+        self.assert_dependency(var_new_act, var_read_class_c, "func", False)
+        self.assert_dependency(var_new_act, var_a, "argument", False)
+        self.assert_dependency(var_c_act, var_read_class_c, "func", False)
+        self.assert_dependency(var_c_act, var_a, "argument", False)
+        self.assert_dependency(var_c_act, var_new_act, "internal", True)
+        self.assert_dependency(var_c_act, var_a, "dependency", False)
+        self.assert_dependency(var_inst_c, var_c_act, "assign", True)
+        
+        activation = self.metascript.activations_store[var_new_act.id]
+        self.assertEqual(activation.context['cls'], var_cls)
+        self.assertEqual(activation.context['x'], var_write_x)
+
+
     def test_dunder_new_init(self):
         self.script("# script.py\n"
                     "class C(object):\n"
@@ -240,7 +291,7 @@ class TestClassExecution(CollectionTestCase):
         self.assert_dependency(var_selfa, var_read_x, "assign", True)
         self.assert_dependency(var_selfa, var_read_self, "value", False)
         self.assert_dependency(var_init_act, var_read_class_c, "func", False)
-        self.assert_dependency(var_init_act, var_new_act, "init", False)
+        self.assert_dependency(var_init_act, var_new_act, "init", True)
         self.assert_dependency(var_init_act, var_a, "argument", False)
         self.assert_dependency(var_init_act, var_new_act, "internal", False)
         self.assert_dependency(var_c_act, var_read_class_c, "func", False)
@@ -252,6 +303,10 @@ class TestClassExecution(CollectionTestCase):
         activation = self.metascript.activations_store[var_init_act.id]
         self.assertEqual(activation.context['self'], var_self)
         self.assertEqual(activation.context['x'], var_write_x)
+
+        activation = self.metascript.activations_store[var_new_act.id]
+        self.assertEqual(activation.context['cls'], var_cls)
+        self.assertEqual(activation.context['x'], var_write_x2)
 
         self.assert_member(var_new_act, var_selfa, ".a")
 
