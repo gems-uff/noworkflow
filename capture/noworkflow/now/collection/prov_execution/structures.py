@@ -65,11 +65,12 @@ class ConditionExceptions(object):
 class DependencyAware(object):
     """Store dependencies of an element"""
 
-    def __init__(self, active=True, exc_handler=-1, code_id=None):
+    def __init__(self, active=True, exc_handler=-1, code_id=None, maybe_activation=None):
         self.dependencies = []
         self.extra_dependencies = []
         self.exc_handler = exc_handler
         self.code_id = code_id
+        self.maybe_activation = maybe_activation or set()
 
         self.active = active
 
@@ -86,17 +87,20 @@ class DependencyAware(object):
     def __bool__(self):
         return bool(self.dependencies) or bool(self.extra_dependencies)
 
-    def clone(self, mode=None, extra_only=False):
+    def clone(self, extra_only=False, **kwargs):
         """Clone dependency aware and replace mode"""
         new_depa = DependencyAware()
         if not extra_only:
             for dep in self.dependencies:
                 new_dep = copy(dep)
-                new_dep.mode = mode or new_dep.mode
+                for key, value in kwargs.items():
+                    setattr(new_dep, key, value)
+                #new_dep.mode = mode or new_dep.mode
                 new_depa.add(new_dep)
         for dep in self.extra_dependencies:
             new_dep = copy(dep)
-            new_dep.mode = mode or new_dep.mode
+            for key, value in kwargs.items():
+                setattr(new_dep, key, value)
             new_depa.add_extra(new_dep)
         new_depa.exc_handler = self.exc_handler
         new_depa.code_id = self.code_id

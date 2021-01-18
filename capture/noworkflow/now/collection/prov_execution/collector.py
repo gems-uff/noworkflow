@@ -462,6 +462,16 @@ class Collector(object):
         activation.dependencies.append(DependencyAware(
             exc_handler=exc_handler,
             code_id=code_id,
+            maybe_activation={
+                '__neg__', '__pos__', '__invert__',
+                '__add__', '__sub__', '__mul__', '__matmul__', '__truediv__', 
+                '__floordiv__', '__mod__', '__pow__', '__lshift__', '__rshift__', 
+                '__and__', '__xor__', '__or__',
+                '__radd__', '__rsub__', '__rmul__', '__rmatmul__', '__rtruediv__', 
+                '__rfloordiv__', '__rmod__', '__rpow__', '__rlshift__', '__rrshift__', 
+                '__rand__', '__rxor__', '__ror__',
+                '__lt__', '__le__', '__gt__', '__ge__', '__ne__', '__eq__', '__contains__',
+            }
         ))
         return self._operation
 
@@ -1133,7 +1143,10 @@ class Collector(object):
                     _call = self.call(
                         activation, block_id, defaults.exc_handler, new_function_def, 'internal'
                     )
-                    self.last_activation.dependencies[1] = activation.dependencies[1]
+                    if function_def.__name__ in activation.dependencies[-1].maybe_activation:
+                        self.last_activation.dependencies[1] = activation.dependencies[-1].clone(mode="argument", kind="argument")
+                    else:
+                        self.last_activation.dependencies[1] = activation.dependencies[1]
                     if function_def.__name__ == "__init__":
                         # Find value in activation result (__init__ after __new__)
                         reference = self.find_reference_dependency(args[0], activation.dependencies[1])
@@ -1332,9 +1345,13 @@ class Collector(object):
                 new_bind = True
             arguments.insert(0, activation.bound_dependency)
         bound_dependency = activation.bound_dependency
-        if function_def.__name__ in {'__rdivmod__'}:
+        if function_def.__name__ in {
+            '__rdivmod__', '__contains__', 
+            '__radd__', '__rsub__', '__rmul__', '__rmatmul__', '__rtruediv__', 
+            '__rfloordiv__', '__rmod__', '__rpow__', '__rlshift__', '__rrshift__', 
+            '__rand__', '__rxor__', '__ror__',
+        }:
             arguments = arguments[::-1]
-
 
         def match(arg, param):
             """Create dependency"""
