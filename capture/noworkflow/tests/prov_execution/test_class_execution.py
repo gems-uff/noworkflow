@@ -800,3 +800,46 @@ class TestClassExecution(CollectionTestCase):
 
         self.assertEqual(activation.context['self'], var_self)
         self.assertEqual(activation.context['x'], var_write_x)
+
+    def test_dunder_getattribute(self):
+        self.script("# script.py\n"
+                    "class C(object):\n"
+                    "    'cdoc'\n"
+                    "    def __getattribute__(self, x):\n"
+                    "        return x\n"
+                    "c = C()\n"
+                    "b = c.a\n"
+                    "# other") 
+
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        param_object_eval = self.get_evaluation(name="object", mode="r")
+        var_class_c = self.get_evaluation(name="C", mode="w")
+        var_read_class_c = self.get_evaluation(name="C", mode="r")
+        var_inst_c = self.get_evaluation(name="c", mode="w")
+        var_c_act = self.get_evaluation(name="C()")
+        var_c_attr = self.get_evaluation(name="c", mode="r", first_char_line=7)
+        var_self = self.get_evaluation(name="self")
+        var_write_x = self.get_evaluation(name="x", mode="w")
+        var_read_x = self.get_evaluation(name="x", mode="r")
+        var_dunder_call_act = self.get_evaluation(name="__getattribute__", skip=1)
+        var_cf_act = self.get_evaluation(name="c.a")
+        var_b = self.get_evaluation(name="b")
+
+        self.assert_type(var_inst_c, var_class_c)
+        self.assert_type(var_class_c, var_type)
+        self.assert_dependency(var_class_c, param_object_eval, "base", False)
+        self.assert_dependency(var_read_class_c, var_class_c, "assignment", True)
+        self.assert_dependency(var_c_act, var_read_class_c, "func", False)
+        self.assert_dependency(var_inst_c, var_c_act, "assign", True)
+        self.assert_dependency(var_c_attr, var_inst_c, "assignment", True)
+        self.assert_dependency(var_self, var_c_attr, "argument", True)
+        self.assert_dependency(var_read_x, var_write_x, "assignment", True)
+        self.assert_dependency(var_cf_act, var_dunder_call_act, "internal", True)
+        self.assert_dependency(var_cf_act, var_c_attr, "value", False)
+        self.assert_dependency(var_b, var_cf_act, "assign", True)
+
+        activation = self.metascript.activations_store[var_dunder_call_act.id]
+
+        self.assertEqual(activation.context['self'], var_self)
+        self.assertEqual(activation.context['x'], var_write_x)
+

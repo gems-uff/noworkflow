@@ -113,9 +113,9 @@ class Collector(object):
     def get_value(self, value):
         """Get value representation from value"""
         repr_fn = repr
-        if not isinstance(value, type):
+        if type(value) is not type:
             try:
-                the_repr = getattr(value, '__repr__')
+                the_repr = object.__getattribute__(value, '__repr__')
                 original_def = getattr(the_repr, 'original_def')
                 repr_fn = original_def
             except AttributeError:
@@ -226,10 +226,8 @@ class Collector(object):
             if in_class:
                 # In instance
                 return True
-            # ToDo: __getattr__ provenance
             return False
         else:
-            # ToDo: __getattribute__ provenance
             return self.simple_member_lookup(collection, addr, value, depa)
 
     def __getitem__(self, index):
@@ -314,7 +312,6 @@ class Collector(object):
     def __setitem__(self, index, value):
         # pylint: disable=too-many-locals
         activation, code_id, vcontainer, vindex, access, _ = index
-        depa = activation.dependencies.pop()
         if access == "[]":
             nvindex = vindex
             if isinstance(vindex, int) and vindex < 0:
@@ -324,6 +321,7 @@ class Collector(object):
         elif access == ".":
             setattr(vcontainer, vindex, value)
             addr = ".{}".format(vindex)
+        depa = activation.dependencies.pop()
 
         value_dep = None
         for dep in depa.dependencies:
@@ -989,7 +987,6 @@ class Collector(object):
         _, _, depa = assign
         if isinstance(depa, list):
             ldepa, depa = depa, DependencyAware.join(depa)
-
         info, type_ = code_component_tuple
         if type_ == "single":
             return self.assign_single(activation, assign, info, depa)
@@ -1182,7 +1179,7 @@ class Collector(object):
                         self.last_activation.bound_dependency = Dependency(
                             activation.func_evaluation, activation.func, "bound"
                         )
-                    if function_def.__name__ in {'__getattr__'}:
+                    if function_def.__name__ in {'__getattr__', '__getattribute__'}:
                         self.last_activation.bound_dependency = self.current_attr or True
 
                     result = _call(*args, **kwargs)
@@ -1739,7 +1736,7 @@ class Collector(object):
 
     def add_type(self, evaluation, value):
         """Create type for evaluation"""
-        if isinstance(value, type):
+        if type(value) is type:
             if value not in self.shared_types:
                 self.shared_types[value] = evaluation
             else:
