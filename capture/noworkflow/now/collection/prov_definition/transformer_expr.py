@@ -214,8 +214,9 @@ class RewriteDependencies(ast.NodeTransformer):
             lambda x: x
         Into:
             <now>.function_def(<act>)(<act>, <block_id>, <parameters>)(
-                lambda __now_activation__, x:
-                <now>.return_(<act>)(<act>, |x|)
+                lambda __now_activation__, x: <now>.match_arguments(
+
+                )(<now>.return_(<act>)(<act>, |x|))
             )
         """
         rewriter = self.rewriter
@@ -228,6 +229,7 @@ class RewriteDependencies(ast.NodeTransformer):
 
         new_node = copy(node)
         self.composition_edge = (rewriter.container_id, Component.S_ARGS)
+        parameters, param_defaults = rewriter.process_parameters(new_node.args)
         result = ast_copy(call(
             ast_copy(double_noworkflow(
                 'function_def',
@@ -238,26 +240,43 @@ class RewriteDependencies(ast.NodeTransformer):
                 ], [
                     activation(),
                     ast.Num(rewriter.container_id),
-                    rewriter.process_parameters(new_node.args),
+                    param_defaults,
                     ast.Str(self.mode)
                 ]
             ), new_node),
             [new_node]
         ), new_node)
-        new_node.args.args = [param('__now_activation__')] + new_node.args.args
+        new_node.args.args = [
+            param('__now_activation__'),
+            param('__now_function_def__'),
+            param('__now_args__'),
+            param('__now_kwargs__'),
+            param('__now_default_values__'),
+            param('__now_default_dependencies__'),
+        ] + new_node.args.args
         new_node.args.defaults = [none() for _ in new_node.args.defaults]
 
         self.composition_edge = (rewriter.container_id, Component.S_BODY)
-        new_node.body = ast_copy(double_noworkflow(
-            'return_',
-            [
-                activation(),
-                ast.Num(rewriter.current_exc_handler)
-            ], [
-                activation(),
-                rewriter.capture(node.body, mode=Dependency.USE)
-            ]
-        ), new_node.body)
+        new_node.body = ast_copy(double_noworkflow('match_arguments', [
+            activation(),
+            ast.Name('__now_function_def__', L()),
+            ast.Name('__now_args__', L()),
+            ast.Name('__now_kwargs__', L()),
+            ast.Name('__now_default_values__', L()),
+            ast.Name('__now_default_dependencies__', L()),
+            parameters,
+        ], [
+            double_noworkflow(
+                'return_',
+                [
+                    activation(),
+                    ast.Num(rewriter.current_exc_handler)
+                ], [
+                    activation(),
+                    rewriter.capture(node.body, mode=Dependency.USE)
+                ]
+            )
+        ]), new_node.body)
 
         rewriter.container_id = current_container_id
         return result

@@ -169,12 +169,13 @@ class Dependency(object):
 
 class Parameter(object):
 
-    def __init__(self, name, code_id, is_vararg=False):
+    def __init__(self, name, code_id, value, is_vararg=False):
         self.name = name
         self.code_id = code_id
         self.is_vararg = is_vararg
         self.filled = False
         self.default = None
+        self.value = value
 
     def __repr__(self):
         return "{}".format(self.name)

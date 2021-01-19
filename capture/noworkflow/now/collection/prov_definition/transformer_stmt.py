@@ -52,7 +52,6 @@ class RewriteAST(ast.NodeTransformer):
         self.current_exc_handler = 0
         self.cell = cell
         self.composition_edge = None
-        self.in_class = False
 
     # data
 
@@ -277,7 +276,7 @@ class RewriteAST(ast.NodeTransformer):
         self.create_composition(id_, *self.composition_edge)
 
         return ast_copy(ast.Tuple([
-            ast.Str(arg.name), ast.Num(id_)
+            ast.Str(arg.name), ast.Num(id_), ast.Name(arg.name, L())
         ], L()), arg)
 
     def process_default(self, default):
@@ -324,7 +323,7 @@ class RewriteAST(ast.NodeTransformer):
             ]
         ), decorator)
 
-    def process_parameters(self, arguments, is_method=False):
+    def process_parameters(self, arguments):
         """Return List of arguments for <now>.function_def"""
         # pylint: disable=too-many-locals
         arguments_id = self.create_ast_component(arguments, Component.ARGUMENTS)
@@ -363,8 +362,9 @@ class RewriteAST(ast.NodeTransformer):
             kwonlyargs = none()
             kw_defaults = none()
         return ast.Tuple([
-            true_false(is_method),
-            args, defaults, vararg, kwarg, kwonlyargs, kw_defaults
+            args, vararg, kwarg, kwonlyargs, 
+        ], L()), ast.Tuple([
+            defaults, kw_defaults
         ], L())
 
     def visit_FunctionDef(self, node, cls=ast.FunctionDef, typ=Component.FUNCTION_DEF):
@@ -376,14 +376,23 @@ class RewriteAST(ast.NodeTransformer):
         Into:
         @<now>.collect_function_def(<act>, 'f', __now_original_f)
         @<now>.decorator(__now_activation__)(|dec|)
-        @<now>.function_def(<act>)(<act>, <block_id>, <parameters>)
-        def f(__now_activation__, x, y=2, *args, z=3, **kwargs):
+        @<now>.function_def(<act>)(<act>, <block_id>, <defaults>)
+        def f(__now_activation__, __now_function_def__, __now_args__, __now_kwargs__, 
+              __now_default_values__, __now_default_dependencies__,  
+              x, y=2, *args, z=3, **kwargs):
+            <now>.match_arguments(
+                __now_activation__, __now_function_def__, __now_args__, __now_kwargs__,  
+                __now_default_values__, __now_default_dependencies__, [
+                    ('x', |x|, x),
+                    ('y', |y|, y),
+                    ('args', |args|, args),
+                    ('z', |z|, z),
+                    ('kwargs', |kwargs|, kwargs),
+            ])
             ...
         """
         # pylint: disable=invalid-name
         old_exc_handler = self.current_exc_handler
-        old_in_class = self.in_class
-        self.in_class = False
         with self.container(node, typ) as func_id, self.exc_handler():
             self.create_composition(func_id, *self.composition_edge)
 
@@ -403,6 +412,7 @@ class RewriteAST(ast.NodeTransformer):
                 decorators.append(self.process_decorator(dec))
 
             self.composition_edge = (func_id, Component.S_ARGS)
+            parameters, param_defaults = self.process_parameters(new_node.args)
             decorators.append(ast_copy(double_noworkflow(
                 'function_def',
                 [
@@ -412,20 +422,34 @@ class RewriteAST(ast.NodeTransformer):
                 ], [
                     activation(),
                     ast.Num(self.container_id),
-                    self.process_parameters(new_node.args, old_in_class),
+                    param_defaults,
                     ast.Str(Dependency.DECORATE)
                 ]
             ), new_node))
 
-            body = self.process_body(new_node.body, func_id)
+            body = [
+                ast_copy(ast.Expr(noworkflow('match_arguments', [
+                    activation(),
+                    ast.Name('__now_function_def__', L()),
+                    ast.Name('__now_args__', L()),
+                    ast.Name('__now_kwargs__', L()),
+                    ast.Name('__now_default_values__', L()),
+                    ast.Name('__now_default_dependencies__', L()),
+                    parameters,
+                ])), new_node)
+            ] + self.process_body(new_node.body, func_id)
 
             new_node.args.args = [
-                param('__now_activation__')
+                param('__now_activation__'),
+                param('__now_function_def__'),
+                param('__now_args__'),
+                param('__now_kwargs__'),
+                param('__now_default_values__'),
+                param('__now_default_dependencies__'),
             ] + new_node.args.args
             new_node.args.defaults = [
                 ast_copy(none(), arg) for arg in new_node.args.defaults
             ]
-            self.in_class = old_in_class
             return ast_copy(function_def(
                 new_node.name, new_node.args, body, decorators,
                 returns=maybe(new_node, 'returns'), cls=cls
@@ -454,8 +478,6 @@ class RewriteAST(ast.NodeTransformer):
         # pylint: disable=invalid-name
         # ToDo: collect dependencies
         old_exc_handler = self.current_exc_handler
-        old_in_class = self.in_class
-        self.in_class = True
         with self.container(node, Component.CLASS_DEF) as class_id, self.exc_handler():
             self.create_composition(class_id, *self.composition_edge)
             
@@ -524,7 +546,6 @@ class RewriteAST(ast.NodeTransformer):
                 node.name, node.bases, body, decorators,
                 keywords=maybe(node, 'keywords')
             ), node)
-            self.in_class = False
             return result
 
     def visit_Return(self, node):
