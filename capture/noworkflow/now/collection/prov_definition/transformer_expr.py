@@ -12,7 +12,7 @@ from copy import copy
 
 import pyposast
 
-from .ast_helpers import ReplaceContextWithLoad, ast_copy
+from .ast_helpers import ast_copy
 
 from .ast_elements import L, S, context, none, call, param
 from .ast_elements import noworkflow, double_noworkflow
@@ -415,7 +415,7 @@ class RewriteDependencies(ast.NodeTransformer):
         ifs.append(ast_copy(noworkflow('assign', [
             activation(),
             noworkflow('pop_assign', [activation()]),
-            new_node.target.code_component_expr,
+            new_node.target.target_expr,
         ]), new_node))
 
         if new_node.ifs:
@@ -459,10 +459,10 @@ class RewriteDependencies(ast.NodeTransformer):
                     2
                 )
                 for x in <now>.loop(<act>, #, <exc>)(<act>, |l|)
-                if <now>.assign(<act>, <now>.pop_assign(<act>), cce(x))
+                if <now>.assign(<act>, <now>.pop_assign(<act>), target(x))
                 if <now>.rcondition(<act>, <exc>)(<act>, 1, |y| and |z|)
                 for k in <now>.loop(<act>, #, <exc>)(<act>, |l2|)
-                if <now>.assign(<act>, <now>.pop_assign(<act>), cce(k))
+                if <now>.assign(<act>, <now>.pop_assign(<act>), target(k))
                 if <now>.rcondition(<act>, <exc>)(<act>, 2, |w|)
             ], <mode>)
         """
@@ -527,7 +527,7 @@ class RewriteDependencies(ast.NodeTransformer):
                     )
                 )
                 for x in <now>.loop(<act>, <exc>)(<act>, |l|)
-                if <now>.assign(<act>, <now>.pop_assign(<act>), cce(x))
+                if <now>.assign(<act>, <now>.pop_assign(<act>), target(x))
                 if <now>.rcondition(<act>, <exc>)(<act>, 1, |y| and |z|)
             }, <mode>)
         """
@@ -545,7 +545,7 @@ class RewriteDependencies(ast.NodeTransformer):
                 <now>.comp_key(<act>, #, <exc>)(<act>, #, |x|, 1):
                     <now>.comp_value(<act>, #, <exc>)(<act>, #, |z|, 1)
                 for x in <now>.loop(<act>, <exc>)(<act>, |l|)
-                if <now>.assign(<act>, <now>.pop_assign(<act>), cce(x))
+                if <now>.assign(<act>, <now>.pop_assign(<act>), target(x))
                 if <now>.rcondition(<act>, <exc>)(<act>, 1, |y|)
             }, <mode>)
         """
@@ -598,7 +598,7 @@ class RewriteDependencies(ast.NodeTransformer):
                     )
                 )
                 for x in <now>.loop(<act>, <exc>)(<act>, |l|)
-                if <now>.assign(<act>, <now>.pop_assign(<act>), cce(x))
+                if <now>.assign(<act>, <now>.pop_assign(<act>), target(x))
                 if <now>.rcondition(<act>, <exc>)(<act>, 1, |y| and |z|)
             )), <mode>)
         """
@@ -1020,17 +1020,17 @@ class RewriteDependencies(ast.NodeTransformer):
         Transform:
             a.b
         Into:
-            <now>.access(<act>, #, <exc>)[
+            <now>.access(<act>, #, <exc>)[('attribute', (
                 <act>,
                 #`a.b`,
                 |a|:value,
                 "b",
-                '[]'
-            ]
-        Code component:
-            ((|a[b]|, a[b]), 'attribute')
+                '.',
+                <mode>
+            )]
+        Target:
+            ((|a[b]|, 'a[b]'), 'attribute')
         """
-        replaced = ReplaceContextWithLoad().visit(node)
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         attribute_component = self.rewriter.create_code_component(
             node, Component.ATTRIBUTE, 'r'
@@ -1051,26 +1051,29 @@ class RewriteDependencies(ast.NodeTransformer):
                 ast.Num(self.rewriter.current_exc_handler)
             ]),
             ast.Index(ast.Tuple([
-                activation(),
-                ast.Num(attribute_component),
-                self.rewriter.capture(node.value, mode=Dependency.VALUE),
-                ast.Str(node.attr),
-                ast.Str('.'),
-                ast.Str(mode)
+                ast.Str('attribute'),
+                ast.Tuple([
+                    activation(),
+                    ast.Num(attribute_component),
+                    self.rewriter.capture(node.value, mode=Dependency.VALUE),
+                    ast.Str(node.attr),
+                    ast.Str('.'),
+                    ast.Str(mode),
+                ], L()),
             ], L())),
             node.ctx,
         ), node)
 
         node.component_id = attribute_component
-        node.code_component_expr = ast.Tuple([
+        node.target_expr = ast.Tuple([
             ast.Tuple([
                 ast.Num(attribute_component),
-                replaced
+                ast.Str(pyposast.extract_code(self.rewriter.lcode, node)),
             ], L()),
             ast.Str('access')
         ], L())
         old_node.component_id = node.component_id
-        old_node.code_component_expr = node.code_component_expr
+        old_node.target_expr = node.target_expr
         return node
 
     def visit_Subscript(self, node):
@@ -1078,17 +1081,17 @@ class RewriteDependencies(ast.NodeTransformer):
         Transform:
             a[b]
         Into:
-            <now>.access(<act>, #, <exc>)[
+            <now>.access(<act>, #, <exc>)['subscript', (
                 <act>,
                 #`a[b]`,
                 |a|:value,
                 |b|:slice,
-                '[]'
-            ]
-        Code component:
-            ((|a[b]|, a[b]), 'subscript')
+                '[]',
+                <mode>
+            )]
+        Target:
+            ((|a[b]|, 'a[b]'), 'subscript')
         """
-        replaced = ReplaceContextWithLoad().visit(node)
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         subscript_component = self.rewriter.create_code_component(
             node, Component.SUBSCRIPT, 'r'
@@ -1109,50 +1112,49 @@ class RewriteDependencies(ast.NodeTransformer):
                 ast.Num(self.rewriter.current_exc_handler)
             ]), node),
             ast.Index(ast.Tuple([
-                activation(),
-                ast.Num(subscript_component),
-                value,
-                slice_,
-                ast.Str('[]'),
-                ast.Str(mode)
+                ast.Str('subscript'),
+                ast.Tuple([
+                    activation(),
+                    ast.Num(subscript_component),
+                    value,
+                    slice_,
+                    ast.Str('[]'),
+                    ast.Str(mode),
+                ], L()),
             ], L())),
             node.ctx,
         ), node)
         new_node.component_id = subscript_component
-        new_node.code_component_expr = ast.Tuple([
+        new_node.target_expr = ast.Tuple([
             ast.Tuple([
                 ast.Num(subscript_component),
-                replaced
+                ast.Str(pyposast.extract_code(self.rewriter.lcode, node)),
             ], L()),
             ast.Str('access')
         ], L())
         node.component_id = new_node.component_id
-        node.code_component_expr = new_node.code_component_expr
+        node.target_expr = new_node.target_expr
         return new_node
 
     def visit_Starred(self, node):
-        """Visit Starred. Create code component
-        Code component of:
+        """Visit Starred. Create target expression
+        Target of:
             *x
         Is:
-            ((((|x|, 'x', x), 'single'), x), 'starred')
+            (((|x|, 'x', x), 'single'), 'starred')
 
         """
         starred_id = self.rewriter.create_ast_component(node, Component.STARRED)
         self.create_composition(starred_id, *self.composition_edge)
         self.composition_edge = (starred_id, Component.S_VALUE)
 
-        replaced = ReplaceContextWithLoad().visit(node)
         new_node = copy(node)
         new_node.value = self.visit(node.value)
-        new_node.code_component_expr = ast.Tuple([
-            ast.Tuple([
-                new_node.value.code_component_expr,
-                replaced,
-            ], L()),
+        new_node.target_expr = ast.Tuple([
+            new_node.value.target_expr,
             ast.Str('starred')
         ], L())
-        node.code_component_expr = new_node.code_component_expr
+        node.target_expr = new_node.target_expr
         return new_node
 
     def visit_Name(self, node):
@@ -1160,26 +1162,30 @@ class RewriteDependencies(ast.NodeTransformer):
         Transform;
             a
         Into (mode=Load):
-            <now>.name(<act>, cce(a), a, 'a')
-        Code component:
+            <now>.name(<act>, target(a), a, 'a')
+        Target:
             ((|x|, 'x', x), 'single')
         """
         node.name = node.id
         ctx = context(node)
         id_ = self.rewriter.create_code_component(node, Component.NAME, ctx)
         self.create_composition(id_, *self.composition_edge)
-        node.code_component_expr = ast.Tuple([
+
+        node.target_expr = ast.Tuple([
             ast.Tuple([
                 ast.Num(id_),
                 ast.Str(pyposast.extract_code(self.rewriter.lcode, node)),
-                ast.Name(node.id, L()),
+                ast.Name(node.id, L())
             ], L()),
             ast.Str('single')
         ], L())
         if ctx.startswith('r'):
-            return ast_copy(noworkflow(
-                'name',
-                [activation(), node.code_component_expr, node, ast.Str(self.mode)]
+            return ast_copy(noworkflow('name', [
+                activation(), 
+                ast.Num(id_),
+                ast.Str(pyposast.extract_code(self.rewriter.lcode, node)),
+                node,
+                ast.Str(self.mode)]
             ), node)
         return node
 
@@ -1191,13 +1197,11 @@ class RewriteDependencies(ast.NodeTransformer):
             <now>.list(<act>, #, <exc>)(<act>, #`[a]`, [
                 <now>.item(<act>, #, <exc>)(<act>, #`a`, |a|, 0)
             ])
-        Code component:
-            (((((|a|, 'a', a), 'single'),), [a]), 'multiple')
-            cce = (info, 'multiple')
-            info = (elements, [a])
-            elements = (cce(a),)
+        Target:
+            ((((|a|, 'a', a), 'single'),), 'multiple')
+            target = (elements, 'multiple')
+            elements = (target(a),)
         """
-        replaced = ReplaceContextWithLoad().visit(node)
         ctx = context(node)
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         list_code_component = self.rewriter.create_code_component(
@@ -1214,17 +1218,14 @@ class RewriteDependencies(ast.NodeTransformer):
                 set_key = lambda: ('item', ast.Num(index))
             new_items.append(self._itemize(item, ctx, set_key))
 
-        new_node.code_component_expr = ast.Tuple([
+        new_node.target_expr = ast.Tuple([
             ast.Tuple([
-                ast.Tuple([
-                    getattr(elt, 'code_component_expr', None)
-                    for elt in node.elts
-                ], L()),
-                replaced,
+                getattr(elt, 'target_expr', None)
+                for elt in node.elts
             ], L()),
             ast.Str('multiple')
         ], L())
-        node.code_component_expr = new_node.code_component_expr
+        node.target_expr = new_node.target_expr
         new_node.elts = new_items
 
         if ctx.startswith('r'):

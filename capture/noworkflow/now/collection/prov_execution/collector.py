@@ -9,6 +9,7 @@ import sys
 import weakref
 import os
 import time
+import inspect
 
 from collections import OrderedDict
 from copy import copy
@@ -232,107 +233,111 @@ class Collector(object):
 
     def __getitem__(self, index):
         # pylint: disable=too-many-locals
-        activation, code_id, vcontainer, vindex, access, mode = index
-        depa = activation.dependencies[-1]
+        operation, subindex = index
+        if operation in {'attribute', 'subscript'}:
+            activation, code_id, vcontainer, vindex, access, mode = subindex
+            depa = activation.dependencies[-1]
+            value_dep = part_id = None
+            for dep in depa.dependencies:
+                if dep.mode == "value":
+                    value_dep = dep
+                    break
 
-        value_dep = part_id = None
-        for dep in depa.dependencies:
-            if dep.mode == "value":
-                value_dep = dep
-                break
+            if access == "[]":
+                nvindex = vindex
+                if isinstance(vindex, int) and vindex < 0:
+                    nvindex = len(vcontainer) + vindex
+                addr = "[{}]".format(nvindex)
+                value = vcontainer[vindex]
+                if not activation.active:
+                    return value
+                if value_dep is not None:
+                    collection = value_dep.evaluation
+                    self.simple_member_lookup(collection, addr, value, depa)
 
-        if access == "[]":
-            nvindex = vindex
-            if isinstance(vindex, int) and vindex < 0:
-                nvindex = len(vcontainer) + vindex
-            addr = "[{}]".format(nvindex)
-            value = vcontainer[vindex]
-            if not activation.active:
-                return value
-            if value_dep is not None:
-                collection = value_dep.evaluation
-                self.simple_member_lookup(collection, addr, value, depa)
+            elif access == ".":
+                if value_dep is not None:
+                    self.current_attr = Dependency(value_dep.evaluation, vcontainer, "bound")
 
-        elif access == ".":
-            if value_dep is not None:
-                self.current_attr = Dependency(value_dep.evaluation, vcontainer, "bound")
+                addr = ".{}".format(vindex)
+                value = getattr(vcontainer, vindex)
+                if not activation.active:
+                    return value
+                if value_dep is not None:
+                    self.full_member_lookup(
+                        value_dep.evaluation, vcontainer, vindex, value, depa
+                    )
+            activation.dependencies.pop()
 
-            addr = ".{}".format(vindex)
-            value = getattr(vcontainer, vindex)
-            if not activation.active:
-                return value
-            if value_dep is not None:
-                self.full_member_lookup(
-                    value_dep.evaluation, vcontainer, vindex, value, depa
-                )
-        activation.dependencies.pop()
+            eva = self.evaluate_depa(activation, code_id, value, None, depa)
+            is_whitebox_slice = (
+                isinstance(vindex, self.pyslice) and
+                isinstance(vcontainer, (list, tuple)) and
+                access == "[]" and
+                value_dep is not None
+            )
+            if is_whitebox_slice:
+                original_indexes = range(len(vcontainer))[vindex]
+                component = self.code_components[code_id]
+                trial_id = self.trial_id
+                ocollection = value_dep.evaluation
+                osame = ocollection.same()
+                nsame = eva.same()
 
-        eva = self.evaluate_depa(activation, code_id, value, None, depa)
-        is_whitebox_slice = (
-            isinstance(vindex, self.pyslice) and
-            isinstance(vcontainer, (list, tuple)) and
-            access == "[]" and
-            value_dep is not None
-        )
-        if is_whitebox_slice:
-            original_indexes = range(len(vcontainer))[vindex]
-            component = self.code_components[code_id]
-            trial_id = self.trial_id
-            ocollection = value_dep.evaluation
-            osame = ocollection.same()
-            nsame = eva.same()
+                for slice_index, original_index in enumerate(original_indexes):
+                    oaddr = "[{}]".format(original_index)
+                    naddr = "[{}]".format(slice_index)
+                    svalue = vcontainer[original_index]
 
-            for slice_index, original_index in enumerate(original_indexes):
-                oaddr = "[{}]".format(original_index)
-                naddr = "[{}]".format(slice_index)
-                svalue = vcontainer[original_index]
+                    opart = osame.members.get(oaddr)
+                    if opart is not None:
+                        depa.add(Dependency(
+                            opart, svalue, "access", ocollection, oaddr
+                        ))
 
-                opart = osame.members.get(oaddr)
-                if opart is not None:
-                    depa.add(Dependency(
-                        opart, svalue, "access", ocollection, oaddr
-                    ))
+                    spart = self.evaluate_depa(
+                        activation, self.code_components.add(
+                            trial_id, "{}{}".format(component.name, naddr),
+                            'subscript_item', 'w', -1, -1, -1, -1, -1,
+                        ), svalue, eva.checkpoint, depa
+                    )
 
-                spart = self.evaluate_depa(
-                    activation, self.code_components.add(
-                        trial_id, "{}{}".format(component.name, naddr),
-                        'subscript_item', 'w', -1, -1, -1, -1, -1,
-                    ), svalue, eva.checkpoint, depa
-                )
+                    nsame.members[naddr] = spart
+                    self.members.add_object(
+                        self.trial_id, nsame.activation_id, nsame.id,
+                        spart.activation_id, spart.id, naddr, eva.checkpoint, "Put"
+                    )
 
-                nsame.members[naddr] = spart
-                self.members.add_object(
-                    self.trial_id, nsame.activation_id, nsame.id,
-                    spart.activation_id, spart.id, naddr, eva.checkpoint, "Put"
-                )
-
-        activation.dependencies[-1].add(Dependency(eva, value, mode))
-        return value
+            activation.dependencies[-1].add(Dependency(eva, value, mode))
+            return value
 
     def __setitem__(self, index, value):
         # pylint: disable=too-many-locals
-        activation, code_id, vcontainer, vindex, access, _ = index
-        if access == "[]":
-            nvindex = vindex
-            if isinstance(vindex, int) and vindex < 0:
-                nvindex = len(vcontainer) + vindex
-            addr = "[{}]".format(nvindex)
-            vcontainer[vindex] = value
-        elif access == ".":
-            setattr(vcontainer, vindex, value)
-            addr = ".{}".format(vindex)
-        depa = activation.dependencies.pop()
+        operation, subindex = index
+        if operation in {'attribute', 'subscript'}:
+            activation, code_id, vcontainer, vindex, access, _ = subindex
+            if access == "[]":
+                nvindex = vindex
+                if isinstance(vindex, int) and vindex < 0:
+                    nvindex = len(vcontainer) + vindex
+                addr = "[{}]".format(nvindex)
+                vcontainer[vindex] = value
+            elif access == ".":
+                setattr(vcontainer, vindex, value)
+                addr = ".{}".format(vindex)
+            depa = activation.dependencies.pop()
 
-        value_dep = None
-        for dep in depa.dependencies:
-            if dep.mode == "value":
-                value_dep = dep
-                break
+            value_dep = None
+            for dep in depa.dependencies:
+                if dep.mode == "value":
+                    value_dep = dep
+                    break
 
-        if activation.active:
-            activation.assignments[-1].accesses[code_id] = AssignAccess(
-                value, depa, addr, value_dep, self.time()
-            )
+            if activation.active:
+                aaccess = AssignAccess(
+                    value, depa, addr, value_dep, self.time()
+                )
+                activation.assignments[-1].accesses[code_id] = aaccess
 
     def time(self):
         """Return time at this moment
@@ -453,11 +458,11 @@ class Collector(object):
             self.eval_dep(activation, code_id, value, mode)
         return value
 
-    def name(self, activation, code_tuple, value, mode="dependency"):
+    def name(self, activation, code_id, name, value, mode="dependency"):
         """Capture name value"""
-        if code_tuple[0] and activation.active:
+        if code_id and activation.active:
             # Capture only if there is a code component id
-            code_id, name, _ = code_tuple[0]
+            #code_id, name, _ = code_tuple[0]
             old_eval = self.lookup(activation, name)
             depa = DependencyAware()
             if old_eval:
@@ -839,24 +844,59 @@ class Collector(object):
         assign = activation.assignments.pop()
         return assign
 
-    def assign_single(self, activation, assign, info, depa):
+    def _extract_assign_access(self, activation, assign, target_info, back):
+        checkpoint = assign.checkpoint
+        code_id, vdef = target_info
+        addr = value_dep = None
+        if code_id in assign.accesses:
+            # Replaces information for more precise subscript
+            value, access_depa, addr, value_dep, checkpoint = (
+                assign.accesses[code_id])
+        else:
+            frame = inspect.currentframe()
+            print(frame.f_code.co_name)
+            try:
+                for i in range(back):
+                    frame = frame.f_back
+                    print(frame.f_code.co_name)
+                value = eval(vdef, globals(), frame.f_locals)
+            finally:
+                del frame
+        return code_id, value, access_depa, addr, value_dep, checkpoint
+
+    def value_from_target_expr(self, activation, assign, target_expr, back):
+        target_info, type_ = target_expr
+        if target_expr is None:
+            return None
+        elif type_ == 'single':
+            return target_info[2]
+        elif type_ == 'access':
+            _, value, _, _, _, _ = self._extract_assign_access(
+                activation, assign, target_info, back + 1
+            )
+            return value
+        elif type_ == 'multiple':
+            return [
+                self.value_from_target_expr(activation, assign, x, back + 1)
+                for x in target_info
+            ]
+        elif type_ == 'starred':
+            return self.value_from_target_expr(activation, assign, target_info, back + 1)
+
+    def assign_single(self, activation, assign, target_info, depa, back):
         """Create dependencies for assignment to single name"""
         checkpoint = assign.checkpoint
-        code, name, value = info
-        eva = self.evaluate_depa(activation, code, value, checkpoint, depa)
+        code_id, name, value = target_info
+        eva = self.evaluate_depa(activation, code_id, value, checkpoint, depa)
         if name:
             activation.context[name] = eva
         return 1
-
-    def assign_access(self, activation, assign, info, depa):
+    
+    def assign_access(self, activation, assign, target_info, depa, back):
         """Create dependencies for assignment to subscript"""
-        checkpoint = assign.checkpoint
-        code, value = info
-        addr = value_dep = None
-        if code in assign.accesses:
-            # Replaces information for more precise subscript
-            value, access_depa, addr, value_dep, checkpoint = (
-                assign.accesses[code])
+        code, value, access_depa, addr, value_dep, checkpoint = self._extract_assign_access(
+            activation, assign, target_info, back + 1
+        )
         eva = self.evaluate_depa(activation, code, value, checkpoint, depa)
         if value_dep:
             same = value_dep.evaluation.same()
@@ -895,7 +935,7 @@ class Collector(object):
         new_depa.add(dependency)
         return new_depa, new_eva
 
-    def assign_multiple(self, activation, assign, info, depa, ldepa):
+    def assign_multiple(self, activation, assign, target_info, depa, ldepa, back):
         """Prepare to create dependencies for assignment to tuple/list"""
         # pylint: disable=too-many-arguments, function-redefined
         value = assign.value
@@ -937,14 +977,14 @@ class Collector(object):
 
 
         return self.assign_multiple_apply(
-            activation, assign, info, custom_dependency
+            activation, assign, target_info, custom_dependency, back + 1
         )
 
-    def assign_multiple_apply(self, activation, assign, info, custom):
+    def assign_multiple_apply(self, activation, assign, target_info, custom, back):
         """Create dependencies for assignment to tuple/list"""
         # pylint: disable=too-many-locals
         assign_value = assign.value
-        subcomps, _ = info
+        subcomps = target_info
         # Assign until starred
         starred = None
         delta = 0
@@ -952,22 +992,22 @@ class Collector(object):
             if subcomp[-1] == "starred":
                 starred = index
                 break
-            val = subcomp[0][-1]
+            val = self.value_from_target_expr(activation, assign, subcomp, back + 1)
             adepa, _ = custom(index)
-            delta += self.assign(activation, assign.sub(val, adepa), subcomp)
+            delta += self.assign(activation, assign.sub(val, adepa), subcomp, back + 1)
 
         if starred is None:
             return
 
-        star = subcomps[starred][0][0]
+        star = subcomps[starred][0]
         rdelta = -1
         for index in range(len(subcomps) - 1, starred, -1):
             subcomp = subcomps[index]
-            val = subcomp[0][-1]
+            val = self.value_from_target_expr(activation, assign, subcomp, back + 1)
             new_index = len(assign_value) + rdelta
             adepa, _ = custom(new_index)
             rdelta -= self.assign(
-                activation, assign.sub(val, adepa), subcomp)
+                activation, assign.sub(val, adepa), subcomp, back + 1)
 
         # ToDo: treat it as a plain slice
         new_value = assign_value[delta:rdelta + 1]
@@ -977,9 +1017,9 @@ class Collector(object):
             for index in range(delta, len(assign_value) + rdelta + 1)
         ]
 
-        self.assign(activation, assign.sub(new_value, depas), star)
+        self.assign(activation, assign.sub(new_value, depas), star, back + 1)
 
-    def assign(self, activation, assign, code_component_tuple):
+    def assign(self, activation, assign, target_expr, back=1):
         """Create dependencies"""
         if not activation.active:
             return 0
@@ -987,13 +1027,13 @@ class Collector(object):
         _, _, depa = assign
         if isinstance(depa, list):
             ldepa, depa = depa, DependencyAware.join(depa)
-        info, type_ = code_component_tuple
+        target_info, type_ = target_expr
         if type_ == "single":
-            return self.assign_single(activation, assign, info, depa)
+            return self.assign_single(activation, assign, target_info, depa, back + 1)
         if type_ == "access":
-            return self.assign_access(activation, assign, info, depa)
+            return self.assign_access(activation, assign, target_info, depa, back + 1)
         if type_ == "multiple":
-            return self.assign_multiple(activation, assign, info, depa, ldepa)
+            return self.assign_multiple(activation, assign, target_info, depa, ldepa, back + 1)
 
     def func(self, activation, code_id, exc_handler):
         """Capture func before"""

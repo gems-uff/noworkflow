@@ -594,13 +594,13 @@ class RewriteAST(ast.NodeTransformer):
                 <now>.assign_value(<act>, <exc>)(<act>, |k, l|)
             __now__assign__ = <now>.pop_assign(<act>)
 
-            <now>.assign(<act>, __now__assign__, cce(a))
-            <now>.assign(<act>, __now__assign__, cce((b, c)))
-            <now>.assign(<act>, __now__assign__, cce([d, e]))
-            <now>.assign(<act>, __now__assign__, cce(*f))
+            <now>.assign(<act>, __now__assign__, target(a))
+            <now>.assign(<act>, __now__assign__, target((b, c)))
+            <now>.assign(<act>, __now__assign__, target([d, e]))
+            <now>.assign(<act>, __now__assign__, target(*f))
             # Check if assigned
-            <now>.assign(<act>, __now__assign__, cce(g[h]))
-            <now>.assign(<act>, __now__assign__, cce(i.j))
+            <now>.assign(<act>, __now__assign__, target(g[h]))
+            <now>.assign(<act>, __now__assign__, target(i.j))
         """
         assign_id = self.create_ast_component(node, Component.ASSIGN)
         self.create_composition(assign_id, *self.composition_edge)
@@ -615,7 +615,7 @@ class RewriteAST(ast.NodeTransformer):
                 noworkflow('assign', [
                     activation(),
                     ast.Name('__now__assign__', L()),
-                    new_target.code_component_expr,
+                    new_target.target_expr,
                 ])
             ), node))
 
@@ -643,9 +643,9 @@ class RewriteAST(ast.NodeTransformer):
             a += 1
         Into:
             a += <now>.assign_value(<act>, <ext>)(<act>, |1|, |a|)
-            __now__assign__ = <now>.pop_assign(<act>)
+            __now__assign__ = <now>.pop_assign(<act>) 
 
-            <now>.assign(<act>, __now__assign__, cce(a))
+            <now>.assign(<act>, __now__assign__, target(a))
         Transform
             a[0] += 1
         Into:
@@ -653,7 +653,7 @@ class RewriteAST(ast.NodeTransformer):
                 self.assign_value(<act>, <ext>)(<act>, |1|)
             __now__assign__ = <now>.pop_assign(<act>)
 
-            <now>.assign(<act>, __now__assign__, cce(a))
+            <now>.assign(<act>, __now__assign__, target(a))
         """
         assign_id = self.create_ast_component(node, Component.AUG_ASSIGN)
         self.create_composition(assign_id, *self.composition_edge)
@@ -702,7 +702,7 @@ class RewriteAST(ast.NodeTransformer):
             noworkflow('assign', [
                 activation(),
                 ast.Name('__now__assign__', L()),
-                new_target.code_component_expr,
+                new_target.target_expr,
             ])
         ), node))
 
@@ -714,7 +714,7 @@ class RewriteAST(ast.NodeTransformer):
             a : int = self.assign_value(<act>, <ext>)(<act>, |1|, |a|)
             __now__assign__ = <now>.pop_assign(<act>)
 
-            <now>.assign(<act>, __now__assign__, cce(a))
+            <now>.assign(<act>, __now__assign__, target(a))
         """
         assign_id = self.create_ast_component(node, Component.ANN_ASSIGN)
         self.create_composition(assign_id, *self.composition_edge)
@@ -735,7 +735,6 @@ class RewriteAST(ast.NodeTransformer):
             )
             new_body.append(node)
             return
-
         self.composition_edge = (assign_id, Component.S_TARGET)
         new_target = self.capture(node.target)
         mode = Dependency.ASSIGN
@@ -758,7 +757,7 @@ class RewriteAST(ast.NodeTransformer):
             noworkflow('assign', [
                 activation(),
                 ast.Name('__now__assign__', L()),
-                new_target.code_component_expr,
+                new_target.target_expr,
             ])
         ), node))
 
@@ -813,13 +812,12 @@ class RewriteAST(ast.NodeTransformer):
                 ...
         Into:
             for i in <now>.loop(<act>, #, <exc>)(<act>, |lis|):
-                <now>.assign(<act>, <now>.pop_assign(<act>), cce(i))
+                <now>.assign(<act>, <now>.pop_assign(<act>), target(i))
         """
         # pylint: disable=invalid-name
         # ToDo: capture orelse dependencies
         for_id = self.create_ast_component(node, Component.FOR)
         self.create_composition(for_id, *self.composition_edge)
-
         new_node = copy(node)
         self.composition_edge = (for_id, Component.S_TARGET)
         new_node.target = self.capture(new_node.target)
@@ -840,7 +838,7 @@ class RewriteAST(ast.NodeTransformer):
                 noworkflow('assign', [
                     activation(),
                     noworkflow('pop_assign', [activation()]),
-                    new_node.target.code_component_expr,
+                    new_node.target.target_expr,
                 ])
             ), new_node)
         ] + self.process_body(new_node.body, for_id)
