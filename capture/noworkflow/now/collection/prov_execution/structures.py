@@ -193,6 +193,7 @@ class MemberDependencyAware(DependencyAware):
         self.key = None
         self.value = None
 
+
 class CollectionDependencyAware(DependencyAware):
     """Store dependencies of a collection element"""
 
@@ -204,3 +205,21 @@ class CollectionDependencyAware(DependencyAware):
         )
         # list of tuples representing (item name, evaluation_id, time)
         self.items = []
+
+
+class WithContext(object):
+
+    def __init__(self, now, context, activation, exc_handler):
+        self.noworkflow = now
+        self.context = context
+        self.activation = activation
+        self.exc_handler = exc_handler
+
+    def __enter__(self):
+        return self.context.__enter__()
+
+    def __exit__(self, *exc):
+        result = self.context.__exit__(*exc)
+        if result: # suppressed exception:
+            self.noworkflow.collect_exception(self.activation, self.exc_handler)
+        return result

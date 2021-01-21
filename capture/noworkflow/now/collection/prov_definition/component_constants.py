@@ -129,6 +129,7 @@ TRY_FINALLY = "try_finally"
 WHILE = "while"
 #  stmt.visit_While
 WITH = "with"
+WITHITEM = "withitem"
 #  stmt.visit_With
 YIELD = "yield"
 #  expr.visit_Yield
@@ -287,6 +288,7 @@ M_VALUES = "*values"
 #  expr.visit_JoinedStr
 S_VARARG = "vararg"
 #  stmt.process_parameters
-
+M_ITEMS = "*items"
+#  stmt.visit_WITH
 
 

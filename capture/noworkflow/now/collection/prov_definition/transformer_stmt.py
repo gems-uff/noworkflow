@@ -1008,13 +1008,77 @@ class RewriteAST(ast.NodeTransformer):
             )), node)
         ], node), node)
 
+    def process_withitem(self, node, component_id, internal_handler):
+        """Process withitem
+        Transform:
+            cm as a
+        Into:
+            <now>.withitem(<act>, #, <exc>)(<act>, <iexc>, True, |cm|)
+        Future assign:
+            <now>.assign(<act>, <now>.pop_assign(<act>), target(c))
+        """
+        rewriter = RewriteDependencies(self, mode=Dependency.DEPENDENCY)
+        node.context_expr = ast_copy(double_noworkflow('withitem', [
+            activation(),
+            ast.Num(component_id),
+            ast.Num(self.current_exc_handler)
+        ], [
+            activation(),
+            ast.Num(component_id),
+            ast.Num(internal_handler),
+            true_false(bool(node.optional_vars)),
+            rewriter.visit(node.context_expr),
+        ]), node.context_expr)
+        
+        if not node.optional_vars:
+            return []
+        node.optional_vars = rewriter.visit(node.optional_vars)
+        return [ast_copy(ast.Expr(noworkflow('assign', [
+            activation(),
+            noworkflow('pop_assign', [activation()]),
+            node.optional_vars.target_expr
+        ])), node.optional_vars)]
+
     def visit_With(self, node):
-        """Visit With"""
+        """Visit With
+        Transform:
+            with cm1 as a, cm2 as b, cm3 as c, cm4:
+                ...
+        Into:
+            with <now>.withitem(<act>, #1, <exc>)(<act>, <iexc>, True, |cm1|) as a,
+                 <now>.withitem(<act>, #2, <exc>)(<act>, <iexc>, True, |cm2|) as b,
+                 <now>.withitem(<act>, #3, <exc>)(<act>, <iexc>, True, |cm3|) as c,
+                 <now>.withitem(<act>, #4, <exc>)(<act>, <iexc>, False, |cm4|):
+                <now>.assign(<act>, <now>.pop_assign(<act>), target(c))
+                <now>.assign(<act>, <now>.pop_assign(<act>), target(b))
+                <now>.assign(<act>, <now>.pop_assign(<act>), target(a))
+                ...
+        
+        """
         # pylint: disable=invalid-name
         # ToDo: collect with
         with_id = self.create_ast_component(node, Component.WITH)
         self.create_composition(with_id, *self.composition_edge)
-        return node
+        old_composition_edge = self.composition_edge
+
+        new_node = copy(node)
+        extra_lines = []
+        with self.exc_handler() as internal_handler:
+            new_node.body = self.process_body(new_node.body, with_id)
+        if PY3:
+            for index, item in enumerate(new_node.items):
+                self.composition_edge = (with_id, Component.M_ITEMS, index)
+                withitem_id = self.create_ast_component(item, Component.WITHITEM)
+                self.create_composition(withitem_id, *self.composition_edge)
+                extra_lines.extend(self.process_withitem(
+                    item, withitem_id, internal_handler
+                ))
+        else:
+            extra_lines.extend(self.process_withitem(new_node, with_id, internal_handler))
+        new_node.body = extra_lines + new_node.body
+
+        self.composition_edge = old_composition_edge
+        return new_node
 
     def visit_AsyncWith(self, node):
         """Visit AsyncWith"""

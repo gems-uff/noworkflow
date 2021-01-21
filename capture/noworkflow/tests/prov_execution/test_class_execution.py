@@ -44,8 +44,6 @@ class TestClassExecution(CollectionTestCase):
         self.assert_dependency(var_c, param_object_eval, "base", False)
         self.assert_type(var_c, var_type)
 
-    # ToDO https://blog.ionelmc.ro/2015/02/09/understanding-python-metaclasses/#object-attribute-lookup
-
     def test_class_definition_with_member(self):
         self.script("# script.py\n"
                     "class C(object):\n"
@@ -1023,9 +1021,71 @@ class TestClassExecution(CollectionTestCase):
         self.assertEqual(activation.context['self'], var_self)
         self.assertEqual(activation.context['x'], var_write_x)
 
-    
+
+    def test_collect_dunder_enter_exit(self):
+        self.script("# script.py\n"
+                    "class C(object):\n"
+                    "    'cdoc'\n"
+                    "    def __enter__(self):\n"
+                    "        return 1\n"
+                    "    def __exit__(self, exc_type, exc_value, exc_tb):\n"
+                    "        pass\n"
+                    "c = C()\n"
+                    "with c as f:\n"
+                    "    a = f\n"
+                    "# other")
+
+        script_eval = self.get_evaluation(name="script.py")
+        var_type = self.get_evaluation(name=self.rtype('type'))
+        param_object_eval = self.get_evaluation(name="object", mode="r")
+        var_class_c = self.get_evaluation(name="C", mode="w")
+        var_read_class_c = self.get_evaluation(name="C", mode="r")
+        var_inst_c = self.get_evaluation(name="c", mode="w")
+        var_c_act = self.get_evaluation(name="C()")
+        var_c_cm = self.get_evaluation(name="c", mode="r")
+        write_f_eval = self.get_evaluation(name="f", mode="w")
+        read_f_eval = self.get_evaluation(name="f", mode="r")
+        write_a_eval = self.get_evaluation(name="a", mode="w")
+        var_dunder_enter_act = self.get_evaluation(name="__enter__", skip=1)
+        var_dunder_exit_act = self.get_evaluation(name="__exit__", skip=1)
+        var_1 = self.get_evaluation(name="1")
+        var_self_1 = self.get_evaluation(name="self")
+        var_self_2 = self.get_evaluation(name="self", skip=1)
+        var_exc_type = self.get_evaluation(name="exc_type")
+        var_exc_value = self.get_evaluation(name="exc_value")
+        var_exc_tb = self.get_evaluation(name="exc_tb")
+        
+        self.assert_type(var_inst_c, var_class_c)
+        self.assert_type(var_class_c, var_type)
+        self.assert_dependency(var_class_c, param_object_eval, "base", False)
+        self.assert_dependency(var_read_class_c, var_class_c, "assignment", True)
+        self.assert_dependency(var_c_act, var_read_class_c, "func", False)
+        self.assert_dependency(var_inst_c, var_c_act, "assign", True)
+        self.assert_dependency(var_c_cm, var_inst_c, "assignment", True)
+        self.assert_dependency(write_f_eval, var_c_cm, "assign", False)
+        self.assert_dependency(var_self_1, var_c_cm, "argument", True)
+        self.assert_dependency(write_f_eval, var_dunder_enter_act, "internal", True)
+        self.assert_dependency(var_dunder_enter_act, var_1, "use", True)
+        self.assert_dependency(read_f_eval, write_f_eval, "assignment", True)
+        self.assert_dependency(write_a_eval, read_f_eval, "assign", True)
+
+        activation = self.metascript.activations_store[var_dunder_enter_act.id]
+        self.assertEqual(activation.context['self'], var_self_1)
+
+        activation = self.metascript.activations_store[var_dunder_exit_act.id]
+        self.assertEqual(activation.context['self'], var_self_2)
+        self.assertEqual(activation.context['exc_type'], var_exc_type)
+        self.assertEqual(activation.context['exc_value'], var_exc_value)
+        self.assertEqual(activation.context['exc_tb'], var_exc_tb)
+
+
+
+    # https://docs.python.org/3/reference/datamodel.html
+    # ToDo: generic parameter matching for internal activations (is it necessary?)
     # ToDo: with: __enter__, __exit__
     # ToDo: del statement: __delattr__, __delitem__, __del__
     # ToDo: descriptor: __get__, __set__, __delete__, __set_name__
     # ToDo: Metaclass: __init_subclass__, __instancecheck__, __subclasscheck__, __class_getitem__
     # ToDo: Coroutines: __await__, __aiter__, __anext__, __aenter__, __aexit__
+    # ToDO https://blog.ionelmc.ro/2015/02/09/understanding-python-metaclasses/#object-attribute-lookup
+

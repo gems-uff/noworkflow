@@ -26,6 +26,9 @@ DECORATE = "decorate"
 DECORATOR = "decorator"
 #  stmt.process_decorator
 DEPENDENCY = "dependency"
+#  stmt.visit_With
+#  stmt.process_withitem
+WITHITEM = "withitem"
 #  stmt.visit_ClassDef
 #  stmt.visit_Print
 #  stmt.visit_For

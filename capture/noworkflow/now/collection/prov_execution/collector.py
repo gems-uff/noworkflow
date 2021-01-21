@@ -27,7 +27,7 @@ from ...utils.cross_version import cross_print, PY38
 from .structures import AssignAccess, Assign, Generator
 from .structures import DependencyAware, Dependency, Parameter
 from .structures import MemberDependencyAware, CollectionDependencyAware
-from .structures import ConditionExceptions
+from .structures import ConditionExceptions, WithContext
 
 
 OPEN_MODES = {
@@ -874,11 +874,9 @@ class Collector(object):
                 assign.accesses[code_id])
         else:
             frame = inspect.currentframe()
-            print(frame.f_code.co_name)
             try:
                 for i in range(back):
                     frame = frame.f_back
-                    print(frame.f_code.co_name)
                 value = eval(vdef, globals(), frame.f_locals)
             finally:
                 del frame
@@ -1055,6 +1053,20 @@ class Collector(object):
         if type_ == "multiple":
             return self.assign_multiple(activation, assign, target_info, depa, ldepa, back + 1)
 
+    def withitem(self, activation, code_id, exc_handler):
+        activation.dependencies.append(CollectionDependencyAware(
+            exc_handler=exc_handler,
+            code_id=code_id
+        ))
+        return self._withitem
+
+    def _withitem(self, activation, code_id, iexc_handler, assigns, value):
+        depa = activation.dependencies.pop()
+        if assigns:
+            assign = Assign(self.time(), value, depa)
+            activation.assignments.append(assign)
+        return WithContext(self, value, activation, iexc_handler)
+
     def func(self, activation, code_id, exc_handler):
         """Capture func before"""
         activation.dependencies.append(DependencyAware(
@@ -1226,9 +1238,16 @@ class Collector(object):
                         self.last_activation.dependencies[1] = activation.dependencies[-1].clone(mode="argument", kind="argument")
                     elif len(activation.dependencies) > 1:
                         self.last_activation.dependencies[1] = activation.dependencies[1]
+                    
+                    find_bound_self = None
+                    if function_def.__name__ == "__enter__":
+                        # ToDo: check the proper __enter__ assignment
+                        find_bound_self = activation.assignments[-1].dependency
                     if function_def.__name__ == "__init__":
                         # Find value in activation result (__init__ after __new__)
-                        reference = self.find_reference_dependency(args[0], activation.dependencies[1])
+                        find_bound_self = activation.dependencies[1]
+                    if find_bound_self:
+                        reference = self.find_reference_dependency(args[0], find_bound_self)
                         if reference:
                             self.last_activation.bound_dependency = Dependency(
                                 reference, args[0], "bound"
@@ -1246,6 +1265,11 @@ class Collector(object):
                         self.last_activation.bound_dependency = self.current_attr or True
 
                     result = _call(*args, **kwargs)
+                    if function_def.__name__ == "__enter__":
+                        # ToDo: check the proper __enter__ assignment
+                        activation.assignments[-1].dependency.dependencies.extend(
+                            self.last_activation.dependencies[-1].dependencies
+                        )
                     if is_augassign:
                         activation.dependencies.pop()
                     return result
@@ -1275,7 +1299,6 @@ class Collector(object):
                     activation.generator = Generator()
                     activation.generator.value = result
                 return result
-            # ToDo: restore defaults
             if default_values[0]:
                 function_def.__defaults__ = default_values[0]
             closure_activation.dependencies.append(DependencyAware(
@@ -1459,7 +1482,6 @@ class Collector(object):
         if function_def.__name__ in {'__setitem__'} and self.current_assign_dep and len(arguments) == 2:
             arguments.append(self.current_assign_dep)
         
-
         def match(arg, param):
             """Create dependency"""
             arg.mode = "argument"
