@@ -17,12 +17,12 @@ export declare class DiffInfoWidget extends Widget {
     loadModules(trial1: string, trial2: string): void;
     loadEnvironment(trial1: string, trial2: string): void;
     loadFileAccess(trial1: string, trial2: string): void;
-    private info(main, cls, label, value1, value2);
-    private mod_li(element, cls, mod);
-    private env_field(element, env);
-    private env_li(element, cls, env);
-    private env_cli(element, rem, add);
-    private fa_field(element, cls, title, value);
-    private fa_li(element, cls, fa);
-    private fa_cfield(element, cls, title, v1, v2);
+    private info;
+    private mod_li;
+    private env_field;
+    private env_li;
+    private env_cli;
+    private fa_field;
+    private fa_li;
+    private fa_cfield;
 }

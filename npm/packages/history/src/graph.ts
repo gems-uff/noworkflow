@@ -230,7 +230,7 @@ class HistoryGraph {
     let levels = [];
     for (var i = 0; i <= last; i++) {
       let node: HistoryNodeData = data.nodes[i];
-      var previous = levels[node.level];
+      var previous:any = levels[node.level];
       if (previous == undefined) {
         previous = -1;
       }
@@ -252,7 +252,6 @@ class HistoryGraph {
       let node: HistoryNodeData = data.nodes[i];
       let x: number = start + spacing4 * id;
       let y: number = levelsy[node.level];
-
       var new_node: VisibleHistoryNode = {
         id: id,
         display: node.display,
@@ -262,7 +261,7 @@ class HistoryGraph {
         info: node,
         radius: this.config.radius,
         gradient: false,
-        status: "finished"
+        status: node.status
       };
 
       nodes.push(new_node)

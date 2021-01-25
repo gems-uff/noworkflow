@@ -479,6 +479,7 @@ class Node(object):
             'parent_id': repr(self.parent_id),
             'level': self.level,
             'trials': [x.to_dict(*args, **kwargs) for x in self.trials],
+            'status': 'finished',
         }
 
     @property

@@ -46,7 +46,7 @@ interface TrialGraphData {
 export
 interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
   _children?: d3_HierarchyPointNode<TrialNodeData>[];
-  children?: d3_HierarchyPointNode<TrialNodeData>[];
+  children?: this[];
   dy?: number;
   x0?: number;
   y0?: number;

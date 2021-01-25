@@ -697,7 +697,7 @@ class TrialGraph {
   }
 
   private updateLinks(source: VisibleTrialNode, edges: VisibleTrialEdge[]) {
-    var link = this.g.selectAll('path.link')
+    var link = this.g.selectAll<SVGPathElement, VisibleTrialEdge[]>('path.link')
       .data(edges, (d: VisibleTrialEdge) => d.id);
 
     // Enter any new links at the parent's previous position.
