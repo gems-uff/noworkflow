@@ -1,6 +1,7 @@
 const path = require('path');
 
 module.exports = {
+    mode: 'development',
     entry: "./src/index.ts",
     output: {
         path: path.resolve(__dirname, '..', '..', '..', 'capture', 'noworkflow', 'now', 'vis', 'static', 'dist'),
@@ -8,20 +9,19 @@ module.exports = {
     },
     resolve: {
         // Add '.ts' and '.tsx' as a resolvable extension.
-        extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"]
+        extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
+        fallback: {
+            crypto: require.resolve("crypto-browserify"),
+            stream: require.resolve("stream-browserify"),
+            buffer: require.resolve("buffer/")
+        }
     },
     devtool: 'source-map', // if we want a source map 
     module: {
         rules: [
             {
                 test: /\.ts|\.tsx$/,
-                use: [{
-                    loader: "awesome-typescript-loader",
-                    options: {
-                        useBabel: true,
-                        useCache: true
-                    }
-                }]
+                loader: "babel-loader"
             },
             {
                 test: /\.css$/,

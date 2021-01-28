@@ -1,4 +1,4 @@
-import {Widget} from '@phosphor/widgets';
+import {Widget} from '@lumino/widgets';
 
 import {
   select as d3_select,
@@ -16,7 +16,7 @@ class ConfigWidget extends Widget {
 
   static createNode(): HTMLElement {
     let node = document.createElement('div');
-    let d3node = d3_select(node);
+    let d3node = d3_select<HTMLDivElement, any>(node);
 
     let content = d3node.append('div')
       .classed('config-content', true)

@@ -1,7 +1,7 @@
 /**
 * Register the on demand syntax highlight
 */
-export function register_highlight(Jupyter, events, utils, codecell) {
+function register_highlight(Jupyter, events, utils, codecell) {
   function activateMonitor(cell) {
     if ((cell instanceof codecell.CodeCell)) {
       /* Define event for checking the highlight */
@@ -57,3 +57,7 @@ export function register_highlight(Jupyter, events, utils, codecell) {
     events.one('notebook_loaded.Notebook', initExistingCells);
   }
 }
+
+module.exports = {
+  register_highlight: register_highlight
+};

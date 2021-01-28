@@ -1,6 +1,6 @@
 import '../style/index.css';
 
-import {Widget} from '@phosphor/widgets';
+import {Widget} from '@lumino/widgets';
 
 import {NowVisPanel} from './nowpanel';
 import {ConfigWidget} from './config_widget';

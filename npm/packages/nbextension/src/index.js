@@ -14,5 +14,8 @@ __webpack_public_path__ = document
 /**
  * Export widget models and views, and the npm package version number.
  */
-export { register_renderer, render_cells } from './renderer.js';
-export { version } from '../package.json';
+module.exports = {
+  ...require('./highlight.js'),
+  ...require('./renderer.js')
+}
+module.exports['version'] = require('../package.json').version;

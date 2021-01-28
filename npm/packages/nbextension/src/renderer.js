@@ -1,10 +1,10 @@
-import './index.css';
+require('./index.css');
 
 /**
  * Register the mime type and append_mime function with the notebook's
  * output area
  */
-export function register_renderer(notebook, trial, history, utils, d3_selection) {
+function register_renderer(notebook, trial, history, utils, d3_selection) {
   /* Get an instance of output_area from a CodeCell instance */
   const { output_area } = notebook
     .get_cells()
@@ -58,7 +58,7 @@ export function register_renderer(notebook, trial, history, utils, d3_selection)
 /**
  * Re-render cells with output data of 'application/unittest.status+json' mime type
  */
-export function render_cells(notebook) {
+function render_cells(notebook) {
   /* Get all cells in notebook */
   notebook.get_cells().forEach(cell => {
     if (cell.output_area) {
@@ -73,3 +73,9 @@ export function render_cells(notebook) {
     }
   });
 }
+
+
+module.exports = {
+  register_renderer: register_renderer,
+  render_cells: render_cells
+};

@@ -4,7 +4,7 @@ import {
   BaseType as d3_BaseType,
 } from 'd3-selection';
 
-import {Widget} from '@phosphor/widgets';
+import {Widget} from '@lumino/widgets';
 
 import {
   HistoryGraph,

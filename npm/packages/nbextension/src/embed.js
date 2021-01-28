@@ -5,5 +5,8 @@
  * dynamic baseURL for the static assets and may load some css that would
  * already be loaded by the notebook otherwise.
  */
-
-export { version } from '../package.json';
+module.exports = {
+    ...require('./highlight.js'),
+    ...require('./renderer.js')
+}
+module.exports['version'] = require('../package.json').version;

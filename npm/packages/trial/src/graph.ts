@@ -15,8 +15,7 @@ import {
   BaseType as d3_BaseType,
   Selection as d3_Selection,
   select as d3_select,
-  event as d3_event,
-  mouse as d3_mouse,
+  pointers as d3_pointers
 } from 'd3-selection';
 
 import {
@@ -35,7 +34,7 @@ import {
   TrialEdgeData, ActivationData
 } from './structures';
 
-import {json} from '@noworkflow/utils';
+import { D3ZoomEvent } from 'd3';
 
 
 export
@@ -80,9 +79,10 @@ class TrialGraph {
           g.config.height,
         ]
       },
-      customMouseOver: (g:TrialGraph, d: VisibleTrialNode, name: string) => false,
+      customMouseOver: (g:TrialGraph, d: VisibleTrialNode) => false,
       customMouseOut: (g:TrialGraph, d: VisibleTrialNode) => false,
       customForm: (g: TrialGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => null,
+      customLoadTooltip: (g: TrialGraph, div: HTMLDivElement, text: string, trialid: string, aid: string) => null,
 
       duration: 750,
 
@@ -109,12 +109,15 @@ class TrialGraph {
 
     this.graphId = graphId;
 
-    this.zoom = d3_zoom()
-      .on("zoom", () => this.zoomFunction())
+    this.zoom = d3_zoom<SVGSVGElement, any>()
+      .on("zoom", (event: D3ZoomEvent<SVGSVGElement, any>) => {
+        return this.zoomFunction(event);
+      })
       .on("start", () => d3_select('body').style("cursor", "move"))
       .on("end", () => d3_select('body').style("cursor", "auto"))
-      .wheelDelta(() => {
-        return -d3_event.deltaY * (d3_event.deltaMode ? 120 : 1) / 2000;
+      .wheelDelta(function() {
+        const e = event as WheelEvent;
+        return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
       })
 
     this.div = d3_select(div)
@@ -122,7 +125,7 @@ class TrialGraph {
       .append("form")
       .classed("trial-toolbar", true);
 
-    this.svg = d3_select(div)
+    this.svg = d3_select<SVGSVGElement, any>(div)
       .append("div")
       .append("svg")
       .attr("width", this.config.width)
@@ -138,16 +141,14 @@ class TrialGraph {
       .attr("transform", "translate(0,0)")
       .classed('TrialGraph', true);
 
-    this.tree = d3_tree()
+    this.tree = d3_tree<VisibleTrialNode>()
       .nodeSize([
         this.config.nodeSizeX,
         this.config.nodeSizeY
       ]);
-
     
-
     // Tooltip
-    this.tooltipDiv = d3_select("body").append("div")
+    this.tooltipDiv = d3_select<HTMLDivElement, any>("body").append("div")
       .attr("class", "now-tooltip now-trial-tooltip")
       .style("opacity", 0)
       .on("mouseout", () => {
@@ -471,7 +472,7 @@ class TrialGraph {
     this.tooltipDiv.classed("hidden", true);
   }
 
-  private showTooltip(d: TrialNodeData, trial_id: number) {
+  private showTooltip(event: MouseEvent, d: TrialNodeData, trial_id: number) {
     var self = this;
     this.tooltipDiv.classed("hidden", false);
     this.tooltipDiv.transition()
@@ -482,8 +483,8 @@ class TrialGraph {
       var regexp = (/T(\d*) - (\d*)<br>Line \d*?<br>/g)
       var match = regexp.exec(string);
       this.tooltipDiv.html("")
-      .style("left", (d3_event.pageX - 3) + "px")
-      .style("top", (d3_event.pageY - 28) + "px");
+      .style("left", (event.pageX - 3) + "px")
+      .style("top", (event.pageY - 28) + "px");
       while (match != null) {
         var div = document.createElement("div");
         //var div2 = document.createElement("div");
@@ -493,26 +494,19 @@ class TrialGraph {
         if (aid in self.activationStorage) {
           this.updateTooltipDiv(aid, div);
         } else {
-          var url = "/trials/" + match[1] + "/activations/" + aid + ".json";
-          function createResponse(activationId: string, div2: Element) {
-            return function(data: ActivationData) {
-              self.activationStorage[activationId] = data;
-              self.updateTooltipDiv(activationId, div2);
-            }
-          }
-          json(match[0], div, url, createResponse(aid, div));
+          self.config.customLoadTooltip(self, div, match[0], match[1], match[2]);
         }
         match = regexp.exec(string);
       }
     } else {
       this.tooltipDiv.html(d.tooltip[trial_id])
-      .style("left", (d3_event.pageX - 3) + "px")
-      .style("top", (d3_event.pageY - 28) + "px");
+      .style("left", (event.pageX - 3) + "px")
+      .style("top", (event.pageY - 28) + "px");
     }
     
   }
 
-  private updateTooltipDiv(activationId: string, div: Element) {
+  updateTooltipDiv(activationId: string, div: Element) {
     var data = this.activationStorage[activationId];
     var title = data.id + " - " + data.name;
     if (data.hash != "") {
@@ -580,19 +574,19 @@ class TrialGraph {
       .attr('transform', (d: VisibleTrialNode) => {
         return "translate(" + source.x + "," + source.y + ")";
       })
-      .on('click', (d: VisibleTrialNode) => this.nodeClick(d))
-      .on('mouseover', function(d: VisibleTrialNode) {
+      .on('click', (event: MouseEvent, d: VisibleTrialNode) => this.nodeClick(d))
+      .on('mouseover', function(event: MouseEvent, d: VisibleTrialNode) {
         if (self.config.useTooltip) {
           self.closeTooltip();
-          if (d3_mouse(this)[0] < 10) {
-            self.showTooltip(d.data, self.t1);
+          if (d3_pointers(event)[0][0] < 10) {
+            self.showTooltip(event, d.data, self.t1);
           } else {
-            self.showTooltip(d.data, self.t2);
+            self.showTooltip(event, d.data, self.t2);
           }
         }
-        self.config.customMouseOver(self, d, name);
+        self.config.customMouseOver(self, d);
         return false;
-      }).on('mouseout', function (d: VisibleTrialNode) {
+      }).on('mouseout', function (event: MouseEvent, d: VisibleTrialNode) {
         self.config.customMouseOut(self, d);
       })
 
@@ -886,7 +880,7 @@ class TrialGraph {
   }
 
   private updateLinkLabels(edges: VisibleTrialEdge[]) {
-    var labelPath = this.g.selectAll(".label_text")
+    var labelPath = this.g.selectAll<SVGTextPathElement, VisibleTrialEdge>(".label_text")
       .data(edges, (d: VisibleTrialEdge) => d.id);
 
     var labelEnter = labelPath.enter().append("text")
@@ -927,10 +921,10 @@ class TrialGraph {
     labelPath.exit().remove();
   }
 
-  private zoomFunction() {
+  private zoomFunction(event: D3ZoomEvent<SVGSVGElement, any>) {
     this.closeTooltip();
-    this.transform = d3_event.transform;
-    this.g.attr("transform", d3_event.transform);
+    this.transform = event.transform;
+    this.g.attr("transform", event.transform as any);
   }
 
   private _graphId(): string {
