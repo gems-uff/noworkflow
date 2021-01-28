@@ -12,6 +12,6 @@ export declare class BaseActivationGraphWidget extends Widget {
     static useCacheForm(name: string, selectorDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>): void;
     static createNode(name: string, fn?: (name: string, parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => void): HTMLElement;
     setGraph(data: TrialGraphData, config?: any): void;
-    configureGraph(selectedGraph: string | undefined, useCache: boolean | undefined, data: TrialGraphData): void;
+    configureGraph(selectedGraph: string | undefined, useCache: boolean | undefined, genDataflow: boolean | undefined, data: TrialGraphData): void;
     protected onResize(msg: Widget.ResizeMessage): void;
 }

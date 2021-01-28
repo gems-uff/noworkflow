@@ -46,6 +46,7 @@ class TrialGraph {
   transform: any;
 
   div: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   svg: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   g: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   zoom: any;
@@ -100,7 +101,8 @@ class TrialGraph {
       nodeSizeX: 47,
       nodeSizeY: 100,
 
-      queryTooltip: false
+      queryTooltip: false,
+      genDataflow: true
     };
     this.config = (Object as any).assign({}, defaultConfig, config);
 
@@ -116,7 +118,7 @@ class TrialGraph {
       })
 
     this.div = d3_select(div)
-    let form = d3_select(div)
+    this.form = this.div
       .append("form")
       .classed("trial-toolbar", true);
 
@@ -142,8 +144,7 @@ class TrialGraph {
         this.config.nodeSizeY
       ]);
 
-    // **Toolbar**
-    this.createToolbar(form);
+    
 
     // Tooltip
     this.tooltipDiv = d3_select("body").append("div")
@@ -167,6 +168,10 @@ class TrialGraph {
     this.t1 = t1;
     this.t2 = t2;
 
+    // **Toolbar**
+    this.createToolbar(this.form);
+
+    // **Graph**
     this.minDuration = data.min_duration;
     this.maxDuration = data.max_duration;
     this.totalDuration = {};
@@ -233,17 +238,17 @@ class TrialGraph {
       .classed("fa fa-download", true)
 
     // Generate Dataflow
-    var trialId = document.getElementsByClassName("id")[0].innerHTML;
-    form.append("a")
-    .classed("toollink", true)
-    .attr("id", "trial-" + this.graphId + "-dataflow")
-    .attr("href", "trials/" + trialId + "/flow.pdf")
-    .attr("title", "Generate dataflow")
-    .on("click", () => {
-
-    })
-  .append("i")
-    .classed("fa fa-book", true)
+    if (this.config.genDataflow) {
+      var trialId = self.t1;
+      form.append("a")
+        .classed("toollink", true)
+        .attr("id", "trial-" + this.graphId + "-dataflow")
+        .attr("href", "trials/" + trialId + "/flow.pdf")
+        .attr("title", "Generate dataflow")
+        .on("click", () => {})
+        .append("i")
+        .classed("fa fa-book", true)
+    }
 
     // Set Font Size
     let fontToggle = form.append("input")
@@ -387,7 +392,6 @@ class TrialGraph {
     this.nodes.forEach((node: VisibleTrialNode) => {
       validNodes[node.data.index] = node;
     });
-
     var edges: VisibleTrialEdge[] = this.alledges.filter((edge: TrialEdgeData) => {
       let source: VisibleTrialNode = validNodes[edge.source];
       let target: VisibleTrialNode = validNodes[edge.target];
@@ -415,7 +419,6 @@ class TrialGraph {
       d.x0 = d.x;
       d.y0 = d.y;
     });
-
     this.wrapText();
   }
 
@@ -710,6 +713,33 @@ class TrialGraph {
       .attr("stroke-width", "1.5px")
       .attr('d', (d: VisibleTrialEdge) => {
         var o = {y: source.y0, x: source.x0}
+        if (d.source.dy == undefined) {
+          d.source.dy = 0;
+        }
+        if (d.target.dy == undefined) {
+          d.target.dy = 0;
+        }
+        
+        let
+          ox = source.x0 || 0,
+          oy = source.y0 || 0,
+          x1 = d.source.x,
+          y1 = d.source.y + d.source.dy,
+          x2 = d.target.x,
+          y2 = d.target.y + d.target.dy,
+          dx = x2 - x1,
+          dy = y2 - y1;
+        if (d.type === 'initial' || d.type === 'call' || d.type == 'return') {
+          // Initial
+          return diagonal(o, o)
+        } else if (dx === 0 && dy === 0) {
+          // Loop
+          return `M ${ox}, ${oy}
+            A 15,20
+              -45,1,1
+              ${ox + 5},${oy + 8}`;
+        }
+        //return diagonal(d.source, d.target);
         return diagonal(o, o)
       })
       .attr("marker-end", (d: VisibleTrialEdge) => {
@@ -748,7 +778,6 @@ class TrialGraph {
 
     // UPDATE
     var linkUpdate = linkEnter.merge(link)
-
     // Transition back to the parent element position
     linkUpdate.transition()
       .duration(this.config.duration)
@@ -843,13 +872,11 @@ class TrialGraph {
         y1 += m1 * cos_theta;
         x2 += m2 * cos_phi;
         y2 += m2 * sin_phi;
-
         return `M ${x1} ${y1}
             C ${(x1 + x2) / 2} ${y1},
               ${(x1 + x2) / 2} ${y2},
               ${x2} ${y2}`
       });
-
     // Remove any exiting links
     link.exit()//.transition()
       .attr('d', function(d: VisibleTrialEdge) {

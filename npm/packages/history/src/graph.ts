@@ -301,8 +301,9 @@ class HistoryGraph {
       edge.id = edge.source + "-" + edge.target;
       edge.source = nodes[edge.source];
       edge.target = nodes[edge.target];
-
-      edges.push(edge as VisibleHistoryEdge);
+      if (edge.source != edge.target) {
+        edges.push(edge as VisibleHistoryEdge);
+      }
     }
 
     if (useVersion) {
@@ -657,7 +658,6 @@ class HistoryGraph {
           step += this.config.moveY;
           step += (d.level - 1) * this.config.moveY2;
         }
-
         return `M ${sourceX}, ${sourceY}
           C ${(sourceX - this.config.moveX / 2)} ${sourceY}
             ${(sourceX - this.config.moveX / 2)} ${(sourceY + 3 * step / 4)}

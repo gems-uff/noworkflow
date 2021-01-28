@@ -59,7 +59,7 @@ class TrialGraphWidget extends BaseActivationGraphWidget {
 
   }
 
-  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, data: TrialGraphData) {
+  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
     this.setGraph(data, {
       queryTooltip: true,
       width: this.node.getBoundingClientRect().width - 24,
@@ -104,14 +104,15 @@ class TrialGraphWidget extends BaseActivationGraphWidget {
           .classed('fa', true)
           .classed("fa-circle", !selectorDiv.classed('visible'))
           .classed("fa-circle-o", selectorDiv.classed('visible'))
-      }
+      },
+      genDataflow: genDataflow
     });
   }
 
   load(selectedGraph: string = "namespace_match", useCache: boolean = true) {
     let sub = this.node.getElementsByClassName("sub-content")[0];
     json("Trial", sub, TrialGraphWidget.url(this.t1, selectedGraph, useCache), (data: TrialGraphData) => {
-      this.configureGraph(selectedGraph, useCache, data);
+      this.configureGraph(selectedGraph, useCache, true, data);
     })
   }
 

@@ -240,7 +240,8 @@ function register_renderer(notebook, trial, history, utils, d3_selection) {
     element.append(div);
     var graph = new trial.TrialGraph('trial-' + utils.makeid(), div, {
       width: data.width,
-      height: data.height
+      height: data.height,
+      genDataflow: false
     });
     graph.load(data, data.trial1, data.trial2);
     return div;

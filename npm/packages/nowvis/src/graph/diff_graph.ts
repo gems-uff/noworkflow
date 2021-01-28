@@ -53,7 +53,7 @@ class DiffGraphWidget extends BaseActivationGraphWidget {
       let useCacheDiv = selectorDiv.select(".use-cache");
       useCacheDiv.property("checked", useCache);
 
-      this.configureGraph(selectedGraph, useCache, data);
+      this.configureGraph(selectedGraph, useCache, false, data);
     })
   }
 }

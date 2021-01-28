@@ -1088,4 +1088,4 @@ class TestClassExecution(CollectionTestCase):
     # ToDo: Metaclass: __init_subclass__, __instancecheck__, __subclasscheck__, __class_getitem__
     # ToDo: Coroutines: __await__, __aiter__, __anext__, __aenter__, __aexit__
     # ToDO https://blog.ionelmc.ro/2015/02/09/understanding-python-metaclasses/#object-attribute-lookup
-
+    # ToDo: https://medium.com/stepping-through-the-cpython-interpreter/how-does-attribute-access-work-d19371898fee

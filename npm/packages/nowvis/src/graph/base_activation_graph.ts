@@ -114,7 +114,7 @@ class BaseActivationGraphWidget extends Widget {
     this.graph.load(data, this.t1, this.t2);
   }
 
-  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, data: TrialGraphData) {
+  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
     this.setGraph(data, {
       width: this.node.getBoundingClientRect().width - 24,
       height: this.node.getBoundingClientRect().height - 24,
@@ -158,7 +158,8 @@ class BaseActivationGraphWidget extends Widget {
           .classed('fa', true)
           .classed("fa-circle", !selectorDiv.classed('visible'))
           .classed("fa-circle-o", selectorDiv.classed('visible'))
-      }
+      },
+      genDataflow: genDataflow
     });
   }
 

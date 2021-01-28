@@ -30317,7 +30317,7 @@ class BaseActivationGraphWidget extends widgets_1.Widget {
         this.graph = new trial_1.TrialGraph(this.cls, sub, config);
         this.graph.load(data, this.t1, this.t2);
     }
-    configureGraph(selectedGraph = "namespace_match", useCache = true, data) {
+    configureGraph(selectedGraph = "namespace_match", useCache = true, genDataflow = true, data) {
         this.setGraph(data, {
             width: this.node.getBoundingClientRect().width - 24,
             height: this.node.getBoundingClientRect().height - 24,
@@ -30337,7 +30337,8 @@ class BaseActivationGraphWidget extends widgets_1.Widget {
                 let optionsNode = typeOptions.node();
                 selectorLabel.append("span").classed("toggle-label", true).text(optionsNode.options[optionsNode.selectedIndex].text);
                 let selectorToggleI = selectorLabel.append("i").classed('fa', true).classed("fa-circle", !selectorDiv.classed('visible')).classed("fa-circle-o", selectorDiv.classed('visible'));
-            }
+            },
+            genDataflow: genDataflow
         });
     }
     onResize(msg) {
@@ -87111,7 +87112,8 @@ class TrialGraph {
             labelFontSize: 10,
             nodeSizeX: 47,
             nodeSizeY: 100,
-            queryTooltip: false
+            queryTooltip: false,
+            genDataflow: true
         };
         this.config = Object.assign({}, defaultConfig, config);
         this.graphId = graphId;
@@ -87123,7 +87125,7 @@ class TrialGraph {
             return -d3_selection_1.event.deltaY * (d3_selection_1.event.deltaMode ? 120 : 1) / 2000;
         });
         this.div = d3_selection_1.select(div);
-        let form = d3_selection_1.select(div)
+        this.form = this.div
             .append("form")
             .classed("trial-toolbar", true);
         this.svg = d3_selection_1.select(div)
@@ -87144,8 +87146,6 @@ class TrialGraph {
             this.config.nodeSizeX,
             this.config.nodeSizeY
         ]);
-        // **Toolbar**
-        this.createToolbar(form);
         // Tooltip
         this.tooltipDiv = d3_selection_1.select("body").append("div")
             .attr("class", "now-tooltip now-trial-tooltip")
@@ -87161,6 +87161,9 @@ class TrialGraph {
     init(data, t1, t2) {
         this.t1 = t1;
         this.t2 = t2;
+        // **Toolbar**
+        this.createToolbar(this.form);
+        // **Graph**
         this.minDuration = data.min_duration;
         this.maxDuration = data.max_duration;
         this.totalDuration = {};
@@ -87218,16 +87221,17 @@ class TrialGraph {
             .append("i")
             .classed("fa fa-download", true);
         // Generate Dataflow
-        var trialId = document.getElementsByClassName("id")[0].innerHTML;
-        form.append("a")
-            .classed("toollink", true)
-            .attr("id", "trial-" + this.graphId + "-dataflow")
-            .attr("href", "trials/" + trialId + "/flow.pdf")
-            .attr("title", "Generate dataflow")
-            .on("click", () => {
-        })
-            .append("i")
-            .classed("fa fa-book", true);
+        if (this.config.genDataflow) {
+            var trialId = self.t1;
+            form.append("a")
+                .classed("toollink", true)
+                .attr("id", "trial-" + this.graphId + "-dataflow")
+                .attr("href", "trials/" + trialId + "/flow.pdf")
+                .attr("title", "Generate dataflow")
+                .on("click", () => { })
+                .append("i")
+                .classed("fa fa-book", true);
+        }
         // Set Font Size
         let fontToggle = form.append("input")
             .attr("id", "trial-" + this.graphId + "-toolbar-fonts")
@@ -87657,6 +87661,25 @@ class TrialGraph {
             .attr("stroke-width", "1.5px")
             .attr('d', (d) => {
             var o = { y: source.y0, x: source.x0 };
+            if (d.source.dy == undefined) {
+                d.source.dy = 0;
+            }
+            if (d.target.dy == undefined) {
+                d.target.dy = 0;
+            }
+            let ox = source.x0 || 0, oy = source.y0 || 0, x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy, dx = x2 - x1, dy = y2 - y1;
+            if (d.type === 'initial' || d.type === 'call' || d.type == 'return') {
+                // Initial
+                return utils_1.diagonal(o, o);
+            }
+            else if (dx === 0 && dy === 0) {
+                // Loop
+                return `M ${ox}, ${oy}
+            A 15,20
+              -45,1,1
+              ${ox + 5},${oy + 8}`;
+            }
+            //return diagonal(d.source, d.target);
             return utils_1.diagonal(o, o);
         })
             .attr("marker-end", (d) => {
@@ -94405,7 +94428,9 @@ class HistoryGraph {
             edge.id = edge.source + "-" + edge.target;
             edge.source = nodes[edge.source];
             edge.target = nodes[edge.target];
-            edges.push(edge);
+            if (edge.source != edge.target) {
+                edges.push(edge);
+            }
         }
         if (useVersion) {
             this.nodes = otherNodes;
@@ -100390,7 +100415,7 @@ class TrialGraphWidget extends base_activation_graph_1.BaseActivationGraphWidget
         this.graph = new trial_1.TrialGraph(this.cls, sub, config);
         this.graph.load(data, this.t1, this.t2);
     }
-    configureGraph(selectedGraph = "namespace_match", useCache = true, data) {
+    configureGraph(selectedGraph = "namespace_match", useCache = true, genDataflow = true, data) {
         this.setGraph(data, {
             queryTooltip: true,
             width: this.node.getBoundingClientRect().width - 24,
@@ -100411,13 +100436,14 @@ class TrialGraphWidget extends base_activation_graph_1.BaseActivationGraphWidget
                 let optionsNode = typeOptions.node();
                 selectorLabel.append("span").classed("toggle-label", true).text(optionsNode.options[optionsNode.selectedIndex].text);
                 let selectorToggleI = selectorLabel.append("i").classed('fa', true).classed("fa-circle", !selectorDiv.classed('visible')).classed("fa-circle-o", selectorDiv.classed('visible'));
-            }
+            },
+            genDataflow: genDataflow
         });
     }
     load(selectedGraph = "namespace_match", useCache = true) {
         let sub = this.node.getElementsByClassName("sub-content")[0];
         utils_1.json("Trial", sub, TrialGraphWidget.url(this.t1, selectedGraph, useCache), data => {
-            this.configureGraph(selectedGraph, useCache, data);
+            this.configureGraph(selectedGraph, useCache, true, data);
         });
     }
     onResize(msg) {
@@ -100469,7 +100495,7 @@ class DiffGraphWidget extends base_activation_graph_1.BaseActivationGraphWidget 
             let selectorDiv = this.d3node.select(".trial-content .graphselector");
             let useCacheDiv = selectorDiv.select(".use-cache");
             useCacheDiv.property("checked", useCache);
-            this.configureGraph(selectedGraph, useCache, data);
+            this.configureGraph(selectedGraph, useCache, false, data);
         });
     }
 }
