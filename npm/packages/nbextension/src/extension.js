@@ -53,6 +53,7 @@ function load_ipython_extension() {
         notebook, trial, history, nowutils, d3_selection
       );
       Extension.render_cells(notebook);
+      Extension.register_highlight(Jupyter, events, utils, codecell)
       resolve();
     })
   });

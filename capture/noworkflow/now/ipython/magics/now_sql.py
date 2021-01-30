@@ -38,18 +38,6 @@ class NowSQL(IpythonCommandMagic):
 
     def __init__(self, *args, **kwargs):
         super(NowSQL, self).__init__(*args, **kwargs)
-        javascript = """
-            var mode = 'magic_text/x-sql';
-            if (!Jupyter.CodeCell.options_default.highlight_modes[mode]) {
-                Jupyter.CodeCell.options_default.highlight_modes[mode] = {
-                    'reg':[]
-                };
-            }
-            Jupyter.CodeCell.options_default.highlight_modes[mode].reg.push(
-                /^%%now_sql/
-            );
-        """
-        display_javascript(javascript, raw=True)
 
     def add_arguments(self):
         super(NowSQL, self).add_arguments()

@@ -49,53 +49,18 @@ class CodeDisplay(object):
                 for comp in viewvalues(self.all_components)
             ]
         return self
-
-    def _repr_html_(self):
-        uid = str(int(time.time() * 1000000))
-        return """
-            <style type="text/css">
-              .mark-text {{ background-color: lightblue; }}
-            </style>
-            <textarea id="{0}">\n{1}
-            </textarea>
-            <script>
-            (function () {{
-                var code_id = "{0}";
-                var code_mirror = CodeMirror.fromTextArea(
-                  document.getElementById(code_id), {{
-                  lineNumbers: true,
-                  styleSelectedText: true,
-                  mode: "python",
-                  readOnly: true
-                }});
-
-                var marks = {2};
-                marks.forEach(function(mark) {{
-                  code_mirror.markText.apply(code_mirror, mark)
-                }});
-
-                var show_selection = {3};
-                if (show_selection) {{
-                  $(code_mirror.getWrapperElement()).after(
-                    "<input type='text' id='"+code_id+"-selection'></input>"
-                  );
-                  code_mirror.on('cursorActivity', function(cm) {{
-                    var tcursor = cm.getCursor(true);
-                    var fcursor = cm.getCursor(false);
-                    $("#"+code_id+"-selection").val(
-                      "[" + tcursor.line + ", " + tcursor.ch + "], "+
-                      "[" + fcursor.line + ", " + fcursor.ch + "]"
-                    );
-                  }});
-                }}
-            }})();
-            </script>
-        """.format(
-            uid,
-            self.code,
-            self.marks,
-            int(self.show_selection)
-        )
+    
+    def _ipython_display_(self):
+        from IPython.display import display
+        bundle = {
+            'text/plain': self.code,
+            'application/noworkflow.code+json': {
+                'code': self.code,
+                'marks': self.marks,
+                'showSelection': self.show_selection
+            }
+        }
+        display(bundle, raw=True)
 
     def __str__(self):
         """Default str repr"""
