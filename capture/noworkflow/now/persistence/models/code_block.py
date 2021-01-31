@@ -112,6 +112,22 @@ class CodeBlock(AlchemyProxy):
                 for sub_component in block.all_components:
                     yield sub_component
 
+    def mark_code(self, evaluations, options=None):
+        """Mark evaluation dependencies in CodeBlock"""
+        from .evaluation import Evaluation
+        from ...models.dependency_querier import DependencyQuerier
+        if isinstance(evaluations, Evaluation):
+            evaluations = [evaluations]
+        querier = DependencyQuerier(options=options)
+        nodes_to_visit, visited, found = querier.navigate_dependencies(evaluations)
+        return self.content([
+            self.content.get_mark(
+                node.evaluation.code_component, {'className': 'mark-text'}
+            )
+            for node in visited
+            if node.evaluation.code_component_id in self.content.all_components
+        ])
+
     @query_many_property
     def globals(self):
         """Return block globals as a SQLAlchemy query

@@ -27,6 +27,7 @@ from .cmd_prov import Prov
 from .cmd_schema import Schema
 from .cmd_kernel import Kernel
 from .cmd_gc import GC
+from .cmd_evaluation import Evaluation
 from ..utils.io import print_msg
 
 
@@ -54,7 +55,8 @@ def main():
         Prov(),
         Schema(),
         Kernel(),
-        GC()
+        GC(),
+        Evaluation()
 
     ]
     for cmd in commands:

@@ -339,7 +339,17 @@ bidirectional_relationship(
         (Evaluation.m.activation_id == Member.m.member_activation_id) &
         (Evaluation.m.trial_id == Member.m.trial_id))
 )
-# ToDo: Evaluation.member_container <-> Evaluation.container_members --- member_container_id
+# Evaluation.member_container <-> Evaluation.container_members --- member_container_id
+bidirectional_relationship(
+    Evaluation, "member_container", Evaluation, "container_members", OTM,
+    extra1=dict(remote_side=[Evaluation.m.trial_id, Evaluation.m.activation_id, Evaluation.m.id]),
+    extra2=dict(remote_side=[Evaluation.m.trial_id, Evaluation.m.member_container_activation_id, Evaluation.m.member_container_id]),
+    viewonly=True,
+    primaryjoin=(
+        (Evaluation.m.id == Evaluation.m.member_container_id) &
+        (Evaluation.m.activation_id == Evaluation.m.member_container_activation_id) &
+        (Evaluation.m.trial_id == foreign(Evaluation.m.trial_id)))
+)
 
 
 ## FileAccess

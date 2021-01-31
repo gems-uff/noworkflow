@@ -11,9 +11,9 @@ from sqlalchemy import Column, Integer, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import remote, foreign
 
+
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
 from ...utils.prolog import PrologAttribute, PrologNullable, PrologRepr
-
 from .. import relational
 
 from .base import AlchemyProxy, proxy_class, proxy
@@ -218,3 +218,16 @@ class Evaluation(AlchemyProxy):
         True
         """
         return self.trial.start + timedelta(seconds=self.checkpoint)
+
+    def was_derived_from(self, evaluations, distinguish=False):
+        from ...models.dependency_querier import DependencyQuerier
+        if isinstance(evaluations, Evaluation):
+            evaluations = [evaluations]
+        querier = DependencyQuerier()
+        nodes_to_visit, visited, found = querier.navigate_dependencies([self], stop_on=evaluations)
+        if distinguish:
+            return {
+                evaluation: evaluation in found
+                for evaluation in evaluations
+            }
+        return len(found) == len(evaluations)

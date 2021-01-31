@@ -1,72 +1,70 @@
-# Copyright (c) 2017 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2017 Polytechnic Institute of New York University.
+# Copyright (c) 2021 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2021 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Classes for helping debugging the querier"""
 
 from collections import defaultdict
-from future.utils import viewvalues
-
 from ....patterns import var
 from ....patterns.rules import name as name_
-from ...utils.functions import run_dot
-
-from .graph import DependencyQuerier
-from .helpers import Arrow
+from .querier_options import PreloadedQuerierOptions
 
 
-class StaticDebugDependencyQuerier(DependencyQuerier):
+class Arrow(object):
+    """Represent an arrow with a label"""
+    # pylint: disable=too-few-public-methods
+    def __init__(self, mode, checkpoint=None):
+        self.mode = mode
+        self.checkpoint = checkpoint
+        self.marked = False
+
+    def __repr__(self):
+        label = self.mode
+        if self.checkpoint is not None:
+            label = "{}\n{}".format(label, self.checkpoint)
+        if not self.marked:
+            return '[label="{}"]'.format(label)
+        return '[label="{}" color="blue"]'.format(label)
+
+
+class StaticDebugOptions(PreloadedQuerierOptions):
     """Creates all possible arrows before, and gets them during search"""
-    def __init__(self, trial):
-        super(StaticDebugDependencyQuerier, self).__init__(trial)
-        self.arrows = defaultdict(dict)
-        initial_activation = self.trial.initial_activation
-        if not initial_activation:
-            # There is no activation in this trial
-            return
-        self.start = initial_activation.start_checkpoint
-
-    def _elapsed_time(self, current):
-        """Get elapsed time in microseconds from start to current checkpoint
-        Use for debug
-        """
-        if current is None:
-            return ""
-        return str((current - self.start))
-
-    def add_static_arrow(self, from_, to_, name, checkpoint=None, part=None):
+    
+    def __init__(self, *args, **kwargs):
+        super(StaticDebugOptions, self).__init__(*args, **kwargs)
+        self.arrows = {}
+        self.visited_nodes = set()
+        self.format = "png"
+        
+    def add_static_arrow(self, from_, to_, mode, checkpoint=None):
         """Add static arrow *name* *from_* node *to_* another node
         at a given checkpoint.
         Only add in debug mode
         """
-        # pylint: disable=too-many-arguments
-        arrow = self.arrows[from_][to_] = Arrow(name, checkpoint, part)
-        if checkpoint is not None:
-            arrow.label += "\n" + self._elapsed_time(checkpoint)
+        self.arrows[(from_, to_, mode, checkpoint)] = Arrow(mode, checkpoint)
 
-    def get_arrow(self, from_, to_, name, checkpoint=None, part=None):
-        """Get arrow used to go from a node to another"""
-        # pylint: disable=unused-argument, too-many-arguments
-        #arrow = Arrow(name, checkpoint)
-        #if checkpoint is not None:
-        #    arrow.label += "\n" + self._elapsed_time(checkpoint)
-        return self.arrows[from_][to_]
-
-    def visit_arrow(self, arrow, index, new_context):
+    def visit_arrow(self, from_context, to_context):
         """Visit arrow"""
-        arrow.marked = True
-        arrow.label += "\n{} {} {}".format(
-            index,
-            self._elapsed_time(new_context.checkpoint),
-            {(x[0].id, x[1]) for x in new_context.block_set}
+        mode, checkpoint = to_context.arrow, to_context.checkpoint
+        tup = (
+            from_context.evaluation, to_context.evaluation,
+            to_context.arrow, to_context.checkpoint
         )
+        arrow = self.arrows.get(tup, None)
+        if arrow is None:
+            arrow = self.arrows[tup] = Arrow(mode, checkpoint)
+        arrow.marked = True
+        
+    def visit_context(self, context):
+        """Visit context"""
+        self.visited_nodes.add(context.evaluation)
+        return context
 
     def reset_arrows(self):
         """Reset marks on static arrows"""
-        for influenced in viewvalues(self.arrows):
-            for arrow in viewvalues(influenced):
-                arrow.marked = False
-
+        self.visited = set()
+        for tup, arrow in self.arrows.items():
+            arrow.marked = False
+            
     def _get_name(self, element):
         """Get element name"""
         # pylint: disable=no-self-use
@@ -87,7 +85,7 @@ class StaticDebugDependencyQuerier(DependencyQuerier):
             type(element).__name__,
             element.id
         )
-
+    
     def arrows_to_dot(self):
         """Convert arrows to dot"""
         result = []
@@ -104,46 +102,32 @@ class StaticDebugDependencyQuerier(DependencyQuerier):
                     "blue" if element in self.visited_nodes else "black"
                 )
         edges = []
-        for influenced, influencers in self.arrows.items():
-            include(influenced)
-            for influencer, arrow in influencers.items():
-                include(influencer)
-                edges.append('  {} -> {} {};'.format(
-                    self._get_id(influenced),
-                    self._get_id(influencer),
-                    arrow,
-                ))
+        for tup, arrow in self.arrows.items():
+            include(tup[0])
+            include(tup[1])
+            edges.append('  {} -> {} {};'.format(
+                self._get_id(tup[0]),
+                self._get_id(tup[1]),
+                arrow,
+            ))
         result.extend(nodes.values())
         result.extend(edges)
         result.append("}")
         return "\n".join(result)
-
-    def draw_arrows(self, format_="png"):
-        """Draw arrows"""
-        from IPython.display import display_png, display_svg
-        {'SVG': display_svg, 'PNG': display_png}[format_.upper()](
-            run_dot(self.arrows_to_dot(), format_),
-            raw=True
+    
+    def _ipython_display_(self):
+        from IPython.display import display
+        ipython = get_ipython()
+        obj = ipython.run_cell_magic(
+            "dot", "--format {}".format(self.format), self.arrows_to_dot()
         )
+        display(obj)
+    
 
-
-class DynamicDebugDependencyQuerier(StaticDebugDependencyQuerier):
-    """Creates arrows during search"""
-
-    def add_static_arrow(self, from_, to_, name, checkpoint=None, part=None):
+class DynamicDebugOptions(StaticDebugOptions):
+    
+    def add_static_arrow(self, from_, to_, mode, checkpoint=None):
         """Do Nothing"""
-        # pylint: disable=too-many-arguments, no-self-use
-        pass
-
-    def get_arrow(self, from_, to_, name, checkpoint=None, part=None):
-        """Get arrow used to go from a node to another or create a new one"""
-        # pylint: disable=too-many-arguments
-        arrow = self.arrows[from_].get(to_)
-        if arrow is None:
-            arrow = self.arrows[from_][to_] = Arrow(name, checkpoint, part)
-            if checkpoint is not None:
-                arrow.label += "\n" + self._elapsed_time(checkpoint)
-        return arrow
 
     def reset_arrows(self):
         """Erase all arroes"""
