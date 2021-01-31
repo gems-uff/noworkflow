@@ -205,7 +205,9 @@ class Metascript(object):                                                       
             depth=sys.getrecursionlimit(),
             save_frequency=0,
             call_storage_frequency=10000,
-            context="main"
+            context="main",
+            message=None,
+            content_engine=None,
         )
         self._read_args(args)
         self.path = os.getcwd()

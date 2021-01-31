@@ -48,7 +48,8 @@ class ActivationLW(BaseLW):
          "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
          "evaluation", "assignments", "closure", "func", "dependency_type",
-         "active", "depth", "parent", "generator", "last_activation"]
+         "active", "depth", "parent", "generator", "last_activation", 
+         "bound_dependency", "func_evaluation", "iscell"]
     )
     nullable = {"code_block_id"}
     model = Activation
@@ -102,6 +103,9 @@ class ActivationLW(BaseLW):
         # Method
         self.bound_dependency = None
         self.func_evaluation = None
+
+        # Notebook
+        self.iscell = False
 
 
     def is_complete(self):

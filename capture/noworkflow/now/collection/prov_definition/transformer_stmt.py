@@ -25,6 +25,7 @@ from . import dependency_constants as Dependency
 from . import component_constants as Component
 
 from ...utils.cross_version import PY3, PY36
+from ...utils.functions import recgetattr
 
 
 class RewriteAST(ast.NodeTransformer):
@@ -139,7 +140,7 @@ class RewriteAST(ast.NodeTransformer):
 
         Surround script with calls to noWorkflow:
         __now_result__ = None
-        __now_activation__ = <now>.start_script(__name__, <block_id>)
+        __now_activation__ = <now>.start_script(__name__, <block_id>, <iscell>)
         try:
             ...script...
             __now_result__ = last_expr (if exists)
@@ -176,7 +177,10 @@ class RewriteAST(ast.NodeTransformer):
             if not old_body:
                 old_body = [ast_copy(ast.Pass(), new_node)]
             post_body = []
-            if isinstance(old_body[-1], ast.Expr):
+            if node.body and isinstance(node.body[-1], ast.Expr):
+                func_name = recgetattr(old_body[-1], ['value', 'func', 'func', 'attr'])
+                if func_name == "expression":
+                    old_body[-1].value.func.func.attr = "last_expression"
                 old_body[-1] = ast_copy(ast.Assign(
                     [ast.Name('__now_result__', S())],
                     old_body[-1].value
@@ -185,8 +189,9 @@ class RewriteAST(ast.NodeTransformer):
                     ast.Expr(ast.Name('__now_result__', L()))
                 )
             name = ast.Name('__name__', L())
+            iscell = none()
             if self.cell is not None:
-                name = ast.Str(self.cell)
+                iscell = name = ast.Str(self.cell)
             body = future_imports + [
                 ast_copy(ast.Assign(
                     [ast.Name('__now_result__', S())],
@@ -196,7 +201,7 @@ class RewriteAST(ast.NodeTransformer):
                     [ast.Name('__now_activation__', S())],
                     noworkflow(
                         'start_script',
-                        [name, ast.Num(self.container_id)]
+                        [name, ast.Num(self.container_id), iscell]
                     )
                 ), new_node),
                 ast_copy(try_def(old_body, [

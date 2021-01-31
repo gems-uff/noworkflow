@@ -116,6 +116,10 @@ class Collector(object):
         # assign attribute/value
         self.current_assign_dep = None
 
+        # IPython Kernel History
+        self.ipcell = 0
+        self.iphistory = {}
+
     def get_value(self, value):
         """Get value representation from value"""
         repr_fn = repr
@@ -419,12 +423,22 @@ class Collector(object):
                     file_access.content_hash_after = content.put(fil.read(), file_access.name)
             file_access.done = True
 
-    def start_script(self, module_name, code_component_id):
+    def start_script(self, module_name, code_component_id, iscell):
         """Start script collection. Create new activation"""
-        return self.start_activation(
+        activation = self.start_activation(
             module_name, code_component_id, code_component_id,
             self.last_activation
         )
+        activation.iscell = iscell
+        if iscell:
+            self.ipcell += 1
+            from IPython import get_ipython
+            ip = get_ipython()
+            if '__now_activation__' in getattr(ip, 'user_ns', {}):
+                old_activation = ip.user_ns['__now_activation__']
+                activation.context = old_activation.context
+
+        return activation
 
     def close_script(self, now_activation, is_module=True, result=None):
         """Close script activation"""
@@ -533,6 +547,54 @@ class Collector(object):
         #    self.eval_dep(activation, code_id, value, mode, depa)
         return value
 
+    def last_expression(self, activation, code_id, exc_handler):
+        """Capture expression before"""
+        activation.dependencies.append(DependencyAware(
+            exc_handler=exc_handler,
+            code_id=code_id,
+        ))
+        return self._last_expression
+
+    def _last_expression(self, activation, code_id, value):
+        """Capture expression after"""
+        depa = activation.dependencies.pop()
+        if activation.iscell:
+            evaluation = activation.evaluation
+            reference = self.find_reference_dependency(value, depa)
+            evaluation.repr = self.get_value(value)
+            evaluation.set_reference(reference)
+            self.make_dependencies(activation, evaluation, depa)
+            if 'Out' not in activation.context:
+                trial_id = self.trial_id
+                out = self.evaluate(
+                    -1, self.code_components.add(
+                        trial_id, 'Out', 'ipython', 'w', -1, -1, -1, -1, -1
+                    ), {}, self.time()
+                )
+                activation.context['Out'] = out
+            if '___' in activation.context:
+                del activation.context['___']
+            if '__' in activation.context:
+                activation.context['___'] = activation.context['__']
+                del activation.context['__']
+            if '_' in activation.context:
+                activation.context['__'] = activation.context['_']
+                del activation.context['_']
+            if value:
+                activation.context['_'] = evaluation
+                activation.context['_{}'.format(self.ipcell)] = evaluation
+                self.iphistory[self.ipcell] = evaluation
+                out = activation.context['Out']
+                attr = "[{}]".format(self.ipcell)
+                out.members[attr] = evaluation
+                self.members.add_object(
+                    self.trial_id, out.activation_id, out.id,
+                    evaluation.activation_id, evaluation.id, attr, 
+                    evaluation.checkpoint, "Put"
+                )
+        #if activation.active:
+        #    self.eval_dep(activation, code_id, value, mode, depa)
+        return value
 
     joined_str = operation
     formatted_value = operation

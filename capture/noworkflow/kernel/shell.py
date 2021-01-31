@@ -73,7 +73,7 @@ class OverrideShell(object):
             "", os.getcwd(), "notebook", False, False,
         )
         self.activation = metascript.execution.collector.start_script(
-            "__main__", id_
+            "__main__", id_, None
         )
         evaluation = self.activation.evaluation
         # Never remove main evaluation from store
