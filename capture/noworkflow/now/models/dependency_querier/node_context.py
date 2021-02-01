@@ -31,7 +31,6 @@ class NodeContext(object):
         """Context dependencies"""
         if self.is_activation:
             return
-
         evaluation = self.evaluation
         # If time is not in the context, get it from the entity
         checkpoint = self.checkpoint or evaluation.checkpoint
@@ -55,6 +54,8 @@ class NodeContext(object):
             )
 
         if checkpoint and self.options.visit_members:
+            if not self.options.visit_out and evaluation.code_component.name == "Out":
+                return
             # Get initial reference to value
             original = self.options.member_container(evaluation)
 

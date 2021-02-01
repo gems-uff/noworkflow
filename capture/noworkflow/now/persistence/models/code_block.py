@@ -128,6 +128,19 @@ class CodeBlock(AlchemyProxy):
             if node.evaluation.code_component_id in self.content.all_components
         ])
 
+    def recursive_evaluations(self):
+        """Return all evaluations that occur within this code block"""
+        for evaluation in self.this_component.evaluations:
+            yield evaluation
+        for component in self.components:
+            block = component.this_block
+            if block:
+                for evaluation in block.recursive_evaluations():
+                    yield evaluation
+            else:
+                for evaluation in component.evaluations:
+                    yield evaluation
+
     @query_many_property
     def globals(self):
         """Return block globals as a SQLAlchemy query

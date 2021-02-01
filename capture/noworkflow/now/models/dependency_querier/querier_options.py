@@ -7,10 +7,11 @@ from collections import defaultdict
 
 class QuerierOptions(object):
 
-    def __init__(self, visit_activations=False, visit_arguments=True, visit_members=True):
+    def __init__(self, visit_activations=False, visit_arguments=True, visit_members=True, visit_out=True):
         self.visit_activations = visit_activations
         self.visit_arguments = visit_arguments
         self.visit_members = visit_members
+        self.visit_out = visit_out
 
     def dependencies(self, evaluation):
         """Get evaluation dependencies"""
@@ -40,8 +41,8 @@ class QuerierOptions(object):
 
 class PreloadedQuerierOptions(QuerierOptions):
 
-    def __init__(self, trial, visit_activations=False, visit_arguments=True, visit_members=True):
-        super(PreloadedQuerierOptions, self).__init__(visit_activations, visit_arguments, visit_members)
+    def __init__(self, trial, visit_activations=False, visit_arguments=True, visit_members=True, visit_out=True):
+        super(PreloadedQuerierOptions, self).__init__(visit_activations, visit_arguments, visit_members, visit_out)
         self.trial = trial
         self._dependencies = defaultdict(list)
         self._members = defaultdict(lambda: defaultdict(dict))
@@ -49,6 +50,7 @@ class PreloadedQuerierOptions(QuerierOptions):
         self._activations = {}
         self._evaluations = {}
         self.gen_disabled_static = True
+        self.initialize(initial=True)
 
     def add_static_arrow(self, from_, to_, mode, checkpoint=None):
         pass
@@ -85,9 +87,13 @@ class PreloadedQuerierOptions(QuerierOptions):
             if self.visit_members or self.gen_disabled_static:
                 self.add_static_arrow(ecollection, emember, "<{}>".format(member.key), member.checkpoint)
 
-    def initialize(self):
+    def initialize(self, initial=False):
         """Initialize graph"""
-        self.__init__(self.trial, self.visit_activations, self.visit_arguments, self.visit_members)
+        if not initial:
+            self.__init__(
+                self.trial, self.visit_activations, self.visit_arguments, 
+                self.visit_members, self.visit_out
+            )
 
         self.initialize_evaluations()
         self.initialize_dependencies()
@@ -98,7 +104,7 @@ class PreloadedQuerierOptions(QuerierOptions):
         return self._dependencies[evaluation]
 
     def member_container(self, evaluation):
-        return self._containers[evaluation.id]
+        return self._containers.get(evaluation.id, evaluation)
 
     def members(self, evaluation):
         return self._members[evaluation]

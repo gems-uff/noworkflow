@@ -28,6 +28,7 @@ from .cmd_schema import Schema
 from .cmd_kernel import Kernel
 from .cmd_gc import GC
 from .cmd_evaluation import Evaluation
+from .cmd_clean import Clean
 from ..utils.io import print_msg
 
 
@@ -56,7 +57,8 @@ def main():
         Schema(),
         Kernel(),
         GC(),
-        Evaluation()
+        Evaluation(),
+        Clean()
 
     ]
     for cmd in commands:

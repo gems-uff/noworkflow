@@ -1,5 +1,5 @@
-# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
-# Copyright (c) 2016 Polytechnic Institute of New York University.
+# Copyright (c) 2021 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2021 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """"now list" command"""
@@ -17,10 +17,11 @@ from ..utils.io import print_msg
 from .command import Command
 
 
-def add_query_arguments(add_arg, prefix=""):
+def add_query_arguments(add_arg, prefix="", add_trial=True):
     """Add query command to subparser"""
-    add_arg("-t", "--trial", type=str, nargs="?", dest=prefix + "trial",
-            help="trial id or none for last trial")
+    if add_trial:
+        add_arg("-t", "--trial", type=str, nargs="?", dest=prefix + "trial",
+                help="trial id or none for last trial")
     add_arg("-l", "--line", type=int, dest=prefix + "line",
             help="line number")
     add_arg("--column", type=int, dest=prefix + "column",

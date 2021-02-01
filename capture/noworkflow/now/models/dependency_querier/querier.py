@@ -14,11 +14,14 @@ class DependencyQuerier(object):
 
     def navigate_dependencies(self, initial_evaluations, visited=None, stop_on=None):
         self.options.reset_arrows()    
-        nodes_to_visit = [
-            NodeContext(evaluation, None, options=self.options)
-            for evaluation in initial_evaluations
-        ]
-        visited = visited or {self.options.visit_context(context) for context in nodes_to_visit}
+        nodes_to_visit = []
+        visited = visited or set()
+        for evaluation in initial_evaluations:
+            context = NodeContext(evaluation, None, options=self.options)
+            if context not in visited:
+                nodes_to_visit.append(context)
+                visited.add(self.options.visit_context(context))
+
         found = set()
         while nodes_to_visit:
             context = nodes_to_visit.pop()
