@@ -24,7 +24,7 @@ from ...persistence.models import Trial
 from ...utils.cross_version import IMMUTABLE, isiterable, PY3
 from ...utils.cross_version import cross_print, PY38
 
-from .structures import AssignAccess, Assign, Generator
+from .structures import AssignAccess, Assign, Generator, FutureActivation
 from .structures import DependencyAware, Dependency, Parameter
 from .structures import MemberDependencyAware, CollectionDependencyAware
 from .structures import ConditionExceptions, WithContext
@@ -98,6 +98,7 @@ class Collector(object):
         )
         self.first_activation.depth = 0
         self.last_activation = self.first_activation
+        self.future_activation = []
         self.shared_types = {}
 
         # Original globals
@@ -1152,39 +1153,53 @@ class Collector(object):
         result = self.call(activation, code_id, depa.exc_handler, func, mode)
 
         if activation.active:
-            act = self.last_activation # current activation
-            act.dependencies[-1].add(dependency)
+            future = self.future_activation[-1]
+            future.dependencies[-1].add(dependency)
             if hasattr(func, '__self__'):
-                act.bound_dependency = self.current_attr or True
-            act.func_evaluation = dependency.evaluation
+                future.bound_dependency = self.current_attr or True
+            future.func_evaluation = dependency.evaluation
 
         return result
 
     def call(self, activation, code_id, exc_handler, func, mode="dependency"):
         """Capture call before"""
         # pylint: disable=too-many-arguments
-        if activation.active:
-            act = self.start_activation(
-                getattr(func, '__name__', type(func).__name__),
-                code_id, -1, activation
-            )
-        else:
-            act = self.dry_activation(activation)
-        act.dependencies.append(DependencyAware(
+        future = FutureActivation(
+            getattr(func, '__name__', type(func).__name__),
+            code_id, activation, func, mode
+        )
+        depa = DependencyAware(
             exc_handler=exc_handler,
             code_id=code_id,
-        ))
-        act.func = func
-        act.depedency_type = mode
+        )
+        future.dependencies.append(depa)
+        self.future_activation.append(future)
+
+        activation.dependencies.append(depa)
         return self._call
 
     def _call(self, *args, **kwargs):
-        """Capture call activation"""
-        activation = self.last_activation
+        """Capture call activation"""        
+        future = self.future_activation.pop()
+        parent_activation = future.activation
+        parent_depa = parent_activation.dependencies.pop()
+        if future.activation.active:
+            activation = self.start_activation(
+                future.name,
+                future.code_id, -1, future.activation
+            )
+        else:
+            activation = self.dry_activation(future.activation)
+        activation.dependencies.extend(future.dependencies)
+        activation.bound_dependency = future.bound_dependency
+        activation.func_evaluation = future.func_evaluation
+        activation.func = future.func
+
+        #activation = self.last_activation
         eva = activation.evaluation
         result = None
         try:
-            result = activation.func(*args, **kwargs)
+            result = future.func(*args, **kwargs)
         except Exception:
             self.collect_exception(activation)
             raise
@@ -1202,13 +1217,14 @@ class Collector(object):
                 # Create dependencies
                 if len(activation.dependencies) >= 2:
                     depa = activation.dependencies[1]
+                #depa = parent_depa
                     self.make_dependencies(activation, eva, depa)
                     if activation.code_block_id == -1:
                         # Call without definition
                         self.create_argument_dependencies(eva, depa)
 
                 # Just add dependency if it is expecting one
-                dependency = Dependency(eva, result, activation.depedency_type)
+                dependency = Dependency(eva, result, future.dependency_type)
                 self.last_activation.dependencies[-1].add(dependency)
                 if activation.generator is not None:
                     activation.generator.evaluation = eva
@@ -1292,14 +1308,15 @@ class Collector(object):
                     _call = self.call(
                         activation, block_id, defaults.exc_handler, new_function_def, 'internal'
                     )
+                    future = self.future_activation[-1]
                     if is_augassign:
                         assign = activation.assignments[-1]
-                        self.last_activation.dependencies[1] = assign.dependency.clone(mode="argument", kind="argument")
-                        activation.dependencies.append(assign.dependency)
-                    elif function_def.__name__ in activation.dependencies[-1].maybe_activation:
-                        self.last_activation.dependencies[1] = activation.dependencies[-1].clone(mode="argument", kind="argument")
+                        future.dependencies[0].replace(assign.dependency.clone(mode="argument", kind="argument"))
+                        activation.dependencies.insert(-1, assign.dependency)
+                    elif function_def.__name__ in activation.dependencies[-2].maybe_activation:
+                        future.dependencies[0].replace(activation.dependencies[-2].clone(mode="argument", kind="argument"))
                     elif len(activation.dependencies) > 1:
-                        self.last_activation.dependencies[1] = activation.dependencies[1]
+                        future.dependencies[0].replace(activation.dependencies[1])
                     
                     find_bound_self = None
                     if function_def.__name__ == "__enter__":
@@ -1311,20 +1328,20 @@ class Collector(object):
                     if find_bound_self:
                         reference = self.find_reference_dependency(args[0], find_bound_self)
                         if reference:
-                            self.last_activation.bound_dependency = Dependency(
+                            future.bound_dependency = Dependency(
                                 reference, args[0], "bound"
                             )
                         else:
-                            self.last_activation.bound_dependency = True
+                            future.bound_dependency = True
                     if function_def.__name__ in ("__new__", "__call__"):
-                        self.last_activation.bound_dependency = Dependency(
+                        future.bound_dependency = Dependency(
                             activation.func_evaluation, activation.func, "bound"
                         )
                     if function_def.__name__ in {
                         '__getattr__', '__getattribute__', '__setattr__',
                         '__getitem__', '__setitem__', '__missing__'
                     }:
-                        self.last_activation.bound_dependency = self.current_attr or True
+                        future.bound_dependency = self.current_attr or True
 
                     result = _call(*args, **kwargs)
                     if function_def.__name__ == "__enter__":

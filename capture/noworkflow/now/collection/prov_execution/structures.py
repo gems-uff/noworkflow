@@ -19,6 +19,18 @@ AssignAccess = namedtuple(
     "AssignAccess", "value dependency addr value_dep checkpoint")
 
 
+class FutureActivation(object):
+
+    def __init__(self, name, code_id, activation, func, dependency_type):
+        self.name = name
+        self.code_id = code_id
+        self.activation = activation
+        self.func = func
+        self.dependency_type = dependency_type
+        self.dependencies = []
+        self.bound_dependency = None
+        self.func_evaluation = None
+
 
 class Assign(namedtuple("Assign", "checkpoint value dependency")):
     """Represent an assignment for further processing"""
@@ -73,6 +85,14 @@ class DependencyAware(object):
         self.maybe_activation = maybe_activation or set()
 
         self.active = active
+
+    def replace(self, other):
+        """Replace by other dependency aware"""
+        self.dependencies = other.dependencies
+        self.extra_dependencies = other.extra_dependencies
+        self.exc_handler = other.exc_handler
+        self.code_id = other.code_id
+        self.maybe_activation = other.maybe_activation
 
     def add(self, dependency):
         """Add dependency"""

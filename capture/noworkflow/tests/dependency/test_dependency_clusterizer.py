@@ -118,7 +118,7 @@ class TestDependencyClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script),
-                [write_f_eval, read_f_eval, var_act, var_param, var_y]),
+                [write_f_eval, read_f_eval, var_param, var_act, var_y]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
@@ -222,7 +222,7 @@ class TestDependencyClusterizer(CollectionTestCase):
             (script, cluster(script), [
                 write_f_eval, var_function, write_g_eval, var_type, var_str, 
                 var_param, var_module, read_f_eval, var_act_f, var_acc1, var_fx_w, 
-                read_g_eval, var_act_g, var_acc2, var_fx_r, var_gx_w, var_gx_r, var_y,
+                read_g_eval, var_fx_r, var_act_g, var_acc2,  var_gx_w, var_gx_r, var_y,
             ]),
             clusterizer.main_cluster.to_tree()
         )
@@ -291,8 +291,8 @@ class TestDependencyClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval, read_f_eval, var_act_f, var_fx_w, read_g_eval, var_act_g, 
-                var_acc2, var_fx_r, var_acc1, var_param, var_y
+                write_f_eval, write_g_eval, read_f_eval, var_param, var_act_f, var_fx_w, read_g_eval, 
+                var_fx_r, var_act_g, var_acc2,  var_acc1,  var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
@@ -350,8 +350,8 @@ class TestDependencyClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval, read_f_eval, var_act_f,
-                var_acc1, var_acc2, var_param, var_y
+                write_f_eval, write_g_eval, read_f_eval, var_param, var_act_f,
+                var_acc1, var_acc2, var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )

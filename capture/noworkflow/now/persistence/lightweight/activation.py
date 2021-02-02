@@ -47,7 +47,7 @@ class ActivationLW(BaseLW):
         ["trial_id", "id", "name", "start_checkpoint", "code_block_trial_id",
          "code_block_id"],
         ["file_accesses", "context", "conditions", "permanent_conditions",
-         "evaluation", "assignments", "closure", "func", "dependency_type",
+         "evaluation", "assignments", "closure", "func",
          "active", "depth", "parent", "generator", "last_activation", 
          "bound_dependency", "func_evaluation", "iscell"]
     )
@@ -80,9 +80,6 @@ class ActivationLW(BaseLW):
         self.last_activation = None
         # Executed function
         self.func = None
-        # Dependency type
-        self.dependency_type = "dependency"
-
 
         # File accesses. Used to get the content after the activation
         self.file_accesses = []
