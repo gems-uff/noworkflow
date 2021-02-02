@@ -117,6 +117,7 @@ class StaticDebugOptions(PreloadedQuerierOptions):
     
     def _ipython_display_(self):
         from IPython.display import display
+        from IPython import get_ipython
         ipython = get_ipython()
         obj = ipython.run_cell_magic(
             "dot", "--format {}".format(self.format), self.arrows_to_dot()

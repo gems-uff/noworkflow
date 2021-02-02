@@ -57,6 +57,7 @@ class DataflowModel(Model):
         return "\n".join(visitor.result)
 
     def _ipython_display_(self):
+        from IPython import get_ipython
         from IPython.display import display
         ipython = get_ipython()
         obj = ipython.run_cell_magic(

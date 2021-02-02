@@ -12,6 +12,7 @@ import argparse
 from future.utils import viewkeys
 
 from ...persistence.models import MetaModel
+from ..defaults import set_default
 
 from .command import IpythonCommandMagic
 
@@ -40,8 +41,4 @@ class NowSetDefault(IpythonCommandMagic):
         pattern = re.compile(r"\s*(?P<left>[\w\.]+)\s*=\s*(?P<right>\w+)\s*")
         _, args = self.arguments(func, line)
         for match in pattern.finditer(" ".join(args.defaults)):
-            right = match.group("right")
-            if right.isdigit():
-                right = int(right)
-            MetaModel.set_classes_default(match.group("left"), right,
-                                          model=args.model)
+            set_default(match.group("left"), match.group("right"), args.model)

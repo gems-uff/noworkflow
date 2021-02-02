@@ -175,7 +175,7 @@ class DotDisplay(object):
 
 def load_ipython_extension(ipython):
     """Load the extension in IPython."""
-    
+    from IPython import get_ipython
     from IPython.core.magic import Magics, magics_class, cell_magic
     from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
     from IPython.utils.text import DollarFormatter
@@ -209,6 +209,7 @@ def load_ipython_extension(ipython):
             return dot_display
         
     global LOADED                                                               # pylint: disable=global-statement, invalid-name
-    if not LOADED:
+    ipython = get_ipython()
+    if not LOADED and ipython:
         ipython.register_magics(DotMagic)
         LOADED = True

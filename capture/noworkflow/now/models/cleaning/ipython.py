@@ -4,6 +4,14 @@
 # Please, consult the license terms in the LICENSE file.
 """"This file has functions for generating a history notebook from a living IPython Kernel (without noWorkflow)"""
 
+import time
+
+from datetime import datetime
+
+from IPython import get_ipython
+from IPython.display import display, Javascript
+import nbformat as nbf
+
 def getname():
     """Get name from Jupyter Notebook - Does not work on Jupyter Lab"""
     # ToDo: use the following code? https://github.com/jupyter/notebook/issues/1000

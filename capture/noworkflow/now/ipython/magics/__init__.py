@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 from collections import defaultdict
 from functools import wraps
 
+from IPython import get_ipython
 from IPython.core.magic import Magics, magics_class
 
 from .now_run import NowRun
@@ -65,6 +66,7 @@ class NoworkflowMagics(Magics):
 def register_magics(ipython):
     """Register IPython magics"""
     if not ipython:
-        ipython = get_ipython()                                                  # pylint: disable=undefined-variable
-    magics = NoworkflowMagics(ipython)
-    ipython.register_magics(magics)
+        ipython = get_ipython()
+    if ipython:
+        magics = NoworkflowMagics(ipython)
+        ipython.register_magics(magics)
