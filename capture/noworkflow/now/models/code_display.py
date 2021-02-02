@@ -16,16 +16,39 @@ class CodeDisplay(object):
     # pylint: disable=too-few-public-methods
 
     def __init__(self, block):
-        component = block.this_component
-        self.trial_id = block.trial_id
-        self.first_line = component.first_char_line
-        self.marks = []
-        self.show_selection = False
-        self.all_components = {
-            comp.id: comp
-            for comp in block.all_components
-        }
-        self.code = content.get(block.code_hash).decode("utf-8")
+        if block is not None:
+            component = block.this_component
+            self.trial_id = block.trial_id
+            self.first_line = component.first_char_line
+            self.marks = []
+            self.show_selection = False
+            self.all_components = {
+                comp.id: comp
+                for comp in block.all_components
+            }
+            self.code = content.get(block.code_hash).decode("utf-8")
+
+    def __getitem__(self, item):
+        code = self.code.split('\n')
+        if isinstance(item, slice):
+            start_line = item.start or self.first_line
+            start = item.start - self.first_line if item.start else None
+            stop = item.stop - self.first_line if item.stop else None
+            newslice = slice(start, stop, item.step)
+            code = "\n".join(code[newslice])
+        elif isinstance(item, int):
+            start_line = item
+            code = "\n".join(code[item])
+        else:
+            raise IndexError("Invalid index {}".format(item))
+        result = CodeDisplay(None)
+        result.trial_id = self.trial_id
+        result.first_line = start_line
+        result.marks = []
+        result.show_selection = False
+        result.all_components = self.all_components
+        result.code = code
+        return result
 
     def get_mark(self, component, properties):
         """Get a codemirror mark definition"""
@@ -57,7 +80,8 @@ class CodeDisplay(object):
             'application/noworkflow.code+json': {
                 'code': self.code,
                 'marks': self.marks,
-                'showSelection': self.show_selection
+                'showSelection': self.show_selection,
+                'firstLineNumber': self.first_line
             }
         }
         display(bundle, raw=True)

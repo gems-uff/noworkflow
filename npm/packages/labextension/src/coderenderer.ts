@@ -35,6 +35,7 @@ export class RenderedCode extends Widget implements IRenderMime.IRenderer {
       self.code_mirror = CodeMirror.fromTextArea(
         textarea, {
           lineNumbers: true,
+          firstLineNumber: data.firstLineNumber,
           mode: "python",
           readOnly: true
       });

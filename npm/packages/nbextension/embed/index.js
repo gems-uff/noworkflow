@@ -659,6 +659,7 @@ function register_renderer(notebook, trial, history, utils, d3_selection) {
     var code_mirror = CodeMirror.fromTextArea(
       textarea, {
         lineNumbers: true,
+        firstLineNumber: data.firstLineNumber,
         styleSelectedText: true,
         mode: "python",
         readOnly: true
