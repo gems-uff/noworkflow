@@ -79,7 +79,7 @@ def create_clean(cells, filename, name="current", create_header=True, add_empty=
                 execution_count=lineno
             ))
         nbcells.append(nbf.v4.new_code_cell(
-            str(cell.this_block.content),
+            str(cell.this_block.content).strip(),
             execution_count=lineno,
             outputs=outputs
         ))

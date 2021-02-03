@@ -99,7 +99,7 @@ def equal_code_cells(ocode_cell, hcode_cell):
         return False 
     if hcode_cell['cell_type'] != "code":
         return False
-    return ocode_cell["source"] == hcode_cell["source"]
+    return ocode_cell["source"].strip() == hcode_cell["source"].strip()
     
 
 def merge_json(original, history, before=None, after=None, original_first=True, merge_code=False):
@@ -107,11 +107,9 @@ def merge_json(original, history, before=None, after=None, original_first=True, 
     cells = before or []
     original_cells = [create_hashable(cell) for cell in original["cells"]]
     history_cells = [create_hashable(cell) for cell in history["cells"]]
-
     _, matches2 = lcs(original_cells, history_cells, equal_code_cells)
     cell_matches = list(reversed(matches2.items()))
     cell_matches.append((float('inf'), float('inf')))
-    
     if original_first:
         first_merge = partial_merge(
             cell_matches, original_cells, 1,
