@@ -124,13 +124,13 @@ class Tag(AlchemyProxy):
         from .code_block import CodeBlock
         session = session or relational.session
         _query = select([cls.m.name]).where(
-            (Trial.m.id == cls.m.trial_id) &
-            (Trial.m.id == CodeBlock.m.trial_id) &
-            (Trial.m.main_id == CodeBlock.m.id) &
-            (Trial.m.id != bindparam("trial_id")) &
-            (Trial.m.experiment_id == bindparam("experiment_id")) &
-            (cls.m.type == "AUTO")
-        )
+                (Trial.m.id == cls.m.trial_id) &
+                (Trial.m.id == CodeBlock.m.trial_id) &
+                (Trial.m.main_id == CodeBlock.m.id) &
+                (Trial.m.id != bindparam("trial_id")) &
+                (Trial.m.experiment_id == experiment_id) &
+                (cls.m.type == "AUTO")
+            )
 
         conditions = [
             (1, ((CodeBlock.m.code_hash == bindparam("code_hash")) &
