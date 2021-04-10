@@ -100,7 +100,7 @@ class Evaluation(AlchemyProxy):
     repr = Column(Text)
 
     this_activation = one(
-        "Activation", backref="this_evaluation",
+        "Activation", backref="this_evaluation",viewonly=True,
         primaryjoin=((foreign(id) == remote(Activation.m.id)) &
                      (foreign(trial_id) == remote(Activation.m.trial_id))))
 

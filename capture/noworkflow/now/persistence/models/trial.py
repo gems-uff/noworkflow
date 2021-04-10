@@ -12,7 +12,7 @@ import os
 import uuid
 from sqlalchemy import Column, Integer,String, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
-
+from sqlalchemy.orm import relationship
 from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial
 from ...utils.prolog import PrologTimestamp, PrologRepr
@@ -179,11 +179,7 @@ class Trial(AlchemyProxy):
         remote_side=[CodeBlock.m.trial_id, CodeBlock.m.id],
         primaryjoin=((main_id == CodeBlock.m.id) &
                      (id == CodeBlock.m.trial_id)))
-    code_blocks = many_viewonly_ref(
-        "trial", "CodeBlock",
-        uselist=True,
-        remote_side=[CodeBlock.m.trial_id],
-        primaryjoin=((id == CodeBlock.m.trial_id)))
+    code_blocks = relationship("CodeBlock", backref="trial",uselist=True,viewonly=True, lazy='dynamic')
 
     arguments = many_ref("trial", "Argument")
     environment_attrs = many_ref("trial", "EnvironmentAttr")
