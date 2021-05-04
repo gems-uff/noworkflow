@@ -45,12 +45,15 @@ class TrialLW(BaseLW):
         return ("TrialLW(id={0.id})").format(self)
 
     def __json__(self):
+        finish=None
+        if  self.finish is not None:
+            finish=self.finish.strftime('%Y-%m-%d %H:%M:%S.%f')
         return {
             'trial_id': self.trial_id,
             'id': self.id,
             'script': self.script,
             'start': self.start.strftime('%Y-%m-%d %H:%M:%S.%f'),
-            'finish': self.finish.strftime('%Y-%m-%d %H:%M:%S.%f'),
+            'finish': finish,
             'command': self.command,
             'path': self.path,
             'status': self.status,

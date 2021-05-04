@@ -45,10 +45,14 @@ class BundleLW(BaseLW):
             'members': [x.__json__() for x in self.members],
             'modules': [x.__json__() for x in self.modules]
         }
-    
+    def returnDateTimeInfo(self,finish):
+        resp=finish
+        if finish is not None:
+            resp=datetime.strptime(finish, '%Y-%m-%d %H:%M:%S.%f')
+        return resp
     def from_json(self, data):
         self.trials.extend([TrialLW(x["id"],x["script"],\
-            datetime.strptime(x["start"], '%Y-%m-%d %H:%M:%S.%f'),datetime.strptime(x["finish"], '%Y-%m-%d %H:%M:%S.%f'),\
+            self.returnDateTimeInfo(x["start"]),self.returnDateTimeInfo(x["finish"]),\
             x["command"],x["path"],x["status"],\
             x["modules_inherited_from_trial_id"],x["parent_id"],x["main_id"]) for x in data["trials"]])
      

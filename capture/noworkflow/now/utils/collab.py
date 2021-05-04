@@ -55,8 +55,10 @@ def import_bundle(bundle, experiment):
     
     for x in bundle.trials:
         main_block=[c for c in bundle.codeBlocks if c.trial_id==x.id and x.main_id==c.id]
-        main_block=main_block[0]
-        Tag.create_automatic_tag(x.id,main_block.code_hash,x.command, experiment_id=experiment)
+        main_block_code_hash=None
+        if len(main_block)>0:
+            main_block_code_hash=main_block[0].code_hash
+        Tag.create_automatic_tag(x.id,main_block_code_hash,x.command, experiment_id=experiment)
     
 def export_bundle(trialIds):
     #Load dependencies

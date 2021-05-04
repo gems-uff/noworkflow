@@ -449,7 +449,10 @@ class Trial(AlchemyProxy):
         >>> len(trial.code_hash)
         40
         """
-        return self.main.code_hash
+        resp=None
+        if self.main is not None:
+            resp=self.main.code_hash
+        return resp
 
     @property
     def finished(self):
