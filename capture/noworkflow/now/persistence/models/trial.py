@@ -144,6 +144,7 @@ class Trial(AlchemyProxy):
                              ["trial.id"], ondelete="RESTRICT"),
         ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
         ForeignKeyConstraint(["experiment_id"], ["experiment.id"], ondelete="SET NULL"),
+        ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),
         ForeignKeyConstraint(["id", "main_id"],
                              ["code_block.trial_id", "code_block.id"],
                              ondelete="SET NULL", use_alter=True),
@@ -204,6 +205,7 @@ class Trial(AlchemyProxy):
     children = backref_many("children")
 
     experiment_id = Column(Text)
+    user_id = Column(Text)
 
     DEFAULT = {
         "dot.format": "png",

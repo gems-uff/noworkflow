@@ -28,6 +28,10 @@ from .module import Module
 from .tag import Tag
 from .trial import Trial
 from .experiment import Experiment
+from .extendedAnnotation import ExtendedAnnotation
+from .group import Group
+from .user import User
+from .memberOfGroup import MemberOfGroup
 
 
 ORDER = [
@@ -35,7 +39,8 @@ ORDER = [
     Module, EnvironmentAttr,  # Deployment
     CodeComponent, CodeBlock, Composition, Experiment,  # Definition
     Evaluation, Activation, Dependency, Member,  # Execution
-    FileAccess  # Execution
+    FileAccess,  # Execution
+    Group, MemberOfGroup, User, ExtendedAnnotation # additional info
 ]
 
 

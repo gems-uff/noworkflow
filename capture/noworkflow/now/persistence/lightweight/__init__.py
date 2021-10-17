@@ -22,6 +22,7 @@ from .member import MemberLW
 from .module import ModuleLW
 from .trial import TrialLW
 from .bundle import BundleLW
+from .extendedAnnotation import ExtendedAnnotationLW
 
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     "ModuleLW",
     "TrialLW",
     "BundleLW",
+    "ExtendedAnnotationLW",
 ]

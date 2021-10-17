@@ -13,7 +13,7 @@ from flask import render_template, jsonify, request,send_file
 from io import BytesIO as IO
 
 from ..persistence.models import Trial,Activation, Experiment
-from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW
+from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational
@@ -126,7 +126,18 @@ def createExperiment():
         return jsonify(exp.__json__()),201
     else:
         return "Experiment name must by filled",400
+@app.route("/experiments/<expCode>/extendedAnnotation", methods=['Post'])
+def createExperiment(expCode):
+    annt=request.json['annotation']
+    anntFormat=request.json['annotationFormat']
+    anntType=request.json['annotationType']
     
+    if(annt!="" and anntFormat!=""):
+        annt=ExtendedAnnotationLW(None, annt, anntFormat, anntType, "Experiment", expCode, None)
+        exp=Experiment.create(exp)
+        return jsonify(exp.__json__()),201
+    else:
+        return "Annotation and annotation format must by filled",400    
 
 @app.route("/experiments/<expCode>/collab/bundle", methods=['Post'])
 def postBundle(expCode):
