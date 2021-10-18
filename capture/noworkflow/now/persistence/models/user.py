@@ -49,3 +49,12 @@ class User(AlchemyProxy):
         session.commit()
         user.id=id
         return user
+    @classmethod
+    def list_members_Of_Group(cls,groupId,session=None):
+        from .memberOfGroup import MemberOfGroup  # avoid circular import
+        session = session or relational.session
+        return (
+            session.query(cls.m)
+            .outerjoin(MemberOfGroup.m)
+            .filter((MemberOfGroup.m.groupId == groupId))
+        ).all()

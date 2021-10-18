@@ -22,6 +22,7 @@ from .. import relational
 from .base import AlchemyProxy, proxy_class, backref_one
 
 
+
 def uuid_gen():
     return str(uuid.uuid4())
 @proxy_class
@@ -32,15 +33,13 @@ class Group(AlchemyProxy):
     )
     name = Column(String, unique=True)
     
-
-    
     @classmethod  # query
     def create(cls, grp, session=None):
         
         # pylint: disable=too-many-arguments
         session = session or relational.session
 
-        grp = cls.t
+        grop = cls.t
         id=uuid_gen()
         result = session.execute(
             grp.insert(),

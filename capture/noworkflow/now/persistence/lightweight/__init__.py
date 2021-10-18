@@ -23,6 +23,9 @@ from .module import ModuleLW
 from .trial import TrialLW
 from .bundle import BundleLW
 from .extendedAnnotation import ExtendedAnnotationLW
+from .group import GroupLW
+from .user import UserLW
+from .memberOfGroup import MemberOfGroupLW
 
 
 __all__ = [
@@ -44,4 +47,6 @@ __all__ = [
     "TrialLW",
     "BundleLW",
     "ExtendedAnnotationLW",
+    "Group",
+    "User",
 ]

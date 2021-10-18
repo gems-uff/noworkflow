@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Tag Model"""
+"""ExtendedAnnotation Model"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -49,11 +49,11 @@ class ExtendedAnnotation(AlchemyProxy):
         # pylint: disable=too-many-arguments
         session = session or relational.session
 
-        annt = cls.t
+        ant = cls.t
         id=uuid_gen()
         result = session.execute(
-            annt.insert(),
-            {"id": id, "annotation": annt.annt, "description": annt.annotationFormat,"provenanceType": annt.provenanceType, "annotationLevel": annt.annotationLevel, "relatedExperiment": annt.relatedExperiment,"relatedTrial": annt.relatedTrial})
+            ant.insert(),
+            {"id": id, "annotation": annt.annotation, "annotationFormat": annt.annotationFormat,"provenanceType": annt.provenanceType, "annotationLevel": annt.annotationLevel, "relatedExperiment": annt.relatedExperiment,"relatedTrial": annt.relatedTrial})
 
         session.commit()
         annt.id=id

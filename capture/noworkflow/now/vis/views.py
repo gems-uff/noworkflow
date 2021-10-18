@@ -9,11 +9,11 @@ from __future__ import (absolute_import, print_function,
 import os
 import json
 
-from flask import render_template, jsonify, request,send_file  
+from flask import render_template, jsonify, request,send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial,Activation, Experiment
-from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW
+from ..persistence.models import Trial,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup
+from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational
@@ -126,18 +126,66 @@ def createExperiment():
         return jsonify(exp.__json__()),201
     else:
         return "Experiment name must by filled",400
-@app.route("/experiments/<expCode>/extendedAnnotation", methods=['Post'])
-def createExperiment(expCode):
-    annt=request.json['annotation']
-    anntFormat=request.json['annotationFormat']
-    anntType=request.json['annotationType']
+def getDictValue(dicti,valueToGet):
+    if(valueToGet in dicti):
+        return dicti[valueToGet]
+    else:
+        return ""
+def insertAnnotation(request,annotationLevel,relatedExperiment,relatedTrial):
+    annt=getDictValue(request.json,'annotation')
+    anntFormat=getDictValue(request.json,'annotationFormat')
+    anntType=getDictValue(request.json,'provenanceType')
+    
     
     if(annt!="" and anntFormat!=""):
-        annt=ExtendedAnnotationLW(None, annt, anntFormat, anntType, "Experiment", expCode, None)
-        exp=Experiment.create(exp)
-        return jsonify(exp.__json__()),201
+        annt=ExtendedAnnotationLW(None, annt, anntFormat, anntType, annotationLevel, relatedExperiment, relatedTrial)
+        annt=ExtendedAnnotation.create(annt)
+        return jsonify(annt.__json__()),201
     else:
         return "Annotation and annotation format must by filled",400    
+
+@app.route("/experiments/<expCode>/extendedAnnotation", methods=['Post'])
+def createExperimentAnnotation(expCode):
+    return insertAnnotation(request,"Experiment",expCode,None)
+    
+@app.route("/trials/<trialCode>/extendedAnnotation", methods=['Post'])
+def createTrialAnnotation(trialCode):
+    return insertAnnotation(request,"Trial",None,trialCode)
+
+@app.route("/groups", methods=['Post'])
+def createGroup():
+    groupName=getDictValue(request.json,'name')
+    
+    if(groupName!=""):
+        grp=GroupLW(None, groupName,None)
+        grp=Group.create(grp)
+        return jsonify(grp.__json__()),201
+    else:
+        return "Name must by filled",400 
+
+@app.route("/groups/<grpId>/users", methods=['Post'])
+def addUserToGroup(grpId):
+    userId=getDictValue(request.json,'userId')
+    
+    if(userId!=""):
+        grp=MemberOfGroupLW(None, grpId, userId)
+        grp=MemberOfGroup.create(grp)
+        return jsonify(grp.__json__()),201
+    else:
+        return "userId must by filled",400   
+def GetGroup(grpInfo):
+    users=[UserLW(x.id,x.userLogin).__json__()  for x in User.list_members_Of_Group(grpInfo.id)]
+    return GroupLW(grpInfo.id,grpInfo.name, users).__json__() 
+@app.route("/groups", methods=['Get'])
+def getGroups():
+    grps=[GetGroup(x) for x in Group.all()]
+    return Response(json.dumps(grps),  mimetype='application/json')
+
+@app.route("/users", methods=['Get'])
+def getUsers():
+    users=[UserLW(x.id,x.userLogin).__json__() for x in User.all()]
+    return Response(json.dumps(users),  mimetype='application/json')
+ 
 
 @app.route("/experiments/<expCode>/collab/bundle", methods=['Post'])
 def postBundle(expCode):

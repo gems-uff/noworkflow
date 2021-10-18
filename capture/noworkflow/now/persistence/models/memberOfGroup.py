@@ -48,10 +48,10 @@ class MemberOfGroup(AlchemyProxy):
         # pylint: disable=too-many-arguments
         session = session or relational.session
 
-        UsrGrp = cls.t
+        UsrGrop = cls.t
         id=uuid_gen()
         result = session.execute(
-            UsrGrp.insert(),
+            UsrGrop.insert(),
             {"id": id, "userId": UsrGrp.userId, "groupId": UsrGrp.groupId})
 
         session.commit()
