@@ -11,7 +11,7 @@ from ..persistence import persistence_config
 from ..utils.collab import export_bundle,import_bundle
 from ..utils.compression import gzip_compress
 
-from ..persistence.models import Trial
+from ..persistence.models import Trial, User
 from ..persistence import content
 
 from .command import Command
@@ -47,8 +47,15 @@ class Push(Command):
         trials=[t for t in Trial.all()]
         trialsToExport=[x.id for x in trials if x.id not in targetUuids]
 
-        bundle=export_bundle(trialsToExport)
+        url=self.url+"/collab/usersids"
+        usersIds=self.get(url)
 
+        localUsers=[u for u in User.all()]
+        usersToExport=[x.id for x in localUsers if x.id not in usersIds]
+
+
+        bundle=export_bundle(trialsToExport,usersToExport)
+        
         headers = {'Content-Encoding': 'gzip'}
         url=self.url+"/collab/bundle"
         
