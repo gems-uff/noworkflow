@@ -966,6 +966,23 @@ class Trial(AlchemyProxy):
             .filter((Experiment.m.id == experiment))
         ).all()
     @classmethod  # query
+    def set_user_based_on_env(cls, trial_id, session=None):
+        
+        from .environment_attr import EnvironmentAttr
+        from .user import User
+        session = session or relational.session
+        userName=EnvironmentAttr.get_userName(trial_id,session)
+        userDomain=EnvironmentAttr.get_userDomain(trial_id,session)
+        user_id=userDomain + "\\" + userName
+        user=User.get_user(user_id,session)
+        trial=session.query(cls.m).filter((cls.m.id == trial_id) ).first()
+        trial.user_id=user_id
+        if( user is None):
+            User.create(user_id,userName,session)
+
+        session.commit()
+
+    @classmethod  # query
     def load_trial(cls, trial_ref, session=None):
         """Load trial by trial reference
 

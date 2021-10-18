@@ -4,10 +4,10 @@
 # Please, consult the license terms in the LICENSE file.
 
 from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
-from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW,BundleLW
+from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW,BundleLW,UserLW
 
 from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
-from ..persistence.models import FileAccess,Member,Module,Tag
+from ..persistence.models import FileAccess,Member,Module,Tag, User
 from ..persistence.lightweight import ObjectStore
 def store_trial_from_experiment(trial,experiment,trial_store):
     trial.experiment_id=experiment
@@ -26,6 +26,7 @@ def import_bundle(bundle, experiment):
     fileAccess_store=ObjectStore(FileAccessLW)
     member_store=ObjectStore(MemberLW)
     module_store=ObjectStore(ModuleLW)
+    user_store=ObjectStore(UserLW)
 
     [store_trial_from_experiment(x,experiment,trials_store) for x in bundle.trials]
     [codeBlock_store.add_from_object(x) for x in bundle.codeBlocks]
@@ -39,6 +40,7 @@ def import_bundle(bundle, experiment):
     [fileAccess_store.add_from_object(x) for x in bundle.fileAccesses]
     [member_store.add_from_object(x) for x in bundle.members]
     [module_store.add_from_object(x) for x in bundle.modules]
+    [user_store.add_from_object(x) for x in bundle.users]
 
     trials_store.do_store()
     arguments_store.do_store()
@@ -52,7 +54,8 @@ def import_bundle(bundle, experiment):
     fileAccess_store.do_store()
     member_store.do_store()
     module_store.do_store()
-    
+    user_store.do_store()
+
     for x in bundle.trials:
         main_block=[c for c in bundle.codeBlocks if c.trial_id==x.id and x.main_id==c.id]
         main_block_code_hash=None
@@ -60,7 +63,7 @@ def import_bundle(bundle, experiment):
             main_block_code_hash=main_block[0].code_hash
         Tag.create_automatic_tag(x.id,main_block_code_hash,x.command, experiment_id=experiment)
     
-def export_bundle(trialIds):
+def export_bundle(trialIds,usersIds):
     #Load dependencies
     trialsToImport=[t for t in Trial.all() if t.id in trialIds ]
     actsToImport=Activation.load_by_trials(trialIds)
@@ -74,12 +77,14 @@ def export_bundle(trialIds):
     fileAccessToImport=FileAccess.load_by_trials(trialIds)
     memberToImport=Member.load_by_trials(trialIds)
     moduleToImport=Module.load_by_trials(trialIds)
+    usersToImport=[u for u in User.all() if u.id in usersIds ]
     
+
     bundle=BundleLW()
     #Converting to LW Objects
     bundle.trials.extend(
         [TrialLW(x.id,x.script,x.start,x.finish,x.command,x.path,x.status,x.modules_inherited_from_trial_id,\
-        x.parent_id,x.main_id) for x in trialsToImport]
+        x.parent_id,x.main_id,x.experiment_id,x.user_id) for x in trialsToImport]
     )
     bundle.arguments.extend(
         [ArgumentLW(x.id,x.trial_id,x.name,x.value) for x in argsToImport]
@@ -118,4 +123,8 @@ def export_bundle(trialIds):
     bundle.modules.extend(
         [ModuleLW(x.id,x.trial_id,x.name,x.version,x.path,x.code_block_id,x.transformed) for x in moduleToImport]
     )
+    bundle.users.extend(
+        [UserLW(x.id,x.userLogin) for x in usersToImport]
+    )
+
     return bundle

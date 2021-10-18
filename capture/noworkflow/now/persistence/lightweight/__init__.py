@@ -21,11 +21,12 @@ from .file_access import FileAccessLW
 from .member import MemberLW
 from .module import ModuleLW
 from .trial import TrialLW
-from .bundle import BundleLW
 from .extendedAnnotation import ExtendedAnnotationLW
 from .group import GroupLW
 from .user import UserLW
 from .memberOfGroup import MemberOfGroupLW
+from .bundle import BundleLW
+
 
 
 __all__ = [
@@ -45,8 +46,10 @@ __all__ = [
     "MemberLW",
     "ModuleLW",
     "TrialLW",
-    "BundleLW",
     "ExtendedAnnotationLW",
-    "Group",
-    "User",
+    "GroupLW",
+    "UserLW",
+    "MemberOfGroupLW",
+    "BundleLW"
+
 ]

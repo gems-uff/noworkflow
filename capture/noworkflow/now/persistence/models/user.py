@@ -35,19 +35,17 @@ class User(AlchemyProxy):
 
     
     @classmethod  # query
-    def create(cls, user, session=None):
+    def create(cls, id,login, session=None):
         
         # pylint: disable=too-many-arguments
         session = session or relational.session
 
         user = cls.t
-        id=uuid_gen()
         result = session.execute(
             user.insert(),
-            {"id": id, "userLogin": user.userLogin})
+            {"id": id, "userLogin": login})
 
         session.commit()
-        user.id=id
         return user
     @classmethod
     def list_members_Of_Group(cls,groupId,session=None):
@@ -58,3 +56,12 @@ class User(AlchemyProxy):
             .outerjoin(MemberOfGroup.m)
             .filter((MemberOfGroup.m.groupId == groupId))
         ).all()
+
+    @classmethod
+    def get_user(cls,userId,session=None):
+        session = session or relational.session
+        model=cls.m
+        return (
+            session.query(model)
+            .filter(model.id == userId).first() 
+        )

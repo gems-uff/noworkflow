@@ -63,6 +63,7 @@ def run(metascript, args=None):
         metascript.execution.store_provenance()
 
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
+        Trial.set_user_based_on_env(metascript.trial_id)
         metaprofiler.meta_profiler.save()
     finally:
         metascript.create_last()

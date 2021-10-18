@@ -9,7 +9,7 @@ from ..models import CodeBlock
 from .. import content
 
 from . import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
-from . import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW
+from . import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW, UserLW
 
 from .base import BaseLW, define_attrs
 from datetime import datetime
@@ -29,6 +29,7 @@ class BundleLW(BaseLW):
         self.fileAccesses=[]
         self.members=[]
         self.modules=[]
+        self.users=[]
         
     def __json__(self):
         return {
@@ -43,7 +44,8 @@ class BundleLW(BaseLW):
             'evaluations': [x.__json__() for x in self.evaluations],
             'fileAccesses': [x.__json__() for x in self.fileAccesses],
             'members': [x.__json__() for x in self.members],
-            'modules': [x.__json__() for x in self.modules]
+            'modules': [x.__json__() for x in self.modules],
+            'users': [x.__json__() for x in self.users]
         }
     def returnDateTimeInfo(self,finish):
         resp=finish
@@ -54,7 +56,7 @@ class BundleLW(BaseLW):
         self.trials.extend([TrialLW(x["id"],x["script"],\
             self.returnDateTimeInfo(x["start"]),self.returnDateTimeInfo(x["finish"]),\
             x["command"],x["path"],x["status"],\
-            x["modules_inherited_from_trial_id"],x["parent_id"],x["main_id"]) for x in data["trials"]])
+            x["modules_inherited_from_trial_id"],x["parent_id"],x["main_id"],x["experiment_id"],x["user_id"]) for x in data["trials"]])
      
         self.activations=[ActivationLW(x,x["trial_id"],x["name"],x["start_checkpoint"],x["code_block_id"],x["id"]) for x in data["activations"]]
         self.arguments=[ArgumentLW(x["id"],x["trial_id"],x["name"],x["value"]) for x in data["arguments"]]
@@ -72,4 +74,5 @@ class BundleLW(BaseLW):
         self.members=[MemberLW(x["id"],x["trial_id"],x["collection_activation_id"],x["collection_id"],x["member_activation_id"],\
             x["member_id"],x["key"],x["checkpoint"],x["type"]) for x in data["members"]]
         self.modules=[ModuleLW(x["id"],x["trial_id"],x["name"],x["version"],x["path"],x["code_block_id"],x["transformed"]) for x in data["modules"]]
+        self.users=[UserLW(x["id"],x["userLogin"]) for x in data["users"]]
   

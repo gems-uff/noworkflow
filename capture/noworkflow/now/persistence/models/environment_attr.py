@@ -110,3 +110,21 @@ class EnvironmentAttr(AlchemyProxy):
         attr_name: attr_value
         """
         print_("{0.name}: {0.value}".format(self))
+    
+    @classmethod
+    def get_userName(cls,trialId,session=None):
+        session = session or relational.session
+        model=cls.m
+        return (
+            session.query(model)
+            .filter((model.trial_id == trialId) & (model.name == "USERNAME")).first()
+        ).value
+    
+    @classmethod
+    def get_userDomain(cls,trialId,session=None):
+        session = session or relational.session
+        model=cls.m
+        return (
+            session.query(model)
+            .filter((model.trial_id == trialId) & (model.name == "USERDOMAIN")).first()
+        ).value

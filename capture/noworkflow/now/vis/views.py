@@ -229,6 +229,11 @@ def trialsId(expCode):
     """Respond trials ids"""
     resp=[t.id for t in Trial.list_from_experiment(expCode)]
     return jsonify(resp)
+@app.route("/experiments/<expCode>/collab/usersids")
+def usersId(expCode):
+    """Respond users ids"""
+    resp=[u.id for u in User.all()]
+    return jsonify(resp)
 
 @app.route("/experiments/<expId>/trials.json")
 @app.route("/trials.json")

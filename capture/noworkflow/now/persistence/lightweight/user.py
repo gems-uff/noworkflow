@@ -5,6 +5,9 @@
 """Lightweight User"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
+
+
+from ..models import User                        
 from .base import BaseLW, define_attrs
 
 
@@ -12,13 +15,16 @@ class UserLW(BaseLW):                                                      # pyl
     """User lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["userLogin", "id"]
+        ["trial_id","userLogin", "id"]
     )
+    nullable = set()
+    model = User
 
     def __init__(self, id,userLogin):
 
         self.userLogin = userLogin
         self.id = id
+        self.trial_id=id
     
     def __json__(self):
         return {
