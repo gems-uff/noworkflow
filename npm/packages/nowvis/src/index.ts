@@ -5,6 +5,7 @@ import {Widget} from '@phosphor/widgets';
 import {NowVisPanel} from './nowpanel';
 import {ConfigWidget} from './config_widget';
 import {ProjectWidget} from './project_widget';
+import {GroupWidget} from './group_widget';
 import {HistoryWidget} from './graph/history_graph';
 //import { json } from '@noworkflow/utils';
 
@@ -15,6 +16,7 @@ function main(): void {
   var selectedExp = (<HTMLInputElement>document.getElementById("selectedExperiment")).value;
   var server = (<HTMLInputElement>document.getElementById("server")).value;
   var experiments=[];
+
   if(experimentsIn)
   experiments=JSON.parse(experimentsIn);
 
@@ -22,7 +24,9 @@ function main(): void {
   mainpanel.id = 'main';
   if(server=="True"){
     var projectWidget = new ProjectWidget(experiments);
+    var groupWidget = new GroupWidget();
     mainpanel.addMainWidget(projectWidget);
+    mainpanel.addMainWidget(groupWidget);
   }
   else{
     var config = new ConfigWidget();

@@ -42,9 +42,20 @@ class Group(AlchemyProxy):
         grop = cls.t
         id=uuid_gen()
         result = session.execute(
-            grp.insert(),
+            grop.insert(),
             {"id": id, "name": grp.name})
 
         session.commit()
         grp.id=id
         return grp
+    @classmethod  # query
+    def delete(cls, grpId, session=None):
+
+        # pylint: disable=too-many-arguments
+        session = session or relational.session
+
+        model=cls.m
+        session = session or relational.session
+
+        session.query(model).filter(model.id==grpId).delete()
+        session.commit()

@@ -332,7 +332,7 @@ exports = module.exports = __webpack_require__(0)(undefined);
 
 
 // module
-exports.push([module.i, "div.now-tooltip {\n    position: absolute;\n    left: 1px;\n    right: 1px;\n    max-height: 200px;\n    max-width: 400px;\n    overflow: auto;\n    padding: 5px;\n    padding-bottom: 10px;\n    font: 12px sans-serif;\n    background: #DDD;\n    border: 0px;\n    border-radius: 8px;\n    z-index: 2000;\n}\n\n.now-tooltip.hidden {\n    display: none;\n}", ""]);
+exports.push([module.i, "div.now-tooltip {\r\n    position: absolute;\r\n    left: 1px;\r\n    right: 1px;\r\n    max-height: 200px;\r\n    max-width: 400px;\r\n    overflow: auto;\r\n    padding: 5px;\r\n    padding-bottom: 10px;\r\n    font: 12px sans-serif;\r\n    background: #DDD;\r\n    border: 0px;\r\n    border-radius: 8px;\r\n    z-index: 2000;\r\n}\r\n\r\n.now-tooltip.hidden {\r\n    display: none;\r\n}", ""]);
 
 // exports
 
@@ -346,7 +346,7 @@ exports = module.exports = __webpack_require__(0)(undefined);
 
 
 // module
-exports.push([module.i, ".history-toolbar {\n    float: left;\n    overflow: none;\n    z-index: 3;\n    position: absolute;\n}\n\n.history-toolbar .buttons {\n    height: 30px;\n    display: inline-block;\n    margin-left: 8px;\n}\n\n.history-toolbar .buttons > input {\n    height: 30px;\n}\n\n.history-toolbar .buttons > input[type=checkbox] {\n    display: none\n}\n\n.history-toolbar .buttons > label, .history-toolbar > div > a {\n    margin: 8px 8px 8px 0;\n}\n\n.history-toolbar .buttons > input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.history-toolbar .buttons > input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.history-toolbar .buttons > a.toollink,\n.history-toolbar .buttons > a.toollink:link,\n.history-toolbar .buttons > a.toollink:visited {\n    color: black;\n}\n\n.history-toolbar .buttons > a.toollink:active  {\n    color: blue;\n}\n", ""]);
+exports.push([module.i, ".history-toolbar {\r\n    float: left;\r\n    overflow: none;\r\n    z-index: 3;\r\n    position: absolute;\r\n}\r\n\r\n.history-toolbar .buttons {\r\n    height: 30px;\r\n    display: inline-block;\r\n    margin-left: 8px;\r\n}\r\n\r\n.history-toolbar .buttons > input {\r\n    height: 30px;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox] {\r\n    display: none\r\n}\r\n\r\n.history-toolbar .buttons > label, .history-toolbar > div > a {\r\n    margin: 8px 8px 8px 0;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox] + label {\r\n    display:inline-block;\r\n    color: black;\r\n    cursor: pointer;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox]:checked + label {\r\n    color: blue;\r\n}\r\n\r\n.history-toolbar .buttons > a.toollink,\r\n.history-toolbar .buttons > a.toollink:link,\r\n.history-toolbar .buttons > a.toollink:visited {\r\n    color: black;\r\n}\r\n\r\n.history-toolbar .buttons > a.toollink:active  {\r\n    color: blue;\r\n}\r\n", ""]);
 
 // exports
 
@@ -360,7 +360,7 @@ exports = module.exports = __webpack_require__(0)(undefined);
 
 
 // module
-exports.push([module.i, ".trial-toolbar {\n    margin: 5px;\n    float: left;\n    overflow: none;\n    width: 320px;\n    height: 30px;\n    z-index: 3;\n    position: absolute;\n}\n\n.trial-toolbar input {\n    height: 30px;\n}\n\n.trial-toolbar input[type=checkbox] {\n    display: none\n}\n\n.trial-toolbar label, .trial-toolbar a {\n    margin-right: 8px;\n    margin-top: 8px;\n}\n\n.trial-toolbar input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.trial-toolbar input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active  {\n  color: blue;\n}\n", ""]);
+exports.push([module.i, ".trial-toolbar {\r\n    margin: 5px;\r\n    float: left;\r\n    overflow: none;\r\n    width: 320px;\r\n    height: 30px;\r\n    z-index: 3;\r\n    position: absolute;\r\n}\r\n\r\n.trial-toolbar input {\r\n    height: 30px;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox] {\r\n    display: none\r\n}\r\n\r\n.trial-toolbar label, .trial-toolbar a {\r\n    margin-right: 8px;\r\n    margin-top: 8px;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox] + label {\r\n    display:inline-block;\r\n    color: black;\r\n    cursor: pointer;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox]:checked + label {\r\n    color: blue;\r\n}\r\n\r\n.trial-toolbar a.toollink,\r\n.trial-toolbar a.toollink:link,\r\n.trial-toolbar a.toollink:visited {\r\n  color: black;\r\n}\r\n\r\n.trial-toolbar a.toollink:active  {\r\n  color: blue;\r\n}\r\n", ""]);
 
 // exports
 

@@ -56,7 +56,7 @@ class ProjectWidget extends Widget {
   }
   addFeedBackinfo(baseNode: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
       cls:string,txt:string,desc:string){
-    let _this=this;
+    let _thiss=this;
     let feedbackNode=baseNode.append("div")
       .classed("alert",true)
       .classed(cls,true)
@@ -68,7 +68,7 @@ class ProjectWidget extends Widget {
       .append("button").attr("type","button").classed("close",true)
       .attr("data-dismiss","alert").text("x")
       .on("click",function(){
-        _this.hideNode(feedbackNode);
+        _thiss.hideNode(feedbackNode);
       });
       return feedbackNode;
   }
@@ -117,8 +117,8 @@ class ProjectWidget extends Widget {
     inputsDiv.classed("d-none",true);
     
     confimButton.on("click",function(){
-      _this.hideNode(_this.errorFeedback);
-      _this.hideNode(_this.successFeedback);
+      _thiss.hideNode(_thiss.errorFeedback);
+      _thiss.hideNode(_thiss.successFeedback);
       let newExp=<IExperiment>{
         name:nameIn.property("value"),
         description:descIn.property("value")
@@ -133,27 +133,27 @@ class ProjectWidget extends Widget {
         if(response.status==201){
           response.json().then((obj)=>{
             newExp.id=obj.id;
-            _this.addExpRow(newExp);
-            _this.hideNode(inputsDiv);
-            _this.showNode(addExpButton);
-            _this.showNode(_this.successFeedback);
+            _thiss.addExpRow(newExp);
+            _thiss.hideNode(inputsDiv);
+            _thiss.showNode(addExpButton);
+            _thiss.showNode(_thiss.successFeedback);
           });
           
         }else{
-          _this.showNode(_this.errorFeedback);
+          _thiss.showNode(_thiss.errorFeedback);
         }
       });  
       
       
     });
-    var _this=this;
+    var _thiss=this;
     addExpButton.on("click",function(){
-        _this.showNode(inputsDiv);
-        _this.hideNode(addExpButton);
+      _thiss.showNode(inputsDiv);
+        _thiss.hideNode(addExpButton);
       });
     
     this.experiments.forEach(function (obj) {
-      _this.addExpRow(obj);
+      _thiss.addExpRow(obj);
     });
   }
 

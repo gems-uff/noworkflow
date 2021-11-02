@@ -162,6 +162,10 @@ def createGroup():
         return jsonify(grp.__json__()),201
     else:
         return "Name must by filled",400 
+@app.route("/groups/<grpId>", methods=['Delete'])
+def deleteGroup(grpId):
+    Group.delete(grpId)
+    return "",200
 
 @app.route("/groups/<grpId>/users", methods=['Post'])
 def addUserToGroup(grpId):
