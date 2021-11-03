@@ -7,6 +7,7 @@ import {ConfigWidget} from './config_widget';
 import {ProjectWidget} from './project_widget';
 import {GroupWidget} from './group_widget';
 import {HistoryWidget} from './graph/history_graph';
+import { AnnontationWidget } from './annotation_widget';
 //import { json } from '@noworkflow/utils';
 
 
@@ -30,10 +31,13 @@ function main(): void {
   }
   else{
     var config = new ConfigWidget();
-    var history = new HistoryWidget(config, "History", "History", selectedExp);
+    var annotationn = new AnnontationWidget(selectedExp);
+    var history = new HistoryWidget(config, "History", "History", selectedExp,annotationn);
+ 
 
     mainpanel.addMainWidget(history);
     mainpanel.addMainWidget(config);
+    mainpanel.addMainWidget(annotationn);
     history.load();
   }  
 

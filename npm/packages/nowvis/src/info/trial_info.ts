@@ -17,15 +17,16 @@ import {ModuleListData, EnvironmentData, FileAccessListData, FilterObject} from 
 import {ModulesInfoWidget} from './modules_info';
 import {EnvironmentInfoWidget} from './environment_info';
 import {FileAccessesInfoWidget} from './file_accesses_info';
-
+import {AnnontationWidget} from '../annotation_widget';
 
 export
 class TrialInfoWidget extends Widget {
 
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   trial: VisibleHistoryNode;
+  annontationWidget: AnnontationWidget;
 
-  static createNode(trial: VisibleHistoryNode): HTMLElement {
+  static createNode(trial: VisibleHistoryNode,annontationWidget: AnnontationWidget): HTMLElement {
     let node = document.createElement('div');
     let info = trial.info as HistoryTrialNodeData;
 
@@ -103,6 +104,9 @@ class TrialInfoWidget extends Widget {
     }
 
 
+
+    
+
     content.append("div")
       .classed("modules", true)
 
@@ -112,11 +116,20 @@ class TrialInfoWidget extends Widget {
     content.append("div")
       .classed("file-accesses", true)
 
+    var anntButton=content.append("button").classed("btn btn-primary",true)
+      .attr("type","submit").text("Manage Annotations");
+
+    anntButton.on("click",function(){
+      
+
+      annontationWidget.activeAnnotation(trial.title);
+    });
+
     return node;
   }
 
-  constructor(trial: VisibleHistoryNode) {
-    super({ node: TrialInfoWidget.createNode(trial) });
+  constructor(trial: VisibleHistoryNode,annontationWidget: AnnontationWidget) {
+    super({ node: TrialInfoWidget.createNode(trial,annontationWidget) });
     this.trial = trial;
     this.d3node = d3_select(this.node);
     this.addClass('content');
@@ -127,6 +140,7 @@ class TrialInfoWidget extends Widget {
     this.loadModules();
     this.loadEnvironment();
     this.loadFileAccess();
+    this.annontationWidget=annontationWidget;
   }
 
   static createFold(parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, title: string) {

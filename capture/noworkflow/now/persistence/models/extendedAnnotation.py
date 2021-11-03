@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+
 from datetime import datetime
 
 import uuid
@@ -20,6 +21,7 @@ from ...utils.prolog import PrologRepr, PrologTimestamp
 from .. import relational
 
 from .base import AlchemyProxy, proxy_class, backref_one
+
 
 
 def uuid_gen():
@@ -37,6 +39,7 @@ class ExtendedAnnotation(AlchemyProxy):
                              ["trial.id"], ondelete="CASCADE")
     )
     annotation = Column(String)
+    description = Column(String)
     annotationFormat = Column(String)
     provenanceType = Column(String)
     annotationLevel = Column(String)
@@ -53,8 +56,42 @@ class ExtendedAnnotation(AlchemyProxy):
         id=uuid_gen()
         result = session.execute(
             ant.insert(),
-            {"id": id, "annotation": annt.annotation, "annotationFormat": annt.annotationFormat,"provenanceType": annt.provenanceType, "annotationLevel": annt.annotationLevel, "relatedExperiment": annt.relatedExperiment,"relatedTrial": annt.relatedTrial})
+            {"id": id, "annotation": annt.annotation, "description": annt.description,"annotationFormat": annt.annotationFormat,"provenanceType": annt.provenanceType, "annotationLevel": annt.annotationLevel, "relatedExperiment": annt.relatedExperiment,"relatedTrial": annt.relatedTrial})
 
         session.commit()
         annt.id=id
         return annt
+
+    @classmethod  # query
+    def GetInfoByExperimentId(cls, expId, session=None):
+        
+        # pylint: disable=too-many-arguments
+        session = session or relational.session
+
+        model=cls.m
+        session = session or relational.session
+
+        return session.query(model.id,model.annotationFormat,model.provenanceType,model.annotationLevel,model.relatedExperiment,model.description).filter(model.relatedExperiment==expId)
+
+    @classmethod  # query
+    def GetInfoByTrialId(cls, trialId, session=None):
+        
+        # pylint: disable=too-many-arguments
+        session = session or relational.session
+
+        model=cls.m
+        session = session or relational.session
+
+        return session.query(model.id,model.annotationFormat,model.provenanceType,model.annotationLevel,model.relatedTrial,model.description).filter(model.relatedTrial==trialId)
+
+    
+    @classmethod  # query
+    def GetById(cls, id, session=None):
+        
+        # pylint: disable=too-many-arguments
+        session = session or relational.session
+
+        model=cls.m
+        session = session or relational.session
+
+        return session.query(model).filter(model.id==id).one()

@@ -166,8 +166,7 @@ class GroupWidget extends Widget {
     var deleteGroupButton=actions.append("button").classed("btn btn-primary",true)
     .attr("type","submit").text("Delete Group");
     deleteGroupButton.on("click",function(){
-        console.log("Delete group:")
-        console.log(grp.id)
+
         if(confirm("Are you sure you want to delete group: " + grp.name + " ?" )){
             _thiss.deleteGrp(grp.id);
         }

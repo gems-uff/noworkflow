@@ -20,6 +20,7 @@ import {NowVisPanel} from '../nowpanel';
 import {TrialInfoWidget} from '../info/trial_info';
 import {DiffInfoWidget} from '../info/diff_info';
 import {ConfigWidget} from '../config_widget';
+import {AnnontationWidget} from '../annotation_widget';
 
 
 export
@@ -31,6 +32,7 @@ class HistoryWidget extends Widget {
   graph: HistoryGraph;
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   config: ConfigWidget;
+  annontationWidget: AnnontationWidget;
 
   static url(script = "*", execution = "*", summarize=true) 
   {
@@ -112,10 +114,11 @@ class HistoryWidget extends Widget {
     return node;
   }
 
-  constructor(config: ConfigWidget, name: string, cls: string, expId: string) {
+  constructor(config: ConfigWidget, name: string, cls: string, expId: string,annontationWidget:AnnontationWidget) {
     super({ node: HistoryWidget.createNode() });
     this.expId = expId;
     this.config = config;
+    this.annontationWidget = annontationWidget;
     this.d3node = d3_select(this.node);
     this.d3node.select('.reload-button')
       .on("click", () => {
@@ -183,7 +186,7 @@ class HistoryWidget extends Widget {
           let parentDock: NowVisPanel = this.parent as NowVisPanel;
 
           if (this.config.showInfo()) {
-            let trialInfoWidget = new TrialInfoWidget(d);
+            let trialInfoWidget = new TrialInfoWidget(d,this.annontationWidget);
             parentDock.addInfoWidget(trialInfoWidget);
             parentDock.activateWidget(trialInfoWidget);
           }

@@ -133,16 +133,36 @@ def getDictValue(dicti,valueToGet):
         return ""
 def insertAnnotation(request,annotationLevel,relatedExperiment,relatedTrial):
     annt=getDictValue(request.json,'annotation')
+    description=getDictValue(request.json,'description')
     anntFormat=getDictValue(request.json,'annotationFormat')
     anntType=getDictValue(request.json,'provenanceType')
     
     
     if(annt!="" and anntFormat!=""):
-        annt=ExtendedAnnotationLW(None, annt, anntFormat, anntType, annotationLevel, relatedExperiment, relatedTrial)
+        annt=ExtendedAnnotationLW(None, annt,description, anntFormat, anntType, annotationLevel, relatedExperiment, relatedTrial)
         annt=ExtendedAnnotation.create(annt)
         return jsonify(annt.__json__()),201
     else:
         return "Annotation and annotation format must by filled",400    
+@app.route("/experiments/<expCode>/extendedAnnotation", methods=['Get'])
+def getExperimentAnnotation(expCode):
+    annotations=ExtendedAnnotation.GetInfoByExperimentId(expCode)
+    annts= [ExtendedAnnotationLW(x.id,"",x.description,x.annotationFormat,x.provenanceType,x.annotationLevel,x.relatedExperiment,"").__json__() for x in annotations]
+    return jsonify(annts),200
+@app.route("/trials/<trialCode>/extendedAnnotation", methods=['Get'])
+def getTrialAnnotation(trialCode):
+    annotations=ExtendedAnnotation.GetInfoByTrialId(trialCode)
+    annts= [ExtendedAnnotationLW(x.id,"",x.description,x.annotationFormat,x.provenanceType,x.annotationLevel,"",x.relatedTrial).__json__() for x in annotations]
+    return jsonify(annts),200
+
+@app.route("/extendedAnnotation/<id>/annotation", methods=['Get'])
+def getExtendedAnnotationContent(id):
+    annt=ExtendedAnnotation.GetById(id)
+    extention=annt.annotationFormat
+    if(extention=="plainText"):
+        extention="txt"
+    return send_file(IO(bytes(annt.annotation, 'utf-8')),mimetype='application/octet-stream',as_attachment=True,attachment_filename=id+"."+extention)
+
 
 @app.route("/experiments/<expCode>/extendedAnnotation", methods=['Post'])
 def createExperimentAnnotation(expCode):
