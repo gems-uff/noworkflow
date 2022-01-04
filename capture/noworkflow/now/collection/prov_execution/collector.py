@@ -508,8 +508,8 @@ class Collector(object):
 
         return value
     
-    def collect_pass(self, activation, pass_id, exc_handler, mode="dependency"):
-        """Capture pass"""
+    def collect_break_continue_pass(self, activation, pass_id, exc_handler, mode="dependency"):
+        """Capture 'break', 'continue' or 'pass' statements"""
         if activation.active:
             self.eval_dep(activation, pass_id, None, mode)
 
