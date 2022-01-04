@@ -1353,7 +1353,15 @@ class RewriteAST(ast.NodeTransformer):
         # pylint: disable=invalid-name
         pass_id = self.create_ast_component(node, Component.PASS)
         self.create_composition(pass_id, *self.composition_edge)
-        return node
+        return ast_copy(ast.Expr(
+            noworkflow(
+                'collect_pass',
+                [
+                    activation(),
+                    ast.Num(pass_id),
+                    ast.Num(self.current_exc_handler),
+                ]
+            )),node)
 
     def visit_Break(self, node):
         """Visit Break"""

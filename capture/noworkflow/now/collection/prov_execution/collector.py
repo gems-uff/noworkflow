@@ -507,6 +507,11 @@ class Collector(object):
             activation.dependencies[-1].add(Dependency(eva, value, mode))
 
         return value
+    
+    def collect_pass(self, activation, pass_id, exc_handler, mode="dependency"):
+        """Capture pass"""
+        if activation.active:
+            self.eval_dep(activation, pass_id, None, mode)
 
     def operation(self, activation, code_id, exc_handler):
         """Capture operation before"""
