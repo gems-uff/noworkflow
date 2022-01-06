@@ -242,9 +242,9 @@ class RewriteAST(ast.NodeTransformer):
                 new_body.append(old_fd) 
                 new_body.append(self.visit(stmt))
             elif isinstance(stmt, ast.Break):
-                self.visit_break(new_body,stmt)
+                self.visit_break(new_body, stmt)
             elif isinstance(stmt, ast.Continue):
-                self.visit_continue(new_body,stmt)
+                self.visit_continue(new_body, stmt)
             else:
                 new_body.append(self.visit(stmt))
             index += 1
@@ -1354,7 +1354,12 @@ class RewriteAST(ast.NodeTransformer):
         return new_node
 
     def visit_Pass(self, node):
-        """Visit Pass"""
+        """Visit pass
+        Transform:
+            pass
+        Into:
+            <now>.collect_break_continue_pass(<act>, #, <exc>)
+        """
         # pylint: disable=invalid-name
         pass_id = self.create_ast_component(node, Component.PASS)
         self.create_composition(pass_id, *self.composition_edge)
@@ -1369,7 +1374,13 @@ class RewriteAST(ast.NodeTransformer):
             )),node)
 
     def visit_break(self, new_body, stmt):
-        """Visit break"""
+        """Visit break
+        Transform:
+            break
+        Into:
+            <now>.collect_break_continue_pass(<act>, #, <exc>)
+            break
+        """
         # pylint: disable=invalid-name
         break_id = self.create_ast_component(stmt, Component.BREAK)
         self.create_composition(break_id, *self.composition_edge)
@@ -1382,11 +1393,17 @@ class RewriteAST(ast.NodeTransformer):
                                 ast.Num(break_id),
                                 ast.Num(self.current_exc_handler),
                             ]
-                    )),stmt))
+                    )), stmt))
         new_body.append(stmt)
 
-    def visit_continue(self, new_body,stmt):
-        """Visit continue"""
+    def visit_continue(self, new_body, stmt):
+        """Visit continue
+        Transform:
+            continue
+        Into:
+            <now>.collect_break_continue_pass(<act>, #, <exc>)
+            continue
+        """
         # pylint: disable=invalid-name
         continue_id = self.create_ast_component(stmt, Component.CONTINUE)
         self.create_composition(continue_id, *self.composition_edge)
@@ -1399,7 +1416,7 @@ class RewriteAST(ast.NodeTransformer):
                                 ast.Num(continue_id),
                                 ast.Num(self.current_exc_handler),
                             ]
-                    )),stmt))
+                    )), stmt))
         new_body.append(stmt)
 
     def capture(self, node, mode=Dependency.DEPENDENCY):
