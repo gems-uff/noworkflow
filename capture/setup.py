@@ -51,7 +51,7 @@ setup(
     keywords="scientific experiments provenance python",
     url="https://github.com/gems-uff/noworkflow",
     install_requires=[
-        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy", "parameterized",
+        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy>=1.4.29", "parameterized",
     ],
     extras_require={
         "vis": ["pyposast", "flask"],
