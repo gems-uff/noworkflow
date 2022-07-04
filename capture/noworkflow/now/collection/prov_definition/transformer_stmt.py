@@ -241,12 +241,17 @@ class RewriteAST(ast.NodeTransformer):
                 old_fd.name = "__now_original_" + stmt.name
                 new_body.append(old_fd) 
                 new_body.append(self.visit(stmt))
-
+            elif isinstance(stmt, ast.Break):
+                self.visit_break(new_body, stmt)
+            elif isinstance(stmt, ast.Continue):
+                self.visit_continue(new_body, stmt)
             else:
                 new_body.append(self.visit(stmt))
             index += 1
 
         return new_body
+
+
 
     def visit_Module(self, node, cls=ast.Module):
         """Visit Module. Create and close activation"""
@@ -1349,25 +1354,70 @@ class RewriteAST(ast.NodeTransformer):
         return new_node
 
     def visit_Pass(self, node):
-        """Visit Pass"""
+        """Visit pass
+        Transform:
+            pass
+        Into:
+            <now>.collect_break_continue_pass(<act>, #, <exc>)
+        """
         # pylint: disable=invalid-name
         pass_id = self.create_ast_component(node, Component.PASS)
         self.create_composition(pass_id, *self.composition_edge)
-        return node
+        return ast_copy(ast.Expr(
+            noworkflow(
+                'collect_break_continue_pass',
+                [
+                    activation(),
+                    ast.Num(pass_id),
+                    ast.Num(self.current_exc_handler),
+                ]
+            )),node)
 
-    def visit_Break(self, node):
-        """Visit Break"""
+    def visit_break(self, new_body, stmt):
+        """Visit break
+        Transform:
+            break
+        Into:
+            <now>.collect_break_continue_pass(<act>, #, <exc>)
+            break
+        """
         # pylint: disable=invalid-name
-        break_id = self.create_ast_component(node, Component.BREAK)
+        break_id = self.create_ast_component(stmt, Component.BREAK)
         self.create_composition(break_id, *self.composition_edge)
-        return node
+        new_body.append(
+            ast_copy(ast.Expr(
+                    noworkflow(
+                        'collect_break_continue_pass',
+                            [
+                                activation(),
+                                ast.Num(break_id),
+                                ast.Num(self.current_exc_handler),
+                            ]
+                    )), stmt))
+        new_body.append(stmt)
 
-    def visit_Continue(self, node):
-        """Visit Continue"""
+    def visit_continue(self, new_body, stmt):
+        """Visit continue
+        Transform:
+            continue
+        Into:
+            <now>.collect_break_continue_pass(<act>, #, <exc>)
+            continue
+        """
         # pylint: disable=invalid-name
-        continue_id = self.create_ast_component(node, Component.CONTINUE)
+        continue_id = self.create_ast_component(stmt, Component.CONTINUE)
         self.create_composition(continue_id, *self.composition_edge)
-        return node
+        new_body.append(
+            ast_copy(ast.Expr(
+                    noworkflow(
+                        'collect_break_continue_pass',
+                            [
+                                activation(),
+                                ast.Num(continue_id),
+                                ast.Num(self.current_exc_handler),
+                            ]
+                    )), stmt))
+        new_body.append(stmt)
 
     def capture(self, node, mode=Dependency.DEPENDENCY):
         """Capture node"""

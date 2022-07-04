@@ -104,9 +104,7 @@ def trial_update_params(minute=56, main_id=1, status="finished"):
 
 def select_trial(id_):
     """Select trial by id"""
-    return relational.session.execute(
-        select([Trial.m]).where(Trial.m.id == id_)
-    ).first()
+    return relational.session.get(Trial.m, id_)
 
 
 def count(model):

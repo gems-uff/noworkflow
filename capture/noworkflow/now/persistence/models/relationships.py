@@ -50,7 +50,7 @@ DIRECTIONS = {
 
 def bidirectional_relationship(
     model1, attr1, model2, attr2, direction=MTO, proxy1=None, proxy2=None,
-    extra1=None, extra2=None, **extra    
+    extra1=None, extra2=None, **extra
 ):
     proxy1_, proxy2_ = DIRECTIONS[direction]
     proxy1 = proxy1 or proxy1_
@@ -68,6 +68,7 @@ def bidirectional_relationship(
     
 
 
+
 ## Activation
 
 # Activation.trial <-> Trial.activations
@@ -78,15 +79,19 @@ bidirectional_relationship(
 )
 
 # Activation.code_block <-> CodeBlock.activations
-bidirectional_relationship(
-    CodeBlock, "activations", Activation, "code_block", MTO,
-)
+add(CodeBlock, "activations", relationship(
+    "Activation", backref="code_block",
+    primaryjoin=(((CodeBlock.m.id) == foreign(Activation.m.code_block_id)) &
+                 ((CodeBlock.m.trial_id) == foreign(Activation.m.trial_id))),
+), proxy=proxy_gen)
+Activation.code_block = proxy_attr("code_block", proxy)
+
 
 # Activation.this_evaluation <-> Evaluation.this_activation
 add(Evaluation, "this_activation", relationship(
     "Activation", backref="this_evaluation",
     primaryjoin=((foreign(Evaluation.m.id) == remote(Activation.m.id)) &
-                 (foreign(Evaluation.m.trial_id) == remote(Activation.m.trial_id)))
+                 ((Evaluation.m.trial_id) == remote(Activation.m.trial_id))),
 ))
 Activation.this_evaluation = proxy_attr("this_evaluation", proxy_gen_first)
 
@@ -94,7 +99,8 @@ Activation.this_evaluation = proxy_attr("this_evaluation", proxy_gen_first)
 add(Evaluation, "activation", relationship(
     "Activation", backref="evaluations",
     primaryjoin=((foreign(Evaluation.m.activation_id) == remote(Activation.m.id)) &
-                 (foreign(Evaluation.m.trial_id) == remote(Activation.m.trial_id))),
+                 ((Evaluation.m.trial_id) == remote(Activation.m.trial_id))),
+    
 ))
 Activation.evaluations = proxy_attr("evaluations", proxy_gen)
 
@@ -140,9 +146,12 @@ bidirectional_relationship(
 ## Argument
 
 # Argument.trial <-> Trial.arguments
-bidirectional_relationship(
-    Trial, "arguments", Argument, "trial", MTO,
-)
+add(Trial, "arguments", relationship(
+    "Argument", backref="trial",
+    primaryjoin=(((Trial.m.id) == foreign(Argument.m.trial_id))),
+), proxy=proxy_gen)
+Argument.trial = proxy_attr("trial", proxy)
+
 
 
 ## CodeBlock
@@ -260,15 +269,14 @@ bidirectional_relationship(
 )
 
 # Dependency.dependency <-> Evaluation.dependencies_as_dependency
-# dependencies in which the evaluation is the dependency
-bidirectional_relationship(
-    Dependency, "dependency", Evaluation, "dependencies_as_dependency", OTM,
-    extra2=dict(lazy="dynamic"),
+add(Dependency, "dependency", relationship(
+    "Evaluation", backref="dependencies_as_dependency",
     primaryjoin=(
-        (Evaluation.m.id == Dependency.m.dependency_id) &
+        (Evaluation.m.id == foreign(Dependency.m.dependency_id)) &
         (Evaluation.m.activation_id == Dependency.m.dependency_activation_id) &
         (Evaluation.m.trial_id == Dependency.m.trial_id))
-)
+), proxy=proxy)
+Evaluation.dependencies_as_dependency = proxy_attr("dependencies_as_dependency", proxy_gen)
 
 
 ## EnvironmentAttr
