@@ -78,12 +78,12 @@ class Clusterizer(object):
             return None
 
         for member in node.evaluation.memberships_as_collection:
-            self.process_evaluation(member.member, self.main_cluster, True)
+            self.process_evaluation(member.member, cluster, True)
 
         if not is_type:
             for member in node.evaluation.memberships_as_member:
                 self.process_evaluation(
-                    member.collection, self.main_cluster, False)
+                    member.collection, cluster, False)
 
         return node
 
