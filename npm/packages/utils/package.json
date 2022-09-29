@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@types/d3": "^4.10.1",
-    "d3": "^4.11.0"
+    "d3": "^7.6.1"
   },
   "devDependencies": {
     "rimraf": "^2.6.2",
