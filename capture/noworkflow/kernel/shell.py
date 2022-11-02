@@ -94,7 +94,7 @@ class OverrideShell(object):
             metascript.main_id, tnow, "finished")
 
     def run_cell(self, raw_cell, store_history=False, silent=False,
-                 shell_futures=True):
+                 shell_futures=True, cell_id=None):
         """Run a complete IPython cell.
         https://github.com/ipython/ipython/blob/master/
             IPython/core/interactiveshell.py#L2561
@@ -104,7 +104,7 @@ class OverrideShell(object):
             sys.meta_path.insert(0, self.metascript.definition.finder)
             result = self.old_run_cell(
                 raw_cell, store_history=store_history, silent=silent,
-                shell_futures=shell_futures
+                shell_futures=shell_futures, cell_id=cell_id
             )
             sys.meta_path.remove(self.metascript.definition.finder)
             # ToDo: capture exception: result.error_in_exec
@@ -114,7 +114,7 @@ class OverrideShell(object):
             self.metascript.jupyter_original = True
             result = self.old_run_cell(
                 raw_cell, store_history=store_history, silent=silent,
-                shell_futures=shell_futures
+                shell_futures=shell_futures, cell_id=cell_id
             )
             self.metascript.jupyter_original = old_original
         return result
