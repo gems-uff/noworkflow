@@ -13,7 +13,7 @@ from ...utils.prolog import PrologDescription, PrologRepr, PrologAttribute
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, one, proxy
+from .base import AlchemyProxy, proxy_class, proxy
 
 
 @proxy_class
@@ -28,6 +28,7 @@ class Head(AlchemyProxy):
     >>> session = relational.make_session()
     >>> result = session.execute(Head.t.insert(), {"trial_id": trial.id,
     ...     "script": "main.py"})
+    >>> session.commit()
     >>> head_id = result.lastrowid
 
     Load a Head object by passing its id:
@@ -50,7 +51,8 @@ class Head(AlchemyProxy):
     script = Column(Text)
     trial_id = Column(String, index=True)
 
-    trial = one("Trial")
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("head", (
         PrologRepr("script"),

@@ -6,14 +6,17 @@ import {
 
 import {
   scaleOrdinal as d3_scaleOrdinal,
-  schemeCategory10 as d3_schemeCategory10
 } from 'd3-scale';
+
+import {
+  schemeCategory10 as d3_schemeCategory10
+} from 'd3-scale-chromatic';
+
 
 import {
   BaseType as d3_BaseType,
   Selection as d3_Selection,
   select as d3_select,
-  event as d3_event,
 } from 'd3-selection';
 
 import {
@@ -26,6 +29,7 @@ import * as fs from 'file-saver';
 import {HistoryConfig, HistoryState} from './config';
 import {VisibleHistoryNode, VisibleHistoryEdge} from './structures';
 import {HistoryGraphData, HistoryNodeData, HistoryTrialNodeData} from './structures';
+import { D3ZoomEvent } from 'd3';
 
 
 export
@@ -79,20 +83,23 @@ class HistoryGraph {
 
     this.graphId = graphId;
 
-    this.zoom = d3_zoom()
-      .on("zoom", () => this.zoomFunction())
+    this.zoom = d3_zoom<SVGSVGElement, any>()
+      .on("zoom", (event: D3ZoomEvent<SVGSVGElement, any>) => {
+        return this.zoomFunction(event);
+      })
       .on("start", () => d3_select('body').style("cursor", "move"))
       .on("end", () => d3_select('body').style("cursor", "auto"))
-      .wheelDelta(() => {
-        return -d3_event.deltaY * (d3_event.deltaMode ? 120 : 1) / 2000;
+      .wheelDelta(function() {
+        const e = event as WheelEvent;
+        return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
       })
 
     this.div = d3_select(div);
-    let form = d3_select(div)
+    let form = d3_select<HTMLFormElement, any>(div)
       .append("form")
       .classed("history-toolbar", true);
 
-    this.svg = d3_select(div)
+    this.svg = d3_select<SVGSVGElement, any>(div)
       .append("div")
       .append("svg")
       .attr("width", this.config.width)
@@ -107,7 +114,7 @@ class HistoryGraph {
     }
 
     // Tooltip
-    this.tooltipDiv = d3_select("body").append("div")
+    this.tooltipDiv = d3_select<HTMLDivElement, any>("body").append("div")
       .classed("now-tooltip now-history-tooltip", true)
       .style("opacity", 0)
       .style("max-width", "250px")
@@ -125,12 +132,12 @@ class HistoryGraph {
       .classed('HistoryGraph', true);
   }
 
-  createToolbar(form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
-    form = form.append("div")
+  createToolbar(form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>) {
+    let formdiv = form.append("div")
       .classed("buttons", true);
-    this.config.customForm(this, form);
+    this.config.customForm(this, formdiv);
     // Reset zoom
-    form.append("a")
+    formdiv.append("a")
       .classed("toollink", true)
       .attr("id", "history-" + this.graphId + "-history-zoom")
       .attr("href", "#")
@@ -140,7 +147,7 @@ class HistoryGraph {
       .classed("fa fa-eye", true)
 
     // Toggle Tooltips
-    let tooltipsToggle = form.append("input")
+    let tooltipsToggle = formdiv.append("input")
       .attr("id", "history-" + this.graphId + "-toolbar-tooltips")
       .attr("type", "checkbox")
       .attr("name", "history-toolbar-tooltips")
@@ -150,14 +157,14 @@ class HistoryGraph {
         this.closeTooltip();
         this.config.useTooltip = tooltipsToggle.property("checked");
       });
-    form.append("label")
+      formdiv.append("label")
       .attr("for", "history-" + this.graphId + "-toolbar-tooltips")
       .attr("title", "Show tooltips on mouse hover")
     .append("i")
       .classed("fa fa-comment", true)
 
     // Download SVG
-    form.append("a")
+    formdiv.append("a")
       .classed("toollink", true)
       .attr("id", "history-" + this.graphId + "-download")
       .attr("href", "#")
@@ -169,7 +176,7 @@ class HistoryGraph {
       .classed("fa fa-download", true)
 
     // Set Font Size
-    let fontToggle = form.append("input")
+    let fontToggle = formdiv.append("input")
       .attr("id", "history-" + this.graphId + "-toolbar-fonts")
       .attr("type", "checkbox")
       .attr("name", "history-toolbar-fonts")
@@ -179,12 +186,12 @@ class HistoryGraph {
         let display = fontToggle.property("checked")? "inline-block" : "none";
         fontSize.style("display", display);
       });
-    form.append("label")
+    formdiv.append("label")
       .attr("for", "history-" + this.graphId + "-toolbar-fonts")
       .attr("title", "Set font size")
     .append("i")
       .classed("fa fa-font", true)
-    let fontSize = form.append("input")
+    let fontSize = formdiv.append("input")
       .attr("type", "number")
       .attr("value", this.config.fontSize)
       .style("width", "50px")
@@ -197,14 +204,14 @@ class HistoryGraph {
       })
 
     // Submit
-    form.append("input")
+    formdiv.append("input")
       .attr("type", "submit")
       .attr("name", "prevent-enter")
       .attr("onclick", "return false;")
       .style("display", "none");
 
-    form.append("div")
-    form.append("div")
+    formdiv.append("div")
+    formdiv.append("div")
       .text(this.config.hintMessage)
       .style('font-family', 'sans-serif')
       .style('font-size', '12px')
@@ -230,7 +237,7 @@ class HistoryGraph {
     let levels = [];
     for (var i = 0; i <= last; i++) {
       let node: HistoryNodeData = data.nodes[i];
-      var previous = levels[node.level];
+      var previous:any = levels[node.level];
       if (previous == undefined) {
         previous = -1;
       }
@@ -252,7 +259,6 @@ class HistoryGraph {
       let node: HistoryNodeData = data.nodes[i];
       let x: number = start + spacing4 * id;
       let y: number = levelsy[node.level];
-
       var new_node: VisibleHistoryNode = {
         id: id,
         display: node.display,
@@ -262,7 +268,7 @@ class HistoryGraph {
         info: node,
         radius: this.config.radius,
         gradient: false,
-        status: "finished"
+        status: node.status
       };
 
       nodes.push(new_node)
@@ -302,8 +308,9 @@ class HistoryGraph {
       edge.id = edge.source + "-" + edge.target;
       edge.source = nodes[edge.source];
       edge.target = nodes[edge.target];
-
-      edges.push(edge as VisibleHistoryEdge);
+      if (edge.source != edge.target) {
+        edges.push(edge as VisibleHistoryEdge);
+      }
     }
 
     if (useVersion) {
@@ -425,7 +432,7 @@ class HistoryGraph {
     this.tooltipDiv.classed("hidden", true);
   }
 
-  private showTooltip(d: VisibleHistoryNode) {
+  private showTooltip(event: MouseEvent, d: VisibleHistoryNode) {
     if (typeof(d.tooltip) == "undefined") {
       return;
     }
@@ -434,8 +441,8 @@ class HistoryGraph {
       .duration(200)
       .style("opacity", 0.9);
     this.tooltipDiv.html(d.tooltip)
-      .style("left", (d3_event.pageX - 3) + "px")
-      .style("top", (d3_event.pageY - 28) + "px");
+      .style("left", (event.pageX - 3) + "px")
+      .style("top", (event.pageY - 28) + "px");
   }
 
   private createMarker(name: string, cls: string, fill: string) {
@@ -467,14 +474,14 @@ class HistoryGraph {
     this.state.selectedNode = null;
   }
 
-  private nodeMouseDown(d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, d: VisibleHistoryNode): void {
-    d3_event.stopPropagation();
+  private nodeMouseDown(event: MouseEvent, d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, d: VisibleHistoryNode): void {
+    event.stopPropagation();
     this.state.mouseDownNode = d;
     this.closeTooltip();
   }
 
-  private nodeMouseUp(d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, d: VisibleHistoryNode): void {
-    d3_event.stopPropagation();
+  private nodeMouseUp(event: MouseEvent, d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, d: VisibleHistoryNode): void {
+    event.stopPropagation();
     if (!this.state.mouseDownNode) {
       return;
     }
@@ -482,7 +489,7 @@ class HistoryGraph {
     if (this.state.justScale) {
       this.state.justScale = false;
     } else {
-      if (d3_event.ctrlKey || d3_event.shiftKey || d3_event.altKey) {
+      if (event.ctrlKey || event.shiftKey || event.altKey) {
         this.config.customCtrlClick(this, d);
         return;
       }
@@ -591,18 +598,18 @@ class HistoryGraph {
         return (d3_select(this).classed('selected')) ? 'rgb(200, 238, 241)' : "#000";
       })
       .attr("stroke-width", "2.5px")
-      .on('mousedown', function(d: VisibleHistoryNode) {
-        self.nodeMouseDown(d3_select(this), d);
-      }).on('mouseup', function (d: VisibleHistoryNode) {
-        self.nodeMouseUp(d3_select(this), d);
-      }).on('mouseover', function (d: VisibleHistoryNode) {
+      .on('mousedown', function(event: MouseEvent, d: VisibleHistoryNode) {
+        self.nodeMouseDown(event, d3_select(this), d);
+      }).on('mouseup', function (event: MouseEvent, d: VisibleHistoryNode) {
+        self.nodeMouseUp(event, d3_select(this), d);
+      }).on('mouseover', function (event: MouseEvent, d: VisibleHistoryNode) {
         if (!self.state.mouseDownNode && self.config.useTooltip) {
           self.closeTooltip();
-          self.showTooltip(d);
+          self.showTooltip(event, d);
         }
         d3_select(this)
           .attr('stroke', 'rgb(200, 238, 241)')
-      }).on('mouseout', function (d: VisibleHistoryNode) {
+      }).on('mouseout', function (event: MouseEvent, d: VisibleHistoryNode) {
         d3_select(this)
           .attr("stroke", (d: VisibleHistoryNode) => {
             return (d3_select(this).classed('selected')) ? 'rgb(200, 238, 241)' : "#000";
@@ -658,7 +665,6 @@ class HistoryGraph {
           step += this.config.moveY;
           step += (d.level - 1) * this.config.moveY2;
         }
-
         return `M ${sourceX}, ${sourceY}
           C ${(sourceX - this.config.moveX / 2)} ${sourceY}
             ${(sourceX - this.config.moveX / 2)} ${(sourceY + 3 * step / 4)}
@@ -682,11 +688,11 @@ class HistoryGraph {
     link.exit().remove(); // linkExit
   }
 
-  private zoomFunction() {
+  private zoomFunction(event: D3ZoomEvent<SVGSVGElement, any>) {
     this.state.justScale = true;
     this.closeTooltip();
-    this.transform = d3_event.transform;
-    this.g.attr("transform", d3_event.transform);
+    this.transform = event.transform;
+    this.g.attr("transform", event.transform as any);
   }
 
   private _graphId(): string {

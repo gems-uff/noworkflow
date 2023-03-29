@@ -15,7 +15,7 @@ class EvaluationLW(BaseLW):                                                     
 
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "checkpoint", "code_component_id", "activation_id",
-         "repr"], ["_same", "members"]
+         "repr", "member_container_activation_id", "member_container_id"], ["_same", "members"]
     )
     nullable = {"checkpoint"}
     model = Evaluation
@@ -28,6 +28,8 @@ class EvaluationLW(BaseLW):                                                     
         self.checkpoint = -1 if not checkpoint else checkpoint
         self.repr = repr_
         self._same = None
+        self.member_container_activation_id = self.activation_id
+        self.member_container_id = id_
         self.members = {}
 
     def same(self):
@@ -44,6 +46,8 @@ class EvaluationLW(BaseLW):                                                     
             self._same = None
         else:
             self._same = other_same
+            self.member_container_activation_id = other_same.member_container_activation_id
+            self.member_container_id = other_same.member_container_id
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Evaluation can only be removed from object store

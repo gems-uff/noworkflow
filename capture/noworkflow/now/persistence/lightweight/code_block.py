@@ -22,7 +22,7 @@ class CodeBlockLW(BaseLW):
     nullable = set()
     model = CodeBlock
 
-    def __init__(self, id_, trial_id, code, binary, docstring,code_hash=None):
+    def __init__(self, id_, trial_id, code, binary, docstring,code_hash=None, filename):
         # pylint: disable=too-many-arguments
         self.trial_id = trial_id
         self.id = id_  # pylint: disable=invalid-name
@@ -31,7 +31,7 @@ class CodeBlockLW(BaseLW):
         if code_hash:
             self.code_hash=code_hash
         else:
-            self.code_hash = content.put(bin_code)
+            self.code_hash = content.put(bin_code, filename)
 
         self.docstring = docstring or ""
 

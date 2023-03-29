@@ -23,8 +23,11 @@ class List(Command):
         add_arg("--dir", type=str,
                 help="set project path where is the database. Default to "
                      "current directory")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
     def execute(self, args):
+        persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         print_msg("trials available in the provenance store:", True)
         for trial in Trial.all():

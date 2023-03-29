@@ -43,6 +43,10 @@ class Variable(object):
         self.bound = val
         return self
 
+    def key(self, binds=None):
+        """Return current bound value"""
+        return self.bound
+
     def __repr__(self):
         return self.name
 

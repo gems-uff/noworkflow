@@ -15,7 +15,7 @@ def ast_copy(new_node, old_node):
     new_node = ast.copy_location(new_node, old_node)
     attrs = [
         "first_line", "first_col", "last_line", "last_col", "uid",
-        "code_component_id", "code_component_expr"
+        "code_component_id", "code_component_expr", "type_ignores"
     ]
     for attr in attrs:
         if hasattr(old_node, attr):
@@ -96,6 +96,7 @@ class DebugVisitor(ast.NodeVisitor):
     visit_YieldFrom = _visit_expr
     visit_Compare = _visit_expr
     visit_Call = _visit_expr
+    visit_Constant = _visit_expr
     visit_Num = _visit_expr
     visit_Str = _visit_expr
     visit_Bytes = _visit_expr
@@ -172,12 +173,20 @@ def debug_tree(tree, just_print=None, show_code=None, methods=None):
 
 
 @contextmanager
-def temporary(obj, name, value):
-    """Set temporary attribute"""
+def temporary(obj, name, value, nested=None):
+    """Set temporary attribute
+    
+    This context manager also may add and remove a value from a nested stack.
+    Pass nested as a tuple of a list and a value
+    """
+    if nested is not None:
+        nested[0].append(nested[1])
     old = getattr(obj, name)
     setattr(obj, name, value)
     yield value
     setattr(obj, name, old)
+    if nested is not None:
+        nested[0].pop()
 
 
 def select_future_imports(body):

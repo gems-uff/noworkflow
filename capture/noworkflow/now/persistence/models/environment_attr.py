@@ -11,7 +11,7 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -48,7 +48,8 @@ class EnvironmentAttr(AlchemyProxy):
     name = Column(Text)
     value = Column(Text)
 
-    trial = backref_one("trial")  # Trial.environment_attrs
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("environment", (
         PrologTrial("trial_id", link="trial.id"),

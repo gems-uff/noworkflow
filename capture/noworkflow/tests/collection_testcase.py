@@ -105,9 +105,12 @@ class CollectionTestCase(unittest.TestCase):
         self.metascript.definition.store_provenance()
         self.metascript.execution.store_provenance()
 
-    def get_evaluation(self, **kwargs):
+    def get_evaluation(self, skip=0, **kwargs):
         """Execute and get evaluation"""
-        for evaluation in self.get_evaluations(**kwargs):
+        it = iter(self.get_evaluations(**kwargs))
+        for _ in zip(range(skip), it):
+            pass
+        for evaluation in it:
             return evaluation
         return None
 

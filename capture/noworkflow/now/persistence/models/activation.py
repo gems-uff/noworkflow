@@ -15,12 +15,8 @@ from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, many_viewonly_ref
-from .base import backref_one, backref_many, backref_one_uselist
+from .base import AlchemyProxy, proxy_class
 from .base import query_many_property
-
-from .dependency import Dependency
-from .member import Member
 
 
 @proxy_class
@@ -94,33 +90,16 @@ class Activation(AlchemyProxy):
     start_checkpoint = Column(Float)
     code_block_id = Column(Integer, index=True)
 
-    file_accesses = many_viewonly_ref("activation", "FileAccess")
-
-    dependent_dependencies = many_viewonly_ref(
-        "dependent_activation", "Dependency",
-        primaryjoin=((id == Dependency.m.dependent_activation_id) &
-                     (trial_id == Dependency.m.trial_id)))
-    dependency_dependencies = many_viewonly_ref(
-        "dependency_activation", "Dependency",
-        primaryjoin=((id == Dependency.m.dependency_activation_id) &
-                     (trial_id == Dependency.m.trial_id)))
-
-
-    collection_membership = many_viewonly_ref(
-        "collection_activation", "Member",
-        primaryjoin=((id == Member.m.collection_activation_id) &
-                     (trial_id == Member.m.trial_id)))
-    member_membership = many_viewonly_ref(
-        "member_activation", "Member",
-        primaryjoin=((id == Member.m.member_activation_id) &
-                     (trial_id == Member.m.trial_id)))
-
-
-    trial = backref_one("trial")  # Trial.activations
-    code_block = backref_one("code_block")  # CodeBlock.activations
-    # Evaluation.this_activation
-    this_evaluation = backref_one_uselist("this_evaluation")
-    evaluations = backref_many("evaluations") # Evaluation.activation
+    # Relationship attributes (see relationships.py):
+    #   code_block: 1 CodeBlock
+    #   collection_membership: * Member
+    #   dependent_dependencies: * Dependency
+    #   dependency_dependencies: * Dependency
+    #   evaluations: * Evaluation
+    #   file_accesses: * FileAccess
+    #   member_membership: * Member
+    #   this_evaluation: 1 Evaluation
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("activation", (
         PrologTrial("trial_id", link="evaluation.trial_id"),

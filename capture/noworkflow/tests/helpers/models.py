@@ -104,9 +104,7 @@ def trial_update_params(minute=56, main_id=1, status="finished"):
 
 def select_trial(id_):
     """Select trial by id"""
-    return relational.session.execute(
-        select([Trial.m]).where(Trial.m.id == id_)
-    ).first()
+    return relational.session.get(Trial.m, id_)
 
 
 def count(model):
@@ -145,9 +143,9 @@ def component_params(trial_id, name="main.py", type_="script", mode="w",
             last_char_line, last_char_column, container_id]
 
 
-def block_params(id_, trial_id, code="'block'", docstring="block"):
+def block_params(id_, trial_id, code="'block'", docstring="block", name="codeblock"):
     """Return default code block params"""
-    return [id_, trial_id, code, False, docstring]
+    return [id_, trial_id, code, False, docstring, name]
 
 
 def evaluation_params(trial_id, code_component_id, activation_id, repr_=None, checkpoint=65):
@@ -624,12 +622,12 @@ def create_trial(
                 meta.trial_id,
                 "/home/external.py", "module", "w", 1, 0, 1, 4, -1
             )
-            meta.code_blocks_store.add(mc1, meta.trial_id, "aaaa", False, None)
+            meta.code_blocks_store.add(mc1, meta.trial_id, "aaaa", False, None, "codeblock")
             mc2 = meta.code_components_store.add(
                 meta.trial_id,
                 "/home/internal.py", "module", "w", 1, 0, 1, 4, -1
             )
-            meta.code_blocks_store.add(mc2, meta.trial_id, "bbbb", False, None)
+            meta.code_blocks_store.add(mc2, meta.trial_id, "bbbb", False, None, "codeblock")
             m1 = meta.modules_store.add(
                 meta.trial_id,
                 "external", "1.0.1", "/home/external.py", mc1, False)

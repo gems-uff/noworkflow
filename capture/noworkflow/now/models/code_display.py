@@ -16,16 +16,39 @@ class CodeDisplay(object):
     # pylint: disable=too-few-public-methods
 
     def __init__(self, block):
-        component = block.this_component
-        self.trial_id = block.trial_id
-        self.first_line = component.first_char_line
-        self.marks = []
-        self.show_selection = False
-        self.all_components = {
-            comp.id: comp
-            for comp in block.all_components
-        }
-        self.code = content.get(block.code_hash).decode("utf-8")
+        if block is not None:
+            component = block.this_component
+            self.trial_id = block.trial_id
+            self.first_line = component.first_char_line
+            self.marks = []
+            self.show_selection = False
+            self.all_components = {
+                comp.id: comp
+                for comp in block.all_components
+            }
+            self.code = content.get(block.code_hash).decode("utf-8")
+
+    def __getitem__(self, item):
+        code = self.code.split('\n')
+        if isinstance(item, slice):
+            start_line = item.start or self.first_line
+            start = item.start - self.first_line if item.start else None
+            stop = item.stop - self.first_line if item.stop else None
+            newslice = slice(start, stop, item.step)
+            code = "\n".join(code[newslice])
+        elif isinstance(item, int):
+            start_line = item
+            code = "\n".join(code[item])
+        else:
+            raise IndexError("Invalid index {}".format(item))
+        result = CodeDisplay(None)
+        result.trial_id = self.trial_id
+        result.first_line = start_line
+        result.marks = []
+        result.show_selection = False
+        result.all_components = self.all_components
+        result.code = code
+        return result
 
     def get_mark(self, component, properties):
         """Get a codemirror mark definition"""
@@ -49,53 +72,19 @@ class CodeDisplay(object):
                 for comp in viewvalues(self.all_components)
             ]
         return self
-
-    def _repr_html_(self):
-        uid = str(int(time.time() * 1000000))
-        return """
-            <style type="text/css">
-              .mark-text {{ background-color: lightblue; }}
-            </style>
-            <textarea id="{0}">\n{1}
-            </textarea>
-            <script>
-            (function () {{
-                var code_id = "{0}";
-                var code_mirror = CodeMirror.fromTextArea(
-                  document.getElementById(code_id), {{
-                  lineNumbers: true,
-                  styleSelectedText: true,
-                  mode: "python",
-                  readOnly: true
-                }});
-
-                var marks = {2};
-                marks.forEach(function(mark) {{
-                  code_mirror.markText.apply(code_mirror, mark)
-                }});
-
-                var show_selection = {3};
-                if (show_selection) {{
-                  $(code_mirror.getWrapperElement()).after(
-                    "<input type='text' id='"+code_id+"-selection'></input>"
-                  );
-                  code_mirror.on('cursorActivity', function(cm) {{
-                    var tcursor = cm.getCursor(true);
-                    var fcursor = cm.getCursor(false);
-                    $("#"+code_id+"-selection").val(
-                      "[" + tcursor.line + ", " + tcursor.ch + "], "+
-                      "[" + fcursor.line + ", " + fcursor.ch + "]"
-                    );
-                  }});
-                }}
-            }})();
-            </script>
-        """.format(
-            uid,
-            self.code,
-            self.marks,
-            int(self.show_selection)
-        )
+    
+    def _ipython_display_(self):
+        from IPython.display import display
+        bundle = {
+            'text/plain': self.code,
+            'application/noworkflow.code+json': {
+                'code': self.code,
+                'marks': self.marks,
+                'showSelection': self.show_selection,
+                'firstLineNumber': self.first_line
+            }
+        }
+        display(bundle, raw=True)
 
     def __str__(self):
         """Default str repr"""

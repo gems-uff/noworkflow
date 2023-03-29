@@ -14,7 +14,7 @@ from ...utils.prolog import PrologAttribute, PrologNullableRepr
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_many, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -31,7 +31,7 @@ class Module(AlchemyProxy):
     >>> trial_id = new_trial()
     >>> cid = components.add(
     ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1)
-    >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+    >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
     >>> mid = modules.add(
     ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
     >>> components.do_store()
@@ -68,8 +68,9 @@ class Module(AlchemyProxy):
     code_block_id = Column(Text, index=True)
     transformed = Column(Boolean)
 
-    trial = backref_one("trial")  # Trial.modules
-    code_block = backref_one("code_block")  # CodeBlock.modules
+    # Relationship attributes (see relationships.py):
+    #   code_block: 1 CodeBlock
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("module", (
         PrologTrial("trial_id", link="trial.id"),
@@ -140,7 +141,7 @@ class Module(AlchemyProxy):
         >>> cid = components.add(
         ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
-        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
         >>> mid = modules.add(
         ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
         >>> components.do_store()
@@ -171,7 +172,7 @@ class Module(AlchemyProxy):
         >>> cid = components.add(
         ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
-        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None)
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
         >>> mid = modules.add(
         ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
         >>> components.do_store()

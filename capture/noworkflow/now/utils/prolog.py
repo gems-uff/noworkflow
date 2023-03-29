@@ -44,7 +44,7 @@ class PrologDescription(object):
     def fact(self, obj):
         """Convert obj to prolog fact"""
         return "{0.name}({1}).".format(
-            self, ', '.join(x.fact(obj) for x in self.attributes)
+            self, ', '.join(str(x.fact(obj)) for x in self.attributes)
         )
 
     def empty(self):

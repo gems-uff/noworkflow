@@ -10,6 +10,7 @@ class SaveOutput(object):
         self.lines.append(" ".join(map(str, text)))
         
     def _repr_svg_(self):
+        from IPython import get_ipython
         return get_ipython().run_cell_magic(
             "provn", "-o {} -e {}".format(self.name, self.formats),
             self.text

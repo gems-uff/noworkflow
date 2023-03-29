@@ -9,7 +9,7 @@
 from .helpers import between, once, member
 from .id_rules import evaluation_code_id
 from .name_rules import code_name, evaluation_name, activation_name, access_name
-from .name_rules import value_name, name, map_names
+from .name_rules import name, map_names
 from .timestamp_rules import timestamp_id, duration_id, successor_id
 from .timestamp_rules import timestamp, duration, successor
 from .mode_access_rules import read_mode, write_mode, delete_mode, param_mode

@@ -16,9 +16,8 @@ from future.utils import viewitems
 
 from ..now.persistence import persistence_config
 
-persistence_config.mock()
 persistence_config.connect(".")
-
+persistence_config.mock()
 
 #from .prov_deployment import TestProvDeployment
 from .prov_definition import TestCodeBlockDefinition

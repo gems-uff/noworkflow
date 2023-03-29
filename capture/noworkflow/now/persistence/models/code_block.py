@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-
+from sqlalchemy.orm import remote, foreign
 
 from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
@@ -18,8 +18,7 @@ from ...utils.prolog import PrologNullableRepr
 from .. import relational, content
 
 from .base import proxy_class, AlchemyProxy
-from .base import many_ref, backref_many, backref_one_uselist
-from .base import query_many_property, many_viewonly_ref
+from .base import query_many_property
 
 
 @proxy_class
@@ -69,15 +68,13 @@ class CodeBlock(AlchemyProxy):
     code_hash = Column(Text)
     docstring = Column(Text)
 
-    activations = many_ref("code_block", "Activation")
 
-    modules = many_viewonly_ref("code_block", "Module")
-
-    trial = backref_one_uselist("trial")  # Trial.code_blocks
-    components = backref_many("components") # CodeComponent.container
-
-    # CodeComponent.this_block
-    this_component = backref_one_uselist("this_component")
+    # Relationship attributes (see relationships.py):
+    #   activations: * Activation
+    #   components: * CodeComponent
+    #   modules: * Module
+    #   this_component: 1 CodeComponent
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("code_block", (
         PrologTrial("trial_id", link="code_component.trial_id"),
@@ -114,6 +111,35 @@ class CodeBlock(AlchemyProxy):
             if block:
                 for sub_component in block.all_components:
                     yield sub_component
+
+    def mark_code(self, evaluations, options=None):
+        """Mark evaluation dependencies in CodeBlock"""
+        from .evaluation import Evaluation
+        from ...models.dependency_querier import DependencyQuerier
+        if isinstance(evaluations, Evaluation):
+            evaluations = [evaluations]
+        querier = DependencyQuerier(options=options)
+        nodes_to_visit, visited, found = querier.navigate_dependencies(evaluations)
+        return self.content([
+            self.content.get_mark(
+                node.evaluation.code_component, {'className': 'mark-text'}
+            )
+            for node in visited
+            if node.evaluation.code_component_id in self.content.all_components
+        ])
+
+    def recursive_evaluations(self):
+        """Return all evaluations that occur within this code block"""
+        for evaluation in self.this_component.evaluations:
+            yield evaluation
+        for component in self.components:
+            block = component.this_block
+            if block:
+                for evaluation in block.recursive_evaluations():
+                    yield evaluation
+            else:
+                for evaluation in component.evaluations:
+                    yield evaluation
 
     @query_many_property
     def globals(self):

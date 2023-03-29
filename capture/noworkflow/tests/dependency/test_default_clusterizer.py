@@ -295,15 +295,19 @@ class TestClusterizer(CollectionTestCase):
 
         script = self.evaluation_node(name="script.py")
         var_act = self.evaluation_node(name="int()")
+        var_int = self.evaluation_node(name="int")
 
         trial = Trial()
         clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
-            (script, cluster(script), [var_act]),
+            (script, cluster(script), [var_int, var_act]),
             clusterizer.main_cluster.to_tree()
         )
-        self.assertEqual({}, clusterizer.dependencies)
+        created = clusterizer.created
+        self.assertEqual([
+            ((created[var_act][1], created[var_int][1]), {EMPTY_ATTR}),
+        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_single_activation_dependencies(self):
         self.script("# script.py\n"
@@ -312,6 +316,7 @@ class TestClusterizer(CollectionTestCase):
 
         script = self.evaluation_node(name="script.py")
         var_act = self.evaluation_node(name="int('1')")
+        var_int = self.evaluation_node(name="int")
         var_param = self.evaluation_node(name="'1'")
         var_x = self.evaluation_node(name="x")
 
@@ -319,11 +324,12 @@ class TestClusterizer(CollectionTestCase):
         clusterizer = Clusterizer(trial, synonymer=Synonymer()).run()
 
         self.assertEqual(
-            (script, cluster(script), [var_act, var_param, var_x]),
+            (script, cluster(script), [var_int, var_param, var_act, var_x]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
         self.assertEqual([
+            ((created[var_act][1], created[var_int][1]), {EMPTY_ATTR}),
             ((created[var_act][1], created[var_param][1]), {EMPTY_ATTR}),
             ((created[var_x][1], created[var_act][1]), {REFERENCE_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
@@ -336,6 +342,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act = self.evaluation_node(name="f('1')")
         var_param = self.evaluation_node(name="'1'")
@@ -348,14 +355,16 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script),
-                [write_f_eval, var_act, var_param, var_y]),
+                [write_f_eval, read_f_eval, var_param, var_act, var_y]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act][1], created[read_f_eval][1]), {EMPTY_ATTR}),
             ((created[var_y][1], created[var_act][1]), {REFERENCE_ATTR}),
             ((created[var_act][1], created[var_param][1]), {REFERENCE_ATTR, PROPAGATED_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_no_max_depth(self):
         self.script("# script.py\n"
@@ -365,6 +374,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act = self.evaluation_node(name="f('1')")
         var_param = self.evaluation_node(name="'1'")
@@ -378,19 +388,21 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval,
+                write_f_eval, read_f_eval, var_param, 
                 (var_act, cluster(var_act), [var_x_w, var_x_r]),
-                var_param, var_y
+                var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act][1], created[read_f_eval][1]), {EMPTY_ATTR}),
             ((created[var_y][1], created[var_act][1]), {REFERENCE_ATTR}),
             ((created[var_act][1], created[var_x_r][1]), {REFERENCE_ATTR}),
             ((created[var_x_w][1], created[var_param][1]), {REFERENCE_ATTR}),
             ((created[var_x_r][1], created[var_x_w][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses(self):
         self.script("# script.py\n"
@@ -403,6 +415,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
+        read_g_eval = self.evaluation_node(name="g", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -431,20 +445,24 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval,
+                write_f_eval, write_g_eval, read_f_eval, var_param, 
                 (var_act_f, cluster(var_act_f), [
-                    var_fx_w,
+                    var_fx_w, read_g_eval, var_fx_r,
                     (var_act_g, cluster(var_act_g), [
                         var_gx_w, var_gx_r,
                     ]),
-                    var_acc2, var_fx_r
+                    var_acc2,
                 ]),
-                var_acc1, var_param, var_y
+                var_acc1, var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_g_eval][1], created[write_g_eval][1]), {REFERENCE_ATTR}),
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[read_f_eval][1]), {EMPTY_ATTR}),
+            ((created[var_act_g][1], created[read_g_eval][1]), {EMPTY_ATTR}),
             ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_acc2][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
@@ -454,7 +472,7 @@ class TestClusterizer(CollectionTestCase):
             ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
             ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
             ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_max_depth_2(self):
         self.script("# script.py\n"
@@ -467,6 +485,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
+        read_g_eval = self.evaluation_node(name="g", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -494,17 +514,21 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval,
+                write_f_eval, write_g_eval, read_f_eval, var_param, 
                 (var_act_f, cluster(var_act_f), [
-                    var_fx_w, var_act_g,
-                    var_acc2, var_fx_r
+                    var_fx_w, read_g_eval, var_fx_r, var_act_g, 
+                    var_acc2, 
                 ]),
-                var_acc1, var_param, var_y
+                var_acc1, var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_g_eval][1], created[write_g_eval][1]), {REFERENCE_ATTR}),
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[read_f_eval][1]), {EMPTY_ATTR}),
+            ((created[var_act_g][1], created[read_g_eval][1]), {EMPTY_ATTR}),
             ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_acc2][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_fx_r][1]),
@@ -513,7 +537,7 @@ class TestClusterizer(CollectionTestCase):
             ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
             ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
             ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_max_depth_1(self):
         self.script("# script.py\n"
@@ -526,6 +550,7 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -551,20 +576,24 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval, var_act_f,
-                var_acc1, var_acc2, var_param, var_y
+                write_f_eval, write_g_eval, read_f_eval, var_param, var_act_f,
+                var_acc1, var_acc2, var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[read_f_eval][1]), {EMPTY_ATTR}),
+            ((created[var_act_f][1], created[write_g_eval][1]), 
+                {EMPTY_ATTR, REFERENCE_ATTR, PROPAGATED_ATTR}),
             ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
             ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
             ((created[var_act_f][1], created[var_acc2][1]),
                 {ACCESS_ATTR, PROPAGATED_ATTR}),
             ((created[var_act_f][1], created[var_param][1]),
                 {REFERENCE_ATTR, PROPAGATED_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_separate_accesses(self):
         self.script("# script.py\n"
@@ -577,6 +606,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
+        read_g_eval = self.evaluation_node(name="g", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -605,20 +636,24 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval,
+                write_f_eval, write_g_eval, read_f_eval,
+                var_param,
                 (var_act_f, cluster(var_act_f), [
-                    var_fx_w,
+                    var_fx_w, read_g_eval, var_fx_r,
                     (var_act_g, cluster(var_act_g), [
                         var_gx_w, var_gx_r,
                     ]),
-                    var_fx_r
                 ]),
-                var_acc1, var_acc2, var_param, var_y
+                var_acc1, var_acc2,  var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_g_eval][1], created[write_g_eval][1]), {REFERENCE_ATTR}),
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[read_f_eval][1]), {EMPTY_ATTR}),
+            ((created[var_act_g][1], created[read_g_eval][1]), {EMPTY_ATTR}),
             ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
             ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
@@ -628,7 +663,7 @@ class TestClusterizer(CollectionTestCase):
             ((created[var_act_f][1], created[var_acc2][1]), {ACCESS_ATTR}),
             ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
             ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_combine_accesses_synonymer(self):
         self.script("# script.py\n"
@@ -641,6 +676,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
+        read_g_eval = self.evaluation_node(name="g", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -669,20 +706,23 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval,
+                write_f_eval, write_g_eval, read_f_eval, var_param,
                 (var_act_f, cluster(var_act_f), [
-                    var_fx_w,
+                    var_fx_w, read_g_eval, var_fx_r,
                     (var_act_g, cluster(var_act_g), [
                         var_gx_w, var_gx_r,
                     ]),
-                    var_fx_r
                 ]),
-                var_acc1, var_param, var_y
+                var_acc1, var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_g_eval][1], created[write_g_eval][1]), {REFERENCE_ATTR}),
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[read_f_eval][1]), {EMPTY_ATTR}),
+            ((created[var_act_g][1], created[read_g_eval][1]), {EMPTY_ATTR}),
             ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
             ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
@@ -692,7 +732,7 @@ class TestClusterizer(CollectionTestCase):
             ((created[var_act_f][1], created[var_acc1][1]), {ACCESS_ATTR}),
             ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
             ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_joined_synonymer(self):
         self.script("# script.py\n"
@@ -705,6 +745,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
+        read_g_eval = self.evaluation_node(name="g", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -733,19 +775,22 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval,
+                write_f_eval, write_g_eval, 
+                var_param, 
                 (var_act_f, cluster(var_act_f), [
                     var_fx_w,
                     (var_act_g, cluster(var_act_g), [
                         var_gx_w,
                     ]),
                 ]),
-                var_acc1, var_param, var_y
+                var_acc1, var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[var_act_f][1], created[write_f_eval][1]), {EMPTY_ATTR}),
+            ((created[var_act_g][1], created[write_g_eval][1]), {EMPTY_ATTR}),
             ((created[var_acc1][1], created[var_act_f][1]), {ACCESS_ATTR}),
             ((created[var_act_g][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
             ((created[var_gx_w][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
@@ -753,7 +798,7 @@ class TestClusterizer(CollectionTestCase):
             ((created[var_act_f][1], created[var_acc1][1]), {ACCESS_ATTR}),
             ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
             ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_filter_no_accesses(self):
         self.script("# script.py\n"
@@ -766,6 +811,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
+        read_g_eval = self.evaluation_node(name="g", mode="r") 
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -796,22 +843,26 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, var_function, var_type, write_g_eval,
+                write_f_eval, var_function, var_type, write_g_eval, read_f_eval, var_param, var_str, 
                 (var_act_f, cluster(var_act_f), [
-                    var_fx_w,
+                    var_fx_w, read_g_eval, var_fx_r,
                     (var_act_g, cluster(var_act_g), [
                         var_gx_w, var_gx_r,
                     ]),
-                    var_fx_r
+                    
                 ]),
-                var_param, var_str, var_y
+                var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
         class_attr = EMPTY_ATTR.update({"label": ".__class__"})
         self.maxDiff = None
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[read_g_eval][1], created[write_g_eval][1]), {REFERENCE_ATTR}),
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[read_f_eval][1]), {EMPTY_ATTR}),
+            ((created[var_act_g][1], created[read_g_eval][1]), {EMPTY_ATTR}),
             ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
             ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
             ((created[var_gx_w][1], created[var_fx_r][1]), {REFERENCE_ATTR}),
@@ -824,7 +875,7 @@ class TestClusterizer(CollectionTestCase):
             ((created[var_param][1], created[var_str][1]), {class_attr}),
             ((created[var_str][1], created[var_type][1]), {class_attr}),
             ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_file_accesses_joined_filter_no_accesses_no_types(self):
         self.script("# script.py\n"
@@ -837,6 +888,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
+        read_g_eval = self.evaluation_node(name="g", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
@@ -865,28 +918,32 @@ class TestClusterizer(CollectionTestCase):
 
         self.assertEqual(
             (script, cluster(script), [
-                write_f_eval, write_g_eval,
+                write_f_eval, write_g_eval, read_f_eval, 
+                var_param,
                 (var_act_f, cluster(var_act_f), [
-                    var_fx_w,
+                    var_fx_w, read_g_eval, var_fx_r,
                     (var_act_g, cluster(var_act_g), [
                         var_gx_w, var_gx_r,
                     ]),
-                    var_fx_r
                 ]),
-                var_param, var_y
+                var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        self.assertEqual(sorted([
+            ((created[var_act_g][1], created[read_g_eval][1]), {EMPTY_ATTR}),
             ((created[var_act_g][1], created[var_gx_r][1]), {REFERENCE_ATTR}),
+            ((created[read_g_eval][1], created[write_g_eval][1]), {REFERENCE_ATTR}),
             ((created[var_fx_r][1], created[var_fx_w][1]), {REFERENCE_ATTR}),
             ((created[var_gx_w][1], created[var_fx_r][1]), {REFERENCE_ATTR}),
             ((created[var_gx_r][1], created[var_gx_w][1]), {REFERENCE_ATTR}),
             ((created[var_y][1], created[var_act_f][1]), {REFERENCE_ATTR}),
             ((created[var_act_f][1], created[var_act_g][1]), {REFERENCE_ATTR}),
+            ((created[var_act_f][1], created[read_f_eval][1]), {EMPTY_ATTR}),
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
             ((created[var_fx_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]), sorted([item for item in viewitems(clusterizer.dependencies)]))
 
     def test_user_activation_rank_lines(self):
         self.script("# script.py\n"
@@ -896,6 +953,7 @@ class TestClusterizer(CollectionTestCase):
         self.clean_execution()
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
+        read_f_eval = self.evaluation_node(name="f", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act = self.evaluation_node(name="f('1')")
         var_param = self.evaluation_node(name="'1'", first_char_column=6)
@@ -915,28 +973,35 @@ class TestClusterizer(CollectionTestCase):
         self.assertEqual(
              (script, cluster(script), [
                 write_f_eval,
+                read_f_eval,
+                var_param, 
                 (var_act, cluster(var_act),
                     [var_x_w, var_x_r1, var_x_r2, var_x_sum]),
-                var_param, var_add_1, var_concat, var_y
+                var_add_1, var_concat, var_y
             ]),
             clusterizer.main_cluster.to_tree()
         )
         created = clusterizer.created
-        self.assertEqual([
+        expected = [
+            ((created[var_x_r1][1], created[var_x_w][1]), {REFERENCE_ATTR}),
             ((created[var_x_r2][1], created[var_x_w][1]), {REFERENCE_ATTR}),
-            ((created[var_x_sum][1], created[var_x_r2][1]), {EMPTY_ATTR}),
             ((created[var_x_sum][1], created[var_x_r1][1]), {EMPTY_ATTR}),
+            ((created[var_x_sum][1], created[var_x_r2][1]), {EMPTY_ATTR}),
             ((created[var_concat][1], created[var_add_1][1]), {EMPTY_ATTR}),
             ((created[var_concat][1], created[var_act][1]), {EMPTY_ATTR}),
             ((created[var_y][1], created[var_concat][1]), {REFERENCE_ATTR}),
+            ((created[read_f_eval][1], created[write_f_eval][1]), {REFERENCE_ATTR}),
             ((created[var_act][1], created[var_x_sum][1]), {REFERENCE_ATTR}),
+            ((created[var_act][1], created[read_f_eval][1]), {EMPTY_ATTR}),
             ((created[var_x_w][1], created[var_param][1]), {REFERENCE_ATTR}),
-            ((created[var_x_r1][1], created[var_x_w][1]), {REFERENCE_ATTR}),
-        ], sorted([item for item in viewitems(clusterizer.dependencies)]))
+        ]
+        result = sorted([item for item in viewitems(clusterizer.dependencies)])
+        self.assertEqual(expected, result)
+        
 
         self.assertEqual([created[write_f_eval][1]], created[script][1].ranks[0])
         self.assertEqual([
-            created[var_act][1], created[var_param][1], 
+            created[read_f_eval][1], created[var_param][1], created[var_act][1],  
             created[var_add_1][1], created[var_concat][1], created[var_y][1], 
         ], created[script][1].ranks[1])
         self.assertEqual([created[var_x_w][1]], created[var_act][1].ranks[0])

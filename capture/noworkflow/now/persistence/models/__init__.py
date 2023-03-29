@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 from future.utils import text_to_native_str as n
 
 # Base
-from .base import Model, MetaModel
+from .base import Model, MetaModel, proxy, proxy_gen
 
 # Database Models
 from .activation import Activation
@@ -33,6 +33,7 @@ from .group import Group
 from .user import User
 from .memberOfGroup import MemberOfGroup
 
+from . import relationships
 
 ORDER = [
     Trial, Head, Tag, GraphCache, Argument, # Trial
@@ -49,6 +50,8 @@ __all__ = [
 ] + [
     "MetaModel",
     "Model",
+    "proxy",
+    "proxy_gen",
     "UniqueFileAccess",
     "ORDER",
 ]

@@ -7,7 +7,7 @@
 # pylint: disable=no-value-for-parameter
 
 from ..machinery import prolog_rule, create_rule, restrict_rule, var
-from ..models import code_component, evaluation, activation, access, value
+from ..models import code_component, evaluation, activation, access
 from ..models import trial
 from .helpers import _list_matcher
 
@@ -85,23 +85,6 @@ def access_name(trial_id, id, name, _binds):
         _binds, id, name
     )
 
-
-@prolog_rule("value_name(_, [], []).")
-@prolog_rule("value_name(TrialId, [Id|Ids], [Name|Names]) :-")
-@prolog_rule("    value_name(TrialId, Id, Name),")
-@prolog_rule("    value_name(TrialId, Ids, Names).")
-@prolog_rule("value_name(TrialId, Id, Name) :-")
-@prolog_rule("    value(TrialId, Id, Name, _).")
-@create_rule
-def value_name(trial_id, id, name, _binds):
-    """Get the *Name* (value) of a value (*Id*)
-    in a given trial (*TrialId*)."""
-    return _list_matcher(
-        (lambda id, name: value(trial_id, id, name)),
-        _binds, id, name
-    )
-
-
 @prolog_rule("name(TrialId, code_component, Id, Name) :-")
 @prolog_rule("    code_name(TrialId, Id, Name).")
 @prolog_rule("name(TrialId, code_block, Id, Name) :-")
@@ -112,8 +95,6 @@ def value_name(trial_id, id, name, _binds):
 @prolog_rule("    activation_name(TrialId, Id, Name).")
 @prolog_rule("name(TrialId, access, Id, Name) :-")
 @prolog_rule("    access_name(TrialId, Id, Name).")
-@prolog_rule("name(TrialId, value, Id, Name) :-")
-@prolog_rule("    value_name(TrialId, Id, Name).")
 @prolog_rule("name(TrialId, trial, _, Name) :-")
 @prolog_rule("    trial(TrialId, Name, _, _, _, _, _, _, _).")
 @restrict_rule(model=[
@@ -122,7 +103,6 @@ def value_name(trial_id, id, name, _binds):
     "evaluation",
     "activation",
     "access",
-    "value",
     "trial",
 ])
 @create_rule
@@ -137,7 +117,6 @@ def name(trial_id, model, id, name):
         "evaluation": evaluation_name,
         "activation": activation_name,
         "access": access_name,
-        "value": value_name,
     }
     if model not in model_map:
         return

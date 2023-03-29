@@ -44,8 +44,11 @@ class Vis(Command):
                      "current directory")
         add_arg("--force", type=str, default="false",
                 help="If force is set to true, it creates provenance database if not exists.")
+        add_arg("--content-engine", type=str,
+                help="set the content database engine")
 
     def execute(self, args):
+        persistence_config.content_engine = args.content_engine
         if args.force == "true":
                 persistence_config.connect(args.dir or os.getcwd())        
         else:

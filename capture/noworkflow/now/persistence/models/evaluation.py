@@ -11,17 +11,14 @@ from sqlalchemy import Column, Integer, String, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy.orm import remote, foreign
 
+
 from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
 from ...utils.prolog import PrologAttribute, PrologNullable, PrologRepr
-
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, one, many_viewonly_ref
-from .base import backref_one, backref_many, proxy
+from .base import AlchemyProxy, proxy_class, proxy
 
 from .dependency import Dependency
-from .member import Member
-from .activation import Activation
 
 
 @proxy_class
@@ -91,6 +88,11 @@ class Evaluation(AlchemyProxy):
         ForeignKeyConstraint(["trial_id", "activation_id"],
                              ["activation.trial_id", "activation.id"],
                              ondelete="CASCADE", use_alter=True),
+        ForeignKeyConstraint(["trial_id", "activation_id", "id"],
+                             ["evaluation.trial_id",
+                              "evaluation.member_container_activation_id",
+                              "evaluation.member_container_id"],
+                             ondelete="CASCADE", use_alter=True),
     )
     trial_id = Column(String, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
@@ -98,81 +100,23 @@ class Evaluation(AlchemyProxy):
     code_component_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
     repr = Column(Text)
+    member_container_activation_id = Column(Integer, index=True)
+    member_container_id = Column(Integer, index=True)
 
-    this_activation = one(
-        "Activation", backref="this_evaluation",viewonly=True,
-        primaryjoin=((foreign(id) == remote(Activation.m.id)) &
-                     (foreign(trial_id) == remote(Activation.m.trial_id))))
-
-    activation = one(
-        "Activation", backref="evaluations",
-        remote_side=[Activation.m.trial_id, Activation.m.id],
-        primaryjoin=((foreign(activation_id) == remote(Activation.m.id)) &
-                     (foreign(trial_id) == remote(Activation.m.trial_id))))
-
-    # dependencies in which this variable is the dependent
-    dependencies_as_dependent = many_viewonly_ref(
-        "dependent", "Dependency",
-        primaryjoin=(
-            (id == Dependency.m.dependent_id) &
-            (activation_id == Dependency.m.dependent_activation_id) &
-            (trial_id == Dependency.m.trial_id))
-    )
-
-    # dependencies in which this variable is the dependency
-    dependencies_as_dependency = many_viewonly_ref(
-        "dependency", "Dependency",
-        primaryjoin=(
-            (id == Dependency.m.dependency_id) &
-            (activation_id == Dependency.m.dependency_activation_id) &
-            (trial_id == Dependency.m.trial_id)))
-
-    dependencies = many_viewonly_ref(
-        "dependents", "Evaluation",
-        secondary=Dependency.__table__,
-        primaryjoin=(
-            (id == Dependency.m.dependent_id) &
-            (activation_id == Dependency.m.dependent_activation_id) &
-            (trial_id == Dependency.m.trial_id)),
-        secondaryjoin=(
-            (id == Dependency.m.dependency_id) &
-            (activation_id == Dependency.m.dependency_activation_id) &
-            (trial_id == Dependency.m.trial_id)))
-
-    # memberships in which this evaluation is the collection
-    memberships_as_collection = many_viewonly_ref(
-        "collection", "Member",
-        primaryjoin=(
-            (id == Member.m.collection_id) &
-            (activation_id == Member.m.collection_activation_id) &
-            (trial_id == Member.m.trial_id))
-    )
-
-    # memberships in which this evaluation is the member
-    memberships_as_member = many_viewonly_ref(
-        "member", "Member",
-        primaryjoin=(
-            (id == Member.m.member_id) &
-            (activation_id == Member.m.member_activation_id) &
-            (trial_id == Member.m.trial_id)))
-
-    members = many_viewonly_ref(
-        "collections", "Evaluation",
-        secondary=Member.__table__,
-        primaryjoin=(
-            (id == Member.m.collection_id) &
-            (activation_id == Member.m.collection_activation_id) &
-            (trial_id == Member.m.trial_id)),
-        secondaryjoin=(
-            (id == Member.m.member_id) &
-            (activation_id == Member.m.member_activation_id) &
-            (trial_id == Member.m.trial_id)))
-
-    dependents = backref_many("dependents")  # Evaluation.dependencies
-    collections = backref_many("collections")  # Evaluation.members
-    trial = backref_one("trial")  # Trial.evaluations
-    code_component = backref_one("code_component")  # CodeComponent.evaluations
-
+    # Relationship attributes (see relationships.py):
+    #   this_activation: 1 Activation
+    #   activation: 1 Activation
+    #   dependencies_as_dependent: * Dependency 
+    #   dependencies_as_dependency: * Dependency
+    #   dependencies: * Evaluation
+    #   dependents: * Evaluation
+    #   memberships_as_collection: * Member
+    #   memberships_as_member: * Member
+    #   members: * Evaluation
+    #   collections: * Evaluation
+    #   trial: 1 Trial
+    #   code_component: 1 CodeComponent
+    
     prolog_description = PrologDescription("evaluation", (
         PrologTrial("trial_id", link="trial.id"),
         PrologAttribute("id"),
@@ -180,6 +124,7 @@ class Evaluation(AlchemyProxy):
         PrologAttribute("code_component_id", link="code_component.id"),
         PrologNullable("activation_id", link="activation.id"),
         PrologRepr("repr"),
+        PrologNullable("member_container_id", link="evaluation.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "an evaluation *Id* of *CodeComponentId* finalized at *Checkpoint*\n"
@@ -273,3 +218,16 @@ class Evaluation(AlchemyProxy):
         True
         """
         return self.trial.start + timedelta(seconds=self.checkpoint)
+
+    def was_derived_from(self, evaluations, distinguish=False):
+        from ...models.dependency_querier import DependencyQuerier
+        if isinstance(evaluations, Evaluation):
+            evaluations = [evaluations]
+        querier = DependencyQuerier()
+        nodes_to_visit, visited, found = querier.navigate_dependencies([self], stop_on=evaluations)
+        if distinguish:
+            return {
+                evaluation: evaluation in found
+                for evaluation in evaluations
+            }
+        return len(found) == len(evaluations)

@@ -14,7 +14,7 @@
         % DESCRIPTION: match *CodeId* of evalation *Id*
         %              in a given trial (*TrialId*).
 
-        evaluation_code_id(TrialId, Id, CodeId) :- evaluation(TrialId, Id, _, CodeId, _, _).
+        evaluation_code_id(TrialId, Id, CodeId) :- evaluation(TrialId, Id, _, CodeId, _, _, _).
 
 
 %%% NAME RULES
@@ -52,13 +52,6 @@
         access_name(TrialId, [Id|Ids], [Name|Names]) :- access_name(TrialId, Id, Name), access_name(TrialId, Ids, Names).
         access_name(TrialId, Id, Name) :- access(TrialId, Id, Name, _, _, _, _, _).
 
-    % value_name(TrialId, Id, Name)/3
-        % DESCRIPTION: get the *Name* (Value) of a value (*Id*)
-        %              in a given trial (*TrialId*).
-
-        value_name(_, [], []).
-        value_name(TrialId, [Id|Ids], [Name|Names]) :- value_name(TrialId, Id, Name), value_name(TrialId, Ids, Names).
-        value_name(TrialId, Id, Name) :- value(TrialId, Id, Name, _).
 
     % name(TrialId, Model, Id, Name)/4
         % DESCRIPTION: get the *Name* of a *Model* (*Id*)
@@ -69,7 +62,6 @@
         name(TrialId, evaluation, Id, Name) :- evaluation_name(TrialId, Id, Name).
         name(TrialId, activation, Id, Name) :- activation_name(TrialId, Id, Name).
         name(TrialId, access, Id, Name) :- access_name(TrialId, Id, Name).
-        name(TrialId, value, Id, Name) :- value_name(TrialId, Id, Name).
         name(TrialId, trial, 0, Name) :- trial(TrialId, Name, _, _, _, _, _, _, _).
 
     % map_names(TrialId, Model, Ids, Names)/4
@@ -97,7 +89,7 @@
         timestamp_id(TrialId, Id, Start, start) :- timestamp_id(TrialId, Id, Start, activation).
         timestamp_id(TrialId, Id, Finish, finish) :- timestamp_id(TrialId, Id, Finish, evaluation).
         timestamp_id(TrialId, Id, Checkpoint, activation) :- activation(TrialId, Id, _, Checkpoint, _).
-        timestamp_id(TrialId, Id, Checkpoint, evaluation) :- evaluation(TrialId, Id, Checkpoint, _, _, _).
+        timestamp_id(TrialId, Id, Checkpoint, evaluation) :- evaluation(TrialId, Id, Checkpoint, _, _, _, _).
         timestamp_id(TrialId, Id, Checkpoint, access) :- access(TrialId, Id, _, _, _, _, Checkpoint, _).
 
     % duration_id(TrialId, Id, Duration)/3
@@ -265,7 +257,7 @@
         % DESCRIPTION: match *Called* evaluations by *Caller* activation
         %              in a given trial (*TrialId*).
 
-        activation_id(TrialId, Caller, Called) :- evaluation(TrialId, Called, _, _, Caller, _).
+        activation_id(TrialId, Caller, Called) :- evaluation(TrialId, Called, _, _, Caller, _, _).
 
     % called_activation_id(TrialId, Caller, Called)/3
         % DESCRIPTION: match *Called* activation by *Caller* activation

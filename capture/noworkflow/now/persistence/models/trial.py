@@ -21,10 +21,8 @@ from ...utils.prolog import PrologNullable
 from .. import relational, content, persistence_config
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
-from .base import one, many_ref, many_viewonly_ref, backref_many, is_none
-from .base import proxy
+from .base import is_none, proxy
 
-from .code_block import CodeBlock
 from .activation import Activation
 from .head import Head
 
@@ -166,47 +164,28 @@ class Trial(AlchemyProxy):
     modules_inherited_from_trial_id = Column(Integer, index=True)
     parent_id = Column(Integer, index=True)
     main_id = Column(Integer, index=True)
-
-    modules_inherited_from_trial = one(
-        "Trial", backref="bypass_children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == modules_inherited_from_trial_id)
-    )
-    parent = one(
-        "Trial", backref="children", viewonly=True,
-        remote_side=[id], primaryjoin=(id == parent_id)
-    )
-    main = one(
-        "CodeBlock",
-        remote_side=[CodeBlock.m.trial_id, CodeBlock.m.id],
-        primaryjoin=((main_id == CodeBlock.m.id) &
-                     (id == CodeBlock.m.trial_id)))
-    code_blocks = relationship("CodeBlock", backref="trial",uselist=True,viewonly=True, lazy='dynamic')
-
-    arguments = many_ref("trial", "Argument")
-    environment_attrs = many_ref("trial", "EnvironmentAttr")
-    _modules = many_ref("trial", "Module")
-
-    code_components = many_viewonly_ref("trial", "CodeComponent")
-    evaluations = many_viewonly_ref("trial", "Evaluation")
-    activations = many_viewonly_ref(
-        "trial", "Activation", order_by=Activation.m.start_checkpoint)
-    file_accesses = many_viewonly_ref("trial", "FileAccess")
-
-    members = many_viewonly_ref("trial", "Member")
-
-    dependencies = many_viewonly_ref("trial", "Dependency")
-    compositions = many_viewonly_ref("trial", "Composition")
-
-    tags = many_ref("trial", "Tag")
-
-    # Trial.modules_inherited_from_trial
-    bypass_children = backref_many("bypass_children")
-    # Trial.parent
-    children = backref_many("children")
+    # Relationship attributes (see relationships.py):
+    #   modules_inherited_from_trial: * Module
+    #   parent: 1 Trial
+    #   main: 1 CodeBlock
+    #   code_blocks: * CodeBlock
+    #   arguments: * Argument
+    #   environment_attrs: * EnvironmentAttr
+    #   _modules: * Module
+    #   code_components: * CodeComponent
+    #   evalulations: * Evaluation
+    #   activations: * Activation
+    #   file_accesses: * FileAccess
+    #   members: * Member
+    #   dependencies: * Dependency
+    #   compositions: * Composition
+    #   tags: * Tag
+    #   bypass_children: * Trial
+    #   children: * Trial
 
     experiment_id = Column(Text)
     user_id = Column(Text)
-
+    
     DEFAULT = {
         "dot.format": "png",
         "graph.width": 500,
@@ -282,7 +261,7 @@ class Trial(AlchemyProxy):
         from ...models.dependency_graph.config import DependencyConfig
         from ...models.graphs.trial_graph import TrialGraph
         from ...models.trial_prolog import TrialProlog
-        from ...models.trial_dot import TrialDot
+        from ...models.dataflow_model import DataflowModel
 
         self.dependency_config = DependencyConfig()
         self._dependency_clusterizer = None
@@ -290,7 +269,7 @@ class Trial(AlchemyProxy):
         self.graph = TrialGraph(self)
 
         self.prolog = TrialProlog(self)
-        self.dot = TrialDot(self)
+        self.dot = DataflowModel(trial=self)
         self.initialize_default(kwargs)
         self._prolog_visitor = None
 
@@ -358,7 +337,7 @@ class Trial(AlchemyProxy):
         >>> trial.initial_activation.id == trial_config.main_act
         True
         """
-        if self.main.this_component.first_evaluation is None:
+        if self.main is None or self.main.this_component.first_evaluation is None:
             return None
         return self.main.this_component.first_evaluation.this_activation
 
@@ -451,10 +430,9 @@ class Trial(AlchemyProxy):
         >>> len(trial.code_hash)
         40
         """
-        resp=None
-        if self.main is not None:
-            resp=self.main.code_hash
-        return resp
+        if not self.main:
+            return ""
+        return self.main.code_hash
 
     @property
     def finished(self):

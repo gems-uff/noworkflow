@@ -372,6 +372,24 @@ Out [14]: %
      ...: ...
 ```
 
+
+Contributing
+------------
+
+Pull requests for bugfixes and new features are welcome!
+
+For installing the python dependencies locally, clone the repository and run:
+```
+pip install -e noworkflow/capture
+```
+
+For changes on the now vis or IPython integration files, install nodejs, Python 3 and run:
+```
+cd noworkflow/npm
+python watch.py
+```
+
+
 Included Software
 -----------------
 

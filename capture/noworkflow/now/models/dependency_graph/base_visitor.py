@@ -21,10 +21,12 @@ class ClusterVisitor(object):
         }
         self.dependencies = clusterizer.dependencies
 
-    def visit(self, node):
+    def visit(self, node, initial=False):
         """Visit node"""
         if isinstance(node, Clusterizer):
             return self.visit_initial(node.main_cluster)
+        if initial:
+            return self.visit_initial(node)
         return self.visitors.get(type(node), self.visit_else)(node)
 
     def visit_default(self, node):

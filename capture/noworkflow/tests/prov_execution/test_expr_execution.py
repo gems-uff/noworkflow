@@ -304,7 +304,8 @@ class TestExprExecution(CollectionTestCase):
         self.script("# script.py\n"
                     "a = '1'\n"
                     "b = int(a)\n"
-                    "# other")
+                    "# other",
+                    capture_func_component=False)
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
         var_b = self.get_evaluation(name="b")

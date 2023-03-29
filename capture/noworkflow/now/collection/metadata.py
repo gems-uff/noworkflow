@@ -98,7 +98,7 @@ class Metascript(object):                                                       
         self.bypass_modules = True
 
         # Capture func component : bool
-        self.capture_func_component = False
+        self.capture_func_component = True
 
         # Depth for capturing function activations : int
         self.depth = sys.getrecursionlimit()
@@ -112,6 +112,11 @@ class Metascript(object):                                                       
 
         # Used by jupyter to indicate that it should not transform cell : bool
         self.jupyter_original = False
+
+        # Commit message : str
+        self.message = ""
+        # Content engine : str
+        self.content_engine = None
 
 
         # Trial time
@@ -200,7 +205,9 @@ class Metascript(object):                                                       
             depth=sys.getrecursionlimit(),
             save_frequency=0,
             call_storage_frequency=10000,
-            context="main"
+            context="main",
+            message=None,
+            content_engine=None,
         )
         self._read_args(args)
         self.path = os.getcwd()
@@ -219,7 +226,8 @@ class Metascript(object):                                                       
         self.depth = args.depth
         self.save_frequency = args.save_frequency
         self.call_storage_frequency = args.call_storage_frequency
-
+        self.message = args.message
+        self.content_engine = persistence_config.content_engine = args.content_engine
         io.print_msg("setting up local provenance store")
         persistence_config.connect(self.dir)
         return self
@@ -230,6 +238,8 @@ class Metascript(object):                                                       
         self.command = " ".join(sys.argv[1:])
 
         self.dir = args.dir
+        self.message = args.message
+        self.content_engine = persistence_config.content_engine = args.content_engine
         return self
 
     def create_arguments(self, args):

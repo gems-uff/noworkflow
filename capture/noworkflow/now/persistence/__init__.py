@@ -30,5 +30,5 @@ __all__ = [
     "persistence_config",
     "content",
     "relational",
-    "get_serializer",
+    "get_serializer"
 ]

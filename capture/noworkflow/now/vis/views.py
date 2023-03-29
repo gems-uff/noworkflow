@@ -7,16 +7,20 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
+import io
 import json
 
-from flask import render_template, jsonify, request,send_file, Response
+from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup
+from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup
 from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW
 from ..models.history import History
 from ..models.diff import Diff
-from ..persistence import relational
+from ..persistence import relational, content
+from ..ipython.dotmagic import DotDisplay
+
+import subprocess
 from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
 from ..persistence import content
@@ -270,6 +274,38 @@ def trials(expId=None):
                       expId=expId)
     return jsonify(**history.graph.graph())
 
+#generate dafalowdataflow
+@app.route("/experiments/<expCode>/trials/<tid>/flow.pdf")
+@app.route("/trials/<tid>/flow.pdf")
+def dataflow(tid):
+    """Generates the dafalow of a trial """ 
+    trial = Trial(tid)
+    display = DotDisplay(trial.dot.export_text(), format="pdf")
+    return send_file(
+        io.BytesIO(display.display_result()["application/pdf"]),
+        attachment_filename='flow.pdf',
+        mimetype="application/pdf"
+    )
+
+@app.route("/experiments/<expCode>/trials/<tid>/<script_hash>/<name>") 
+@app.route("/trials/<tid>/<script_hash>/<name>")    
+def get_script(tid, script_hash, name):
+    """Returns the executed script"""
+    return send_file(
+        io.BytesIO(content.get(script_hash)),
+        attachment_filename=name + '.py'
+    )
+
+@app.route("/experiments/<expCode>/trials/files/<file_hash>/<file_ext>")
+@app.route("/trials/files/<file_hash>/<file_ext>")
+def get_file(file_hash, file_ext):
+    """Returns a file used in the trial"""
+    name = file_hash + file_ext
+    return send_file(
+        io.BytesIO(content.get(file_hash)),
+        attachment_filename=name
+    )
+
 @app.route("/experiments/<expCode>/trials/<tid>/<graph_mode>/<cache>.json")
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
 def trial_graph(tid, graph_mode, cache,expCode=None):
@@ -313,6 +349,28 @@ def file_accesses(tid,expCode=None):
                                   for x in trial.file_accesses],
                    trial_path=trial_path)
 
+@app.route("/experiments/<expCode>/trials/<tid>/activations/<aid>.json")
+@app.route("/experiments/<expCode>/trials/<tid>/activations/<aid>")
+@app.route("/trials/<tid>/activations/<aid>.json")
+@app.route("/trials/<tid>/activations/<aid>")
+def activations(tid, aid):
+    """Respond trial activation as text"""
+    activation = Activation((tid, aid))
+    global_evaluations = activation.filter_evaluations_by_type("global")
+    param_evaluations = activation.filter_evaluations_by_type("param")
+    return jsonify(
+        id=aid,
+        line=activation.line,
+        name=activation.name,
+        start=activation.start,
+        finish=activation.finish,
+        duration=activation.duration,
+        globals=["{} = {}".format(*evaluation) for evaluation in global_evaluations],
+        parameters=["{} = {}".format(*evaluation) for evaluation in param_evaluations],
+        return_value=activation.this_evaluation.repr,
+        hash=activation.code_block.code_hash if activation.code_block is not None else "",
+    )
+    
 @app.route("/experiments/<expCode>/diff/<trial1>/<trial2>/info.json")
 @app.route("/diff/<trial1>/<trial2>/info.json")
 def diff(trial1, trial2,expCode=None):

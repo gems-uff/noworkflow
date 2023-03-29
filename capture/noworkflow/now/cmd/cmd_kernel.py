@@ -12,14 +12,15 @@ import sys
 import threading
 import webbrowser
 
-from ipykernel import kernelspec
 from ..persistence import persistence_config
 from .command import Command
+
+
+
 
 KERNEL_NAME = 'noworkflow%i' % sys.version_info[0]
 DISPLAY_NAME = 'noWorkflow %i' % sys.version_info[0]
 
-kernelspec.make_ipkernel_cmd.__defaults__ = ('noworkflow.kernel', None, None)
 
 class Kernel(Command):
     """ Install Jupyter Kernel """
@@ -49,6 +50,9 @@ class Kernel(Command):
 
     def execute(self, args):
         try:
+            from ipykernel import kernelspec
+            kernelspec.make_ipkernel_cmd.__defaults__ = ('noworkflow.kernel', None, None)
+
             dest = kernelspec.install(
                 user=args.user, kernel_name=args.name, profile=args.profile,
                 prefix=args.prefix, display_name=args.display_name)
@@ -58,6 +62,6 @@ class Kernel(Command):
                 if args.user:
                     print("Perhaps you want `sudo` or `--user`?",
                           file=sys.stderr)
-                self.exit(1)
+                sys.exit(1)
             raise
         print("Installed kernelspec %s in %s" % (args.name, dest))

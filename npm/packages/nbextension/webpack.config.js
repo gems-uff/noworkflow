@@ -2,33 +2,27 @@ const path = require('path');
 var version = require('./package.json').version;
 
 
-var loaders = [
-  {
-    test: /\.js$/,
-    include: [path.join(__dirname, 'src')],
-    loader: 'babel-loader',
-    query: { presets: ['env'] }
-  },
-  { test: /\.json$/, loader: 'json-loader' },
-  { test: /\.css$/, loader: 'style-loader!css-loader' },
-  { test: /\.html$/, loader: 'file-loader' },
-  { test: /\.(jpg|png|gif)$/, loader: 'file-loader' },
+var rules = [
+  { test: /\.css$/, use: ['style-loader', 'css-loader'] },
+  // jquery-ui loads some images
+  { test: /\.(jpg|png|gif)$/, use: 'file-loader' },
+  // required to load font-awesome
   {
     test: /\.woff2(\?v=\d+\.\d+\.\d+)?$/,
-    loader: 'url-loader?limit=10000&mimetype=application/font-woff'
+    use: 'url-loader?limit=10000&mimetype=application/font-woff'
   },
   {
     test: /\.woff(\?v=\d+\.\d+\.\d+)?$/,
-    loader: 'url-loader?limit=10000&mimetype=application/font-woff'
+    use: 'url-loader?limit=10000&mimetype=application/font-woff'
   },
   {
     test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/,
-    loader: 'url-loader?limit=10000&mimetype=application/octet-stream'
+    use: 'url-loader?limit=10000&mimetype=application/octet-stream'
   },
-  { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader' },
+  { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, use: 'file-loader' },
   {
     test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,
-    loader: 'url-loader?limit=10000&mimetype=image/svg+xml'
+    use: 'url-loader?limit=10000&mimetype=image/svg+xml'
   }
 ];
 
@@ -38,9 +32,14 @@ var base = {
     libraryTarget: 'amd',
     devtoolModuleFilenameTemplate: 'webpack:///[absolute-resource-path]'
   },
+  mode: 'development',
   devtool: 'source-map',
-  module: { loaders },
-  externals: ['$']
+  module: { rules },
+  externals: ['$'],
+  output: {
+    libraryTarget: 'amd',
+    publicPath: ''
+  }
 };
 
 
@@ -74,6 +73,10 @@ module.exports = [
       'base/js/events',
       'base/js/utils',
       'notebook/js/codecell',
+      /*'d3-selection',
+      '@noworkflow/trial',
+      '@noworkflow/history',
+      '@noworkflow/utils',*/
       '$'
     ]
   }),

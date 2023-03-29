@@ -6,9 +6,9 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-
 import ast
 import os
+import sys
 import weakref
 import traceback
 
@@ -72,15 +72,16 @@ class Definition(object):
         else:
             lines = [code]
 
+        path = os.path.relpath(path, self.metascript.dir) 
         id_ = self.metascript.code_components_store.add(
             self.metascript.trial_id,
-            os.path.relpath(path, self.metascript.dir),
+            path,
             type_,
             "w",
             1, 0, len(lines), len(lines[-1]), -1
         )
         self.metascript.code_blocks_store.add(
-            id_, self.metascript.trial_id, code, binary, None
+            id_, self.metascript.trial_id, code, binary, None, path
         )
         return code, id_
 
@@ -104,6 +105,8 @@ class Definition(object):
 
             tree = visitor.visit(tree)
             debug_tree(tree, just_print=[], show_code=[])
+            #import astor
+            #print(astor.to_source(tree))
             transformed = True
         except SyntaxError:
             print_msg("Syntax error on file {}. Skipping transformer."
@@ -125,7 +128,6 @@ class Definition(object):
             source, filename, mode
         )
         self.first = False
-
         return compiler(
             tree, filename, mode,
             **kwargs

@@ -13,7 +13,7 @@ def finder(metascript):
     class SourceLoader(SourceFileLoader):
 
         def exec_module(self, module):
-            with content.restore_open():
+            with content.use_safe_open():
                 source_path = self.get_filename(module.__name__)
                 required = 2
                 required -= int(source_path.startswith(metascript.dir))
@@ -46,7 +46,7 @@ def finder(metascript):
     def create_generic_loader(superclass):
         class GenericLoader(superclass):
             def exec_module(self, module):
-                with content.restore_open():
+                with content.use_safe_open():
                     create_module = not metascript.bypass_modules
                     if create_module:
                         source_path = module.__file__
@@ -75,7 +75,7 @@ def finder(metascript):
     class Finder(PathFinder):
         @classmethod
         def find_spec(cls, fullname, path=None, target=None):
-            with content.restore_open():
+            with content.use_safe_open():
                 spec = super(Finder, cls).find_spec(fullname, path, target)
                 if spec is None:
                     return None

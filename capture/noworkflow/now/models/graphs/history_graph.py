@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 import time
 import weakref
 
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict, namedtuple
 
 from future.utils import viewvalues
 
@@ -181,8 +181,8 @@ class HistoryGraph(Graph):
                 parent_tag = new_tmap.get(trial.parent_id)
                 if parent_tag is not None:
                     if (node_obj.parent_id is None or
-                            node_obj.parent_id > parent_tag.nid):
-                        node_obj.parent_id = parent_tag.nid
+                            node_obj.parent_id > parent_tag.id):
+                        node_obj.parent_id = parent_tag.id
             else:
                 node_obj = node_map[tag_node]
 
@@ -413,7 +413,6 @@ class HistoryGraph(Graph):
         active_levels = [0] * (max_level + 1)
         lines = []
         add_line = lambda *a, **kw: lines.append(_line_text(*a, **kw))
-
         for trial in reversed(nodes):
             active_levels[trial.level] = 1
             add_line(active_levels, trial, trial.level, width=width)
@@ -445,6 +444,7 @@ class Node(object):
         self.level = 0
         self.script = ""
         self.trials = []
+        self.status_letter = "*"
         self.order=tid
 
     def insert(self, trial):
@@ -479,10 +479,19 @@ class Node(object):
         return {
             'id': repr(self.id),
             "display": repr(self.id),
-            'parent_id': self.parent_id,
+            'parent_id': repr(self.parent_id),
             'level': self.level,
             'trials': [x.to_dict(*args, **kwargs) for x in self.trials],
+            'status': 'finished',
         }
+
+    @property
+    def tags(self):
+        Tag = namedtuple("Tag", "name")
+        return [
+            Tag("[{}]".format(", ".join(tag.name for tag in trial.tags))) 
+            for trial in self.trials
+        ]
 
 
 class Version(object):
@@ -540,7 +549,7 @@ def _line_text(active, trial, current, moving=False, width=25):
     if moving:
         return "".join(text)
     return "{line}  {id: <4} {script: <{width}} {tags}".format(
-        line="".join(text), id=trial.id, script=trial.script,
+        line="".join(text), id=str(trial.id), script=trial.script,
         tags=", ".join(tag.name for tag in trial.tags), width=width
     )
 

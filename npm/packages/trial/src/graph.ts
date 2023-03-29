@@ -15,8 +15,7 @@ import {
   BaseType as d3_BaseType,
   Selection as d3_Selection,
   select as d3_select,
-  event as d3_event,
-  mouse as d3_mouse,
+  pointers as d3_pointers
 } from 'd3-selection';
 
 import {
@@ -32,8 +31,10 @@ import {TrialConfig} from './config';
 import {VisibleTrialNode, VisibleTrialEdge} from './structures';
 import {
   TrialGraphData, TrialNodeData,
-  TrialEdgeData
+  TrialEdgeData, ActivationData
 } from './structures';
+
+import { D3ZoomEvent } from 'd3';
 
 
 export
@@ -44,6 +45,7 @@ class TrialGraph {
   transform: any;
 
   div: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   svg: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   g: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   zoom: any;
@@ -64,6 +66,7 @@ class TrialGraph {
   totalDuration: { [trial: string]: number };
   maxTotalDuration: number;
   colors: { [trial: string]: number };
+  activationStorage: { [aid: string]: ActivationData; };
 
 
   constructor(graphId:string, div: any, config: any={}) {
@@ -76,9 +79,10 @@ class TrialGraph {
           g.config.height,
         ]
       },
-      customMouseOver: (g:TrialGraph, d: VisibleTrialNode, name: string) => false,
+      customMouseOver: (g:TrialGraph, d: VisibleTrialNode) => false,
       customMouseOut: (g:TrialGraph, d: VisibleTrialNode) => false,
       customForm: (g: TrialGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => null,
+      customLoadTooltip: (g: TrialGraph, div: HTMLDivElement, text: string, trialid: string, aid: string) => null,
 
       duration: 750,
 
@@ -96,26 +100,32 @@ class TrialGraph {
 
       nodeSizeX: 47,
       nodeSizeY: 100,
+
+      queryTooltip: false,
+      genDataflow: true
     };
     this.config = (Object as any).assign({}, defaultConfig, config);
 
 
     this.graphId = graphId;
 
-    this.zoom = d3_zoom()
-      .on("zoom", () => this.zoomFunction())
+    this.zoom = d3_zoom<SVGSVGElement, any>()
+      .on("zoom", (event: D3ZoomEvent<SVGSVGElement, any>) => {
+        return this.zoomFunction(event);
+      })
       .on("start", () => d3_select('body').style("cursor", "move"))
       .on("end", () => d3_select('body').style("cursor", "auto"))
-      .wheelDelta(() => {
-        return -d3_event.deltaY * (d3_event.deltaMode ? 120 : 1) / 2000;
+      .wheelDelta(function() {
+        const e = event as WheelEvent;
+        return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
       })
 
     this.div = d3_select(div)
-    let form = d3_select(div)
+    this.form = this.div
       .append("form")
       .classed("trial-toolbar", true);
 
-    this.svg = d3_select(div)
+    this.svg = d3_select<SVGSVGElement, any>(div)
       .append("div")
       .append("svg")
       .attr("width", this.config.width)
@@ -131,17 +141,14 @@ class TrialGraph {
       .attr("transform", "translate(0,0)")
       .classed('TrialGraph', true);
 
-    this.tree = d3_tree()
+    this.tree = d3_tree<VisibleTrialNode>()
       .nodeSize([
         this.config.nodeSizeX,
         this.config.nodeSizeY
       ]);
-
-    // **Toolbar**
-    this.createToolbar(form);
-
+    
     // Tooltip
-    this.tooltipDiv = d3_select("body").append("div")
+    this.tooltipDiv = d3_select<HTMLDivElement, any>("body").append("div")
       .attr("class", "now-tooltip now-trial-tooltip")
       .style("opacity", 0)
       .on("mouseout", () => {
@@ -154,12 +161,18 @@ class TrialGraph {
         this.config.left + this.config.width / 2,
         this.config.top
       ))
+
+    this.activationStorage = {};
   }
 
   init(data: TrialGraphData, t1: string, t2: string) {
     this.t1 = t1;
     this.t2 = t2;
 
+    // **Toolbar**
+    this.createToolbar(this.form);
+
+    // **Graph**
     this.minDuration = data.min_duration;
     this.maxDuration = data.max_duration;
     this.totalDuration = {};
@@ -184,7 +197,7 @@ class TrialGraph {
   createToolbar(form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
     let self = this;
     form = form.append("div")
-      .classed("buttons", true);
+      .classed("buttons buttonsGraph", true);
     this.config.customForm(this, form);
     // Reset zoom
     form.append("a")
@@ -224,6 +237,19 @@ class TrialGraph {
       })
     .append("i")
       .classed("fa fa-download", true)
+
+    // Generate Dataflow
+    if (this.config.genDataflow) {
+      var trialId = self.t1;
+      form.append("a")
+        .classed("toollink", true)
+        .attr("id", "trial-" + this.graphId + "-dataflow")
+        .attr("href", "trials/" + trialId + "/flow.pdf")
+        .attr("title", "Generate dataflow")
+        .on("click", () => {})
+        .append("i")
+        .classed("fa fa-book", true)
+    }
 
     // Set Font Size
     let fontToggle = form.append("input")
@@ -367,7 +393,6 @@ class TrialGraph {
     this.nodes.forEach((node: VisibleTrialNode) => {
       validNodes[node.data.index] = node;
     });
-
     var edges: VisibleTrialEdge[] = this.alledges.filter((edge: TrialEdgeData) => {
       let source: VisibleTrialNode = validNodes[edge.source];
       let target: VisibleTrialNode = validNodes[edge.target];
@@ -395,7 +420,6 @@ class TrialGraph {
       d.x0 = d.x;
       d.y0 = d.y;
     });
-
     this.wrapText();
   }
 
@@ -448,14 +472,56 @@ class TrialGraph {
     this.tooltipDiv.classed("hidden", true);
   }
 
-  private showTooltip(d: TrialNodeData, trial_id: string) {
+  private showTooltip(event: MouseEvent, d: TrialNodeData, trial_id: string) {
+    var self = this;
     this.tooltipDiv.classed("hidden", false);
     this.tooltipDiv.transition()
       .duration(200)
       .style("opacity", 0.9);
-    this.tooltipDiv.html(d.tooltip[trial_id])
-      .style("left", (d3_event.pageX - 3) + "px")
-      .style("top", (d3_event.pageY - 28) + "px");
+    if (this.config.queryTooltip) {
+      var string = d.tooltip[trial_id]
+      var regexp = (/T(\d*) - (\d*)<br>Line \d*?<br>/g)
+      var match = regexp.exec(string);
+      this.tooltipDiv.html("")
+      .style("left", (event.pageX - 3) + "px")
+      .style("top", (event.pageY - 28) + "px");
+      while (match != null) {
+        var div = document.createElement("div");
+        //var div2 = document.createElement("div");
+        this.tooltipDiv.append(() => div);
+        //this.tooltipDiv.append(() => div2);
+        var aid = match[2];
+        if (aid in self.activationStorage) {
+          this.updateTooltipDiv(aid, div);
+        } else {
+          self.config.customLoadTooltip(self, div, match[0], match[1], match[2]);
+        }
+        match = regexp.exec(string);
+      }
+    } else {
+      this.tooltipDiv.html(d.tooltip[trial_id])
+      .style("left", (event.pageX - 3) + "px")
+      .style("top", (event.pageY - 28) + "px");
+    }
+    
+  }
+
+  updateTooltipDiv(activationId: string, div: Element) {
+    var data = this.activationStorage[activationId];
+    var title = data.id + " - " + data.name;
+    if (data.hash != "") {
+      title = '<a href="/trials/files/' + data.hash + '/' + data.name + '">' + title + "</a>";
+    }
+    var result = [
+      '<span class="attr"> <span style="font-weight: bold;">' + title  + '</span></span>',
+      '<span class="attr"> <span style="font-weight: bold;"> Line: </span> <span class="line">' + data.line + "</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Start: </span> <span class="start">' + data.start + "</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Finish: </span> <span class="finish">' + data.finish + "</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Duration: </span> <span class="duration">' + data.duration + "ns</span></span>",
+      '<span class="attr"> <span style="font-weight: bold;"> Return: </span> <span class="return">' + data.return_value + "</span></span>",
+    ]
+    // ToDo: parameters and globals
+    div.outerHTML = result.join("<br>") + "<br><br>"
   }
 
   private createMarker(name: string, cls: string, fill: string) {
@@ -508,19 +574,19 @@ class TrialGraph {
       .attr('transform', (d: VisibleTrialNode) => {
         return "translate(" + source.x + "," + source.y + ")";
       })
-      .on('click', (d: VisibleTrialNode) => this.nodeClick(d))
-      .on('mouseover', function(d: VisibleTrialNode) {
+      .on('click', (event: MouseEvent, d: VisibleTrialNode) => this.nodeClick(d))
+      .on('mouseover', function(event: MouseEvent, d: VisibleTrialNode) {
         if (self.config.useTooltip) {
           self.closeTooltip();
-          if (d3_mouse(this)[0] < 10) {
-            self.showTooltip(d.data, self.t1);
+          if (d3_pointers(event)[0][0] < 10) {
+            self.showTooltip(event, d.data, self.t1);
           } else {
-            self.showTooltip(d.data, self.t2);
+            self.showTooltip(event, d.data, self.t2);
           }
         }
-        self.config.customMouseOver(self, d, name);
+        self.config.customMouseOver(self, d);
         return false;
-      }).on('mouseout', function (d: VisibleTrialNode) {
+      }).on('mouseout', function (event: MouseEvent, d: VisibleTrialNode) {
         self.config.customMouseOut(self, d);
       })
 
@@ -628,7 +694,7 @@ class TrialGraph {
   }
 
   private updateLinks(source: VisibleTrialNode, edges: VisibleTrialEdge[]) {
-    var link = this.g.selectAll('path.link')
+    var link = this.g.selectAll<SVGPathElement, VisibleTrialEdge[]>('path.link')
       .data(edges, (d: VisibleTrialEdge) => d.id);
 
     // Enter any new links at the parent's previous position.
@@ -641,6 +707,33 @@ class TrialGraph {
       .attr("stroke-width", "1.5px")
       .attr('d', (d: VisibleTrialEdge) => {
         var o = {y: source.y0, x: source.x0}
+        if (d.source.dy == undefined) {
+          d.source.dy = 0;
+        }
+        if (d.target.dy == undefined) {
+          d.target.dy = 0;
+        }
+        
+        let
+          ox = source.x0 || 0,
+          oy = source.y0 || 0,
+          x1 = d.source.x,
+          y1 = d.source.y + d.source.dy,
+          x2 = d.target.x,
+          y2 = d.target.y + d.target.dy,
+          dx = x2 - x1,
+          dy = y2 - y1;
+        if (d.type === 'initial' || d.type === 'call' || d.type == 'return') {
+          // Initial
+          return diagonal(o, o)
+        } else if (dx === 0 && dy === 0) {
+          // Loop
+          return `M ${ox}, ${oy}
+            A 15,20
+              -45,1,1
+              ${ox + 5},${oy + 8}`;
+        }
+        //return diagonal(d.source, d.target);
         return diagonal(o, o)
       })
       .attr("marker-end", (d: VisibleTrialEdge) => {
@@ -679,7 +772,6 @@ class TrialGraph {
 
     // UPDATE
     var linkUpdate = linkEnter.merge(link)
-
     // Transition back to the parent element position
     linkUpdate.transition()
       .duration(this.config.duration)
@@ -774,13 +866,11 @@ class TrialGraph {
         y1 += m1 * cos_theta;
         x2 += m2 * cos_phi;
         y2 += m2 * sin_phi;
-
         return `M ${x1} ${y1}
             C ${(x1 + x2) / 2} ${y1},
               ${(x1 + x2) / 2} ${y2},
               ${x2} ${y2}`
       });
-
     // Remove any exiting links
     link.exit()//.transition()
       .attr('d', function(d: VisibleTrialEdge) {
@@ -790,7 +880,7 @@ class TrialGraph {
   }
 
   private updateLinkLabels(edges: VisibleTrialEdge[]) {
-    var labelPath = this.g.selectAll(".label_text")
+    var labelPath = this.g.selectAll<SVGTextPathElement, VisibleTrialEdge>(".label_text")
       .data(edges, (d: VisibleTrialEdge) => d.id);
 
     var labelEnter = labelPath.enter().append("text")
@@ -831,13 +921,14 @@ class TrialGraph {
     labelPath.exit().remove();
   }
 
-  private zoomFunction() {
+  private zoomFunction(event: D3ZoomEvent<SVGSVGElement, any>) {
     this.closeTooltip();
-    this.transform = d3_event.transform;
-    this.g.attr("transform", d3_event.transform);
+    this.transform = event.transform;
+    this.g.attr("transform", event.transform as any);
   }
 
   private _graphId(): string {
     return "trial-graph-" + this.graphId;
   }
+
 }

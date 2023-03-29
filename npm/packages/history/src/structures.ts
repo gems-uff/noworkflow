@@ -9,6 +9,7 @@ interface HistoryNodeData {
   display: string;
   parent_id: number;
   level: number;
+  status: string;
 
   /* Only when HistoryNodeData acts as a summarized node */
   trials?: HistoryNodeData[];

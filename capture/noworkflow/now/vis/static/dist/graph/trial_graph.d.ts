@@ -12,7 +12,7 @@ export declare class TrialGraphWidget extends BaseActivationGraphWidget {
     static url(trialId: string, selectedGraph: string, useCache: boolean): string;
     constructor(name: string, cls: string, t1: string, t2: string);
     setGraph(data: TrialGraphData, config?: any): void;
-    configureGraph(selectedGraph: string | undefined, useCache: boolean | undefined, data: TrialGraphData): void;
+    configureGraph(selectedGraph: string | undefined, useCache: boolean | undefined, genDataflow: boolean | undefined, data: TrialGraphData): void;
     load(selectedGraph?: string, useCache?: boolean): void;
     protected onResize(msg: Widget.ResizeMessage): void;
 }

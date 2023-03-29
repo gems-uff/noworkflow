@@ -12,7 +12,7 @@ from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologTimestamp
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class
@@ -87,13 +87,12 @@ class Member(AlchemyProxy):
     checkpoint = Column(Float)
     type = Column(Text)  # pylint: disable=invalid-name
 
-    trial = backref_one("trial")  # Trial.dependencies
-    # Activation.dependent_variables, Evaluation.dependencies_as_dependent
-    member_activation = backref_one("member_activation")
-    member = backref_one("member")
-    # Activation.dependency_variables, Evaluation.dependencies_as_dependency
-    collection_activation = backref_one("collection_activation")
-    collection = backref_one("collection")
+    # Relationship attributes (see relationships.py):
+    #   trial: 1 Trial
+    #   member_activation: 1 Activation
+    #   member: 1 Evaluation
+    #   collection_activation: 1 Activation
+    #   collection: 1 Evaluation
 
     prolog_description = PrologDescription("member", (
         PrologTrial("trial_id", link="evaluation.trial_id"),

@@ -21,6 +21,13 @@ MODULE = MODULE[:MODULE.rfind(".")]
 NOWORKFLOW_DIR = dirname(dirname(dirname(__file__)))
 
 
+def recgetattr(obj, attrs, default=None):
+    cattr = attrs.pop()
+    if attrs:
+        return getattr(recgetattr(obj, attrs, None), cattr, default)
+    return getattr(obj, cattr, default)
+    
+
 def wrap(string, initial="  ", other="\n  "):
     """Re-indent indented text
 

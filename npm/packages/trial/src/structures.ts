@@ -46,7 +46,7 @@ interface TrialGraphData {
 export
 interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
   _children?: d3_HierarchyPointNode<TrialNodeData>[];
-  children?: d3_HierarchyPointNode<TrialNodeData>[];
+  children?: this[];
   dy?: number;
   x0?: number;
   y0?: number;
@@ -59,4 +59,18 @@ interface VisibleTrialEdge {
   target: VisibleTrialNode;
   type: string;
   id: string;
+}
+
+export
+interface ActivationData {
+  id: string;
+  hash: string;
+  name: string;
+  line: number;
+  parameters: string[];
+  globals: string[];
+  return_value: string;
+  duration: string;
+  start: string;
+  finish: string;
 }

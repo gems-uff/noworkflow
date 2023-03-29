@@ -36,7 +36,7 @@ def finder(metascript):
 
             I removed many error handling
             """
-            with content.restore_open():
+            with content.use_safe_open():
                 if name in sys.modules:
                     return sys.modules[name]
 
@@ -47,7 +47,7 @@ def finder(metascript):
 
         def load_module(self, fullname):
             """Mimics Python's load_module"""
-            with content.restore_open():
+            with content.use_safe_open():
                 self._reopen()
                 create_module = not metascript.bypass_modules
                 required = 2

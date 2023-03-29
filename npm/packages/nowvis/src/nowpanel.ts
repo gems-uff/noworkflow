@@ -1,5 +1,5 @@
-import {DockPanel, Widget, DockLayout} from '@phosphor/widgets';
-import {each} from '@phosphor/algorithm';
+import {DockPanel, Widget, DockLayout} from '@lumino/widgets';
+import {each} from '@lumino/algorithm';
 
 
 export

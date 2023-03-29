@@ -20,6 +20,7 @@ except ImportError:
 
 from .future_cross_version import cross_print
 
+PY38 = sys.version_info >= (3, 8)
 PY36 = sys.version_info >= (3, 6)
 PY35 = sys.version_info >= (3, 5)
 PY34 = sys.version_info >= (3, 4)
@@ -55,6 +56,22 @@ cross_compile = compile
 def to_unicode(text):
     """Convert bytes to unicode"""
     return text.decode("utf-8") if isinstance(text, raw_bytes) else text
+
+
+def bytes_string(text, encode="utf-8"):
+    """Return a bytes object on Python 3 and a str object on Python 2"""
+    if not PY3:
+        if isinstance(text, unicode):                                            # pylint: disable=undefined-variable
+            result = text.encode(encode)
+        else:
+            result = text
+    else:
+        if isinstance(text, bytes):
+            result = text
+        else:
+            result = bytes(text, encode)
+    return result
+
 
 def isiterable(element):
     """Check if element is iterable"""

@@ -4,7 +4,7 @@ import {
   BaseType as d3_BaseType,
 } from 'd3-selection';
 
-import {Widget} from '@phosphor/widgets';
+import {Widget} from '@lumino/widgets';
 
 import {EnvironmentItemData, FilterObject} from './structures';
 
@@ -118,7 +118,7 @@ class EnvironmentInfoWidget extends Widget {
 
   static createNode(trialDisplay: string, data: EnvironmentItemData[], default_local: string = "0"): HTMLElement {
     let node = document.createElement('div');
-    let d3node = d3_select(node);
+    let d3node = d3_select<HTMLDivElement, any>(node);
 
     let content = d3node.append('div')
       .classed('list', true)

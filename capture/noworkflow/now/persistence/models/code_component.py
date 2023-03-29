@@ -15,10 +15,6 @@ from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullable
 
 from .base import AlchemyProxy, proxy_class, query_one_property
-from .base import backref_one, one, many_viewonly_ref, backref_many
-
-from .code_block import CodeBlock
-from .composition import Composition
 
 
 @proxy_class
@@ -87,19 +83,15 @@ class CodeComponent(AlchemyProxy):
     last_char_column = Column(Integer)
     container_id = Column(Integer, index=True)
 
-    evaluations = many_viewonly_ref("code_component", "Evaluation")
-
-    this_block = one(
-        "CodeBlock", backref="this_component",
-        primaryjoin=((foreign(id) == remote(CodeBlock.m.id)) &
-                     (foreign(trial_id) == remote(CodeBlock.m.trial_id))))
-    container = one(
-        "CodeBlock", backref="components",
-        viewonly=True,
-        primaryjoin=((foreign(container_id) == remote(CodeBlock.m.id)) &
-                     (foreign(trial_id) == remote(CodeBlock.m.trial_id))))
-
-    trial = backref_one("trial")  # Trial.code_components
+    # Relationship attributes (see relationships.py):
+    #   children: * CodeComponent
+    #   container: 1 CodeBlock
+    #   compositions_as_part: * Composition
+    #   compositions_as_whole: * Composition
+    #   evaluations: * Evaluation
+    #   parents: * CodeComponent
+    #   this_block: 1 CodeBlock
+    #   trial: 1 Trial
 
     prolog_description = PrologDescription("code_component", (
         PrologTrial("trial_id", link="trial.id"),
@@ -120,34 +112,6 @@ class CodeComponent(AlchemyProxy):
         "and it last char is at [*LastCharLine*, *LastCharColumn*].\n"
         "This component is part of a given code block (*ContainerId*)."
     ))
-
-    # compositions in which this component is the part
-    compositions_as_part = many_viewonly_ref(
-        "part", "Composition",
-        primaryjoin=(
-            (id == Composition.m.part_id) &
-            (trial_id == Composition.m.trial_id))
-    )
-
-    # compositions in which this component is the whole
-    compositions_as_whole = many_viewonly_ref(
-        "whole", "Composition",
-        primaryjoin=(
-            (id == Composition.m.whole_id) &
-            (trial_id == Composition.m.trial_id)))
-
-    parents = many_viewonly_ref(
-        "children", "CodeComponent",
-        secondary=Composition.__table__,
-        primaryjoin=(
-            (id == Composition.m.part_id) &
-            (trial_id == Composition.m.trial_id)),
-        secondaryjoin=(
-            (id == Composition.m.whole_id) &
-            (trial_id == Composition.m.trial_id)))
-
-    children = backref_many("children")  # Value.parts
-
 
     @query_one_property
     def first_evaluation(self):

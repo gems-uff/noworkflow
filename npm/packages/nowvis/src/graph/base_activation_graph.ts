@@ -4,10 +4,11 @@ import {
   BaseType as d3_BaseType,
 } from 'd3-selection';
 
-import {Widget} from '@phosphor/widgets';
+import {Widget} from '@lumino/widgets';
 
-import {TrialGraph, TrialGraphData} from '@noworkflow/trial';
+import {TrialGraph, TrialGraphData, ActivationData} from '@noworkflow/trial';
 
+import {json} from '@noworkflow/utils';
 
 export
 class BaseActivationGraphWidget extends Widget {
@@ -76,7 +77,7 @@ class BaseActivationGraphWidget extends Widget {
 
   static createNode(name:string, fn: (name: string, parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => void = (parent) => null): HTMLElement {
     let node = document.createElement('div');
-    let d3node = d3_select(node);
+    let d3node = d3_select<HTMLDivElement, any>(node);
 
     let content = d3node.append('div')
       .classed('trial-content', true)
@@ -114,8 +115,8 @@ class BaseActivationGraphWidget extends Widget {
     this.graph.load(data, this.t1, this.t2);
   }
 
-  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, data: TrialGraphData) {
-    this.setGraph(data, {
+  graphDefinition(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
+    return {
       width: this.node.getBoundingClientRect().width - 24,
       height: this.node.getBoundingClientRect().height - 24,
       customForm: (graph: TrialGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => {
@@ -126,7 +127,7 @@ class BaseActivationGraphWidget extends Widget {
         typeOptions.property("value", selectedGraph);
 
         let useCacheDiv = selectorDiv.select(".use-cache");
-        useCacheDiv.property("value", useCache);
+        useCacheDiv.property("checked", useCache);
 
 
         let selectorToggle = form.append("input")
@@ -158,8 +159,24 @@ class BaseActivationGraphWidget extends Widget {
           .classed('fa', true)
           .classed("fa-circle", !selectorDiv.classed('visible'))
           .classed("fa-circle-o", selectorDiv.classed('visible'))
-      }
-    });
+      },
+      customLoadTooltip: (g: TrialGraph, div: HTMLDivElement, text: string, trialid: string, aid: string) => {
+        var url = "/trials/" + trialid + "/activations/" + aid + ".json";
+        function createResponse(activationId: string, div2: Element) {
+          return function(data: ActivationData) {
+            g.activationStorage[activationId] = data;
+            g.updateTooltipDiv(activationId, div2);
+          }
+        }
+        json(text, div, url, createResponse(aid, div));
+      },
+      genDataflow: genDataflow,
+      queryTooltip: true
+    }
+  }
+
+  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
+    this.setGraph(data, this.graphDefinition(selectedGraph, useCache, genDataflow, data));
   }
 
   protected onResize(msg: Widget.ResizeMessage): void {

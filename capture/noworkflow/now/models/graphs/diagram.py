@@ -68,6 +68,7 @@ class ViewDiagram(object):
 
     def _repr_svg_(self):
         if self.format == "svg":
+            from IPython import get_ipython
             ipython = get_ipython()
             return ipython.run_cell_magic(
                 "dot", "--format {}".format(self.format), self.as_dot()
@@ -75,6 +76,7 @@ class ViewDiagram(object):
 
     def _repr_png_(self):
         if self.format == "png":
+            from IPython import get_ipython
             ipython = get_ipython()
             return ipython.run_cell_magic(
                 "dot", "--format {}".format(self.format), self.as_dot()

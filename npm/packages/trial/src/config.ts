@@ -10,9 +10,10 @@ import {VisibleTrialNode} from './structures';
 export
 interface TrialConfig {
   customSize: (g:TrialGraph) => number[];
-  customMouseOver: (g:TrialGraph, d: VisibleTrialNode, name: string) => boolean;
+  customMouseOver: (g:TrialGraph, d: VisibleTrialNode) => boolean;
   customMouseOut: (g:TrialGraph, d: VisibleTrialNode) => boolean;
   customForm: (g: TrialGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => void;
+  customLoadTooltip: (g: TrialGraph, div: HTMLDivElement, text: string, trialid: string, aid: string) => void;
 
   duration: number;
 
@@ -30,4 +31,7 @@ interface TrialConfig {
 
   nodeSizeX: number;
   nodeSizeY: number;
+
+  queryTooltip: boolean;
+  genDataflow: boolean;
 }

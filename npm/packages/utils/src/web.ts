@@ -1,6 +1,6 @@
 import {
   json as d3_json,
-} from 'd3-request';
+} from 'd3-fetch';
 
 export
 function json(innertext:string, sub: Element, url: string, fn: (data: any) => void) {
@@ -16,24 +16,21 @@ function json(innertext:string, sub: Element, url: string, fn: (data: any) => vo
     json(innertext, sub, url, fn);
   }
 
-  d3_json(url, (error: any, data: any) => {
-    if (error) {
-      i.classList.remove("fa-spinner");
-      i.classList.remove("fa-pulse");
-      i.classList.add("fa-refresh");
-      i.classList.add("connection-error");
+  d3_json(url).then(function (data: any) {
+    (sub as any).onclick = function() {
 
-      let text = document.createElement('span');
-      text.classList.add("error-text")
-      text.innerHTML = innertext;
-
-      i.appendChild(text);
-    } else {
-      (sub as any).onclick = function() {
-
-      }
-      fn(data);
     }
+    fn(data);
+  }).catch(function(error){
+    i.classList.remove("fa-spinner");
+    i.classList.remove("fa-pulse");
+    i.classList.add("fa-refresh");
+    i.classList.add("connection-error");
 
+    let text = document.createElement('span');
+    text.classList.add("error-text")
+    text.innerHTML = innertext;
+
+    i.appendChild(text);
   });
 }

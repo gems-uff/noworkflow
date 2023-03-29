@@ -19,6 +19,18 @@ AssignAccess = namedtuple(
     "AssignAccess", "value dependency addr value_dep checkpoint")
 
 
+class FutureActivation(object):
+
+    def __init__(self, name, code_id, activation, func, dependency_type):
+        self.name = name
+        self.code_id = code_id
+        self.activation = activation
+        self.func = func
+        self.dependency_type = dependency_type
+        self.dependencies = []
+        self.bound_dependency = None
+        self.func_evaluation = None
+
 
 class Assign(namedtuple("Assign", "checkpoint value dependency")):
     """Represent an assignment for further processing"""
@@ -65,13 +77,22 @@ class ConditionExceptions(object):
 class DependencyAware(object):
     """Store dependencies of an element"""
 
-    def __init__(self, active=True, exc_handler=-1, code_id=None):
+    def __init__(self, active=True, exc_handler=-1, code_id=None, maybe_activation=None):
         self.dependencies = []
         self.extra_dependencies = []
         self.exc_handler = exc_handler
         self.code_id = code_id
+        self.maybe_activation = maybe_activation or set()
 
         self.active = active
+
+    def replace(self, other):
+        """Replace by other dependency aware"""
+        self.dependencies = other.dependencies
+        self.extra_dependencies = other.extra_dependencies
+        self.exc_handler = other.exc_handler
+        self.code_id = other.code_id
+        self.maybe_activation = other.maybe_activation
 
     def add(self, dependency):
         """Add dependency"""
@@ -86,17 +107,20 @@ class DependencyAware(object):
     def __bool__(self):
         return bool(self.dependencies) or bool(self.extra_dependencies)
 
-    def clone(self, mode=None, extra_only=False):
+    def clone(self, extra_only=False, **kwargs):
         """Clone dependency aware and replace mode"""
         new_depa = DependencyAware()
         if not extra_only:
             for dep in self.dependencies:
                 new_dep = copy(dep)
-                new_dep.mode = mode or new_dep.mode
+                for key, value in kwargs.items():
+                    setattr(new_dep, key, value)
+                #new_dep.mode = mode or new_dep.mode
                 new_depa.add(new_dep)
         for dep in self.extra_dependencies:
             new_dep = copy(dep)
-            new_dep.mode = mode or new_dep.mode
+            for key, value in kwargs.items():
+                setattr(new_dep, key, value)
             new_depa.add_extra(new_dep)
         new_depa.exc_handler = self.exc_handler
         new_depa.code_id = self.code_id
@@ -165,12 +189,13 @@ class Dependency(object):
 
 class Parameter(object):
 
-    def __init__(self, name, code_id, is_vararg=False):
+    def __init__(self, name, code_id, value, is_vararg=False):
         self.name = name
         self.code_id = code_id
         self.is_vararg = is_vararg
         self.filled = False
         self.default = None
+        self.value = value
 
     def __repr__(self):
         return "{}".format(self.name)
@@ -188,6 +213,7 @@ class MemberDependencyAware(DependencyAware):
         self.key = None
         self.value = None
 
+
 class CollectionDependencyAware(DependencyAware):
     """Store dependencies of a collection element"""
 
@@ -199,3 +225,21 @@ class CollectionDependencyAware(DependencyAware):
         )
         # list of tuples representing (item name, evaluation_id, time)
         self.items = []
+
+
+class WithContext(object):
+
+    def __init__(self, now, context, activation, exc_handler):
+        self.noworkflow = now
+        self.context = context
+        self.activation = activation
+        self.exc_handler = exc_handler
+
+    def __enter__(self):
+        return self.context.__enter__()
+
+    def __exit__(self, *exc):
+        result = self.context.__exit__(*exc)
+        if result: # suppressed exception:
+            self.noworkflow.collect_exception(self.activation, self.exc_handler)
+        return result
