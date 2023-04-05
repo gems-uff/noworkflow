@@ -1,4 +1,4 @@
-import {Widget} from '@phosphor/widgets';
+import {Widget} from '@lumino/widgets';
 import '../style/bootstrap.min.css';
 
 import {
@@ -20,7 +20,7 @@ interface IGroup {
   members: Array<IUser>;
 }
 
-export
+export 
 class GroupWidget extends Widget {
 
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;

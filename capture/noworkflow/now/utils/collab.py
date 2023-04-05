@@ -13,7 +13,7 @@ def store_trial_from_experiment(trial,experiment,trial_store):
     trial.experiment_id=experiment
     trial_store.add_from_object(trial)
 
-def import_bundle(bundle, experiment):
+def import_bundle(bundle, experiment=None):
     trials_store=ObjectStore(TrialLW)
     codeBlock_store=ObjectStore(CodeBlockLW)
     arguments_store=ObjectStore(ArgumentLW)
@@ -63,7 +63,7 @@ def import_bundle(bundle, experiment):
             main_block_code_hash=main_block[0].code_hash
         Tag.create_automatic_tag(x.id,main_block_code_hash,x.command, experiment_id=experiment)
     
-def export_bundle(trialIds,usersIds):
+def export_bundle(trialIds,usersIds=[]):
     #Load dependencies
     trialsToImport=[t for t in Trial.all() if t.id in trialIds ]
     actsToImport=Activation.load_by_trials(trialIds)
@@ -90,7 +90,7 @@ def export_bundle(trialIds,usersIds):
         [ArgumentLW(x.id,x.trial_id,x.name,x.value) for x in argsToImport]
     )
     bundle.codeBlocks.extend(
-        [CodeBlockLW(x.id,x.trial_id,x.code_hash,False,x.docstring,x.code_hash) for x in codeBlockToImport]
+        [CodeBlockLW(id_=x.id,trial_id=x.trial_id,code=x.code_hash,binary=False,docstring=x.docstring,code_hash=x.code_hash, filename=None) for x in codeBlockToImport]
     )
     bundle.codeComponents.extend(
         [CodeComponentLW(x.id,x.trial_id,x.name,x.type,x.mode,x.first_char_line, x.first_char_column, \

@@ -1,10 +1,10 @@
 define(() => /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/history/style/index.css":
-/*!************************************************************************************************!*\
-  !*** ./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/history/style/index.css ***!
-  \************************************************************************************************/
+/***/ "../../node_modules/css-loader/dist/cjs.js!../history/style/index.css":
+/*!****************************************************************************!*\
+  !*** ../../node_modules/css-loader/dist/cjs.js!../history/style/index.css ***!
+  \****************************************************************************/
 /***/ ((module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
@@ -12,94 +12,40 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
 /* harmony export */ });
-/* harmony import */ var _css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../css-loader/dist/runtime/cssWithMappingToString.js */ "./node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
-/* harmony import */ var _css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js");
-/* harmony import */ var _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
-// Imports
-
-
-var ___CSS_LOADER_EXPORT___ = _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
-// Module
-___CSS_LOADER_EXPORT___.push([module.id, ".history-toolbar {\n    float: left;\n    overflow: none;\n    z-index: 3;\n    position: absolute;\n}\n\n.history-toolbar .buttons {\n    height: 30px;\n    display: inline-block;\n    margin-left: 8px;\n}\n\n.history-toolbar .buttons > input {\n    height: 30px;\n}\n\n.history-toolbar .buttons > input[type=checkbox] {\n    display: none\n}\n\n.history-toolbar .buttons > label, .history-toolbar > div > a {\n    margin: 8px 8px 8px 0;\n}\n\n.history-toolbar .buttons > input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.history-toolbar .buttons > input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.history-toolbar .buttons > a.toollink,\n.history-toolbar .buttons > a.toollink:link,\n.history-toolbar .buttons > a.toollink:visited {\n    color: black;\n}\n\n.history-toolbar .buttons > a.toollink:active  {\n    color: blue;\n}\n", "",{"version":3,"sources":["webpack://./node_modules/@noworkflow/history/style/index.css"],"names":[],"mappings":"AAAA;IACI,WAAW;IACX,cAAc;IACd,UAAU;IACV,kBAAkB;AACtB;;AAEA;IACI,YAAY;IACZ,qBAAqB;IACrB,gBAAgB;AACpB;;AAEA;IACI,YAAY;AAChB;;AAEA;IACI;AACJ;;AAEA;IACI,qBAAqB;AACzB;;AAEA;IACI,oBAAoB;IACpB,YAAY;IACZ,eAAe;AACnB;;AAEA;IACI,WAAW;AACf;;AAEA;;;IAGI,YAAY;AAChB;;AAEA;IACI,WAAW;AACf","sourcesContent":[".history-toolbar {\n    float: left;\n    overflow: none;\n    z-index: 3;\n    position: absolute;\n}\n\n.history-toolbar .buttons {\n    height: 30px;\n    display: inline-block;\n    margin-left: 8px;\n}\n\n.history-toolbar .buttons > input {\n    height: 30px;\n}\n\n.history-toolbar .buttons > input[type=checkbox] {\n    display: none\n}\n\n.history-toolbar .buttons > label, .history-toolbar > div > a {\n    margin: 8px 8px 8px 0;\n}\n\n.history-toolbar .buttons > input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.history-toolbar .buttons > input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.history-toolbar .buttons > a.toollink,\n.history-toolbar .buttons > a.toollink:link,\n.history-toolbar .buttons > a.toollink:visited {\n    color: black;\n}\n\n.history-toolbar .buttons > a.toollink:active  {\n    color: blue;\n}\n"],"sourceRoot":""}]);
-// Exports
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
-
-
-/***/ }),
-
-/***/ "./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/trial/style/index.css":
-/*!**********************************************************************************************!*\
-  !*** ./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/trial/style/index.css ***!
-  \**********************************************************************************************/
-/***/ ((module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
-/* harmony export */ });
-/* harmony import */ var _css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../css-loader/dist/runtime/cssWithMappingToString.js */ "./node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
-/* harmony import */ var _css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js");
-/* harmony import */ var _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
-// Imports
-
-
-var ___CSS_LOADER_EXPORT___ = _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
-// Module
-___CSS_LOADER_EXPORT___.push([module.id, ".trial-toolbar {\n    margin: 5px;\n    float: left;\n    overflow: none;\n    width: 360px;\n    height: 30px;\n    z-index: 3;\n    position: absolute;\n}\n\n.trial-toolbar input {\n    height: 30px;\n}\n\n.trial-toolbar input[type=checkbox] {\n    display: none\n}\n\n.trial-toolbar label, .trial-toolbar a {\n    margin-right: 8px;\n    margin-top: 8px;\n}\n\n.trial-toolbar input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.trial-toolbar input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active  {\n  color: blue;\n}\n", "",{"version":3,"sources":["webpack://./node_modules/@noworkflow/trial/style/index.css"],"names":[],"mappings":"AAAA;IACI,WAAW;IACX,WAAW;IACX,cAAc;IACd,YAAY;IACZ,YAAY;IACZ,UAAU;IACV,kBAAkB;AACtB;;AAEA;IACI,YAAY;AAChB;;AAEA;IACI;AACJ;;AAEA;IACI,iBAAiB;IACjB,eAAe;AACnB;;AAEA;IACI,oBAAoB;IACpB,YAAY;IACZ,eAAe;AACnB;;AAEA;IACI,WAAW;AACf;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".trial-toolbar {\n    margin: 5px;\n    float: left;\n    overflow: none;\n    width: 360px;\n    height: 30px;\n    z-index: 3;\n    position: absolute;\n}\n\n.trial-toolbar input {\n    height: 30px;\n}\n\n.trial-toolbar input[type=checkbox] {\n    display: none\n}\n\n.trial-toolbar label, .trial-toolbar a {\n    margin-right: 8px;\n    margin-top: 8px;\n}\n\n.trial-toolbar input[type=checkbox] + label {\n    display:inline-block;\n    color: black;\n    cursor: pointer;\n}\n\n.trial-toolbar input[type=checkbox]:checked + label {\n    color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active  {\n  color: blue;\n}\n"],"sourceRoot":""}]);
-// Exports
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
-
-
-/***/ }),
-
-/***/ "./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/utils/style/shared.css":
-/*!***********************************************************************************************!*\
-  !*** ./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/utils/style/shared.css ***!
-  \***********************************************************************************************/
-/***/ ((module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
-/* harmony export */ });
-/* harmony import */ var _css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../css-loader/dist/runtime/cssWithMappingToString.js */ "./node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
-/* harmony import */ var _css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js");
-/* harmony import */ var _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
-// Imports
-
-
-var ___CSS_LOADER_EXPORT___ = _css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
-// Module
-___CSS_LOADER_EXPORT___.push([module.id, "div.now-tooltip {\n    position: absolute;\n    left: 1px;\n    right: 1px;\n    max-height: 200px;\n    max-width: 400px;\n    overflow: auto;\n    padding: 5px;\n    padding-bottom: 10px;\n    font: 12px sans-serif;\n    background: #DDD;\n    border: 0px;\n    border-radius: 8px;\n    z-index: 2000;\n}\n\n.now-tooltip.hidden {\n    display: none;\n}", "",{"version":3,"sources":["webpack://./node_modules/@noworkflow/utils/style/shared.css"],"names":[],"mappings":"AAAA;IACI,kBAAkB;IAClB,SAAS;IACT,UAAU;IACV,iBAAiB;IACjB,gBAAgB;IAChB,cAAc;IACd,YAAY;IACZ,oBAAoB;IACpB,qBAAqB;IACrB,gBAAgB;IAChB,WAAW;IACX,kBAAkB;IAClB,aAAa;AACjB;;AAEA;IACI,aAAa;AACjB","sourcesContent":["div.now-tooltip {\n    position: absolute;\n    left: 1px;\n    right: 1px;\n    max-height: 200px;\n    max-width: 400px;\n    overflow: auto;\n    padding: 5px;\n    padding-bottom: 10px;\n    font: 12px sans-serif;\n    background: #DDD;\n    border: 0px;\n    border-radius: 8px;\n    z-index: 2000;\n}\n\n.now-tooltip.hidden {\n    display: none;\n}"],"sourceRoot":""}]);
-// Exports
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
-
-
-/***/ }),
-
-/***/ "./node_modules/css-loader/dist/cjs.js!./src/index.css":
-/*!*************************************************************!*\
-  !*** ./node_modules/css-loader/dist/cjs.js!./src/index.css ***!
-  \*************************************************************/
-/***/ ((module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
-/* harmony export */ });
-/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../node_modules/css-loader/dist/runtime/cssWithMappingToString.js */ "./node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js */ "../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
 /* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../node_modules/css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/api.js */ "../../node_modules/css-loader/dist/runtime/api.js");
 /* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _node_modules_css_loader_dist_cjs_js_node_modules_noworkflow_utils_style_shared_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! -!../node_modules/css-loader/dist/cjs.js!../node_modules/@noworkflow/utils/style/shared.css */ "./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/utils/style/shared.css");
-/* harmony import */ var _node_modules_css_loader_dist_cjs_js_node_modules_noworkflow_history_style_index_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! -!../node_modules/css-loader/dist/cjs.js!../node_modules/@noworkflow/history/style/index.css */ "./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/history/style/index.css");
-/* harmony import */ var _node_modules_css_loader_dist_cjs_js_node_modules_noworkflow_trial_style_index_css__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! -!../node_modules/css-loader/dist/cjs.js!../node_modules/@noworkflow/trial/style/index.css */ "./node_modules/css-loader/dist/cjs.js!./node_modules/@noworkflow/trial/style/index.css");
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, ".history-toolbar {\r\n    float: left;\r\n    overflow: none;\r\n    z-index: 3;\r\n    position: absolute;\r\n}\r\n\r\n.history-toolbar .buttons {\r\n    height: 30px;\r\n    display: inline-block;\r\n    margin-left: 8px;\r\n}\r\n\r\n.history-toolbar .buttons > input {\r\n    height: 30px;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox] {\r\n    display: none\r\n}\r\n\r\n.history-toolbar .buttons > label, .history-toolbar > div > a {\r\n    margin: 8px 8px 8px 0;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox] + label {\r\n    display:inline-block;\r\n    color: black;\r\n    cursor: pointer;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox]:checked + label {\r\n    color: blue;\r\n}\r\n\r\n.history-toolbar .buttons > a.toollink,\r\n.history-toolbar .buttons > a.toollink:link,\r\n.history-toolbar .buttons > a.toollink:visited {\r\n    color: black;\r\n}\r\n\r\n.history-toolbar .buttons > a.toollink:active  {\r\n    color: blue;\r\n}\r\n", "",{"version":3,"sources":["webpack://./../history/style/index.css"],"names":[],"mappings":"AAAA;IACI,WAAW;IACX,cAAc;IACd,UAAU;IACV,kBAAkB;AACtB;;AAEA;IACI,YAAY;IACZ,qBAAqB;IACrB,gBAAgB;AACpB;;AAEA;IACI,YAAY;AAChB;;AAEA;IACI;AACJ;;AAEA;IACI,qBAAqB;AACzB;;AAEA;IACI,oBAAoB;IACpB,YAAY;IACZ,eAAe;AACnB;;AAEA;IACI,WAAW;AACf;;AAEA;;;IAGI,YAAY;AAChB;;AAEA;IACI,WAAW;AACf","sourcesContent":[".history-toolbar {\r\n    float: left;\r\n    overflow: none;\r\n    z-index: 3;\r\n    position: absolute;\r\n}\r\n\r\n.history-toolbar .buttons {\r\n    height: 30px;\r\n    display: inline-block;\r\n    margin-left: 8px;\r\n}\r\n\r\n.history-toolbar .buttons > input {\r\n    height: 30px;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox] {\r\n    display: none\r\n}\r\n\r\n.history-toolbar .buttons > label, .history-toolbar > div > a {\r\n    margin: 8px 8px 8px 0;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox] + label {\r\n    display:inline-block;\r\n    color: black;\r\n    cursor: pointer;\r\n}\r\n\r\n.history-toolbar .buttons > input[type=checkbox]:checked + label {\r\n    color: blue;\r\n}\r\n\r\n.history-toolbar .buttons > a.toollink,\r\n.history-toolbar .buttons > a.toollink:link,\r\n.history-toolbar .buttons > a.toollink:visited {\r\n    color: black;\r\n}\r\n\r\n.history-toolbar .buttons > a.toollink:active  {\r\n    color: blue;\r\n}\r\n"],"sourceRoot":""}]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ }),
+
+/***/ "../../node_modules/css-loader/dist/cjs.js!./src/index.css":
+/*!*****************************************************************!*\
+  !*** ../../node_modules/css-loader/dist/cjs.js!./src/index.css ***!
+  \*****************************************************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
+/* harmony export */ });
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js */ "../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/api.js */ "../../node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_utils_style_shared_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! -!../../../node_modules/css-loader/dist/cjs.js!../../utils/style/shared.css */ "../../node_modules/css-loader/dist/cjs.js!../utils/style/shared.css");
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_history_style_index_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! -!../../../node_modules/css-loader/dist/cjs.js!../../history/style/index.css */ "../../node_modules/css-loader/dist/cjs.js!../history/style/index.css");
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_trial_style_index_css__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! -!../../../node_modules/css-loader/dist/cjs.js!../../trial/style/index.css */ "../../node_modules/css-loader/dist/cjs.js!../trial/style/index.css");
 // Imports
 
 
@@ -107,21 +53,75 @@ __webpack_require__.r(__webpack_exports__);
 
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
-___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_node_modules_noworkflow_utils_style_shared_css__WEBPACK_IMPORTED_MODULE_2__.default);
-___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_node_modules_noworkflow_history_style_index_css__WEBPACK_IMPORTED_MODULE_3__.default);
-___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_node_modules_noworkflow_trial_style_index_css__WEBPACK_IMPORTED_MODULE_4__.default);
+___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_utils_style_shared_css__WEBPACK_IMPORTED_MODULE_2__.default);
+___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_history_style_index_css__WEBPACK_IMPORTED_MODULE_3__.default);
+___CSS_LOADER_EXPORT___.i(_node_modules_css_loader_dist_cjs_js_trial_style_index_css__WEBPACK_IMPORTED_MODULE_4__.default);
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ".mark-text { background-color: lightblue; }", "",{"version":3,"sources":["webpack://./src/index.css"],"names":[],"mappings":"AAIA,aAAa,2BAA2B,EAAE","sourcesContent":["@import '~@noworkflow/utils/style/shared.css';\n@import '~@noworkflow/history/style/index.css';\n@import '~@noworkflow/trial/style/index.css';\n\n.mark-text { background-color: lightblue; }"],"sourceRoot":""}]);
+___CSS_LOADER_EXPORT___.push([module.id, ".mark-text { background-color: lightblue; }", "",{"version":3,"sources":["webpack://./src/index.css"],"names":[],"mappings":"AAIA,aAAa,2BAA2B,EAAE","sourcesContent":["@import '~@noworkflow/utils/style/shared.css';\r\n@import '~@noworkflow/history/style/index.css';\r\n@import '~@noworkflow/trial/style/index.css';\r\n\r\n.mark-text { background-color: lightblue; }"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
 
 /***/ }),
 
-/***/ "./node_modules/css-loader/dist/runtime/api.js":
-/*!*****************************************************!*\
-  !*** ./node_modules/css-loader/dist/runtime/api.js ***!
-  \*****************************************************/
+/***/ "../../node_modules/css-loader/dist/cjs.js!../trial/style/index.css":
+/*!**************************************************************************!*\
+  !*** ../../node_modules/css-loader/dist/cjs.js!../trial/style/index.css ***!
+  \**************************************************************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
+/* harmony export */ });
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js */ "../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/api.js */ "../../node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, ".trial-toolbar {\r\n    margin: 5px;\r\n    float: left;\r\n    overflow: none;\r\n    width: 360px;\r\n    height: 30px;\r\n    z-index: 3;\r\n    position: absolute;\r\n}\r\n\r\n.trial-toolbar input {\r\n    height: 30px;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox] {\r\n    display: none\r\n}\r\n\r\n.trial-toolbar label, .trial-toolbar a {\r\n    margin-right: 8px;\r\n    margin-top: 8px;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox] + label {\r\n    display:inline-block;\r\n    color: black;\r\n    cursor: pointer;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox]:checked + label {\r\n    color: blue;\r\n}\r\n\r\n.trial-toolbar a.toollink,\r\n.trial-toolbar a.toollink:link,\r\n.trial-toolbar a.toollink:visited {\r\n  color: black;\r\n}\r\n\r\n.trial-toolbar a.toollink:active  {\r\n  color: blue;\r\n}\r\n", "",{"version":3,"sources":["webpack://./../trial/style/index.css"],"names":[],"mappings":"AAAA;IACI,WAAW;IACX,WAAW;IACX,cAAc;IACd,YAAY;IACZ,YAAY;IACZ,UAAU;IACV,kBAAkB;AACtB;;AAEA;IACI,YAAY;AAChB;;AAEA;IACI;AACJ;;AAEA;IACI,iBAAiB;IACjB,eAAe;AACnB;;AAEA;IACI,oBAAoB;IACpB,YAAY;IACZ,eAAe;AACnB;;AAEA;IACI,WAAW;AACf;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".trial-toolbar {\r\n    margin: 5px;\r\n    float: left;\r\n    overflow: none;\r\n    width: 360px;\r\n    height: 30px;\r\n    z-index: 3;\r\n    position: absolute;\r\n}\r\n\r\n.trial-toolbar input {\r\n    height: 30px;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox] {\r\n    display: none\r\n}\r\n\r\n.trial-toolbar label, .trial-toolbar a {\r\n    margin-right: 8px;\r\n    margin-top: 8px;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox] + label {\r\n    display:inline-block;\r\n    color: black;\r\n    cursor: pointer;\r\n}\r\n\r\n.trial-toolbar input[type=checkbox]:checked + label {\r\n    color: blue;\r\n}\r\n\r\n.trial-toolbar a.toollink,\r\n.trial-toolbar a.toollink:link,\r\n.trial-toolbar a.toollink:visited {\r\n  color: black;\r\n}\r\n\r\n.trial-toolbar a.toollink:active  {\r\n  color: blue;\r\n}\r\n"],"sourceRoot":""}]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ }),
+
+/***/ "../../node_modules/css-loader/dist/cjs.js!../utils/style/shared.css":
+/*!***************************************************************************!*\
+  !*** ../../node_modules/css-loader/dist/cjs.js!../utils/style/shared.css ***!
+  \***************************************************************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
+/* harmony export */ });
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js */ "../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/api.js */ "../../node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_cssWithMappingToString_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, "div.now-tooltip {\r\n    position: absolute;\r\n    left: 1px;\r\n    right: 1px;\r\n    max-height: 200px;\r\n    max-width: 400px;\r\n    overflow: auto;\r\n    padding: 5px;\r\n    padding-bottom: 10px;\r\n    font: 12px sans-serif;\r\n    background: #DDD;\r\n    border: 0px;\r\n    border-radius: 8px;\r\n    z-index: 2000;\r\n}\r\n\r\n.now-tooltip.hidden {\r\n    display: none;\r\n}", "",{"version":3,"sources":["webpack://./../utils/style/shared.css"],"names":[],"mappings":"AAAA;IACI,kBAAkB;IAClB,SAAS;IACT,UAAU;IACV,iBAAiB;IACjB,gBAAgB;IAChB,cAAc;IACd,YAAY;IACZ,oBAAoB;IACpB,qBAAqB;IACrB,gBAAgB;IAChB,WAAW;IACX,kBAAkB;IAClB,aAAa;AACjB;;AAEA;IACI,aAAa;AACjB","sourcesContent":["div.now-tooltip {\r\n    position: absolute;\r\n    left: 1px;\r\n    right: 1px;\r\n    max-height: 200px;\r\n    max-width: 400px;\r\n    overflow: auto;\r\n    padding: 5px;\r\n    padding-bottom: 10px;\r\n    font: 12px sans-serif;\r\n    background: #DDD;\r\n    border: 0px;\r\n    border-radius: 8px;\r\n    z-index: 2000;\r\n}\r\n\r\n.now-tooltip.hidden {\r\n    display: none;\r\n}"],"sourceRoot":""}]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ }),
+
+/***/ "../../node_modules/css-loader/dist/runtime/api.js":
+/*!*********************************************************!*\
+  !*** ../../node_modules/css-loader/dist/runtime/api.js ***!
+  \*********************************************************/
 /***/ ((module) => {
 
 "use strict";
@@ -145,15 +145,15 @@ module.exports = function (cssWithMappingToString) {
       }
 
       return content;
-    }).join('');
+    }).join("");
   }; // import a list of modules into the list
   // eslint-disable-next-line func-names
 
 
   list.i = function (modules, mediaQuery, dedupe) {
-    if (typeof modules === 'string') {
+    if (typeof modules === "string") {
       // eslint-disable-next-line no-param-reassign
-      modules = [[null, modules, '']];
+      modules = [[null, modules, ""]];
     }
 
     var alreadyImportedModules = {};
@@ -194,10 +194,10 @@ module.exports = function (cssWithMappingToString) {
 
 /***/ }),
 
-/***/ "./node_modules/css-loader/dist/runtime/cssWithMappingToString.js":
-/*!************************************************************************!*\
-  !*** ./node_modules/css-loader/dist/runtime/cssWithMappingToString.js ***!
-  \************************************************************************/
+/***/ "../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js":
+/*!****************************************************************************!*\
+  !*** ../../node_modules/css-loader/dist/runtime/cssWithMappingToString.js ***!
+  \****************************************************************************/
 /***/ ((module) => {
 
 "use strict";
@@ -211,7 +211,7 @@ function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o =
 
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
-function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _iterableToArrayLimit(arr, i) { var _i = arr && (typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"]); if (_i == null) return; var _arr = []; var _n = true; var _d = false; var _s, _e; try { for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
@@ -220,18 +220,22 @@ module.exports = function cssWithMappingToString(item) {
       content = _item[1],
       cssMapping = _item[3];
 
-  if (typeof btoa === 'function') {
+  if (!cssMapping) {
+    return content;
+  }
+
+  if (typeof btoa === "function") {
     // eslint-disable-next-line no-undef
     var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(cssMapping))));
     var data = "sourceMappingURL=data:application/json;charset=utf-8;base64,".concat(base64);
     var sourceMapping = "/*# ".concat(data, " */");
     var sourceURLs = cssMapping.sources.map(function (source) {
-      return "/*# sourceURL=".concat(cssMapping.sourceRoot || '').concat(source, " */");
+      return "/*# sourceURL=".concat(cssMapping.sourceRoot || "").concat(source, " */");
     });
-    return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
+    return [content].concat(sourceURLs).concat([sourceMapping]).join("\n");
   }
 
-  return [content].join('\n');
+  return [content].join("\n");
 };
 
 /***/ }),
@@ -247,9 +251,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => __WEBPACK_DEFAULT_EXPORT__
 /* harmony export */ });
-/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "../../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
 /* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _node_modules_css_loader_dist_cjs_js_index_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../node_modules/css-loader/dist/cjs.js!./index.css */ "./node_modules/css-loader/dist/cjs.js!./src/index.css");
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_index_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/css-loader/dist/cjs.js!./index.css */ "../../node_modules/css-loader/dist/cjs.js!./src/index.css");
 
             
 
@@ -266,10 +270,10 @@ var update = _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js
 
 /***/ }),
 
-/***/ "./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js":
-/*!****************************************************************************!*\
-  !*** ./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js ***!
-  \****************************************************************************/
+/***/ "../../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js":
+/*!********************************************************************************!*\
+  !*** ../../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js ***!
+  \********************************************************************************/
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
@@ -552,7 +556,7 @@ module.exports = function (list, options) {
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse("{\"private\":false,\"name\":\"@noworkflow/nbextension\",\"version\":\"0.0.8\",\"description\":\"A Jupyter Notebook extension for noWorkflow\",\"main\":\"lib/index.js\",\"keywords\":[\"jupyter\"],\"dependencies\":{\"@noworkflow/history\":\"0.0.10\",\"@noworkflow/trial\":\"0.0.7\",\"@noworkflow/utils\":\"0.0.8\",\"d3\":\"^6.5.0\",\"d3-selection\":\"^2.0.0\",\"file-saver\":\"^2.0.5\"},\"devDependencies\":{\"css-loader\":\"^5.0.1\",\"file-loader\":\"^6.2.0\",\"style-loader\":\"^2.0.0\",\"url-loader\":\"^4.1.1\",\"watch\":\"^1.0.2\",\"webpack\":\"^5.18.0\",\"webpack-cli\":\"^4.4.0\"},\"scripts\":{\"build\":\"webpack\",\"watch\":\"watch \\\"npm run build\\\" src --wait 10 --ignoreDotFiles\",\"prepublish\":\"npm run build\",\"extension:install\":\"jupyter nbextension install --symlink --py --sys-prefix noworkflow\",\"extension:uninstall\":\"jupyter nbextension uninstall --py --sys-prefix noworkflow\",\"extension:enable\":\"jupyter nbextension enable --py --sys-prefix noworkflow\",\"extension:disable\":\"jupyter nbextension disable --py --sys-prefix noworkflow\",\"clean\":\"rimraf ../../../capture/noworkflow/jupyter\"},\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/gems-uff/noworkflow.git\"},\"author\":\"Joao Felipe Pimentel <joaofelipenp@gmail.com>\",\"license\":\"MIT\",\"bugs\":{\"url\":\"https://github.com/gems-uff/noworkflow/issues\"},\"homepage\":\"http://gems-uff.github.io/noworkflow\"}");
+module.exports = JSON.parse("{\"private\":false,\"name\":\"@noworkflow/nbextension\",\"version\":\"0.0.8\",\"description\":\"A Jupyter Notebook extension for noWorkflow\",\"main\":\"lib/index.js\",\"keywords\":[\"jupyter\"],\"dependencies\":{\"@noworkflow/history\":\"0.0.10\",\"@noworkflow/trial\":\"0.0.7\",\"@noworkflow/utils\":\"0.0.8\",\"d3\":\"^6.5.0\",\"d3-selection\":\"^2.0.0\",\"file-saver\":\"^2.0.5\"},\"devDependencies\":{\"css-loader\":\"^5.0.1\",\"file-loader\":\"^6.2.0\",\"style-loader\":\"^2.0.0\",\"url-loader\":\"^4.1.1\",\"watch\":\"^1.0.2\",\"webpack\":\"^5.18.0\",\"webpack-cli\":\"^4.10.0\"},\"scripts\":{\"build\":\"webpack\",\"watch\":\"watch \\\"npm run build\\\" src --wait 10 --ignoreDotFiles\",\"prepublish\":\"npm run build\",\"extension:install\":\"jupyter nbextension install --symlink --py --sys-prefix noworkflow\",\"extension:uninstall\":\"jupyter nbextension uninstall --py --sys-prefix noworkflow\",\"extension:enable\":\"jupyter nbextension enable --py --sys-prefix noworkflow\",\"extension:disable\":\"jupyter nbextension disable --py --sys-prefix noworkflow\",\"clean\":\"rimraf ../../../capture/noworkflow/jupyter\"},\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/gems-uff/noworkflow.git\"},\"author\":\"Joao Felipe Pimentel <joaofelipenp@gmail.com>\",\"license\":\"MIT\",\"bugs\":{\"url\":\"https://github.com/gems-uff/noworkflow/issues\"},\"homepage\":\"http://gems-uff.github.io/noworkflow\"}");
 
 /***/ }),
 

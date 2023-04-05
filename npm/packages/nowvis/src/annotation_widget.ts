@@ -1,4 +1,4 @@
-import {Widget} from '@phosphor/widgets';
+import {Widget} from '@lumino/widgets';
 import '../style/bootstrap.min.css';
 import { Message } from '@phosphor/messaging';
 import {

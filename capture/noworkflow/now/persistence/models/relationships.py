@@ -89,7 +89,7 @@ Activation.code_block = proxy_attr("code_block", proxy)
 
 # Activation.this_evaluation <-> Evaluation.this_activation
 add(Evaluation, "this_activation", relationship(
-    "Activation", backref="this_evaluation",
+    "Activation", backref="this_evaluation", viewonly=True,
     primaryjoin=((foreign(Evaluation.m.id) == remote(Activation.m.id)) &
                  ((Evaluation.m.trial_id) == remote(Activation.m.trial_id))),
 ))
@@ -157,10 +157,9 @@ Argument.trial = proxy_attr("trial", proxy)
 ## CodeBlock
 
 # CodeBlock.trial <-> Trial.code_blocks
-add(Trial, "code_blocks", relationship(
-    "CodeBlock", backref="trial",
-    foreign_keys="CodeBlock.trial_id"
-), proxy=proxy_gen)
+add(Trial, "code_blocks", 
+    relationship("CodeBlock", backref="trial", foreign_keys="CodeBlock.trial_id", uselist=True,viewonly=True, lazy='dynamic'), 
+    proxy=proxy_gen)
 CodeBlock.trial = proxy_attr("trial")
 
 # CodeBlock.components <-> CodeComponent.container

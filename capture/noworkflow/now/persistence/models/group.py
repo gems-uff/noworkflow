@@ -19,7 +19,7 @@ from ...utils.prolog import PrologRepr, PrologTimestamp
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, backref_one
+from .base import AlchemyProxy, proxy_class
 
 
 

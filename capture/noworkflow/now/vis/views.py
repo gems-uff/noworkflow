@@ -234,7 +234,7 @@ def receiveFiles(expCode):
     zF=BytesIO(filedata)
     zipObj = ZipFile(zF, 'r')
     for fName in zipObj.namelist():
-        content.put(zipObj.read(fName))
+        content.put(zipObj.read(fName), fName)
 
     zipObj.close()
     zF.close()

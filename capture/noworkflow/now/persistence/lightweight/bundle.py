@@ -60,7 +60,7 @@ class BundleLW(BaseLW):
      
         self.activations=[ActivationLW(x,x["trial_id"],x["name"],x["start_checkpoint"],x["code_block_id"],x["id"]) for x in data["activations"]]
         self.arguments=[ArgumentLW(x["id"],x["trial_id"],x["name"],x["value"]) for x in data["arguments"]]
-        self.codeBlocks=[CodeBlockLW(x["id"],x["trial_id"],x["code_hash"],False,x["docstring"],x["code_hash"]) for x in data["codeBlocks"]]
+        self.codeBlocks=[CodeBlockLW(id_=x["id"],trial_id=x["trial_id"],code=x["code_hash"],binary=False,docstring=x["docstring"],code_hash=x["code_hash"], filename=None) for x in data["codeBlocks"]]
         self.codeComponents=[CodeComponentLW(x["id"],x["trial_id"],x["name"],x["type"],x["mode"],x["first_char_line"], x["first_char_column"], \
             x["last_char_line"],x["last_char_column"],x["container_id"]) for x in data["codeComponents"]]
         self.compositions=[CompositionLW(x["id"],x["trial_id"],x["part_id"],\

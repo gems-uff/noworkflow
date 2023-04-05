@@ -22,7 +22,7 @@ class CodeBlockLW(BaseLW):
     nullable = set()
     model = CodeBlock
 
-    def __init__(self, id_, trial_id, code, binary, docstring,code_hash=None, filename):
+    def __init__(self, id_, trial_id, code, binary, docstring, filename, code_hash=None):
         # pylint: disable=too-many-arguments
         self.trial_id = trial_id
         self.id = id_  # pylint: disable=invalid-name

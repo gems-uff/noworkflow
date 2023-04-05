@@ -31,7 +31,7 @@ class Pull(Command):
 
     def populate(self,args):
         if not (args.url):  
-            raise ValueError("--url can't be empty")  
+            raise ValueError("--url can't be empty")
         self.url=args.url
 
     def get(self,url):
@@ -60,7 +60,7 @@ class Pull(Command):
         print("Importing file: "+url)
         headers = {'Accept-Encoding': 'gzip'}
         response=requests.get(url, headers=headers)
-        content.put(response.content)
+        content.put(response.content, None)
 
     def importFiles(self,url):
         filesUrl=self.url+"/collab/files"

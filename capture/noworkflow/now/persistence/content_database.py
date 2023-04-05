@@ -7,6 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import importlib
+import os
 from os.path import join, isdir
 from .content.plain_engine import STANDARD_DATABASE_DIR
 from ..utils.io import print_msg
@@ -84,7 +85,7 @@ class ContentDatabase(object):
     
     def listAll(self):
         files = []
-        for r,d, f in os.walk(self.content_path):
+        for r,d, f in os.walk(self.__getattr__("content_path")):
             for file in f:
                 fileName=os.path.basename(r)
                 fileName+=file
