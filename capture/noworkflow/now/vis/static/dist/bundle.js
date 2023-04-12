@@ -27570,7 +27570,7 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
       item.append("td").text(annt.annotationFormat);
       item.append("td").text(annt.provenanceType);
       var actions = item.append("td");
-      var addMemberButton = actions.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Downlaod Content");
+      var addMemberButton = actions.append("button").classed("btn btn-primary", true).attr("type", "submit").text("Download Content");
       addMemberButton.on("click", function () {
         window.open("/extendedAnnotation/" + annt.id + "/annotation");
       });
