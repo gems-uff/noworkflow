@@ -77,6 +77,8 @@ def abstract():
 
 def recursive_copy(origin, destiny):
     """Copy directory from resource to destiny folder"""
+    origin = origin.strip()
+    destiny = destiny.strip()
     if resource_is_dir(origin):
         if not exists(destiny):
             os.makedirs(destiny)

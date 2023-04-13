@@ -22,6 +22,7 @@ The main noWorkflow team is composed by researchers from Universidade Federal Fl
 - Juliana Freire (NYU)
 - Leonardo Murta (UFF)
 - Vanessa Braganholo (UFF)
+- Eduardo Jandre (UFF)
 
 Collaborators
 
@@ -38,6 +39,7 @@ Publications
 * [PIMENTEL, J. F.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; Fine-grained Provenance Collection over Scripts Through Program Slicing. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016b.pdf)
 * [PIMENTEL, J. F.; DEY, S.; MCPHILLIPS, T.; BELHAJJAME, K.; KOOP, D.; MURTA, L. G. P.; BRAGANHOLO, V.; LUDÄSCHER B.; Yin & Yang: Demonstrating Complementary Provenance from noWorkflow & YesWorkflow. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016c.pdf)
 * [PIMENTEL, J. F.; MURTA, L. G. P.; BRAGANHOLO, V.; FREIRE, J.; noWorkflow: a Tool for Collecting, Analyzing, and Managing Provenance from Python Scripts. In: International Conference on Very Large Data Bases (VLDB), 2017, Munich, Germany.](https://github.com/gems-uff/noworkflow/raw/master/docs/vldb2017.pdf)
+* [OLIVEIRA, E.; Enabling Collaboration in Scientific Experiments. Masters Dissertation, Universidade Federal Fluminense, 2022.](/docs/Disserta__o___Eduardo_Jandre.pdf)
 
 History
 ------------------
@@ -52,7 +54,7 @@ Quick Installation
 
 To install noWorkflow, you should follow these basic instructions:
 
-If you have pip, just run:
+First your Python version must be 3.7, then if you have pip, just run:
 ```bash
 $ pip install noworkflow[all]
 ```
@@ -71,6 +73,34 @@ $ cd noworkflow/capture
 $ python setup.py install
 ```
 This installs noWorkflow on your system. It will download the dependencies from PyPI
+
+Afterward you will need to install the following dependencies:
+
+sqlalchemy 1.4.47
+```bash
+pip install SQLAlchemy==1.4.47
+```
+
+requests:
+```bash
+$ pip install requests
+```
+
+ipykernel:
+```bash
+$ pip install ipykernel
+```
+
+flask 2.1.3:
+```bash
+$ pip install flask==2.1.3
+```
+
+matplotlib:
+```bash
+$ pip install matplotlib
+```
+
 
 Upgrade
 -------
@@ -106,25 +136,16 @@ The *-v* option turns the verbose mode on, so that noWorkflow gives you feedback
 $ now run -v simulation.py data1.dat data2.dat
 [now] removing noWorkflow boilerplate
 [now] setting up local provenance store
-[now] collecting definition provenance
-[now]   registering user-defined functions
+[now] using content engine noworkflow.now.persistence.content.plain_engine.PlainEngine
 [now] collecting deployment provenance
 [now]   registering environment attributes
-[now]   searching for module dependencies
-[now]   registering provenance from 1369 modules
-[now] collecting execution provenance
+[now] collection definition and execution provenance
 [now]   executing the script
-[now] the execution of trial 10 finished successfully
+[now] the execution of trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb finished successfully
 ```
-Each new run produces a different trial that will be stored with a sequential identification number in the relational database.
+Each new run produces a different trial that will be stored with a universally unique identifier in the relational database.
 
 Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.
-
-It is possible to collect more information than what is collected by default, such as variable usages and dependencias.
-To perform a dynamic program slicing and capture those information, just run
-```bash
-$ now run -e Tracer simulation.py data1.dat data2.dat
-```
 
 To list all trials, just run
 
@@ -136,41 +157,63 @@ Assuming we run the experiment again and then run `now list`, the output would b
 ```bash
 $ now list
 [now] trials available in the provenance store:
-  Trial 1: simulation.py data1.dat data2.dat
-           with code hash 9f13b9b35f5215a82f9b12f9f32238dddf02646a
-           ran from 2016-01-13 19:06:53.740877 to 2016-01-13 19:07:13.250622
-  Trial 2: simulation_complete.py 
-           with code hash 705471548f6253da20302333f0a3f79059d79e40
-           ran from 2016-01-13 19:07:13.583000 to 2016-01-13 19:07:39.225553
-  Trial 3: simulation.py data1.dat data2.dat
-           with code hash ba58136d9eac420930d352c127a78988c226dff8
-           ran from 2016-01-13 19:07:39.530637 to 2016-01-13 19:07:58.513666
-  Trial 4: simulation.py data2.dat data1.dat
-           with code hash 9f13b9b35f5215a82f9b12f9f32238dddf02646a
-           ran from 2016-01-13 19:07:58.953236 to 2016-01-13 19:08:20.822072
-  Trial 5: simulation.py <restore 3>
-           with code hash 16d9ba96a1dfa97d26fd5009b19f872a4fa5cb57
-           ran from 2016-01-13 19:08:21.146970 to None
-  Trial 6: simulation.py data1.dat data2.dat
-           with code hash ba58136d9eac420930d352c127a78988c226dff8
-           ran from 2016-01-13 19:08:42.827121 to 2016-01-13 19:09:02.137061
-  Trial 7: simulation.py data1.dat data2.dat
-           with code hash 16d9ba96a1dfa97d26fd5009b19f872a4fa5cb57
-           ran from 2016-01-13 19:09:02.430346 to None
-  Trial 8: simulation_complete.py 
-           with code hash 705471548f6253da20302333f0a3f79059d79e40
-           ran from 2016-01-13 19:09:22.637177 to 2016-01-13 19:09:46.327150
-  Trial 9: simulation.py data1.dat data2.dat
-           with code hash 9f13b9b35f5215a82f9b12f9f32238dddf02646a
-           ran from 2016-01-13 19:09:46.711818 to 2016-01-13 19:10:10.998172
-  Trial 10: simulation.py data1.dat data2.dat
-            with code hash 9f13b9b35f5215a82f9b12f9f32238dddf02646a
-            ran from 2016-01-13 19:10:21.587332 to 2016-01-13 19:10:41.900566
-  Trial 11: simulation.py data1.dat data2.dat
-            with code hash 9f13b9b35f5215a82f9b12f9f32238dddf02646a
-            ran from 2016-01-13 19:11:00.033094 to 2016-01-13 19:11:25.632197
+  [f]Trial 7fb4ca3d-8046-46cf-9c54-54923d2076ba: run -v .\simulation.py .\data1.dat .\data2.dat
+                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
+                                                 ran from 2023-04-12 19:38:50.234485 to 2023-04-12 19:38:51.672300
+                                                 duration: 0:00:01.437815
+  [*]Trial 01482b72-2005-4319-bd57-773291f9f7b1: run -v .\simulation.py .\data1.dat .\data2.dat
+                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
+                                                 ran from 2023-04-12 19:40:18.747749 to 2023-04-12 19:40:48.401719
+                                                 duration: 0:00:29.653970
+  [*]Trial c320d339-09d1-4d10-ad38-e565fa1f1f08: run simulation.py data1.dat data2.dat
+                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
+                                                 ran from 2023-04-12 19:44:28.459500 to 2023-04-12 19:44:43.310089
+                                                 duration: 0:00:14.850589
+  [f]Trial 28a6e5da-9a3c-473b-902c-44574beeef29: run simulation_complete.py
+                                                 with code hash 78b5b11f3e6f7dca48a6ab9851df2cc0fb5157bc
+                                                 ran from 2023-04-12 19:44:44.987635 to 2023-04-12 19:44:58.970957
+                                                 duration: 0:00:13.983322
+  [*]Trial 4a30be20-e295-4a38-8aea-6b36e4fd2bcd: run simulation.py data1.dat data2.dat
+                                                 with code hash 8f73e09f17e877cb2d3ce3604cc66293abed2300
+                                                 ran from 2023-04-12 19:45:00.667359 to 2023-04-12 19:45:15.783596
+                                                 duration: 0:00:15.116237
+  [*]Trial 87161c9c-9a8b-4742-ab3a-df1cdf1779d5: run simulation.py data2.dat data1.dat
+                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
+                                                 ran from 2023-04-12 19:45:19.122164 to 2023-04-12 19:45:35.050733
+                                                 duration: 0:00:15.928569
+  [b]Trial 8bf59cf5-cd06-409e-97f6-185063b1cfc3: restore 3
+                                                 with code hash c3aeb4cb9af363b375aec603010dd1b97460f6b1
+                                                 ran from 2023-04-12 19:45:36.937565 to 2023-04-12 19:45:37.141808
+                                                 duration: 0:00:00.204243
+  [*]Trial 0adee409-bebf-4119-ae57-8a9d5ba345ce: run simulation.py data1.dat data2.dat
+                                                 with code hash 8f73e09f17e877cb2d3ce3604cc66293abed2300
+                                                 ran from 2023-04-12 19:45:38.873199 to 2023-04-12 19:45:53.370662
+                                                 duration: 0:00:14.497463
+  [f]Trial 035a4749-1c58-4f1b-b296-d708779e258a: run simulation.py data1.dat data2.dat
+                                                 with code hash c3aeb4cb9af363b375aec603010dd1b97460f6b1
+                                                 ran from 2023-04-12 19:45:54.945150 to 2023-04-12 19:46:08.792798
+                                                 duration: 0:00:13.847648
+  [f]Trial b14bf7b9-a0e5-4f12-a1ae-fb3922c1cd5f: run simulation_complete.py
+                                                 with code hash c7c8de76eb564530131abfab4d510bb187ec4b04
+                                                 ran from 2023-04-12 19:46:10.360999 to 2023-04-12 19:46:23.811610
+                                                 duration: 0:00:13.450611
+  [*]Trial 231368e0-786a-4bf4-8e21-a8d05cc72585: run simulation.py data1.dat data2.dat
+                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
+                                                 ran from 2023-04-12 19:46:25.385022 to 2023-04-12 19:46:42.141455
+                                                 duration: 0:00:16.756433
+  [*]Trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb: run -v simulation.py data1.dat data2.dat
+                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
+                                                 ran from 2023-04-12 19:48:29.463034 to 2023-04-12 19:48:46.930577
+                                                 duration: 0:00:17.467543
 ```
+Each symbol between brackets is its respective trial status. They can express if
+```
+a trial is a backup: b
 
+a trial has not finished: f
+
+a trial has finished: *
+```
 To look at details of an specific trial, use
 ```bash
 $ now show [trial]
@@ -179,31 +222,34 @@ This command has several options, such as *-m* to show module dependencies; *-d*
 
 Running
 ```bash
-$ now show -a 1
+$ now show -a 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
 ```
-would show details of trial 1. Notice that the function name is preceded by the line number where the call was activated.
+would show details of trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb. Notice that the function name is preceded by the line number where the call was activated.
 
 ```bash
-$ now show -a 1
+$ now show -a 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
 [now] trial information:
-  Id: 1
+  Id: 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
+  Sequence Key: 21
+  Status: Finished
   Inherited Id: None
   Script: simulation.py
-  Code hash: 9f13b9b35f5215a82f9b12f9f32238dddf02646a
-  Start: 2016-01-13 19:06:53.740877
-  Finish: 2016-01-13 19:07:13.250622
-[now] this trial has the following function activation graph:
-  54: /home/joao/demotest/demo1/simulation.py (2016-01-13 19:07:12.135981 - 2016-01-13 19:07:13.250515)
-      Return value: None
-    38: run_simulation (2016-01-13 19:07:12.136067 - 2016-01-13 19:07:12.201430)
-        Arguments: data_a = 'data1.dat', data_b = 'data2.dat'
-        Return value: [['0.0', '0.6'], ['1.0', '0.0'], ['1.0', '0.0'],
+  Code hash: 6a28e58e34bbff0facaf55f80313ab2fd2505a58
+  Start: 2023-04-12 19:48:29.463034
+  Finish: 2023-04-12 19:48:46.930577
+  Duration: 0:00:17.467543
+[now] this trial has the following function activation tree:
+  1: __main__ (2023-04-12 19:48:30.263701 - 2023-04-12 19:48:42.070729)
+     Return value: <module '__main__' from '/home/joao/demotest/demo1/simulation.py'>
+    38: run_simulation (2023-04-12 19:48:38.590221 - 2023-04-12 19:48:40.676348)
+        Parameters: data_a = 'data1.dat', data_b = 'data2.dat'
+        Return value: [['0.0', '0.6'], ['1.0', '0.0'], ['1.0', '0.0']
         ...
 ```
 
-To restore files used by trial 1, run
+To restore files used by trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb, run
 ```bash
-$ now restore 1
+$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
 ```
 
 By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 2 is based on Trial 1). When you restore a Trial, the next Trial will be based on the restored Trial (e.g. Trial 3 based on Trial 1).
@@ -211,12 +257,12 @@ By default, the restore command will restore the trial script, imported local mo
 The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access.
 
 ```bash
-$ now restore 1 -f data1.dat -i "A|2016-01-13 19:06:59"
-$ now restore 1 -f output.png -i 90451b101 -t output_trial1.png
-$ now restore 1 -f simulation.py -i 1
+$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -f data1.dat -i "A|2023-04-12 19:48:46"
+$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -f output.png -i 90451b101 -t output_trial1.png
+$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -f simulation.py -i 1
 ```
 
-The first command queries data1.dat of Trial 1 accessed at "2016-01-13 19:06:59", and restores the resulting content after the access.
+The first command queries data1.dat of Trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb accessed at "2023-04-12 19:48:46", and restores the resulting content after the access.
 The second command restores output.png with subhash 90451b101, and save it to output_trial1.png.
 The third command restores the first access to simulation.py, which represents the trial script.
 
@@ -231,10 +277,10 @@ The *export* option exports provenance data of a given trial to Prolog facts, so
 
 The *history* option presents a textual history evolution graph of trials.
 
-The *dataflow* option exports fine-grained provenance data (captured through *-e Tracer*) to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now dataflow -h" to get their descriptions.
+The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now dataflow -h" to get their descriptions.
 
 ```bash
-$ now dataflow 6 -l -m prospective | dot -Tpng -o prospective.png
+$ now dataflow 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -l -m prospective | dot -Tpng -o prospective.png
 ```
 
 The *vis* option starts a visualization tool that allows interactive analysis:
@@ -246,8 +292,86 @@ The visualization tool shows the evolution history, the trial information, an ac
 The visualization tool requires Flask to be installed.
 To install Flask, you can run
 ```bash
-$ pip install flask
+$ pip install flask==2.1.3
 ```
+
+Collaboration Usage
+-----------
+
+noWorkflow can also be used to run collaborative experiments. Scientists with different computers can work on the same experiments without much trouble. To do this they must do push and pull operations to a server.
+
+The server can be a central one or a peer-to-peer connection. To set up a server or connection online the command below must be run
+
+```bash
+$ now vis --force true
+```
+
+The command line output will show the server address 
+```bash
+ * Serving Flask app 'noworkflow.now.vis.views'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://localhost:5000
+Press CTRL+C to quit
+```
+In the case above it's http://localhost:5000
+
+To create a new experiment you must open the server address and choose the "Add Experiment" option
+![Collab main page](/readme_images/collab_main_page.png)
+
+Then you must give the experiment a name, write its description, and choose "Confirm"
+![Collab add experiment](/readme_images/collab_add_experiment.png)
+
+If the experiment is successfully created you should see a message stating so
+![Collab add experiment success](/readme_images/collab_add_experiment_success.png)
+As you can see in the image above, an id and an url for the experiment will be generated after the experiment is created.
+The url is extremely important since it will be used to do the push and pull operations.
+
+To get the experiment on a computer you first need to navigate to the folder where you want the experiment, then execute the pull command. The pull command accepts a --url parameter that must be followed by the experiment's url. For example
+
+```bash
+$ now pull --url http://localhost:5000/experiments/958273cc-b90a-4d1c-b617-43bd2dca20de
+```
+
+The command will download the experiment's files and provenience in the folder. If there are already any files or trials in the experiment you must execute the command "now restore" with or without a trial id.
+
+To push(or commit) to the server(or peer-to-peer connection) you must run the push command. The push command accepts a --url parameter that must be followed by the experiment's url. For example
+
+```bash
+$ now push --url http://localhost:5000/experiments/958273cc-b90a-4d1c-b617-43bd2dca20de
+```
+
+You can also add groups to a server by navigating to the "Group Information" tab and choosing the "Add Group" option
+
+![Collab group tab](/readme_images/collab_group_tab.png)
+
+Then you should write the group's name and choose "Confirm"
+![Collab group add group](/readme_images/collab_add_group.png)
+
+If the group is added successfully, you should see a message confirming that the group was created. You should also see the options to add a user to a group or to delete the group
+![Collab group success](/readme_images/collab_group_success.png)
+
+If the option to add a user is chosen, you must select the user from a list and choose "Confirm".
+![Collab group member](/readme_images/collab_add_group_member.png)
+
+To delete a group just select "Delete Group", then "OK" on the alert that will appear on the screen
+![Collab delete group](/readme_images/collab_delete_group.png)
+
+Annotations
+-----------------
+
+You can also add annotations to an experiment. To do this you need to access the experiment's url, then go to the "Annotation" tab, and select "Add Annotation"
+![Annotation experiment](/readme_images/annotation%20experiment.png)
+
+After filling the annotation's information, choose "Confirm"
+![Annotation add](/readme_images/annotation_add.png)
+
+If the annotation is added, you will see a success message and will be able to download the annotation as seen below
+![Annotation success](/readme_images/annotation_success.png)
+
+Annotations can also be added to a trial by following the same procedure above. But first, you must select a trial, choose "Manage Annotations"
+
+![Annotation trial](/readme_images/trial_annotations.png)
 
 IPython Interface
 -----------------
