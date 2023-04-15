@@ -51,12 +51,13 @@ setup(
     keywords="scientific experiments provenance python",
     url="https://github.com/gems-uff/noworkflow",
     install_requires=[
-        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy>=1.4.29", "parameterized",
+        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy>=1.4.29,<2", "parameterized",
+        "requests", "ipykernel", "flask==2.1.3", "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22"
     ],
     extras_require={
-        "vis": ["pyposast", "flask"],
+        "vis": ["pyposast", "flask==2.1.3"],
         "notebook": ["pyposast", "ipython", "jupyter"],
-        "all": ["pyposast", "ipython", "jupyter", "flask", "pyswip-alt"],
+        "all": ["pyposast", "ipython", "jupyter", "flask==2.1.3", "pyswip-alt"],
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',

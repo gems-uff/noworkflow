@@ -74,34 +74,6 @@ $ python setup.py install
 ```
 This installs noWorkflow on your system. It will download the dependencies from PyPI
 
-Afterward you will need to install the following dependencies:
-
-sqlalchemy 1.4.47
-```bash
-pip install SQLAlchemy==1.4.47
-```
-
-requests:
-```bash
-$ pip install requests
-```
-
-ipykernel:
-```bash
-$ pip install ipykernel
-```
-
-flask 2.1.3:
-```bash
-$ pip install flask==2.1.3
-```
-
-matplotlib:
-```bash
-$ pip install matplotlib
-```
-
-
 Upgrade
 -------
 
