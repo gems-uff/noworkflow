@@ -224,7 +224,7 @@ To restore files used by trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb, run
 $ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
 ```
 
-By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 2 is based on Trial 1). When you restore a Trial, the next Trial will be based on the restored Trial (e.g. Trial 3 based on Trial 1).
+By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 01482b72-2005-4319-bd57-773291f9f7b1 is based on 7fb4ca3d-8046-46cf-9c54-54923d2076ba). When you restore a Trial, the next Trial will be based on the restored Trial (e.g. c320d339-09d1-4d10-ad38-e565fa1f1f08 based on Trial 7fb4ca3d-8046-46cf-9c54-54923d2076ba).
 
 The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access.
 
@@ -386,7 +386,7 @@ In  [1]: arg1 = "data1.dat"
 
 In  [2]: trial = %now_run simulation.py {arg1} {arg2}
     ...: trial
-Out [2]: <Trial 12> # Loads the trial object represented as a graph
+Out [2]: <Trial "7fb4ca3d-8046-46cf-9c54-54923d2076ba"> # Loads the trial object represented as a graph
 ```
 
 2- Load the code inside a cell
@@ -398,7 +398,7 @@ In  [4]: %%now_run --name new_simularion --interactive
     ...: c = sum(l)
     ...: print(c)
          6
-Out [4]: <Trial 13> # Loads the trial object represented as a graph
+Out [4]: <Trial "01482b72-2005-4319-bd57-773291f9f7b1"> # Loads the trial object represented as a graph
 
 In  [5]: c
 Out [5]: 6
@@ -409,17 +409,17 @@ The *--interactive* mode allows the cell to share variables with the notebook.
 
 Loading existing trials, histories and diffs:
 ```python
-In  [6]: trial = nip.Trial(1) # Loads trial with Id = 1
+In  [6]: trial = nip.Trial("7fb4ca3d-8046-46cf-9c54-54923d2076ba") # Loads trial with Id = 7fb4ca3d-8046-46cf-9c54-54923d2076ba
     ...: trial # Shows trial graph
-Out [6]: <Trial 1>
+Out [6]: <Trial 7fb4ca3d-8046-46cf-9c54-54923d2076ba>
 
 In  [7]: history = nip.History() # Loads history
     ...: history # Shows history graph
 Out [7]: <History>
 
-In  [8]: diff = nip.Diff(1, 3) # Loads diff between trial 1 and 3
+In  [8]: diff = nip.Diff("7fb4ca3d-8046-46cf-9c54-54923d2076ba", "01482b72-2005-4319-bd57-773291f9f7b1") # Loads diff between trial 7fb4ca3d-8046-46cf-9c54-54923d2076ba and 01482b72-2005-4319-bd57-773291f9f7b1
     ...: diff # Shows diff graph
-Out [8]: <Diff 1 3>
+Out [8]: <Diff "7fb4ca3d-8046-46cf-9c54-54923d2076ba" "01482b72-2005-4319-bd57-773291f9f7b1">
 ```
 
 To visualize the dataflow of a trial, it is possible to use the dot attribute of trial objects:
