@@ -52,13 +52,13 @@ setup(
     url="https://github.com/gems-uff/noworkflow",
     install_requires=[
         "pyposast>=1.5.0", "apted", "future", "SQLAlchemy>=1.4.29,<2", "parameterized",
-        "requests", "ipykernel", "flask==2.1.3", "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22",
-        "cython",
+        "requests", "ipykernel",
     ],
     extras_require={
-        "vis": ["pyposast", "flask==2.1.3"],
+        "demo": ["flask==2.1.3", "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
         "notebook": ["pyposast", "ipython", "jupyter"],
-        "all": ["pyposast", "ipython", "jupyter", "flask==2.1.3", "pyswip-alt"],
+        "all": ["pyposast", "ipython", "jupyter", "flask==2.1.3", "pyswip-alt", 
+                "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
