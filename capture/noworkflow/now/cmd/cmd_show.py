@@ -70,9 +70,12 @@ class Show(NotebookCommand):
         persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         trial = Trial(trial_ref=args.trial)
-
+        print_msg("trial tags:", True)
+        print_trial_relationship(trial.tags)
+        
         print_msg("trial information:", True)
         trial.show(print_=lambda x: print(wrap(x)))
+        
 
         if args.modules:
             print_msg("this trial depends on the following modules:", True)

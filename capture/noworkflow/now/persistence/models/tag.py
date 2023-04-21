@@ -284,3 +284,8 @@ class Tag(AlchemyProxy):
         model = cls.m
         session = session or relational.session
         return session.query(model).filter(model.type == "AUTO")
+    def show(self, print_=print):
+        """Print tag information
+        """
+        print_("""\
+            Tag: {t.name} Type: {t.type}""".format(t=self))
