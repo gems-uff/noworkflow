@@ -46,3 +46,10 @@ class List(Command):
                 print('{indent}duration: {t.duration_text}'.format(
                     indent=" " * indent, t=trial
                 ))
+            print("{indent}Sequence Key: {t.sequence_key}".format(
+                indent=" " * indent, t=trial
+            ))
+            for obj in trial.tags:
+                print("{indent}Tag: {t.name} Type: {t.type}".format(
+                indent=" " * indent, t=obj
+            ))
