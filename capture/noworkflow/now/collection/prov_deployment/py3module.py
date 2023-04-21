@@ -5,72 +5,102 @@
 """Python 3 Import Hook"""
 
 from importlib.machinery import PathFinder, SourceFileLoader
+from importlib.abc import Loader
 from ...persistence import content
 
 
-def finder(metascript):
+class GenericLoader(Loader):
 
-    class SourceLoader(SourceFileLoader):
+    def __init__(self, metascript, loader):
+        self.metascript = metascript
+        self.loader = loader
 
-        def exec_module(self, module):
-            with content.use_safe_open():
-                source_path = self.get_filename(module.__name__)
-                required = 2
-                required -= int(source_path.startswith(metascript.dir))
-                create_module = not metascript.bypass_modules
+    def __getattr__(self, attr):
+        return getattr(self.loader, attr)
+    
+    def create_module(self, spec):
+        return self.loader.create_module(spec)
+    
+    def load_module(self, fullname):
+        return self.loader.load_module(fullname)
+    
+    def module_repr(self, module):
+        return self.loader.module_repr(module)
 
-                if metascript.context >= required:
-                    code, id_, transformed = metascript.definition.collect(
-                        None, source_path, "exec"
-                    )
-                    exec(code, module.__dict__)
-                    create_module = True # Override bypass_modules
-                else:
-                    if create_module:
-                        transformed = False
-                        id_ = metascript.definition.create_code_block(
-                            None, source_path, "module", False, True
-                        )[1]
-                    super(SourceLoader, self).exec_module(module)
+    def exec_module(self, module):
+        with content.use_safe_open():
+            create_module = not self.metascript.bypass_modules
+            if create_module:
+                source_path = module.__file__
+                id_ = self.metascript.definition.create_code_block(
+                    None, source_path, "module", True, True
+                )[1]
+                self.loader.exec_module(module)
 
+                # To get version, the module must execute first
+                self.metascript.deployment.add_module(
+                    module.__name__,
+                    self.metascript.deployment.get_version(module),
+                    source_path,
+                    id_,
+                    False
+                )
+            else:
+                self.loader.exec_module(module)
+
+
+class SourceLoader(SourceFileLoader):
+
+    def __init__(self, metascript, loader):
+        self.metascript = metascript
+        self.loader = loader
+
+    def __getattr__(self, attr):
+        return getattr(self.loader, attr)
+    
+    def create_module(self, spec):
+        return self.loader.create_module(spec)
+    
+    def load_module(self, fullname):
+        return self.loader.load_module(fullname)
+    
+    def module_repr(self, module):
+        return self.loader.module_repr(module)
+
+    def exec_module(self, module):
+        with content.use_safe_open():
+            source_path = self.get_filename(module.__name__)
+            required = 2
+            required -= int(source_path.startswith(self.metascript.dir))
+            create_module = not self.metascript.bypass_modules
+
+            if self.metascript.context >= required:
+                code, id_, transformed = self.metascript.definition.collect(
+                    None, source_path, "exec"
+                )
+                exec(code, module.__dict__)
+                create_module = True # Override bypass_modules
+            else:
                 if create_module:
-                    # To get version, the module must execute first
-                    metascript.deployment.add_module(
-                        module.__name__,
-                        metascript.deployment.get_version(module),
-                        source_path,
-                        id_,
-                        transformed
-                    )
+                    transformed = False
+                    id_ = self.metascript.definition.create_code_block(
+                        None, source_path, "module", False, True
+                    )[1]
+                self.loader.exec_module(module)
 
-    def create_generic_loader(superclass):
-        class GenericLoader(superclass):
-            def exec_module(self, module):
-                with content.use_safe_open():
-                    create_module = not metascript.bypass_modules
-                    if create_module:
-                        source_path = module.__file__
-                        id_ = metascript.definition.create_code_block(
-                            None, source_path, "module", True, True
-                        )[1]
-                        super(GenericLoader, self).exec_module(module)
-                        # To get version, the module must execute first
-                        metascript.deployment.add_module(
-                            module.__name__,
-                            metascript.deployment.get_version(module),
-                            source_path,
-                            id_,
-                            False
-                        )
-                    else:
-                        super(GenericLoader, self).exec_module(module)
-                    
-        return GenericLoader
+            if create_module:
+                # To get version, the module must execute first
+                self.metascript.deployment.add_module(
+                    module.__name__,
+                    self.metascript.deployment.get_version(module),
+                    source_path,
+                    id_,
+                    transformed
+                )
 
-    generic_loaders = {
-        SourceFileLoader: SourceLoader,
-    }
 
+def finder(metascript):
+    loaders = {}
 
     class Finder(PathFinder):
         @classmethod
@@ -80,10 +110,14 @@ def finder(metascript):
                 if spec is None:
                     return None
                 loader = spec.loader
-                lcls = type(loader)
-                if lcls not in generic_loaders:
-                    generic_loaders[lcls] = create_generic_loader(lcls)
-                loader.__class__ = generic_loaders[lcls]
+                if id(loader) not in loaders:
+                    if type(loader) == SourceFileLoader: 
+                        # Playing safe here: instead of using isinstance, I'm checking the actual type
+                        # I don't know if the noworkflow loader supports any subtype of SourceFileLoader
+                        loaders[id(loader)] = SourceLoader(metascript, loader)
+                    else:
+                        loaders[id(loader)] = GenericLoader(metascript, loader)
+                spec.loader = loaders[id(loader)]
 
                 return spec
             
