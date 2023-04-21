@@ -64,7 +64,7 @@ class Diff(Model):
     @property
     def trial(self):
         """Return a tuple with information from both trials """
-        extra = ("start", "finish", "duration_text")
+        extra = ("start", "finish", "duration_text","code_hash")
         ignore = ("id",)
         return diff_dict(
             self.trial1.to_dict(ignore=ignore, extra=extra),                     # pylint: disable=no-member
