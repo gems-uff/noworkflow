@@ -18,7 +18,7 @@ from .command import Command
 
 
 class Pull(Command):
-    """Import trials to a database"""
+    """Fetches and downloads a remote provenance database and merges their data with your local provenance database"""
     def __init__(self, *args, **kwargs):
         super(Pull, self).__init__(*args, **kwargs)
         self.url=None

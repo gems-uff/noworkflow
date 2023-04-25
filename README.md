@@ -74,6 +74,13 @@ $ python setup.py install
 ```
 This installs noWorkflow on your system. It will download the dependencies from PyPI
 
+If you want to install the dependencies to run the demos execute the following commands:
+
+```bash
+$ cd noworkflow
+$ pip install -e capture[demo]
+```
+
 Upgrade
 -------
 

@@ -19,7 +19,7 @@ from zipfile import ZipFile
 from io import BytesIO
 
 class Push(Command):
-    """Import trials to a database"""
+    """Send your local provenance database to a remote server and merge their data"""
     def __init__(self, *args, **kwargs):
         super(Push, self).__init__(*args, **kwargs)
         self.url=None
