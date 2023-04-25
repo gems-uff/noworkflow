@@ -39,10 +39,10 @@ def main():
     """Main function"""
     from ..utils.functions import version
     parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=SmartFormatter)
+                                     formatter_class=SmartFormatter, usage="")
     parser.add_argument("-v", "--version", action="version",
                         version="noWorkflow {}".format(version()))
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(metavar="")
     commands = [
         Run(),
         Debug(),

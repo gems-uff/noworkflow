@@ -26,7 +26,7 @@ from .command import Command
 
 
 class Import(Command):
-    """Import trials to a database"""
+    """"""
     def __init__(self, *args, **kwargs):
         super(Import, self).__init__(*args, **kwargs)
         self.targetContent=None
