@@ -630,10 +630,10 @@ def create_trial(
             meta.code_blocks_store.add(mc2, meta.trial_id, "bbbb", False, None, "codeblock")
             m1 = meta.modules_store.add(
                 meta.trial_id,
-                "external", "1.0.1", "/home/external.py", mc1, False)
+                "external", "1.0.1", "/home/external.py", mc1, False, None)
             m2 = meta.modules_store.add(
                 meta.trial_id,
-                "internal", "", "internal.py", mc2, False)
+                "internal", "", "internal.py", mc2, False, None)
             meta.code_components_store.do_store()
             meta.code_blocks_store.do_store()
             meta.modules_store.do_store()

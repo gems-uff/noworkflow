@@ -103,7 +103,7 @@ class Restore(Command):
                 except Exception:
                     pass
                 metascript.deployment.add_module(
-                    info["name"], version, path, cid, False
+                    info["name"], version, path, cid, False, None
                 )
             elif info["type"] == "access":
                 aid = accesses.add(tid, path, info["checkpoint"])
@@ -137,15 +137,24 @@ class Restore(Command):
             return True
         elif code_hash is not None:
             load_file = content.get(code_hash)
-            with open(path, "wb") as fil:
-                fil.write(load_file)
-            msg = "File {}".format(path)
-            if trial_id:
-                msg += " from trial {}".format(trial_id)
-            msg += " restored"
+            try:
+                with open(path, "wb") as fil:
+                    fil.write(load_file)
+                msg = "File {}".format(path)
+                if trial_id:
+                    msg += " from trial {}".format(trial_id)
+                msg += " restored"
 
-            print_msg(msg, self.print_msg)
-            return True
+                print_msg(msg, self.print_msg)
+                return True
+            except NotADirectoryError as exc:
+                msg = "Unable to restore file {}".format(path)
+                if trial_id:
+                    msg += " from trial {}".format(trial_id)
+                msg += " due to {}. Skipping it".format(str(exc))
+
+                print_msg(msg, self.print_msg)
+                return False
 
     def restore_script(self, trial):
         """Restore the main script from <trial>"""

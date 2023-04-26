@@ -74,10 +74,10 @@ class Deployment(object):
 
         attrs.add(trial_id, "NOWORKFLOW_VERSION", version())
 
-    def add_module(self, name, version, path, code_id, transformed=False):
+    def add_module(self, name, version, path, code_id, transformed=False, fullpath=None):
         """Insert module into provenance store"""
         self.metascript.modules_store.add(
-            self.metascript.trial_id, name, version, path, code_id, transformed
+            self.metascript.trial_id, name, version, path, code_id, transformed, fullpath
         )
 
     def get_version(self, module):

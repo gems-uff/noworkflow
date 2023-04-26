@@ -9,6 +9,7 @@ from functools import wraps
 from importlib.machinery import PathFinder, SourceFileLoader
 from importlib.abc import Loader
 from ...persistence import content
+from pathlib import Path
 
 
 def proxy(loader, name):
@@ -32,6 +33,14 @@ def proxy(loader, name):
         delattr(loader, name)
     return attribute
     
+
+def find_file_in_path(path):
+    while not path.is_file():
+        if path == path.parent:
+            return None
+        path = path.parent
+    return path
+
 
 def create_generic_loader(metascript, loader):
 
@@ -63,7 +72,8 @@ def create_generic_loader(metascript, loader):
                             metascript.deployment.get_version(module),
                             source_path,
                             id_,
-                            False
+                            False,
+                            None
                         )
                     else:
                         loader.exec_module(module)
@@ -81,16 +91,35 @@ def create_generic_loader(metascript, loader):
                     module = loader.load_module(fullname)
                     create_module = not metascript.bypass_modules
                     if create_module:
-                        source_path = module.__file__
-                        id_ = metascript.definition.create_code_block(
-                            inspect.getsource(module), source_path, "module", False, False
-                        )[1]
+                        fullpath = None
+                        module_path = module.__file__
+
+                        try:
+                            source = inspect.getsource(module)
+                            id_ = metascript.definition.create_code_block(
+                                source, module_path, "module", False, False
+                            )[1]
+                        except OSError:  # Can't load source from module
+                            module_file_path = find_file_in_path(Path(module_path))
+                            if module_file_path is not None:
+                                id_ = metascript.definition.create_code_block(
+                                    None, str(module_file_path), "module", True, True
+                                )[1]
+                                if str(module_path) != str(module_file_path):
+                                    fullpath = module_path
+                                    module_path = str(module_file_path)
+                            else:
+                                id_ = metascript.definition.create_code_block(
+                                    b"<noWorkflow: unable to load>", str(module_path), "module", True, False
+                                )[1]
+                        
                         metascript.deployment.add_module(
                             module.__name__,
                             metascript.deployment.get_version(module),
-                            source_path,
+                            module_path,
                             id_,
-                            False
+                            False,
+                            fullpath
                         )
                     return module
 
@@ -139,7 +168,8 @@ def create_source_loader(metascript, loader):
                         metascript.deployment.get_version(module),
                         source_path,
                         id_,
-                        transformed
+                        transformed,
+                        None
                     )
 
     instance = SourceLoader()

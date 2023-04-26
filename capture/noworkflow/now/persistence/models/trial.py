@@ -358,21 +358,21 @@ class Trial(AlchemyProxy):
 
         Do not return modules outside the trial path:
         >>> m1 = modules.add(
-        ...     trial_id, "external", "1.0.1", "/home/external.py", None, 0)
+        ...     trial_id, "external", "1.0.1", "/home/external.py", None, 0, None)
         >>> modules.do_store()
         >>> list(trial.local_modules)
         []
 
         Return modules inside the trial path:
         >>> m2 = modules.add(
-        ...    trial_id, "inte", "1.0.1", "/home/now/inte.py", None, 0)
+        ...    trial_id, "inte", "1.0.1", "/home/now/inte.py", None, 0, None)
         >>> modules.do_store()
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
         [module(..., 'inte', '1.0.1').]
 
         Return modules with relative path:
         >>> m3 = modules.add(
-        ...    trial_id, "inte2", "1.0.2", "inte2.py", None, 0)
+        ...    trial_id, "inte2", "1.0.2", "inte2.py", None, 0, None)
         >>> modules.do_store()
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
         [module(..., 'inte', '1.0.1')., module(..., 'inte2', '1.0.2').]
@@ -1137,7 +1137,7 @@ class Trial(AlchemyProxy):
         >>> main_id, finish = par["main_id"], par["finish"]
         >>> status = par["status"]
         >>> Trial.fast_update(trial_id, main_id, finish, status)
-        >>> trial = select_trial(trial_id)
+        >>> trial = Trial(trial_id)
         >>> trial.finish == finish
         True
         >>> trial.status == status
@@ -1182,7 +1182,7 @@ class Trial(AlchemyProxy):
         >>> script, start, path = par["script"], par["start"], par["path"]
         >>> command, bypass_modules = par["command"], par["bypass_modules"]
         >>> id1 = Trial.create(script, start, command, path, bypass_modules)
-        >>> trial = select_trial(id1)
+        >>> trial = Trial(id1)
         >>> trial.id == id1
         True
         >>> trial.script == script
@@ -1202,21 +1202,21 @@ class Trial(AlchemyProxy):
 
         Set parent id if there is a trial:
         >>> id2 = Trial.create(**trial_params(minute=25))
-        >>> trial = select_trial(id2)
+        >>> trial = Trial(id2)
         >>> trial.parent_id == id1
         True
         >>> trial.modules_inherited_from_trial_id
 
         Set inherited trial if bypass_modules=True
         >>> id3 = Trial.create(**trial_params(minute=32, bypass_modules=True))
-        >>> trial = select_trial(id3)
+        >>> trial = Trial(id3)
         >>> trial.modules_inherited_from_trial_id == id2
         True
 
         Set inherited trial to a trial that did not inherit
         modules. Note that it sets `modules_inherited_from_trial_id` to `id2`
         >>> id4 = Trial.create(**trial_params(minute=33, bypass_modules=True))
-        >>> trial = select_trial(id4)
+        >>> trial = Trial(id4)
         >>> trial.modules_inherited_from_trial_id == id2
         True
         """
@@ -1231,7 +1231,7 @@ class Trial(AlchemyProxy):
         if bypass_modules:
             inherited_id = cls.fast_last_trial_id()
         ttrial = cls.t
-        tid=uuid_gen()
+        tid = uuid_gen()
         result = session.execute(
             ttrial.insert(),
             {"id": tid, "script": script, "start": start, "command": command,

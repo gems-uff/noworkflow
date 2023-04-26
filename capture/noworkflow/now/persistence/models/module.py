@@ -33,7 +33,7 @@ class Module(AlchemyProxy):
     ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1)
     >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
     >>> mid = modules.add(
-    ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
+    ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True, None)
     >>> components.do_store()
     >>> blocks.do_store()
     >>> modules.do_store()
@@ -67,6 +67,8 @@ class Module(AlchemyProxy):
     path = Column(Text)
     code_block_id = Column(Text, index=True)
     transformed = Column(Boolean)
+    fullpath = Column(Text)
+
 
     # Relationship attributes (see relationships.py):
     #   code_block: 1 CodeBlock
@@ -80,12 +82,14 @@ class Module(AlchemyProxy):
         PrologRepr("path"),
         PrologNullableRepr("code_block_id", link="code_block.id"),
         PrologAttribute("transformed"),
+        PrologRepr("fullpath"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "a module with *Id* and *Name* at *Version*,\n"
         "associated with a *CodeBlockId*,\n"
-        "was imported from *Path*,\n"
-        "and *Transformed* for collection."
+        "was stored in *Path*,\n"
+        "and *Transformed* for collection.\n"
+        "When *FullPath* is not null, it indicates the actual part of *Path* that was imported."
     ))
 
 
@@ -108,9 +112,9 @@ class Module(AlchemyProxy):
         >>> erase_db()
         >>> trial_id = new_trial()
         >>> mid1 = modules.add(
-        ...     trial_id, "mod", "1.0.1", "/home/module.py", None, False)
+        ...     trial_id, "mod", "1.0.1", "/home/module.py", None, False, None)
         >>> mid2 = modules.add(
-        ...     trial_id, "mod2", None, "/home/module2.py", None, False)
+        ...     trial_id, "mod2", None, "/home/module2.py", None, False, None)
         >>> modules.do_store()
         >>> module1 = Module((trial_id, mid1))
         >>> module2 = Module((trial_id, mid2))
@@ -141,9 +145,9 @@ class Module(AlchemyProxy):
         >>> cid = components.add(
         ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
-        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py", None)
         >>> mid = modules.add(
-        ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
+        ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True, None)
         >>> components.do_store()
         >>> blocks.do_store()
         >>> modules.do_store()
@@ -172,9 +176,9 @@ class Module(AlchemyProxy):
         >>> cid = components.add(
         ...     trial_id, "/home/module.py", "module", "w", 1, 0, 1, 10, -1
         ... )
-        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py")
+        >>> _ = blocks.add(cid, trial_id, "abcdefghij", False, None, "module.py", None)
         >>> mid = modules.add(
-        ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True)
+        ...     trial_id, "module", "1.0.1", "/home/module.py", cid, True, None)
         >>> components.do_store()
         >>> blocks.do_store()
         >>> modules.do_store()
@@ -188,11 +192,14 @@ class Module(AlchemyProxy):
         Path: /home/module.py
         Code hash: d68c19a0a345b7eab78d5e11e991c026ec60db63
         """
+        fullpath = ""
+        if self.fullpath:
+            fullpath = "\n            Full path: {}".format(self.fullpath)
         print_("""\
             Name: {0.name}
             Version: {0.version}
-            Path: {0.path}
-            Code hash: {0.code_hash}""".format(self))
+            Path: {0.path}{1}
+            Code hash: {0.code_hash}""".format(self, fullpath))
 
     def __repr__(self):
         return "module({0.id}, '{0.name}', '{0.version}').".format(self)

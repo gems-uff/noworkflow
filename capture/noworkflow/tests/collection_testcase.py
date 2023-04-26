@@ -99,11 +99,12 @@ class CollectionTestCase(unittest.TestCase):
         if not hasattr(self, 'executed'):
             self.metascript.execution.collect_provenance()
             self.assertEqual(self.metascript.execution.msg,
-                             "the execution of trial 1 finished successfully")
+                             "the execution of trial {} finished successfully".format(self.metascript.trial_id))
             self.executed = True
         self.metascript.deployment.store_provenance()
         self.metascript.definition.store_provenance()
         self.metascript.execution.store_provenance()
+        return self.metascript.trial_id
 
     def get_evaluation(self, skip=0, **kwargs):
         """Execute and get evaluation"""

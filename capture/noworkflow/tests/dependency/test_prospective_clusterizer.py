@@ -194,7 +194,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
                     "def g(x):\n"
                     "    return x\n"
                     "y = f('1')\n")
-        self.clean_execution()
+        trial_id = self.clean_execution()
 
         script = self.evaluation_node(name="script.py")
         var_f = self.evaluation_node(name="f", mode='w')
@@ -207,10 +207,10 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_gx_w = self.evaluation_node(name="x", mode="w", first_char_line=4)
 
         fas = self.metascript.file_accesses_store
-        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
+        acc1 = fas.add_object(trial_id, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
+        acc2 = fas.add_object(trial_id, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
         fas.do_store()
@@ -254,7 +254,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
                     "def g(x):\n"
                     "    return x\n"
                     "y = f('1')\n")
-        self.clean_execution()
+        trial_id = self.clean_execution()
 
         script = self.evaluation_node(name="script.py")
         var_f = self.evaluation_node(name="f", mode='w')
@@ -266,10 +266,10 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_fx_w = self.evaluation_node(name="x", mode="w", first_char_line=2)
 
         fas = self.metascript.file_accesses_store
-        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
+        acc1 = fas.add_object(trial_id, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
+        acc2 = fas.add_object(trial_id, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
         fas.do_store()
@@ -310,7 +310,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
                     "def g(x):\n"
                     "    return x\n"
                     "y = f('1')\n")
-        self.clean_execution()
+        trial_id = self.clean_execution()
 
         script = self.evaluation_node(name="script.py")
         var_f = self.evaluation_node(name="f", mode='w')
@@ -320,10 +320,10 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_y = self.evaluation_node(name="y")
 
         fas = self.metascript.file_accesses_store
-        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
+        acc1 = fas.add_object(trial_id, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
+        acc2 = fas.add_object(trial_id, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
         fas.do_store()
