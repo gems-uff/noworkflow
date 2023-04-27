@@ -105,17 +105,17 @@ class TestActivationClusterizer(CollectionTestCase):
                     "def g(x):\n"
                     "    return x\n"
                     "y = f('1')\n")
-        self.clean_execution()
+        trial_id = self.clean_execution()
 
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
 
         fas = self.metascript.file_accesses_store
-        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
+        acc1 = fas.add_object(trial_id, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
+        acc2 = fas.add_object(trial_id, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
         fas.do_store()
@@ -148,17 +148,17 @@ class TestActivationClusterizer(CollectionTestCase):
                     "def g(x):\n"
                     "    return x\n"
                     "y = f('1')\n")
-        self.clean_execution()
+        trial_id = self.clean_execution()
 
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
 
         fas = self.metascript.file_accesses_store
-        acc1 = fas.add_object(1, "teste", self.metascript.get_time())
+        acc1 = fas.add_object(trial_id, "teste", self.metascript.get_time())
         acc1.mode = "w"
         acc1.activation_id = int(var_act_f.split("_")[-1])
-        acc2 = fas.add_object(1, "teste2", self.metascript.get_time())
+        acc2 = fas.add_object(trial_id, "teste2", self.metascript.get_time())
         acc2.mode = "r"
         acc2.activation_id = int(var_act_g.split("_")[-1])
         fas.do_store()

@@ -26,11 +26,13 @@ class FileAccessLW(BaseLW):                                                     
     nullable = {"activation_id"}
     model = FileAccess
 
-    def __init__(self, id_, trial_id, name, checkpoint,mode = "r",buffering = "default",content_hash_before = None,\
-        content_hash_after = None,activation_id = -1):
+    def __init__(
+        self, id_, trial_id, name, checkpoint, mode="r", buffering="default", content_hash_before=None,
+        content_hash_after=None, activation_id=-1
+    ):
         self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
-        self.name = name
+        self.name = str(name)
         self.mode = mode
         self.buffering = buffering
         self.content_hash_before = content_hash_before

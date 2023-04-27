@@ -15,13 +15,15 @@ class ModuleLW(BaseLW):
 
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "path", "version", "code_block_id", 
-         "transformed"],
+         "transformed", "fullpath"],
     )
     nullable = set()
     model = Module
 
-    def __init__(self, id_, trial_id, name, version, path, code_block_id,        # pylint: disable=too-many-arguments
-                 transformed):
+    def __init__(
+        self, id_, trial_id, name, version, path, code_block_id,
+        transformed, fullpath
+    ):                                                                           # pylint: disable=too-many-arguments
         self.trial_id = trial_id
         self.id = id_                                                            # pylint: disable=invalid-name
         self.name = name
@@ -29,6 +31,7 @@ class ModuleLW(BaseLW):
         self.path = path
         self.code_block_id = code_block_id
         self.transformed = transformed
+        self.fullpath = fullpath
 
     def is_complete(self):                                                       # pylint: disable=no-self-use
         """Module can always be removed from object store"""
@@ -46,5 +49,6 @@ class ModuleLW(BaseLW):
             'version': self.version,
             'path': self.path,
             'code_block_id': self.code_block_id,
-            'transformed': self.transformed
+            'transformed': self.transformed,
+            'fullpath': self.fullpath
         }
