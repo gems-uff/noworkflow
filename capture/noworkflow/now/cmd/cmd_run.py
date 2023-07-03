@@ -15,8 +15,6 @@ from ..persistence.models import Tag, Trial, Argument
 from ..utils import io, metaprofiler
 from ..persistence import content
 
-
-
 from .command import Command
 
 
