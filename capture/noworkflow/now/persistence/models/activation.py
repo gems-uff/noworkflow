@@ -233,6 +233,7 @@ class Activation(AlchemyProxy):
                 )
                 for access in act_accesses:
                     yield access
+                    
 
     @property
     def caller(self):

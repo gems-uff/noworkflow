@@ -21,6 +21,7 @@ from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
 from .evaluation import Evaluation
 from .file_access import FileAccess, UniqueFileAccess
+from .cell_tags import CellTags
 from .graph_cache import GraphCache
 from .head import Head
 from .member import Member
@@ -40,7 +41,7 @@ ORDER = [
     Module, EnvironmentAttr,  # Deployment
     CodeComponent, CodeBlock, Composition, Experiment,  # Definition
     Evaluation, Activation, Dependency, Member,  # Execution
-    FileAccess,  # Execution
+    CellTags, FileAccess,   # Execution
     Group, MemberOfGroup, User, ExtendedAnnotation # additional info
 ]
 
