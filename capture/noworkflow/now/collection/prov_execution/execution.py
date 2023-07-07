@@ -38,9 +38,12 @@ class Execution(object):
         try:
             builtin["__noworkflow__"] = self.collector
             builtin["open"] = self.collector.new_open(content.std_open)
+            builtin["now_tag"] = now_tag
         except TypeError:
             builtin.__noworkflow__ = self.collector
             builtin.open = self.collector.new_open(content.std_open)
+            builtin.now_tag = now_tag
+            
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)
         os.open = self.collector.new_open(content.os_open, osopen=True)
@@ -90,3 +93,19 @@ class Execution(object):
         )
         if self.msg:
             print_msg(self.msg, self.force_msg)
+
+def now_tag(tag):
+
+    trial_id = __noworkflow__.trial_id
+    id_ = __noworkflow__.last_activation.id
+    name = __noworkflow__.last_activation.name
+    tag_name = str(tag)
+    activation_id = __noworkflow__.last_activation.evaluation.activation_id
+
+    print(trial_id)
+    print(name)
+    print(tag)
+    print(activation_id)
+
+    # Writing it
+    __noworkflow__.stage_tagss.add(trial_id, name, tag_name, activation_id)

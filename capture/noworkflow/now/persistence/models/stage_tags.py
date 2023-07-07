@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Cells Tags Model"""
+"""File Access Model"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -22,37 +22,15 @@ from .base import AlchemyProxy, proxy_class, proxy
 
 
 @proxy_class
-class CellTags(AlchemyProxy):
-    """Represent a file access
-
-
-    Doctest:
-    >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
-    >>> from noworkflow.tests.helpers.models import AccessConfig, AssignConfig
-    >>> from noworkflow.now.persistence.models import Activation
-    >>> assign = AssignConfig(arg="a")
-    >>> access_config = AccessConfig(read_file="a.txt", read_hash="ab")
-    >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
-    ...                      access=access_config, erase=True)
-    >>> f_activation = Activation((trial_id, assign.f_activation))
-
-    Load FileAccess by (trial_id, id):
-    >>> access = FileAccess((trial_id, access_config.r_access.id))
-    >>> access  # doctest: +ELLIPSIS
-    access(..., ..., 'a.txt', 'r', 'ab', 'ab', ..., ...).
-
-    Load FileAccess trial:
-    >>> access.trial.id == trial_id
-    True
-
-    Load FileAccess activation:
-    >>> access.activation.id == f_activation.id
-    True
+class StageTags(AlchemyProxy):
+    """Represent a stage tag mark
+    
+    TODO
     """
 
     hide_timestamp = False
 
-    __tablename__ = "cell_tags"
+    __tablename__ = "stage_tags"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id", "activation_id"],
@@ -63,11 +41,7 @@ class CellTags(AlchemyProxy):
     trial_id = Column(String, index=True)
     id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
     name = Column(Text)
-    mode = Column(Text)
-    buffering = Column(Text)
-    content_hash_before = Column(Text)
-    content_hash_after = Column(Text)
-    checkpoint = Column(Float)
+    tag_name = Column(Text)
     activation_id = Column(Integer, index=True)
 
     # Relationship attributes (see relationships.py):
@@ -78,27 +52,19 @@ class CellTags(AlchemyProxy):
         PrologTrial("trial_id", link="activation.trial_id"),
         PrologAttribute("id", fn=lambda obj: "f{}".format(obj.id)),
         PrologRepr("name"),
-        PrologRepr("mode"),
-        PrologNullableRepr("content_hash_before"),
-        PrologNullableRepr("content_hash_after"),
-        PrologAttribute("checkpoint"),
+        PrologRepr("tag_name"),
         PrologNullable("activation_id", link="activation.id"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
-        "a file *Id* with *Name*\n"
-        "was accessed in a specific read or write *Mode*\n"
-        "The content of the file\n"
-        "was captured before (*ContentHashBefore*)\n"
-        "and after (*ContentHashAfter*) the access."
-        "The file was accessed at a specific *Checkpoint*\n"
-        "by a function activation (*ActivationId*)."
+        "a file *Id* with *Name* tag function\n"
+        "was stamped with the tagging function with\n"
+        "*tag_name*. This activation received the *activation_id*."
     ))
 
     @property
     def timestamp(self):
         """Return activation finish time
-
-
+        
         Doctest:
          >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
         >>> from noworkflow.tests.helpers.models import AccessConfig
@@ -267,7 +233,7 @@ class CellTags(AlchemyProxy):
         return hash(self.__key())
 
     def __eq__(self, other):
-        if not isinstance(other, CellTags):
+        if not isinstance(other, FileAccess):
             return False
         return (
             (self.content_hash_before == other.content_hash_before)
@@ -321,14 +287,14 @@ class CellTags(AlchemyProxy):
 
 
 
-class UniqueFileAccess(CellTags):
+class UniqueFileAccess(StageTags):
     """FileAccess with Unique hash"""
 
     def __key(self):
         return self.id
 
     def __eq__(self, other):
-        if not isinstance(other, CellTags):
+        if not isinstance(other, StageTags):
             return False
         return self.id == other.id
 

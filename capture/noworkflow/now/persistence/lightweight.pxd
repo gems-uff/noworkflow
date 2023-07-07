@@ -42,7 +42,7 @@ cdef class FileAccessLw(BaseLW):
     cdef public object timestamp;
     cdef public bint done;
 
-cdef class CellTags(BaseLW):
+cdef class StageTags(BaseLW):
     cdef public int trial_id, id, function_activation_id;
     cdef public str name, mode, buffering;
     cdef public str content_hash_before, content_hash_after;

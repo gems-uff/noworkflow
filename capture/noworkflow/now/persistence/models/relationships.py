@@ -20,7 +20,7 @@ from .environment_attr import EnvironmentAttr
 from .evaluation import Evaluation
 from .member import Member
 from .file_access import FileAccess
-from .cell_tags import CellTags
+
 from .head import Head
 from .module import Module
 from .tag import Tag
@@ -108,12 +108,6 @@ Activation.evaluations = proxy_attr("evaluations", proxy_gen)
 # Activation.file_accesses <-> FileAccess.activation
 bidirectional_relationship(
     Activation, "file_accesses", FileAccess, "activation", MTO,
-    viewonly=True,
-)
-
-# Activation.file_accesses <-> FileAccess.activation
-bidirectional_relationship(
-    Activation, "cell_tags", CellTags, "activation", MTO,
     viewonly=True,
 )
 
