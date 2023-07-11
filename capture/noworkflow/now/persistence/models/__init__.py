@@ -40,7 +40,7 @@ ORDER = [
     Module, EnvironmentAttr,  # Deployment
     CodeComponent, CodeBlock, Composition, Experiment,  # Definition
     Evaluation, Activation, Dependency, Member,  # Execution
-    StageTags, FileAccess,   # Execution
+    FileAccess,   # Execution
     Group, MemberOfGroup, User, ExtendedAnnotation # additional info
 ]
 
