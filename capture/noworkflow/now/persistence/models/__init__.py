@@ -21,7 +21,6 @@ from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
 from .evaluation import Evaluation
 from .file_access import FileAccess, UniqueFileAccess
-from .stage_tags import StageTags
 from .graph_cache import GraphCache
 from .head import Head
 from .member import Member
