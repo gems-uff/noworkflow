@@ -7,7 +7,7 @@ from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeCo
 from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW,BundleLW,UserLW
 
 from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
-from ..persistence.models import FileAccess,CellTags,Member,Module,Tag, User
+from ..persistence.models import FileAccess,StageTags,Member,Module,Tag, User
 from ..persistence.lightweight import ObjectStore
 def store_trial_from_experiment(trial,experiment,trial_store):
     trial.experiment_id=experiment
@@ -24,7 +24,7 @@ def import_bundle(bundle, experiment=None):
     env_store=ObjectStore(EnvironmentAttrLW)
     evaluation_store=ObjectStore(EvaluationLW)
     fileAccess_store=ObjectStore(FileAccessLW)
-    cellTags_store=ObjectStore(CellTags)
+    stageTags_store=ObjectStore(StageTags)
     member_store=ObjectStore(MemberLW)
     module_store=ObjectStore(ModuleLW)
     user_store=ObjectStore(UserLW)
@@ -39,7 +39,7 @@ def import_bundle(bundle, experiment=None):
     [env_store.add_from_object(x) for x in bundle.environmentAttrs]
     [evaluation_store.add_from_object(x) for x in bundle.evaluations]
     [fileAccess_store.add_from_object(x) for x in bundle.fileAccesses]
-    [cellTags_store.add_from_object(x) for x in bundle.cellTags]
+    [stageTags_store.add_from_object(x) for x in bundle.stageTags]
     [member_store.add_from_object(x) for x in bundle.members]
     [module_store.add_from_object(x) for x in bundle.modules]
     [user_store.add_from_object(x) for x in bundle.users]
@@ -54,7 +54,7 @@ def import_bundle(bundle, experiment=None):
     env_store.do_store()
     evaluation_store.do_store()
     fileAccess_store.do_store()
-    cellTags_store.do_store()
+    stageTags_store.do_store()
 
     
     member_store.do_store()

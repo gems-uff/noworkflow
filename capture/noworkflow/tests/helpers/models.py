@@ -17,7 +17,7 @@ from ...now.persistence.lightweight import ObjectStore, SharedObjectStore
 from ...now.persistence.lightweight import CodeBlockLW, CodeComponentLW
 from ...now.persistence.lightweight import ActivationLW, EvaluationLW
 from ...now.persistence.lightweight import DependencyLW, FileAccessLW
-from ...now.persistence.lightweight import CellTagsLW
+from ...now.persistence.lightweight import StageTagsLW
 
 from ...now.persistence.lightweight import ModuleLW
 from ...now.persistence.lightweight import MemberLW
@@ -73,7 +73,7 @@ def erase_database():
     relational.session.execute(ActivationLW.model.t.delete())
     relational.session.execute(DependencyLW.model.t.delete())
     relational.session.execute(FileAccessLW.model.t.delete())
-    relational.session.execute(CellTagsLW.model.t.delete())
+    relational.session.execute(StageTagsLW.model.t.delete())
     relational.session.execute(MemberLW.model.t.delete())
     relational.session.execute(ModuleLW.model.t.delete())
     relational.session.execute(EnvironmentAttrLW.model.t.delete())

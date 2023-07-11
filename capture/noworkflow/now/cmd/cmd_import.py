@@ -17,7 +17,7 @@ from ..persistence import persistence_config, relational
 from ..utils.collab import export_bundle,import_bundle
 
 from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
-from ..persistence.lightweight import EvaluationLW,FileAccessLW,CellTagsLW,MemberLW,ModuleLW,TrialLW
+from ..persistence.lightweight import EvaluationLW,FileAccessLW,StageTagsLW,MemberLW,ModuleLW,TrialLW
 
 from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
 from ..persistence.models import FileAccess,Member,Module,Tag

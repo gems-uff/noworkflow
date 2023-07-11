@@ -22,7 +22,7 @@ from .base import AlchemyProxy, proxy_class, proxy
 
 
 @proxy_class
-class CellTags(AlchemyProxy):
+class StageTags(AlchemyProxy):
     """Represent a file access
 
 
@@ -52,7 +52,7 @@ class CellTags(AlchemyProxy):
 
     hide_timestamp = False
 
-    __tablename__ = "cell_tags"
+    __tablename__ = "stage_tags"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id", "activation_id"],
@@ -267,7 +267,7 @@ class CellTags(AlchemyProxy):
         return hash(self.__key())
 
     def __eq__(self, other):
-        if not isinstance(other, CellTags):
+        if not isinstance(other, StageTags):
             return False
         return (
             (self.content_hash_before == other.content_hash_before)
@@ -321,14 +321,14 @@ class CellTags(AlchemyProxy):
 
 
 
-class UniqueFileAccess(CellTags):
+class UniqueFileAccess(StageTags):
     """FileAccess with Unique hash"""
 
     def __key(self):
         return self.id
 
     def __eq__(self, other):
-        if not isinstance(other, CellTags):
+        if not isinstance(other, StageTags):
             return False
         return self.id == other.id
 

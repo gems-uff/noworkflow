@@ -18,7 +18,7 @@ from .evaluation import EvaluationLW
 from .experiment import ExperimentLW
 from .exception import ExceptionLW
 from .file_access import FileAccessLW
-from .cell_tags import CellTagsLW
+from .stage_tags import StageTagsLW
 from .member import MemberLW
 from .module import ModuleLW
 from .trial import TrialLW
@@ -27,7 +27,7 @@ from .group import GroupLW
 from .user import UserLW
 from .memberOfGroup import MemberOfGroupLW
 from .bundle import BundleLW
-from .cell_tags import CellTagsLW
+from .stage_tags import StageTagsLW
 
 
 __all__ = [
@@ -44,7 +44,7 @@ __all__ = [
     "ExperimentLW",
     "ExceptionLW",
     "FileAccessLW",
-    "CellTagsLW",
+    "StageTagsLW",
     "MemberLW",
     "ModuleLW",
     "TrialLW",

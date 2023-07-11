@@ -84,7 +84,7 @@ class Collector(object):
         self.dependencies = self.metascript.dependencies_store
         self.members = self.metascript.members_store
         self.file_accesses = self.metascript.file_accesses_store
-        self.cell_tagss = self.metascript.cell_tags_store
+        self.stage_tagss = self.metascript.stage_tags_store
 
         self.exceptions = self.metascript.exceptions_store
         # Partial save
@@ -194,19 +194,19 @@ class Collector(object):
 
             if not activation:
                 return old_open(name, *args, **kwargs)
-            cell_tags = self.cell_tagss.add_object(
+            stage_tags = self.stage_tagss.add_object(
                 self.trial_id, name, self.get_time()
             )
             if os.path.exists(name):
                 # Read previous content if file exists
                 with content.std_open(name, "rb") as fil:
-                    cell_tags.content_hash_before = content.put(fil.read(), name)
-            cell_tags.activation_id = activation.id
+                    stage_tags.content_hash_before = content.put(fil.read(), name)
+            stage_tags.activation_id = activation.id
             # Update with the informed keyword arguments (mode / buffering)
-            cell_tags.update(kwargs)
+            stage_tags.update(kwargs)
             # Update with the informed positional arguments
             if len(args) > 1:
-                cell_tags.buffering = args[1]
+                stage_tags.buffering = args[1]
             elif args:
                 mode = args[0]
                 if osopen:
@@ -217,8 +217,8 @@ class Collector(object):
                             value = value or "({})".format(key)
                             mode += value
 
-                cell_tags.mode = mode
-            activation.cell_tagss.append(cell_tags)
+                stage_tags.mode = mode
+            activation.stage_tagss.append(stage_tags)
             return old_open(name, *args, **kwargs)
 
         return open
@@ -466,11 +466,11 @@ class Collector(object):
             file_access.done = True
         
         # cell tags experiment
-        for cell_tags in activation.cell_tagss:
-            if os.path.exists(cell_tags.name):
-                with content.std_open(cell_tags.name, "rb") as fil:
-                    cell_tags.content_hash_after = content.put(fil.read(), cell_tags.name)
-            cell_tags.done = True
+        for stage_tags in activation.stage_tagss:
+            if os.path.exists(stage_tags.name):
+                with content.std_open(stage_tags.name, "rb") as fil:
+                    stage_tags.content_hash_after = content.put(fil.read(), stage_tags.name)
+            stage_tags.done = True
 
     def start_script(self, module_name, code_component_id, iscell):
         """Start script collection. Create new activation"""
@@ -2004,7 +2004,7 @@ class Collector(object):
         metascript.dependencies_store.do_store(partial)
         metascript.members_store.do_store(partial)
         metascript.file_accesses_store.do_store(partial)
-        metascript.cell_tags_store.do_store(partial)
+        metascript.stage_tags_store.do_store(partial)
 
         now = self.get_time()
         if not partial:

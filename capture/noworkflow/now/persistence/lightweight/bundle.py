@@ -9,7 +9,7 @@ from ..models import CodeBlock
 from .. import content
 
 from . import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
-from . import EvaluationLW,FileAccessLW,CellTagsLW,MemberLW,ModuleLW,TrialLW, UserLW
+from . import EvaluationLW,FileAccessLW,StageTagsLW,MemberLW,ModuleLW,TrialLW, UserLW
 
 from .base import BaseLW, define_attrs
 from datetime import datetime
@@ -71,7 +71,7 @@ class BundleLW(BaseLW):
         self.evaluations= [EvaluationLW(x["id"],x["trial_id"],x["code_component_id"],x["activation_id"],x["checkpoint"],x["repr"]) for x in data["evaluations"]]
         self.fileAccesses=[FileAccessLW(x["id"],x["trial_id"],x["name"],x["checkpoint"],x["mode"],x["buffering"],\
             x["content_hash_before"],x["content_hash_after"],x["activation_id"]) for x in data["fileAccesses"]]
-        self.fileAccesses=[CellTagsLW(x["id"],x["trial_id"],x["name"],x["checkpoint"],x["mode"],x["buffering"],\
+        self.fileAccesses=[StageTagsLW(x["id"],x["trial_id"],x["name"],x["checkpoint"],x["mode"],x["buffering"],\
             x["content_hash_before"],x["content_hash_after"],x["activation_id"]) for x in data["fileAccesses"]]
         self.members=[MemberLW(x["id"],x["trial_id"],x["collection_activation_id"],x["collection_id"],x["member_activation_id"],\
             x["member_id"],x["key"],x["checkpoint"],x["type"]) for x in data["members"]]

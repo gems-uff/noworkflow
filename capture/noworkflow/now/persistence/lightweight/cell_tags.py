@@ -10,13 +10,13 @@ from datetime import datetime
 
 from future.utils import viewitems
 
-from ..models import CellTags
+from ..models import StageTags
 
 from .base import BaseLW, define_attrs
 
 
-class CellTagsLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
-    """CellTags lightweight object"""
+class StageTagsLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
+    """StageTags lightweight object"""
 
     __slots__, attributes = define_attrs(
         ["trial_id", "id", "name", "mode", "buffering",
@@ -25,7 +25,7 @@ class CellTagsLW(BaseLW):                                                      #
         ["done"]
     )
     nullable = {"activation_id"}
-    model = CellTags
+    model = StageTags
 
     def __init__(
         self, id_, trial_id, name, checkpoint, mode="r", buffering="default", content_hash_before=None,

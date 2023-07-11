@@ -22,7 +22,7 @@ from ..persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 from ..persistence.lightweight import CodeComponentLW, CodeBlockLW
 from ..persistence.lightweight import CompositionLW
 from ..persistence.lightweight import EvaluationLW, ActivationLW, DependencyLW
-from ..persistence.lightweight import MemberLW, FileAccessLW, CellTagsLW
+from ..persistence.lightweight import MemberLW, FileAccessLW, StageTagsLW
 from ..persistence.lightweight import ExceptionLW
 
 
@@ -64,7 +64,7 @@ class Metascript(object):                                                       
         self.dependencies_store = ObjectStore(DependencyLW)
         self.members_store = ObjectStore(MemberLW)
         self.file_accesses_store = ObjectStore(FileAccessLW)
-        self.cell_tags_store = ObjectStore(CellTagsLW)
+        self.stage_tags_store = ObjectStore(StageTagsLW)
 
         self.exceptions_store = ObjectStore(ExceptionLW)
         # Trial id read from Database : int
