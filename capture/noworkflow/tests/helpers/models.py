@@ -26,7 +26,6 @@ from ...now.persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 from ...now.persistence.models.trial import Trial
 from ...now.persistence.models.head import Head
 from ...now.persistence.models.tag import Tag
-from ...now.persistence.models.stage_tag import StageTag
 from ...now.persistence.models.graph_cache import GraphCache
 from ...now.persistence import relational
 from ...now.collection.metadata import Metascript
@@ -68,7 +67,6 @@ def erase_database():
     relational.session.execute(Trial.t.delete())
     relational.session.execute(Head.t.delete())
     relational.session.execute(Tag.t.delete())
-    relational.session.execute(StageTag.t.delete())
     relational.session.execute(CodeComponentLW.model.t.delete())
     relational.session.execute(CodeBlockLW.model.t.delete())
     relational.session.execute(EvaluationLW.model.t.delete())
@@ -652,7 +650,6 @@ def create_trial(
 
     if tag:
         Tag.create(**tag_params(trial.trial_id, name=tag))
-        StageTag.create(**tag_params(trial.trial_id, name=stage_tag))
         
 
     trial_list[trial.trial_id] = meta

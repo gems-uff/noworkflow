@@ -27,7 +27,6 @@ from .head import Head
 from .member import Member
 from .module import Module
 from .tag import Tag
-from .stage_tag import StageTag
 from .trial import Trial
 from .experiment import Experiment
 from .extendedAnnotation import ExtendedAnnotation
@@ -38,7 +37,7 @@ from .memberOfGroup import MemberOfGroup
 from . import relationships
 
 ORDER = [
-    Trial, Head, Tag, StageTag, GraphCache, Argument, # Trial
+    Trial, Head, Tag, GraphCache, Argument, # Trial
     Module, EnvironmentAttr,  # Deployment
     CodeComponent, CodeBlock, Composition, Experiment,  # Definition
     Evaluation, Activation, Dependency, Member,  # Execution

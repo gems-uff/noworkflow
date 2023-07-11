@@ -11,7 +11,7 @@ import os
 import sys
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Tag, StageTag, Trial, Argument
+from ..persistence.models import Tag, Trial, Argument
 from ..utils import io, metaprofiler
 from ..persistence import content
 
@@ -65,7 +65,6 @@ def run(metascript, args=None):
         metascript.execution.store_provenance()
 
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
-        StageTag.create_automatic_tag(*metascript.create_automatic_tag_args())
         Trial.set_user_based_on_env(metascript.trial_id)
         metaprofiler.meta_profiler.save()
         content.commit_content(metascript.message or "Trial {}".format(metascript.trial_id))

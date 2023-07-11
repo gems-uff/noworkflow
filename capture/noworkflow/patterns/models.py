@@ -17,7 +17,6 @@ from ..now.persistence.models import FileAccess
 from ..now.persistence.models import Member
 from ..now.persistence.models import Module
 from ..now.persistence.models import Tag
-from ..now.persistence.models import StageTag
 from ..now.persistence.models import Trial
 
 from .machinery import ModelRule
@@ -35,5 +34,4 @@ access = ModelRule(FileAccess)
 member = ModelRule(Member)
 module = ModelRule(Module)
 tag = ModelRule(Tag)
-stage_tag = ModelRule(StageTag)
 trial = ModelRule(Trial)
