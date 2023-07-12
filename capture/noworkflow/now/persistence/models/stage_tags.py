@@ -321,14 +321,14 @@ class StageTags(AlchemyProxy):
 
 
 
-class UniqueFileAccess(FileAccess):
+class UniqueFileAccess(StageTags):
     """FileAccess with Unique hash"""
 
     def __key(self):
         return self.id
 
     def __eq__(self, other):
-        if not isinstance(other, FileAccess):
+        if not isinstance(other, StageTags):
             return False
         return self.id == other.id
 
