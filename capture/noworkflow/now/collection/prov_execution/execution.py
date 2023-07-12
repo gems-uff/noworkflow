@@ -96,3 +96,8 @@ class Execution(object):
 
 def now_tag(tag_name):
     print(__noworkflow__.last_activation.evaluation.activation_id)
+    activation = __noworkflow__.last_activation.evaluation.activation_id
+    #name = __noworkflow__.last_activation.evaluation.name
+    trial_id = __noworkflow__.trial_id
+    
+    __noworkflow__.stage_tagss.add(trial_id, 'teste', activation)
