@@ -94,10 +94,18 @@ class Execution(object):
         if self.msg:
             print_msg(self.msg, self.force_msg)
 
-def now_tag(tag_name):
-    print(__noworkflow__.last_activation.evaluation.activation_id)
-    activation = __noworkflow__.last_activation.evaluation.activation_id
-    #name = __noworkflow__.last_activation.evaluation.name
+def now_tag(tag):
+
     trial_id = __noworkflow__.trial_id
-    
-    __noworkflow__.stage_tagss.add(trial_id, 'teste', activation)
+    id_ = __noworkflow__.last_activation.id
+    name = __noworkflow__.last_activation.name
+    tag_name = str(tag)
+    activation_id = __noworkflow__.last_activation.evaluation.activation_id
+
+    print(trial_id)
+    print(name)
+    print(tag)
+    print(activation_id)
+
+    # Writing it
+    __noworkflow__.stage_tagss.add(trial_id, name, tag_name, activation_id)
