@@ -43,6 +43,8 @@ class StageTags(AlchemyProxy):
     name = Column(Text)
     tag_name = Column(Text)
     activation_id = Column(Integer, index=True)
+    variable_name = Column(Text)
+    variable_value = Column(String)
 
     # Relationship attributes (see relationships.py):
     #   activation: 1 Activation
@@ -54,6 +56,8 @@ class StageTags(AlchemyProxy):
         PrologRepr("name"),
         PrologRepr("tag_name"),
         PrologNullable("activation_id", link="activation.id"),
+        PrologNullable("variable_name"),
+        PrologNullable("variable_value"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"
         "a file *Id* with *Name* tag function\n"

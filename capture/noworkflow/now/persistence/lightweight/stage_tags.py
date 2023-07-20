@@ -26,7 +26,7 @@ class StageTagsLW(BaseLW):                                                      
     model = StageTags
 
     def __init__(
-        self, id_, trial_id, name, tag_name, activation_id=-1
+        self, id_, trial_id, name, tag_name=None, var_name=None, var_value=None, activation_id=-1
     ):
         self.trial_id = trial_id
         self.id = id_
@@ -34,6 +34,8 @@ class StageTagsLW(BaseLW):                                                      
         self.tag_name = str(tag_name)
         self.activation_id = activation_id
         self.done = False
+        self.variable_name = var_name
+        self.variable_value = var_value
 
     def update(self, variables):
         """Update file access with dict"""
