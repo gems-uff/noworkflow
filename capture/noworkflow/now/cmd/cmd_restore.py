@@ -15,7 +15,7 @@ from datetime import datetime
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Trial, Module, FileAccess
+from ..persistence.models import Trial, Module, FileAccess, Tag
 from ..persistence.models import CodeComponent, CodeBlock, Argument
 from ..persistence import persistence_config, content
 from ..utils.io import print_msg
@@ -121,6 +121,8 @@ class Restore(Command):
         FileAccess.store(accesses, partial)
         Argument.store(arguments, partial)
         metascript.definition.store_provenance()
+        
+        Tag.create_automatic_tag(tid, None, None, None, metascript.trial.experiment_id, True) # Adds a X.0.0 tag to the backup trial
 
         print_msg("Backup Trial {} created".format(metascript.trial_id),
                   self.print_msg)
