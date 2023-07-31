@@ -102,25 +102,27 @@ class Execution(object):
 
 def now_tag(tag):
    """Tags a given cell"""
-    trial_id = __noworkflow__.trial_id
-    name = __noworkflow__.last_activation.name
-    tag_name = str(tag)
-    activation_id = __noworkflow__.last_activation.evaluation.activation_id
+   
+   trial_id = __noworkflow__.trial_id
+   name = __noworkflow__.last_activation.name
+   tag_name = str(tag)
+   activation_id = __noworkflow__.last_activation.evaluation.activation_id
 
-    # Writing it
-    __noworkflow__.stage_tagss.add(trial_id, name, tag_name, activation_id)
+   # Writing it
+   __noworkflow__.stage_tagss.add(trial_id, name, tag_name, activation_id)
 
 def now_variable(var_name, value):
-    """Taggins a given variable"""
-    dependencies = __noworkflow__.last_activation.dependencies[-1]
-    dep_evaluation = dependencies.dependencies[-1].evaluation
+   """Taggins a given variable"""
     
-    trial_id = dep_evaluation.trial_id
-    name = str(var_name)
-    activation_id = dep_evaluation.activation_id
-    value = dep_evaluation.repr
+   dependencies = __noworkflow__.last_activation.dependencies[-1]
+   dep_evaluation = dependencies.dependencies[-1].evaluation
+    
+   trial_id = dep_evaluation.trial_id
+   name = str(var_name)
+   activation_id = dep_evaluation.activation_id
+   value = dep_evaluation.repr
      
-       # Writing it
-    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
+      # Writing it
+   __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
     
-    return value
+   return value
