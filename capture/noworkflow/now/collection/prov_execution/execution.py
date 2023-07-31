@@ -40,7 +40,6 @@ class Execution(object):
             builtin["open"] = self.collector.new_open(content.std_open)
             builtin["now_tag"] = now_tag
             builtin["now_variable"] = now_variable
-            builtin["cell_dep"] = cell_dep
             
             
         except TypeError:
@@ -48,7 +47,6 @@ class Execution(object):
             builtin.open = self.collector.new_open(content.std_open)
             builtin.now_tag = now_tag
             builtin.now_variable = now_variable
-            builtin.cell_dep = cell_dep
             
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)
