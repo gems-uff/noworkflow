@@ -124,11 +124,3 @@ def now_variable(var_name, value):
     __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
     
     return value
-
-
-def cell_dep():
- 
-    dependencies = __noworkflow__.last_activation.dependencies[-1]
-    dep_evaluation = dependencies.dependencies[-1].evaluation
-  
-    return dep_evaluation
