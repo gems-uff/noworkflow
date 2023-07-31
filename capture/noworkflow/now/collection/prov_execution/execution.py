@@ -20,7 +20,6 @@ from ...utils.metaprofiler import meta_profiler
 from .debugger import debugger_builtins
 from .collector import Collector
 
-
 class Execution(object):
     """Execution Class"""
 
@@ -30,21 +29,26 @@ class Execution(object):
         self.partial = False
         self.force_msg = False
         self.msg = ""
-
+        
     def configure(self):
         """Configure execution provenance collection"""
         self.collector.trial_id = self.metascript.trial_id
         builtin = self.metascript.namespace["__builtins__"]
+
         try:
             builtin["__noworkflow__"] = self.collector
             builtin["open"] = self.collector.new_open(content.std_open)
             builtin["now_tag"] = now_tag
             builtin["now_variable"] = now_variable
+            builtin["cell_dep"] = cell_dep
+            
+            
         except TypeError:
             builtin.__noworkflow__ = self.collector
             builtin.open = self.collector.new_open(content.std_open)
             builtin.now_tag = now_tag
             builtin.now_variable = now_variable
+            builtin.cell_dep = cell_dep
             
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)
@@ -97,21 +101,17 @@ class Execution(object):
             print_msg(self.msg, self.force_msg)
 
 def now_tag(tag):
-
+   """Tags a given cell"""
     trial_id = __noworkflow__.trial_id
     name = __noworkflow__.last_activation.name
     tag_name = str(tag)
     activation_id = __noworkflow__.last_activation.evaluation.activation_id
 
-    print('trial_id' + " " + str(trial_id))
-    print('name' + " " + str(name))
-    print('activation_id' + " " + str(activation_id))
-
     # Writing it
     __noworkflow__.stage_tagss.add(trial_id, name, tag_name, activation_id)
 
 def now_variable(var_name, value):
-    
+    """Taggins a given variable"""
     dependencies = __noworkflow__.last_activation.dependencies[-1]
     dep_evaluation = dependencies.dependencies[-1].evaluation
     
@@ -119,18 +119,16 @@ def now_variable(var_name, value):
     name = str(var_name)
     activation_id = dep_evaluation.activation_id
     value = dep_evaluation.repr
-    
+     
        # Writing it
     __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
     
-
-
-    print(__noworkflow__.last_activation)
-    print(dependencies)
-    print(dep_evaluation)
-    print(dep_evaluation.trial_id)
-    print(dep_evaluation.id)
-    print(dep_evaluation.repr)
-    print(dep_evaluation.activation_id)
-
     return value
+
+
+def cell_dep():
+ 
+    dependencies = __noworkflow__.last_activation.dependencies[-1]
+    dep_evaluation = dependencies.dependencies[-1].evaluation
+  
+    return dep_evaluation
