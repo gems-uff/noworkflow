@@ -20,6 +20,17 @@ from ...utils.metaprofiler import meta_profiler
 from .debugger import debugger_builtins
 from .collector import Collector
 
+from noworkflow.now.persistence.models import Evaluation, Activation
+from noworkflow.now.models.dependency_querier import DependencyQuerier
+from noworkflow.now.models.dependency_querier.node_context import NodeContext
+from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
+
+# TODO: unsure if it is a good practice keep it here
+# as a global variable
+body_function_def = []
+dep_dict = {}
+####################################################
+
 class Execution(object):
     """Execution Class"""
 
@@ -119,8 +130,40 @@ def now_variable(var_name, value):
    name = str(var_name)
    activation_id = dep_evaluation.activation_id
    value = dep_evaluation.repr
-     
-      # Writing it
+   
+   print(dep_evaluation)
+    
+  # Writing it
    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
     
    return value
+
+class NotebookQuerierOptions(QuerierOptions):
+    global body_function_def
+    dep_list = []
+    
+    def visit_arrow(self, context, neighbor):
+                
+        # keeping 
+        if neighbor.evaluation.code_component.type == 'function_def':
+            body_function_def.append(int(neighbor.evaluation.code_component.id))
+       
+        arrow_list = ('argument', '<.__class__>', 'item')
+        type_list = ('add', 'literal', 'mult', 'div', 'param', 'sub', 'attribute', 'usub', 'function_def')
+        
+        context_code_comp = context.evaluation.code_component
+        neighbor_code_comp = neighbor.evaluation.code_component
+    
+        if neighbor.arrow not in arrow_list:
+            if context_code_comp.type not in type_list:
+                if neighbor_code_comp.type not in type_list:
+                    if not (neighbor.arrow == 'use' and context_code_comp.type == 'call'):
+                        if (neighbor_code_comp.container_id != None):
+                            if neighbor_code_comp.container_id not in body_function_def:
+                                self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, context.evaluation.repr))
+
+    def predecessors_output(self):
+        global dep_dict
+        
+        dep_dict = {i[0] : i[1] for i in enumerate(self.dep_list)}
+        return dep_dict
