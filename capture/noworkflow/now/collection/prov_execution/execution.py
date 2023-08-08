@@ -54,6 +54,7 @@ class Execution(object):
             builtin["open"] = self.collector.new_open(content.std_open)
             builtin["now_tag"] = now_tag
             builtin["now_variable"] = now_variable
+            builtin["get_pre"] = get_pre
             
             
         except TypeError:
@@ -61,6 +62,7 @@ class Execution(object):
             builtin.open = self.collector.new_open(content.std_open)
             builtin.now_tag = now_tag
             builtin.now_variable = now_variable
+            builtin.get_pre = get_pre
             
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)
@@ -136,16 +138,15 @@ def now_variable(var_name, value):
    trial_id = dep_evaluation.trial_id
    name = str(var_name)
    activation_id = dep_evaluation.activation_id
-   value = dep_evaluation.repr
-   
+      
    tagged_var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id] 
    
-   print(dep_evaluation)
+   #print(dep_evaluation)
 
   # Writing it
    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
     
-   return value, tagged_var_dict   
+   return value   
 
 class NotebookQuerierOptions(QuerierOptions):
     global body_function_def
