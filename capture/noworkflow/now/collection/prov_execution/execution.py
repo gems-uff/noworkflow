@@ -24,11 +24,14 @@ from noworkflow.now.persistence.models import Evaluation, Activation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.node_context import NodeContext
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
+#from noworkflow.now.collection.prov_execution.execution import NotebookQuerierOptions
 
 # TODO: unsure if it is a good practice keep it here
 # as a global variable
 body_function_def = []
 dep_dict = {}
+tagged_var_dict = {}
+
 ####################################################
 
 class Execution(object):
@@ -121,8 +124,9 @@ def now_tag(tag):
    __noworkflow__.stage_tagss.add(trial_id, name, tag_name, activation_id)
 
 def now_variable(var_name, value):
-   """Taggins a given variable"""
-    
+   """Tag a given variable"""
+   global tagged_var_dict
+       
    dependencies = __noworkflow__.last_activation.dependencies[-1]
    dep_evaluation = dependencies.dependencies[-1].evaluation
     
@@ -131,12 +135,34 @@ def now_variable(var_name, value):
    activation_id = dep_evaluation.activation_id
    value = dep_evaluation.repr
    
+   tagged_var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id] 
+   
    print(dep_evaluation)
+   
     
   # Writing it
    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
     
-   return value
+   return value, tagged_var_dict
+
+def get_pre(var_name):
+    from noworkflow.now.persistence.models import Evaluation
+    from noworkflow.now.collection.prov_execution.execution import NotebookQuerierOptions
+    from noworkflow.now.models.dependency_querier import DependencyQuerier
+
+    global tagged_var_dict
+    global nbOptions
+
+    # Get an Evaluation
+    evaluation_id =  tagged_var_dict[var_name][0]
+    trial_id =  tagged_var_dict[var_name][3]
+    evals = Evaluation((trial_id, evaluation_id))
+    
+    nbOptions = NotebookQuerierOptions()
+    querier = DependencyQuerier(options=nbOptions)
+    _, _, _ = querier.navigate_dependencies([evals])  
+    
+    return nbOptions.predecessors_output
 
 class NotebookQuerierOptions(QuerierOptions):
     global body_function_def
@@ -167,3 +193,4 @@ class NotebookQuerierOptions(QuerierOptions):
         
         dep_dict = {i[0] : i[1] for i in enumerate(self.dep_list)}
         return dep_dict
+    
