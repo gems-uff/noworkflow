@@ -112,6 +112,9 @@ class Execution(object):
         if self.msg:
             print_msg(self.msg, self.force_msg)
 
+def teste():
+    print('passou')
+
 def now_tag(tag):
    """Tags a given cell"""
    
@@ -138,31 +141,11 @@ def now_variable(var_name, value):
    tagged_var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id] 
    
    print(dep_evaluation)
-   
-    
+
   # Writing it
    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
     
-   return value, tagged_var_dict
-
-def get_pre(var_name):
-    from noworkflow.now.persistence.models import Evaluation
-    from noworkflow.now.collection.prov_execution.execution import NotebookQuerierOptions
-    from noworkflow.now.models.dependency_querier import DependencyQuerier
-
-    global tagged_var_dict
-    global nbOptions
-
-    # Get an Evaluation
-    evaluation_id =  tagged_var_dict[var_name][0]
-    trial_id =  tagged_var_dict[var_name][3]
-    evals = Evaluation((trial_id, evaluation_id))
-    
-    nbOptions = NotebookQuerierOptions()
-    querier = DependencyQuerier(options=nbOptions)
-    _, _, _ = querier.navigate_dependencies([evals])  
-    
-    return nbOptions.predecessors_output
+   return value, tagged_var_dict   
 
 class NotebookQuerierOptions(QuerierOptions):
     global body_function_def
@@ -194,3 +177,22 @@ class NotebookQuerierOptions(QuerierOptions):
         dep_dict = {i[0] : i[1] for i in enumerate(self.dep_list)}
         return dep_dict
     
+def get_pre(var_name):
+    from noworkflow.now.persistence.models import Evaluation
+    from noworkflow.now.collection.prov_execution.execution import NotebookQuerierOptions
+    from noworkflow.now.models.dependency_querier import DependencyQuerier
+
+    global tagged_var_dict
+    global nbOptions
+    global dep_dict
+
+    # Get an Evaluation
+    evaluation_id =  tagged_var_dict[var_name][0]
+    trial_id =  tagged_var_dict[var_name][3]
+    evals = Evaluation((trial_id, evaluation_id))
+    
+    nbOptions = NotebookQuerierOptions()
+    querier = DependencyQuerier(options=nbOptions)
+    _, _, _ = querier.navigate_dependencies([evals])  
+    
+    return nbOptions.predecessors_output()   
