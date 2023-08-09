@@ -200,3 +200,58 @@ def get_pre(var_name):
     _, _, _ = querier.navigate_dependencies([evals])  
     
     return nbOptions.predecessors_output()   
+
+def exp_compare(trial_a, trial_b):
+    import shelve
+    
+    # Retrieve the dictionary a from the shelve file
+    with shelve.open('ops') as shelf:
+        dict_a = shelf['dict_a']
+        print("Retrieved dictionary:", dict_a)
+        dict_b = shelf['dict_b']
+        print("Retrieved dictionary:", dict_b)
+        
+    # comparing two dicts
+    
+    return dict_a == dict_b
+
+def store_operations(trial, ops_dict):
+    import shelve
+
+    # Store the dictionary in a shelve file
+    with shelve.open('ops') as shelf:
+        shelf[trial] = ops_dict
+        print("Dictionary stored in shelve.")
+        
+def exp_compare(trial_a, trial_b):
+    import shelve
+    from operator import itemgetter
+    
+    # Retrieve the dictionary a from the shelve file
+    with shelve.open('ops') as shelf:
+        dict1 = shelf[trial_a]
+        #print("Retrieved dictionary:", dict_a)
+        dict2 = shelf[trial_b]
+        #print("Retrieved dictionary:", dict_b)
+        
+    # comparing two dicts
+
+    common_keys = set(dict1.keys()) & set(dict2.keys())
+    indices_to_compare = [2, 3]
+
+    # Compare dictionaries' specific indices and print the results
+    
+    if len(dict1) == len(dict2):
+        print(f"Pipelines have same length")
+    else:
+        print(f"Pipelines A and B differ in length")
+    
+    for key in common_keys:
+        values1 = dict1.get(key, [])
+        values2 = dict2.get(key, [])
+        
+        compare_length = min(len(values1), len(values2), max(indices_to_compare) + 1)
+        
+        are_equal = all(values1[idx] == values2[idx] for idx in indices_to_compare)
+        
+        print(f"Key '{key}': Values at indices {indices_to_compare} are {'equal' if are_equal else 'different'}.")
