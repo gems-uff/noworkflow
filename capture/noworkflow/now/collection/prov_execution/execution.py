@@ -170,7 +170,10 @@ class NotebookQuerierOptions(QuerierOptions):
                     if not (neighbor.arrow == 'use' and context_code_comp.type == 'call'):
                         if (neighbor_code_comp.container_id != None):
                             if neighbor_code_comp.container_id not in body_function_def:
-                                self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, context.evaluation.repr))
+                                if len(context.evaluation.repr) < 10:  # arbitrary lenght to avoid matricial outputs
+                                    self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, context.evaluation.repr))
+                                else:
+                                    self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, 'matrix'))
 
     def predecessors_output(self):
         global dep_dict
