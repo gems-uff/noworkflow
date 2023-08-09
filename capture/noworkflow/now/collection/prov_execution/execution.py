@@ -225,7 +225,6 @@ def store_operations(trial, ops_dict):
         
 def exp_compare(trial_a, trial_b):
     import shelve
-    from operator import itemgetter
     
     # Retrieve the dictionary a from the shelve file
     with shelve.open('ops') as shelf:
