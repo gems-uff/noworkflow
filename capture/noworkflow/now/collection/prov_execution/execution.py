@@ -226,25 +226,23 @@ def store_operations(trial, ops_dict):
 def exp_compare(trial_a, trial_b):
     import shelve
     
-    # Retrieve the dictionary a from the shelve file
+    # Retrieve the ops dictionary from the shelve file
     with shelve.open('ops') as shelf:
         dict1 = shelf[trial_a]
-        #print("Retrieved dictionary:", dict_a)
         dict2 = shelf[trial_b]
-        #print("Retrieved dictionary:", dict_b)
         
-    # comparing two dicts
-
-    common_keys = set(dict1.keys()) & set(dict2.keys())
-    indices_to_compare = [2, 3]
-
     # Compare dictionaries' specific indices and print the results
     
     if len(dict1) == len(dict2):
-        print(f"Pipelines have same length")
+        print(f"Pipelines have same lenght")
     else:
-        print(f"Pipelines A and B differ in length")
-    
+        print(f"Pipelines A and B differ in lenght")
+
+
+    # comparing two dicts
+    common_keys = set(dict1.keys()) & set(dict2.keys())
+    indices_to_compare = [2, 3]
+   
     for key in common_keys:
         values1 = dict1.get(key, [])
         values2 = dict2.get(key, [])
@@ -253,4 +251,8 @@ def exp_compare(trial_a, trial_b):
         
         are_equal = all(values1[idx] == values2[idx] for idx in indices_to_compare)
         
-        print(f"Key '{key}': Values at indices {indices_to_compare} are {'equal' if are_equal else 'different'}.")
+        if are_equal:
+            print(f"Key '{key}': Values are equal")
+        else:
+            print(f"Key '{key}': Values are different")
+            print("->>>", values1[2:4], values2[2:4])
