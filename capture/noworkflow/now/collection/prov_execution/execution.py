@@ -141,7 +141,7 @@ def now_variable(var_name, value):
       
    tagged_var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id] 
    
-   #print(dep_evaluation)
+   print(dep_evaluation)
 
   # Writing it
    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
@@ -151,6 +151,10 @@ def now_variable(var_name, value):
 class NotebookQuerierOptions(QuerierOptions):
     global body_function_def
     dep_list = []
+    
+    def __init__(self, level, *args, **kwargs):
+        QuerierOptions.__init__(self, *args, **kwargs) # change it to super when integrating in the main code
+        self.level = level
     
     def visit_arrow(self, context, neighbor):
                 
@@ -169,7 +173,7 @@ class NotebookQuerierOptions(QuerierOptions):
                 if neighbor_code_comp.type not in type_list:
                     if not (neighbor.arrow == 'use' and context_code_comp.type == 'call'):
                         if (neighbor_code_comp.container_id != None):
-                            if neighbor_code_comp.container_id not in body_function_def:
+                            if neighbor_code_comp.container_id not in body_function_def or self.level:
                                 if len(context.evaluation.repr) < 10:  # arbitrary lenght to avoid matricial outputs
                                     self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, context.evaluation.repr))
                                 else:
@@ -181,7 +185,7 @@ class NotebookQuerierOptions(QuerierOptions):
         dep_dict = {i[0] : i[1] for i in enumerate(self.dep_list)}
         return dep_dict
     
-def get_pre(var_name):
+def get_pre(var_name, glanularity = False):
     from noworkflow.now.persistence.models import Evaluation
     from noworkflow.now.collection.prov_execution.execution import NotebookQuerierOptions
     from noworkflow.now.models.dependency_querier import DependencyQuerier
@@ -195,7 +199,7 @@ def get_pre(var_name):
     trial_id =  tagged_var_dict[var_name][3]
     evals = Evaluation((trial_id, evaluation_id))
     
-    nbOptions = NotebookQuerierOptions()
+    nbOptions = NotebookQuerierOptions(level = glanularity)
     querier = DependencyQuerier(options=nbOptions)
     _, _, _ = querier.navigate_dependencies([evals])  
     
