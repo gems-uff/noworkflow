@@ -24,13 +24,11 @@ from noworkflow.now.persistence.models import Evaluation, Activation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.node_context import NodeContext
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
-#from noworkflow.now.collection.prov_execution.execution import NotebookQuerierOptions
 
 # TODO: unsure if it is a good practice keep it here
 # as a global variable
-body_function_def = []
-dep_dict = {}
-tagged_var_dict = {}
+
+
 
 ####################################################
 
@@ -55,7 +53,9 @@ class Execution(object):
             builtin["now_tag"] = now_tag
             builtin["now_variable"] = now_variable
             builtin["get_pre"] = get_pre
-            
+            builtin["tagged_var_dict"] = {} #todo: keep it here?
+            builtin["body_function_def"] = [] #todo: keep it here?
+            builtin["dep_dict"] = {} #todo: keep it here?
             
         except TypeError:
             builtin.__noworkflow__ = self.collector
@@ -63,6 +63,9 @@ class Execution(object):
             builtin.now_tag = now_tag
             builtin.now_variable = now_variable
             builtin.get_pre = get_pre
+            builtin.tagged_var_dict = {} #todo: keep it here?
+            builtin.body_function_def = [] #todo: keep it here?
+            builtin.dep_dict = {} #todo: keep it here?
             
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)
@@ -157,7 +160,6 @@ class NotebookQuerierOptions(QuerierOptions):
         self.level = level
     
     def visit_arrow(self, context, neighbor):
-                
         # keeping 
         if neighbor.evaluation.code_component.type == 'function_def':
             body_function_def.append(int(neighbor.evaluation.code_component.id))
@@ -167,17 +169,19 @@ class NotebookQuerierOptions(QuerierOptions):
         
         context_code_comp = context.evaluation.code_component
         neighbor_code_comp = neighbor.evaluation.code_component
-    
-        if neighbor.arrow not in arrow_list:
-            if context_code_comp.type not in type_list:
-                if neighbor_code_comp.type not in type_list:
-                    if not (neighbor.arrow == 'use' and context_code_comp.type == 'call'):
-                        if (neighbor_code_comp.container_id != None):
-                            if neighbor_code_comp.container_id not in body_function_def or self.level:
-                                if len(context.evaluation.repr) < 10:  # arbitrary lenght to avoid matricial outputs
-                                    self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, context.evaluation.repr))
-                                else:
-                                    self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, 'matrix'))
+        
+        if context_code_comp.type == 'literal' and neighbor_code_comp.type == 'type':
+            self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, context.evaluation.repr))
+        elif neighbor.arrow not in arrow_list:
+                if context_code_comp.type not in type_list:
+                    if neighbor_code_comp.type not in type_list:
+                        if not (neighbor.arrow == 'use' and context_code_comp.type == 'call'):
+                            if (neighbor_code_comp.container_id != None):
+                                if neighbor_code_comp.container_id not in body_function_def or self.level:
+                                    if len(context.evaluation.repr) < 10:  # arbitrary lenght to avoid matricial outputs
+                                        self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, context.evaluation.repr))
+                                    else:
+                                        self.dep_list.append((str(context.evaluation.checkpoint), str(context.evaluation.id), context_code_comp.name, 'matrix'))
 
     def predecessors_output(self):
         global dep_dict
