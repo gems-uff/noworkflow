@@ -28,9 +28,8 @@ from noworkflow.now.models.dependency_querier.querier_options import QuerierOpti
 
 # TODO: unsure if it is a good practice keep it here
 # as a global variable
-body_function_def = []
-dep_dict = {}
-tagged_var_dict = {}
+
+
 
 ####################################################
 
@@ -55,7 +54,9 @@ class Execution(object):
             builtin["now_tag"] = now_tag
             builtin["now_variable"] = now_variable
             builtin["get_pre"] = get_pre
-            
+            builtin["var_dict"] = {} #todo: keep it here?
+            builtin["body_function_def"] = [] #todo: keep it here?
+            builtin["dep_dict"] = {} #todo: keep it here?
             
         except TypeError:
             builtin.__noworkflow__ = self.collector
@@ -63,6 +64,9 @@ class Execution(object):
             builtin.now_tag = now_tag
             builtin.now_variable = now_variable
             builtin.get_pre = get_pre
+            builtin.var_dict = {} #todo: keep it here?
+            builtin.body_function_def = [] #todo: keep it here?
+            builtin.dep_dict = {} #todo: keep it here?
             
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)
@@ -130,7 +134,7 @@ def now_tag(tag):
 
 def now_variable(var_name, value):
    """Tag a given variable"""
-   global tagged_var_dict
+   global var_dict
        
    dependencies = __noworkflow__.last_activation.dependencies[-1]
    dep_evaluation = dependencies.dependencies[-1].evaluation
@@ -139,7 +143,7 @@ def now_variable(var_name, value):
    name = str(var_name)
    activation_id = dep_evaluation.activation_id
       
-   tagged_var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id] 
+   var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id] 
    
    print(dep_evaluation)
 
