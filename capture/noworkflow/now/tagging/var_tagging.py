@@ -152,3 +152,17 @@ def exp_compare(trial_a, trial_b):
         else:
             print(f"Key '{key}': Values are different")
             print("->>>", values1[2:4], values2[2:4])
+
+    def get_pre_all(glanularity = False):
+        from noworkflow.now.persistence.models.stage_tags import StageTags
+        from noworkflow.now.persistence import relational
+        from noworkflow.now.persistence.models.base import proxy_gen
+
+        global tagged_var_dict
+        
+        #tagged_values = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.trial_id == __noworkflow__.trial_id)))
+        all_tags = {}
+        for key in tagged_var_dict:
+            all_tags[key] = get_pre(key, glanularity)
+            
+        return all_tags
