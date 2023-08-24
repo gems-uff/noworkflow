@@ -24,6 +24,7 @@ from noworkflow.now.persistence.models import Evaluation, Activation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.node_context import NodeContext
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
+from noworkflow.now.tagging.var_tagging import now_tag, now_variable, get_pre
 
 class Execution(object):
     """Execution Class"""

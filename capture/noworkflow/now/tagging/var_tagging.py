@@ -10,7 +10,6 @@ from __future__ import (absolute_import, print_function,
 from noworkflow.now.persistence.models import Evaluation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
-from noworkflow.now.collection.prov_execution.execution import NotebookQuerierOptions
 
 class NotebookQuerierOptions(QuerierOptions):
     global body_function_def
