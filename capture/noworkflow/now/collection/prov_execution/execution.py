@@ -24,7 +24,7 @@ from noworkflow.now.persistence.models import Evaluation, Activation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.node_context import NodeContext
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
-from noworkflow.now.tagging.var_tagging import now_tag, now_variable, get_pre, get_pre_all
+from noworkflow.now.tagging.var_tagging import now_tag, now_variable, get_pre, get_pre_all, store_operations
 
 class Execution(object):
     """Execution Class"""
@@ -51,6 +51,7 @@ class Execution(object):
             builtin["body_function_def"] = [] #todo: keep it here?
             builtin["dep_dict"] = {} #todo: keep it here?
             builtin["get_pre_all"] = get_pre_all
+            builtin["store_operations"] = store_operations
             
         except TypeError:
             builtin.__noworkflow__ = self.collector
@@ -62,6 +63,7 @@ class Execution(object):
             builtin.tagged_var_dict = {} #todo: keep it here?
             builtin.body_function_def = [] #todo: keep it here?
             builtin.dep_dict = {} #todo: keep it here?
+            builtin.store_operations = store_operations
             
             
         io.open = self.collector.new_open(content.io_open)
