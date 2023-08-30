@@ -10,6 +10,9 @@ from __future__ import (absolute_import, print_function,
 from noworkflow.now.persistence.models import Evaluation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
+from noworkflow.now.persistence.models.base import proxy_gen
+from noworkflow.now.persistence import relational
+from noworkflow.now.persistence.lightweight import StageTags
 import ipdb
 
 class NotebookQuerierOptions(QuerierOptions):
@@ -198,9 +201,6 @@ def store_operations(trial, ops_dict):
         
 
 def get_pre_all(glanularity = False):
-    from noworkflow.now.persistence.models.stage_tags import StageTags
-    from noworkflow.now.persistence import relational
-    from noworkflow.now.persistence.models.base import proxy_gen
 
     global tagged_var_dict
     
@@ -211,9 +211,6 @@ def get_pre_all(glanularity = False):
     return all_tags
 
 def tagged_comp(tag_name):
-    from noworkflow.now.persistence.models.base import proxy_gen
-    from noworkflow.now.persistence import relational
-
     access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
     
     values_list = []
@@ -224,10 +221,6 @@ def tagged_comp(tag_name):
 
 def plot_comp(tag_name = 'roc_rf'):
     import pandas as pd
-    from noworkflow.now.persistence.models.base import proxy_gen
-    from noworkflow.now.persistence import relational
-    from noworkflow.now.persistence.lightweight import StageTags
-
     import matplotlib.pyplot as plt
 
     access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
@@ -236,9 +229,7 @@ def plot_comp(tag_name = 'roc_rf'):
     for i in access_list:
         values_list.append([i.trial_id, i.trial_id[-5:],  i.name, float(i.tag_name)])
     
-    columns = ['trial_id', 'short_trial_id',  'tag', 'value']
-    df = pd.DataFrame(values_list, columns=columns)
-    
+    df = pd.DataFrame(values_list, columns=['trial_id', 'short_trial_id',  'tag', 'value'])
     df = df.tail(30) # arbitrary cuttoff for better chart visualization
     
     plt.bar(df.short_trial_id, df.value)
