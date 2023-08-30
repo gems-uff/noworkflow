@@ -10,6 +10,9 @@ from __future__ import (absolute_import, print_function,
 from noworkflow.now.persistence.models import Evaluation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
+from noworkflow.now.persistence.models.base import proxy_gen
+from noworkflow.now.persistence import relational
+from noworkflow.now.persistence.lightweight.stage_tags import StageTags
 import ipdb
 
 class NotebookQuerierOptions(QuerierOptions):
@@ -48,6 +51,13 @@ class NotebookQuerierOptions(QuerierOptions):
                                     else:
                                         self.dep_list.append((str(context_code_comp.name), str(context.evaluation.repr)))
 
+    
+    def global_history(self):
+        # create an enumerated dictionary        
+        dep_dict = {i[0] : i[1] for i in list(reversed(self.dep_list))}
+        
+        return dep_dict
+    
     def predecessors_output(self):
         global dep_dict
         
@@ -129,6 +139,38 @@ def dict_to_text(op_dict):
 
     return plain_text
 
+def dict_compare(trial_a, trial_b):
+    import shelve
+    import numpy as np
+    from IPython.display import HTML
+    
+    comp_dict = {}
+    # Retrieve the ops dictionary from the shelve file
+    with shelve.open('ops') as shelf:
+        dict1 = shelf[trial_a]
+        dict2 = shelf[trial_b]
+    
+    if len(dict1) == len(dict2):
+
+        for key in dict1:
+            value1 = dict1[key]
+            value2 = dict2[key]
+
+            if isinstance(value1, np.ndarray) and isinstance(value2, np.ndarray):
+                # If both values are NumPy arrays, compare if they are equal
+                if np.array_equal(value1, value2):
+                    comp_dict[value1[0]] = 'equal matrices'
+                else:
+                    comp_dict[value1[0]] = 'different matrices'
+                
+            elif value1 != value2:
+                # If one or both values are scalars, compare their equality
+                comp_dict[value1[0]] = 'different values'
+            else:
+                comp_dict[value1[0]] = 'equal values'
+    
+    return comp_dict
+
 def exp_compare(trial_a, trial_b, html=False):
     import shelve
     import difflib
@@ -157,7 +199,36 @@ def exp_compare(trial_a, trial_b, html=False):
             context=False,  # Show some context lines around changes
             numlines=0     # Number of lines of context to show
         )
-        display(HTML(diff_html))
+
+        # Add CSS styling for left alignment
+        styled_diff_html = f'''
+        <style>
+        .diff_header {{
+            background-color: #f1f1f1;
+        }}
+        .diff_next {{
+            background-color: #f1f1f1;
+        }}
+        .diff_add {{
+            background-color: #ddffdd;
+        }}
+        .diff_chg {{
+            background-color: #ffffaa;
+        }}
+        .diff_sub {{
+            background-color: #ffdddd;
+        }}
+        .diff_table {{
+            text-align: left; /* Align the table content to the left */
+        }}
+        </style>
+        {diff_html}
+        '''
+
+        # Display the styled HTML in a Jupyter Notebook cell
+        display(HTML(styled_diff_html))
+       
+        #display(HTML(diff_html))
 
 def store_operations(trial, ops_dict):
     import shelve
@@ -167,53 +238,41 @@ def store_operations(trial, ops_dict):
         shelf[trial] = ops_dict
         print("Dictionary stored in shelve.")
         
-def exp_compare(trial_a, trial_b):
-    import shelve
-    
-    # Retrieve the ops dictionary from the shelve file
-    with shelve.open('ops') as shelf:
-        dict1 = shelf[trial_a]
-        dict2 = shelf[trial_b]
-        
-    # Compare dictionaries' specific indices and print the results
-    
-    if len(dict1) == len(dict2):
-        print(f"Pipelines have same lenght")
-    else:
-        print(f"Pipelines A and B differ in lenght")
-
-
-    # comparing two dicts
-    common_keys = set(dict1.keys()) & set(dict2.keys())
-    indices_to_compare = [2, 3]
-   
-    for key in common_keys:
-        values1 = dict1.get(key, [])
-        values2 = dict2.get(key, [])
-        
-        #compare_length = min(len(values1), len(values2), max(indices_to_compare) + 1)
-        
-        are_equal = all(values1[idx] == values2[idx] for idx in indices_to_compare)
-        
-        if are_equal:
-            print(f"Key '{key}': Values are equal")
-        else:
-            print(f"Key '{key}': Values are different")
-            if len(values1[3]) > 10 or len(values2[3]) > 10:
-                print("->>>", values1[2:4][:3], values2[2:4][:3])
-            else:
-                print("->>>", values1[2:4], values2[2:4])
 
 def get_pre_all(glanularity = False):
-    from noworkflow.now.persistence.models.stage_tags import StageTags
-    from noworkflow.now.persistence import relational
-    from noworkflow.now.persistence.models.base import proxy_gen
 
     global tagged_var_dict
     
-    #tagged_values = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.trial_id == __noworkflow__.trial_id)))
     all_tags = {}
     for key in tagged_var_dict:
         all_tags[key] = get_pre(key, glanularity)
         
     return all_tags
+
+def tagged_comp(tag_name):
+    access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
+    
+    values_list = []
+    for i in access_list:
+        values_list.append([i.trial_id, i.trial_id[-5:],  i.name, float(i.tag_name)])
+        
+    return values_list
+
+def plot_comp(tag_name = 'roc_rf'):
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
+    
+    values_list = []
+    for i in access_list:
+        values_list.append([i.trial_id, i.trial_id[-5:],  i.name, float(i.tag_name)])
+    
+    df = pd.DataFrame(values_list, columns=['trial_id', 'short_trial_id',  'tag', 'value'])
+    df = df.tail(30) # arbitrary cuttoff for better chart visualization
+    
+    plt.bar(df.short_trial_id, df.value)
+    plt.title(tag_name + ' values')
+    plt.xticks(rotation=90)
+
+    plt.show()
