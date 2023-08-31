@@ -12,7 +12,7 @@ from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
 from noworkflow.now.persistence.models.base import proxy_gen
 from noworkflow.now.persistence import relational
-from noworkflow.now.persistence.lightweight import StageTags
+from noworkflow.now.persistence.lightweight.stage_tags import StageTags
 import ipdb
 
 class NotebookQuerierOptions(QuerierOptions):
