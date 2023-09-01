@@ -54,7 +54,7 @@ class NotebookQuerierOptions(QuerierOptions):
     
     def global_history(self):
         # create an enumerated dictionary        
-        dep_dict = {i[0] : i[1] for i in reversed(list(enumerate(self.dep_list)))}
+        dep_dict = {i[0] : i[1] for i in list(reversed(self.dep_list))}
         
         return dep_dict
     
