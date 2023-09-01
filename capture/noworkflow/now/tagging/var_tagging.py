@@ -51,6 +51,13 @@ class NotebookQuerierOptions(QuerierOptions):
                                     else:
                                         self.dep_list.append((str(context_code_comp.name), str(context.evaluation.repr)))
 
+    
+    def global_history(self):
+        # create an enumerated dictionary        
+        dep_dict = {i[0] : i[1] for i in reversed(list(enumerate(self.dep_list)))}
+        
+        return dep_dict
+    
     def predecessors_output(self):
         global dep_dict
         
