@@ -139,6 +139,38 @@ def dict_to_text(op_dict):
 
     return plain_text
 
+def dict_compare(trial_a, trial_b):
+    import shelve
+    import numpy as np
+    from IPython.display import HTML
+    
+    comp_dict = {}
+    # Retrieve the ops dictionary from the shelve file
+    with shelve.open('ops') as shelf:
+        dict1 = shelf[trial_a]
+        dict2 = shelf[trial_b]
+    
+    if len(dict1) == len(dict2):
+
+        for key in dict1:
+            value1 = dict1[key]
+            value2 = dict2[key]
+
+            if isinstance(value1, np.ndarray) and isinstance(value2, np.ndarray):
+                # If both values are NumPy arrays, compare if they are equal
+                if np.array_equal(value1, value2):
+                    comp_dict[value1[0]] = 'equal matrices'
+                else:
+                    comp_dict[value1[0]] = 'different matrices'
+                
+            elif value1 != value2:
+                # If one or both values are scalars, compare their equality
+                comp_dict[value1[0]] = 'different values'
+            else:
+                comp_dict[value1[0]] = 'equal values'
+    
+    return comp_dict
+
 def exp_compare(trial_a, trial_b, html=False):
     import shelve
     import difflib
