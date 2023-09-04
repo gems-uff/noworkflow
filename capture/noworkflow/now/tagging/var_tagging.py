@@ -163,13 +163,14 @@ def backward_deps(var_name: str, glanularity_level: Optional[bool] = False) -> D
     global nbOptions
     global dep_dict
 
+
     trial_id = __noworkflow__.trial_id
 
     evals = list(proxy_gen(relational
                            .session
                            .query(Evaluation.m)
                            .join(CodeComponent.m, ((Evaluation.m.trial_id == CodeComponent.m.trial_id) & (Evaluation.m.code_component_id == CodeComponent.m.id)))
-                           .filter((CodeComponent.m.name == 'var_final') & (CodeComponent.m.trial_id == trial_id))))
+                           .filter((CodeComponent.m.name == var_name) & (CodeComponent.m.trial_id == trial_id))))
 
     nbOptions = NotebookQuerierOptions(level=glanularity_level)
     querier = DependencyQuerier(options=nbOptions)
@@ -266,6 +267,7 @@ def dict_to_text(op_dict: dict) -> str:
 
     return plain_text
 
+import ipdb
 
 def trial_values_diff(trial_a, trial_b):
     """Compare values from two distinct trials"""
@@ -284,7 +286,7 @@ def trial_values_diff(trial_a, trial_b):
 
             if isinstance(value1, numpy.ndarray) and isinstance(value2, numpy.ndarray):
                 # If both values are NumPy arrays, compare if they are equal
-                if np.array_equal(value1, value2):
+                if numpy.array_equal(value1, value2):
                     comp_dict[value1[0]] = 'equal matrices'
                 else:
                     comp_dict[value1[0]] = 'different matrices'
@@ -462,9 +464,64 @@ def var_tag_values(tag_name: str) -> DataFrame:
 
     access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
 
+    if access_list == []:
+        raise ValueError('No values found for tag ' + tag_name)
+
     values_list = []
     for i in access_list:
         values_list.append([i.trial_id, i.trial_id[-5:], i.name, float(i.tag_name)])
 
     df = DataFrame(values_list, columns=['trial_id', 'short_trial_id', 'tag', 'value'])
+    return df
+
+
+def resume_trials():
+    """
+    Resumes the list of trial ids available for comparison.
+
+    Returns:
+        list: A list of trial IDs available for comparison.
+    """
+    shelf = shelve.open('ops')
+    list_id = list(shelf.keys())
+
+    if list_id == []:
+        raise ValueError('No trials found.')
+    else:
+        return list_id
+
+
+def trial_intersection_diff(trial_a: str, trial_b: str) -> DataFrame:
+    """
+    Compare the common operations from two distinct trials.
+
+    Args:
+        trial_a (str): The identifier for the first trial.
+        trial_b (str): The identifier for the second trial.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing common operation details.
+
+    Example:
+        df = trial_intersection_diff('trial_12345', 'trial_67890')
+    """
+
+    # Retrieve the ops dictionary from the shelve file
+    with shelve.open('ops') as shelf:
+        dict1 = shelf[trial_a]
+        dict2 = shelf[trial_b]
+
+    # Extract relevant data from the dictionaries
+    dict1 = {value[1][0]: value[1][1] for value in dict1.items()}
+    dict2 = {value[1][0]: value[1][1] for value in dict2.items()}
+
+    # Find the common keys
+    common_keys = set(dict1.keys()) & set(dict2.keys())
+
+    # Create a list of dictionaries with common key-value pairs
+    common_data = [{'key': key, trial_a[-5:]: dict1[key], trial_b[-5:]: dict2[key]} for key in common_keys]
+
+    # Create a pandas DataFrame from the list of dictionaries
+    df = DataFrame(common_data)
+
     return df
