@@ -1,0 +1,3 @@
+[flake8]
+ignore = E501, E701
+docstring-convention = google
