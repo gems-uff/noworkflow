@@ -6,6 +6,7 @@
 """Variable tagging"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
+import ipdb
 
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
 from noworkflow.now.models.dependency_querier import DependencyQuerier
@@ -163,7 +164,6 @@ def backward_deps(var_name: str, glanularity_level: Optional[bool] = False) -> D
     global nbOptions
     global dep_dict
 
-
     trial_id = __noworkflow__.trial_id
 
     evals = list(proxy_gen(relational
@@ -267,7 +267,6 @@ def dict_to_text(op_dict: dict) -> str:
 
     return plain_text
 
-import ipdb
 
 def trial_values_diff(trial_a, trial_b):
     """Compare values from two distinct trials"""
