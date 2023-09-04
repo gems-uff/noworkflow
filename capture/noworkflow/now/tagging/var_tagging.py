@@ -435,3 +435,15 @@ def var_tag_plot(tag_name: str):
     plt.xticks(rotation=90)
 
     plt.show()
+    
+def var_tag_values(tag_name):
+    from noworkflow.now.persistence.models.base import proxy_gen
+    from noworkflow.now.persistence import relational
+
+    access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
+    
+    values_list = []
+    for i in access_list:
+        values_list.append([i.trial_id, i.trial_id[-5:],  i.name, float(i.tag_name)])
+        
+    return values_list
