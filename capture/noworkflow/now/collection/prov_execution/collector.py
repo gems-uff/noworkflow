@@ -589,20 +589,7 @@ class Collector(object):
                 activation.context['__'] = activation.context['_']
                 del activation.context['_']
             if hasattr(value, 'any'):
-                if value.any():
-                    activation.context['_'] = evaluation
-                    activation.context['_{}'.format(self.ipcell)] = evaluation
-                    self.iphistory[self.ipcell] = evaluation
-                    out = activation.context['Out']
-                    attr = "[{}]".format(self.ipcell)
-                    out.members[attr] = evaluation
-                    self.members.add_object(
-                        self.trial_id, out.activation_id, out.id,
-                        evaluation.activation_id, evaluation.id, attr, 
-                        evaluation.checkpoint, "Put"
-                    )
-            else:
-                if value:
+                if value is not None:
                     activation.context['_'] = evaluation
                     activation.context['_{}'.format(self.ipcell)] = evaluation
                     self.iphistory[self.ipcell] = evaluation
