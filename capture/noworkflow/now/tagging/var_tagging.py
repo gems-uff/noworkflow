@@ -16,6 +16,7 @@ from noworkflow.now.persistence import relational
 
 from typing import Dict, Optional, Tuple
 from IPython.display import HTML
+from pandas import DataFrame
 import difflib
 import numpy
 import shelve
@@ -132,7 +133,9 @@ def now_variable(var_name, value):
     tagged_var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id] 
     
     print(dep_evaluation)
-    
+      # Writing it	  # Writing it
+    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
+                
     return value
 
 def backward_deps(var_name: str, glanularity_level: Optional[bool] = False) -> Dict[int, Tuple[str, str]]:
@@ -436,14 +439,27 @@ def var_tag_plot(tag_name: str):
 
     plt.show()
     
-def var_tag_values(tag_name):
-    from noworkflow.now.persistence.models.base import proxy_gen
-    from noworkflow.now.persistence import relational
+def var_tag_values(tag_name: str) -> DataFrame:
+    """
+    Recollect all values attributed to tag_name variable across all trials in the database.
+
+    Args:
+        tag_name (str): The name of the tag variable to retrieve values for.
+
+    Returns:
+        DataFrame: A DataFrame containing the collected values with columns:
+            - 'trial_id': The trial ID.
+            - 'short_trial_id': A shortened version of the trial ID.
+            - 'tag': The name of the tag.
+            - 'value': The value attributed to the tag in float format.
+    """
+    
 
     access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
     
     values_list = []
     for i in access_list:
         values_list.append([i.trial_id, i.trial_id[-5:],  i.name, float(i.tag_name)])
-        
-    return values_list
+    
+    df = DataFrame(values_list, columns=['trial_id', 'short_trial_id',  'tag', 'value'])
+    return df
