@@ -22,19 +22,42 @@ import textwrap
 
 
 class NotebookQuerierOptions(QuerierOptions):
-    """Navigation options object"""
+    """Navigation options class for notebook queries.
+
+    This class defines options for navigating through notebook queries. It inherits
+    from the QuerierOptions base class.
+
+    Attributes:
+        dep_list (List[Tuple[str, str]]): A list to store dependencies.
+        level (int): The navigation level.
+
+    """
 
     global body_function_def
     dep_list = []
 
     def __init__(self, level, *args, **kwargs):
+        """Initialize a NotebookQuerierOptions instance.
+
+        Args:
+            level (int): The navigation level.
+            *args: Variable-length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        """
         QuerierOptions.__init__(
             self, *args, **kwargs
         )  # change it to super when integrating in the main code
         self.level = level
 
     def visit_arrow(self, context, neighbor):
-        """Navigate throught all evalutions getting operation and repr values"""
+        """Navigate through all evaluations, getting operation and representation values.
+
+        Args:
+            context: The context object.
+            neighbor: The neighbor object.
+
+        """
 
         if neighbor.evaluation.code_component.type == "function_def":
             body_function_def.append(int(neighbor.evaluation.code_component.id))
@@ -63,7 +86,7 @@ class NotebookQuerierOptions(QuerierOptions):
                     if not (
                         neighbor.arrow == "use" and context_code_comp.type == "call"
                     ):
-                        if neighbor_code_comp.container_id != None:
+                        if neighbor_code_comp.container_id is not None:
                             if (
                                 neighbor_code_comp.container_id not in body_function_def
                                 or self.level
@@ -89,8 +112,13 @@ class NotebookQuerierOptions(QuerierOptions):
                                         )
                                     )
 
-    def back_deps(self):
-        """Creates a readable list of backward dependencies in a ordered dict format"""
+    def back_deps(self) -> dict:
+        """Create a readable list of backward dependencies in an ordered dict format.
+
+        Returns:
+            dict: A dictionary of backward dependencies.
+
+        """
 
         global dep_dict
 
@@ -102,8 +130,13 @@ class NotebookQuerierOptions(QuerierOptions):
 
         return dep_dict
 
-    def global_back_deps(self):
-        """Creates a readable list of backward dependencies from all steps in the current trial"""
+    def global_back_deps(self) -> dict:
+        """Create a readable list of backward dependencies from all steps in the current trial.
+
+        Returns:
+            dict: A dictionary of global backward dependencies.
+
+        """
 
         global global_dep_dict
 
