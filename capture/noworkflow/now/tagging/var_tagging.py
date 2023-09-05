@@ -430,7 +430,10 @@ def var_tag_plot(tag_name: str):
     import pandas as pd
     import matplotlib.pyplot as plt
 
-    access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
+    access_list = list(
+        proxy_gen(relational.session
+                  .query(StageTags.m)
+                  .filter(StageTags.m.name == tag_name)))
 
     values_list = []
     for i in access_list:
@@ -448,7 +451,8 @@ def var_tag_plot(tag_name: str):
 
 def var_tag_values(tag_name: str) -> DataFrame:
     """
-    Recollect all values attributed to tag_name variable across all trials in the database.
+    Recollect all values attributed to tag_name
+    variable across all trials in the database.
 
     Args:
         tag_name (str): The name of the tag variable to retrieve values for.
@@ -461,7 +465,10 @@ def var_tag_values(tag_name: str) -> DataFrame:
             - 'value': The value attributed to the tag in float format.
     """
 
-    access_list = list(proxy_gen(relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)))
+    access_list = list(
+        proxy_gen(relational.session
+                  .query(StageTags.m)
+                  .filter(StageTags.m.name == tag_name)))
 
     if access_list == []:
         raise ValueError('No values found for tag ' + tag_name)
