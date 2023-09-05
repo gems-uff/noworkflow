@@ -370,14 +370,13 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
     In these cases, it returns the dimension of the complex type.
 
     If the raw flag is set to True, it returns the raw HTML output.
-    Otherwise, it displays the visual diff
-    between the two trials in the cell.
+    Otherwise, it returns two dictionaries.
 
     Args:
         trial_a (str): The identifier of the first trial.
         trial_b (str): The identifier of the second trial.
-        raw (bool, optional): Whether to return the raw HTML
-        output. Default is False.
+        raw (bool, optional): Whether to return HTML formated
+        table or a raw output. Default is False.
 
     Returns:
         tuple or None: If raw is False, it returns None and displays
@@ -386,10 +385,10 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
 
     Example:
         To display the visual diff in the cell:
-        >>> trial_diff("trial123", "trial456")
+        >>> trial_diff("06dbf287-8ac0-44c7-b951-e56f79b4c7ee", "73f4e83e-0028-4733-9f39-d280d5b03502")
 
         To obtain raw HTML output:
-        >>> dict1, dict2 = trial_diff("trial123", "trial456", raw=True)
+        >>> dict1, dict2 = trial_diff("06dbf287-8ac0-44c7-b951-e56f79b4c7ee", "73f4e83e-0028-4733-9f39-d280d5b03502", raw=True)
     """
 
     # Retrieve the ops dictionary from the shelve file
