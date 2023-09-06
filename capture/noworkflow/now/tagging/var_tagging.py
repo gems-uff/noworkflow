@@ -601,7 +601,7 @@ def resume_trials():
     shelf = shelve.open("ops")
     list_id = list(shelf.keys())
 
-    if list_id == []:
+    if not list_id:
         raise ValueError("No trials found.")
     else:
         return list_id
@@ -621,11 +621,13 @@ def trial_intersection_diff(trial_a: str, trial_b: str) -> DataFrame:
     Example:
         df = trial_intersection_diff('trial_12345', 'trial_67890')
     """
-
     # Retrieve the ops dictionary from the shelve file
-    with shelve.open("ops") as shelf:
-        dict1 = shelf[trial_a]
-        dict2 = shelf[trial_b]
+    try:
+        with shelve.open("ops") as shelf:
+            dict1 = shelf[trial_a]
+            dict2 = shelf[trial_b]
+    except Exception as e:
+        print(f"There is not historical for comparision: {str(e)}")
 
     # Extract relevant data from the dictionaries
     dict1 = {value[1][0]: value[1][1] for value in dict1.items()}
