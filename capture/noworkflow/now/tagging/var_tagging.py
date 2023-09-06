@@ -94,14 +94,10 @@ class NotebookQuerierOptions(QuerierOptions):
                                 if (
                                     len(context.evaluation.repr) > 20
                                 ):  # arbitrary lenght to avoid matricial outputs
-                                    dimensions = numpy.frombuffer(
-                                        context.evaluation.repr.encode(),
-                                        dtype=numpy.uint8,
-                                    )
                                     self.dep_list.append(
                                         (
                                             str(context_code_comp.name),
-                                            str("matrix dim" + str(dimensions.shape)),
+                                            str("complex data type"),
                                         )
                                     )
                                 else:
@@ -446,6 +442,8 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
             modified_code.splitlines(),
             context=False,  # Show some context lines around changes
             numlines=0,  # Number of lines of context to show
+            fromdesc=str('Trial '+trial_a),
+            todesc=str('Trial '+trial_b)
         )
 
         # Add CSS styling for left alignment
@@ -589,7 +587,13 @@ def var_tag_values(tag_name: str) -> DataFrame:
 
     values_list = []
     for i in access_list:
-        values_list.append([i.trial_id, i.trial_id[-5:], i.name, float(i.tag_name)])
+        # Check if the value is a number (int or float)
+        if isinstance(i.tag_name, (int, float)):
+            temp_value = str(i.tag_name)
+        else:
+            temp_value = str(i.tag_name)
+               
+        values_list.append([i.trial_id, i.trial_id[-5:], i.name, temp_value])
 
     df = DataFrame(values_list, columns=["trial_id", "short_trial_id", "tag", "value"])
     return df
@@ -605,7 +609,7 @@ def resume_trials():
     shelf = shelve.open("ops")
     list_id = list(shelf.keys())
 
-    if list_id == []:
+    if not list_id:
         raise ValueError("No trials found.")
     else:
         return list_id
@@ -625,11 +629,13 @@ def trial_intersection_diff(trial_a: str, trial_b: str) -> DataFrame:
     Example:
         df = trial_intersection_diff('trial_12345', 'trial_67890')
     """
-
     # Retrieve the ops dictionary from the shelve file
-    with shelve.open("ops") as shelf:
-        dict1 = shelf[trial_a]
-        dict2 = shelf[trial_b]
+    try:
+        with shelve.open("ops") as shelf:
+            dict1 = shelf[trial_a]
+            dict2 = shelf[trial_b]
+    except Exception as e:
+        print(f"There is not historical for comparision: {str(e)}")
 
     # Extract relevant data from the dictionaries
     dict1 = {value[1][0]: value[1][1] for value in dict1.items()}
