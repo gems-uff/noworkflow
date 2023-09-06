@@ -94,14 +94,10 @@ class NotebookQuerierOptions(QuerierOptions):
                                 if (
                                     len(context.evaluation.repr) > 20
                                 ):  # arbitrary lenght to avoid matricial outputs
-                                    dimensions = numpy.frombuffer(
-                                        context.evaluation.repr.encode(),
-                                        dtype=numpy.uint8,
-                                    )
                                     self.dep_list.append(
                                         (
                                             str(context_code_comp.name),
-                                            str("matrix dim" + str(dimensions.shape)),
+                                            str("complex data type"),
                                         )
                                     )
                                 else:
