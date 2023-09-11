@@ -585,7 +585,13 @@ def var_tag_values(tag_name: str) -> DataFrame:
 
     values_list = []
     for i in access_list:
-        values_list.append([i.trial_id, i.trial_id[-5:], i.name, float(i.tag_name)])
+        # Check if the value is a number (int or float)
+        if isinstance(i.tag_name, (int, float)):
+            temp_value = str(i.tag_name)
+        else:
+            temp_value = str(i.tag_name)
+               
+        values_list.append([i.trial_id, i.trial_id[-5:], i.name, temp_value])
 
     df = DataFrame(values_list, columns=["trial_id", "short_trial_id", "tag", "value"])
     return df
