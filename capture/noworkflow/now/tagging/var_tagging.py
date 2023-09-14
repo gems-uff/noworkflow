@@ -442,6 +442,8 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
             modified_code.splitlines(),
             context=False,  # Show some context lines around changes
             numlines=0,  # Number of lines of context to show
+            fromdesc=str('Trial '+trial_a),
+            todesc=str('Trial '+trial_b)
         )
 
         # Add CSS styling for left alignment
