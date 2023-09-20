@@ -1,0 +1,14 @@
+git clone git@github.com:gems-uff/noworkflow.git
+cd noworkflow/capture
+python setup.py install
+
+cd noworkflow
+pip install -e capture[demo]
+
+pip install jupyter
+pip install ipython
+jupyter nbextension install --py --sys-prefix noworkflow
+jupyter nbextension enable noworkflow --py --sys-prefix
+
+now kernel
+
