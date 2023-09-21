@@ -361,36 +361,6 @@ def dict_to_text(op_dict: dict) -> str:
     return plain_text
 
 
-def trial_values_diff(trial_a, trial_b):
-    """Compare values from two distinct trials"""
-
-    comp_dict = {}
-    # Retrieve the ops dictionary from the shelve file
-    with shelve.open("ops") as shelf:
-        dict1 = shelf[trial_a]
-        dict2 = shelf[trial_b]
-
-    if len(dict1) == len(dict2):
-        for key in dict1:
-            value1 = dict1[key]
-            value2 = dict2[key]
-
-            if isinstance(value1, numpy.ndarray) and isinstance(value2, numpy.ndarray):
-                # If both values are NumPy arrays, compare if they are equal
-                if numpy.array_equal(value1, value2):
-                    comp_dict[value1[0]] = "equal matrices"
-                else:
-                    comp_dict[value1[0]] = "different matrices"
-
-            elif value1 != value2:
-                # If one or both values are scalars, compare their equality
-                comp_dict[value1[0]] = "different values"
-            else:
-                comp_dict[value1[0]] = "equal values"
-
-    return comp_dict
-
-
 def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
     """
     Visually compare two trials, but with limitations for
@@ -472,51 +442,6 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
         """
 
         display(HTML(styled_diff_html))
-
-
-def var_tag_diff(tag_name: str, pandas: bool = False):
-    """
-    Recollects all values associated with tag_name across distinct
-    trials in the database.
-
-    Args:
-        tag_name (str): The name of the tag to retrieve values for.
-        pandas (bool, optional): If True, returns a pandas DataFrame.
-        If False, returns a list of lists.
-        Default is False.
-
-    Returns:
-        pandas.DataFrame or list: If pandas is True, returns a pandas
-        DataFrame with columns: 'trial_id',
-        'short_trial_id', 'tag', 'value'.
-        If pandas is False, returns a list of lists with the same information.
-
-    Example:
-        To retrieve values as a pandas DataFrame:
-        >>> df = var_tag_diff("my_tag", pandas=True)
-
-        To retrieve values as a list of lists:
-        >>> values_list = var_tag_diff("my_tag")
-    """
-
-    access_list = list(
-        proxy_gen(
-            relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)
-        )
-    )
-
-    values_list = []
-    for i in access_list:
-        values_list.append([i.trial_id, i.trial_id[-5:], i.name, float(i.tag_name)])
-
-    if pandas:
-        import pandas
-
-        return pandas.DataFrame(
-            values_list, columns=["trial_id", "short_trial_id", "tag", "value"]
-        )
-    else:
-        return values_list
 
 
 def var_tag_plot(tag_name: str):
