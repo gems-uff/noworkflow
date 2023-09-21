@@ -36,7 +36,7 @@ To perform this tutorial, we highly recommend setting up a Conda environment on 
 First, clone our use case tutorial to your local machine and create a separate environment:
 
 ```bash
-git clone https://github.com/jaglima/noworkflow_usecase.git
+git clone -b sor_pull_request https://github.com/jaglima/noworkflow.git
 
 cd noworkflow_usecase
 # Create a conda env
@@ -61,6 +61,14 @@ jupyter nbextension enable noworkflow --py --sys-prefix
 now kernel
 cd ..
 ```
+
+
+Download the dataset for our example from:
+````
+https://www.kaggle.com/mlg-ulb/creditcardfraud
+````
+
+and save it in the \dataset folder in this directory.
 
 Finally, fire up the Jupyter Lab to start the fun.
 
