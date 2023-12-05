@@ -491,6 +491,11 @@ For changes on the now vis or IPython integration files, install nodejs, Python 
 cd noworkflow/npm
 python watch.py
 ```
+(If it is your first time making changes or if you changed some modules, you must first run the following command before "python watch.py":)
+```
+npm install
+```
+
 
 
 Included Software

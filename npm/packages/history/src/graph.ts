@@ -24,12 +24,18 @@ import {
   zoomIdentity as d3_zoomIdentity,
 } from 'd3-zoom';
 
+import { instance } from "@viz-js/viz";
+
 import * as fs from 'file-saver';
+declare var require: any;
+const pl = require("tau-prolog");
 
 import {HistoryConfig, HistoryState} from './config';
 import {VisibleHistoryNode, VisibleHistoryEdge} from './structures';
 import {HistoryGraphData, HistoryNodeData, HistoryTrialNodeData} from './structures';
 import { D3ZoomEvent } from 'd3';
+import { event } from 'jquery';
+import { config } from 'webpack';
 
 
 export
@@ -47,6 +53,8 @@ class HistoryGraph {
   svg: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   g: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   hintElement: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  rightClickMenu: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
 
   nodes: VisibleHistoryNode[] = [];
   versionNodes: VisibleHistoryNode[] = [];
@@ -54,6 +62,8 @@ class HistoryGraph {
   maxX: number = 0;
   maxY: number = 0;
   maxId: number = 0;
+  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>;
+  
 
 
   constructor(graphId:string, div: any, config: any = {}) {
@@ -63,6 +73,7 @@ class HistoryGraph {
       customCtrlClick: (g: HistoryGraph, d: VisibleHistoryNode) => false,
       customForm: (g: HistoryGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => null,
       customSize: (g: HistoryGraph) => [g.config.width, g.config.height],
+      customWindowTabCommand: (trialIdSimplified : string, trialId : string, command: string) => false,
 
       hintMessage: "Ctrl+Shift click or ⌘+Shift click to diff trials",
 
@@ -130,6 +141,342 @@ class HistoryGraph {
       .attr("id", this._graphId())
       .attr("transform", "translate(0,0)")
       .classed('HistoryGraph', true);
+
+    this.rightClickMenu = d3_select<SVGSVGElement, any>(div).append("div")
+    .classed("dropdown-menu dropdown-menu-sm", true)
+    .attr("id", "context-menu")
+    .attr("selected-trial", "")
+    .style("display", "block");
+
+    this.buildModal(div);
+    this.buildRightClickMenu();
+  }
+
+  private buildModal(div: any) {
+    this.modal = d3_select<SVGSVGElement, any>(div).append("div")
+      .classed("modal fade", true)
+      .attr("id", "commandsModal")
+      .attr("tabindex", "-1")
+      .attr("role", "dialog")
+      .attr("aria-labelledby", "commandsModalTitle")
+      .style("display", "none")
+      .attr("aria-hidden", "true");
+
+    let modalContent = this.modal.append("div")
+      .classed("modal-dialog", true)
+      .attr("role", "document")
+      .append("div").classed("modal-content", true); //modal content
+
+    let modalHeader = modalContent.append("div")
+      .classed("modal-header", true)//modal header
+    modalHeader.append("h5")
+      .classed("modal-title", true)
+      .attr("id", "exampleModalTitle")
+      .text("Change Temporary Title") //modal title
+    
+    this.modalBody = modalContent.append("div")
+      .classed("modal-body", true);
+
+    modalHeader.append("button").classed("close", true).attr("type", "button").text("x").style("float", "right")
+      .on("click", ()=>cleanModalBodyAndClose(this.modal, this.modalBody)); //close modal
+  }
+
+  private buildRightClickMenu() {
+
+    //let modal = document.getElementById("commandsModal");
+    this.buildRestoreTrialCommand(this.modal, this.modalBody);
+    this.buildRestoreFileCommand(this.modal, this.modalBody);
+    this.buildProvCommand(this.modal, this.modalBody);
+    this.buildExportCommand(this.modal, this.modalBody, this.config)
+    this.buildDataflowCommand(this.modal, this.modalBody, this.config)
+  }
+
+  buildDataflowCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, config : HistoryConfig) {  
+    
+    this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "dataflow-option")
+      .text("export dataflow")
+      .on("click", function() {        
+        
+        let parent = this.parentNode as Element
+
+        buildDataflowModal(modal, modalBody, parent, config);
+        });       
+
+      };
+  
+
+
+  buildExportCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, config : HistoryConfig) {  
+    
+    this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "export-option")
+      .text("export prolog")
+      .on("click", function() {
+        
+        let parent = this.parentNode as Element
+        let trialId = parent.getAttribute("selected-trial");
+        let exportUrl = "/commands/export/" + trialId;
+        let exportWindowId = "Export window " + trialId;
+
+        if (document.getElementById(exportWindowId) != undefined) return;
+
+        fetch(exportUrl, {
+          method: 'GET', // *GET, POST, PUT, DELETE, etc.
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        }).then((response : any)=>{
+          response.json().then((json : any)=>{
+
+            if(response.status == 200){
+              
+              
+              config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified")!, exportWindowId, "Prolog");
+              let exportWindow = d3_select(document.getElementById(exportWindowId));
+
+              let form : d3_Selection<HTMLDivElement, {}, HTMLElement | null, any> = (exportWindow.append("form") as d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>)
+              .append("div").classed("form-row", true);
+              createFormTextInput(form, "exportPrologProgram"+trialId, "Prolog").classed("col-7", true);
+              createFormTextInput(form, "exportPrologQuery"+trialId, "Query").classed("col", true);              
+
+              let submitButton = form.append("div").classed("col-auto", true).style("padding-top", "5vh")
+              .append("button").classed("btn btn-primary mb-2", true).text("Execute Query");
+              
+
+              (<HTMLInputElement> document.getElementById("exportPrologProgram"+trialId))!.value = json.export;
+
+              let prologSession = pl.create(1000);
+
+              let answerCallback = (answer : any, answerString: string) => {
+                if (answer == false){
+                  
+                  let answerCardTextId = "Answers prolog card text "+trialId;
+                  let answerCardText = document.getElementById(answerCardTextId)? d3_select(document.getElementById(answerCardTextId)) : null;
+                  if(answerCardText == null){
+                    let answerWindow = exportWindow.append("div");
+                    answerWindow.classed("card", true).append("div").classed("card-header", true).text("Answers");
+                    answerCardText = answerWindow.append("div").classed("card-body", true)
+                      .append("p").classed("card-text", true).attr("id", answerCardTextId)
+                      .style("overflow-y", "auto").style("max-height", "35vh");
+                  }
+
+                  answerCardText!.html(answerString);
+                  return;
+                }
+                answerString += prologSession.format_answer(answer).toString() + "<br>";
+                
+                prologSession.answer((answer:any)=>answerCallback(answer, answerString));
+              };
+
+              submitButton.on("click", () => {
+                let prologProgram = getTextInputFormByID("exportPrologProgram"+trialId);
+                let userQuery = getTextInputFormByID("exportPrologQuery"+trialId);
+                if(prologProgram && userQuery){
+
+                  prologSession.consult(prologProgram, {
+                    success: () => {
+                      console.log("Prolog consult success");
+                      prologSession.query(userQuery, {
+                        success: () => {
+                              prologSession.answer((answer:any)=>answerCallback(answer, ""));
+                            },
+                        error: () => {
+                          console.log("Erro query");
+                        }
+                    })
+                    },
+                    error: () => {
+                      console.log("Prolog consult error");
+                    }
+                  });
+                }
+
+
+              });   
+                          
+            }else{
+              console.log("Export error");
+            }
+            
+          });
+        });
+
+      });
+  }
+
+  buildProvCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+    this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "prov-option")
+      .text("export prov")
+      .on("click", function() {
+        let parent = this.parentNode as Element;
+        let trialId = parent.getAttribute("selected-trial");
+        changeTitle(parent, "Prov trial ")
+
+        showModal(modal);
+
+        if(modalBody){
+          let provUrl = "/commands/prov/" + trialId;
+          
+
+          fetch(provUrl, {
+            method: 'GET', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+              'Content-Type': 'application/json'
+            },
+          }).then((response)=>{
+            response.json().then((json)=>{
+
+              if(response.status == 200){
+                addAlert(modalBody, "alert-success", "Success!", "Prov exported");
+                scrollableModal(modalBody);
+                
+                let prov_lines = json.prov.split("\n");
+                for(var line in prov_lines) modalBody.append("p").text(prov_lines[line]);
+                
+              }else{
+                addAlert(modalBody, "alert-danger", "Error!", json.prov);
+              }
+              
+            });
+          });
+        }
+      });
+  }
+
+  private buildRestoreFileCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, 
+    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+      this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "restore-file-option")
+      .text("restore file")
+      .on("click", function () {
+
+        let parent = this.parentNode as Element;
+        let trialId = parent.getAttribute("selected-trial");
+        changeTitle(parent, "Restore file trial ")
+
+        let submitButton;
+        let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+
+        showModal(modal);
+
+        if (modalBody) {
+          form = modalBody.append("form");
+          createFormTextInput(form, "restoreFile", "Restore file", "restoreFileHelp", "Write the name of the file you want to restore");
+          createFormTextInput(form, "restoreFileID", "File identifier", "restoreIDHelp", "(optional) Identifies the file to be restored. It can be either the timestamp, the number of access, or the code hash");
+          createFormTextInput(form, "restoreFileTarget", "Target file path", "restoreTargetHelp", "(optional) specifies the target path of the restored file");
+
+          submitButton = form.append("button").classed("btn btn-primary mb-2", true).attr("type", "submit").text("restore trial");
+
+        }
+
+        submitButton?.on("click", function () {
+          let fileToRestore : string | boolean = getTextInputFormByID("restoreFile", true);
+          let fileIdentifier : string | boolean = getTextInputFormByID("restoreFileID", true);
+          let targetPath : string | boolean = getTextInputFormByID("restoreFileTarget", true);
+
+          let restoreUrl = "/commands/restore/file/" + trialId + "/" + fileToRestore + "/" + fileIdentifier + "/" + targetPath;
+
+          if(fileToRestore) getRestoreOrCollabCommand(restoreUrl, form, modalBody)
+          else addAlert(modalBody, "alert-danger", "Error!", "The file's name is empty");
+
+          });
+        });
+    }
+
+  private buildRestoreTrialCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, 
+    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+
+    this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "restore-trial-option")
+      .text("restore trial")
+      .on("click", function () {
+
+        let parent = this.parentNode as Element;
+        let trialId = parent.getAttribute("selected-trial");
+        changeTitle(parent, "Restore trial ");
+
+        let submitButton;
+        let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+
+        showModal(modal);
+
+        if (modalBody) {
+          form = modalBody.append("form").attr("onsubmit", "return false;");
+          createFormCheckInput(form, "restoreSkipScript", "Skip Script");
+          createFormCheckInput(form, "restoreSkipLocalModules", "Skip Local Modules");
+          createFormCheckInput(form, "restoreSkipFileAccess", "Skip File Access");
+
+          submitButton = form.append("button").classed("btn btn-primary mb-2", true).attr("type", "submit").text("restore trial");
+
+        }
+
+        submitButton?.on("click", function () {
+          let skipScript = (<HTMLInputElement> document.getElementById("restoreSkipScript")).checked;
+          let skipModules = (<HTMLInputElement> document.getElementById("restoreSkipLocalModules")).checked;
+          let skipFileAccess = (<HTMLInputElement> document.getElementById("restoreSkipFileAccess")).checked;
+
+          let restoreUrl = "/commands/restore/trial/" + trialId + "/" + skipScript + "/" + skipModules + "/" + skipFileAccess;
+
+          getRestoreOrCollabCommand(restoreUrl, form, modalBody);
+
+          });
+        });
+    }
+
+    private buildPushCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, 
+      modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+
+        this. executeCollabCommand(modal, modalBody, "pushExperimentId", "pushServerUrlId", "Push experiment", "push");
+
+      }
+
+    private buildPullCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, 
+      modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+
+        this. executeCollabCommand(modal, modalBody, "pullExperimentId", "pullServerUrlId", "Pull experiment", "pull");
+
+      }
+
+  private executeCollabCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+    inputExperimentId : string, inputServerUrlId : string, title : string, command : string) {
+    document.getElementById("exampleModalTitle")!.textContent = title;
+
+    let submitButton;
+    let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+
+    showModal(modal);
+
+    if (modalBody) {
+      form = modalBody.append("form");
+      createFormTextInput(form, inputExperimentId, "Experiment Id: ");
+      createFormTextInput(form, inputServerUrlId, "Server Url: ");
+      submitButton = form.append("button").classed("btn btn-primary mb-2", true).text(title);
+      (<HTMLInputElement>document.getElementById(inputServerUrlId)).value = window.location.origin;
+    }
+
+    submitButton?.on("click", function () {
+      let experimentId = (<HTMLInputElement>document.getElementById(inputExperimentId)).value;
+      let serverUrl = (<HTMLInputElement>document.getElementById(inputServerUrlId)).value;
+
+      let collabCommandUrl = "/commands/" + command + "/"+  experimentId + "/" + serverUrl;
+
+      getRestoreOrCollabCommand(collabCommandUrl, form, modalBody);
+
+    });
   }
 
   createToolbar(form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>) {
@@ -209,6 +556,26 @@ class HistoryGraph {
       .attr("name", "prevent-enter")
       .attr("onclick", "return false;")
       .style("display", "none");
+
+    // Push trial
+    formdiv.append("a")
+      .classed("toollink", true)
+      .attr("id", "history-" + this.graphId + "-push-trial")
+      .attr("href", "#")
+      .attr("title", "Push trial")
+      .on("click", () => this.buildPushCommand(this.modal, this.modalBody))
+    .append("i")
+      .classed("fa fa-cloud-upload", true)
+
+    // Pull trial
+    formdiv.append("a")
+      .classed("toollink", true)
+      .attr("id", "history-" + this.graphId + "-pull-trial")
+      .attr("href", "#")
+      .attr("title", "Pull trial")
+      .on("click", () => this.buildPullCommand(this.modal, this.modalBody))
+    .append("i")
+      .classed("fa fa-cloud-download", true)
 
     formdiv.append("div")
     formdiv.append("div")
@@ -324,6 +691,7 @@ class HistoryGraph {
     this.updateWindow();
     this.restorePosition();
     this.update();
+    this.menuOnRightClick();
 
     return nodes;
   }
@@ -600,7 +968,7 @@ class HistoryGraph {
       .attr("stroke-width", "2.5px")
       .on('mousedown', function(event: MouseEvent, d: VisibleHistoryNode) {
         self.nodeMouseDown(event, d3_select(this), d);
-      }).on('mouseup', function (event: MouseEvent, d: VisibleHistoryNode) {
+      }).on('click', function (event: MouseEvent, d: VisibleHistoryNode) {
         self.nodeMouseUp(event, d3_select(this), d);
       }).on('mouseover', function (event: MouseEvent, d: VisibleHistoryNode) {
         if (!self.state.mouseDownNode && self.config.useTooltip) {
@@ -615,6 +983,7 @@ class HistoryGraph {
             return (d3_select(this).classed('selected')) ? 'rgb(200, 238, 241)' : "#000";
           });
       })
+      .classed("custom-menu", true);
 
     nodeEnter.append('text')
       .classed('trial-id', true)
@@ -698,4 +1067,284 @@ class HistoryGraph {
   private _graphId(): string {
     return "history-graph-" + this.graphId;
   }
+
+  private menuOnRightClick() {
+    let rightClickMenu = document.getElementById("context-menu");
+
+    // Set up an event handler for the documnt right click
+    document.addEventListener("contextmenu", function(event) {
+      //open right click menu
+      let target = event.target as Element;
+      if(target && target.classList.contains("custom-menu")){
+          event.preventDefault();
+          if(rightClickMenu){
+            rightClickMenu.setAttribute("selected-trial", target.parentElement?.getAttribute("attr-trialid")!);
+            rightClickMenu.setAttribute("selected-trial-simplified", target.getAttribute("title")!);
+            rightClickMenu.style.top = (event.pageY - 10).toString();
+            rightClickMenu.style.left = (event.pageX - 90).toString();
+            rightClickMenu.style.display = "block";
+            rightClickMenu.classList.add("show");
+          }         
+
+
+        }
+      
+    });
+
+    // close the menu
+    document.addEventListener("click", function(event){
+      if(rightClickMenu){
+        rightClickMenu.style.display = "none";
+        rightClickMenu.classList.remove("show");
+      }
+    });
+  }
 }
+
+function scrollableModal(modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+  let modalDialog = (document.getElementsByClassName("modal-dialog") as HTMLCollectionOf<HTMLElement>)[0];
+  modalDialog.style.overflowY = "initial";
+  modalDialog.style.maxHeight = "85%";
+  modalBody.style("overflow-y", "auto").style("height", "80vh");
+}
+
+function getDataflow(response: any, config: HistoryConfig, parent: Element, dataflowWindowId : string) {
+  response.json().then((json:any) => {
+    if (response.status == 200) {
+
+      config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified")!, dataflowWindowId, "Dataflow");
+      console.log(json.dataflow);
+  
+      instance().then(viz => {
+        const dataflowWindow = document.getElementById(dataflowWindowId);
+  
+        // Download SVG Button
+        downloadDataflow(dataflowWindow, dataflowWindowId);
+  
+  
+        dataflowWindow!.style.overflowY = dataflowWindow!.style.overflowX = "auto";
+        dataflowWindow!.appendChild(viz.renderSVGElement(json.dataflow));
+      });
+  
+  
+    } else {
+      console.log("Dataflow error");
+    }
+
+  });
+  
+}
+
+function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+  parent : Element, config : HistoryConfig) {
+
+  let submitButton;
+  let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+  document.getElementById("exampleModalTitle")!.textContent = "Dataflow";
+
+  showModal(modal);
+
+  if (modalBody) {
+
+    scrollableModal(modalBody);
+
+    form = modalBody.append("form");
+    createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
+    createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
+    createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
+
+    createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp", 
+    "(default: Shows each file once (hide external accesses))",
+    ["Hides file accesses", "Shows each file once (hide external accesses)", "Shows each file once (show external accesses)",
+    "Shows all accesses (except external accesses)", "Shows all accesses (including external accesses)"]);
+
+    createFormSelectInput(form, "dataflowEvaluation", "Combine evaluation nodes", 0, 2, 1, "dataflowEvaluationHelp", 
+    "(default: Combines evaluation nodes by assignment)", 
+    ["Not combine evaluation nodes", "Combines evaluation nodes by assignment", "Combines evaluation nodes by value"]);
+
+    createFormSelectInput(form, "dataflowGroup", "Align evalutions in the same column", 0, 2, 0,
+    "dataflowGroupHelp", 
+    "(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.", 
+    ["Does no align", "Aligns by line", "Aligns by line and column"]);
+
+    createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 3, 3, "dataflowModeHelp", 
+    "(default: prospective). 'simulation' presents a dataflow graph with all relevant evaluations. 'activation' presents only activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations. 'prospective' presents only parameters, calls, and assignments to calls.",
+    ["simulation","activation","dependency","prospective"]);
+
+    createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity");
+    createFormNumberInput(form, "dataflowValueLength", "Maximum length of values", 0, 0, "dataflowValueLengthHelp",
+    "(default: 0). 0 indicates that values should be hidden.The values appear on the second line of node lables. E.g. if it is set to '10', it will show 'data.dat',  but it will transform 'data2.dat' in to 'da...dat' to respect the length restriction (note that '' is part of the value). Minimum displayable value: 5. Suggested: 55.");
+    createFormNumberInput(form, "dataflowName", "Maximum length of names", 0, 55, "dataflowNameHelp",
+    "(default: 55). 0 indicates that values should be hidden. Minimum displayable value: 5. Suggested: 55.");
+    
+
+    submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
+
+  }
+
+  submitButton?.on("click", function () {
+    let dataFlowShowType = (<HTMLInputElement> document.getElementById("dataFlowShowType")).checked;
+    let dataFlowHideTimestamps = (<HTMLInputElement> document.getElementById("dataFlowHideTimestamps")).checked;
+    let dataFlowHideInternals = (<HTMLInputElement> document.getElementById("dataFlowHideInternals")).checked;
+
+    let dataflowFileAccesses = (<HTMLSelectElement> document.getElementById("dataflowShowAccesses")).selectedOptions[0].index;
+    let dataflowEvaluation = (<HTMLSelectElement> document.getElementById("dataflowEvaluation")).selectedOptions[0].index;
+    let dataflowGroup = (<HTMLSelectElement> document.getElementById("dataflowGroup")).selectedOptions[0].index;
+    let dataflowMode = (<HTMLSelectElement> document.getElementById("dataflowMode")).selectedOptions[0].value;
+
+    let dataflowDepth = (<HTMLInputElement> document.getElementById("dataflowDepth")).value;
+    let dataflowValueLength = (<HTMLInputElement> document.getElementById("dataflowValueLength")).value;
+    let dataflowName = (<HTMLInputElement> document.getElementById("dataflowName")).value;
+
+    let trialId = parent.getAttribute("selected-trial");
+    let dataflowUrl = "/commands/dataflow/" + trialId + "/"+ dataFlowShowType + "/" + dataFlowHideTimestamps + "/" + 
+    dataFlowHideInternals + "/" + dataflowFileAccesses + "/" + dataflowEvaluation + "/" + dataflowGroup + "/" + 
+    dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
+    let dataflowWindowId = "Dataflow window " + trialId;
+
+    if (document.getElementById(dataflowWindowId)){
+      window.alert("Close trial "+ trialId +" dataflow tab before generating a new dataflow");
+      return;
+    } 
+
+    fetch(dataflowUrl, {
+      method: 'GET', // *GET, POST, PUT, DELETE, etc.
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    }).then((response : any)=>{
+      console.log(dataflowMode);
+      cleanModalBodyAndClose(modal, modalBody);
+      getDataflow(response, config, parent, dataflowWindowId);
+    });
+
+    
+
+  });
+}
+
+function downloadDataflow(dataflowWindow: HTMLElement | null, dataflowWindowId: string) {
+  d3_select(dataflowWindow).append("div").append("a")
+    .classed("toollink", true)
+    .attr("id", dataflowWindowId + "-download")
+    .attr("href", "#")
+    .style("color", "black")
+    .attr("title", "Download dataflow SVG")
+    .on("click", () => {
+      fs.saveAs(new Blob([dataflowWindow!.children[1].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
+    })
+    .append("i")
+    .classed("fa fa-download", true);
+}
+
+function getRestoreOrCollabCommand(restoreUrl: string, form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>, 
+  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+  fetch(restoreUrl, {
+    method: 'GET', // *GET, POST, PUT, DELETE, etc.
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  }).then((response) => {
+
+    response.json().then((json) => {
+      form.remove();
+      if (response.status == 200) {
+        addAlert(modalBody, "alert-success", "Success!", json.terminal_text);
+      } else {
+        addAlert(modalBody, "alert-danger", "Error!", json.terminal_text);
+      }
+
+    });
+  });
+}
+
+function changeTitle(parent: Element, commandTitle : string) {
+  let trialIdTitle = parent.getAttribute("selected-trial-simplified");
+  document.getElementById("exampleModalTitle")!.textContent = commandTitle + trialIdTitle;
+}
+
+function cleanModalBodyAndClose(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, 
+  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>){
+  document.getElementsByClassName("modal-body")[0].textContent = "";
+  modalBody.style("height", null);
+  hideModal(modal);
+}
+
+function addAlert(div: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, alertType: string, title: string, text: string) {
+  let feedbackAlert = div.append("div").classed("alert " + alertType, true).attr("role", "alert");
+  feedbackAlert.append("h4").text(title).append("button").classed("close", true).attr("type", "button").text("x").on("click", () => {
+    feedbackAlert.remove();
+  });
+  feedbackAlert.append("p").text(text);
+}
+
+function createFormCheckInput(form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>, checkInputId : string, text : string) {
+  let checkDiv = form.append("div").classed("form-check", true);
+  checkDiv.append("input").classed("form-check-input", true).attr("value", "").attr("id", checkInputId)
+    .attr("type", "checkbox");
+  checkDiv.append("label").classed("form-check-label", true).attr("for", checkInputId)
+    .text(text);
+}
+
+function createFormTextInput(form: d3_Selection<HTMLFormElement | HTMLDivElement, {}, HTMLElement | null, any>, textInputId : string, text : string, helpId? : string, helpText? : string){
+  let textDiv = form.append("div").classed("form-group",true);
+  textDiv.append("label").attr("for", textInputId).text(text);
+  let textInput = textDiv.append("textarea").classed("form-control", true).attr("id", textInputId);
+  if(helpId && helpText){
+    textInput.attr("aria-describedby", helpId);
+    textDiv.append("small").classed("form-text text-muted", true).attr("id", helpId).text(helpText);
+  }
+
+  return textDiv;
+}
+
+function createFormSelectInput(form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>,
+  selectId : string, selectText : string, minOptionNumber: number, maxOptionNumber : number, defaultOption? : number,
+  helpId? : string, helpText? : string, optionsLabels? : Array<string>) {
+  let selectDiv = form.append("div").classed("form-group", true);
+  let selectInput = selectDiv.append("label").attr("for", selectId).text(selectText)
+    .append("select").classed("form-control", true).attr("id", selectId);
+
+  if(helpId && helpText){
+    selectInput.attr("aria-describedby", helpId);
+    selectDiv.append("small").classed("form-text text-muted", true).attr("id", helpId).text(helpText);
+  }
+
+  for (var optionNumber = minOptionNumber; optionNumber <= maxOptionNumber; optionNumber++) { 
+    let inputLabel = optionsLabels? optionsLabels[optionNumber] : optionNumber;
+    let input = selectInput.append("option").text(inputLabel);
+    if (defaultOption && optionNumber == defaultOption) input.attr("selected", "selected");
+  }
+}
+
+function createFormNumberInput(form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>, id : string, text : string, minValue : number, defaultValue : number,
+  helpId? : string, helpText? : string) {
+  let numberDiv = form.append("div").classed("form-group", true);
+  numberDiv.append("label").classed("form-check-label", true).attr("for", id)
+    .text(text);
+
+  numberDiv.append("input").attr("type", "number").attr("id", id).attr("min", minValue).attr("value", defaultValue)
+  .attr("oninput", "validity.valid||(value='');").attr("aria-describedby", "dataflowDepthHelp");
+
+  if(helpId && helpText){
+    numberDiv.attr("aria-describedby", helpId);
+    numberDiv.append("small").classed("form-text text-muted", true).attr("id", helpId).text(helpText);
+  }
+  
+}
+
+function getTextInputFormByID(id : string, replace? : boolean){
+  let formTextInput : string | boolean = (<HTMLInputElement> document.getElementById(id)).value
+  if(replace) formTextInput.replace("/","%2F").replace("\\", "%5C");
+  if(!formTextInput) formTextInput = false;
+  return formTextInput;
+}
+
+function hideModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  if(modal) modal.style("display", "none").style("padding-right", "").classed("show", false).attr("aria-hidden", "true");
+}
+
+function showModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  if (modal) modal.style("display", "block").style("padding-right", "17px").classed("show", true).attr("aria-hidden", "false");
+}
+

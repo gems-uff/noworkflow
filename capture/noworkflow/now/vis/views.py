@@ -437,6 +437,94 @@ def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
     _, diff_result, _ = getattr(graph, graph_mode)()
     return jsonify(**diff_result)
 
+@app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
+def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):
+    """Execute the command 'now restore' for a trial"""
+    restore_command = ("now restore " + trial_id).split()
+    if skip_script == "true": restore_command.append("-s")
+    if skip_modules == "true": restore_command.append("-l")
+    if skip_files_access == "true": restore_command.append("-a")
+    
+    sub_proccess_print = subprocess.run(restore_command, capture_output=True).stdout.decode("utf-8")
+    # os.system(restore_command)
+    return jsonify(terminal_text=sub_proccess_print), 200
+
+@app.route("/commands/restore/file/<trial_id>/<file_to_restore>/<file_id>/<path:output_path>")
+def execute_command_restore_file(trial_id, file_to_restore, file_id, output_path):
+    """Execute the command 'now restore' for a file"""
+    restore_command = ("now restore " + trial_id + " -f").split()
+    restore_command.append(file_to_restore)
+    if file_id != "false": 
+        restore_command.append("-i")
+        restore_command.append(file_id)
+    if output_path != "false":
+        restore_command.append("-t")
+        restore_command.append(output_path)
+    
+    sub_process = subprocess.run(restore_command, capture_output=True)
+    
+    erro_string = sub_process.stderr.decode("utf-8")    
+    if ("No such file or directory" in erro_string): return jsonify(terminal_text="\""+ output_path +"\" No such file or directory"), 400
+    
+    sub_proccess_print = sub_process.stdout.decode("utf-8")    
+    status = 400 if ("Unable" in sub_proccess_print) or ("not" in sub_proccess_print) else 200
+    return jsonify(terminal_text=sub_proccess_print), status
+
+@app.route("/commands/prov/<trial_id>")
+def execute_command_prov(trial_id):
+    """Execute the command 'now prov'"""
+    prov_command = ("now prov " + trial_id).split()
+    sub_process_print = subprocess.run(prov_command, capture_output=True).stdout.decode("utf-8")
+    if "(" in sub_process_print: return jsonify(prov=sub_process_print), 200
+    return jsonify(prov="No prov to export"), 400
+    
+@app.route("/commands/export/<trial_id>")
+def execute_command_export(trial_id):
+    """Execute the command 'now export'"""
+    export_command = ("now export " + trial_id).split()
+    sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
+    return jsonify(export=sub_process_print), 200
+
+@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>")
+def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_accesses, evaluation, group, depth, value_length, name, mode):
+    """Execute the command 'now export'"""
+    export_command = ("now dataflow " + trial_id).split()
+    
+    if argument_T == "true": export_command.append("-T")
+    if argument_t == "true": export_command.append("-t")
+    if argument_H == "true": export_command.append("-H")
+    
+    appendDataflowCommandWithParameters(export_command, "-a", file_accesses, 0, 4, 1)
+    appendDataflowCommandWithParameters(export_command, "-e", evaluation, 0, 2, 1)
+    appendDataflowCommandWithParameters(export_command, "-g", group, 0, 2, 0)
+    appendDataflowCommandWithParameters(export_command, "-d", depth, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(export_command, "--value-length", value_length, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(export_command, "-n", name, 0, float('inf'), 55)
+
+    export_command.append("-m")
+    if mode in ["simulation", "activation" , "dependency"]: export_command.append(mode)
+    else: export_command.append("prospective")
+    
+    print(export_command)
+    
+    sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
+    return jsonify(dataflow=sub_process_print), 200
+
+def appendDataflowCommandWithParameters(export_command, command, parameter_value, min_value, max_value, default_value):
+    export_command.append(command)
+    if int(parameter_value) > max_value or int(parameter_value) < min_value: export_command.append(str(default_value))
+    else: export_command.append(str(parameter_value))
+
+@app.route("/commands/<collab_command>/<expCode>/<path:serverUrl>")
+def execute_command_push_experiment(collab_command, expCode, serverUrl):
+    """Execute the command 'now push'"""
+    push_command = ("now " + collab_command + " --url " + serverUrl + "/experiments/" + expCode).split()
+    
+    sub_process = subprocess.run(push_command, capture_output=True)
+    
+    if(len(sub_process.stderr)): return jsonify(terminal_text="Invalid server address"), 400
+    
+    return jsonify(terminal_text=sub_process.stdout.decode("utf-8")), 200
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):

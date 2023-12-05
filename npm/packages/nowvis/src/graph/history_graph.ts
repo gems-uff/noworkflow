@@ -180,6 +180,18 @@ class HistoryWidget extends Widget {
           }
           return true;
         },
+        customWindowTabCommand: (trialIdSimplified : string, trialId : string, command: string)=>{
+          
+          let trialExportWidget = new Widget();
+          trialExportWidget.title.label = command + " trial " + trialIdSimplified;
+          trialExportWidget.title.closable = true;
+          trialExportWidget.id = trialId;
+          let parentDock: NowVisPanel = this.parent as NowVisPanel;
+          parentDock.addGraphWidget(trialExportWidget);
+          parentDock.activateWidget(trialExportWidget);
+          return true;
+          
+        },
         customSelectNode: (g: HistoryGraph, d: VisibleHistoryNode) => {
           let trialGraphWidget = new TrialGraphWidget("Trial " + d.display, "trial-" + d.title + makeid(), d.title, d.title);
           let parentDock: NowVisPanel = this.parent as NowVisPanel;

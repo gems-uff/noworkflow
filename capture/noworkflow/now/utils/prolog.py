@@ -96,10 +96,13 @@ class PrologAttribute(object):
 
 class PrologTrial(PrologAttribute):
     """Represent Trial id attribute, used for retract"""
+    
+    def fact(self, obj):
+        return "'{}'".format(self.value(obj).replace("'", "''"))
 
     def retract(self, trial_id):
         """Trial Attribute identifies fact. Retrun trial_id"""
-        return str(trial_id)
+        return "'{}'".format(trial_id.replace("'", "''"))
 
 
 class PrologRepr(PrologAttribute):
@@ -143,6 +146,7 @@ class PrologNullable(PrologAttribute):
     def fact(self, obj):
         """Replace None by nil if attribute self.attr_name of obj"""
         value = self.value(obj)
+        if(self.name == 'parent_id'): value = "'{}'".format(value.replace("'", "''"))
         return str(value) if value is not None else "nil"
 
 
