@@ -13,7 +13,7 @@ import json
 from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup
+from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module
 from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW
 from ..models.history import History
 from ..models.diff import Diff
@@ -464,9 +464,9 @@ def execute_command_restore_file(trial_id, file_to_restore, file_id, output_path
     sub_process = subprocess.run(restore_command, capture_output=True)
     
     erro_string = sub_process.stderr.decode("utf-8")    
-    if ("No such file or directory" in erro_string): return jsonify(terminal_text="\""+ output_path +"\" No such file or directory"), 400
-    
-    sub_proccess_print = sub_process.stdout.decode("utf-8")    
+    if (len(erro_string) > 0): return jsonify(terminal_text="\""+ output_path +"\" No such file or directory"), 400
+
+    sub_proccess_print = sub_process.stdout.decode("utf-8")
     status = 400 if ("Unable" in sub_proccess_print) or ("not" in sub_proccess_print) else 200
     return jsonify(terminal_text=sub_proccess_print), status
 
@@ -478,10 +478,14 @@ def execute_command_prov(trial_id):
     if "(" in sub_process_print: return jsonify(prov=sub_process_print), 200
     return jsonify(prov="No prov to export"), 400
     
-@app.route("/commands/export/<trial_id>")
-def execute_command_export(trial_id):
+@app.route("/commands/export/<trial_id>/<rules>/<hide_timestamps>")
+def execute_command_export(trial_id, rules, hide_timestamps):
     """Execute the command 'now export'"""
     export_command = ("now export " + trial_id).split()
+    
+    if rules == "true": export_command.append("-r")
+    if hide_timestamps == "true": export_command.append("-t")
+    
     sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(export=sub_process_print), 200
 
@@ -525,6 +529,22 @@ def execute_command_push_experiment(collab_command, expCode, serverUrl):
     if(len(sub_process.stderr)): return jsonify(terminal_text="Invalid server address"), 400
     
     return jsonify(terminal_text=sub_process.stdout.decode("utf-8")), 200
+
+@app.route("/files/<trial_id>")
+def get_files_belonging_to_trial(trial_id):   
+    files = []
+    for file in FileAccess.all():
+        if file.trial_id  == trial_id and file.name != "nul": files.append(file.name)
+    for trial in Trial.all():
+        if trial.id == trial_id: files.append(trial.script)
+    for module in Module.all():
+        if module.trial_id == trial_id:
+            module_path = module.path
+            if "/" in module_path: files.append(module_path.split("/")[-1])
+            elif "\\" in module_path: files.append(module_path.split("\\")[-1])
+            # files.append(module.path.split(os.sep)[-1])
+        
+    return jsonify(files=files), 200
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):

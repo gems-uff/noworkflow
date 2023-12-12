@@ -36112,8 +36112,8 @@ class HistoryGraph {
         //let modal = document.getElementById("commandsModal");
         this.buildRestoreTrialCommand(this.modal, this.modalBody);
         this.buildRestoreFileCommand(this.modal, this.modalBody);
-        this.buildProvCommand(this.modal, this.modalBody);
-        this.buildExportCommand(this.modal, this.modalBody, this.config);
+        this.buildProvCommand(this.config);
+        this.buildExportPrologCommand(this.modal, this.modalBody, this.config);
         this.buildDataflowCommand(this.modal, this.modalBody, this.config);
     }
     buildDataflowCommand(modal, modalBody, config) {
@@ -36128,7 +36128,7 @@ class HistoryGraph {
         });
     }
     ;
-    buildExportCommand(modal, modalBody, config) {
+    buildExportPrologCommand(modal, modalBody, config) {
         this.rightClickMenu.append("a")
             .classed("dropdown-item", true)
             .attr("href", "#")
@@ -36139,74 +36139,10 @@ class HistoryGraph {
             let trialId = parent.getAttribute("selected-trial");
             let exportUrl = "/commands/export/" + trialId;
             let exportWindowId = "Export window " + trialId;
-            if (document.getElementById(exportWindowId) != undefined)
-                return;
-            fetch(exportUrl, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            }).then((response) => {
-                response.json().then((json) => {
-                    if (response.status == 200) {
-                        config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), exportWindowId, "Prolog");
-                        let exportWindow = d3_selection_1.select(document.getElementById(exportWindowId));
-                        let form = exportWindow.append("form")
-                            .append("div").classed("form-row", true);
-                        createFormTextInput(form, "exportPrologProgram" + trialId, "Prolog").classed("col-7", true);
-                        createFormTextInput(form, "exportPrologQuery" + trialId, "Query").classed("col", true);
-                        let submitButton = form.append("div").classed("col-auto", true).style("padding-top", "5vh")
-                            .append("button").classed("btn btn-primary mb-2", true).text("Execute Query");
-                        document.getElementById("exportPrologProgram" + trialId).value = json.export;
-                        let prologSession = pl.create(1000);
-                        let answerCallback = (answer, answerString) => {
-                            if (answer == false) {
-                                let answerCardTextId = "Answers prolog card text " + trialId;
-                                let answerCardText = document.getElementById(answerCardTextId) ? d3_selection_1.select(document.getElementById(answerCardTextId)) : null;
-                                if (answerCardText == null) {
-                                    let answerWindow = exportWindow.append("div");
-                                    answerWindow.classed("card", true).append("div").classed("card-header", true).text("Answers");
-                                    answerCardText = answerWindow.append("div").classed("card-body", true)
-                                        .append("p").classed("card-text", true).attr("id", answerCardTextId)
-                                        .style("overflow-y", "auto").style("max-height", "35vh");
-                                }
-                                answerCardText.html(answerString);
-                                return;
-                            }
-                            answerString += prologSession.format_answer(answer).toString() + "<br>";
-                            prologSession.answer((answer) => answerCallback(answer, answerString));
-                        };
-                        submitButton.on("click", () => {
-                            let prologProgram = getTextInputFormByID("exportPrologProgram" + trialId);
-                            let userQuery = getTextInputFormByID("exportPrologQuery" + trialId);
-                            if (prologProgram && userQuery) {
-                                prologSession.consult(prologProgram, {
-                                    success: () => {
-                                        console.log("Prolog consult success");
-                                        prologSession.query(userQuery, {
-                                            success: () => {
-                                                prologSession.answer((answer) => answerCallback(answer, ""));
-                                            },
-                                            error: () => {
-                                                console.log("Erro query");
-                                            }
-                                        });
-                                    },
-                                    error: () => {
-                                        console.log("Prolog consult error");
-                                    }
-                                });
-                            }
-                        });
-                    }
-                    else {
-                        console.log("Export error");
-                    }
-                });
-            });
+            buildExportPrologModal(modal, modalBody, exportUrl, config, parent, exportWindowId, trialId);
         });
     }
-    buildProvCommand(modal, modalBody) {
+    buildProvCommand(config) {
         this.rightClickMenu.append("a")
             .classed("dropdown-item", true)
             .attr("href", "#")
@@ -36215,30 +36151,30 @@ class HistoryGraph {
             .on("click", function () {
             let parent = this.parentNode;
             let trialId = parent.getAttribute("selected-trial");
-            changeTitle(parent, "Prov trial ");
-            showModal(modal);
-            if (modalBody) {
-                let provUrl = "/commands/prov/" + trialId;
-                fetch(provUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                }).then((response) => {
-                    response.json().then((json) => {
-                        if (response.status == 200) {
-                            addAlert(modalBody, "alert-success", "Success!", "Prov exported");
-                            scrollableModal(modalBody);
-                            let prov_lines = json.prov.split("\n");
-                            for (var line in prov_lines)
-                                modalBody.append("p").text(prov_lines[line]);
-                        }
-                        else {
-                            addAlert(modalBody, "alert-danger", "Error!", json.prov);
-                        }
-                    });
+            let provWindowId = "Prov window " + trialId;
+            if (document.getElementById(provWindowId))
+                return;
+            let provUrl = "/commands/prov/" + trialId;
+            fetch(provUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            }).then((response) => {
+                response.json().then((json) => {
+                    config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), provWindowId, "Prov");
+                    let provWindow = d3_selection_1.select(document.getElementById(provWindowId));
+                    if (response.status == 200) {
+                        provWindow.style("overflow-y", "auto");
+                        let prov_lines = json.prov.split("\n");
+                        for (var line in prov_lines)
+                            provWindow.append("p").text(prov_lines[line]);
+                    }
+                    else {
+                        window.alert("No prov to export");
+                    }
                 });
-            }
+            });
         });
     }
     buildRestoreFileCommand(modal, modalBody) {
@@ -36250,26 +36186,39 @@ class HistoryGraph {
             .on("click", function () {
             let parent = this.parentNode;
             let trialId = parent.getAttribute("selected-trial");
-            changeTitle(parent, "Restore file trial ");
-            let submitButton;
-            let form;
-            showModal(modal);
-            if (modalBody) {
-                form = modalBody.append("form");
-                createFormTextInput(form, "restoreFile", "Restore file", "restoreFileHelp", "Write the name of the file you want to restore");
-                createFormTextInput(form, "restoreFileID", "File identifier", "restoreIDHelp", "(optional) Identifies the file to be restored. It can be either the timestamp, the number of access, or the code hash");
-                createFormTextInput(form, "restoreFileTarget", "Target file path", "restoreTargetHelp", "(optional) specifies the target path of the restored file");
-                submitButton = form.append("button").classed("btn btn-primary mb-2", true).attr("type", "submit").text("restore trial");
-            }
-            submitButton === null || submitButton === void 0 ? void 0 : submitButton.on("click", function () {
-                let fileToRestore = getTextInputFormByID("restoreFile", true);
-                let fileIdentifier = getTextInputFormByID("restoreFileID", true);
-                let targetPath = getTextInputFormByID("restoreFileTarget", true);
-                let restoreUrl = "/commands/restore/file/" + trialId + "/" + fileToRestore + "/" + fileIdentifier + "/" + targetPath;
-                if (fileToRestore)
-                    getRestoreOrCollabCommand(restoreUrl, form, modalBody);
-                else
-                    addAlert(modalBody, "alert-danger", "Error!", "The file's name is empty");
+            let trialFiles;
+            fetch("/files/" + trialId, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            }).then((response) => {
+                response.json().then((json) => {
+                    trialFiles = json.files;
+                    changeTitle(parent, "Restore file trial ");
+                    let submitButton;
+                    let form;
+                    showModal(modal);
+                    if (modalBody) {
+                        form = modalBody.append("form");
+                        //createFormTextInput(form, "restoreFile", "Restore file", "restoreFileHelp", "Write the name of the file you want to restore");
+                        createFormSelectInput(form, "restoreFile", "Restore file", 0, trialFiles.length - 1, 0, "", "", trialFiles);
+                        createFormTextInput(form, "restoreFileID", "File identifier", "restoreIDHelp", "(optional) Identifies the file to be restored. It can be either the timestamp, the number of access, or the code hash");
+                        createFormTextInput(form, "restoreFileTarget", "Target file path", "restoreTargetHelp", "(optional) specifies the target path of the restored file");
+                        submitButton = form.append("button").classed("btn btn-primary mb-2", true).attr("type", "submit").text("restore trial");
+                    }
+                    submitButton === null || submitButton === void 0 ? void 0 : submitButton.on("click", function () {
+                        //let fileToRestore : string | boolean = getTextInputFormByID("restoreFile", true);
+                        let fileToRestore = document.getElementById("restoreFile").selectedOptions[0].value;
+                        let fileIdentifier = getTextInputFormByID("restoreFileID", true);
+                        let targetPath = getTextInputFormByID("restoreFileTarget", false);
+                        let restoreUrl = "/commands/restore/file/" + trialId + "/" + fileToRestore + "/" + fileIdentifier + "/" + targetPath;
+                        if (fileToRestore)
+                            getRestoreOrCollabCommand(restoreUrl, form, modalBody);
+                        else
+                            addAlert(modalBody, "alert-danger", "Error!", "The file's name is empty");
+                    });
+                });
             });
         });
     }
@@ -36868,6 +36817,94 @@ class HistoryGraph {
     }
 }
 exports.HistoryGraph = HistoryGraph;
+function buildExportPrologModal(modal, modalBody, exportUrl, config, parent, exportWindowId, trialId) {
+    let submitButton;
+    let form;
+    document.getElementById("exampleModalTitle").textContent = "Prolog";
+    showModal(modal);
+    if (modalBody) {
+        form = modalBody.append("form");
+        createFormCheckInput(form, "exportProvRules", "Also exports inference rules");
+        createFormCheckInput(form, "exportProvHideTimestamps", "Hide timestamps");
+        submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
+    }
+    submitButton === null || submitButton === void 0 ? void 0 : submitButton.on("click", () => {
+        let inferenceRules = document.getElementById("exportProvRules").checked;
+        let hideTimestamps = document.getElementById("exportProvHideTimestamps").checked;
+        exportUrl += "/" + inferenceRules + "/" + hideTimestamps;
+        buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId);
+        cleanModalBodyAndClose(modal, modalBody);
+    });
+}
+function buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId) {
+    if (document.getElementById(exportWindowId)) {
+        window.alert("Close trial " + trialId + " prolog tab before generating a new prolog");
+        return;
+    }
+    fetch(exportUrl, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    }).then((response) => {
+        response.json().then((json) => {
+            if (response.status == 200) {
+                config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), exportWindowId, "Prolog");
+                let exportWindow = d3_selection_1.select(document.getElementById(exportWindowId));
+                let form = exportWindow.append("form")
+                    .append("div").classed("form-row", true);
+                createFormTextInput(form, "exportPrologProgram" + trialId, "Prolog").classed("col-7", true);
+                createFormTextInput(form, "exportPrologQuery" + trialId, "Query").classed("col", true);
+                let submitButton = form.append("div").classed("col-auto", true).style("padding-top", "5vh")
+                    .append("button").classed("btn btn-primary mb-2", true).text("Execute Query");
+                document.getElementById("exportPrologProgram" + trialId).value = json.export;
+                let prologSession = pl.create(1000);
+                let answerCallback = (answer, answerString) => {
+                    if (answer == false) {
+                        let answerCardTextId = "Answers prolog card text " + trialId;
+                        let answerCardText = document.getElementById(answerCardTextId) ? d3_selection_1.select(document.getElementById(answerCardTextId)) : null;
+                        if (answerCardText == null) {
+                            let answerWindow = exportWindow.append("div");
+                            answerWindow.classed("card", true).append("div").classed("card-header", true).text("Answers");
+                            answerCardText = answerWindow.append("div").classed("card-body", true)
+                                .append("p").classed("card-text", true).attr("id", answerCardTextId)
+                                .style("overflow-y", "auto").style("max-height", "35vh");
+                        }
+                        answerCardText.html(answerString);
+                        return;
+                    }
+                    answerString += prologSession.format_answer(answer).toString() + "<br>";
+                    prologSession.answer((answer) => answerCallback(answer, answerString));
+                };
+                submitButton.on("click", () => {
+                    let prologProgram = getTextInputFormByID("exportPrologProgram" + trialId);
+                    let userQuery = getTextInputFormByID("exportPrologQuery" + trialId);
+                    if (prologProgram && userQuery) {
+                        prologSession.consult(prologProgram, {
+                            success: () => {
+                                console.log("Prolog consult success");
+                                prologSession.query(userQuery, {
+                                    success: () => {
+                                        prologSession.answer((answer) => answerCallback(answer, ""));
+                                    },
+                                    error: () => {
+                                        console.log("Erro query");
+                                    }
+                                });
+                            },
+                            error: () => {
+                                console.log("Prolog consult error");
+                            }
+                        });
+                    }
+                });
+            }
+            else {
+                console.log("Export error");
+            }
+        });
+    });
+}
 function scrollableModal(modalBody) {
     let modalDialog = document.getElementsByClassName("modal-dialog")[0];
     modalDialog.style.overflowY = "initial";
@@ -36967,7 +37004,7 @@ function getRestoreOrCollabCommand(restoreUrl, form, modalBody) {
     }).then((response) => {
         response.json().then((json) => {
             form.remove();
-            if (response.status == 200) {
+            if (response.status == 200 && (!json.terminal_text.includes("not"))) {
                 addAlert(modalBody, "alert-success", "Success!", json.terminal_text);
             }
             else {
