@@ -146,7 +146,7 @@ class PrologNullable(PrologAttribute):
     def fact(self, obj):
         """Replace None by nil if attribute self.attr_name of obj"""
         value = self.value(obj)
-        if(self.name == 'parent_id'): value = "'{}'".format(value.replace("'", "''"))
+        if(self.name == 'parent_id') and value is not None: value = "'{}'".format(value.replace("'", "''"))
         return str(value) if value is not None else "nil"
 
 

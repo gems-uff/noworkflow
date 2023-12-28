@@ -36826,7 +36826,7 @@ function buildExportPrologModal(modal, modalBody, exportUrl, config, parent, exp
         form = modalBody.append("form");
         createFormCheckInput(form, "exportProvRules", "Also exports inference rules");
         createFormCheckInput(form, "exportProvHideTimestamps", "Hide timestamps");
-        submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
+        submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate prolog");
     }
     submitButton === null || submitButton === void 0 ? void 0 : submitButton.on("click", () => {
         let inferenceRules = document.getElementById("exportProvRules").checked;

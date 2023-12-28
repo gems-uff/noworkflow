@@ -1052,7 +1052,7 @@ function buildExportPrologModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement
     createFormCheckInput(form, "exportProvRules", "Also exports inference rules");
     createFormCheckInput(form, "exportProvHideTimestamps", "Hide timestamps");
 
-    submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
+    submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate prolog");
 
   }
 

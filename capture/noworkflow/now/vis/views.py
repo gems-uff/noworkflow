@@ -115,10 +115,13 @@ def index(tid=None, graph_mode=None,expcode=None):
 @app.route("/experiments/<expCode>/collab/bundle", methods=['GET'])
 def getBundle(expCode):
     """Return bundle with trials from trials ids"""
-    trialsToExport=request.args.getlist("id")
-    bundle=export_bundle(trialsToExport)
-    resp=bundle.__json__()
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        trialsToExport=request.args.getlist("id")
+        bundle=export_bundle(trialsToExport)
+        resp=bundle.__json__()
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
 
 @app.route("/experiments", methods=['Post'])
 def createExperiment():
@@ -218,27 +221,33 @@ def getUsers():
 @app.route("/experiments/<expCode>/collab/bundle", methods=['Post'])
 def postBundle(expCode):
     """Import Bundle of trials"""
-    data =  getRequestContent()
-    bundle=BundleLW()
-    bundle.from_json(data)
-    import_bundle(bundle, expCode)
-    return "",201
+    if experiment_in_db(expCode=expCode):
+        data =  getRequestContent()
+        bundle=BundleLW()
+        bundle.from_json(data)
+        import_bundle(bundle, expCode)
+        return "",201
+    
+    return return_json_error_invalid_experiment_id()
 
 @app.route("/experiments/<expCode>/collab/files", methods=['Post'])
 def receiveFiles(expCode):
     """Receive zipped files"""
-
-    file=request.files['files']
-    filedata=file.read()
     
-    zF=BytesIO(filedata)
-    zipObj = ZipFile(zF, 'r')
-    for fName in zipObj.namelist():
-        content.put(zipObj.read(fName), fName)
+    if experiment_in_db(expCode=expCode):
+        file=request.files['files']
+        filedata=file.read()
+        
+        zF=BytesIO(filedata)
+        zipObj = ZipFile(zF, 'r')
+        for fName in zipObj.namelist():
+            content.put(zipObj.read(fName), fName)
 
-    zipObj.close()
-    zF.close()
-    return "",201
+        zipObj.close()
+        zF.close()
+        return "",201
+    
+    return return_json_error_invalid_experiment_id()
 
 @app.route("/experiments/<expCode>/collab/files/<fid>", methods=['Get'])
 def downloadFile(expCode,fid):
@@ -246,22 +255,39 @@ def downloadFile(expCode,fid):
     resp=content.get(fid)
     return send_file(IO(resp),mimetype='application/octet-stream')
 
+def experiment_in_db(expCode):
+    return len(relational.session.query(Experiment.m).filter(Experiment.m.id == expCode).all()) == 1
+
 @app.route("/experiments/<expCode>/collab/files", methods=['Get'])
 def listFiles(expCode):
     """Respond files hash"""
-    resp=content.listAll()
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        resp=content.listAll()
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
 
 @app.route("/experiments/<expCode>/collab/trialsids")
 def trialsId(expCode):
     """Respond trials ids"""
-    resp=[t.id for t in Trial.list_from_experiment(expCode)]
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        resp=[t.id for t in Trial.list_from_experiment(expCode)]
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
+
+
 @app.route("/experiments/<expCode>/collab/usersids")
 def usersId(expCode):
     """Respond users ids"""
-    resp=[u.id for u in User.all()]
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        resp=[u.id for u in User.all()]
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
+
+def return_json_error_invalid_experiment_id():
+    return jsonify("Invalid experiment ID"), 400
 
 @app.route("/experiments/<expId>/trials.json")
 @app.route("/trials.json")
@@ -492,26 +518,24 @@ def execute_command_export(trial_id, rules, hide_timestamps):
 @app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>")
 def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_accesses, evaluation, group, depth, value_length, name, mode):
     """Execute the command 'now export'"""
-    export_command = ("now dataflow " + trial_id).split()
+    dataflow_command = ("now dataflow " + trial_id).split()
     
-    if argument_T == "true": export_command.append("-T")
-    if argument_t == "true": export_command.append("-t")
-    if argument_H == "true": export_command.append("-H")
+    if argument_T == "true": dataflow_command.append("-T")
+    if argument_t == "true": dataflow_command.append("-t")
+    if argument_H == "true": dataflow_command.append("-H")
     
-    appendDataflowCommandWithParameters(export_command, "-a", file_accesses, 0, 4, 1)
-    appendDataflowCommandWithParameters(export_command, "-e", evaluation, 0, 2, 1)
-    appendDataflowCommandWithParameters(export_command, "-g", group, 0, 2, 0)
-    appendDataflowCommandWithParameters(export_command, "-d", depth, 0, float('inf'), 0)
-    appendDataflowCommandWithParameters(export_command, "--value-length", value_length, 0, float('inf'), 0)
-    appendDataflowCommandWithParameters(export_command, "-n", name, 0, float('inf'), 55)
+    appendDataflowCommandWithParameters(dataflow_command, "-a", file_accesses, 0, 4, 1)
+    appendDataflowCommandWithParameters(dataflow_command, "-e", evaluation, 0, 2, 1)
+    appendDataflowCommandWithParameters(dataflow_command, "-g", group, 0, 2, 0)
+    appendDataflowCommandWithParameters(dataflow_command, "-d", depth, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(dataflow_command, "--value-length", value_length, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(dataflow_command, "-n", name, 0, float('inf'), 55)
 
-    export_command.append("-m")
-    if mode in ["simulation", "activation" , "dependency"]: export_command.append(mode)
-    else: export_command.append("prospective")
+    dataflow_command.append("-m")
+    if mode in ["simulation", "activation" , "dependency"]: dataflow_command.append(mode)
+    else: dataflow_command.append("prospective")
     
-    print(export_command)
-    
-    sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
+    sub_process_print = subprocess.run(dataflow_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(dataflow=sub_process_print), 200
 
 def appendDataflowCommandWithParameters(export_command, command, parameter_value, min_value, max_value, default_value):
@@ -528,7 +552,11 @@ def execute_command_push_experiment(collab_command, expCode, serverUrl):
     
     if(len(sub_process.stderr)): return jsonify(terminal_text="Invalid server address"), 400
     
-    return jsonify(terminal_text=sub_process.stdout.decode("utf-8")), 200
+    sub_process_print = sub_process.stdout.decode("utf-8")
+    status_code = 200
+    if return_json_error_invalid_experiment_id()[0].json in sub_process_print: status_code = 400       
+    
+    return jsonify(terminal_text=sub_process_print), status_code
 
 @app.route("/files/<trial_id>")
 def get_files_belonging_to_trial(trial_id):   
