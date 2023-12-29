@@ -43,7 +43,19 @@ class ProjectWidget extends Widget {
     item.append("th").attr("scope","row").text(exp.id);
     item.append("td").text(exp.name);
     item.append("td").text(exp.description);
-    item.append("td").append("a").attr("href",link).text(link);   
+    item.append("td").append("a").attr("href",link).text(link);
+
+    let cloneCommandText = "now pull --url " + link;
+    item.append("td").text( cloneCommandText + " ").append("i").classed("fa fa-clone", true).attr("aria-hidden", "true")
+      .attr("id", exp.id + "CopyIcon").on("click", ()=> {
+        navigator.clipboard.writeText(cloneCommandText)
+        .then(()=>{
+          let divCopied = d3_select(document.getElementById(exp.id + "CopyIcon")!)
+            .append("small").classed("alert alert-secondary p-0", true).text("Copied!");
+          setTimeout(()=>{divCopied.remove()}, 3000);
+        });
+      });
+
   }
   addFormInput(form:d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
       fieldId:string,fieldLabel:string,fieldType:string){
@@ -110,6 +122,9 @@ class ProjectWidget extends Widget {
     header.append("th").attr("scope","col").text("name");
     header.append("th").attr("scope","col").text("description");
     header.append("th").attr("scope","col").text("url");
+    header.append("th").attr("scope", "col").html("<i class=\"fa fa-terminal\" aria-hidden=\"true\"></i> clone ")
+      .append("i").classed("fa fa-question-circle-o", true).attr("aria-hidden", "true")
+        .attr("title", "Run this command on the command line, in the desired folder, to clone the experiment.");
     
     this.expTBody=table.append("tbody");
 
