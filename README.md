@@ -1,7 +1,7 @@
 noWorkflow
 ==========
 
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 Copyright (c) 2016 Universidade Federal Fluminense (UFF).
 Copyright (c) 2016 Polytechnic Institute of New York University.
@@ -24,13 +24,18 @@ The main noWorkflow team is composed by researchers from Universidade Federal Fl
 - Juliana Freire (NYU)
 - Leonardo Murta (UFF)
 - Vanessa Braganholo (UFF)
-- Eduardo Jandre (UFF)
+- Arthur Paiva (UFF)
 
 Collaborators
 
 - David Koop (University of Massachusetts Dartmouth)
 - Fernando Chirigati (NYU)
 - Paolo Missier (Newcastle University)
+- Vynicius Pontes (UFF)
+- Henrique Linhares (UFF)
+- Eduardo Jandre (UFF)
+- Jessé Lima
+
 
 Publications
 ------------
