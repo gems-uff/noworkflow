@@ -2,6 +2,7 @@ noWorkflow
 ==========
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+
 Copyright (c) 2016 Universidade Federal Fluminense (UFF).
 Copyright (c) 2016 Polytechnic Institute of New York University.
 All rights reserved.
