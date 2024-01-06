@@ -29,7 +29,6 @@ from .structures import DependencyAware, Dependency, Parameter
 from .structures import MemberDependencyAware, CollectionDependencyAware
 from .structures import ConditionExceptions, WithContext
 
-
 OPEN_MODES = {
     # All
     "O_RDONLY": "r",
@@ -84,6 +83,7 @@ class Collector(object):
         self.dependencies = self.metascript.dependencies_store
         self.members = self.metascript.members_store
         self.file_accesses = self.metascript.file_accesses_store
+        self.stage_tagss = self.metascript.stage_tags_store
 
         self.exceptions = self.metascript.exceptions_store
         # Partial save
@@ -122,6 +122,7 @@ class Collector(object):
         self.iphistory = {}
 
     def get_value(self, value):
+        #ipdb.set_trace()
         """Get value representation from value"""
         repr_fn = repr
         if type(value) is not type:
@@ -178,6 +179,7 @@ class Collector(object):
 
                 file_access.mode = mode
             activation.file_accesses.append(file_access)
+    
             return old_open(name, *args, **kwargs)
 
         return open
@@ -586,18 +588,19 @@ class Collector(object):
             if '_' in activation.context:
                 activation.context['__'] = activation.context['_']
                 del activation.context['_']
-            if value:
-                activation.context['_'] = evaluation
-                activation.context['_{}'.format(self.ipcell)] = evaluation
-                self.iphistory[self.ipcell] = evaluation
-                out = activation.context['Out']
-                attr = "[{}]".format(self.ipcell)
-                out.members[attr] = evaluation
-                self.members.add_object(
-                    self.trial_id, out.activation_id, out.id,
-                    evaluation.activation_id, evaluation.id, attr, 
-                    evaluation.checkpoint, "Put"
-                )
+            if hasattr(value, 'any'):
+                if value is not None:
+                    activation.context['_'] = evaluation
+                    activation.context['_{}'.format(self.ipcell)] = evaluation
+                    self.iphistory[self.ipcell] = evaluation
+                    out = activation.context['Out']
+                    attr = "[{}]".format(self.ipcell)
+                    out.members[attr] = evaluation
+                    self.members.add_object(
+                        self.trial_id, out.activation_id, out.id,
+                        evaluation.activation_id, evaluation.id, attr, 
+                        evaluation.checkpoint, "Put"
+                    )
         #if activation.active:
         #    self.eval_dep(activation, code_id, value, mode, depa)
         return value
@@ -1956,6 +1959,7 @@ class Collector(object):
         metascript.dependencies_store.do_store(partial)
         metascript.members_store.do_store(partial)
         metascript.file_accesses_store.do_store(partial)
+        metascript.stage_tags_store.do_store(partial)
 
         now = self.get_time()
         if not partial:
