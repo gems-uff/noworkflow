@@ -51,8 +51,8 @@ setup(
     keywords="scientific experiments provenance python",
     url="https://github.com/gems-uff/noworkflow",
     install_requires=[
-        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy>=1.4.29,<2", "parameterized",
-        "requests", "ipykernel",
+        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy>=1.4.29,<=1.4.47", "parameterized",
+        "requests", "ipykernel", "zipp==3.15", "importlib-metadata==6.4.1", "typing-extensions==4.5.0"
     ],
     extras_require={
         "demo": ["flask==2.1.3", "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
