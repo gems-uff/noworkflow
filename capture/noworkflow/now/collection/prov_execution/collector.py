@@ -1351,9 +1351,12 @@ class Collector(object):
                     result = _call(*args, **kwargs)
                     if function_def.__name__ == "__enter__":
                         # ToDo: check the proper __enter__ assignment
-                        activation.assignments[-1].dependency.dependencies.extend(
-                            self.last_activation.dependencies[-1].dependencies
-                        )
+                        try:
+                            activation.assignments[-1].dependency.dependencies.extend(
+                                self.last_activation.dependencies[-1].dependencies
+                            )
+                        except AttributeError:
+                            pass
                     if is_augassign:
                         activation.dependencies.pop()
                     return result
@@ -1602,6 +1605,10 @@ class Collector(object):
                 if not param.is_vararg:
                     param.filled = True
                     last_unfilled += 1
+                if (((function_def.__name__ == "__enter__") or (function_def.__name__ == "__exit__")) 
+                    and (last_unfilled >= len(parameter_order))):
+                    break
+       
 
         if vararg:
             parameters[vararg[0]].filled = True
