@@ -35991,10 +35991,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 /*!*******************************!*\
   !*** ../history/lib/graph.js ***!
   \*******************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HistoryGraph = void 0;
 __webpack_require__(/*! d3-transition */ "../../node_modules/d3-transition/src/index.js");
@@ -36251,28 +36260,120 @@ class HistoryGraph {
             });
         });
     }
-    buildPushCommand(modal, modalBody) {
-        this.executeCollabCommand(modal, modalBody, "pushExperimentId", "pushServerUrlId", "Push experiment", "push");
-    }
-    buildPullCommand(modal, modalBody) {
-        this.executeCollabCommand(modal, modalBody, "pullExperimentId", "pullServerUrlId", "Pull experiment", "pull");
-    }
-    executeCollabCommand(modal, modalBody, inputExperimentId, inputServerUrlId, title, command) {
-        document.getElementById("exampleModalTitle").textContent = title;
+    buildAddRemote(modal, modalBody) {
+        document.getElementById("exampleModalTitle").textContent = "Add new remote";
         let submitButton;
         let form;
         showModal(modal);
         if (modalBody) {
             form = modalBody.append("form");
-            createFormTextInput(form, inputExperimentId, "Experiment Id: ");
-            createFormTextInput(form, inputServerUrlId, "Server Url: ");
-            submitButton = form.append("button").classed("btn btn-primary mb-2", true).text(title);
-            document.getElementById(inputServerUrlId).value = window.location.origin;
+            createFormTextInput(form, "inputAddRemoteUrl", "Remote URL: ");
+            createFormTextInput(form, "inputAddRemoteName", "Remote name: ");
+            submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Add remote");
         }
         submitButton === null || submitButton === void 0 ? void 0 : submitButton.on("click", function () {
-            let experimentId = document.getElementById(inputExperimentId).value;
-            let serverUrl = document.getElementById(inputServerUrlId).value;
-            let collabCommandUrl = "/commands/" + command + "/" + experimentId + "/" + serverUrl;
+            let remoteURL = document.getElementById("inputAddRemoteUrl").value;
+            let remoteName = document.getElementById("inputAddRemoteName").value;
+            let addRemoteURL = "/collab/remotes/add/" + remoteName + "/" + remoteURL;
+            fetch(addRemoteURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            }).then((response) => {
+                response.json().then((json) => {
+                    form.remove();
+                    if (response.status == 200) {
+                        addAlert(modalBody, "alert-success", "Success!", json.terminal_text);
+                    }
+                    else {
+                        addAlert(modalBody, "alert-danger", "Error!", "");
+                    }
+                });
+            });
+        });
+    }
+    buildEditRemote(modal, modalBody) {
+        fetch("/collab/remotes/getall", {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        }).then((response) => {
+            response.json().then((json) => __awaiter(this, void 0, void 0, function* () {
+                if (response.status == 200) {
+                    this.executeCollabCommand(modal, modalBody, "editRemoteServerUrlId", "Edit remote", "edit", json.remotes);
+                }
+                else {
+                    console.log("Failed to get remotes");
+                }
+            }));
+        });
+    }
+    buildPushCommand(modal, modalBody) {
+        fetch("/collab/remotes/getall", {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        }).then((response) => {
+            response.json().then((json) => __awaiter(this, void 0, void 0, function* () {
+                if (response.status == 200) {
+                    this.executeCollabCommand(modal, modalBody, "pushServerUrlId", "Push experiment", "push", json.remotes);
+                }
+                else {
+                    console.log("Failed to get remotes");
+                }
+            }));
+        });
+    }
+    buildPullCommand(modal, modalBody) {
+        fetch("/collab/remotes/getall", {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        }).then((response) => {
+            response.json().then((json) => __awaiter(this, void 0, void 0, function* () {
+                if (response.status == 200) {
+                    this.executeCollabCommand(modal, modalBody, "pullServerUrlId", "Pull experiment", "pull", json.remotes);
+                }
+                else {
+                    console.log("Failed to get remotes");
+                }
+            }));
+        });
+    }
+    executeCollabCommand(modal, modalBody, serverUrlId, title, command, remotes) {
+        document.getElementById("exampleModalTitle").textContent = title;
+        let submitButton;
+        let form;
+        showModal(modal);
+        let select;
+        if (modalBody) {
+            form = modalBody.append("form").attr("onsubmit", "return false;");
+            form.append("label").attr("for", "remotes").text("Remote: ");
+            select = form.append("select").attr("name", "remotes").attr("id", "remotes");
+            for (let i = 0; i < remotes.length; i++) {
+                select.append("option").attr("value", remotes[i].server_url).text(remotes[i].name);
+            }
+            form.append("br");
+            form.append("span").text("Remote URL: ");
+            let remoteURLText = form.append("span").attr("id", serverUrlId + "Remote").text(remotes[0].server_url);
+            select.on("change", () => {
+                remoteURLText.text(select.node().value);
+            });
+            form.append("br");
+            if (command == "edit") {
+                createFormTextInput(form, "inputEditRemoteName", "Remote new name: ");
+            }
+            submitButton = form.append("button").classed("btn btn-primary mb-2", true).text(title);
+        }
+        submitButton === null || submitButton === void 0 ? void 0 : submitButton.on("click", function () {
+            let serverUrl = select.node().value;
+            let collabCommandUrl = "/commands/" + command + "/" + serverUrl;
+            if (command == "edit")
+                collabCommandUrl = "/collab/remotes/edit/" + document.getElementById("inputEditRemoteName").value + "/" + serverUrl;
             getRestoreOrCollabCommand(collabCommandUrl, form, modalBody);
         });
     }
@@ -36367,6 +36468,24 @@ class HistoryGraph {
             .on("click", () => this.buildPullCommand(this.modal, this.modalBody))
             .append("i")
             .classed("fa fa-cloud-download", true);
+        // Add remote
+        formdiv.append("a")
+            .classed("toollink", true)
+            .attr("id", "history-" + this.graphId + "-add-remote")
+            .attr("href", "#")
+            .attr("title", "Add remote")
+            .on("click", () => this.buildAddRemote(this.modal, this.modalBody))
+            .append("i")
+            .classed("fa fa-plus-circle", true);
+        // Edit remote
+        formdiv.append("a")
+            .classed("toollink", true)
+            .attr("id", "history-" + this.graphId + "-add-remote")
+            .attr("href", "#")
+            .attr("title", "Edit remote")
+            .on("click", () => this.buildEditRemote(this.modal, this.modalBody))
+            .append("i")
+            .classed("fa fa-pencil-square", true);
         formdiv.append("div");
         formdiv.append("div")
             .text(this.config.hintMessage)
@@ -36936,7 +37055,7 @@ function buildDataflowModal(modal, modalBody, parent, config) {
     showModal(modal);
     if (modalBody) {
         scrollableModal(modalBody);
-        form = modalBody.append("form");
+        form = modalBody.append("form").attr("onsubmit", "return false;");
         createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
         createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
         createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
@@ -36995,8 +37114,8 @@ function downloadDataflow(dataflowWindow, dataflowWindowId) {
         .append("i")
         .classed("fa fa-download", true);
 }
-function getRestoreOrCollabCommand(restoreUrl, form, modalBody) {
-    fetch(restoreUrl, {
+function getRestoreOrCollabCommand(serverUrl, form, modalBody) {
+    fetch(serverUrl, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -37004,7 +37123,7 @@ function getRestoreOrCollabCommand(restoreUrl, form, modalBody) {
     }).then((response) => {
         response.json().then((json) => {
             form.remove();
-            if (response.status == 200 && (!json.terminal_text.includes("not"))) {
+            if (response.status == 200 && (!json.terminal_text.includes("not") || (serverUrl.includes("edit")))) {
                 addAlert(modalBody, "alert-success", "Success!", json.terminal_text);
             }
             else {

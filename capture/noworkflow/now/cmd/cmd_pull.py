@@ -11,7 +11,7 @@ from ..persistence import persistence_config
 from ..utils.collab import export_bundle,import_bundle
 from ..utils.compression import gzip_uncompress
 from ..persistence.lightweight import BundleLW
-from ..persistence.models import Trial
+from ..persistence.models import Trial, Remote
 from ..persistence import content
 
 from .command import Command
@@ -95,10 +95,6 @@ class Pull(Command):
         print("Importing trials")
         importTrialsSuccess = self.importTrials(self.url)
         
-        if importFilesSuccess and importTrialsSuccess: print("Pulled successfully")
-
-        
-       
-
-
-
+        if importFilesSuccess and importTrialsSuccess:
+            Remote.create(self.url, self.url.split("/experiments/")[-1])
+            print("Pulled successfully")

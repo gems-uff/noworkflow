@@ -13,8 +13,8 @@ import json
 from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module
-from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW
+from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote
+from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational, content
@@ -542,11 +542,29 @@ def appendDataflowCommandWithParameters(export_command, command, parameter_value
     export_command.append(command)
     if int(parameter_value) > max_value or int(parameter_value) < min_value: export_command.append(str(default_value))
     else: export_command.append(str(parameter_value))
+    
+@app.route("/collab/remotes/getall")
+def get_all_remotes():
+    return jsonify(remotes=[RemoteLW(x.id, x.server_url, x.name).__json__() for x in Remote.all()]), 200
 
-@app.route("/commands/<collab_command>/<expCode>/<path:serverUrl>")
-def execute_command_push_experiment(collab_command, expCode, serverUrl):
+@app.route("/collab/remotes/add/<remote_name>/<path:remote_url>", methods=['Post'])
+def add_remote(remote_name, remote_url):
+    Remote.create(remote_url, remote_name)
+    return jsonify(terminal_text="Remote " + remote_name + " added successfully"), 200
+
+@app.route("/collab/remotes/edit/<remote_new_name>/<path:remote_url>")
+def edit_remote(remote_new_name, remote_url):
+    remote_url_list = relational.session.query(Remote.m).filter(Remote.m.server_url == remote_url).all()
+    if(len(remote_url) <= 0): return jsonify(text="Remote url " + remote_url  + " not found"), 400
+    remote = remote_url_list[0]
+    remote.name = remote_new_name
+    relational.session.commit()
+    return jsonify(terminal_text="Remote "+ remote_url + " name changed successfully to " + remote_new_name), 200
+
+@app.route("/commands/<collab_command>/<path:serverUrl>")
+def execute_command_push_experiment(collab_command, serverUrl):
     """Execute the command 'now push'"""
-    push_command = ("now " + collab_command + " --url " + serverUrl + "/experiments/" + expCode).split()
+    push_command = ("now " + collab_command + " --url " + serverUrl).split()
     
     sub_process = subprocess.run(push_command, capture_output=True)
     
