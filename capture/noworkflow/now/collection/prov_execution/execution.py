@@ -20,6 +20,11 @@ from ...utils.metaprofiler import meta_profiler
 from .debugger import debugger_builtins
 from .collector import Collector
 
+from noworkflow.now.persistence.models import Evaluation, Activation
+from noworkflow.now.models.dependency_querier import DependencyQuerier
+from noworkflow.now.models.dependency_querier.node_context import NodeContext
+from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
+from noworkflow.now.tagging.var_tagging import now_cell, now_variable
 
 class Execution(object):
     """Execution Class"""
@@ -30,17 +35,31 @@ class Execution(object):
         self.partial = False
         self.force_msg = False
         self.msg = ""
-
+        
     def configure(self):
         """Configure execution provenance collection"""
         self.collector.trial_id = self.metascript.trial_id
         builtin = self.metascript.namespace["__builtins__"]
+
+
         try:
             builtin["__noworkflow__"] = self.collector
             builtin["open"] = self.collector.new_open(content.std_open)
+            builtin["now_tag"] = now_cell
+            builtin["now_variable"] = now_variable
+            builtin["tagged_var_dict"] = {} #todo: keep it here?
+            builtin["body_function_def"] = [] #todo: keep it here?
+            builtin["dep_dict"] = {} #todo: keep it here?
+            
         except TypeError:
             builtin.__noworkflow__ = self.collector
             builtin.open = self.collector.new_open(content.std_open)
+            builtin.now_tag = now_cell
+            builtin.now_variable = now_variable
+            builtin.tagged_var_dict = {} #todo: keep it here?
+            builtin.body_function_def = [] #todo: keep it here?
+            builtin.dep_dict = {} #todo: keep it here?
+            
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)
         os.open = self.collector.new_open(content.os_open, osopen=True)
