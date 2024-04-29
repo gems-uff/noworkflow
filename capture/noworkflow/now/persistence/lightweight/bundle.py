@@ -73,6 +73,6 @@ class BundleLW(BaseLW):
             x["content_hash_before"],x["content_hash_after"],x["activation_id"]) for x in data["fileAccesses"]]
         self.members=[MemberLW(x["id"],x["trial_id"],x["collection_activation_id"],x["collection_id"],x["member_activation_id"],\
             x["member_id"],x["key"],x["checkpoint"],x["type"]) for x in data["members"]]
-        self.modules=[ModuleLW(x["id"],x["trial_id"],x["name"],x["version"],x["path"],x["code_block_id"],x["transformed"]) for x in data["modules"]]
+        self.modules=[ModuleLW(x["id"],x["trial_id"],x["name"],x["version"],x["path"],x["code_block_id"],x["transformed"], x["fullpath"]) for x in data["modules"]]
         self.users=[UserLW(x["id"],x["userLogin"]) for x in data["users"]]
   

@@ -36209,7 +36209,7 @@ class HistoryGraph {
                     let form;
                     showModal(modal);
                     if (modalBody) {
-                        form = modalBody.append("form");
+                        form = modalBody.append("form").attr("onsubmit", "return false;");
                         //createFormTextInput(form, "restoreFile", "Restore file", "restoreFileHelp", "Write the name of the file you want to restore");
                         createFormSelectInput(form, "restoreFile", "Restore file", 0, trialFiles.length - 1, 0, "", "", trialFiles);
                         createFormTextInput(form, "restoreFileID", "File identifier", "restoreIDHelp", "(optional) Identifies the file to be restored. It can be either the timestamp, the number of access, or the code hash");
@@ -36266,7 +36266,7 @@ class HistoryGraph {
         let form;
         showModal(modal);
         if (modalBody) {
-            form = modalBody.append("form");
+            form = modalBody.append("form").attr("onsubmit", "return false;");
             createFormTextInput(form, "inputAddRemoteUrl", "Remote URL: ");
             createFormTextInput(form, "inputAddRemoteName", "Remote name: ");
             submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Add remote");
@@ -36942,7 +36942,7 @@ function buildExportPrologModal(modal, modalBody, exportUrl, config, parent, exp
     document.getElementById("exampleModalTitle").textContent = "Prolog";
     showModal(modal);
     if (modalBody) {
-        form = modalBody.append("form");
+        form = modalBody.append("form").attr("onsubmit", "return false;");
         createFormCheckInput(form, "exportProvRules", "Also exports inference rules");
         createFormCheckInput(form, "exportProvHideTimestamps", "Hide timestamps");
         submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate prolog");
@@ -36970,7 +36970,7 @@ function buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId
             if (response.status == 200) {
                 config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), exportWindowId, "Prolog");
                 let exportWindow = d3_selection_1.select(document.getElementById(exportWindowId));
-                let form = exportWindow.append("form")
+                let form = exportWindow.append("form").attr("onsubmit", "return false;")
                     .append("div").classed("form-row", true);
                 createFormTextInput(form, "exportPrologProgram" + trialId, "Prolog").classed("col-7", true);
                 createFormTextInput(form, "exportPrologQuery" + trialId, "Query").classed("col", true);

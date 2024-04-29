@@ -1221,7 +1221,7 @@ function buildExportPrologTab(exportUrl: string, config: HistoryConfig, parent: 
         config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified")!, exportWindowId, "Prolog");
         let exportWindow = d3_select(document.getElementById(exportWindowId));
 
-        let form: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any> = (exportWindow.append("form") as d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>)
+        let form: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any> = (exportWindow.append("form").attr("onsubmit", "return false;") as d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>)
           .append("div").classed("form-row", true);
         createFormTextInput(form, "exportPrologProgram" + trialId, "Prolog").classed("col-7", true);
         createFormTextInput(form, "exportPrologQuery" + trialId, "Query").classed("col", true);
