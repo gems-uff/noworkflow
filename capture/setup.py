@@ -55,9 +55,9 @@ setup(
         "requests", "ipykernel",
     ],
     extras_require={
-        "demo": ["flask==2.1.3", "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
+        "demo": ["flask==2.1.3", "werkzeug==2.3.7", "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
         "notebook": ["pyposast", "ipython", "jupyter"],
-        "all": ["pyposast", "ipython", "jupyter", "flask==2.1.3", "pyswip-alt", 
+        "all": ["pyposast", "ipython", "jupyter", "flask==2.1.3", "werkzeug==2.3.7", "pyswip-alt", 
                 "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
     },
     classifiers=[
