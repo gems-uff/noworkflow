@@ -4,6 +4,12 @@
 # Please, consult the license terms in the LICENSE file.
 """Filters for dependency graph"""
 
+from argparse import Namespace
+
+from ...persistence.models.base import proxy_gen, proxy
+
+from  ...cmd.cmd_evaluation import query_evaluations, Evaluation as EvaluationPrint
+
 from .node_types import AccessNode, ClusterNode
 from .node_types import EvaluationNode
 
@@ -85,6 +91,38 @@ class FilterTypesOut(AcceptAllNodesFilter):
         if isinstance(node, EvaluationNode):
             return not node.is_type
         return super(FilterTypesOut, self).__contains__(node)
+    
+class FilterWasDerivedFrom(AcceptAllNodesFilter):
+    """Filter that accepts only one evaluation and the ones that derived it"""
+    # pylint: disable=too-few-public-methods
+    was_derived_from_list = None
+    def __init__(self, eid, trial):
+        if self.was_derived_from_list is None:
+            # TODO This class is being disnecessarily instantiated twice
+            self.was_derived_from_list = self.get_was_derived_from_list(eid, trial)
+        
+    def __contains__(self, node):
+        if isinstance(node, EvaluationNode):
+            return not node.evaluation not in self.was_derived_from_list
+        return super(FilterWasDerivedFrom, self).__contains__(node)
+    
+    def get_was_derived_from_list(self, eid, trial):
+        args = Namespace(trial=trial, eid=eid, wdf_trial=trial)
+        
+        evaluation = proxy(query_evaluations(args)[0])
+        
+        if not evaluation:
+            print("No evaluation found")
+            return
+        
+        check_dependencies = list(proxy_gen(query_evaluations(args, prefix="wdf_")))
+
+        derived_from = evaluation.was_derived_from(check_dependencies, distinguish=True)
+        derived_list = []
+        for other, derived in derived_from.items():
+            if derived: derived_list.append(other)
+        derived_list.append(evaluation)
+        return derived_list
 
 
 class _JoinedFilterAttribute(object):

@@ -13,8 +13,8 @@ import json
 from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote
-from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW
+from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent
+from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..persistence import relational, content
@@ -515,14 +515,17 @@ def execute_command_export(trial_id, rules, hide_timestamps):
     sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(export=sub_process_print), 200
 
-@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>")
-def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_accesses, evaluation, group, depth, value_length, name, mode):
+@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
+def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
     """Execute the command 'now export'"""
     dataflow_command = ("now dataflow " + trial_id).split()
     
     if argument_T == "true": dataflow_command.append("-T")
     if argument_t == "true": dataflow_command.append("-t")
     if argument_H == "true": dataflow_command.append("-H")
+    if wdf == "true":
+        dataflow_command.append("-w")
+        dataflow_command.append(eid)
     
     appendDataflowCommandWithParameters(dataflow_command, "-a", file_accesses, 0, 4, 1)
     appendDataflowCommandWithParameters(dataflow_command, "-e", evaluation, 0, 2, 1)
@@ -542,6 +545,15 @@ def appendDataflowCommandWithParameters(export_command, command, parameter_value
     export_command.append(command)
     if int(parameter_value) > max_value or int(parameter_value) < min_value: export_command.append(str(default_value))
     else: export_command.append(str(parameter_value))
+
+@app.route("/dataflow/evaluations/<trial_id>")
+def get_evaluations_from_trial(trial_id):
+    from sqlalchemy import or_
+    evaluations_query = relational.session.query(Evaluation.m.id, CodeComponent.m.name, CodeComponent.m.first_char_line).filter(
+            Evaluation.m.trial_id==trial_id, 
+            Evaluation.m.code_component_id == CodeComponent.m.id, 
+            CodeComponent.m.trial_id == trial_id).all()
+    return jsonify(evaluations=[{"evaluation_id": x[0], "name": x[1], "first_char_line": x[2]} for x in evaluations_query]), 200
     
 @app.route("/collab/remotes/getall")
 def get_all_remotes():

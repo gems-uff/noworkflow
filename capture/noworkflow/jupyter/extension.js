@@ -36133,7 +36133,8 @@ class HistoryGraph {
             .text("export dataflow")
             .on("click", function () {
             let parent = this.parentNode;
-            buildDataflowModal(modal, modalBody, parent, config);
+            let trialId = parent.getAttribute("selected-trial");
+            buildDataflowModal(modal, modalBody, parent, config, trialId);
         });
     }
     ;
@@ -37039,8 +37040,27 @@ function getDataflow(response, config, parent, dataflowWindowId) {
                 const dataflowWindow = document.getElementById(dataflowWindowId);
                 // Download SVG Button
                 downloadDataflow(dataflowWindow, dataflowWindowId);
+                let selectedNode;
                 dataflowWindow.style.overflowY = dataflowWindow.style.overflowX = "auto";
-                dataflowWindow.appendChild(viz.renderSVGElement(json.dataflow));
+                let svgElement = viz.renderSVGElement(json.dataflow);
+                for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children.length; nodeIndex++) {
+                    let presentNode = svgElement.children[0].children[nodeIndex];
+                    if (presentNode.getAttribute("class") == "node" && presentNode.children[1].tagName.toLowerCase() == "polygon") {
+                        d3_selection_1.select(presentNode).on("click", (event) => {
+                            if (selectedNode) {
+                                selectedNode.children[1].setAttribute("stroke", "black");
+                            }
+                            if (selectedNode && (event.ctrlKey || event.shiftKey)) {
+                                deletePriorNodes(selectedNode, presentNode, json.dataflow, viz, dataflowWindow);
+                            }
+                            else {
+                                selectedNode = svgElement.children[0].children[nodeIndex];
+                                selectedNode.children[1].setAttribute("stroke", "red");
+                            }
+                        });
+                    }
+                }
+                dataflowWindow.appendChild(svgElement);
             });
         }
         else {
@@ -37048,56 +37068,156 @@ function getDataflow(response, config, parent, dataflowWindowId) {
         }
     });
 }
-function buildDataflowModal(modal, modalBody, parent, config) {
+function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWindow) {
+    let selectedNodeEvaluationTitle = selectedNode.children[0].innerHTML;
+    let presentNodeOrderEvaluationTitle = presentNode.children[0].innerHTML;
+    let firstEvaluationOrder = Number(selectedNodeEvaluationTitle.replace("e_", ""));
+    let lastEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace("e_", ""));
+    if (firstEvaluationOrder > lastEvaluationOrder) {
+        lastEvaluationOrder = firstEvaluationOrder;
+        firstEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace("e_", ""));
+    }
+    console.log(firstEvaluationOrder);
+    let lines = dataflow.split("\n");
+    let newLines = lines.slice(0, 3);
+    for (let i = 4; i < lines.length; i++) {
+        if (sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder, lastEvaluationOrder, lines[i]) || (i >= lines.length - 2)) {
+            if (lines[i].includes("->")) {
+                let words = lines[i].split(" ");
+                let evaluation1 = words[4];
+                let evaluation2 = words[6];
+                let priorEvaluationTitle = Number(evaluation1.replace("e_", "").replace("a_", "")) > Number(evaluation2.replace("e_", "").replace("a_", "")) ? evaluation2 : evaluation1;
+                if (Number(priorEvaluationTitle.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) {
+                    let evaluationSettingsDataflowLine = lines.find((string) => string.includes(priorEvaluationTitle + " [label="));
+                    newLines.splice(3, 0, evaluationSettingsDataflowLine);
+                }
+            }
+            newLines.push(lines[i]);
+        }
+        ;
+    }
+    let newDataflowString = newLines.join("\n");
+    console.log(newDataflowString);
+    dataflowWindow.textContent = "";
+    dataflowWindow.appendChild(viz.renderSVGElement(newDataflowString));
+}
+function sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder, lastEvaluationOrder, dataflowStringLine) {
+    let words = dataflowStringLine.split(" ");
+    for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
+        let word = words[wordIndex];
+        let evaluationOrder = Number(word.replace("e_", ""));
+        if (word.includes("e_") && (evaluationOrder > lastEvaluationOrder))
+            return false;
+        if (word.includes("e_") && (evaluationOrder >= firstEvaluationOrder))
+            return true;
+    }
+    return false;
+}
+function buildDataflowModal(modal, modalBody, parent, config, trialId) {
     let submitButton;
+    let evaluationList;
     let form;
     document.getElementById("exampleModalTitle").textContent = "Dataflow";
-    showModal(modal);
-    if (modalBody) {
-        scrollableModal(modalBody);
-        form = modalBody.append("form").attr("onsubmit", "return false;");
-        createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
-        createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
-        createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
-        createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp", "(default: Shows each file once (hide external accesses))", ["Hides file accesses", "Shows each file once (hide external accesses)", "Shows each file once (show external accesses)",
-            "Shows all accesses (except external accesses)", "Shows all accesses (including external accesses)"]);
-        createFormSelectInput(form, "dataflowEvaluation", "Combine evaluation nodes", 0, 2, 1, "dataflowEvaluationHelp", "(default: Combines evaluation nodes by assignment)", ["Not combine evaluation nodes", "Combines evaluation nodes by assignment", "Combines evaluation nodes by value"]);
-        createFormSelectInput(form, "dataflowGroup", "Align evalutions in the same column", 0, 2, 0, "dataflowGroupHelp", "(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.", ["Does no align", "Aligns by line", "Aligns by line and column"]);
-        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 3, 3, "dataflowModeHelp", "(default: prospective). 'simulation' presents a dataflow graph with all relevant evaluations. 'activation' presents only activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations. 'prospective' presents only parameters, calls, and assignments to calls.", ["simulation", "activation", "dependency", "prospective"]);
-        createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity");
-        createFormNumberInput(form, "dataflowValueLength", "Maximum length of values", 0, 0, "dataflowValueLengthHelp", "(default: 0). 0 indicates that values should be hidden.The values appear on the second line of node lables. E.g. if it is set to '10', it will show 'data.dat',  but it will transform 'data2.dat' in to 'da...dat' to respect the length restriction (note that '' is part of the value). Minimum displayable value: 5. Suggested: 55.");
-        createFormNumberInput(form, "dataflowName", "Maximum length of names", 0, 55, "dataflowNameHelp", "(default: 55). 0 indicates that values should be hidden. Minimum displayable value: 5. Suggested: 55.");
-        submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
-    }
-    submitButton === null || submitButton === void 0 ? void 0 : submitButton.on("click", function () {
-        let dataFlowShowType = document.getElementById("dataFlowShowType").checked;
-        let dataFlowHideTimestamps = document.getElementById("dataFlowHideTimestamps").checked;
-        let dataFlowHideInternals = document.getElementById("dataFlowHideInternals").checked;
-        let dataflowFileAccesses = document.getElementById("dataflowShowAccesses").selectedOptions[0].index;
-        let dataflowEvaluation = document.getElementById("dataflowEvaluation").selectedOptions[0].index;
-        let dataflowGroup = document.getElementById("dataflowGroup").selectedOptions[0].index;
-        let dataflowMode = document.getElementById("dataflowMode").selectedOptions[0].value;
-        let dataflowDepth = document.getElementById("dataflowDepth").value;
-        let dataflowValueLength = document.getElementById("dataflowValueLength").value;
-        let dataflowName = document.getElementById("dataflowName").value;
-        let trialId = parent.getAttribute("selected-trial");
-        let dataflowUrl = "/commands/dataflow/" + trialId + "/" + dataFlowShowType + "/" + dataFlowHideTimestamps + "/" +
-            dataFlowHideInternals + "/" + dataflowFileAccesses + "/" + dataflowEvaluation + "/" + dataflowGroup + "/" +
-            dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
-        let dataflowWindowId = "Dataflow window " + trialId;
-        if (document.getElementById(dataflowWindowId)) {
-            window.alert("Close trial " + trialId + " dataflow tab before generating a new dataflow");
-            return;
-        }
-        fetch(dataflowUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        }).then((response) => {
-            console.log(dataflowMode);
-            cleanModalBodyAndClose(modal, modalBody);
-            getDataflow(response, config, parent, dataflowWindowId);
+    fetch("/dataflow/evaluations/" + trialId, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    }).then((response) => {
+        response.json().then((json) => {
+            evaluationList = json.evaluations;
+            let selectedEvaluation;
+            let dataflowTextInputEvaluation;
+            showModal(modal);
+            if (modalBody) {
+                scrollableModal(modalBody);
+                form = modalBody.append("form").attr("onsubmit", "return false;");
+                createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
+                createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
+                createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
+                createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp", "(default: Shows each file once (hide external accesses))", ["Hides file accesses", "Shows each file once (hide external accesses)", "Shows each file once (show external accesses)",
+                    "Shows all accesses (except external accesses)", "Shows all accesses (including external accesses)"]);
+                createFormSelectInput(form, "dataflowEvaluation", "Combine evaluation nodes", 0, 2, 1, "dataflowEvaluationHelp", "(default: Combines evaluation nodes by assignment)", ["Not combine evaluation nodes", "Combines evaluation nodes by assignment", "Combines evaluation nodes by value"]);
+                createFormSelectInput(form, "dataflowGroup", "Align evalutions in the same column", 0, 2, 0, "dataflowGroupHelp", "(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.", ["Does no align", "Aligns by line", "Aligns by line and column"]);
+                createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 3, 3, "dataflowModeHelp", "(default: prospective). 'simulation' presents a dataflow graph with all relevant evaluations. 'activation' presents only activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations. 'prospective' presents only parameters, calls, and assignments to calls.", ["simulation", "activation", "dependency", "prospective"]);
+                createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity");
+                createFormNumberInput(form, "dataflowValueLength", "Maximum length of values", 0, 0, "dataflowValueLengthHelp", "(default: 0). 0 indicates that values should be hidden.The values appear on the second line of node lables. E.g. if it is set to '10', it will show 'data.dat',  but it will transform 'data2.dat' in to 'da...dat' to respect the length restriction (note that '' is part of the value). Minimum displayable value: 5. Suggested: 55.");
+                createFormNumberInput(form, "dataflowName", "Maximum length of names", 0, 55, "dataflowNameHelp", "(default: 55). 0 indicates that values should be hidden. Minimum displayable value: 5. Suggested: 55.");
+                let dataflowEvaluationInput = createFormTextInput(form, "dataflowTextInputEvaluation", "Evaluation was derived from: ", "dataflowSelectEvaluationHelp", "Filter that shows only one evaluation and the ones that derived it");
+                form.append("div").attr("id", "autocompleteSuggestionsResults");
+                dataflowTextInputEvaluation = document.getElementById("dataflowTextInputEvaluation");
+                dataflowEvaluationInput.on("keyup", () => {
+                    let input = dataflowTextInputEvaluation.value;
+                    let autocompleteSuggestionsResults = document.getElementById("autocompleteSuggestionsResults");
+                    let evaluationInputHint = document.getElementById("dataflowSelectEvaluationHelp");
+                    autocompleteSuggestionsResults.innerHTML = "";
+                    let suggestions;
+                    if (input == "") {
+                        autocompleteSuggestionsResults.setAttribute("style", "");
+                        evaluationInputHint.style.opacity = "1";
+                        suggestions = [];
+                        selectedEvaluation = undefined;
+                    }
+                    else {
+                        autocompleteSuggestionsResults.style.border = "1px solid #ccc";
+                        autocompleteSuggestionsResults.style.padding = "3px";
+                        autocompleteSuggestionsResults.style.marginTop = "-3rem";
+                        evaluationInputHint.style.opacity = "0";
+                        suggestions = evaluationList.filter((evaluation) => {
+                            if (evaluation.name.includes(input))
+                                return evaluation;
+                        });
+                        autocompleteSuggestionsResults.innerHTML = "<ul id=\"dataflowEvaluationSuggestionsBoxId\" style=\"list-style-type: none; padding: 0; margin: 0;\"></ul>";
+                        for (let i = 0; i < suggestions.length; i++) {
+                            let evaluationSuggestionId = suggestions[i].evaluation_id + " " + "evaluationSuggestionItem";
+                            d3_selection_1.select(document.getElementById("dataflowEvaluationSuggestionsBoxId")).append("li").attr("id", evaluationSuggestionId)
+                                .style("padding", "5px 0")
+                                .style("z-index", 1)
+                                .text("Evaluation: " + suggestions[i].name + "         " + "Code_line: " + suggestions[i].first_char_line)
+                                .on("click", () => {
+                                dataflowTextInputEvaluation.value = suggestions[i].name;
+                                input = suggestions[i].name;
+                                selectedEvaluation = suggestions[i].evaluation_id;
+                            })
+                                .on("mouseover", () => { d3_selection_1.select(document.getElementById(evaluationSuggestionId)).style("background-color", "#eee"); })
+                                .on("mouseout", () => { d3_selection_1.select(document.getElementById(evaluationSuggestionId)).style("background-color", ""); });
+                        }
+                    }
+                });
+                submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
+            }
+            submitButton.on("click", function () {
+                let dataFlowShowType = document.getElementById("dataFlowShowType").checked;
+                let dataFlowHideTimestamps = document.getElementById("dataflowMode").checked;
+                let dataFlowHideInternals = document.getElementById("dataFlowHideInternals").checked;
+                let dataflowFileAccesses = document.getElementById("dataflowShowAccesses").selectedOptions[0].index;
+                let dataflowEvaluation = document.getElementById("dataflowEvaluation").selectedOptions[0].index;
+                let dataflowGroup = document.getElementById("dataflowGroup").selectedOptions[0].index;
+                let dataflowMode = document.getElementById("dataflowMode").selectedOptions[0].value;
+                let dataflowDepth = document.getElementById("dataflowDepth").value;
+                let dataflowValueLength = document.getElementById("dataflowValueLength").value;
+                let dataflowName = document.getElementById("dataflowName").value;
+                let trialId = parent.getAttribute("selected-trial");
+                let dataflowUrl = "/commands/dataflow/" + trialId + "/" + dataFlowShowType + "/" + dataFlowHideTimestamps + "/" +
+                    dataFlowHideInternals + "/" + dataflowFileAccesses + "/" + dataflowEvaluation + "/" + dataflowGroup + "/" +
+                    dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
+                dataflowUrl += selectedEvaluation ? "/true/" + selectedEvaluation : "/false/0";
+                let dataflowWindowId = "Dataflow window " + trialId;
+                if (document.getElementById(dataflowWindowId)) {
+                    window.alert("Close trial " + trialId + " dataflow tab before generating a new dataflow");
+                    return;
+                }
+                fetch(dataflowUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                }).then((response) => {
+                    console.log(dataflowMode);
+                    cleanModalBodyAndClose(modal, modalBody);
+                    getDataflow(response, config, parent, dataflowWindowId);
+                });
+            });
         });
     });
 }

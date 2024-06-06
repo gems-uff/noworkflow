@@ -14,6 +14,7 @@ from .synonymers import SameSynonymer, ReferenceSynonymer
 from .synonymers import AccessNameSynonymer, JoinedSynonymer
 from .filters import FilterAccessesOut, FilterInternalsOut
 from .filters import FilterExternalAccessesOut, FilterTypesOut
+from .filters import FilterWasDerivedFrom
 from .filters import JoinedFilter, AcceptAllNodesFilter
 from .node_types import ClusterNode, EvaluationNode
 
@@ -34,6 +35,9 @@ class DependencyConfig(object):
         self.combine_accesses = True
         self.combine_assignments = True
         self.combine_values = False
+        self.show_only_was_derived_from = False
+        self.show_only_was_derived_from_eid = None
+        self.show_only_was_derived_from_trial = None
         self.max_depth = float("inf")
         self.mode = "simulation"
 
@@ -88,6 +92,9 @@ class DependencyConfig(object):
                       "'prospective' presents only parameters, calls, and\n"
                       "assignments to calls."
                       .format(mode)))
+        add_arg("-w", "--wdf", type=int, 
+                help="shows only one evaluation and the ones that derived it\n"
+                "You must inform the evaluation's id")
 
     def read_args(self, args):
         """Read config from args"""
@@ -104,6 +111,11 @@ class DependencyConfig(object):
         self.max_depth = args.depth or float("inf")
         self.rank_option = args.group
         self.mode = args.mode
+        
+        if(args.wdf):
+            self.show_only_was_derived_from = True
+            self.show_only_was_derived_from_trial = args.trial
+            self.show_only_was_derived_from_eid = args.wdf
 
     def rank(self, cluster):
         """Group cluster evaluations"""
@@ -148,6 +160,8 @@ class DependencyConfig(object):
             filters.append(FilterExternalAccessesOut())
         if not self.show_internals:
             filters.append(FilterInternalsOut())
+        if self.show_only_was_derived_from:
+            filters.append(FilterWasDerivedFrom(self.show_only_was_derived_from_eid, self.show_only_was_derived_from_trial))
         filters.extend(extra or [])
         if not filters:
             return AcceptAllNodesFilter()
