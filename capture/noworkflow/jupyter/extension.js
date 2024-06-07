@@ -37031,7 +37031,7 @@ function scrollableModal(modalBody) {
     modalDialog.style.maxHeight = "85%";
     modalBody.style("overflow-y", "auto").style("height", "80vh");
 }
-function getDataflow(response, config, parent, dataflowWindowId) {
+function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
     response.json().then((json) => {
         if (response.status == 200) {
             config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), dataflowWindowId, "Dataflow");
@@ -37051,7 +37051,9 @@ function getDataflow(response, config, parent, dataflowWindowId) {
                                 selectedNode.children[1].setAttribute("stroke", "black");
                             }
                             if (selectedNode && (event.ctrlKey || event.shiftKey)) {
-                                deletePriorNodes(selectedNode, presentNode, json.dataflow, viz, dataflowWindow);
+                                deletePriorNodes(selectedNode, presentNode, json.dataflow, viz, dataflowWindow, dataflowUrl);
+                                selectedNode = undefined;
+                                presentNode = undefined;
                             }
                             else {
                                 selectedNode = svgElement.children[0].children[nodeIndex];
@@ -37068,7 +37070,9 @@ function getDataflow(response, config, parent, dataflowWindowId) {
         }
     });
 }
-function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWindow) {
+function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWindow, dataflowUrl) {
+    dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
+    dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
     let selectedNodeEvaluationTitle = selectedNode.children[0].innerHTML;
     let presentNodeOrderEvaluationTitle = presentNode.children[0].innerHTML;
     let firstEvaluationOrder = Number(selectedNodeEvaluationTitle.replace("e_", ""));
@@ -37077,42 +37081,131 @@ function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWind
         lastEvaluationOrder = firstEvaluationOrder;
         firstEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace("e_", ""));
     }
-    console.log(firstEvaluationOrder);
-    let lines = dataflow.split("\n");
-    let newLines = lines.slice(0, 3);
-    for (let i = 4; i < lines.length; i++) {
+    let dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
+    let dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
+    fetch(dataflowUrlLastEvaluation, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+    }).then((responseLastEvaluation) => {
+        responseLastEvaluation.json().then((jsonLastEvaluation) => {
+            let dataflowLastEvaluation = jsonLastEvaluation.dataflow;
+            fetch(dataflowUrlFirstEvaluation, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            }).then((responseFirstEvaluation) => {
+                responseFirstEvaluation.json().then((jsonFirstEvaluation) => {
+                    let dataflowFirstEvaluation = jsonFirstEvaluation.dataflow;
+                    let linesDataflowLastEvaluation = dataflowLastEvaluation.split("\n");
+                    let linesDataflowFirstEvaluation = dataflowFirstEvaluation.split("\n");
+                    let newDataflow = linesDataflowLastEvaluation.slice(0);
+                    removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowFirstEvaluation, newDataflow, firstEvaluationOrder);
+                    let dataflowIsAligned = addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow, firstEvaluationOrder, linesDataflowLastEvaluation);
+                    removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow);
+                    console.log("------");
+                    console.log(newDataflow.join("\n"));
+                    console.log("------");
+                    dataflowWindow.textContent = "";
+                    dataflowWindow.appendChild(viz.renderSVGElement(newDataflow.join("\n")));
+                });
+            });
+        });
+    });
+    /*
+      let lines = dataflow.split("\n");
+      let newLines = lines.slice(0, 3);
+      for (let i = 4; i < lines.length; i++) {
+    
         if (sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder, lastEvaluationOrder, lines[i]) || (i >= lines.length - 2)) {
-            if (lines[i].includes("->")) {
-                let words = lines[i].split(" ");
-                let evaluation1 = words[4];
-                let evaluation2 = words[6];
-                let priorEvaluationTitle = Number(evaluation1.replace("e_", "").replace("a_", "")) > Number(evaluation2.replace("e_", "").replace("a_", "")) ? evaluation2 : evaluation1;
-                if (Number(priorEvaluationTitle.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) {
-                    let evaluationSettingsDataflowLine = lines.find((string) => string.includes(priorEvaluationTitle + " [label="));
-                    newLines.splice(3, 0, evaluationSettingsDataflowLine);
+          if (lines[i].includes("->")) {
+            let words = lines[i].split(" ");
+            let evaluation1 = words[4];
+            let evaluation2 = words[6];
+            let priorEvaluationTitle = Number(evaluation1.replace("e_", "").replace("a_", "")) > Number(evaluation2.replace("e_", "").replace("a_", "")) ? evaluation2 : evaluation1;
+    
+            if (Number(priorEvaluationTitle.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) {
+              let evaluationSettingsDataflowLine = lines.find((string) => string.includes(priorEvaluationTitle + " [label="));
+              newLines.splice(3, 0, evaluationSettingsDataflowLine!);
+            }
+          }
+          newLines.push(lines[i])
+        };
+      }
+    
+      let newDataflowString = newLines.join("\n");
+    
+      console.log(newDataflowString);
+    
+      dataflowWindow!.textContent = "";
+    
+      dataflowWindow!.appendChild(viz.renderSVGElement(newDataflowString)); */
+}
+function removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow) {
+    if (dataflowIsAligned) {
+        let evaluations = [];
+        for (let lineIndex = 3; lineIndex < newDataflow.length; lineIndex++) {
+            let line = newDataflow[lineIndex];
+            if (line.includes("label"))
+                evaluations.push(line.replace(/\[[^\]]*?\];/, "").split(" ")[4].trim());
+            else if (line.includes("{rank=")) {
+                let alignedEvaluations = line.split(" ");
+                console.log(evaluations);
+                for (let alignedEvalIndex = 5; alignedEvalIndex < alignedEvaluations.length; alignedEvalIndex++) {
+                    let alignedEval = alignedEvaluations[alignedEvalIndex].replace("}\r", "").trim();
+                    if (!evaluations.includes(alignedEval))
+                        newDataflow[lineIndex] = newDataflow[lineIndex].replace(alignedEval, "");
                 }
             }
-            newLines.push(lines[i]);
+            else if (line.includes("->"))
+                break;
         }
-        ;
     }
-    let newDataflowString = newLines.join("\n");
-    console.log(newDataflowString);
-    dataflowWindow.textContent = "";
-    dataflowWindow.appendChild(viz.renderSVGElement(newDataflowString));
 }
-function sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder, lastEvaluationOrder, dataflowStringLine) {
-    let words = dataflowStringLine.split(" ");
-    for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
-        let word = words[wordIndex];
-        let evaluationOrder = Number(word.replace("e_", ""));
-        if (word.includes("e_") && (evaluationOrder > lastEvaluationOrder))
-            return false;
-        if (word.includes("e_") && (evaluationOrder >= firstEvaluationOrder))
-            return true;
+function removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowFirstEvaluation, newDataflow, firstEvaluationOrder) {
+    for (let i = 3; i < linesDataflowFirstEvaluation.length - 2; i++) {
+        let indexOfDataflowLineToRemove;
+        if (linesDataflowFirstEvaluation[i].includes("->") && linesDataflowFirstEvaluation[i].includes("[")) {
+            let lineToRemove = linesDataflowFirstEvaluation[i].replace(/\[[^\]]*\]/, "");
+            indexOfDataflowLineToRemove = newDataflow.findIndex((dataflowLine) => {
+                return dataflowLine.replace(/\[[^\]]*\]/, "") == lineToRemove;
+            });
+        }
+        else
+            indexOfDataflowLineToRemove = newDataflow.indexOf(linesDataflowFirstEvaluation[i]);
+        if (indexOfDataflowLineToRemove > -1 && (!linesDataflowFirstEvaluation[i].includes("_" + firstEvaluationOrder + " [")))
+            newDataflow.splice(indexOfDataflowLineToRemove, 1);
     }
-    return false;
 }
+function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow, firstEvaluationOrder, linesDataflowLastEvaluation) {
+    let tempArray = [];
+    let isAligned = false;
+    newDataflow.forEach((line) => {
+        if (!isAligned && line.includes("{rank"))
+            isAligned = true;
+        if (line.includes("->")) {
+            let evaluationWithoutSettings = line.split(" ")[6];
+            if (Number(evaluationWithoutSettings.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) { // TODO revise if firstEvaluationOrder is right
+                tempArray.push(linesDataflowLastEvaluation.find((string) => string.includes(evaluationWithoutSettings + " [")));
+            }
+        }
+    });
+    tempArray.forEach(item => newDataflow.splice(3, 0, item));
+    return isAligned;
+}
+/* function sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder: number, lastEvaluationOrder: number, dataflowStringLine: string): boolean {
+  let words = dataflowStringLine.split(" ");
+  for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
+    let word = words[wordIndex];
+    let evaluationOrder = Number(word.replace("e_", ""));
+
+    if (word.includes("e_") && (evaluationOrder > lastEvaluationOrder)) return false;
+    if (word.includes("e_") && (evaluationOrder >= firstEvaluationOrder)) return true;
+  }
+  return false
+} */
 function buildDataflowModal(modal, modalBody, parent, config, trialId) {
     let submitButton;
     let evaluationList;
@@ -37215,7 +37308,7 @@ function buildDataflowModal(modal, modalBody, parent, config, trialId) {
                 }).then((response) => {
                     console.log(dataflowMode);
                     cleanModalBodyAndClose(modal, modalBody);
-                    getDataflow(response, config, parent, dataflowWindowId);
+                    getDataflow(response, config, parent, dataflowWindowId, dataflowUrl);
                 });
             });
         });

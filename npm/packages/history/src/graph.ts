@@ -1297,7 +1297,7 @@ function scrollableModal(modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement
   modalBody.style("overflow-y", "auto").style("height", "80vh");
 }
 
-function getDataflow(response: any, config: HistoryConfig, parent: Element, dataflowWindowId: string) {
+function getDataflow(response: any, config: HistoryConfig, parent: Element, dataflowWindowId: string, dataflowUrl: string) {
   response.json().then((json: any) => {
     if (response.status == 200) {
 
@@ -1310,20 +1310,22 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
         // Download SVG Button
         downloadDataflow(dataflowWindow, dataflowWindowId);
 
-        let selectedNode: Element;
+        let selectedNode: Element | undefined;
 
         dataflowWindow!.style.overflowY = dataflowWindow!.style.overflowX = "auto";
         let svgElement = viz.renderSVGElement(json.dataflow);
         for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children.length; nodeIndex++) {
 
-          let presentNode = svgElement.children[0].children[nodeIndex];
+          let presentNode : Element | undefined = svgElement.children[0].children[nodeIndex];
           if (presentNode.getAttribute("class") == "node" && presentNode.children[1].tagName.toLowerCase() == "polygon") {
             d3_select(presentNode).on("click", (event: MouseEvent) => {
 
               if (selectedNode) { selectedNode.children[1].setAttribute("stroke", "black"); }
 
               if (selectedNode && (event.ctrlKey || event.shiftKey)) {
-                deletePriorNodes(selectedNode, presentNode, json.dataflow, viz, dataflowWindow);
+                deletePriorNodes(selectedNode, presentNode!, json.dataflow, viz, dataflowWindow, dataflowUrl);
+                selectedNode = undefined;
+                presentNode = undefined;
               } else {
                 selectedNode = svgElement.children[0].children[nodeIndex];
                 selectedNode.children[1].setAttribute("stroke", "red");
@@ -1343,50 +1345,160 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
 
 }
 
-function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow: string, viz : any, dataflowWindow : HTMLElement | null) {
+function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow: string, viz: any, dataflowWindow: HTMLElement | null, dataflowUrl: string) {
+
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
+
   let selectedNodeEvaluationTitle = selectedNode.children[0].innerHTML;
   let presentNodeOrderEvaluationTitle = presentNode.children[0].innerHTML;
 
   let firstEvaluationOrder = Number(selectedNodeEvaluationTitle.replace("e_", ""));
   let lastEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace("e_", ""));
-  if(firstEvaluationOrder > lastEvaluationOrder){
+  if (firstEvaluationOrder > lastEvaluationOrder) {
     lastEvaluationOrder = firstEvaluationOrder;
     firstEvaluationOrder = Number(presentNodeOrderEvaluationTitle.replace("e_", ""));
   }
 
-  console.log(firstEvaluationOrder);
+  let dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
+  let dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
 
-  let lines = dataflow.split("\n");
-  let newLines = lines.slice(0, 3);
-  for (let i = 4; i < lines.length; i++) {
+  fetch(dataflowUrlLastEvaluation, {
+    method: 'GET', // *GET, POST, PUT, DELETE, etc.
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  }).then((responseLastEvaluation: any) => {
+    responseLastEvaluation.json().then((jsonLastEvaluation: any) => {
+      let dataflowLastEvaluation = jsonLastEvaluation.dataflow;
+      fetch(dataflowUrlFirstEvaluation, {
+        method: 'GET', // *GET, POST, PUT, DELETE, etc.
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      }).then((responseFirstEvaluation: any) => {
+        responseFirstEvaluation.json().then((jsonFirstEvaluation: any) => {
+          let dataflowFirstEvaluation = jsonFirstEvaluation.dataflow;
 
-    if (sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder, lastEvaluationOrder, lines[i]) || (i >= lines.length - 2)){
-      if(lines[i].includes("->")){
-        let words = lines[i].split(" ");
-        let evaluation1 = words[4];
-        let evaluation2 = words[6];
-        let priorEvaluationTitle = Number(evaluation1.replace("e_", "").replace("a_", "")) > Number(evaluation2.replace("e_", "").replace("a_", "")) ? evaluation2 : evaluation1;
-        
-        if(Number(priorEvaluationTitle.replace("e_", "").replace("a_", "")) < firstEvaluationOrder){
-          let evaluationSettingsDataflowLine = lines.find((string)=> string.includes(priorEvaluationTitle+" [label="));
-          newLines.splice(3, 0, evaluationSettingsDataflowLine!);
+          let linesDataflowLastEvaluation = dataflowLastEvaluation.split("\n");
+          let linesDataflowFirstEvaluation = dataflowFirstEvaluation.split("\n");
+          let newDataflow = linesDataflowLastEvaluation.slice(0);
+
+          removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowFirstEvaluation, newDataflow, firstEvaluationOrder);
+
+          let dataflowIsAligned = addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow, firstEvaluationOrder, linesDataflowLastEvaluation);
+
+          removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow);
+
+          console.log("------");
+          console.log(newDataflow.join("\n"));
+          console.log("------");
+
+          dataflowWindow!.textContent = "";
+
+          dataflowWindow!.appendChild(viz.renderSVGElement(newDataflow.join("\n")));
+
+        });
+      });
+    });
+  });
+  /* 
+    let lines = dataflow.split("\n");
+    let newLines = lines.slice(0, 3);
+    for (let i = 4; i < lines.length; i++) {
+  
+      if (sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder, lastEvaluationOrder, lines[i]) || (i >= lines.length - 2)) {
+        if (lines[i].includes("->")) {
+          let words = lines[i].split(" ");
+          let evaluation1 = words[4];
+          let evaluation2 = words[6];
+          let priorEvaluationTitle = Number(evaluation1.replace("e_", "").replace("a_", "")) > Number(evaluation2.replace("e_", "").replace("a_", "")) ? evaluation2 : evaluation1;
+  
+          if (Number(priorEvaluationTitle.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) {
+            let evaluationSettingsDataflowLine = lines.find((string) => string.includes(priorEvaluationTitle + " [label="));
+            newLines.splice(3, 0, evaluationSettingsDataflowLine!);
+          }
         }
-      }
-      newLines.push(lines[i])
-    };
-  }
-
-  let newDataflowString = newLines.join("\n");
-
-  console.log(newDataflowString);
-
-  dataflowWindow!.textContent = "";
-
-  dataflowWindow!.appendChild(viz.renderSVGElement(newDataflowString));
+        newLines.push(lines[i])
+      };
+    }
+  
+    let newDataflowString = newLines.join("\n");
+  
+    console.log(newDataflowString);
+  
+    dataflowWindow!.textContent = "";
+  
+    dataflowWindow!.appendChild(viz.renderSVGElement(newDataflowString)); */
 
 }
 
-function sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder: number, lastEvaluationOrder : number, dataflowStringLine: string): boolean{
+function removesDeletedEvaluationsFromAligment(dataflowIsAligned: boolean, newDataflow: any) {
+  if (dataflowIsAligned) {
+
+    let evaluations : any = [];
+    
+    for (let lineIndex = 3; lineIndex < newDataflow.length; lineIndex++) {
+      let line = newDataflow[lineIndex];
+      if (line.includes("label")) evaluations.push(line.replace(/\[[^\]]*?\];/, "").split(" ")[4].trim());
+
+      else if (line.includes("{rank=")) {
+        let alignedEvaluations = line.split(" ");
+
+        for(let alignedEvalIndex = 5; alignedEvalIndex < alignedEvaluations.length; alignedEvalIndex++){
+          let alignedEval = alignedEvaluations[alignedEvalIndex].replace("}\r", "").trim();
+
+          if(!evaluations.includes(alignedEval)) newDataflow[lineIndex] = newDataflow[lineIndex].replace(alignedEval, "");
+        }
+      }
+
+      else if (line.includes("->")) break;
+    }
+  }
+}
+
+function removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowFirstEvaluation: any, newDataflow: any, firstEvaluationOrder: number) {
+  for (let i = 3; i < linesDataflowFirstEvaluation.length - 2; i++) {
+    let indexOfDataflowLineToRemove;
+
+    if (linesDataflowFirstEvaluation[i].includes("->") && linesDataflowFirstEvaluation[i].includes("[")) {
+
+      let lineToRemove = linesDataflowFirstEvaluation[i].replace(/\[[^\]]*\]/, "");
+
+      indexOfDataflowLineToRemove = newDataflow.findIndex((dataflowLine: string) => {
+        return dataflowLine.replace(/\[[^\]]*\]/, "") == lineToRemove;
+      });
+
+
+    } else indexOfDataflowLineToRemove = newDataflow.indexOf(linesDataflowFirstEvaluation[i]);
+
+    if (indexOfDataflowLineToRemove > -1 && (!linesDataflowFirstEvaluation[i].includes("_" + firstEvaluationOrder + " ["))) newDataflow.splice(indexOfDataflowLineToRemove, 1);
+
+  }
+}
+
+function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, firstEvaluationOrder: number, linesDataflowLastEvaluation: any) {
+  let tempArray: any[] = [];
+  let isAligned = false;
+
+  newDataflow.forEach((line: string) => {
+    if(!isAligned && line.includes("{rank")) isAligned = true;
+
+
+    if (line.includes("->")) {
+      let evaluationWithoutSettings = line.split(" ")[6];
+      if (Number(evaluationWithoutSettings.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) { // TODO revise if firstEvaluationOrder is right
+        tempArray.push(linesDataflowLastEvaluation.find((string: string) => string.includes(evaluationWithoutSettings + " [")));
+      }
+    }
+  });
+
+  tempArray.forEach(item => newDataflow.splice(3, 0, item));
+
+  return isAligned
+}
+
+/* function sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder: number, lastEvaluationOrder: number, dataflowStringLine: string): boolean {
   let words = dataflowStringLine.split(" ");
   for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
     let word = words[wordIndex];
@@ -1396,7 +1508,7 @@ function sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder: number
     if (word.includes("e_") && (evaluationOrder >= firstEvaluationOrder)) return true;
   }
   return false
-}
+} */
 
 function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
   parent: Element, config: HistoryConfig, trialId: string) {
@@ -1550,7 +1662,7 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         }).then((response: any) => {
           console.log(dataflowMode);
           cleanModalBodyAndClose(modal, modalBody);
-          getDataflow(response, config, parent, dataflowWindowId);
+          getDataflow(response, config, parent, dataflowWindowId, dataflowUrl);
         });
 
 
