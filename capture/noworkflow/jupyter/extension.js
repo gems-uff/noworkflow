@@ -37040,6 +37040,7 @@ function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
                 const dataflowWindow = document.getElementById(dataflowWindowId);
                 // Download SVG Button
                 downloadDataflow(dataflowWindow, dataflowWindowId);
+                excludePriorProvenanceHint(dataflowWindow);
                 let selectedNode;
                 dataflowWindow.style.overflowY = dataflowWindow.style.overflowX = "auto";
                 let svgElement = viz.renderSVGElement(json.dataflow);
@@ -37070,6 +37071,13 @@ function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
         }
     });
 }
+function excludePriorProvenanceHint(dataflowWindow) {
+    d3_selection_1.select(dataflowWindow).append("div").append("div")
+        .text("Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience")
+        .style('font-family', 'sans-serif')
+        .style('font-size', '12px')
+        .style('pointer-events', 'none');
+}
 function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWindow, dataflowUrl) {
     dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
     dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
@@ -37083,6 +37091,7 @@ function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWind
     }
     let dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
     let dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
+    dataflowWindow.textContent = "Loading...";
     fetch(dataflowUrlLastEvaluation, {
         method: 'GET',
         headers: {
@@ -37152,7 +37161,6 @@ function removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow) {
                 evaluations.push(line.replace(/\[[^\]]*?\];/, "").split(" ")[4].trim());
             else if (line.includes("{rank=")) {
                 let alignedEvaluations = line.split(" ");
-                console.log(evaluations);
                 for (let alignedEvalIndex = 5; alignedEvalIndex < alignedEvaluations.length; alignedEvalIndex++) {
                     let alignedEval = alignedEvaluations[alignedEvalIndex].replace("}\r", "").trim();
                     if (!evaluations.includes(alignedEval))

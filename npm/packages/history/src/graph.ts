@@ -1309,6 +1309,7 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
 
         // Download SVG Button
         downloadDataflow(dataflowWindow, dataflowWindowId);
+        excludePriorProvenanceHint(dataflowWindow);
 
         let selectedNode: Element | undefined;
 
@@ -1345,6 +1346,14 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
 
 }
 
+function excludePriorProvenanceHint(dataflowWindow: HTMLElement | null) {
+  d3_select(dataflowWindow).append("div").append("div")
+    .text("Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience")
+    .style('font-family', 'sans-serif')
+    .style('font-size', '12px')
+    .style('pointer-events', 'none');
+}
+
 function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow: string, viz: any, dataflowWindow: HTMLElement | null, dataflowUrl: string) {
 
   dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
@@ -1362,6 +1371,8 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow:
 
   let dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
   let dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
+
+  dataflowWindow!.textContent = "Loading...";
 
   fetch(dataflowUrlLastEvaluation, {
     method: 'GET', // *GET, POST, PUT, DELETE, etc.
