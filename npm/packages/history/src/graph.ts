@@ -1413,34 +1413,6 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow:
       });
     });
   });
-  /* 
-    let lines = dataflow.split("\n");
-    let newLines = lines.slice(0, 3);
-    for (let i = 4; i < lines.length; i++) {
-  
-      if (sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder, lastEvaluationOrder, lines[i]) || (i >= lines.length - 2)) {
-        if (lines[i].includes("->")) {
-          let words = lines[i].split(" ");
-          let evaluation1 = words[4];
-          let evaluation2 = words[6];
-          let priorEvaluationTitle = Number(evaluation1.replace("e_", "").replace("a_", "")) > Number(evaluation2.replace("e_", "").replace("a_", "")) ? evaluation2 : evaluation1;
-  
-          if (Number(priorEvaluationTitle.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) {
-            let evaluationSettingsDataflowLine = lines.find((string) => string.includes(priorEvaluationTitle + " [label="));
-            newLines.splice(3, 0, evaluationSettingsDataflowLine!);
-          }
-        }
-        newLines.push(lines[i])
-      };
-    }
-  
-    let newDataflowString = newLines.join("\n");
-  
-    console.log(newDataflowString);
-  
-    dataflowWindow!.textContent = "";
-  
-    dataflowWindow!.appendChild(viz.renderSVGElement(newDataflowString)); */
 
 }
 
@@ -1508,18 +1480,6 @@ function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, f
 
   return isAligned
 }
-
-/* function sameEvaluationOrEvaluationLatterEvalatuion(firstEvaluationOrder: number, lastEvaluationOrder: number, dataflowStringLine: string): boolean {
-  let words = dataflowStringLine.split(" ");
-  for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
-    let word = words[wordIndex];
-    let evaluationOrder = Number(word.replace("e_", ""));
-
-    if (word.includes("e_") && (evaluationOrder > lastEvaluationOrder)) return false;
-    if (word.includes("e_") && (evaluationOrder >= firstEvaluationOrder)) return true;
-  }
-  return false
-} */
 
 function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
   parent: Element, config: HistoryConfig, trialId: string) {
