@@ -21,10 +21,12 @@ def recursive_path(pack, path):
 try:
     with open("../README.md") as f:
         long_description = f.read()
+        long_description_content_type="text/markdown"
 except (IOError, ImportError):
     long_description = (
         "Supporting infrastructure to run scientific experiments "
         "without a scientific workflow management system.")
+    long_description_content_type="text/x-rst"
 
 setup(
     name="noworkflow",
@@ -47,6 +49,7 @@ setup(
     description="Supporting infrastructure to run scientific experiments "
                 "without a scientific workflow management system.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     license="MIT",
     keywords="scientific experiments provenance python",
     url="https://github.com/gems-uff/noworkflow",
