@@ -121,7 +121,7 @@ def export_bundle(trialIds,usersIds=[]):
         x.member_id,x.key,x.checkpoint,x.type) for x in memberToImport]
     )
     bundle.modules.extend(
-        [ModuleLW(x.id,x.trial_id,x.name,x.version,x.path,x.code_block_id,x.transformed) for x in moduleToImport]
+        [ModuleLW(x.id,x.trial_id,x.name,x.version,x.path,x.code_block_id,x.transformed, x.fullpath) for x in moduleToImport]
     )
     bundle.users.extend(
         [UserLW(x.id,x.userLogin) for x in usersToImport]

@@ -51,14 +51,14 @@ setup(
     keywords="scientific experiments provenance python",
     url="https://github.com/gems-uff/noworkflow",
     install_requires=[
-        "pyposast>=1.5.0", "apted", "future", "SQLAlchemy>=1.4.29,<=1.4.47", "parameterized",
+        "pyposast", "apted", "future", "SQLAlchemy>=1.4.29,<=1.4.47", "parameterized",
         "requests", "ipykernel", "zipp==3.15", "importlib-metadata==6.4.1", "typing-extensions==4.5.0"
     ],
     extras_require={
-        "demo": ["flask==2.1.3", "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
+        "demo": ["flask", "matplotlib", "numpy", "cython"],
         "notebook": ["pyposast", "ipython", "jupyter"],
-        "all": ["pyposast", "ipython", "jupyter", "flask==2.1.3", "pyswip-alt", 
-                "matplotlib>=3.5.3,<3.6", "numpy>=1.21.6,<1.22", "cython"],
+        "all": ["pyposast", "ipython", "jupyter", "flask", "pyswip-alt", 
+                "matplotlib", "numpy", "cython"],
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -69,6 +69,6 @@ setup(
 
         'License :: OSI Approved :: MIT License',
 
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.12',
     ]
 )

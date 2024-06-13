@@ -26,6 +26,7 @@ from .group import GroupLW
 from .user import UserLW
 from .memberOfGroup import MemberOfGroupLW
 from .bundle import BundleLW
+from .remote import RemoteLW
 
 
 
@@ -50,6 +51,7 @@ __all__ = [
     "GroupLW",
     "UserLW",
     "MemberOfGroupLW",
-    "BundleLW"
+    "BundleLW",
+    "RemoteLW"
 
 ]

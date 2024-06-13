@@ -449,6 +449,7 @@ class TrialGraph {
       .attr("height", height);
     this.g.attr("transform", this.transform);
     if (isFileSaverSupported) {
+      console.log(html);
       var blob = new Blob([html], {type: "image/svg+xml"});
       fs.saveAs(blob, name);
     }

@@ -20,6 +20,11 @@ from io import BytesIO
 
 class Push(Command):
     """Send your local provenance database to a remote server and merge their data"""
+    
+    text_invalid_experiment_id = "Invalid experiment ID"
+    text_exporting_files_failed = "Exporting files failed."
+    text_exporting_trials_failed = "Exporting trials failed."
+    
     def __init__(self, *args, **kwargs):
         super(Push, self).__init__(*args, **kwargs)
         self.url=None
@@ -44,12 +49,19 @@ class Push(Command):
         url=self.url+"/collab/trialsids"
         targetUuids=self.get(url)
 
+        if targetUuids == self.text_invalid_experiment_id:
+            print(self.text_exporting_trials_failed + " " + targetUuids)
+            return False
+
         trials=[t for t in Trial.all()]
         trialsToExport=[x.id for x in trials if x.id not in targetUuids]
 
         url=self.url+"/collab/usersids"
         usersIds=self.get(url)
-
+        if usersIds == self.text_invalid_experiment_id:
+            print(self.exportTrials + " " + usersIds)
+            return False
+            
         localUsers=[u for u in User.all()]
         usersToExport=[x.id for x in localUsers if x.id not in usersIds]
 
@@ -62,6 +74,7 @@ class Push(Command):
         ziped_data=gzip_compress(json.dumps(bundle.__json__()).encode())
         response=requests.post(url, data= ziped_data, headers=headers)
         return response.status_code
+    
     def exportFile(self,fileName,url):
         print("Sending file: "+fileName)
         headers = {'Content-Encoding': 'gzip'}
@@ -72,7 +85,12 @@ class Push(Command):
     def exportFiles(self):
         filesUrl=self.url+"/collab/files"
         targetFiles=self.get(filesUrl)
-        sourceFiles=content.listAll()
+        
+        if targetFiles == self.text_invalid_experiment_id:
+            print(self.text_exporting_files_failed +  " " + targetFiles)
+            return False
+        
+        sourceFiles=content.listAll()        
         filesToExport=[x for x in sourceFiles if x not in targetFiles]
         if (filesToExport.__len__()>0):
             zipF=BytesIO()
@@ -87,6 +105,10 @@ class Push(Command):
             }
             
             response = requests.post(filesUrl, files=multipart_form_data)
+            if response.status_code == 400:
+                print(self.text_exporting_files_failed + " " + sourceFiles)
+                return False
+        
             zipF.close()
 
     def execute(self, args):
