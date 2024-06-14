@@ -977,7 +977,7 @@ class Collector(object):
         if name:
             activation.context[name] = eva
         return 1
-    
+
     def assign_access(self, activation, assign, target_info, depa, back):
         """Create dependencies for assignment to subscript"""
         code, value, access_depa, addr, value_dep, checkpoint = self._extract_assign_access(
@@ -1083,7 +1083,7 @@ class Collector(object):
             delta += self.assign(activation, assign.sub(val, adepa), subcomp, back + 1)
 
         if starred is None:
-            return
+            return delta
 
         star = subcomps[starred][0]
         rdelta = -1
@@ -1103,7 +1103,7 @@ class Collector(object):
             for index in range(delta, len(assign_value) + rdelta + 1)
         ]
 
-        self.assign(activation, assign.sub(new_value, depas), star, back + 1)
+        return self.assign(activation, assign.sub(new_value, depas), star, back + 1)
 
     def assign(self, activation, assign, target_expr, back=1):
         """Create dependencies"""
