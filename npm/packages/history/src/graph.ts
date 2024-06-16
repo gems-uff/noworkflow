@@ -204,7 +204,7 @@ export
         let parent = this.parentNode as Element
         let trialId = parent.getAttribute("selected-trial");
 
-        buildDataflowModal(modal, modalBody, parent, config, trialId);
+        buildDataflowModal(modal, modalBody, parent, config, trialId!);
       });
 
   };
@@ -1301,7 +1301,9 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
   response.json().then((json: any) => {
     if (response.status == 200) {
 
-      config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified")!, dataflowWindowId, "Dataflow");
+      let trialIdSimplified = parent.getAttribute("selected-trial-simplified")!;
+
+      config.customWindowTabCommand(trialIdSimplified, dataflowWindowId, "Dataflow");
       console.log(json.dataflow);
 
       instance().then(viz => {
@@ -1317,16 +1319,14 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
         let svgElement = viz.renderSVGElement(json.dataflow);
         for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children.length; nodeIndex++) {
 
-          let presentNode : Element | undefined = svgElement.children[0].children[nodeIndex];
+          let presentNode: Element | undefined = svgElement.children[0].children[nodeIndex];
           if (presentNode.getAttribute("class") == "node" && presentNode.children[1].tagName.toLowerCase() == "polygon") {
             d3_select(presentNode).on("click", (event: MouseEvent) => {
 
               if (selectedNode) { selectedNode.children[1].setAttribute("stroke", "black"); }
 
               if (selectedNode && (event.ctrlKey || event.shiftKey)) {
-                deletePriorNodes(selectedNode, presentNode!, json.dataflow, viz, dataflowWindow, dataflowUrl);
-                selectedNode = undefined;
-                presentNode = undefined;
+                deletePriorNodes(selectedNode, presentNode!, viz, dataflowUrl, config, trialIdSimplified);
               } else {
                 selectedNode = svgElement.children[0].children[nodeIndex];
                 selectedNode.children[1].setAttribute("stroke", "red");
@@ -1354,7 +1354,8 @@ function excludePriorProvenanceHint(dataflowWindow: HTMLElement | null) {
     .style('pointer-events', 'none');
 }
 
-function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow: string, viz: any, dataflowWindow: HTMLElement | null, dataflowUrl: string) {
+function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any, dataflowUrl: string,
+  config: HistoryConfig, trialIdSimplified: string) {
 
   dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
   dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
@@ -1372,7 +1373,20 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow:
   let dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
   let dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
 
-  dataflowWindow!.textContent = "Loading...";
+  let excludindProvenanceWindowId = "Dataflow excluding prior " + presentNodeOrderEvaluationTitle + " " + selectedNodeEvaluationTitle
+    + " window " + trialIdSimplified;
+
+  let excludingProvenanceWindow = document.getElementById(excludindProvenanceWindowId);
+
+  if(!excludingProvenanceWindow){
+
+    config.customWindowTabCommand(trialIdSimplified, excludindProvenanceWindowId, "Dataflow excluding some provenance");
+
+    excludingProvenanceWindow = document.getElementById(excludindProvenanceWindowId);
+
+  }
+
+  excludingProvenanceWindow!.textContent = "Loading...";
 
   fetch(dataflowUrlLastEvaluation, {
     method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -1405,9 +1419,9 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow:
           console.log(newDataflow.join("\n"));
           console.log("------");
 
-          dataflowWindow!.textContent = "";
+          excludingProvenanceWindow!.textContent = "";
 
-          dataflowWindow!.appendChild(viz.renderSVGElement(newDataflow.join("\n")));
+          excludingProvenanceWindow!.appendChild(viz.renderSVGElement(newDataflow.join("\n")));
 
         });
       });
@@ -1419,8 +1433,8 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, dataflow:
 function removesDeletedEvaluationsFromAligment(dataflowIsAligned: boolean, newDataflow: any) {
   if (dataflowIsAligned) {
 
-    let evaluations : any = [];
-    
+    let evaluations: any = [];
+
     for (let lineIndex = 3; lineIndex < newDataflow.length; lineIndex++) {
       let line = newDataflow[lineIndex];
       if (line.includes("label")) evaluations.push(line.replace(/\[[^\]]*?\];/, "").split(" ")[4].trim());
@@ -1428,10 +1442,10 @@ function removesDeletedEvaluationsFromAligment(dataflowIsAligned: boolean, newDa
       else if (line.includes("{rank=")) {
         let alignedEvaluations = line.split(" ");
 
-        for(let alignedEvalIndex = 5; alignedEvalIndex < alignedEvaluations.length; alignedEvalIndex++){
+        for (let alignedEvalIndex = 5; alignedEvalIndex < alignedEvaluations.length; alignedEvalIndex++) {
           let alignedEval = alignedEvaluations[alignedEvalIndex].replace("}\r", "").trim();
 
-          if(!evaluations.includes(alignedEval)) newDataflow[lineIndex] = newDataflow[lineIndex].replace(alignedEval, "");
+          if (!evaluations.includes(alignedEval)) newDataflow[lineIndex] = newDataflow[lineIndex].replace(alignedEval, "");
         }
       }
 
@@ -1465,7 +1479,7 @@ function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, f
   let isAligned = false;
 
   newDataflow.forEach((line: string) => {
-    if(!isAligned && line.includes("{rank")) isAligned = true;
+    if (!isAligned && line.includes("{rank")) isAligned = true;
 
 
     if (line.includes("->")) {

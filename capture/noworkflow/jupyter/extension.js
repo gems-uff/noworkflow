@@ -37034,7 +37034,8 @@ function scrollableModal(modalBody) {
 function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
     response.json().then((json) => {
         if (response.status == 200) {
-            config.customWindowTabCommand(parent.getAttribute("selected-trial-simplified"), dataflowWindowId, "Dataflow");
+            let trialIdSimplified = parent.getAttribute("selected-trial-simplified");
+            config.customWindowTabCommand(trialIdSimplified, dataflowWindowId, "Dataflow");
             console.log(json.dataflow);
             viz_1.instance().then(viz => {
                 const dataflowWindow = document.getElementById(dataflowWindowId);
@@ -37052,9 +37053,7 @@ function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
                                 selectedNode.children[1].setAttribute("stroke", "black");
                             }
                             if (selectedNode && (event.ctrlKey || event.shiftKey)) {
-                                deletePriorNodes(selectedNode, presentNode, json.dataflow, viz, dataflowWindow, dataflowUrl);
-                                selectedNode = undefined;
-                                presentNode = undefined;
+                                deletePriorNodes(selectedNode, presentNode, viz, dataflowUrl, config, trialIdSimplified);
                             }
                             else {
                                 selectedNode = svgElement.children[0].children[nodeIndex];
@@ -37078,7 +37077,7 @@ function excludePriorProvenanceHint(dataflowWindow) {
         .style('font-size', '12px')
         .style('pointer-events', 'none');
 }
-function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWindow, dataflowUrl) {
+function deletePriorNodes(selectedNode, presentNode, viz, dataflowUrl, config, trialIdSimplified) {
     dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
     dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
     let selectedNodeEvaluationTitle = selectedNode.children[0].innerHTML;
@@ -37091,7 +37090,14 @@ function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWind
     }
     let dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
     let dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
-    dataflowWindow.textContent = "Loading...";
+    let excludindProvenanceWindowId = "Dataflow excluding prior " + presentNodeOrderEvaluationTitle + " " + selectedNodeEvaluationTitle
+        + " window " + trialIdSimplified;
+    let excludingProvenanceWindow = document.getElementById(excludindProvenanceWindowId);
+    if (!excludingProvenanceWindow) {
+        config.customWindowTabCommand(trialIdSimplified, excludindProvenanceWindowId, "Dataflow excluding some provenance");
+        excludingProvenanceWindow = document.getElementById(excludindProvenanceWindowId);
+    }
+    excludingProvenanceWindow.textContent = "Loading...";
     fetch(dataflowUrlLastEvaluation, {
         method: 'GET',
         headers: {
@@ -37117,8 +37123,8 @@ function deletePriorNodes(selectedNode, presentNode, dataflow, viz, dataflowWind
                     console.log("------");
                     console.log(newDataflow.join("\n"));
                     console.log("------");
-                    dataflowWindow.textContent = "";
-                    dataflowWindow.appendChild(viz.renderSVGElement(newDataflow.join("\n")));
+                    excludingProvenanceWindow.textContent = "";
+                    excludingProvenanceWindow.appendChild(viz.renderSVGElement(newDataflow.join("\n")));
                 });
             });
         });
