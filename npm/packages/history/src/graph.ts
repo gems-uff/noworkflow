@@ -1378,7 +1378,7 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any,
 
   let excludingProvenanceWindow = document.getElementById(excludindProvenanceWindowId);
 
-  if(!excludingProvenanceWindow){
+  if (!excludingProvenanceWindow) {
 
     config.customWindowTabCommand(trialIdSimplified, excludindProvenanceWindowId, "Dataflow excluding some provenance");
 
@@ -1405,29 +1405,80 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any,
         responseFirstEvaluation.json().then((jsonFirstEvaluation: any) => {
           let dataflowFirstEvaluation = jsonFirstEvaluation.dataflow;
 
-          let linesDataflowLastEvaluation = dataflowLastEvaluation.split("\n");
-          let linesDataflowFirstEvaluation = dataflowFirstEvaluation.split("\n");
-          let newDataflow = linesDataflowLastEvaluation.slice(0);
-
-          removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowFirstEvaluation, newDataflow, firstEvaluationOrder);
-
-          let dataflowIsAligned = addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow, firstEvaluationOrder, linesDataflowLastEvaluation);
-
-          removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow);
-
-          console.log("------");
-          console.log(newDataflow.join("\n"));
-          console.log("------");
-
-          excludingProvenanceWindow!.textContent = "";
-
-          excludingProvenanceWindow!.appendChild(viz.renderSVGElement(newDataflow.join("\n")));
+          dataflowAMinusDataflowB(dataflowLastEvaluation, dataflowFirstEvaluation, firstEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl);
 
         });
       });
     });
   });
 
+}
+
+function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluationOrder: number, excludingProvenanceWindow: HTMLElement | null, viz: any, dataflowUrl: string) {
+  //SET MINUS OPERATION A-B "The set A−B consists of elements that are in A but not in B. For example if A={1,2,3} and B={3,5}, then A−B={1,2}."
+  let linesDataflowA = dataflowA.split("\n");
+  let linesDataflowB = dataflowB.split("\n");
+  let newDataflow = linesDataflowA.slice(0);
+
+  removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowB, newDataflow, selectedEvaluationOrder);
+
+  let dataflowIsAligned = addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow, selectedEvaluationOrder, linesDataflowA);
+
+  removesDeletedEvaluationsFromAligment(dataflowIsAligned, newDataflow);
+
+  console.log("------");
+  let newDataflowString = newDataflow.join("\n");
+  console.log(newDataflowString);
+  console.log("------");
+
+  excludingProvenanceWindow!.textContent = "";
+  
+  let svgElement = viz.renderSVGElement(newDataflowString);
+
+  addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow);
+  excludingProvenanceWindow!.appendChild(svgElement);
+}
+
+function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null) {
+  for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children.length; nodeIndex++) {
+
+    let selectedNode: Element = svgElement.children[0].children[nodeIndex];
+    if (selectedNode.getAttribute("class") == "node" && selectedNode.children[1].tagName.toLowerCase() == "polygon") {
+      d3_select(selectedNode).on("click", (event: MouseEvent) => {
+
+        if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow);
+        
+      });
+    }
+  }
+}
+
+function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null) {
+
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
+
+  let selectedNodeOrderEvaluationTitle = selectedNode.children[0].innerHTML;
+  let selectedEvaluationOrder = Number(selectedNodeOrderEvaluationTitle.replace("e_", ""));
+
+  let dataflowUrlPresentEvaluation = dataflowUrl + selectedEvaluationOrder;
+
+  excludingProvenanceWindow!.textContent = "Loading...";
+
+  fetch(dataflowUrlPresentEvaluation, {
+    method: 'GET', // *GET, POST, PUT, DELETE, etc.
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  }).then((responseLastEvaluation: any) => {
+    responseLastEvaluation.json().then((json: any) => {
+
+      let selectedEvaluationDataflow = json.dataflow;
+
+      dataflowAMinusDataflowB(newDataflowString, selectedEvaluationDataflow, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl);
+
+    });
+  });
 }
 
 function removesDeletedEvaluationsFromAligment(dataflowIsAligned: boolean, newDataflow: any) {
@@ -1454,27 +1505,27 @@ function removesDeletedEvaluationsFromAligment(dataflowIsAligned: boolean, newDa
   }
 }
 
-function removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowFirstEvaluation: any, newDataflow: any, firstEvaluationOrder: number) {
-  for (let i = 3; i < linesDataflowFirstEvaluation.length - 2; i++) {
+function removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDataflowB: any, newDataflow: any, selectedEvaluationOrder: number) {
+  for (let i = 3; i < linesDataflowB.length - 2; i++) {
     let indexOfDataflowLineToRemove;
 
-    if (linesDataflowFirstEvaluation[i].includes("->") && linesDataflowFirstEvaluation[i].includes("[")) {
+    if (linesDataflowB[i].includes("->") && linesDataflowB[i].includes("[")) {
 
-      let lineToRemove = linesDataflowFirstEvaluation[i].replace(/\[[^\]]*\]/, "");
+      let lineToRemove = linesDataflowB[i].replace(/\[[^\]]*\]/, "");
 
       indexOfDataflowLineToRemove = newDataflow.findIndex((dataflowLine: string) => {
         return dataflowLine.replace(/\[[^\]]*\]/, "") == lineToRemove;
       });
 
 
-    } else indexOfDataflowLineToRemove = newDataflow.indexOf(linesDataflowFirstEvaluation[i]);
+    } else indexOfDataflowLineToRemove = newDataflow.indexOf(linesDataflowB[i]);
 
-    if (indexOfDataflowLineToRemove > -1 && (!linesDataflowFirstEvaluation[i].includes("_" + firstEvaluationOrder + " ["))) newDataflow.splice(indexOfDataflowLineToRemove, 1);
+    if (indexOfDataflowLineToRemove > -1 && (!linesDataflowB[i].includes("_" + selectedEvaluationOrder + " ["))) newDataflow.splice(indexOfDataflowLineToRemove, 1);
 
   }
 }
 
-function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, firstEvaluationOrder: number, linesDataflowLastEvaluation: any) {
+function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, selectedEvaluationOrder: number, linesDataflowA: any) {
   let tempArray: any[] = [];
   let isAligned = false;
 
@@ -1484,8 +1535,9 @@ function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, f
 
     if (line.includes("->")) {
       let evaluationWithoutSettings = line.split(" ")[6];
-      if (Number(evaluationWithoutSettings.replace("e_", "").replace("a_", "")) < firstEvaluationOrder) { // TODO revise if firstEvaluationOrder is right
-        tempArray.push(linesDataflowLastEvaluation.find((string: string) => string.includes(evaluationWithoutSettings + " [")));
+      if (Number(evaluationWithoutSettings.replace("e_", "").replace("a_", "")) < selectedEvaluationOrder) { // TODO revise if firstEvaluationOrder is right
+        let lineToAdd = linesDataflowA.find((string: string) => string.includes(evaluationWithoutSettings + " ["));
+        if(newDataflow.indexOf(lineToAdd) < 0) tempArray.push(lineToAdd);
       }
     }
   });
@@ -1511,7 +1563,7 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
   }).then((response) => {
     response.json().then((json) => {
       evaluationList = json.evaluations;
-      let selectedEvaluation: number | undefined;
+      let selectedEvaluation: string | null;
       let dataflowTextInputEvaluation: HTMLSelectElement;
 
       showModal(modal);
@@ -1556,56 +1608,7 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         dataflowTextInputEvaluation = (<HTMLSelectElement>document.getElementById("dataflowTextInputEvaluation"))
 
 
-        dataflowEvaluationInput.on("keyup", () => {
-
-          let input = dataflowTextInputEvaluation.value;
-          let autocompleteSuggestionsResults = (<HTMLSelectElement>document.getElementById("autocompleteSuggestionsResults"));
-          let evaluationInputHint = (<HTMLSelectElement>document.getElementById("dataflowSelectEvaluationHelp"));
-
-          autocompleteSuggestionsResults.innerHTML = "";
-
-          let suggestions: any[];
-
-          if (input == "") {
-            autocompleteSuggestionsResults.setAttribute("style", "");
-            evaluationInputHint.style.opacity = "1";
-            suggestions = [];
-            selectedEvaluation = undefined;
-          }
-          else {
-            autocompleteSuggestionsResults.style.border = "1px solid #ccc";
-            autocompleteSuggestionsResults.style.padding = "3px";
-            autocompleteSuggestionsResults.style.marginTop = "-3rem";
-            evaluationInputHint.style.opacity = "0";
-
-            suggestions = evaluationList!.filter((evaluation: any) => {
-              if (evaluation.name.includes(input)) return evaluation;
-            });
-
-            autocompleteSuggestionsResults.innerHTML = "<ul id=\"dataflowEvaluationSuggestionsBoxId\" style=\"list-style-type: none; padding: 0; margin: 0;\"></ul>";
-
-
-            for (let i = 0; i < suggestions.length; i++) {
-              let evaluationSuggestionId = suggestions[i].evaluation_id + " " + "evaluationSuggestionItem"
-
-              d3_select(document.getElementById("dataflowEvaluationSuggestionsBoxId")).append("li").attr("id", evaluationSuggestionId)
-                .style("padding", "5px 0")
-                .style("z-index", 1)
-                .text("Evaluation: " + suggestions[i].name + "         " + "Code_line: " + suggestions[i].first_char_line)
-                .on("click", () => {
-                  dataflowTextInputEvaluation.value = suggestions[i].name;
-                  input = suggestions[i].name;
-                  selectedEvaluation = suggestions[i].evaluation_id;
-                })
-                .on("mouseover", () => { d3_select(document.getElementById(evaluationSuggestionId)).style("background-color", "#eee") })
-                .on("mouseout", () => { d3_select(document.getElementById(evaluationSuggestionId)).style("background-color", "") });
-            }
-
-
-
-          }
-
-        });
+        addsAutocompleteToDataflowWDF(dataflowEvaluationInput, dataflowTextInputEvaluation, evaluationList);
 
         submitButton = form.append("button").classed("btn btn-primary mb-2", true).text("Generate dataflow");
 
@@ -1627,10 +1630,12 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
 
         let trialId = parent.getAttribute("selected-trial");
 
+        selectedEvaluation = dataflowTextInputEvaluation.getAttribute("selectedEvaluationID");
+
         let dataflowUrl = "/commands/dataflow/" + trialId + "/" + dataFlowShowType + "/" + dataFlowHideTimestamps + "/" +
           dataFlowHideInternals + "/" + dataflowFileAccesses + "/" + dataflowEvaluation + "/" + dataflowGroup + "/" +
           dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
-        dataflowUrl += selectedEvaluation ? "/true/" + selectedEvaluation : "/false/0";
+        dataflowUrl += (selectedEvaluation && !selectedEvaluation.includes("undefined")) ? "/true/" + selectedEvaluation : "/false/0";
 
         let dataflowWindowId = "Dataflow window " + trialId;
 
@@ -1658,6 +1663,59 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
   });
 
 
+}
+
+function addsAutocompleteToDataflowWDF(dataflowEvaluationInput: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, dataflowTextInputEvaluation: HTMLSelectElement, evaluationList: any) {
+  dataflowEvaluationInput.on("keyup", () => {
+
+    let input = dataflowTextInputEvaluation.value;
+    let autocompleteSuggestionsResults = (<HTMLSelectElement>document.getElementById("autocompleteSuggestionsResults"));
+    let evaluationInputHint = (<HTMLSelectElement>document.getElementById("dataflowSelectEvaluationHelp"));
+
+    autocompleteSuggestionsResults.innerHTML = "";
+
+    let suggestions: any[];
+
+    if (input == "") {
+      autocompleteSuggestionsResults.setAttribute("style", "");
+      evaluationInputHint.style.opacity = "1";
+      suggestions = [];
+      dataflowTextInputEvaluation.setAttribute("selectedEvaluationID", "undefined");
+    }
+    else {
+      autocompleteSuggestionsResults.style.border = "1px solid #ccc";
+      autocompleteSuggestionsResults.style.padding = "3px";
+      autocompleteSuggestionsResults.style.marginTop = "-3rem";
+      evaluationInputHint.style.opacity = "0";
+
+      suggestions = evaluationList!.filter((evaluation: any) => {
+        if (evaluation.name.includes(input)) return evaluation;
+      });
+
+      autocompleteSuggestionsResults.innerHTML = "<ul id=\"dataflowEvaluationSuggestionsBoxId\" style=\"list-style-type: none; padding: 0; margin: 0;\"></ul>";
+
+
+      for (let i = 0; i < suggestions.length; i++) {
+        let evaluationSuggestionId = suggestions[i].evaluation_id + " " + "evaluationSuggestionItem";
+
+        d3_select(document.getElementById("dataflowEvaluationSuggestionsBoxId")).append("li").attr("id", evaluationSuggestionId)
+          .style("padding", "5px 0")
+          .style("z-index", 1)
+          .text("Evaluation: " + suggestions[i].name + "         " + "Code_line: " + suggestions[i].first_char_line)
+          .on("click", () => {
+            dataflowTextInputEvaluation.value = suggestions[i].name;
+            input = suggestions[i].name;
+            dataflowTextInputEvaluation.setAttribute("selectedEvaluationID", suggestions[i].evaluation_id);
+          })
+          .on("mouseover", () => { d3_select(document.getElementById(evaluationSuggestionId)).style("background-color", "#eee"); })
+          .on("mouseout", () => { d3_select(document.getElementById(evaluationSuggestionId)).style("background-color", ""); });
+      }
+
+
+
+    }
+
+  });
 }
 
 function downloadDataflow(dataflowWindow: HTMLElement | null, dataflowWindowId: string) {
