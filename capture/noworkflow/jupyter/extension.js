@@ -39411,7 +39411,7 @@ function deletePriorNodes(selectedNode, presentNode, viz, dataflowUrl, config, t
             }).then((responseFirstEvaluation) => {
                 responseFirstEvaluation.json().then((jsonFirstEvaluation) => {
                     let dataflowFirstEvaluation = jsonFirstEvaluation.dataflow;
-                    dataflowAMinusDataflowB(dataflowLastEvaluation, dataflowFirstEvaluation, firstEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config);
+                    dataflowAMinusDataflowB(dataflowLastEvaluation, dataflowFirstEvaluation, firstEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config, lastEvaluationOrder);
                 });
             });
         });
@@ -39426,7 +39426,7 @@ function getDataflowWindowExcludeSomeProvenance(presentWindowId, newWindowId, tr
     }
     return excludingProvenanceWindow;
 }
-function dataflowAMinusDataflowB(dataflowA, dataflowB, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config) {
+function dataflowAMinusDataflowB(dataflowA, dataflowB, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config, lastEvaluationId) {
     //SET MINUS OPERATION A-B "The set A−B consists of elements that are in A but not in B. For example if A={1,2,3} and B={3,5}, then A−B={1,2}."
     let linesDataflowA = dataflowA.split("\n");
     let linesDataflowB = dataflowB.split("\n");
@@ -39445,24 +39445,28 @@ function dataflowAMinusDataflowB(dataflowA, dataflowB, selectedEvaluationOrder, 
     let svgElement = viz.renderSVGElement(newDataflowString);
     excludingProvenanceWindow.appendChild(svgElement);
     svgPanZoom(svgElement, { preventMouseEventsDefault: false, dblClickZoomEnabled: false });
-    addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config);
+    addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
 }
-function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config) {
+function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId) {
     for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children[0].children.length; nodeIndex++) {
         let selectedNode = svgElement.children[0].children[0].children[nodeIndex];
         if (selectedNode.getAttribute("class") == "node" && selectedNode.children[1].tagName.toLowerCase() == "polygon") {
             d3_selection_1.select(selectedNode).on("click", (event) => {
                 if (event.ctrlKey || event.shiftKey)
-                    deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config);
+                    deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
             });
         }
     }
 }
-function deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config) {
-    dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
-    dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
+function deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId) {
     let selectedNodeOrderEvaluationTitle = selectedNode.children[0].innerHTML;
     let selectedEvaluationOrder = Number(selectedNodeOrderEvaluationTitle.replace("e_", ""));
+    if (lastEvaluationId == selectedEvaluationOrder) {
+        window.alert("You can't remove everything.");
+        return undefined;
+    }
+    dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
+    dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
     let dataflowUrlPresentEvaluation = dataflowUrl + selectedEvaluationOrder;
     let excludingProvenanceWindowId = excludingProvenanceWindow === null || excludingProvenanceWindow === void 0 ? void 0 : excludingProvenanceWindow.getAttribute("id");
     excludingProvenanceWindow = getDataflowWindowExcludeSomeProvenance(excludingProvenanceWindowId, excludingProvenanceWindowId + "OneMore", "", config); //TODO get simplifiedtrialid from wxcludingprovenancewindow
@@ -39475,7 +39479,7 @@ function deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl,
     }).then((responseLastEvaluation) => {
         responseLastEvaluation.json().then((json) => {
             let selectedEvaluationDataflow = json.dataflow;
-            dataflowAMinusDataflowB(newDataflowString, selectedEvaluationDataflow, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config);
+            dataflowAMinusDataflowB(newDataflowString, selectedEvaluationDataflow, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config, lastEvaluationId);
         });
     });
 }

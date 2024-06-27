@@ -1421,7 +1421,7 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any,
         responseFirstEvaluation.json().then((jsonFirstEvaluation: any) => {
           let dataflowFirstEvaluation = jsonFirstEvaluation.dataflow;
 
-          dataflowAMinusDataflowB(dataflowLastEvaluation, dataflowFirstEvaluation, firstEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config);
+          dataflowAMinusDataflowB(dataflowLastEvaluation, dataflowFirstEvaluation, firstEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config, lastEvaluationOrder);
 
         });
       });
@@ -1445,7 +1445,7 @@ function getDataflowWindowExcludeSomeProvenance(presentWindowId: string, newWind
   return excludingProvenanceWindow;
 }
 
-function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluationOrder: number, excludingProvenanceWindow: HTMLElement | null, viz: any, dataflowUrl: string, config : HistoryConfig) {
+function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluationOrder: number, excludingProvenanceWindow: HTMLElement | null, viz: any, dataflowUrl: string, config : HistoryConfig, lastEvaluationId : Number) {
   //SET MINUS OPERATION A-B "The set A−B consists of elements that are in A but not in B. For example if A={1,2,3} and B={3,5}, then A−B={1,2}."
   let linesDataflowA = dataflowA.split("\n");
   let linesDataflowB = dataflowB.split("\n");
@@ -1472,31 +1472,38 @@ function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluat
   excludingProvenanceWindow!.appendChild(svgElement);
   svgPanZoom(svgElement, {preventMouseEventsDefault: false, dblClickZoomEnabled: false});
 
-  addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config);
+  addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
   
 }
 
-function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig) {
+function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig, lastEvaluationId : number) {
   for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children[0].children.length; nodeIndex++) {
 
     let selectedNode: Element = svgElement.children[0].children[0].children[nodeIndex];
     if (selectedNode.getAttribute("class") == "node" && selectedNode.children[1].tagName.toLowerCase() == "polygon") {
       d3_select(selectedNode).on("click", (event: MouseEvent) => {
 
-        if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config);
+        if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
 
       });
     }
   }
 }
 
-function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig) {
-
-  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
-  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
+function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig, lastEvaluationId : number) {
 
   let selectedNodeOrderEvaluationTitle = selectedNode.children[0].innerHTML;
   let selectedEvaluationOrder = Number(selectedNodeOrderEvaluationTitle.replace("e_", ""));
+
+  if(lastEvaluationId == selectedEvaluationOrder){
+    window.alert("You can't remove everything.")
+    return undefined;
+  } 
+  
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
+  dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
+
+  
 
   let dataflowUrlPresentEvaluation = dataflowUrl + selectedEvaluationOrder;
 
@@ -1516,7 +1523,7 @@ function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any
 
       let selectedEvaluationDataflow = json.dataflow;
 
-      dataflowAMinusDataflowB(newDataflowString, selectedEvaluationDataflow, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config);
+      dataflowAMinusDataflowB(newDataflowString, selectedEvaluationDataflow, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config, lastEvaluationId);
 
     });
   });
