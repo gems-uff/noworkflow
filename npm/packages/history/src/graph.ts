@@ -25,6 +25,7 @@ import {
 } from 'd3-zoom';
 
 import { instance } from "@viz-js/viz";
+import svgPanZoom = require('svg-pan-zoom'); "svg-pan-zoom";
 
 import * as fs from 'file-saver';
 declare var require: any;
@@ -1309,32 +1310,35 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
       instance().then(viz => {
         const dataflowWindow = document.getElementById(dataflowWindowId);
 
-        // Download SVG Button
+        // Download SVG Button, excluding hint, and excluding checkbox
         downloadDataflow(dataflowWindow, dataflowWindowId);
-        excludePriorProvenanceHint(dataflowWindow);
+        excludePriorProvenanceHint(dataflowWindow, "Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience");
+        checkboxOpenDataflowExcludeProvenanceNewWindow(dataflowWindow!);
 
         let selectedNode: Element | undefined;
 
-        dataflowWindow!.style.overflowY = dataflowWindow!.style.overflowX = "auto";
+        //dataflowWindow!.style.overflowY = dataflowWindow!.style.overflowX = "auto";
         let svgElement = viz.renderSVGElement(json.dataflow);
-        for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children.length; nodeIndex++) {
+        dataflowWindow!.appendChild(svgElement);
+        svgPanZoom(svgElement, {preventMouseEventsDefault: false, dblClickZoomEnabled: false});
 
-          let presentNode: Element | undefined = svgElement.children[0].children[nodeIndex];
+        for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children[0].children.length; nodeIndex++) {
+
+          let presentNode: Element | undefined = svgElement.children[0].children[0].children[nodeIndex];
           if (presentNode.getAttribute("class") == "node" && presentNode.children[1].tagName.toLowerCase() == "polygon") {
             d3_select(presentNode).on("click", (event: MouseEvent) => {
 
               if (selectedNode) { selectedNode.children[1].setAttribute("stroke", "black"); }
 
               if (selectedNode && (event.ctrlKey || event.shiftKey)) {
-                deletePriorNodes(selectedNode, presentNode!, viz, dataflowUrl, config, trialIdSimplified);
+                deletePriorNodes(selectedNode, presentNode!, viz, dataflowUrl, config, trialIdSimplified, dataflowWindowId);
               } else {
-                selectedNode = svgElement.children[0].children[nodeIndex];
+                selectedNode = svgElement.children[0].children[0].children[nodeIndex];
                 selectedNode.children[1].setAttribute("stroke", "red");
               }
             });
           }
         }
-        dataflowWindow!.appendChild(svgElement);
       });
 
 
@@ -1346,16 +1350,38 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
 
 }
 
-function excludePriorProvenanceHint(dataflowWindow: HTMLElement | null) {
-  d3_select(dataflowWindow).append("div").append("div")
-    .text("Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience")
+function checkboxOpenDataflowExcludeProvenanceNewWindow(dataflowWindow: HTMLElement) {
+
+  let dataflowWindowD3Select = d3_select(dataflowWindow);
+  let checkboxID = dataflowWindow.getAttribute("id") + "OpenNewWindowOption";
+  
+  dataflowWindowD3Select.append("input")
+    .attr("id", checkboxID)
+    .attr("type", "checkbox");
+
+  dataflowWindowD3Select.append("label")
+    .attr("for", checkboxID)
+    .text("Don't open dataflow with excluded provenance in a new tab")
     .style('font-family', 'sans-serif')
     .style('font-size', '12px')
     .style('pointer-events', 'none');
 }
 
+function excludePriorProvenanceHint(dataflowWindow: HTMLElement | null, text : string) {
+  d3_select(dataflowWindow).append("div").append("div")
+    .text(text)
+    .style('font-family', 'sans-serif')
+    .style('font-size', '12px')
+    .style('pointer-events', 'none');
+}
+
+function chooseDataflowExcludedProvenanceWindowId(presentWindowId : string, newWindowId : string){
+  if((document.getElementById(presentWindowId + "OpenNewWindowOption") as HTMLInputElement).checked) return presentWindowId;
+  return newWindowId;
+}
+
 function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any, dataflowUrl: string,
-  config: HistoryConfig, trialIdSimplified: string) {
+  config: HistoryConfig, trialIdSimplified: string, presentWindowId: string) {
 
   dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
   dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
@@ -1373,18 +1399,8 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any,
   let dataflowUrlLastEvaluation = dataflowUrl + lastEvaluationOrder;
   let dataflowUrlFirstEvaluation = dataflowUrl + firstEvaluationOrder;
 
-  let excludindProvenanceWindowId = "Dataflow excluding prior " + presentNodeOrderEvaluationTitle + " " + selectedNodeEvaluationTitle
-    + " window " + trialIdSimplified;
-
-  let excludingProvenanceWindow = document.getElementById(excludindProvenanceWindowId);
-
-  if (!excludingProvenanceWindow) {
-
-    config.customWindowTabCommand(trialIdSimplified, excludindProvenanceWindowId, "Dataflow excluding some provenance");
-
-    excludingProvenanceWindow = document.getElementById(excludindProvenanceWindowId);
-
-  }
+  let excludingProvenanceWindow = getDataflowWindowExcludeSomeProvenance(presentWindowId, "Dataflow excluding prior " + presentNodeOrderEvaluationTitle + " " + selectedNodeEvaluationTitle
+    + " window " + trialIdSimplified, trialIdSimplified, config);
 
   excludingProvenanceWindow!.textContent = "Loading...";
 
@@ -1405,7 +1421,7 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any,
         responseFirstEvaluation.json().then((jsonFirstEvaluation: any) => {
           let dataflowFirstEvaluation = jsonFirstEvaluation.dataflow;
 
-          dataflowAMinusDataflowB(dataflowLastEvaluation, dataflowFirstEvaluation, firstEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl);
+          dataflowAMinusDataflowB(dataflowLastEvaluation, dataflowFirstEvaluation, firstEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config);
 
         });
       });
@@ -1414,7 +1430,22 @@ function deletePriorNodes(selectedNode: Element, presentNode: Element, viz: any,
 
 }
 
-function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluationOrder: number, excludingProvenanceWindow: HTMLElement | null, viz: any, dataflowUrl: string) {
+function getDataflowWindowExcludeSomeProvenance(presentWindowId: string, newWindowId: string, trialIdSimplified: string, config: HistoryConfig) {
+  let excludingProvenanceWindowId = chooseDataflowExcludedProvenanceWindowId(presentWindowId, newWindowId);
+
+  let excludingProvenanceWindow = document.getElementById(excludingProvenanceWindowId);
+
+  if (!excludingProvenanceWindow) {
+
+    config.customWindowTabCommand(trialIdSimplified, excludingProvenanceWindowId, "Dataflow excluding some provenance");
+
+    excludingProvenanceWindow = document.getElementById(excludingProvenanceWindowId);
+
+  }
+  return excludingProvenanceWindow;
+}
+
+function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluationOrder: number, excludingProvenanceWindow: HTMLElement | null, viz: any, dataflowUrl: string, config : HistoryConfig) {
   //SET MINUS OPERATION A-B "The set A−B consists of elements that are in A but not in B. For example if A={1,2,3} and B={3,5}, then A−B={1,2}."
   let linesDataflowA = dataflowA.split("\n");
   let linesDataflowB = dataflowB.split("\n");
@@ -1432,28 +1463,34 @@ function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluat
   console.log("------");
 
   excludingProvenanceWindow!.textContent = "";
-  
-  let svgElement = viz.renderSVGElement(newDataflowString);
 
-  addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow);
+  downloadDataflow(excludingProvenanceWindow, excludingProvenanceWindow!.getAttribute("id")!);
+  excludePriorProvenanceHint(excludingProvenanceWindow, "(Ctrl or Shift)+click on a function call to exclude prior provenience");
+  checkboxOpenDataflowExcludeProvenanceNewWindow(excludingProvenanceWindow!);
+
+  let svgElement = viz.renderSVGElement(newDataflowString);
   excludingProvenanceWindow!.appendChild(svgElement);
+  svgPanZoom(svgElement, {preventMouseEventsDefault: false, dblClickZoomEnabled: false});
+
+  addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config);
+  
 }
 
-function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null) {
-  for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children.length; nodeIndex++) {
+function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig) {
+  for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children[0].children.length; nodeIndex++) {
 
-    let selectedNode: Element = svgElement.children[0].children[nodeIndex];
+    let selectedNode: Element = svgElement.children[0].children[0].children[nodeIndex];
     if (selectedNode.getAttribute("class") == "node" && selectedNode.children[1].tagName.toLowerCase() == "polygon") {
       d3_select(selectedNode).on("click", (event: MouseEvent) => {
 
-        if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow);
-        
+        if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config);
+
       });
     }
   }
 }
 
-function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null) {
+function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig) {
 
   dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/"));
   dataflowUrl = dataflowUrl.substring(0, dataflowUrl.lastIndexOf("/")) + "/true/";
@@ -1462,6 +1499,10 @@ function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any
   let selectedEvaluationOrder = Number(selectedNodeOrderEvaluationTitle.replace("e_", ""));
 
   let dataflowUrlPresentEvaluation = dataflowUrl + selectedEvaluationOrder;
+
+
+  let excludingProvenanceWindowId = excludingProvenanceWindow?.getAttribute("id");
+  excludingProvenanceWindow = getDataflowWindowExcludeSomeProvenance(excludingProvenanceWindowId!, excludingProvenanceWindowId+"OneMore", "", config);//TODO get simplifiedtrialid from wxcludingprovenancewindow
 
   excludingProvenanceWindow!.textContent = "Loading...";
 
@@ -1475,7 +1516,7 @@ function deletePriorNodesAfterDeletingPriorNodes(selectedNode: Element, viz: any
 
       let selectedEvaluationDataflow = json.dataflow;
 
-      dataflowAMinusDataflowB(newDataflowString, selectedEvaluationDataflow, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl);
+      dataflowAMinusDataflowB(newDataflowString, selectedEvaluationDataflow, selectedEvaluationOrder, excludingProvenanceWindow, viz, dataflowUrl, config);
 
     });
   });
@@ -1537,7 +1578,7 @@ function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, s
       let evaluationWithoutSettings = line.split(" ")[6];
       if (Number(evaluationWithoutSettings.replace("e_", "").replace("a_", "")) < selectedEvaluationOrder) { // TODO revise if firstEvaluationOrder is right
         let lineToAdd = linesDataflowA.find((string: string) => string.includes(evaluationWithoutSettings + " ["));
-        if(newDataflow.indexOf(lineToAdd) < 0) tempArray.push(lineToAdd);
+        if (newDataflow.indexOf(lineToAdd) < 0) tempArray.push(lineToAdd);
       }
     }
   });
@@ -1726,7 +1767,7 @@ function downloadDataflow(dataflowWindow: HTMLElement | null, dataflowWindowId: 
     .style("color", "black")
     .attr("title", "Download dataflow SVG")
     .on("click", () => {
-      fs.saveAs(new Blob([dataflowWindow!.children[1].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
+      fs.saveAs(new Blob([dataflowWindow!.getElementsByTagName("svg")[0].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
     })
     .append("i")
     .classed("fa fa-download", true);
