@@ -1394,7 +1394,7 @@ class Trial(AlchemyProxy):
             part_node = node_dict.get(composition.part_id)
 
             if whole_node is None or part_node is None:
-                if composition.extra is not None:
+                if composition.extra is None:
                     continue
             construct_relationship(whole_node, part_node, composition)
 

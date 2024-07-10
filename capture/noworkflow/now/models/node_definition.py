@@ -373,8 +373,6 @@ def construct_relationship(whole_node, part_node, composition):
         composition.whole_id == part_node and whole_node.content.append(
             whole_node.name)
     elif isinstance(whole_node, ast.Dict):
-        print(part_node[0])
-        print(part_node[1])
         whole_node.keys.append(part_node[0])
         whole_node.values.append(part_node[1])
 
@@ -446,8 +444,6 @@ def construct_relationship(whole_node, part_node, composition):
             whole_node.generators.append(part_node)
     elif isinstance(whole_node, ast.DictComp):
         if composition.type == 'key_value':
-            print(part_node[0])
-            print(part_node[1])
             whole_node.key = part_node[0]
             whole_node.value = part_node[1]
         elif composition.type == '*generators':
