@@ -632,7 +632,7 @@ class Trial(AlchemyProxy):
             if os.path.isabs(path):
                 if not path.startswith(self.path):
                     return
-                path = os.path.relpath(path, persistence_config.base_path)
+                path = os.path.relpath(path, self.path)
             files[path] = info
 
         if script:
