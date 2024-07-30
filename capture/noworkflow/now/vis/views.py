@@ -17,6 +17,7 @@ from ..persistence.models import Trial, Activation,Activation, Experiment, Exten
 from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
 from ..models.history import History
 from ..models.diff import Diff
+from ..models.definition import Definition
 from ..persistence import relational, content
 from ..ipython.dotmagic import DotDisplay
 
@@ -337,7 +338,18 @@ def get_file(file_hash, file_ext):
 def trial_graph(tid, graph_mode, cache,expCode=None):
     """Respond trial graph as JSON"""
     trial = Trial(tid)
+    # trial = Definition(tid)
     graph = trial.graph
+    graph.use_cache &= bool(int(cache))
+    _, tgraph, _ = getattr(graph, graph_mode)()
+    return jsonify(**tgraph)
+
+@app.route("/experiments/<expCode>/definition/<tid>/<graph_mode>/<cache>.json")
+@app.route("/definition/<tid>/<graph_mode>/<cache>.json")
+def definition_graph(tid, graph_mode, cache,expCode=None):
+    """Respond definition graph as JSON"""
+    definition = Definition(tid)
+    graph = definition.graph
     graph.use_cache &= bool(int(cache))
     _, tgraph, _ = getattr(graph, graph_mode)()
     return jsonify(**tgraph)

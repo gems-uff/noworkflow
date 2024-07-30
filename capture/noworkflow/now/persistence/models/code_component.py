@@ -14,7 +14,9 @@ from sqlalchemy.orm import remote, foreign
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullable
 
-from .base import AlchemyProxy, proxy_class, query_one_property
+from .. import relational
+
+from .base import AlchemyProxy, proxy_class, query_one_property, query_many_property
 
 
 @proxy_class
@@ -136,3 +138,35 @@ class CodeComponent(AlchemyProxy):
         """
         from .evaluation import Evaluation
         return self.evaluations.order_by(Evaluation.m.checkpoint).first()
+
+    @classmethod # query
+    def compositions(cls, trial_id):
+        """Return activation line
+
+
+        Doctest:
+        >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
+        >>> from noworkflow.tests.helpers.models import AssignConfig
+        >>> from noworkflow.now.persistence.models import Trial
+        >>> assign = AssignConfig(call_line=5)
+        >>> trial_id = new_trial(TrialConfig("finished"), assignment=assign,
+        ...                      erase=True)
+        >>> activation = Activation((trial_id, assign.f_activation))
+
+        Return activation line:
+        >>> activation.line
+        5
+        """
+        from .composition import Composition
+        return relational.session.query(Composition.m).join(
+            CodeComponent.m,
+            (CodeComponent.m.trial_id == Composition.m.trial_id)&
+            (CodeComponent.m.id == Composition.m.whole_id)
+        ).filter(
+            (CodeComponent.m.type != "syntax") &
+            (CodeComponent.m.type != "module") &
+            (CodeComponent.m.type != "type") &
+            (CodeComponent.m.type != "global") &
+            (Composition.m.type != '*op_pos') &
+            (CodeComponent.m.trial_id == trial_id)
+        ).all()
