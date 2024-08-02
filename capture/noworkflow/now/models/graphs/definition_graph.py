@@ -41,22 +41,17 @@ class DefinitionGraph(Graph):
         }
 
 
-    def define_node(self, preorder, relationship):
+    def define_node(self, preorder, compositions):
+        relationship = compositions
         for node in preorder:
             if node.type == 'script':
-                root = last = self.insert_node(node, None)
+                root = self.insert_node(node, None)
                 continue
             elif node.type != 'syntax':
                  for relation in relationship:
-                    if last.node_id == relation.whole_id and node.id == relation.part_id:
-                        last = self.insert_node(node, last)
-                        relationship.remove(relation)
-                        break
-                    else:
-                        match = self.calculate_match(node)
-                        find = self.matches[last.parent_index].get(match)
-                        if find is None:
-                            last = self.insert_node(node, self.nodes[last.parent_index], match)
+                    if node.id == relation.part_id:
+                            find = next((n for n in self.nodes if n.node_id == relation.whole_id), None)
+                            self.insert_node(node, find)
                             relationship.remove(relation)
                             break
         return root
@@ -67,11 +62,11 @@ class DefinitionGraph(Graph):
         trial_id = 0 if len(ids) > 1 else next(iter(ids))
         self.edges[source.index][target.index][type_][trial_id] += count
 
-    def insert_node(self, node_, parent, match=None):
+    def insert_node(self, node_, parent):
         """Create node"""
         node = Node(
             index=self.index,
-            name=node_.type,
+            name=node_.type + "\n" + node_.name,
             parent_index=-1,
             children_index=-1,
             children=[],
@@ -83,7 +78,19 @@ class DefinitionGraph(Graph):
             trial_ids=[],
             has_return=False,
         )
-        # self.merge(node, node_)
+
+        # if node_.type == 'function_def':
+        #     args = [body['name'] for body in self.def_dict
+        #             if body['type'] == 'arguments' and body['whole_id'] == node.node_id][0]
+        #     label_lines = []
+        #     for body in self.def_dict:
+        #         if body['whole_id'] == node.node_id and body['position'] is not None:
+        #             if body['type'] == 'function_def':
+        #                 label_lines.append(f"def {body['name']}({args}):")
+        #             else:
+        #                 label_lines.append(body['name'])
+        #     node.name = '<br>'.join(label_lines)
+
         trial_id = node_.trial_id
         if trial_id not in node.trial_ids:
             node.trial_ids.append(trial_id)
@@ -99,11 +106,42 @@ class DefinitionGraph(Graph):
             node.parent_index = parent.index
             node.children_index = len(parent.children)
             parent.children.append(node)
-            if match is not None:
-                self.matches[parent.index][match] = node
 
         self.nodes.append(node)
         return node
+
+    def label_def(self, trial_id):
+        "Return the label needed for the trial's definition multi-name node."
+        def_id = relational.session.query(CodeComponent.m.id).join(
+            Composition.m,
+            (CodeComponent.m.id == Composition.m.part_id) &
+            (CodeComponent.m.trial_id == Composition.m.trial_id)
+        ).filter(
+            (CodeComponent.m.trial_id == trial_id) &
+            (CodeComponent.m.type == 'function_def') | (CodeComponent.m.type == 'class_def')
+        ).subquery()
+
+        labels = relational.session.query(
+            CodeComponent.m.name,
+            CodeComponent.m.type,
+            Composition.m.whole_id,
+            Composition.m.position
+        ).join(
+            Composition.m,
+            (CodeComponent.m.id == Composition.m.part_id) &
+            (CodeComponent.m.trial_id == Composition.m.trial_id)
+        ).filter(
+            (CodeComponent.m.trial_id == trial_id) &
+            (CodeComponent.m.type != 'syntax') &
+            Composition.m.whole_id.in_(def_id)
+        ).all()
+
+        return [{
+            'name': def_.name,
+            'type': def_.type,
+            'whole_id': def_.whole_id,
+            'position': def_.position}
+            for def_ in labels]
 
     def calculate_match(self, node):
         """No match"""
@@ -111,16 +149,15 @@ class DefinitionGraph(Graph):
         return self.match_id
 
     def result(self, components, compositions):
-        """Get summarization graph result"""
-        # return self.trial.finished, summarization.graph(
-        #     {self.trial.id: 0}, self.width, self.height
-        # ), summarization.nodes
+        """Get definition graph result"""
         self.index = 0
         self.nodes = []
         self.matches = defaultdict(dict)
         self.edges = defaultdict(
             lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
         )
+        # self.def_dict = self.label_def(compositions[0].trial_id)
+
         root = self.define_node(components, compositions)
         stack = [root]
         edges = []
@@ -138,6 +175,7 @@ class DefinitionGraph(Graph):
                         'target': target_nid,
                         'type': type_,
                     })
+
         min_duration = 0
         max_duration = 1
         trials = set()
@@ -147,6 +185,7 @@ class DefinitionGraph(Graph):
         tlist = list(trials)
         if not tlist:
             tlist.append(0)
+
         graph = {
             'root': root,
             'edges': edges,
@@ -192,7 +231,7 @@ class DefinitionGraph(Graph):
         }
         display(bundle, raw=True)
 
-from .. import relational
+from ...persistence import relational
 from ...persistence.models.composition import Composition
 
 class TrialAst:
