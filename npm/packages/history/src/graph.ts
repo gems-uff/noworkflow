@@ -35,7 +35,7 @@ import { VisibleHistoryNode, VisibleHistoryEdge } from './structures';
 import { HistoryGraphData, HistoryNodeData, HistoryTrialNodeData } from './structures';
 import { D3ZoomEvent } from 'd3';
 import { event } from 'jquery';
-import { config } from 'webpack';
+//import { config } from 'webpack';
 
 
 export
@@ -101,7 +101,7 @@ export
       .on("start", () => d3_select('body').style("cursor", "move"))
       .on("end", () => d3_select('body').style("cursor", "auto"))
       .wheelDelta(function () {
-        const e = event as WheelEvent;
+        const e = event as unknown as WheelEvent;
         return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
       })
 
@@ -202,7 +202,7 @@ export
       .on("click", function () {
 
         let parent = this.parentNode as Element
-        let trialId = parent.getAttribute("selected-trial");
+        let trialId = parent.getAttribute("selected-trial") ?? "";
 
         buildDataflowModal(modal, modalBody, parent, config, trialId);
       });
@@ -1484,8 +1484,8 @@ function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(newDataflow: any, f
 function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
   parent: Element, config: HistoryConfig, trialId: string) {
 
-  let submitButton;
-  let evaluationList;
+  let submitButton: d3_Selection<HTMLButtonElement, {}, HTMLElement | null, any>;
+  let evaluationList: any[];
   let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
   document.getElementById("exampleModalTitle")!.textContent = "Dataflow";
 
@@ -1599,7 +1599,7 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
 
       submitButton!.on("click", function () {
         let dataFlowShowType = (<HTMLInputElement>document.getElementById("dataFlowShowType")).checked;
-        let dataFlowHideTimestamps = (<HTMLSelectElement>document.getElementById("dataflowMode")).checked;
+        let dataFlowHideTimestamps = (<HTMLInputElement>document.getElementById("dataflowMode")).checked;
         let dataFlowHideInternals = (<HTMLInputElement>document.getElementById("dataFlowHideInternals")).checked;
 
         let dataflowFileAccesses = (<HTMLSelectElement>document.getElementById("dataflowShowAccesses")).selectedOptions[0].index;
