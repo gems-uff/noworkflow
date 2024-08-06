@@ -2,7 +2,7 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Diff Object"""
+"""Definition Diff Object"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
@@ -13,31 +13,32 @@ from future.utils import viewkeys
 from ..persistence.models.base import Model, proxy_gen
 from .definition import Definition
 from .graphs.definition_diff_graph import DefinitionDiffGraph
+from .diff import diff_dict, diff_set
 
 
 class DefinitionDiff(Model):
     """This model represents a diff between two trials
     Initialize it by passing both trials ids:
-        diff = Diff(1, 2)
+        definition_diff = DefinitionDiff(1, 2)
 
     There are four visualization modes for the graph:
         tree: activation tree without any filters
-            diff.graph.mode = 0
+            definition_diff.graph.mode = 0
         no match: tree transformed into a graph by the addition of sequence and
                   return edges and removal of intermediate call edges
-            diff.graph.mode = 1
+            definition_diff.graph.mode = 1
         exact match: calls are only combined when all the sub-call match
-            diff.graph.mode = 2
+            definition_diff.graph.mode = 2
         namesapce: calls are combined without considering the sub-calls
-            diff.graph.mode = 3
+            definition_diff.graph.mode = 3
 
 
     You can change the graph width and height by the variables:
-        diff.graph.width = 600
-        diff.graph.height = 400
+        definition_diff.graph.width = 600
+        definition_diff.graph.height = 400
     """
 
-    __modelname__ = "Diff"
+    __modelname__ = "DefinitionDiff"
 
     DEFAULT = {
         "graph.width": 500,
@@ -64,29 +65,30 @@ class DefinitionDiff(Model):
     @property
     def trial(self):
         """Return a tuple with information from both trials """
-        extra = ("start", "finish", "duration_text","code_hash")
+        extra = ("start", "finish", "duration_text", "code_hash")
         ignore = ("id",)
         return diff_dict(
-            self.definition1.trial.to_dict(ignore=ignore, extra=extra),                     # pylint: disable=no-member
+            self.definition1.trial.to_dict(
+                ignore=ignore, extra=extra),                     # pylint: disable=no-member
             self.definition2.trial.to_dict(ignore=ignore, extra=extra))                     # pylint: disable=no-member
 
     @property
     def modules(self):
-        """Diff modules from trials"""
+        """Definition diff modules from trials"""
         return diff_set(
             set(proxy_gen(self.definition1.trial.modules)),
             set(proxy_gen(self.definition2.trial.modules)))
 
     @property
     def environment(self):
-        """Diff environment variables"""
+        """Definition diff environment variables"""
         return diff_set(
             set(self.definition1.trial.environment_attrs),
             set(self.definition2.trial.environment_attrs))
 
     @property
     def file_accesses(self):
-        """Diff file accesses"""
+        """Definition diff file accesses"""
         return diff_set(
             set(self.definition1.trial.file_accesses),
             set(self.definition2.trial.file_accesses),
@@ -104,42 +106,3 @@ class DefinitionDiff(Model):
                 self.definition2.trial.id
             )
         })
-
-
-def diff_dict(before, after):
-    """Compare dicts.
-    Return a dict with keys shared by both dicts that have different values
-        key -> [before[key], after[key]]
-    """
-    result = OrderedDict()
-    for key in viewkeys(before):
-        if key != "id" and before[key] != after[key]:
-            result[key] = [before[key], after[key]]
-    return result
-
-
-def diff_set(before, after, create_replaced=True):
-    """Compare sets to get additions, removals and replacements
-
-    Return 3 sets:
-    added -- objects present in second set, but not present in first set
-    removed -- objects present in first set, but not present in second set
-    replaced -- objects that have the same name in both sets, but are different
-    """
-    removed = before - after
-    added = after - before
-    replaced = set()
-
-    removed_by_name = {}
-    for element_removed in removed:
-        removed_by_name[element_removed.name] = element_removed
-    for element_added in added:
-        element_removed = removed_by_name.get(element_added.name)
-        if element_removed and create_replaced:
-            replaced.add((element_removed, element_added))
-    if create_replaced:
-        for (element_removed, element_added) in replaced:
-            removed.discard(element_removed)
-            added.discard(element_added)
-
-    return (added, removed, replaced)
