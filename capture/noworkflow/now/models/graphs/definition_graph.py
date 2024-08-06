@@ -5,6 +5,8 @@
 """Trial Graph Module"""
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
+from ...persistence import relational
+from ...persistence.models.composition import Composition
 
 import weakref
 import ast
@@ -40,7 +42,6 @@ class DefinitionGraph(Graph):
             3: self.namespace_match
         }
 
-
     def define_node(self, preorder, compositions):
         relationship = compositions
         for node in preorder:
@@ -48,12 +49,13 @@ class DefinitionGraph(Graph):
                 root = self.insert_node(node, None)
                 continue
             elif node.type != 'syntax':
-                 for relation in relationship:
+                for relation in relationship:
                     if node.id == relation.part_id:
-                            find = next((n for n in self.nodes if n.node_id == relation.whole_id), None)
-                            self.insert_node(node, find)
-                            relationship.remove(relation)
-                            break
+                        find = next(
+                            (n for n in self.nodes if n.node_id == relation.whole_id), None)
+                        self.insert_node(node, find)
+                        relationship.remove(relation)
+                        break
         return root
 
     def add_edge(self, source, target, type_, count=1):
@@ -66,11 +68,11 @@ class DefinitionGraph(Graph):
         """Create node"""
         node = Node(
             index=self.index,
-            name=node_.type + "\n" + node_.name,
+            name=node_.type + " | " + node_.name,
             parent_index=-1,
             children_index=-1,
             children=[],
-            node_id = node_.id,
+            node_id=node_.id,
             activations=defaultdict(list),
             duration=defaultdict(int),
             full_tooltip=True,
@@ -79,17 +81,12 @@ class DefinitionGraph(Graph):
             has_return=False,
         )
 
-        # if node_.type == 'function_def':
-        #     args = [body['name'] for body in self.def_dict
-        #             if body['type'] == 'arguments' and body['whole_id'] == node.node_id][0]
-        #     label_lines = []
-        #     for body in self.def_dict:
-        #         if body['whole_id'] == node.node_id and body['position'] is not None:
-        #             if body['type'] == 'function_def':
-        #                 label_lines.append(f"def {body['name']}({args}):")
-        #             else:
-        #                 label_lines.append(body['name'])
-        #     node.name = '<br>'.join(label_lines)
+        if node_.type in {'global', 'nonlocal', 'assert', 'raise', 'await', 'yield', 'yield_from'}:
+            node.name = node_.name
+        elif node_.type == 'return':
+            node.name = node_.type
+        elif node_.type == 'attribute':
+            node.name = node_.name.split('.')[1]
 
         trial_id = node_.trial_id
         if trial_id not in node.trial_ids:
@@ -118,7 +115,8 @@ class DefinitionGraph(Graph):
             (CodeComponent.m.trial_id == Composition.m.trial_id)
         ).filter(
             (CodeComponent.m.trial_id == trial_id) &
-            (CodeComponent.m.type == 'function_def') | (CodeComponent.m.type == 'class_def')
+            (CodeComponent.m.type == 'function_def') | (
+                CodeComponent.m.type == 'class_def')
         ).subquery()
 
         labels = relational.session.query(
@@ -231,8 +229,6 @@ class DefinitionGraph(Graph):
         }
         display(bundle, raw=True)
 
-from ...persistence import relational
-from ...persistence.models.composition import Composition
 
 class TrialAst:
     def __init__(self):
@@ -263,7 +259,8 @@ class TrialAst:
             (CodeComponent.m.trial_id == Composition.m.trial_id)
         ).filter(
             (CodeComponent.m.trial_id == self.id) &
-            (CodeComponent.m.type == 'function_def') | (CodeComponent.m.type == 'class_def')
+            (CodeComponent.m.type == 'function_def') | (
+                CodeComponent.m.type == 'class_def')
         ).subquery()
 
         labels = relational.session.query(
