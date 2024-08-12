@@ -17,7 +17,7 @@ from future.utils import viewitems
 
 from .trial_graph import Node
 from .structures import Graph, prepare_cache
-from .diff_graph import CONFIG, children_cmp, create_mapping, merge, merge_edges 
+from .diff_graph import CONFIG, children_cmp, create_mapping, merge, merge_edges
 
 
 def create_diff(trial_graph1, trial_graph2):
@@ -89,8 +89,9 @@ def create_diff(trial_graph1, trial_graph2):
 
 
 cache = prepare_cache(  # pylint: disable=invalid-name
-    lambda self, *args, **kwargs: "diff {}:{}".format(self.diff.definition1.trial.id,
+    lambda self, *args, **kwargs: "definition diff {}:{}".format(self.diff.definition1.trial.id,
                                                       self.diff.definition2.trial.id))
+
 
 class DefinitionDiffGraph(Graph):
     """Diff Graph Class. Present diff graph on Jupyter"""
@@ -105,9 +106,6 @@ class DefinitionDiffGraph(Graph):
 
         self._modes = {
             0: self.tree,
-            1: self.no_match,
-            2: self.exact_match,
-            3: self.namespace_match
         }
 
     @cache("tree")
@@ -117,21 +115,6 @@ class DefinitionDiffGraph(Graph):
             self.diff.definition1.graph.tree(),
             self.diff.definition2.graph.tree()
         )
-
-    @cache("no_match")
-    def no_match(self):
-        """Convert tree structure into dict graph without node matchings"""
-        pass
-
-    @cache("exact_match")
-    def exact_match(self):
-        """Convert tree structure into dict graph and match equal calls"""
-        pass
-
-    @cache("namespace_match")
-    def namespace_match(self):
-        """Convert tree structure into dict graph and match namespaces"""
-        pass
 
     def _ipython_display_(self):
         from IPython.display import display

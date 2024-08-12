@@ -20,16 +20,9 @@ class Definition(Model):
     Initialize it by passing a trials id:
         definition = Definition(1)
 
-    There are four visualization modes for the graph:
-        tree: activation tree without any filters
+    There are one visualization modes for the graph:
+        definition_tree: definition tree without any filters
             definition.graph.mode = 0
-        no match: tree transformed into a graph by the addition of sequence and
-                  return edges and removal of intermediate call edges
-            definition.graph.mode = 1
-        exact match: calls are only combined when all the sub-call match
-            definition.graph.mode = 2
-        namesapce: calls are combined without considering the sub-calls
-            definition.graph.mode = 3
 
 
     You can change the graph width and height by the variables:
@@ -42,15 +35,13 @@ class Definition(Model):
     DEFAULT = {
         "graph.width": 500,
         "graph.height": 500,
-        "graph.mode": 0,
-        "graph.use_cache": False
+        "graph.mode": 0
     }
 
     REPLACE = {
         "graph_width": "graph.width",
         "graph_height": "graph.height",
-        "graph_mode": "graph.mode",
-        "graph_use_cache": "graph.use_cache"
+        "graph_mode": "graph.mode"
     }
 
     def __init__(self, trial_ref, **kwargs):

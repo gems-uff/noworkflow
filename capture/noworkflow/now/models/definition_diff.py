@@ -21,16 +21,9 @@ class DefinitionDiff(Model):
     Initialize it by passing both trials ids:
         definition_diff = DefinitionDiff(1, 2)
 
-    There are four visualization modes for the graph:
-        tree: activation tree without any filters
+    There are one visualization modes for the graph:
+        definition_tree: definition tree without any filters
             definition_diff.graph.mode = 0
-        no match: tree transformed into a graph by the addition of sequence and
-                  return edges and removal of intermediate call edges
-            definition_diff.graph.mode = 1
-        exact match: calls are only combined when all the sub-call match
-            definition_diff.graph.mode = 2
-        namesapce: calls are combined without considering the sub-calls
-            definition_diff.graph.mode = 3
 
 
     You can change the graph width and height by the variables:
@@ -43,7 +36,7 @@ class DefinitionDiff(Model):
     DEFAULT = {
         "graph.width": 500,
         "graph.height": 500,
-        "graph.mode": 3,
+        "graph.mode": 0,
         "graph.time_limit": None,
     }
 

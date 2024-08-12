@@ -338,19 +338,12 @@ def get_file(file_hash, file_ext):
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
 def trial_graph(tid, graph_mode, cache,expCode=None):
     """Respond trial graph as JSON"""
-    # trial = Trial(tid)
-    trial = Definition(tid)
+    if "definition" in graph_mode :
+        trial = Definition(tid)
+        graph_mode = graph_mode.split('_')[1]
+    else:
+        trial = Trial(tid)
     graph = trial.graph
-    graph.use_cache &= bool(int(cache))
-    _, tgraph, _ = getattr(graph, "tree")()
-    return jsonify(**tgraph)
-
-@app.route("/experiments/<expCode>/definition/<tid>/<graph_mode>/<cache>.json")
-@app.route("/definition/<tid>/<graph_mode>/<cache>.json")
-def definition_graph(tid, graph_mode, cache,expCode=None):
-    """Respond definition graph as JSON"""
-    definition = Definition(tid)
-    graph = definition.graph
     graph.use_cache &= bool(int(cache))
     _, tgraph, _ = getattr(graph, graph_mode)()
     return jsonify(**tgraph)
@@ -469,19 +462,11 @@ def diff_accesses(trial1, trial2,expCode=None):
 @app.route("/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
 def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
     """Respond trial diff as JSON"""
-    # diff_object = Diff(trial1, trial2)
-    diff_object = DefinitionDiff(trial1, trial2)
-    graph = diff_object.graph
-    graph.use_cache &= bool(int(cache))
-
-    _, diff_result, _ = getattr(graph, 'tree')()
-    return jsonify(**diff_result)
-
-@app.route("/experiments/<expCode>/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
-@app.route("/definition/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
-def definition_diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
-    """Respond definition diff graph as JSON"""
-    diff_object = DefinitionDiff(trial1, trial2)
+    if "definition" in graph_mode :
+        diff_object = DefinitionDiff(trial1, trial2)
+        graph_mode = graph_mode.split('_')[1]
+    else:
+        diff_object = Diff(trial1, trial2)
     graph = diff_object.graph
     graph.use_cache &= bool(int(cache))
 

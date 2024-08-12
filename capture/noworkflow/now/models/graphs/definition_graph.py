@@ -20,7 +20,7 @@ from ...persistence.models.code_component import CodeComponent
 from .trial_graph import Node
 
 cache = prepare_cache(                                                           # pylint: disable=invalid-name
-    lambda self, *args, **kwargs: "trial {}".format(self.trial.trial.id))
+    lambda self, *args, **kwargs: "definition {}".format(self.trial.trial.id))
 
 
 class DefinitionGraph(Graph):
@@ -37,9 +37,6 @@ class DefinitionGraph(Graph):
         self.mode = 0
         self._modes = {
             0: self.tree,
-            1: self.no_match,
-            2: self.exact_match,
-            3: self.namespace_match
         }
 
     def define_node(self, preorder, compositions):
@@ -68,7 +65,7 @@ class DefinitionGraph(Graph):
         """Create node"""
         node = Node(
             index=self.index,
-            name=node_.type + " | " + node_.name,
+            name=node_.type + " <br> " + node_.name,
             parent_index=-1,
             children_index=-1,
             children=[],
@@ -202,24 +199,6 @@ class DefinitionGraph(Graph):
     def tree(self):
         """Convert tree structure into dict tree structure"""
         return self.result(self.trial.trial.code_components, CodeComponent.compositions(self.trial.trial.id))
-
-    @cache("no_match")
-    def no_match(self):
-        """Convert tree structure into dict graph without node matchings"""
-        # ToDo if needed
-        pass
-
-    @cache("exact_match")
-    def exact_match(self):
-        """Convert tree structure into dict graph and match equal calls"""
-        # ToDo if needed
-        pass
-
-    @cache("namespace_match")
-    def namespace_match(self):
-        """Convert tree structure into dict graph and match namespaces"""
-        # ToDo if needed
-        pass
 
     def _ipython_display_(self):
         from IPython.display import display
