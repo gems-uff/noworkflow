@@ -456,7 +456,7 @@ class TrialGraph {
   }
 
   wrapText() {
-    this.svg.selectAll(".node text")
+    this.svg.selectAll(".node text:not(.nowrap)")
         .call(wrap, this.config.nodeSizeX);
   }
 
@@ -631,7 +631,24 @@ class TrialGraph {
       .attr("y", 24)
       .attr("x", 10)
       .attr("text-anchor", "middle")
-      .text((d: VisibleTrialNode) => { return d.data.name; })
+      .each(function(d: VisibleTrialNode) {
+        const textLabel = d3_select(this);
+        const name = d.data.name.split('<br>');
+        if (name.length > 1) {
+          textLabel.append("tspan")
+            .attr("x", "10")
+            .attr("dy", ".35em")
+            .attr("font-weight", "bold")
+            .text(name[0]);
+          textLabel.append("tspan")
+            .attr("x", "10")
+            .attr("dy", "1em")
+            .text(name[1]);
+          textLabel.attr("class", "nowrap")
+        } else {
+          return textLabel.text(d.data.name);
+        }
+      });
 
     nodeEnter.append("path")
       .attr("stroke", "#000")
