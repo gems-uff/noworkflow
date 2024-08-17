@@ -12,7 +12,7 @@ from future.utils import viewkeys
 
 from ..persistence.models.base import Model, proxy_gen
 from ..persistence.models.trial import Trial
-from .graphs.definition_graph import DefinitionGraph
+from .graphs.definition_graph import DefinitionGraph, DefinitionAst
 
 
 class Definition(Model):
@@ -48,6 +48,7 @@ class Definition(Model):
         super(Definition, self).__init__(trial_ref, **kwargs)
         self.trial = Trial(trial_ref)
         self.graph = DefinitionGraph(self)
+        self.ast = DefinitionAst(self)
         self.initialize_default(kwargs)
 
     @property

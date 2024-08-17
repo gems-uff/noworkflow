@@ -209,8 +209,9 @@ class DefinitionGraph(Graph):
         display(bundle, raw=True)
 
 
-class TrialAst:
-    def __init__(self):
+class DefinitionAst:
+    def __init__(self, trial):
+        self.trial = weakref.proxy(trial)
         self.components = self.code_component_definition()
         self.compositions = self.composition_definition()
         self.def_dict = self.label_def()
@@ -219,14 +220,14 @@ class TrialAst:
     def code_component_definition(self):
         """Return a code component definition"""
         return relational.session.query(CodeComponent.m).filter((
-            (CodeComponent.m.trial_id == self.id) &
+            (CodeComponent.m.trial_id == self.trial.trial.id) &
             (CodeComponent.m.type != "syntax")
         )).all()
 
     def composition_definition(self):
         """Return a composition definition"""
         return relational.session.query(Composition.m).filter((
-            (Composition.m.trial_id == self.id) &
+            (Composition.m.trial_id == self.trial.trial.id) &
             (Composition.m.type != '*op_pos')
         )).all()
 
@@ -237,7 +238,7 @@ class TrialAst:
             (CodeComponent.m.id == Composition.m.part_id) &
             (CodeComponent.m.trial_id == Composition.m.trial_id)
         ).filter(
-            (CodeComponent.m.trial_id == self.id) &
+            (CodeComponent.m.trial_id == self.trial.trial.id) &
             (CodeComponent.m.type == 'function_def') | (
                 CodeComponent.m.type == 'class_def')
         ).subquery()
@@ -252,7 +253,7 @@ class TrialAst:
             (CodeComponent.m.id == Composition.m.part_id) &
             (CodeComponent.m.trial_id == Composition.m.trial_id)
         ).filter(
-            (CodeComponent.m.trial_id == self.id) &
+            (CodeComponent.m.trial_id == self.trial.trial.id) &
             (CodeComponent.m.type != 'syntax') &
             Composition.m.whole_id.in_(def_id)
         ).all()
@@ -280,7 +281,11 @@ class TrialAst:
                     continue
             self.construct_ast_relationship(whole_node, part_node, composition)
 
-        return self.node_dict[1]
+        ast_ = {
+            "ast": {self.trial.trial.id: ast.dump(ast.parse(self.node_dict[1]))},
+            "trial": self.trial.trial.id
+        }
+        return ast_
 
     def construct_ast_node(self, component, def_dict):
         label_ = component.name
