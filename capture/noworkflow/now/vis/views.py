@@ -473,6 +473,13 @@ def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
     _, diff_result, _ = getattr(graph, graph_mode)()
     return jsonify(**diff_result)
 
+@app.route("/definition/<trial_id>/ast.json")
+def definition_ast(trial_id):
+    """Respond trial definition as AST"""
+    trial = Definition(trial_id)
+    ast = trial.ast
+    return jsonify(ast())
+
 @app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
 def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):
     """Execute the command 'now restore' for a trial"""
