@@ -17,8 +17,6 @@ from ..persistence.models import Trial, Activation,Activation, Experiment, Exten
 from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
 from ..models.history import History
 from ..models.diff import Diff
-from ..models.definition import Definition
-from ..models.definition_diff import DefinitionDiff
 from ..persistence import relational, content
 from ..ipython.dotmagic import DotDisplay
 
@@ -338,11 +336,7 @@ def get_file(file_hash, file_ext):
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
 def trial_graph(tid, graph_mode, cache,expCode=None):
     """Respond trial graph as JSON"""
-    if "definition" in graph_mode :
-        trial = Definition(tid)
-        graph_mode = graph_mode.split('_')[1]
-    else:
-        trial = Trial(tid)
+    trial = Trial(tid)
     graph = trial.graph
     graph.use_cache &= bool(int(cache))
     _, tgraph, _ = getattr(graph, graph_mode)()
@@ -462,23 +456,19 @@ def diff_accesses(trial1, trial2,expCode=None):
 @app.route("/diff/<trial1>/<trial2>/<graph_mode>-<cache>.json")
 def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
     """Respond trial diff as JSON"""
-    if "definition" in graph_mode :
-        diff_object = DefinitionDiff(trial1, trial2)
-        graph_mode = graph_mode.split('_')[1]
-    else:
-        diff_object = Diff(trial1, trial2)
+    diff_object = Diff(trial1, trial2)
     graph = diff_object.graph
     graph.use_cache &= bool(int(cache))
 
     _, diff_result, _ = getattr(graph, graph_mode)()
     return jsonify(**diff_result)
 
-@app.route("/definition/<trial_id>/ast.json")
-def definition_ast(trial_id):
-    """Respond trial definition as AST"""
-    trial = Definition(trial_id)
-    ast = trial.ast
-    return jsonify(ast())
+# @app.route("/definition/<trial_id>/ast.json")
+# def definition_ast(trial_id):
+#     """Respond trial definition as AST"""
+#     trial = Definition(trial_id)
+#     ast = trial.ast
+#     return jsonify(ast())
 
 @app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
 def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):
