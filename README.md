@@ -294,6 +294,11 @@ The server can be a central one or a peer-to-peer connection. To set up a server
 $ now vis --force true
 ```
 
+The *ast* option generates the Abstract Syntax Tree (AST) for a given trial. By default, it outputs the AST in its standard format. However, you can specify the output format using the *-j* (*--json*) option for JSON format or the *-d* (*--dot*) option for Graphviz dot format.
+```bash
+$ now ast 08ece614-f5ae-4e65-93a0-5a8b44ac9a44 --dot
+```
+
 The command line output will show the server address 
 ```bash
  * Serving Flask app 'noworkflow.now.vis.views'
