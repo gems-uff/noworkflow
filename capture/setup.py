@@ -61,7 +61,7 @@ setup(
         "demo": ["flask", "matplotlib", "numpy", "cython"],
         "notebook": ["pyposast", "ipython", "jupyter"],
         "all": ["pyposast", "ipython", "jupyter", "flask", "pyswip-alt", 
-                "matplotlib", "numpy", "cython"],
+                "matplotlib", "numpy", "cython", "graphviz"],
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',

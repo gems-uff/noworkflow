@@ -468,8 +468,8 @@ def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
 def definition_ast(trial_id):
     """Respond trial definition as AST"""
     trial = Trial(trial_id)
-    ast = trial.ast
-    return jsonify(ast())
+    ast = TrialAst(trial)
+    return jsonify(ast.construct_ast_json(False))
 
 @app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
 def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):

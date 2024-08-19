@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 import weakref
 import ast
+import graphviz
 
 
 class TrialAst(object):
@@ -86,11 +87,7 @@ class TrialAst(object):
                     continue
             self.construct_ast_relationship(whole_node, part_node, composition)
 
-        ast_ = {
-            "ast": {self.trial.id: ast.dump(ast.parse(self.node_dict[1]))},
-            "trial": self.trial.id
-        }
-        return ast_
+        return self.node_dict[1]
 
     def construct_ast_node(self, component, def_dict):
         label_ = component.name
@@ -456,8 +453,6 @@ class TrialAst(object):
             composition.whole_id == part_node and whole_node.content.append(
                 whole_node.name)
         elif isinstance(whole_node, ast.Dict):
-            print(part_node[0])
-            print(part_node[1])
             whole_node.keys.append(part_node[0])
             whole_node.values.append(part_node[1])
 
@@ -529,8 +524,6 @@ class TrialAst(object):
                 whole_node.generators.append(part_node)
         elif isinstance(whole_node, ast.DictComp):
             if composition.type == 'key_value':
-                print(part_node[0])
-                print(part_node[1])
                 whole_node.key = part_node[0]
                 whole_node.value = part_node[1]
             elif composition.type == '*generators':
@@ -653,3 +646,77 @@ class TrialAst(object):
             #     whole_node.bases.append(part_node)
             # elif composition.type == '*keywords':
             #     whole_node.keywords.append(part_node)
+
+    def construct_ast_graphviz(self):
+        dot = ast_to_dot(self())
+        print(dot.source)
+
+    def construct_ast_json(self, output=True):
+        ast_ = {
+            "ast": {self.trial.id: ast.dump(ast.parse(self()))},
+            "trial": self.trial.id
+        }
+        if output:
+            print(ast_)
+        else:
+            return ast_
+
+    def construct_ast(self):
+        print(ast.dump(ast.parse(self())))
+
+def ast_to_dot(node):
+    """Converts AST node to DOT format for Graphviz."""
+    def node_label(node):
+        label = type(node).__name__
+        if isinstance(node, ast.Module):
+            return f"{label}\n{node.name}"
+        elif isinstance(node, ast.Constant):
+            return f"{label}\n{node.value}"
+        elif isinstance(node, ast.Name):
+            return f"{label}\n{node.id}"
+        elif isinstance(node, ast.Import):
+            return f"Import\nimport {node.names[0].name}"
+        elif isinstance(node, ast.ImportFrom):
+            names_ = ', '.join([names.name for names in node.names])
+            return f"ImportFrom\nfrom {node.module} import {names_}"
+        elif isinstance(node, ast.alias):
+            return f"alias\n{node.name} as {node.asname}" if node.asname else f"alias\n{node.name}"
+        elif isinstance(node, ast.FunctionDef):
+            args = ', '.join(arg.arg for arg in node.args.args)
+            return f"{label}\ndef {node.name}({args}):\n{node.label}"
+        elif isinstance(node, ast.arg):
+            return f"{label}\n{node.arg}"
+        elif isinstance(node, ast.ClassDef):
+            return f"{label}\nclass {node.name}:\n{node.label}"
+        elif hasattr(node, 'label') and isinstance(node, ast.AST):
+            return f"{label}\n{node.label}"
+        else:
+          return f"{label}"
+
+    def node_id(node):
+        return f"node{str(id(node))}"
+
+    dot = graphviz.Digraph()
+    dot.attr(rankdir='TB', nodesep='0.75', ranksep='0.75')
+    root_id = node_id(node)
+
+    def visit(node, parent=None):
+        if not isinstance(node, ast.AST) or isinstance(node, ast.Load) or isinstance(node, ast.Store):
+            return
+
+        node_name = node_id(node)
+        dot.node(node_name, node_label(node), margin='0.1,0.1', width='0.2', height='0.2', fontsize='10')
+
+        if parent:
+            dot.edge(parent, node_name, minlen='1', arrowsize='0.5')
+
+        for child_name, child_node in ast.iter_fields(node):
+            if isinstance(child_node, list):
+                for child in child_node:
+                    if isinstance(child, ast.AST):
+                        visit(child, node_name)
+            elif isinstance(child_node, ast.AST):
+                visit(child_node, node_name)
+
+    visit(node)
+    return dot
