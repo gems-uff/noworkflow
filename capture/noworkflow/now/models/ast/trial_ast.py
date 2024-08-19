@@ -8,6 +8,7 @@ from __future__ import (absolute_import, print_function,
 from ...persistence import relational
 from ...persistence.models.composition import Composition
 from ...persistence.models.code_component import CodeComponent
+from sqlalchemy import select
 
 import weakref
 import ast
@@ -37,7 +38,7 @@ class TrialAst(object):
 
     def label_def(self):
         "Return the label needed for the trial's definition multi-name node."
-        def_id = relational.session.query(CodeComponent.m.id).join(
+        def_id = select(CodeComponent.m.id).join(
             Composition.m,
             (CodeComponent.m.id == Composition.m.part_id) &
             (CodeComponent.m.trial_id == Composition.m.trial_id)
@@ -59,7 +60,7 @@ class TrialAst(object):
         ).filter(
             (CodeComponent.m.trial_id == self.trial.id) &
             (CodeComponent.m.type != 'syntax') &
-            Composition.m.whole_id.in_(def_id)
+            Composition.m.whole_id.in_(select(def_id))
         ).all()
 
         return [{
