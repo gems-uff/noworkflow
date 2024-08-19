@@ -275,6 +275,8 @@ $ now vis -b
 ```
 The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool.
 
+An activation graph can be changed into definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs.
+
 The visualization tool requires Flask to be installed.
 To install Flask, you can run
 ```bash
