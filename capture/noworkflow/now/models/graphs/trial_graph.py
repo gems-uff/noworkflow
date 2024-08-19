@@ -354,10 +354,16 @@ class DefinitionSummarization(LineNameSummarization):
             has_return=False,
         )
 
-        if code_component.type in {'global', 'nonlocal', 'assert', 'raise', 'await', 'yield', 'yield_from'}:
-            node.name = code_component.name
-        elif code_component.type == 'return':
-            node.name = code_component.type
+        if code_component.type in {'list', 'tuple', 'dict', 'set', 'expr',
+                                     'for', 'while' 'if', 'with', 'uadd', 'usub',
+                                     'not', 'invert', 'and', 'or' 'add', 'sub',
+                                     'mult', 'matmult', 'div', 'mod', 'pow', 'lshift',
+                                     'rshift', 'bitor', 'bitxor', 'bitand', 'floordiv',
+                                     'lambda_def', 'return', 'yield', 'yield_from',
+                                     any(t in ['eq', 'noteq', 'lt', 'lte', 'gt', 'gte', 'is', 'isnot',
+                                         'in', 'notin'] for t in code_component.type.split('.'))
+                                     }:
+            node.name = code_component.type + " <br> ‎"
         elif code_component.type == 'attribute':
             node.name = code_component.name.split('.')[1]
 
@@ -365,7 +371,7 @@ class DefinitionSummarization(LineNameSummarization):
         if trial_id not in node.trial_ids:
             node.trial_ids.append(trial_id)
         node.activations[trial_id].append(code_component.id)
-        node.duration[trial_id] += 1
+        node.duration[trial_id] -= 1
 
         node.tooltip[trial_id] += "T{} - {}<br>Name: {}<br>Type: {}<br>".format(
             trial_id, code_component.id, code_component.name, code_component.type
@@ -373,7 +379,6 @@ class DefinitionSummarization(LineNameSummarization):
 
         self.nid += 1
         if parent is not None:
-            node.duration[trial_id] = 0
             node.parent_index = parent.index
             node.children_index = len(parent.children)
             parent.children.append(node)
