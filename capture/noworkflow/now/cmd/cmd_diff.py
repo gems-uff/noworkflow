@@ -9,9 +9,11 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from future.utils import viewitems, viewkeys
+from apted import APTED
 
 from ..ipython.converter import create_ipynb
 from ..models.diff import Diff as DiffModel
+from ..models.graphs.diff_graph import CONFIG
 from ..persistence import persistence_config
 from ..utils.io import print_msg
 from ..utils.cross_version import zip_longest
@@ -81,6 +83,17 @@ def print_brief(added, removed, replaced):
             add, rem, cha, *max_column_len))
 
 
+def print_ted(diff, mode):
+    if mode == "definition":
+        root1 = diff.trial1.graph.definition_tree()[1]['root']
+        root2 = diff.trial2.graph.definition_tree()[1]['root']
+    else:
+        root1 = diff.trial1.graph.no_match()[1]['root']
+        root2 = diff.trial2.graph.no_match()[1]['root']
+    apted = APTED(root1, root2, CONFIG)
+    ted = apted.compute_edit_distance()
+    print(f'{mode.capitalize()} TED:', ted)
+
 
 def hide_timestamp(elements):
     """Set hide_timestamp of elements"""
@@ -103,6 +116,10 @@ class Diff(NotebookCommand):
                 help="compare environment conditions")
         add_arg("-f", "--file-accesses", action="store_true",
                 help="compare read/write access to files")
+        add_arg("-a", "--activations", action="store_true",
+                help="compare activations")
+        add_arg("-d", "--definition", action="store_true",
+                help="compare definitions")
         add_arg("-t", "--hide-timestamps", action="store_true",
                 help="hide timestamps")
         add_arg("--brief", action="store_true",
@@ -196,7 +213,13 @@ class Diff(NotebookCommand):
                     ignore=("id", "trial_id", "function_activation_id"),
                     names={"stack": "Function"})
 
+        if args.activations:
+            print_ted(diff, "activations")
+            print()
 
+        if args.definition:
+            print_ted(diff, "definition")
+            print()
 
     def execute_export(self, args):
         persistence_config.content_engine = args.content_engine
