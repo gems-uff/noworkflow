@@ -8,8 +8,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "es6",
-    "outDir": "./lib",
-    "types": ["jquery"]
+    "outDir": "./lib"
   },
   "include": ["src/*"]
 }

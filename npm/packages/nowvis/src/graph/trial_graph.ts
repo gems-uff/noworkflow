@@ -62,7 +62,7 @@ class TrialGraphWidget extends BaseActivationGraphWidget {
   graphDefinition(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
     var result = super.graphDefinition(selectedGraph, useCache, genDataflow, data);
     return Object.assign({}, result, {
-      queryTooltip: true
+      queryTooltip: selectedGraph != "definition_tree"
     });
   }
 

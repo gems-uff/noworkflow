@@ -34,9 +34,6 @@ import { HistoryConfig, HistoryState } from './config';
 import { VisibleHistoryNode, VisibleHistoryEdge } from './structures';
 import { HistoryGraphData, HistoryNodeData, HistoryTrialNodeData } from './structures';
 import { D3ZoomEvent } from 'd3';
-import { event } from 'jquery';
-//import { config } from 'webpack';
-
 
 export
   class HistoryGraph {

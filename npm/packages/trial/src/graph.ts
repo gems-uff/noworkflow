@@ -481,7 +481,7 @@ class TrialGraph {
       .style("opacity", 0.9);
     if (this.config.queryTooltip) {
       var string = d.tooltip[trial_id]
-      var regexp = (/T(\d*) - (\d*)<br>Line \d*?<br>/g)
+      var regexp = (/T(.*) - (\d*)<br>Line \d*?<br>/g)
       var match = regexp.exec(string);
       this.tooltipDiv.html("")
       .style("left", (event.pageX - 3) + "px")
