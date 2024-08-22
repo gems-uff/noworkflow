@@ -15,10 +15,8 @@
   },
   "dependencies": {
     "@noworkflow/utils": "0.0.9",
-    "@viz-js/viz": "^3.8.0",
     "d3": "^7.9.0",
-    "file-saver": "^2.0.5",
-    "tau-prolog": "^0.3.4"
+    "file-saver": "^2.0.5"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
