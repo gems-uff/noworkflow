@@ -12,7 +12,6 @@ from sqlalchemy import select
 
 import weakref
 import ast
-import graphviz
 
 
 class TrialAst(object):
@@ -666,6 +665,7 @@ class TrialAst(object):
 
 def ast_to_dot(node):
     """Converts AST node to DOT format for Graphviz."""
+    import graphviz
     def node_label(node):
         label = type(node).__name__
         if isinstance(node, ast.Module):
