@@ -33,5 +33,4 @@ interface TrialConfig {
   nodeSizeY: number;
 
   queryTooltip: boolean;
-  genDataflow: boolean;
 }

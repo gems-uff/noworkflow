@@ -101,8 +101,7 @@ class TrialGraph {
       nodeSizeX: 47,
       nodeSizeY: 100,
 
-      queryTooltip: false,
-      genDataflow: true
+      queryTooltip: false
     };
     this.config = (Object as any).assign({}, defaultConfig, config);
 
@@ -237,19 +236,6 @@ class TrialGraph {
       })
     .append("i")
       .classed("fa fa-download", true)
-
-    // Generate Dataflow
-    if (this.config.genDataflow) {
-      var trialId = self.t1;
-      form.append("a")
-        .classed("toollink", true)
-        .attr("id", "trial-" + this.graphId + "-dataflow")
-        .attr("href", "trials/" + trialId + "/flow.pdf")
-        .attr("title", "Generate dataflow")
-        .on("click", () => {})
-        .append("i")
-        .classed("fa fa-book", true)
-    }
 
     // Set Font Size
     let fontToggle = form.append("input")

@@ -44,12 +44,14 @@ class HistoryWidget extends Widget {
 
   static createNode(): HTMLElement {
     let node = document.createElement('div');
-    let d3node = d3_select(node);
+    let content = document.createElement('div');
+    node.appendChild(content);
+    let d3node = d3_select(content);
 
-    let content = d3node.append('div')
+    let d3content = d3node.append('div')
       .classed('history-content', true)
 
-    let filterDiv = content.append("div")
+    let filterDiv = d3content.append("div")
     //let filterDiv = form.insert("div", ":first-child")
       .classed("filter", true)
       .classed("hide-toolbar", true);
@@ -107,7 +109,7 @@ class HistoryWidget extends Widget {
     filterReload.append('span')
       .text('Reload');
 
-    content.append('div')
+    d3content.append('div')
       .classed('sub-content', true);
 
     return node;
