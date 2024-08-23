@@ -22,7 +22,7 @@ $ npm install
 
 NPM workspaces will take care of symlinking all the sub-packages and installing the dependencies.
 
-## Building
+## Building nowvis
 
 For a single build of all packages, run
 
@@ -32,13 +32,44 @@ $ npm run build
 
 It will invoke `lerna` to orchestrate the build order in each sub-package.
 
-For developping a package, instead of this command, it is advisable to run:
+For developping a package/nowvis, instead of this command, it is advisable to run:
 
 ```
 $ python watch.py
 ```
 
 This script constantly monitors changes on the files of the sub-packages and rebuilds all the appropriate packages in order.
+
+## Building the jupyterlab extension
+
+While the jupyter lab extension is part of workspace (and shares the dependencies), the process of installing it in development and monitoring file changes is different.
+
+Start by running a single build of all packages:
+
+```
+$ npm run build
+```
+
+Then, install the labextension Python package in development mode and add it to jupyter lab:
+
+```
+$ pip install -e "packages/labextension"
+$ jupyter labextension develop "packages/labextension" --overwrite
+```
+
+Finally, rebuild the extension after making changes
+
+```
+$ npm run build
+```
+
+For watching the source directory and rebuilding on file changes, you may run:
+
+```
+$ npx lerna run watch --scope=@noworkflow/labextension
+```
+
+(I haven't actually tested this watch command, since I just ported the old extension to the new format and it worked on the first try, but it will probably work)
 
 ## Adding new dependencies
 

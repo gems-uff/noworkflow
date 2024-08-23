@@ -42,7 +42,7 @@ export class RenderedCode extends Widget implements IRenderMime.IRenderer {
       self.code_mirror.setValue(data.code);
       var marks = data.marks;
       marks.forEach(function(mark:any) {
-        self.code_mirror.markText.apply(self.code_mirror, mark)
+        self.code_mirror?.markText.apply(self.code_mirror, mark)
       });
 
       if (data.showSelection) {
@@ -87,14 +87,13 @@ export class RenderedCode extends Widget implements IRenderMime.IRenderer {
     var self = this;
     if (this.isVisible && self.code_mirror) {
       setTimeout(function() {
-        console.log(this, self, self.code_mirror);
-        self.code_mirror.refresh();
+        self.code_mirror?.refresh();
       },1);
     }
   }
 
   div: HTMLDivElement;
-  code_mirror: CodeMirror.EditorFromTextArea;
+  code_mirror: CodeMirror.EditorFromTextArea | undefined;
   private _mimeType: string;
 }
 

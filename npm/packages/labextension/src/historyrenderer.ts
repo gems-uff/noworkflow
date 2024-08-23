@@ -65,7 +65,7 @@ export class RenderedHistory extends Widget implements IRenderMime.IRenderer {
     }
   }
 
-  graph: HistoryGraph;
+  graph: HistoryGraph | undefined;
   div: HTMLDivElement;
   private _mimeType: string;
 }
@@ -79,5 +79,3 @@ export const historyFactory: IRenderMime.IRendererFactory = {
   mimeTypes: ['application/noworkflow.history+json'],
   createRenderer: options => new RenderedHistory(options)
 };
-  
-  

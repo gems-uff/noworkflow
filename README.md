@@ -34,7 +34,8 @@ Collaborators
 - Vynicius Pontes (UFF)
 - Henrique Linhares (UFF)
 - Eduardo Jandre (UFF)
-- Jessé Lima
+- Jessé Lima (Summer of Reproducibility)
+- Joshua Daniel Talahatu (Google Summer of Code)
 
 
 Publications
@@ -370,15 +371,21 @@ IPython Interface
 -----------------
 
 Another way to run, visualize, and query trials is to use Jupyter notebook with IPython kernel.
-To install Jupyter notebook and IPython kernel, you can run
+To install Jupyter and noworkflow extension, you can run
 ```bash
 $ pip install jupyter
-$ pip install ipython
-$ jupyter nbextension install --py --sys-prefix noworkflow
-$ jupyter nbextension enable noworkflow --py --sys-prefix
+$ pip install noworkflow_labextension
 ```
 
-Then, to run Jupyter notebook, go to the project directory and execute:
+Notes: 
+
+- It is possible to run many of the commands below without installing `noworkflow_labextension`. This package enables visualizing trials and history in the notebook.
+
+- This visualization package supports Jupyter Lab and Notebook 7+. The support for older versions of notebook has been dropped.
+
+
+
+After installing jupyter (and noWorkflow labextension), go to the project directory and execute:
 ```bash
 $ jupyter notebook
 ```

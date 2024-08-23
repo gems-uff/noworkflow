@@ -35,7 +35,6 @@ setup(
     package_data={
         "noworkflow": (
             recursive_path("noworkflow", "resources")
-            + recursive_path("noworkflow", "jupyter")
             + recursive_path("noworkflow", "now/vis/static")
             + recursive_path("noworkflow", "now/vis/templates")
         ),
