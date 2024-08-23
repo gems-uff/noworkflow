@@ -300,6 +300,93 @@ class TreeSummarization(NoMatchSummarization):
         return result
 
 
+class DefinitionSummarization(LineNameSummarization):
+    """Summarization algorithm for Definition
+
+    Traverses nodes of code_components in preorder.
+    Creates graph based on composition's whole_id & part_id
+    """
+
+    def __init__(self, preorder, compositions):
+        self.compositions = compositions
+
+        original_call = self.__call__
+        self.__call__ = lambda preorder: None
+        super(DefinitionSummarization, self).__init__(preorder)
+        self.__call__ = original_call
+
+    def __call__(self, preorder):
+        relationship = self.compositions
+        for node in preorder:
+            if node.type == 'script':
+                self.root = self.insert_node(node, None)
+                continue
+            elif node.type != 'syntax':
+                for relation in relationship:
+                    if node.id == relation.part_id:
+                        find = next(
+                            (n for n in self.nodes if n.node_id == relation.whole_id), None)
+                        self.insert_node(node, find)
+                        relationship.remove(relation)
+                        break
+        stack = [self.root]
+        while stack:
+            current = stack.pop()
+            for index, child in enumerate(current.children):
+                self.add_edge(current, child, 'call', index)
+                stack.append(child)
+        return self
+
+    def insert_node(self, code_component, parent):
+        """Create node"""
+        node = Node(
+            index=self.nid,
+            name=code_component.type + " <br> " + code_component.name,
+            parent_index=-1,
+            children_index=-1,
+            children=[],
+            node_id=code_component.id,
+            activations=defaultdict(list),
+            duration=defaultdict(int),
+            full_tooltip=True,
+            tooltip=defaultdict(str),
+            trial_ids=[],
+            has_return=False,
+        )
+
+        if code_component.type in {'list', 'tuple', 'dict', 'set', 'expr',
+                                     'for', 'while' 'if', 'with', 'uadd', 'usub',
+                                     'not', 'invert', 'and', 'or' 'add', 'sub',
+                                     'mult', 'matmult', 'div', 'mod', 'pow', 'lshift',
+                                     'rshift', 'bitor', 'bitxor', 'bitand', 'floordiv',
+                                     'lambda_def', 'return', 'yield', 'yield_from',
+                                     any(t in ['eq', 'noteq', 'lt', 'lte', 'gt', 'gte', 'is', 'isnot',
+                                         'in', 'notin'] for t in code_component.type.split('.'))
+                                     }:
+            node.name = code_component.type + " <br> ‎"
+        elif code_component.type == 'attribute':
+            node.name = code_component.name.split('.')[1]
+
+        trial_id = code_component.trial_id
+        if trial_id not in node.trial_ids:
+            node.trial_ids.append(trial_id)
+        node.activations[trial_id].append(code_component.id)
+        node.duration[trial_id] -= 1
+
+        node.tooltip[trial_id] += "T{} - {}<br>Name: {}<br>Type: {}<br>".format(
+            trial_id, code_component.id, code_component.name, code_component.type
+        )
+
+        self.nid += 1
+        if parent is not None:
+            node.parent_index = parent.index
+            node.children_index = len(parent.children)
+            parent.children.append(node)
+
+        self.nodes.append(node)
+        return node
+
+
 cache = prepare_cache(                                                           # pylint: disable=invalid-name
     lambda self, *args, **kwargs: "trial {}".format(self.trial.id))
 
@@ -319,7 +406,8 @@ class TrialGraph(Graph):
             0: self.tree,
             1: self.no_match,
             2: self.exact_match,
-            3: self.namespace_match
+            3: self.namespace_match,
+            4: self.definition_tree
         }
 
     def result(self, summarization):
@@ -347,6 +435,12 @@ class TrialGraph(Graph):
     def namespace_match(self):
         """Convert tree structure into dict graph and match namespaces"""
         return self.result(LineNameSummarization(self.trial.activations))
+
+    @cache("definition_tree")
+    def definition_tree(self):
+        """Convert tree structure into dict tree structure based from code_components"""
+        from ...persistence.models.code_component import CodeComponent
+        return self.result(DefinitionSummarization(self.trial.code_components, CodeComponent.ast_compositions(self.trial.id)))
 
     def _ipython_display_(self):
         from IPython.display import display

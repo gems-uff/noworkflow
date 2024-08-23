@@ -34,7 +34,8 @@ Collaborators
 - Vynicius Pontes (UFF)
 - Henrique Linhares (UFF)
 - Eduardo Jandre (UFF)
-- Jessé Lima
+- Jessé Lima (Summer of Reproducibility)
+- Joshua Daniel Talahatu (Google Summer of Code)
 
 
 Publications
@@ -275,6 +276,8 @@ $ now vis -b
 ```
 The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool.
 
+An activation graph can be changed into definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs.
+
 The visualization tool requires Flask to be installed.
 To install Flask, you can run
 ```bash
@@ -290,6 +293,11 @@ The server can be a central one or a peer-to-peer connection. To set up a server
 
 ```bash
 $ now vis --force true
+```
+
+The *ast* option generates the Abstract Syntax Tree (AST) for a given trial. By default, it outputs the AST in its standard format. However, you can specify the output format using the *-j* (*--json*) option for JSON format or the *-d* (*--dot*) option for Graphviz dot format.
+```bash
+$ now ast 08ece614-f5ae-4e65-93a0-5a8b44ac9a44 --dot
 ```
 
 The command line output will show the server address 
@@ -363,15 +371,21 @@ IPython Interface
 -----------------
 
 Another way to run, visualize, and query trials is to use Jupyter notebook with IPython kernel.
-To install Jupyter notebook and IPython kernel, you can run
+To install Jupyter and noworkflow extension, you can run
 ```bash
 $ pip install jupyter
-$ pip install ipython
-$ jupyter nbextension install --py --sys-prefix noworkflow
-$ jupyter nbextension enable noworkflow --py --sys-prefix
+$ pip install noworkflow_labextension
 ```
 
-Then, to run Jupyter notebook, go to the project directory and execute:
+Notes: 
+
+- It is possible to run many of the commands below without installing `noworkflow_labextension`. This package enables visualizing trials and history in the notebook.
+
+- This visualization package supports Jupyter Lab and Notebook 7+. The support for older versions of notebook has been dropped.
+
+
+
+After installing jupyter (and noWorkflow labextension), go to the project directory and execute:
 ```bash
 $ jupyter notebook
 ```

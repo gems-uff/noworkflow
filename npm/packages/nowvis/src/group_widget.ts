@@ -6,7 +6,7 @@ import {
   Selection as d3_Selection,
   BaseType as d3_BaseType,
 } from 'd3-selection';
-import { Message } from '@phosphor/messaging';
+import { Message } from '@lumino/messaging';
 interface IAddMember {
     userId: string;
   }

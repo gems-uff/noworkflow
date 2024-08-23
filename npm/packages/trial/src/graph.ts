@@ -101,8 +101,7 @@ class TrialGraph {
       nodeSizeX: 47,
       nodeSizeY: 100,
 
-      queryTooltip: false,
-      genDataflow: true
+      queryTooltip: false
     };
     this.config = (Object as any).assign({}, defaultConfig, config);
 
@@ -237,19 +236,6 @@ class TrialGraph {
       })
     .append("i")
       .classed("fa fa-download", true)
-
-    // Generate Dataflow
-    if (this.config.genDataflow) {
-      var trialId = self.t1;
-      form.append("a")
-        .classed("toollink", true)
-        .attr("id", "trial-" + this.graphId + "-dataflow")
-        .attr("href", "trials/" + trialId + "/flow.pdf")
-        .attr("title", "Generate dataflow")
-        .on("click", () => {})
-        .append("i")
-        .classed("fa fa-book", true)
-    }
 
     // Set Font Size
     let fontToggle = form.append("input")
@@ -456,7 +442,7 @@ class TrialGraph {
   }
 
   wrapText() {
-    this.svg.selectAll(".node text")
+    this.svg.selectAll(".node text:not(.nowrap)")
         .call(wrap, this.config.nodeSizeX);
   }
 
@@ -481,7 +467,7 @@ class TrialGraph {
       .style("opacity", 0.9);
     if (this.config.queryTooltip) {
       var string = d.tooltip[trial_id]
-      var regexp = (/T(\d*) - (\d*)<br>Line \d*?<br>/g)
+      var regexp = (/T(.*) - (\d*)<br>Line \d*?<br>/g)
       var match = regexp.exec(string);
       this.tooltipDiv.html("")
       .style("left", (event.pageX - 3) + "px")
@@ -631,7 +617,24 @@ class TrialGraph {
       .attr("y", 24)
       .attr("x", 10)
       .attr("text-anchor", "middle")
-      .text((d: VisibleTrialNode) => { return d.data.name; })
+      .each(function(d: VisibleTrialNode) {
+        const textLabel = d3_select(this);
+        const name = d.data.name.split('<br>');
+        if (name.length > 1) {
+          textLabel.append("tspan")
+            .attr("x", "10")
+            .attr("dy", ".35em")
+            .attr("font-weight", "bold")
+            .text(name[0]);
+          textLabel.append("tspan")
+            .attr("x", "10")
+            .attr("dy", "1em")
+            .text(name[1]);
+          textLabel.attr("class", "nowrap")
+        } else {
+          return textLabel.text(d.data.name);
+        }
+      });
 
     nodeEnter.append("path")
       .attr("stroke", "#000")

@@ -1,0 +1,9 @@
+/*
+    See the JupyterLab Developer Guide for useful CSS Patterns:
+
+    https://jupyterlab.readthedocs.io/en/stable/developer/css.html
+*/
+
+@import '~@noworkflow/utils/style/shared.css';
+@import '~@noworkflow/history/style/index.css';
+@import '~@noworkflow/trial/style/index.css';

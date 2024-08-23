@@ -1,3 +1,1 @@
-@import '~@noworkflow/utils/style/shared.css';
-@import '~@noworkflow/history/style/index.css';
-@import '~@noworkflow/trial/style/index.css';
+@import url('base.css');

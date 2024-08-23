@@ -13,7 +13,10 @@ module.exports = {
         fallback: {
             crypto: require.resolve("crypto-browserify"),
             stream: require.resolve("stream-browserify"),
-            buffer: require.resolve("buffer/")
+            buffer: require.resolve("buffer/"),
+            vm: require.resolve("vm-browserify"),
+            fs: false,
+            child_process: false
         }
     },
     devtool: 'source-map', // if we want a source map 
@@ -29,7 +32,15 @@ module.exports = {
                     'style-loader',
                     'css-loader'
                 ]
-            }
+            },
+            {
+                test: /\.(png|jpe?g|gif)$/i,
+                use: [
+                  {
+                    loader: 'file-loader',
+                  },
+                ],
+            },
         ]
     }
 }

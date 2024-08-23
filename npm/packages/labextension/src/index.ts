@@ -1,6 +1,5 @@
 import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 
-
 import '../style/index.css';
 import { historyFactory } from './historyrenderer';
 import { trialFactory } from './trialrenderer';
@@ -27,20 +26,22 @@ const TYPES: {
   }
 };
 
-  
-const extensions = Object.keys(TYPES).map(k => {
+
+/**
+ * Extension definition.
+ */
+const extensions: IRenderMime.IExtension[] = Object.keys(TYPES).map(k => {
   const { name, factory } = TYPES[k];
   return {
     id: `jupyterlab-noworkflow:${name}`,
     rendererFactory: factory,
-    rank: 0,
+    rank: 100,
     dataType: 'json',
     fileTypes: [
       {
         name,
-        extensions: TYPES[k].extensions,
-        mimeTypes: [k]
-       // iconClass: 'jp-MaterialIcon jp-MSAIcon'
+        mimeTypes: [k],
+        extensions: TYPES[k].extensions
       }
     ],
     documentWidgetFactoryOptions: {
