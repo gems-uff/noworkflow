@@ -17,6 +17,7 @@ from ..persistence.models import Trial, Activation,Activation, Experiment, Exten
 from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
 from ..models.history import History
 from ..models.diff import Diff
+from ..models.ast.trial_ast import TrialAst
 from ..persistence import relational, content
 from ..ipython.dotmagic import DotDisplay
 
@@ -462,6 +463,13 @@ def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
 
     _, diff_result, _ = getattr(graph, graph_mode)()
     return jsonify(**diff_result)
+
+@app.route("/definition/<trial_id>/ast.json")
+def definition_ast(trial_id):
+    """Respond trial definition as AST"""
+    trial = Trial(trial_id)
+    ast = TrialAst(trial)
+    return jsonify(ast.construct_ast_json(False))
 
 @app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
 def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):

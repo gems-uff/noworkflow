@@ -35,7 +35,6 @@ setup(
     package_data={
         "noworkflow": (
             recursive_path("noworkflow", "resources")
-            + recursive_path("noworkflow", "jupyter")
             + recursive_path("noworkflow", "now/vis/static")
             + recursive_path("noworkflow", "now/vis/templates")
         ),
@@ -55,13 +54,13 @@ setup(
     url="https://github.com/gems-uff/noworkflow",
     install_requires=[
         "pyposast", "apted", "future", "SQLAlchemy>=1.4.29,<=1.4.47", "parameterized",
-        "requests", "ipykernel", "zipp==3.15", "importlib-metadata==6.4.1", "typing-extensions==4.5.0"
+        "requests", "ipykernel", "zipp==3.15", "importlib-metadata==6.4.1", "typing-extensions>=4.5.0,<5"
     ],
     extras_require={
         "demo": ["flask", "matplotlib", "numpy", "cython"],
         "notebook": ["pyposast", "ipython", "jupyter"],
         "all": ["pyposast", "ipython", "jupyter", "flask", "pyswip-alt", 
-                "matplotlib", "numpy", "cython"],
+                "matplotlib", "numpy", "cython", "graphviz"],
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',

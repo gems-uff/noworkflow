@@ -18,20 +18,6 @@ def load_ipython_extension(ipython):
     init(ipython=ipython)
 
 
-def _jupyter_labextension_paths():
-    return [{
-        'name': 'noworkflow',
-        'src': 'jupyter',
-    }]
-
-
-def _jupyter_nbextension_paths():
-    return [{
-        'section': 'notebook',
-        'src': 'jupyter',
-        'dest': 'noworkflow',
-        'require': 'noworkflow/extension'
-    }]
 
 
 if __name__ == "__main__":

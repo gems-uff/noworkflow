@@ -1,5 +1,4 @@
 import {DockPanel, Widget, DockLayout} from '@lumino/widgets';
-import {each} from '@lumino/algorithm';
 
 
 export
@@ -56,11 +55,12 @@ class NowVisPanel extends DockPanel {
         console.log("Warning: options.ref is not 'main'");
       }
     } else {
-      each(this.widgets(), (w: VisWidget) => {
-        if (w.nowVis == "main") {
+      for (let w of this.widgets()) {
+        let wnow = w as VisWidget;
+        if (wnow.nowVis == "main") {
           options.ref = w;
         }
-      });
+      }
     }
     (widget as VisWidget).nowVis = "main";
     this.addWidget(widget, options);
@@ -73,21 +73,22 @@ class NowVisPanel extends DockPanel {
         console.log("Warning: options.ref is not 'graph'");
       }
     } else {
-      each(this.widgets(), (w: VisWidget) => {
-        if (w.nowVis == "main" && !options.ref) {
+      for (let w of this.widgets()) {
+        let wnow = w as VisWidget;
+        if (wnow.nowVis == "main" && !options.ref) {
           options.ref = w;
           options.mode = "split-bottom";
           operation = "main";
-        } else if ((w.nowVis == "info") && (operation != "graph")) {
+        } else if ((wnow.nowVis == "info") && (operation != "graph")) {
           options.ref = w;
           options.mode = "split-left";
           operation = "info";
-        } else if (w.nowVis == "graph") {
+        } else if (wnow.nowVis == "graph") {
           options.ref = w;
           options.mode = "tab-after";
           operation = "graph";
         }
-      });
+      };
     }
     (widget as VisWidget).nowVis = "graph";
     this.addWidget(widget, options);
@@ -122,21 +123,22 @@ class NowVisPanel extends DockPanel {
         console.log("Warning: options.ref is not 'info'");
       }
     } else {
-      each(this.widgets(), (w: VisWidget) => {
-        if (w.nowVis == "main" && !options.ref) {
+      for (let w of this.widgets()) {
+        let wnow = w as VisWidget;
+        if (wnow.nowVis == "main" && !options.ref) {
           options.ref = w;
           options.mode = "split-bottom";
           operation = "main";
-        } else if ((w.nowVis == "graph") && (operation != "info")) {
+        } else if ((wnow.nowVis == "graph") && (operation != "info")) {
           options.ref = w;
           options.mode = "split-right";
           operation = "graph";
-        } else if (w.nowVis == "info") {
+        } else if (wnow.nowVis == "info") {
           options.ref = w;
           options.mode = "tab-after";
           operation = "info";
         }
-      });
+      };
     }
     (widget as VisWidget).nowVis = "info";
     this.addWidget(widget, options);

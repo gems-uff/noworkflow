@@ -10,10 +10,12 @@ import os
 import difflib
 
 from future.utils import viewitems, viewkeys
+from apted import APTED
 
 from ..ipython.converter import create_ipynb
 from ..models.diff import Diff as DiffModel
 from ..persistence import persistence_config, relational
+from ..models.graphs.diff_graph import CONFIG
 from ..utils.io import print_msg
 from ..utils.cross_version import zip_longest
 from ..persistence.models import Evaluation, Dependency, Activation, CodeComponent
@@ -86,6 +88,17 @@ def print_brief(added, removed, replaced):
             add, rem, cha, *max_column_len))
 
 
+def print_ted(diff, mode):
+    if mode == "definition":
+        root1 = diff.trial1.graph.definition_tree()[1]['root']
+        root2 = diff.trial2.graph.definition_tree()[1]['root']
+    else:
+        root1 = diff.trial1.graph.no_match()[1]['root']
+        root2 = diff.trial2.graph.no_match()[1]['root']
+    apted = APTED(root1, root2, CONFIG)
+    ted = apted.compute_edit_distance()
+    print(f'{mode.capitalize()} TED:', ted)
+
 
 def hide_timestamp(elements):
     """Set hide_timestamp of elements"""
@@ -108,6 +121,10 @@ class Diff(NotebookCommand):
                 help="compare environment conditions")
         add_arg("-f", "--file-accesses", action="store_true",
                 help="compare read/write access to files")
+        add_arg("-a", "--activations", action="store_true",
+                help="compare activations")
+        add_arg("-d", "--definition", action="store_true",
+                help="compare definitions")
         add_arg("-t", "--hide-timestamps", action="store_true",
                 help="hide timestamps")
         add_arg("-fa", "--function-activations", type=str, nargs='+',
@@ -183,6 +200,14 @@ class Diff(NotebookCommand):
         if args.file_accesses:
             (added, removed, replaced) = diff.file_accesses
             self.print_file_accesses(args, access_extra, added, removed, replaced)
+        
+        if args.activations:
+            print_ted(diff, "activations")
+            print()
+
+        if args.definition:
+            print_ted(diff, "definition")
+            print()
 
         if args.function_activations and len(args.function_activations)>=2:
             try:

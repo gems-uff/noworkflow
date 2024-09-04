@@ -32,6 +32,7 @@ from .cmd_kernel import Kernel
 from .cmd_gc import GC
 from .cmd_evaluation import Evaluation
 from .cmd_clean import Clean
+from .cmd_ast import Ast
 from ..utils.io import print_msg
 
 
@@ -64,7 +65,8 @@ def main():
         Kernel(),
         GC(),
         Evaluation(),
-        Clean()
+        Clean(),
+        Ast()
 
     ]
     for cmd in commands:
@@ -104,4 +106,5 @@ __all__ = [
     "Push",
     "Pull",
     "Import",
+    "Ast",
 ]

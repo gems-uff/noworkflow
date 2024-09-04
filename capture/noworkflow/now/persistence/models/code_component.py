@@ -14,7 +14,9 @@ from sqlalchemy.orm import remote, foreign
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullable
 
-from .base import AlchemyProxy, proxy_class, query_one_property
+from .. import relational
+
+from .base import AlchemyProxy, proxy_class, query_one_property, query_many_property
 
 
 @proxy_class
@@ -136,3 +138,21 @@ class CodeComponent(AlchemyProxy):
         """
         from .evaluation import Evaluation
         return self.evaluations.order_by(Evaluation.m.checkpoint).first()
+
+    @classmethod # query
+    def ast_compositions(cls, trial_id):
+        """Return all compositions to represents ast"""
+
+        from .composition import Composition
+        return relational.session.query(Composition.m).join(
+            CodeComponent.m,
+            (CodeComponent.m.trial_id == Composition.m.trial_id)&
+            (CodeComponent.m.id == Composition.m.whole_id)
+        ).filter(
+            (CodeComponent.m.type != "syntax") &
+            (CodeComponent.m.type != "module") &
+            (CodeComponent.m.type != "type") &
+            (CodeComponent.m.type != "global") &
+            (Composition.m.type != '*op_pos') &
+            (CodeComponent.m.trial_id == trial_id)
+        ).all()

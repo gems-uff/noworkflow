@@ -1,0 +1,18 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.3.5
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: joaofelipenp@gmail.com
+author_name: Joao Felipe Pimentel
+data_format: json
+file_extension: .history+json
+has_binder: false
+kind: mimerenderer
+labextension_name: '@noworkflow/labextension'
+mimetype: application/noworkflow.history+json
+mimetype_name: noWorkflow History
+project_short_description: A JupyterLab extension for noWorkflow
+python_name: noworkflow_labextension
+repository: https://github.com/gems-uff/noworkflow
+test: false
+viewer_name: noWorkflow Viewer
+
