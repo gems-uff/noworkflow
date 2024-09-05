@@ -253,7 +253,7 @@ class Diff(NotebookCommand):
             self.print_file_accesses(args, access_extra, functions_info["file_accesses_added"], functions_info["file_accesses_removed"], functions_info["file_accesses_replaced"])
 
     def build_variables_lcs(self, variables_list_trial1, variables_list_trial2, differ):
-        lcs_variables_result_trial1, lcs_variables_result_trial2  = lcs(variables_list_trial1, variables_list_trial2, lambda x,y: (difflib.SequenceMatcher(None, x["name"], y["name"]).ratio() >= 0.8) or (difflib.SequenceMatcher(None, x["name"], y["name"]).ratio() > 0.6 and x["code_line"] == y["code_line"]))
+        lcs_variables_result_trial1, lcs_variables_result_trial2  = lcs(variables_list_trial1, variables_list_trial2, lambda x,y: (x["name"] == y["name"]) or (difflib.SequenceMatcher(None, x["name"], y["name"]).ratio() > 0.6 and x["code_line"] == y["code_line"]))
         trial1_variables_that_changed = []
         trial1_variables_removed = []
         trial2_variables_added = []
