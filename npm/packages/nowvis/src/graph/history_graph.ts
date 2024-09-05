@@ -309,12 +309,22 @@ class HistoryWidget extends Widget {
           // Edit remote
           form.append("a")
             .classed("toollink", true)
-            .attr("id", "history-" + graph.graphId + "-add-remote")
+            .attr("id", "history-" + graph.graphId + "-edit-remote")
             .attr("href", "#")
             .attr("title", "Edit remote")
             .on("click", () => this.buildEditRemote(this.modal, this.modalBody))
             .append("i")
             .classed("fa fa-pencil-square", true)
+
+          // Delete remote
+          form.append("a")
+            .classed("toollink", true)
+            .attr("id", "history-" + graph.graphId + "-delete-remote")
+            .attr("href", "#")
+            .attr("title", "Delete remote")
+            .on("click", () => this.buildDeleteRemote(this.modal, this.modalBody))
+            .append("i")
+            .classed("fa fa-trash", true)
 
           
         }
@@ -597,6 +607,28 @@ class HistoryWidget extends Widget {
     });
   }
 
+  private buildDeleteRemote(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
+
+    fetch("/collab/remotes/getall", {
+      method: 'GET', // *GET, POST, PUT, DELETE, etc.
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    }).then((response) => {
+
+      response.json().then(async (json) => {
+        if (response.status == 200) {
+          this.executeCollabCommand(modal, modalBody, "editDeleteServerUrlId", "Delete remote", "delete", json.remotes);
+        } else {
+          console.log("Failed to get remotes");
+        }
+
+      });
+    });
+
+  }
+
   private buildEditRemote(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
     modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
 
@@ -701,6 +733,7 @@ class HistoryWidget extends Widget {
 
       let collabCommandUrl = "/commands/" + command + "/" + serverUrl;
       if (command == "edit") collabCommandUrl = "/collab/remotes/edit/" + (<HTMLInputElement>document.getElementById("inputEditRemoteName")).value + "/" + serverUrl;
+      if (command == "delete") collabCommandUrl = "/collab/remotes/delete/" + serverUrl;
 
       getRestoreOrCollabCommand(collabCommandUrl, form, modalBody);
 

@@ -11,7 +11,7 @@ from ..persistence import persistence_config
 from ..utils.collab import export_bundle,import_bundle
 from ..utils.compression import gzip_compress
 
-from ..persistence.models import Trial, User
+from ..persistence.models import Trial, User, Remote
 from ..persistence import content
 
 from .command import Command
@@ -123,6 +123,7 @@ class Push(Command):
         
 
         if(status_code==201):
+            Remote.create(self.url, self.url.split("/experiments/")[-1], True)
             print("Pushed successfully")
         else:
             print("Error pushing")

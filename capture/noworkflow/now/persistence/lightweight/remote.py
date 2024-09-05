@@ -14,21 +14,25 @@ class RemoteLW(BaseLW):                                                      # p
     """Remote lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["relatedExperiment","server_url","name", "id"]
+        ["relatedExperiment","server_url","name", "id", "used", "hide"]
     )
     nullable = set()
     model = Remote
 
-    def __init__(self, id, server_url, name):
+    def __init__(self, id, server_url, name, used, hide):
 
         self.server_url = server_url
         self.id = id
         self.name = name
+        self.used = used
+        self.hide = hide
     
     def __json__(self):
         return {
 
             'server_url': self.server_url,
             'name': self.name,
-            'id': self.id
+            'id': self.id,
+            'used': self.used,
+            'hide': self.hide
         }

@@ -96,5 +96,5 @@ class Pull(Command):
         importTrialsSuccess = self.importTrials(self.url)
         
         if importFilesSuccess and importTrialsSuccess:
-            Remote.create(self.url, self.url.split("/experiments/")[-1])
+            Remote.create(self.url, self.url.split("/experiments/")[-1], True)
             print("Pulled successfully")

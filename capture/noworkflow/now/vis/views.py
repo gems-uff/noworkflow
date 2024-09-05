@@ -565,7 +565,7 @@ def get_evaluations_from_trial(trial_id):
     
 @app.route("/collab/remotes/getall")
 def get_all_remotes():
-    return jsonify(remotes=[RemoteLW(x.id, x.server_url, x.name).__json__() for x in Remote.all()]), 200
+    return jsonify(remotes=[RemoteLW(x.id, x.server_url, x.name, x.used, x.hide).__json__() for x in Remote.all() if x.hide == False]), 200
 
 @app.route("/collab/remotes/add/<remote_name>/<path:remote_url>", methods=['Post'])
 def add_remote(remote_name, remote_url):
@@ -581,13 +581,22 @@ def edit_remote(remote_new_name, remote_url):
     relational.session.commit()
     return jsonify(terminal_text="Remote "+ remote_url + " name changed successfully to " + remote_new_name), 200
 
+@app.route("/collab/remotes/delete/<path:remote_url>")
+def delete_remote(remote_url):
+    remote_url_list = relational.session.query(Remote.m).filter(Remote.m.server_url == remote_url).all()
+    if(len(remote_url) <= 0): return jsonify(text="Remote url " + remote_url  + " not found"), 400
+    remote = remote_url_list[0]
+    if remote.used: remote.hide = True
+    else: relational.session.delete(remote)
+    relational.session.commit()
+    return jsonify(terminal_text="Remote "+ remote_url + " deleted successfully"), 200
+
 @app.route("/commands/<collab_command>/<path:serverUrl>")
 def execute_command_push_experiment(collab_command, serverUrl):
     """Execute the command 'now push'"""
     push_command = ("now " + collab_command + " --url " + serverUrl).split()
     
     sub_process = subprocess.run(push_command, capture_output=True)
-    
     if(len(sub_process.stderr)): return jsonify(terminal_text="Invalid server address"), 400
     
     sub_process_print = sub_process.stdout.decode("utf-8")

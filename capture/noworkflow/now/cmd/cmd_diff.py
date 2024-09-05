@@ -128,7 +128,7 @@ class Diff(NotebookCommand):
         add_arg("-t", "--hide-timestamps", action="store_true",
                 help="hide timestamps")
         add_arg("-fa", "--function-activations", type=str, nargs='+',
-                help="Compare two function activations. The first one must be from trial1 and the second one must be from trial2.\n"
+                help="R|Compare two function activations. The first one must be from trial1 and the second one must be from trial2.\n"
                 "After the functions' ids, you can specify which type of variables you want to see.\n"
                 "Leave it blank: 'name', 'attribute', 'access'\n"
                 "op: shows the above plus " + str(OPERATIONS).replace(")","").replace("(","") + "\n"
@@ -226,7 +226,7 @@ class Diff(NotebookCommand):
             
             differ = difflib.Differ()
             
-            trial1_variables_that_changed, trial2_variables_added = self.build_variables_lcs(functions_info["variables_function_trial1"], functions_info["variables_function_trial2"], differ)
+            trial1_variables_that_changed, trial2_variables_added, trial1_variables_removed = self.build_variables_lcs(functions_info["variables_function_trial1"], functions_info["variables_function_trial2"], differ)
             
             print_msg("Function output", True)
             for property in ["output", "arguments", "duration", "variables"]:
@@ -242,6 +242,9 @@ class Diff(NotebookCommand):
                         if len(trial2_variables_added) > 0:
                             print_msg("The "+property+" added:\n", True)
                             [print(str(var)+"\n") for var in trial2_variables_added]
+                        if len(trial1_variables_removed) > 0:
+                            print_msg("The "+property+" removed:\n", True)
+                            [print(str(var)+"\n") for var in trial1_variables_removed]
                     else:
                         diff = differ.compare(str(functions_info[property+"_function_trial1"]).splitlines(keepends=True),str(functions_info[property+"_function_trial2"]).splitlines(keepends=True))
                         print('\n'.join(list(diff)))
@@ -252,16 +255,18 @@ class Diff(NotebookCommand):
     def build_variables_lcs(self, variables_list_trial1, variables_list_trial2, differ):
         lcs_variables_result_trial1, lcs_variables_result_trial2  = lcs(variables_list_trial1, variables_list_trial2, lambda x,y: (difflib.SequenceMatcher(None, x["name"], y["name"]).ratio() >= 0.8) or (difflib.SequenceMatcher(None, x["name"], y["name"]).ratio() > 0.6 and x["code_line"] == y["code_line"]))
         trial1_variables_that_changed = []
+        trial1_variables_removed = []
         trial2_variables_added = []
         for i in range(len(variables_list_trial1)):
             if i in lcs_variables_result_trial1 and (str(variables_list_trial1[i]) != str(variables_list_trial2[lcs_variables_result_trial1[i]])):
                 diff = differ.compare(str(variables_list_trial1[i]).splitlines(keepends=True), str(variables_list_trial2[lcs_variables_result_trial1[i]]).splitlines(keepends=True))
                 trial1_variables_that_changed.append(diff)
+            if i not in lcs_variables_result_trial1: trial1_variables_removed.append(variables_list_trial1[i])
         
         for j in range(len(variables_list_trial2)):
             if j not in lcs_variables_result_trial2: trial2_variables_added.append(variables_list_trial2[j])
                 
-        return trial1_variables_that_changed, trial2_variables_added
+        return trial1_variables_that_changed, trial2_variables_added, trial1_variables_removed
 
     def print_file_accesses(self, args, access_extra, added, removed, replaced):
         if args.brief:
@@ -316,12 +321,12 @@ class Diff(NotebookCommand):
         if variable_types_to_show != None and variable_types_to_show.lower() == "op": [variable_types.append(CodeComponent.m.type==operation) for operation in OPERATIONS]
         variable_types = or_(true()) if variable_types_to_show != None and variable_types_to_show.lower() == "all" else or_(*variable_types)
         
-        function_trial1_variables = relational.session.query(Evaluation.m.id, CodeComponent.m.name, Evaluation.m.repr, CodeComponent.m.type, CodeComponent.m.first_char_line).filter(
+        function_trial1_variables = relational.session.query(Evaluation.m.id, CodeComponent.m.name, Evaluation.m.repr, CodeComponent.m.type, CodeComponent.m.first_char_line, CodeComponent.m.first_char_column).filter(
             Evaluation.m.trial_id==trial1_id, Evaluation.m.activation_id==function_as_activation_trial1.id, 
             CodeComponent.m.trial_id==trial1_id, CodeComponent.m.id == Evaluation.m.code_component_id,
             variable_types).all()
         
-        function_trial2_variables = relational.session.query(Evaluation.m.id, CodeComponent.m.name, Evaluation.m.repr, CodeComponent.m.type, CodeComponent.m.first_char_line).filter(
+        function_trial2_variables = relational.session.query(Evaluation.m.id, CodeComponent.m.name, Evaluation.m.repr, CodeComponent.m.type, CodeComponent.m.first_char_line, CodeComponent.m.first_char_column).filter(
             Evaluation.m.trial_id==trial2_id, Evaluation.m.activation_id==function_as_activation_trial2.id, 
             CodeComponent.m.trial_id==trial2_id, CodeComponent.m.id == Evaluation.m.code_component_id,
             variable_types).all()
@@ -338,8 +343,8 @@ class Diff(NotebookCommand):
                 "arguments_function_trial2" : [relational.session.query(Evaluation.m).filter(Evaluation.m.id==argument.dependency_id, Evaluation.m.trial_id==trial2_id).all()[0].repr for argument in function_trial2_arguments],
                 "duration_function_trial1" : (function_as_evaluation_trial1.checkpoint - function_as_activation_trial1.start_checkpoint) * 1000000, #miliseconds
                 "duration_function_trial2" : (function_as_evaluation_trial2.checkpoint - function_as_activation_trial2.start_checkpoint) * 1000000, #miliseconds
-                "variables_function_trial1" : [{"evaluation_id":variable[0],"name":variable[1],"value":variable[2],"type":variable[3],"code_line":variable[4]} for variable in function_trial1_variables],
-                "variables_function_trial2" : [{"evaluation_id":variable[0],"name":variable[1],"value":variable[2],"type":variable[3],"code_line":variable[4]} for variable in function_trial2_variables],
+                "variables_function_trial1" : [{"evaluation_id":variable[0],"name":variable[1],"value":variable[2],"type":variable[3],"code_line":variable[4], "code_column": variable[5]} for variable in function_trial1_variables],
+                "variables_function_trial2" : [{"evaluation_id":variable[0],"name":variable[1],"value":variable[2],"type":variable[3],"code_line":variable[4], "code_column": variable[5]} for variable in function_trial2_variables],
                 "file_accesses_added" : new_added,
                 "file_accesses_removed": new_removed,
                 "file_accesses_replaced": new_replaced
