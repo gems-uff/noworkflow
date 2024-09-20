@@ -881,9 +881,7 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
         const dataflowWindow = document.getElementById(dataflowWindowId);
 
         // Download SVG Button, excluding hint, and excluding checkbox
-        downloadDataflow(dataflowWindow, dataflowWindowId);
-        excludePriorProvenanceHint(dataflowWindow, "Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience");
-        checkboxOpenDataflowExcludeProvenanceNewWindow(dataflowWindow!);
+        dataflowButtons(dataflowWindow, dataflowWindowId, "Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience", json.dataflow)
 
         let selectedNode: Element | undefined;
 
@@ -1034,9 +1032,7 @@ function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluat
 
   excludingProvenanceWindow!.textContent = "";
 
-  downloadDataflow(excludingProvenanceWindow, excludingProvenanceWindow!.getAttribute("id")!);
-  excludePriorProvenanceHint(excludingProvenanceWindow, "(Ctrl or Shift)+click on a function call to exclude prior provenience");
-  checkboxOpenDataflowExcludeProvenanceNewWindow(excludingProvenanceWindow!);
+  dataflowButtons(excludingProvenanceWindow, excludingProvenanceWindow!.getAttribute("id")!, "(Ctrl or Shift)+click on a function call to exclude prior provenience", newDataflowString)
 
   let svgElement = viz.renderSVGElement(newDataflowString);
   excludingProvenanceWindow!.appendChild(svgElement);
@@ -1336,10 +1332,11 @@ function addsAutocompleteToDataflowWDF(dataflowEvaluationInput: d3_Selection<HTM
   });
 }
 
-function downloadDataflow(dataflowWindow: HTMLElement | null, dataflowWindowId: string) {
-  d3_select(dataflowWindow).append("div").append("a")
+function downloadDataflowAsSVG(dataflowWindow: HTMLElement | null, dataflowWindowId: string, appendDiv : boolean) {
+  let div = appendDiv ? d3_select(dataflowWindow).append("div").attr("id", dataflowWindowId + "-downloadDiv") : d3_select(document.getElementById(dataflowWindowId + "-downloadDiv"));
+  div.append("a")
     .classed("toollink", true)
-    .attr("id", dataflowWindowId + "-download")
+    .attr("id", dataflowWindowId + "-downloadSVG")
     .attr("href", "#")
     .style("color", "black")
     .attr("title", "Download dataflow SVG")
@@ -1348,6 +1345,28 @@ function downloadDataflow(dataflowWindow: HTMLElement | null, dataflowWindowId: 
     })
     .append("i")
     .classed("fa fa-download", true);
+}
+
+function downloadDataflowAsDOT(dataflowWindow: HTMLElement | null, dataflowWindowId: string, dataflowDOT : string, appendDiv: boolean) {
+  let div = appendDiv ? d3_select(dataflowWindow).append("div").attr("id", dataflowWindowId + "-downloadDiv") : d3_select(document.getElementById(dataflowWindowId + "-downloadDiv"));
+  div.append("a")
+    .classed("toollink", true)
+    .attr("id", dataflowWindowId + "-downloadDOT")
+    .attr("href", "#")
+    .style("color", "black")
+    .attr("title", "Download dataflow DOT")
+    .on("click", () => {
+      fs.saveAs(new Blob([dataflowDOT.trim()], { type: "text/plain;charset=utf-8" }), "dataflow.dot");
+    })
+    .append("i")
+    .classed("fa fa-file-text", true);
+}
+
+function dataflowButtons(dataflowWindow: HTMLElement | null, dataflowWindowId: string, excludeProvenanceHint : string, dataflowDOT : string){
+  downloadDataflowAsSVG(dataflowWindow, dataflowWindowId, true);
+	downloadDataflowAsDOT(dataflowWindow, dataflowWindowId, dataflowDOT, false)
+	excludePriorProvenanceHint(dataflowWindow, excludeProvenanceHint);
+	checkboxOpenDataflowExcludeProvenanceNewWindow(dataflowWindow!);
 }
 
 function getRestoreOrCollabCommand(serverUrl: string, form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>,
