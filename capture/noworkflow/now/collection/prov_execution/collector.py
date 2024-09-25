@@ -29,6 +29,7 @@ from .structures import DependencyAware, Dependency, Parameter
 from .structures import MemberDependencyAware, CollectionDependencyAware
 from .structures import ConditionExceptions, WithContext
 
+NOW_UNSET = "<now_unset>"
 
 OPEN_MODES = {
     # All
@@ -999,7 +1000,7 @@ class Collector(object):
         # pylint: disable=too-many-locals
         meta = self.metascript
         new_eva = None
-        val = "<now_unset>"
+        val = NOW_UNSET
         sub = []
         if len(dep.sub_dependencies) > index:
             new_dep = dep.sub_dependencies[index]
@@ -1012,7 +1013,7 @@ class Collector(object):
             new_eva = same.members.get(addr)
         if not new_eva:
             return clone_depa, None
-        if val == "<now_unset>":
+        if val is NOW_UNSET:
             val = value[index]
 
         new_depa = clone_depa.clone(extra_only=True)
