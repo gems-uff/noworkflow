@@ -754,7 +754,7 @@ class Collector(object):
         ))
         return self._item
 
-    def _item(self, activation, code_id, value, key):
+    def _item(self, activation, code_id, value, key, starred=False):
         """Capture item after"""
         # pylint: disable=no-self-use
         value_depa = activation.dependencies.pop()
