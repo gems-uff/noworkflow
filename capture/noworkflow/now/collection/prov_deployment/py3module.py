@@ -186,14 +186,20 @@ def finder(metascript):
                 if spec is None:
                     return None
                 loader = spec.loader
-                if id(loader) not in loaders:
-                    if type(loader) == SourceFileLoader: 
-                        # Playing safe here: instead of using isinstance, I'm checking the actual type
-                        # I don't know if the noworkflow loader supports any subtype of SourceFileLoader
-                        loaders[id(loader)] = create_source_loader(metascript, loader)
-                    else:
-                        loaders[id(loader)] = create_generic_loader(metascript, loader)
-                spec.loader = loaders[id(loader)]
+                if loader is not None:
+                    if id(loader) not in loaders:
+                        if type(loader) == SourceFileLoader: 
+                            # Playing safe here: instead of using isinstance, I'm checking the actual type
+                            # I don't know if the noworkflow loader supports any subtype of SourceFileLoader
+                            loaders[id(loader)] = create_source_loader(metascript, loader)
+                        else:
+                            loaders[id(loader)] = create_generic_loader(metascript, loader)
+                    spec.loader = loaders[id(loader)]
+                else:
+                    # Namespace package, builtin module, or direct module execution
+                    # ToDo: check if we check collect this type of module
+                    pass
+
 
                 return spec
             
