@@ -14,6 +14,9 @@ import {TrialGraphData} from '@noworkflow/trial';
 export
 class DiffGraphWidget extends BaseActivationGraphWidget {
 
+  showDiffFunction : any;
+  nowVisPanel : any
+
   static url(trial1: string, trial2: string, selectedGraph: string, useCache: boolean): string {
     let cache = useCache ? "1" : "0"
     return ("diff/"
@@ -24,7 +27,7 @@ class DiffGraphWidget extends BaseActivationGraphWidget {
   static createForm(name: string, parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>): void {
   }
 
-  constructor(name: string, cls: string, t1: string, t2: string) {
+  constructor(name: string, cls: string, t1: string, t2: string, showDiffFunction : any, nowVisPanel : any) {
     super({ node: BaseActivationGraphWidget.createNode(cls, DiffGraphWidget.createForm) });
     this.d3node = d3_select(this.node);
     this.d3node.select('.reload-button')
@@ -43,6 +46,8 @@ class DiffGraphWidget extends BaseActivationGraphWidget {
     this.cls = cls;
     this.t1 = t1;
     this.t2 = t2;
+    this.showDiffFunction = showDiffFunction
+    this.nowVisPanel = nowVisPanel
   }
 
   load(selectedGraph: string = "namespace_match", useCache: boolean = true) {
@@ -53,7 +58,7 @@ class DiffGraphWidget extends BaseActivationGraphWidget {
       let useCacheDiv = selectorDiv.select(".use-cache");
       useCacheDiv.property("checked", useCache);
 
-      this.configureGraph(selectedGraph, useCache, false, data);
+      this.configureGraph(selectedGraph, useCache, false, data, this.showDiffFunction, this.nowVisPanel);
     })
   }
 }

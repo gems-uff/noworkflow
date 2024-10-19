@@ -113,10 +113,10 @@ class BaseActivationGraphWidget extends Widget {
     return node;
   }
 
-  setGraph(data: TrialGraphData, config: any={}) {
+  setGraph(data: TrialGraphData, config: any={}, showDiffFunction?:any, nowVisPanel?: any) {
     let sub = this.node.getElementsByClassName("sub-content")[0];
     sub.innerHTML = "";
-    this.graph = new TrialGraph(this.cls, sub, config);
+    this.graph = new TrialGraph(this.cls, sub, config, showDiffFunction, nowVisPanel);
     this.graph.load(data, this.t1, this.t2);
   }
 
@@ -180,8 +180,8 @@ class BaseActivationGraphWidget extends Widget {
     }
   }
 
-  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
-    this.setGraph(data, this.graphDefinition(selectedGraph, useCache, genDataflow, data));
+  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData, showDiffFunction?:any, nowVisPanel?:any) {
+    this.setGraph(data, this.graphDefinition(selectedGraph, useCache, genDataflow, data), showDiffFunction, nowVisPanel);
   }
 
   protected onResize(msg: Widget.ResizeMessage): void {

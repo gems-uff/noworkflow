@@ -25,10 +25,10 @@ import {
 
 import * as fs from 'file-saver';
 
-import {wrap, diagonal} from '@noworkflow/utils';
+import { wrap, diagonal } from '@noworkflow/utils';
 
-import {TrialConfig} from './config';
-import {VisibleTrialNode, VisibleTrialEdge} from './structures';
+import { TrialConfig } from './config';
+import { VisibleTrialNode, VisibleTrialEdge } from './structures';
 import {
   TrialGraphData, TrialNodeData,
   TrialEdgeData, ActivationData
@@ -38,7 +38,7 @@ import { D3ZoomEvent } from 'd3';
 
 
 export
-class TrialGraph {
+  class TrialGraph {
 
   i: number;
   config: TrialConfig;
@@ -67,20 +67,26 @@ class TrialGraph {
   maxTotalDuration: number;
   colors: { [trial: string]: number };
   activationStorage: { [aid: string]: ActivationData; };
+  showDiffFunction : any;
+  nowVisPanel: any;
 
+  constructor(graphId: string, div: any, config: any = {}, showDiffFunction? : any, nowVisPanel?:any) {
+    if(showDiffFunction && nowVisPanel){
+      this.showDiffFunction = showDiffFunction;
+      this.nowVisPanel = nowVisPanel
+    }
 
-  constructor(graphId:string, div: any, config: any={}) {
     this.i = 0;
 
     let defaultConfig: TrialConfig = {
-      customSize: function(g:TrialGraph) {
+      customSize: function (g: TrialGraph) {
         return [
           g.config.width,
           g.config.height,
         ]
       },
-      customMouseOver: (g:TrialGraph, d: VisibleTrialNode) => false,
-      customMouseOut: (g:TrialGraph, d: VisibleTrialNode) => false,
+      customMouseOver: (g: TrialGraph, d: VisibleTrialNode) => false,
+      customMouseOut: (g: TrialGraph, d: VisibleTrialNode) => false,
       customForm: (g: TrialGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => null,
       customLoadTooltip: (g: TrialGraph, div: HTMLDivElement, text: string, trialid: string, aid: string) => null,
 
@@ -114,7 +120,7 @@ class TrialGraph {
       })
       .on("start", () => d3_select('body').style("cursor", "move"))
       .on("end", () => d3_select('body').style("cursor", "auto"))
-      .wheelDelta(function() {
+      .wheelDelta(function () {
         const e = event as WheelEvent;
         return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
       })
@@ -145,7 +151,7 @@ class TrialGraph {
         this.config.nodeSizeX,
         this.config.nodeSizeY
       ]);
-    
+
     // Tooltip
     this.tooltipDiv = d3_select<HTMLDivElement, any>("body").append("div")
       .attr("class", "now-tooltip now-trial-tooltip")
@@ -185,7 +191,7 @@ class TrialGraph {
 
     if (!data.root) return;
 
-    this.root = d3_hierarchy(data.root, function(d) { return d.children; }) as VisibleTrialNode;
+    this.root = d3_hierarchy(data.root, function (d) { return d.children; }) as VisibleTrialNode;
     this.root.x0 = 0;
     this.root.y0 = (this.config.width) / 2;
 
@@ -205,7 +211,7 @@ class TrialGraph {
       .attr("href", "#")
       .attr("title", "Restore zoom")
       .on("click", () => this.restorePosition())
-    .append("i")
+      .append("i")
       .classed("fa fa-eye", true)
 
     // Toggle Tooltips
@@ -222,7 +228,7 @@ class TrialGraph {
     form.append("label")
       .attr("for", "trial-" + this.graphId + "-toolbar-tooltips")
       .attr("title", "Show tooltips on mouse hover")
-    .append("i")
+      .append("i")
       .classed("fa fa-comment", true)
 
     // Download SVG
@@ -234,7 +240,7 @@ class TrialGraph {
       .on("click", () => {
         this.download();
       })
-    .append("i")
+      .append("i")
       .classed("fa fa-download", true)
 
     // Set Font Size
@@ -245,14 +251,14 @@ class TrialGraph {
       .attr("value", "show")
       .property("checked", false)
       .on("change", () => {
-        let display = fontToggle.property("checked")? "inline-block" : "none";
+        let display = fontToggle.property("checked") ? "inline-block" : "none";
         fontSize.style("display", display);
         labelFontSize.style("display", display);
       });
     form.append("label")
       .attr("for", "trial-" + this.graphId + "-toolbar-fonts")
       .attr("title", "Set font size")
-    .append("i")
+      .append("i")
       .classed("fa fa-font", true)
     let fontSize = form.append("input")
       .attr("type", "number")
@@ -276,7 +282,7 @@ class TrialGraph {
       })
 
     // Set distances
-    let setDistances = function() {
+    let setDistances = function () {
       self.config.nodeSizeX = distanceX.property("value");
       self.config.nodeSizeY = distanceY.property("value");
       self.wrapText()
@@ -297,13 +303,13 @@ class TrialGraph {
       .attr("value", "show")
       .property("checked", false)
       .on("change", () => {
-        let display = distanceXToggle.property("checked")? "inline-block" : "none";
+        let display = distanceXToggle.property("checked") ? "inline-block" : "none";
         distanceX.style("display", display);
       });
     form.append("label")
       .attr("for", "trial-" + this.graphId + "-toolbar-distance-x")
       .attr("title", "Set horizontal distance")
-    .append("i")
+      .append("i")
       .classed("fa fa-arrows-h", true)
     let distanceX = form.append("input")
       .attr("type", "number")
@@ -321,13 +327,13 @@ class TrialGraph {
       .attr("value", "show")
       .property("checked", false)
       .on("change", () => {
-        let display = distanceYToggle.property("checked")? "inline-block" : "none";
+        let display = distanceYToggle.property("checked") ? "inline-block" : "none";
         distanceY.style("display", display);
       });
     form.append("label")
       .attr("for", "trial-" + this.graphId + "-toolbar-distance-y")
       .attr("title", "Set vertical distance")
-    .append("i")
+      .append("i")
       .classed("fa fa-arrows-v", true)
     let distanceY = form.append("input")
       .attr("type", "number")
@@ -353,10 +359,10 @@ class TrialGraph {
   restorePosition(): void {
     this.wrapText();
     this.svg
-        .call(this.zoom.transform, d3_zoomIdentity.translate(
-          this.config.left + this.config.width / 2,
-          this.config.top
-        ))
+      .call(this.zoom.transform, d3_zoomIdentity.translate(
+        this.config.left + this.config.width / 2,
+        this.config.top
+      ))
   }
 
   updateWindow(): void {
@@ -373,7 +379,7 @@ class TrialGraph {
     this.nodes = treeData.descendants();
 
     var node = this.g.selectAll('g.node')
-      .data(this.nodes, (d: any) => {return d.id || (d.id = ++this.i); });
+      .data(this.nodes, (d: any) => { return d.id || (d.id = ++this.i); });
 
     let validNodes: { [key: string]: VisibleTrialNode } = {};
     this.nodes.forEach((node: VisibleTrialNode) => {
@@ -402,7 +408,7 @@ class TrialGraph {
     this.updateLinkLabels(edges);
 
     // Store old positions for transition
-    this.nodes.forEach(function(d: VisibleTrialNode, i: number){
+    this.nodes.forEach(function (d: VisibleTrialNode, i: number) {
       d.x0 = d.x;
       d.y0 = d.y;
     });
@@ -416,11 +422,11 @@ class TrialGraph {
     } catch (e) {
       alert("blob not supported");
     }
-    name = (name === undefined)? "trial.svg" : name;
+    name = (name === undefined) ? "trial.svg" : name;
     let gnode: any = this.g.node()
     var bbox = gnode.getBBox();
     var width = this.svg.attr("width"), height = this.svg.attr("height");
-    this.g.attr("transform", "translate(" + (-bbox.x + 5) +", " +(-bbox.y + 5) +")");
+    this.g.attr("transform", "translate(" + (-bbox.x + 5) + ", " + (-bbox.y + 5) + ")");
     let svgNode: any = this.svg
       .attr("title", "Trial")
       .attr("version", 1.1)
@@ -436,20 +442,106 @@ class TrialGraph {
     this.g.attr("transform", this.transform);
     if (isFileSaverSupported) {
       console.log(html);
-      var blob = new Blob([html], {type: "image/svg+xml"});
+      var blob = new Blob([html], { type: "image/svg+xml" });
       fs.saveAs(blob, name);
     }
   }
 
   wrapText() {
     this.svg.selectAll(".node text:not(.nowrap)")
-        .call(wrap, this.config.nodeSizeX);
+      .call(wrap, this.config.nodeSizeX);
   }
 
   private calculateColor(d: TrialNodeData, trial_id: string): any {
     var proportion = Math.round(255 * (1.0 - (d.duration[trial_id] / this.maxTotalDuration)));
     //Math.round(510 * (node.duration - self.min_duration[node.trial_id]) / self.total_duration[node.trial_id]);
     return d3_rgb(255, proportion, proportion, 255).toString();
+  }
+
+  getFunctionDiff(activations: any, trial_ids : any) {
+    let showModal = (activations[trial_ids[0]].length > 1 || activations[trial_ids[1]].length > 1);
+    let modal : any;
+    let modalBody;
+    let button;
+
+    if(showModal){
+      modal = d3_select(document.getElementById("main"))
+      .append("div").classed("modal fade show", true)
+      .attr("id", "functionDiffModal")
+      .attr("tabindex", "-1")
+      .attr("role", "dialog")
+      .attr("aria-labelledby", "functionDiffModalLabel")
+      .style("display", "none")
+      .attr("aria-hidden", "false")
+      .style("display", "block");
+      
+      let modalDialog = modal.append("div").classed("modal-dialog", true).attr("role","document");
+
+      let modalContent = modalDialog.append("div").classed("modal-content", true);
+      
+      let modalHeader = modalContent.append("div").classed("modal-header", true);
+      modalHeader.append("h5").classed("modal-title", true).attr("id", "functionDiffModalLabel").text("Select a function activation: ");
+      modalHeader.append("button").classed("close", true).attr("data-dismiss", "modal").attr("aria-label", "Close")
+      .append("span").attr("aria-hidden", "true").html("&times;").on("click", () => modal.remove());
+
+      modalBody = modalContent.append("div").classed("modal-body", true);
+      modalBody.append("p").text("This function was called multipled times. Select the activations you want to see their diff").style("font-weight", "bold");
+
+
+      button = modalContent.append("div").classed("modal-footer", true).append("button").classed("btn btn-primary", true).text("Confirm");
+    }
+
+    
+
+    let compareFunctionCallsUrl = "commands/diff";
+    let windowLabel = "Diff"
+    for (let i = 0; i < trial_ids.length; i++) {
+      let trial = trial_ids[i]
+      
+      if(showModal){
+        let trialNumber = i == 0 ? "first" : "second";
+        modalBody!.append("span").text("Select the " +trialNumber+" trial activation: ");
+        let select = modalBody!.append("select").classed("form-select", true).attr("arial-label", "functionTrial"+trial).attr("id", "functionTrial"+trial);
+        for(let activation in activations[trial]){
+          select.append("option").attr("value", activations[trial][activation]).text(activations[trial][activation])
+          modalBody!.append("br");
+        }
+      } else {
+        if (compareFunctionCallsUrl.length > 0) compareFunctionCallsUrl += "/";
+        compareFunctionCallsUrl += trial + "/";
+        compareFunctionCallsUrl += activations[trial];
+        windowLabel += " trial " + trial + " activation_id " + activations[trial];
+      }
+      
+    }
+
+    if(showModal){
+      button?.on("click", ()=>{
+        let firstTrialActivation = (<HTMLSelectElement>document.getElementById("functionTrial"+trial_ids[0])).selectedOptions[0].value;
+        let secondTrialActivation = (<HTMLSelectElement>document.getElementById("functionTrial"+trial_ids[1])).selectedOptions[0].value;
+        compareFunctionCallsUrl += "/" + trial_ids[0] + "/" + firstTrialActivation + "/" + trial_ids[1] + "/" + secondTrialActivation;
+        windowLabel += " trial " + trial_ids[0] + " activation_id " + firstTrialActivation + " trial " + trial_ids[1] + " activation_id " + secondTrialActivation;
+
+        makeRequest(this.showDiffFunction, this.nowVisPanel);
+        modal!.remove();
+      });
+    }else{
+      makeRequest(this.showDiffFunction, this.nowVisPanel);
+    }
+
+    function makeRequest(showDiffFunction : any, nowVisPanel : any) {
+      fetch(compareFunctionCallsUrl, {
+        method: 'GET', // *GET, POST, PUT, DELETE, etc.
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      }).then((response) => {
+
+        response.json().then((json) => {
+          if (showDiffFunction) showDiffFunction(json, windowLabel, nowVisPanel);
+        });
+      });
+    }
   }
 
   private closeTooltip(): void {
@@ -470,8 +562,8 @@ class TrialGraph {
       var regexp = (/T(.*) - (\d*)<br>Line \d*?<br>/g)
       var match = regexp.exec(string);
       this.tooltipDiv.html("")
-      .style("left", (event.pageX - 3) + "px")
-      .style("top", (event.pageY - 28) + "px");
+        .style("left", (event.pageX - 3) + "px")
+        .style("top", (event.pageY - 28) + "px");
       while (match != null) {
         var div = document.createElement("div");
         //var div2 = document.createElement("div");
@@ -487,10 +579,10 @@ class TrialGraph {
       }
     } else {
       this.tooltipDiv.html(d.tooltip[trial_id])
-      .style("left", (event.pageX - 3) + "px")
-      .style("top", (event.pageY - 28) + "px");
+        .style("left", (event.pageX - 3) + "px")
+        .style("top", (event.pageY - 28) + "px");
     }
-    
+
   }
 
   updateTooltipDiv(activationId: string, div: Element) {
@@ -500,7 +592,7 @@ class TrialGraph {
       title = '<a href="/trials/files/' + data.hash + '/' + data.name + '">' + title + "</a>";
     }
     var result = [
-      '<span class="attr"> <span style="font-weight: bold;">' + title  + '</span></span>',
+      '<span class="attr"> <span style="font-weight: bold;">' + title + '</span></span>',
       '<span class="attr"> <span style="font-weight: bold;"> Line: </span> <span class="line">' + data.line + "</span></span>",
       '<span class="attr"> <span style="font-weight: bold;"> Start: </span> <span class="start">' + data.start + "</span></span>",
       '<span class="attr"> <span style="font-weight: bold;"> Finish: </span> <span class="finish">' + data.finish + "</span></span>",
@@ -515,17 +607,17 @@ class TrialGraph {
     this.svg.append("svg:defs").selectAll("marker")
       .data([name])
       .enter().append("svg:marker")
-        .attr("id", this.graphId + "-" + name)
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 10)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("orient", "auto")
+      .attr("id", this.graphId + "-" + name)
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 10)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
       .append("svg:path")
-        .classed(cls, true)
-        .attr("fill", fill)
-        .attr("d", "M0,-5L10,0L0,5");
+      .classed(cls, true)
+      .attr("fill", fill)
+      .attr("d", "M0,-5L10,0L0,5");
   }
 
   private defaultNodeStroke(d: VisibleTrialNode) {
@@ -561,8 +653,15 @@ class TrialGraph {
       .attr('transform', (d: VisibleTrialNode) => {
         return "translate(" + source.x + "," + source.y + ")";
       })
-      .on('click', (event: MouseEvent, d: VisibleTrialNode) => this.nodeClick(d))
-      .on('mouseover', function(event: MouseEvent, d: VisibleTrialNode) {
+      .on('click', (event: MouseEvent, d: VisibleTrialNode) => {
+        let activations = d.data.activations;
+        if (event.ctrlKey && Object.keys(activations).length > 1) {
+          self.getFunctionDiff(activations, d.data.trial_ids);
+        } else {
+          this.nodeClick(d);
+        }
+      })
+      .on('mouseover', function (event: MouseEvent, d: VisibleTrialNode) {
         if (self.config.useTooltip) {
           self.closeTooltip();
           if (d3_pointers(event)[0][0] < 10) {
@@ -576,6 +675,17 @@ class TrialGraph {
       }).on('mouseout', function (event: MouseEvent, d: VisibleTrialNode) {
         self.config.customMouseOut(self, d);
       })
+
+    /* nodeEnter.attr("activations_ids", (d:VisibleTrialNode)=>{
+      let activations = d.data.activations;
+      let attrValue = "";
+      for(let trial in activations){
+        if(attrValue.length > 0) attrValue+= "/";
+        attrValue += trial + "/";
+        attrValue += activations[trial];
+      }
+      return attrValue;
+    }); */
 
     // Circle for new nodes
     nodeEnter.append('rect')
@@ -617,7 +727,7 @@ class TrialGraph {
       .attr("y", 24)
       .attr("x", 10)
       .attr("text-anchor", "middle")
-      .each(function(d: VisibleTrialNode) {
+      .each(function (d: VisibleTrialNode) {
         const textLabel = d3_select(this);
         const name = d.data.name.split('<br>');
         if (name.length > 1) {
@@ -641,7 +751,7 @@ class TrialGraph {
       .attr("d", function (d: VisibleTrialNode) {
         if (d.data.trial_ids.length > 1) {
           return "M10," + 0 +
-               "L10," + 20;
+            "L10," + 20;
         }
         return "M0,0L0,0";
       });
@@ -655,7 +765,7 @@ class TrialGraph {
       .attr("transform", (d: VisibleTrialNode) => {
         let color = this.colors[d.data.trial_ids[0]];
         d.dy = 0;
-        if (color == 1){
+        if (color == 1) {
           d.dy = -40;
         } else if (color == 2) {
           d.dy = 40;
@@ -680,7 +790,7 @@ class TrialGraph {
     // Remove exiting nodes
     var nodeExit = node.exit().transition()
       .duration(this.config.duration)
-      .attr("transform", function(d: VisibleTrialNode) {
+      .attr("transform", function (d: VisibleTrialNode) {
         return "translate(" + source.x + "," + source.y + ")";
       })
       .remove();
@@ -710,14 +820,14 @@ class TrialGraph {
       .attr("fill", "none")
       .attr("stroke-width", "1.5px")
       .attr('d', (d: VisibleTrialEdge) => {
-        var o = {y: source.y0, x: source.x0}
+        var o = { y: source.y0, x: source.x0 }
         if (d.source.dy == undefined) {
           d.source.dy = 0;
         }
         if (d.target.dy == undefined) {
           d.target.dy = 0;
         }
-        
+
         let
           ox = source.x0 || 0,
           oy = source.y0 || 0,
@@ -877,7 +987,7 @@ class TrialGraph {
       });
     // Remove any exiting links
     link.exit()//.transition()
-      .attr('d', function(d: VisibleTrialEdge) {
+      .attr('d', function (d: VisibleTrialEdge) {
         return diagonal(d.source, d.target)
       })
       .remove();  // linkExit

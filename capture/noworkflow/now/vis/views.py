@@ -19,6 +19,7 @@ from ..models.history import History
 from ..models.diff import Diff
 from ..models.ast.trial_ast import TrialAst
 from ..persistence import relational, content
+from ..cmd.cmd_diff import Diff as DiffCMD
 from ..ipython.dotmagic import DotDisplay
 
 import subprocess
@@ -26,6 +27,7 @@ from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
 from ..persistence import content
 import time
+import difflib
 from zipfile import ZipFile
 from io import BytesIO
 
@@ -470,6 +472,28 @@ def definition_ast(trial_id):
     trial = Trial(trial_id)
     ast = TrialAst(trial)
     return jsonify(ast.construct_ast_json(False))
+
+@app.route("/experiments/<expCode>/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")
+@app.route("/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")
+def execute_command_diff_function_activation(trial1_id, activation1_id, trial2_id, activation2_id, expCode=None):
+    diff = Diff(trial1_id, trial2_id)
+    diffCMD = DiffCMD()
+    
+    functions_info = diffCMD.get_diff_function_info(trial1_id, trial2_id, activation1_id, activation2_id, diff.file_accesses, "all")    
+    differ = difflib.Differ()
+    trial1_variables_that_changed, trial2_variables_added, trial1_variables_removed = diffCMD.build_variables_lcs(functions_info["variables_function_trial1"], functions_info["variables_function_trial2"], differ)
+    
+    functions_info["file_accesses_added"] = list([{"name": obj.name, "mode": obj.mode , "buffering": obj.buffering, "content_hash_before": obj.content_hash_before, "content_hash_after": obj.content_hash_after, "timestamp": obj.timestamp, "stack": obj.stack} for obj in functions_info["file_accesses_added"]])
+    functions_info["file_accesses_removed"] = list([{"name": obj.name, "mode": obj.mode , "buffering": obj.buffering, "content_hash_before": obj.content_hash_before, "content_hash_after": obj.content_hash_after, "timestamp": obj.timestamp, "stack": obj.stack} for obj in functions_info["file_accesses_removed"]])
+    functions_info["file_accesses_replaced"] = list([{"name": obj[0].name, "content_hash_before_first_trial": obj[0].content_hash_before, "content_hash_before_second_trial": obj[1].content_hash_before, "content_hash_after_first_trial": obj[0].content_hash_after, "content_hash_after_second_trial": obj[1].content_hash_after, "timestamp_first_trial": obj[0].timestamp, "timestamp_second_trial": obj[1].timestamp, "checkpoint_first_trial": obj[0].checkpoint, "checkpoint_second_trial": obj[1].checkpoint} for obj in functions_info["file_accesses_replaced"]])
+    
+    functions_info["trial1_variables_that_changed"] = [('\n'.join(list(diff_var))) for diff_var in trial1_variables_that_changed]
+    functions_info["trial2_variables_added"] = [(str(var)+"\n") for var in trial2_variables_added]
+    functions_info["trial1_variables_removed"] = [(str(var)+"\n") for var in trial1_variables_removed]
+    
+    print(functions_info["file_accesses_replaced"])
+
+    return jsonify(functions_info), 200
 
 @app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
 def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):
