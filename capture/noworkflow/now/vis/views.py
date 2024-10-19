@@ -13,7 +13,7 @@ import json
 from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent
+from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent, Dependency
 from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
 from ..models.history import History
 from ..models.diff import Diff
@@ -472,6 +472,15 @@ def definition_ast(trial_id):
     trial = Trial(trial_id)
     ast = TrialAst(trial)
     return jsonify(ast.construct_ast_json(False))
+
+@app.route("/experiments/<expCode>/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
+@app.route("/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
+def get_function_activation_arguments(trial_id, function_id, expCode=None):
+    function_arguments = relational.session.query(Dependency.m).filter(Dependency.m.trial_id==trial_id, Dependency.m.dependent_id==int(function_id), Dependency.m.type=="argument").all()
+    if len(function_arguments) < 1: return jsonify(function_params="This function has no params")
+    
+    function_params = [relational.session.query(Evaluation.m).filter(Evaluation.m.id==argument.dependency_id, Evaluation.m.trial_id==trial_id).all()[0].repr for argument in function_arguments]
+    return jsonify(function_params=function_params)
 
 @app.route("/experiments/<expCode>/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")
 @app.route("/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")

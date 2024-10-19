@@ -503,9 +503,22 @@ export
         modalBody!.append("span").text("Select the " +trialNumber+" trial activation: ");
         let select = modalBody!.append("select").classed("form-select", true).attr("arial-label", "functionTrial"+trial).attr("id", "functionTrial"+trial);
         for(let activation in activations[trial]){
-          select.append("option").attr("value", activations[trial][activation]).text(activations[trial][activation])
-          modalBody!.append("br");
+
+          fetch("/diff/getFunctionActivationArguments/"+trial+"/"+activations[trial][activation], {
+            method: 'GET', // *GET, POST, PUT, DELETE, etc.
+            headers: {
+              'Content-Type': 'application/json'
+            },
+          }).then((response) => {
+    
+            response.json().then((json) => {
+              select.append("option").attr("value", activations[trial][activation]).text(activations[trial][activation] + " params: " + json.function_params.toString());
+            });
+          }); 
         }
+
+        modalBody!.append("br");
+
       } else {
         if (compareFunctionCallsUrl.length > 0) compareFunctionCallsUrl += "/";
         compareFunctionCallsUrl += trial + "/";
