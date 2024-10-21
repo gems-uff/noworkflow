@@ -388,7 +388,28 @@ class HistoryWidget extends Widget {
     this.buildProvCommand();
     this.buildExportPrologCommand(this.modal, this.modalBody)
     this.buildDataflowCommand(this.modal, this.modalBody)
+    this.buildTrialFunctionDiffCommand(this.modal, this.modalBody, this.functionDiffWindow)
   }
+
+  buildTrialFunctionDiffCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, functionDiffWindow : any) {
+
+    let self = this
+
+    this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "trial-function-diff-option")
+      .text("function activation diff")
+      .on("click", function () {
+
+        let parent = this.parentNode as Element
+        let trialId = parent.getAttribute("selected-trial") ?? "";
+
+        buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, functionDiffWindow, self);
+      });
+
+  };
 
   buildDataflowCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
     modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
@@ -750,6 +771,128 @@ class HistoryWidget extends Widget {
     });
   }
 
+}
+
+function buildTrialFunctionDiffModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+  parent: Element, trialId: string, functionDiffWindow : any, self : any) {
+
+  let secondTrialId : string;
+  changeTitle(parent, "Function activation diff trial")
+  //document.getElementById("exampleModalTitle")!.textContent = "Function activation diff trial " + trialId;
+
+  fetch("/getFunctionActivations/" + trialId, {
+    method: 'GET', // *GET, POST, PUT, DELETE, etc.
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  }).then((response) => {
+    response.json().then((json) => {
+
+      showModal(modal);
+
+      if (modalBody) {
+
+        //scrollableModal(modalBody);
+
+        modalBody.append("span").text("Select this trial's activation: ");
+        let firstTrialSelectActivation = modalBody.append("select").classed("form-select", true).attr("arial-label", "firstTrialFunctionActivations").attr("id", "firstTrialFunctionActivations").style("max-width", "480px");
+
+        for(let activation in json["function_activations"]){
+          firstTrialSelectActivation.append("option").attr("value", json["function_activations"][activation].id).text(JSON.stringify(json["function_activations"][activation]).replace(/{|}/g,"").substring(0, 70));
+        }       
+
+        modalBody.append("br");
+
+        modalBody.append("span").text("Select the other trial: ");
+
+        let secondTrialSelect = modalBody.append("select").classed("form-select", true).attr("arial-label", "secondTrialSelect").attr("id", "secondTrialSelect");
+
+        fetch("/getAllTrialsIdsAndTags", {
+          method: 'GET', // *GET, POST, PUT, DELETE, etc.
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        }).then((response) => {
+          response.json().then((json) => {
+            for(let trial in json){
+              secondTrialSelect.append("option").attr("value", json[trial].id).text(json[trial].tag);
+            }
+
+            modalBody.append("br");
+
+            modalBody.append("span").text("Select the other trial's activation: ");
+
+            let secondTrialSelectActivation = modalBody.append("select").classed("form-select", true).attr("arial-label", "secondTrialFunctionActivations").attr("id", "secondTrialFunctionActivations").style("max-width", "480px");
+
+            getSecondTrialFunctionActivations(secondTrialSelectActivation);
+
+            secondTrialSelect.on("change",()=>{
+
+              getSecondTrialFunctionActivations(secondTrialSelectActivation);
+
+            });
+        
+        
+            modalBody.append("br");
+
+            let submitButton = modalBody.append("button").classed("btn btn-primary mb-2", true).style("margin-top", "10px").text("Confirm");
+
+            submitButton!.on("click", function () {
+
+              let firstTrialFunctionId = (<HTMLSelectElement>document.getElementById("firstTrialFunctionActivations")).selectedOptions[0].value;
+              let secondTrialFunctionId = (<HTMLSelectElement>document.getElementById("secondTrialFunctionActivations")).selectedOptions[0].value;
+      
+              let url = "/commands/diff/"+ trialId +"/"+ firstTrialFunctionId + "/"+ secondTrialId + "/"  + secondTrialFunctionId;
+
+              fetch(url, {
+                method: 'GET', // *GET, POST, PUT, DELETE, etc.
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+              }).then((response) => {
+        
+                response.json().then((json) => {
+                  functionDiffWindow(json, "Diff trial " + trialId + " activation_id " + firstTrialFunctionId + " trial " + secondTrialId + " activation_id " + secondTrialFunctionId, self.parent as NowVisPanel);
+                });
+              });
+      
+              cleanModalBodyAndClose(modal, modalBody);
+      
+      
+      
+            });
+
+        })});
+
+        
+
+      }
+
+    });
+  });
+
+
+
+  function getSecondTrialFunctionActivations(secondTrialSelectActivation: d3_Selection<HTMLSelectElement, {}, HTMLElement | null, any>) {
+    secondTrialId = (<HTMLSelectElement>document.getElementById("secondTrialSelect")).selectedOptions[0].value;
+
+    fetch("/getFunctionActivations/" + secondTrialId, {
+      method: 'GET', // *GET, POST, PUT, DELETE, etc.
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    }).then((response) => {
+      response.json().then((json) => {
+
+        secondTrialSelectActivation.html("");
+
+        for (let activation in json["function_activations"]) {
+          secondTrialSelectActivation.append("option").attr("value", json["function_activations"][activation].id).text(JSON.stringify(json["function_activations"][activation]).replace(/{|}/g, "").substring(0, 70));
+        }
+
+      });
+    });
+  }
 }
 
 function buildExportPrologModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, exportUrl: string, config: HistoryConfig, parent: Element, exportWindowId: string, trialId: string | null) {

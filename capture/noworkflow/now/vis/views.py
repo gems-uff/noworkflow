@@ -473,6 +473,23 @@ def definition_ast(trial_id):
     ast = TrialAst(trial)
     return jsonify(ast.construct_ast_json(False))
 
+@app.route("/experiments/<expCode>/getAllTrialsIdsAndTags")
+@app.route("/getAllTrialsIdsAndTags")
+def get_all_trials_ids_and_tags():
+    return jsonify([{"id": trial.id, "tag": list(trial.tags)[0].name} for trial in Trial.all()])
+
+@app.route("/experiments/<expCode>/getFunctionActivations/<trial_id>")
+@app.route("/getFunctionActivations/<trial_id>")
+def get_function_activations_from_trial(trial_id):
+    function_activations = relational.session.query(Activation.m).filter(Activation.m.trial_id == trial_id).all()
+    function_activations_array = []
+    for activation in function_activations:
+        activation_dict = {"id": activation.id, "name": activation.name}
+        activation_dict["params"] = get_function_activation_arguments(trial_id, activation.id).json["function_params"]
+        if("This function has no params" in activation_dict["params"]): activation_dict["params"] = ""
+        function_activations_array.append(activation_dict)
+    return jsonify(function_activations=function_activations_array)
+
 @app.route("/experiments/<expCode>/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
 @app.route("/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
 def get_function_activation_arguments(trial_id, function_id, expCode=None):
@@ -499,8 +516,6 @@ def execute_command_diff_function_activation(trial1_id, activation1_id, trial2_i
     functions_info["trial1_variables_that_changed"] = [('\n'.join(list(diff_var))) for diff_var in trial1_variables_that_changed]
     functions_info["trial2_variables_added"] = [(str(var)+"\n") for var in trial2_variables_added]
     functions_info["trial1_variables_removed"] = [(str(var)+"\n") for var in trial1_variables_removed]
-    
-    print(functions_info["file_accesses_replaced"])
 
     return jsonify(functions_info), 200
 
