@@ -334,6 +334,12 @@ def get_file(file_hash, file_ext):
         io.BytesIO(content.get(file_hash)),
         attachment_filename=name
     )
+    
+@app.route("/experiments/<expCode>/getFileContent/<file_hash>")
+@app.route("/getFileContent/<file_hash>")
+def get_file_content(file_hash, expCode=None):
+    """Returns a file's content"""
+    return jsonify(file_content=content.get(file_hash).decode(errors="ignore"))
 
 @app.route("/experiments/<expCode>/trials/<tid>/<graph_mode>/<cache>.json")
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")

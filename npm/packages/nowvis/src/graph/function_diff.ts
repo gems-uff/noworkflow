@@ -154,9 +154,13 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
         window.append("br");
         window.append("span").style("color", color).text(" Buffering: " + file.buffering);
         window.append("br");
-        window.append("span").style("color", color).text("Content hash before: " + file.content_hash_before);
+        window.append("span").style("color", color).text("Content hash before: " + file.content_hash_before).on("click", () => {
+          showFileContent(file.content_hash_before, file.name);
+        });
         window.append("br");
-        window.append("span").style("color", color).text("Content hash after: " + file.content_hash_after);
+        window.append("span").style("color", color).text("Content hash after: " + file.content_hash_after).on("click", () => {
+          showFileContent(file.content_hash_after, file.name);
+        });
         window.append("br");
         window.append("span").style("color", color).text("Timestamp: " + file.timestamp);
         window.append("br");
@@ -278,11 +282,19 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
       //spanFileAccessReplaced.append("br");
       //spanFileAccessReplaced.append("span").style("color", color).text(" Buffering: " + file.buffering);
       //spanFileAccessReplaced.append("br");
-      spanFileAccessReplaced.append("span").text("Content hash before changed from ").append("span").style("color", "red").text(file.content_hash_before_first_trial);
-      spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_before_second_trial);
+      spanFileAccessReplaced.append("span").text("Content hash before changed from ").append("span").style("color", "red").text(file.content_hash_before_first_trial).on("click", ()=>{
+        showFileContent(file.content_hash_before_first_trial, file.name);
+      });
+      spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_before_second_trial).on("click", ()=>{
+        showFileContent(file.content_hash_before_second_trial, file.name);
+      });
       spanFileAccessReplaced.append("br");
-      spanFileAccessReplaced.append("span").text("Content hash after changed from ").append("span").style("color", "red").text(file.content_hash_after_first_trial);
-      spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_after_second_trial);
+      spanFileAccessReplaced.append("span").text("Content hash after changed from ").append("span").style("color", "red").text(file.content_hash_after_first_trial).on("click", ()=>{
+        showFileContent(file.content_hash_after_first_trial, file.name);
+      });
+      spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_after_second_trial).on("click", ()=>{
+        showFileContent(file.content_hash_after_second_trial, file.name);
+      });
       spanFileAccessReplaced.append("br");
       spanFileAccessReplaced.append("span").text("Timestamp changed from ").append("span").style("color", "red").text(file.timestamp_first_trial);
       spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.timestamp_second_trial);
@@ -293,4 +305,40 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
       spanFileAccessReplaced.append("br");
       spanFileAccessReplaced.append("br");
     });
+
+  function showFileContent(fileHash: any, fileName : any) {
+    fetch("getFileContent/" + fileHash, {
+      method: 'GET', // *GET, POST, PUT, DELETE, etc.
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    }).then((response) => {
+      response.json().then((json) => {
+
+      if(fileName.length > 50) fileName = fileName.substring(40);
+
+      let modal = d3_select(document.getElementById("main"))
+      .append("div").classed("modal fade show", true)
+      .attr("id", "fileContentModal")
+      .attr("tabindex", "-1")
+      .attr("role", "dialog")
+      .attr("aria-labelledby", "fileContentModal")
+      .style("display", "none")
+      .attr("aria-hidden", "false")
+      .style("display", "block");
+      
+      let modalDialog = modal.append("div").classed("modal-dialog", true).attr("role","document").style("overflow-y","initial").style("max-height", "85%");
+
+      let modalContent = modalDialog.append("div").classed("modal-content", true);
+      
+      let modalHeader = modalContent.append("div").classed("modal-header", true);
+      modalHeader.append("h5").classed("modal-title", true).attr("id", "fileContentModalLabel").text("File "+fileName+"'s content:");
+      modalHeader.append("button").classed("close", true).attr("data-dismiss", "modal").attr("aria-label", "Close")
+      .append("span").attr("aria-hidden", "true").html("&times;").on("click", () => modal.remove());
+
+      let modalBody = modalContent.append("div").classed("modal-body", true).style("overflow-y", "auto").style("height", "80vh");
+      modalBody.append("p").html(json.file_content.replace("\r\n", "<br>").replace("\n", "<br>"));
+      });
+    });
+  }
   }
