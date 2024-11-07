@@ -252,8 +252,10 @@ def receiveFiles(expCode):
     
     return return_json_error_invalid_experiment_id()
 
+@app.route("/downloadFile/<fid>", methods=['Get'])
+@app.route("/experiments/<expCode>/downloadFile/<fid>", methods=['Get'])
 @app.route("/experiments/<expCode>/collab/files/<fid>", methods=['Get'])
-def downloadFile(expCode,fid):
+def downloadFile(fid, expCode=None):
     """Respond files hash"""
     resp=content.get(fid)
     return send_file(IO(resp),mimetype='application/octet-stream')
@@ -577,14 +579,17 @@ def execute_command_export(trial_id, rules, hide_timestamps):
     sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(export=sub_process_print), 200
 
-@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
-def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
+@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<argument_hnc>/<argument_an>/<argument_hf>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
+def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argument_hnc, argument_an, argument_hf,file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
     """Execute the command 'now export'"""
     dataflow_command = ("now dataflow " + trial_id).split()
     
     if argument_T == "true": dataflow_command.append("-T")
     if argument_t == "true": dataflow_command.append("-t")
     if argument_H == "true": dataflow_command.append("-H")
+    if argument_hnc == "true": dataflow_command.append("-hnc")
+    if argument_an == "true": dataflow_command.append("-an")
+    if argument_hf == "true": dataflow_command.append("-hf")
     if wdf == "true":
         dataflow_command.append("-w")
         dataflow_command.append(eid)
@@ -597,7 +602,7 @@ def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_a
     appendDataflowCommandWithParameters(dataflow_command, "-n", name, 0, float('inf'), 55)
 
     dataflow_command.append("-m")
-    if mode in ["simulation", "activation" , "dependency"]: dataflow_command.append(mode)
+    if mode in ["simulation", "activation" , "dependency", "retrospective"]: dataflow_command.append(mode)
     else: dataflow_command.append("prospective")
     
     sub_process_print = subprocess.run(dataflow_command, capture_output=True).stdout.decode("utf-8")

@@ -11,7 +11,8 @@ from itertools import chain
 
 from future.utils import viewitems
 
-from ...persistence.models import UniqueFileAccess, Evaluation
+from ...persistence import relational
+from ...persistence.models import UniqueFileAccess, Evaluation, CodeComponent
 
 from .attributes import EMPTY_ATTR, ACCESS_ATTR, PROPAGATED_ATTR
 from .attributes import REFERENCE_ATTR
@@ -317,11 +318,11 @@ class ActivationClusterizer(Clusterizer):
         self.config.rank(cluster)
 
 
-class ProspectiveClusterizer(Clusterizer):
+class RetrospectiveClusterizer(Clusterizer):
     """Create an activation graph"""
 
     def __init__(self, *args, **kwargs):
-        super(ProspectiveClusterizer, self).__init__(*args, **kwargs)
+        super(RetrospectiveClusterizer, self).__init__(*args, **kwargs)
         self.clusters = []
 
     def process_cluster(self, cluster):
@@ -340,7 +341,45 @@ class ProspectiveClusterizer(Clusterizer):
 
     def run(self):
         """Process main_cluster to create nodes"""
+        result = super(RetrospectiveClusterizer, self).run()
+        for cluster in self.clusters:
+            self.config.rank(cluster)
+        return result
+
+class ProspectiveClusterizer(Clusterizer):
+    """Create an activation graph"""
+
+    def __init__(self, *args, **kwargs):
+        super(ProspectiveClusterizer, self).__init__(*args, **kwargs)
+        self.clusters = []
+        self.function_calls_added = []
+        
+    def check_if_function_call_was_added(self, evaluation):
+        code_component = relational.session.query(CodeComponent.m).filter(CodeComponent.m.id==evaluation.code_component_id, CodeComponent.m.trial_id==evaluation.trial_id).all()[0]
+        if code_component.type == "call":
+            if code_component.id in self.function_calls_added: return True
+            self.function_calls_added.append(code_component.id)
+        return False
+
+    def process_cluster(self, cluster):
+        """Process cluster"""
+        self.clusters.append(cluster)
+        created = self.created
+        for activation in cluster.activation.activations:
+            evaluation = activation.this_evaluation
+            if(not self.check_if_function_call_was_added(evaluation)):
+                self.process_activation(activation, evaluation, cluster, False)
+                for dep in chain(evaluation.dependencies, evaluation.dependents):
+                    dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
+                    dep_cluster = created[dep_act_node_id][1]
+                    if not isinstance(dep_cluster, ClusterNode):
+                        continue
+                    self.process_evaluation(dep, dep_cluster, False)
+
+    def run(self):
+        """Process main_cluster to create nodes"""
         result = super(ProspectiveClusterizer, self).run()
         for cluster in self.clusters:
             self.config.rank(cluster)
         return result
+

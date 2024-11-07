@@ -14,7 +14,8 @@ from .synonymers import SameSynonymer, ReferenceSynonymer
 from .synonymers import AccessNameSynonymer, JoinedSynonymer
 from .filters import FilterAccessesOut, FilterInternalsOut
 from .filters import FilterExternalAccessesOut, FilterTypesOut
-from .filters import FilterWasDerivedFrom
+from .filters import FilterWasDerivedFrom, FilterNotFromCodeOut
+from .filters import FilterUseActivationName, FilterFuncOut
 from .filters import JoinedFilter, AcceptAllNodesFilter
 from .node_types import ClusterNode, EvaluationNode
 
@@ -32,17 +33,20 @@ class DependencyConfig(object):
         self.show_external_files = False
         self.show_types = False
         self.show_timestamps = False
+        self.activation_names = False
         self.combine_accesses = True
         self.combine_assignments = True
         self.combine_values = False
         self.show_only_was_derived_from = False
         self.show_only_was_derived_from_eid = None
         self.show_only_was_derived_from_trial = None
+        self.hide_not_code = False
+        self.hide_func = False
         self.max_depth = float("inf")
         self.mode = "simulation"
 
     @classmethod
-    def create_arguments(cls, add_arg, mode="prospective"):
+    def create_arguments(cls, add_arg, mode="retrospective"):
         """Create arguments
 
         Arguments:
@@ -62,6 +66,12 @@ class DependencyConfig(object):
         add_arg("-H", "--hide-internals", action="store_false",
                 help="show variables and functions which name starts with a "
                      "leading underscore")
+        add_arg("-hnc", "--hide-not-code", action="store_false",
+                help="hide evaluations that aren't from the code")
+        add_arg("-hf", "--hide-func", action="store_false",
+                help="hide func type evaluations")
+        add_arg("-an", "--activation-names", action="store_false",
+                help="display nodes with their activation names instead")
         add_arg("-e", "--evaluations", type=int, default=1, metavar="E",
                 help="R|combine evaluation nodes (default: 1)\n"
                      "0 does not combine evaluation nodes\n"
@@ -81,16 +91,19 @@ class DependencyConfig(object):
                      "The alignment is independent for each activation.\n")
         add_arg("-m", "--mode", type=str, default=mode,
                 choices=[
-                    "simulation", "activation", "dependency", "prospective"
+                    "simulation", "activation", "dependency", "retrospective", "prospective"
                 ],
                 help=("R|Graph mode (default: {})\n"
                       "'simulation' presents a dataflow graph with all\n"
                       "relevant evaluations.\n"
-                      "'activation' presents only activations.\n"
+                      "'activation' presents only function activations.\n"
                       "'dependency' presents a graph with a single cluster,\n"
                       "with all evaluations and activations.\n"
-                      "'prospective' presents only parameters, calls, and\n"
-                      "assignments to calls."
+                      "'retrospective' presents only parameters, calls, and\n"
+                      "assignments to calls.\n"
+                      "'prospective' is the same thing as retrospective, but\n"
+                      "it doesn't repeat calls when they're in the same line\n"
+                      "in a loop"
                       .format(mode)))
         add_arg("-w", "--wdf", type=int, 
                 help="shows only one evaluation and the ones that derived it\n"
@@ -102,6 +115,9 @@ class DependencyConfig(object):
         self.show_types = bool(args.types)
         self.show_timestamps = not bool(args.hide_timestamps)
         self.show_internals = not bool(args.hide_internals)
+        self.hide_not_code = not bool(args.hide_not_code)
+        self.activation_names = not bool(args.activation_names)
+        self.hide_func = not bool(args.hide_func)
         self.show_external_files = args.accesses in {2, 4}
 
         self.combine_accesses = args.accesses in {1, 2}
@@ -162,6 +178,12 @@ class DependencyConfig(object):
             filters.append(FilterInternalsOut())
         if self.show_only_was_derived_from:
             filters.append(FilterWasDerivedFrom(self.show_only_was_derived_from_eid, self.show_only_was_derived_from_trial))
+        if self.hide_not_code:
+            filters.append(FilterNotFromCodeOut())
+        if self.activation_names:
+            filters.append(FilterUseActivationName())
+        if self.hide_func:
+            filters.append(FilterFuncOut())
         filters.extend(extra or [])
         if not filters:
             return AcceptAllNodesFilter()
@@ -172,12 +194,14 @@ class DependencyConfig(object):
         from .clusterizer import Clusterizer
         from .clusterizer import ActivationClusterizer
         from .clusterizer import DependencyClusterizer
+        from .clusterizer import RetrospectiveClusterizer
         from .clusterizer import ProspectiveClusterizer
         cls = {
             "simulation": Clusterizer,
             "activation": ActivationClusterizer,
             "dependency": DependencyClusterizer,
-            "prospective": ProspectiveClusterizer,
+            "retrospective": RetrospectiveClusterizer,
+            "prospective": ProspectiveClusterizer
         }[self.mode]
         return cls(
             trial,

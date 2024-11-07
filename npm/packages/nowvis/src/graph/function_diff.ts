@@ -155,11 +155,11 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
         window.append("span").style("color", color).text(" Buffering: " + file.buffering);
         window.append("br");
         window.append("span").style("color", color).text("Content hash before: " + file.content_hash_before).on("click", () => {
-          showFileContent(file.content_hash_before, file.name);
+          downloadFileContent(file.content_hash_before, file.name);
         });
         window.append("br");
         window.append("span").style("color", color).text("Content hash after: " + file.content_hash_after).on("click", () => {
-          showFileContent(file.content_hash_after, file.name);
+          downloadFileContent(file.content_hash_after, file.name);
         });
         window.append("br");
         window.append("span").style("color", color).text("Timestamp: " + file.timestamp);
@@ -283,17 +283,17 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
       //spanFileAccessReplaced.append("span").style("color", color).text(" Buffering: " + file.buffering);
       //spanFileAccessReplaced.append("br");
       spanFileAccessReplaced.append("span").text("Content hash before changed from ").append("span").style("color", "red").text(file.content_hash_before_first_trial).on("click", ()=>{
-        showFileContent(file.content_hash_before_first_trial, file.name);
+        downloadFileContent(file.content_hash_before_first_trial, file.name);
       });
       spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_before_second_trial).on("click", ()=>{
-        showFileContent(file.content_hash_before_second_trial, file.name);
+        downloadFileContent(file.content_hash_before_second_trial, file.name);
       });
       spanFileAccessReplaced.append("br");
       spanFileAccessReplaced.append("span").text("Content hash after changed from ").append("span").style("color", "red").text(file.content_hash_after_first_trial).on("click", ()=>{
-        showFileContent(file.content_hash_after_first_trial, file.name);
+        downloadFileContent(file.content_hash_after_first_trial, file.name);
       });
       spanFileAccessReplaced.append("span").text(" to ").append("span").style("color", "green").text(file.content_hash_after_second_trial).on("click", ()=>{
-        showFileContent(file.content_hash_after_second_trial, file.name);
+        downloadFileContent(file.content_hash_after_second_trial, file.name);
       });
       spanFileAccessReplaced.append("br");
       spanFileAccessReplaced.append("span").text("Timestamp changed from ").append("span").style("color", "red").text(file.timestamp_first_trial);
@@ -306,7 +306,17 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
       spanFileAccessReplaced.append("br");
     });
 
-  function showFileContent(fileHash: any, fileName : any) {
+  function downloadFileContent(fileHash: any, fileName : any) {
+    var link = document.createElement("a");
+    link.download = fileName;
+    link.href = window.location.origin + "/downloadFile/"+fileHash;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    link.remove();
+  }  
+
+  /* function showFileContent(fileHash: any, fileName : any) {
     fetch("getFileContent/" + fileHash, {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
       headers: {
@@ -340,5 +350,5 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
       modalBody.append("p").html(json.file_content.replace("\r\n", "<br>").replace("\n", "<br>"));
       });
     });
-  }
+  } */
   }

@@ -1037,6 +1037,7 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
         dataflowButtons(dataflowWindow, dataflowWindowId, "Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience", json.dataflow)
 
         let selectedNode: Element | undefined;
+        let selectedEdge: Element | undefined;
 
         //dataflowWindow!.style.overflowY = dataflowWindow!.style.overflowX = "auto";
         let svgElement = viz.renderSVGElement(json.dataflow);
@@ -1057,6 +1058,12 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
                 selectedNode = svgElement.children[0].children[0].children[nodeIndex];
                 selectedNode.children[1].setAttribute("stroke", "red");
               }
+            });
+          } else if (presentNode.getAttribute("class") == "edge" && presentNode.children[1].tagName.toLowerCase() == "path"){
+            d3_select(presentNode).on("click",()=>{
+              if (selectedEdge) {selectedEdge.children[1].setAttribute("stroke", "black");}
+              selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
+              selectedEdge.children[1].setAttribute("stroke", "red");
             });
           }
         }
@@ -1196,6 +1203,8 @@ function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluat
 }
 
 function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig, lastEvaluationId : number) {
+  let selectedEdge : Element | undefined;
+  
   for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children[0].children.length; nodeIndex++) {
 
     let selectedNode: Element = svgElement.children[0].children[0].children[nodeIndex];
@@ -1204,6 +1213,12 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any
 
         if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
 
+      });
+    } else if (selectedNode.getAttribute("class") == "edge" && selectedNode.children[1].tagName.toLowerCase() == "path"){
+      d3_select(selectedNode).on("click",()=>{
+        if (selectedEdge) {selectedEdge.children[1].setAttribute("stroke", "black");}
+        selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
+        selectedEdge!.children[1].setAttribute("stroke", "red");
       });
     }
   }
@@ -1343,6 +1358,9 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
         createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
         createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
+        createFormCheckInput(form, "dataFlowHideNotCode", "Hide evaluations that aren't from the code");
+        createFormCheckInput(form, "dataFlowActivationNames", "Display nodes with their activation names instead");
+        createFormCheckInput(form, "dataFlowHideFunc", "Hide func type evaluations");
 
         createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp",
           "(default: Shows each file once (hide external accesses))",
@@ -1358,9 +1376,9 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
           "(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.",
           ["Does no align", "Aligns by line", "Aligns by line and column"]);
 
-        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 3, 3, "dataflowModeHelp",
-          "(default: prospective). 'simulation' presents a dataflow graph with all relevant evaluations. 'activation' presents only activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations. 'prospective' presents only parameters, calls, and assignments to calls.",
-          ["simulation", "activation", "dependency", "prospective"]);
+        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 4, 3, "dataflowModeHelp",
+          "(default: retrospective). 'simulation' presents a dataflow graph with all relevant evaluations. 'activation' presents only function activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations. 'retrospective' presents only parameters, calls, and assignments to calls. 'prospective' is the same thing as retrospective, but it doesn't repeat calls when they're in the same line in a loop",
+          ["simulation", "activation", "dependency", "retrospective", "prospective"]);
 
         createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity");
         createFormNumberInput(form, "dataflowValueLength", "Maximum length of values", 0, 0, "dataflowValueLengthHelp",
@@ -1385,6 +1403,9 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         let dataFlowShowType = (<HTMLInputElement>document.getElementById("dataFlowShowType")).checked;
         let dataFlowHideTimestamps = (<HTMLInputElement>document.getElementById("dataflowMode")).checked;
         let dataFlowHideInternals = (<HTMLInputElement>document.getElementById("dataFlowHideInternals")).checked;
+        let dataFlowHideNotCode = (<HTMLInputElement>document.getElementById("dataFlowHideNotCode")).checked;
+        let dataFlowActivationNames = (<HTMLInputElement>document.getElementById("dataFlowActivationNames")).checked;
+        let dataFlowHideFunc = (<HTMLInputElement>document.getElementById("dataFlowHideFunc")).checked;
 
         let dataflowFileAccesses = (<HTMLSelectElement>document.getElementById("dataflowShowAccesses")).selectedOptions[0].index;
         let dataflowEvaluation = (<HTMLSelectElement>document.getElementById("dataflowEvaluation")).selectedOptions[0].index;
@@ -1400,8 +1421,8 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         selectedEvaluation = dataflowTextInputEvaluation.getAttribute("selectedEvaluationID");
 
         let dataflowUrl = "/commands/dataflow/" + trialId + "/" + dataFlowShowType + "/" + dataFlowHideTimestamps + "/" +
-          dataFlowHideInternals + "/" + dataflowFileAccesses + "/" + dataflowEvaluation + "/" + dataflowGroup + "/" +
-          dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
+          dataFlowHideInternals + "/" + dataFlowHideNotCode + "/"+ dataFlowActivationNames + "/"+ dataFlowHideFunc + "/" +dataflowFileAccesses + "/" + dataflowEvaluation + 
+          "/" + dataflowGroup + "/" + dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
         dataflowUrl += (selectedEvaluation && !selectedEvaluation.includes("undefined")) ? "/true/" + selectedEvaluation : "/false/0";
 
         let dataflowWindowId = "Dataflow window " + trialId;
