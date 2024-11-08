@@ -172,7 +172,6 @@ To compare two trials:
 $ now diff [trial1] [trial2]
 ```
 where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run "now diff -h".
-```
 
 The visualization tool requires Flask to be installed. To install Flask, you can run:
 ```bash
