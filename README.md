@@ -122,10 +122,7 @@ $ now run -v script.py
 ```
 Each new run produces a different trial that will be stored with a universally unique identifier in the relational database.
 
-Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.  To see more usage options:
-```bash
-$ now run -h
-```
+Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.  To see more usage options, run "now run -h".
 
 To list all trials, just run:
 ```bash
@@ -160,24 +157,21 @@ To look at details of an specific trial, use:
 ```bash
 $ now show [trial]
 ```
-This command has several options, such as *-m* to show module dependencies; *-d* to show function definitions; *-e* to show the environment context; *-a* to show function activations; *-p* to show noworkflow parameters; and *-f* to show file accesses.To see more usage options:
-```bash
-$ now show -h
-```
+This command has several options, such as *-m* to show module dependencies; *-d* to show function definitions; *-e* to show the environment context; *-a* to show function activations; *-p* to show noworkflow parameters; and *-f* to show file accesses.To see more usage options, please run "now show -h".
 
 To restore files, run:
-```bash
+```
 $ now restore [trial]
 ```
 By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial. When you restore a Trial, the next Trial will be based on the restored Trial.
 
-The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access. The option *-f* does not affect evolution history. To see more usage options, run: now restore -h.
+The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access. The option *-f* does not affect evolution history. To see more usage options, run "now restore -h".
 
 To compare two trials:
 ```bash
 $ now diff [trial1] [trial2]
 ```
-where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run: now diff -h.
+where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run "now diff -h".
 ```
 
 The visualization tool requires Flask to be installed. To install Flask, you can run:
@@ -196,7 +190,7 @@ $ now dataflow [trial] -m prospective | dot -Tpng -o prospective.png
 ```
 
 To export provenance data of a given trial to Prolog facts, so inference queries can be run over the database, run:
-```bash
+```
 $ now export [trial]
 ```
 It also exports inference rules by *-r* argument.
