@@ -169,32 +169,15 @@ To restore files, run:
 ```bash
 $ now restore [trial]
 ```
-By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 01482b72-2005-4319-bd57-773291f9f7b1 is based on 7fb4ca3d-8046-46cf-9c54-54923d2076ba). When you restore a Trial, the next Trial will be based on the restored Trial (e.g. c320d339-09d1-4d10-ad38-e565fa1f1f08 based on Trial 7fb4ca3d-8046-46cf-9c54-54923d2076ba).
+By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial. When you restore a Trial, the next Trial will be based on the restored Trial.
 
-The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access.
-
-```bash
-$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -f data1.dat -i "A|2023-04-12 19:48:46"
-$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -f output.png -i 90451b101 -t output_trial1.png
-$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -f simulation.py -i 1
-```
-
-The first command queries data1.dat of Trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb accessed at "2023-04-12 19:48:46", and restores the resulting content after the access.
-The second command restores output.png with subhash 90451b101, and save it to output_trial1.png.
-The third command restores the first access to simulation.py, which represents the trial script.
-
-The option *-f* does not affect evolution history. To see more optional arguments, run:
-```bash
-$ now restore -h
-```
+The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access. The option *-f* does not affect evolution history. To see more usage options, run: now restore -h.
 
 To compare two trials:
 ```bash
 $ now diff [trial1] [trial2]
 ```
-where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run:
-```bash
-$ now diff -h
+where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run: now diff -h.
 ```
 
 The visualization tool requires Flask to be installed. To install Flask, you can run:
@@ -233,12 +216,12 @@ $ now schema prolog
 ```
 Adding the *-d* optional argument exports graphic schema to a dot format.
 
-The *history* option presents a textual history evolution graph of trials.
+To check a textual history evolution graph of trials, run:
 ```bash
 $ now history [trial]
 ```
 
-The *gc* option executes the git garbage collection in the content database.
+To execute the git garbage collection in the content database, run:
 ```bash
 $ now gc
 ```
@@ -248,7 +231,7 @@ The *evaluation* option query evaluation and its dependencies. The argument *wdf
 $ now evaluation -h
 ```
 
-The *clean* option clean Jupyter Notebook using the collected provenance.
+To clean Jupyter Notebook using the collected provenance, run:
 ```bash
 $ now clean [trial]
 ```
