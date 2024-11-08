@@ -7,10 +7,7 @@ Copyright (c) 2016 Universidade Federal Fluminense (UFF).
 Copyright (c) 2016 Polytechnic Institute of New York University.
 All rights reserved.
 
-The noWorkflow project aims at allowing scientists to benefit from provenance data analysis even when they don't use a workflow system. Also, the goal is to allow them to avoid using naming conventions to store files originated in previous executions. Currently, when this is not done, the result and intermediate files are overwritten by every new execution of the pipeline.
-
-
-noWorkflow was developed in Python and it currently is able to capture provenance of Python scripts using Software Engineering techniques such as abstract syntax tree (AST) analysis, reflection, and profiling, to collect provenance without the need of a version control system or any other environment.
+noWorkflow is a tool designed to automatically trace the provenance of a Python script without requiring changes to the original code, thereby providing users with the creation and analysis of a detailed history of how data was produced and transformed. This history ensures transparency and reliability in scientific experiments and data processes. Developed in Python, noWorkflow can capture the provenance of scripts using software engineering techniques such as abstract syntax tree (AST) analysis, reflection, and profiling to collect provenance without necessitating a version control system or any other external environment.
 
 Installing and using noWorkflow is simple and easy. Please check our installation and basic usage guidelines below, and the [tutorial videos at our Wiki page](https://github.com/gems-uff/noworkflow/wiki/Videos).
 
@@ -37,6 +34,12 @@ Collaborators
 - Jessé Lima (Summer of Reproducibility)
 - Joshua Daniel Talahatu (Google Summer of Code)
 
+History
+------------------
+
+The project started in 2013, when Leonardo Murta and Vanessa Braganholo were visiting professors at New York University (NYU) with Juliana Freire. At that moment, David Koop and Fernando Chirigati also joined the project. They published the initial paper about noWorkflow in IPAW 2014. After going back to their home university, Universidade Federal Fluminense (UFF), Leonardo and Vanessa invited João Felipe Pimentel to join the project in 2014 for his PhD. João, Juliana, Leonardo and Vanessa integrated noWorkflow and IPython and published a paper about it in TaPP 2015. They also worked on provenance versioning and fine-grained provenance collection and published papers in IPAW 2016. During the same time, David, João, Leonardo and Vanessa worked with the YesWorkflow team on an integration between noWorkflow & YesWorkflow and published a demo in IPAW 2016. The research and development on noWorkflow continues and is currently under the responsibility of João Felipe, in the context of his PhD thesis.
+
+[![Contribution Timeline](history/history.png)](history/history.svg)
 
 Publications
 ------------
@@ -48,14 +51,6 @@ Publications
 * [PIMENTEL, J. F.; DEY, S.; MCPHILLIPS, T.; BELHAJJAME, K.; KOOP, D.; MURTA, L. G. P.; BRAGANHOLO, V.; LUDÄSCHER B.; Yin & Yang: Demonstrating Complementary Provenance from noWorkflow & YesWorkflow. In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016c.pdf)
 * [PIMENTEL, J. F.; MURTA, L. G. P.; BRAGANHOLO, V.; FREIRE, J.; noWorkflow: a Tool for Collecting, Analyzing, and Managing Provenance from Python Scripts. In: International Conference on Very Large Data Bases (VLDB), 2017, Munich, Germany.](https://github.com/gems-uff/noworkflow/raw/master/docs/vldb2017.pdf)
 * [OLIVEIRA, E.; Enabling Collaboration in Scientific Experiments. Masters Dissertation, Universidade Federal Fluminense, 2022.](/docs/Disserta__o___Eduardo_Jandre.pdf)
-
-History
-------------------
-
-The project started in 2013, when Leonardo Murta and Vanessa Braganholo were visiting professors at New York University (NYU) with Juliana Freire. At that moment, David Koop and Fernando Chirigati also joined the project. They published the initial paper about noWorkflow in IPAW 2014. After going back to their home university, Universidade Federal Fluminense (UFF), Leonardo and Vanessa invited João Felipe Pimentel to join the project in 2014 for his PhD. João, Juliana, Leonardo and Vanessa integrated noWorkflow and IPython and published a paper about it in TaPP 2015. They also worked on provenance versioning and fine-grained provenance collection and published papers in IPAW 2016. During the same time, David, João, Leonardo and Vanessa worked with the YesWorkflow team on an integration between noWorkflow & YesWorkflow and published a demo in IPAW 2016. The research and development on noWorkflow continues and is currently under the responsibility of João Felipe, in the context of his PhD thesis.
-
-[![Contribution Timeline](history/history.png)](history/history.svg)
-
 
 Quick Installation
 ------------------
@@ -107,20 +102,15 @@ $ now --help
 ```
 to learn the usage options.
 
-noWorkflow comes with a demonstration project. To extract it, you should run
-```bash
-$ now demo 1
-$ cd demo1
-```
+noWorkflow comes with a demonstration project. Follow the Wiki page to see how extract it.
 
-To run noWorkflow with the demo script called *simulation.py* with input data *data1.dat* and *data2.dat*, you should run
+To run noWorkflow you should run:
 ```bash
-$ now run -v simulation.py data1.dat data2.dat
+$ now run script.py
 ```
 The *-v* option turns the verbose mode on, so that noWorkflow gives you feedback on the steps taken by the tool. The output, in this case, is similar to what follows.
-
 ```bash
-$ now run -v simulation.py data1.dat data2.dat
+$ now run -v script.py
 [now] removing noWorkflow boilerplate
 [now] setting up local provenance store
 [now] using content engine noworkflow.now.persistence.content.plain_engine.PlainEngine
@@ -132,15 +122,16 @@ $ now run -v simulation.py data1.dat data2.dat
 ```
 Each new run produces a different trial that will be stored with a universally unique identifier in the relational database.
 
-Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.
+Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.  To see more usage options:
+```bash
+$ now run -h
+```
 
-To list all trials, just run
-
+To list all trials, just run:
 ```bash
 $ now list
 ```
-Assuming we run the experiment again and then run `now list`, the output would be as follows. Note that 9 trials were extracted from the demonstration.
-
+Assuming we run the experiment again and then run `now list`, the output would be as follows. 
 ```bash
 $ now list
 [now] trials available in the provenance store:
@@ -152,93 +143,32 @@ $ now list
                                                  with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
                                                  ran from 2023-04-12 19:40:18.747749 to 2023-04-12 19:40:48.401719
                                                  duration: 0:00:29.653970
-  [*]Trial c320d339-09d1-4d10-ad38-e565fa1f1f08: run simulation.py data1.dat data2.dat
-                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
-                                                 ran from 2023-04-12 19:44:28.459500 to 2023-04-12 19:44:43.310089
-                                                 duration: 0:00:14.850589
-  [f]Trial 28a6e5da-9a3c-473b-902c-44574beeef29: run simulation_complete.py
-                                                 with code hash 78b5b11f3e6f7dca48a6ab9851df2cc0fb5157bc
-                                                 ran from 2023-04-12 19:44:44.987635 to 2023-04-12 19:44:58.970957
-                                                 duration: 0:00:13.983322
-  [*]Trial 4a30be20-e295-4a38-8aea-6b36e4fd2bcd: run simulation.py data1.dat data2.dat
-                                                 with code hash 8f73e09f17e877cb2d3ce3604cc66293abed2300
-                                                 ran from 2023-04-12 19:45:00.667359 to 2023-04-12 19:45:15.783596
-                                                 duration: 0:00:15.116237
-  [*]Trial 87161c9c-9a8b-4742-ab3a-df1cdf1779d5: run simulation.py data2.dat data1.dat
-                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
-                                                 ran from 2023-04-12 19:45:19.122164 to 2023-04-12 19:45:35.050733
-                                                 duration: 0:00:15.928569
   [b]Trial 8bf59cf5-cd06-409e-97f6-185063b1cfc3: restore 3
                                                  with code hash c3aeb4cb9af363b375aec603010dd1b97460f6b1
                                                  ran from 2023-04-12 19:45:36.937565 to 2023-04-12 19:45:37.141808
                                                  duration: 0:00:00.204243
-  [*]Trial 0adee409-bebf-4119-ae57-8a9d5ba345ce: run simulation.py data1.dat data2.dat
-                                                 with code hash 8f73e09f17e877cb2d3ce3604cc66293abed2300
-                                                 ran from 2023-04-12 19:45:38.873199 to 2023-04-12 19:45:53.370662
-                                                 duration: 0:00:14.497463
-  [f]Trial 035a4749-1c58-4f1b-b296-d708779e258a: run simulation.py data1.dat data2.dat
-                                                 with code hash c3aeb4cb9af363b375aec603010dd1b97460f6b1
-                                                 ran from 2023-04-12 19:45:54.945150 to 2023-04-12 19:46:08.792798
-                                                 duration: 0:00:13.847648
-  [f]Trial b14bf7b9-a0e5-4f12-a1ae-fb3922c1cd5f: run simulation_complete.py
-                                                 with code hash c7c8de76eb564530131abfab4d510bb187ec4b04
-                                                 ran from 2023-04-12 19:46:10.360999 to 2023-04-12 19:46:23.811610
-                                                 duration: 0:00:13.450611
-  [*]Trial 231368e0-786a-4bf4-8e21-a8d05cc72585: run simulation.py data1.dat data2.dat
-                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
-                                                 ran from 2023-04-12 19:46:25.385022 to 2023-04-12 19:46:42.141455
-                                                 duration: 0:00:16.756433
-  [*]Trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb: run -v simulation.py data1.dat data2.dat
-                                                 with code hash 6a28e58e34bbff0facaf55f80313ab2fd2505a58
-                                                 ran from 2023-04-12 19:48:29.463034 to 2023-04-12 19:48:46.930577
-                                                 duration: 0:00:17.467543
 ```
-Each symbol between brackets is its respective trial status. They can express if
+Each symbol between brackets is its respective trial status. They can express if:
 ```
-a trial is a backup: b
-
 a trial has not finished: f
 
 a trial has finished: *
+
+a trial is a backup: b
 ```
-To look at details of an specific trial, use
+To look at details of an specific trial, use:
 ```bash
 $ now show [trial]
 ```
-This command has several options, such as *-m* to show module dependencies; *-d* to show function definitions; *-e* to show the environment context; *-a* to show function activations; and *-f* to show file accesses.
-
-Running
+This command has several options, such as *-m* to show module dependencies; *-d* to show function definitions; *-e* to show the environment context; *-a* to show function activations; *-p* to show noworkflow parameters; and *-f* to show file accesses.To see more usage options:
 ```bash
-$ now show -a 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
-```
-would show details of trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb. Notice that the function name is preceded by the line number where the call was activated.
-
-```bash
-$ now show -a 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
-[now] trial information:
-  Id: 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
-  Sequence Key: 21
-  Status: Finished
-  Inherited Id: None
-  Script: simulation.py
-  Code hash: 6a28e58e34bbff0facaf55f80313ab2fd2505a58
-  Start: 2023-04-12 19:48:29.463034
-  Finish: 2023-04-12 19:48:46.930577
-  Duration: 0:00:17.467543
-[now] this trial has the following function activation tree:
-  1: __main__ (2023-04-12 19:48:30.263701 - 2023-04-12 19:48:42.070729)
-     Return value: <module '__main__' from '/home/joao/demotest/demo1/simulation.py'>
-    38: run_simulation (2023-04-12 19:48:38.590221 - 2023-04-12 19:48:40.676348)
-        Parameters: data_a = 'data1.dat', data_b = 'data2.dat'
-        Return value: [['0.0', '0.6'], ['1.0', '0.0'], ['1.0', '0.0']
-        ...
+$ now show -h
 ```
 
-To restore files used by trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb, run
+To restore files, run:
 ```bash
-$ now restore 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb
+$ now restore [trial]
 ```
-
 By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial (e.g. Trial 01482b72-2005-4319-bd57-773291f9f7b1 is based on 7fb4ca3d-8046-46cf-9c54-54923d2076ba). When you restore a Trial, the next Trial will be based on the restored Trial (e.g. c320d339-09d1-4d10-ad38-e565fa1f1f08 based on Trial 7fb4ca3d-8046-46cf-9c54-54923d2076ba).
 
 The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access.
@@ -253,35 +183,79 @@ The first command queries data1.dat of Trial 91f4fdc7-6c36-4c9d-a43a-341eaee9b7f
 The second command restores output.png with subhash 90451b101, and save it to output_trial1.png.
 The third command restores the first access to simulation.py, which represents the trial script.
 
-The option *-f* does not affect evolution history.
-
-
-The remaining options of noWorkflow are *diff*, *export*, *history*, *dataflow*, and *vis*.
-
-The *diff* option compares two trials. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*)
-
-The *export* option exports provenance data of a given trial to Prolog facts, so inference queries can be run over the database.
-
-The *history* option presents a textual history evolution graph of trials.
-
-The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now dataflow -h" to get their descriptions.
-
+The option *-f* does not affect evolution history. To see more optional arguments, run:
 ```bash
-$ now dataflow 91f4fdc7-6c36-4c9d-a43a-341eaee9b7fb -l -m prospective | dot -Tpng -o prospective.png
+$ now restore -h
 ```
 
+To compare two trials:
+```bash
+$ now diff [trial1] [trial2]
+```
+where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run:
+```bash
+$ now diff -h
+```
+
+The visualization tool requires Flask to be installed. To install Flask, you can run:
+```bash
+$ pip install flask==2.1.3
+```
 The *vis* option starts a visualization tool that allows interactive analysis:
 ```bash
 $ now vis -b
 ```
-The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool.
+The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool. An activation graph can be changed into definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs. 
 
-An activation graph can be changed into definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs.
-
-The visualization tool requires Flask to be installed.
-To install Flask, you can run
+The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now dataflow -h" to get their descriptions.
 ```bash
-$ pip install flask==2.1.3
+$ now dataflow [trial] -m prospective | dot -Tpng -o prospective.png
+```
+
+To export provenance data of a given trial to Prolog facts, so inference queries can be run over the database, run:
+```bash
+$ now export [trial]
+```
+It also exports inference rules by *-r* argument.
+
+To export the collected provenance of a trial to Prov.
+```bash
+$ now prov [trial]
+```
+
+The *schema* option presents the SQL schema of noWorkflow:
+```bash
+$ now schema sql
+```
+or Prolog schema of noWorkflow:
+```bash
+$ now schema prolog
+```
+Adding the *-d* optional argument exports graphic schema to a dot format.
+
+The *history* option presents a textual history evolution graph of trials.
+```bash
+$ now history [trial]
+```
+
+The *gc* option executes the git garbage collection in the content database.
+```bash
+$ now gc
+```
+
+The *evaluation* option query evaluation and its dependencies. The argument *wdf* find was derived from relationships. To see more usage options, run:
+```bash
+$ now evaluation -h
+```
+
+The *clean* option clean Jupyter Notebook using the collected provenance.
+```bash
+$ now clean [trial]
+```
+
+The *ast* option exports the collected provenance of a trial to Prolog or Notebook.
+```bash
+$ now ast [trial]
 ```
 
 Collaboration Usage
