@@ -212,9 +212,13 @@ To check a textual history evolution graph of trials, run:
 $ now history [trial]
 ```
 
-The *evaluation* option query evaluation and its dependencies. The argument *wdf* find was derived from relationships. To see more usage options, run:
+The *evaluation* option query evaluation and its dependencies. The *evaluation* command can be used without arguments, and the default option is *display*. The argument shows evaluations that represent executions or accesses to values and expressions in the code, capturing the interaction between variables, functions, objects, and other script elements. 
 ```bash
-$ now evaluation -h
+$ now evaluation
+```
+The argument *wdf* identifies and displays dependency relationships between code elements, tracing how data, functions, and variables have been derived from each other.
+```bash
+$ now evaluation wdf
 ```
 
 The *ast* option exports the collected provenance of a trial to Prolog or Notebook.
