@@ -58,19 +58,19 @@ Quick Installation
 To install noWorkflow, you should follow these basic instructions:
 
 First your Python version must be 3.7, then if you have pip, just run:
-```bash
+```
 $ pip install noworkflow[all]
 ```
 This installs noWorkflow, PyPosAST, SQLAlchemy, python-future, flask, IPython, Jupyter and PySWIP.
 The only requirements for running noWorkflow are PyPosAST, SQLAlchemy and python-future. The other libraries are only used for provenance analysis.
 
 If you only want to install noWorkflow, PyPosAST, SQLAlchemy and python-future please do:
-```bash
+```
 $ pip install noworkflow
 ```
 
 If you do not have pip, but already have Git (to clone our repository) and Python:
-```bash
+```
 $ git clone git@github.com:gems-uff/noworkflow.git
 $ cd noworkflow/capture
 $ python setup.py install
@@ -79,7 +79,7 @@ This installs noWorkflow on your system. It will download the dependencies from 
 
 If you want to install the dependencies to run the demos execute the following commands:
 
-```bash
+```
 $ cd noworkflow
 $ pip install -e capture[demo]
 ```
@@ -89,7 +89,7 @@ Upgrade
 
 To upgrade the version of a previously installed noWorkflow using pip, you should run the following command:
 
-```bash
+```
 $ pip install --upgrade noworkflow[all]
 ```
 
@@ -97,7 +97,7 @@ Basic Usage
 -----------
 
 noWorkflow is transparent in the sense that it requires neither changes to the script, nor any laborious configuration. Run
-```bash
+```
 $ now --help
 ```
 to learn the usage options.
@@ -105,11 +105,11 @@ to learn the usage options.
 noWorkflow comes with a demonstration project. Follow the Wiki page to see how extract it.
 
 To run noWorkflow you should run:
-```bash
+```
 $ now run script.py
 ```
 The *-v* option turns the verbose mode on, so that noWorkflow gives you feedback on the steps taken by the tool. The output, in this case, is similar to what follows.
-```bash
+```
 $ now run -v script.py
 [now] removing noWorkflow boilerplate
 [now] setting up local provenance store
@@ -124,12 +124,28 @@ Each new run produces a different trial that will be stored with a universally u
 
 Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.  To see more usage options, run "now run -h".
 
+To restore files, run:
+```
+$ now restore [trial]
+```
+By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial. When you restore a Trial, the next Trial will be based on the restored Trial.
+
+The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access. The option *-f* does not affect evolution history. To see more usage options, run "now restore -h".
+
+To execute the git garbage collection in the content database, run:
+```
+$ now gc
+```
+
+Analysis
+-----------
+
 To list all trials, just run:
-```bash
+```
 $ now list
 ```
 Assuming we run the experiment again and then run `now list`, the output would be as follows. 
-```bash
+```
 $ now list
 [now] trials available in the provenance store:
   [f]Trial 7fb4ca3d-8046-46cf-9c54-54923d2076ba: run -v .\simulation.py .\data1.dat .\data2.dat
@@ -154,34 +170,16 @@ a trial has finished: *
 a trial is a backup: b
 ```
 To look at details of an specific trial, use:
-```bash
+```
 $ now show [trial]
 ```
 This command has several options, such as *-m* to show module dependencies; *-d* to show function definitions; *-e* to show the environment context; *-a* to show function activations; *-p* to show noworkflow parameters; and *-f* to show file accesses.To see more usage options, please run "now show -h".
-
-To restore files, run:
-```
-$ now restore [trial]
-```
-By default, the restore command will restore the trial script, imported local modules and the first access to files. Use the option *-s* to leave out the script; the option *-l* to leave out modules; and the option *-a* to leave out file accesses. The restore command track the evolution history. By default, subsequent trials are based on the previous Trial. When you restore a Trial, the next Trial will be based on the restored Trial.
-
-The restore command also provides a *-f path* option. This option can be used to restore a single file. With this command there are extra options: *-t path2* specifies the target of restored file; *-i id* identifies the file. There are 3 possibilities to identify files: by access time, by code hash, or by number of access. The option *-f* does not affect evolution history. To see more usage options, run "now restore -h".
 
 To compare two trials:
 ```bash
 $ now diff [trial1] [trial2]
 ```
 where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run "now diff -h".
-
-The visualization tool requires Flask to be installed. To install Flask, you can run:
-```bash
-$ pip install flask==2.1.3
-```
-The *vis* option starts a visualization tool that allows interactive analysis:
-```bash
-$ now vis -b
-```
-The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool. An activation graph can be changed into definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs. 
 
 The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now dataflow -h" to get their descriptions.
 ```bash
@@ -214,25 +212,34 @@ To check a textual history evolution graph of trials, run:
 $ now history [trial]
 ```
 
-To execute the git garbage collection in the content database, run:
+The *evaluation* option query evaluation and its dependencies. The *evaluation* command can be used without arguments, and the default option is *display*. The argument shows evaluations that represent executions or accesses to values and expressions in the code, capturing the interaction between variables, functions, objects, and other script elements. 
 ```bash
-$ now gc
+$ now evaluation
 ```
-
-The *evaluation* option query evaluation and its dependencies. The argument *wdf* find was derived from relationships. To see more usage options, run:
+The argument *wdf* identifies and displays dependency relationships between code elements, tracing how data, functions, and variables have been derived from each other.
 ```bash
-$ now evaluation -h
-```
-
-To clean Jupyter Notebook using the collected provenance, run:
-```bash
-$ now clean [trial]
+$ now evaluation wdf
 ```
 
 The *ast* option exports the collected provenance of a trial to Prolog or Notebook.
 ```bash
 $ now ast [trial]
 ```
+
+Visualization Tool
+-----------
+
+The visualization tool requires Flask to be installed. To install Flask, you can run:
+```bash
+$ pip install flask==2.1.3
+```
+The *vis* option starts a visualization tool that allows interactive analysis:
+```bash
+$ now vis -b
+```
+The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool. An activation graph can be changed into definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs. 
+
+Explore this tutorial to master the [Visualization Tool](https://github.com/gems-uff/noworkflow/wiki#visualization-tool)
 
 Collaboration Usage
 -----------
@@ -446,6 +453,10 @@ Out [14]: %
      ...: ...
 ```
 
+To clean Jupyter Notebook using the collected provenance, run:
+```bash
+$ now clean [trial]
+```
 
 Contributing
 ------------
@@ -466,8 +477,6 @@ python watch.py
 ```
 npm install
 ```
-
-
 
 Included Software
 -----------------
