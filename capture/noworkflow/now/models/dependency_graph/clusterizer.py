@@ -352,14 +352,33 @@ class ProspectiveClusterizer(Clusterizer):
     def __init__(self, *args, **kwargs):
         super(ProspectiveClusterizer, self).__init__(*args, **kwargs)
         self.clusters = []
-        self.function_calls_added = []
+        self.code_components_added = []
         
     def check_if_function_call_was_added(self, evaluation):
         code_component = relational.session.query(CodeComponent.m).filter(CodeComponent.m.id==evaluation.code_component_id, CodeComponent.m.trial_id==evaluation.trial_id).all()[0]
-        if code_component.type == "call":
-            if code_component.id in self.function_calls_added: return True
-            self.function_calls_added.append(code_component.id)
+        #if code_component.type == "call":
+        if code_component in self.code_components_added: return True
+        self.code_components_added.append(code_component)
         return False
+    
+    def add_node(self, node, cluster):
+        """Add node to graph"""
+        created = self.created
+        filter_ = self.filter
+        synonymer = self.synonymer
+        if node not in filter_.before_synonym:
+            return None, "before"
+        node = synonymer.get(node)
+        nid = node.node_id
+        if node not in filter_.after_synonym:
+            return None, "after"
+        if nid in created:
+            return node, "exists"
+        if((type(node) is not AccessNode) and self.check_if_function_call_was_added(node.evaluation)): return node, "done"
+        created[nid] = (cluster, node)
+        cluster.add(node)
+        synonymer.set(node)
+        return node, "done"
 
     def process_cluster(self, cluster):
         """Process cluster"""
@@ -367,14 +386,14 @@ class ProspectiveClusterizer(Clusterizer):
         created = self.created
         for activation in cluster.activation.activations:
             evaluation = activation.this_evaluation
-            if(not self.check_if_function_call_was_added(evaluation)):
-                self.process_activation(activation, evaluation, cluster, False)
-                for dep in chain(evaluation.dependencies, evaluation.dependents):
-                    dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
-                    dep_cluster = created[dep_act_node_id][1]
-                    if not isinstance(dep_cluster, ClusterNode):
-                        continue
-                    self.process_evaluation(dep, dep_cluster, False)
+            #if(not self.check_if_function_call_was_added(evaluation)):
+            self.process_activation(activation, evaluation, cluster, False)
+            for dep in chain(evaluation.dependencies, evaluation.dependents):
+                dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
+                dep_cluster = created[dep_act_node_id][1]
+                if not isinstance(dep_cluster, ClusterNode):
+                    continue
+                self.process_evaluation(dep, dep_cluster, False)
 
     def run(self):
         """Process main_cluster to create nodes"""

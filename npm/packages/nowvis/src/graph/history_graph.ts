@@ -1048,7 +1048,11 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
 
           let presentNode: Element | undefined = svgElement.children[0].children[0].children[nodeIndex];
           if (presentNode.getAttribute("class") == "node" && presentNode.children[1].tagName.toLowerCase() == "polygon") {
-            d3_select(presentNode).on("click", (event: MouseEvent) => {
+            let presentNodeSelection = d3_select(presentNode);
+
+            presentNodeSelection.style("cursor", "pointer");
+
+            presentNodeSelection.on("click", (event: MouseEvent) => {
 
               if (selectedNode) { selectedNode.children[1].setAttribute("stroke", "black"); }
 
@@ -1060,7 +1064,11 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
               }
             });
           } else if (presentNode.getAttribute("class") == "edge" && presentNode.children[1].tagName.toLowerCase() == "path"){
-            d3_select(presentNode).on("click",()=>{
+            let presentNodeSelection = d3_select(presentNode);
+
+            presentNodeSelection.style("cursor", "pointer");
+
+            presentNodeSelection.on("click",()=>{
               if (selectedEdge) {selectedEdge.children[1].setAttribute("stroke", "black");}
               selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
               selectedEdge.children[1].setAttribute("stroke", "red");
@@ -1209,13 +1217,23 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any
 
     let selectedNode: Element = svgElement.children[0].children[0].children[nodeIndex];
     if (selectedNode.getAttribute("class") == "node" && selectedNode.children[1].tagName.toLowerCase() == "polygon") {
-      d3_select(selectedNode).on("click", (event: MouseEvent) => {
+
+      let selectedNodeSelection = d3_select(selectedNode);
+      
+      selectedNodeSelection.style("cursor", "pointer");
+      
+      selectedNodeSelection.on("click", (event: MouseEvent) => {
 
         if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
 
       });
     } else if (selectedNode.getAttribute("class") == "edge" && selectedNode.children[1].tagName.toLowerCase() == "path"){
-      d3_select(selectedNode).on("click",()=>{
+
+      let selectedNodeSelection = d3_select(selectedNode);
+
+      selectedNodeSelection.style("cursor", "pointer");
+
+      selectedNodeSelection.on("click",()=>{
         if (selectedEdge) {selectedEdge.children[1].setAttribute("stroke", "black");}
         selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
         selectedEdge!.children[1].setAttribute("stroke", "red");
@@ -1377,7 +1395,7 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
           ["Does no align", "Aligns by line", "Aligns by line and column"]);
 
         createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 4, 3, "dataflowModeHelp",
-          "(default: retrospective). 'simulation' presents a dataflow graph with all relevant evaluations. 'activation' presents only function activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations. 'retrospective' presents only parameters, calls, and assignments to calls. 'prospective' is the same thing as retrospective, but it doesn't repeat calls when they're in the same line in a loop",
+          "(default: retrospective). 'retrospective' presents only parameters, calls, and assignments to calls. 'prospective' is the same thing as retrospective, but it doesn't repeat calls when they're in the same line in a loop. 'simulation' presents the same things as retrospective plus variables. 'activation' presents only function activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations",
           ["simulation", "activation", "dependency", "retrospective", "prospective"]);
 
         createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity");
@@ -1427,10 +1445,12 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
 
         let dataflowWindowId = "Dataflow window " + trialId;
 
-        if (document.getElementById(dataflowWindowId)) {
+        /* if (document.getElementById(dataflowWindowId)) {
           window.alert("Close trial " + trialId + " dataflow tab before generating a new dataflow");
           return;
-        }
+        } */
+
+          if (document.getElementById(dataflowWindowId)) dataflowWindowId += crypto.randomUUID();
 
         fetch(dataflowUrl, {
           method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -1506,16 +1526,21 @@ function addsAutocompleteToDataflowWDF(dataflowEvaluationInput: d3_Selection<HTM
   });
 }
 
-function downloadDataflowAsSVG(dataflowWindow: HTMLElement | null, dataflowWindowId: string, appendDiv : boolean) {
+function downloadDataflowAsSVG(dataflowWindow: HTMLElement | null, dataflowWindowId: string, dataflowDOT : string, appendDiv : boolean) {
   let div = appendDiv ? d3_select(dataflowWindow).append("div").attr("id", dataflowWindowId + "-downloadDiv") : d3_select(document.getElementById(dataflowWindowId + "-downloadDiv"));
   div.append("a")
     .classed("toollink", true)
     .attr("id", dataflowWindowId + "-downloadSVG")
     .attr("href", "#")
     .style("color", "black")
+    .style("margin-right", "10px")
     .attr("title", "Download dataflow SVG")
     .on("click", () => {
-      fs.saveAs(new Blob([dataflowWindow!.getElementsByTagName("svg")[0].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
+      instance().then(viz => {
+        let svgElement = viz.renderSVGElement(dataflowDOT);
+        fs.saveAs(new Blob([svgElement.outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
+      });
+      //fs.saveAs(new Blob([dataflowWindow!.getElementsByTagName("svg")[0].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
     })
     .append("i")
     .classed("fa fa-download", true);
@@ -1537,7 +1562,7 @@ function downloadDataflowAsDOT(dataflowWindow: HTMLElement | null, dataflowWindo
 }
 
 function dataflowButtons(dataflowWindow: HTMLElement | null, dataflowWindowId: string, excludeProvenanceHint : string, dataflowDOT : string){
-  downloadDataflowAsSVG(dataflowWindow, dataflowWindowId, true);
+  downloadDataflowAsSVG(dataflowWindow, dataflowWindowId, dataflowDOT, true);
 	downloadDataflowAsDOT(dataflowWindow, dataflowWindowId, dataflowDOT, false)
 	excludePriorProvenanceHint(dataflowWindow, excludeProvenanceHint);
 	checkboxOpenDataflowExcludeProvenanceNewWindow(dataflowWindow!);
