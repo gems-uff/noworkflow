@@ -7,6 +7,8 @@
 from argparse import Namespace
 
 from ...persistence.models.base import proxy_gen, proxy
+from ...persistence.models import CodeComponent, Activation, Dependency
+from ...persistence import relational
 
 from  ...cmd.cmd_evaluation import query_evaluations, Evaluation as EvaluationPrint
 
@@ -91,6 +93,38 @@ class FilterTypesOut(AcceptAllNodesFilter):
         if isinstance(node, EvaluationNode):
             return not node.is_type
         return super(FilterTypesOut, self).__contains__(node)
+
+class FilterFuncOut(AcceptAllNodesFilter):
+    """Filter that ignores evaluations that their code component has the type global or that aren't from the code"""
+    # pylint: disable=too-few-public-methods
+    def __contains__(self, node):
+        if isinstance(node, EvaluationNode):
+            dependencies = relational.session.query(Dependency.m).filter(Dependency.m.dependency_id==node.evaluation.id, Dependency.m.trial_id==node.evaluation.trial_id).all()
+            for dependency in dependencies:
+                if dependency.type == "func": return False
+            return True
+        return super(FilterFuncOut, self).__contains__(node)
+    
+class FilterUseActivationName(AcceptAllNodesFilter):
+    """Filter(workaround) that changes the node's name for its activation name"""
+    # pylint: disable=too-few-public-methods
+    def __contains__(self, node):
+        if isinstance(node, EvaluationNode):
+            code_component = relational.session.query(CodeComponent.m).filter(CodeComponent.m.id==node.evaluation.code_component_id, CodeComponent.m.trial_id==node.evaluation.trial_id).all()[0]
+            if code_component.type == "call": node.name = relational.session.query(Activation.m).filter(Activation.m.id==node.evaluation.id, Activation.m.trial_id==node.evaluation.trial_id).all()[0].name
+            return True
+            # "<class" in evaluation.repr
+            # (code_component.first_char_line == -1)
+        return super(FilterUseActivationName, self).__contains__(node)
+
+class FilterNotFromCodeOut(AcceptAllNodesFilter):
+    """Filter that ignores evaluations that their code component has the type global or that aren't from the code"""
+    # pylint: disable=too-few-public-methods
+    def __contains__(self, node):
+        if isinstance(node, EvaluationNode):
+            code_component = relational.session.query(CodeComponent.m).filter(CodeComponent.m.id==node.evaluation.code_component_id, CodeComponent.m.trial_id==node.evaluation.trial_id).all()[0]
+            return not (code_component.type == "global" or code_component.first_char_line == -1)
+        return super(FilterNotFromCodeOut, self).__contains__(node)
     
 class FilterWasDerivedFrom(AcceptAllNodesFilter):
     """Filter that accepts only one evaluation and the ones that derived it"""

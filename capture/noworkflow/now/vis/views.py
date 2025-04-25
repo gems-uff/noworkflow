@@ -13,12 +13,13 @@ import json
 from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent
+from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent, Dependency
 from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..models.ast.trial_ast import TrialAst
 from ..persistence import relational, content
+from ..cmd.cmd_diff import Diff as DiffCMD
 from ..ipython.dotmagic import DotDisplay
 
 import subprocess
@@ -26,6 +27,7 @@ from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
 from ..persistence import content
 import time
+import difflib
 from zipfile import ZipFile
 from io import BytesIO
 
@@ -250,8 +252,10 @@ def receiveFiles(expCode):
     
     return return_json_error_invalid_experiment_id()
 
+@app.route("/downloadFile/<fid>", methods=['Get'])
+@app.route("/experiments/<expCode>/downloadFile/<fid>", methods=['Get'])
 @app.route("/experiments/<expCode>/collab/files/<fid>", methods=['Get'])
-def downloadFile(expCode,fid):
+def downloadFile(fid, expCode=None):
     """Respond files hash"""
     resp=content.get(fid)
     return send_file(IO(resp),mimetype='application/octet-stream')
@@ -332,6 +336,12 @@ def get_file(file_hash, file_ext):
         io.BytesIO(content.get(file_hash)),
         attachment_filename=name
     )
+    
+@app.route("/experiments/<expCode>/getFileContent/<file_hash>")
+@app.route("/getFileContent/<file_hash>")
+def get_file_content(file_hash, expCode=None):
+    """Returns a file's content"""
+    return jsonify(file_content=content.get(file_hash).decode(errors="ignore"))
 
 @app.route("/experiments/<expCode>/trials/<tid>/<graph_mode>/<cache>.json")
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
@@ -471,6 +481,52 @@ def definition_ast(trial_id):
     ast = TrialAst(trial)
     return jsonify(ast.construct_ast_json(False))
 
+@app.route("/experiments/<expCode>/getAllTrialsIdsAndTags")
+@app.route("/getAllTrialsIdsAndTags")
+def get_all_trials_ids_and_tags():
+    return jsonify([{"id": trial.id, "tag": list(trial.tags)[0].name} for trial in Trial.all()])
+
+@app.route("/experiments/<expCode>/getFunctionActivations/<trial_id>")
+@app.route("/getFunctionActivations/<trial_id>")
+def get_function_activations_from_trial(trial_id):
+    function_activations = relational.session.query(Activation.m).filter(Activation.m.trial_id == trial_id).all()
+    function_activations_array = []
+    for activation in function_activations:
+        activation_dict = {"id": activation.id, "name": activation.name}
+        activation_dict["params"] = get_function_activation_arguments(trial_id, activation.id).json["function_params"]
+        if("This function has no params" in activation_dict["params"]): activation_dict["params"] = ""
+        function_activations_array.append(activation_dict)
+    return jsonify(function_activations=function_activations_array)
+
+@app.route("/experiments/<expCode>/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
+@app.route("/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
+def get_function_activation_arguments(trial_id, function_id, expCode=None):
+    function_arguments = relational.session.query(Dependency.m).filter(Dependency.m.trial_id==trial_id, Dependency.m.dependent_id==int(function_id), Dependency.m.type=="argument").all()
+    if len(function_arguments) < 1: return jsonify(function_params="This function has no params")
+    
+    function_params = [relational.session.query(Evaluation.m).filter(Evaluation.m.id==argument.dependency_id, Evaluation.m.trial_id==trial_id).all()[0].repr for argument in function_arguments]
+    return jsonify(function_params=function_params)
+
+@app.route("/experiments/<expCode>/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")
+@app.route("/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")
+def execute_command_diff_function_activation(trial1_id, activation1_id, trial2_id, activation2_id, expCode=None):
+    diff = Diff(trial1_id, trial2_id)
+    diffCMD = DiffCMD()
+    
+    functions_info = diffCMD.get_diff_function_info(trial1_id, trial2_id, activation1_id, activation2_id, diff.file_accesses, "all")    
+    differ = difflib.Differ()
+    trial1_variables_that_changed, trial2_variables_added, trial1_variables_removed = diffCMD.build_variables_lcs(functions_info["variables_function_trial1"], functions_info["variables_function_trial2"], differ)
+    
+    functions_info["file_accesses_added"] = list([{"name": obj.name, "mode": obj.mode , "buffering": obj.buffering, "content_hash_before": obj.content_hash_before, "content_hash_after": obj.content_hash_after, "timestamp": obj.timestamp, "stack": obj.stack} for obj in functions_info["file_accesses_added"]])
+    functions_info["file_accesses_removed"] = list([{"name": obj.name, "mode": obj.mode , "buffering": obj.buffering, "content_hash_before": obj.content_hash_before, "content_hash_after": obj.content_hash_after, "timestamp": obj.timestamp, "stack": obj.stack} for obj in functions_info["file_accesses_removed"]])
+    functions_info["file_accesses_replaced"] = list([{"name": obj[0].name, "content_hash_before_first_trial": obj[0].content_hash_before, "content_hash_before_second_trial": obj[1].content_hash_before, "content_hash_after_first_trial": obj[0].content_hash_after, "content_hash_after_second_trial": obj[1].content_hash_after, "timestamp_first_trial": obj[0].timestamp, "timestamp_second_trial": obj[1].timestamp, "checkpoint_first_trial": obj[0].checkpoint, "checkpoint_second_trial": obj[1].checkpoint} for obj in functions_info["file_accesses_replaced"]])
+    
+    functions_info["trial1_variables_that_changed"] = [('\n'.join(list(diff_var))) for diff_var in trial1_variables_that_changed]
+    functions_info["trial2_variables_added"] = [(str(var)+"\n") for var in trial2_variables_added]
+    functions_info["trial1_variables_removed"] = [(str(var)+"\n") for var in trial1_variables_removed]
+
+    return jsonify(functions_info), 200
+
 @app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
 def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):
     """Execute the command 'now restore' for a trial"""
@@ -523,14 +579,17 @@ def execute_command_export(trial_id, rules, hide_timestamps):
     sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(export=sub_process_print), 200
 
-@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
-def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
+@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<argument_hnc>/<argument_an>/<argument_hf>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
+def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argument_hnc, argument_an, argument_hf,file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
     """Execute the command 'now export'"""
     dataflow_command = ("now dataflow " + trial_id).split()
     
     if argument_T == "true": dataflow_command.append("-T")
     if argument_t == "true": dataflow_command.append("-t")
     if argument_H == "true": dataflow_command.append("-H")
+    if argument_hnc == "true": dataflow_command.append("-hnc")
+    if argument_an == "true": dataflow_command.append("-an")
+    if argument_hf == "true": dataflow_command.append("-hf")
     if wdf == "true":
         dataflow_command.append("-w")
         dataflow_command.append(eid)
@@ -543,7 +602,7 @@ def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, file_a
     appendDataflowCommandWithParameters(dataflow_command, "-n", name, 0, float('inf'), 55)
 
     dataflow_command.append("-m")
-    if mode in ["simulation", "activation" , "dependency"]: dataflow_command.append(mode)
+    if mode in ["simulation", "activation" , "dependency", "retrospective"]: dataflow_command.append(mode)
     else: dataflow_command.append("prospective")
     
     sub_process_print = subprocess.run(dataflow_command, capture_output=True).stdout.decode("utf-8")

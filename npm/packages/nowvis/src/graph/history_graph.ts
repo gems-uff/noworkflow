@@ -4,7 +4,7 @@ import {
   BaseType as d3_BaseType,
 } from 'd3-selection';
 
-import {Widget} from '@lumino/widgets';
+import {DockPanel, Widget} from '@lumino/widgets';
 
 import {
   HistoryGraph,
@@ -22,6 +22,8 @@ import {TrialInfoWidget} from '../info/trial_info';
 import {DiffInfoWidget} from '../info/diff_info';
 import {ConfigWidget} from '../config_widget';
 import {AnnontationWidget} from '../annotation_widget';
+
+import { functionDiffWindow } from './function_diff';
 
 import * as fs from 'file-saver';
 import { instance } from "@viz-js/viz";
@@ -42,6 +44,7 @@ class HistoryWidget extends Widget {
   rightClickMenu: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>;
+  functionDiffWindow = functionDiffWindow;
 
   static url(script = "*", execution = "*", summarize=false) {
     return ("trials.json"
@@ -179,8 +182,14 @@ class HistoryWidget extends Widget {
           let diffGraphWidget = new DiffGraphWidget(
             "Diff " + redTrial.display + "-" + greenTrial.display,
             "diff-" + redTrial.title + "-" + greenTrial.title + makeid(),
-            redTrial.title, greenTrial.title
+            redTrial.title, greenTrial.title, this.functionDiffWindow, (this.parent as NowVisPanel)
           );
+          diffGraphWidget.d3node.append("span")
+          .text("Ctrl+(left click) on a function overlap to see the functions' diff")
+          .style('font-family', 'sans-serif')
+          .style('font-size', '12px')
+          .style('pointer-events', 'none')
+          .lower();
           let parentDock: NowVisPanel = this.parent as NowVisPanel;
 
           if (this.config.showInfo()) {
@@ -330,7 +339,8 @@ class HistoryWidget extends Widget {
         }
       });
     });
-  }
+  } 
+
 
   protected onResize(msg: Widget.ResizeMessage): void {
     if (!this.graph) {
@@ -378,7 +388,28 @@ class HistoryWidget extends Widget {
     this.buildProvCommand();
     this.buildExportPrologCommand(this.modal, this.modalBody)
     this.buildDataflowCommand(this.modal, this.modalBody)
+    this.buildTrialFunctionDiffCommand(this.modal, this.modalBody, this.functionDiffWindow)
   }
+
+  buildTrialFunctionDiffCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, functionDiffWindow : any) {
+
+    let self = this
+
+    this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "trial-function-diff-option")
+      .text("function activation diff")
+      .on("click", function () {
+
+        let parent = this.parentNode as Element
+        let trialId = parent.getAttribute("selected-trial") ?? "";
+
+        buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, functionDiffWindow, self);
+      });
+
+  };
 
   buildDataflowCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
     modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
@@ -742,6 +773,128 @@ class HistoryWidget extends Widget {
 
 }
 
+function buildTrialFunctionDiffModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+  parent: Element, trialId: string, functionDiffWindow : any, self : any) {
+
+  let secondTrialId : string;
+  changeTitle(parent, "Function activation diff trial")
+  //document.getElementById("exampleModalTitle")!.textContent = "Function activation diff trial " + trialId;
+
+  fetch("/getFunctionActivations/" + trialId, {
+    method: 'GET', // *GET, POST, PUT, DELETE, etc.
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  }).then((response) => {
+    response.json().then((json) => {
+
+      showModal(modal);
+
+      if (modalBody) {
+
+        //scrollableModal(modalBody);
+
+        modalBody.append("span").text("Select this trial's activation: ");
+        let firstTrialSelectActivation = modalBody.append("select").classed("form-select", true).attr("arial-label", "firstTrialFunctionActivations").attr("id", "firstTrialFunctionActivations").style("max-width", "480px");
+
+        for(let activation in json["function_activations"]){
+          firstTrialSelectActivation.append("option").attr("value", json["function_activations"][activation].id).text(JSON.stringify(json["function_activations"][activation]).replace(/{|}/g,"").substring(0, 70));
+        }       
+
+        modalBody.append("br");
+
+        modalBody.append("span").text("Select the other trial: ");
+
+        let secondTrialSelect = modalBody.append("select").classed("form-select", true).attr("arial-label", "secondTrialSelect").attr("id", "secondTrialSelect");
+
+        fetch("/getAllTrialsIdsAndTags", {
+          method: 'GET', // *GET, POST, PUT, DELETE, etc.
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        }).then((response) => {
+          response.json().then((json) => {
+            for(let trial in json){
+              secondTrialSelect.append("option").attr("value", json[trial].id).text(json[trial].tag);
+            }
+
+            modalBody.append("br");
+
+            modalBody.append("span").text("Select the other trial's activation: ");
+
+            let secondTrialSelectActivation = modalBody.append("select").classed("form-select", true).attr("arial-label", "secondTrialFunctionActivations").attr("id", "secondTrialFunctionActivations").style("max-width", "480px");
+
+            getSecondTrialFunctionActivations(secondTrialSelectActivation);
+
+            secondTrialSelect.on("change",()=>{
+
+              getSecondTrialFunctionActivations(secondTrialSelectActivation);
+
+            });
+        
+        
+            modalBody.append("br");
+
+            let submitButton = modalBody.append("button").classed("btn btn-primary mb-2", true).style("margin-top", "10px").text("Confirm");
+
+            submitButton!.on("click", function () {
+
+              let firstTrialFunctionId = (<HTMLSelectElement>document.getElementById("firstTrialFunctionActivations")).selectedOptions[0].value;
+              let secondTrialFunctionId = (<HTMLSelectElement>document.getElementById("secondTrialFunctionActivations")).selectedOptions[0].value;
+      
+              let url = "/commands/diff/"+ trialId +"/"+ firstTrialFunctionId + "/"+ secondTrialId + "/"  + secondTrialFunctionId;
+
+              fetch(url, {
+                method: 'GET', // *GET, POST, PUT, DELETE, etc.
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+              }).then((response) => {
+        
+                response.json().then((json) => {
+                  functionDiffWindow(json, "Diff trial " + trialId + " activation_id " + firstTrialFunctionId + " trial " + secondTrialId + " activation_id " + secondTrialFunctionId, self.parent as NowVisPanel);
+                });
+              });
+      
+              cleanModalBodyAndClose(modal, modalBody);
+      
+      
+      
+            });
+
+        })});
+
+        
+
+      }
+
+    });
+  });
+
+
+
+  function getSecondTrialFunctionActivations(secondTrialSelectActivation: d3_Selection<HTMLSelectElement, {}, HTMLElement | null, any>) {
+    secondTrialId = (<HTMLSelectElement>document.getElementById("secondTrialSelect")).selectedOptions[0].value;
+
+    fetch("/getFunctionActivations/" + secondTrialId, {
+      method: 'GET', // *GET, POST, PUT, DELETE, etc.
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    }).then((response) => {
+      response.json().then((json) => {
+
+        secondTrialSelectActivation.html("");
+
+        for (let activation in json["function_activations"]) {
+          secondTrialSelectActivation.append("option").attr("value", json["function_activations"][activation].id).text(JSON.stringify(json["function_activations"][activation]).replace(/{|}/g, "").substring(0, 70));
+        }
+
+      });
+    });
+  }
+}
+
 function buildExportPrologModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, exportUrl: string, config: HistoryConfig, parent: Element, exportWindowId: string, trialId: string | null) {
   let submitButton;
   let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
@@ -884,6 +1037,7 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
         dataflowButtons(dataflowWindow, dataflowWindowId, "Click on a function call, then (Ctrl or Shift)+click on another one to exclude prior provenience", json.dataflow)
 
         let selectedNode: Element | undefined;
+        let selectedEdge: Element | undefined;
 
         //dataflowWindow!.style.overflowY = dataflowWindow!.style.overflowX = "auto";
         let svgElement = viz.renderSVGElement(json.dataflow);
@@ -894,7 +1048,11 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
 
           let presentNode: Element | undefined = svgElement.children[0].children[0].children[nodeIndex];
           if (presentNode.getAttribute("class") == "node" && presentNode.children[1].tagName.toLowerCase() == "polygon") {
-            d3_select(presentNode).on("click", (event: MouseEvent) => {
+            let presentNodeSelection = d3_select(presentNode);
+
+            presentNodeSelection.style("cursor", "pointer");
+
+            presentNodeSelection.on("click", (event: MouseEvent) => {
 
               if (selectedNode) { selectedNode.children[1].setAttribute("stroke", "black"); }
 
@@ -904,6 +1062,16 @@ function getDataflow(response: any, config: HistoryConfig, parent: Element, data
                 selectedNode = svgElement.children[0].children[0].children[nodeIndex];
                 selectedNode.children[1].setAttribute("stroke", "red");
               }
+            });
+          } else if (presentNode.getAttribute("class") == "edge" && presentNode.children[1].tagName.toLowerCase() == "path"){
+            let presentNodeSelection = d3_select(presentNode);
+
+            presentNodeSelection.style("cursor", "pointer");
+
+            presentNodeSelection.on("click",()=>{
+              if (selectedEdge) {selectedEdge.children[1].setAttribute("stroke", "black");}
+              selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
+              selectedEdge.children[1].setAttribute("stroke", "red");
             });
           }
         }
@@ -1043,14 +1211,32 @@ function dataflowAMinusDataflowB(dataflowA: any, dataflowB: any, selectedEvaluat
 }
 
 function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement: any, viz: any, dataflowUrl: string, newDataflowString: any, excludingProvenanceWindow: HTMLElement | null, config : HistoryConfig, lastEvaluationId : number) {
+  let selectedEdge : Element | undefined;
+  
   for (let nodeIndex = 0; nodeIndex < svgElement.children[0].children[0].children.length; nodeIndex++) {
 
     let selectedNode: Element = svgElement.children[0].children[0].children[nodeIndex];
     if (selectedNode.getAttribute("class") == "node" && selectedNode.children[1].tagName.toLowerCase() == "polygon") {
-      d3_select(selectedNode).on("click", (event: MouseEvent) => {
+
+      let selectedNodeSelection = d3_select(selectedNode);
+      
+      selectedNodeSelection.style("cursor", "pointer");
+      
+      selectedNodeSelection.on("click", (event: MouseEvent) => {
 
         if (event.ctrlKey || event.shiftKey) deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
 
+      });
+    } else if (selectedNode.getAttribute("class") == "edge" && selectedNode.children[1].tagName.toLowerCase() == "path"){
+
+      let selectedNodeSelection = d3_select(selectedNode);
+
+      selectedNodeSelection.style("cursor", "pointer");
+
+      selectedNodeSelection.on("click",()=>{
+        if (selectedEdge) {selectedEdge.children[1].setAttribute("stroke", "black");}
+        selectedEdge = svgElement.children[0].children[0].children[nodeIndex];
+        selectedEdge!.children[1].setAttribute("stroke", "red");
       });
     }
   }
@@ -1190,6 +1376,9 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
         createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
         createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
+        createFormCheckInput(form, "dataFlowHideNotCode", "Hide evaluations that aren't from the code");
+        createFormCheckInput(form, "dataFlowActivationNames", "Display nodes with their activation names instead");
+        createFormCheckInput(form, "dataFlowHideFunc", "Hide func type evaluations");
 
         createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp",
           "(default: Shows each file once (hide external accesses))",
@@ -1205,9 +1394,9 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
           "(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.",
           ["Does no align", "Aligns by line", "Aligns by line and column"]);
 
-        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 3, 3, "dataflowModeHelp",
-          "(default: prospective). 'simulation' presents a dataflow graph with all relevant evaluations. 'activation' presents only activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations. 'prospective' presents only parameters, calls, and assignments to calls.",
-          ["simulation", "activation", "dependency", "prospective"]);
+        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 4, 3, "dataflowModeHelp",
+          "(default: retrospective). 'retrospective' presents only parameters, calls, and assignments to calls. 'prospective' is the same thing as retrospective, but it doesn't repeat calls when they're in the same line in a loop. 'simulation' presents the same things as retrospective plus variables. 'activation' presents only function activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations",
+          ["simulation", "activation", "dependency", "retrospective", "prospective"]);
 
         createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity");
         createFormNumberInput(form, "dataflowValueLength", "Maximum length of values", 0, 0, "dataflowValueLengthHelp",
@@ -1232,6 +1421,9 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         let dataFlowShowType = (<HTMLInputElement>document.getElementById("dataFlowShowType")).checked;
         let dataFlowHideTimestamps = (<HTMLInputElement>document.getElementById("dataflowMode")).checked;
         let dataFlowHideInternals = (<HTMLInputElement>document.getElementById("dataFlowHideInternals")).checked;
+        let dataFlowHideNotCode = (<HTMLInputElement>document.getElementById("dataFlowHideNotCode")).checked;
+        let dataFlowActivationNames = (<HTMLInputElement>document.getElementById("dataFlowActivationNames")).checked;
+        let dataFlowHideFunc = (<HTMLInputElement>document.getElementById("dataFlowHideFunc")).checked;
 
         let dataflowFileAccesses = (<HTMLSelectElement>document.getElementById("dataflowShowAccesses")).selectedOptions[0].index;
         let dataflowEvaluation = (<HTMLSelectElement>document.getElementById("dataflowEvaluation")).selectedOptions[0].index;
@@ -1247,16 +1439,18 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         selectedEvaluation = dataflowTextInputEvaluation.getAttribute("selectedEvaluationID");
 
         let dataflowUrl = "/commands/dataflow/" + trialId + "/" + dataFlowShowType + "/" + dataFlowHideTimestamps + "/" +
-          dataFlowHideInternals + "/" + dataflowFileAccesses + "/" + dataflowEvaluation + "/" + dataflowGroup + "/" +
-          dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
+          dataFlowHideInternals + "/" + dataFlowHideNotCode + "/"+ dataFlowActivationNames + "/"+ dataFlowHideFunc + "/" +dataflowFileAccesses + "/" + dataflowEvaluation + 
+          "/" + dataflowGroup + "/" + dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
         dataflowUrl += (selectedEvaluation && !selectedEvaluation.includes("undefined")) ? "/true/" + selectedEvaluation : "/false/0";
 
         let dataflowWindowId = "Dataflow window " + trialId;
 
-        if (document.getElementById(dataflowWindowId)) {
+        /* if (document.getElementById(dataflowWindowId)) {
           window.alert("Close trial " + trialId + " dataflow tab before generating a new dataflow");
           return;
-        }
+        } */
+
+          if (document.getElementById(dataflowWindowId)) dataflowWindowId += crypto.randomUUID();
 
         fetch(dataflowUrl, {
           method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -1332,16 +1526,21 @@ function addsAutocompleteToDataflowWDF(dataflowEvaluationInput: d3_Selection<HTM
   });
 }
 
-function downloadDataflowAsSVG(dataflowWindow: HTMLElement | null, dataflowWindowId: string, appendDiv : boolean) {
+function downloadDataflowAsSVG(dataflowWindow: HTMLElement | null, dataflowWindowId: string, dataflowDOT : string, appendDiv : boolean) {
   let div = appendDiv ? d3_select(dataflowWindow).append("div").attr("id", dataflowWindowId + "-downloadDiv") : d3_select(document.getElementById(dataflowWindowId + "-downloadDiv"));
   div.append("a")
     .classed("toollink", true)
     .attr("id", dataflowWindowId + "-downloadSVG")
     .attr("href", "#")
     .style("color", "black")
+    .style("margin-right", "10px")
     .attr("title", "Download dataflow SVG")
     .on("click", () => {
-      fs.saveAs(new Blob([dataflowWindow!.getElementsByTagName("svg")[0].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
+      instance().then(viz => {
+        let svgElement = viz.renderSVGElement(dataflowDOT);
+        fs.saveAs(new Blob([svgElement.outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
+      });
+      //fs.saveAs(new Blob([dataflowWindow!.getElementsByTagName("svg")[0].outerHTML], { type: "image/svg+xml" }), "dataflow.svg");
     })
     .append("i")
     .classed("fa fa-download", true);
@@ -1363,7 +1562,7 @@ function downloadDataflowAsDOT(dataflowWindow: HTMLElement | null, dataflowWindo
 }
 
 function dataflowButtons(dataflowWindow: HTMLElement | null, dataflowWindowId: string, excludeProvenanceHint : string, dataflowDOT : string){
-  downloadDataflowAsSVG(dataflowWindow, dataflowWindowId, true);
+  downloadDataflowAsSVG(dataflowWindow, dataflowWindowId, dataflowDOT, true);
 	downloadDataflowAsDOT(dataflowWindow, dataflowWindowId, dataflowDOT, false)
 	excludePriorProvenanceHint(dataflowWindow, excludeProvenanceHint);
 	checkboxOpenDataflowExcludeProvenanceNewWindow(dataflowWindow!);

@@ -320,7 +320,7 @@ class Diff(NotebookCommand):
         variable_types = [CodeComponent.m.type=="name",CodeComponent.m.type=="attribute",CodeComponent.m.type=="access"]
         if variable_types_to_show != None and variable_types_to_show.lower() == "op": [variable_types.append(CodeComponent.m.type==operation) for operation in OPERATIONS]
         variable_types = or_(true()) if variable_types_to_show != None and variable_types_to_show.lower() == "all" else or_(*variable_types)
-        
+
         function_trial1_variables = relational.session.query(Evaluation.m.id, CodeComponent.m.name, Evaluation.m.repr, CodeComponent.m.type, CodeComponent.m.first_char_line, CodeComponent.m.first_char_column).filter(
             Evaluation.m.trial_id==trial1_id, Evaluation.m.activation_id==function_as_activation_trial1.id, 
             CodeComponent.m.trial_id==trial1_id, CodeComponent.m.id == Evaluation.m.code_component_id,
@@ -335,7 +335,7 @@ class Diff(NotebookCommand):
         new_added = self.filter_file_accesses_diff_function(added, function_as_activation_trial1.id, function_as_activation_trial2.id)
         new_removed = self.filter_file_accesses_diff_function(removed, function_as_activation_trial1.id, function_as_activation_trial2.id)
         new_replaced = self.filter_file_accesses_diff_function(replaced, function_as_activation_trial1.id, function_as_activation_trial2.id)
-            
+          
         functions_info = {
                 "output_function_trial1" : function_as_evaluation_trial1.repr,
                 "output_function_trial2" : function_as_evaluation_trial2.repr,
@@ -355,7 +355,10 @@ class Diff(NotebookCommand):
     def filter_file_accesses_diff_function(self, old_set, activation_id1, activation_id2):
         new_set = set()
         for file in old_set:
-            if (file.activation_id == activation_id1) or (file.activation_id == activation_id2): new_set.add(file)
+            if (isinstance(file, tuple)):
+                print(file)
+                if (file[0].activation_id == activation_id1 and file[1].activation_id == activation_id2): new_set.add(file)
+            elif (file.activation_id == activation_id1) or (file.activation_id == activation_id2): new_set.add(file)
         return new_set
 
     def execute_export(self, args):
