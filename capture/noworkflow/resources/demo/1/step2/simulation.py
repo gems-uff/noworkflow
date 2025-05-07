@@ -7,7 +7,7 @@ def run_simulation(data_a, data_b):
     return simulate(csv_read(data_a), csv_read(data_b))
 
 def csv_read(f):
-    return list(csv.reader(open(f, 'rU'), delimiter=':'))
+    return list(csv.reader(open(f, newline=''), delimiter=':'))
 
 def extract_column(data, column):
     return [float(row[column]) for row in data]

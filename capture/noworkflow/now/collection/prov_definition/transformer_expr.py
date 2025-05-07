@@ -14,7 +14,7 @@ import pyposast
 
 from .ast_helpers import ast_copy
 
-from .ast_elements import L, S, context, none, call, param
+from .ast_elements import L, S, context, none, call, param, true
 from .ast_elements import noworkflow, double_noworkflow
 from .ast_elements import nlambda, activation, act_attribute
 
@@ -84,19 +84,35 @@ class RewriteDependencies(ast.NodeTransformer):
                 citem, item, Component.ITEM, 'r'
             )
             fname, key = set_key()
-            return ast_copy(double_noworkflow(
-                fname,
-                [
-                    activation(),
-                    citem_component_id,
-                    ast.Num(self.rewriter.current_exc_handler)
-                ], [
-                    activation(),
-                    citem_component_id,
-                    citem,
-                    key,
-                ]
-            ), citem)
+            if PY3 and isinstance(citem, ast.Starred):
+                return ast_copy(ast.Starred(double_noworkflow(
+                    fname,
+                    [
+                        activation(),
+                        citem_component_id,
+                        ast.Num(self.rewriter.current_exc_handler)
+                    ], [
+                        activation(),
+                        citem_component_id,
+                        citem.value,
+                        key,
+                    ],
+                    __starred=true()
+                ), L()), citem)
+            else:
+                return ast_copy(double_noworkflow(
+                    fname,
+                    [
+                        activation(),
+                        citem_component_id,
+                        ast.Num(self.rewriter.current_exc_handler)
+                    ], [
+                        activation(),
+                        citem_component_id,
+                        citem,
+                        key,
+                    ]
+                ), citem)
         return citem
 
     def create_composition(self, *args, **kwargs):
@@ -1180,13 +1196,15 @@ class RewriteDependencies(ast.NodeTransformer):
             ast.Str('single')
         ], L())
         if ctx.startswith('r'):
-            return ast_copy(noworkflow('name', [
+            result = ast_copy(noworkflow('name', [
                 activation(), 
                 ast.Num(id_),
                 ast.Str(pyposast.extract_code(self.rewriter.lcode, node)),
                 node,
                 ast.Str(self.mode)]
             ), node)
+            result.target_expr = node.target_expr
+            return result
         return node
 
     def visit_List(self, node, comp='list', set_key=None):

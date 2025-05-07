@@ -11,7 +11,7 @@ from ..persistence import persistence_config
 from ..utils.collab import export_bundle,import_bundle
 from ..utils.compression import gzip_uncompress
 from ..persistence.lightweight import BundleLW
-from ..persistence.models import Trial
+from ..persistence.models import Trial, Remote
 from ..persistence import content
 
 from .command import Command
@@ -19,6 +19,11 @@ from .command import Command
 
 class Pull(Command):
     """Fetches and downloads a remote provenance database and merges their data with your local provenance database"""
+    
+    text_invalid_experiment_id = "Invalid experiment ID"
+    text_importing_files_failed = "Importing files failed."
+    text_importing_trials_failed = "Importing trials failed."
+    
     def __init__(self, *args, **kwargs):
         super(Pull, self).__init__(*args, **kwargs)
         self.url=None
@@ -42,7 +47,11 @@ class Pull(Command):
     def importTrials(self,url):
         trialUrls=self.url+"/collab/trialsids"
         targetUuids=self.get(trialUrls)
-
+        
+        if targetUuids == self.text_invalid_experiment_id:
+            print(self.text_importing_trials_failed + " " + targetUuids)
+            return False
+        
         trialsIds=[t.id for t in Trial.all()]
         trialsToImport=[x for x in targetUuids if x not in trialsIds]
         bundleUrls=self.url+"/collab/bundle?id=0&"
@@ -55,6 +64,8 @@ class Pull(Command):
         bundle.from_json(pvContent)
         
         import_bundle(bundle)
+        
+        return True
     
     def importFile(self,url):
         print("Importing file: "+url)
@@ -65,9 +76,14 @@ class Pull(Command):
     def importFiles(self,url):
         filesUrl=self.url+"/collab/files"
         sourceFiles=self.get(filesUrl)
+        if sourceFiles == self.text_invalid_experiment_id:
+            print(self.text_importing_files_failed + " " + sourceFiles)
+            return False
         targetFiles=content.listAll()
         filesToImport=[x for x in sourceFiles if x not in targetFiles]
         [self.importFile(filesUrl+"/"+x) for x in filesToImport]
+        
+        return True
 
     def execute(self, args):
 
@@ -75,15 +91,10 @@ class Pull(Command):
         
         persistence_config.connect(os.getcwd())
 
-        self.importFiles(self.url)
+        importFilesSuccess = self.importFiles(self.url)
         print("Importing trials")
-        self.importTrials(self.url)
+        importTrialsSuccess = self.importTrials(self.url)
         
-
-        print("Pulled successfully")
-
-        
-       
-
-
-
+        if importFilesSuccess and importTrialsSuccess:
+            Remote.create(self.url, self.url.split("/experiments/")[-1], True)
+            print("Pulled successfully")

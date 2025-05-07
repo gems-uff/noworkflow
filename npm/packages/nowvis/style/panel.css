@@ -1,5 +1,6 @@
-@import '~@lumino/dragdrop/style/index.css';
-@import '~@lumino/widgets/style/index.css';
+
+@import '~@lumino/default-theme/style/index.css';
+
 
 .p-TabBar {
   min-height: 24px;
@@ -100,7 +101,6 @@
 
 .content > div {
   flex: 1 1 auto;
-  /*border: 1px solid #505050;*/
   overflow: auto;
 }
 

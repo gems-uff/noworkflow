@@ -27,8 +27,8 @@ from .group import GroupLW
 from .user import UserLW
 from .memberOfGroup import MemberOfGroupLW
 from .bundle import BundleLW
+from .remote import RemoteLW
 from .stage_tags import StageTagsLW
-
 
 __all__ = [
     "ObjectStore",
@@ -52,5 +52,5 @@ __all__ = [
     "GroupLW",
     "UserLW",
     "MemberOfGroupLW",
-    "BundleLW"
+    "RemoteLW",
 ]

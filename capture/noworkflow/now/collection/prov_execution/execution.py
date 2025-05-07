@@ -24,7 +24,7 @@ from noworkflow.now.persistence.models import Evaluation, Activation
 from noworkflow.now.models.dependency_querier import DependencyQuerier
 from noworkflow.now.models.dependency_querier.node_context import NodeContext
 from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
-from noworkflow.now.tagging.var_tagging import now_cell, now_variable
+from noworkflow.now.tagging.var_tagging import now_tag_cell, now_tag_variable
 
 class Execution(object):
     """Execution Class"""
@@ -45,20 +45,13 @@ class Execution(object):
         try:
             builtin["__noworkflow__"] = self.collector
             builtin["open"] = self.collector.new_open(content.std_open)
-            builtin["now_tag"] = now_cell
-            builtin["now_variable"] = now_variable
-            builtin["tagged_var_dict"] = {} #todo: keep it here?
-            builtin["body_function_def"] = [] #todo: keep it here?
-            builtin["dep_dict"] = {} #todo: keep it here?
-            
+            builtin["now_tag_cell"] = now_tag_cell
+            builtin["now_tag_variable"] = now_tag_variable
         except TypeError:
             builtin.__noworkflow__ = self.collector
             builtin.open = self.collector.new_open(content.std_open)
-            builtin.now_tag = now_cell
-            builtin.now_variable = now_variable
-            builtin.tagged_var_dict = {} #todo: keep it here?
-            builtin.body_function_def = [] #todo: keep it here?
-            builtin.dep_dict = {} #todo: keep it here?
+            builtin.now_tag_cell = now_tag_cell
+            builtin.now_tag_variable = now_tag_variable
             
         io.open = self.collector.new_open(content.io_open)
         codecs.open = self.collector.new_open(content.codecs_open)

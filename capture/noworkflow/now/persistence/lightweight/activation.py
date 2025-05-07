@@ -85,7 +85,7 @@ class ActivationLW(BaseLW):
         self.file_accesses = []
         
         # Cells tags. Used to get the content after the activation
-        self.stage_tagss = []
+        self.stage_tags = []
 
         # Track conditional dependencies
         self.conditions = []

@@ -90,7 +90,7 @@ class Diff(Model):
         return diff_set(
             set(self.trial1.file_accesses),
             set(self.trial2.file_accesses),
-            create_replaced=False)
+            create_replaced=True)
 
     def _ipython_display_(self):
         """Display history graph"""

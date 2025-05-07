@@ -89,20 +89,29 @@ def now_attribute(name):
     return ast.Attribute(ast.Name("__noworkflow__", L()), name, L())
 
 
-def noworkflow(name, args, keywords=None, star=None, kwargs=None):
+def noworkflow(name, args, **kwargs):
     """Create <now>.<name>(args...) call"""
+    keywords = []
+    for key, value in kwargs.items():
+        keywords.append(ast.keyword(arg=key, value=value))
     return call(
         now_attribute(name),
-        args, keywords, star, kwargs
+        args, keywords=keywords
     )
 
 
-def double_noworkflow(name, external_args, args,
-                      keywords=None, star=None, kwargs=None):
+def double_noworkflow(name, external_args, args, **kwargs):
     """Create <now>.<name>(external_args)(args...) call"""
+    first_kwargs = {}
+    second_keywords = []
+    for key, value in kwargs.items():
+        if key.startswith('__'):
+            second_keywords.append(ast.keyword(arg=key[2:], value=value))
+        else:
+            first_kwargs[key] = value
     return call(
-        noworkflow(name, external_args),
-        args, keywords, star, kwargs
+        noworkflow(name, external_args, **first_kwargs),
+        args, keywords=second_keywords
     )
 
 def arguments():

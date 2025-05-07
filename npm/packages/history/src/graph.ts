@@ -26,14 +26,13 @@ import {
 
 import * as fs from 'file-saver';
 
-import {HistoryConfig, HistoryState} from './config';
-import {VisibleHistoryNode, VisibleHistoryEdge} from './structures';
-import {HistoryGraphData, HistoryNodeData, HistoryTrialNodeData} from './structures';
+import { HistoryConfig, HistoryState } from './config';
+import { VisibleHistoryNode, VisibleHistoryEdge } from './structures';
+import { HistoryGraphData, HistoryNodeData, HistoryTrialNodeData } from './structures';
 import { D3ZoomEvent } from 'd3';
 
-
 export
-class HistoryGraph {
+  class HistoryGraph {
 
   config: HistoryConfig;
   state: HistoryState;
@@ -47,6 +46,7 @@ class HistoryGraph {
   svg: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   g: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   hintElement: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  
 
   nodes: VisibleHistoryNode[] = [];
   versionNodes: VisibleHistoryNode[] = [];
@@ -54,15 +54,15 @@ class HistoryGraph {
   maxX: number = 0;
   maxY: number = 0;
   maxId: number = 0;
-
-
-  constructor(graphId:string, div: any, config: any = {}) {
+  
+  constructor(graphId: string, div: any, config: any = {}) {
     this.i = 0;
     var defaultConfig: HistoryConfig = {
       customSelectNode: (g: HistoryGraph, d: VisibleHistoryNode) => false,
       customCtrlClick: (g: HistoryGraph, d: VisibleHistoryNode) => false,
       customForm: (g: HistoryGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => null,
       customSize: (g: HistoryGraph) => [g.config.width, g.config.height],
+      customWindowTabCommand: (trialIdSimplified: string, trialId: string, command: string) => false,
 
       hintMessage: "Ctrl+Shift click or ⌘+Shift click to diff trials",
 
@@ -89,8 +89,8 @@ class HistoryGraph {
       })
       .on("start", () => d3_select('body').style("cursor", "move"))
       .on("end", () => d3_select('body').style("cursor", "auto"))
-      .wheelDelta(function() {
-        const e = event as WheelEvent;
+      .wheelDelta(function () {
+        const e = event as unknown as WheelEvent;
         return -e.deltaY * (e.deltaMode ? 120 : 1) / 2000;
       })
 
@@ -143,7 +143,7 @@ class HistoryGraph {
       .attr("href", "#")
       .attr("title", "Restore zoom")
       .on("click", () => this.restorePosition())
-    .append("i")
+      .append("i")
       .classed("fa fa-eye", true)
 
     // Toggle Tooltips
@@ -157,10 +157,10 @@ class HistoryGraph {
         this.closeTooltip();
         this.config.useTooltip = tooltipsToggle.property("checked");
       });
-      formdiv.append("label")
+    formdiv.append("label")
       .attr("for", "history-" + this.graphId + "-toolbar-tooltips")
       .attr("title", "Show tooltips on mouse hover")
-    .append("i")
+      .append("i")
       .classed("fa fa-comment", true)
 
     // Download SVG
@@ -172,7 +172,7 @@ class HistoryGraph {
       .on("click", () => {
         this.download();
       })
-    .append("i")
+      .append("i")
       .classed("fa fa-download", true)
 
     // Set Font Size
@@ -183,13 +183,13 @@ class HistoryGraph {
       .attr("value", "show")
       .property("checked", false)
       .on("change", () => {
-        let display = fontToggle.property("checked")? "inline-block" : "none";
+        let display = fontToggle.property("checked") ? "inline-block" : "none";
         fontSize.style("display", display);
       });
     formdiv.append("label")
       .attr("for", "history-" + this.graphId + "-toolbar-fonts")
       .attr("title", "Set font size")
-    .append("i")
+      .append("i")
       .classed("fa fa-font", true)
     let fontSize = formdiv.append("input")
       .attr("type", "number")
@@ -209,6 +209,7 @@ class HistoryGraph {
       .attr("name", "prevent-enter")
       .attr("onclick", "return false;")
       .style("display", "none");
+
 
     formdiv.append("div")
     formdiv.append("div")
@@ -237,7 +238,7 @@ class HistoryGraph {
     let levels = [];
     for (var i = 0; i <= last; i++) {
       let node: HistoryNodeData = data.nodes[i];
-      var previous:any = levels[node.level];
+      var previous: any = levels[node.level];
       if (previous == undefined) {
         previous = -1;
       }
@@ -272,7 +273,7 @@ class HistoryGraph {
       };
 
       nodes.push(new_node)
-      if (typeof(node.trials) != "undefined") {
+      if (typeof (node.trials) != "undefined") {
         useVersion = true;
         for (var j = 0; j < node.trials.length; j++) {
           let trialNode: HistoryTrialNodeData = node.trials[j] as HistoryTrialNodeData;
@@ -304,7 +305,7 @@ class HistoryGraph {
     this.maxId = Math.max(tid, id);
 
     for (var i = 0; i < data.edges.length; i++) {
-      let edge: any = { ...data.edges[i]};
+      let edge: any = { ...data.edges[i] };
       edge.id = edge.source + "-" + edge.target;
       edge.source = nodes[edge.source];
       edge.target = nodes[edge.target];
@@ -324,6 +325,7 @@ class HistoryGraph {
     this.updateWindow();
     this.restorePosition();
     this.update();
+    this.menuOnRightClick();
 
     return nodes;
   }
@@ -362,7 +364,7 @@ class HistoryGraph {
             - this.maxX * scale
             - this.config.margin, 0)
           .scale(scale)
-        )
+      )
     } else {
       this.svg.call(this.zoom.transform,
         d3_zoomIdentity
@@ -371,7 +373,7 @@ class HistoryGraph {
             this.config.width
             - this.maxX
             - this.config.margin, 0)
-        )
+      )
     }
     this.state.justScale = false;
   }
@@ -400,11 +402,11 @@ class HistoryGraph {
     } catch (e) {
       alert("blob not supported");
     }
-    name = (name === undefined)? "history.svg" : name;
+    name = (name === undefined) ? "history.svg" : name;
     let gnode: any = this.g.node()
     var bbox = gnode.getBBox();
     var width = this.svg.attr("width"), height = this.svg.attr("height");
-    this.g.attr("transform", "translate(" + (-bbox.x + 5) +", " +(-bbox.y + 5) +")");
+    this.g.attr("transform", "translate(" + (-bbox.x + 5) + ", " + (-bbox.y + 5) + ")");
     let svgNode: any = this.svg
       .attr("title", "Trial")
       .attr("version", 1.1)
@@ -419,7 +421,7 @@ class HistoryGraph {
       .attr("height", height);
     this.g.attr("transform", this.transform);
     if (isFileSaverSupported) {
-      var blob = new Blob([html], {type: "image/svg+xml"});
+      var blob = new Blob([html], { type: "image/svg+xml" });
       fs.saveAs(blob, name);
     }
   }
@@ -433,7 +435,7 @@ class HistoryGraph {
   }
 
   private showTooltip(event: MouseEvent, d: VisibleHistoryNode) {
-    if (typeof(d.tooltip) == "undefined") {
+    if (typeof (d.tooltip) == "undefined") {
       return;
     }
     this.tooltipDiv.classed("hidden", false);
@@ -449,17 +451,17 @@ class HistoryGraph {
     this.svg.append("svg:defs").selectAll("marker")
       .data([name])
       .enter().append("svg:marker")
-        .attr("id", String)
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 6)
-        .attr("refY", 0)
-        .attr("markerWidth", 3)
-        .attr("markerHeight", 3)
-        .attr("orient", "auto")
+      .attr("id", String)
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 6)
+      .attr("refY", 0)
+      .attr("markerWidth", 3)
+      .attr("markerHeight", 3)
+      .attr("orient", "auto")
       .append("svg:path")
-        .classed(cls, true)
-        .attr("fill", fill)
-        .attr("d", "M0,-5L10,0L0,5");
+      .classed(cls, true)
+      .attr("fill", fill)
+      .attr("d", "M0,-5L10,0L0,5");
   }
 
   private unselectNode(): void {
@@ -549,7 +551,7 @@ class HistoryGraph {
       //.attr('font-weight', 'bold')
       .attr("transform", (d: VisibleHistoryNode) => {
         return "translate(" + d.x + "," + d.y + ")";
-      }).text((d: VisibleHistoryNode) =>  d.display);
+      }).text((d: VisibleHistoryNode) => d.display);
 
     nodeEnter.merge(nodes);  // nodeUpdate
 
@@ -584,23 +586,23 @@ class HistoryGraph {
       .attr("fill", function (d: VisibleHistoryNode) {
         var proportion = Math.round(200 * (1.0 - (parseInt(d.title) / self.maxId)) + 50);
         if (d.status === 'unfinished') {
-          return d.gradient? d3_rgb(255, proportion, proportion, 255).toString(): "rgb(238, 200, 241)";
+          return d.gradient ? d3_rgb(255, proportion, proportion, 255).toString() : "rgb(238, 200, 241)";
         }
         if (d.status === 'finished') {
-          return d.gradient? d3_rgb(proportion, proportion, proportion, 255).toString(): "#F6FBFF";
+          return d.gradient ? d3_rgb(proportion, proportion, proportion, 255).toString() : "#F6FBFF";
         }
         if (d.status === 'backup') {
-          return d.gradient? d3_rgb(255, 255, proportion, 255).toString(): "rgb(241, 238, 200)";
+          return d.gradient ? d3_rgb(255, 255, proportion, 255).toString() : "rgb(241, 238, 200)";
         }
         return '#666';
       })
-      .attr("stroke", function(d: VisibleHistoryNode) {
+      .attr("stroke", function (d: VisibleHistoryNode) {
         return (d3_select(this).classed('selected')) ? 'rgb(200, 238, 241)' : "#000";
       })
       .attr("stroke-width", "2.5px")
-      .on('mousedown', function(event: MouseEvent, d: VisibleHistoryNode) {
+      .on('mousedown', function (event: MouseEvent, d: VisibleHistoryNode) {
         self.nodeMouseDown(event, d3_select(this), d);
-      }).on('mouseup', function (event: MouseEvent, d: VisibleHistoryNode) {
+      }).on('click', function (event: MouseEvent, d: VisibleHistoryNode) {
         self.nodeMouseUp(event, d3_select(this), d);
       }).on('mouseover', function (event: MouseEvent, d: VisibleHistoryNode) {
         if (!self.state.mouseDownNode && self.config.useTooltip) {
@@ -615,6 +617,7 @@ class HistoryGraph {
             return (d3_select(this).classed('selected')) ? 'rgb(200, 238, 241)' : "#000";
           });
       })
+      .classed("custom-menu", true);
 
     nodeEnter.append('text')
       .classed('trial-id', true)
@@ -628,7 +631,7 @@ class HistoryGraph {
       //.attr('font-weight', 'bold')
       .attr("transform", (d: VisibleHistoryNode) => {
         return "translate(" + d.x + "," + d.y + ")";
-      }).text((d: VisibleHistoryNode) =>  d.gradient? "" : d.display);
+      }).text((d: VisibleHistoryNode) => d.gradient ? "" : d.display);
 
     nodeEnter.merge(nodes); // nodeUpdate
 
@@ -654,7 +657,7 @@ class HistoryGraph {
           dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
           normX = deltaX / dist,
           normY = deltaY / dist,
-          sourcePadding = this.config.radius -5,
+          sourcePadding = this.config.radius - 5,
           targetPadding = this.config.radius + (d.right ? 3 : -5),
           sourceX = d.source.x + this.config.radius + (sourcePadding * normX),
           sourceY = d.source.y + this.config.radius + (sourcePadding * normY),
@@ -697,5 +700,37 @@ class HistoryGraph {
 
   private _graphId(): string {
     return "history-graph-" + this.graphId;
+  }
+
+  private menuOnRightClick() {
+    let rightClickMenu = document.getElementById("context-menu");
+
+    // Set up an event handler for the documnt right click
+    document.addEventListener("contextmenu", function (event) {
+      //open right click menu
+      let target = event.target as Element;
+      if (target && target.classList.contains("custom-menu")) {
+        event.preventDefault();
+        if (rightClickMenu) {
+          rightClickMenu.setAttribute("selected-trial", target.parentElement?.getAttribute("attr-trialid")!);
+          rightClickMenu.setAttribute("selected-trial-simplified", target.getAttribute("title")!);
+          rightClickMenu.style.top = (event.pageY - 10).toString();
+          rightClickMenu.style.left = (event.pageX - 90).toString();
+          rightClickMenu.style.display = "block";
+          rightClickMenu.classList.add("show");
+        }
+
+
+      }
+
+    });
+
+    // close the menu
+    document.addEventListener("click", function (event) {
+      if (rightClickMenu) {
+        rightClickMenu.style.display = "none";
+        rightClickMenu.classList.remove("show");
+      }
+    });
   }
 }

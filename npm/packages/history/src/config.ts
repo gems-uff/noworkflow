@@ -13,6 +13,7 @@ interface HistoryConfig {
   customCtrlClick: (g: HistoryGraph, d: VisibleHistoryNode) => boolean;
   customSize: (g: HistoryGraph) => number[];
   customForm: (g: HistoryGraph, form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) => void;
+  customWindowTabCommand: (trialIdSimplified : string, trialId : string, command: string) => boolean;
 
   hintMessage: string;
 

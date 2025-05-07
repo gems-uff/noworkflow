@@ -6,11 +6,11 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import errno
 import os
 import sys
-import threading
-import webbrowser
+import tempfile
+import json
+import errno
 
 from ..persistence import persistence_config
 from .command import Command
@@ -35,9 +35,6 @@ class Kernel(Command):
         add_arg('--display-name', type=str, default=DISPLAY_NAME,
                 help="Specify the display name for the kernelspec."
                 " This is helpful when you have multiple kernels.")
-        add_arg('--profile', type=str,
-                help="Specify an IPython profile to load. "
-                "This can be used to create custom versions of the kernel.")
         add_arg('--prefix', type=str,
                 help="Specify an install prefix for the kernelspec."
                 " This is needed to install into a non-default location,"
@@ -50,12 +47,36 @@ class Kernel(Command):
 
     def execute(self, args):
         try:
-            from ipykernel import kernelspec
-            kernelspec.make_ipkernel_cmd.__defaults__ = ('noworkflow.kernel', None, None)
+            #from ipykernel import kernelspec
+            from jupyter_client.kernelspec import KernelSpecManager
+            #kernelspec.make_ipkernel_cmd.__defaults__ = ('noworkflow.kernel', None, None)
 
-            dest = kernelspec.install(
-                user=args.user, kernel_name=args.name, profile=args.profile,
-                prefix=args.prefix, display_name=args.display_name)
+            kernel_spec = {
+                "argv": [
+                    sys.executable,
+                    "-m",
+                    "noworkflow.kernel",
+                    "-f",
+                    "{connection_file}"
+                ],
+                "display_name": args.display_name,
+                "language": "python"
+            }
+
+            
+            with tempfile.TemporaryDirectory() as spec_dir:
+                with open(os.path.join(spec_dir, "kernel.json"), "w") as f:
+                    json.dump(kernel_spec, f, indent=2)
+
+            
+                ksm = KernelSpecManager()
+                ksm.install_kernel_spec(
+                    spec_dir,                     # source_dir
+                    kernel_name=args.name,
+                    prefix=args.prefix,
+                    user=args.user,              # Install to user directory
+                    replace=True            # Replace if it already exists
+                )
         except OSError as e:
             if e.errno == errno.EACCES:
                 print(e, file=sys.stderr)
@@ -64,4 +85,4 @@ class Kernel(Command):
                           file=sys.stderr)
                 sys.exit(1)
             raise
-        print("Installed kernelspec %s in %s" % (args.name, dest))
+        print("Installed kernelspec %s" % (args.name))

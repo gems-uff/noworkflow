@@ -29,6 +29,8 @@ from .structures import DependencyAware, Dependency, Parameter
 from .structures import MemberDependencyAware, CollectionDependencyAware
 from .structures import ConditionExceptions, WithContext
 
+NOW_UNSET = "<now_unset>"
+
 OPEN_MODES = {
     # All
     "O_RDONLY": "r",
@@ -83,7 +85,7 @@ class Collector(object):
         self.dependencies = self.metascript.dependencies_store
         self.members = self.metascript.members_store
         self.file_accesses = self.metascript.file_accesses_store
-        self.stage_tagss = self.metascript.stage_tags_store
+        self.stage_tags = self.metascript.stage_tags_store
 
         self.exceptions = self.metascript.exceptions_store
         # Partial save
@@ -756,7 +758,7 @@ class Collector(object):
         ))
         return self._item
 
-    def _item(self, activation, code_id, value, key):
+    def _item(self, activation, code_id, value, key, starred=False):
         """Capture item after"""
         # pylint: disable=no-self-use
         value_depa = activation.dependencies.pop()
@@ -980,7 +982,7 @@ class Collector(object):
         if name:
             activation.context[name] = eva
         return 1
-    
+
     def assign_access(self, activation, assign, target_info, depa, back):
         """Create dependencies for assignment to subscript"""
         code, value, access_depa, addr, value_dep, checkpoint = self._extract_assign_access(
@@ -1002,7 +1004,7 @@ class Collector(object):
         # pylint: disable=too-many-locals
         meta = self.metascript
         new_eva = None
-        val = "<now_unset>"
+        val = NOW_UNSET
         sub = []
         if len(dep.sub_dependencies) > index:
             new_dep = dep.sub_dependencies[index]
@@ -1015,7 +1017,7 @@ class Collector(object):
             new_eva = same.members.get(addr)
         if not new_eva:
             return clone_depa, None
-        if val == "<now_unset>":
+        if val is NOW_UNSET:
             val = value[index]
 
         new_depa = clone_depa.clone(extra_only=True)
@@ -1086,7 +1088,7 @@ class Collector(object):
             delta += self.assign(activation, assign.sub(val, adepa), subcomp, back + 1)
 
         if starred is None:
-            return
+            return delta
 
         star = subcomps[starred][0]
         rdelta = -1
@@ -1106,7 +1108,7 @@ class Collector(object):
             for index in range(delta, len(assign_value) + rdelta + 1)
         ]
 
-        self.assign(activation, assign.sub(new_value, depas), star, back + 1)
+        return self.assign(activation, assign.sub(new_value, depas), star, back + 1)
 
     def assign(self, activation, assign, target_expr, back=1):
         """Create dependencies"""
@@ -1354,9 +1356,12 @@ class Collector(object):
                     result = _call(*args, **kwargs)
                     if function_def.__name__ == "__enter__":
                         # ToDo: check the proper __enter__ assignment
-                        activation.assignments[-1].dependency.dependencies.extend(
-                            self.last_activation.dependencies[-1].dependencies
-                        )
+                        try:
+                            activation.assignments[-1].dependency.dependencies.extend(
+                                self.last_activation.dependencies[-1].dependencies
+                            )
+                        except AttributeError:
+                            pass
                     if is_augassign:
                         activation.dependencies.pop()
                     return result
@@ -1605,6 +1610,10 @@ class Collector(object):
                 if not param.is_vararg:
                     param.filled = True
                     last_unfilled += 1
+                if (((function_def.__name__ == "__enter__") or (function_def.__name__ == "__exit__")) 
+                    and (last_unfilled >= len(parameter_order))):
+                    break
+       
 
         if vararg:
             parameters[vararg[0]].filled = True

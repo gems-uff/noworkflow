@@ -37,22 +37,27 @@ class BaseActivationGraphWidget extends Widget {
     typeOptions.append("option")
       .attr("value", "tree")
       .attr("data-description", "Activation tree. Edges represent order of execution")
-      .text("Tree")
+      .text("Activation Tree")
 
     typeOptions.append("option")
       .attr("value", "no_match")
       .attr("data-description", "Activation tree presented as a Graph")
-      .text("No Match")
+      .text("Activation No Match")
 
     typeOptions.append("option")
       .attr("value", "exact_match")
       .attr("data-description", "Calls have counting independent from caller activations")
-      .text("Exact Match")
+      .text("Activation Exact Match")
 
     typeOptions.append("option")
       .attr("value", "namespace_match")
       .attr("data-description", "Calls are combined and a function may have more than one call workflow")
-      .text("Namespace Match")
+      .text("Activation Namespace Match")
+
+    typeOptions.append("option")
+    .attr("value", "definition_tree")
+    .attr("data-description", "Definition tree. Edges represent order of script definition")
+    .text("Definition Tree")
 
     typeOptions.property("value", "namespace_match")
   }
@@ -108,10 +113,10 @@ class BaseActivationGraphWidget extends Widget {
     return node;
   }
 
-  setGraph(data: TrialGraphData, config: any={}) {
+  setGraph(data: TrialGraphData, config: any={}, showDiffFunction?:any, nowVisPanel?: any) {
     let sub = this.node.getElementsByClassName("sub-content")[0];
     sub.innerHTML = "";
-    this.graph = new TrialGraph(this.cls, sub, config);
+    this.graph = new TrialGraph(this.cls, sub, config, showDiffFunction, nowVisPanel);
     this.graph.load(data, this.t1, this.t2);
   }
 
@@ -175,8 +180,8 @@ class BaseActivationGraphWidget extends Widget {
     }
   }
 
-  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData) {
-    this.setGraph(data, this.graphDefinition(selectedGraph, useCache, genDataflow, data));
+  configureGraph(selectedGraph: string = "namespace_match", useCache: boolean = true, genDataflow: boolean = true, data: TrialGraphData, showDiffFunction?:any, nowVisPanel?:any) {
+    this.setGraph(data, this.graphDefinition(selectedGraph, useCache, genDataflow, data), showDiffFunction, nowVisPanel);
   }
 
   protected onResize(msg: Widget.ResizeMessage): void {

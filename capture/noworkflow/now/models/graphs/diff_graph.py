@@ -235,7 +235,8 @@ class DiffGraph(Graph):
             0: self.tree,
             1: self.no_match,
             2: self.exact_match,
-            3: self.namespace_match
+            3: self.namespace_match,
+            4: self.definition_tree
         }
 
     @cache("tree")
@@ -268,6 +269,14 @@ class DiffGraph(Graph):
         return create_diff(
             self.diff.trial1.graph.namespace_match(),
             self.diff.trial2.graph.namespace_match()
+        )
+
+    @cache("definition_tree")
+    def definition_tree(self):
+        """Convert tree structure into dict tree structure based from code_components"""
+        return create_diff(
+            self.diff.trial1.graph.definition_tree(),
+            self.diff.trial2.graph.definition_tree()
         )
 
     def _ipython_display_(self):

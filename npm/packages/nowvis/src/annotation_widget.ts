@@ -1,6 +1,6 @@
 import {Widget} from '@lumino/widgets';
 import '../style/bootstrap.min.css';
-import { Message } from '@phosphor/messaging';
+import { Message } from '@lumino/messaging';
 import {
   select as d3_select,
   Selection as d3_Selection,

@@ -15,8 +15,10 @@ from future.utils import viewvalues
 
 from ...persistence.models.trial import Trial
 from ...persistence.models.tag import Tag
+from ...persistence.models.user import User
 from ...utils.cross_version import zip_longest
 from .structures import Graph
+from ...persistence import relational
 
 
 
@@ -117,15 +119,18 @@ class HistoryGraph(Graph):
         tmap = OrderedDict()
         id_s=1
         for trial in trial_gen:
+            user = relational.session.query(User.m).filter(User.m.id==trial.user_id).all()
+            trial_user = user[0].userLogin if (len(user)>0) else trial.user_id
             trial.display = str(trial.id)
             trial.level = 0
             trial.tooltip = """
                 <b>{0.script}</b><br>
                 Id: {0.id}<br>
                 {status}<br>
+                User: {user}<br>
                 Start: {0.start}<br>
                 Finish: {0.finish}
-                """.format(trial, status=trial.status.capitalize())
+                """.format(trial, status=trial.status.capitalize(), user=trial_user)
             if trial.finish:
                 trial.tooltip += """
                 <br>

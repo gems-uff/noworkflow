@@ -133,6 +133,10 @@ class Metascript(object):                                                       
         for key, value in viewitems(kwargs):
             setattr(self, key, value)
 
+        # Tags
+        self.tagged_var_dict = {}
+        self.dep_dict = {}
+
 
     @property
     def context(self):

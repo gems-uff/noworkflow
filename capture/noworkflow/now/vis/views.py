@@ -10,14 +10,16 @@ import os
 import io
 import json
 
-from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
+from flask import render_template, jsonify, request, send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup
-from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW
+from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent, Dependency
+from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
 from ..models.history import History
 from ..models.diff import Diff
+from ..models.ast.trial_ast import TrialAst
 from ..persistence import relational, content
+from ..cmd.cmd_diff import Diff as DiffCMD
 from ..ipython.dotmagic import DotDisplay
 
 import subprocess
@@ -25,6 +27,7 @@ from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
 from ..persistence import content
 import time
+import difflib
 from zipfile import ZipFile
 from io import BytesIO
 
@@ -115,10 +118,13 @@ def index(tid=None, graph_mode=None,expcode=None):
 @app.route("/experiments/<expCode>/collab/bundle", methods=['GET'])
 def getBundle(expCode):
     """Return bundle with trials from trials ids"""
-    trialsToExport=request.args.getlist("id")
-    bundle=export_bundle(trialsToExport)
-    resp=bundle.__json__()
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        trialsToExport=request.args.getlist("id")
+        bundle=export_bundle(trialsToExport)
+        resp=bundle.__json__()
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
 
 @app.route("/experiments", methods=['Post'])
 def createExperiment():
@@ -165,7 +171,12 @@ def getExtendedAnnotationContent(id):
     extention=annt.annotationFormat
     if(extention=="plainText"):
         extention="txt"
-    return send_file(IO(bytes(annt.annotation, 'utf-8')),mimetype='application/octet-stream',as_attachment=True,attachment_filename=id+"."+extention)
+    return send_file(
+        IO(bytes(annt.annotation, 'utf-8')),
+        mimetype='application/octet-stream',
+        as_attachment=True,
+        download_name=f"{id}.{extention}"
+    )
 
 
 @app.route("/experiments/<expCode>/extendedAnnotation", methods=['Post'])
@@ -218,50 +229,75 @@ def getUsers():
 @app.route("/experiments/<expCode>/collab/bundle", methods=['Post'])
 def postBundle(expCode):
     """Import Bundle of trials"""
-    data =  getRequestContent()
-    bundle=BundleLW()
-    bundle.from_json(data)
-    import_bundle(bundle, expCode)
-    return "",201
+    if experiment_in_db(expCode=expCode):
+        data =  getRequestContent()
+        bundle=BundleLW()
+        bundle.from_json(data)
+        import_bundle(bundle, expCode)
+        return "",201
+    
+    return return_json_error_invalid_experiment_id()
 
 @app.route("/experiments/<expCode>/collab/files", methods=['Post'])
 def receiveFiles(expCode):
     """Receive zipped files"""
-
-    file=request.files['files']
-    filedata=file.read()
     
-    zF=BytesIO(filedata)
-    zipObj = ZipFile(zF, 'r')
-    for fName in zipObj.namelist():
-        content.put(zipObj.read(fName), fName)
+    if experiment_in_db(expCode=expCode):
+        file=request.files['files']
+        filedata=file.read()
+        
+        zF=BytesIO(filedata)
+        zipObj = ZipFile(zF, 'r')
+        for fName in zipObj.namelist():
+            content.put(zipObj.read(fName), fName)
 
-    zipObj.close()
-    zF.close()
-    return "",201
+        zipObj.close()
+        zF.close()
+        return "",201
+    
+    return return_json_error_invalid_experiment_id()
 
+@app.route("/downloadFile/<fid>", methods=['Get'])
+@app.route("/experiments/<expCode>/downloadFile/<fid>", methods=['Get'])
 @app.route("/experiments/<expCode>/collab/files/<fid>", methods=['Get'])
-def downloadFile(expCode,fid):
+def downloadFile(fid, expCode=None):
     """Respond files hash"""
     resp=content.get(fid)
-    return send_file(IO(resp),mimetype='application/octet-stream')
+    return send_file(IO(resp), mimetype='application/octet-stream')
+
+def experiment_in_db(expCode):
+    return len(relational.session.query(Experiment.m).filter(Experiment.m.id == expCode).all()) == 1
 
 @app.route("/experiments/<expCode>/collab/files", methods=['Get'])
 def listFiles(expCode):
     """Respond files hash"""
-    resp=content.listAll()
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        resp=content.listAll()
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
 
 @app.route("/experiments/<expCode>/collab/trialsids")
 def trialsId(expCode):
     """Respond trials ids"""
-    resp=[t.id for t in Trial.list_from_experiment(expCode)]
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        resp=[t.id for t in Trial.list_from_experiment(expCode)]
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
+
+
 @app.route("/experiments/<expCode>/collab/usersids")
 def usersId(expCode):
     """Respond users ids"""
-    resp=[u.id for u in User.all()]
-    return jsonify(resp)
+    if experiment_in_db(expCode=expCode):
+        resp=[u.id for u in User.all()]
+        return jsonify(resp)
+    
+    return return_json_error_invalid_experiment_id()
+
+def return_json_error_invalid_experiment_id():
+    return jsonify("Invalid experiment ID"), 400
 
 @app.route("/experiments/<expId>/trials.json")
 @app.route("/trials.json")
@@ -283,7 +319,7 @@ def dataflow(tid):
     display = DotDisplay(trial.dot.export_text(), format="pdf")
     return send_file(
         io.BytesIO(display.display_result()["application/pdf"]),
-        attachment_filename='flow.pdf',
+        download_name='flow.pdf',
         mimetype="application/pdf"
     )
 
@@ -293,7 +329,7 @@ def get_script(tid, script_hash, name):
     """Returns the executed script"""
     return send_file(
         io.BytesIO(content.get(script_hash)),
-        attachment_filename=name + '.py'
+        download_name=f"{name}.py"
     )
 
 @app.route("/experiments/<expCode>/trials/files/<file_hash>/<file_ext>")
@@ -303,8 +339,14 @@ def get_file(file_hash, file_ext):
     name = file_hash + file_ext
     return send_file(
         io.BytesIO(content.get(file_hash)),
-        attachment_filename=name
+        download_name=name
     )
+    
+@app.route("/experiments/<expCode>/getFileContent/<file_hash>")
+@app.route("/getFileContent/<file_hash>")
+def get_file_content(file_hash, expCode=None):
+    """Returns a file's content"""
+    return jsonify(file_content=content.get(file_hash).decode(errors="ignore"))
 
 @app.route("/experiments/<expCode>/trials/<tid>/<graph_mode>/<cache>.json")
 @app.route("/trials/<tid>/<graph_mode>/<cache>.json")
@@ -437,6 +479,211 @@ def diff_graph(trial1, trial2, graph_mode, cache,expCode=None):
     _, diff_result, _ = getattr(graph, graph_mode)()
     return jsonify(**diff_result)
 
+@app.route("/definition/<trial_id>/ast.json")
+def definition_ast(trial_id):
+    """Respond trial definition as AST"""
+    trial = Trial(trial_id)
+    ast = TrialAst(trial)
+    return jsonify(ast.construct_ast_json(False))
+
+@app.route("/experiments/<expCode>/getAllTrialsIdsAndTags")
+@app.route("/getAllTrialsIdsAndTags")
+def get_all_trials_ids_and_tags():
+    return jsonify([{"id": trial.id, "tag": list(trial.tags)[0].name} for trial in Trial.all()])
+
+@app.route("/experiments/<expCode>/getFunctionActivations/<trial_id>")
+@app.route("/getFunctionActivations/<trial_id>")
+def get_function_activations_from_trial(trial_id):
+    function_activations = relational.session.query(Activation.m).filter(Activation.m.trial_id == trial_id).all()
+    function_activations_array = []
+    for activation in function_activations:
+        activation_dict = {"id": activation.id, "name": activation.name}
+        activation_dict["params"] = get_function_activation_arguments(trial_id, activation.id).json["function_params"]
+        if("This function has no params" in activation_dict["params"]): activation_dict["params"] = ""
+        function_activations_array.append(activation_dict)
+    return jsonify(function_activations=function_activations_array)
+
+@app.route("/experiments/<expCode>/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
+@app.route("/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
+def get_function_activation_arguments(trial_id, function_id, expCode=None):
+    function_arguments = relational.session.query(Dependency.m).filter(Dependency.m.trial_id==trial_id, Dependency.m.dependent_id==int(function_id), Dependency.m.type=="argument").all()
+    if len(function_arguments) < 1: return jsonify(function_params="This function has no params")
+    
+    function_params = [relational.session.query(Evaluation.m).filter(Evaluation.m.id==argument.dependency_id, Evaluation.m.trial_id==trial_id).all()[0].repr for argument in function_arguments]
+    return jsonify(function_params=function_params)
+
+@app.route("/experiments/<expCode>/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")
+@app.route("/commands/diff/<trial1_id>/<activation1_id>/<trial2_id>/<activation2_id>")
+def execute_command_diff_function_activation(trial1_id, activation1_id, trial2_id, activation2_id, expCode=None):
+    diff = Diff(trial1_id, trial2_id)
+    diffCMD = DiffCMD()
+    
+    functions_info = diffCMD.get_diff_function_info(trial1_id, trial2_id, activation1_id, activation2_id, diff.file_accesses, "all")    
+    differ = difflib.Differ()
+    trial1_variables_that_changed, trial2_variables_added, trial1_variables_removed = diffCMD.build_variables_lcs(functions_info["variables_function_trial1"], functions_info["variables_function_trial2"], differ)
+    
+    functions_info["file_accesses_added"] = list([{"name": obj.name, "mode": obj.mode , "buffering": obj.buffering, "content_hash_before": obj.content_hash_before, "content_hash_after": obj.content_hash_after, "timestamp": obj.timestamp, "stack": obj.stack} for obj in functions_info["file_accesses_added"]])
+    functions_info["file_accesses_removed"] = list([{"name": obj.name, "mode": obj.mode , "buffering": obj.buffering, "content_hash_before": obj.content_hash_before, "content_hash_after": obj.content_hash_after, "timestamp": obj.timestamp, "stack": obj.stack} for obj in functions_info["file_accesses_removed"]])
+    functions_info["file_accesses_replaced"] = list([{"name": obj[0].name, "content_hash_before_first_trial": obj[0].content_hash_before, "content_hash_before_second_trial": obj[1].content_hash_before, "content_hash_after_first_trial": obj[0].content_hash_after, "content_hash_after_second_trial": obj[1].content_hash_after, "timestamp_first_trial": obj[0].timestamp, "timestamp_second_trial": obj[1].timestamp, "checkpoint_first_trial": obj[0].checkpoint, "checkpoint_second_trial": obj[1].checkpoint} for obj in functions_info["file_accesses_replaced"]])
+    
+    functions_info["trial1_variables_that_changed"] = [('\n'.join(list(diff_var))) for diff_var in trial1_variables_that_changed]
+    functions_info["trial2_variables_added"] = [(str(var)+"\n") for var in trial2_variables_added]
+    functions_info["trial1_variables_removed"] = [(str(var)+"\n") for var in trial1_variables_removed]
+
+    return jsonify(functions_info), 200
+
+@app.route("/commands/restore/trial/<trial_id>/<skip_script>/<skip_modules>/<skip_files_access>")
+def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):
+    """Execute the command 'now restore' for a trial"""
+    restore_command = ("now restore " + trial_id).split()
+    if skip_script == "true": restore_command.append("-s")
+    if skip_modules == "true": restore_command.append("-l")
+    if skip_files_access == "true": restore_command.append("-a")
+    
+    sub_proccess_print = subprocess.run(restore_command, capture_output=True).stdout.decode("utf-8")
+    # os.system(restore_command)
+    return jsonify(terminal_text=sub_proccess_print), 200
+
+@app.route("/commands/restore/file/<trial_id>/<file_to_restore>/<file_id>/<path:output_path>")
+def execute_command_restore_file(trial_id, file_to_restore, file_id, output_path):
+    """Execute the command 'now restore' for a file"""
+    restore_command = ("now restore " + trial_id + " -f").split()
+    restore_command.append(file_to_restore)
+    if file_id != "false": 
+        restore_command.append("-i")
+        restore_command.append(file_id)
+    if output_path != "false":
+        restore_command.append("-t")
+        restore_command.append(output_path)
+    
+    sub_process = subprocess.run(restore_command, capture_output=True)
+    
+    erro_string = sub_process.stderr.decode("utf-8")    
+    if (len(erro_string) > 0): return jsonify(terminal_text="\""+ output_path +"\" No such file or directory"), 400
+
+    sub_proccess_print = sub_process.stdout.decode("utf-8")
+    status = 400 if ("Unable" in sub_proccess_print) or ("not" in sub_proccess_print) else 200
+    return jsonify(terminal_text=sub_proccess_print), status
+
+@app.route("/commands/prov/<trial_id>")
+def execute_command_prov(trial_id):
+    """Execute the command 'now prov'"""
+    prov_command = ("now prov " + trial_id).split()
+    sub_process_print = subprocess.run(prov_command, capture_output=True).stdout.decode("utf-8")
+    if "(" in sub_process_print: return jsonify(prov=sub_process_print), 200
+    return jsonify(prov="No prov to export"), 400
+    
+@app.route("/commands/export/<trial_id>/<rules>/<hide_timestamps>")
+def execute_command_export(trial_id, rules, hide_timestamps):
+    """Execute the command 'now export'"""
+    export_command = ("now export " + trial_id).split()
+    
+    if rules == "true": export_command.append("-r")
+    if hide_timestamps == "true": export_command.append("-t")
+    
+    sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
+    return jsonify(export=sub_process_print), 200
+
+@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<argument_hnc>/<argument_an>/<argument_hf>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
+def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argument_hnc, argument_an, argument_hf,file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
+    """Execute the command 'now export'"""
+    dataflow_command = ("now dataflow " + trial_id).split()
+    
+    if argument_T == "true": dataflow_command.append("-T")
+    if argument_t == "true": dataflow_command.append("-t")
+    if argument_H == "true": dataflow_command.append("-H")
+    if argument_hnc == "true": dataflow_command.append("-hnc")
+    if argument_an == "true": dataflow_command.append("-an")
+    if argument_hf == "true": dataflow_command.append("-hf")
+    if wdf == "true":
+        dataflow_command.append("-w")
+        dataflow_command.append(eid)
+    
+    appendDataflowCommandWithParameters(dataflow_command, "-a", file_accesses, 0, 4, 1)
+    appendDataflowCommandWithParameters(dataflow_command, "-e", evaluation, 0, 2, 1)
+    appendDataflowCommandWithParameters(dataflow_command, "-g", group, 0, 2, 0)
+    appendDataflowCommandWithParameters(dataflow_command, "-d", depth, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(dataflow_command, "--value-length", value_length, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(dataflow_command, "-n", name, 0, float('inf'), 55)
+
+    dataflow_command.append("-m")
+    if mode in ["simulation", "activation" , "dependency", "retrospective"]: dataflow_command.append(mode)
+    else: dataflow_command.append("prospective")
+    
+    sub_process_print = subprocess.run(dataflow_command, capture_output=True).stdout.decode("utf-8")
+    return jsonify(dataflow=sub_process_print), 200
+
+def appendDataflowCommandWithParameters(export_command, command, parameter_value, min_value, max_value, default_value):
+    export_command.append(command)
+    if int(parameter_value) > max_value or int(parameter_value) < min_value: export_command.append(str(default_value))
+    else: export_command.append(str(parameter_value))
+
+@app.route("/dataflow/evaluations/<trial_id>")
+def get_evaluations_from_trial(trial_id):
+    from sqlalchemy import or_
+    evaluations_query = relational.session.query(Evaluation.m.id, CodeComponent.m.name, CodeComponent.m.first_char_line).filter(
+            Evaluation.m.trial_id==trial_id, 
+            Evaluation.m.code_component_id == CodeComponent.m.id, 
+            CodeComponent.m.trial_id == trial_id).all()
+    return jsonify(evaluations=[{"evaluation_id": x[0], "name": x[1], "first_char_line": x[2]} for x in evaluations_query]), 200
+    
+@app.route("/collab/remotes/getall")
+def get_all_remotes():
+    return jsonify(remotes=[RemoteLW(x.id, x.server_url, x.name, x.used, x.hide).__json__() for x in Remote.all() if x.hide == False]), 200
+
+@app.route("/collab/remotes/add/<remote_name>/<path:remote_url>", methods=['Post'])
+def add_remote(remote_name, remote_url):
+    Remote.create(remote_url, remote_name)
+    return jsonify(terminal_text="Remote " + remote_name + " added successfully"), 200
+
+@app.route("/collab/remotes/edit/<remote_new_name>/<path:remote_url>")
+def edit_remote(remote_new_name, remote_url):
+    remote_url_list = relational.session.query(Remote.m).filter(Remote.m.server_url == remote_url).all()
+    if(len(remote_url) <= 0): return jsonify(text="Remote url " + remote_url  + " not found"), 400
+    remote = remote_url_list[0]
+    remote.name = remote_new_name
+    relational.session.commit()
+    return jsonify(terminal_text="Remote "+ remote_url + " name changed successfully to " + remote_new_name), 200
+
+@app.route("/collab/remotes/delete/<path:remote_url>")
+def delete_remote(remote_url):
+    remote_url_list = relational.session.query(Remote.m).filter(Remote.m.server_url == remote_url).all()
+    if(len(remote_url) <= 0): return jsonify(text="Remote url " + remote_url  + " not found"), 400
+    remote = remote_url_list[0]
+    if remote.used: remote.hide = True
+    else: relational.session.delete(remote)
+    relational.session.commit()
+    return jsonify(terminal_text="Remote "+ remote_url + " deleted successfully"), 200
+
+@app.route("/commands/<collab_command>/<path:serverUrl>")
+def execute_command_push_experiment(collab_command, serverUrl):
+    """Execute the command 'now push'"""
+    push_command = ("now " + collab_command + " --url " + serverUrl).split()
+    
+    sub_process = subprocess.run(push_command, capture_output=True)
+    if(len(sub_process.stderr)): return jsonify(terminal_text="Invalid server address"), 400
+    
+    sub_process_print = sub_process.stdout.decode("utf-8")
+    status_code = 200
+    if return_json_error_invalid_experiment_id()[0].json in sub_process_print: status_code = 400       
+    
+    return jsonify(terminal_text=sub_process_print), status_code
+
+@app.route("/files/<trial_id>")
+def get_files_belonging_to_trial(trial_id):   
+    files = []
+    for file in FileAccess.all():
+        if file.trial_id  == trial_id and file.name != "nul": files.append(file.name)
+    for trial in Trial.all():
+        if trial.id == trial_id: files.append(trial.script)
+    for module in Module.all():
+        if module.trial_id == trial_id:
+            module_path = module.path
+            if "/" in module_path: files.append(module_path.split("/")[-1])
+            elif "\\" in module_path: files.append(module_path.split("\\")[-1])
+            # files.append(module.path.split(os.sep)[-1])
+        
+    return jsonify(files=files), 200
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):

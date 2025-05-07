@@ -33,6 +33,7 @@ from .extendedAnnotation import ExtendedAnnotation
 from .group import Group
 from .user import User
 from .memberOfGroup import MemberOfGroup
+from .remote import Remote
 
 from . import relationships
 
@@ -42,7 +43,7 @@ ORDER = [
     CodeComponent, CodeBlock, Composition, Experiment,  # Definition
     Evaluation, Activation, Dependency, Member,  # Execution
     FileAccess, StageTags,  # Execution
-    Group, MemberOfGroup, User, ExtendedAnnotation # additional info
+    Group, MemberOfGroup, User, ExtendedAnnotation,  # additional info
 ]
 
 

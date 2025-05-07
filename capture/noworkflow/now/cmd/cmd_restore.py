@@ -121,7 +121,7 @@ class Restore(Command):
         FileAccess.store(accesses, partial)
         Argument.store(arguments, partial)
         metascript.definition.store_provenance()
-        
+
         Tag.create_automatic_tag(tid, None, None, None, metascript.trial.experiment_id, True) # Adds a X.0.0 tag to the backup trial
 
         print_msg("Backup Trial {} created".format(metascript.trial_id),
@@ -140,6 +140,9 @@ class Restore(Command):
         elif code_hash is not None:
             load_file = content.get(code_hash)
             try:
+                parent = os.path.dirname(path)
+                if parent:
+                    os.makedirs(parent, exist_ok=True)
                 with open(path, "wb") as fil:
                     fil.write(load_file)
                 msg = "File {}".format(path)

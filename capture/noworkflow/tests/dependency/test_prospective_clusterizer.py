@@ -17,7 +17,7 @@ from ...now.models.dependency_graph.filters import JoinedFilter
 from ...now.models.dependency_graph.attributes import EMPTY_ATTR, ACCESS_ATTR
 from ...now.models.dependency_graph.attributes import PROPAGATED_ATTR
 from ...now.models.dependency_graph.attributes import REFERENCE_ATTR
-from ...now.models.dependency_graph.clusterizer import ProspectiveClusterizer
+from ...now.models.dependency_graph.clusterizer import RetrospectiveClusterizer
 
 from ..collection_testcase import CollectionTestCase, cluster
 
@@ -38,7 +38,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         script = self.evaluation_node(name="script.py")
 
         trial = Trial()
-        clusterizer = ProspectiveClusterizer(trial).run()
+        clusterizer = RetrospectiveClusterizer(trial).run()
 
         self.assertEqual(
             (script, cluster(script), []),
@@ -56,7 +56,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_int = self.evaluation_node(name="int", mode='w')
 
         trial = Trial()
-        clusterizer = ProspectiveClusterizer(trial).run()
+        clusterizer = RetrospectiveClusterizer(trial).run()
 
         self.assertEqual(
             (script, cluster(script), [var_act, var_int]),
@@ -80,7 +80,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_x = self.evaluation_node(name="x")
 
         trial = Trial()
-        clusterizer = ProspectiveClusterizer(trial).run()
+        clusterizer = RetrospectiveClusterizer(trial).run()
 
         self.assertEqual(
             (script, cluster(script), [var_act, var_int, var_param, var_x]),
@@ -107,7 +107,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_y = self.evaluation_node(name="y")
 
         trial = Trial()
-        clusterizer = ProspectiveClusterizer(trial)
+        clusterizer = RetrospectiveClusterizer(trial)
         clusterizer.config.max_depth = 1
         clusterizer.run()
         self.assertEqual(
@@ -137,7 +137,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_x_w = self.evaluation_node(name="x", mode="w")
 
         trial = Trial()
-        clusterizer = ProspectiveClusterizer(trial)
+        clusterizer = RetrospectiveClusterizer(trial)
         clusterizer.run()
 
         self.assertEqual(
@@ -171,7 +171,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_x_w = self.evaluation_node(name="x", mode="w")
 
         trial = Trial()
-        clusterizer = ProspectiveClusterizer(trial)
+        clusterizer = RetrospectiveClusterizer(trial)
         clusterizer.run()
 
         self.assertEqual(
@@ -219,7 +219,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_acc1 = "a_{}".format(acc1.id)
         var_acc2 = "a_{}".format(acc2.id)
 
-        clusterizer = ProspectiveClusterizer(trial)
+        clusterizer = RetrospectiveClusterizer(trial)
         clusterizer.run()
 
         self.assertEqual(
@@ -278,7 +278,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_acc1 = "a_{}".format(acc1.id)
         var_acc2 = "a_{}".format(acc2.id)
 
-        clusterizer = ProspectiveClusterizer(trial)
+        clusterizer = RetrospectiveClusterizer(trial)
         clusterizer.config.max_depth = 2
         clusterizer.run()
 
@@ -332,7 +332,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_acc1 = "a_{}".format(acc1.id)
         var_acc2 = "a_{}".format(acc2.id)
 
-        clusterizer = ProspectiveClusterizer(trial)
+        clusterizer = RetrospectiveClusterizer(trial)
         clusterizer.config.max_depth = 1
         clusterizer.run()
 
@@ -374,7 +374,7 @@ class TestProspectiveClusterizer(CollectionTestCase):
         var_concat = self.evaluation_node(name="f('1') + '1'")
 
         trial = Trial()
-        clusterizer = ProspectiveClusterizer(trial)
+        clusterizer = RetrospectiveClusterizer(trial)
         clusterizer.config.rank_option = 1
         clusterizer.run()
 

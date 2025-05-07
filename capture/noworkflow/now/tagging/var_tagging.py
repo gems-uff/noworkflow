@@ -33,7 +33,6 @@ class NotebookQuerierOptions(QuerierOptions):
 
     """
 
-    global body_function_def
     dep_list = []
 
     def __init__(self, level, *args, **kwargs):
@@ -45,6 +44,7 @@ class NotebookQuerierOptions(QuerierOptions):
             **kwargs: Arbitrary keyword arguments.
 
         """
+        self.body_function_def = []
         QuerierOptions.__init__(
             self, *args, **kwargs
         )  # change it to super when integrating in the main code
@@ -60,7 +60,7 @@ class NotebookQuerierOptions(QuerierOptions):
         """
 
         if neighbor.evaluation.code_component.type == "function_def":
-            body_function_def.append(int(neighbor.evaluation.code_component.id))
+            self.body_function_def.append(int(neighbor.evaluation.code_component.id))
 
         arrow_list = ("argument", "<.__class__>", "item")
         type_list = (
@@ -88,7 +88,7 @@ class NotebookQuerierOptions(QuerierOptions):
                     ):
                         if neighbor_code_comp.container_id is not None:
                             if (
-                                neighbor_code_comp.container_id not in body_function_def
+                                neighbor_code_comp.container_id not in self.body_function_def
                                 or self.level
                             ):
                                 if (
@@ -115,16 +115,15 @@ class NotebookQuerierOptions(QuerierOptions):
             dict: A dictionary of backward dependencies.
 
         """
-
-        global dep_dict
-
         elements = [tuple_ for tuple_ in self.dep_list if tuple_[0] != tuple_[1]]
         filtered_list = [
             tup[0] for tup in zip(elements, [None] + elements) if tup[0] != tup[1]
         ]
-        dep_dict = {i[0]: i[1] for i in reversed(list(enumerate(filtered_list)))}
+        __noworkflow__.metascript.dep_dict = {
+            i[0]: i[1] for i in reversed(list(enumerate(filtered_list)))
+        }
 
-        return dep_dict
+        return __noworkflow__.metascript.dep_dict
 
     def global_back_deps(self) -> dict:
         """Create a readable list of backward dependencies from all steps in the current trial.
@@ -145,7 +144,7 @@ class NotebookQuerierOptions(QuerierOptions):
         return global_dep_dict
 
 
-def now_cell(tag):
+def now_tag_cell(tag):
     """
     Creates a tag in a notebook cell.
 
@@ -156,7 +155,7 @@ def now_cell(tag):
         None
 
     Example:
-        >>> now_cell("feature_engineering")
+        >>> now_tag_cell("feature_engineering")
     """
 
     trial_id = __noworkflow__.trial_id
@@ -165,10 +164,10 @@ def now_cell(tag):
     activation_id = __noworkflow__.last_activation.evaluation.activation_id
 
     # Writing it
-    __noworkflow__.stage_tagss.add(trial_id, name, tag_name, activation_id)
+    __noworkflow__.stage_tags.add(trial_id, name, tag_name, activation_id)
 
 
-def now_variable(var_name, value):
+def now_tag_variable(var_name, value):
     """
     Creates a tag for a variable and associates a value with it.
 
@@ -180,12 +179,12 @@ def now_variable(var_name, value):
         Any: The value associated with the variable.
 
     Example:
-        >>> x = now_variable("my_variable", 42)
+        >>> x = now_tag_variable("my_variable", 42)
         >>> x
         42
     """
 
-    global tagged_var_dict
+    tagged_var_dict = __noworkflow__.metascript.tagged_var_dict
 
     dependencies = __noworkflow__.last_activation.dependencies[-1]
     dep_evaluation = dependencies.dependencies[-1].evaluation
@@ -198,7 +197,7 @@ def now_variable(var_name, value):
 
     print(dep_evaluation)
     # Writing it	  # Writing it
-    __noworkflow__.stage_tagss.add(trial_id, name, value, activation_id)
+    __noworkflow__.stage_tags.add(trial_id, name, value, activation_id)
 
     return value
 
@@ -227,9 +226,7 @@ def backward_deps(
         {'1': ('variable1', value1), '2': ('function1', value2), ...}
     """
 
-    global tagged_var_dict
     global nbOptions
-    global dep_dict
 
     trial_id = __noworkflow__.trial_id
 

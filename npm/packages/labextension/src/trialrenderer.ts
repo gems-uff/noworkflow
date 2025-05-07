@@ -64,7 +64,7 @@ export class RenderedTrial extends Widget implements IRenderMime.IRenderer {
     }
   }
 
-  graph: TrialGraph;
+  graph: TrialGraph | undefined;
   div: HTMLDivElement;
   private _mimeType: string;
 }

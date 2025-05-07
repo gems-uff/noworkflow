@@ -84,29 +84,29 @@ df = pd.read_csv('dataset/creditcard.csv', encoding='utf-8')
 X = df.drop('Class', axis=1)
 y = df['Class']
 
-# Here we are stamping pca_components as a now_variable, and started 
+# Here we are stamping pca_components as a now_tag_variable, and started 
 # monitoring it
-pca_components = now_variable('pca_components', 3)
+pca_components = now_tag_variable('pca_components', 3)
 pca = PCA(n_components=pca_components)
 X_pca = pca.fit_transform(X)
 
 # Same here with random_seed
-random_seed = now_variable('random_seed', 42)
+random_seed = now_tag_variable('random_seed', 42)
 rus = RandomUnderSampler(random_state=random_seed)
 X_resampled, y_resampled = rus.fit_resample(X_pca, y)
 
 # Same with test_dim
-test_dim = now_variable('test_dim', 0.2)
+test_dim = now_tag_variable('test_dim', 0.2)
 X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=test_dim, random_state=random_seed)
 
 # Keeping the model type 
-rf = now_variable('model', RandomForestClassifier())
+rf = now_tag_variable('model', RandomForestClassifier())
 rf.fit(X_train, y_train)
 y_pred = rf.predict(X_test)
 
 # Finally, keeping the metrics roc and f1
-roc_metric = now_variable('roc_metric', roc_auc_score(y_test, y_pred))
-f1_metric = now_variable('f1_metric', f1_score(y_test, y_pred))
+roc_metric = now_tag_variable('roc_metric', roc_auc_score(y_test, y_pred))
+f1_metric = now_tag_variable('f1_metric', f1_score(y_test, y_pred))
 
 print("Random Forest - ROC = %f, F1 = %f" % (roc_metric, f1_metric))
 ```
