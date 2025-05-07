@@ -31,7 +31,7 @@ def simulation(dataA, dataB):
 
 
 def csvRead(f):
-    reader = csv.reader(open(f, 'rU'), delimiter=':')
+    reader = csv.reader(open(f, newline=''), delimiter=':')
     header = []
     data = []
     for row in reader:
@@ -67,7 +67,7 @@ def mplScatter(x,y):
     #kwargs['y'] = y
     #kwargs['x'] = x
     plt.scatter(x, y, s=20, c='b', marker='o', cmap=None, norm=None,
-                    vmin=None, vmax=None, alpha=None, linewidths=None, verts=None, **kwargs)
+                    vmin=None, vmax=None, alpha=None, linewidths=None, **kwargs)
     plt.xlabel('Temperature')
     plt.ylabel('Precipitation')
     plt.savefig("output.png")
