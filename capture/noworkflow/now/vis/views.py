@@ -10,7 +10,7 @@ import os
 import io
 import json
 
-from flask import render_template, jsonify, request, make_response, send_file,send_file, Response
+from flask import render_template, jsonify, request, send_file, Response
 from io import BytesIO as IO
 
 from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent, Dependency
@@ -171,7 +171,12 @@ def getExtendedAnnotationContent(id):
     extention=annt.annotationFormat
     if(extention=="plainText"):
         extention="txt"
-    return send_file(IO(bytes(annt.annotation, 'utf-8')),mimetype='application/octet-stream',as_attachment=True,attachment_filename=id+"."+extention)
+    return send_file(
+        IO(bytes(annt.annotation, 'utf-8')),
+        mimetype='application/octet-stream',
+        as_attachment=True,
+        download_name=f"{id}.{extention}"
+    )
 
 
 @app.route("/experiments/<expCode>/extendedAnnotation", methods=['Post'])
@@ -258,7 +263,7 @@ def receiveFiles(expCode):
 def downloadFile(fid, expCode=None):
     """Respond files hash"""
     resp=content.get(fid)
-    return send_file(IO(resp),mimetype='application/octet-stream')
+    return send_file(IO(resp), mimetype='application/octet-stream')
 
 def experiment_in_db(expCode):
     return len(relational.session.query(Experiment.m).filter(Experiment.m.id == expCode).all()) == 1
@@ -314,7 +319,7 @@ def dataflow(tid):
     display = DotDisplay(trial.dot.export_text(), format="pdf")
     return send_file(
         io.BytesIO(display.display_result()["application/pdf"]),
-        attachment_filename='flow.pdf',
+        download_name='flow.pdf',
         mimetype="application/pdf"
     )
 
@@ -324,7 +329,7 @@ def get_script(tid, script_hash, name):
     """Returns the executed script"""
     return send_file(
         io.BytesIO(content.get(script_hash)),
-        attachment_filename=name + '.py'
+        download_name=f"{name}.py"
     )
 
 @app.route("/experiments/<expCode>/trials/files/<file_hash>/<file_ext>")
@@ -334,7 +339,7 @@ def get_file(file_hash, file_ext):
     name = file_hash + file_ext
     return send_file(
         io.BytesIO(content.get(file_hash)),
-        attachment_filename=name
+        download_name=name
     )
     
 @app.route("/experiments/<expCode>/getFileContent/<file_hash>")
