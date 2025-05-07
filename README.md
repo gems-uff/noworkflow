@@ -78,7 +78,10 @@ $ git clone git@github.com:gems-uff/noworkflow.git
 ```
 If you don't have git, just download the ZIP source code from our repository and decompress the zip file into a folder. 
 
-Then, use Python to install it (the most up-to-date version of noWorkflow works with newer versions of Python. The current version was tested with Python 3.12.4. Go to the folder where you decompressed the files and then execute the following: 
+Then, use Python to install it (the most up-to-date version of noWorkflow works with newer versions of Python. The current version was tested with Python 3.12.4. 
+
+Go to the folder where you decompressed the files (or where you cloned the project) and then execute the following: 
+
 ```
 $ cd noworkflow-master/capture
 $ python setup.py install
