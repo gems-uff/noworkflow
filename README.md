@@ -55,9 +55,9 @@ Publications
 Quick Installation
 ------------------
 
-To install noWorkflow, you should follow these basic instructions:
+To install noWorkflow, you should follow these basic instructions. Note that these steps may install an older version of noWorkflow. To make sure you are using the newest stable version, please follow the "Alternative" installation procedure mentioned below. 
 
-First your Python version must be 3.7, then if you have pip, just run:
+Using Python 3.7, use pip to install noWorkflow:
 ```
 $ pip install noworkflow[all]
 ```
@@ -68,21 +68,23 @@ If you only want to install noWorkflow, PyPosAST, SQLAlchemy and python-future p
 ```
 $ pip install noworkflow
 ```
+Alternative: install the most up-to-date version of noWorkflow
+------------------
 
-If you do not have pip, but already have Git (to clone our repository) and Python:
+If you wish to install the most up-to-date stable version of noWorkflow, you can clone our repository using Git.
+
 ```
 $ git clone git@github.com:gems-uff/noworkflow.git
-$ cd noworkflow/capture
+```
+If you don't have git, just download the ZIP source code from our repository and decompress the zip file into a folder. 
+
+Then, use Python to install it (the most up-to-date version of noWorkflow works with newer versions of Python. The current version was tested with Python 3.12.4. Go to the folder where you decompressed the files and then execute the following: 
+```
+$ cd noworkflow-master/capture
 $ python setup.py install
+$ pip install -e ".[all]"
 ```
-This installs noWorkflow on your system. It will download the dependencies from PyPI
-
-If you want to install the dependencies to run the demos execute the following commands:
-
-```
-$ cd noworkflow
-$ pip install -e capture[demo]
-```
+This installs noWorkflow and its dependencies on your system. 
 
 Upgrade
 -------
