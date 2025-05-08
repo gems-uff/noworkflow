@@ -11,7 +11,7 @@ from ...now.models.dependency_graph.config import DependencyConfig
 from ...now.models.dependency_graph.clusterizer import Clusterizer
 from ...now.models.dependency_graph.clusterizer import ActivationClusterizer
 from ...now.models.dependency_graph.clusterizer import DependencyClusterizer
-from ...now.models.dependency_graph.clusterizer import RetrospectiveClusterizer
+from ...now.models.dependency_graph.clusterizer import ProspectiveClusterizer
 from ...now.models.dependency_graph.filters import FilterTypesOut
 from ...now.models.dependency_graph.filters import FilterAccessesOut
 from ...now.models.dependency_graph.filters import FilterExternalAccessesOut
@@ -166,6 +166,6 @@ class TestClusterizerConfig(CollectionTestCase):
         config = DependencyConfig()
         config.mode = "prospective"
         self.assertEqual(
-            RetrospectiveClusterizer,
+            ProspectiveClusterizer,
             type(config.clusterizer(TrialMock()))
         )

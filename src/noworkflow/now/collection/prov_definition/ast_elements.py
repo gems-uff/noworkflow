@@ -7,7 +7,7 @@
 import ast
 import sys
 
-from ...utils.cross_version import PY3, PY35
+from ...utils.cross_version import PY3, PY35, PY38
 
 
 def maybe(obj, attribute):
@@ -55,21 +55,21 @@ def context(node):
 def none():
     """Create None object"""
     if PY3:
-        return ast.NameConstant(None)
+        return ast_name_constant(None)
     return ast.Name("None", L())
 
 
 def true():
     """Create True object"""
     if PY3:
-        return ast.NameConstant(True)
+        return ast_name_constant(True)
     return ast.Name("True", L())
 
 
 def false():
     """Create False object"""
     if PY3:
-        return ast.NameConstant(False)
+        return ast_name_constant(False)
     return ast.Name("False", L())
 
 def true_false(condition):
@@ -173,6 +173,7 @@ def class_def(name, bases, body, decorators, keywords=None):
 
     return ast.ClassDef(*constructor)
 
+
 def try_def(body, handlers, orelse, finalbody, node=None):
     """Create try block"""
     # python 2 # pylint: disable=E1101
@@ -188,8 +189,28 @@ def try_def(body, handlers, orelse, finalbody, node=None):
             body = [ast.copy_location(result, node) if node else result]
         return body[-1]
 
+
 def raise_(exc, cause=None):
     if PY3:
         return ast.Raise(exc, cause)
     else:
         return ast.Raise(exc, None, cause)
+
+
+def ast_num(*args):
+    return ast.Constant(*args) if PY38 else ast.Num(*args)
+
+
+def ast_str(*args):
+    return ast.Constant(*args) if PY38 else ast.Str(*args)
+
+
+def ast_name_constant(*args):
+    return ast.Constant(*args) if PY38 else ast.NameConstant(*args)
+
+
+def is_ast_str(node):
+    if PY38:
+        return isinstance(node, ast.Constant) and isinstance(node.value, str)
+    else:
+        return isinstance(node, ast.Str)

@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import unittest
-from ..now.utils.cross_version import cross_compile
+from ..now.utils.cross_version import cross_compile, PY310
 
 
 class TestCrossVersion(unittest.TestCase):
@@ -20,9 +20,13 @@ class TestCrossVersion(unittest.TestCase):
         result = cross_compile(code, "name", "exec")
         args = [
             "co_argcount", "co_cellvars", "co_code", "co_consts",
-            "co_filename", "co_firstlineno", "co_freevars", "co_lnotab",
+            "co_filename", "co_firstlineno", "co_freevars", 
             "co_name", "co_names", "co_nlocals", "co_stacksize", "co_varnames"
         ]
+        if not PY310:
+            args.append("co_lnotab")
+        # ToDo: maybe check method co_lines on Python > 3.10
+
         for arg in args:
             self.assertEqual(getattr(expected, arg), getattr(result, arg))
         # On Python 2: result.co_flags != expected.co_flags

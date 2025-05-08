@@ -19,6 +19,7 @@ from .ast_elements import maybe, context, raise_, now_attribute
 from .ast_elements import L, S, none, call, param, true_false, true, false
 from .ast_elements import noworkflow, double_noworkflow
 from .ast_elements import activation, function_def, class_def, try_def
+from .ast_elements import ast_num, ast_str, is_ast_str
 
 from .transformer_expr import RewriteDependencies
 from . import dependency_constants as Dependency
@@ -57,16 +58,16 @@ class RewriteAST(ast.NodeTransformer):
     # data
 
     def _ast_num_from_component_id(self, citem, node, node_type, mode, fallback=True):
-        """Get ast.Num from code_component_id. Create component if it does not exist"""
+        """Get ast_num from code_component_id. Create component if it does not exist"""
         if hasattr(citem, 'code_component_id'):
-            return ast.Num(citem.code_component_id)
+            return ast_num(citem.code_component_id)
         elif fallback:
             name = pyposast.extract_code(self.lcode, node)
             id_ = self.create_code_component(
                 node, name, mode
             )
             self.create_composition(id_, *self.composition_edge)
-            return ast.Num(id_)
+            return ast_num(id_)
         else:
             raise Exception('Attribute code_component_id not found for {}'.format(citem))
 
@@ -191,7 +192,7 @@ class RewriteAST(ast.NodeTransformer):
             name = ast.Name('__name__', L())
             iscell = none()
             if self.cell is not None:
-                iscell = name = ast.Str(self.cell)
+                iscell = name = ast_str(self.cell)
             body = future_imports + [
                 ast_copy(ast.Assign(
                     [ast.Name('__now_result__', S())],
@@ -201,14 +202,14 @@ class RewriteAST(ast.NodeTransformer):
                     [ast.Name('__now_activation__', S())],
                     noworkflow(
                         'start_script',
-                        [name, ast.Num(self.container_id), iscell]
+                        [name, ast_num(self.container_id), iscell]
                     )
                 ), new_node),
                 ast_copy(try_def(old_body, [
                     ast_copy(ast.ExceptHandler(None, None, [
                         ast_copy(ast.Expr(noworkflow(
                             'collect_exception',
-                            [activation(), ast.Num(self.current_exc_handler)]
+                            [activation(), ast_num(self.current_exc_handler)]
                         )), new_node),
                         ast_copy(ast.Raise(), new_node)
                     ]), new_node)
@@ -286,7 +287,7 @@ class RewriteAST(ast.NodeTransformer):
         self.create_composition(id_, *self.composition_edge)
 
         return ast_copy(ast.Tuple([
-            ast.Str(arg.name), ast.Num(id_), ast.Name(arg.name, L())
+            ast_str(arg.name), ast_num(id_), ast.Name(arg.name, L())
         ], L()), arg)
 
     def process_default(self, default):
@@ -304,12 +305,12 @@ class RewriteAST(ast.NodeTransformer):
             [
                 activation(),
                 cnode_component_id,
-                ast.Num(self.current_exc_handler)
+                ast_num(self.current_exc_handler)
             ], [
                 activation(),
                 cnode_component_id,
                 cnode,
-                ast.Str(Dependency.ARGUMENT),
+                ast_str(Dependency.ARGUMENT),
             ]
         ), default)
 
@@ -324,12 +325,12 @@ class RewriteAST(ast.NodeTransformer):
             [
                 activation(),
                 cnode_component_id,
-                ast.Num(self.current_exc_handler)
+                ast_num(self.current_exc_handler)
             ], [
                 activation(),
                 cnode_component_id,
                 cnode,
-                ast.Str(Dependency.DECORATOR),
+                ast_str(Dependency.DECORATOR),
             ]
         ), decorator)
 
@@ -414,7 +415,7 @@ class RewriteAST(ast.NodeTransformer):
             new_node = copy(node)
             decorators = [ast_copy(noworkflow('collect_function_def', [
                 activation(),
-                ast.Str(new_node.name),
+                ast_str(new_node.name),
                 ast.Name("__now_original_" + node.name, L())
             ]), new_node)]
             for index, dec in enumerate(new_node.decorator_list):
@@ -427,13 +428,13 @@ class RewriteAST(ast.NodeTransformer):
                 'function_def',
                 [
                     activation(),
-                    ast.Num(self.container_id),
-                    ast.Num(old_exc_handler)
+                    ast_num(self.container_id),
+                    ast_num(old_exc_handler)
                 ], [
                     activation(),
-                    ast.Num(self.container_id),
+                    ast_num(self.container_id),
                     param_defaults,
-                    ast.Str(Dependency.DECORATE)
+                    ast_str(Dependency.DECORATE)
                 ]
             ), new_node))
 
@@ -498,7 +499,7 @@ class RewriteAST(ast.NodeTransformer):
             new_node = copy(node)
             decorators = [ast_copy(noworkflow('collect_class_def', [
                 activation(),
-                ast.Str(new_node.name)
+                ast_str(new_node.name)
             ]), new_node)]
             for index, dec in enumerate(new_node.decorator_list):
                 self.composition_edge = (class_id, Component.M_DECORATOR_LIST, index)
@@ -516,10 +517,10 @@ class RewriteAST(ast.NodeTransformer):
                 'class_def',
                 [
                     activation(),
-                    ast.Num(self.container_id),
-                    ast.Num(old_exc_handler)
+                    ast_num(self.container_id),
+                    ast_num(old_exc_handler)
                 ], [
-                    ast.Str(Dependency.DECORATE),
+                    ast_str(Dependency.DECORATE),
                     ast.Tuple(bases, L()),
                 ]
             ), new_node)
@@ -537,7 +538,7 @@ class RewriteAST(ast.NodeTransformer):
             has_doc = (
                 old_body
                 and isinstance(old_body[0], ast.Expr)
-                and isinstance(old_body[0].value, ast.Str)
+                and is_ast_str(old_body[0].value)
             ) 
             if has_doc:
                 docstring, old_body = old_body[:1], old_body[1:]
@@ -546,8 +547,8 @@ class RewriteAST(ast.NodeTransformer):
                     [ast.Name('__now_activation__', S())],
                     noworkflow('start_class', [
                         activation(), 
-                        ast.Str(new_node.name), 
-                        ast.Num(class_id)
+                        ast_str(new_node.name), 
+                        ast_num(class_id)
                     ])
                 ), new_node),
             ] + self.process_body(old_body, class_id)
@@ -576,7 +577,7 @@ class RewriteAST(ast.NodeTransformer):
                 'return_',
                 [
                     activation(),
-                    ast.Num(self.current_exc_handler),
+                    ast_num(self.current_exc_handler),
                 ], [
                     activation(),
                     self.capture(new_node.value, mode=Dependency.USE)
@@ -634,7 +635,7 @@ class RewriteAST(ast.NodeTransformer):
             new_targets,
             double_noworkflow(
                 'assign_value',
-                [activation(), ast.Num(self.current_exc_handler)],
+                [activation(), ast_num(self.current_exc_handler)],
                 [activation(), self.capture(node.value, mode=Dependency.ASSIGN)]
             )
         ), node))
@@ -695,7 +696,7 @@ class RewriteAST(ast.NodeTransformer):
                 'assign_value',
                 [
                     activation(),
-                    ast.Num(self.current_exc_handler),
+                    ast_num(self.current_exc_handler),
                     same
                 ], [
                     activation(),
@@ -754,7 +755,7 @@ class RewriteAST(ast.NodeTransformer):
             node.annotation,
             double_noworkflow(
                 'assign_value',
-                [activation(), ast.Num(self.current_exc_handler)],
+                [activation(), ast_num(self.current_exc_handler)],
                 [activation(), self.capture(node.value, mode=mode)]
             ),
             node.simple
@@ -791,7 +792,7 @@ class RewriteAST(ast.NodeTransformer):
             None, component_id, Component.S_NL, extra='bool({})'.format(node.nl)
         )
         if not new_node.nl:
-            keywords.append(ast.keyword('end', ast.Str('')))
+            keywords.append(ast.keyword('end', ast_str('')))
         if new_node.dest:
             self.composition_edge = (component_id, Component.S_DEST)
             keywords.append(ast.keyword(
@@ -807,9 +808,9 @@ class RewriteAST(ast.NodeTransformer):
             'py2_print',
             [
                 activation(),
-                ast.Num(component_id),
-                ast.Num(self.current_exc_handler),
-                ast.Str(Dependency.DEPENDENCY)
+                ast_num(component_id),
+                ast_num(self.current_exc_handler),
+                ast_str(Dependency.DEPENDENCY)
             ],
             values,
             keywords=keywords
@@ -836,8 +837,8 @@ class RewriteAST(ast.NodeTransformer):
             'loop',
             [
                 activation(),
-                ast.Num(new_node.target.code_component_id),
-                ast.Num(self.current_exc_handler)
+                ast_num(new_node.target.code_component_id),
+                ast_num(self.current_exc_handler)
             ], [
                 activation(),
                 self.capture(new_node.iter, mode=Dependency.DEPENDENCY)
@@ -898,7 +899,7 @@ class RewriteAST(ast.NodeTransformer):
                     'condition',
                     [
                         activation(),
-                        ast.Num(self.current_exc_handler)
+                        ast_num(self.current_exc_handler)
                     ], [
                         activation(),
                         self.capture(new_node.test, mode=Dependency.CONDITION)
@@ -913,14 +914,14 @@ class RewriteAST(ast.NodeTransformer):
             return ast_copy(try_def([
                 ast_copy(ast.Expr(noworkflow(
                     'prepare_while',
-                    [activation(), ast.Num(self.current_exc_handler)]
+                    [activation(), ast_num(self.current_exc_handler)]
                 )), new_node),
                 new_node
             ], [
                 ast_copy(ast.ExceptHandler(None, None, [
                     ast_copy(ast.Expr(noworkflow(
                         'collect_exception',
-                        [activation(), ast.Num(self.current_exc_handler)]
+                        [activation(), ast_num(self.current_exc_handler)]
                     )), new_node),
                     ast_copy(ast.Raise(), new_node)
                 ]), new_node)
@@ -965,11 +966,11 @@ class RewriteAST(ast.NodeTransformer):
             self.create_composition(if_id, *self.composition_edge)
             subscript = ast.Subscript(
                 now_attribute('condition_exceptions'),
-                ast.Index(ast.Num(exc_id)), L()
+                ast.Index(ast_num(exc_id)), L()
             )
             else_subscript = ast.Subscript(
                 now_attribute('condition_exceptions'),
-                ast.Index(ast.Num(exc_id + 1)), L()
+                ast.Index(ast_num(exc_id + 1)), L()
             )
             handlers.append(ast_copy(ast.ExceptHandler(
                 subscript, None,
@@ -1000,7 +1001,7 @@ class RewriteAST(ast.NodeTransformer):
                     'condition',
                     [
                         activation(),
-                        ast.Num(self.current_exc_handler)
+                        ast_num(self.current_exc_handler)
                     ], [
                         activation(),
                         self.capture(ifnod.test, mode=Dependency.CONDITION)
@@ -1030,12 +1031,12 @@ class RewriteAST(ast.NodeTransformer):
         rewriter = RewriteDependencies(self, mode=Dependency.DEPENDENCY)
         node.context_expr = ast_copy(double_noworkflow('withitem', [
             activation(),
-            ast.Num(component_id),
-            ast.Num(self.current_exc_handler)
+            ast_num(component_id),
+            ast_num(self.current_exc_handler)
         ], [
             activation(),
-            ast.Num(component_id),
-            ast.Num(internal_handler),
+            ast_num(component_id),
+            ast_num(internal_handler),
             true_false(bool(node.optional_vars)),
             rewriter.visit(node.context_expr),
         ]), node.context_expr)
@@ -1228,15 +1229,15 @@ class RewriteAST(ast.NodeTransformer):
         new_node.body = [
             ast_copy(ast.Expr(noworkflow(
                 'collect_exception',
-                [activation(), ast.Num(internal_handler)]
+                [activation(), ast_num(internal_handler)]
             )), new_node),
             ast_copy(ast.Expr(noworkflow(
                 'exception',
                 [
                     activation(),
-                    ast.Num(component_id),
-                    ast.Num(internal_handler),
-                    ast.Str(name),
+                    ast_num(component_id),
+                    ast_num(internal_handler),
+                    ast_str(name),
                     ast.Name(name, L()),
                 ]
             )), new_node)
@@ -1305,9 +1306,9 @@ class RewriteAST(ast.NodeTransformer):
             'py2_exec',
             [
                 activation(),
-                ast.Num(component_id),
-                ast.Num(self.current_exc_handler),
-                ast.Str(Dependency.DEPENDENCY)
+                ast_num(component_id),
+                ast_num(self.current_exc_handler),
+                ast_str(Dependency.DEPENDENCY)
             ], [
                 rewriter._call_arg(new_node.body, False),
                 key('globals', new_node.globals),
@@ -1343,11 +1344,11 @@ class RewriteAST(ast.NodeTransformer):
             'expression',
             [
                 activation(),
-                ast.Num(expr_id),
-                ast.Num(self.current_exc_handler),
+                ast_num(expr_id),
+                ast_num(self.current_exc_handler),
             ], [
                 activation(),
-                ast.Num(expr_id),
+                ast_num(expr_id),
                 cnode,
             ],
         ), new_node.value)
@@ -1368,8 +1369,8 @@ class RewriteAST(ast.NodeTransformer):
                 'collect_break_continue_pass',
                 [
                     activation(),
-                    ast.Num(pass_id),
-                    ast.Num(self.current_exc_handler),
+                    ast_num(pass_id),
+                    ast_num(self.current_exc_handler),
                 ]
             )),node)
 
@@ -1390,8 +1391,8 @@ class RewriteAST(ast.NodeTransformer):
                         'collect_break_continue_pass',
                             [
                                 activation(),
-                                ast.Num(break_id),
-                                ast.Num(self.current_exc_handler),
+                                ast_num(break_id),
+                                ast_num(self.current_exc_handler),
                             ]
                     )), stmt))
         new_body.append(stmt)
@@ -1413,8 +1414,8 @@ class RewriteAST(ast.NodeTransformer):
                         'collect_break_continue_pass',
                             [
                                 activation(),
-                                ast.Num(continue_id),
-                                ast.Num(self.current_exc_handler),
+                                ast_num(continue_id),
+                                ast_num(self.current_exc_handler),
                             ]
                     )), stmt))
         new_body.append(stmt)
