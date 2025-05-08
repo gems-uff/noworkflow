@@ -62,6 +62,9 @@ noworkflow = [
     "now/vis/templates/**/*"
 ]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
 
 [tool.setuptools.dynamic]
 version = {file = "src/noworkflow/resources/version.txt"}
