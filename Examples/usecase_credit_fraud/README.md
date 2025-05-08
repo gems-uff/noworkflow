@@ -48,7 +48,7 @@ pip install -r ./Examples/usecase_credit_fraud/requirements.txt
 Install the noWorkflow:
 ```bash
 # install the noWorkflow
-pip install -e capture[demo]
+pip install -e .[demo]
 pip install jupyter==1.0.0
 jupyter nbextension install --py --sys-prefix noworkflow
 jupyter nbextension enable noworkflow --py --sys-prefix

@@ -57,7 +57,7 @@ Quick Installation
 
 To install noWorkflow, you should follow these basic instructions. Note that these steps may install an older version of noWorkflow. To make sure you are using the newest stable version, please follow the "Alternative" installation procedure mentioned below. 
 
-Using Python 3.7, use pip to install noWorkflow:
+Using Python 3.8, use pip to install noWorkflow:
 ```
 $ pip install noworkflow[all]
 ```
@@ -83,7 +83,7 @@ Then, use Python to install it (the most up-to-date version of noWorkflow works 
 Go to the folder where you decompressed the files (or where you cloned the project) and then execute the following: 
 
 ```
-$ cd noworkflow-master/capture
+$ cd noworkflow-master
 $ python setup.py install
 $ pip install -e ".[all]"
 ```
