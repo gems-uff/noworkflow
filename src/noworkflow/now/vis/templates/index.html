@@ -1,0 +1,15 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Graph</title>
+  <link rel="stylesheet" href="/font-awesome-4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+  <input type="hidden" id="experimentsIn" name="experimentsIn" value='{{ experiments|tojson }}''>
+  <input type="hidden" id="selectedExperiment" name="selectedExperiment" value='{{ selectedExperiment }}''>
+  <input type="hidden" id="server" name="server" value='{{ server }}''>
+  <div id="graphflash">
+  </div>
+  <script src="/dist/bundle.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+>ERASE_ALL
+>LOAD step1
+$now run simulation.py data1.dat data2.dat
+$now run simulation_complete.py
+>LOAD step2
+$now run simulation.py data1.dat data2.dat
+$now restore 1
+$now run simulation.py data2.dat data1.dat
+>LOAD step3
+$now restore 3
+$now run simulation.py data1.dat data2.dat
+>LOAD step3
+$now run simulation.py data1.dat data2.dat
+$now run simulation_complete.py
+>LOAD step1
+$now run simulation.py data1.dat data2.dat

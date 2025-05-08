@@ -9,7 +9,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "es6",
-    "outDir": "../../../capture/noworkflow/now/vis/static/dist/",
+    "outDir": "../../../src/noworkflow/now/vis/static/dist/",
     "types": []
   },
   "include": ["src/*"]

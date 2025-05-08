@@ -3,9 +3,9 @@
   "name": "@noworkflow/nowvis",
   "version": "0.1.1",
   "description": "noWorkflow - Visualization Tool",
-  "main": "../../../capture/noworkflow/now/vis/static/dist/bundle.js",
+  "main": "../../../src/noworkflow/now/vis/static/dist/bundle.js",
   "files": [
-    "../../../capture/noworkflow/now/vis/static/dist/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
+    "../../../src/noworkflow/now/vis/static/dist/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
     "style/*.css"
   ],
   "dependencies": {
@@ -52,7 +52,7 @@
   "scripts": {
     "build": "webpack",
     "watch": "webpack --watch",
-    "clean": "rimraf ../../../capture/noworkflow/now/vis/static/dist/",
+    "clean": "rimraf ../../../src/noworkflow/now/vis/static/dist/",
     "prepublish": "npm run build"
   },
   "repository": {
@@ -72,6 +72,6 @@
   },
   "homepage": "http://gems-uff.github.io/noworkflow",
   "outputs": [
-    "../../../capture/noworkflow/now/vis/static/dist/"
+    "../../../src/noworkflow/now/vis/static/dist/"
   ]
 }

@@ -1,0 +1,2 @@
+>ERASE_ALL
+>LOAD step1
