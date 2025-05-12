@@ -50,8 +50,8 @@ Publications
 * PIMENTEL, J. F.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; [Fine-grained Provenance Collection over Scripts Through Program Slicing](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016b.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
 * PIMENTEL, J. F.; DEY, S.; MCPHILLIPS, T.; BELHAJJAME, K.; KOOP, D.; MURTA, L. G. P.; BRAGANHOLO, V.; LUDÄSCHER B.; [Yin & Yang: Demonstrating Complementary Provenance from noWorkflow & YesWorkflow](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016c.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
 * PIMENTEL, J. F.; MURTA, L. G. P.; BRAGANHOLO, V.; FREIRE, J.; [noWorkflow: a Tool for Collecting, Analyzing, and Managing Provenance from Python Scripts](https://github.com/gems-uff/noworkflow/raw/master/docs/vldb2017.pdf). In: International Conference on Very Large Data Bases (VLDB), 2017, Munich, Germany.
-* PONTES, V.: [Reducing the Storage Overhead of the noWorkflow Content Database by using Git](https://github.com/gems-uff/noworkflow/raw/master/docs/tcc_vynivius.pdf) Final undergraduate Project, Sistemas de Informação, Universidade Federal Fluminense, 2018.
-* [OLIVEIRA, E.; Enabling Collaboration in Scientific Experiments. Masters Dissertation, Universidade Federal Fluminense, 2022.](/docs/MSc_Eduardo_Jandre.pdf)
+* PONTES, V.: [Reducing the Storage Overhead of the noWorkflow Content Database by using Git](https://github.com/gems-uff/noworkflow/raw/master/docs/tcc_vynivius.pdf). Final undergraduate Project, Sistemas de Informação, Universidade Federal Fluminense, 2018.
+* [OLIVEIRA, E.; Enabling Collaboration in Scientific Experiments. Masters Dissertation, Universidade Federal Fluminense, 2022.](/docs/Disserta__o___Eduardo_Jandre.pdf)
 
 Quick Installation
 ------------------
