@@ -117,10 +117,10 @@ class DiffInfoWidget extends Widget {
     } else {
       main.append("h3")
         .classed("hash dbefore", true)
-        .text(trial1.code_hash || "");
+        .text(trial.code_hash[0] || "");
       main.append("h3")
         .classed("hash dafter", true)
-        .text(trial2.code_hash || "");
+        .text(trial.code_hash[1] || "");
     }
     this.info(main, "id", "Id", trial1.id, trial2.id);
     this.info(main, "script", "Script", trial1.script, trial2.script);
