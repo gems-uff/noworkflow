@@ -1,0 +1,42 @@
+.trial-toolbar {
+    margin: 5px;
+    float: left;
+    overflow: none;
+    width: 375px;
+    height: 30px;
+    z-index: 3;
+    position: absolute;
+}
+
+.trial-toolbar input {
+    height: 30px;
+}
+
+.trial-toolbar input[type=checkbox] {
+    display: none
+}
+
+.trial-toolbar label, .trial-toolbar a {
+    margin-right: 8px;
+    margin-top: 8px;
+}
+
+.trial-toolbar input[type=checkbox] + label {
+    display:inline-block;
+    color: black;
+    cursor: pointer;
+}
+
+.trial-toolbar input[type=checkbox]:checked + label {
+    color: blue;
+}
+
+.trial-toolbar a.toollink,
+.trial-toolbar a.toollink:link,
+.trial-toolbar a.toollink:visited {
+  color: black;
+}
+
+.trial-toolbar a.toollink:active  {
+  color: blue;
+}

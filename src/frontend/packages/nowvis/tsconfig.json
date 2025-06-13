@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "sourceMap":  true,
+    "declaration": true,
+    "noImplicitAny": true,
+    "noEmitOnError": true,
+    "noUnusedLocals": true,
+    "strictNullChecks": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es6",
+    "outDir": "../../../noworkflow/now/vis/static/dist/",
+    "types": []
+  },
+  "include": ["src/*"]
+}

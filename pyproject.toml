@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "noworkflow"
+# dynamically loaded version; see below
+dynamic = ["version", "readme"]
+description = "Supporting infrastructure to run scientific experiments without a scientific workflow management system."
+authors = [
+    {name = "Joao Pimentel", email = "jpimentel@ic.uff.br"},
+    {name = "Leonardo Murta", email = "leomurta@ic.uff.br"},
+    {name = "Vanessa Braganholo", email = "vanessa@ic.uff.br"},
+    {name = "Juliana Freire", email = "juliana.freire@nyu.edu"},
+    {name = "Arthur Paiva", email = "arthur.paiva@id.uff.br"},
+    {name = "Other collaborators"},
+]
+license = "MIT"
+keywords = ["scientific", "experiments", "provenance", "python"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "pyposast",
+    "apted",
+    "future",
+    "SQLAlchemy>=1.4.29,<=1.4.47",
+    "parameterized",
+    "requests",
+    "ipykernel",
+    "zipp==3.15",
+    "importlib-metadata==6.4.1",
+    "typing-extensions>=4.5.0,<5"
+]
+
+[project.optional-dependencies]
+demo = ["flask", "matplotlib", "numpy", "cython"]
+notebook = ["pyposast", "ipython", "jupyter"]
+all = [
+    "pyposast", "ipython", "jupyter", "flask", "pyswip-alt",
+    "matplotlib", "numpy", "cython", "graphviz"
+]
+
+[project.scripts]
+now = "noworkflow:main"
+
+[project.urls]
+Homepage = "https://gems-uff.github.io/noworkflow/"
+Repository = "https://github.com/gems-uff/noworkflow.git"
+Issues = "https://github.com/gems-uff/noworkflow/issues"
+
+
+[tool.setuptools.package-data]
+noworkflow = [
+    "resources/**/*",
+    "now/vis/static/**/*",
+    "now/vis/templates/**/*"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.setuptools.dynamic]
+version = {file = "src/noworkflow/resources/version.txt"}
+readme = {file = "README.md", content-type = "text/markdown"}

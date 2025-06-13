@@ -1,0 +1,44 @@
+.history-toolbar {
+    float: left;
+    overflow: none;
+    z-index: 3;
+    position: absolute;
+}
+
+.history-toolbar .buttons {
+    height: 30px;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.history-toolbar .buttons > input {
+    height: 30px;
+}
+
+.history-toolbar .buttons > input[type=checkbox] {
+    display: none
+}
+
+.history-toolbar .buttons > label, .history-toolbar > div > a {
+    margin: 8px 8px 8px 0;
+}
+
+.history-toolbar .buttons > input[type=checkbox] + label {
+    display:inline-block;
+    color: black;
+    cursor: pointer;
+}
+
+.history-toolbar .buttons > input[type=checkbox]:checked + label {
+    color: blue;
+}
+
+.history-toolbar .buttons > a.toollink,
+.history-toolbar .buttons > a.toollink:link,
+.history-toolbar .buttons > a.toollink:visited {
+    color: black;
+}
+
+.history-toolbar .buttons > a.toollink:active  {
+    color: blue;
+}

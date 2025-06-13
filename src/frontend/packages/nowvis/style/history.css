@@ -1,0 +1,36 @@
+@import '~@noworkflow/history/style/index.css';
+
+.history-content,
+.history-content .sub-content,
+.history-content .sub-content > div {
+    overflow: hidden !important;
+}
+
+.history-content .filter .internal {
+    margin: 4px 8px;
+}
+
+.history-content .filter {
+}
+
+.history-content .filter input, .history-content .filter label {
+    vertical-align: top;
+    display: inline-block;
+}
+
+
+.history-content .graph-attr {
+	display: inline-block;
+	margin-right: 5px;
+}
+
+.history-content .graph-attr input, .history-content .graph-attr label {
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.history-content .select-style {
+    width: 170px;
+    margin-right: 5px;
+}
+

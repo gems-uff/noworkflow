@@ -1,0 +1,71 @@
+# Copyright (c) 2016 Universidade Federal Fluminense (UFF)
+# Copyright (c) 2016 Polytechnic Institute of New York University.
+# This file is part of noWorkflow.
+# Please, consult the license terms in the LICENSE file.
+"""Define data structures and data access functions"""
+from __future__ import (absolute_import, print_function,
+                        division, unicode_literals)
+
+from collections import OrderedDict, Counter, defaultdict
+
+
+class OrderedCounter(OrderedDict, Counter):
+    """OrderedDict with default value 0"""
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__,
+                           OrderedDict(self))
+
+    def __reduce__(self):
+        return self.__class__, (OrderedDict(self),)
+
+
+class HashableDict(dict):
+    """Hashable Dict that can be used on sets"""
+
+    def create(self, element):
+        """Create hashable element recursively"""
+        if isinstance(element, dict):
+            return self.__class__(element)
+        else:
+            return element
+
+    def key(self):
+        """Create tuple with elements"""
+        return tuple((k, self.create(self[k])) for k in sorted(self))
+
+    def __hash__(self):
+        return hash(self.key())
+
+    def __eq__(self, other):
+        return self.key() == other.key()
+
+
+class OrderedDefaultDict(OrderedDict):
+    """OrderedDefaultDict that works both on Python 2.7 and Python 3.6"""
+
+    def __init__(self, default_factory=None, *args, **kwargs):
+        super(OrderedDefaultDict, self).__init__(*args, **kwargs)
+        self.default_factory = default_factory
+
+    def __missing__(self, key):
+        self[key] = value = self.default_factory()
+        return value
+
+
+class DotDict(dict):
+    """Dict that can be accessed by attributes"""
+    def __getattr__(self, attr):
+        if attr in self:
+            return self[attr]
+        return dict.__getattr__(self, attr)
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
+class Singleton(type):
+
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]

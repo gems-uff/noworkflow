@@ -1,0 +1,77 @@
+{
+  "private": false,
+  "name": "@noworkflow/nowvis",
+  "version": "0.1.1",
+  "description": "noWorkflow - Visualization Tool",
+  "main": "../../../noworkflow/now/vis/static/dist/bundle.js",
+  "files": [
+    "../../../noworkflow/now/vis/static/dist/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
+    "style/*.css"
+  ],
+  "dependencies": {
+    "@lumino/default-theme": "^2.1.7",
+    "@lumino/widgets": "^2.5.0",
+    "@noworkflow/history": "0.0.11",
+    "@noworkflow/trial": "0.0.8",
+    "@noworkflow/utils": "0.0.9",
+    "buffer": "^6.0.3",
+    "child_process": "^1.0.2",
+    "crypto-browserify": "^3.12.0",
+    "d3": "^7.9.0",
+    "file-saver": "^2.0.5",
+    "fs": "^0.0.1-security",
+    "stream-browserify": "^3.0.0",
+    "@viz-js/viz": "^3.8.0",
+    "tau-prolog": "^0.3.4",
+    "svg-pan-zoom": "^3.6.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.10",
+    "@babel/preset-env": "^7.12.11",
+    "@babel/preset-typescript": "^7.12.7",
+    "@types/d3": "^7.4.3",
+    "@types/file-saver": "^2.0.1",
+    "babel-loader": "^9.1.3",
+    "css-loader": "^7.1.2",
+    "file-loader": "^6.2.0",
+    "os": "^0.1.2",
+    "path": "^0.12.7",
+    "rimraf": "^6.0.1",
+    "style-loader": "^4.0.0",
+    "typescript": "^5.5.4",
+    "vm-browserify": "^1.1.2",
+    "webpack": "^5.77.0",
+    "webpack-cli": "^5.0.1"
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env",
+      "@babel/preset-typescript"
+    ]
+  },
+  "scripts": {
+    "build": "webpack",
+    "watch": "webpack --watch",
+    "clean": "rimraf ../../../noworkflow/now/vis/static/dist/",
+    "prepublish": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gems-uff/noworkflow.git"
+  },
+  "author": "Joao Felipe Pimentel <joaofelipenp@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gems-uff/noworkflow/issues"
+  },
+  "browser": {
+    "fs": false,
+    "os": false,
+    "path": false,
+    "child_process": false
+  },
+  "homepage": "http://gems-uff.github.io/noworkflow",
+  "outputs": [
+    "../../../noworkflow/now/vis/static/dist/"
+  ]
+}
