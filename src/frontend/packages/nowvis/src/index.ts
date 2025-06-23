@@ -8,6 +8,7 @@ import {ProjectWidget} from './project_widget';
 import {GroupWidget} from './group_widget';
 import {HistoryWidget} from './graph/history_graph';
 import { AnnontationWidget } from './annotation_widget';
+import {DatabaseWidget} from './database_widget';
 //import { json } from '@noworkflow/utils';
 
 
@@ -28,6 +29,8 @@ function main(): void {
     var groupWidget = new GroupWidget();
     mainpanel.addMainWidget(projectWidget);
     mainpanel.addMainWidget(groupWidget);
+    var databaseWidget = new DatabaseWidget(mainpanel);
+    mainpanel.addMainWidget(databaseWidget);
   }
   else{
     var config = new ConfigWidget();
@@ -38,6 +41,8 @@ function main(): void {
     mainpanel.addMainWidget(history);
     mainpanel.addMainWidget(config);
     mainpanel.addMainWidget(annotationn);
+    var databaseWidget = new DatabaseWidget(mainpanel);
+    mainpanel.addMainWidget(databaseWidget);
     history.load();
   }  
   
