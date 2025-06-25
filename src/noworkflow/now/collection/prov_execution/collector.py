@@ -74,7 +74,10 @@ class Collector(object):
     # pylint: disable=too-many-public-methods
 
     def __init__(self, metascript):
-        self.metascript = weakref.proxy(metascript)
+        if isinstance(metascript, weakref.ProxyType):
+            self.metascript = metascript
+        else:
+            self.metascript = weakref.proxy(metascript)
         self.get_time = metascript.get_time
 
         self.trial_id = -1  # It should be updated

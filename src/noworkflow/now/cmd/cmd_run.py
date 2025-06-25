@@ -120,6 +120,9 @@ class Run(Command):
                 default=self.default_call_storage_frequency,
                 help="frequency (in calls) to save partial provenance")
         # ToDo: capture only activations
+        add_arg("-cg", "--coarse-granularity", action="store_true",
+                help="capture only activation-level provenance "
+                     "(activations, arguments, returns and file accesses)")
 
         # Other
         if not self.is_ipython:
