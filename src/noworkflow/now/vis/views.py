@@ -607,7 +607,7 @@ def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argume
     appendDataflowCommandWithParameters(dataflow_command, "-n", name, 0, float('inf'), 55)
 
     dataflow_command.append("-m")
-    if mode in ["simulation", "activation" , "dependency", "retrospective"]: dataflow_command.append(mode)
+    if mode in ["activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"]: dataflow_command.append(mode)
     else: dataflow_command.append("prospective")
     
     sub_process_print = subprocess.run(dataflow_command, capture_output=True).stdout.decode("utf-8")

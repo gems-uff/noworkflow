@@ -1394,11 +1394,11 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
           "(default: Does no align). With this option, all variables in a loop appear grouped, reducing the width of the graph. It may affect the graph legibility. The alignment is independent for each activation.",
           ["Does no align", "Aligns by line", "Aligns by line and column"]);
 
-        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 4, 3, "dataflowModeHelp",
-          "(default: retrospective). 'retrospective' presents only parameters, calls, and assignments to calls. 'prospective' is the same thing as retrospective, but it doesn't repeat calls when they're in the same line in a loop. 'simulation' presents the same things as retrospective plus variables. 'activation' presents only function activations. 'dependency' presents a graph with a single cluster, with all evaluations and activations",
-          ["simulation", "activation", "dependency", "retrospective", "prospective"]);
+        createFormSelectInput(form, "dataflowMode", "Graph mode", 0, 4, 1, "dataflowModeHelp",
+          "(default: coarseGrain). 'activation' presents only function activations and file accesses. Dependencies on the dataflow are clustered by depth(-d). 'coarseGrain' is the same as the activation dataflow, but with the addition of parameters and variable assignment of function activations. 'looplessCoarseGrain' is the same as the coarseGrain dataflow, but it doesn't repeat function activations when they're in the same line in a loop. 'fineGrain' is the same as the coarseGrain dataflow with the addition of variables, all user defined evaluations and data values. 'all' presents a dataflow with all evaluations and function activations. Dependencies on the dataflow are not clustered.",
+          ["activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"]);
 
-        createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity");
+        createFormNumberInput(form, "dataflowDepth", "Visualization depth", 0, 0, "dataflowDepthHelp", "(default: 0) 0 represents infinity. This parameter is ignored when the mode is \"all\"");
         createFormNumberInput(form, "dataflowValueLength", "Maximum length of values", 0, 0, "dataflowValueLengthHelp",
           "(default: 0). 0 indicates that values should be hidden.The values appear on the second line of node lables. E.g. if it is set to '10', it will show 'data.dat',  but it will transform 'data2.dat' in to 'da...dat' to respect the length restriction (note that '' is part of the value). Minimum displayable value: 5. Suggested: 55.");
         createFormNumberInput(form, "dataflowName", "Maximum length of names", 0, 55, "dataflowNameHelp",

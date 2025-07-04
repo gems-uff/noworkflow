@@ -46,7 +46,7 @@ class DependencyConfig(object):
         self.mode = "simulation"
 
     @classmethod
-    def create_arguments(cls, add_arg, mode="retrospective"):
+    def create_arguments(cls, add_arg, mode="coarseGrain"):
         """Create arguments
 
         Arguments:
@@ -79,7 +79,8 @@ class DependencyConfig(object):
                      "2 combines evaluation nodes by value")
         add_arg("-d", "--depth", type=int, default=0, metavar="D",
                 help="R|visualization depth (default: 0)\n"
-                     "0 represents infinity")
+                     "0 represents infinity\n"
+                     "this parameter is ignored when the mode is \"all\"")
         add_arg("-g", "--group", type=int, default=0, metavar="R",
                 help="R|align evalutions in the same column (default: 0)\n"
                      "0 does no align\n"
@@ -91,19 +92,23 @@ class DependencyConfig(object):
                      "The alignment is independent for each activation.\n")
         add_arg("-m", "--mode", type=str, default=mode,
                 choices=[
-                    "simulation", "activation", "dependency", "retrospective", "prospective"
+                    "activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"
                 ],
                 help=("R|Graph mode (default: {})\n"
-                      "'simulation' presents a dataflow graph with all\n"
-                      "relevant evaluations.\n"
-                      "'activation' presents only function activations.\n"
-                      "'dependency' presents a graph with a single cluster,\n"
-                      "with all evaluations and activations.\n"
-                      "'retrospective' presents only parameters, calls, and\n"
-                      "assignments to calls.\n"
-                      "'prospective' is the same thing as retrospective, but\n"
-                      "it doesn't repeat calls when they're in the same line\n"
-                      "in a loop"
+                      "'activation' presents only function activations \n"
+                      "and file accesses. Dependencies on the dataflow \n"
+                      "are clustered by depth(-d).\n"
+                       "'coarseGrain' is the same as the activation dataflow\n,"
+                       "but with the addition of parameters and variable\n"
+                       "assignment of function activations.\n"
+                      "'looplessCoarseGrain' is the same as the coarseGrain\n"
+                      "dataflow, but it doesn't repeat function activations\n"
+                      "when they're in the same line in a loop.\n"
+                      "'fineGrain' is the same as the coarseGrain dataflow\n"
+                      "with the addition of variables, all user defined evaluations\n"
+                      "and data values.\n"
+                      "'all' presents a dataflow with all evaluations and\n"
+                      "function activations. Dependencies on the dataflow are not clustered."
                       .format(mode)))
         add_arg("-w", "--wdf", type=int, 
                 help="shows only one evaluation and the ones that derived it\n"
@@ -197,11 +202,11 @@ class DependencyConfig(object):
         from .clusterizer import RetrospectiveClusterizer
         from .clusterizer import ProspectiveClusterizer
         cls = {
-            "simulation": Clusterizer,
+            "fineGrain": Clusterizer,
             "activation": ActivationClusterizer,
-            "dependency": DependencyClusterizer,
-            "retrospective": RetrospectiveClusterizer,
-            "prospective": ProspectiveClusterizer
+            "all": DependencyClusterizer,
+            "coarseGrain": RetrospectiveClusterizer,
+            "looplessCoarseGrain": ProspectiveClusterizer
         }[self.mode]
         return cls(
             trial,
