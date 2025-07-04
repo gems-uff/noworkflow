@@ -690,3 +690,131 @@ def shutdown_session(exception=None):
     """Shutdown SQLAlchemy session"""
     # pylint: disable=unused-argument
     relational.session.remove()
+
+@app.route("/db/tables")
+def db_tables():
+    conn = relational.engine.raw_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        tables = [row[0] for row in cursor.fetchall()]
+        
+        foreign_keys = {}
+        for table in tables:
+            cursor.execute(f"PRAGMA foreign_key_list('{table}')")
+            table_fks = []
+            for fk in cursor.fetchall():
+                table_fks.append({
+                    "id": fk[0],
+                    "seq": fk[1],
+                    "table": fk[2],
+                    "from": fk[3],
+                    "to": fk[4],
+                    "on_update": fk[5],
+                    "on_delete": fk[6],
+                    "match": fk[7]
+                })
+            if table_fks:
+                foreign_keys[table] = table_fks
+        
+        return jsonify({
+            "tables": tables,
+            "foreign_keys": foreign_keys
+        })
+    finally:
+        conn.close()
+
+@app.route("/db/table/<table_name>")
+def db_table_info(table_name):
+    conn = relational.engine.raw_connection()
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute(f"PRAGMA table_info('{table_name}')")
+        columns = []
+        for col in cursor.fetchall():
+            columns.append({
+                "name": col[1],
+                "type": col[2],
+                "notnull": bool(col[3]),
+                "default": col[4],
+                "pk": bool(col[5]),
+            })
+        
+        cursor.execute(f"PRAGMA foreign_key_list('{table_name}')")
+        foreign_keys = []
+        for fk in cursor.fetchall():
+            foreign_keys.append({
+                "id": fk[0],
+                "seq": fk[1],
+                "table": fk[2],
+                "from": fk[3],
+                "to": fk[4],
+                "on_update": fk[5],
+                "on_delete": fk[6],
+                "match": fk[7]
+            })
+        
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        all_tables = [row[0] for row in cursor.fetchall()]
+        
+        referenced_by = []
+        for table in [t for t in all_tables if t != table_name]:
+            cursor.execute(f"PRAGMA foreign_key_list('{table}')")
+            for fk in [fk for fk in cursor.fetchall() if fk[2] == table_name]:
+                referenced_by.append({
+                    "referencing_table": table,
+                    "referencing_column": fk[3],
+                    "referenced_column": fk[4],
+                    "on_update": fk[5],
+                    "on_delete": fk[6]
+                })
+
+        return jsonify({
+            "columns": columns,
+            "foreign_keys": foreign_keys,
+            "referenced_by": referenced_by
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    finally:
+        conn.close()
+
+@app.route("/db/query", methods=["POST"])
+def db_query():
+    data = request.get_json()
+    query = data.get("query", "")
+    if not query.strip():
+        return jsonify({"error": "No query provided"}), 400
+    
+    transaction_keywords = ['BEGIN', 'COMMIT', 'ROLLBACK', 'SAVEPOINT', 'RELEASE', 'TRANSACTION']
+    query_upper = query.upper()
+    for keyword in transaction_keywords:
+        if keyword in query_upper:
+            return jsonify({"error": f"Query contains dangeroous keyword '{keyword}' which is not allowed"}), 400
+    
+    conn = None
+    cursor = None
+    try:
+        conn = relational.engine.raw_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("BEGIN TRANSACTION")
+        
+        cursor.execute(query)
+        if cursor.description:
+            columns = [desc[0] for desc in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            result = {"columns": columns, "rows": rows}
+        else:
+            result = {"columns": [], "rows": []}
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    finally:
+        if cursor:
+            cursor.execute("ROLLBACK") # Always rollback 
+
+        if conn:
+            conn.close()

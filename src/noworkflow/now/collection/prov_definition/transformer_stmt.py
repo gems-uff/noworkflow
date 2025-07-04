@@ -41,6 +41,7 @@ class RewriteAST(ast.NodeTransformer):
         self.code_components = metascript.code_components_store
         self.code_blocks = metascript.code_blocks_store
         self.compositions = metascript.compositions_store
+        self.coarse_granularity = metascript.coarse_granularity
         self.path = path
         self.nested = [os.path.join(
             os.path.dirname(self.path),
@@ -613,6 +614,13 @@ class RewriteAST(ast.NodeTransformer):
             <now>.assign(<act>, __now__assign__, target(g[h]))
             <now>.assign(<act>, __now__assign__, target(i.j))
         """
+        if self.coarse_granularity:
+            # If coarse granularity is enabled, avoid detailed dependency tracking and directly process the node.
+            new_node = ast_copy(copy(node), node)
+            new_node.value = self.capture(node.value, mode=Dependency.ASSIGN)
+            new_body.append(new_node)
+            return
+
         assign_id = self.create_ast_component(node, Component.ASSIGN)
         self.create_composition(assign_id, *self.composition_edge)
 
@@ -666,6 +674,14 @@ class RewriteAST(ast.NodeTransformer):
 
             <now>.assign(<act>, __now__assign__, target(a))
         """
+        if self.coarse_granularity and isinstance(node.target, ast.Name):
+            # If coarse granularity is enabled, avoid detailed dependency tracking and directly process the node.
+            new_node = ast_copy(copy(node), node)
+            mode = '{}_assign'.format(type(node.op).__name__.lower())
+            new_node.value = self.capture(node.value, mode=mode)
+            new_body.append(new_node)
+            return
+
         assign_id = self.create_ast_component(node, Component.AUG_ASSIGN)
         self.create_composition(assign_id, *self.composition_edge)
 
@@ -727,6 +743,13 @@ class RewriteAST(ast.NodeTransformer):
 
             <now>.assign(<act>, __now__assign__, target(a))
         """
+        if self.coarse_granularity and isinstance(node.target, ast.Name) and node.value:
+            # If coarse granularity is enabled, avoid detailed dependency tracking and directly process the node.
+            new_node = ast_copy(copy(node), node)
+            new_node.value = self.capture(node.value, mode=Dependency.ASSIGN)
+            new_body.append(new_node)
+            return
+
         assign_id = self.create_ast_component(node, Component.ANN_ASSIGN)
         self.create_composition(assign_id, *self.composition_edge)
         self.create_composition(
@@ -825,6 +848,14 @@ class RewriteAST(ast.NodeTransformer):
             for i in <now>.loop(<act>, #, <exc>)(<act>, |lis|):
                 <now>.assign(<act>, <now>.pop_assign(<act>), target(i))
         """
+        if self.coarse_granularity:
+            new_node = copy(node)
+            new_node.iter = self.capture(new_node.iter, mode=Dependency.DEPENDENCY)
+            new_node.body = self.process_body(new_node.body, self.container_id)
+            new_node.orelse = self.process_body(
+                new_node.orelse, self.container_id, attr=Component.M_ORELSE
+            )
+            return new_node
         # pylint: disable=invalid-name
         # ToDo: capture orelse dependencies
         for_id = self.create_ast_component(node, Component.FOR)
@@ -887,6 +918,14 @@ class RewriteAST(ast.NodeTransformer):
             finally:
                 <now>.remove_condition(<act>)
         """
+        if self.coarse_granularity:
+            new_node = copy(node)
+            new_node.test = self.capture(new_node.test, mode=Dependency.CONDITION)
+            new_node.body = self.process_body(new_node.body, self.container_id)
+            new_node.orelse = self.process_body(
+                new_node.orelse, self.container_id, attr=Component.M_ORELSE
+            )
+            return new_node
         # pylint: disable=invalid-name
         while_id = self.create_ast_component(node, Component.WHILE)
         self.create_composition(while_id, *self.composition_edge)

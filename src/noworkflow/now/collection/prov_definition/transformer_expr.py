@@ -34,6 +34,23 @@ class RewriteDependencies(ast.NodeTransformer):
         self.rewriter = rewriter
         self.mode = mode
 
+    def visit(self, node):
+        """Visit nodes.
+        If coarse_granularity is True, instrument only calls (to collect function activations).
+        calls generic_visit for other nodes (skipping their collection), which will visit all of its children.
+        """
+        if self.rewriter.coarse_granularity:
+            if isinstance(node, (ast.Call, ast.Lambda)):
+                original_coarse = self.rewriter.coarse_granularity
+                self.rewriter.coarse_granularity = False
+                try:
+                    return super(RewriteDependencies, self).visit(node)
+                finally:
+                    self.rewriter.coarse_granularity = original_coarse
+            else:
+                return super(RewriteDependencies, self).generic_visit(node)
+        return super(RewriteDependencies, self).visit(node)
+
     def _dict_itemize(self, key, value, func='dict', extra=None):
         extra = extra or []
         last_line, last_col = key.last_line, key.last_col
