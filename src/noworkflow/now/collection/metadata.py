@@ -107,6 +107,8 @@ class Metascript(object):                                                       
         self.depth = sys.getrecursionlimit()
         # Script context : ["main", "package", "all"]
         self._context = MAIN
+        # Should collect only coarse granularity provenance: bool
+        self.coarse_granularity = False
 
         # Save every X ms : int
         self.save_frequency = None
@@ -229,6 +231,7 @@ class Metascript(object):                                                       
         self.meta = args.meta
 
         self.bypass_modules = args.bypass_modules
+        self.coarse_granularity = args.coarse_granularity
 
         self.depth = args.depth
         self.save_frequency = args.save_frequency
