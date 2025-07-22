@@ -27,21 +27,21 @@ function main(): void {
   if(server=="True"){
     var projectWidget = new ProjectWidget(experiments);
     var groupWidget = new GroupWidget();
+    var databaseWidget = new DatabaseWidget(mainpanel);
+
     mainpanel.addMainWidget(projectWidget);
     mainpanel.addMainWidget(groupWidget);
-    var databaseWidget = new DatabaseWidget(mainpanel);
     mainpanel.addMainWidget(databaseWidget);
   }
   else{
     var config = new ConfigWidget();
     var annotationn = new AnnontationWidget(selectedExp);
     var history = new HistoryWidget(config, "History", "History", selectedExp,annotationn);
- 
+    var databaseWidget = new DatabaseWidget(mainpanel);
 
     mainpanel.addMainWidget(history);
     mainpanel.addMainWidget(config);
     mainpanel.addMainWidget(annotationn);
-    var databaseWidget = new DatabaseWidget(mainpanel);
     mainpanel.addMainWidget(databaseWidget);
     history.load();
   }  
