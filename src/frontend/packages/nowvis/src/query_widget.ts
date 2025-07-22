@@ -2,6 +2,12 @@ import { Widget } from '@lumino/widgets';
 import { select as d3_select, Selection as d3_Selection, BaseType as d3_BaseType } from 'd3-selection';
 import { NowVisPanel } from './nowpanel';
 import { TableInfoWidget } from './database_widget';
+import 'ace-builds/src-noconflict/ace';
+import 'ace-builds/src-noconflict/theme-textmate';
+import 'ace-builds/src-noconflict/mode-sql';
+import 'ace-builds/src-noconflict/ext-language_tools';
+
+declare global { interface Window { ace: any; } }
 
 export class DatabaseTabWidget extends Widget {}
 
@@ -167,20 +173,22 @@ export class QueryWidget extends Widget {
   private panel: NowVisPanel;
   private static count: number = 0;
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  private aceEditor: any; // Ace editor instance
+  private tableNames: string[] = [];
   
-  constructor(panel: NowVisPanel) {
+  constructor(panel: NowVisPanel, tableNames?: string[]) {
     super();
     this.panel = panel;
     this.title.label = 'SQL Query';
     this.title.caption = 'SQL Query Interface';
     this.title.closable = true;
-    
     this.d3node = d3_select(this.node);
-    
+    this.tableNames = tableNames || [];
+
     this.createQueryInterface();
   }
 
-  private createQueryInterface(): void {
+  private async createQueryInterface(): Promise<void> {
     const container = this.d3node.append('div')
       .style('display', 'flex')
       .style('flex-direction', 'column')
@@ -221,25 +229,50 @@ export class QueryWidget extends Widget {
       .style('font-weight', 'bold')
       .style('margin-bottom', '0.5rem');
     
-    queryContainer.append('textarea')
+    queryContainer.append('div')
       .attr('id', 'query-input')
       .style('width', '100%')
-      .style('font-family', 'monospace')
-      .style('font-size', '1em')
-      .style('padding', '0.75rem')
-      .style('border', '1px solid #ccc')
-      .style('border-radius', '4px')
-      .style('resize', 'vertical')
       .style('min-height', '140px')
       .style('max-height', '30vh')
-      .style('flex', '1')
-      .attr('placeholder', 'SELECT * FROM table_name;')
-      .on('keydown', (event: KeyboardEvent) => {
-        if (event.ctrlKey && event.key === 'Enter') {
-          event.preventDefault();
-          this.executeQuery();
-        }
+      .style('border', '1px solid #ccc')
+      .style('border-radius', '4px')
+      .style('font-size', '1em')
+      .style('flex', '1');
+
+    setTimeout(() => {
+      // @ts-ignore
+      this.aceEditor = window.ace.edit('query-input');
+      this.aceEditor.setTheme('ace/theme/textmate');
+      this.aceEditor.session.setMode('ace/mode/sql');
+      this.aceEditor.setOptions({
+        fontSize: '1em',
+        minLines: 6,
+        showPrintMargin: false,
+        enableBasicAutocompletion: true,
+        enableLiveAutocompletion: true,
       });
+      this.aceEditor.commands.addCommand({
+        name: 'executeQuery',
+        bindKey: { win: 'Ctrl-Enter', mac: 'Command-Enter' },
+        exec: () => this.executeQuery()
+      });
+
+      if (window.ace && window.ace.require) {
+        const langTools = window.ace.require('ace/ext/language_tools');
+        const tableCompleter = {
+          getCompletions: (editor: any, session: any, pos: any, prefix: string, callback: any) => {
+            if (!prefix) { callback(null, []); return; }
+            const completions = (this.tableNames || []).map((name: string) => ({
+              caption: name,
+              value: name,
+              meta: 'table'
+            }));
+            callback(null, completions);
+          }
+        };
+        langTools.addCompleter(tableCompleter);
+      }
+    }, 0);
     
     queryContainer.append('div')
       .attr('id', 'query-status')
@@ -257,15 +290,15 @@ export class QueryWidget extends Widget {
   }
 
   private async executeQuery(): Promise<void> {
-    const queryInput = this.node.querySelector('#query-input') as HTMLTextAreaElement;
+    // const queryInput = this.node.querySelector('#query-input') as HTMLTextAreaElement;
     const statusArea = this.node.querySelector('#query-status') as HTMLDivElement;
     
-    if (!queryInput || !statusArea) return;
+    const sql = this.aceEditor ? this.aceEditor.getValue().trim() : '';
+    
+    if (!statusArea) return;
     
     statusArea.innerHTML = '';
     statusArea.style.color = '#333';
-    
-    const sql = queryInput.value.trim();
     
     if (!sql) {
       statusArea.textContent = 'Please enter a SQL query.';

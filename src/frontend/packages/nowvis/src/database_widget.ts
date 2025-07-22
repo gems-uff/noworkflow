@@ -567,7 +567,7 @@ export class DatabaseWidget extends Widget {
           .attr('stroke-width', 4)
           .attr('stroke', '#333');
         
-        // Highlight connected links
+        // Highlight links
         link
           .attr('stroke-opacity', (linkData: any) => {
             const sourceId = typeof linkData.source === 'object' ? linkData.source.id : linkData.source;
@@ -585,7 +585,7 @@ export class DatabaseWidget extends Widget {
             return (sourceId === d.id || targetId === d.id) ? '#87CEEB' : '#999';
           });
         
-        // Highlight connected nodes
+        // Highlight nodes
         node.select('circle')
           .attr('stroke-width', (nodeData: any) => {
             const isConnected = link.data().some((linkData: any) => {
@@ -740,7 +740,8 @@ export class DatabaseWidget extends Widget {
   }
 
   private openNewQueryTab(): void {
-    const queryWidget = new QueryWidget(this.panel);
+    const tableNames = this.graphData.nodes.map(n => n.name);
+    const queryWidget = new QueryWidget(this.panel, tableNames);
     
     this.panel.addInfoWidget(queryWidget, { ref: this, mode: 'tab-after' });
     
