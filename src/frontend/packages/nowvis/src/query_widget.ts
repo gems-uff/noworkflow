@@ -175,8 +175,10 @@ export class QueryWidget extends Widget {
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   private aceEditor: any; // Ace editor instance
   private tableNames: string[] = [];
+  private editorId: string;
+  private initialQuery: string;
   
-  constructor(panel: NowVisPanel, tableNames?: string[]) {
+  constructor(panel: NowVisPanel, tableNames?: string[], initialQuery?: string) {
     super();
     this.panel = panel;
     this.title.label = 'SQL Query';
@@ -184,6 +186,8 @@ export class QueryWidget extends Widget {
     this.title.closable = true;
     this.d3node = d3_select(this.node);
     this.tableNames = tableNames || [];
+    this.editorId = `query-input-${++QueryWidget.count}`;
+    this.initialQuery = initialQuery || '';
 
     this.createQueryInterface();
   }
@@ -224,13 +228,13 @@ export class QueryWidget extends Widget {
       .style('flex', '1 1 0');
     
     queryContainer.append('label')
-      .attr('for', 'query-input')
+      .attr('for', this.editorId)
       .text('Enter your SQL query:')
       .style('font-weight', 'bold')
       .style('margin-bottom', '0.5rem');
     
     queryContainer.append('div')
-      .attr('id', 'query-input')
+      .attr('id', this.editorId)
       .style('width', '100%')
       .style('min-height', '140px')
       .style('max-height', '30vh')
@@ -241,7 +245,7 @@ export class QueryWidget extends Widget {
 
     setTimeout(() => {
       // @ts-ignore
-      this.aceEditor = window.ace.edit('query-input');
+      this.aceEditor = window.ace.edit(this.editorId);
       this.aceEditor.setTheme('ace/theme/textmate');
       this.aceEditor.session.setMode('ace/mode/sql');
       this.aceEditor.setOptions({
@@ -272,10 +276,16 @@ export class QueryWidget extends Widget {
         };
         langTools.addCompleter(tableCompleter);
       }
+
+      if (this.initialQuery) {
+        this.aceEditor.setValue(this.initialQuery);
+        this.aceEditor.clearSelection();
+        this.aceEditor.focus();
+      }
     }, 0);
     
     queryContainer.append('div')
-      .attr('id', 'query-status')
+      .attr('id', `query-status-${this.editorId}`)
       .style('min-height', '60px')
       .style('padding', '0.5rem')
       .style('border', '1px solid #e0e0e0')
@@ -291,7 +301,7 @@ export class QueryWidget extends Widget {
 
   private async executeQuery(): Promise<void> {
     // const queryInput = this.node.querySelector('#query-input') as HTMLTextAreaElement;
-    const statusArea = this.node.querySelector('#query-status') as HTMLDivElement;
+    const statusArea = this.node.querySelector(`#query-status-${this.editorId}`) as HTMLDivElement;
     
     const sql = this.aceEditor ? this.aceEditor.getValue().trim() : '';
     
@@ -358,14 +368,18 @@ export class QueryWidget extends Widget {
   }
 
   protected onResize(msg: Widget.ResizeMessage): void {
-    const textarea = this.node.querySelector('#query-input') as HTMLTextAreaElement;
-    if (!textarea) 
+    const editorElement = this.node.querySelector(`#${this.editorId}`) as HTMLElement;
+    if (!editorElement) 
       return;
 
     const rect = this.node.getBoundingClientRect();
     const availableHeight = rect.height - 200;
     const minHeight = 250;
     const maxHeight = Math.max(minHeight, availableHeight * 0.6);
-    textarea.style.height = `${maxHeight}px`;
+    editorElement.style.height = `${maxHeight}px`;
+    
+    if (this.aceEditor) {
+      this.aceEditor.resize();
+    }
   }
 } 
