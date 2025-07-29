@@ -175,10 +175,11 @@ export class QueryWidget extends Widget {
   d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   private aceEditor: any; // Ace editor instance
   private tableNames: string[] = [];
+  private columnNames: string[] = [];
   private editorId: string;
   private initialQuery: string;
   
-  constructor(panel: NowVisPanel, tableNames?: string[], initialQuery?: string) {
+  constructor(panel: NowVisPanel, tableNames?: string[], columnNames?: string[], initialQuery?: string) {
     super();
     this.panel = panel;
     this.title.label = 'SQL Query';
@@ -186,6 +187,7 @@ export class QueryWidget extends Widget {
     this.title.closable = true;
     this.d3node = d3_select(this.node);
     this.tableNames = tableNames || [];
+    this.columnNames = columnNames || [];
     this.editorId = `query-input-${++QueryWidget.count}`;
     this.initialQuery = initialQuery || '';
 
@@ -266,11 +268,21 @@ export class QueryWidget extends Widget {
         const tableCompleter = {
           getCompletions: (editor: any, session: any, pos: any, prefix: string, callback: any) => {
             if (!prefix) { callback(null, []); return; }
-            const completions = (this.tableNames || []).map((name: string) => ({
-              caption: name,
-              value: name,
-              meta: 'table'
+            
+            const completions = this.tableNames.map((name: string) => ({
+                caption: name,
+                value: name,
+                meta: 'table'
             }));
+            
+            this.columnNames.forEach((name: string) => {
+              completions.push({
+                caption: name,
+                value: name,
+                meta: 'column'
+              });
+            });
+            
             callback(null, completions);
           }
         };

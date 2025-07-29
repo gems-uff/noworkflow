@@ -859,12 +859,31 @@ export class DatabaseWidget extends Widget {
     return initialQuery + joins.join('\n') + '\nLIMIT 100;';
   }
 
-  private openNewQueryTab(): void {
+  private async openNewQueryTab(): Promise<void> {
     const selectedTables = this.getSelectedTables();
     const tableNames = this.graphData.nodes.map(n => n.name);
     const initialQuery = this.getInitialQuery(selectedTables);
     
-    const queryWidget = new QueryWidget(this.panel, tableNames, initialQuery);
+    let columnNames: string[] = [];
+    if (selectedTables.length > 0) {
+      try {
+        const columnPromises = selectedTables.map(async (tableName) => {
+          const response = await fetch(`/db/table/${encodeURIComponent(tableName)}`);
+          if (response.ok) {
+            const details = await response.json();
+            return details.columns ? details.columns.map((col: any) => col.name) : [];
+          }
+          return [];
+        });
+        
+        const columnArrays = await Promise.all(columnPromises);
+        columnNames = [].concat(...columnArrays);
+      } catch (error) {
+        console.warn('Failed to fetch column names:', error);
+      }
+    }
+    
+    const queryWidget = new QueryWidget(this.panel, tableNames, columnNames, initialQuery);
     
     this.panel.addInfoWidget(queryWidget, { ref: this, mode: 'tab-after' });
     this.panel.activateWidget(queryWidget);
