@@ -3,7 +3,7 @@ import { Message } from '@lumino/messaging';
 import { select as d3_select, Selection as d3_Selection, BaseType as d3_BaseType } from 'd3-selection';
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
 import { scaleOrdinal } from 'd3-scale';
-import { schemeCategory10, schemeTableau10 } from 'd3-scale-chromatic';
+import { schemeTableau10 } from 'd3-scale-chromatic';
 import { drag } from 'd3-drag';
 import { NowVisPanel } from './nowpanel';
 import { QueryWidget, QueryResultWidget } from './query_widget';
@@ -11,6 +11,7 @@ import { QueryWidget, QueryResultWidget } from './query_widget';
 interface TableNode extends SimulationNodeDatum {
   id: string;
   name: string;
+  selected?: boolean;
 }
 
 interface TableLink extends SimulationLinkDatum<TableNode> {
@@ -92,7 +93,6 @@ export class TableInfoWidget extends DatabaseTabWidget {
         row.append('td').text(col.pk ? 'Yes' : '').style('font-size', '0.875rem');
       });
 
-      // Foreing keys
       if (details.foreign_keys && details.foreign_keys.length > 0) {
         contentContainer.append('h5')
           .text('Foreign Keys')
@@ -119,7 +119,6 @@ export class TableInfoWidget extends DatabaseTabWidget {
         };
       }
 
-      // Referenced by 
       if (details.referenced_by && details.referenced_by.length > 0) {
         contentContainer.append('h5')
           .text('Referenced By')
@@ -165,6 +164,7 @@ export class DatabaseWidget extends Widget {
   svg: d3_Selection<SVGSVGElement, {}, HTMLElement | null, any>;
   color: any;
   dataLoaded: boolean = false;
+  selectedNodes: Set<string> = new Set();
   
   constructor(panel: NowVisPanel) {
     super();
@@ -232,6 +232,13 @@ export class DatabaseWidget extends Widget {
       .on('click', () => this.openNewQueryTab())
       .html('<i class="fa fa-plus" style="margin-right:4px;"></i> New Query');
 
+    controlsContainer.append('button')
+      .attr('id', 'clear-selection-btn')
+      .classed('btn btn-outline-secondary', true)
+      .style('display', 'none')
+      .on('click', () => this.clearSelection())
+      .html('<i class="fa fa-times" style="margin-right:2px;"></i> Clear Selection');
+
     container.append('div')
       .attr('id', 'graph-container')
       .style('flex', '1')
@@ -296,6 +303,7 @@ export class DatabaseWidget extends Widget {
     }
 
     this.showLoadingState();
+    this.clearSelection();
 
     try {
       const response = await fetch('/db/tables');
@@ -493,7 +501,7 @@ export class DatabaseWidget extends Widget {
       .enter().append('g')
       .attr('class', 'node')
       .call((selection: any) => {
-        selection.on('click', (event: any, d: any) => this.openTableInfoTab(d.name));
+        selection.on('click', (event: any, d: any) => this.handleNodeClick(event, d));
       });
 
     node.append('circle')
@@ -513,7 +521,13 @@ export class DatabaseWidget extends Widget {
       .style('pointer-events', 'none');
 
     node.append('title')
-      .text((d: any) => `Table: ${d.name}\nClick to view details`);
+      .text((d: any) => `Table: ${d.name}\nClick to view details\nCtrl+Click to select (orange margin)`);
+
+    this.svg.on('click', (event: any) => {
+      if (event.target === this.svg.node()) {
+        this.clearSelection();
+      }
+    });
 
     this.createSimulation(width, height, false);
 
@@ -562,12 +576,14 @@ export class DatabaseWidget extends Widget {
     });
 
     node.call((selection: any) => {
+      const widget = this;
       selection.on('mouseover', function(event: any, d: any) {
-        d3_select(this).select('circle')
-          .attr('stroke-width', 4)
-          .attr('stroke', '#333');
+        const isSelected = widget.selectedNodes.has(d.id);
         
-        // Highlight connected links
+        d3_select(this).select('circle')
+          .attr('stroke-width', isSelected ? 6 : 4)
+          .attr('stroke', isSelected ? '#ff8c00' : '#333');
+        
         link
           .attr('stroke-opacity', (linkData: any) => {
             const sourceId = typeof linkData.source === 'object' ? linkData.source.id : linkData.source;
@@ -585,7 +601,6 @@ export class DatabaseWidget extends Widget {
             return (sourceId === d.id || targetId === d.id) ? '#87CEEB' : '#999';
           });
         
-        // Highlight connected nodes
         node.select('circle')
           .attr('stroke-width', (nodeData: any) => {
             const isConnected = link.data().some((linkData: any) => {
@@ -594,7 +609,8 @@ export class DatabaseWidget extends Widget {
               return (sourceId === d.id && targetId === nodeData.id) || 
                      (targetId === d.id && sourceId === nodeData.id);
             });
-            return isConnected ? 4 : 3;
+            const isNodeSelected = widget.selectedNodes.has(nodeData.id);
+            return isNodeSelected ? 6 : (isConnected ? 4 : 3);
           })
           .attr('stroke', (nodeData: any) => {
             const isConnected = link.data().some((linkData: any) => {
@@ -603,22 +619,17 @@ export class DatabaseWidget extends Widget {
               return (sourceId === d.id && targetId === nodeData.id) || 
                      (targetId === d.id && sourceId === nodeData.id);
             });
-            return isConnected ? '#87CEEB' : '#fff';
+            const isNodeSelected = widget.selectedNodes.has(nodeData.id);
+            return isConnected ? '#87CEEB' : (isNodeSelected ? '#ff8c00' : '#fff');
           });
       })
       .on('mouseout', function() {
-        d3_select(this).select('circle')
-          .attr('stroke-width', 3)
-          .attr('stroke', '#fff');
+        widget.updateSelection();
         
         link
           .attr('stroke-opacity', 0.6)
           .attr('stroke-width', 2)
           .attr('stroke', '#999');
-        
-        node.select('circle')
-          .attr('stroke-width', 3)
-          .attr('stroke', '#fff');
       });
     });
 
@@ -643,6 +654,69 @@ export class DatabaseWidget extends Widget {
 
   private isValidNumber(value: any): boolean {
     return typeof value === 'number' && !isNaN(value) && isFinite(value);
+  }
+
+  private toggleSelection(nodeId: string): void {
+    if (this.selectedNodes.has(nodeId)) {
+      this.selectedNodes.delete(nodeId);
+    } else {
+      this.selectedNodes.add(nodeId);
+    }
+    this.updateSelection();
+  }
+
+  private clearSelection(): void {
+    this.selectedNodes.clear();
+    this.updateSelection();
+  }
+
+  private updateSelection(): void {
+    if (!this.svg) return;
+
+    const widget = this;
+    this.svg.selectAll('.node').each(function(d: any) {
+      const nodeElement = d3_select(this);
+      const isSelected = widget.selectedNodes.has(d.id);
+      
+      nodeElement.select('circle')
+        .attr('stroke', isSelected ? '#ff8c00' : '#fff')
+        .attr('stroke-width', isSelected ? 6 : 3)
+        .attr('stroke-dasharray', 'none');
+    });
+
+    const newQueryBtn = this.node.querySelector('#new-query-btn') as HTMLElement;
+    const clearBtn = this.node.querySelector('#clear-selection-btn') as HTMLElement;
+    
+    if (!newQueryBtn || !clearBtn) return;
+
+    if (this.selectedNodes.size > 0) {
+      newQueryBtn.innerHTML = `<i class="fa fa-plus" style="margin-right:4px;"></i> New Query <span style="background:#ff8c00;color:white;padding:2px 6px;border-radius:10px;font-size:11px;margin-left:4px;">${this.selectedNodes.size}</span>`;
+      clearBtn.style.display = 'inline-block';
+    } else {
+      newQueryBtn.innerHTML = '<i class="fa fa-plus" style="margin-right:4px;"></i> New Query';
+      clearBtn.style.display = 'none';
+    }
+  }
+
+  private handleNodeClick(event: any, d: any): void {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggleSelection(d.id);
+    } else {
+      this.openTableInfoTab(d.name);
+    }
+  }
+
+  getSelectedTables(): string[] {
+    return Array.from(this.selectedNodes);
+  }
+
+  selectTables(tableNames: string[]): void {
+    tableNames.forEach(name => {
+      this.selectedNodes.add(name);
+    });
+    this.updateSelection();
   }
 
   renderTableList(tables: string[]) {
@@ -739,11 +813,81 @@ export class DatabaseWidget extends Widget {
     }
   }
 
-  private openNewQueryTab(): void {
-    const queryWidget = new QueryWidget(this.panel);
+  private getInitialQuery(selectedTables: string[]): string {
+    if (selectedTables.length === 0) 
+      return '';
+    
+    if (selectedTables.length === 1) {
+      return `SELECT * FROM "${selectedTables[0]}" LIMIT 100;`;
+    }
+    
+    let initialQuery = `SELECT *\nFROM "${selectedTables[0]}"\n`;
+    
+    const usedTables = new Set([selectedTables[0]]);
+    const joins: string[] = [];
+    
+    for (let i = 1; i < selectedTables.length; i++) {
+      const currentTable = selectedTables[i];
+      let joinFound = false;
+      
+      for (const link of this.graphData.links) {
+        console.log(link.source, link.target);
+        const sourceTable = (link.source as TableNode).id;
+        const targetTable = (link.target as TableNode).id;
+        
+        if (sourceTable === currentTable && usedTables.has(targetTable)) {
+          joins.push(`JOIN "${currentTable}" ON "${targetTable}".${link.targetColumn} = "${currentTable}".${link.sourceColumn}`);
+          usedTables.add(currentTable);
+          joinFound = true;
+          break;
+        }
+        
+        if (targetTable === currentTable && usedTables.has(sourceTable)) {
+          joins.push(`JOIN "${currentTable}" ON "${sourceTable}".${link.sourceColumn} = "${currentTable}".${link.targetColumn}`);
+          usedTables.add(currentTable);
+          joinFound = true;
+          break;
+        }
+      }
+      
+      if (!joinFound) {
+        joins.push(`CROSS JOIN "${currentTable}"`);
+        usedTables.add(currentTable);
+      }
+    }
+    
+    return initialQuery + joins.join('\n') + '\nLIMIT 100;';
+  }
+
+  private async openNewQueryTab(): Promise<void> {
+    const selectedTables = this.getSelectedTables();
+    const tableNames = this.graphData.nodes.map(n => n.name);
+    const initialQuery = this.getInitialQuery(selectedTables);
+    
+    let columnNames: string[] = [];
+    if (selectedTables.length > 0) {
+      try {
+        const columnPromises = selectedTables.map(async (tableName) => {
+          const response = await fetch(`/db/table/${encodeURIComponent(tableName)}`);
+          if (response.ok) {
+            const details = await response.json();
+            return details.columns ? details.columns.map((col: any) => col.name) : [];
+          }
+          return [];
+        });
+        
+        const columnArrays = await Promise.all(columnPromises);
+        columnNames = [].concat(...columnArrays);
+      } catch (error) {
+        console.warn('Failed to fetch column names:', error);
+      }
+    }
+    
+    const queryWidget = new QueryWidget(this.panel, tableNames, columnNames, initialQuery);
     
     this.panel.addInfoWidget(queryWidget, { ref: this, mode: 'tab-after' });
-    
     this.panel.activateWidget(queryWidget);
+    
+    this.clearSelection();
   }
 } 
