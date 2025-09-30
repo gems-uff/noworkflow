@@ -225,7 +225,7 @@ class Collector(object):
                 if hasattr(accessor, '__get__'):
                     # ToDo: accessor provenance
                     return False
-            if vindex in vcontainer.__dict__:
+            if hasattr(vcontainer, '__dict__') and (vindex in vcontainer.__dict__):
                 # In instance
                 if isinstance(vcontainer, type):
                     accessor = vcontainer.__dict__[vindex]
