@@ -1121,7 +1121,13 @@ class Collector(object):
         _, _, depa = assign
         if isinstance(depa, list):
             ldepa, depa = depa, DependencyAware.join(depa)
-        target_info, type_ = target_expr
+        
+        # target_info, type_ = target_expr
+
+        target_info, type_ = None, None
+        try:
+            target_info, type_ = target_expr
+        except ValueError: pass
         if type_ == "single":
             return self.assign_single(activation, assign, target_info, depa, back + 1)
         if type_ == "access":

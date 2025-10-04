@@ -1083,10 +1083,12 @@ class RewriteAST(ast.NodeTransformer):
         if not node.optional_vars:
             return []
         node.optional_vars = rewriter.visit(node.optional_vars)
+        
+        node_op_var_target_expr = node.optional_vars.target_expr if hasattr(node.optional_vars, "target_expr") else ast.Tuple(elts=[], ctx=ast.Load())
         return [ast_copy(ast.Expr(noworkflow('assign', [
             activation(),
             noworkflow('pop_assign', [activation()]),
-            node.optional_vars.target_expr
+            node_op_var_target_expr
         ])), node.optional_vars)]
 
     def visit_With(self, node):
