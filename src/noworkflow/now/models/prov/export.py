@@ -1,5 +1,6 @@
 from collections import Counter
 from itertools import groupby
+import sys
 
 from .save_output import SaveOutput
 
@@ -71,6 +72,7 @@ def export_prov(trial, name="temp", formats="svg"):
     ckpt_list = []
     assignments = {}
     entity_generated_by_activity = []
+    cache = {ev.id: ev for ev in trial.evaluations}
 
     def insert_ckpt(ckpt):
         if ckpt not in ckpt_list:
@@ -78,26 +80,30 @@ def export_prov(trial, name="temp", formats="svg"):
     
     def get_ckpt_order(ckpt):
         return ckpt_list.index(ckpt) + 1
-
+    
     def entity_name_by_id(evaluation_id):
-        for ev in trial.evaluations:
-            if ev.id == evaluation_id:
-                return entity_name(ev)
+        ev = cache.get(evaluation_id)
+        if ev:
+            return entity_name(ev)
+        return None
 
     def activity_name(evaluation_id):
-        for ev in trial.evaluations:
-            if ev.id == evaluation_id:
-                return ev.code_component.type
+        ev = cache.get(evaluation_id)
+        if ev:
+            return ev.code_component.type
+        return None
     
     def activity_label(evaluation_id):
-        for ev in trial.evaluations:
-            if ev.id == evaluation_id:
-                return ev.code_component.name.split("(")[0]
+        ev = cache.get(evaluation_id)
+        if ev:
+            return ev.code_component.name.split("(")[0]
+        return None
 
     def get_ckpt_by_id(evaluation_id):
-        for ev in trial.evaluations:
-            if ev.id == evaluation_id:
-                return ev.checkpoint
+        ev = cache.get(evaluation_id)
+        if ev:
+            return ev.checkpoint
+        return None
 
     def find_collection_name(evaluation_id):
         for dep in trial.dependencies:
@@ -146,10 +152,12 @@ def export_prov(trial, name="temp", formats="svg"):
     previous_dep_id = 0
     previous_type = ""
     previous_activity = ""
-    groups = groupby(trial.dependencies, key=lambda x: (x.dependent_id, x.type))
+    sorted_deps = sorted(trial.dependencies, key=lambda x: (x.dependent_id, x.type))
+    groups = groupby(sorted_deps, key=lambda x: (x.dependent_id, x.type))
     for (dep_id, type_), group in groups:
         if type_ == "assignment":
-            for dep in group:
+            group_list = list(group)
+            for dep in group_list:
                 key = entity_name(dep.dependent)
                 value = entity_name(dep.dependency)
                 assignments[key] = value
@@ -167,7 +175,8 @@ def export_prov(trial, name="temp", formats="svg"):
             output(activity_str)
             previous_activity = act_name + str(counter[act_name])
             
-            for dep in group:
+            group_list = list(group)
+            for dep in group_list:
                 dependency = entity_name(dep.dependency)
                 
                 if dependency in assignments:
@@ -193,7 +202,8 @@ def export_prov(trial, name="temp", formats="svg"):
             
             output()
         elif type_ == "value" or type_ == "slice":
-            for dep in group:
+            group_list = list(group)
+            for dep in group_list:
                 using_activity = previous_activity
                 
                 if type_ == "value" and not(previous_dep_id == dep_id and previous_type == "assign"):
@@ -241,7 +251,8 @@ def export_prov(trial, name="temp", formats="svg"):
                 output(activity_str)
                 previous_activity = act_name + str(counter[act_name])
 
-            for dep in group:
+            group_list = list(group)
+            for dep in group_list:
                 counter["u"] += 1
                 dependent = entity_name(dep.dependent)
                 dependency = entity_name(dep.dependency)
