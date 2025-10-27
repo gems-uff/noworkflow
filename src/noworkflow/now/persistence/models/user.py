@@ -32,8 +32,14 @@ class User(AlchemyProxy):
     )
     userLogin = Column(String, unique=True)
     
+    prolog_description = PrologDescription("user", (
+        PrologRepr("id"),
+        PrologRepr("userLogin"),
+    ), description=(
+        "informs that a user (*Id*)\n"
+        "has a *UserLogin*."
+    ))
 
-    
     @classmethod  # query
     def create(cls, id,login, session=None):
         

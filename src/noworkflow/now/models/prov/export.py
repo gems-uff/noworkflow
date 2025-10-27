@@ -306,4 +306,40 @@ def export_prov(trial, name="temp", formats="svg"):
             )
             output(hadMember_str)
 
+    # TODO: Check new models
+    if trial.experiment:
+        exp = trial.experiment
+        exp_entity = 'entity(experiment_{}, [type="script:experiment", label="{}", description="{}"])'.format(
+            exp.id, exp.name, exp.description or ""
+        )
+        output(exp_entity)
+    
+    if trial.user:
+        user = trial.user
+        user_entity = 'entity(user_{}, [type="script:user", label="{}"])'.format(
+            user.id, user.userLogin
+        )
+        output(user_entity)
+    
+        for group in trial.user.groups:
+            group_entity = 'entity(group_{}, [type="script:group", label="{}"])'.format(
+                group.id, group.name
+            )
+            output(group_entity)
+        
+        for member_of_group in trial.user.member_of_groups:
+            member_entity = 'entity(memberOfGroup_{}, [type="script:memberOfGroup", userId="{}", groupId="{}"])'.format(
+                member_of_group.id, member_of_group.userId, member_of_group.groupId
+            )
+            output(member_entity)
+    
+    for annotation in trial.extended_annotations:
+        annotation_entity = 'entity(extendedAnnotation_{}, [type="script:extendedAnnotation", annotation="{}", description="{}", annotationFormat="{}", provenanceType="{}", annotationLevel="{}", relatedExperiment="{}", relatedTrial="{}"])'.format(
+            annotation.id, annotation.annotation or "", annotation.description or "",
+            annotation.annotationFormat or "", annotation.provenanceType or "",
+            annotation.annotationLevel or "", annotation.relatedExperiment or "",
+            annotation.relatedTrial or ""
+        )
+        output(annotation_entity)
+
     return output

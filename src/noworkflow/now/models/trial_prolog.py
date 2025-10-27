@@ -17,6 +17,7 @@ from ..persistence.models import CodeComponent, CodeBlock
 from ..persistence.models import Activation, Evaluation, Dependency
 from ..persistence.models import FileAccess
 from ..persistence.models import Member
+from ..persistence.models import Experiment, User, Group, MemberOfGroup, ExtendedAnnotation
 
 from .graphs.diagram import ViewPrologDiagram
 
@@ -54,6 +55,13 @@ class TrialProlog(Model):
             (Dependency, lambda: trial.dependencies),
             (FileAccess, lambda: trial.file_accesses),
             (Member, lambda: trial.members),
+
+            # TODO: Check new models
+            (Experiment, lambda: [trial.experiment] if hasattr(trial, 'experiment') and trial.experiment else []),
+            (User, lambda: [trial.user] if hasattr(trial, 'user') and trial.user else []),
+            (Group, lambda: [trial.user.groups] if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'groups') else []),
+            (MemberOfGroup, lambda: list(trial.user.member_of_groups) if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'member_of_groups') else []),
+            (ExtendedAnnotation, lambda: list(trial.extended_annotations) if hasattr(trial, 'extended_annotations') and trial.extended_annotations else []),
         ]
 
     @classmethod
@@ -76,7 +84,10 @@ class TrialProlog(Model):
                 result.append(cls.prolog_description.comment())
             result.append(cls.prolog_description.dynamic())
             for obj in query():
-                result.append(cls.prolog_description.fact(obj))
+                if obj is None or not hasattr(obj, 'id'):
+                    print(f"WARNING: Skipping object of type {type(obj)} in {cls.__name__}")
+                    continue
+                result.append(cls.prolog_description.fact(obj)) 
         return result
 
     def export_text_facts(self):

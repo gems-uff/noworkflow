@@ -25,6 +25,11 @@ from .head import Head
 from .module import Module
 from .tag import Tag
 from .trial import Trial
+from .experiment import Experiment
+from .user import User
+from .group import Group
+from .memberOfGroup import MemberOfGroup
+from .extendedAnnotation import ExtendedAnnotation
 
 def add(cls, name, relat, proxy=proxy):
     setattr(cls.m, name, relat)
@@ -43,8 +48,8 @@ MTM = "ManyToMany"
 OTO = "OneToOne"
 
 DIRECTIONS = {
-    MTO: (proxy_gen, proxy),
-    OTM: (proxy, proxy_gen),
+    MTO: (proxy, proxy_gen),
+    OTM: (proxy_gen, proxy),
     MTM: (proxy_gen, proxy_gen),
     OTO: (proxy, proxy)
 }
@@ -430,3 +435,58 @@ add(Trial, "main", relationship(
     primaryjoin=((Trial.m.main_id == CodeBlock.m.id) &
                  (Trial.m.id == CodeBlock.m.trial_id))
 ))
+
+# 
+# TODO: check relationships cardinality and fix comments
+# 
+
+# user <-> trials
+bidirectional_relationship(
+    Trial, "user", User, "trials", MTO,
+    extra1=dict(foreign_keys=[Trial.m.user_id]),
+    viewonly=True,
+)
+
+# user <-> groups 
+bidirectional_relationship(
+    User, "groups", Group, "users", MTM,
+    secondary=MemberOfGroup.__table__,
+    primaryjoin=(User.m.id == MemberOfGroup.m.userId),
+    secondaryjoin=(Group.m.id == MemberOfGroup.m.groupId),
+    viewonly=True,
+)
+
+# experiment <-> trials
+bidirectional_relationship(
+    Trial, "experiment", Experiment, "trials", MTO,
+    extra1=dict(foreign_keys=[Trial.m.experiment_id]),
+    viewonly=True,
+)
+
+# extended_annotations <-> experiment
+bidirectional_relationship(
+    Experiment, "extended_annotations", ExtendedAnnotation, "experiment", MTO,
+    extra1=dict(foreign_keys=[ExtendedAnnotation.m.relatedExperiment]),
+    viewonly=True,
+)
+
+# extended_annotations <-> trial
+bidirectional_relationship(
+    Trial, "extended_annotations", ExtendedAnnotation, "trial", MTO,
+    extra1=dict(foreign_keys=[ExtendedAnnotation.m.relatedTrial]),
+    viewonly=True,
+)
+
+# member_of_groups <-> user
+bidirectional_relationship(
+    User, "member_of_groups", MemberOfGroup, "user", MTO,
+    extra1=dict(foreign_keys=[MemberOfGroup.m.userId]),
+    viewonly=True,
+)
+
+# member_of_groups <-> group
+bidirectional_relationship(
+    Group, "member_of_groups", MemberOfGroup, "group", MTO,
+    extra1=dict(foreign_keys=[MemberOfGroup.m.groupId]),
+    viewonly=True,
+)

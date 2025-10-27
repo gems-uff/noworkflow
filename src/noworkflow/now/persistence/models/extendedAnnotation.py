@@ -45,6 +45,26 @@ class ExtendedAnnotation(AlchemyProxy):
     annotationLevel = Column(String)
     relatedExperiment = Column(Text)
     relatedTrial = Column(Text)
+    
+    prolog_description = PrologDescription("extendedAnnotation", (
+        PrologRepr("id"),
+        PrologRepr("annotation"),
+        PrologRepr("description"),
+        PrologRepr("annotationFormat"),
+        PrologRepr("provenanceType"),
+        PrologRepr("annotationLevel"),
+        PrologRepr("relatedExperiment"),
+        PrologRepr("relatedTrial"),
+    ), description=(
+        "informs that an extended annotation (*Id*)\n"
+        "has *Annotation*\n"
+        "*Description*\n"
+        "*AnnotationFormat*\n"
+        "*ProvenanceType*\n"
+        "*AnnotationLevel*\n"
+        "and is related to experiment (*RelatedExperiment*)\n"
+        "and trial (*RelatedTrial*)."
+    ))
   
     @classmethod  # query
     def create(cls, annt, session=None):
