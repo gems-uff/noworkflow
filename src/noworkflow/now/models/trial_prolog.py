@@ -17,7 +17,8 @@ from ..persistence.models import CodeComponent, CodeBlock
 from ..persistence.models import Activation, Evaluation, Dependency
 from ..persistence.models import FileAccess
 from ..persistence.models import Member
-from ..persistence.models import Experiment, User, Group, MemberOfGroup, ExtendedAnnotation
+from ..persistence.models import Experiment, User, Group, MemberOfGroup, ExtendedAnnotation, Remote
+from ..persistence import relational
 
 from .graphs.diagram import ViewPrologDiagram
 
@@ -62,6 +63,7 @@ class TrialProlog(Model):
             (Group, lambda: [trial.user.groups] if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'groups') else []),
             (MemberOfGroup, lambda: list(trial.user.member_of_groups) if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'member_of_groups') else []),
             (ExtendedAnnotation, lambda: list(trial.extended_annotations) if hasattr(trial, 'extended_annotations') and trial.extended_annotations else []),
+            (Remote, lambda: list(relational.session.query(Remote.m).all())),
         ]
 
     @classmethod

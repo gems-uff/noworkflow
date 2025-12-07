@@ -212,17 +212,21 @@ class Trial(AlchemyProxy):
         PrologTimestamp("start"),
         PrologTimestamp("finish"),
         PrologRepr("command"),
+        PrologRepr("path"),
         PrologRepr("status"),
         PrologNullable("modules_inherited_from_trial_id", link="trial.id"),
-        PrologNullable("parent_id", link="trial.id"),
+        PrologNullable("experiment_id"),
         PrologNullable("main_id", link="code_block.id"),
+        PrologNullable("parent_id", link="trial.id"),
+        PrologNullable("user_id"),
     ), description=(
         "informs that a given trial (*Id*),\n"
         "executed *Script* during a time period from *Start*"
         "to *Finish*,\n"
-        "using noWokflows *command*.\n"
+        "using noWokflows *command* at *Path*.\n"
         "This trial might by backup/finished/unfinished (*Status*).\n"
         "This trial uses modules from *ModulesInheritedFromTrialId*,\n"
+        "belongs to *ExperimentId* and *UserId*,\n"
         "is based on *ParentId*,\n"
         "and represents the script *CodeBlockId*."
     ))
