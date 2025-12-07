@@ -318,12 +318,12 @@ def export_prov(trial, name="temp", formats="svg"):
             output(hadMember_str)
 
     # TODO: Check new models
-    if trial.experiment:
-        exp = trial.experiment
-        exp_entity = 'entity(experiment_{}, [type="script:experiment", label="{}", description="{}"])'.format(
-            exp.id, exp.name, exp.description or ""
-        )
-        output(exp_entity)
+    # if trial.experiment:
+    #     exp = trial.experiment
+    #     exp_entity = 'entity(experiment_{}, [type="script:experiment", label="{}", description="{}"])'.format(
+    #         exp.id, exp.name, exp.description or ""
+    #     )
+    #     output(exp_entity)
     
     if trial.user:
         user = trial.user
