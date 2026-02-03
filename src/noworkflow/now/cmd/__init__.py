@@ -24,6 +24,8 @@ from .cmd_restore import Restore
 from .cmd_vis import Vis
 from .cmd_demo import Demo
 from .cmd_history import History
+from .cmd_prov import Prov
+from .cmd_prospective import Prospective
 from .cmd_schema import Schema
 from .cmd_kernel import Kernel
 from .cmd_gc import GC
@@ -54,6 +56,8 @@ def main():
         Vis(),
         Demo(),
         History(),
+        Prov(),
+        Prospective(),
         Schema(),
         Kernel(),
         GC(),
@@ -88,6 +92,8 @@ __all__ = [
     "Vis",
     "Demo",
     "History",
+    "Prov",
+    "Prospective",
     "Kernel",
     "GC",
     "main",

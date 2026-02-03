@@ -18,6 +18,7 @@ from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, Exte
 from ..models.history import History
 from ..models.diff import Diff
 from ..models.ast.trial_ast import TrialAst
+from ..models.prospective.generate import generate_prospective_prov
 from ..persistence import relational, content
 from ..cmd.cmd_diff import Diff as DiffCMD
 from ..ipython.dotmagic import DotDisplay
@@ -357,6 +358,23 @@ def trial_graph(tid, graph_mode, cache,expCode=None):
     graph.use_cache &= bool(int(cache))
     _, tgraph, _ = getattr(graph, graph_mode)()
     return jsonify(**tgraph)
+
+@app.route("/experiments/<expCode>/trials/<tid>/prospective.dot")
+@app.route("/trials/<tid>/prospective.dot")
+def prospective_provenance(tid, expCode=None):
+    """Respond prospective provenance as DOT format"""
+    try:
+        trial = Trial(tid)
+        dot_content = generate_prospective_prov(trial)
+        return Response(dot_content, mimetype='text/plain')
+    except ValueError as e:
+        # Trial not found or not finished, return error
+        error_msg = f"Error generating prospective provenance: {str(e)}"
+        return Response(error_msg, status=400, mimetype='text/plain')
+    except Exception as e:
+        # Unexpected error
+        error_msg = f"Unexpected error: {str(e)}"
+        return Response(error_msg, status=500, mimetype='text/plain')
 
 @app.route("/experiments/<expCode>/trials/<tid>/dependencies.json")
 @app.route("/trials/<tid>/dependencies.json")
