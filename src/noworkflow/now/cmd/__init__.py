@@ -24,7 +24,6 @@ from .cmd_export import Export
 from .cmd_restore import Restore
 from .cmd_vis import Vis
 from .cmd_demo import Demo
-from .cmd_helper import Helper
 from .cmd_history import History
 from .cmd_prov import Prov
 from .cmd_schema import Schema
@@ -58,7 +57,6 @@ def main():
         Restore(),
         Vis(),
         Demo(),
-        Helper(),
         History(),
         Prov(),
         Schema(),
@@ -97,7 +95,6 @@ __all__ = [
     "Restore",
     "Vis",
     "Demo",
-    "Helper",
     "History",
     "Prov",
     "Kernel",
