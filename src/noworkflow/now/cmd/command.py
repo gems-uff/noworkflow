@@ -74,6 +74,8 @@ class NotebookCommand(Command):
 
     def _execute(self, args):
         """Select between export or execute"""
+        ## TODO: Should we remove execute_export if we are adding: now export --type=ipynb?
+        ## Maybe keep both for backward compatibility?
         if args.ipynb:
             self.execute_export(args)
         else:
