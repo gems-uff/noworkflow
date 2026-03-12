@@ -41,7 +41,7 @@ class Export(NotebookCommand):
                      "current directory")
         add_arg("--content-engine", type=str,
                 help="set the content database engine")
-        add_arg("-t", "--type", type=str,
+        add_arg("--export-type", type=str,
                 help="set the export type option."
                 "Options: prov, prolog, dataflow, ast, and ipynb.")
 
@@ -73,6 +73,14 @@ class Export(NotebookCommand):
                 help="output in json format")
 
         ## ===================================================================
+        add_arg("-a", "--accesses", type=int, default=1, metavar="A",
+                help="R|show file accesses (default: 1)\n"
+                     "0 hides file accesses\n"
+                     "1 shows each file once (hide external accesses)\n"
+                     "2 shows each file once (show external accesses)\n"
+                     "3 shows all accesses (except external accesses)\n"
+                     "4 shows all accesses (including external accesses)")
+
 
     def execute(self, args):
         persistence_config.content_engine = args.content_engine
@@ -93,6 +101,8 @@ class Export(NotebookCommand):
             if args.rules:
                 print("\n".join(trial.prolog.rules()))
         elif args.type  == "dataflow":
+            ## TODO: All dependency_graph/config.py args dont have any None check
+            # Now breaks with an ugly error without it
             trial.dependency_config.read_args(args)
             trial.dot.value_length = args.value_length
             trial.dot.name_length = args.name_length
@@ -111,8 +121,6 @@ class Export(NotebookCommand):
             print("Please select an export type")
 
 
-    ## TODO: Should we remove this if we are adding now export --type=ipynb?
-    ## Maybe keep both for backward compatibility?
     def execute_export(self, args):
         namespace = Namespace(ipynb=True, dir=args.dir)
         if not args.trial or args.trial == "current":
