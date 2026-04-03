@@ -63,23 +63,9 @@ class Command(object):
 
 
 class NotebookCommand(Command):
-    """NotebookCommand base. Default option -i to export notebook files"""
+    """NotebookCommand base. """
 
     def create_parser(self, subparsers):
         """Create parser with arguments"""
         super(NotebookCommand, self).create_parser(subparsers)
-        self.add_argument("-i", "--ipynb", action="store_true",
-                          help="export jupyter notebook file")
-        self.parser.set_defaults(func=self._execute)
-
-    def _execute(self, args):
-        """Select between export or execute"""
-        if args.ipynb:
-            self.execute_export(args)
-        else:
-            self.execute(args)
-
-    def execute_export(self, args):
-        """Export notebook file. Override on subclass"""
-        abstract()
-        print(self, args)
+        self.parser.set_defaults(func=self.execute)

@@ -19,19 +19,16 @@ from .cmd_pull import Pull
 from .cmd_list import List
 from .cmd_show import Show
 from .cmd_diff import Diff
-from .cmd_dataflow import Dataflow
 from .cmd_export import Export
 from .cmd_restore import Restore
 from .cmd_vis import Vis
 from .cmd_demo import Demo
 from .cmd_history import History
-from .cmd_prov import Prov
 from .cmd_schema import Schema
 from .cmd_kernel import Kernel
 from .cmd_gc import GC
 from .cmd_evaluation import Evaluation
 from .cmd_clean import Clean
-from .cmd_ast import Ast
 from ..utils.io import print_msg
 
 
@@ -49,7 +46,6 @@ def main():
         List(),
         Show(),
         Diff(),
-        Dataflow(),
         Export(),
         Import(),
         Push(),
@@ -58,14 +54,11 @@ def main():
         Vis(),
         Demo(),
         History(),
-        Prov(),
         Schema(),
         Kernel(),
         GC(),
         Evaluation(),
         Clean(),
-        Ast()
-
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
@@ -90,18 +83,15 @@ __all__ = [
     "List",
     "Show",
     "Diff",
-    "Dataflow",
     "Export",
     "Restore",
     "Vis",
     "Demo",
     "History",
-    "Prov",
     "Kernel",
     "GC",
     "main",
     "Push",
     "Pull",
     "Import",
-    "Ast",
 ]
