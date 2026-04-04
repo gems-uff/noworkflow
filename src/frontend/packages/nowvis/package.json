@@ -14,6 +14,8 @@
     "@noworkflow/history": "0.0.11",
     "@noworkflow/trial": "0.0.8",
     "@noworkflow/utils": "0.0.9",
+    "@viz-js/viz": "^3.8.0",
+    "ace-builds": "^1.43.3",
     "buffer": "^6.0.3",
     "child_process": "^1.0.2",
     "crypto-browserify": "^3.12.0",
@@ -21,9 +23,8 @@
     "file-saver": "^2.0.5",
     "fs": "^0.0.1-security",
     "stream-browserify": "^3.0.0",
-    "@viz-js/viz": "^3.8.0",
-    "tau-prolog": "^0.3.4",
-    "svg-pan-zoom": "^3.6.1"
+    "svg-pan-zoom": "^3.6.1",
+    "tau-prolog": "^0.3.4"
   },
   "devDependencies": {
     "@babel/core": "^7.12.10",
