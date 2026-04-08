@@ -33,6 +33,14 @@ class Group(AlchemyProxy):
     )
     name = Column(String, unique=True)
     
+    prolog_description = PrologDescription("group", (
+        PrologRepr("id"),
+        PrologRepr("name"),
+    ), description=(
+        "informs that a group (*Id*)\n"
+        "has a *Name*."
+    ))
+
     @classmethod  # query
     def create(cls, grp, session=None):
         
