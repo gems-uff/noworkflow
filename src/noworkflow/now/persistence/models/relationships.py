@@ -48,8 +48,8 @@ MTM = "ManyToMany"
 OTO = "OneToOne"
 
 DIRECTIONS = {
-    MTO: (proxy, proxy_gen),
-    OTM: (proxy_gen, proxy),
+    MTO: (proxy_gen, proxy),
+    OTM: (proxy, proxy_gen),
     MTM: (proxy_gen, proxy_gen),
     OTO: (proxy, proxy)
 }
@@ -442,7 +442,7 @@ add(Trial, "main", relationship(
 
 # user <-> trials
 bidirectional_relationship(
-    Trial, "user", User, "trials", MTO,
+    Trial, "user", User, "trials", OTM,
     extra1=dict(foreign_keys=[Trial.m.user_id]),
     viewonly=True,
 )
@@ -458,7 +458,7 @@ bidirectional_relationship(
 
 # experiment <-> trials
 bidirectional_relationship(
-    Trial, "experiment", Experiment, "trials", MTO,
+    Trial, "experiment", Experiment, "trials", OTM,
     extra1=dict(foreign_keys=[Trial.m.experiment_id]),
     viewonly=True,
 )

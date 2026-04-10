@@ -58,12 +58,12 @@ class TrialProlog(Model):
             (Member, lambda: trial.members),
 
             # TODO: Check new models
-            (Experiment, lambda: [trial.experiment] if hasattr(trial, 'experiment') and trial.experiment else []),
-            (User, lambda: [trial.user] if hasattr(trial, 'user') and trial.user else []),
-            (Group, lambda: [trial.user.groups] if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'groups') else []),
-            (MemberOfGroup, lambda: list(trial.user.member_of_groups) if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'member_of_groups') else []),
-            (ExtendedAnnotation, lambda: list(trial.extended_annotations) if hasattr(trial, 'extended_annotations') and trial.extended_annotations else []),
-            (Remote, lambda: list(relational.session.query(Remote.m).all())),
+            #(Experiment, lambda: [trial.experiment] if hasattr(trial, 'experiment') and trial.experiment else []),
+            #(User, lambda: [trial.user] if hasattr(trial, 'user') and trial.user else []),
+            #(Group, lambda: [trial.user.groups] if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'groups') else []),
+            #(MemberOfGroup, lambda: list(trial.user.member_of_groups) if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'member_of_groups') else []),
+            #(ExtendedAnnotation, lambda: list(trial.extended_annotations) if hasattr(trial, 'extended_annotations') and trial.extended_annotations else []),
+            #(Remote, lambda: list(relational.session.query(Remote.m).all())),
         ]
 
     @classmethod
