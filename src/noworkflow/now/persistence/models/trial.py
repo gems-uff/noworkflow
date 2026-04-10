@@ -126,7 +126,7 @@ class Trial(AlchemyProxy):
     >>> list(trial.dependencies)  # doctest: +ELLIPSIS
     [dependency(...)., ...]
     >>> list(trial.tags)  # doctest: +ELLIPSIS
-    [tag(..., '1.1.0', 'AUTO', ...).]
+    [tag(..., 'AUTO', '1.1.0', ...).]
 
     To load modules, propagating inherited modules:
     >>> list(trial.modules)  # doctest: +ELLIPSIS

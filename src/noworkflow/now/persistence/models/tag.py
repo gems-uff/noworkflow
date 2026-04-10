@@ -33,7 +33,7 @@ class Tag(AlchemyProxy):
     Load a Tag object by passing its id:
     >>> tag = Tag(tag_id)
     >>> tag  # doctest: +ELLIPSIS
-    tag(..., '1.1.1', 'AUTO', ...).
+    tag(..., 'AUTO', '1.1.1', ...).
 
     Load Tag trial:
     >>> trial = tag.trial
