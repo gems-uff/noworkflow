@@ -15,7 +15,7 @@ authors = [
     {name = "Arthur Paiva", email = "arthur.paiva@id.uff.br"},
     {name = "Other collaborators"},
 ]
-license = "MIT"
+license = {text = "MIT"}
 keywords = ["scientific", "experiments", "provenance", "python"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -37,7 +37,8 @@ dependencies = [
     "importlib-metadata==6.4.1",
     "typing-extensions>=4.5.0,<5",
     "setuptools<72",
-    "nbformat"
+    "nbformat",
+    "graphviz",
 ]
 
 [project.optional-dependencies]
@@ -45,7 +46,7 @@ demo = ["flask", "matplotlib", "numpy", "cython"]
 notebook = ["pyposast", "ipython", "jupyter"]
 all = [
     "pyposast", "ipython", "jupyter", "flask", "pyswip-alt",
-    "matplotlib", "numpy", "cython", "graphviz"
+    "matplotlib", "numpy", "cython"
 ]
 
 [project.scripts]

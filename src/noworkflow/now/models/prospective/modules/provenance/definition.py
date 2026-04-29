@@ -9,11 +9,11 @@ from __future__ import (absolute_import, print_function,
 from collections import defaultdict
 from typing import List, Optional, Dict, Any
 
-from ..build.syntax_utils import SyntaxUtils
-from ..build.graph_drawer import GraphDrawer
-from ..build.node_mapper import NodeMapper
-from ..build.condition_nodes import ConditionNodes
-from ..build.graphviz_wrapper import GraphvizWrapper
+from ..utils.syntax_utils import SyntaxUtils
+from ..utils.graph_drawer import GraphDrawer
+from ..utils.node_mapper import NodeMapper
+from ..utils.condition_nodes import ConditionNodes
+from ..utils.graphviz_wrapper import GraphvizWrapper
 
 
 class DefinitionProvenanceAnalyzer:
