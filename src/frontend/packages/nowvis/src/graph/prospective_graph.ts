@@ -39,7 +39,6 @@ export class ProspectiveGraphWidget extends Widget {
     this.currentZoom = 1.0;
     this.originalViewBox = null;
 
-    // Add toolbar
     this.createToolbar();
   }
 
@@ -47,7 +46,6 @@ export class ProspectiveGraphWidget extends Widget {
     let node = document.createElement("div");
     let d3node = d3_select(node);
 
-    // Set up container to take full space
     node.style.display = "flex";
     node.style.flexDirection = "column";
     node.style.width = "100%";
@@ -80,7 +78,6 @@ export class ProspectiveGraphWidget extends Widget {
   createToolbar() {
     let toolbar = this.d3node.select(".prospective-toolbar");
 
-    // Zoom In button
     toolbar
       .append("a")
       .classed("toollink", true)
@@ -92,12 +89,11 @@ export class ProspectiveGraphWidget extends Widget {
       .style("font-size", "14px")
       .on("click", (event: Event) => {
         event.preventDefault();
-        this.zoomIn();
+    	this.applyZoom(1.2);
       })
       .append("i")
       .classed("fa fa-search-plus", true);
 
-    // Zoom Out button
     toolbar
       .append("a")
       .classed("toollink", true)
@@ -109,12 +105,11 @@ export class ProspectiveGraphWidget extends Widget {
       .style("font-size", "14px")
       .on("click", (event: Event) => {
         event.preventDefault();
-        this.zoomOut();
+        this.applyZoom(0.8);
       })
       .append("i")
       .classed("fa fa-search-minus", true);
 
-    // Download SVG button
     toolbar
       .append("a")
       .classed("toollink", true)
@@ -130,7 +125,6 @@ export class ProspectiveGraphWidget extends Widget {
       .append("i")
       .classed("fa fa-download", true);
 
-    // Download DOT button
     toolbar
       .append("a")
       .classed("toollink", true)
@@ -149,20 +143,7 @@ export class ProspectiveGraphWidget extends Widget {
 
   load() {
     let contentDiv = this.node.getElementsByClassName("prospective-content")[0];
-
-    // Show loading state
-    contentDiv.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px;">
-        <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
-        <p style="margin-top: 20px; color: #666;">Loading prospective provenance for trial ${this.trialId}...</p>
-        <style>
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </div>
-    `;
+    contentDiv.innerHTML = "<p>Loading prospective provenance for trial:" + this.trialId + "</p>";
 
     // Fetch DOT content from backend
     const url = ProspectiveGraphWidget.url(this.trialId);
@@ -177,53 +158,21 @@ export class ProspectiveGraphWidget extends Widget {
         return response.text();
       })
       .then((dotContent) => {
-        console.log("Successfully fetched prospective provenance DOT");
         this.dotContent = dotContent;
         this.renderGraph(dotContent, contentDiv);
       })
       .catch((error) => {
         console.error("Error fetching prospective provenance:", error);
-        // Show error message in graph area
-        contentDiv.innerHTML = `
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px; text-align: center;">
-            <i class="fa fa-exclamation-triangle" style="font-size: 48px; color: #e74c3c; margin-bottom: 20px;"></i>
-            <h3 style="color: #e74c3c; margin: 0 0 10px 0;">Failed to Load Prospective Provenance</h3>
-            <p style="color: #666; margin: 0 0 10px 0; max-width: 500px;">
-              Could not fetch prospective provenance for trial <code>${this.trialId}</code>
-            </p>
-            <p style="color: #999; margin: 0; font-size: 0.9em; max-width: 500px;">
-              ${error.message}
-            </p>
-            <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              Reload Page
-            </button>
-          </div>
-        `;
+        container.innerHTML = "<p>Error fetching prospective provenance:" + error + "</p>";
       });
   }
 
   renderGraph(dotContent: string, container: Element) {
-    console.log("Rendering prospective graph...");
-    console.log("DOT content length:", dotContent.length);
     instance()
       .then((viz) => {
-        console.log("Viz.js instance loaded");
         container.innerHTML = "";
         let svgElement = viz.renderSVGElement(dotContent);
-        console.log("SVG element created:", svgElement);
-        console.log(
-          "SVG element dimensions:",
-          svgElement.clientWidth,
-          svgElement.clientHeight,
-        );
-        console.log("SVG viewBox:", svgElement.getAttribute("viewBox"));
-        console.log(
-          "Container dimensions:",
-          (container as HTMLElement).clientWidth,
-          (container as HTMLElement).clientHeight,
-        );
 
-        // Store original viewBox before any transformations
         const viewBoxAttr = svgElement.getAttribute("viewBox");
         if (viewBoxAttr) {
           const values = viewBoxAttr.split(" ").map(parseFloat);
@@ -234,8 +183,7 @@ export class ProspectiveGraphWidget extends Widget {
             height: values[3]
           };
 
-          // Apply initial zoom by adjusting viewBox
-          const zoomFactor = 0.6;
+          const zoomFactor = 1.1;
           const newWidth = this.originalViewBox.width * zoomFactor;
           const newHeight = this.originalViewBox.height * zoomFactor;
 
@@ -243,10 +191,8 @@ export class ProspectiveGraphWidget extends Widget {
           const newY = this.originalViewBox.y + (this.originalViewBox.height - newHeight) / 2;
 
           svgElement.setAttribute("viewBox", `${newX} ${newY} ${newWidth} ${newHeight}`);
-          console.log("Applied initial zoom, new viewBox:", svgElement.getAttribute("viewBox"));
         }
 
-        // Style SVG to fill container completely
         svgElement.style.width = "100%";
         svgElement.style.height = "100%";
         svgElement.style.display = "block";
@@ -255,9 +201,7 @@ export class ProspectiveGraphWidget extends Widget {
         svgElement.style.left = "0";
 
         container.appendChild(svgElement);
-        console.log("SVG appended to container");
 
-        // Add simple pan functionality
         this.addPanFunctionality(svgElement);
       })
       .catch((error) => {
@@ -338,14 +282,6 @@ export class ProspectiveGraphWidget extends Widget {
     }
   }
 
-  zoomIn() {
-    this.applyZoom(1.2);
-  }
-
-  zoomOut() {
-    this.applyZoom(0.8);
-  }
-
   applyZoom(factor: number) {
     const svgElement = this.node.querySelector("svg");
     if (!svgElement || !this.originalViewBox) return;
@@ -371,11 +307,5 @@ export class ProspectiveGraphWidget extends Widget {
     const newY = centerY - newHeight / 2;
 
     svgElement.setAttribute("viewBox", `${newX} ${newY} ${newWidth} ${newHeight}`);
-  }
-
-  protected onResize(msg: Widget.ResizeMessage): void {
-    // Resize is handled automatically via flexbox layout
-    // SVG uses 100% width/height with position: absolute
-    // No manual intervention needed
   }
 }
