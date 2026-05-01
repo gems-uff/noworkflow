@@ -675,7 +675,21 @@ class DefinitionProvenanceAnalyzer:
             if node_else != node_function and null_check:
                 self.node_else[index] = node_function
 
-    def component_analyzer(self):
+    def code_components(self):
+        """Get code components based on filter type"""
+        query = self.queries.list_all_codes()
+        results = query.all()
+        if results:
+            return [
+                (comp.first_char_line, comp.last_char_line, comp.type,
+                 comp.name, comp.first_char_column)
+                for comp in results
+            ]
+        else:
+            print("Something went wrong in the trial verification!")
+            return None
+
+    def build_prospective_graph(self):
         """Main orchestration method - builds complete provenance graph"""
         self.create_all_nodes(self.code_components())
         self._create_global_end_node()
@@ -694,16 +708,4 @@ class DefinitionProvenanceAnalyzer:
         self._verify_function_check()
         self.linking_nodes_graph()
 
-    def code_components(self):
-        """Get code components based on filter type"""
-        query = self.queries.list_all_codes()
-        results = query.all()
-        if results:
-            return [
-                (comp.first_char_line, comp.last_char_line, comp.type,
-                 comp.name, comp.first_char_column)
-                for comp in results
-            ]
-        else:
-            print("Something went wrong in the trial verification!")
-            return None
+        return self.provenance.source

@@ -3,17 +3,12 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Generate Prospective Provenance in DOT Format"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import (absolute_import, print_function, division, unicode_literals)
 
-from collections import defaultdict
 from .analyzer import DefinitionProvenanceAnalyzer
 
-from ...persistence import relational
-from ...persistence.models import Trial
 
-
-def generate_prospective_prov(trial: Trial):
+def generate_prospective_prov(trial):
     """Generate prospective provenance as Graphviz DOT format
 
     Args:
@@ -26,6 +21,4 @@ def generate_prospective_prov(trial: Trial):
         raise ValueError(f"Error loading trial: {e}")
 
     analyzer = DefinitionProvenanceAnalyzer(trial.id)
-    analyzer.component_analyzer()
-
-    return analyzer.provenance.source
+    return analyzer.build_prospective_graph()
