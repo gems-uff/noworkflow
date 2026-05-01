@@ -669,7 +669,7 @@ class DefinitionProvenanceAnalyzer:
             if node_else != node_function and null_check:
                 self.node_else[index] = node_function
 
-    def component_analyzer(self, collector, rows, data_set):
+    def component_analyzer(self, collector, rows):
         """Main orchestration method - builds complete provenance graph"""
         self.collector = collector
         self.create_all_nodes(rows)

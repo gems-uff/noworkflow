@@ -90,7 +90,6 @@ __all__ = [
     "Vis",
     "Demo",
     "History",
-    "Prov",
     "Prospective",
     "Kernel",
     "GC",

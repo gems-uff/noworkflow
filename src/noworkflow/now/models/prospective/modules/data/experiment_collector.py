@@ -24,8 +24,7 @@ class ExperimentDataCollector:
         """Check if trial exists"""
         try:
             trial = Trial(trial_ref=self.trial_id)
-            # Check if trial exists - prospective provenance is about script structure,
-            # so we don't require the trial to be "finished"
+
             if trial.id:
                 return True
             else:
@@ -33,24 +32,11 @@ class ExperimentDataCollector:
                 return False
         except Exception as e:
             print(f"Error loading trial {self.trial_id}: {e}")
-            print("Something is wrong! Maybe the trial is not available in noWorkflow!")
-            print("Try running the trial again in noWorkflow!")
             return False
 
-    def code_components(self, config):
+    def code_components(self):
         """Get code components based on filter type"""
-        filter_type = config.get('filter_type', ['everything'])[0]
-
-        if filter_type == 'lines':
-            start_line = config.get('start', [0])[0]
-            end_line = config.get('final', [0])[0]
-            query = self.queries.list_lines_codes(start_line, end_line)
-        elif filter_type == 'partial':
-            start_line = config.get('start', [0])[0]
-            query = self.queries.list_partial_codes(start_line)
-        else:
-            query = self.queries.list_all_codes()
-
+        query = self.queries.list_all_codes()
         results = query.all()
         if results:
             return [
