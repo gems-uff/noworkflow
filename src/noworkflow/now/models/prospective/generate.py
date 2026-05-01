@@ -8,11 +8,12 @@ from __future__ import (absolute_import, print_function,
 
 from collections import defaultdict
 from .modules.provenance.definition import DefinitionProvenanceAnalyzer
-from .modules.data.experiment_collector import ExperimentDataCollector
+
 from ...persistence import relational
+from ...persistence.models import Trial
 
 
-def generate_prospective_prov(trial):
+def generate_prospective_prov(trial: Trial):
     """Generate prospective provenance as Graphviz DOT format
 
     Args:
@@ -21,19 +22,10 @@ def generate_prospective_prov(trial):
     Returns:
         String containing DOT format graph
     """
-    trial_id = trial.id
-    session = relational.session
-    collector = ExperimentDataCollector(trial_id, session)
+    if trial.id == None:
+        raise ValueError(f"Error loading trial: {e}")
 
-    if not collector.trial_check:
-        raise ValueError(f"Trial {trial_id} not found")
-
-    components = collector.code_components()
-
-    if not components:
-        raise ValueError("No code components found")
-
-    analyzer = DefinitionProvenanceAnalyzer(trial_id)
-    analyzer.component_analyzer(collector, components)
+    analyzer = DefinitionProvenanceAnalyzer(trial.id)
+    analyzer.component_analyzer()
 
     return analyzer.provenance.source

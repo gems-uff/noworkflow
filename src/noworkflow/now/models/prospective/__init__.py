@@ -5,11 +5,5 @@
 """Prospective Provenance Models"""
 
 from .generate import generate_prospective_prov
-from .analyzer import ProspectiveAnalyzer
-from .queries import ProspectiveQueries
 
-__all__ = [
-    'generate_prospective_prov',
-    'ProspectiveAnalyzer',
-    'ProspectiveQueries',
-]
+__all__ = [ 'generate_prospective_prov' ]

@@ -10,14 +10,10 @@ import os
 
 from argparse import Namespace
 
+from .command import Command
+
 from ..persistence.models import Trial
 from ..persistence import persistence_config
-
-
-from .command import Command
-from .cmd_diff import Diff
-from .cmd_history import History
-from .cmd_show import Show
 
 from ..models.prospective.generate import generate_prospective_prov
 
@@ -28,12 +24,9 @@ class Prospective(Command):
     def add_arguments(self):
         add_arg = self.add_argument
         add_arg("trial", type=str, nargs="?",
-                help="trial id or none for last trial. If you are generation "
-                     "ipython notebook files, it is also possible to use "
-                     "'history' or 'diff:<trial_id_1>:<trial_id_2>'")
+                help="trial id or none for last trial")
         add_arg("--dir", type=str,
-                help="set project path where is the database. Default to "
-                     "current directory")
+                help="set project path where is the database. Default to current directory")
 
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())

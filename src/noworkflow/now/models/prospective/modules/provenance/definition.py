@@ -15,14 +15,20 @@ from ..utils.node_mapper import NodeMapper
 from ..utils.condition_nodes import ConditionNodes
 from ..utils.graphviz_wrapper import GraphvizWrapper
 
+from ...queries import ProspectiveQueries
+
+from .....persistence import relational
+
 
 class DefinitionProvenanceAnalyzer:
     """Analyzes code structure and builds control-flow provenance graph"""
 
-    def __init__(self, trial_id: str):
+    def __init__(self, trial_id: str, session=None):
         self.trial_id = trial_id
         self.provenance = GraphvizWrapper(trial_id).initialize()
-        self.collector = None
+
+        self.session = session or relational.session
+        self.queries = ProspectiveQueries(trial_id, session)
 
         self.def_list: List[Optional[str]] = []
         self.call: Dict[str, List[str]] = defaultdict(list)
@@ -414,9 +420,12 @@ class DefinitionProvenanceAnalyzer:
 
     def _arguments_selection(self, start):
         """Get function arguments from database"""
-        if self.collector is None:
-            return ""
-        return self.collector.selection_args(start)
+        results = self.queries.get_arguments(start).all()
+
+        if results and len(results) > 0:
+            return str(results[0].name)
+
+        return -1
 
     def create_all_nodes(self, rows):
         """Create all graph nodes from code components"""
@@ -669,10 +678,9 @@ class DefinitionProvenanceAnalyzer:
             if node_else != node_function and null_check:
                 self.node_else[index] = node_function
 
-    def component_analyzer(self, collector, rows):
+    def component_analyzer(self):
         """Main orchestration method - builds complete provenance graph"""
-        self.collector = collector
-        self.create_all_nodes(rows)
+        self.create_all_nodes(self.code_components())
         self._create_global_end_node()
         self._format_column()
 
@@ -688,3 +696,17 @@ class DefinitionProvenanceAnalyzer:
         self._get_point_code()
         self._verify_function_check()
         self.linking_nodes_graph()
+
+    def code_components(self):
+        """Get code components based on filter type"""
+        query = self.queries.list_all_codes()
+        results = query.all()
+        if results:
+            return [
+                (comp.first_char_line, comp.last_char_line, comp.type,
+                 comp.name, comp.first_char_column)
+                for comp in results
+            ]
+        else:
+            print("Something went wrong in the trial verification!")
+            return None
