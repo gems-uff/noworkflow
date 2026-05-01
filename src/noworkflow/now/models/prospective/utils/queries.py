@@ -6,9 +6,9 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from ...persistence import relational
-from ...persistence.models.code_component import CodeComponent
-from ...persistence.models.evaluation import Evaluation
+from ....persistence import relational
+from ....persistence.models.code_component import CodeComponent
+from ....persistence.models.evaluation import Evaluation
 
 
 class ProspectiveQueries:

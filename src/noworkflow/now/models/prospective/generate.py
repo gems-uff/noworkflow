@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from collections import defaultdict
-from .modules.provenance.definition import DefinitionProvenanceAnalyzer
+from .analyzer import DefinitionProvenanceAnalyzer
 
 from ...persistence import relational
 from ...persistence.models import Trial

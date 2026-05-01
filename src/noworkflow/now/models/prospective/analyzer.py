@@ -9,26 +9,23 @@ from __future__ import (absolute_import, print_function,
 from collections import defaultdict
 from typing import List, Optional, Dict, Any
 
-from ..utils.syntax_utils import SyntaxUtils
-from ..utils.graph_drawer import GraphDrawer
-from ..utils.node_mapper import NodeMapper
-from ..utils.condition_nodes import ConditionNodes
-from ..utils.graphviz_wrapper import GraphvizWrapper
-
-from ...queries import ProspectiveQueries
-
-from .....persistence import relational
+from .utils import (
+    SyntaxUtils,
+    GraphDrawer,
+    NodeMapper,
+    ConditionNodes,
+    GraphvizWrapper,
+    ProspectiveQueries
+)
 
 
 class DefinitionProvenanceAnalyzer:
     """Analyzes code structure and builds control-flow provenance graph"""
 
-    def __init__(self, trial_id: str, session=None):
+    def __init__(self, trial_id: str):
         self.trial_id = trial_id
         self.provenance = GraphvizWrapper(trial_id).initialize()
-
-        self.session = session or relational.session
-        self.queries = ProspectiveQueries(trial_id, session)
+        self.queries = ProspectiveQueries(trial_id)
 
         self.def_list: List[Optional[str]] = []
         self.call: Dict[str, List[str]] = defaultdict(list)
