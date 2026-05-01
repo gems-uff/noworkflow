@@ -13,7 +13,6 @@ from .utils import (
     SyntaxUtils,
     GraphDrawer,
     NodeMapper,
-    ConditionNodes,
     GraphvizWrapper,
     ProspectiveQueries
 )
@@ -24,7 +23,7 @@ class DefinitionProvenanceAnalyzer:
 
     def __init__(self, trial_id: str):
         self.trial_id = trial_id
-        self.provenance = GraphvizWrapper(trial_id).initialize()
+        self.graphviz = GraphvizWrapper(trial_id).initialize()
         self.queries = ProspectiveQueries(trial_id)
 
         self.def_list: List[Optional[str]] = []
@@ -128,7 +127,7 @@ class DefinitionProvenanceAnalyzer:
                             break
                         else:
                             else_ = SyntaxUtils.get_index_array(self.last[value], self.start)
-                            self.provenance.edge(self.node_hash[else_], last_node)
+                            self.graphviz.edge(self.node_hash[else_], last_node)
                             self.visited_x.append(self.node_hash[else_])
                             self.visited_y.append(last_node)
                             self.node_else[else_] = last_node
@@ -136,7 +135,7 @@ class DefinitionProvenanceAnalyzer:
                 else:
                     self.node_else[value] = last_node
                     else_ = SyntaxUtils.get_index_array(self.last[value], self.start)
-                    self.provenance.edge(self.node_hash[else_], last_node)
+                    self.graphviz.edge(self.node_hash[else_], last_node)
 
     def _organize_sequences_if_else(self):
         """Chain together IF → ELIF → ELIF → ELSE sequences"""
@@ -178,7 +177,7 @@ class DefinitionProvenanceAnalyzer:
             linked_back = SyntaxUtils.get_object_array(self.last[index], self.start)
 
             if linked_back is not None and self.node_hash[linked_back] not in visited_array:
-                self.provenance.edge(
+                self.graphviz.edge(
                     self.node_hash[linked_back],
                     current_node,
                     style='dashed'
@@ -203,7 +202,7 @@ class DefinitionProvenanceAnalyzer:
 
                 if there_element and check_element:
                     node_next = self.node_for[self._get_return_loop(node_loop)]
-                    self.provenance.edge(node_back, node_next, style='dashed')
+                    self.graphviz.edge(node_back, node_next, style='dashed')
 
     def _get_return_loop(self, node_loop):
         """Helper to find loop return point"""
@@ -227,7 +226,7 @@ class DefinitionProvenanceAnalyzer:
 
             if column_node == self.column[last_node + 1]:
                 self.node_end_for[index] = self.node_hash[last_node + 1]
-                self.provenance.edge(
+                self.graphviz.edge(
                     item,
                     self.node_hash[last_node + 1],
                     label=" End Loop"
@@ -243,7 +242,7 @@ class DefinitionProvenanceAnalyzer:
                         if SyntaxUtils.compare_loop(self.node_hash[index_node]):
                             check_column = self.column[index_node] < column_node
                             if check_column:
-                                self.provenance.edge(
+                                self.graphviz.edge(
                                     item,
                                     self.node_hash[index_node],
                                     label=" End Loop"
@@ -286,19 +285,19 @@ class DefinitionProvenanceAnalyzer:
             if check:
                 element = self.node_hash.index(key)
                 last = SyntaxUtils.get_index_array(self.last[element], self.start)
-                self.provenance.edge(key, self.try_except[key][1])
+                self.graphviz.edge(key, self.try_except[key][1])
 
                 if 'exception' in self.try_except[key][count - 2]:
                     check_structure = True
                     exception_node = self.try_except[key][count - 2]
                     element = self.node_hash.index(exception_node) - 1
 
-                    self.provenance.edge(self.node_hash[element], self.try_except[key][1])
+                    self.graphviz.edge(self.node_hash[element], self.try_except[key][1])
                     self.visited_x.append(self.node_hash[element])
 
             element = self.node_hash.index(key)
             last = SyntaxUtils.get_index_array(self.last[element], self.start)
-            self.provenance.edge(key, self.node_hash[last + 1], style='dashed')
+            self.graphviz.edge(key, self.node_hash[last + 1], style='dashed')
 
             if check_structure:
                 self.visited_y.append(self.node_hash[last + 1])
@@ -342,7 +341,7 @@ class DefinitionProvenanceAnalyzer:
         self.block.append('Start')
         self.type.append('start-code')
         self.hash_index.append(0)
-        self.provenance.node('start', label='Start')
+        self.graphviz.node('start', label='Start')
         self.generic_hash.append('{}name{}'.format(0, 0))
         return True
 
@@ -356,7 +355,7 @@ class DefinitionProvenanceAnalyzer:
         self.column.append(0)
         self.block.append('End')
         self.type.append('end-code')
-        self.provenance.node('end', label='End')
+        self.graphviz.node('end', label='End')
         element = '{}{}'.format(self.last[-1] + 1, 0)
         self.hash_index.append(int(element))
         self.generic_hash.append('{}name{}'.format(self.last[-1] + 1, 0))
@@ -408,7 +407,7 @@ class DefinitionProvenanceAnalyzer:
         """Connect Start node to first code node"""
         for index, node in enumerate(self.node_hash):
             if self.def_list[index] is None and 'start' not in node:
-                self.provenance.edge('start', node)
+                self.graphviz.edge('start', node)
                 break
 
     def _create_hash_code(self, x, y, z):
@@ -426,9 +425,8 @@ class DefinitionProvenanceAnalyzer:
 
     def create_all_nodes(self, rows):
         """Create all graph nodes from code components"""
-        syntax = ConditionNodes()
         mapper = NodeMapper()
-        drawer = GraphDrawer(self.provenance)
+        drawer = GraphDrawer(self.graphviz)
 
         self._start_node()
 
@@ -444,7 +442,7 @@ class DefinitionProvenanceAnalyzer:
             check = False
 
             if types_line in SyntaxUtils.get_others():
-                check, self.provenance = drawer.assign(nodes_hash, label)
+                check, self.graphviz = drawer.assign(nodes_hash, label)
 
             elif types_line == 'class_def':
                 self.class_def_name.append(block_line)
@@ -453,56 +451,42 @@ class DefinitionProvenanceAnalyzer:
 
             elif SyntaxUtils.get_call(types_line, block_line):
                 self.call[nodes_hash].append(block_line)
-                check, self.provenance = drawer.calls(nodes_hash, label)
+                check, self.graphviz = drawer.calls(nodes_hash, label)
 
             elif types_line == 'import':
-                check, self.provenance = drawer.imports(nodes_hash, label)
+                check, self.graphviz = drawer.imports(nodes_hash, label)
 
             elif types_line == 'return':
-                check, self.provenance = drawer.calls(nodes_hash, label)
+                check, self.graphviz = drawer.calls(nodes_hash, label)
 
             elif types_line == 'function_def':
                 self.defs[nodes_hash].append(block_line)
                 args = self._arguments_selection(start_line)
                 text = mapper.get_element('function', start_line, block_line, args)
-                check, self.provenance = drawer.calls(nodes_hash, text)
+                check, self.graphviz = drawer.calls(nodes_hash, text)
 
-            elif types_line in SyntaxUtils.get_loop():
+            elif types_line in ['if', 'elif', 'else', 'for', 'while']:
                 array = block_line.split('\n')
-                condition = syntax.loops(types_line, array[0])
-                text = mapper.get_element('label', start_line, types_line)
-                check, self.provenance = drawer.loops(nodes_hash, text, condition)
-
-            elif types_line == 'if':
-                array = block_line.split('\n')
-                if 'elif' in array[0]:
-                    nodes_hash = self._create_hash_code(start_line, 'elif', colum_line)
-                    text = mapper.get_element('label', start_line, 'elif')
-                    check, self.provenance = drawer.condition(
-                        nodes_hash, text, syntax.statement_if(array[0])
-                    )
-                else:
-                    text = mapper.get_element('label', start_line, 'if')
-                    check, self.provenance = drawer.condition(
-                        nodes_hash, text, syntax.statement_if(array[0])
-                    )
+                text = mapper.get_element('label', start_line, array[0].split(' ')[0])
+                condition = mapper.get_element('condition', types_line, array[0])
+                check, self.graphviz = drawer.condition(nodes_hash, text, condition)
 
             elif types_line in SyntaxUtils.get_try() or block_line == 'finally:':
                 if types_line == 'try':
                     text = mapper.get_element('label', start_line, 'try')
-                    check, self.provenance = drawer.exceptions(nodes_hash, text)
+                    check, self.graphviz = drawer.exceptions(nodes_hash, text)
                 elif block_line == 'finally:':
                     nodes_hash = self._create_hash_code(start_line, 'finally', colum_line)
                     text = mapper.get_element('label', start_line, 'finally')
-                    check, self.provenance = drawer.calls(nodes_hash, text)
+                    check, self.graphviz = drawer.calls(nodes_hash, text)
                 elif types_line == 'exception':
                     text = mapper.get_element('label', start_line, 'except')
-                    check, self.provenance = drawer.exceptions(nodes_hash, text)
+                    check, self.graphviz = drawer.exceptions(nodes_hash, text)
 
             elif block_line == 'else:':
                 nodes_hash = self._create_hash_code(start_line, 'else', colum_line)
                 text = mapper.get_element('label', start_line, 'else')
-                check, self.provenance = drawer.calls(nodes_hash, text)
+                check, self.graphviz = drawer.calls(nodes_hash, text)
 
             if check:
                 dict_item = {str(colum_line): nodes_hash}
@@ -539,7 +523,7 @@ class DefinitionProvenanceAnalyzer:
                 name_call = self.call[key_call][0]
 
                 if name_call.find(name_def) != -1:
-                    self.provenance.edge(key_call, key_def, style='dashed')
+                    self.graphviz.edge(key_call, key_def, style='dashed')
 
     def _create_elif_list(self):
         """Create elif connection list"""
@@ -554,10 +538,10 @@ class DefinitionProvenanceAnalyzer:
                 if 'elif' in self.node_hash[k] and column == self.column[k]:
                     self.node_else[id_node] = self.node_hash[k]
                     if self.def_list[id_node] is None:
-                        self.provenance.edge(node, self.node_hash[k], label=' False')
+                        self.graphviz.edge(node, self.node_hash[k], label=' False')
                     else:
                         if self.def_list[id_node] == self.def_list[k]:
-                            self.provenance.edge(node, self.node_hash[k], label=' False')
+                            self.graphviz.edge(node, self.node_hash[k], label=' False')
                     break
 
     def _edge_back_in_loops(self):
@@ -588,7 +572,7 @@ class DefinitionProvenanceAnalyzer:
             border = SyntaxUtils.get_index_array(self.last[index], self.start)
 
             cluster_name = 'cluster{}'.format(index)
-            with self.provenance.subgraph(name=cluster_name) as subgroup:
+            with self.graphviz.subgraph(name=cluster_name) as subgroup:
                 subgroup.attr(style='dashed')
 
                 for index_2 in range(index, border + 1):
@@ -617,7 +601,7 @@ class DefinitionProvenanceAnalyzer:
 
             if (('if' not in current) and ('else' not in current) and
                 (self.node_else[i] is not None) and (self.node_for[i] is not None)):
-                self.provenance.edge(current, self.node_for[i], style="dashed")
+                self.graphviz.edge(current, self.node_for[i], style="dashed")
 
             elif current in self.def_function_after:
                 continue
@@ -625,43 +609,43 @@ class DefinitionProvenanceAnalyzer:
             elif 'function_def' in next_node:
                 if next_node in self.def_function:
                     index_def_node = self.def_function.index(next_node)
-                    self.provenance.edge(current, self.def_function_final[index_def_node])
+                    self.graphviz.edge(current, self.def_function_final[index_def_node])
 
             elif 'if' in current:
-                self.provenance.edge(current, next_node, label='   True')
+                self.graphviz.edge(current, next_node, label='   True')
 
                 if '*' in str(self.node_else[i]):
                     hash_string = self.node_else[i]
                     if self.node_for[i] is not None:
                         item_false = self.node_hash.index(hash_string[0:len(hash_string) - 1])
                         if self.node_for[i] != self.node_for[item_false]:
-                            self.provenance.edge(current, self.node_for[i], label='   False')
+                            self.graphviz.edge(current, self.node_for[i], label='   False')
                         else:
-                            self.provenance.edge(
+                            self.graphviz.edge(
                                 current,
                                 hash_string[0:len(hash_string) - 1],
                                 label='   False'
                             )
 
             elif 'try' in current:
-                self.provenance.edge(current, next_node)
+                self.graphviz.edge(current, next_node)
 
             elif 'exception' in current:
-                self.provenance.edge(self.node_if[i], self.node_hash[i])
-                self.provenance.edge(current, next_node)
+                self.graphviz.edge(self.node_if[i], self.node_hash[i])
+                self.graphviz.edge(current, next_node)
 
             elif 'else' in current:
-                self.provenance.edge(self.node_if[i], self.node_hash[i], label='   False')
-                self.provenance.edge(current, next_node)
+                self.graphviz.edge(self.node_if[i], self.node_hash[i], label='   False')
+                self.graphviz.edge(current, next_node)
 
             elif 'for' in current or 'while' in current:
-                self.provenance.edge(current, next_node)
+                self.graphviz.edge(current, next_node)
 
             else:
                 if self.node_else[i] is None:
-                    self.provenance.edge(current, next_node)
+                    self.graphviz.edge(current, next_node)
                 else:
-                    self.provenance.edge(current, self.node_else[i])
+                    self.graphviz.edge(current, self.node_else[i])
 
         self._create_boxes_in_functions()
 
@@ -708,4 +692,4 @@ class DefinitionProvenanceAnalyzer:
         self._verify_function_check()
         self.linking_nodes_graph()
 
-        return self.provenance.source
+        return self.graphviz.source

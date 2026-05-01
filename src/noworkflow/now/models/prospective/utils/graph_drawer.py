@@ -63,7 +63,6 @@ class GraphDrawer:
                                 color=self.color['notes']
                                 )
             self.graphProv.node(hashing,
-
                                 label=text,
                                 shape=self.shape['condition']
                                 )

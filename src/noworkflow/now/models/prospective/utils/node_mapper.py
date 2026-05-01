@@ -24,6 +24,8 @@ class NodeMapper:
             return self.get_label(args[1], args[2])
         if args[0] == 'function':
             return self.get_label_function(args[1], args[2], args[3])
+        if args[0] == 'condition':
+            return self.get_condition(args[1], args[2])
 
     @staticmethod
     def get_hashing(line: int, types: str, block: str) -> object:
@@ -53,3 +55,18 @@ class NodeMapper:
         :return:
         """
         return '{}: {}'.format(line, block)
+
+    @staticmethod
+    def get_condition(block: str, node: str) -> object:
+        if block == 'for':
+            return (" Variable: {}\n {}").format(
+                node[node.find('for') + 4: node.find('in')],
+                node[node.find('for') + 4: node.find(':')])
+        elif block == 'if':
+            return (" Condition:\n {}").format(
+                node[node.find('if') + 2: node.find(':')])
+        elif block == 'while':
+            return (" Condition:\n {}").format(
+                node[node.find('while') + 5: node.find(':')])
+        else:
+            return 'error'

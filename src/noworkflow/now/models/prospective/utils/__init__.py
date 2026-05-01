@@ -7,7 +7,6 @@
 from .syntax_utils import SyntaxUtils
 from .graph_drawer import GraphDrawer
 from .node_mapper import NodeMapper
-from .condition_nodes import ConditionNodes
 from .graphviz_wrapper import GraphvizWrapper
 from .queries import ProspectiveQueries
 
@@ -16,7 +15,6 @@ __all__ = [
     "SyntaxUtils",
     "GraphDrawer",
     "NodeMapper",
-    "ConditionNodes",
     "GraphvisWrapper",
     "ProspectiveQueries",
 ]
