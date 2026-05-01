@@ -38,8 +38,9 @@ output.png
 .last_trial
 *-checkpoint.ipynb
 
-
 # Javascript
+src/noworkflow/now/vis/static/dist/bundle.js
+src/noworkflow/now/vis/static/dist/bundle.js.map
 
 # Logs
 logs
