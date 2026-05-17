@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, select, bindparam
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
-from ...utils.prolog import PrologAttribute, PrologNullableRepr
+from ...utils.prolog import PrologAttribute, PrologNullableRepr, PrologBoolean
 
 from .. import relational
 
@@ -81,7 +81,7 @@ class Module(AlchemyProxy):
         PrologNullableRepr("version"),
         PrologRepr("path"),
         PrologNullableRepr("code_block_id", link="code_block.id"),
-        PrologAttribute("transformed"),
+        PrologBoolean("transformed"),
         PrologRepr("fullpath"),
     ), description=(
         "informs that in a given trial (*TrialId*),\n"

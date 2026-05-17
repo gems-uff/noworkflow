@@ -18,7 +18,7 @@ from sqlalchemy.orm import relationship
 from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial
 from ...utils.prolog import PrologTimestamp, PrologRepr
-from ...utils.prolog import PrologNullable
+from ...utils.prolog import PrologNullable, PrologNullableRepr
 
 from .. import relational, content, persistence_config
 
@@ -218,7 +218,7 @@ class Trial(AlchemyProxy):
         PrologNullable("experiment_id"),
         PrologNullable("main_id", link="code_block.id"),
         PrologNullable("parent_id", link="trial.id"),
-        PrologNullable("user_id"),
+        PrologNullableRepr("user_id"),
     ), description=(
         "informs that a given trial (*Id*),\n"
         "executed *Script* during a time period from *Start*"
