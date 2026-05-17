@@ -227,9 +227,9 @@ The argument *wdf* identifies and displays dependency relationships between code
 $ now evaluation wdf
 ```
 
-The *ast* option exports the collected provenance of a trial to Prolog or Notebook.
+The *export ast* option exports the collected provenance of a trial to Prolog or Notebook.
 ```bash
-$ now ast [trial]
+$ now export ast [trial]
 ```
 
 Visualization Tool
@@ -258,9 +258,9 @@ The server can be a central one or a peer-to-peer connection. To set up a server
 $ now vis --force true
 ```
 
-The *ast* option generates the Abstract Syntax Tree (AST) for a given trial. By default, it outputs the AST in its standard format. However, you can specify the output format using the *-j* (*--json*) option for JSON format or the *-d* (*--dot*) option for Graphviz dot format.
+The *export ast* option generates the Abstract Syntax Tree (AST) for a given trial. By default, it outputs the AST in its standard format. However, you can specify the output format using the *-j* (*--json*) option for JSON format or the *-d* (*--dot*) option for Graphviz dot format.
 ```bash
-$ now ast 08ece614-f5ae-4e65-93a0-5a8b44ac9a44 --dot
+$ now export ast 08ece614-f5ae-4e65-93a0-5a8b44ac9a44 --dot
 ```
 
 The command line output will show the server address 

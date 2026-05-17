@@ -585,7 +585,7 @@ def execute_command_restore_file(trial_id, file_to_restore, file_id, output_path
 
 @app.route("/commands/prov/<trial_id>")
 def execute_command_prov(trial_id):
-    """Execute the command 'now prov'"""
+    """Execute the command 'now export prov'"""
     prov_command = ("now export prov " + trial_id).split()
     sub_process_print = subprocess.run(prov_command, capture_output=True).stdout.decode("utf-8")
     if "(" in sub_process_print: return jsonify(prov=sub_process_print), 200
@@ -593,7 +593,7 @@ def execute_command_prov(trial_id):
     
 @app.route("/commands/export/<trial_id>/<rules>/<hide_timestamps>")
 def execute_command_export(trial_id, rules, hide_timestamps):
-    """Execute the command 'now export'"""
+    """Execute the command 'now export prolog'"""
     export_command = ("now export prolog " + trial_id).split()
     
     if rules == "true": export_command.append("-r")
@@ -604,7 +604,7 @@ def execute_command_export(trial_id, rules, hide_timestamps):
 
 @app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<argument_hnc>/<argument_an>/<argument_hf>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
 def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argument_hnc, argument_an, argument_hf,file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
-    """Execute the command 'now export'"""
+    """Execute the command 'now export dataflow'"""
     dataflow_command = ("now export dataflow " + trial_id).split()
     
     if argument_T == "true": dataflow_command.append("-T")
