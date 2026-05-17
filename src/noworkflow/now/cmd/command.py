@@ -60,12 +60,3 @@ class Command(object):
         """Execute the command. Override on subclass"""
         abstract()
         print(self, args)
-
-
-class NotebookCommand(Command):
-    """NotebookCommand base. """
-
-    def create_parser(self, subparsers):
-        """Create parser with arguments"""
-        super(NotebookCommand, self).create_parser(subparsers)
-        self.parser.set_defaults(func=self.execute)

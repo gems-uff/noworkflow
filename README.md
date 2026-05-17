@@ -187,20 +187,20 @@ $ now diff [trial1] [trial2]
 ```
 where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run "now diff -h".
 
-The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now dataflow -h" to get their descriptions.
+The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now export dataflow -h" to get their descriptions.
 ```bash
-$ now dataflow [trial] -m prospective | dot -Tpng -o prospective.png
+$ now export dataflow [trial] -m prospective | dot -Tpng -o prospective.png
 ```
 
 To export provenance data of a given trial to Prolog facts, so inference queries can be run over the database, run:
 ```
-$ now export [trial]
+$ now export prolog [trial]
 ```
 It also exports inference rules by *-r* argument.
 
 To export the collected provenance of a trial to Prov.
 ```bash
-$ now prov [trial]
+$ now export prov [trial]
 ```
 
 The *schema* option presents the SQL schema of noWorkflow:

@@ -10,12 +10,12 @@ import os
 
 from argparse import Namespace
 
-from .command import Command
+from ..command import Command
 
-from ..persistence.models import Trial
-from ..persistence import persistence_config
+from ...persistence.models import Trial
+from ...persistence import persistence_config
 
-from ..models.prospective.generate import generate_prospective_prov
+from ...models.prospective.generate import generate_prospective_prov
 
 
 class Prospective(Command):

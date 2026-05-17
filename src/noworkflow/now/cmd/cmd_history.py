@@ -8,14 +8,13 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from ..ipython.converter import create_ipynb
 from ..models.history import History as HistoryModel
 from ..persistence import persistence_config
 
-from .command import NotebookCommand
+from .command import Command
 
 
-class History(NotebookCommand):
+class History(Command):
     """Show project history"""
 
     def add_arguments(self):
@@ -36,16 +35,3 @@ class History(NotebookCommand):
         persistence_config.connect_existing(args.dir or os.getcwd())
         history = HistoryModel(script=args.script, status=args.status)
         print(history)
-
-    def execute_export(self, args):
-        code = ("%load_ext noworkflow\n"
-                "import noworkflow.now.ipython as nip\n"
-                "# <codecell>\n"
-                "history = nip.History()\n"
-                "# history.graph.width = 700\n"
-                "# history.graph.height = 300\n"
-                "# history.script = '*'\n"
-                "# history.status = '*'\n"
-                "# <codecell>\n"
-                "history")
-        create_ipynb("History.ipynb", code)

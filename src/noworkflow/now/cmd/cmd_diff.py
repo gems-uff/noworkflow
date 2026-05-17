@@ -12,7 +12,6 @@ import difflib
 from future.utils import viewitems, viewkeys
 from apted import APTED
 
-from ..ipython.converter import create_ipynb
 from ..models.diff import Diff as DiffModel
 from ..persistence import persistence_config, relational
 from ..models.graphs.diff_graph import CONFIG
@@ -24,7 +23,7 @@ from ..models.cleaning.merge import lcs
 from sqlalchemy import or_, true
 
 from .cmd_show import print_trial_relationship
-from .command import NotebookCommand
+from .command import Command
 
 
 def print_diff_trials(diff, skip=None):
@@ -106,7 +105,7 @@ def hide_timestamp(elements):
         element.hide_timestamp = True
 
 
-class Diff(NotebookCommand):
+class Diff(Command):
     """Compare the collected provenance of two trials"""
 
     def add_arguments(self):
@@ -360,20 +359,3 @@ class Diff(NotebookCommand):
                 if (file[0].activation_id == activation_id1 and file[1].activation_id == activation_id2): new_set.add(file)
             elif (file.activation_id == activation_id1) or (file.activation_id == activation_id2): new_set.add(file)
         return new_set
-
-    def execute_export(self, args):
-        persistence_config.content_engine = args.content_engine
-        persistence_config.connect_existing(args.dir or os.getcwd())
-        DiffModel(args.trial1, args.trial2)
-        name = "Diff-{0}-{1}.ipynb".format(args.trial1, args.trial2)
-        code = ("%load_ext noworkflow\n"
-                "import noworkflow.now.ipython as nip\n"
-                "# <codecell>\n"
-                "diff = nip.Diff('{0}', '{1}')\n"
-                "# diff.graph.view = 0\n"
-                "# diff.graph.mode = 3\n"
-                "# diff.graph.width = 500\n"
-                "# diff.graph.height = 500\n"
-                "# <codecell>\n"
-                "diff").format(args.trial1, args.trial2)
-        create_ipynb(name, code)

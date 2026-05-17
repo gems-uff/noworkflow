@@ -17,7 +17,7 @@ import webbrowser
 
 from argparse import Namespace
 
-from ...cmd.cmd_show import Show
+from ...cmd.cmd_export.cmd_ipynb import Ipynb
 from ...persistence.models.trial import Trial
 from ...utils.io import redirect_output
 
@@ -122,7 +122,7 @@ def debugger_builtins(provider, namespace, metascript):
         """Start Jupyter Notebook"""
         try:
             import IPython
-            Show().execute_export(Namespace(ipynb=True, dir=None))
+            Ipynb().execute(Namespace(trial=None, dir=None))
             if start:
                 params = ["ipython", "notebook", "Current Trial.ipynb"]
                 proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
