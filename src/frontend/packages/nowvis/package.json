@@ -15,7 +15,7 @@
     "@noworkflow/trial": "0.0.8",
     "@noworkflow/utils": "0.0.9",
     "@viz-js/viz": "^3.8.0",
-    "ace-builds": "^1.43.3",
+    "ace-builds": "^1.44.0",
     "buffer": "^6.0.3",
     "child_process": "^1.0.2",
     "crypto-browserify": "^3.12.0",
