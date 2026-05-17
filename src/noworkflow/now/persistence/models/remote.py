@@ -10,8 +10,8 @@ from future.utils import lmap
 from future.builtins import map as cvmap
 from sqlalchemy import Column, String, Integer, Boolean
 
-from ...utils.prolog import PrologDescription, PrologTrial
-from ...utils.prolog import PrologRepr, PrologTimestamp
+from ...utils.prolog import PrologDescription, PrologAttribute
+from ...utils.prolog import PrologRepr, PrologBoolean
 
 from .. import relational
 
@@ -26,6 +26,18 @@ class Remote(AlchemyProxy):
     name = Column(String)
     used = Column(Boolean)
     hide = Column(Boolean)
+    
+    prolog_description = PrologDescription("remote", (
+        PrologAttribute("id"),
+        PrologRepr("server_url"),
+        PrologRepr("name"),
+        PrologBoolean("used"),
+        PrologBoolean("hide"),
+    ), description=(
+        "informs that a remote server (*Id*)\n"
+        "has a *ServerUrl* and *Name*,\n"
+        "with *Used* and *Hide* flags."
+    ))
     
     @classmethod  # query
     def create(cls, server_url, name, used=False, hide=False, session=None):

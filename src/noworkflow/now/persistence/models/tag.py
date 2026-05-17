@@ -13,7 +13,7 @@ from future.builtins import map as cvmap
 from sqlalchemy import Column, Integer, String, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, bindparam
 
-from ...utils.prolog import PrologDescription, PrologTrial
+from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologTimestamp
 
 from .. import relational
@@ -33,7 +33,7 @@ class Tag(AlchemyProxy):
     Load a Tag object by passing its id:
     >>> tag = Tag(tag_id)
     >>> tag  # doctest: +ELLIPSIS
-    tag(..., '1.1.1', 'AUTO', ...).
+    tag(..., 'AUTO', '1.1.1', ...).
 
     Load Tag trial:
     >>> trial = tag.trial
@@ -56,13 +56,15 @@ class Tag(AlchemyProxy):
     #   trial: 1 Trial
 
     prolog_description = PrologDescription("tag", (
+        PrologAttribute("id"),
         PrologTrial("trial_id", link="trial.id"),
-        PrologRepr("name"),
         PrologRepr("type"),
+        PrologRepr("name"),
         PrologTimestamp("timestamp"),
     ), description=(
-        "informs that a given trial (*TrialId*)\n"
-        "has a tag (*Name*) of *Type*,\n"
+        "informs that a tag (*Id*)\n"
+        "belongs to a given trial (*TrialId*),\n"
+        "has a *Type* and *Name*,\n"
         "created at *Timestamp*."
     ))
 

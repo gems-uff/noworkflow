@@ -40,8 +40,15 @@ class MemberOfGroup(AlchemyProxy):
     userId = Column(Text)
     groupId = Column(Text)
     
+    prolog_description = PrologDescription("memberOfGroup", (
+        PrologRepr("id"),
+        PrologRepr("userId"),
+        PrologRepr("groupId"),
+    ), description=(
+        "informs that a user (*UserId*)\n"
+        "is a member of group (*GroupId*)."
+    ))
 
-    
     @classmethod  # query
     def create(cls, UsrGrp, session=None):
         

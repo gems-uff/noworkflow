@@ -148,6 +148,8 @@ class PrologNullable(PrologAttribute):
         value = self.value(obj)
         if(self.name == 'parent_id') and value is not None: value = "'{}'".format(value.replace("'", "''"))
         if(self.name == 'modules_inherited_from_trial_id') and value is not None: value = "'{}'".format(value.replace("'", "''"))
+        if(self.name == 'experiment_id') and value is not None: value = "'{}'".format(value.replace("'", "''"))
+        if(self.name == 'user_id') and value is not None: value = "'{}'".format(value.replace("'", "''"))
         return str(value) if value is not None else "nil"
 
 

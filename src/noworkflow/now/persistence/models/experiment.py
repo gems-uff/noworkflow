@@ -33,6 +33,16 @@ class Experiment(AlchemyProxy):
     name = Column(String, unique=True)
     description = Column(String)
 
+    prolog_description = PrologDescription("experiment", (
+        PrologRepr("id"),
+        PrologRepr("name"),
+        PrologRepr("description"),
+    ), description=(
+        "informs that an experiment (*Id*)\n"
+        "has a *Name*\n"
+        "and *Description*."
+    ))
+
     @classmethod
     def load_experiment(cls,experiment,session=None):
         session = session or relational.session
