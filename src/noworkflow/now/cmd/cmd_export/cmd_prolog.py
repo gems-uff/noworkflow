@@ -21,7 +21,7 @@ from ..cmd_show import Show
 
 
 class Prolog(Command):
-    """Export the collected provenance of a trial to Prolog or Notebook"""
+    """Export the collected provenance of a trial to Prolog"""
 
     def add_arguments(self):
         """Create parser for subcommands"""

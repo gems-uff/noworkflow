@@ -18,7 +18,7 @@ from .cmd_ipynb import Ipynb
 from .cmd_prospective import Prospective
 
 class Export(Command):
-    """Export the collected provenance of a trial"""
+    """Export the collected provenance of a trial to different formats"""
     def add_arguments(self):
         export_sub = self.parser.add_subparsers(dest="what", required=True)
         commands = [

@@ -18,7 +18,7 @@ from ..command import Command
 from ...models.ast.trial_ast import TrialAst
 
 class Ast(Command):
-    """Export the collected provenance of a trial to Prolog or Notebook"""
+    """Export the collected AST of a trial script to text, dot or json"""
 
     def add_arguments(self):
         add_arg = self.add_argument

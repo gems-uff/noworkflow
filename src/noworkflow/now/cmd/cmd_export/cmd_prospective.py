@@ -19,7 +19,7 @@ from ...models.prospective.generate import generate_prospective_prov
 
 
 class Prospective(Command):
-    """Export the prospective provenance of a trial to Prov"""
+    """Export the prospective provenance of a trial to dot file"""
 
     def add_arguments(self):
         add_arg = self.add_argument
