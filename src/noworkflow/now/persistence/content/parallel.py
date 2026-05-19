@@ -24,8 +24,10 @@ def create_distributed(cls, name=None):
                     self.task_queue.task_done()
                     break
 
-                self.engine.do_put(*queue_content)
-                self.task_queue.task_done()
+                try:
+                    self.engine.do_put(*queue_content)
+                finally:
+                    self.task_queue.task_done()
 
 
     class Distributed(cls):
@@ -50,6 +52,7 @@ def create_distributed(cls, name=None):
             with safeopen.use_safe_open():
                 for _ in range(self.num_consumers):
                     consumer = Worker(self.tasks, self)
+                    consumer.daemon = True
                     self.consumers.append(consumer)
                     consumer.start()
 
@@ -69,9 +72,18 @@ def create_distributed(cls, name=None):
                 for _ in range(self.num_consumers):
                     self.tasks.put(None)
 
-                # Wait for all of the tasks to finish
-                self.tasks.join()
-                self.processes_started = False
+                try:
+                    # Wait for all of the tasks to finish
+                    self.tasks.join()
+                    for consumer in self.consumers:
+                        consumer.join()
+                finally:
+                    for consumer in self.consumers:
+                        if consumer.is_alive():
+                            consumer.terminate()
+                            consumer.join()
+                    self.consumers = []
+                    self.processes_started = False
         
     Distributed.__name__ = name or ("Distributed" + cls.__name__)
     return Distributed

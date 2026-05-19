@@ -126,7 +126,10 @@ class Restore(Command):
 
         print_msg("Backup Trial {} created".format(metascript.trial_id),
                   self.print_msg)
-        content.commit_content(metascript.message or "Backup Trial {}".format(metascript.trial_id))
+        content.commit_content(
+            metascript.message or "Backup Trial {}".format(metascript.trial_id),
+            trial_id=metascript.trial_id
+        )
 
     def restore(self, path, code_hash, trial_id, mode="normal"):
         """Restore file with <code_hash> from <trial_id>"""

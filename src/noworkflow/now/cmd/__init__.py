@@ -29,6 +29,7 @@ from .cmd_kernel import Kernel
 from .cmd_gc import GC
 from .cmd_evaluation import Evaluation
 from .cmd_clean import Clean
+from .cmd_branch import Branch
 from ..utils.io import print_msg
 
 
@@ -59,7 +60,9 @@ def main():
         GC(),
         Evaluation(),
         Clean(),
+        Branch()
     ]
+
     for cmd in commands:
         cmd.create_parser(subparsers)
 
@@ -95,4 +98,5 @@ __all__ = [
     "Push",
     "Pull",
     "Import",
+    "Branch",
 ]
