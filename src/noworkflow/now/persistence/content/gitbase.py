@@ -17,7 +17,7 @@ class GitContentDatabaseEngine(ContentDatabaseEngine):
         self._commit_name = 'Noworkflow'
         self._commit_email = 'noworkflow@noworkflow.com'
         self._commit_ref = 'refs/heads/master'
-        self._default_branch = 'main'
+        self._default_branch = 'master'
         self._trial_ref_prefix = 'refs/noworkflow/trials/'
         self._initial_message = "Initial Commit"
         self.name_counter = Counter()

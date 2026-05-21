@@ -1052,40 +1052,18 @@ class Trial(AlchemyProxy):
         """
         session = session or relational.session
         head = Head.load_head(script, session=session)
+
         if head:
+            content.ensure_branch_for_trial(head.trial.id)
             trial = head.trial
             if remove:
                 Head.remove(head.id, session=relational.make_session())
-        elif not head:
-            trial = cls.last_trial(
-                script=script, check=check,
-                session=session)
+            return proxy(trial)
+
+        trial_id = content.get_branch_head_trial_id()
+        trial = cls.load_trial(trial_id, session=session)
         return proxy(trial)
 
-    @classmethod
-    def load_branch_parent(cls, script, session=None):
-        """Load parent from Git branch metadata, falling back to Head/last trial"""
-        session = session or relational.session
-        head = Head.load_head(script, session=session)
-        if head:
-            trial = head.trial
-            try:
-                content.ensure_branch_for_trial(trial.id)
-            except AttributeError:
-                pass
-            Head.remove(head.id, session=relational.make_session())
-            return trial
-
-        try:
-            trial_id = content.current_branch_trial()
-        except AttributeError:
-            trial_id = None
-        if trial_id:
-            trial = cls.load_trial(trial_id, session=session)
-            if trial:
-                return proxy(trial)
-
-        return proxy(cls.last_trial(script=script, check=True, session=session))
 
     @classmethod  # query
     def fast_last_trial_id(cls, session=None):
@@ -1253,7 +1231,7 @@ class Trial(AlchemyProxy):
         session = session or relational.session
 
         # ToDo: use core query
-        parent = cls.load_branch_parent(script, session=session)
+        parent = cls.load_parent(script, check=True)
         parent_id = parent.id if parent else None
 
         inherited_id = None

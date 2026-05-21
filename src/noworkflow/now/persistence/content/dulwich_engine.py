@@ -192,13 +192,13 @@ class DulwichEngine(GitContentDatabaseEngine):
             head = self.repo.refs.read_ref(b"HEAD")
         except (AttributeError, KeyError):
             head = None
-        head = self._to_text(head)
+        head = head.decode("utf-8")
         if head and head.startswith("refs/heads/"):
             return head
 
         refs = self.repo.get_refs()
         for candidate in ("refs/heads/master", "refs/heads/main"):
-            if candidate.encode("utf-8") in refs:
+            if candidate in refs:
                 self._set_head(candidate)
                 return candidate
 
@@ -215,24 +215,16 @@ class DulwichEngine(GitContentDatabaseEngine):
         """Return branch names in content.git"""
         result = []
         for ref in self.repo.get_refs():
-            ref = self._to_text(ref)
             if ref.startswith("refs/heads/"):
                 result.append(ref.rsplit("/", 1)[-1])
         return sorted(result)
 
-    def branch_commit(self, name=None):
-        """Return commit id for a branch"""
-        branch_ref = self.branch_ref(name) if name else self._current_branch_ref()
-        commit_id = self.repo.get_refs().get(branch_ref.encode("utf-8"))
-        return self._to_hex(commit_id)
 
-    def trial_commit(self, trial_id):
+    def get_commit_id_by_trial_id(self, trial_id):
         """Return commit id for a trial ref"""
-        commit_id = self.repo.get_refs().get(self.trial_ref(trial_id).encode("utf-8"))
-        print(commit_id)
-        return self._to_hex(commit_id)
+        return self.repo.get_refs().get(self.trial_ref(trial_id).encode("utf-8"))
 
-    def trial_for_commit(self, commit_id):
+    def get_trial_id_by_commit_id(self, commit_id):
         """Find trial id by commit id"""
         if not commit_id:
             return None
@@ -240,32 +232,35 @@ class DulwichEngine(GitContentDatabaseEngine):
         prefix = self._trial_ref_prefix
         for ref, value in self.repo.get_refs().items():
             ref = self._to_text(ref)
-            if ref.startswith(prefix) and self._to_hex(value) == wanted:
+            if ref.startswith(prefix) and value == commit_id:
                 return ref[len(prefix):]
         return None
 
-    def current_branch_head(self):
-        """Return trial id at the current branch head"""
-        return self.trial_for_commit(self.branch_commit())
+    def get_branch_head_trial_id(self, name=None):
+        """Return trial_id at the named branch head"""
+        """If no name is given, return trial_id current branch head"""
+        return self.get_trial_id_by_commit_id(self.get_branch_head_commit_id(name))
 
-    def branch_trial(self, name):
-        """Return trial id at the named branch head"""
-        return self.trial_for_commit(self.branch_commit(name))
+    def get_branch_head_commit_id(self, name=None):
+        """Return commit_id at the named branch head"""
+        """If no name is given, return commit_id current branch head"""
+        branch_ref = self.branch_ref(name) if name else self._current_branch_ref()
+        commit_id = self.repo.get_refs().get(branch_ref.encode("utf-8"))
+        return commit_id
 
     def create_branch(self, name, commit_id):
         """Create branch pointing to commit id"""
         if not commit_id:
             raise RuntimeError("cannot create branch without a commit")
         branch_ref = self.branch_ref(name)
-        encoded_ref = branch_ref.encode("utf-8")
-        if encoded_ref in self.repo.get_refs():
+        if branch_ref in self.repo.get_refs():
             raise RuntimeError("branch already exists: {}".format(name))
-        self.repo.refs[encoded_ref] = commit_id.encode("ascii")
+        self.repo.refs[branch_ref] = commit_id.encode("ascii")
 
     def switch_branch(self, name):
         """Switch HEAD to branch"""
         branch_ref = self.branch_ref(name)
-        if branch_ref.encode("utf-8") not in self.repo.get_refs():
+        if branch_ref not in self.repo.get_refs():
             raise RuntimeError("branch not found: {}".format(name))
         self._set_head(branch_ref)
 
@@ -328,7 +323,6 @@ class DulwichEngine(GitContentDatabaseEngine):
             else:
                 name, entry = item
                 mode, sha = entry.mode, entry.sha
-            name = self._to_text(name)
             relative = posixpath.join(prefix, name) if prefix else name
             obj = self.repo[sha]
             if isinstance(obj, Tree):

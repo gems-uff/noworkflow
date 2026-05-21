@@ -66,7 +66,4 @@ class Branch(Command):
             print_msg("Switched to branch {}".format(args.name), True)
         elif command == "rename":
             content.rename_branch(args.old, args.new)
-            print_msg(
-                "Renamed branch {} to {}".format(args.old, args.new),
-                True
-            )
+            print_msg("Renamed branch {} to {}".format(args.old, args.new), True)
