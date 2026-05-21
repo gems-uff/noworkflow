@@ -17,6 +17,8 @@ class GitContentDatabaseEngine(ContentDatabaseEngine):
         self._commit_name = 'Noworkflow'
         self._commit_email = 'noworkflow@noworkflow.com'
         self._commit_ref = 'refs/heads/master'
+        self._default_branch = 'master'
+        self._trial_ref_prefix = 'refs/noworkflow/trials/'
         self._initial_message = "Initial Commit"
         self.name_counter = Counter()
         self.base_path = None
@@ -32,7 +34,7 @@ class GitContentDatabaseEngine(ContentDatabaseEngine):
     def gc(self, aggressive=False):
         git_system.garbage_collection(self.content_path, aggressive)
 
-    def commit_content(self, message):
+    def commit_content(self, message, trial_id=None):
         """Commit the current files of content database"""
         self.close()
         trees = {'': self.new_tree('')}

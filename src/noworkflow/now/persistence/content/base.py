@@ -60,7 +60,7 @@ class ContentDatabaseEngine(object):
         """Collect garbage from database"""
         raise NotImplementedError("Implement in subclass")
 
-    def commit_content(self, message):
+    def commit_content(self, message, trial_id=None):
         """Commit content"""
         raise NotImplementedError("Implement in subclass")
 
