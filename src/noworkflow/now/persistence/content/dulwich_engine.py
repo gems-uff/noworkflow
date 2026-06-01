@@ -2,7 +2,6 @@ import os
 import hashlib
 import time
 import io
-import posixpath
 
 from dulwich import file
 from dulwich.repo import Repo
@@ -36,7 +35,7 @@ class DulwichEngine(GitContentDatabaseEngine):
             self.create_initial_commit()
         else:
             self.repo = Repo(self.content_path)
-            self._commit_ref = self._current_branch_ref()
+            _, self._commit_ref = self.current_branch()
 
     @staticmethod
     def do_put(content_path, object_hashes, lock, content, filename):
@@ -154,21 +153,9 @@ class DulwichEngine(GitContentDatabaseEngine):
             self.repo.object_store.add_object(tree)
             return tree.id
 
-    @staticmethod
-    def _to_text(value):
-        if value is None:
-            return None
-        if isinstance(value, bytes):
-            return value.decode("utf-8")
-        return value
-
-    @staticmethod
-    def _to_hex(value):
-        if value is None:
-            return None
-        if isinstance(value, bytes):
-            return value.decode("ascii")
-        return str(value)
+    #####################################################################
+    ## Branch Implementation
+    #####################################################################
 
     def get_commit_id_by_trial_id(self, trial_id):
         """Return commit id for a trial ref"""
@@ -284,6 +271,22 @@ class DulwichEngine(GitContentDatabaseEngine):
         _, current_name_ref = self.current_branch()
         if current_name_ref == old_ref:
             self._set_head(new_ref)
+
+    @staticmethod
+    def _to_text(value):
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            return value.decode("utf-8")
+        return value
+
+    @staticmethod
+    def _to_hex(value):
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            return value.decode("ascii")
+        return str(value)
 
 DistributedDulwichEngine = create_distributed(DulwichEngine)
 PoolDulwichEngine = create_pool(DulwichEngine)

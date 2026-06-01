@@ -1052,18 +1052,15 @@ class Trial(AlchemyProxy):
         """
         session = session or relational.session
         head = Head.load_head(script, session=session)
-
         if head:
-            content.ensure_branch_for_trial(head.trial.id)
             trial = head.trial
             if remove:
                 Head.remove(head.id, session=relational.make_session())
-            return proxy(trial)
-
-        trial_id = content.get_branch_head_trial_id()
-        trial = cls.load_trial(trial_id, session=session)
+        elif not head:
+            trial = cls.last_trial(
+                script=script, check=check,
+                session=session)
         return proxy(trial)
-
 
     @classmethod  # query
     def fast_last_trial_id(cls, session=None):

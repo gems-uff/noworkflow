@@ -48,21 +48,20 @@ class Branch(Command):
     def execute(self, args):
         self._connect(args)
         command = args.branch_cmd or "list"
+        current, _ = content.current_branch()
 
         if command == "list":
-            current = content.current_branch()
             for name in content.branches():
                 marker = "*" if name == current else " "
-                trial_id = content.branch_trial(name) or "<no trial>"
-                print("{} {} {}".format(marker, name, trial_id))
+                print("{} {}".format(marker, name))
         elif command == "current":
-            trial_id = content.current_branch_trial() or "<no trial>"
-            print("{} {}".format(content.current_branch(), trial_id))
+            print("{}".format(current))
         elif command == "switch":
-            content.checkout_branch(args.name)
-            trial_id = content.branch_trial(args.name)
-            if trial_id:
-                Trial(trial_id).create_head()
+            # TODO: IMPLEMENT this
+            # content.checkout_branch(args.name)
+            # trial_id = content.get_branch_head_trial_id(args.name)
+            # if trial_id:
+            #     Trial(trial_id).create_head()
             print_msg("Switched to branch {}".format(args.name), True)
         elif command == "rename":
             content.rename_branch(args.old, args.new)
