@@ -15,6 +15,7 @@ from dulwich.objectspec import scan_for_short_id
 from .gitbase import GitContentDatabaseEngine
 from .parallel import create_distributed, create_pool, create_threading, NullLock
 from . import safeopen
+from ..models import Trial
 
 class DulwichEngine(GitContentDatabaseEngine):
 
@@ -83,18 +84,30 @@ class DulwichEngine(GitContentDatabaseEngine):
             object_store = self.repo.object_store
             empty_tree = Tree()
             object_store.add_object(empty_tree)
-            self.create_commit_object(self._initial_message, empty_tree.id)
+            commit_id = self.create_commit_object(self._initial_message, empty_tree.id)
+            self.repo.refs[(self._commit_ref).encode("utf-8")] = commit_id
+            self.switch_branch(self._default_branch)
 
     def create_commit_object(self, message, tree, trial_id=None):
         """Create a commit object"""
         with self.use_safe_open(): 
-            self._commit_ref = self._current_branch_ref()
-            branch_ref = self._commit_ref.encode("utf-8")
-            master_ref = self.repo.get_refs().get(branch_ref, None)
-            
             commit = Commit()
-            if master_ref is not None:
-                commit.parents = [master_ref]
+
+            if trial_id != None:
+                current_branch, current_branch_ref = self.current_branch()
+                branch_head_commit_id = self.get_branch_head_commit_id(current_branch)
+                branch_head_trial_id = self.get_branch_head_trial_id(current_branch)
+
+                parent_trial_id = Trial(trial_id).parent_id
+
+                if parent_trial_id and branch_head_trial_id != parent_trial_id:
+                    new_branch = self.create_branch(branch_head_commit_id)
+                    self.switch_branch(new_branch)
+                else:
+                    self._set_head(current_branch_ref)
+
+                if branch_head_commit_id is not None:
+                    commit.parents = [branch_head_commit_id]
 
             commit.tree = tree
             author = (self._commit_name + " <" + self._commit_email + ">").encode()
@@ -106,17 +119,21 @@ class DulwichEngine(GitContentDatabaseEngine):
             commit.message = message.encode()
 
             self.repo.object_store.add_object(commit)
-            self.repo.refs[branch_ref] = commit.id
-            if trial_id:
-                self.repo.refs[self.trial_ref(trial_id).encode("utf-8")] = commit.id
+
+            self.repo.refs[
+                self._commit_ref.encode("utf-8")
+            ] = commit.id
+
+            self.repo.refs[
+                self.trial_ref(trial_id).encode("utf-8")
+            ] = commit.id
 
             return commit.id
 
     def commit_content(self, message, trial_id=None):
         """Commit the current files and update branch/trial refs"""
-        commit_id = super(DulwichEngine, self).commit_content(message)
-        if trial_id:
-            self.repo.refs[self.trial_ref(trial_id).encode("utf-8")] = commit_id
+        empty_tree = Tree()
+        commit_id = self.create_commit_object(message, empty_tree.id, trial_id)
         return commit_id
 
     def new_tree(self, parent):
@@ -137,8 +154,6 @@ class DulwichEngine(GitContentDatabaseEngine):
             self.repo.object_store.add_object(tree)
             return tree.id
 
-    # Branch prototype API
-
     @staticmethod
     def _to_text(value):
         if value is None:
@@ -155,21 +170,53 @@ class DulwichEngine(GitContentDatabaseEngine):
             return value.decode("ascii")
         return str(value)
 
-    @staticmethod
-    def _valid_branch_name(name):
-        return (
-            name and
-            ".." not in name and
-            not name.startswith("/") and
-            not name.endswith("/") and
-            not name.endswith(".lock") and
-            all(ch not in name for ch in " ~^:?*[\\")
-        )
+    def get_commit_id_by_trial_id(self, trial_id):
+        """Return commit id for a trial ref"""
+        return self.repo.get_refs().get(self.trial_ref(trial_id).encode("utf-8"))
+
+    def get_trial_id_by_commit_id(self, commit_id):
+        """Find trial id by commit id"""
+        if not commit_id:
+            return None
+        wanted = self._to_hex(commit_id)
+
+        prefix = self._trial_ref_prefix
+
+        with self.use_safe_open():
+            for ref, value in self.repo.get_refs().items():
+                ref = self._to_text(ref)
+                if ref.startswith(prefix) and value == commit_id:
+                    return ref[len(prefix):]
+        return None
+
+    def get_branch_head_trial_id(self, name=None):
+        """Return trial_id at the named branch head"""
+        """If no name is given, return trial_id current branch head"""
+        return self.get_trial_id_by_commit_id(self.get_branch_head_commit_id(name))
+
+    def get_branch_head_commit_id(self, name=None):
+        """Return commit_id at the named branch head"""
+        """If no name is given, return commit_id current branch head"""
+        with self.use_safe_open():
+            if name != None:
+                branch_ref = self.branch_ref(name)
+            else:
+                branch_name, branch_ref = self.current_branch()
+
+            commit_id = self.repo.get_refs().get(branch_ref.encode("utf-8"))
+            return commit_id
+
+    def branches(self):
+        """Return branch names in content.git"""
+        result = []
+        for ref in self.repo.get_refs():
+            ref = self._to_text(ref)
+            if ref.startswith("refs/heads/"):
+                result.append(ref.rsplit("/", 1)[-1])
+        return sorted(result)
 
     def branch_ref(self, name):
         """Return a full Git branch ref"""
-        if not self._valid_branch_name(name):
-            raise RuntimeError("invalid branch name: {}".format(name))
         return "refs/heads/{}".format(name)
 
     def trial_ref(self, trial_id):
@@ -186,81 +233,37 @@ class DulwichEngine(GitContentDatabaseEngine):
                 fil.write(b"ref: " + ref + b"\n")
         self._commit_ref = branch_ref
 
-    def _current_branch_ref(self):
-        """Return current branch ref, upgrading old stores lazily"""
-        try:
-            head = self.repo.refs.read_ref(b"HEAD")
-        except (AttributeError, KeyError):
-            head = None
-        head = head.decode("utf-8")
-        if head and head.startswith("refs/heads/"):
-            return head
-
-        refs = self.repo.get_refs()
-        for candidate in ("refs/heads/master", "refs/heads/main"):
-            if candidate in refs:
-                self._set_head(candidate)
-                return candidate
-
-        branch_ref = self.branch_ref(self._default_branch)
-        self._set_head(branch_ref)
-        return branch_ref
-
     def current_branch(self):
-        """Return the current branch name"""
-        ref = self._current_branch_ref()
-        return ref.rsplit("/", 1)[-1]
+        """Return the current branch name and ref"""
+        with self.use_safe_open():
+            ref_chain, commit_sha = self.repo.refs.follow(b'HEAD')
+            full_name = ref_chain[1].decode('utf-8')
+            return full_name.rsplit("/")[-1], full_name
 
-    def branches(self):
-        """Return branch names in content.git"""
-        result = []
-        for ref in self.repo.get_refs():
-            if ref.startswith("refs/heads/"):
-                result.append(ref.rsplit("/", 1)[-1])
-        return sorted(result)
-
-
-    def get_commit_id_by_trial_id(self, trial_id):
-        """Return commit id for a trial ref"""
-        return self.repo.get_refs().get(self.trial_ref(trial_id).encode("utf-8"))
-
-    def get_trial_id_by_commit_id(self, commit_id):
-        """Find trial id by commit id"""
-        if not commit_id:
-            return None
-        wanted = self._to_hex(commit_id)
-        prefix = self._trial_ref_prefix
-        for ref, value in self.repo.get_refs().items():
-            ref = self._to_text(ref)
-            if ref.startswith(prefix) and value == commit_id:
-                return ref[len(prefix):]
-        return None
-
-    def get_branch_head_trial_id(self, name=None):
-        """Return trial_id at the named branch head"""
-        """If no name is given, return trial_id current branch head"""
-        return self.get_trial_id_by_commit_id(self.get_branch_head_commit_id(name))
-
-    def get_branch_head_commit_id(self, name=None):
-        """Return commit_id at the named branch head"""
-        """If no name is given, return commit_id current branch head"""
-        branch_ref = self.branch_ref(name) if name else self._current_branch_ref()
-        commit_id = self.repo.get_refs().get(branch_ref.encode("utf-8"))
-        return commit_id
-
-    def create_branch(self, name, commit_id):
+    def create_branch(self, commit_id):
         """Create branch pointing to commit id"""
         if not commit_id:
             raise RuntimeError("cannot create branch without a commit")
-        branch_ref = self.branch_ref(name)
-        if branch_ref in self.repo.get_refs():
-            raise RuntimeError("branch already exists: {}".format(name))
-        self.repo.refs[branch_ref] = commit_id.encode("ascii")
+
+        trial_id = self.get_trial_id_by_commit_id(commit_id)
+
+        name = "now-diverge-{}".format(str(trial_id)[:8])
+        index = 1
+        existing = set(self.branches())
+
+        while name in existing:
+            index += 1
+            name = "{}-{}".format(name, index)
+
+        encoded_ref = (self.branch_ref(name)).encode("utf-8")
+        self.repo.refs[encoded_ref] = commit_id
+        return name
 
     def switch_branch(self, name):
         """Switch HEAD to branch"""
         branch_ref = self.branch_ref(name)
-        if branch_ref not in self.repo.get_refs():
+        encoded_ref = (branch_ref).encode("utf-8")
+        if encoded_ref not in self.repo.get_refs():
             raise RuntimeError("branch not found: {}".format(name))
         self._set_head(branch_ref)
 
@@ -277,64 +280,10 @@ class DulwichEngine(GitContentDatabaseEngine):
             raise RuntimeError("branch already exists: {}".format(new))
         self.repo.refs[new_key] = refs[old_key]
         del self.repo.refs[old_key]
-        if self._current_branch_ref() == old_ref:
+
+        _, current_name_ref = self.current_branch()
+        if current_name_ref == old_ref:
             self._set_head(new_ref)
-
-    def ensure_branch_for_trial(self, trial_id):
-        """Create and switch to an automatic branch for a restored trial"""
-        current_trial = self.current_branch_trial()
-        if current_trial == str(trial_id):
-            return self.current_branch()
-
-        commit_id = self.trial_commit(trial_id)
-        if not commit_id:
-            return self.current_branch()
-
-        base = "now-diverge-{}".format(str(trial_id)[:8])
-        name = base
-        index = 1
-        existing = set(self.branches())
-        while name in existing:
-            index += 1
-            name = "{}-{}".format(base, index)
-        self.create_branch(name, commit_id)
-        self.switch_branch(name)
-        return name
-
-    def checkout_branch(self, name):
-        """Switch branch and restore versioned files from its tree"""
-        self.switch_branch(name)
-        commit_id = self.branch_commit(name)
-        if not commit_id:
-            return
-        commit = self.repo[commit_id.encode("ascii")]
-        self._checkout_tree(commit.tree, "")
-
-    def _tree_items(self, tree):
-        if hasattr(tree, "iteritems"):
-            return tree.iteritems()
-        return tree.items()
-
-    def _checkout_tree(self, tree_id, prefix):
-        tree = self.repo[tree_id]
-        for item in self._tree_items(tree):
-            if len(item) == 3:
-                name, mode, sha = item
-            else:
-                name, entry = item
-                mode, sha = entry.mode, entry.sha
-            relative = posixpath.join(prefix, name) if prefix else name
-            obj = self.repo[sha]
-            if isinstance(obj, Tree):
-                self._checkout_tree(sha, relative)
-            else:
-                path = os.path.join(self.base_path, *relative.split("/"))
-                parent = os.path.dirname(path)
-                if parent:
-                    os.makedirs(parent, exist_ok=True)
-                with self.std_open(path, "wb") as fil:
-                    fil.write(obj.as_raw_string())
-
 
 DistributedDulwichEngine = create_distributed(DulwichEngine)
 PoolDulwichEngine = create_pool(DulwichEngine)

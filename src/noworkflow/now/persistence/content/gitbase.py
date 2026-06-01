@@ -20,6 +20,8 @@ class GitContentDatabaseEngine(ContentDatabaseEngine):
         self._default_branch = 'master'
         self._trial_ref_prefix = 'refs/noworkflow/trials/'
         self._initial_message = "Initial Commit"
+        self._default_branch = 'master'
+        self._trial_ref_prefix = 'refs/noworkflow/trials/'
         self.name_counter = Counter()
         self.base_path = None
         self.user_path = os.path.expanduser("~")

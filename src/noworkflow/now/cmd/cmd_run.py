@@ -67,6 +67,7 @@ def run(metascript, args=None):
         Tag.create_automatic_tag(*metascript.create_automatic_tag_args())
         Trial.set_user_based_on_env(metascript.trial_id)
         metaprofiler.meta_profiler.save()
+
         content.commit_content(
             metascript.message or "Trial {}".format(metascript.trial_id),
             trial_id=metascript.trial_id
@@ -159,7 +160,7 @@ class Run(Command):
                 help="add a message to the commit of the trial")
         add_arg("--content-engine", type=str,
                 help="set the content database engine")
-                                
+
 
         # Internal
         add_cmd("--create_last", action="store_true", help=argparse.SUPPRESS)
