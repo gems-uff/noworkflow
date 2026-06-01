@@ -68,7 +68,7 @@ class PlainEngine(ContentDatabaseEngine):
         """Do nothing for plain storage"""
         pass
 
-    def commit_content(self, message):
+    def commit_content(self, message, trial_id=None):
         """Do nothing for plain storage"""
         pass
 

@@ -39,6 +39,7 @@ dependencies = [
     "setuptools<72",
     "nbformat",
     "graphviz",
+    "dulwich"
 ]
 
 [project.optional-dependencies]
