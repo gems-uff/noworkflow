@@ -96,7 +96,7 @@ Upgrade
 To upgrade the version of a previously installed noWorkflow using pip, you should run the following command:
 
 ```
-$ pip install --upgrade noworkflow[all]
+$ pip install --upgrade "noworkflow[all]"
 ```
 
 Basic Usage
@@ -243,7 +243,14 @@ The *vis* option starts a visualization tool that allows interactive analysis:
 ```bash
 $ now vis -b
 ```
-The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool. An activation graph can be changed into definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs. 
+The visualization tool shows the evolution history, the trial information, an activation graph. It is also possible to compare different trials in the visualization tool. An activation graph can be changed into a definition graph that visualizes the structure of a trial, showing the hierarchical relationships of code constructs. 
+
+By default, *now vis* runs on *localhost:5000*, which conflicts with a built-in service on MacOS. To avoid that, you can specify a different port using the -p parameter. The example below uses the 5001 port instead of the default 5000.
+
+```bash
+$ now vis -p 5001
+```
+
 
 Explore this tutorial to master the [Visualization Tool](https://github.com/gems-uff/noworkflow/wiki#visualization-tool)
 
