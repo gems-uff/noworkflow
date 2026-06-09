@@ -60,7 +60,7 @@ To install noWorkflow, you should follow these basic instructions. Note that the
 
 Using Python 3.8, use pip to install noWorkflow:
 ```
-$ pip install noworkflow[all]
+$ pip install "noworkflow[all]"
 ```
 This installs noWorkflow, PyPosAST, SQLAlchemy, python-future, flask, IPython, Jupyter and PySWIP.
 The only requirements for running noWorkflow are PyPosAST, SQLAlchemy and python-future. The other libraries are only used for provenance analysis.
