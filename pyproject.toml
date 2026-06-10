@@ -39,13 +39,14 @@ dependencies = [
     "setuptools<72",
     "nbformat",
     "graphviz",
+    "flask"
 ]
 
 [project.optional-dependencies]
 demo = ["flask", "matplotlib", "numpy", "cython"]
 notebook = ["pyposast", "ipython", "jupyter"]
 all = [
-    "pyposast", "ipython", "jupyter", "flask", "pyswip-alt",
+    "pyposast", "ipython", "jupyter", "pyswip-alt",
     "matplotlib", "numpy", "cython"
 ]
 
