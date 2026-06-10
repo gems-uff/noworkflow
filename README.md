@@ -22,6 +22,7 @@ The main noWorkflow team is composed by researchers from Universidade Federal Fl
 - Leonardo Murta (UFF)
 - Vanessa Braganholo (UFF)
 - Arthur Paiva (UFF)
+- Felipe Coutinho (UFF)
 
 Collaborators
 
