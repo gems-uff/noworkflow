@@ -481,20 +481,13 @@ class Node(object):
 
     def to_dict(self, *args, **kwargs):
         """Convert to dict"""
-        statuses = {trial.status for trial in self.trials}
-        if "unfinished" in statuses:
-            status = "unfinished"
-        elif "backup" in statuses:
-            status = "backup"
-        else:
-            status = "finished"
         return {
             'id': repr(self.id),
             "display": repr(self.id),
             'parent_id': repr(self.parent_id),
             'level': self.level,
             'trials': [x.to_dict(*args, **kwargs) for x in self.trials],
-            'status': status,
+            'status': 'finished',
         }
 
     @property
