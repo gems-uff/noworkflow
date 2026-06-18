@@ -8,6 +8,7 @@
 import sys
 import weakref
 import os
+import io
 import time
 import inspect
 
@@ -68,6 +69,108 @@ OPEN_MODES = {
 }
 
 
+def is_write_mode(mode):
+    """Return True if the open mode writes/modifies the file (w/a/x/+)"""
+    return any(char in mode for char in ("w", "a", "x", "+"))
+
+
+class FileAccessProxy(object):
+    """Proxy around a real file object.
+
+    Delegates every operation to the wrapped file and captures
+    ``content_hash_after`` at the moment the file is closed (explicit
+    ``close()`` or ``with`` block exit). This is required because the
+    ``open`` call is itself a noWorkflow activation that closes right after
+    returning the (just-truncated) file object; capturing the "after" hash
+    when that activation closes would always hash an empty file.
+    """
+    # pylint: disable=protected-access
+
+    def __init__(self, file, file_access, collector):
+        object.__setattr__(self, "_f", file)
+        object.__setattr__(self, "_fa", file_access)
+        object.__setattr__(self, "_collector", collector)
+
+    def _capture_after(self):
+        """Re-read the file from disk and store its content_hash_after once"""
+        file_access = self._fa
+        # The file is no longer open for the never-closed fallback in store().
+        self._collector.open_write_files.pop(file_access, None)
+        if (file_access.content_hash_after is None
+                and os.path.exists(file_access.name)):
+            with content.std_open(file_access.name, "rb") as fil:
+                file_access.content_hash_after = content.put(
+                    fil.read(), file_access.name
+                )
+        file_access.done = True
+
+    def close(self):
+        """Close the real file (flushing it) before capturing the hash"""
+        result = self._f.close()
+        self._capture_after()
+        return result
+
+    def __enter__(self):
+        self._f.__enter__()
+        return self
+
+    def __exit__(self, *exc):
+        result = self._f.__exit__(*exc)
+        self._capture_after()
+        return result
+
+    # Dunders that bypass __getattr__ must be delegated explicitly:
+    def __iter__(self):
+        return iter(self._f)
+
+    def __next__(self):
+        return next(self._f)
+
+    def write(self, *args, **kwargs):
+        return self._f.write(*args, **kwargs)
+
+    def read(self, *args, **kwargs):
+        return self._f.read(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._f, name)
+
+    def __setattr__(self, name, value):
+        setattr(self._f, name, value)
+
+
+class TextFileProxy(FileAccessProxy):
+    """FileAccessProxy for text files (io.TextIOBase)"""
+
+
+class BufferedFileProxy(FileAccessProxy):
+    """FileAccessProxy for buffered binary files (io.BufferedIOBase)"""
+
+
+class RawFileProxy(FileAccessProxy):
+    """FileAccessProxy for raw/unbuffered binary files (io.RawIOBase)"""
+
+
+# Register one proxy class per io category so that isinstance(proxy, io.*)
+# keeps reporting the real file category without breaking attribute
+# delegation (subclassing io.* directly would resolve methods on the base
+# before __getattr__, hiding the real file's state).
+io.TextIOBase.register(TextFileProxy)
+io.BufferedIOBase.register(BufferedFileProxy)
+io.RawIOBase.register(RawFileProxy)
+
+
+def wrap_file_access(file, file_access, collector):
+    """Wrap a write-mode file object in the proxy matching its io category"""
+    if isinstance(file, io.TextIOBase):
+        return TextFileProxy(file, file_access, collector)
+    if isinstance(file, io.BufferedIOBase):
+        return BufferedFileProxy(file, file_access, collector)
+    if isinstance(file, io.RawIOBase):
+        return RawFileProxy(file, file_access, collector)
+    return FileAccessProxy(file, file_access, collector)
+
+
 class Collector(object):
     """Collector called by the transformed AST. __noworkflow__ object"""
     # pylint: disable=too-many-instance-attributes
@@ -92,6 +195,11 @@ class Collector(object):
         self.old_next = next
 
         self.condition_exceptions = ConditionExceptions()
+
+        # Write-mode file objects wrapped by a FileAccessProxy that are still
+        # open (file_access -> raw file). Used by store() to flush and capture
+        # content_hash_after for files the script never closes.
+        self.open_write_files = {}
 
         # attribute<->self dependency
         self.current_attr = None
@@ -201,9 +309,25 @@ class Collector(object):
                             mode += value
 
                 file_access.mode = mode
+
+            fil = old_open(name, *args, **kwargs)
+            # Only wrap real file objects opened for writing. os.open
+            # (osopen=True) returns an int file descriptor, not a file
+            # object, so it is never wrapped.
+            if not osopen and is_write_mode(file_access.mode or ""):
+                # Do NOT attach the file_access to the activation: the open()
+                # call is itself an activation that closes right after
+                # returning the just-truncated file, so close_activation would
+                # capture an empty content_hash_after before the script
+                # writes. The proxy captures it on close()/__exit__ instead
+                # (with a final sweep in store() as a fallback). Track the
+                # still-open file so the sweep can flush it if never closed.
+                self.open_write_files[file_access] = fil
+                return wrap_file_access(fil, file_access, self)
+            # Read-mode (and fd) accesses keep being captured by
+            # close_activation when the owning activation closes.
             activation.file_accesses.append(file_access)
-    
-            return old_open(name, *args, **kwargs)
+            return fil
 
         return open
 
@@ -444,7 +568,11 @@ class Collector(object):
         self.add_type(evaluation, value)
         self.last_activation = activation.last_activation
         for file_access in activation.file_accesses:
-            if os.path.exists(file_access.name):
+            # Do not overwrite a content_hash_after already captured by a
+            # FileAccessProxy on close()/__exit__ (write-mode files). Only
+            # fill it here when still unset (e.g. read-mode accesses).
+            if (file_access.content_hash_after is None
+                    and os.path.exists(file_access.name)):
                 with content.std_open(file_access.name, "rb") as fil:
                     file_access.content_hash_after = content.put(fil.read(), file_access.name)
             file_access.done = True
@@ -1996,6 +2124,27 @@ class Collector(object):
         metascript.activations_store.do_store(partial)
         metascript.dependencies_store.do_store(partial)
         metascript.members_store.do_store(partial)
+        if not partial:
+            # Final sweep: write-mode files the script never closed do not
+            # trigger the FileAccessProxy. Flush any still-open file object so
+            # its buffered data reaches disk, then capture its content instead
+            # of leaving content_hash_after unset.
+            for file_access in metascript.file_accesses_store.values():
+                if file_access.content_hash_after is not None:
+                    continue
+                fil = self.open_write_files.pop(file_access, None)
+                if fil is not None and not fil.closed:
+                    try:
+                        fil.flush()
+                        os.fsync(fil.fileno())
+                    except (OSError, ValueError):
+                        pass
+                if os.path.exists(file_access.name):
+                    with content.std_open(file_access.name, "rb") as cfil:
+                        file_access.content_hash_after = content.put(
+                            cfil.read(), file_access.name
+                        )
+                    file_access.done = True
         metascript.file_accesses_store.do_store(partial)
         metascript.stage_tags_store.do_store(partial)
 
