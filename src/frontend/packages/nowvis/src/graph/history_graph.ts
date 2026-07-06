@@ -1386,10 +1386,8 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
   document.getElementById("exampleModalTitle")!.textContent = "Dataflow";
 
   fetch("/dataflow/evaluations/" + trialId, {
-    method: 'GET', // *GET, POST, PUT, DELETE, etc.
-    headers: {
-      'Content-Type': 'application/json'
-    },
+	method: 'GET',
+	headers: { 'Content-Type': 'application/json' }
   }).then((response) => {
     response.json().then((json) => {
       evaluationList = json.evaluations;
@@ -1403,12 +1401,19 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
         scrollableModal(modalBody);
 
         form = modalBody.append("form").attr("onsubmit", "return false;");
-        createFormCheckInput(form, "dataFlowShowType", "Show type nodes");
-        createFormCheckInput(form, "dataFlowHideTimestamps", "Hide timestamps");
-        createFormCheckInput(form, "dataFlowHideInternals", "Show variables and functions which name starts with a leading underscore");
-        createFormCheckInput(form, "dataFlowHideNotCode", "Hide evaluations that aren't from the code");
-        createFormCheckInput(form, "dataFlowActivationNames", "Display nodes with their activation names instead");
-        createFormCheckInput(form, "dataFlowHideFunc", "Hide func type evaluations");
+
+	const checkboxes = [
+	  ["dataFlowShowType", "Show type nodes"],
+	  ["dataFlowHideTimestamps", "Hide timestamps"],
+	  ["dataFlowHideInternals", "Show variables and functions whose names start with '_'"],
+	  ["dataFlowHideNotCode", "Hide evaluations that aren't from the code"],
+	  ["dataFlowActivationNames", "Display nodes with their activation names"],
+	  ["dataFlowHideFunc", "Hide func type evaluations"],
+	] as const;
+
+	checkboxes.forEach(([id, label]) =>
+	  createFormCheckInput(form, id, label)
+	);
 
         createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp",
           "(default: Shows each file once (hide external accesses))",
@@ -1448,59 +1453,44 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
       }
 
       submitButton!.on("click", function () {
-        let dataFlowShowType = (<HTMLInputElement>document.getElementById("dataFlowShowType")).checked;
-        let dataFlowHideTimestamps = (<HTMLInputElement>document.getElementById("dataflowMode")).checked;
-        let dataFlowHideInternals = (<HTMLInputElement>document.getElementById("dataFlowHideInternals")).checked;
-        let dataFlowHideNotCode = (<HTMLInputElement>document.getElementById("dataFlowHideNotCode")).checked;
-        let dataFlowActivationNames = (<HTMLInputElement>document.getElementById("dataFlowActivationNames")).checked;
-        let dataFlowHideFunc = (<HTMLInputElement>document.getElementById("dataFlowHideFunc")).checked;
-
-        let dataflowFileAccesses = (<HTMLSelectElement>document.getElementById("dataflowShowAccesses")).selectedOptions[0].index;
-        let dataflowEvaluation = (<HTMLSelectElement>document.getElementById("dataflowEvaluation")).selectedOptions[0].index;
-        let dataflowGroup = (<HTMLSelectElement>document.getElementById("dataflowGroup")).selectedOptions[0].index;
-        let dataflowMode = (<HTMLSelectElement>document.getElementById("dataflowMode")).selectedOptions[0].value;
-
-        let dataflowDepth = (<HTMLInputElement>document.getElementById("dataflowDepth")).value;
-        let dataflowValueLength = (<HTMLInputElement>document.getElementById("dataflowValueLength")).value;
-        let dataflowName = (<HTMLInputElement>document.getElementById("dataflowName")).value;
-
         let trialId = parent.getAttribute("selected-trial");
-
-        selectedEvaluation = dataflowTextInputEvaluation.getAttribute("selectedEvaluationID");
-
-        let dataflowUrl = "/commands/dataflow/" + trialId + "/" + dataFlowShowType + "/" + dataFlowHideTimestamps + "/" +
-          dataFlowHideInternals + "/" + dataFlowHideNotCode + "/"+ dataFlowActivationNames + "/"+ dataFlowHideFunc + "/" +dataflowFileAccesses + "/" + dataflowEvaluation + 
-          "/" + dataflowGroup + "/" + dataflowDepth + "/" + dataflowValueLength + "/" + dataflowName + "/" + dataflowMode;
-        dataflowUrl += (selectedEvaluation && !selectedEvaluation.includes("undefined")) ? "/true/" + selectedEvaluation : "/false/0";
 
         let dataflowWindowId = "Dataflow window " + trialId;
 
-        /* if (document.getElementById(dataflowWindowId)) {
-          window.alert("Close trial " + trialId + " dataflow tab before generating a new dataflow");
-          return;
-        } */
+        if (document.getElementById(dataflowWindowId)) dataflowWindowId += crypto.randomUUID();
 
-          if (document.getElementById(dataflowWindowId)) dataflowWindowId += crypto.randomUUID();
+	let payload = {
+		trialId,
+		dataFlowShowType: (document.getElementById("dataFlowShowType")).checked,
+		dataFlowHideTimestamps: (document.getElementById("dataflowMode")).checked,
+		dataFlowHideInternals: (document.getElementById("dataFlowHideInternals")).checked,
+		dataFlowHideNotCode: (document.getElementById("dataFlowHideNotCode")).checked,
+		dataFlowActivationNames: (document.getElementById("dataFlowActivationNames")).checked,
+		dataFlowHideFunc: (document.getElementById("dataFlowHideFunc")).checked,
 
-        fetch(dataflowUrl, {
-          method: 'GET', // *GET, POST, PUT, DELETE, etc.
-          headers: {
-            'Content-Type': 'application/json'
-          },
+		dataflowFileAccesses: (document.getElementById("dataflowShowAccesses")).selectedOptions[0].index,
+		dataflowEvaluation: (document.getElementById("dataflowEvaluation")).selectedOptions[0].index,
+		dataflowGroup: (document.getElementById("dataflowGroup")).selectedOptions[0].index,
+		dataflowMode: (document.getElementById("dataflowMode")).selectedOptions[0].value,
+
+		dataflowDepth: (document.getElementById("dataflowDepth")).value,
+		dataflowValueLength: (document.getElementById("dataflowValueLength")).value,
+		dataflowName: (document.getElementById("dataflowName")).value,
+
+		selectedEvaluation: dataflowTextInputEvaluation.getAttribute("selectedEvaluationID")
+	}
+
+        fetch("/commands/dataflow/", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify(payload)
         }).then((response: any) => {
-          console.log(dataflowMode);
           cleanModalBodyAndClose(modal, modalBody);
-          getDataflow(response, config, parent, dataflowWindowId, dataflowUrl);
+          getDataflow(response, config, parent, dataflowWindowId, ""); // TODO: REFACTOR THIS DATAFLOW URL
         });
-
-
-
       });
-
     });
   });
-
-
 }
 
 function addsAutocompleteToDataflowWDF(dataflowEvaluationInput: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>, dataflowTextInputEvaluation: HTMLSelectElement, evaluationList: any) {

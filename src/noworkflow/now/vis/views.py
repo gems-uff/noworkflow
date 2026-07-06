@@ -602,32 +602,55 @@ def execute_command_export(trial_id, rules, hide_timestamps):
     sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(export=sub_process_print), 200
 
-@app.route("/commands/dataflow/<trial_id>/<argument_T>/<argument_t>/<argument_H>/<argument_hnc>/<argument_an>/<argument_hf>/<file_accesses>/<evaluation>/<group>/<depth>/<value_length>/<name>/<mode>/<wdf>/<eid>")
-def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argument_hnc, argument_an, argument_hf,file_accesses, evaluation, group, depth, value_length, name, mode, wdf, eid):
+@app.route("/commands/dataflow/", methods=["POST"])
+def execute_dataflow_export():
     """Execute the command 'now export dataflow'"""
+
+    body = request.json
+
+    trial_id                = body.get("trialId")
+    dataFlowShowType        = body.get("dataFlowShowType")
+    dataFlowHideTimestamps  = body.get("dataFlowHideTimestamps")
+    dataFlowHideInternals   = body.get("dataFlowHideInternals")
+    dataFlowHideNotCode     = body.get("dataFlowHideNotCode")
+    dataFlowActivationNames = body.get("dataFlowActivationNames")
+    dataFlowHideFunc        = body.get("dataFlowHideFunc")
+    dataflowFileAccesses    = body.get("dataflowFileAccesses")
+    dataflowEvaluation      = body.get("dataflowEvaluation")
+    dataflowGroup           = body.get("dataflowGroup")
+    dataflowMode            = body.get("dataflowMode")
+    dataflowDepth           = int(body.get("dataflowDepth"))
+    dataflowValueLength     = int(body.get("dataflowValueLength"))
+    dataflowName            = int(body.get("dataflowName"))
+    selectedEvaluation      = body.get("selectedEvaluation")
+
     dataflow_command = ("now export dataflow " + trial_id).split()
-    
-    if argument_T == "true": dataflow_command.append("-T")
-    if argument_t == "true": dataflow_command.append("-t")
-    if argument_H == "true": dataflow_command.append("-H")
-    if argument_hnc == "true": dataflow_command.append("-hnc")
-    if argument_an == "true": dataflow_command.append("-an")
-    if argument_hf == "true": dataflow_command.append("-hf")
-    if wdf == "true":
+
+    if dataFlowShowType == "true": dataflow_command.append("-T")
+    if dataFlowHideTimestamps == "true": dataflow_command.append("-t")
+    if dataFlowHideInternals == "true": dataflow_command.append("-H")
+    if dataFlowHideNotCode == "true": dataflow_command.append("-hnc")
+    if dataFlowActivationNames == "true": dataflow_command.append("-an")
+    if dataFlowHideFunc == "true": dataflow_command.append("-hf")
+
+    if selectedEvaluation == "true":
         dataflow_command.append("-w")
         dataflow_command.append(eid)
-    
-    appendDataflowCommandWithParameters(dataflow_command, "-a", file_accesses, 0, 4, 1)
-    appendDataflowCommandWithParameters(dataflow_command, "-e", evaluation, 0, 2, 1)
-    appendDataflowCommandWithParameters(dataflow_command, "-g", group, 0, 2, 0)
-    appendDataflowCommandWithParameters(dataflow_command, "-d", depth, 0, float('inf'), 0)
-    appendDataflowCommandWithParameters(dataflow_command, "--value-length", value_length, 0, float('inf'), 0)
-    appendDataflowCommandWithParameters(dataflow_command, "-n", name, 0, float('inf'), 55)
+
+    appendDataflowCommandWithParameters(dataflow_command, "-a", dataflowFileAccesses, 0, 4, 1)
+    appendDataflowCommandWithParameters(dataflow_command, "-e", dataflowEvaluation, 0, 2, 1)
+    appendDataflowCommandWithParameters(dataflow_command, "-g", dataflowGroup, 0, 2, 0)
+    appendDataflowCommandWithParameters(dataflow_command, "-d", dataflowDepth, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(dataflow_command, "--value-length", dataflowValueLength, 0, float('inf'), 0)
+    appendDataflowCommandWithParameters(dataflow_command, "-n", dataflowName, 0, float('inf'), 55)
 
     dataflow_command.append("-m")
-    if mode in ["activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"]: dataflow_command.append(mode)
-    else: dataflow_command.append("prospective")
-    
+
+    if dataflowMode in ["activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"]:
+        dataflow_command.append(dataflowMode)
+    else:
+        dataflow_command.append("prospective")
+
     sub_process_print = subprocess.run(dataflow_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(dataflow=sub_process_print), 200
 
