@@ -444,6 +444,7 @@ buildProspectiveCommand() {
   buildDataflowCommand(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
     modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>) {
     let self = this;
+
     this.rightClickMenu.append("a")
       .classed("dropdown-item", true)
       .attr("href", "#")
@@ -455,6 +456,19 @@ buildProspectiveCommand() {
         let trialId = parent.getAttribute("selected-trial") ?? "";
 
         buildDataflowModal(modal, modalBody, parent, self.graph.config, trialId);
+      });
+
+    this.rightClickMenu.append("a")
+      .classed("dropdown-item", true)
+      .attr("href", "#")
+      .attr("id", "dataflow-option")
+      .text("generate dataflow (Advanced)")
+      .on("click", function () {
+
+        let parent = this.parentNode as Element
+        let trialId = parent.getAttribute("selected-trial") ?? "";
+
+        buildAdvancedDataflowModal(modal, modalBody, parent, self.graph.config, trialId);
       });
 
   };
@@ -1397,6 +1411,84 @@ function buildDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | n
       showModal(modal);
 
       if (modalBody) {
+        form = modalBody.append("form").attr("onsubmit", "return false;");
+
+	const checkboxes = [
+	  ["1", "Default"],
+	  ["2", "Detailed"],
+	  ["3", "Complete"],
+	  ["3", "Function Overview"],
+	  ["4", "File Provenance"],
+	] as const;
+
+	checkboxes.forEach(([id, label]) =>
+	  createFormRadioInput(form, id, label)
+	);
+
+        submitButton = form.append("button").classed("btn btn-primary", true).text("Generate dataflow");
+      }
+
+      submitButton!.on("click", function () {
+        let trialId = parent.getAttribute("selected-trial");
+
+        let dataflowWindowId = "Dataflow window " + trialId;
+
+        if (document.getElementById(dataflowWindowId)) dataflowWindowId += crypto.randomUUID();
+
+	let payload = {
+		trialId,
+		dataFlowShowType: false,
+		dataFlowHideTimestamps: "55",
+		dataFlowHideInternals: false,
+		dataFlowHideNotCode: false,
+		dataFlowActivationNames: false,
+		dataFlowHideFunc: false,
+
+		dataflowFileAccesses: 1,
+		dataflowEvaluation: 1,
+		dataflowGroup: 0,
+		dataflowMode: "coarseGrain",
+
+		dataflowDepth: "0",
+		dataflowValueLength: "0",
+		dataflowName: "55",
+
+		selectedEvaluation: null
+	}
+
+        fetch("/commands/dataflow/", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify(payload)
+        }).then((response: any) => {
+          cleanModalBodyAndClose(modal, modalBody);
+          getDataflow(response, config, parent, dataflowWindowId, ""); // TODO: REFACTOR THIS DATAFLOW URL
+        });
+      });
+    });
+  });
+}
+
+function buildAdvancedDataflowModal(modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+  parent: Element, config: HistoryConfig, trialId: string) {
+
+  let submitButton;
+  let evaluationList;
+  let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+  document.getElementById("exampleModalTitle")!.textContent = "Dataflow";
+
+  fetch("/dataflow/evaluations/" + trialId, {
+	method: 'GET',
+	headers: { 'Content-Type': 'application/json' }
+  }).then((response) => {
+    response.json().then((json) => {
+      evaluationList = json.evaluations;
+      let selectedEvaluation: string | null;
+      let dataflowTextInputEvaluation: HTMLSelectElement;
+
+      showModal(modal);
+
+      if (modalBody) {
 
         scrollableModal(modalBody);
 
@@ -1627,6 +1719,14 @@ function addAlert(div: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>, a
     feedbackAlert.remove();
   });
   feedbackAlert.append("p").text(text);
+}
+
+function createFormRadioInput(form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>, checkInputId: string, text: string) {
+  let checkDiv = form.append("div").classed("form-check mb-3", true);
+  checkDiv.append("input").classed("form-check-input", true).attr("value", "").attr("id", checkInputId)
+    .attr("name", "exportType").attr("type", "radio");
+  checkDiv.append("label").classed("form-check-label", true).attr("for", checkInputId)
+    .text(text);
 }
 
 function createFormCheckInput(form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>, checkInputId: string, text: string) {

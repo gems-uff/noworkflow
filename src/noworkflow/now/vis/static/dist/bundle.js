@@ -57277,6 +57277,12 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
         var trialId = (_parent$getAttribute2 = parent.getAttribute("selected-trial")) !== null && _parent$getAttribute2 !== void 0 ? _parent$getAttribute2 : "";
         buildDataflowModal(modal, modalBody, parent, self.graph.config, trialId);
       });
+      this.rightClickMenu.append("a").classed("dropdown-item", true).attr("href", "#").attr("id", "dataflow-option").text("generate dataflow (Advanced)").on("click", function () {
+        var _parent$getAttribute3;
+        var parent = this.parentNode;
+        var trialId = (_parent$getAttribute3 = parent.getAttribute("selected-trial")) !== null && _parent$getAttribute3 !== void 0 ? _parent$getAttribute3 : "";
+        buildAdvancedDataflowModal(modal, modalBody, parent, self.graph.config, trialId);
+      });
     }
   }, {
     key: "buildExportPrologCommand",
@@ -58074,13 +58080,75 @@ function buildDataflowModal(modal, modalBody, parent, config, trialId) {
       var dataflowTextInputEvaluation;
       showModal(modal);
       if (modalBody) {
-        scrollableModal(modalBody);
         form = modalBody.append("form").attr("onsubmit", "return false;");
-        var checkboxes = [["dataFlowShowType", "Show type nodes"], ["dataFlowHideTimestamps", "Hide timestamps"], ["dataFlowHideInternals", "Show variables and functions whose names start with '_'"], ["dataFlowHideNotCode", "Hide evaluations that aren't from the code"], ["dataFlowActivationNames", "Display nodes with their activation names"], ["dataFlowHideFunc", "Hide func type evaluations"]];
+        var checkboxes = [["1", "Default"], ["2", "Detailed"], ["3", "Complete"], ["3", "Function Overview"], ["4", "File Provenance"]];
         checkboxes.forEach(function (_ref5) {
           var _ref6 = _slicedToArray(_ref5, 2),
             id = _ref6[0],
             label = _ref6[1];
+          return createFormRadioInput(form, id, label);
+        });
+        submitButton = form.append("button").classed("btn btn-primary", true).text("Generate dataflow");
+      }
+      submitButton.on("click", function () {
+        var trialId = parent.getAttribute("selected-trial");
+        var dataflowWindowId = "Dataflow window " + trialId;
+        if (document.getElementById(dataflowWindowId)) dataflowWindowId += crypto.randomUUID();
+        var payload = {
+          trialId: trialId,
+          dataFlowShowType: false,
+          dataFlowHideTimestamps: "55",
+          dataFlowHideInternals: false,
+          dataFlowHideNotCode: false,
+          dataFlowActivationNames: false,
+          dataFlowHideFunc: false,
+          dataflowFileAccesses: 1,
+          dataflowEvaluation: 1,
+          dataflowGroup: 0,
+          dataflowMode: "coarseGrain",
+          dataflowDepth: "0",
+          dataflowValueLength: "0",
+          dataflowName: "55",
+          selectedEvaluation: null
+        };
+        fetch("/commands/dataflow/", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }).then(function (response) {
+          cleanModalBodyAndClose(modal, modalBody);
+          getDataflow(response, config, parent, dataflowWindowId, ""); // TODO: REFACTOR THIS DATAFLOW URL
+        });
+      });
+    });
+  });
+}
+function buildAdvancedDataflowModal(modal, modalBody, parent, config, trialId) {
+  var submitButton;
+  var evaluationList;
+  var form;
+  document.getElementById("exampleModalTitle").textContent = "Dataflow";
+  fetch("/dataflow/evaluations/" + trialId, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }).then(function (response) {
+    response.json().then(function (json) {
+      evaluationList = json.evaluations;
+      var selectedEvaluation;
+      var dataflowTextInputEvaluation;
+      showModal(modal);
+      if (modalBody) {
+        scrollableModal(modalBody);
+        form = modalBody.append("form").attr("onsubmit", "return false;");
+        var checkboxes = [["dataFlowShowType", "Show type nodes"], ["dataFlowHideTimestamps", "Hide timestamps"], ["dataFlowHideInternals", "Show variables and functions whose names start with '_'"], ["dataFlowHideNotCode", "Hide evaluations that aren't from the code"], ["dataFlowActivationNames", "Display nodes with their activation names"], ["dataFlowHideFunc", "Hide func type evaluations"]];
+        checkboxes.forEach(function (_ref7) {
+          var _ref8 = _slicedToArray(_ref7, 2),
+            id = _ref8[0],
+            label = _ref8[1];
           return createFormCheckInput(form, id, label);
         });
         createFormSelectInput(form, "dataflowShowAccesses", "Show file accesses", 0, 4, 1, "dataflowShowAccessesHelp", "(default: Shows each file once (hide external accesses))", ["Hides file accesses", "Shows each file once (hide external accesses)", "Shows each file once (show external accesses)", "Shows all accesses (except external accesses)", "Shows all accesses (including external accesses)"]);
@@ -58229,6 +58297,11 @@ function addAlert(div, alertType, title, text) {
     feedbackAlert.remove();
   });
   feedbackAlert.append("p").text(text);
+}
+function createFormRadioInput(form, checkInputId, text) {
+  var checkDiv = form.append("div").classed("form-check mb-3", true);
+  checkDiv.append("input").classed("form-check-input", true).attr("value", "").attr("id", checkInputId).attr("name", "exportType").attr("type", "radio");
+  checkDiv.append("label").classed("form-check-label", true).attr("for", checkInputId).text(text);
 }
 function createFormCheckInput(form, checkInputId, text) {
   var checkDiv = form.append("div").classed("form-check", true);
