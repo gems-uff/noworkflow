@@ -14,7 +14,7 @@ import tempfile
 
 from future.utils import viewvalues
 
-from ...now.collection.prov_execution.collector import wrap_file_access
+from ...now.collection.prov_execution.file_access_proxy import wrap_file_access
 from ..collection_testcase import CollectionTestCase
 
 
