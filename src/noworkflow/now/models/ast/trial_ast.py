@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 import weakref
 import ast
+import sys
 
 
 class TrialAst(object):
@@ -661,7 +662,10 @@ class TrialAst(object):
             return ast_
 
     def construct_ast(self):
-        print(ast.dump(ast.parse(self()), indent=2))
+        kwargs = {}
+        if sys.version_info >= (3, 9):
+            kwargs["indent"] = 2
+        print(ast.dump(ast.parse(self()), **kwargs))
 
 def ast_to_dot(node):
     """Converts AST node to DOT format for Graphviz."""
