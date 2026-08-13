@@ -23,8 +23,10 @@ class DataflowModel(Model):
     def __init__(self, trial=None, activation=None):
         super(DataflowModel, self).__init__()
         self.trial = None
+        self.trial_ref = None
         if trial is not None:
             self.trial = weakref.proxy(trial)
+            self.trial_ref = trial.id
         self.activation = None
         if activation is not None:
             self.activation = activation
@@ -36,12 +38,8 @@ class DataflowModel(Model):
 
     def _load_trial_and_activation(self):
         """Load trial or activation from trial/activation attributes"""
-        if self.activation is None and self.trial is None:
-            raise ValueError("Either activation or trial should be defined")
-        elif self.activation is not None:
-            self.trial = weakref.proxy(self.activation.trial)
-        elif self.trial is not None:
-            self.activation = self.trial.initial_activation
+        self.trial = self._get_trial()
+        self.activation = self.trial.initial_activation
 
     def export_text(self):
         """Export facts from trial as text"""
@@ -64,3 +62,17 @@ class DataflowModel(Model):
             "dot", "--format {}".format(self.format), self.export_text()
         )
         display(obj)
+
+    def _get_trial(self):
+        if self.trial is not None:
+            try:
+                self.trial.id  # just verifies the proxy is alive
+                return self.trial
+            except ReferenceError:
+                pass
+
+        if self.trial_ref is not None:
+            from ..persistence.models.trial import Trial
+            return Trial(self.trial_ref)
+
+        raise ValueError("Either activation or trial should be defined")
