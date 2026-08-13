@@ -13,6 +13,9 @@ class TestDataflowModel(CollectionTestCase):
         self.clean_execution()
 
         trial = Trial()
+        trial_ref = trial.id
+
+        trial = Trial(trial_ref)
         dot = trial.dot
 
         del trial

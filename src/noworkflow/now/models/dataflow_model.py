@@ -10,7 +10,6 @@ import weakref
 
 
 from ..persistence.models.base import Model
-from ..persistence.models.trial import Trial
 
 from .dependency_graph.dot_visitor import DotVisitor
 from .dependency_graph.search_visitor import SearchEvaluationVisitor
@@ -73,6 +72,7 @@ class DataflowModel(Model):
                 pass
 
         if self.trial_ref is not None:
+            from ..persistence.models.trial import Trial
             return Trial(self.trial_ref)
 
         raise ValueError("Either activation or trial should be defined")
