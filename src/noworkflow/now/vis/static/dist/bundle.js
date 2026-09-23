@@ -56927,8 +56927,8 @@ function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
     if (property != "variables") textChangeTitle = functionDiffWindow.append("p").attr("style", "font-weight:bold;").text(changeText);
     if (changeText.includes("changed")) {
       if (property == "duration") {
-        functionDiffJson[property + "_function_trial1"] = functionDiffJson[property + "_function_trial1"].toString() + " miliseconds";
-        functionDiffJson[property + "_function_trial2"] = functionDiffJson[property + "_function_trial2"].toString() + " miliseconds";
+        functionDiffJson[property + "_function_trial1"] = Number(functionDiffJson[property + "_function_trial1"]).toFixed(2) + " microseconds";
+        functionDiffJson[property + "_function_trial2"] = Number(functionDiffJson[property + "_function_trial2"]).toFixed(2) + " microseconds";
       }
       var spanProperty = functionDiffWindow.append("span").attr("id", "diff-function-" + property + "-span-" + crypto.randomUUID());
       if (property != "variables") addHideShowButton(textChangeTitle, "hide-and-show-button-" + property, spanProperty.attr("id"));

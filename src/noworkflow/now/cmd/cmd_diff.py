@@ -234,8 +234,8 @@ class Diff(Command):
                 print_msg("The "+property+" "+change+"\n", True)
                 if  not didnt_change:
                     if property == "duration":
-                        functions_info[property+"_function_trial1"] = str(functions_info[property+"_function_trial1"]) + " miliseconds"
-                        functions_info[property+"_function_trial2"] = str(functions_info[property+"_function_trial2"]) + " miliseconds"
+                        functions_info[property+"_function_trial1"] = str(round(functions_info[property+"_function_trial1"], 2)) + " microseconds"
+                        functions_info[property+"_function_trial2"] = str(round(functions_info[property+"_function_trial2"], 2)) + " microseconds"
                     if property == "variables":
                         [print('\n'.join(list(diff_var))) for diff_var in trial1_variables_that_changed]
                         if len(trial2_variables_added) > 0:
@@ -340,8 +340,8 @@ class Diff(Command):
                 "output_function_trial2" : function_as_evaluation_trial2.repr,
                 "arguments_function_trial1" : [relational.session.query(Evaluation.m).filter(Evaluation.m.id==argument.dependency_id, Evaluation.m.trial_id==trial1_id).all()[0].repr for argument in function_trial1_arguments],
                 "arguments_function_trial2" : [relational.session.query(Evaluation.m).filter(Evaluation.m.id==argument.dependency_id, Evaluation.m.trial_id==trial2_id).all()[0].repr for argument in function_trial2_arguments],
-                "duration_function_trial1" : (function_as_evaluation_trial1.checkpoint - function_as_activation_trial1.start_checkpoint) * 1000000, #miliseconds
-                "duration_function_trial2" : (function_as_evaluation_trial2.checkpoint - function_as_activation_trial2.start_checkpoint) * 1000000, #miliseconds
+                "duration_function_trial1" : (function_as_evaluation_trial1.checkpoint - function_as_activation_trial1.start_checkpoint) * 1000000, # microseconds
+                "duration_function_trial2" : (function_as_evaluation_trial2.checkpoint - function_as_activation_trial2.start_checkpoint) * 1000000, # microseconds
                 "variables_function_trial1" : [{"evaluation_id":variable[0],"name":variable[1],"value":variable[2],"type":variable[3],"code_line":variable[4], "code_column": variable[5]} for variable in function_trial1_variables],
                 "variables_function_trial2" : [{"evaluation_id":variable[0],"name":variable[1],"value":variable[2],"type":variable[3],"code_line":variable[4], "code_column": variable[5]} for variable in function_trial2_variables],
                 "file_accesses_added" : new_added,
