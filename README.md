@@ -131,6 +131,17 @@ Each new run produces a different trial that will be stored with a universally u
 
 Verifying the module dependencies is a time consuming step, and scientists can bypass this step by using the *-b* flag if they know that no library or source code has changed. The current trial then inherits the module dependencies of the previous one.  To see more usage options, run "now run -h".
 
+The collection can also be tuned. The *-d* option limits the depth of the collection, and *-cg* switches from fine-grained to coarse-grained collection, which stops collecting variable assignments, variable dependencies, and loop structures:
+```bash
+$ now run -d 2 script.py
+$ now run -cg script.py
+```
+The *-e* option controls which evaluation values are collected: *all* (default), *relevant* (only values of activations, arguments, and tagged evaluations), or *none* (no values at all):
+```bash
+$ now run -e relevant script.py
+```
+Other options include *-c* to choose which functions are subject to depth computation (*main*, *package*, or *all*), *-r* to choose the serialization method for values (*repr*, *jsonpickle*, *jsonpickle_content*, or *simple*), *-s* and *-S* to set how often partial provenance is saved, *--name* to group or separate trials, *--dir* to set where provenance is stored, and *--message* to attach a message to the trial.
+
 To restore files, run:
 ```
 $ now restore [trial]
@@ -188,9 +199,25 @@ $ now diff [trial1] [trial2]
 ```
 where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run "now diff -h".
 
-The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. This command has many options to change the resulting graph. Please, run "now export dataflow -h" to get their descriptions.
+The *-fa* option compares two function activations instead of whole trials, taking the database ids of the activations in the same order as the trials:
 ```bash
-$ now export dataflow [trial] -m prospective | dot -Tpng -o prospective.png
+$ now diff [trial1] [trial2] -fa 57 65
+```
+It reports the differences in output, arguments, duration, variables, and file accesses. An optional argument after the ids selects which kinds of variable are shown: leaving it blank shows name, attribute, and access variables; *op* also shows operations; and *all* shows every kind.
+
+The *dataflow* option exports fine-grained provenance data to a graphviz dot representing the dataflow. The *-m* option chooses the graph mode: *activation*, *coarseGrain*, *looplessCoarseGrain*, *fineGrain*, or *all*. Please, run "now export dataflow -h" to get the description of all options.
+```bash
+$ now export dataflow [trial] -m coarseGrain | dot -Tpng -o dataflow.png
+```
+
+Other options control what appears in the graph: *-a* sets how file accesses are shown, *-e* combines evaluation nodes, *-d* limits which user-defined calls appear, *-g* aligns evaluations, *--value-length* and *--name-length* limit the displayed text, and *-T*, *-t*, *-H*, *-hnc*, *-hf*, and *-an* hide or rename specific kinds of node. The *-w* option restricts the graph to everything that derived a given evaluation:
+```bash
+$ now export dataflow [trial] -m activation -w 18 | dot -Tpng -o wdf.png
+```
+
+To export the prospective provenance graph of a trial, which represents the static structure of the script, run:
+```bash
+$ now export prospective [trial] | dot -Tpng -o prospective.png
 ```
 
 To export provenance data of a given trial to Prolog facts, so inference queries can be run over the database, run:
@@ -251,6 +278,7 @@ By default, *now vis* runs on *localhost:5000*, which conflicts with a built-in 
 ```bash
 $ now vis -p 5001
 ```
+The *--host* option changes the address the server binds to, so the interface can be reached from another machine, *-d* runs the server in debug mode, and *--dir* points to a provenance database in another directory.
 
 
 Explore this tutorial to master the [Visualization Tool](https://github.com/gems-uff/noworkflow/wiki#visualization-tool)
