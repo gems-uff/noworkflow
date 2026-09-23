@@ -11,6 +11,7 @@ from .test_default_clusterizer import TestClusterizer
 from .test_dependency_clusterizer import TestDependencyClusterizer
 from .test_activation_clusterizer import TestActivationClusterizer
 from .test_prospective_clusterizer import TestProspectiveClusterizer
+from .test_dataflow_model import TestDataflowModel
 from .test_clusterizer_config import TestClusterizerConfig
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "TestActivationClusterizer",
     "TestProspectiveClusterizer",
     "TestClusterizerConfig",
+    "TestDataflowModel"
 ]

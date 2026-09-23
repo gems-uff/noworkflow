@@ -29,6 +29,7 @@ from .prov_execution import TestFileAccessExecution
 from .dependency import TestClusterizer, TestClusterizerConfig
 from .dependency import TestProspectiveClusterizer
 from .dependency import TestActivationClusterizer, TestDependencyClusterizer
+from .dependency import TestDataflowModel
 from .cross_version_test import TestCrossVersion
 
 from ..now.persistence.models import ORDER
@@ -76,6 +77,7 @@ dataflow.addTests(loader.loadTestsFromTestCase(TestDependencyClusterizer))
 dataflow.addTests(loader.loadTestsFromTestCase(TestActivationClusterizer))
 dataflow.addTests(loader.loadTestsFromTestCase(TestProspectiveClusterizer))
 dataflow.addTests(loader.loadTestsFromTestCase(TestClusterizerConfig))
+dataflow.addTests(loader.loadTestsFromTestCase(TestDataflowModel))
 
 
 def load_tests(loader, tests, pattern):
