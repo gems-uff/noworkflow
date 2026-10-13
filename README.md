@@ -507,22 +507,8 @@ $ now clean [trial]
 Contributing
 ------------
 
-Pull requests for bugfixes and new features are welcome!
-
-For installing the python dependencies locally, clone the repository and run:
-```
-pip install -e noworkflow/capture
-```
-
-For changes on the now vis or IPython integration files, install nodejs, Python 3 and run:
-```
-cd noworkflow/npm
-python watch.py
-```
-(If it is your first time making changes or if you changed some modules, you must first run the following command before "python watch.py":)
-```
-npm install
-```
+Pull requests for bug fixes and new features are welcome! The contribution cycle (issue first, `issue_NNN` branch, tests, pull request) and the commands to run the suite locally are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Security problems are reported as public issues; see [SECURITY.md](SECURITY.md).
 
 Included Software
 -----------------

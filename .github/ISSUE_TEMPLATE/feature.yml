@@ -1,0 +1,36 @@
+name: Feature request
+description: A new capability or a change of behavior
+type: Feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening, search the existing issues, closed ones included, in English and in Portuguese. The solution is agreed here before anyone codes it (see `CONTRIBUTING.md`).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task, not the solution. What provenance you need, what question you want to answer, what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+      description: The command line you would run and what `now show`, `now export`, the vis or the notebook would display.
+      render: text
+      placeholder: |
+        $ now run --something script.py
+        [now] ...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: Existing commands or options that almost do it, and why they do not.
+  - type: textarea
+    id: questions
+    attributes:
+      label: Open questions
+      description: Product decisions you see, for example what happens to trials recorded by an older version, or whether the option applies to every command.
