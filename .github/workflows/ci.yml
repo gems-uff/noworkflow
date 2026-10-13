@@ -32,21 +32,102 @@ defaults:
 jobs:
   # Checks that need neither the matrix nor the frontend, in a job of their own
   # and in parallel with the suite, so a cheap red here does not hide the
-  # result of the tests. PR 1.4 (#212) adds lint, SAST and the audits.
+  # result of the tests. Every check after the install runs even when an
+  # earlier one failed, so one push shows all of them. On the weekly trigger
+  # only the lock and the two audits run: lint, SAST and the build cannot
+  # change without a commit.
   checks:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Install uv
+      # The tools come from the dev group of uv.lock, so their versions move
+      # only with the lock, like everything else.
+      - name: Install uv and Python 3.13
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
 
       # pyproject.toml changed without `uv lock`: every `uv sync --locked`
       # below would fail with a message about the lock, far from the cause.
-      # Cheap and network-only, so it also runs on the weekly trigger.
       - name: Lock is up to date
         run: uv lock --check
+
+      - name: Install dependencies
+        id: sync
+        run: uv sync --locked
+
+      # Audits exactly the versions in uv.lock (every group, every platform
+      # marker), not whatever this runner happens to resolve. --no-deps and
+      # --disable-pip: the export is already the full pinned set, so pip-audit
+      # only queries the advisories.
+      #
+      # Ignored advisories, present since the job was created; each one leaves
+      # with the pin that keeps it, in Round 3 (#225). Never add one here
+      # without the reason and the issue that removes it.
+      # - GHSA-jfmj-5v4g-7637 (CVE-2024-5569, zipp): `zipp==3.15` in
+      #   [project.dependencies] has no recorded reason; noworkflow does not
+      #   import zipp.
+      # - GHSA-5rjg-fvgr-3xxf (CVE-2025-47273) and GHSA-h35f-9h28-mq5c
+      #   (CVE-2026-59890), setuptools: `setuptools<72` keeps pkg_resources,
+      #   which deployment.py and utils/functions.py import (PR #186 moves them
+      #   to importlib.metadata). Both advisories are in PackageIndex and sdist
+      #   building, which noworkflow does not call.
+      - name: Audit Python dependencies
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
+        run: |
+          uv export --locked --format requirements-txt --no-emit-project --all-groups --no-hashes -o requirements-audit.txt
+          uv run --no-sync pip-audit -r requirements-audit.txt --no-deps --disable-pip --strict --desc on \
+            --ignore-vuln GHSA-jfmj-5v4g-7637 \
+            --ignore-vuln GHSA-5rjg-fvgr-3xxf \
+            --ignore-vuln GHSA-h35f-9h28-mq5c
+
+      # Not a gate yet: the critical runtime advisories (elliptic, pbkdf2,
+      # sha.js) come from crypto-browserify, a dependency of @noworkflow/nowvis
+      # whose code ends up in bundle.js, and fixing them means rebuilding the
+      # bundle, which is Round 3 (#225). Until then the red shows on the step
+      # without failing the job. --package-lock-only: no node_modules needed.
+      - name: Audit frontend dependencies
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: npm audit --prefix src/frontend --package-lock-only --omit=dev --audit-level=high
+
+      # Phase A of the lint: only rules already at zero are selected; the
+      # rules that still have occurrences are listed under `ignore` in
+      # pyproject.toml and leave it in Round 3 (#221).
+      - name: Lint
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' && github.event_name != 'schedule' }}
+        run: uv run --no-sync ruff check --output-format=github .
+
+      # SAST. bandit-baseline.json is the inventory of the findings that
+      # existed when this job was created; only findings outside it fail.
+      # Matching ignores line numbers, so unrelated edits do not break it.
+      # Round 3 (#223) turns the inventory into `# nosec Bxxx` comments with a
+      # reason, or real fixes, and deletes the file. Regenerate it only in
+      # that round:
+      #   uv run bandit -c pyproject.toml -r src/noworkflow -q -f json \
+      #     | jq '{results: .results}' > bandit-baseline.json
+      - name: SAST (bandit)
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' && github.event_name != 'schedule' }}
+        run: uv run --no-sync bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json
+
+      # The wheel is what `pip install noworkflow` gets. version.txt and
+      # bundle.js reach it only through package-data globs; if a glob or the
+      # build backend drops them, `now --version` and `now vis` break on
+      # install while the suite, which runs from the source tree, stays green.
+      - name: Build the package
+        if: ${{ !cancelled() && github.event_name != 'schedule' }}
+        run: |
+          uv build
+          contents=$(unzip -Z1 dist/*.whl)
+          for file in noworkflow/resources/version.txt noworkflow/now/vis/static/dist/bundle.js; do
+            if ! grep -qxF "$file" <<<"$contents"; then
+              echo "::error::$file is missing from the wheel"
+              exit 1
+            fi
+          done
 
   test:
     if: github.event_name != 'schedule'

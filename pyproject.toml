@@ -107,3 +107,64 @@ omit = [
     "*/prov_deployment/py2module.py",
 ]
 patch = ["subprocess"]  # covers the `now` that the e2e harness runs in a subprocess
+
+[tool.ruff]
+target-version = "py38"
+# Not linted: py2module.py does not parse as Python 3; the rest are scripts
+# that noWorkflow traces (demo, test examples, e2e corpus, tests/), the
+# Examples notebooks, and material outside the package.
+extend-exclude = [
+    "src/noworkflow/now/collection/prov_deployment/py2module.py",
+    "src/noworkflow/resources/demo",
+    "src/noworkflow/tests/examples",
+    "src/noworkflow/tests/e2e/corpus",
+    "tests",
+    "Examples",
+    "history",
+    "docs",
+    "src/frontend",
+]
+# Injected into builtins by the collector while a traced script runs.
+builtins = ["__noworkflow__"]
+
+[tool.ruff.lint]
+# Phase A: ruff's default set (E4, E7, E9, F) plus W605, blocking only the
+# rules that are already at zero. Each code in `ignore` still has occurrences;
+# Round 3 (#221) fixes them and removes the code from the list. E501 never
+# (the formatter owns line length); no S, because bandit is the SAST.
+select = ["E4", "E7", "E9", "F", "W605"]
+ignore = [
+    "E402",  # module-import-not-at-top-of-file
+    "E701",  # multiple-statements-on-one-line-colon
+    "E703",  # useless-semicolon
+    "E711",  # none-comparison
+    "E712",  # true-false-comparison
+    "E721",  # type-comparison
+    "E722",  # bare-except
+    "E731",  # lambda-assignment
+    "F401",  # unused-import
+    "F403",  # undefined-local-with-import-star
+    "F811",  # redefined-while-unused
+    "F841",  # unused-variable
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Python 2 compatibility shim: names that only exist on Python 2, re-exports.
+"src/noworkflow/now/utils/cross_version.py" = ["F401", "F821"]
+# Package re-exports. F401 is still ignored globally; this entry keeps them
+# allowed once Round 3 (#221) removes F401 from `ignore`.
+"__init__.py" = ["F401"]
+# Real NameErrors, fixed in Round 3 (#221): `e` in generate.py:21 and
+# `display` (exists only inside IPython) in var_tagging.py:445.
+"src/noworkflow/now/models/prospective/generate.py" = ["F821"]
+"src/noworkflow/now/tagging/var_tagging.py" = ["F821"]
+
+[tool.bandit]
+# Tests, the traced demo scripts and the Python 2 module are not product code
+# that runs on a user's data.
+exclude_dirs = [
+    "src/noworkflow/tests",
+    "src/noworkflow/resources/demo",
+    "src/noworkflow/now/collection/prov_deployment/py2module.py",
+]
+skips = []
