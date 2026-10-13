@@ -1,0 +1,57 @@
+name: Flaky tests (multi-trial)
+
+# Ten independent runs of the suite on the reference leg. A test that fails in
+# some trials and not in others depends on timing or on the order of the tests;
+# the seed in each trial's summary reproduces the order once pytest-randomly
+# is enabled (#219).
+on:
+  workflow_dispatch:
+
+# No job writes to the repository: only checkout, setup and artifact upload.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  flaky-tests:
+    name: Trial ${{ matrix.trial }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        trial: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m "not golden" | tee "test-log-trial-${{ matrix.trial }}.log"
+
+      # Same floor as the reference leg in ci.yml.
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 343 \
+            "trial ${{ matrix.trial }}" \
+            'uv sync --locked --python 3.13 && uv run --no-sync pytest -m "not golden"'
+
+      - name: Upload the log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-trial-${{ matrix.trial }}
+          path: test-log-trial-${{ matrix.trial }}.log

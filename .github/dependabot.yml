@@ -1,0 +1,41 @@
+# Options reference:
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+#
+# Dependabot has two independent machines, and this file configures only one
+# of them:
+#
+# - Version updates: a PR for every outdated dependency. Turned off here by
+#   `open-pull-requests-limit: 0`. Updating is manual, one dependency per step,
+#   to the latest patch of its series; a Dependabot PR proposes the latest
+#   release, majors included, which is what that convention refuses.
+# - Security updates: a PR for a dependency with a known vulnerability. Turned
+#   on at the repository level, not here, and **not** subject to the limit
+#   above. They keep arriving against `main`.
+#
+# Do not set `target-branch`: with it, these entries stop applying to security
+# updates, the only automatic channel still active.
+version: 2
+updates:
+  # `uv`, not `pip`: the `pip` ecosystem does not write uv.lock, so its PRs
+  # would fail `uv lock --check` in CI.
+  - package-ecosystem: "uv"
+    directory: "/"
+    # Required by the schema, and inert while the limit is 0.
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+
+  # The workspace that builds src/noworkflow/now/vis/static/dist/bundle.js.
+  # A security PR here changes package-lock.json only; the bundle has to be
+  # rebuilt and committed in the same change, or the `frontend` job fails.
+  - package-ecosystem: "npm"
+    directory: "/src/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0

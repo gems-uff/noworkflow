@@ -1,0 +1,223 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  # Weekly watch over the dependencies. A new advisory makes uv.lock or the
+  # npm lock vulnerable without anyone changing a line, and the other triggers
+  # only fire on a push. On this trigger only the `checks` job runs (see the
+  # `if` on the other jobs): the suite and the bundle do not change without a
+  # commit, and running them here would repeat the last result.
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+# A newer push to the same branch or PR makes the running workflow obsolete.
+# On `main` every commit keeps its own run: tasks land there directly, and a
+# cancelled run would leave a commit without a verdict.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# No job writes to the repository: only checkout, setup and artifact upload.
+permissions:
+  contents: read
+
+# Windows runners default to pwsh; every `run` here is bash, so `set -o
+# pipefail` and the scripts behave the same on the three systems.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Checks that need neither the matrix nor the frontend, in a job of their own
+  # and in parallel with the suite, so a cheap red here does not hide the
+  # result of the tests. PR 1.4 (#212) adds lint, SAST and the audits.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      # pyproject.toml changed without `uv lock`: every `uv sync --locked`
+      # below would fail with a message about the lock, far from the cause.
+      # Cheap and network-only, so it also runs on the weekly trigger.
+      - name: Lock is up to date
+        run: uv lock --check
+
+  test:
+    if: github.event_name != 'schedule'
+    # Legs are independent: a red on one version does not cancel the others,
+    # so the panel tells whether a failure is specific to a version or system.
+    strategy:
+      fail-fast: false
+      matrix:
+        # min-tests: floor for passed + skipped + xfailed + xpassed. Raise it
+        # when tests are added; lower it only with the reason written in the PR.
+        include:
+          # Oldest supported Python (requires-python = ">=3.8").
+          - { os: ubuntu-latest, python: "3.8", min-tests: 343 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 343 }
+          # Reference leg: the only one with coverage and with goldens, which
+          # depend on the system and on the Python version.
+          - { os: ubuntu-latest, python: "3.13", min-tests: 343, reference: true }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 343 }
+          - { os: macos-latest, python: "3.13", min-tests: 343 }
+    name: test (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    steps: &test-steps
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # uv installs the interpreter itself (python-build-standalone), so 3.8
+      # works on runner images where actions/setup-python no longer has it.
+      - name: Install uv and Python ${{ matrix.python }}
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      # --locked: install exactly what uv.lock says, and fail instead of
+      # silently re-resolving when the lock and pyproject.toml disagree.
+      - name: Install dependencies
+        id: sync
+        run: uv sync --locked
+
+      # The root conftest.py runs the session from a scratch directory, so the
+      # coverage path must be absolute. Goldens only exist for the reference
+      # leg; elsewhere the `golden` marker is deselected.
+      - name: Run tests
+        env:
+          GOLDEN: ${{ matrix.reference && 'require' || '' }}
+        run: |
+          set -o pipefail
+          args=()
+          if [ "${{ matrix.reference }}" = "true" ]; then
+            args+=(--cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
+          else
+            args+=(-m "not golden")
+          fi
+          uv run --no-sync pytest "${args[@]}" | tee pytest.log
+
+      # Count, seed and reproduction command in the job summary, one click
+      # away. It also fails the job when the count drops below min-tests or
+      # the log has no summary line: a zero exit status does not prove that
+      # the tests ran.
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          if [ "${{ matrix.reference }}" = "true" ]; then
+            repro='uv sync --locked --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest'
+          else
+            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden"'
+          fi
+          bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
+            "${{ matrix.os }}, ${{ matrix.python }}" "$repro"
+
+      # The suite imports noworkflow; nothing in it runs the installed `now`
+      # entry point from a plain directory the way a user does. Runs even when
+      # tests fail, as a separate signal.
+      - name: CLI smoke test
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -o pipefail
+          mkdir now-smoke && cd now-smoke
+          now() { uv run --no-sync --project "$GITHUB_WORKSPACE" now "$@"; }
+          printf 'print("hello from noWorkflow")\n' > hello.py
+          now --version
+          now run hello.py | tee run.log
+          grep -q "hello from noWorkflow" run.log
+          now list | tee list.log
+          grep -q "run hello.py" list.log
+
+      # Coverage comes from the reference leg alone: the other legs run the
+      # same code. A fork PR cannot write to the base repository, hence the
+      # guard; PR 1.5 (#213) publishes this artifact.
+      - name: Upload the Cobertura report
+        if: matrix.reference && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report-python
+          path: coverage.xml
+
+  # Legs under observation: the next Python release and Windows. Kept out of
+  # the `needs` of `ci-ok`, so a red here shows on the PR without blocking it
+  # (`continue-on-error` would turn it green inside `needs` and hide it).
+  # Promoting a leg means moving it to the `test` matrix.
+  test-experimental:
+    if: github.event_name != 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.15", min-tests: 343, reference: false }
+          # Warns wherever open() and friends rely on the locale encoding,
+          # which is cp1252 on Windows and UTF-8 elsewhere.
+          - { os: windows-latest, python: "3.13", min-tests: 343, reference: false, warn-encoding: "1" }
+    name: test-experimental (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONWARNDEFAULTENCODING: ${{ matrix.warn-encoding }}
+    steps: *test-steps
+
+  # bundle.js is committed, because `pip install noworkflow` must serve `now
+  # vis` without Node. Nothing forced whoever changed src/frontend to rebuild
+  # it. The bundle is reproducible byte for byte; the .map is not (it embeds
+  # the absolute path of the machine that built it), so only bundle.js is
+  # compared.
+  frontend:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # Node 26 is the major measured to reproduce the committed bundle.
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the vis bundle
+        run: npx lerna run build --scope=@noworkflow/nowvis --include-dependencies
+
+      # Type-check of the Jupyter extension. Its full `build` needs jupyterlab
+      # (`jupyter labextension build`); `build:lib` is plain tsc.
+      - name: Type-check the lab extension
+        run: npx lerna run build:lib --scope=@noworkflow/labextension
+
+      - name: Committed bundle matches the sources
+        run: |
+          bundle=../noworkflow/now/vis/static/dist/bundle.js
+          if ! git diff --quiet -- "$bundle"; then
+            git diff --stat -- "$bundle"
+            echo "::error file=src/noworkflow/now/vis/static/dist/bundle.js::bundle.js differs from a fresh build of src/frontend. Rebuild it (cd src/frontend && npm ci && npm run build) and commit it with the source change."
+            exit 1
+          fi
+
+  # The only status the ruleset on `main` requires: one name that stays stable
+  # while jobs and matrix legs come and go. `always()` makes it run, and fail,
+  # when a needed job failed; without it the job would be skipped, and a
+  # skipped required check counts as passing.
+  ci-ok:
+    if: always() && github.event_name != 'schedule'
+    needs: [checks, test, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All required jobs passed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::checks=${{ needs.checks.result }} test=${{ needs.test.result }} frontend=${{ needs.frontend.result }}"
+          exit 1
