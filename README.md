@@ -1,6 +1,10 @@
 noWorkflow
 ==========
 
+[![CI](https://github.com/gems-uff/noworkflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gems-uff/noworkflow/actions/workflows/ci.yml?query=branch%3Amain)
+[![PyPI version](https://img.shields.io/pypi/v/noworkflow.svg)](https://pypi.org/project/noworkflow/)
+[![Python versions](https://img.shields.io/pypi/pyversions/noworkflow.svg)](https://pypi.org/project/noworkflow/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 Copyright (c) 2016 Universidade Federal Fluminense (UFF).

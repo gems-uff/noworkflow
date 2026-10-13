@@ -219,13 +219,45 @@ jobs:
 
       # Coverage comes from the reference leg alone: the other legs run the
       # same code. A fork PR cannot write to the base repository, hence the
-      # guard; PR 1.5 (#213) publishes this artifact.
+      # guard; the `coverage` job publishes this artifact.
       - name: Upload the Cobertura report
         if: matrix.reference && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report-python
           path: coverage.xml
+
+  # Publishes the reference leg's report to the repository's code quality view.
+  # No threshold: the rule is "test count >= floor" (see min-tests), not a
+  # percentage. A job of its own, with the only write permission of the
+  # workflow, so the test legs keep read-only tokens. No checkout: the action
+  # needs only the report. The `if` mirrors the one on the artifact upload: a
+  # fork PR has no artifact, and `!cancelled()` plus the result check keep the
+  # job from running (or being skipped by implication) after a red or skipped
+  # `test`.
+  coverage:
+    if: ${{ !cancelled() && needs.test.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      code-quality: write
+      pull-requests: read
+    steps:
+      - name: Download the Cobertura report
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-report-python
+
+      # fail-on-error: false: the upload is a report, not a gate; an outage of
+      # the coverage API must not turn a green suite red.
+      - name: Upload coverage to code quality
+        uses: actions/upload-code-coverage@v1
+        with:
+          file: coverage.xml
+          language: Python
+          label: code-coverage/pytest-cov
+          fail-on-error: false
 
   # bundle.js is committed, because `pip install noworkflow` must serve `now
   # vis` without Node. Nothing forced whoever changed src/frontend to rebuild
