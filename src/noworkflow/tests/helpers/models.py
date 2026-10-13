@@ -14,19 +14,9 @@ from collections import namedtuple
 
 
 from ...now.persistence.lightweight import ObjectStore, SharedObjectStore
-from ...now.persistence.lightweight import CodeBlockLW, CodeComponentLW
-from ...now.persistence.lightweight import ActivationLW, EvaluationLW
-from ...now.persistence.lightweight import DependencyLW, FileAccessLW
-from ...now.persistence.lightweight import StageTagsLW
-
-from ...now.persistence.lightweight import ModuleLW
-from ...now.persistence.lightweight import MemberLW
-from ...now.persistence.lightweight import EnvironmentAttrLW, ArgumentLW
 
 from ...now.persistence.models.trial import Trial
-from ...now.persistence.models.head import Head
 from ...now.persistence.models.tag import Tag
-from ...now.persistence.models.graph_cache import GraphCache
 from ...now.persistence import relational
 from ...now.collection.metadata import Metascript
 
@@ -62,22 +52,10 @@ restart_object_store()
 
 
 def erase_database():
-    """Remove all rows from database"""
-    relational.session.execute(GraphCache.t.delete())
-    relational.session.execute(Trial.t.delete())
-    relational.session.execute(Head.t.delete())
-    relational.session.execute(Tag.t.delete())
-    relational.session.execute(CodeComponentLW.model.t.delete())
-    relational.session.execute(CodeBlockLW.model.t.delete())
-    relational.session.execute(EvaluationLW.model.t.delete())
-    relational.session.execute(ActivationLW.model.t.delete())
-    relational.session.execute(DependencyLW.model.t.delete())
-    relational.session.execute(FileAccessLW.model.t.delete())
-    relational.session.execute(StageTagsLW.model.t.delete())
-    relational.session.execute(MemberLW.model.t.delete())
-    relational.session.execute(ModuleLW.model.t.delete())
-    relational.session.execute(EnvironmentAttrLW.model.t.delete())
-    relational.session.execute(ArgumentLW.model.t.delete())
+    """Remove all rows from every table of the relational store"""
+    # sorted_tables lists parents before children; delete in reverse.
+    for table in reversed(relational.base.metadata.sorted_tables):
+        relational.session.execute(table.delete())
     relational.session.expire_all()
     restart_object_store()
 

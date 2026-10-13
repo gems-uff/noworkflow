@@ -14,10 +14,9 @@ import sys
 
 from future.utils import viewitems
 
-from ..now.persistence import persistence_config
+from .helpers.persistence import connect_in_memory
 
-persistence_config.connect(".")
-persistence_config.mock()
+connect_in_memory()
 
 #from .prov_deployment import TestProvDeployment
 from .prov_definition import TestCodeBlockDefinition

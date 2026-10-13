@@ -73,3 +73,37 @@ namespaces = false
 [tool.setuptools.dynamic]
 version = {file = "src/noworkflow/resources/version.txt"}
 readme = {file = "README.md", content-type = "text/markdown"}
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5",
+    "ruff>=0.14",
+    "bandit[toml]>=1.7.10",
+    "pip-audit>=2.7",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = [
+    "src/noworkflow/tests",
+    "src/noworkflow/now/persistence/models",
+    "src/noworkflow/now/utils/formatter.py",
+    "src/noworkflow/now/utils/functions.py",
+]
+python_files = ["test_*.py", "*_test.py"]  # the second pattern matches cross_version_test.py
+addopts = "--doctest-modules --doctest-report=only_first_failure --durations=10 --strict-markers -ra --cov-report=term --cov-report=xml"
+markers = [
+    "golden: compares against a stored golden output",
+    "slow: needs the console `now` and matplotlib",
+]
+filterwarnings = ["default::DeprecationWarning:noworkflow"]  # Round 3 promotes it to error::
+
+[tool.coverage.run]
+source = ["noworkflow"]
+omit = [
+    "*/noworkflow/tests/*",
+    "*/noworkflow/resources/*",
+    "*/prov_deployment/py2module.py",
+]
+patch = ["subprocess"]  # covers the `now` that the e2e harness runs in a subprocess

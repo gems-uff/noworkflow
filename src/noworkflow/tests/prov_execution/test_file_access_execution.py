@@ -60,6 +60,7 @@ class TestFileAccessExecution(CollectionTestCase):
     def tearDown(self):
         os.chdir(self.olddir)
         shutil.rmtree(self.tmpdir, ignore_errors=True)
+        super(TestFileAccessExecution, self).tearDown()
 
     def file_accesses(self, basename):
         """Return file_access objects for a basename, ordered by id"""
