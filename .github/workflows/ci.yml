@@ -52,6 +52,8 @@ jobs:
     if: github.event_name != 'schedule'
     # Legs are independent: a red on one version does not cancel the others,
     # so the panel tells whether a failure is specific to a version or system.
+    # Legs still under observation (next Python, Windows) live in
+    # experimental.yml; promoting one means moving it to this matrix.
     strategy:
       fail-fast: false
       matrix:
@@ -68,7 +70,7 @@ jobs:
           - { os: macos-latest, python: "3.13", min-tests: 343 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
-    steps: &test-steps
+    steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
@@ -143,26 +145,6 @@ jobs:
         with:
           name: coverage-report-python
           path: coverage.xml
-
-  # Legs under observation: the next Python release and Windows. Kept out of
-  # the `needs` of `ci-ok`, so a red here shows on the PR without blocking it
-  # (`continue-on-error` would turn it green inside `needs` and hide it).
-  # Promoting a leg means moving it to the `test` matrix.
-  test-experimental:
-    if: github.event_name != 'schedule'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: ubuntu-latest, python: "3.15", min-tests: 343, reference: false }
-          # Warns wherever open() and friends rely on the locale encoding,
-          # which is cp1252 on Windows and UTF-8 elsewhere.
-          - { os: windows-latest, python: "3.13", min-tests: 343, reference: false, warn-encoding: "1" }
-    name: test-experimental (${{ matrix.os }}, ${{ matrix.python }})
-    runs-on: ${{ matrix.os }}
-    env:
-      PYTHONWARNDEFAULTENCODING: ${{ matrix.warn-encoding }}
-    steps: *test-steps
 
   # bundle.js is committed, because `pip install noworkflow` must serve `now
   # vis` without Node. Nothing forced whoever changed src/frontend to rebuild

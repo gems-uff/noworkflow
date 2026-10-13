@@ -1,0 +1,80 @@
+name: Experimental legs
+
+# Legs under observation: the next Python release and Windows. A workflow of
+# their own, so a red here shows on the PR and in the commit checks without
+# turning the CI workflow red: `ci-ok`, the badge and the required check all
+# reflect the supported matrix only. `continue-on-error` would hide the red
+# instead of isolating it. Promoting a leg means moving it to the `test`
+# matrix in ci.yml.
+#
+# The steps mirror the `test` job in ci.yml; keep them in sync.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# No job writes to the repository: only checkout and setup.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test-experimental:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.15", min-tests: 343 }
+          # Warns wherever open() and friends rely on the locale encoding,
+          # which is cp1252 on Windows and UTF-8 elsewhere.
+          - { os: windows-latest, python: "3.13", min-tests: 343, warn-encoding: "1" }
+    name: test-experimental (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONWARNDEFAULTENCODING: ${{ matrix.warn-encoding }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python ${{ matrix.python }}
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      - name: Install dependencies
+        id: sync
+        run: uv sync --locked
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m "not golden" | tee pytest.log
+
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
+            "${{ matrix.os }}, ${{ matrix.python }}" \
+            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden"'
+
+      - name: CLI smoke test
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -o pipefail
+          mkdir now-smoke && cd now-smoke
+          now() { uv run --no-sync --project "$GITHUB_WORKSPACE" now "$@"; }
+          printf 'print("hello from noWorkflow")\n' > hello.py
+          now --version
+          now run hello.py | tee run.log
+          grep -q "hello from noWorkflow" run.log
+          now list | tee list.log
+          grep -q "run hello.py" list.log
