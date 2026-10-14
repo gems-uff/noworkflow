@@ -471,14 +471,17 @@ def perturb(text, seed=216, keep=()):
         if kind == "microseconds":
             return MICROSECONDS[index % len(MICROSECONDS)] + " microseconds"
         if kind == "checkpoint":
-            form = index % 4
+            form = index % 5
             if form == 0:
                 return repr(rng.random())
             if form == 1:
                 return repr(rng.uniform(1e-6, 9e-5))
             if form == 2:
                 return repr(rng.uniform(1, 30))
-            return "1.5e-05"
+            if form == 3:
+                return "1.5e-05"
+            # A short repr, as Windows' 100 ns perf_counter() ticks give.
+            return repr(round(rng.uniform(0.1, 0.9), 5))
         if kind == "address":
             if index % 2:
                 return "0x{:016X}".format(rng.getrandbits(44))
@@ -570,6 +573,34 @@ def test_normalizer_ignores_rewritten_volatile_tokens(twins, command,
     assert survivors == [], "perturb() left original tokens in place"
     assert_same_output(project.normalize(perturbed.text),
                        project.normalize(raw))
+
+
+def test_short_checkpoints_are_masked_by_position():
+    """A checkpoint whose repr is short (Windows' perf_counter() ticks every
+    100 ns) is masked where checkpoints are printed, while the same number
+    elsewhere survives"""
+    text = (
+        "activation('<UUID1>', 9, 'load', 0.5, 6).\n"
+        "evaluation('<UUID1>', 248, 0.314076, 172, 206, 'f(a, b)', 7).\n"
+        "access('<UUID1>', f1, 'data.csv', 'r', 'ab', 'ab', 0.12, 10).\n"
+        "member('<UUID1>', 0, 1, 0, 11, '.x, y', 0.25, 'Put').\n"
+        "(access('<UUID1>', f1, 'a.csv', 'r', nil, 'ab', 0.3, 10)., "
+        "access('<UUID2>', f1, 'a.csv', 'r', 'ab', 'ab', 0.4, 10).)\n"
+        "    Checkpoint changed from 0.31 to 0.5\n"
+        "  Return value: 0.5\n"
+    )
+    lines = Normalizer(hostname=HOST)(text).splitlines()
+    assert lines[0] == "activation('<UUID1>', 9, 'load', <CHECKPOINT>, 6)."
+    assert lines[1] == ("evaluation('<UUID1>', 248, <CHECKPOINT>, 172, 206, "
+                        "'f(a, b)', 7).")
+    assert lines[2] == ("access('<UUID1>', f1, 'data.csv', 'r', 'ab', 'ab', "
+                        "<CHECKPOINT>, 10).")
+    assert lines[3] == ("member('<UUID1>', 0, 1, 0, 11, '.x, y', "
+                        "<CHECKPOINT>, 'Put').")
+    assert lines[4].count("<CHECKPOINT>") == 2
+    assert lines[5] == ("    Checkpoint changed from <CHECKPOINT> to "
+                        "<CHECKPOINT>")
+    assert lines[6] == "  Return value: 0.5"
 
 
 def test_hostname_with_a_uuid_survives_perturbation():

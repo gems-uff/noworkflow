@@ -58,6 +58,16 @@ CHECKPOINT = re.compile(
     r"(?<![\w.])\d+\.\d{7,}(?:e[-+]?\d+)?(?![\w.])"
     r"|(?<![\w.])\d+(?:\.\d+)?e-\d+(?![\w.])"
 )
+# Where a checkpoint is printed, whatever its length: the 0-based argument
+# of the Prolog facts (also inside the access tuples that `now diff -fa`
+# prints) and `now diff -f`. The shape rule above misses a short repr, which
+# is common on Windows, where perf_counter() ticks every 100 ns.
+CHECKPOINT_ARGUMENT = {"evaluation": 2, "activation": 3, "access": 6,
+                       "member": 6}
+FACT_START = re.compile(r"\b({})\(".format("|".join(CHECKPOINT_ARGUMENT)))
+CHECKPOINT_CHANGE = re.compile(
+    r"(Checkpoint changed from )\S+( to )\S+$", re.MULTILINE)
+NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:e[-+]?\d+)?")
 ADDRESS = re.compile(r"\b0x[0-9a-fA-F]+\b")
 # The duration of an activation in ``now diff -fa``, ``round(x, 2)``.
 MICROSECONDS = re.compile(r"\b\d+(?:\.\d+)? microseconds\b")
@@ -192,6 +202,8 @@ class Normalizer:
         text = TIMESTAMP.sub("<TIMESTAMP>", text)
         text = DURATION.sub("<DURATION>", text)
         text = EPOCH.sub("<EPOCH>", text)
+        text = mask_fact_checkpoints(text)
+        text = CHECKPOINT_CHANGE.sub(r"\1<CHECKPOINT>\2<CHECKPOINT>", text)
         text = CHECKPOINT.sub("<CHECKPOINT>", text)
         text = ADDRESS.sub("<ADDRESS>", text)
         text = MICROSECONDS.sub("<N> microseconds", text)
@@ -344,6 +356,63 @@ def prolog_facts(text):
             arities.add(clause_arity(body[match.end():]))
             result[match.group(1)] = (declared, arities)
     return result
+
+
+def mask_fact_checkpoints(text):
+    """Mask the checkpoint argument of every activation, evaluation, access
+    and member fact, by position
+
+    >>> mask_fact_checkpoints("evaluation('<UUID1>', 7, 0.314076, 3, 2, 'x', 7).")
+    "evaluation('<UUID1>', 7, <CHECKPOINT>, 3, 2, 'x', 7)."
+    >>> mask_fact_checkpoints("member('<UUID1>', 0, 1, 0, 11, '.a, b', 0.5, 'Put').")
+    "member('<UUID1>', 0, 1, 0, 11, '.a, b', <CHECKPOINT>, 'Put')."
+    """
+    pieces, position = [], 0
+    for match in FACT_START.finditer(text):
+        if match.start() < position:
+            continue
+        spans = argument_spans(text, match.end())
+        index = CHECKPOINT_ARGUMENT[match.group(1)]
+        if spans is None or index >= len(spans):
+            continue
+        start, end = spans[index]
+        value = text[start:end].strip()
+        if not NUMBER.fullmatch(value):
+            continue
+        offset = start + (len(text[start:end]) - len(text[start:end].lstrip()))
+        pieces.append(text[position:offset])
+        pieces.append("<CHECKPOINT>")
+        position = offset + len(value)
+    pieces.append(text[position:])
+    return "".join(pieces)
+
+
+def argument_spans(text, index):
+    """``[(start, end)]`` of the top-level arguments of a call, from just
+    after its ``(``; None when the call does not close"""
+    spans, depth, quoted, start = [], 0, False, index
+    while index < len(text):
+        char = text[index]
+        if quoted:
+            if char == "'":
+                if text[index + 1:index + 2] == "'":
+                    index += 2
+                    continue
+                quoted = False
+        elif char == "'":
+            quoted = True
+        elif char in "([":
+            depth += 1
+        elif char in ")]":
+            if depth == 0:
+                spans.append((start, index))
+                return spans
+            depth -= 1
+        elif char == "," and depth == 0:
+            spans.append((start, index))
+            start = index + 1
+        index += 1
+    return None
 
 
 def clause_arity(arguments):
