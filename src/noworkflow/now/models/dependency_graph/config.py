@@ -43,7 +43,7 @@ class DependencyConfig(object):
         self.hide_not_code = False
         self.hide_func = False
         self.max_depth = float("inf")
-        self.mode = "simulation"
+        self.mode = "coarseGrain"
 
     @classmethod
     def create_arguments(cls, add_arg, mode="coarseGrain"):
