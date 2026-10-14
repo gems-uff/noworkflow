@@ -103,6 +103,16 @@ of date, fix it there.
   reviews. If the fact is in the repository, the right memory is none.
 - **When a command fails because the sandbox blocked it, try again outside
   the sandbox.** That triggers the permission question; the human decides.
+- **Three failed attempts at the same goal: stop, explain, recommend.** When
+  the same goal fails three times in a row (a test or a CI leg that stays
+  red, a command that keeps failing, a change the human rejects), do not
+  start a fourth variation. Stop and tell the human what was tried, why each
+  attempt failed, and what to change for the next one: a stronger model
+  among those available (Sonnet → Opus → Fable), a higher reasoning effort,
+  or ultracode on (or off, when the fan-out is what keeps failing). When the
+  cause is not the model (a missing tool, the sandbox, the network, an
+  ambiguous requirement), say that instead: a stronger model would fail the
+  same way. Switching is the human's decision.
 
 ## Repository skills
 
