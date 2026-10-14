@@ -61,7 +61,8 @@ The lifecycle of a branch is:
    to date.
 4. Open the pull request as a draft, and mark it ready for review when the
    checklist in the template is complete.
-5. The maintainer reviews it.
+5. The maintainer reviews it, following the `review-pr` skill in
+   `.claude/skills/`.
 6. The maintainer merges `issue_NNN` into `main`. Because of step 3 this is a
    fast-forward.
 7. The maintainer sets the milestone of the issue to the version that will
@@ -95,8 +96,9 @@ Reference the issue with the prefix alone. Do not write `Fixes #NNN` or
   `main` and passes on the branch; say so in the PR. For a new command or
   option, a test that runs it.
 - **The suite green, and the count not below the floor.** CI fails a leg
-  whose test count drops below `min-tests` in `.github/workflows/ci.yml`;
-  when you add tests, raise the floor in the same PR.
+  whose test count drops below `min-tests` in `.github/workflows/ci.yml`
+  and `experimental.yml`; when you add tests, raise the floor in both, in
+  the same PR.
 - **The bundle, when the frontend changes.** Any change under `src/frontend`
   comes with `src/noworkflow/now/vis/static/dist/bundle.js` rebuilt in the
   same commit; the `frontend` job rebuilds it and fails on a difference.
@@ -121,10 +123,12 @@ uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json
 uv run now run script.py     # the `now` of the working tree
 ```
 
-To run the suite on another Python version, uv installs the interpreter:
+To run the suite on another Python version, uv installs the interpreter
+(`--isolated` keeps `.venv` as it is; without it, `uv run --python` recreates
+`.venv` on that version):
 
 ```bash
-for v in 3.8 3.12 3.13 3.14; do uv run --python "$v" pytest -q || break; done
+for v in 3.8 3.12 3.13 3.14; do uv run --isolated --python "$v" pytest -q || break; done
 ```
 
 The visualization bundle and the Jupyter extension are built from

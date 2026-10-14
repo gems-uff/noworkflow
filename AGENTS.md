@@ -44,8 +44,9 @@ of date, fix it there.
   "rejects a restore target outside the project directory") that is red before
   the fix and green after it. See `SECURITY.md`.
 - **Definition of done:** `uv run pytest` green from the repository root;
-  the test count at or above the floor in `.github/workflows/ci.yml`
-  (`min-tests`), **and the floor goes up in the same PR that adds tests**;
+  the test count at or above the floor in `.github/workflows/ci.yml` and
+  `experimental.yml` (`min-tests`), **and the floor goes up in the same PR
+  that adds tests**;
   `uv run ruff check .` clean; CI green at the tip of the branch; and, whenever
   `src/frontend` changes, `src/noworkflow/now/vis/static/dist/bundle.js`
   rebuilt and committed in the same commit (the `frontend` job rebuilds it
@@ -102,7 +103,14 @@ of date, fix it there.
 ## Repository skills
 
 In `.claude/skills/`. Claude Code discovers them by itself, and each one
-carries its own description.
+carries its own description; this index is for humans and for other agents,
+in the order of the cycle.
+
+- `review-pr` — takes a pull request from start to finish. **Start here**; it
+  points to the others.
+- `prove-candidate` — gives a verdict to a suspected defect: confirmed,
+  refuted or plausible.
+- `safe-refactor` — measures a change by the local suite, before and after.
 
 ### A skill is a procedure, not a logbook
 
@@ -192,13 +200,15 @@ and what came out, in the PR.
   persistence layer to in-memory stores on import
   (`src/noworkflow/tests/helpers/persistence.py`). A defect in the SQLite
   file, in the content directory or in anything that only exists on disk is
-  reproduced with a real `now run` in a scratch directory
-  (`now run --dir <scratch> script.py`), never with the suite.
+  reproduced with a real `now run` in a scratch directory (`cd <scratch> &&
+  uv run --project <checkout> now run script.py`: `now` is not on the PATH,
+  and `uv run` only finds it from inside the checkout), never with the suite.
 - **Trial ids are UUIDs**, not the integers of older versions. A reproduction
   that passes `1` as a trial id is talking to `sequence_key`, not to the id.
-- **A version-specific bug is proven with that version:** `uv run --python
-  3.8 pytest ...` (uv installs the interpreter). "It works here" on another
-  Python proves nothing.
+- **A version-specific bug is proven with that version:** `uv run --isolated
+  --python 3.8 pytest ...` (uv installs the interpreter; without `--isolated`
+  it recreates `.venv` on that version and leaves it there). "It works here"
+  on another Python proves nothing.
 - **`now` prints an error and may still exit with 0.** Several commands
   report failure through `print_msg` and return normally; check the output,
   not only the status.
@@ -271,5 +281,5 @@ The supported range is `requires-python` in `pyproject.toml`; the versions
 that are actually run are the legs of `.github/workflows/ci.yml` (blocking)
 and `.github/workflows/experimental.yml` (observed, not blocking). A version
 is supported when it has a blocking leg, and a classifier in
-`pyproject.toml` is added only then. Locally, `uv run --python <version>
-pytest` runs the suite on any of them.
+`pyproject.toml` is added only then. Locally, `uv run --isolated --python
+<version> pytest` runs the suite on any of them without touching `.venv`.
