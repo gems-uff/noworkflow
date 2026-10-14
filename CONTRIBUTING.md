@@ -125,10 +125,14 @@ uv run now run script.py     # the `now` of the working tree
 
 To run the suite on another Python version, uv installs the interpreter
 (`--isolated` keeps `.venv` as it is; without it, `uv run --python` recreates
-`.venv` on that version):
+`.venv` on that version). The loop below runs every version of the Linux legs
+in `.github/workflows/ci.yml`, which are the supported ones (see "Python
+versions" in `AGENTS.md`):
 
 ```bash
-for v in 3.8 3.12 3.13 3.14; do uv run --isolated --python "$v" pytest -q || break; done
+for v in $(sed -n 's/.*os: ubuntu-latest, python: "\([0-9.]*\)".*/\1/p' .github/workflows/ci.yml); do
+  uv run --isolated --python "$v" pytest -q || break
+done
 ```
 
 The visualization bundle and the Jupyter extension are built from

@@ -27,10 +27,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # The reference leg's Python: it moves with `reference` in ci.yml.
       - name: Install uv and Python
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.15"
           enable-cache: true
 
       - name: Install dependencies
@@ -47,7 +48,7 @@ jobs:
         run: |
           bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 343 \
             "trial ${{ matrix.trial }}" \
-            'uv sync --locked --python 3.13 && uv run --no-sync pytest -m "not golden"'
+            'uv sync --locked --python 3.15 && uv run --no-sync pytest -m "not golden"'
 
       - name: Upload the log
         if: ${{ !cancelled() }}

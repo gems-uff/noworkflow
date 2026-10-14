@@ -43,11 +43,12 @@ jobs:
         uses: actions/checkout@v7
 
       # The tools come from the dev group of uv.lock, so their versions move
-      # only with the lock, like everything else.
-      - name: Install uv and Python 3.13
+      # only with the lock, like everything else. The Python is the reference
+      # leg's (see the `test` matrix), and moves with it.
+      - name: Install uv and Python 3.15
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.13"
+          python-version: "3.15"
           enable-cache: true
 
       # pyproject.toml changed without `uv lock`: every `uv sync --locked`
@@ -135,28 +136,37 @@ jobs:
     # so the panel tells whether a failure is specific to a version or system.
     # Legs still under observation (next Python, Windows) live in
     # experimental.yml; promoting one means moving it to this matrix.
+    #
+    # The legs follow "Python versions" in AGENTS.md: Linux runs every
+    # version python.org maintains (requires-python and the classifiers in
+    # pyproject.toml change with this list); macOS runs the floor and the
+    # newest.
     strategy:
       fail-fast: false
       matrix:
         # min-tests: floor for passed + skipped + xfailed + xpassed. Raise it
         # when tests are added; lower it only with the reason written in the PR.
         include:
-          # Oldest supported Python (requires-python = ">=3.8").
-          - { os: ubuntu-latest, python: "3.8", min-tests: 343 }
+          # Floor (requires-python = ">=3.11").
+          - { os: ubuntu-latest, python: "3.11", min-tests: 343 }
           - { os: ubuntu-latest, python: "3.12", min-tests: 343 }
-          # Reference leg: the only one with coverage and with goldens, which
-          # depend on the system and on the Python version.
-          - { os: ubuntu-latest, python: "3.13", min-tests: 343, reference: true }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 343 }
           - { os: ubuntu-latest, python: "3.14", min-tests: 343 }
-          - { os: macos-latest, python: "3.13", min-tests: 343 }
+          # Reference leg: Linux on the newest blocking version, the only one
+          # with coverage and with goldens, which depend on the system and on
+          # the Python version. Moving it means regenerating the goldens, and
+          # the Python of the `checks` job and of flaky.yml moves with it.
+          - { os: ubuntu-latest, python: "3.15", min-tests: 343, reference: true }
+          - { os: macos-latest, python: "3.11", min-tests: 343 }
+          - { os: macos-latest, python: "3.15", min-tests: 343 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # uv installs the interpreter itself (python-build-standalone), so 3.8
-      # works on runner images where actions/setup-python no longer has it.
+      # uv installs the interpreter itself (python-build-standalone), so a
+      # version runs whether or not actions/setup-python has it for the image.
       - name: Install uv and Python ${{ matrix.python }}
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:

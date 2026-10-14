@@ -63,7 +63,7 @@ Quick Installation
 
 To install noWorkflow, you should follow these basic instructions. Note that these steps may install an older version of noWorkflow. To make sure you are using the newest stable version, please follow the "Alternative" installation procedure mentioned below. 
 
-Using Python 3.8, use pip to install noWorkflow:
+With Python 3.11 or later, use pip to install noWorkflow:
 ```
 $ pip install "noworkflow[all]"
 ```
@@ -84,7 +84,7 @@ $ git clone git@github.com:gems-uff/noworkflow.git
 ```
 If you don't have git, just download the ZIP source code from our repository and decompress the zip file into a folder. 
 
-Then, use Python to install it (the most up-to-date version of noWorkflow works with newer versions of Python. The current version was tested with Python 3.12.4. 
+Then, use Python to install it (the most up-to-date version of noWorkflow works with newer versions of Python. The current version is tested with Python 3.11 to 3.15. 
 
 Go to the folder where you decompressed the files (or where you cloned the project) and then execute the following: 
 

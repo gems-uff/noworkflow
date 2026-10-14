@@ -173,8 +173,9 @@ in-memory stores. Code it never executes:
   JavaScript. The `frontend` job only proves that the committed bundle matches
   the sources and that the extension type-checks.
 - **Windows and macOS:** the matrix runs on Ubuntu for every Python version;
-  macOS runs one version, and Windows is an experimental leg that does not
-  block. Path separators and encodings differ there.
+  macOS runs only the floor and the newest version, and Windows the same two
+  as experimental legs that do not block. Path separators and encodings
+  differ there, and the versions in between are not run on either.
 - **Syntax per Python version:** the collector rewrites the AST, and each
   Python version adds nodes. A construct the examples do not use is not
   covered, on any version.
@@ -212,9 +213,9 @@ and what came out, in the PR.
 - **Trial ids are UUIDs**, not the integers of older versions. A reproduction
   that passes `1` as a trial id is talking to `sequence_key`, not to the id.
 - **A version-specific bug is proven with that version:** `uv run --isolated
-  --python 3.8 pytest ...` (uv installs the interpreter; without `--isolated`
-  it recreates `.venv` on that version and leaves it there). "It works here"
-  on another Python proves nothing.
+  --python <version> pytest ...` (uv installs the interpreter; without
+  `--isolated` it recreates `.venv` on that version and leaves it there). "It
+  works here" on another Python proves nothing.
 - **`now` prints an error and may still exit with 0.** Several commands
   report failure through `print_msg` and return normally; check the output,
   not only the status.
@@ -289,3 +290,36 @@ and `.github/workflows/experimental.yml` (observed, not blocking). A version
 is supported when it has a blocking leg, and a classifier in
 `pyproject.toml` is added only then. Locally, `uv run --isolated --python
 <version> pytest` runs the suite on any of them without touching `.venv`.
+
+The rule that decides the range and the matrix (the record of the decision,
+with the measurements behind it, is issue #237):
+
+- **Range:** the versions python.org maintains on the day of the release
+  (bugfix or security, see <https://devguide.python.org/versions/>). A
+  version that reaches end of life leaves in the next minor release, never
+  in a patch release. `requires-python`, the classifiers and the CI matrix
+  change in the same commit.
+- **Matrix:** Linux runs every supported minor; macOS and Windows run the
+  floor and the newest; all of them blocking (Windows stays experimental
+  until the model doctests stop assuming POSIX paths). The next Python runs
+  on Linux as an experimental leg from its first beta (May) and is promoted
+  when the suite passes on it, with the October release as the target.
+- **Reference leg** (coverage, goldens, `flaky.yml`, and the Python of the
+  `checks` job): Linux on the newest blocking version. It moves when a new
+  version is promoted, and the goldens are regenerated in the same step. The
+  diff of that regeneration is what the new Python changes in noWorkflow's
+  output; a line it does not explain is a defect.
+- **Runner images:** the `-latest` labels, which GitHub moves to the newest
+  generally available image.
+
+Why only the ends on macOS and Windows: defects specific to a system (paths,
+encodings, the file system) rarely depend on the Python version; the floor
+catches what became obsolete, the newest what is new. On Windows the two ends
+also read files differently: from 3.15 UTF-8 mode is on by default (PEP 686),
+so an `open()` without `encoding=` reads the locale encoding (usually cp1252)
+on older versions and UTF-8 on newer ones.
+
+Why every minor on Linux: the ends cover the middle only while no code
+branches on a middle version and no dependency resolves differently there
+(the forks in `resolution-markers` of `uv.lock`), and nothing would say when
+that stops being true. Linux legs cost nothing on a public repository.

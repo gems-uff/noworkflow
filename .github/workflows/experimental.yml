@@ -30,11 +30,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # The next Python joins on Linux from its first beta (May) and moves
+        # to ci.yml when the suite passes on it. Windows runs the floor and
+        # the newest, like macOS in ci.yml, and moves there once the model
+        # doctests stop assuming POSIX paths (Round 3).
         include:
-          - { os: ubuntu-latest, python: "3.15", min-tests: 343 }
           # Warns wherever open() and friends rely on the locale encoding,
-          # which is cp1252 on Windows and UTF-8 elsewhere.
-          - { os: windows-latest, python: "3.13", min-tests: 343, warn-encoding: "1" }
+          # which is cp1252 on Windows and UTF-8 elsewhere. 3.15 turns UTF-8
+          # mode on by default (PEP 686), so the two legs read files
+          # differently.
+          - { os: windows-latest, python: "3.11", min-tests: 343, warn-encoding: "1" }
+          - { os: windows-latest, python: "3.15", min-tests: 343, warn-encoding: "1" }
     name: test-experimental (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     env:
