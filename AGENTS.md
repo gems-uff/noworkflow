@@ -108,6 +108,10 @@ in the order of the cycle.
 
 - `review-pr` — takes a pull request from start to finish. **Start here**; it
   points to the others.
+- `merge-downstream` — brings `main` into an issue branch and checks that it
+  came in whole.
+- `dependencies` — declares a dependency in `pyproject.toml`, judges whether
+  a pin still has a reason, and carries out an update.
 - `prove-candidate` — gives a verdict to a suspected defect: confirmed,
   refuted or plausible.
 - `safe-refactor` — measures a change by the local suite, before and after.
@@ -152,7 +156,9 @@ else runs. Known advisories that a pin keeps alive are listed, with the reason
 and the issue that removes them, next to the `pip-audit` step in
 `.github/workflows/ci.yml`; never add one without both. The frontend has its
 own lock in `src/frontend/package-lock.json`, and any change there means
-rebuilding the bundle.
+rebuilding the bundle. The rest — judging a pin, the versions the lock
+resolves per Python version, the audit, the Dependabot PRs, the npm lock and
+the pinned actions — is in the `dependencies` skill.
 
 ## Blind spots of the suite
 
