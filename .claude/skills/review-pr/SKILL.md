@@ -57,7 +57,9 @@ record it in the PR.
 PR touches, git refuses the whole switch, so start with a clean tree. If there
 is uncommitted work there, **stop and ask the maintainer** before switching: by
 `AGENTS.md` it is the maintainer who commits, and an uncommitted change has no
-reflog to come back from.
+reflog to come back from. On an older branch, what only `main`'s `.gitignore`
+ignores (the files the audit and the build generate) shows up as untracked:
+that is nobody's work.
 
 `--force` is not optional: without it, on a PR that was force-pushed, the
 fast-forward that gh runs inside fails and the local branch stays at the old
@@ -66,7 +68,7 @@ resets the local branch to the PR's head — check first that no commit of
 yours is there.
 
 ```bash
-gh pr view <N> --json title,state,headRefName,baseRefName,mergeable,commits,statusCheckRollup,isCrossRepository,maintainerCanModify
+gh pr view <N> --json title,body,state,headRefName,baseRefName,mergeable,commits,statusCheckRollup,isCrossRepository,maintainerCanModify,closingIssuesReferences
 git fetch --all --prune
 gh pr checkout <N> --force                  # everything from here on reads the tree
 git log --oneline origin/main..HEAD         # what the PR brings
@@ -75,6 +77,11 @@ git log --oneline HEAD..origin/main         # what is missing from main
 
 The second list empty is what you want. If it is not, `merge-downstream` before
 any measurement: a stale base measures the lag, not the PR.
+
+`closingIssuesReferences` lists the issues the merge would close. Anything
+there goes against the milestone rule of `AGENTS.md`: ask the author to drop
+the `Fixes`/`Closes`. A body that names the issue without a closing keyword
+does not appear there, and needs nothing.
 
 **"Everything from here on reads the tree" includes this skill and the tools.**
 A branch that predates `uv.lock`, the root `conftest.py`, the pytest
@@ -85,7 +92,8 @@ on that tree — `/code-review` included — until `merge-downstream` has brough
 the lock in.** On a tree without `uv.lock`, every `uv run` re-resolves, writes
 an untracked `uv.lock`, syncs `.venv` to a set without pytest, and the
 untracked lock then aborts the catch-up merge. If it already happened: `rm
-uv.lock` before the merge, `uv sync --locked` after it.
+uv.lock` before the merge, `uv sync --locked` after it. Meanwhile the probes
+and the reproductions run on a worktree of `main` (step 3).
 
 A PR from a fork brings the branch in the author's remote: `maintainerCanModify`
 above says whether the maintainer can push there the reproduction that step 3
@@ -155,7 +163,8 @@ repository does not keep:
   no longer calls. The two sides pass green separately, and only the full
   suite after the merge tells; the detail is in `merge-downstream`. It also
   holds with the branch up to date, so do not wait for the routing of step 1
-  to look.
+  to look. `git merge-tree --write-tree origin/main HEAD` shows the conflicts,
+  and `git show <tree>:<file>` the merged file, without touching the tree.
 
 When the PR touches `pyproject.toml` or `uv.lock`, what decides the review is
 what changed **in the dependency**, not what the author wrote: the notes of
@@ -195,19 +204,37 @@ It is also how you find out that **a candidate already held before the PR**:
 it is not a regression, and the message to the author changes from "you broke
 it" to "this got worse here — fix it now or does it become an issue?".
 
-The worktree is for when the **environment** differs — a PR that touches
+The merge-base worktree is for when the **environment** differs — a PR that touches
 `pyproject.toml`, a different lock. When only the code changed, the cheaper
 **and more precise** control is `git checkout "$base" -- <file>` and run
 again: it isolates the hunk, not the whole commit, and skips `uv sync`. The
 tree is clean after the checkout of step 1, so `git checkout HEAD -- <file>`
 puts it back without losing anything.
 
-Create the worktree **outside** the repository and remove it with `git
-worktree remove --force` when step 6 closes (`--force` because the `uv sync`
-at an old base leaves `uv.lock` and `.venv/` untracked there; `git worktree
-prune` if the directory is already gone): inside the checkout it breaks the
-clean-tree precondition of `release`, and forgotten it accumulates one per PR
-— `release` checks `git status`, never `git worktree list`.
+**When the branch predates the lock, the probes run on a worktree of
+`main`.** Until `merge-downstream`, nothing on the PR's tree goes through
+`uv` (step 1), and the merge-base has no pytest. A worktree of `origin/main`
+synced from the lock takes the PR's files one by one:
+
+```bash
+git worktree add --detach <outside>/nw-main origin/main
+cd <outside>/nw-main && uv sync --locked
+git checkout <branch> -- <file>                    # a file main did not change
+git diff "$base" <branch> -- <file> | git apply    # only the PR's hunk, for one it did
+git diff --stat "$base" origin/main -- <files>     # what main changed since the base
+```
+
+It stands for the "before" only for the files that the last command shows
+unchanged; say so in the report. Bringing the whole file of one that `main`
+changed undoes `main` in the measurement. `--detach` matters: a worktree on
+the `main` branch stops the checkout from switching back to `main`.
+
+Create either worktree **outside** the repository and remove it with `git
+worktree remove --force` when step 6 closes (`--force` because `uv sync`
+leaves `.venv/`, and at an old base also `uv.lock`, untracked there; `git
+worktree prune` if the directory is already gone): inside the checkout it
+breaks the clean-tree precondition of `release`, and forgotten it accumulates
+one per PR — `release` checks `git status`, never `git worktree list`.
 
 ## 4. Whose fix is it?
 
@@ -361,7 +388,7 @@ resources. A green suite says nothing about any of them.
 Before this, all of it has to be true: the full suite green on the branch, the
 checks the table routed done, `main` synchronized, working tree clean, CI
 green at the tip, and the second list of step 1 empty — otherwise
-`merge-downstream` and measure again. The worktree of step 3 is removed.
+`merge-downstream` and measure again. The worktrees of step 3 are removed.
 Your part of this step ends with that list, checked; the integration itself
 is the maintainer's, and these are the commands they run:
 
