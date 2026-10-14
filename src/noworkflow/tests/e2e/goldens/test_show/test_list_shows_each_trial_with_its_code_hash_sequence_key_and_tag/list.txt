@@ -1,0 +1,13 @@
+[now] trials available in the provenance store:
+  [*]Trial <UUID1>: run simulation.py data1.dat data2.dat
+                                                 with code hash eded2ea67f57b93f1dc55aa339b946424d65df28
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 1
+                                                 Tag: 1.1.1 Type: AUTO
+  [*]Trial <UUID2>: run simulation.py data1.dat data2.dat
+                                                 with code hash eded2ea67f57b93f1dc55aa339b946424d65df28
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 2
+                                                 Tag: 1.1.2 Type: AUTO

@@ -146,19 +146,21 @@ jobs:
       matrix:
         # min-tests: floor for passed + skipped + xfailed + xpassed. Raise it
         # when tests are added; lower it only with the reason written in the PR.
+        # The reference leg also runs the goldens, which every other leg
+        # deselects (-m "not golden"), so its floor is the higher one.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 343 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 343 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 343 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 343 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 698 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 698 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 698 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 698 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` job and of flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 343, reference: true }
-          - { os: macos-latest, python: "3.11", min-tests: 343 }
-          - { os: macos-latest, python: "3.15", min-tests: 343 }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 726, reference: true }
+          - { os: macos-latest, python: "3.11", min-tests: 698 }
+          - { os: macos-latest, python: "3.15", min-tests: 698 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -181,10 +183,14 @@ jobs:
 
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
-      # leg; elsewhere the `golden` marker is deselected.
+      # leg (goldens/REFERENCE); elsewhere the `golden` marker is deselected.
+      # GOLDEN=require fails a golden that nobody recorded instead of
+      # skipping it, and GOLDEN_ACTUAL_DIR collects the actual output of every
+      # mismatch for the artifact below.
       - name: Run tests
         env:
           GOLDEN: ${{ matrix.reference && 'require' || '' }}
+          GOLDEN_ACTUAL_DIR: ${{ runner.temp }}/golden-actual
         run: |
           set -o pipefail
           args=()
@@ -210,9 +216,23 @@ jobs:
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" "$repro"
 
-      # The suite imports noworkflow; nothing in it runs the installed `now`
-      # entry point from a plain directory the way a user does. Runs even when
-      # tests fail, as a separate signal.
+      # What the reference leg actually printed where it differs from the
+      # goldens, normalized, under each golden's path. Download it to review a
+      # mismatch; to accept it, record the goldens on the reference platform
+      # (GOLDEN=overwrite .github/reference-leg/run.sh -m golden, see
+      # CONTRIBUTING.md) rather than copying files by hand.
+      - name: Upload the outputs that differ from the goldens
+        if: ${{ failure() && matrix.reference }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: golden-actual
+          path: ${{ runner.temp }}/golden-actual
+          if-no-files-found: ignore
+
+      # The suite runs `now` as a process (the e2e tests) through
+      # `python -m noworkflow`; this runs the installed console script from a
+      # plain directory, the way a user does. Runs even when tests fail, as a
+      # separate signal.
       - name: CLI smoke test
         if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         working-directory: ${{ runner.temp }}

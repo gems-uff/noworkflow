@@ -13,6 +13,7 @@ from .test_stmt_execution import TestStmtExecution
 from .test_expr_execution import TestExprExecution
 from .test_depth_execution import TestDepthExecution
 from .test_file_access_execution import TestFileAccessExecution
+from .test_collector_cleanup import TestCollectorCleanup
 
 __all__ = [
     "TestScript",
@@ -21,4 +22,5 @@ __all__ = [
     "TestExprExecution",
     "TestDepthExecution",
     "TestFileAccessExecution",
+    "TestCollectorCleanup",
 ]

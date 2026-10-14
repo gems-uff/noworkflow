@@ -44,9 +44,10 @@ of date, fix it there.
   "rejects a restore target outside the project directory") that is red before
   the fix and green after it. See `SECURITY.md`.
 - **Definition of done:** `uv run pytest` green from the repository root;
-  the test count at or above the floor in `.github/workflows/ci.yml` and
-  `experimental.yml` (`min-tests`), **and the floor goes up in the same PR
-  that adds tests**;
+  the test count at or above the floor of every leg (`min-tests` in
+  `.github/workflows/ci.yml` and `experimental.yml`, and the one in
+  `flaky.yml`; the reference leg also counts the goldens, which the other
+  legs deselect), **and the floors go up in the same PR that adds tests**;
   `uv run ruff check .` clean; CI green at the tip of the branch; and, whenever
   `src/frontend` changes, `src/noworkflow/now/vis/static/dist/bundle.js`
   rebuilt and committed in the same commit (the `frontend` job rebuilds it
@@ -54,7 +55,10 @@ of date, fix it there.
 - Run the suite from the root. It runs from a scratch directory (see the root
   `conftest.py`), so nothing it writes lands in the checkout; if you ever see
   a `.noworkflow/` or `.last_trial` in the tree, a test leaked, and neither
-  is ever committed.
+  is ever committed. The leak detector in the same file fails a test that
+  leaves such a file, or the collector's process state (the `open`s, the
+  builtins, `sys.meta_path`, `sys.argv`, `__main__`, the cwd), behind;
+  `NOW_LEAK_CHECK=warn` only reports while you investigate.
 - **Do not commit on your own.** Leave the change in the working tree, show
   the diff and the result of the suite, and wait for whoever drives the
   session. Commit, tag, push and new branches are theirs, also in step-by-step
@@ -162,13 +166,16 @@ the pinned actions — is in the `dependencies` skill.
 
 ## Blind spots of the suite
 
-The suite imports `noworkflow` and runs the collector in-process, against
-in-memory stores. Code it never executes:
+Most of the suite imports `noworkflow` and runs the collector in-process,
+against in-memory stores; the end-to-end tests (`src/noworkflow/tests/e2e/`)
+run `now` as a process on a real store in a temporary directory. What
+neither executes:
 
-- **The `now` command as a process:** argument parsing, exit codes, what goes
-  to stdout and stderr, `now run` on a script in a real directory with a real
-  `.noworkflow/`. CI has a smoke test (`now run` and `now list` on a
-  one-line script) and nothing more.
+- **Commands the e2e tests do not run:** `vis` (the server), `push`, `pull`,
+  `kernel`, `debug`, `evaluation`, `clean`, and `demo` (marked `slow`; it
+  skips without matplotlib, which `uv sync --locked` leaves out: it is the
+  `demo` extra). For the commands they do run, only the flags their tests
+  name are covered.
 - **`now vis`:** the Flask routes, the push/pull/experiment endpoints, the
   JavaScript. The `frontend` job only proves that the committed bundle matches
   the sources and that the extension type-checks.
@@ -179,17 +186,21 @@ in-memory stores. Code it never executes:
 - **Syntax per Python version:** the collector rewrites the AST, and each
   Python version adds nodes. A construct the examples do not use is not
   covered, on any version.
-- **The exports** (`prolog`, `prov`, `dataflow`, `ast`, `prospective`): no
-  test compares their output against a reference.
+- **The exports off the reference leg:** goldens compare `prolog`, `prov`,
+  `dataflow` and `prospective` on the reference leg only (Linux, the newest
+  blocking Python); on every other leg nothing compares their output.
+  `export ast` fails from Python 3.14 on (#241), so no golden compares it,
+  and only a structural test checks it on 3.11 to 3.13.
 - **The optional content engines** (`puregit`, `pygit`, `gitdb`,
   `dulwich`): the suite pins the `plain` engine; the others open a git
   repository on connect.
 - **Jupyter:** the magics (`%now_run`, `%now_ip`), the kernel in
   `src/noworkflow/kernel/` and the lab extension have no automated test.
-- **`push`, `pull`, `demo`, `restore`:** a remote server, the demo projects
-  and the files a restore writes are exercised by hand or not at all.
+- **`push`, `pull`, `demo`:** a remote server and the demo projects are
+  exercised by hand or not at all.
 - **Deployment provenance:** what gets recorded about the environment
-  (`now show -e`) depends on the machine; no assertion covers it.
+  (`now show -e`) depends on the machine; the e2e tests assert only the
+  names of a few attributes and the synthetic user, never the values.
 
 When a change touches one of these, run it by hand and write what you ran,
 and what came out, in the PR.
@@ -203,13 +214,27 @@ and what came out, in the PR.
   the originals, or a test that runs the collector and then opens a file, sees
   the wrappers. The originals are kept in
   `src/noworkflow/now/persistence/content/safeopen.py`.
-- **The suite never writes a store to disk.** `noworkflow.tests` connects the
-  persistence layer to in-memory stores on import
+- **The in-process suite never writes a store to disk.** `noworkflow.tests`
+  connects the persistence layer to in-memory stores on import
   (`src/noworkflow/tests/helpers/persistence.py`). A defect in the SQLite
   file, in the content directory or in anything that only exists on disk is
-  reproduced with a real `now run` in a scratch directory (`cd <scratch> &&
-  uv run --project <checkout> now run script.py`: `now` is not on the PATH,
-  and `uv run` only finds it from inside the checkout), never with the suite.
+  reproduced with an e2e test (`NowProject` in
+  `src/noworkflow/tests/e2e/harness.py` runs `now` in `tmp_path` with a
+  synthetic environment), or by hand with a real `now run` in a scratch
+  directory (`cd <scratch> && uv run --project <checkout> now run
+  script.py`: `now` is not on the PATH, and `uv run` only finds it from
+  inside the checkout).
+- **`now run` writes the store next to the script** (or in `--dir`), not in
+  the cwd, while the files the script opens by relative path resolve against
+  the cwd. A store cannot be moved either: trials record absolute paths
+  (`trial.path`, `module.path`), which a copy keeps pointing at the original
+  directory. Build each store where it is used.
+- **Automatic tags count the whole store:** the major goes up for every new
+  code hash of any script, and the command line, flags included, decides
+  the minor. An assertion on a tag needs a fresh store.
+- **`python -m pytest` is not `uv run pytest`:** under `-m`,
+  `sys.modules['__main__']` is pytest's own, and the two tests in
+  `prov_execution/test_script.py` that assert its repr fail.
 - **Trial ids are UUIDs**, not the integers of older versions. A reproduction
   that passes `1` as a trial id is talking to `sequence_key`, not to the id.
 - **A version-specific bug is proven with that version:** `uv run --isolated
@@ -221,7 +246,11 @@ and what came out, in the PR.
   not only the status.
 - **Two trials of the same script differ by design:** the environment table
   records the whole `os.environ`, the start time, the pid. A diff that shows
-  only those is "no change".
+  only those is "no change". `src/noworkflow/tests/e2e/normalize.py` masks
+  what differs between two identical runs; anything it leaves is a real
+  difference, with one known exception: on Python 3.11 the order of the
+  blocks `now diff` prints can change from run to run (#248: it iterates
+  sets whose hash includes `None`, which is address-based before 3.12).
 - **`now demo` depends on `sys.argv[0]` being the console script:** it calls
   `now` through the shell with that path (`src/noworkflow/now/cmd/cmd_demo.py`).
   Through `python -m noworkflow` or from a test, `sys.argv[0]` is something
@@ -273,7 +302,11 @@ too. **Never paste a real `now show -e` output, a real
 Prolog export, a real `environment.json` or a real `.noworkflow/` into an
 issue, a PR, a skill or a golden file.** Reproduce with the test corpus, and
 when an environment attribute matters, name it ("the `USER` attribute")
-instead of quoting the value. The same goes for a user's store sent with a
+instead of quoting the value. The e2e harness runs `now` with a synthetic
+environment (user `nowtest`, a temporary home), the Prolog goldens drop the
+`environment` predicate, and `test_normalize.py` fails if a golden or a
+tracked notebook contains an environment fact, a home directory or the
+hostname. The same goes for a user's store sent with a
 bug report: look at it locally and describe what you found.
 
 ## Language
@@ -306,7 +339,10 @@ with the measurements behind it, is issue #237):
   when the suite passes on it, with the October release as the target.
 - **Reference leg** (coverage, goldens, `flaky.yml`, and the Python of the
   `checks` job): Linux on the newest blocking version. It moves when a new
-  version is promoted, and the goldens are regenerated in the same step. The
+  version is promoted, and the goldens are regenerated in the same step:
+  `src/noworkflow/tests/e2e/goldens/REFERENCE` names the platform they were
+  recorded on, and `.github/reference-leg/run.sh` reads the Python from
+  `ci.yml`. The
   diff of that regeneration is what the new Python changes in noWorkflow's
   output; a line it does not explain is a defect.
 - **Runner images:** the `-latest` labels, which GitHub moves to the newest

@@ -1,0 +1,92 @@
+digraph e_1 {
+    rankdir=RL;
+    node[fontsize=20]
+    e_2 [label="1 \"\"\"Port of tests/weather/ ... dataflow` work on it.
+\"\"\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_5 [label="9 run_simulation" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_7 [label="13 plot" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_8 [label="-1 open" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_11 [label="17 sys" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_13 [label="17 sys.argv" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_15 [label="17 1" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_17 [label="17 sys.argv[1]" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_18 [label="17 open(sys.argv[1])" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    a_1 [label="input.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+    e_20 [label="17 handle" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_22 [label="18 handle.read" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_23 [label="18 handle.read()" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    e_24 [label="18 handle.read().strip" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_25 [label="18 handle.read().strip()" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    e_26 [label="18 data_a" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_27 [label="19 sys" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_28 [label="19 sys.argv" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_29 [label="19 2" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_30 [label="19 sys.argv[2]" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_31 [label="19 data_b" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    subgraph cluster_35 {
+        color="#3A85B9";
+        fontsize=30;
+        label = "run_simulation";
+        e_35 [label="20 return" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+        e_36 [label="9 a" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+        e_37 [label="9 b" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+        e_40 [label="10 a + b" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    }
+    e_41 [label="20 data" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    subgraph cluster_44 {
+        color="#3A85B9";
+        fontsize=30;
+        label = "plot";
+        e_44 [label="21 return" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+        e_45 [label="13 data" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+        e_46 [label="-1 len" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+        e_49 [label="14 len(data)" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    }
+    e_50 [label="21 size" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_52 [label="22 \"result.txt\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_53 [label="22 \"w\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_54 [label="22 \"\n\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_55 [label="22 open(\"result.txt\", \"w\", newline=\"\n\")" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    a_2 [label="result.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+    e_57 [label="22 handle" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_59 [label="23 handle.write" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_62 [label="23 handle.write(data)" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    e_18 -> a_1 [style="dashed"];
+    e_18 -> e_8 ;
+    e_18 -> e_17 ;
+    a_2 -> e_55 [style="dashed"];
+    e_13 -> e_11 ;
+    e_17 -> e_13 ;
+    e_17 -> e_15 ;
+    e_20 -> e_18 [arrowhead="empty"];
+    e_22 -> e_20 ;
+    e_23 -> e_22 ;
+    e_24 -> e_23 ;
+    e_25 -> e_24 ;
+    e_26 -> e_25 [arrowhead="empty"];
+    e_28 -> e_27 ;
+    e_30 -> e_28 ;
+    e_30 -> e_29 ;
+    e_31 -> e_30 [arrowhead="empty"];
+    e_36 -> e_26 [arrowhead="empty"];
+    e_37 -> e_31 [arrowhead="empty"];
+    e_40 -> e_36 ;
+    e_40 -> e_37 ;
+    e_35 -> e_40 [arrowhead="empty"];
+    e_35 -> e_5 ;
+    e_41 -> e_35 [arrowhead="empty"];
+    e_45 -> e_41 [arrowhead="empty"];
+    e_49 -> e_46 ;
+    e_49 -> e_45 ;
+    e_44 -> e_49 [arrowhead="empty"];
+    e_44 -> e_7 ;
+    e_50 -> e_44 [arrowhead="empty"];
+    e_55 -> e_8 ;
+    e_55 -> e_52 ;
+    e_55 -> e_53 ;
+    e_55 -> e_54 ;
+    e_57 -> e_55 [arrowhead="empty"];
+    e_59 -> e_57 ;
+    e_62 -> e_59 ;
+    e_62 -> e_41 ;
+    }

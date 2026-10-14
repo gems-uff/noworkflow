@@ -1,0 +1,36 @@
+[now] trial tags:
+  Tag: 1.1.2 Type: AUTO
+[now] trial information:
+  Id: <UUID1>
+  Sequence Key: 2
+  Status: Finished
+  Inherited Id: None
+  Script: simulation.py
+  Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28
+  Start: <TIMESTAMP>
+  Finish: <TIMESTAMP>
+  Duration: <DURATION>
+[now] this trial accessed the following files:
+  Name: data1.dat
+    Mode: r
+    Buffering: default
+    Content hash before: c0c1c36040345e8c9edd12f5442afbfcc20104ee
+    Content hash after: c0c1c36040345e8c9edd12f5442afbfcc20104ee
+    Timestamp: <TIMESTAMP>
+    Function: run_simulation -> csv_read -> open
+
+  Name: data2.dat
+    Mode: r
+    Buffering: default
+    Content hash before: 3953b079a91c30410014989825e69f689768db03
+    Content hash after: 3953b079a91c30410014989825e69f689768db03
+    Timestamp: <TIMESTAMP>
+    Function: run_simulation -> csv_read -> open
+
+  Name: output.csv
+    Mode: w
+    Buffering: default
+    Content hash before: a37ae01a07d32a45e6be38a00e6710057555da91
+    Content hash after: d239a3eb6cb4099516384ae6ea29a315779254ac
+    Timestamp: <TIMESTAMP>
+    Function: write_output -> open

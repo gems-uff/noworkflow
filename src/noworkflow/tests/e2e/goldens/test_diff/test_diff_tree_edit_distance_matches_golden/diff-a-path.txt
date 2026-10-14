@@ -1,0 +1,8 @@
+[now] trial diff:
+  Start changed from <TIMESTAMP> to <TIMESTAMP>
+  Finish changed from <TIMESTAMP> to <TIMESTAMP>
+  Duration text changed from <DURATION> to <DURATION>
+  Sequence key changed from 1 to 3
+  Parent id changed from <None> to <UUID1>
+
+Activations TED: 9.0

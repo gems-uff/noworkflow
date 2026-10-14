@@ -1,0 +1,28 @@
+digraph e_1 {
+    rankdir=RL;
+    node[fontsize=20]
+    e_18 [label="17 open(sys.argv[1])" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    a_1 [label="input.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+    e_23 [label="18 handle.read()" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    e_25 [label="18 handle.read().strip()" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    e_35 [label="20 run_simulation(data_a, data_b)" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    subgraph cluster_44 {
+        color="#3A85B9";
+        fontsize=30;
+        label = "plot";
+        e_44 [label="21 return" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+        e_49 [label="14 len(data)" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    }
+    e_55 [label="22 open(\"result.txt\", \"w\", newline=\"\n\")" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    a_2 [label="result.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+    e_62 [label="23 handle.write(data)" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
+    e_18 -> a_1 [style="dashed"];
+    a_2 -> e_55 [style="dashed"];
+    e_23 -> e_18 [arrowhead="empty" style="dashed"];
+    e_25 -> e_23 [style="dashed"];
+    e_35 -> e_25 [arrowhead="empty" style="dashed"];
+    e_49 -> e_35 [style="dashed" arrowhead="empty"];
+    e_44 -> e_49 [arrowhead="empty"];
+    e_62 -> e_55 [arrowhead="empty" style="dashed"];
+    e_62 -> e_35 [style="dashed" arrowhead="empty"];
+    }

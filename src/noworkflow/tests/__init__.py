@@ -24,7 +24,7 @@ from .prov_definition import TestCodeComponentDefinition
 from .prov_definition import TestReconstruction
 from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
 from .prov_execution import TestClassExecution, TestDepthExecution
-from .prov_execution import TestFileAccessExecution
+from .prov_execution import TestFileAccessExecution, TestCollectorCleanup
 from .dependency import TestClusterizer, TestClusterizerConfig
 from .dependency import TestProspectiveClusterizer
 from .dependency import TestActivationClusterizer, TestDependencyClusterizer
@@ -64,6 +64,7 @@ execution.addTests(loader.loadTestsFromTestCase(TestExprExecution))
 execution.addTests(loader.loadTestsFromTestCase(TestDepthExecution))
 execution.addTests(loader.loadTestsFromTestCase(TestClassExecution))
 execution.addTests(loader.loadTestsFromTestCase(TestFileAccessExecution))
+execution.addTests(loader.loadTestsFromTestCase(TestCollectorCleanup))
 
 collection = unittest.TestSuite()
 collection.addTests(definition)

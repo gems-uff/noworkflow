@@ -97,8 +97,14 @@ Reference the issue with the prefix alone. Do not write `Fixes #NNN` or
   option, a test that runs it.
 - **The suite green, and the count not below the floor.** CI fails a leg
   whose test count drops below `min-tests` in `.github/workflows/ci.yml`
-  and `experimental.yml`; when you add tests, raise the floor in both, in
-  the same PR.
+  and `experimental.yml`, or below the floor in `flaky.yml`; when you add
+  tests, raise the floors in the same PR. The reference leg also counts the
+  goldens, which the other legs deselect, so its floor is higher.
+- **The goldens, when an output changes.** A change to what a command prints
+  shows up as a golden mismatch on the reference leg. Record the new
+  goldens on the reference platform (see "End-to-end tests and goldens"
+  below) and commit them with the change: their diff is the visible
+  footprint of the change.
 - **The bundle, when the frontend changes.** Any change under `src/frontend`
   comes with `src/noworkflow/now/vis/static/dist/bundle.js` rebuilt in the
   same commit; the `frontend` job rebuilds it and fails on a difference.
@@ -134,6 +140,40 @@ for v in $(sed -n 's/.*os: ubuntu-latest, python: "\([0-9.]*\)".*/\1/p' .github/
   uv run --isolated --python "$v" pytest -q || break
 done
 ```
+
+### End-to-end tests and goldens
+
+`src/noworkflow/tests/e2e/` runs `now` as a process on a real store, in a
+temporary directory and with a synthetic environment (`harness.py`). A
+command, an export or a store on disk is tested there. Outputs that must not
+change by accident are compared with golden files under
+`src/noworkflow/tests/e2e/goldens/`, after `normalize.py` masks what differs
+between two identical runs (trial ids, clock readings, paths, addresses).
+
+Goldens depend on the system and on the Python version, so they are
+recorded on one platform, the CI reference leg, named in
+`goldens/REFERENCE`; on any other platform they are skipped. To compare or
+record them from any machine with Docker (colima or Docker Desktop on
+macOS):
+
+```bash
+GOLDEN=require .github/reference-leg/run.sh -m golden     # compare, as CI does
+GOLDEN=overwrite .github/reference-leg/run.sh -m golden   # record them again
+git diff src/noworkflow/tests/e2e/goldens/                 # review the change
+```
+
+A new golden is written the first time its test runs, and the test is
+skipped; from the next run on it is compared. When the reference leg finds a
+mismatch, the `golden-actual` artifact of the CI run holds what it printed.
+Never edit a golden by hand: record it again.
+
+After every test, the root `conftest.py` checks that the test left no process
+state behind (the collector replaces the `open` functions, adds builtins and
+an import finder, and some commands write into the current directory) and
+fails it otherwise; `NOW_LEAK_CHECK=warn uv run pytest` only reports, in the
+LEAKS section of the summary.
+
+### The frontend
 
 The visualization bundle and the Jupyter extension are built from
 `src/frontend` (details in `src/frontend/development.md`):

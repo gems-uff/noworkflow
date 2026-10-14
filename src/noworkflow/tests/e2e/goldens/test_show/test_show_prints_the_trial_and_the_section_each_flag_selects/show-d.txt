@@ -1,0 +1,42 @@
+[now] trial tags:
+  Tag: 1.1.2 Type: AUTO
+[now] trial information:
+  Id: <UUID1>
+  Sequence Key: 2
+  Status: Finished
+  Inherited Id: None
+  Script: simulation.py
+  Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28
+  Start: <TIMESTAMP>
+  Finish: <TIMESTAMP>
+  Duration: <DURATION>
+[now] this trial has the following code blocks:
+  Name: simulation.py [script]
+    Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28
+    Docstring: Deterministic port of tests/weather/simulation.py
+
+    Reads two data files, imports a local module and writes an output file,
+    without matplotlib and without sleeping.
+
+  Name: csv_read [function_def]
+    Code hash: 0960440582e1b9c510d2a78f84820c33fa1eab96
+    Parameters: path
+    Calls: csv.reader(handle, delimiter=":"), data.append([float(value) for value in row]), float(value), open(path, newline="")
+
+  Name: extract_column [function_def]
+    Code hash: 6aa1d1222336f08ea79800b7e7313244305b8825
+    Parameters: data, column
+    Calls: col_data.append(row[column])
+
+  Name: run_simulation [function_def]
+    Code hash: aa1032548372f00b27389b40b87b5eb0827a2276
+    Parameters: path_a, path_b, scale
+    Calls: csv_read(path_a), csv_read(path_b), simulate(a, b, scale)
+
+  Name: write_output [function_def]
+    Code hash: dcfed10f795d4b1c529a72ed86f49a9816fdf8f2
+    Parameters: path, data
+    Calls: extract_column(data, 0), extract_column(data, 1), csv.writer(handle), writer.writerow(["temperature", "precipitation"]), zip(temperature, precipitation), writer.writerow([t, p]), open(path, "w", newline=""), len(temperature)
+
+  Name: simulator.py [module]
+    Code hash: a8c1681e7004c9e8da9ede5e31d1136526bf6fcf

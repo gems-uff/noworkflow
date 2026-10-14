@@ -42,11 +42,12 @@ jobs:
           set -o pipefail
           uv run --no-sync pytest -m "not golden" | tee "test-log-trial-${{ matrix.trial }}.log"
 
-      # Same floor as the reference leg in ci.yml.
+      # The non-golden floor of ci.yml: these trials deselect the goldens,
+      # which only the reference leg compares.
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 343 \
+          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 698 \
             "trial ${{ matrix.trial }}" \
             'uv sync --locked --python 3.15 && uv run --no-sync pytest -m "not golden"'
 

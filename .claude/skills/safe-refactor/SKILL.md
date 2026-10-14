@@ -118,15 +118,21 @@ point here:
   under `src/noworkflow/tests/prov_execution/` or `prov_definition/`.
 - A model's behavior is its doctest, in
   `src/noworkflow/now/persistence/models/`.
-- A command, an export or a store on disk is a test of the e2e harness under
-  `src/noworkflow/tests/e2e/` once it exists; until then it is a `cd
-  <scratch> && uv run --project <checkout> now run script.py` recorded in the
-  PR with its output, with invented values (`AGENTS.md`, "Sensitive data").
+- A command, an export or a store on disk is a pytest function in a module of
+  `src/noworkflow/tests/e2e/`: the `project` fixture gives an empty project
+  with a synthetic environment, `NowProject.run()` runs `now` and checks the
+  return code and an empty stderr, `query()`/`trial()`/`files()` read the
+  store and the project, and an output that must not change goes through
+  `project.normalize()` into `assert_golden()` (`@pytest.mark.golden`). A
+  script it needs goes under `e2e/corpus/`, never named `test_*.py`. A known
+  defect is a characterization test plus a `_desired` twin marked
+  `xfail(strict=True)` with the issue that flips it.
 - A method added to an existing class needs nothing else. **A new test class
   is also imported and added to its suite in
   `src/noworkflow/tests/__init__.py`** (and exported by the package's
   `__init__.py`): that is how `run_tests.py` finds it; pytest finds it by the
-  file name alone, and the two counts diverge until it is done.
+  file name alone, and the two counts diverge until it is done. The e2e and
+  premise tests are pytest functions that `run_tests.py` never runs.
 
 When the path is unreachable in the test environment (a git content engine,
 the Jupyter kernel), a test with a double fixing the APIs it depends on is

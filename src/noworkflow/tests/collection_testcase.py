@@ -6,22 +6,16 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import builtins
-import codecs
-import io
 import os
-import sys
 import unittest
-
-from importlib.machinery import PathFinder
 
 from future.utils import viewvalues, viewitems
 
 from ..now.collection.metadata import Metascript
 from ..now.models.ast import create_trees
-from ..now.persistence.content import safeopen
 from ..now.utils.cross_version import PY3
 from .helpers import models
+from .helpers.leaks import undo_collection
 
 
 NAME = "noworkflow/tests/examples/script.py"
@@ -35,14 +29,6 @@ def cluster(evaluation_nid):
 class CollectionTestCase(unittest.TestCase):
     """Helpers to test noWorkflow collection"""
 
-    # Names that Execution.configure and debugger_builtins add to the
-    # builtins of the traced script, which are the builtins of this process.
-    INJECTED_BUILTINS = (
-        "__noworkflow__", "now_tag_cell", "now_tag_variable",
-        "set_trace", "now_save", "now_trial", "now_vis", "now_notebook",
-        "now_ipython",
-    )
-
     def tearDown(self):
         """Undo what collecting provenance changes in the process
 
@@ -50,20 +36,10 @@ class CollectionTestCase(unittest.TestCase):
         names to the builtins, and collect_provenance inserts a module finder
         in sys.meta_path that it only removes when the script succeeds. The
         collector restores none of that, so every test would otherwise leak
-        into the next one.
+        into the next one (the leak detector in the root conftest.py would
+        fail it).
         """
-        builtins.open = safeopen.std_open
-        io.open = safeopen.io_open
-        codecs.open = safeopen.codecs_open
-        os.open = safeopen.os_open
-        for name in self.INJECTED_BUILTINS:
-            vars(builtins).pop(name, None)
-        sys.meta_path[:] = [
-            finder for finder in sys.meta_path
-            if not (isinstance(finder, type) and finder is not PathFinder
-                    and issubclass(finder, PathFinder)
-                    and finder.__name__ == "Finder")
-        ]
+        undo_collection()
 
     def find_all(self, store, **kwargs):
         """Find objects in object store by kwargs attributes"""
@@ -270,7 +246,7 @@ class CollectionTestCase(unittest.TestCase):
             ))
         print("Evaluations")
         for eva in viewvalues(self.metascript.evaluations_store.store):
-            if not eva.id in used_evals:
+            if eva.id not in used_evals:
                 print("  {}".format(
                     self.evaluation_repr(eva),
                 ))

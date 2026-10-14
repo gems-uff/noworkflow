@@ -23,7 +23,11 @@ summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
 
 line=""
 seed=""
+leaks=""
 if [ -f "$log" ]; then
+  # The LEAKS section the root conftest.py prints: process state a test left
+  # behind (each such test also errors at teardown, unless NOW_LEAK_CHECK=warn).
+  leaks=$(awk '/^=+ LEAKS =+$/ {on = 1; next} on && /^=+ / {on = 0} on' "$log" || true)
   # "===== 338 passed, 5 skipped, 4 warnings in 1.81s =====", possibly with
   # " (0:01:15)" after the duration.
   line=$(grep -E '^=+ .* in [0-9.]+s( \([0-9:]+\))? =+$' "$log" | tail -n 1 || true)
@@ -57,6 +61,12 @@ fi
   echo "- summary: \`${line:-missing}\`"
   echo "- seed: ${seed:-none (fixed order)}"
   [ -n "$problem" ] && echo "- **failed:** $problem"
+  if [ -n "$leaks" ]; then
+    echo "- **leaks:**"
+    echo '```'
+    echo "$leaks"
+    echo '```'
+  fi
   echo
   echo "Reproduce locally:"
   echo '```'
