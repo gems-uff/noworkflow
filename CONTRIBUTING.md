@@ -116,13 +116,87 @@ Reference the issue with the prefix alone. Do not write `Fixes #NNN` or
   real `now show -e`, a real Prolog export or a real `.noworkflow/` into the
   PR or the tests; use the test corpus and invented values.
 
-## Running locally
+## Development environment
 
-The project is managed with [uv](https://docs.astral.sh/uv/). From the
-repository root:
+What a new machine needs to work on noWorkflow. `README.md` covers
+installing noWorkflow as a user, with `pip`; none of that is needed here.
+No version number is copied below: each one is read from the file that
+owns it, so this section stays right when the versions move.
+
+### What to install
+
+- **git**, to clone the repository. The suite calls it too: the tests that
+  read the committed `bundle.js` and the tracked notebooks skip without it.
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/), the
+  latest release.** It installs Python, creates `.venv` from `uv.lock` and
+  runs every tool. CI installs the latest uv as well (`astral-sh/setup-uv`
+  without a version), and an older uv may not know the newest Python
+  release: `uv python install` fails with "No download found". Update it
+  with `uv self update`, or with the package manager that installed it.
+- **Python, through uv.** No system Python is needed: `uv sync` downloads
+  the interpreter it is asked for (see "Setting up `.venv`" below).
+- **Node and npm, only to change `src/frontend`** (the vis and the Jupyter
+  extension). Use the major of the `frontend` job, which is the one that
+  reproduces the committed `bundle.js`:
+
+  ```bash
+  sed -n 's/.*node-version: "\([0-9]*\)".*/\1/p' .github/workflows/ci.yml
+  ```
+
+  Any installer that provides that major works (nodejs.org, a version
+  manager such as nvm or fnm, a system package manager); npm comes with it.
+- **[gh](https://cli.github.com/)**, for the contribution cycle from the
+  terminal (issues with their Type, pull requests, CI runs) and for the
+  repository skills in `.claude/skills/`, which call it. Authenticate once
+  with `gh auth login`. From a fork, the website does the same.
+
+Optional, each for one purpose:
+
+- **A Linux container engine**, to reproduce the CI reference leg: recording
+  goldens, and failures that only show on Linux x86_64, such as a SQLAlchemy
+  or greenlet build. On macOS, [colima](https://github.com/abiosoft/colima)
+  or Docker Desktop, plus Rosetta on Apple silicon, which runs the
+  `linux/amd64` image; on Linux, the native Docker engine. colima shares
+  only the home directory with its VM by default, so the checkout has to be
+  under it: elsewhere, the container sees an empty directory. How to use it
+  is in [End-to-end tests and goldens](#end-to-end-tests-and-goldens).
+- **graphviz** (the `dot` program), which renders the graphs Jupyter shows
+  through the `%%dot` magic (`trial.dot`, for example) and turns the output
+  of `now export dataflow` or `now export prospective` into an image. The
+  suite does not need it.
+- **SWI-Prolog with its shared libraries**, together with `pyswip-alt` (the
+  `all` extra), for Prolog queries from Jupyter (`trial.query(...)`). `now
+  export prolog` does not need it, and neither does the suite.
+
+### Setting up `.venv`
+
+`.venv` runs on the Python of the CI reference leg, the `reference: true`
+entry of the `test` matrix in `.github/workflows/ci.yml`. The goldens and the
+coverage come from that version, so a local run sees what that leg sees:
 
 ```bash
-uv sync                      # creates .venv with the locked dependencies
+git clone https://github.com/gems-uff/noworkflow.git && cd noworkflow
+python=$(sed -n 's/.*python: "\([0-9.]*\)".*reference: true.*/\1/p' .github/workflows/ci.yml)
+uv sync --locked --python "$python"    # downloads that Python if missing, creates .venv
+uv run pytest                           # the whole suite
+```
+
+`--locked` installs exactly what `uv.lock` says, as CI does, and fails
+instead of re-resolving when the lock and `pyproject.toml` disagree. Run the
+same `uv sync` again when `uv.lock` changes, and when the reference leg moves
+to a newer Python. The other supported versions run without touching `.venv`
+(see "Running locally").
+
+The extras of `pyproject.toml` stay out of `.venv` unless named: add
+`--extra demo` (matplotlib) to run the `slow` tests of `now demo`, which
+skip without it, and `--extra notebook` (Jupyter) for the full frontend
+build (see "The frontend").
+
+## Running locally
+
+From the repository root, with `.venv` set up as above:
+
+```bash
 uv run pytest                # the whole suite
 uv run ruff check .          # lint
 uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json
@@ -176,11 +250,27 @@ LEAKS section of the summary.
 ### The frontend
 
 The visualization bundle and the Jupyter extension are built from
-`src/frontend` (details in `src/frontend/development.md`):
+`src/frontend`, with the Node major given in "What to install" (details in
+`src/frontend/development.md`). To rebuild `bundle.js`, which is what the
+`frontend` job of CI checks:
 
 ```bash
-cd src/frontend && npm ci && npm run build
+cd src/frontend
+npm ci                                                             # node_modules from package-lock.json
+npx lerna run build --scope=@noworkflow/nowvis --include-dependencies
+git restore ../noworkflow/now/vis/static/dist/bundle.js.map
 ```
+
+Commit `bundle.js` together with the source change. The build also rewrites
+`bundle.js.map`, which is not reproducible: it embeds the absolute path of
+the checkout, your home directory included. The last line above discards it;
+it is not committed.
+
+`npm run build` builds every package, the Jupyter extension included, and
+that one calls `jupyter labextension build`. It fails with
+`jupyter: command not found` unless Jupyter is in `.venv` (`uv sync --locked
+--python "$python" --extra notebook`) and the build runs through uv:
+`uv run --no-sync npm run build`.
 
 ## Security
 

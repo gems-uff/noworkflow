@@ -12,8 +12,12 @@ the dependencies come from `pyproject.toml`, `uv.lock` and
 
 Before writing a procedure, check what already exists:
 
-- `README.md`: installation and the usage of every command.
-- `CONTRIBUTING.md`: the contribution cycle (issue, branch, commit, PR).
+- `README.md`: installing noWorkflow as a **user** (`pip install`) and the
+  usage of every command. It is not how to set up a development
+  environment.
+- `CONTRIBUTING.md`: the development environment (what to install on a new
+  machine, and how to set up `.venv`), the commands to run locally, and the
+  contribution cycle (issue, branch, commit, PR).
 - `SECURITY.md`: how security problems are reported.
 - `src/frontend/development.md`: building the visualization bundle and the
   Jupyter extension.
@@ -51,7 +55,9 @@ of date, fix it there.
   `uv run ruff check .` clean; CI green at the tip of the branch; and, whenever
   `src/frontend` changes, `src/noworkflow/now/vis/static/dist/bundle.js`
   rebuilt and committed in the same commit (the `frontend` job rebuilds it
-  and fails on any difference).
+  and fails on any difference). The `bundle.js.map` the build rewrites is
+  not committed: it embeds the absolute path of the checkout. The commands
+  are in "The frontend" in `CONTRIBUTING.md`.
 - Run the suite from the root. It runs from a scratch directory (see the root
   `conftest.py`), so nothing it writes lands in the checkout; if you ever see
   a `.noworkflow/` or `.last_trial` in the tree, a test leaked, and neither
@@ -59,6 +65,19 @@ of date, fix it there.
   leaves such a file, or the collector's process state (the `open`s, the
   builtins, `sys.meta_path`, `sys.argv`, `__main__`, the cwd), behind;
   `NOW_LEAK_CHECK=warn` only reports while you investigate.
+- **Installing software on the machine needs the human's go-ahead.** That
+  covers uv, a Python interpreter, Node, a container engine, Rosetta, a
+  system package. uv counts too when it downloads an interpreter that is
+  missing, which `uv sync --python`, `uv run --python` and `uv python
+  install` do (`uv python list --only-installed` shows what is there).
+  Filling `.venv` from `uv.lock` (`uv sync --locked`) or `node_modules`
+  from the npm lock (`npm ci`) stays inside the checkout and is not an
+  install on the machine. To prepare an environment, check first what is
+  installed, and at which version, against "Development environment" in
+  `CONTRIBUTING.md`; then propose the commands, what each one costs (disk,
+  memory, a background VM) and what it unlocks, and wait. Never settle for a
+  worse workaround (a CI round trip instead of a local container, a check
+  left unrun) without saying that an install would avoid it.
 - **Do not commit on your own.** Leave the change in the working tree, show
   the diff and the result of the suite, and wait for whoever drives the
   session. Commit, tag, push and new branches are theirs, also in step-by-step

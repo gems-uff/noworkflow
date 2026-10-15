@@ -328,7 +328,7 @@ jobs:
           bundle=../noworkflow/now/vis/static/dist/bundle.js
           if ! git diff --quiet -- "$bundle"; then
             git diff --stat -- "$bundle"
-            echo "::error file=src/noworkflow/now/vis/static/dist/bundle.js::bundle.js differs from a fresh build of src/frontend. Rebuild it (cd src/frontend && npm ci && npm run build) and commit it with the source change."
+            echo "::error file=src/noworkflow/now/vis/static/dist/bundle.js::bundle.js differs from a fresh build of src/frontend. Rebuild it (cd src/frontend && npm ci && npx lerna run build --scope=@noworkflow/nowvis --include-dependencies; see The frontend in CONTRIBUTING.md) and commit it with the source change."
             exit 1
           fi
 
