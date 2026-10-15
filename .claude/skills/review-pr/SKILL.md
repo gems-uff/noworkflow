@@ -375,7 +375,10 @@ the text of the output, never by the exit status. The status the ruleset
 requires is `ci-ok`; the `test-experimental (...)` legs come from
 `experimental.yml` and are not required — a red there is compared with the
 same leg on `main` (`gh run list --workflow experimental.yml --branch main
---limit 1`) before being charged to the PR. A PR from a fork has no `coverage`
+--limit 1`) before being charged to the PR. While that workflow is suspended
+(its header says until when) the PR has no such legs: when the diff touches
+paths or file encodings, run it by hand on the PR's branch (`gh workflow run
+experimental.yml --ref <branch>`). A PR from a fork has no `coverage`
 job, by the guard in `ci.yml`; that is not a failure either.
 
 Then what the table routes: `dependencies` for the lock and the workflows,

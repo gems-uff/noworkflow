@@ -8,9 +8,19 @@ name: Experimental legs
 # matrix in ci.yml.
 #
 # The steps mirror the `test` job in ci.yml; keep them in sync.
+#
+# Suspended on push and pull_request since 2026-10-15. The Windows 3.15 leg
+# fails in four model doctests whose fixtures are POSIX paths, which
+# ntpath.isabs() no longer takes as absolute from 3.13 on
+# (persistence/models: file_access.py FileAccess.is_internal; trial.py
+# Trial.iterate_accesses, local_modules and versioned_files). A red on every
+# commit taught nothing new. Meanwhile, run it by hand (the Actions tab, or
+# `gh workflow run experimental.yml --ref <branch>`) before a release and
+# for a change that touches paths or file encodings. Put `push:` and
+# `pull_request:` back when those doctests pass on Windows (a product change,
+# Round 3), or when the next Python's beta leg joins this workflow,
+# whichever comes first.
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 concurrency:

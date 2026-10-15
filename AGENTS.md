@@ -218,8 +218,10 @@ neither executes:
   the sources and that the extension type-checks.
 - **Windows and macOS:** the matrix runs on Ubuntu for every Python version;
   macOS runs only the floor and the newest version, and Windows the same two
-  as experimental legs that do not block. Path separators and encodings
-  differ there, and the versions in between are not run on either.
+  as experimental legs that do not block and, while `experimental.yml` is
+  suspended (its header says until when), run only by hand. Path separators
+  and encodings differ there, and the versions in between are not run on
+  either.
 - **Syntax per Python version:** the collector rewrites the AST, and each
   Python version adds nodes. A construct the examples do not use is not
   covered, on any version.
@@ -388,7 +390,8 @@ Portuguese; what gets written to the repository is translated.
 
 The supported range is `requires-python` in `pyproject.toml`; the versions
 that are actually run are the legs of `.github/workflows/ci.yml` (blocking)
-and `.github/workflows/experimental.yml` (observed, not blocking). A version
+and `.github/workflows/experimental.yml` (observed, not blocking; run by
+hand while suspended). A version
 is supported when it has a blocking leg, and a classifier in
 `pyproject.toml` is added only then. Locally, `uv run --isolated --python
 <version> pytest` runs the suite on any of them without touching `.venv`.
