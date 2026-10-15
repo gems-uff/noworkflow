@@ -302,6 +302,31 @@ and therefore the first suspects when an upgrade breaks something:
 - `future` (`future.utils.viewitems`, `viewvalues`) is still imported in
   about forty modules, including `patterns/` and the tests.
 
+## The paper's running example
+
+The noWorkflow 2 paper uses a credit card fraud detection pipeline as its
+running example. The example lives in three places, each with its own
+purpose:
+
+1. **The paper**, which states what noWorkflow records for it: the script,
+   the trial history, the output of `now show` and `now diff`, the queries
+   and their results, the graphs. Its source is kept by the authors, outside
+   this organization.
+2. **The reproducibility package**,
+   [`dew-uff/noworkflow-analysis`](https://github.com/dew-uff/noworkflow-analysis),
+   which the paper cites by tag: the script, the patches and the
+   `run_trials.sh` that rebuild the trial history.
+3. **The tests of this repository** (#257), which replay that sequence and
+   check what the paper shows, so that a change here cannot contradict the
+   paper without a red build.
+
+A change to the example, or to what the paper shows of it, in any of the
+three is carried to the other two. When the test of the example turns red,
+the maintainer decides whether the change regressed or the paper and the
+package must follow it; the expectation is never edited just to make the
+test pass. When the package gets a new tag, the copy in the tests follows in
+the same commit.
+
 ## Sensitive data
 
 A provenance store records the whole environment of the machine that ran the
