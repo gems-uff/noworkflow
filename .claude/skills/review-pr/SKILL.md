@@ -79,7 +79,7 @@ The second list empty is what you want. If it is not, `merge-downstream` before
 any measurement: a stale base measures the lag, not the PR.
 
 `closingIssuesReferences` lists the issues the merge would close. Anything
-there goes against the milestone rule of `AGENTS.md`: ask the author to drop
+there goes against the closing rule of `AGENTS.md`: ask the author to drop
 the `Fixes`/`Closes`. A body that names the issue without a closing keyword
 does not appear there, and needs nothing.
 
@@ -398,11 +398,12 @@ git merge --ff-only <branch>                # fails if the branch is behind
 git push origin main
 ```
 
-Then the issue gets its milestone (`gh issue edit <issue> --milestone
-<version>`) and stays **open**: the version is the milestone, and the issues
-of a milestone close when that version is released. The integration leaves a
-pending item for the release when persistence, exports or commands changed:
-the store-compatibility check of `golden-run` decides the version number.
+Then the maintainer closes the issue (`gh issue close <issue> --reason
+completed`), unless the PR delivered only part of it: integrated into `main`
+and finished is done, and the release finds it later through the
+`Issue #NNN:` prefix of its commits. The integration leaves a pending item
+for the release when persistence, exports or commands changed: the
+store-compatibility check of `golden-run` decides the version number.
 
 ## 8. Close the trail
 

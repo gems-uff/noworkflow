@@ -65,8 +65,10 @@ The lifecycle of a branch is:
    `.claude/skills/`.
 6. The maintainer merges `issue_NNN` into `main`. Because of step 3 this is a
    fast-forward.
-7. The maintainer sets the milestone of the issue to the version that will
-   ship it. The issue is closed when that version is released.
+7. The maintainer closes the issue, unless something is left to do: `main`
+   is the baseline, and an issue integrated there and finished is done. The
+   release that ships it is found from the commits, through the
+   `Issue #NNN:` prefix.
 
 Steps 5 to 7 are done by the maintainer only.
 
@@ -88,7 +90,8 @@ nothing read it after argument parsing.
 
 Reference the issue with the prefix alone. Do not write `Fixes #NNN` or
 `Closes #NNN`: GitHub closes the issue as soon as such a commit reaches
-`main`, and closing is decided at the release, through the milestone.
+`main`, while an issue often takes several commits; the maintainer closes it
+once it is integrated and nothing is left to do.
 
 ## What a pull request needs
 

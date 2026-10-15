@@ -1,7 +1,7 @@
 <!--
 Keep the PR as a draft until every box below is checked. Do not write
-"Fixes #NNN" or "Closes #NNN": the issue is closed at the release, through
-the milestone. See CONTRIBUTING.md.
+"Fixes #NNN" or "Closes #NNN": the maintainer closes the issue after the
+integration, when nothing is left to do. See CONTRIBUTING.md.
 -->
 
 ## Issue

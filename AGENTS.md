@@ -37,10 +37,16 @@ of date, fix it there.
   about 60 columns remain: imperative mood, no trailing period, and the why in
   the body. The only commit without the prefix is one a maintainer puts
   directly on `main` for work that belongs to no issue.
+- **An issue is closed when it is integrated into `main` with nothing left
+  to do.** `main` is the baseline and releases are cut from it, so integrated
+  and finished is done; an issue delivered in part stays open. Which issues
+  a release ships comes from its commits: the `Issue #NNN:` prefixes in
+  `git log <previous tag>..main`.
 - **Reference the issue by the prefix alone, never with `Fixes` or
-  `Closes`.** Those words close the issue as soon as the commit reaches `main`,
-  and closing is a release decision: the version is the milestone, and the
-  issues of a milestone are closed when that version is released.
+  `Closes`.** Those words close the issue as soon as the first such commit
+  reaches `main`, while an issue often takes several commits, and whether
+  anything is left is the maintainer's call (`gh issue close <N> --reason
+  completed`).
 - **Security work follows the same cycle as everything else.** noWorkflow runs
   on the user's own machine, never as a service, so a public issue does not
   expose anyone. Open the issue, describe the problem plainly, and prove the
@@ -97,8 +103,8 @@ of date, fix it there.
   effect on the user, not at the size of the fix: lost provenance, an ignored
   flag, a crash, data exposed to the wrong place are Bugs even when fixing
   them means building what does not exist yet.
-- **Type says what the issue is, the milestone says in which version it
-  ships, labels say area and resolution.** Labels in use: `collection` (area),
+- **Type says what the issue is, the milestone (when there is one) says
+  which version the work is aimed at, labels say area and resolution.** Labels in use: `collection` (area),
   `question`, `duplicate`, `invalid`, `wontfix` (resolution), `good first
   issue`, and the ones Dependabot sets. Do not create a label for something a
   Type or a milestone already expresses.
