@@ -171,7 +171,7 @@ Optional, each for one purpose:
   `all` extra), for Prolog queries from Jupyter (`trial.query(...)`). `now
   export prolog` does not need it. The suite only runs the `swipl` program,
   for the Prolog query of the paper's running example, and skips that test
-  without it.
+  without it. The reference-leg container has it.
 
 ### Setting up `.venv`
 
@@ -194,7 +194,7 @@ to a newer Python. The other supported versions run without touching `.venv`
 
 The extras of `pyproject.toml` stay out of `.venv` unless named: add
 `--extra demo` (matplotlib) to run the `slow` tests of `now demo`, which
-skip without it, and `--extra notebook` (Jupyter) for the full frontend
+skip without it (the reference leg of CI and its container sync it), and `--extra notebook` (Jupyter) for the full frontend
 build (see "The frontend"). The same goes for the `paper` dependency group:
 `--group paper` adds what the tests of the paper's running example need
 (see [The paper's running example](#the-papers-running-example)).

@@ -56,9 +56,11 @@ jobs:
       - name: Lock is up to date
         run: uv lock --check
 
+      # The reference leg also syncs the `demo` extra (matplotlib), which the
+      # `slow` tests of `now demo` need; they skip on the other legs.
       - name: Install dependencies
         id: sync
-        run: uv sync --locked
+        run: uv sync --locked ${{ matrix.reference && '--extra demo' || '' }}
 
       # Audits exactly the versions in uv.lock (every group, every platform
       # marker), not whatever this runner happens to resolve. --no-deps and
@@ -216,7 +218,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           if [ "${{ matrix.reference }}" = "true" ]; then
-            repro='uv sync --locked --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -m "not paper"'
+            repro='uv sync --locked --extra demo --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -m "not paper"'
           else
             repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden and not paper"'
           fi

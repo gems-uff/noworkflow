@@ -14,7 +14,11 @@
 # outside the checkout, under ~/.cache/noworkflow-reference/, and survive
 # between runs; `.venv` of the host is never touched. PYTHONPYCACHEPREFIX
 # keeps the host's __pycache__ (compiled with host paths) out of the run.
-# The venv has the `paper` group too, so the tests of the paper's running
+# The venv has the `demo` extra (as the reference leg of CI) and the `paper`
+# group, and the image has SWI-Prolog for the paper's query. `-m paper` runs
+# without the extra instead: with matplotlib installed the example records
+# more files and its goldens shift, and the `paper-example` job has no
+# matplotlib either. The tests of the paper's running
 # example run here, and their goldens are recorded here like the others.
 set -euo pipefail
 
@@ -30,15 +34,23 @@ image="noworkflow-reference:$python"
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/noworkflow-reference/$python"
 mkdir -p "$cache/venv" "$cache/uv"
 
+extra="--extra demo"
+prev=""
+for arg in "$@"; do
+  [ "$prev" = "-m" ] && [ "$arg" = "paper" ] && extra=""
+  prev=$arg
+done
+
 docker build --quiet --platform linux/amd64 --build-arg PYTHON="$python" \
   -t "$image" "$here" >/dev/null
 docker run --rm --platform linux/amd64 \
   --user "$(id -u):$(id -g)" \
   -e GOLDEN="${GOLDEN:-}" \
+  -e EXTRA="$extra" \
   -e NOW_LEAK_CHECK="${NOW_LEAK_CHECK:-fail}" \
   -v "$root":/work \
   -v "$cache/venv":/opt/venv \
   -v "$cache/uv":/opt/uv-cache \
   "$image" \
-  bash -c 'uv sync --locked --group paper --python "$PYTHON" --quiet \
+  bash -c 'uv sync --locked $EXTRA --group paper --python "$PYTHON" --quiet \
     && uv run --no-sync pytest -p no:cacheprovider "$@"' bash "$@"

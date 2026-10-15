@@ -226,9 +226,8 @@ run `now` as a process on a real store in a temporary directory. What
 neither executes:
 
 - **Commands the e2e tests do not run:** `vis` (the server), `push`, `pull`,
-  `kernel`, `debug`, `evaluation`, `clean`, and `demo` (marked `slow`; it
-  skips without matplotlib, which `uv sync --locked` leaves out: it is the
-  `demo` extra). For the commands they do run, only the flags their tests
+  `kernel`, `debug`, `evaluation`, `clean`, and `demo` outside the reference
+  leg (see below). For the commands they do run, only the flags their tests
   name are covered.
 - **`now vis`:** the Flask routes, the push/pull/experiment endpoints, the
   JavaScript. The `frontend` job only proves that the committed bundle matches
@@ -259,7 +258,10 @@ neither executes:
 - **Jupyter:** the magics (`%now_run`, `%now_ip`), the kernel in
   `src/noworkflow/kernel/` and the lab extension have no automated test.
 - **`push`, `pull`, `demo`:** a remote server and the demo projects are
-  exercised by hand or not at all.
+  exercised by hand or not at all; the exception is `demo 1` (marked `slow`),
+  which the reference leg runs because it syncs the `demo` extra
+  (matplotlib), and which skips on every other leg and on `uv sync --locked`
+  alone.
 - **Deployment provenance:** what gets recorded about the environment
   (`now show -e`) depends on the machine; the e2e tests assert only the
   names of a few attributes and the synthetic user, never the values.
