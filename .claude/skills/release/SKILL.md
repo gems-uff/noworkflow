@@ -112,7 +112,9 @@ The subject prefixes are the issues the release delivers (`AGENTS.md`:
 releases find their issues by the prefix). **Never take numbers from the
 bodies**: a body cites known defects and later work, and an issue that a body
 mentions is not delivered by that commit. The commits without the prefix are
-the maintainer's direct work on `main`; the note describes them in prose.
+the maintainer's direct work on `main` and the Dependabot updates (`Bump
+<package> ... (#N)`); the note describes them in prose, the updates with
+their PRs.
 
 Each delivered issue is closed — integrated and finished, closed at
 integration — or open with a comment that says what is left. One open

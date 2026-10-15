@@ -26,8 +26,9 @@ updates:
     open-pull-requests-limit: 0
 
   # The workspace that builds src/noworkflow/now/vis/static/dist/bundle.js.
-  # A security PR here changes package-lock.json only; the bundle has to be
-  # rebuilt and committed in the same change, or the `frontend` job fails.
+  # A security PR here changes package-lock.json only, and is never merged as
+  # it stands: a maintainer amends the rebuilt bundle into its commit, on its
+  # branch, before integrating it (the dependencies skill).
   - package-ecosystem: "npm"
     directory: "/src/frontend"
     schedule:

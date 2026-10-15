@@ -22,12 +22,11 @@ working, which the guard never does.
   `dependencies`, part 3): rebuild. A package that only builds (a loader,
   lerna itself) leaves the bundle as it was; one that ships changes it.
   Either outcome is the measurement.
-- **A Dependabot npm PR**: the same, on its branch. When the bundle did not
-  change, there is nothing to push: the PR is green as it is. When it did,
-  the maintainer pushes it to that branch as the last step before merging,
-  after a `@dependabot rebase` has brought the branch up to date: once
-  someone else's commit is on the branch, Dependabot stops rebasing it, and
-  `@dependabot recreate` overwrites that commit (`review-pr`).
+- **A Dependabot npm PR**: never merged as it stands (`dependencies`, "A
+  Dependabot PR is a signal, not the step"). On its branch, rebased on
+  `main`, rebuild: a package that only builds leaves the bundle as it was;
+  one that ships changes it, and the maintainer amends the rebuilt bundle
+  into the bot's commit before pushing it back to the PR's branch.
 - **A merge where both sides touched the frontend or the bundle, or one side
   changed the sources and not the bundle** (`check_merge.sh` of
   `merge-downstream` says which): rebuild after the merge. A bundle is never

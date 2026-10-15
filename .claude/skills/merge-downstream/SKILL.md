@@ -96,8 +96,9 @@ Three kinds of branch need a word before the merge:
   be overwritten"), and a `uv sync` there strips pytest from `.venv`. If it
   already happened, `rm uv.lock` before merging; after the merge, `uv sync
   --locked` puts `.venv` back on the lock the merge brought.
-- **A Dependabot branch never receives a pushed merge.** What brings it up to
-  date is a `@dependabot rebase` comment; `review-pr` says why.
+- **A Dependabot branch is never merged into**: a maintainer rebases it on
+  `main` as part of turning it into the commit that will land
+  (`dependencies`), so it stays one commit on top of `main`.
 - **A fork branch without `maintainerCanModify`** can be merged locally to
   measure, not pushed: the sync of step 3 of `CONTRIBUTING.md` goes back to
   the author.

@@ -328,17 +328,38 @@ is re-solved around it — packages the title never names move, downgrades
 included. Such a lock **passes `uv lock --check`**. Read the version diff
 (`lock_versions.sh origin/main <the PR's head>`), not the title.
 
-What to do with a `uv` one: read the advisory it cites, do the step by hand
-(`uv lock --upgrade-package`, the series rule, the suite, the audit) in the
-cycle of `AGENTS.md` — a PR with no issue goes where the maintainer decides
-(`review-pr`) — and close the Dependabot PR with a comment naming where the
-step went. An npm or a GitHub Actions one has no Python forks to collapse: it
-is accepted or refused by the series rule through `review-pr`, with the lock
-diff read entry by entry (part 3), the bundle rebuilt in the same change for
-npm, and the version next to the SHA for Actions (part 4). A Dependabot PR
-opened before a workflow existed has no checks until a `@dependabot rebase`
-comment; a pushed merge or commit on its branch stops Dependabot from
-updating it (`review-pr`).
+**No Dependabot PR is merged as it stands** (`AGENTS.md`, "Dependencies":
+`main` is the baseline). Its commit was never tested against today's
+`main`, a `uv` one collapses the forks, and an npm one does not rebuild the
+bundle. The PR is its own record, and needs no issue: a maintainer turns its
+branch into the commit that will land, and integrates it.
+
+1. Read the advisory it cites, and decide by the series rule.
+2. `gh pr checkout <N>`, then `git rebase origin/main` when `main` moved.
+3. Make the bot's commit the one that will land (`git commit --amend`, one
+   commit per package):
+   - **`uv`**: redo the lock by hand — `git checkout origin/main -- uv.lock`,
+     then `uv lock --upgrade-package <name>` under the series rule — and read
+     its diff (`lock_versions.sh`). The lock Dependabot wrote collapses the
+     forks (above).
+   - **npm**: read the lock diff entry by entry (part 3), and rebuild the
+     bundle (`rebuild-vis`): when it changes, it goes into the same commit;
+     when the package only builds, it does not change.
+   - **GitHub Actions**: the SHA with its `# vX.Y.Z` comment, in every
+     workflow that uses the action (part 4); usually nothing to change.
+
+   The subject stays the bot's (`Bump <package> from <a> to <b>`) and gains
+   the PR's number at the end, `(#N)`, as `AGENTS.md` allows for this
+   commit.
+4. The suite and the audit locally, then `git push --force-with-lease` to the
+   PR's branch: CI tests the exact commit that will land. Once anyone but
+   Dependabot has pushed there, Dependabot stops rebasing the PR; never
+   comment `@dependabot recreate` afterwards, which discards that push.
+5. With CI green, a maintainer fast-forwards `main` to it and pushes
+   (`review-pr`, step 7). GitHub marks the PR as merged once its commit is on
+   `main`; if it does not, close it with a comment naming the commit. The
+   alert closes by itself once Dependabot rescans the default branch, a few
+   minutes after the push.
 
 ### The sibling project `pyposast`
 

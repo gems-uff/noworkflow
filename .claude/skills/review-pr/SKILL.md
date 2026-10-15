@@ -22,7 +22,7 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 | What appears in the diff or on the branch | What enters |
 |---|---|
 | `pyproject.toml`, `uv.lock`, `src/frontend/package*.json`, `.github/workflows/**` | `dependencies` |
-| A Dependabot PR | `dependencies`; up to date by `@dependabot rebase`, never by a pushed merge (below) |
+| A Dependabot PR | `dependencies`: never merged as it stands; a maintainer turns its branch into the tested commit (below) |
 | `src/frontend/**` | `rebuild-vis` (a browser for a view that changed) |
 | `src/noworkflow/now/vis/**` | `rebuild-vis` ("Smoke"), then `golden-run`, step 4 |
 | `src/noworkflow/now/collection/**`, or an issue that names a Python version | `python-matrix`; also `golden-run` when what is recorded changes |
@@ -36,18 +36,16 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 | Any change that must be measured | `safe-refactor` |
 | Green, measured and integrated | `release`, when the maintainer decides |
 
-Two rows need a word more. **A Dependabot PR has no issue and must not
-receive a pushed merge**: Dependabot stops rebasing a PR once someone else
-has pushed to it, and `@dependabot recreate` overwrites what was pushed.
-What brings it up to date is a `@dependabot rebase` comment, by the
-maintainer; what the maintainer pushes (a rebuilt bundle, for an npm bump
-that changed it) goes last, right before merging, because after it the
-branch can no longer be brought up to date without losing it
-(`rebuild-vis`). What decides whether the bump is accepted is the series rule of
-`AGENTS.md` ("Dependencies"): a patch of the same series goes in, a minor or
-major bump is a decision for the maintainer, never a side effect. With no
-issue, where the milestone goes (`gh pr edit <N> --milestone`, or a `Task`
-issue) is the maintainer's call. **A new option of `now run`, `now
+Two rows need a word more. **A Dependabot PR is never merged as it
+stands**: `main` is the baseline, and only what a maintainer tested reaches
+it (`AGENTS.md`, "Dependencies"). The PR is its own record and needs no
+issue: a maintainer turns its branch into the commit that will land —
+rebased on `main`, the bundle rebuilt in it for npm, the lock redone for uv —
+pushes it to the PR's branch so that CI tests that commit, and integrates it
+as step 7 says (`dependencies` has the steps per ecosystem). What decides whether the
+bump is accepted is the series rule of `AGENTS.md` ("Dependencies"): a patch
+of the same series goes in, a minor or major bump is a decision for the
+maintainer, never a side effect. **A new option of `now run`, `now
 restore` or `now schema` is also a new option of `%now_run`, `%now_restore` or
 `%now_schema`**: the magics in `src/noworkflow/now/ipython/magics/` inherit
 the command's parser, so the diff never touches `now/ipython/**` and the

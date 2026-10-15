@@ -35,8 +35,11 @@ of date, fix it there.
   branch's issue. GitHub turns the number into a link, and the subject is what
   appears in the commit list and in `git log --oneline`. After the prefix
   about 60 columns remain: imperative mood, no trailing period, and the why in
-  the body. The only commit without the prefix is one a maintainer puts
-  directly on `main` for work that belongs to no issue.
+  the body. Two commits go without the prefix: one a maintainer puts directly
+  on `main` for work that belongs to no issue, and a Dependabot update a
+  maintainer integrates, which keeps the bot's subject (`Bump <package> from
+  <a> to <b>`) and gains the PR's number at the end, `(#NNN)`, when the
+  maintainer rewrites it.
 - **An issue is closed when it is integrated into `main` with nothing left
   to do.** `main` is the baseline and releases are cut from it, so integrated
   and finished is done; an issue delivered in part stays open. Which issues
@@ -205,7 +208,13 @@ else runs. Known advisories that a pin keeps alive are listed, with the reason
 and the issue that removes them, next to the `pip-audit` step in
 `.github/workflows/ci.yml`; never add one without both. The frontend has its
 own lock in `src/frontend/package-lock.json`, and any change there means
-rebuilding the bundle. The rest — judging a pin, the versions the lock
+rebuilding the bundle. **A Dependabot PR is never merged as it stands:**
+`main` is the baseline, and only what a maintainer tested reaches it. The PR
+is its own record and needs no issue. A maintainer turns its branch into the
+commit that will land — rebased on `main`, the bundle rebuilt in the same
+commit for npm, the lock redone for uv — pushes it to the PR's branch so that
+CI tests that exact commit, and with CI green fast-forwards `main` and pushes.
+The rest — judging a pin, the versions the lock
 resolves per Python version, the audit, the Dependabot PRs, the npm lock and
 the pinned actions — is in the `dependencies` skill.
 
