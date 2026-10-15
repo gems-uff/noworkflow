@@ -258,10 +258,11 @@ things decide what the audit sees:
   audited.
 - **pip-audit audits only the fork of the interpreter that runs it.** The
   export writes each locked version with its environment marker
-  (`; python_full_version < '3.9'`), and pip-audit evaluates the marker on its
-  own interpreter and skips, silently, every line whose marker is false. The
-  run above audits the Python of `.venv`; the other forks are audited by
-  running the tool on a Python inside each, from outside the project:
+  (`; python_full_version < '<version>'`), and pip-audit evaluates the
+  marker on its own interpreter and skips, silently, every line whose marker
+  is false. The run above audits the Python of `.venv`; the other forks are
+  audited by running the tool on a Python inside each, from outside the
+  project:
 
   ```bash
   cd <outside> && uv run --isolated --no-project --python <version> --with pip-audit \
@@ -461,21 +462,24 @@ its reach:
 - **The git content engines.** The suite pins `plain`; `pygit2`, `dulwich`
   and the engines over them never run in it. A hand probe with a real `now
   run` on that engine, recorded in the PR.
-- **The vis.** An npm update only shows in a browser. `rebuild-vis` proves the
-  bundle builds; `golden-run` (the same corpus through `now` on both
-  versions, the outputs compared) proves the pages; the `frontend` job proves
-  only that the committed bundle matches the sources.
+- **The vis.** An npm update only shows in a browser: `rebuild-vis` rebuilds
+  the bundle and serves it, and the view the update touches is exercised
+  there by hand; the `frontend` job proves only that the committed bundle
+  matches the sources.
 - **SQLAlchemy.** The ORM runs against in-memory SQLite in every test, so the
   mapped models are exercised; the file on disk and a store written by the
   previous version only through a real `now run` — `golden-run`, whose
   store-compatibility check opens the old store with the new code.
 - **`pyposast`.** The collector exercises it on every test, but only on the
   syntax the examples use and on the Python of the run: `python-matrix` (the
-  suite on each Python of the matrix, `uv run --isolated --python <version>
-  pytest`).
-- **The Jupyter stack** (`ipykernel`, the `notebook` extra), `requests`
-  (push and pull) and the Flask routes: no automated test; a hand probe,
-  recorded in the PR.
+  suite on each Python of the matrix, `uv run --isolated --locked
+  --no-python-downloads --python <version> pytest`).
+- **Flask** serves the vis: `golden-run`, step 4, serves a store with each
+  version and compares the routes `read_store.py` fetches (its docstring
+  lists them); the others, among them the ones that write (push, pull, the
+  experiments), stay a hand probe.
+- **The Jupyter stack** (`ipykernel`, the `notebook` extra) and `requests`
+  (push and pull): no automated test; a hand probe, recorded in the PR.
 - **`setuptools`.** `pkg_resources` is imported when `now` starts, so the
   suite proves it imports on the version of the lock; the wheel is built by
   the `[build-system]` setuptools, which is another version — `uv build` in

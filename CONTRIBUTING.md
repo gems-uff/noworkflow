@@ -218,9 +218,16 @@ versions" in `AGENTS.md`):
 
 ```bash
 for v in $(sed -n 's/.*os: ubuntu-latest, python: "\([0-9.]*\)".*/\1/p' .github/workflows/ci.yml); do
-  uv run --isolated --python "$v" pytest -q || break
+  echo "== Python $v"
+  uv run --isolated --locked --python "$v" pytest -q
 done
 ```
+
+Every version runs, even after a red one: which versions fail is the
+result. `--locked` installs what `uv.lock` says, as CI does, and fails when
+the lock and `pyproject.toml` disagree. The `python-matrix` skill in
+`.claude/skills/` has the rest: the reference container, the CI legs, and
+what to do when one version fails.
 
 ### End-to-end tests and goldens
 

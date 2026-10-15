@@ -123,7 +123,7 @@ of date, fix it there.
   machine, with only `git clone`, get it?** If so, it is a convention and
   lives versioned, here or in the skill it belongs to. Local memory does not
   cross machines: keep in it only what dies with the machine (a local path,
-  the sandbox behavior, the state of a session).
+  this machine's sandbox settings, the state of a session).
 - **Do not duplicate in memory what is already versioned.** The two copies
   diverge at the first change, and the one that misleads is the one nobody
   reviews. If the fact is in the repository, the right memory is none.
@@ -155,6 +155,14 @@ in the order of the cycle.
 - `prove-candidate` — gives a verdict to a suspected defect: confirmed,
   refuted or plausible.
 - `safe-refactor` — measures a change by the local suite, before and after.
+- `golden-run` — runs the same corpus through `now` on two versions and
+  compares what they print, what they record and what the vis serves.
+- `python-matrix` — runs the suite on every supported Python and keeps the
+  CI matrix in step with python.org.
+- `rebuild-vis` — rebuilds the vis bundle from `src/frontend`, proves that
+  the committed bundle matches its sources, and smoke-tests `now vis`.
+- `release` — cuts a version from an integrated `main`: the bump, the wheel,
+  the tag, PyPI and the GitHub release.
 
 ### A skill is a procedure, not a logbook
 
@@ -215,7 +223,9 @@ neither executes:
   name are covered.
 - **`now vis`:** the Flask routes, the push/pull/experiment endpoints, the
   JavaScript. The `frontend` job only proves that the committed bundle matches
-  the sources and that the extension type-checks.
+  the sources and that the extension type-checks. By hand, `golden-run` (step
+  4) and the smoke of `rebuild-vis` serve a corpus store and fetch the routes
+  `read_store.py` lists.
 - **Windows and macOS:** the matrix runs on Ubuntu for every Python version;
   macOS runs only the floor and the newest version, and Windows the same two
   as experimental legs that do not block and, while `experimental.yml` is
@@ -281,7 +291,8 @@ and what came out, in the PR.
 - **Trial ids are UUIDs**, not the integers of older versions. A reproduction
   that passes `1` as a trial id is talking to `sequence_key`, not to the id.
 - **A version-specific bug is proven with that version:** `uv run --isolated
-  --python <version> pytest ...` (uv installs the interpreter; without
+  --locked --no-python-downloads --python <version> pytest ...` (without the
+  flag uv downloads a missing interpreter, which is an install; without
   `--isolated` it recreates `.venv` on that version and leaves it there). "It
   works here" on another Python proves nothing.
 - **`now` prints an error and may still exit with 0.** Several commands
@@ -393,8 +404,9 @@ that are actually run are the legs of `.github/workflows/ci.yml` (blocking)
 and `.github/workflows/experimental.yml` (observed, not blocking; run by
 hand while suspended). A version
 is supported when it has a blocking leg, and a classifier in
-`pyproject.toml` is added only then. Locally, `uv run --isolated --python
-<version> pytest` runs the suite on any of them without touching `.venv`.
+`pyproject.toml` is added only then. Locally, `uv run --isolated --locked
+--no-python-downloads --python <version> pytest` runs the suite on any of
+them without touching `.venv`.
 
 The rule that decides the range and the matrix (the record of the decision,
 with the measurements behind it, is issue #237):

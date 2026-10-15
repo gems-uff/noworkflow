@@ -186,7 +186,9 @@ in the checkout left by a leaked run, which `AGENTS.md` says is never
 committed.
 
 A bug that is specific to a Python version is measured on that version, with
-the same baseline there: `uv run --isolated --python <version> pytest`.
+the same baseline there: `uv run --isolated --locked --no-python-downloads
+--python <version> pytest` (without the flag uv downloads a missing
+interpreter, which is an install: `AGENTS.md`).
 **`--isolated` is not optional**: without it, `uv run --python <version>`
 deletes `.venv` and recreates it on that interpreter, every later `uv run`
 in the session runs there without saying so, and `uv sync` keeps it — only

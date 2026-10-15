@@ -23,8 +23,9 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 |---|---|
 | `pyproject.toml`, `uv.lock`, `src/frontend/package*.json`, `.github/workflows/**` | `dependencies` |
 | A Dependabot PR | `dependencies`; up to date by `@dependabot rebase`, never by a pushed merge (below) |
-| `src/frontend/**` or `src/noworkflow/now/vis/**` | `rebuild-vis`, then `golden-run` on the vis |
-| `src/noworkflow/now/collection/**`, or an issue that names a Python version | `python-matrix` |
+| `src/frontend/**` | `rebuild-vis` (a browser for a view that changed) |
+| `src/noworkflow/now/vis/**` | `rebuild-vis` ("Smoke"), then `golden-run`, step 4 |
+| `src/noworkflow/now/collection/**`, or an issue that names a Python version | `python-matrix`; also `golden-run` when what is recorded changes |
 | `src/noworkflow/now/persistence/**`, `src/noworkflow/now/models/**`, `src/noworkflow/now/cmd/**`, `src/noworkflow/patterns/**`, `src/noworkflow/resources/**` | `golden-run` |
 | A new or renamed command or option | `README.md` and, once it exists, `skills/noworkflow/SKILL.md`; for `run`, `restore` and `schema`, also a manual probe of the magic that inherits the parser (below) |
 | `src/noworkflow/now/ipython/**`, `src/noworkflow/kernel/**` | A blind spot of the suite: a manual probe, recorded in the PR |
@@ -36,11 +37,13 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 | Green, measured and integrated | `release`, when the maintainer decides |
 
 Two rows need a word more. **A Dependabot PR has no issue and must not
-receive a pushed merge**: Dependabot stops updating a PR that received
-commits from someone else, and `@dependabot recreate` wipes them; what brings
-it up to date is a `@dependabot rebase` comment, by the maintainer, and what
-the maintainer pushes (a rebuilt bundle, for an npm bump) survives `rebase`
-only. What decides whether the bump is accepted is the series rule of
+receive a pushed merge**: Dependabot stops rebasing a PR once someone else
+has pushed to it, and `@dependabot recreate` overwrites what was pushed.
+What brings it up to date is a `@dependabot rebase` comment, by the
+maintainer; what the maintainer pushes (a rebuilt bundle, for an npm bump
+that changed it) goes last, right before merging, because after it the
+branch can no longer be brought up to date without losing it
+(`rebuild-vis`). What decides whether the bump is accepted is the series rule of
 `AGENTS.md` ("Dependencies"): a patch of the same series goes in, a minor or
 major bump is a decision for the maintainer, never a side effect. With no
 issue, where the milestone goes (`gh pr edit <N> --milestone`, or a `Task`
@@ -382,9 +385,11 @@ experimental.yml --ref <branch>`). A PR from a fork has no `coverage`
 job, by the guard in `ci.yml`; that is not a failure either.
 
 Then what the table routes: `dependencies` for the lock and the workflows,
-`python-matrix` when the collector changed, `rebuild-vis` and `golden-run`
-for the vis, `golden-run` for persistence, models, commands, patterns and
-resources. A green suite says nothing about any of them.
+`python-matrix` when the collector changed (and `golden-run` when that
+changes what is recorded), `rebuild-vis` for the frontend, `rebuild-vis` and
+`golden-run` for the vis server, `golden-run` for persistence, models,
+commands, patterns and resources. A green suite says nothing about any of
+them.
 
 ## 7. Integrate
 
@@ -406,7 +411,8 @@ completed`), unless the PR delivered only part of it: integrated into `main`
 and finished is done, and the release finds it later through the
 `Issue #NNN:` prefix of its commits. The integration leaves a pending item
 for the release when persistence, exports or commands changed: the
-store-compatibility check of `golden-run` decides the version number.
+store-compatibility check of `golden-run` is the maintainer's input for the
+version number.
 
 ## 8. Close the trail
 
