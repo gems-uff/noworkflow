@@ -56,11 +56,9 @@ jobs:
       - name: Lock is up to date
         run: uv lock --check
 
-      # The reference leg also syncs the `demo` extra (matplotlib), which the
-      # `slow` tests of `now demo` need; they skip on the other legs.
       - name: Install dependencies
         id: sync
-        run: uv sync --locked ${{ matrix.reference && '--extra demo' || '' }}
+        run: uv sync --locked
 
       # Audits exactly the versions in uv.lock (every group, every platform
       # marker), not whatever this runner happens to resolve. --no-deps and
@@ -184,9 +182,11 @@ jobs:
 
       # --locked: install exactly what uv.lock says, and fail instead of
       # silently re-resolving when the lock and pyproject.toml disagree.
+      # The reference leg also syncs the `demo` extra (matplotlib), which the
+      # `slow` tests of `now demo` need; they skip on the other legs.
       - name: Install dependencies
         id: sync
-        run: uv sync --locked
+        run: uv sync --locked ${{ matrix.reference && '--extra demo' || '' }}
 
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
