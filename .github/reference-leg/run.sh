@@ -14,6 +14,8 @@
 # outside the checkout, under ~/.cache/noworkflow-reference/, and survive
 # between runs; `.venv` of the host is never touched. PYTHONPYCACHEPREFIX
 # keeps the host's __pycache__ (compiled with host paths) out of the run.
+# The venv has the `paper` group too, so the tests of the paper's running
+# example run here, and their goldens are recorded here like the others.
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -38,5 +40,5 @@ docker run --rm --platform linux/amd64 \
   -v "$cache/venv":/opt/venv \
   -v "$cache/uv":/opt/uv-cache \
   "$image" \
-  bash -c 'uv sync --locked --python "$PYTHON" --quiet \
+  bash -c 'uv sync --locked --group paper --python "$PYTHON" --quiet \
     && uv run --no-sync pytest -p no:cacheprovider "$@"' bash "$@"

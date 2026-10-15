@@ -86,6 +86,15 @@ dev = [
     "bandit[toml]>=1.7.10",
     "pip-audit>=2.7",
 ]
+# What the paper's running example imports (src/noworkflow/tests/e2e/corpus/
+# paper_example). Not in dev, so the matrix legs stay light: only the
+# `paper-example` job of ci.yml and the reference-leg container sync it, and
+# without it the tests of the example skip.
+paper = [
+    "scikit-learn",
+    "imbalanced-learn",
+    "pandas",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -100,6 +109,7 @@ addopts = "--doctest-modules --doctest-report=only_first_failure --durations=10 
 markers = [
     "golden: compares against a stored golden output",
     "slow: needs the console `now` and matplotlib",
+    "paper: replays the paper's running example; needs the `paper` group, runs in the paper-example job",
 ]
 filterwarnings = ["default::DeprecationWarning:noworkflow"]  # Round 3 promotes it to error::
 

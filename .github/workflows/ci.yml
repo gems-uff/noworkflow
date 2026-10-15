@@ -147,7 +147,9 @@ jobs:
         # min-tests: floor for passed + skipped + xfailed + xpassed. Raise it
         # when tests are added; lower it only with the reason written in the PR.
         # The reference leg also runs the goldens, which every other leg
-        # deselects (-m "not golden"), so its floor is the higher one.
+        # deselects (-m "not golden"), so its floor is the higher one. The
+        # `paper` tests are deselected on every leg and counted by the
+        # paper-example job.
         include:
           # Floor (requires-python = ">=3.11").
           - { os: ubuntu-latest, python: "3.11", min-tests: 701 }
@@ -184,6 +186,8 @@ jobs:
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
       # leg (goldens/REFERENCE); elsewhere the `golden` marker is deselected.
+      # The `paper` tests run in the paper-example job, which syncs their
+      # dependency group; every leg here deselects them.
       # GOLDEN=require fails a golden that nobody recorded instead of
       # skipping it, and GOLDEN_ACTUAL_DIR collects the actual output of every
       # mismatch for the artifact below.
@@ -195,9 +199,9 @@ jobs:
           set -o pipefail
           args=()
           if [ "${{ matrix.reference }}" = "true" ]; then
-            args+=(--cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
+            args+=(-m "not paper" --cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
           else
-            args+=(-m "not golden")
+            args+=(-m "not golden and not paper")
           fi
           uv run --no-sync pytest "${args[@]}" | tee pytest.log
 
@@ -209,9 +213,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           if [ "${{ matrix.reference }}" = "true" ]; then
-            repro='uv sync --locked --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest'
+            repro='uv sync --locked --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -m "not paper"'
           else
-            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden"'
+            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden and not paper"'
           fi
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" "$repro"
@@ -332,17 +336,73 @@ jobs:
             exit 1
           fi
 
+  # The running example of the noWorkflow 2 paper (#257), replayed from
+  # src/noworkflow/tests/e2e/corpus/paper_example: a red here means the tool
+  # no longer produces what the paper shows, and is triaged as "The paper's
+  # running example" in AGENTS.md says, never by editing the expectation. A
+  # job of its own because it needs the `paper` dependency group
+  # (scikit-learn, imbalanced-learn, pandas), which the matrix legs do not
+  # sync, and SWI-Prolog for the paper's Prolog query. Blocking: it is in the
+  # needs of ci-ok. It runs on the reference platform (the Python of the
+  # reference leg, which moves with it), where its goldens and the claims
+  # that depend on noWorkflow's numbering are recorded.
+  paper-example:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python 3.15
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.15"
+          enable-cache: true
+
+      - name: Install SWI-Prolog
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+
+      - name: Install dependencies
+        run: uv sync --locked --group paper
+
+      - name: Run the paper example
+        env:
+          GOLDEN: require
+          GOLDEN_ACTUAL_DIR: ${{ runner.temp }}/golden-actual
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m paper | tee pytest.log
+
+      # min-tests: every test of the module, none skipped here (the group,
+      # swipl and the reference platform are all present).
+      - name: Record the test count
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh pytest.log 41 \
+            "paper example (ubuntu-latest, 3.15)" \
+            'uv sync --locked --group paper && GOLDEN=require uv run --no-sync pytest -m paper'
+
+      - name: Upload the outputs that differ from the goldens
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: golden-actual-paper
+          path: ${{ runner.temp }}/golden-actual
+          if-no-files-found: ignore
+
   # The only status the ruleset on `main` requires: one name that stays stable
   # while jobs and matrix legs come and go. `always()` makes it run, and fail,
   # when a needed job failed; without it the job would be skipped, and a
   # skipped required check counts as passing.
   ci-ok:
     if: always() && github.event_name != 'schedule'
-    needs: [checks, test, frontend]
+    needs: [checks, test, frontend, paper-example]
     runs-on: ubuntu-latest
     steps:
       - name: All required jobs passed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
-          echo "::error::checks=${{ needs.checks.result }} test=${{ needs.test.result }} frontend=${{ needs.frontend.result }}"
+          echo "::error::checks=${{ needs.checks.result }} test=${{ needs.test.result }} frontend=${{ needs.frontend.result }} paper-example=${{ needs.paper-example.result }}"
           exit 1

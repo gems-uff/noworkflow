@@ -55,9 +55,10 @@ of date, fix it there.
   the fix and green after it. See `SECURITY.md`.
 - **Definition of done:** `uv run pytest` green from the repository root;
   the test count at or above the floor of every leg (`min-tests` in
-  `.github/workflows/ci.yml` and `experimental.yml`, and the one in
-  `flaky.yml`; the reference leg also counts the goldens, which the other
-  legs deselect), **and the floors go up in the same PR that adds tests**;
+  `.github/workflows/ci.yml` and `experimental.yml`, the one in
+  `flaky.yml` and the one of the `paper-example` job; the reference leg also
+  counts the goldens, which the other legs deselect), **and the floors go
+  up in the same PR that adds tests**;
   `uv run ruff check .` clean; CI green at the tip of the branch; and, whenever
   `src/frontend` changes, `src/noworkflow/now/vis/static/dist/bundle.js`
   rebuilt and committed in the same commit (the `frontend` job rebuilds it
@@ -188,7 +189,8 @@ disposable.
 
 One dependency per step, to the latest patch of the same series; **never a
 major or minor bump as a side effect** of something else. The runtime set is
-in `[project.dependencies]`, the tools in `[dependency-groups]`, and
+in `[project.dependencies]`, the tools in `[dependency-groups]` (with
+`paper`, what the tests of the paper's running example import), and
 `uv.lock` is the truth that CI installs with `uv sync --locked`: a change to
 `pyproject.toml` without `uv lock` fails `uv lock --check` before anything
 else runs. Known advisories that a pin keeps alive are listed, with the reason
@@ -226,6 +228,10 @@ neither executes:
   blocking Python); on every other leg nothing compares their output.
   `export ast` fails from Python 3.14 on (#241), so no golden compares it,
   and only a structural test checks it on 3.11 to 3.13.
+- **The paper's running example off the reference platform:** the
+  `paper-example` job replays it on Linux with the reference leg's Python
+  only; the claims that depend on noWorkflow's numbering, and its goldens,
+  are skipped anywhere else, and no other leg runs it at all.
 - **The optional content engines** (`puregit`, `pygit`, `gitdb`,
   `dulwich`): the suite pins the `plain` engine; the others open a git
   repository on connect.
@@ -341,9 +347,12 @@ purpose:
    [`dew-uff/noworkflow-analysis`](https://github.com/dew-uff/noworkflow-analysis),
    which the paper cites by tag: the script, the patches and the
    `run_trials.sh` that rebuild the trial history.
-3. **The tests of this repository** (#257), which replay that sequence and
-   check what the paper shows, so that a change here cannot contradict the
-   paper without a red build.
+3. **The tests of this repository**:
+   `src/noworkflow/tests/e2e/test_paper_example.py` replays that sequence
+   on the copy in `src/noworkflow/tests/e2e/corpus/paper_example/` (its
+   README names the tag) and checks what the paper shows, one test per
+   figure or listing, in the `paper-example` job of `ci.yml`, so that a
+   change here cannot contradict the paper without a red build.
 
 A change to the example, or to what the paper shows of it, in any of the
 three is carried to the other two. When the test of the example turns red,
@@ -398,8 +407,9 @@ with the measurements behind it, is issue #237):
   on Linux as an experimental leg from its first beta (May) and is promoted
   when the suite passes on it, with the October release as the target.
 - **Reference leg** (coverage, goldens, `flaky.yml`, and the Python of the
-  `checks` job): Linux on the newest blocking version. It moves when a new
-  version is promoted, and the goldens are regenerated in the same step:
+  `checks` and `paper-example` jobs): Linux on the newest blocking version.
+  It moves when a new version is promoted, and the goldens are regenerated
+  in the same step:
   `src/noworkflow/tests/e2e/goldens/REFERENCE` names the platform they were
   recorded on, and `.github/reference-leg/run.sh` reads the Python from
   `ci.yml`. The

@@ -20,6 +20,7 @@ are never compared whole: they hold noWorkflow's own line numbers and carets
 that change with the Python version.
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -428,8 +429,11 @@ def test_run_with_the_jsonpickle_serializer_missing(project):
                                "'jsonpickle'\""), str(result)
     assert ("the execution finished with an uncaught exception."
             in result.stdout), str(result)
-    assert last_line(result.stdout) == (
-        "ModuleNotFoundError: No module named 'jsonpickle'")
+    # From 3.15 the traceback suggests an installed module with a close
+    # name ("Did you mean: 'cloudpickle'?", which the `paper` group brings).
+    assert re.fullmatch(
+        r"ModuleNotFoundError: No module named 'jsonpickle'"
+        r"(\. Did you mean: '\w+'\?)?", last_line(result.stdout)), str(result)
     assert "rows:" not in result.stdout, str(result)
     assert not (project.path / "output.csv").exists()
     assert only_trial(project)["status"] == "unfinished"

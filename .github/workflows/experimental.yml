@@ -62,14 +62,14 @@ jobs:
       - name: Run tests
         run: |
           set -o pipefail
-          uv run --no-sync pytest -m "not golden" | tee pytest.log
+          uv run --no-sync pytest -m "not golden and not paper" | tee pytest.log
 
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" \
-            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden"'
+            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden and not paper"'
 
       - name: CLI smoke test
         if: ${{ !cancelled() && steps.sync.outcome == 'success' }}

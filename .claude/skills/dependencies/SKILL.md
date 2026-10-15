@@ -21,8 +21,11 @@ follows is how to apply it with the tools of this repository.
   as in use (`AGENTS.md`). These ranges go into the wheel verbatim.
 - `[project.optional-dependencies]`: the extras (`demo`, `notebook`, `all`)
   are user-facing features; a user installs `noworkflow[notebook]` to get one.
-- `[dependency-groups]`: the tools (pytest, ruff, bandit, pip-audit). Never in
-  the wheel; CI installs them from the lock.
+- `[dependency-groups]`: the tools (pytest, ruff, bandit, pip-audit), in
+  `dev`, which `uv sync` installs by default, and what a set of tests needs
+  beyond them, in a group of its own (`paper`: the ML stack of the paper's
+  running example), which only the CI job of those tests syncs. Never in the
+  wheel; CI installs them from the lock.
 - `[build-system]`: what builds the wheel. Its setuptools is not the runtime
   setuptools in `[project.dependencies]`; the two move independently.
 - `uv.lock`: the exact set that dev and CI install (`uv sync --locked`),
@@ -105,6 +108,11 @@ it can go.
   it as a comment; it leaves with the tests.
 - Dev tools go in `[dependency-groups]`, and their floor is the version whose
   configuration this repository uses (`[tool.ruff]`, `[tool.pytest.ini_options]`).
+- A heavy package that only some tests import goes in a group of its own,
+  not in `dev`, so that every matrix leg does not install it: the tests
+  skip without it, carry a marker the matrix deselects, and a CI job syncs
+  the group (`uv sync --locked --group <name>`). Its packages are audited
+  like the rest (the export takes `--all-groups`).
 
 ### Judging a pin that is already there
 

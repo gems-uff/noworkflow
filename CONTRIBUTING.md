@@ -169,7 +169,9 @@ Optional, each for one purpose:
   suite does not need it.
 - **SWI-Prolog with its shared libraries**, together with `pyswip-alt` (the
   `all` extra), for Prolog queries from Jupyter (`trial.query(...)`). `now
-  export prolog` does not need it, and neither does the suite.
+  export prolog` does not need it. The suite only runs the `swipl` program,
+  for the Prolog query of the paper's running example, and skips that test
+  without it.
 
 ### Setting up `.venv`
 
@@ -193,7 +195,9 @@ to a newer Python. The other supported versions run without touching `.venv`
 The extras of `pyproject.toml` stay out of `.venv` unless named: add
 `--extra demo` (matplotlib) to run the `slow` tests of `now demo`, which
 skip without it, and `--extra notebook` (Jupyter) for the full frontend
-build (see "The frontend").
+build (see "The frontend"). The same goes for the `paper` dependency group:
+`--group paper` adds what the tests of the paper's running example need
+(see [The paper's running example](#the-papers-running-example)).
 
 ## Running locally
 
@@ -249,6 +253,29 @@ state behind (the collector replaces the `open` functions, adds builtins and
 an import finder, and some commands write into the current directory) and
 fails it otherwise; `NOW_LEAK_CHECK=warn uv run pytest` only reports, in the
 LEAKS section of the summary.
+
+### The paper's running example
+
+`src/noworkflow/tests/e2e/test_paper_example.py` replays the running example
+of the noWorkflow 2 paper (a scikit-learn pipeline, eleven trials) and
+checks what the paper shows of it, figure by figure. Its tests are marked
+`paper` and need the `paper` dependency group; without it they skip, and the
+matrix legs of CI deselect them. The `paper-example` job of `ci.yml` runs
+them on the reference platform, with SWI-Prolog for the Prolog query:
+
+```bash
+uv sync --locked --group paper                           # scikit-learn, imbalanced-learn, pandas
+uv run pytest -m paper                                   # about a minute; the replay runs once
+GOLDEN=require .github/reference-leg/run.sh -m paper     # as the job runs it, goldens included
+```
+
+Off the reference platform the goldens and the claims that depend on
+noWorkflow's numbering skip, as the other goldens do. A plain `uv sync
+--locked` removes the group from `.venv` again. A red test of the example is
+triaged as "The paper's running example" in `AGENTS.md` says: the change
+regressed, or the paper and its package must follow it; the expectation is
+never edited to make the test pass. To replay on the real dataset, see the
+README in `src/noworkflow/tests/e2e/corpus/paper_example/`.
 
 ### The frontend
 
