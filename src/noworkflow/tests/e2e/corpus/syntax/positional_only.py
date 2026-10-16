@@ -1,5 +1,5 @@
 """Positional-only parameters (PEP 570), with defaults and next to **kwargs
-that receives a keyword of the same name (#NEW:positional-only-parameters);
+that receives a keyword of the same name (#297);
 a default after '/' with none before it is in positional_only_defaults.py"""
 
 

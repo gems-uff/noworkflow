@@ -1,5 +1,5 @@
 """Errors that Python reports at the call site name the callee
-(#NEW:call-error-names-collector)
+(#270)
 
 A keyword given twice through two ``**`` unpackings is rejected before the
 callee runs, and the message names the function called; a configuration

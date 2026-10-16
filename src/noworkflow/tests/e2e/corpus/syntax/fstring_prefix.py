@@ -1,6 +1,6 @@
 """f-strings whose prefix does not start with a lowercase f: F, rf, Rf,
 rF, FR and Fr, each with a replacement field and assigned to a name
-(#NEW:pyposast-fstring-prefix)"""
+(#302)"""
 
 name = "ana"
 count = 3

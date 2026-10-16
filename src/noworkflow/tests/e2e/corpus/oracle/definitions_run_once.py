@@ -1,5 +1,5 @@
 """A ``def`` statement runs its decorators and defaults once
-(#NEW:def-runs-twice)
+(#282)
 
 A command registry filled by a decorator factory, a decorator that logs
 the functions it wraps, and a default value computed by a call with a

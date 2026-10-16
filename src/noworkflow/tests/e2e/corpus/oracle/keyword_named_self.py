@@ -1,4 +1,4 @@
-"""Keyword arguments named ``self`` (#NEW:keyword-named-self)
+"""Keyword arguments named ``self`` (#289)
 
 Records built from keyword arguments, where ``self`` is an ordinary field
 name: ``dict`` and ``str.format`` take any keyword, and so does a function

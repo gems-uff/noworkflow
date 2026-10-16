@@ -1,6 +1,6 @@
 """lambda: plain, with defaults, *args, keyword-only and **kwargs, as a key,
 as the element of a comprehension that binds its variable as a default, and
-called immediately (#NEW:lambda-in-collection)"""
+called immediately (#290)"""
 
 square = lambda x: x * x
 add = lambda a, b=10, *rest, scale=1, **options: (a + b + sum(rest)) * scale

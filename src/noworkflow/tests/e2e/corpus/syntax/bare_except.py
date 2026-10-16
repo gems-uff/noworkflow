@@ -1,6 +1,6 @@
 """A bare except catches every exception, the ones that derive from
 BaseException only (SystemExit, KeyboardInterrupt) included
-(#NEW:bare-except-narrowed)"""
+(#268)"""
 import sys
 
 try:

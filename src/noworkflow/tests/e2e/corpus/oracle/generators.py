@@ -12,7 +12,7 @@ under ``yield from`` (yield_from_builtin.py), an iterator class given to
 (yield_in_call_argument.py), a generator expression whose first iterable
 changes after it was created or raises (genexp_iterable_snapshot.py and
 genexp_iterable_raises.py), and coroutines driven by ``asyncio``
-(async_tasks.py). Under ``-cg``: #NEW:coarse-augassign-target
+(async_tasks.py). Under ``-cg``: #275
 (``self.current -= 1`` in ``Countdown``).
 """
 import itertools

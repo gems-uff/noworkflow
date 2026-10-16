@@ -1,7 +1,7 @@
 """Annotated assignments at module, class and function scope, with and
 without a value, on a name and on a subscript (collecting the annotations is
 #158, not checked here); the annotation of a local variable is never
-evaluated (#NEW:coarse-augassign-target under -cg)"""
+evaluated (#275 under -cg)"""
 
 
 def evaluated(kind):

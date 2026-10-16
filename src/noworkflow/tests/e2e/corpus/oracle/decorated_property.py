@@ -1,5 +1,5 @@
 """Properties defined with the ``@property`` decorator
-(#NEW:decorated-object-without-dict)
+(#281)
 
 A temperature with a computed property, a setter that validates, and a
 read-only property.

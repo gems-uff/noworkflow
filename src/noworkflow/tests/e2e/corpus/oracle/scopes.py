@@ -14,7 +14,7 @@ Split out: lambdas inside collection displays (lambda_in_collection.py),
 comprehensions in a class body (class_body_comprehension.py),
 ``globals()``, ``locals()``, ``vars()`` and ``dir()`` without arguments
 (caller_frame.py) and ``__builtins__`` (builtins_module.py). Under
-``-cg``: #NEW:coarse-augassign-target (``self.reading: float = start`` and
+``-cg``: #275 (``self.reading: float = start`` and
 ``self.history: list = []``).
 """
 total = 0

@@ -13,7 +13,7 @@ its operand's type (value_comparisons.py), the hooks run when a class is
 created (class_hooks.py), ``print`` of an object with ``__str__`` among
 other arguments (callbacks.py) and ``with`` without ``as``
 (with_without_as.py). Under ``-cg``: #236 (``@classmethod``, the first
-decorator that is a name), with #NEW:coarse-augassign-target behind it
+decorator that is a name), with #275 behind it
 (``cell.value += 1``, ``Counter.instances += 1``).
 """
 import dataclasses

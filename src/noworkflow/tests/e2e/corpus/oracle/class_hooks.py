@@ -1,5 +1,5 @@
 """Hooks that run when a class statement creates a class
-(#NEW:class-created-twice)
+(#274)
 
 A plugin registry filled by ``__init_subclass__``, a metaclass that counts
 the classes it initializes, and a descriptor that learns its attribute name

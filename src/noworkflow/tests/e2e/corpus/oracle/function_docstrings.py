@@ -1,4 +1,4 @@
-"""Docstrings of functions and methods as help lines (#NEW:docstrings-lost)
+"""Docstrings of functions and methods as help lines (#283)
 
 Each command's docstring is its help line, and a class and its method
 document themselves the same way. The module docstring is in

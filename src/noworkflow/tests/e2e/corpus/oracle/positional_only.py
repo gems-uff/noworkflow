@@ -1,5 +1,5 @@
 """Positional-only parameters without defaults
-(#NEW:positional-only-parameters)
+(#297)
 
 ``clamp`` and ``distance`` take their parameters before ``/``, so callers
 cannot pass them by name, and so does the lambda ``ratio``. Each step runs

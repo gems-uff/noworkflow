@@ -1,4 +1,4 @@
-"""The defaults a function object exposes (#NEW:function-signature)
+"""The defaults a function object exposes (#285)
 
 A command-line generator reads the default of each option from the
 function it wraps: ``__defaults__`` for the positional parameters and

@@ -1,6 +1,6 @@
 """f-strings nested in f-strings, in a replacement field and in a format
 spec, with a different quote at each level (valid before PEP 701)
-(#NEW:pyposast-fstring-nested-string)"""
+(#301)"""
 
 width = 10
 precision = 3

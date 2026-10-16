@@ -1,4 +1,4 @@
-"""``__builtins__`` in the main module (#NEW:builtins-is-a-dict)
+"""``__builtins__`` in the main module (#269)
 
 When ``python script.py`` runs a script, ``__builtins__`` in it is the
 ``builtins`` module itself, and scripts reach builtins through it by

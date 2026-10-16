@@ -1,5 +1,5 @@
 """Classes with bases and keywords: zero-argument super() in methods and
-__init_subclass__ with a class keyword (#162, with #NEW:class-created-twice
+__init_subclass__ with a class keyword (#162, with #274
 behind it); a metaclass is in metaclass_new.py"""
 
 

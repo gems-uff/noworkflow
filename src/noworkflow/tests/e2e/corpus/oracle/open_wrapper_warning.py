@@ -1,5 +1,5 @@
 """A warning raised by ``open`` names the code that called it
-(#NEW:open-wrapper-frame)
+(#296)
 
 Opening a binary file with line buffering warns that the buffering is
 ignored, and the warning names the file of the code that called ``open``:

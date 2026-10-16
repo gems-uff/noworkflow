@@ -1,5 +1,5 @@
 """A ``__repr__`` that reads the attributes ``__init__`` sets
-(#NEW:repr-serializer)
+(#307)
 
 The usual shape of a class: ``__init__`` assigns attributes one by one and
 ``__repr__`` formats them. Python only calls ``__repr__`` when the script

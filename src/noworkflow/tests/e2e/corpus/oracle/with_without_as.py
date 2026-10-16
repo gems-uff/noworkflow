@@ -1,5 +1,5 @@
 """``with`` statements that do not bind the context manager
-(#NEW:with-without-as)
+(#310)
 
 A timer-like context manager entered without ``as``: an instance created
 in the ``with`` line, a reused instance, and one that suppresses an

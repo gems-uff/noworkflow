@@ -1,5 +1,5 @@
 """Decorators whose wrapper takes the name of the wrapped function
-(#NEW:renamed-function-recursion)
+(#306)
 
 ``functools.wraps`` copies ``__name__``, ``__doc__`` and ``__wrapped__``
 from the decorated function to the wrapper: the usual way to write a

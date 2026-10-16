@@ -1,5 +1,5 @@
 """An object released by ``del`` right after its assignment
-(#NEW:last-assign-kept-alive)
+(#291)
 
 A handle whose ``__del__`` releases what it holds: when the name the script
 deletes held the last reference, Python runs ``__del__`` at the ``del``,

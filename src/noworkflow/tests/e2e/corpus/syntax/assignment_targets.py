@@ -1,6 +1,6 @@
 """Assignment targets: chained, tuple unpacking, a swap, nested tuples, an
 attribute and a subscript, and augmented assignment on each
-(#NEW:coarse-augassign-target under -cg)"""
+(#275 under -cg)"""
 
 
 class Holder:

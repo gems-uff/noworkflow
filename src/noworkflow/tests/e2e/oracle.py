@@ -69,8 +69,10 @@ class Defect:
     prints today (an exception and its message, a line of the script's
     output), checked by ``expect_known_failure``. The mark applies on the
     Python versions ``since <= (major, minor) < before`` (each bound
-    optional) and, when ``systems`` is given, only on the ``sys.platform``
-    values it lists; elsewhere the test must pass. The range is the one
+    optional), when ``systems`` is given only on the ``sys.platform``
+    values it lists, and only where ``condition`` holds (a fact of the
+    machine that the version and the system do not capture, computed once
+    when the test module is imported); elsewhere the test must pass. The range is the one
     measured on the matrix, never a guess: ``strict`` turns an unexpected
     pass into a failure.
     """
@@ -80,8 +82,11 @@ class Defect:
     since: tuple = None
     before: tuple = None
     systems: tuple = None
+    condition: bool = True
 
     def applies(self):
+        if not self.condition:
+            return False
         version = sys.version_info[:2]
         if self.since is not None and version < tuple(self.since):
             return False

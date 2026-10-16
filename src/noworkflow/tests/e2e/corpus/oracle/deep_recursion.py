@@ -1,4 +1,4 @@
-"""Recursion a few hundred levels deep (#NEW:recursion-depth)
+"""Recursion a few hundred levels deep (#305)
 
 A linked list of 400 nodes summed and measured recursively, well within
 Python's default recursion limit of 1000, and a recursion that exceeds the

@@ -1,4 +1,4 @@
-"""Builtins that read the namespace of their caller (#NEW:caller-frame)
+"""Builtins that read the namespace of their caller (#271)
 
 A small calculator and report: ``eval`` and ``exec`` without explicit
 namespaces, ``globals()`` used as a dispatch table, ``locals()`` and

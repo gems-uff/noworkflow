@@ -1,5 +1,5 @@
 """The first iterable of a generator expression is read when the
-expression is created (#NEW:genexp-lazy-first-iterable)
+expression is created (#288)
 
 Python evaluates the first iterable of a generator expression, and calls
 ``iter()`` on it, when the expression itself is evaluated; only the rest

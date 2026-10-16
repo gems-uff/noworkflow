@@ -1,7 +1,7 @@
 """A parameter with a default after the positional-only marker, in a def
 and in a lambda, with no default before the marker; neither is called, so
 the positional-only parameter itself stays out of this script
-(#NEW:pyposast-positional-only-defaults)"""
+(#304)"""
 
 
 def scale(value, /, factor=2):

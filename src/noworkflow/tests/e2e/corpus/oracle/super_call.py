@@ -1,5 +1,5 @@
 """Zero-argument ``super()`` in methods (#162, with
-#NEW:class-created-twice behind it)
+#274 behind it)
 
 A small hierarchy where every ``__init__`` and ``describe`` delegates to
 the next class in the MRO with ``super()``, including a cooperative

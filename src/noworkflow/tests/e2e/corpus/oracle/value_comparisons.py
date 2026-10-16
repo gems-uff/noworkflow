@@ -1,5 +1,5 @@
 """An ``__eq__`` that assumes the type of its other operand
-(#NEW:collector-compares-values)
+(#276)
 
 ``Version.__eq__`` compares ``self.parts`` with ``other.parts`` without
 checking what ``other`` is, as many classes do. The script only compares

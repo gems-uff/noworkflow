@@ -6,7 +6,7 @@ two parameters, a ``defaultdict`` whose factory takes a parameter with a
 default, and ``min`` with a lambda key. Each callback takes as many
 parameters as the builtin passes it. The callbacks that receive fewer
 arguments than the builtin call that reaches them are in callbacks.py.
-Under ``-cg``: #NEW:coarse-augassign-target (``counts[first_word(line)] +=
+Under ``-cg``: #275 (``counts[first_word(line)] +=
 1``).
 """
 import collections

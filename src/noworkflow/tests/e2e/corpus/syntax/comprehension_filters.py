@@ -1,5 +1,5 @@
 """Comprehensions with two and three if clauses: list, set, dict and
-generator (#NEW:comprehension-two-ifs)"""
+generator (#277)"""
 
 values = range(12)
 print([v for v in values if v % 2 if v > 3])

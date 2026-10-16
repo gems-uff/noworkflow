@@ -1,4 +1,4 @@
-"""Comprehensions in a class body (#NEW:class-body-comprehension)
+"""Comprehensions in a class body (#272)
 
 Lookup tables computed when the class is created: a list and a dict
 comprehension at class level, whose iterables use class attributes.

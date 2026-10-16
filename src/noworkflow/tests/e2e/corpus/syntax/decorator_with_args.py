@@ -1,5 +1,5 @@
 """Decorators that take arguments, stacked on a function and on a class
-(#NEW:renamed-function-recursion, #NEW:pyposast-decorated-definitions)"""
+(#306, #298)"""
 import functools
 
 

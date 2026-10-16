@@ -1,5 +1,5 @@
 """Introspecting a function: its signature and argument errors
-(#NEW:function-signature)
+(#285)
 
 A validating decorator that binds each call with ``inspect.signature``, the
 parameters a command-line generator reads from a function's signature,

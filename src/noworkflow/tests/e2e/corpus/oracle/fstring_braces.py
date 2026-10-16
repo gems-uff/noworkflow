@@ -1,4 +1,4 @@
-"""Doubled braces in f-strings (#NEW:pyposast-fstring-braces)
+"""Doubled braces in f-strings (#299)
 
 Templates that keep literal braces next to interpolated values, as in
 generated JSON or format strings.

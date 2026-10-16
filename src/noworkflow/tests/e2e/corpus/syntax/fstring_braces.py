@@ -1,5 +1,5 @@
 """Doubled braces in f-strings, next to replacement fields
-(#NEW:pyposast-fstring-braces)"""
+(#299)"""
 
 name = "items"
 count = 3

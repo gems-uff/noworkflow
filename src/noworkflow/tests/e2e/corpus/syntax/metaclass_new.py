@@ -1,5 +1,5 @@
 """A metaclass whose __new__ runs for a class statement
-(#NEW:metaclass-new)"""
+(#293)"""
 
 
 class Meta(type):

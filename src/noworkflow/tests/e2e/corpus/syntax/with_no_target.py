@@ -1,5 +1,5 @@
 """A with statement whose only item has no target
-(#NEW:with-without-as)"""
+(#310)"""
 
 
 class Managed:

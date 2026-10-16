@@ -1,6 +1,6 @@
 """An explicit lazy import (PEP 810, 3.15) that is the only import statement
 of the script, whose module runs only when its name is first used
-(#NEW:lazy-import-in-try)"""
+(#292)"""
 sys = __import__("sys")
 
 with open("lazy_alone.py", "w", encoding="utf-8") as handle:

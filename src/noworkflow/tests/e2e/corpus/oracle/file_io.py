@@ -1,23 +1,21 @@
 """File I/O through every entry point the collector wraps
 
 ``open`` in text, binary, unbuffered binary, append, exclusive,
-read-write and ``w+`` modes, ``io.open``, ``codecs.open`` for reading and
-writing, ``os.open`` with and without a permission mode and ``os.fdopen``,
-``pathlib``, files in a subdirectory the script creates, json and csv
-round trips, ``seek``/``tell``, line iteration of a file open for writing,
-an attribute set on a file object, a data file shipped with the corpus and
-a file left open until the interpreter exits. Split out: a file written
-without ``close`` and read back at once (open_files_kept_alive.py), the
-type of a file object opened for writing (file_object_type.py) and a
-warning that ``open`` raises for its caller (open_wrapper_warning.py).
+read-write and ``w+`` modes, ``os.open`` with and without a permission
+mode and ``os.fdopen``, ``pathlib``, files in a subdirectory the script
+creates, json and csv round trips, ``seek``/``tell``, line iteration of a
+file open for writing, an attribute set on a file object, a data file
+shipped with the corpus and a file left open until the interpreter exits.
+Split out: a file written without ``close`` and read back at once
+(open_files_kept_alive.py), the type of a file object opened for writing
+(file_object_type.py), a warning that ``open`` raises for its caller
+(open_wrapper_warning.py), and ``io.open`` and ``codecs.open`` with a
+non-UTF-8 encoding, whose codec the script imports (codec_import.py).
 """
-import codecs
 import csv
-import io
 import json
 import os
 import pathlib
-import warnings
 
 
 def read_inventory(path):
@@ -89,23 +87,6 @@ for attempt in range(2):
         print("lock", attempt, "created")
     except FileExistsError:
         print("lock", attempt, "exists")
-
-# io.open and codecs.open with a non-UTF-8 encoding.
-with io.open("out/latin.txt", "w", encoding="latin-1") as latin:
-    latin.write("café crème\n")
-# codecs.open is deprecated from 3.14 on; the warning is not the subject.
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", DeprecationWarning)
-    latin = codecs.open("out/latin.txt", "r", encoding="latin-1")
-    written = codecs.open("out/codecs.txt", "w", encoding="latin-1")
-with latin:
-    print("codecs:", latin.read().strip())
-with written:
-    written.write("ação\n")
-with open("out/codecs.txt", "rb") as raw:
-    print("codecs bytes:", raw.read())
-with open("out/latin.txt", "rb") as raw:
-    print("latin bytes:", raw.read())
 
 # os.open returns a descriptor; os.fdopen turns it into a file.
 fd = os.open("out/fd.txt", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)

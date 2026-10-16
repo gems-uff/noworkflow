@@ -1,5 +1,5 @@
 """Objects released when the function that used them returns, or when the
-script rebinds the name that held them (#NEW:values-kept-alive)
+script rebinds the name that held them (#309)
 
 Python releases an object as soon as its last reference goes away: a
 connection created inside a function runs its ``__del__`` when the

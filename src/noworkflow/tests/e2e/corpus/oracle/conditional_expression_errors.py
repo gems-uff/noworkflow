@@ -1,5 +1,5 @@
 """Exceptions raised inside conditional expressions
-(#NEW:conditional-expression-exception)
+(#280)
 
 A grading helper whose conditional expressions divide by a count that can
 be zero, and that catches the ``ZeroDivisionError`` where it handles the

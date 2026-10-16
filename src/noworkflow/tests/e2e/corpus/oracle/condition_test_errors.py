@@ -1,5 +1,5 @@
 """Exceptions raised by the test of an if or a while statement
-(#NEW:condition-test-exception)
+(#279)
 
 A reader of sensor readings that converts each reading in the test of the
 statement that uses it, and catches the ``ValueError`` of a malformed

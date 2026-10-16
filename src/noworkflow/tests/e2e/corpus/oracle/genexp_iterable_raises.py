@@ -1,5 +1,5 @@
 """An exception raised by the first iterable of a generator expression
-(#NEW:genexp-first-iterable-error)
+(#287)
 
 The first iterable of a generator expression is evaluated when the
 expression is, so an exception raised while computing it propagates from

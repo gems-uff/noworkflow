@@ -1,4 +1,4 @@
-"""The type of a file object opened for writing (#NEW:file-proxy-type)
+"""The type of a file object opened for writing (#284)
 
 A logger that reports what it was given: ``type()`` of a file object is
 the io class that implements it (``TextIOWrapper``, ``BufferedWriter``,

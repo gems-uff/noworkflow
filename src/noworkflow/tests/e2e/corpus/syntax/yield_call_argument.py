@@ -1,5 +1,5 @@
 """A yield expression as the argument of a call, inside a generator
-(#NEW:yield-in-call-argument)"""
+(#311)"""
 
 
 def collect():

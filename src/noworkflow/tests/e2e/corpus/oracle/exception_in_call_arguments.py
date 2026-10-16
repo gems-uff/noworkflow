@@ -1,5 +1,5 @@
 """An exception caught inside a function that runs in another call's
-arguments (#NEW:yield-in-call-argument: the same stack of pending calls)
+arguments (#311: the same stack of pending calls)
 
 ``averages`` divides inside the argument of ``results.append`` and
 catches the ``ZeroDivisionError`` there, and the script prints what it

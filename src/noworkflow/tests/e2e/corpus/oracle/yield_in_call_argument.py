@@ -1,5 +1,5 @@
 """A generator paused inside a call's arguments, advanced inside another
-call's arguments (#NEW:yield-in-call-argument)
+call's arguments (#311)
 
 A coroutine-style accumulator: the generator receives each value through
 ``send()`` as the argument of ``list.append``, yields how many values it

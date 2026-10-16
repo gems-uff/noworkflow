@@ -1,5 +1,5 @@
 """An object released by ``del`` after an attribute was set on it
-(#NEW:attribute-container-kept-alive)
+(#267)
 
 A record labelled after it was created, then deleted: when the name held
 the last reference, Python runs ``__del__`` at the ``del``. An assignment

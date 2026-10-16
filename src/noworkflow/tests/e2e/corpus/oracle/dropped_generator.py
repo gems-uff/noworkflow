@@ -1,4 +1,4 @@
-"""A generator abandoned by ``break`` (#NEW:generator-activation-cycle)
+"""A generator abandoned by ``break`` (#286)
 
 A reader that stops at the first line it needs: the ``for`` statement
 drops the generator when ``break`` leaves it, Python releases it at once,

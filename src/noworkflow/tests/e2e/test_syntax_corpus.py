@@ -39,7 +39,7 @@ Python would contradict):
 
 A known defect is a ``Defect`` of ``oracle.py``, in the ``runs`` and
 ``transforms`` entries of each case: the reason starts with the issue that
-will fix it (``#NNN: `` or ``#NEW:<slug>: ``) and states the mechanism
+will fix it (``#NNN: ``) and states the mechanism
 measured, and the signature is a piece of text the failing run prints
 today. The mark is ``xfail(strict=True)`` on the versions (and, with
 ``systems``, the platforms) where it applies; a failure without the
@@ -154,14 +154,14 @@ BLACK_BOX_FALLBACK = (
 )
 BLACK_BOX_SIGNATURE = "param = parameter_order[last_unfilled]"
 POSITIONAL_ONLY = (
-    "#NEW:positional-only-parameters: visit_FunctionDef "
+    "#297: visit_FunctionDef "
     "(transformer_stmt.py) and visit_Lambda (transformer_expr.py) prepend "
     "their six __now_* parameters to args.args, after the positional-only "
     "ones, and process_parameters (transformer_stmt.py), which both call, "
     "never reads arguments.posonlyargs: "
 )
 DECORATED_DEFINITIONS = (
-    "#NEW:pyposast-decorated-definitions: pyposast's adjust_decorator "
+    "#298: pyposast's adjust_decorator "
     "(pyposast/visitor.py) looks up the '@' of each decorator with "
     "ElementDict.find_previous (pyposast/parser.py), whose bisect_left lands "
     "on the decorator's own '@' when the decorator follows it with no "
@@ -172,7 +172,7 @@ DECORATED_DEFINITIONS = (
     "its own last statement; "
 )
 COARSE_TARGET = (
-    "#NEW:coarse-augassign-target: under -cg, visit_augassign and "
+    "#275: under -cg, visit_augassign and "
     "visit_annassign (transformer_stmt.py) take the coarse shortcut only "
     "for a name target (and visit_annassign only with a value: an "
     "annotation without one returns before it captures its target); {} "
@@ -182,12 +182,12 @@ COARSE_TARGET = (
     "transformer, and the script never runs"
 )
 COMPREHENSION_UNPACKING = (
-    "#NEW:comprehension-unpacking: the comprehension visitors "
+    "#278: the comprehension visitors "
     "(transformer_expr.py) assume a plain element, and a PEP 798 unpacking "
     "is not one: "
 )
 WITH_WITHOUT_AS = Defect(
-    "#NEW:with-without-as: Collector._withitem (collector.py) appends an "
+    "#310: Collector._withitem (collector.py) appends an "
     "Assign only for an item with 'as', and the script's __enter__, called "
     "from WithContext.__enter__ (prov_execution/structures.py), takes the "
     "white-box-after-black-box path of new_function_def "
@@ -208,7 +208,7 @@ DECORATOR_FALLBACK = Defect(
     "'Name' object has no attribute 'name'",
 )
 POSITIONAL_ONLY_DEFAULTS = Defect(
-    "#NEW:pyposast-positional-only-defaults: when no positional-only "
+    "#304: when no positional-only "
     "parameter has a default and every positional-or-keyword parameter "
     "after '/' has one, pyposast's visit_arguments (pyposast/visitor.py) "
     "pairs the positional-only parameters with those defaults, finds no "
@@ -219,14 +219,14 @@ POSITIONAL_ONLY_DEFAULTS = Defect(
     "cannot unpack non-iterable NoneType object",
 )
 LAZY_IMPORT_IN_TRY = (
-    "#NEW:lazy-import-in-try: process_script (transformer_stmt.py) wraps "
+    "#292: process_script (transformer_stmt.py) wraps "
     "the module body in try/except/finally, and Python rejects a lazy "
     "import inside try (SyntaxError from the compile in "
     "Definition.collect, definition.py)"
 )
 LAZY_IMPORT_SIGNATURE = "lazy import not allowed inside try/except blocks"
 FSTRING_PREFIX = (
-    "#NEW:pyposast-fstring-prefix: before Python 3.12 an f-string is a "
+    "#302: before Python 3.12 an f-string is a "
     "single STRING token, and TokenCollector.loop (pyposast/parser.py) "
     "takes a STRING token for an f-string only when it starts with a "
     "lowercase 'f' (t_string.startswith('f')), so for any other prefix "
@@ -242,7 +242,7 @@ FSTRING_PREFIX_SIGNATURE = (
     "in visit_JoinedStr\n"
     "    value.bracket = self.brackets.find_next(last_position)")
 FSTRING_NESTED_STRING = (
-    "#NEW:pyposast-fstring-nested-string: pyposast's visit_JoinedStr "
+    "#301: pyposast's visit_JoinedStr "
     "(pyposast/visitor.py) places an f-string at the first string token "
     "that ends after the f-string starts (ElementDict.find_next, "
     "pyposast/parser.py), and a string inside one of its fields, a nested "
@@ -349,7 +349,7 @@ CASES = (
         components=(("fstring", 6, TOTAL), ("fstring", 7, TOTAL),
                     ("fstring", 8, TOTAL)),
         transforms=(Defect(
-            "#NEW:pyposast-fstring-call-argument: pyposast's visit_Call "
+            "#300: pyposast's visit_Call "
             "(pyposast/visitor.py) narrows a call's only argument by one "
             "character at each end (increment_node_position, "
             "pyposast/node_helpers.py), expecting it to span the call's "
@@ -369,7 +369,7 @@ CASES = (
                     ("fstring", 8, 'f"{{}} placeholder and {count}"'),
                     ("fvalue", 8, "{count}")),
         runs=(Defect(
-            "#NEW:pyposast-fstring-braces: before Python 3.12 an f-string "
+            "#299: before Python 3.12 an f-string "
             "is a single STRING token, and TokenCollector.loop "
             "(pyposast/parser.py), which extract_tokens runs from the "
             "constructor of pyposast's LineProvenanceVisitor, matches its "
@@ -379,7 +379,7 @@ CASES = (
             "before the transformer runs; the script never runs",
             "TokenError", before=(3, 12)),),
         transforms=(Defect(
-            "#NEW:pyposast-fstring-braces: TokenCollector.loop "
+            "#299: TokenCollector.loop "
             "(pyposast/parser.py) raises tokenize.TokenError on an f-string "
             "with a literal '{{' before the transformer runs: nothing is "
             "evaluated",
@@ -603,7 +603,7 @@ CASES = (
                     ("function_def", 22, "greet"),
                     ("class_def", 28, "Thing")),
         runs=(Defect(
-            "#NEW:renamed-function-recursion: Collector.call "
+            "#306: Collector.call "
             "(collector.py) names each activation after the callee's "
             "__name__, including the internal one new_function_def opens "
             "for itself, so a wrapper that functools.wraps (or any "
@@ -645,7 +645,7 @@ CASES = (
         components=(("function_def", 9, "celsius"),
                     ("function_def", 13, "celsius")),
         runs=(Defect(
-            "#NEW:decorated-object-without-dict: visit_FunctionDef "
+            "#281: visit_FunctionDef "
             "(transformer_stmt.py) puts collect_function_def first in the "
             "decorator list, so it runs last and receives what the "
             "script's decorators returned; Collector.collect_function_def "
@@ -689,7 +689,7 @@ CASES = (
         components=(("starred", 7), ("starred", 8), ("starred", 9),
                     ("starred", 10), ("starred", 11)),
         runs=(Defect(
-            "#NEW:starred-display-expression: visit_Starred "
+            "#308: visit_Starred "
             "(transformer_expr.py) reads target_expr from the rewritten "
             "operand, which only a name, an attribute or a subscript "
             "carries; a string literal, a list display, a call, a binary "
@@ -698,7 +698,7 @@ CASES = (
             "runs",
             "'Call' object has no attribute 'target_expr'"),),
         transforms=(Defect(
-            "#NEW:starred-display-expression: visit_Starred "
+            "#308: visit_Starred "
             "(transformer_expr.py) raises AttributeError on a starred "
             "literal, display, call, operation or conditional expression: "
             "nothing is evaluated",
@@ -738,7 +738,7 @@ CASES = (
             "#162: the transformer instruments super() as a call, so super "
             "runs inside the frame of Collector._call (collector.py), where "
             "zero-argument super() finds no __class__ cell: RuntimeError; "
-            "#NEW:class-created-twice is a second layer behind it "
+            "#274 is a second layer behind it "
             "(Collector._class_def (collector.py) builds a second class "
             "whose methods keep the first one in their __class__ cell, so "
             "super() would then raise TypeError), which test_oracle.py "
@@ -751,7 +751,7 @@ CASES = (
         components=(("class_def", 5, "Meta"),
                     ("class_def", 11, "WithMeta")),
         runs=(Defect(
-            "#NEW:metaclass-new: the class statement calls Meta.__new__ "
+            "#293: the class statement calls Meta.__new__ "
             "while the activation of the class body (Collector.start_class, "
             "collector.py) is the last one, and only Collector._call sets "
             "func_evaluation; new_function_def (Collector._function_def, "
@@ -760,7 +760,7 @@ CASES = (
             "activation.func_evaluation, None here: AttributeError (a "
             "__call__ reached from a for loop over iter(callable, "
             "sentinel) fails through the same branch). "
-            "#NEW:class-created-twice calls Meta.__new__ a second time "
+            "#274 calls Meta.__new__ a second time "
             "through the same branch, which this script cannot observe",
             "'NoneType' object has no attribute 'activation_id'"),),
     ),
@@ -785,7 +785,7 @@ CASES = (
         "a yield expression as the argument of a call inside a generator",
         components=(("yield", 7), ("yield", 8)),
         runs=(Defect(
-            "#NEW:yield-in-call-argument: Collector.call (collector.py) "
+            "#311: Collector.call (collector.py) "
             "pushes the callee's FutureActivation on "
             "Collector.future_activation, one stack for the whole run, "
             "before the arguments are evaluated, and Collector._call pops "
@@ -900,7 +900,7 @@ CASES = (
         components=(("lambda_def", 5), ("lambda_def", 6), ("lambda_def", 8),
                     ("lambda_def", 9), ("lambda_def", 11)),
         runs=(Defect(
-            "#NEW:lambda-in-collection: the decorator that _function_def "
+            "#290: the decorator that _function_def "
             "(collector.py) returns pushes a DependencyAware of its own on "
             "the enclosing activation, which only collect_function_def pops "
             "and a lambda never reaches; as the element of a list "
@@ -977,7 +977,7 @@ CASES = (
         components=(("try", 6), ("exception", 8), ("try", 10),
                     ("exception", 12)),
         runs=(Defect(
-            "#NEW:bare-except-narrowed: visit_exchandler "
+            "#268: visit_exchandler "
             "(transformer_stmt.py) gives a bare except the type Exception, "
             "so SystemExit and KeyboardInterrupt escape a handler that "
             "catches them under Python: sys.exit(3) ends the script before "
@@ -1035,11 +1035,11 @@ CASES = (
                      LAZY_IMPORT_SIGNATURE),),
         transforms=(Defect(
             LAZY_IMPORT_IN_TRY + ": nothing is evaluated; "
-            "#NEW:pyposast-lazy-import is a second layer behind it, so the "
+            "#303 is a second layer behind it, so the "
             "case flips only when both are fixed",
             LAZY_IMPORT_SIGNATURE),
                     Defect(
-            "#NEW:pyposast-lazy-import: start_by_keyword "
+            "#303: start_by_keyword "
             "(pyposast/node_helpers.py) expects an import statement to "
             "start at its keyword, and with the 'lazy' soft keyword in "
             "front it falls back to ElementDict.find_previous "
@@ -1049,7 +1049,7 @@ CASES = (
             "from at its 'from', without 'lazy'). Every lazy import sits at "
             "module level, which "
             "process_script (transformer_stmt.py) always wraps in try, so "
-            "the case flips only when #NEW:lazy-import-in-try is fixed too",
+            "the case flips only when #292 is fixed too",
             misplaced("import", 11, (4, 5)))),
     ),
     Case(
@@ -1071,7 +1071,7 @@ CASES = (
         components=(("listcomp", 5), ("setcomp", 6), ("dictcomp", 7),
                     ("genexpcomp", 8)),
         runs=(Defect(
-            "#NEW:comprehension-two-ifs: visit_generator "
+            "#277: visit_generator "
             "(transformer_expr.py) joins two or more if clauses into "
             "ast.BoolOp() built without its fields, which Python 3.15 "
             "rejects: TypeError in the transformer, and the script never "
@@ -1079,7 +1079,7 @@ CASES = (
             "BoolOp.__init__ missing 1 required positional argument: 'op'",
             since=(3, 15)),),
         transforms=(Defect(
-            "#NEW:comprehension-two-ifs: visit_generator "
+            "#277: visit_generator "
             "(transformer_expr.py) builds ast.BoolOp() without op, which "
             "Python 3.15 rejects: nothing is evaluated",
             "BoolOp.__init__ missing 1 required positional argument: 'op'",

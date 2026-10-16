@@ -1,6 +1,6 @@
 """An f-string that is the only argument of a call, next to the same
 f-string assigned to a name and passed with a second argument
-(#NEW:pyposast-fstring-call-argument)"""
+(#300)"""
 
 count = 3
 text = f"total {count}"

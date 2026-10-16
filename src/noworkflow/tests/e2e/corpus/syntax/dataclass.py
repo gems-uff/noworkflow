@@ -1,5 +1,5 @@
 """@dataclass with arguments: defaults, default_factory, order and frozen
-(#NEW:pyposast-decorated-definitions)"""
+(#298)"""
 from dataclasses import asdict, dataclass, field
 
 

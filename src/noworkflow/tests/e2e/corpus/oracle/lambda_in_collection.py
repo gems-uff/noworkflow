@@ -1,5 +1,5 @@
 """Lambdas inside collection displays and comprehensions
-(#NEW:lambda-in-collection)
+(#290)
 
 A calculator whose operators live in a dict of lambdas, a list of
 validation rules, a tuple of formatters, a set of cleanup hooks, and

@@ -1,6 +1,6 @@
 """Explicit lazy imports (PEP 810, 3.15): lazy import and lazy from ...
 import, whose module runs only when a name is first used, after two plain
-imports (#NEW:lazy-import-in-try, with #NEW:pyposast-lazy-import behind it)"""
+imports (#292, with #303 behind it)"""
 import importlib
 import sys
 

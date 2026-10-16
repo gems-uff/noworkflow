@@ -8,7 +8,7 @@ short-circuit ``and``/``or``, conditional expressions, ``if``/``elif``/
 to a subscript and to an attribute whose index or object is computed by a
 call, chained assignment, tuple swap, starred targets, and the ``else``
 clauses of ``for`` and ``while`` with and without ``break``. Under
-``-cg``: #NEW:coarse-augassign-target (``counts[note("index", 1)] += ...``).
+``-cg``: #275 (``counts[note("index", 1)] += ...``).
 """
 log = []
 

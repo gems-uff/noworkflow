@@ -1,5 +1,5 @@
 """property used as a decorator, for a getter and a setter
-(#NEW:decorated-object-without-dict, #NEW:pyposast-decorated-definitions)"""
+(#281, #298)"""
 
 
 class Temperature:
