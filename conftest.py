@@ -14,6 +14,13 @@ current directory, files written into it) must be as it was after
 collection. ``NOW_LEAK_CHECK=warn`` only reports in the LEAKS section of the
 summary instead of failing the test; ``NOW_LEAK_AUDIT=1`` also reports the
 rows each test leaves in the in-memory store.
+
+Every report, of a test or of a collection, and the traceback of an
+INTERNALERROR have this machine's hostname replaced by ``<HOSTNAME>``
+before pytest prints them (``noworkflow/tests/helpers/reports.py``, which
+also lists what the mask cannot reach): the repr of a trial carries the
+hostname, and pytest prints the reprs of frame arguments, assertion
+operands, chained exceptions and captured output.
 """
 import os
 import shutil
@@ -59,6 +66,8 @@ def pytest_configure(config):
     config._noworkflow_leak_baseline = None
     config.stash[LEAKS] = []
     config.stash[LEAK_AUDIT] = []
+    # Reads the hostname now, before any test could patch ``socket``.
+    import noworkflow.tests.helpers.reports  # noqa: F401
 
 
 def pytest_sessionstart(session):
@@ -189,6 +198,45 @@ def _check_leaks(item):
             "only reports.",
             pytrace=False,
         )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_logreport(report):
+    """Mask the hostname in a test's report before any reporter reads it
+
+    ``tryfirst`` runs this ahead of the terminal and of ``--junitxml``.
+    The report is complete here: the captured output of a subtest is
+    attached after ``pytest_runtest_makereport``.
+    """
+    _mask_hostname(report)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collectreport(report):
+    """The same for a collection error"""
+    _mask_hostname(report)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_exception_interact(node, call, report):
+    """The same before ``--pdb`` prints a report
+
+    A collection error reaches this hook before ``pytest_collectreport``;
+    a test's report was already masked, and masking twice changes nothing.
+    """
+    _mask_hostname(report)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_internalerror(excrepr, excinfo):
+    """The same for the traceback of an INTERNALERROR"""
+    from noworkflow.tests.helpers.reports import HOSTNAME_RULES, mask
+    mask(excrepr, HOSTNAME_RULES)
+
+
+def _mask_hostname(report):
+    from noworkflow.tests.helpers.reports import mask_report
+    mask_report(report)
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):

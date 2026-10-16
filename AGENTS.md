@@ -436,7 +436,12 @@ environment (user `nowtest`, a temporary home), the Prolog goldens drop the
 `environment` predicate, and `test_normalize.py` fails if a golden or a
 tracked notebook contains an environment fact, a home directory or the
 hostname. The same goes for a user's store sent with a
-bug report: look at it locally and describe what you found.
+bug report: look at it locally and describe what you found. A failing
+test's report gets pasted too: the root `conftest.py` replaces this
+machine's hostname with `<HOSTNAME>` in every report pytest prints
+(`src/noworkflow/tests/helpers/reports.py` lists what it cannot reach),
+and a test still never puts a store's environment or user id in an
+assertion message or a test id.
 
 ## Language
 

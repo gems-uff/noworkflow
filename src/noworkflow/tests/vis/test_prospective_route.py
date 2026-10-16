@@ -167,8 +167,7 @@ def analyzer_failure(trial_id):
 
     ``"<type> in <function>: <message>"``, the function being the innermost
     frame of analyzer.py. The trial is a stand-in with its id, the only
-    attribute the generator reads, so that no ``Trial`` (whose repr holds
-    ``user_id``) is an argument of a frame in a report.
+    attribute the generator reads.
     """
     try:
         generate_prospective_prov(types.SimpleNamespace(id=trial_id))

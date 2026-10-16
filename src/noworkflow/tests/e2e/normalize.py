@@ -160,6 +160,29 @@ def usable_hostname(name):
     return bool(name) and len(name) >= 4 and name.lower() != "localhost"
 
 
+def host_rules(hostname):
+    """Patterns of ``hostname`` and of its first label, longest first
+
+    Any case, and only as a whole name: not preceded by a letter, a digit,
+    a dot or a hyphen, nor followed by a letter, a digit or a hyphen. So
+    it is found after a word character (``user_<host>\\nowtest``) and
+    before a dot (``<host>.other.org``), never inside a longer label. A
+    name that ``usable_hostname`` refuses yields no pattern. The goldens
+    (``Normalizer``), their hygiene checks (``test_normalize.py``) and the
+    suite's reports (``helpers/reports.py``) mask the hostname with these
+    rules.
+    """
+    names = {hostname, hostname.split(".")[0]} if hostname else set()
+    return [
+        re.compile(
+            r"(?<![A-Za-z0-9.-]){}(?![A-Za-z0-9-])".format(re.escape(name)),
+            re.IGNORECASE,
+        )
+        for name in sorted(names, key=len, reverse=True)
+        if usable_hostname(name)
+    ]
+
+
 class Normalizer:
     """Replace the volatile parts of an output by stable placeholders
 
@@ -183,15 +206,7 @@ class Normalizer:
             (re.compile(path_pattern(path), flags), placeholder)
             for path, placeholder in pairs
         ]
-        names = {hostname, hostname.split(".")[0]} if hostname else set()
-        self.host_rules = [
-            re.compile(
-                r"(?<![A-Za-z0-9.-]){}(?![A-Za-z0-9-])".format(re.escape(name)),
-                re.IGNORECASE,
-            )
-            for name in sorted(names, key=len, reverse=True)
-            if usable_hostname(name)
-        ]
+        self.host_rules = host_rules(hostname)
         self.python_version = re.compile(
             r"(?<![\w.]){}(?![\w.])".format(re.escape(platform.python_version()))
         )

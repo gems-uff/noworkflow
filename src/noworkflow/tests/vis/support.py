@@ -11,11 +11,10 @@ never the body: several routes serve the machine's environment, and the
 trial's ``user_id`` holds the hostname.
 
 A route that crashes raises in the test (the fixtures propagate
-exceptions). ``Vis`` raises that same exception again from its own frame,
-with the traceback it had attached as a note: the note names every file,
-line and source line, but pytest's report of a failure prints the
-arguments of the frame that raised, and in the views and the models those
-are trials, whose repr carries ``user_id``.
+exceptions), with its own traceback. pytest's report of a failure prints
+the arguments of every frame, and in the views and the models those are
+trials, whose repr carries ``user_id``: the root ``conftest.py`` masks the
+hostname in every report (``helpers/reports.py``).
 
 ``Vis.routes(path)`` yields a route under each prefix the app declares for
 it: the frontend builds most URLs relative to the page, so a view answers
@@ -33,7 +32,6 @@ import json
 import subprocess
 import sys
 import tempfile
-import traceback
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -133,10 +131,7 @@ class Vis:
 
     @staticmethod
     def _request(method, route, kwargs):
-        try:
-            response = method(route, **kwargs)
-        except Exception as error:  # pylint: disable=broad-except
-            raise _without_arguments(error) from None
+        response = method(route, **kwargs)
         response.get_data()
         response.close()
         return response
@@ -155,15 +150,3 @@ class Vis:
     def routes(path):
         """``path`` (no leading slash) under the root and an experiment"""
         return ["/" + path, "/experiments/{}/{}".format(EXPERIMENT, path)]
-
-
-def _without_arguments(error):
-    """``error`` without its frames, their text kept in a note
-
-    ``traceback.format_exception`` prints files, lines and source, never
-    the values of arguments or locals; the chained exceptions go into the
-    note too, and the caller raises ``from None``.
-    """
-    error.add_note("Raised in the route:\n" + "".join(
-        traceback.format_exception(error)).rstrip())
-    return error.with_traceback(None)

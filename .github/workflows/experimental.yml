@@ -49,8 +49,8 @@ jobs:
           # which is cp1252 on Windows and UTF-8 elsewhere. 3.15 turns UTF-8
           # mode on by default (PEP 686), so the two legs read files
           # differently.
-          - { os: windows-latest, python: "3.11", min-tests: 2501, warn-encoding: "1" }
-          - { os: windows-latest, python: "3.15", min-tests: 2501, warn-encoding: "1" }
+          - { os: windows-latest, python: "3.11", min-tests: 2516, warn-encoding: "1" }
+          - { os: windows-latest, python: "3.15", min-tests: 2516, warn-encoding: "1" }
     name: test-experimental (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     env:

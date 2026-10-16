@@ -73,12 +73,12 @@ from .harness import (
 )
 from .normalize import (
     Normalizer,
+    host_rules,
     path_pattern,
     path_variants,
     prolog_facts,
     prolog_statements,
     strip_prolog_predicate,
-    usable_hostname,
 )
 
 # The repository root, when this module runs from a checkout.
@@ -546,14 +546,8 @@ def hostname_patterns(hostname=None):
     on GitHub's macOS runners it even contains a UUID-shaped segment
     (``iad20-...-<uuid>-...local``) that would otherwise be rewritten.
     """
-    hostname = socket.gethostname() if hostname is None else hostname
-    names = {hostname, hostname.split(".")[0]} if hostname else set()
-    return [
-        re.compile(r"(?<![A-Za-z0-9.-]){}(?![A-Za-z0-9-])".format(
-            re.escape(name)), re.IGNORECASE)
-        for name in sorted(names, key=len, reverse=True)
-        if usable_hostname(name)
-    ]
+    return host_rules(socket.gethostname() if hostname is None
+                      else hostname)
 
 
 @pytest.mark.parametrize("command, required", PERTURBED)
@@ -1079,12 +1073,7 @@ def environment_markers(home=None, hostname=None):
         markers.append(("the home directory",
                         re.compile(path_pattern(home), flags)))
     hostname = socket.gethostname() if hostname is None else hostname
-    names = {hostname, hostname.split(".")[0]} if hostname else set()
-    for name in sorted(names, key=len, reverse=True):
-        if usable_hostname(name):
-            markers.append(("the hostname", re.compile(
-                r"(?<![A-Za-z0-9.-]){}(?![A-Za-z0-9-])".format(
-                    re.escape(name)), re.IGNORECASE)))
+    markers.extend(("the hostname", rule) for rule in host_rules(hostname))
     return markers
 
 

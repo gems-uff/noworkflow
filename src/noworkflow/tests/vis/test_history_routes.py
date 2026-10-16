@@ -14,9 +14,8 @@ Expected values come from the store (SQL). A trial node carries
 ``user_id`` (which holds the hostname) and a ``tooltip`` that names the
 user: only their types are checked, and the bodies are never compared in an
 assertion that would print them. The routes are called through ``history``
-and ``crash``, which turn a crash into its type and message: pytest would
-print the arguments of the frame that raised, and the frames of
-``HistoryGraph`` take the trials, whose repr carries the ``user_id``.
+and ``crash``, which turn a crash into its type and message, the form in
+which a characterization compares it and a twin reads it.
 
 Besides the shared two-trial weather store, two stores of this module,
 built by ``now run`` and then given experiments and a tag in SQL, as a
@@ -116,12 +115,7 @@ def experiment_prefix(code):
 
 def crash(vis, route):
     """What GET ``route`` raises, as ``"<Type>: <message>"``; None when it
-    answers
-
-    The exception never reaches pytest, which would print the arguments of
-    the frame that raised: in ``HistoryGraph`` those are the trials, and a
-    trial's repr carries its ``user_id`` (the hostname).
-    """
+    answers"""
     try:
         vis.get(route)
     except Exception as error:  # pylint: disable=broad-except
@@ -131,8 +125,7 @@ def crash(vis, route):
 
 def history(vis, route):
     """The JSON of a history route (``Vis.json``); a crash of the route
-    fails the test as an AssertionError ``"<Type>: <message>"``, without its
-    traceback (see ``crash``)"""
+    fails the test as an AssertionError ``"<Type>: <message>"``"""
     try:
         return vis.json(route)
     except AssertionError:
