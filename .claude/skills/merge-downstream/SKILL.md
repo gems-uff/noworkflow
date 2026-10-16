@@ -22,10 +22,12 @@ Without arguments it checks `HEAD` against `origin/main`. The third argument
 says which parent is the upstream side, and git's rule decides it: **parent 1
 is whatever was checked out when the merge was made.** A merge made on the
 branch — `git merge origin/main`, or a `git pull` ("Merge branch 'master' of
-<url>") — has the upstream side as parent 2, the default. A merge made on
-`main` has it as parent 1: pass `1`. That is the shape of the one merge `main`
-still accepts — a fork PR that cannot be fast-forwarded, the only case the
-repository keeps the merge-commit option for — and of the merges in the
+<url>") — has the upstream side as parent 2, the default. So does a
+`git pull` on a maintainer's own `main`, the merge `main` gets when two
+maintainers commit there directly: its upstream side is `origin/main`. A
+branch merged into `main` has `main` as parent 1: pass `1`. That is the
+shape of a fork PR that cannot be fast-forwarded, the only pull request the
+repository still integrates with a merge commit, and of the merges in the
 history from before the fast-forward rule ("Merge pull request #N …",
 "Merge PR: …"). For a merge that upstream does not contain yet, the script
 warns when the choice looks swapped; for one already in `main` the subject
