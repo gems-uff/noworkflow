@@ -20,11 +20,11 @@ difference. The plain run drops the variables that start coverage in a
 child process, because coverage of a process that never imports noWorkflow
 warns on stderr.
 
-A known defect is a ``Defect``: the ``xfail(strict=True)`` mark where it
-shows, and the signature of the failure measured today. A test that fails
-without that signature fails outright instead of passing as expected, so a
-second defect hidden behind the first, or a new regression, cannot hide
-behind the mark.
+A known defect is a ``Defect`` (``helpers/defects.py``, re-exported here):
+the ``xfail(strict=True)`` mark where it shows, and the signature of the
+failure measured today. A test that fails without that signature fails
+outright instead of passing as expected, so a second defect hidden behind
+the first, or a new regression, cannot hide behind the mark.
 """
 import dataclasses
 import difflib
@@ -36,6 +36,9 @@ import sys
 
 import pytest
 
+from ..helpers.defects import (  # noqa: F401  (re-exported)
+    Defect, defect_marks, expect_known_failure, known_defects,
+)
 from .harness import CORPUS, PRESERVE_PREFIXES, runs_this_interpreter
 
 
@@ -58,69 +61,6 @@ class Outcome:
                           for path, digest in sorted(self.files.items()))
             )
         )
-
-
-@dataclasses.dataclass(frozen=True)
-class Defect:
-    """A known defect of one test, on the versions and systems it shows
-
-    ``reason`` starts with the issue that will fix it (``#NNN: ``) and says
-    the mechanism; ``signature`` is a piece of text that the failing run
-    prints today (an exception and its message, a line of the script's
-    output), checked by ``expect_known_failure``. The mark applies on the
-    Python versions ``since <= (major, minor) < before`` (each bound
-    optional), when ``systems`` is given only on the ``sys.platform``
-    values it lists, and only where ``condition`` holds (a fact of the
-    machine that the version and the system do not capture, computed once
-    when the test module is imported); elsewhere the test must pass. The range is the one
-    measured on the matrix, never a guess: ``strict`` turns an unexpected
-    pass into a failure.
-    """
-
-    reason: str
-    signature: str
-    since: tuple = None
-    before: tuple = None
-    systems: tuple = None
-    condition: bool = True
-
-    def applies(self):
-        if not self.condition:
-            return False
-        version = sys.version_info[:2]
-        if self.since is not None and version < tuple(self.since):
-            return False
-        if self.before is not None and version >= tuple(self.before):
-            return False
-        return self.systems is None or sys.platform in self.systems
-
-
-def defect_marks(defects):
-    """The ``xfail(strict=True)`` mark of the defects that apply here"""
-    current = [defect for defect in defects if defect.applies()]
-    if not current:
-        return []
-    return [pytest.mark.xfail(
-        strict=True, raises=AssertionError,
-        reason="; ".join(defect.reason for defect in current))]
-
-
-def expect_known_failure(defects, text):
-    """Fail outright unless ``text`` shows a known defect that applies
-
-    Call it once the test knows that it fails, with everything the failing
-    run printed. Without a defect that applies, it does nothing and the
-    assertion that follows fails as usual. ``pytest.fail`` is not an
-    ``AssertionError``, so the xfail mark cannot absorb it.
-    """
-    current = [defect for defect in defects if defect.applies()]
-    if current and not any(defect.signature in text for defect in current):
-        pytest.fail(
-            "fails, but not with the signature of its known defect ({}); "
-            "a second defect or a new regression:\n{}".format(
-                " | ".join(repr(defect.signature) for defect in current),
-                text),
-            pytrace=False)
 
 
 def plain_python(command):

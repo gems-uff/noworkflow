@@ -166,12 +166,14 @@ Optional, each for one purpose:
 - **graphviz** (the `dot` program), which renders the graphs Jupyter shows
   through the `%%dot` magic (`trial.dot`, for example) and turns the output
   of `now export dataflow` or `now export prospective` into an image. The
-  suite does not need it.
+  suite runs it in two tests of `run_dot` and skips them without it.
 - **SWI-Prolog with its shared libraries**, together with `pyswip-alt` (the
   `all` extra), for Prolog queries from Jupyter (`trial.query(...)`). `now
-  export prolog` does not need it. The suite only runs the `swipl` program,
-  for the Prolog query of the paper's running example, and skips that test
-  without it. The reference-leg container has it.
+  export prolog` does not need it. The suite only runs the `swipl` program:
+  for the Prolog query of the paper's running example, for the comparison
+  of each pattern rule with `rules.pl`, and to read Prolog exports back; it
+  skips those tests without it. The reference-leg container and the legs
+  of the `test` job of CI have it.
 
 ### Setting up `.venv`
 

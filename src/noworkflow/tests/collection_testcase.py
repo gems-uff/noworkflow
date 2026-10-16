@@ -100,6 +100,20 @@ class CollectionTestCase(unittest.TestCase):
                              "the execution of trial -1 finished successfully")
             self.executed = True
 
+    def collect(self, code, **kwargs):
+        """Collect a script that may fail, as ``now run`` does
+
+        Unlike ``execute``, it does not assert that the script succeeded:
+        it returns the message of the execution. ``kwargs`` go to the
+        ``Metascript`` (for example ``coarse_granularity=True``).
+        """
+        # pylint: disable=attribute-defined-outside-init
+        self.maxDiff = None
+        self.script(code, **kwargs)
+        self.metascript.execution.collect_provenance()
+        self.executed = True
+        return self.metascript.execution.msg
+
     def clean_execution(self):
         """Clear database and execute"""
         # pylint: disable=attribute-defined-outside-init

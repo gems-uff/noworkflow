@@ -260,11 +260,19 @@ neither executes:
   `paper-example` job replays it on Linux with the reference leg's Python
   only; the claims that depend on noWorkflow's numbering, and its goldens,
   are skipped anywhere else, and no other leg runs it at all.
-- **The optional content engines** (`puregit`, `pygit`, `gitdb`,
-  `dulwich`): the suite pins the `plain` engine; the others open a git
-  repository on connect.
-- **Jupyter:** the magics (`%now_run`, `%now_ip`), the kernel in
-  `src/noworkflow/kernel/` and the lab extension have no automated test.
+- **The optional content engines** (`pygit`, `gitdb`, `dulwich`): the
+  contract tests of `src/noworkflow/tests/persistence/` run `plain` and
+  `puregit` (which calls the `git` binary) and the in-process suite pins
+  `plain`; the others open a git repository on connect and run nowhere
+  (#255), and neither do the process-based wrappers of `parallel.py`.
+- **`rules.pl` without SWI-Prolog:** the patterns tests compare each rule
+  with its `rules.pl` twin over `now export prolog -r`, and the Prolog-fact
+  tests read exports back, only where `swipl` is on the PATH; they skip
+  elsewhere. In CI the legs of the `test` job and the `paper-example` job
+  install it, the experimental Windows legs do not.
+- **Jupyter:** the magics (`%now_run`, `%now_ip`) and the kernel in
+  `src/noworkflow/kernel/` are only imported (`test_import_smoke.py`), never
+  run (#254); the lab extension has no automated test.
 - **`push`, `pull`, `demo`:** a remote server and the demo projects are
   exercised by hand or not at all; the exception is `demo 1` (marked `slow`),
   which the reference leg runs because it syncs the `demo` extra
@@ -295,7 +303,10 @@ and what came out, in the PR.
   synthetic environment), or by hand with a real `now run` in a scratch
   directory (`cd <scratch> && uv run --project <checkout> now run
   script.py`: `now` is not on the PATH, and `uv run` only finds it from
-  inside the checkout).
+  inside the checkout). In-process code that reads a store (the models, the
+  patterns, the vis views) runs against a real one under the
+  `connected_two_trials` fixture or `connected_to(path)`, which put the
+  in-memory stores back afterwards.
 - **`now run` writes the store next to the script** (or in `--dir`), not in
   the cwd, while the files the script opens by relative path resolve against
   the cwd. A store cannot be moved either: trials record absolute paths

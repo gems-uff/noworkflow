@@ -160,6 +160,15 @@ DEF_RUNS_TWICE = Defect(
     "decorators and default expressions run twice, the first time on a "
     "function named __now_original_<name>",
     signature="wrap __now_original_greet")
+ABSTRACT_METHOD_COPY = Defect(
+    "#282: process_body (transformer_stmt.py) emits an "
+    "untransformed copy of each def as __now_original_<name>; in a class "
+    "body the copy stays in the class as _<Class>__now_original_<name>, "
+    "with the decorators applied, so the copy of an @abstractmethod is "
+    "abstract, listed in __abstractmethods__, and no subclass overrides it "
+    "under that name: ABCMeta refuses to instantiate any subclass "
+    "(TypeError)",
+    signature="_Shape__now_original_area")
 DOCSTRINGS_LOST = Defect(
     "#283: process_script (transformer_stmt.py) starts the "
     "rewritten module with noWorkflow's assignments, so the module's "
@@ -242,6 +251,20 @@ REPR_SERIALIZER = Defect(
     "__repr__, including self when match_arguments (collector.py) binds "
     "it at the start of __init__, before the attributes exist",
     signature="'Money' object has no attribute 'currency'")
+CLASS_REPR_UNDER_A_METACLASS = Defect(
+    "#340: the default serializer, "
+    "repr_serializer (persistence/serializers.py), skips the script's "
+    "__repr__ only for a class whose metaclass is type; for an ABC, or "
+    "any other metaclass, object.__getattribute__ finds the __repr__ that "
+    "the class defines for its instances in its own namespace, and "
+    "repr_serializer calls that function's original_def with the class as "
+    "self when the collector records the class statement: AttributeError "
+    "before any instance exists. Not #307, whose trigger is self before "
+    "__init__ sets its attributes; a fix of #307 that falls back to repr() "
+    "only when the script's __repr__ raises flips this case too, while a "
+    "class on which that __repr__ succeeds is still recorded with it (the "
+    "_desired twin in persistence/test_serializers.py)",
+    signature="type object 'Shape' has no attribute 'side'")
 COLLECTOR_COMPARES_VALUES = Defect(
     "#276: the collector compares the script's "
     "values with its own sentinels, key == -1 in Collector._item "
@@ -580,6 +603,7 @@ CASES = (
         case("caller_frame.py", defects=(CALLER_FRAME,)),
         case("super_call.py", defects=(SUPER_CALL,)),
         case("definitions_run_once.py", defects=(DEF_RUNS_TWICE,)),
+        case("abstract_methods.py", defects=(ABSTRACT_METHOD_COPY,)),
         case("docstrings.py", defects=(DOCSTRINGS_LOST,)),
         case("function_docstrings.py", defects=(FUNCTION_DOCSTRINGS_LOST,)),
         case("function_introspection.py", defects=(FUNCTION_SIGNATURE,)),
@@ -591,6 +615,7 @@ CASES = (
         case("decorated_property.py",
              defects=(DECORATED_OBJECT_WITHOUT_DICT,)),
         case("repr_during_init.py", defects=(REPR_SERIALIZER,)),
+        case("abc_class_repr.py", defects=(CLASS_REPR_UNDER_A_METACLASS,)),
         case("value_comparisons.py", defects=(COLLECTOR_COMPARES_VALUES,)),
         case("positional_only.py", defects=(POSITIONAL_ONLY_PARAMETERS,)),
         case("positional_only_defaults.py",

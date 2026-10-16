@@ -152,18 +152,18 @@ jobs:
         # paper-example job.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 945 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 945 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 945 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 945 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 2014 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 2014 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 2014 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 2014 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 973, reference: true }
-          - { os: macos-latest, python: "3.11", min-tests: 945 }
-          - { os: macos-latest, python: "3.15", min-tests: 945 }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 2042, reference: true }
+          - { os: macos-latest, python: "3.11", min-tests: 2014 }
+          - { os: macos-latest, python: "3.15", min-tests: 2014 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -187,6 +187,24 @@ jobs:
       - name: Install dependencies
         id: sync
         run: uv sync --locked ${{ matrix.reference && '--extra demo' || '' }}
+
+      # SWI-Prolog on every leg: the patterns tests compare each rule with
+      # rules.pl over the `now export prolog -r` of that leg's Python, and the
+      # Prolog-fact tests read exports back; without swipl they skip. Linux
+      # takes the package of the paper-example job and of the reference
+      # container, macOS Homebrew's.
+      - name: Install SWI-Prolog (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+
+      - name: Install SWI-Prolog (macOS)
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install swi-prolog
 
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference

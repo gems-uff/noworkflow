@@ -103,6 +103,7 @@ testpaths = [
     "src/noworkflow/now/persistence/models",
     "src/noworkflow/now/utils/formatter.py",
     "src/noworkflow/now/utils/functions.py",
+    "src/noworkflow/patterns/machinery.py",
 ]
 python_files = ["test_*.py", "*_test.py"]  # the second pattern matches cross_version_test.py
 addopts = "--doctest-modules --doctest-report=only_first_failure --durations=10 --strict-markers -ra --cov-report=term --cov-report=xml"

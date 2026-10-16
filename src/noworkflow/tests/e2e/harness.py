@@ -27,6 +27,7 @@ from pathlib import Path
 
 import pytest
 
+from ..helpers.persistence import connected_to
 from .normalize import Normalizer
 
 E2E_DIR = Path(__file__).resolve().parent
@@ -416,6 +417,46 @@ def two_trial_project(_two_trial_store):
     assert _two_trial_store.fingerprint() == before, (
         "the test changed the shared two-trial store or its project files; "
         "use build_weather(project, trials=2) for a store of its own")
+
+
+@pytest.fixture
+def connected_two_trials(two_trial_project):
+    """``two_trial_project``, with this process's persistence connected to it
+
+    For in-process code that reads through ``noworkflow.now.persistence``
+    (the models, the patterns, the vis views): during the test it sees the
+    real two-trial store instead of the in-memory one that the suite
+    connects on import, which comes back afterwards. Read-only, like
+    ``two_trial_project``.
+    """
+    with connected_to(two_trial_project.path):
+        yield two_trial_project
+
+
+@pytest.fixture(scope="session")
+def two_trial_prolog(_two_trial_store, tmp_path_factory):
+    """``{trial id: path}`` of ``now export prolog -r <id>`` for each trial
+
+    The facts and the rules of each trial of the two-trial store, in trial
+    order, exported once per session into files of their own (UTF-8, LF),
+    for ``helpers/swipl.py``. Without ``-t``: the trial's start and finish
+    are timestamps, not ``nil``. Exporting leaves the store unchanged
+    (checked here). The files hold the store's environment facts, and the
+    trial's user id holds the hostname: never put their text, or a solution
+    that binds those values, into an assertion message.
+    """
+    directory = tmp_path_factory.mktemp("two_trial_prolog")
+    before = _two_trial_store.fingerprint()
+    exports = {}
+    for number, trial in enumerate(_two_trial_store.trials(), 1):
+        result = _two_trial_store.run("export", "prolog", "-r", trial["id"])
+        path = directory / "trial{}.pl".format(number)
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(result.stdout)
+        exports[trial["id"]] = path
+    assert _two_trial_store.fingerprint() == before, (
+        "`now export prolog -r` changed the shared two-trial store")
+    return exports
 
 
 @pytest.fixture(scope="session")

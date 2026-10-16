@@ -41,13 +41,6 @@ SUCCEEDS = ("# script.py\n"
 class TestCollectorCleanup(CollectionTestCase):
     """What the process looks like after a collection"""
 
-    def collect(self, code):
-        """Collect a script that may fail, as ``now run`` does"""
-        self.script(code)
-        self.metascript.execution.collect_provenance()
-        self.executed = True  # pylint: disable=attribute-defined-outside-init
-        return self.metascript.execution.msg
-
     def finders(self):
         """noWorkflow's finders in sys.meta_path"""
         return [entry for entry in sys.meta_path if is_finder(entry)]
