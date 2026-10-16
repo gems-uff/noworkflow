@@ -1,9 +1,9 @@
 name: Flaky tests (multi-trial)
 
-# Ten independent runs of the suite on the reference leg. A test that fails in
-# some trials and not in others depends on timing or on the order of the tests;
-# the seed in each trial's summary reproduces the order once pytest-randomly
-# is enabled (#219).
+# Ten independent runs of the suite on the reference leg, each in its own
+# random order (pytest-randomly). A test that fails in some trials and not in
+# others depends on timing or on the order of the tests; the seed in each
+# trial's summary reproduces that order.
 on:
   workflow_dispatch:
 

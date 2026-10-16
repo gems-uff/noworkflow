@@ -178,6 +178,14 @@ numbers: tests, failures and duration. The last line of pytest has them —
 `N passed, M skipped, K xfailed in Ts` — and the count that matters is passed
 + skipped + xfailed + xpassed, the same the CI compares with `min-tests`.
 
+Note a fourth: the seed. Every run has its own order, and the header line
+`Using --randomly-seed=N` says which (`-q` hides it). Run the suite after the
+change with `--randomly-seed=N`: a red that only the new order shows is
+otherwise indistinguishable from one the change caused. When the change adds
+tests the order shifts anyway; a new red then gets a rerun of the baseline
+under the new seed, and one under `-p no:randomly`, before it is blamed on
+the change.
+
 This is not a formality. Without a baseline, a failure after the change is
 ambiguous — it may already have been broken. And if the baseline comes out
 red, **fix the environment first**: `uv sync --locked` (the `.venv` may be

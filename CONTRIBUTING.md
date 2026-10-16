@@ -212,6 +212,17 @@ uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json
 uv run now run script.py     # the `now` of the working tree
 ```
 
+The suite runs in a random order (pytest-randomly), a new one on every run,
+so a test that depends on what another left behind fails sooner or later
+instead of passing by luck. The first lines of the run print the seed, as
+does the job summary of each CI leg (`-q` hides it); the same seed replays
+the same order:
+
+```bash
+uv run pytest --randomly-seed=1234   # the order of that run
+uv run pytest -p no:randomly         # file order, to tell order from code
+```
+
 To run the suite on another Python version, uv installs the interpreter
 (`--isolated` keeps `.venv` as it is; without it, `uv run --python` recreates
 `.venv` on that version). The loop below runs every version of the Linux legs
