@@ -307,6 +307,12 @@ and what came out, in the PR.
 - **`python -m pytest` is not `uv run pytest`:** under `-m`,
   `sys.modules['__main__']` is pytest's own, and the two tests in
   `prov_execution/test_script.py` that assert its repr fail.
+- **Every run of the suite has its own order** (pytest-randomly). A red that
+  a rerun does not repeat may be the order, not the code: the header line
+  `Using --randomly-seed=N` (absent under `-q`) and `--randomly-seed=N`
+  replay it, `-p no:randomly` runs in file order. A test red under some
+  seed depends on another test; the fix is that pair, never a fixed order
+  for the suite.
 - **Trial ids are UUIDs**, not the integers of older versions. A reproduction
   that passes `1` as a trial id is talking to `sequence_key`, not to the id.
 - **A version-specific bug is proven with that version:** `uv run --isolated

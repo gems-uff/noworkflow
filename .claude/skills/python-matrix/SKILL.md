@@ -43,16 +43,19 @@ uv python list --only-installed
 legs=$(sed -n '/reference: true/!s/.*os: ubuntu-latest, python: "\([0-9.]*\)".*/\1/p' .github/workflows/ci.yml)
 [ "$(echo "$legs" | wc -w | tr -d ' ')" -eq "$(( $(grep -cE 'os: *"?ubuntu-latest' .github/workflows/ci.yml) - 1 ))" ] \
   || echo "the sed missed a Linux leg: fix it before reading any result"
+seed=$RANDOM; echo "seed $seed"
 for v in $(echo "$legs"); do
   echo "$v: $(uv python find --no-python-downloads "$v")"
-  uv run --isolated --locked --no-python-downloads --python "$v" pytest -q -p no:cacheprovider > "<scratch>/py$v.log" 2>&1
+  uv run --isolated --locked --no-python-downloads --python "$v" pytest -q -p no:cacheprovider --randomly-seed=$seed > "<scratch>/py$v.log" 2>&1
   echo "$v: exit $? — $(tail -n 1 "<scratch>/py$v.log")"
 done
 ```
 
 Each version takes minutes, one after the other; an agent runs the loop in
 the background and waits for it. `$(echo "$legs")` is there for zsh, which
-does not split a plain `$legs` into words.
+does not split a plain `$legs` into words. One seed for every version (`-q`
+hides the one pytest-randomly picks): a red on one version only is then
+that version, not an order the others never ran.
 
 - **The sed reads one leg per line.** It finds the `- { os: ..., python:
   "...", ... }` form of `ci.yml`, as `CONTRIBUTING.md`,

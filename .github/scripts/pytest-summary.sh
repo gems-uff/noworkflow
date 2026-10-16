@@ -31,7 +31,7 @@ if [ -f "$log" ]; then
   # "===== 338 passed, 5 skipped, 4 warnings in 1.81s =====", possibly with
   # " (0:01:15)" after the duration.
   line=$(grep -E '^=+ .* in [0-9.]+s( \([0-9:]+\))? =+$' "$log" | tail -n 1 || true)
-  # Printed by pytest-randomly; absent while the order is fixed (#219).
+  # Printed by pytest-randomly; absent under -p no:randomly or -q.
   seed=$(grep -oE 'Using --randomly-seed=[0-9]+' "$log" | head -n 1 | grep -oE '[0-9]+$' || true)
 fi
 

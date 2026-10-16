@@ -82,6 +82,9 @@ readme = {file = "README.md", content-type = "text/markdown"}
 dev = [
     "pytest>=8.3",
     "pytest-cov>=5",
+    # 5.0: the first version whose order depends on the seed alone, so the
+    # seed in a CI summary reproduces that order on any machine.
+    "pytest-randomly>=5",
     "ruff>=0.14",
     "bandit[toml]>=1.7.10",
     "pip-audit>=2.7",
