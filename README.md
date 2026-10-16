@@ -504,6 +504,18 @@ To clean Jupyter Notebook using the collected provenance, run:
 $ now clean [trial]
 ```
 
+Using noWorkflow with an AI agent
+---------------------------------
+
+The repository ships a skill, [`skills/noworkflow/SKILL.md`](skills/noworkflow/SKILL.md), that teaches an AI coding agent how to run your scripts under noWorkflow and analyze the trials: the commands, where the data lives, research recipes and the known limitations. With Claude Code, install it for all your projects with:
+
+```bash
+$ mkdir -p ~/.claude/skills/noworkflow
+$ curl -fsSL https://raw.githubusercontent.com/gems-uff/noworkflow/main/skills/noworkflow/SKILL.md -o ~/.claude/skills/noworkflow/SKILL.md
+```
+
+or put it in `.claude/skills/noworkflow/` inside one project. Other agents that read skills or instruction files can be pointed at the same file. Then ask in plain language, for example "run simulation.py with noWorkflow and tell me what changed since the last run". Note that a provenance store records the whole environment of the machine (environment variables, user name, hostname): the skill tells the agent to warn you before sharing it.
+
 Contributing
 ------------
 
