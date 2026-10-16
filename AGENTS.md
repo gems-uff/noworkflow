@@ -241,8 +241,16 @@ neither executes:
   and encodings differ there, and the versions in between are not run on
   either.
 - **Syntax per Python version:** the collector rewrites the AST, and each
-  Python version adds nodes. A construct the examples do not use is not
+  Python version adds nodes. The syntax corpus of the e2e tests
+  (`corpus/syntax/`, `test_syntax_corpus.py`) traces one script per
+  construct on every leg, and its marks are the map of what the collector
+  cannot handle yet; a construct outside it and outside the examples is not
   covered, on any version.
+- **What the oracle compares:** `test_oracle.py` runs each script of
+  `corpus/oracle/` with plain Python and with `now run`, under the
+  harness's synthetic UTF-8 environment and with the flags its cases name;
+  an encoding the legacy locale chooses, another flag of `now run` or a
+  construct no script uses is compared nowhere.
 - **The exports off the reference leg:** goldens compare `prolog`, `prov`,
   `dataflow` and `prospective` on the reference leg only (Linux, the newest
   blocking Python); on every other leg nothing compares their output.

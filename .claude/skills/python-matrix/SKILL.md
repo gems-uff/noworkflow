@@ -11,8 +11,9 @@ versions more changes than the version string:
 
 - **The AST.** Each version adds nodes, and the collector rewrites the AST of
   the traced script (`prov_definition/`, `prov_execution/`) through
-  `pyposast`. A construct the examples do not use is covered on no version
-  (`AGENTS.md`, "Blind spots of the suite").
+  `pyposast`. A construct that neither the syntax corpus of the e2e tests
+  nor the examples use is covered on no version (`AGENTS.md`, "Blind spots
+  of the suite").
 - **The standard library.** On Windows, `ntpath.isabs` stopped taking a
   rooted path without a drive as absolute; from 3.15, UTF-8 mode is on by
   default (PEP 686), so an `open()` without `encoding=` reads differently at
@@ -102,9 +103,20 @@ cd <scratch> && uv run --isolated --locked --no-python-downloads --python <v> --
 ```
 
 The script's own output must be there, with neither `Skipping transformer`
-nor a traceback, and `now show -d` (same prefix) lists its definitions. A
-construct that no test traces is checked this way or not at all; one that
-fails becomes a `Bug` and a test that traces it.
+nor a traceback, and `now show -d` (same prefix) lists its definitions.
+
+The syntax corpus does this for each construct it holds, on every leg:
+`src/noworkflow/tests/e2e/corpus/syntax/` has one script per construct,
+and `test_syntax_corpus.py` runs each one twice, once against plain Python
+(the comparator of `oracle.py`) and once under `now run -v`, where the
+transformer must have run (no `Skipping transformer`, the construct's code
+components on its lines, evaluations recorded). A construct missing there
+is checked by hand as above; one that fails becomes a `Bug`, a script in
+the corpus and an entry in its `CASES`, marked on the versions where it
+fails. That range is measured, never guessed: the module run with
+`--runxfail` on each version (the loop of the previous section, with the
+module's path) shows every case without its marks, and `strict` turns a
+mark on a version where the case passes into a failure.
 
 ## Off this machine: the container, the legs, Windows
 
@@ -253,6 +265,9 @@ From its first beta, the next version runs on Linux in `experimental.yml`:
   Whether the pre-release leg also syncs that group and runs `-m paper` is
   the maintainer's call.
 - Locally the pre-release is an install: ask before it.
+- The grammar the version adds (the syntax PEPs of its "What's New") enters
+  the syntax corpus as scripts gated by that version (`min_py`), measured
+  on the pre-release like every other case.
 - What fails is triaged by the categories above. On a pre-release the third
   is the usual one: `pyposast` and the grammar first, and every package
   without a wheel for that interpreter builds from source (those with C or
@@ -319,7 +334,7 @@ it included, leaves in steps of its own, measured like any refactoring
 
 - The middle versions on macOS and Windows, and Windows as a blocking leg.
 - The goldens and the paper's running example off the reference platform.
-- A construct no test traces, on any version: the AST is exercised only
-  where a test runs a script that contains it ("A green count does not prove
-  the grammar").
+- A construct outside the syntax corpus and the examples, on any version:
+  the AST is exercised only where a test runs a script that contains it ("A
+  green count does not prove the grammar").
 - The extras (`demo`, `notebook`): the legs sync the lock without them.
