@@ -225,15 +225,26 @@ against in-memory stores; the end-to-end tests (`src/noworkflow/tests/e2e/`)
 run `now` as a process on a real store in a temporary directory. What
 neither executes:
 
-- **Commands the e2e tests do not run:** `vis` (the server), `push`, `pull`,
-  `kernel`, `debug`, `evaluation`, `clean`, and `demo` outside the reference
-  leg (see below). For the commands they do run, only the flags their tests
-  name are covered.
-- **`now vis`:** the Flask routes, the push/pull/experiment endpoints, the
-  JavaScript. The `frontend` job only proves that the committed bundle matches
-  the sources and that the extension type-checks. By hand, `golden-run` (step
-  4) and the smoke of `rebuild-vis` serve a corpus store and fetch the routes
-  `read_store.py` lists.
+- **Commands the e2e tests do not run:** `vis` (the server; its routes run
+  in process, see below), `push`, `pull`, `kernel`, `debug`, `evaluation`,
+  `clean`, and `demo` outside the reference leg (see below). For the
+  commands they do run, only the flags their tests name are covered.
+- **`now vis`:** the server itself (`now vis` as a process: `cmd_vis.py`,
+  the port, `--host`, `--dir`); the write routes (experiments, groups,
+  annotations, remotes, the collaboration import and the files it receives)
+  and push and pull against them (#256); what the `now` that the
+  `/commands/*` routes start actually does; the JavaScript. The read routes,
+  `/db/query` included, run in process through Flask's test client
+  (`src/noworkflow/tests/vis/`) on stores that `now run` builds in a
+  temporary directory; the rows only push and pull create are added through
+  the models or in SQL. The `/commands/*` routes that start `now` run with
+  `subprocess.run` replaced, so only the argv they build and how they answer
+  are checked. No test gets a PDF out of `flow.pdf` (#128 fails first), and
+  `prospective.dot` is drawn for a handful of scripts. The `frontend` job
+  proves that the committed bundle matches the sources, that the extension
+  type-checks and that the count of `tsc` errors of the vis does not grow.
+  By hand, `golden-run` (step 4) and the smoke of `rebuild-vis` serve a
+  corpus store over a real port and fetch the routes `read_store.py` lists.
 - **Windows and macOS:** the matrix runs on Ubuntu for every Python version;
   macOS runs only the floor and the newest version, and Windows the same two
   as experimental legs that do not block and, while `experimental.yml` is

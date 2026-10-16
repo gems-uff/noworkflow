@@ -152,18 +152,18 @@ jobs:
         # paper-example job.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 2017 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 2017 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 2017 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 2017 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 2501 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 2501 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 2501 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 2501 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 2045, reference: true }
-          - { os: macos-latest, python: "3.11", min-tests: 2017 }
-          - { os: macos-latest, python: "3.15", min-tests: 2017 }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 2529, reference: true }
+          - { os: macos-latest, python: "3.11", min-tests: 2501 }
+          - { os: macos-latest, python: "3.15", min-tests: 2501 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -343,6 +343,7 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build the vis bundle
+        id: build
         run: npx lerna run build --scope=@noworkflow/nowvis --include-dependencies
 
       # Type-check of the Jupyter extension. Its full `build` needs jupyterlab
@@ -358,6 +359,17 @@ jobs:
             echo "::error file=src/noworkflow/now/vis/static/dist/bundle.js::bundle.js differs from a fresh build of src/frontend. Rebuild it (cd src/frontend && npm ci && npx lerna run build --scope=@noworkflow/nowvis --include-dependencies; see The frontend in CONTRIBUTING.md) and commit it with the source change."
             exit 1
           fi
+
+      # babel strips the types of the vis without checking them, so a type
+      # error never fails the build. The argument is the ceiling of `tsc
+      # --noEmit` errors in @noworkflow/nowvis: the step fails above it and
+      # says when the count is below, so lower it in the PR that removes
+      # errors; raise it only with the reason written in the PR. It needs the
+      # lib/ of the packages the vis imports, which the build writes, and
+      # runs whatever the bundle comparison said.
+      - name: Type-check the vis (baseline)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bash ../../.github/scripts/tsc-baseline.sh 8
 
   # The running example of the noWorkflow 2 paper (#257), replayed from
   # src/noworkflow/tests/e2e/corpus/paper_example: a red here means the tool

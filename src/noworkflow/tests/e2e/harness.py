@@ -410,7 +410,8 @@ def two_trial_project(_two_trial_store):
     absolute paths). A test that changes the store or the project files
     fails here; build your own with ``build_weather(project, trials=2)``.
     Besides ``run`` and ``restore``, commands that build a trial's graphs
-    write to the store: ``now diff -a`` and ``-d`` cache trees there.
+    write to the store: ``now diff -a`` and ``-d`` cache trees there, and
+    so does every graph route of ``now vis``, even with cache 0.
     """
     before = _two_trial_store.fingerprint()
     yield _two_trial_store

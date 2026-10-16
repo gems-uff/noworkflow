@@ -316,6 +316,18 @@ Commit `bundle.js` together with the source change. The build also rewrites
 the checkout, your home directory included. The last line above discards it;
 it is not committed.
 
+The bundle is built by babel, which strips the TypeScript types without
+checking them, so the same job also counts the `tsc` errors of the vis and
+fails when the count goes above a baseline. After the build above, from the
+repository root:
+
+```bash
+bash .github/scripts/tsc-baseline.sh "$(sed -n 's/.*tsc-baseline.sh \([0-9]*\).*/\1/p' .github/workflows/ci.yml)"
+```
+
+When a change removes errors, lower the number in the `frontend` job of
+`.github/workflows/ci.yml` to the new count in the same commit.
+
 `npm run build` builds every package, the Jupyter extension included, and
 that one calls `jupyter labextension build`. It fails with
 `jupyter: command not found` unless Jupyter is in `.venv` (`uv sync --locked

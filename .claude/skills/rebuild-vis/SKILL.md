@@ -70,10 +70,16 @@ npx lerna run build --scope=@noworkflow/nowvis --include-dependencies
 npx lerna run build:lib --scope=@noworkflow/labextension
 git restore ../noworkflow/now/vis/static/dist/bundle.js.map
 cd ../.. && git status --short
+bash .github/scripts/tsc-baseline.sh "$(sed -n 's/.*tsc-baseline.sh \([0-9]*\).*/\1/p' .github/workflows/ci.yml)"
 ```
 
 These are the job's steps, plus the restore: seconds with npm's cache warm,
-more when `npm ci` has to fetch a package.
+more when `npm ci` has to fetch a package. The last line is the job's `tsc`
+baseline: babel builds the bundle without checking types, so the count of
+type errors is checked apart, and it only means something after the build
+(without the `lib/` it writes, every `@noworkflow/*` import is one more
+error). A change that removes errors lowers the number in the job in the
+same commit.
 
 - **`npm ci`, never `npm install`.** `ci` installs exactly what
   `package-lock.json` says and leaves it as it is; `install` may rewrite the
