@@ -35,6 +35,10 @@ defaults:
   run:
     shell: bash
 
+# The CPython that uv downloads, never the runner's: see ci.yml.
+env:
+  UV_MANAGED_PYTHON: "1"
+
 jobs:
   test-experimental:
     strategy:

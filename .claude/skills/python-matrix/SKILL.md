@@ -24,7 +24,8 @@ versions more changes than the version string:
   wheel for a package and build it from source.
 - **The interpreter build.** Two builds of the same version can differ in
   what they compile in; a test that depends on such a module may skip on one
-  and run on the other.
+  and run on the other. CI runs only uv's (python-build-standalone); a local
+  interpreter from another manager is another build.
 
 The rule that decides the range and the matrix is "Python versions" in
 `AGENTS.md`; this skill is how to apply it. Everything here runs outside the
@@ -68,6 +69,9 @@ that version, not an order the others never ran.
   it fail instead, and the download waits for the maintainer's go-ahead
   (`AGENTS.md`). `uv python find` shows which interpreter will run — it may
   be one from another manager, at another patch level than CI's.
+  `--managed-python` (on `uv python find` and `uv run`) refuses it, as CI
+  does; where only another manager's build is installed, CI's build is an
+  install.
 - **`--isolated` is not optional**: without it `uv run --python` recreates
   `.venv` on that version (`safe-refactor`, step 5). **`--locked`** makes a
   `uv.lock` that disagrees with `pyproject.toml` fail, as CI's `uv sync
@@ -171,10 +175,14 @@ gh run view <id> --log | grep 'Using CPython'
 - **The summary line of each leg** comes from the log, one call for every
   leg (the `awk` above): the job summary that `pytest-summary.sh` writes is
   not readable through the API.
-- **Which interpreter each leg ran.** uv takes a matching Python already on
-  the runner before downloading one, so some legs run the image's build and
-  others python-build-standalone; the `Using CPython` lines say which, and a
-  difference between two legs of the same version starts there.
+- **Which interpreter each leg ran.** The three workflows set
+  `UV_MANAGED_PYTHON` at the top, so every leg runs python-build-standalone,
+  the build of the reference container and of uv on a maintainer's machine,
+  and no leg changes when GitHub updates an image. A `Using CPython` line
+  without `interpreter at:` is a download; one with a path of the image
+  after it (`/usr/bin`, `/usr/local/bin`, `/opt/homebrew`, the hosted tool
+  cache) means a job lost the setting. A new workflow that installs uv
+  sets it too.
 
 ## Reading a failure that shows on one leg
 

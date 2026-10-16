@@ -29,6 +29,16 @@ defaults:
   run:
     shell: bash
 
+# Every job runs the CPython that uv downloads (python-build-standalone),
+# never a Python of the runner image. Without this, uv takes a matching
+# interpreter already on the runner, so which build a leg ran depended on
+# the image and changed when GitHub updated it, and a build without a module
+# that a test needs skipped it on that leg only. This is the build of the
+# reference container (.github/reference-leg/) and of uv on a maintainer's
+# machine. experimental.yml and flaky.yml set the same.
+env:
+  UV_MANAGED_PYTHON: "1"
+
 jobs:
   # Checks that need neither the matrix nor the frontend, in a job of their own
   # and in parallel with the suite, so a cheap red here does not hide the
@@ -170,10 +180,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # uv takes a matching interpreter already on the runner (the image's)
-      # and downloads python-build-standalone only when none matches, so a
-      # version runs whether or not the image has it. The "Using CPython"
-      # line of the "Install dependencies" step says which one a leg ran.
+      # setup-uv hands python-version to uv as UV_PYTHON, and uv downloads
+      # python-build-standalone for it even when the image has a matching
+      # Python (UV_MANAGED_PYTHON, at the top). The "Using CPython" line of
+      # the "Install dependencies" step says which one a leg ran: a path of
+      # the image after "interpreter at:" (/usr/bin, /usr/local/bin,
+      # /opt/homebrew, the hosted tool cache) means the setting was lost.
       - name: Install uv and Python ${{ matrix.python }}
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:

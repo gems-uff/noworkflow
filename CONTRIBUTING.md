@@ -137,7 +137,11 @@ owns it, so this section stays right when the versions move.
   release: `uv python install` fails with "No download found". Update it
   with `uv self update`, or with the package manager that installed it.
 - **Python, through uv.** No system Python is needed: `uv sync` downloads
-  the interpreter it is asked for (see "Setting up `.venv`" below).
+  the interpreter it is asked for (see "Setting up `.venv`" below). When uv
+  has none of its own for a version, it takes a matching Python that another
+  manager installed instead of downloading one, while CI runs only the ones
+  uv downloads (`UV_MANAGED_PYTHON` in the workflows);
+  `--managed-python` does the same locally.
 - **Node and npm, only to change `src/frontend`** (the vis and the Jupyter
   extension). Use the major of the `frontend` job, which is the one that
   reproduces the committed `bundle.js`:
