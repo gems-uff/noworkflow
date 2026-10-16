@@ -9,7 +9,7 @@ pins, the advisories that ``pip-audit`` ignores in ``ci.yml``, the lint and
 coverage exclusions of ``py2module.py``, the e2e tests that characterize
 the CLI, the committed ``bundle.js``, the documented ``now vis`` default,
 the way the suite keeps its store in memory and its corpus out of
-collection. One test per fact, named as the fact; the docstring says why
+collection, the uv-managed Python of the CI legs. One test per fact, named as the fact; the docstring says why
 the code depends on it, and the assert message says what to edit, and under
 which issue, when it falls.
 
@@ -923,3 +923,54 @@ def test_no_corpus_item_or_module_in_this_session(request):
             modules.append("module {} ({})".format(name, filename))
     assert not items and not modules, MSG_CORPUS.format(
         "\n  ".join(items + sorted(modules)))
+
+
+# 11. The CI legs run the Python that uv downloads -----------------------------
+
+WORKFLOWS = Path(".github") / "workflows"
+
+
+def _top_level_env(text):
+    """The ``KEY: value`` lines of a workflow's top-level ``env:`` block"""
+    env, inside = {}, False
+    for line in text.splitlines():
+        if re.fullmatch(r"env:\s*", line):
+            inside = True
+        elif inside and line.strip() and not line.lstrip().startswith("#"):
+            if not line.startswith(" "):
+                inside = False
+            else:
+                key, _, value = line.strip().partition(":")
+                env[key] = value.split("#")[0].strip().strip("'\"")
+    return env
+
+
+def test_every_workflow_that_installs_uv_requires_uv_managed_python(request):
+    """Each workflow that runs setup-uv sets ``UV_MANAGED_PYTHON`` at the top
+
+    Without it, uv takes a matching Python of the runner image before it
+    downloads one, so which build a leg runs depends on the image and
+    changes with it. The comments over the setup steps, the "Which
+    interpreter each leg ran" check of the python-matrix skill and the
+    parity with the reference container (.github/reference-leg/) rely on
+    every job running python-build-standalone.
+    """
+    directory = request.config.rootpath / WORKFLOWS
+    if not directory.is_dir():
+        pytest.skip("{} is not here: the suite runs outside the checkout".format(
+            WORKFLOWS.as_posix()))
+    workflows = {path.name: path.read_text(encoding="utf-8")
+                 for path in sorted(directory.glob("*.y*ml"))}
+    with_uv = [name for name, text in workflows.items()
+               if "astral-sh/setup-uv@" in text]
+    assert "ci.yml" in with_uv, (
+        "ci.yml no longer runs astral-sh/setup-uv: this premise looks for "
+        "the workflows that install uv by that action. Point it at what "
+        "installs uv now.")
+    missing = [name for name in with_uv
+               if _top_level_env(workflows[name]).get("UV_MANAGED_PYTHON") != "1"]
+    assert not missing, (
+        "{} run(s) astral-sh/setup-uv without UV_MANAGED_PYTHON: \"1\" in the "
+        "top-level env: of the workflow, so a leg may run the runner image's "
+        "Python instead of the one uv downloads. Add it, with the pointer to "
+        "the comment in ci.yml (#264).".format(", ".join(missing)))
