@@ -2,7 +2,7 @@ digraph e_1 {
     rankdir=RL;
     node[fontsize=20]
     e_18 [label="17 open(sys.argv[1])" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
-    a_1 [label="input.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+    a_<A1> [label="input.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
     e_8 [label="-1 open" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_17 [label="17 sys.argv[1]" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_20 [label="17 handle" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
@@ -33,17 +33,17 @@ digraph e_1 {
     e_7 [label="13 plot" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_50 [label="21 size" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_55 [label="22 open(\"result.txt\", \"w\", newline=\"\n\")" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
-    a_2 [label="result.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+    a_<A2> [label="result.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
     e_52 [label="22 \"result.txt\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_53 [label="22 \"w\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_54 [label="22 \"\n\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_57 [label="22 handle" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_62 [label="23 handle.write(data)" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
     e_59 [label="23 handle.write" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
-    e_18 -> a_1 [style="dashed"];
+    e_18 -> a_<A1> [style="dashed"];
     e_18 -> e_8 ;
     e_18 -> e_17 ;
-    a_2 -> e_55 [style="dashed"];
+    a_<A2> -> e_55 [style="dashed"];
     e_20 -> e_18 [arrowhead="empty"];
     e_22 -> e_20 [arrowhead="empty" style="dashed"];
     e_23 -> e_22 ;

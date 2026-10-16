@@ -5,9 +5,11 @@
 
 Two runs of the same script on the same machine differ in trial ids, clock
 readings, checkpoints, memory addresses, the PID and the directories they ran
-in; on another machine also in the hostname and the install paths. Everything
-else is the output under test and stays: content hashes (SHA-1), sequence
-keys, automatic tags, code component and evaluation ids, line numbers.
+in; on another machine also in the hostname and the install paths; in
+another environment also in the ids of file accesses, which count the files
+the imported libraries read there. Everything else is the output under test
+and stays: content hashes (SHA-1), sequence keys, automatic tags, code
+component and evaluation ids, line numbers.
 
 The rules come from measuring two stores built identically in two fresh
 directories, and ``test_normalize.py`` pins them. They mask by shape, not by
@@ -42,6 +44,12 @@ UUID = re.compile(
 )
 # ``now export ast -d`` names nodes after ``id()`` of the AST node.
 AST_NODE = re.compile(r"\bnode\d{5,}\b")
+# ``now export dataflow`` names a file access ``a_<id>``, and the id counts
+# every access of the trial, the ones the graph leaves out included: the
+# files the libraries the script imports read from the environment, such as
+# the ``entry_points.txt`` of every installed distribution. Only in the dot
+# syntax (``a_1 [``, ``a_1 ->``, ``-> a_1``), so a script's ``a_1`` stays.
+ACCESS_NODE = re.compile(r"\ba_\d+(?= \[| ->)|(?<=-> )a_\d+\b")
 # ``str(datetime)``: the fraction is omitted when the microsecond is zero.
 TIMESTAMP = re.compile(
     r"\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?\b"
@@ -199,6 +207,7 @@ class Normalizer:
         text = NOWORKFLOW_VERSION.sub("noWorkflow <NOWORKFLOW_VERSION>", text)
         text = number(UUID, "<UUID{}>", text)
         text = number(AST_NODE, "node<N{}>", text)
+        text = number(ACCESS_NODE, "a_<A{}>", text)
         text = TIMESTAMP.sub("<TIMESTAMP>", text)
         text = DURATION.sub("<DURATION>", text)
         text = EPOCH.sub("<EPOCH>", text)

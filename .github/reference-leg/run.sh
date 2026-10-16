@@ -16,9 +16,8 @@
 # keeps the host's __pycache__ (compiled with host paths) out of the run.
 # The venv has the `demo` extra (as the reference leg of CI) and the `paper`
 # group, and the image has SWI-Prolog for the paper's query. `-m paper` runs
-# without the extra instead: with matplotlib installed the example records
-# more files and its goldens shift, and the `paper-example` job has no
-# matplotlib either. The tests of the paper's running
+# without the extra instead, in the environment of the `paper-example` job,
+# which has no matplotlib. The tests of the paper's running
 # example run here, and their goldens are recorded here like the others.
 set -euo pipefail
 

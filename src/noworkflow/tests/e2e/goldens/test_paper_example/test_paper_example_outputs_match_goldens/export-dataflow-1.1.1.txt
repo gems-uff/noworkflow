@@ -7,7 +7,7 @@ digraph e_1 {
         label = "get_df";
         e_10 [label="33 return" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
         e_17 [label="10 pd.read_csv('creditcard.csv', encoding='utf-8')" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
-        a_1 [label="creditcard.csv" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+        a_<A1> [label="creditcard.csv" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
         e_13 [label="10 pd.read_csv" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
         e_14 [label="10 'creditcard.csv'" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
         e_16 [label="10 'utf-8'" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
@@ -101,7 +101,7 @@ digraph e_1 {
         e_132 [label="28 f1_score" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
         e_136 [label="28 f1_metric" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
         e_141 [label="30 open(\"out.txt\", \"w\")" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
-        a_113 [label="out.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+        a_<A2> [label="out.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
         e_137 [label="-1 open" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
         e_139 [label="30 \"out.txt\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
         e_140 [label="30 \"w\"" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
@@ -114,11 +114,11 @@ digraph e_1 {
         e_156 [label="30 open(\"out.txt\", \"w\").writ ... )+\"\nF1=\"+str(f1_metric))" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
     }
     e_8 [label="26 save_metrics" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
-    e_17 -> a_1 [style="dashed"];
+    e_17 -> a_<A1> [style="dashed"];
     e_17 -> e_13 ;
     e_17 -> e_14 ;
     e_17 -> e_16 ;
-    a_113 -> e_141 [style="dashed"];
+    a_<A2> -> e_141 [style="dashed"];
     e_10 -> e_17 [arrowhead="empty"];
     e_10 -> e_2 ;
     e_19 -> e_10 [arrowhead="empty"];

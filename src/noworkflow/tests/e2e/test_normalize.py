@@ -27,7 +27,8 @@ blind. This module pins both sides.
   symlink, the hostname after a word character, timestamps without a
   fraction, exponent checkpoints, an empty volatile value, the Python and
   noWorkflow versions, the key order of ``Normalizer.json``, the difflib
-  hints), plus the documented limitation of the checkpoint rule.
+  hints, the dataflow access ids that another environment shifts), plus
+  the documented limitation of the checkpoint rule.
 - Golden hygiene, on every leg (no golden platform needed): no orphan
   golden directory, no stray file, no environment value in a golden or in a
   tracked notebook, and ``goldens/REFERENCE`` names the CI reference leg.
@@ -601,6 +602,48 @@ def test_short_checkpoints_are_masked_by_position():
     assert lines[5] == ("    Checkpoint changed from <CHECKPOINT> to "
                         "<CHECKPOINT>")
     assert lines[6] == "  Return value: 0.5"
+
+
+@pytest.mark.parametrize("mode", ("activation", "fineGrain"))
+def test_access_ids_shifted_by_the_environment_normalize_alike(
+        dataflow_twins, mode):
+    """A dataflow whose access ids are all higher, as when the imported
+    libraries read more files of another environment first, normalizes to
+    the same text; which access is which still shows"""
+    project = dataflow_twins[0]
+    raw = project.run("export", "dataflow", "-m", mode).stdout
+    ids = sorted({int(n) for n in re.findall(r"\ba_(\d+) \[", raw)})
+    assert len(ids) >= 2, "the dataflow corpus should draw two accesses"
+    shifted = re.sub(r"\ba_(\d+)\b",
+                     lambda match: "a_{}".format(int(match.group(1)) + 7), raw)
+    assert shifted != raw
+    assert project.normalize(shifted) == project.normalize(raw)
+    # Control: two accesses that trade labels are another graph.
+    first, second = ("a_{} [label=".format(n + 7) for n in ids[:2])
+    swapped = (shifted.replace(first, "<FIRST>").replace(second, first)
+               .replace("<FIRST>", second))
+    assert project.normalize(swapped) != project.normalize(raw)
+
+
+def test_access_nodes_are_renumbered_only_in_the_dot_syntax():
+    """``a_<id>`` is renumbered by first use where dot names a node or an
+    edge end; the same text in a label or a script line stays"""
+    text = (
+        '    e_3 [label="2 open(\\"a_12\\")"];\n'
+        '    a_12 [label="out.txt"];\n'
+        '    a_9 [label="in.txt"];\n'
+        "    a_12 -> e_3 [style=\"dashed\"];\n"
+        "    e_3 -> a_9 ;\n"
+        "  3: a_12 = a_9\n"
+    )
+    assert Normalizer(hostname=HOST)(text) == (
+        '    e_3 [label="2 open(\\"a_12\\")"];\n'
+        '    a_<A1> [label="out.txt"];\n'
+        '    a_<A2> [label="in.txt"];\n'
+        "    a_<A1> -> e_3 [style=\"dashed\"];\n"
+        "    e_3 -> a_<A2> ;\n"
+        "  3: a_12 = a_9\n"
+    )
 
 
 def test_hostname_with_a_uuid_survives_perturbation():

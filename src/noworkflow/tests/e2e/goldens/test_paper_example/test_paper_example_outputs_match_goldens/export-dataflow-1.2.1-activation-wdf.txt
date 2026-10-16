@@ -7,7 +7,7 @@ digraph e_1 {
         label = "get_df";
         e_10 [label="33 return" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
         e_17 [label="10 pd.read_csv('creditcard.csv', encoding='utf-8')" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
-        a_1 [label="creditcard.csv" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
+        a_<A1> [label="creditcard.csv" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
     }
     e_26 [label="34 df.drop('Class', axis=1)" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
     subgraph cluster_34 {
@@ -43,7 +43,7 @@ digraph e_1 {
         label = "save_metrics";
         e_132 [label="44 return" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
     }
-    e_17 -> a_1 [style="dashed"];
+    e_17 -> a_<A1> [style="dashed"];
     e_10 -> e_17 [arrowhead="empty"];
     e_26 -> e_10 [arrowhead="empty" style="dashed"];
     e_34 -> e_40 [arrowhead="empty"];
