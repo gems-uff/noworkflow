@@ -652,6 +652,16 @@ PREEXEC_FN_CALLBACK = Defect(
     "never runs. A preexec_fn that takes *args and **kwargs, or one "
     "parameter with a default, absorbs those arguments and works",
     signature="Exception occurred in preexec_fn")
+DISTRIBUTION_LOOKUP = Defect(
+    "#417: the loaders of prov_deployment/py3module.py call "
+    "Deployment.get_version (prov_deployment/deployment.py) for every "
+    "module the script imports for the first time, and get_version looks "
+    "the module's distribution up through importlib.metadata.distribution, "
+    "which asks every finder in sys.meta_path that has "
+    "find_distributions, the script's own among them: the script's finder "
+    "answers a question per module that plain Python never asks, and its "
+    "code runs traced",
+    signature="asked for: ['sched'")
 
 
 def case(script, *args, flags=(), defects=(), suffix="", marks=()):
@@ -784,6 +794,7 @@ CASES = (
              marks=(NEEDS_FORK,)),
         case("subprocess_preexec_fn.py", defects=(PREEXEC_FN_CALLBACK,),
              marks=(NEEDS_PREEXEC_FN,)),
+        case("distribution_finder.py", defects=(DISTRIBUTION_LOOKUP,)),
     ]
 )
 
