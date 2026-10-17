@@ -33,6 +33,8 @@ import os
 import shutil
 import subprocess
 import sys
+import sysconfig
+import tempfile
 
 import pytest
 
@@ -40,6 +42,14 @@ from ..helpers.defects import (  # noqa: F401  (re-exported)
     Defect, defect_marks, expect_known_failure, known_defects,
 )
 from .harness import CORPUS, PRESERVE_PREFIXES, runs_this_interpreter
+
+# Whether the standard library is on another drive than the projects,
+# which live under pytest's temporary directory: Windows with Python
+# installed on another drive, as on the CI runners that use
+# python-build-standalone. The condition of the #294 defects.
+STDLIB_ON_ANOTHER_DRIVE = os.name == "nt" and (
+    os.path.splitdrive(sysconfig.get_paths()["stdlib"])[0].lower()
+    != os.path.splitdrive(tempfile.gettempdir())[0].lower())
 
 
 @dataclasses.dataclass

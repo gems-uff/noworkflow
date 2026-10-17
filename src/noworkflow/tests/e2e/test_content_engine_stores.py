@@ -21,13 +21,16 @@ such a store:
 - a script that reads a file under ``.git/`` makes ``now run`` crash after
   the trial is stored;
 - under ``now run``, a script that starts a process with the spawn start
-  method fails: its ``__main__`` has no ``__spec__``.
+  method fails: its ``__main__`` has no ``__spec__``; on Windows, with
+  Python on another drive than the project, the import of the spawn
+  machinery fails first (#294).
 
 What a test expects comes from the store's SQLite file, from the test's own
 ``git`` and from the script's meaning. Each known defect has a
 characterization and a ``_desired`` twin decorated with ``known_defects``.
 The tests that depend on tree paths or on ``git gc`` are not run on
-Windows, where neither was measured.
+Windows, where neither was measured. The script writes its file in binary
+mode, so the file holds the same bytes on every system.
 """
 import os
 import shutil
@@ -40,20 +43,23 @@ from ..persistence.engines import (
     IDENTITY, IDENTITY_EMAIL, IDENTITY_NAME, NOWORKFLOW_AUTHOR, git_blob_hex,
     shown)
 from .harness import last_line
-from .oracle import Defect, known_defects
+from .oracle import STDLIB_ON_ANOTHER_DRIVE, Defect, known_defects
 
 pytestmark = pytest.mark.skipif(
     shutil.which("git") is None, reason="the puregit engine needs `git`")
 
 SCRIPT = (
-    "with open('data.txt', 'w') as handle:\n"
-    "    handle.write('hello\\n')\n"
+    "with open('data.txt', 'wb') as handle:\n"
+    "    handle.write(b'hello\\n')\n"
 )
 DATA = b"hello\n"
 # Where the plain engine looks for the script's content: the path of git's
-# blob id in the plain layout, content/<h[:2]>/<h[2:]>.
+# blob id in the plain layout, content/<h[:2]>/<h[2:]>, as the message of a
+# FileNotFoundError shows it (the repr of the path: Windows' backslashes
+# come doubled).
 SCRIPT_BLOB = git_blob_hex(SCRIPT.encode("utf-8"))
-SCRIPT_AS_PLAIN = os.path.join("content", SCRIPT_BLOB[:2], SCRIPT_BLOB[2:])
+SCRIPT_AS_PLAIN = repr(
+    os.path.join("content", SCRIPT_BLOB[:2], SCRIPT_BLOB[2:]))[1:-1]
 WINDOWS_NOT_MEASURED = pytest.mark.skipif(
     os.name == "nt", reason="not measured on Windows: tree paths use os.sep, "
     "and git gc goes through shell=True")
@@ -92,6 +98,15 @@ MAIN_WITHOUT_SPEC = Defect(
     "__main__ and restores only __name__, __file__ and __builtins__, and "
     "the spawn and forkserver start methods read __main__.__spec__",
     signature="module '__main__' has no attribute '__spec__'")
+SPAWN_ON_ANOTHER_DRIVE = Defect(
+    "#294: noWorkflow's module finder records "
+    "each module the script imports with create_code_block, which calls "
+    "os.path.relpath from the script's directory; on Windows, with Python "
+    "on another drive than the project, relpath raises ValueError at the "
+    "import of multiprocessing.popen_spawn_win32, before the spawn start "
+    "method reads __main__.__spec__",
+    signature="path is on mount", systems=("win32",),
+    condition=STDLIB_ON_ANOTHER_DRIVE)
 
 
 def store_git(project, *args):
@@ -449,6 +464,7 @@ def test_spawn_script_runs_under_python(project):
     assert completed.stdout.splitlines() == ["child", "child exit code: 0"]
 
 
+@known_defects(SPAWN_ON_ANOTHER_DRIVE)
 def test_spawn_under_now_run(project):
     """Under ``now run``, starting a spawn process raises AttributeError:
     the script's ``__main__`` has no ``__spec__``"""
@@ -458,10 +474,10 @@ def test_spawn_under_now_run(project):
 
     assert result.stdout == (
         "start raised AttributeError: module '__main__' has no attribute "
-        "'__spec__'\n")
+        "'__spec__'\n"), str(result)
 
 
-@known_defects(MAIN_WITHOUT_SPEC)
+@known_defects(MAIN_WITHOUT_SPEC, SPAWN_ON_ANOTHER_DRIVE)
 def test_spawn_under_now_run_desired(project):
     """Desired: the child starts as it does outside noWorkflow"""
     project.write("script.py", SPAWN_SCRIPT)

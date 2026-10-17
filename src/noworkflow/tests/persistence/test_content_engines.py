@@ -72,10 +72,26 @@ PLAIN_PUT_FILENAME = Defect(
     "calls content.put(content)",
     signature="PlainEngine.put() missing 1 required positional argument: "
               "'filename'")
+
+
+def _abspath_none_message():
+    """The message of the TypeError that ``os.path.abspath(None)`` raises
+
+    It differs between systems and versions (on Windows 3.15 it comes
+    from ``_path_normpath``).
+    """
+    try:
+        os.path.abspath(None)
+    except TypeError as error:
+        return str(error)
+    raise AssertionError("os.path.abspath(None) raised no TypeError")
+
+
+ABSPATH_NONE = _abspath_none_message()
 GIT_PUT_NONE = Defect(
     "#247: cmd_pull calls content.put(content, None), and "
     "GitContentDatabaseEngine._inc_name passes None to os.path.abspath",
-    signature="expected str, bytes or os.PathLike object, not NoneType")
+    signature=ABSPATH_NONE)
 PLAIN_GET_PATH = Defect(
     "#224: PlainEngine.get joins content_path, hash[:2] and hash[2:] "
     "without validating the hash, and os.path.join drops the content "
@@ -446,13 +462,13 @@ def test_puregit_put_without_a_file_name_uses_generic(engine, engine_spec):
 
 @PUREGIT_ONLY
 def test_puregit_put_with_none_as_the_file_name(engine):
-    """``put(content, None)``, as ``now pull`` calls it, raises TypeError in
-    ``_inc_name`` on puregit (plain ignores the name)"""
+    """``put(content, None)``, as ``now pull`` calls it, raises the
+    TypeError of ``os.path.abspath(None)`` in ``_inc_name`` on puregit
+    (plain ignores the name)"""
     with pytest.raises(TypeError) as raised:
         engine.put(b"x\n", None)
 
-    assert str(raised.value) == (
-        "expected str, bytes or os.PathLike object, not NoneType")
+    assert str(raised.value) == ABSPATH_NONE
 
 
 @PUREGIT_ONLY
