@@ -113,8 +113,8 @@ STOP_TIMEOUT = 10
 # Programs a cell may run that live outside the system directories: the
 # directory where each one is found now, with this process's PATH, is
 # appended to the shell's PATH. ``dot`` for ``%%dot`` and the diagrams,
-# ``swipl`` for pyswip (``%%now_prolog``).
-PROGRAMS = ("dot", "swipl")
+# ``swipl`` for pyswip (``%%now_prolog``), ``inkscape`` for ``%%dot``'s PDF.
+PROGRAMS = ("dot", "swipl", "inkscape")
 FOUND = {program: shutil.which(program) for program in PROGRAMS}
 DOT = FOUND["dot"]
 needs_dot = pytest.mark.skipif(

@@ -90,7 +90,8 @@ class Deployment(object):
         try:
             # ToDo: This is slow! Is there any alternative?
             return pkg_resources.get_distribution(module_name).version
-        except Exception:                                                        # pylint: disable=broad-except
+        # A module name is rarely a distribution's name; fall back to the attributes below
+        except Exception:                                                        # pylint: disable=broad-except  # nosec B110
             pass
 
         # Check explicitly declared module version
@@ -104,7 +105,8 @@ class Deployment(object):
                         return ".".join(cvmap(str, module_version))
                 except AttributeError:
                     pass
-        except Exception:                                                        # pylint: disable=broad-except
+        # A module whose attributes raise still gets its row, without a version
+        except Exception:                                                        # pylint: disable=broad-except  # nosec B110
             pass
 
         # If no other option work, return None

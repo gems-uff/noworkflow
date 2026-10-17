@@ -62,7 +62,11 @@ of date, fix it there.
   `flaky.yml` and the one of the `paper-example` job; the reference leg also
   counts the goldens, which the other legs deselect), **and the floors go
   up in the same PR that adds tests**;
-  `uv run ruff check .` clean; CI green at the tip of the branch; no new
+  `uv run ruff check .` clean; the bandit step of `checks` green, so every
+  site bandit flags either carries `# nosec Bxxx` with the reason on the line
+  above (intended) or has an issue and its entry in `bandit-baseline.json`
+  (real; the entry leaves with the fix), as "Running locally" in
+  `CONTRIBUTING.md` says; CI green at the tip of the branch; no new
   CodeQL alert in the PR, or each one fixed or explained there for a
   maintainer to dismiss (the `CodeQL` check, described in "What a pull
   request needs" in `CONTRIBUTING.md`, and read as step 6 of `review-pr`
@@ -319,6 +323,15 @@ neither executes:
 - **Deployment provenance:** what gets recorded about the environment
   (`now show -e`) depends on the machine; the e2e tests assert only the
   names of a few attributes and the synthetic user, never the values.
+- **What bandit does not see:** it reads the Python of `src/noworkflow`
+  without the tests, the demo scripts and `py2module.py` (`[tool.bandit]`
+  in `pyproject.toml`), and it resolves names within one file only, so a
+  name imported from another module escapes it: the graph cache's
+  `pickle.loads` (`models/graphs/structures.py`) takes `pickle` from
+  `utils/cross_version.py`, and the B403 entries of that module are its
+  only trace. A program named in a variable argv escapes B607 (the bare
+  `now` of the vis routes), and no check flags a `subprocess` call without
+  a timeout. The frontend and the workflows are CodeQL's.
 
 When a change touches one of these, run it by hand and write what you ran,
 and what came out, in the PR.

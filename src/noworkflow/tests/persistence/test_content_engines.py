@@ -13,11 +13,12 @@ bytes the test put. Every store is new, in ``tmp_path``, behind a git that
 reads nothing of the machine (``conftest.isolated_git``).
 
 The rest characterizes what one engine does today: puregit's commits, its
-tree paths, its ``gc`` and ``find_subhash``, the plain engine's no-ops, the
-base classes and the mock. Behavior that is a known defect has a
-characterization test and a ``_desired`` twin decorated with
-``known_defects``, which cites the issue (``#NNN``) and the signature of
-today's failure. The defects of the
+tree paths, its ``gc`` and ``find_subhash``, the plain engine's no-ops and
+what it keeps of two contents that share a SHA-1 (a real collision, with
+the git engines as the control), the base classes and the mock. Behavior
+that is a known defect has a characterization test and a ``_desired`` twin
+decorated with ``known_defects``, which cites the issue (``#NNN``) and the
+signature of today's failure. The defects of the
 git engines are git's behavior or pure Python, the same on every system;
 the tests that depend on tree paths or on ``git gc`` are not run on Windows,
 where neither was measured.
@@ -56,6 +57,32 @@ PLAIN_ONLY = pytest.mark.parametrize(
     "engine_spec", [PLAIN], ids=str, indirect=True)
 # A missing hash: no sha1 of a content starts with 40 zeros.
 MISSING = "0" * 40
+# A real SHA-1 collision: the first 320 bytes of shattered-1.pdf and
+# shattered-2.pdf (https://shattered.io). SHA-1 reads 64-byte blocks. The
+# two files share the first three (the PDF header and the start of a JPEG
+# stream); the next two are the near-collision blocks of the attack, which
+# differ in 62 bytes and leave SHA-1's internal state the same in both.
+# The prefixes also have the same length, so the same padding: their SHA-1s
+# are equal, and stay equal under any common suffix, which is how the whole
+# PDFs collide. The PDFs themselves are not needed.
+SHATTERED_HEADER = bytes.fromhex(
+    "255044462d312e330a25e2e3cfd30a0a0a312030206f626a0a3c3c2f57696474"
+    "682032203020522f4865696768742033203020522f547970652034203020522f"
+    "537562747970652035203020522f46696c7465722036203020522f436f6c6f72"
+    "53706163652037203020522f4c656e6774682038203020522f42697473506572"
+    "436f6d706f6e656e7420383e3e0a73747265616d0affd8fffe00245348412d31"
+    "20697320646561642121212121852fec092339759c39b1a1c63c4c97e1fffe01")
+SHATTERED_1 = SHATTERED_HEADER + bytes.fromhex(
+    "7346dc9166b67e118f029ab621b2560ff9ca67cca8c7f85ba84c79030c2b3de2"
+    "18f86db3a90901d5df45c14f26fedfb3dc38e96ac22fe7bd728f0e45bce046d2"
+    "3c570feb141398bb552ef5a0a82be331fea48037b8b5d71f0e332edf93ac3500"
+    "eb4ddc0decc1a864790c782c76215660dd309791d06bd0af3f98cda4bc4629b1")
+SHATTERED_2 = SHATTERED_HEADER + bytes.fromhex(
+    "7f46dc93a6b67e013b029aaa1db2560b45ca67d688c7f84b8c4c791fe02b3df6"
+    "14f86db1690901c56b45c1530afedfb76038e972722fe7ad728f0e4904e046c2"
+    "30570fe9d41398abe12ef5bc942be33542a4802d98b5d70f2a332ec37fac3514"
+    "e74ddc0f2cc1a874cd0c78305a21566461309789606bd0bf3f98cda8044629a1")
+SHATTERED_SHA1 = "f92d74e3874587aaf443d1db961d4e26dde13e9c"
 
 GC_ARGUMENT = Defect(
     "#224: now gc calls content.gc() with no argument, and "
@@ -98,6 +125,12 @@ PLAIN_GET_PATH = Defect(
     "directory at an absolute component, so a path-shaped hash reads any "
     "file",
     signature="PlainEngine.get read a file outside the content directory")
+SHA1_COLLISION = Defect(
+    "#398: PlainEngine.do_put names a content by hashlib.sha1 of its bytes "
+    "and writes it only if no file has that name yet, and PlainEngine.get "
+    "returns that file as it is: of two contents that share a SHA-1, the "
+    "second gets the first's id and only the first's bytes are kept",
+    signature="gives the first content's bytes")
 COMMITTER_IDENTITY = Defect(
     "#327: git_system.commit_tree sets only "
     "GIT_AUTHOR_NAME/EMAIL, so git takes the committer from the user's "
@@ -514,6 +547,94 @@ def test_plain_get_of_a_path_instead_of_a_hash_desired(engine, isolated_git):
         read = None
     assert read != b"outside the store\n", (
         "PlainEngine.get read a file outside the content directory")
+
+
+def put_shattered_pair(engine, project_dir):
+    """The ids ``put`` returns for the two SHAttered prefixes, in this order
+
+    They are put as two versions of one file, the way two trials record an
+    input that changed.
+    """
+    name = str(project_dir / "data.pdf")
+    return engine.put(SHATTERED_1, name), engine.put(SHATTERED_2, name)
+
+
+def test_shattered_prefixes_differ_and_share_a_sha1():
+    """Premise of the #398 tests: the two prefixes are different contents
+    of 320 bytes, 62 of which differ, with the same SHA-1; their git blob
+    ids, which hash ``blob 320\\0`` before the bytes, differ (the git
+    control below checks them against what puregit's ``git hash-object
+    -w`` returns)"""
+    differing = [index for index, (one, two)
+                 in enumerate(zip(SHATTERED_1, SHATTERED_2)) if one != two]
+
+    assert len(SHATTERED_1) == len(SHATTERED_2) == 320
+    assert len(differing) == 62
+    assert sha1_hex(SHATTERED_1) == sha1_hex(SHATTERED_2) == SHATTERED_SHA1
+    assert git_blob_hex(SHATTERED_1) != git_blob_hex(SHATTERED_2)
+
+
+@PLAIN_ONLY
+def test_plain_keeps_only_the_first_of_two_contents_that_share_a_sha1(
+        engine, engine_spec, project_dir):
+    """Two different contents that share a SHA-1 get one id on plain
+    (#398): the second ``put`` returns the first's id and writes nothing,
+    the store holds one file, with the first content's bytes (read by the
+    test itself), and ``get`` of the second's id gives those bytes"""
+    first, second = put_shattered_pair(engine, project_dir)
+
+    provenance = provenance_of(project_dir)
+    assert second == first == SHATTERED_SHA1
+    assert engine_spec.stored_hashes(provenance) == [SHATTERED_SHA1]
+    assert engine_spec.read_stored(provenance, first) == SHATTERED_1
+    assert engine.get(second) == SHATTERED_1
+
+
+@PLAIN_ONLY
+@known_defects(SHA1_COLLISION)
+def test_plain_tells_apart_two_contents_that_share_a_sha1_desired(
+        engine, project_dir):
+    """Desired (#398): two different contents that share a SHA-1 are never
+    taken for one another: ``get`` of the id each ``put`` returned gives
+    back that ``put``'s bytes. The issue leaves the kind of fix to the
+    maintainer, and the twin accepts both: one that stores the second
+    content apart (under any id), and one that refuses it with a
+    ValueError, a subclass included, as long as the first content still
+    reads back under its id. A refusal of another type fails here with the
+    "not with the signature" message, and the fix updates the twin"""
+    name = str(project_dir / "data.pdf")
+    first = engine.put(SHATTERED_1, name)
+    try:
+        second = engine.put(SHATTERED_2, name)
+    except ValueError:
+        second = None
+
+    if second is not None:
+        read = engine.get(second)
+        assert read != SHATTERED_1, (
+            "get of the id the second put returned ({}) gives the first "
+            "content's bytes".format(second))
+        assert read == SHATTERED_2
+    assert engine.get(first) == SHATTERED_1
+
+
+@GIT_SPECS
+def test_git_tells_apart_two_contents_that_share_a_sha1(
+        engine, engine_spec, project_dir):
+    """Control of #398: the git engines name a content by its blob id, the
+    SHA-1 of ``blob <size>\\0`` and the bytes, which the SHAttered prefixes
+    do not share. The two ``put``s return the two blob ids, the test's own
+    git reads each content back under its id, and so does ``get``"""
+    first, second = put_shattered_pair(engine, project_dir)
+
+    provenance = provenance_of(project_dir)
+    assert [first, second] == [engine_spec.blob_hash(SHATTERED_1),
+                               engine_spec.blob_hash(SHATTERED_2)]
+    assert first != second
+    assert [engine_spec.read_stored(provenance, content_hash)
+            for content_hash in (first, second)] == [SHATTERED_1, SHATTERED_2]
+    assert [engine.get(first), engine.get(second)] == [
+        SHATTERED_1, SHATTERED_2]
 
 
 # ---------------------------------------------------------------------------

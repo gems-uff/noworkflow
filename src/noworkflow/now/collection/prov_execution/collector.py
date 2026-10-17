@@ -1002,7 +1002,8 @@ class Collector(object):
             try:
                 for i in range(back):
                     frame = frame.f_back
-                value = eval(vdef, globals(), frame.f_locals)
+                # vdef is the text of an assignment target of the traced script itself
+                value = eval(vdef, globals(), frame.f_locals)  # nosec B307
             finally:
                 del frame
         return code_id, value, access_depa, addr, value_dep, checkpoint

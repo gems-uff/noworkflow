@@ -226,8 +226,23 @@ From the repository root, with `.venv` set up as above:
 ```bash
 uv run pytest                # the whole suite
 uv run ruff check .          # lint
-uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json
+uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json   # SAST
 uv run now run script.py     # the `now` of the working tree
+```
+
+A site that bandit flags and that is intended gets `# nosec Bxxx`, with the
+reason on the line above; CI refuses a `# nosec` without the test id, which
+would silence every test on its line. A real finding stays in `bandit-baseline.json`,
+with its issue, until the commit that fixes it regenerates the file (the
+command is next to the bandit step in `.github/workflows/ci.yml`). `-b`
+hides every finding of a test in a file that already has one in the
+baseline, so CI also compares the findings one by one. The same comparison
+locally:
+
+```bash
+uv run bandit -c pyproject.toml -r src/noworkflow -q -f json -o "${TMPDIR:-/tmp}/bandit.json"
+diff <(jq -r '.results[] | "\(.filename) \(.test_id)"' bandit-baseline.json | sort) \
+     <(jq -r '.results[] | "\(.filename) \(.test_id)"' "${TMPDIR:-/tmp}/bandit.json" | sort)
 ```
 
 The suite runs in a random order (pytest-randomly), a new one on every run,

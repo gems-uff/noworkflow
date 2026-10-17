@@ -14,9 +14,21 @@ become the shell's positional parameters (#224). ``GIT_TRACE`` pointed at a
 file shows the command git received; a control shows that the same trace
 lists the flags when they reach git. ``read_tree`` is not tested: it needs
 a work tree, which the bare ``content.git`` never has.
+
+The functions run git with the store's ``content.git`` as the working
+directory, so git takes that directory as the repository and honors its
+own ``hooks/`` and ``config``, which a store received from someone else
+carries (#399). On a store with an executable
+``hooks/reference-transaction``, and on one whose ``config`` alone (no
+executable file) gives it a work tree and a ``core.fsmonitor`` command,
+git runs that payload when the engine commits content; a control shows
+that git told to skip hooks and fsmonitor runs neither on the same store.
+The payloads are sh scripts, so these tests do not run on Windows.
 """
 import os
+import shlex
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -30,10 +42,21 @@ GC_FLAGS = Defect(
     "'--aggressive'] with shell=True, so the shell runs `git gc` and the "
     "flags never reach git",
     signature="traced: ['git gc', 'git gc']")
+CODE_FROM_THE_STORE = Defect(
+    "#399: git_system runs git with cwd set to the store's content.git and "
+    "overrides neither core.hooksPath nor core.fsmonitor, so git honors "
+    "that repository's own hooks/ and config: commit_content runs an "
+    "executable hooks/reference-transaction (update-ref) and a "
+    "core.fsmonitor command (update-index, write-tree, rm --cached)",
+    signature="git ran code from the store's content.git")
 # The shell gets a list through shell=True only on POSIX.
 POSIX_SHELL = pytest.mark.skipif(
     os.name == "nt", reason="not measured on Windows: shell=True hands the "
     "list to cmd.exe")
+# The payloads of #399 are sh scripts, and the hook needs an executable mode.
+POSIX_PAYLOADS = pytest.mark.skipif(
+    os.name == "nt", reason="not measured on Windows: the payloads are sh "
+    "scripts, and a hook needs an executable mode")
 
 
 @pytest.fixture
@@ -176,3 +199,140 @@ def test_show_ref_and_all_objects_see_the_commits_of_the_engine(
 
     assert git_system.show_ref("refs/heads/master", repository) == commit
     assert {commit.encode(), content_hash.encode(), b"a.txt"} <= set(objects)
+
+
+# ---------------------------------------------------------------------------
+# Code from the store's content.git (#399)
+# ---------------------------------------------------------------------------
+
+# The options the issue suggests: no hooks directory, no fsmonitor.
+WITHOUT_STORE_CODE = (
+    "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false")
+
+
+def plant_hook(repository, marker):
+    """An executable ``hooks/reference-transaction``, which git runs around
+    every ref update; it appends its name to ``marker``"""
+    hook = Path(repository) / "hooks" / "reference-transaction"
+    # git init copies hooks/ from its templates, which a git may lack.
+    hook.parent.mkdir(exist_ok=True)
+    hook.write_text(
+        "#!/bin/sh\necho reference-transaction >> {}\n".format(
+            shlex.quote(str(marker))),
+        encoding="utf-8", newline="\n")
+    hook.chmod(0o755)
+    return "reference-transaction"
+
+
+def plant_fsmonitor(repository, marker):
+    """No executable file, only ``config``: a work tree (``core.bare``
+    false, ``core.worktree`` the repository itself), without which git
+    ignores fsmonitor, and a ``core.fsmonitor`` shell command, which git
+    runs each time it reads the index
+
+    The command appends its name to ``marker`` and answers as an fsmonitor
+    does (a token, then "/": anything may have changed), so git goes on
+    without a warning; the function ignores the arguments git appends.
+    """
+    command = (
+        "payload() {{ echo fsmonitor >> {}; printf 'token\\000/\\000'; }}; "
+        "payload").format(shlex.quote(str(marker)))
+    git("config", "core.bare", "false", cwd=repository)
+    git("config", "core.worktree", ".", cwd=repository)
+    git("config", "core.fsmonitor", command, cwd=repository)
+    return "fsmonitor"
+
+
+PAYLOADS = pytest.mark.parametrize(
+    "plant", [plant_hook, plant_fsmonitor], ids=["hook", "fsmonitor"])
+
+
+def planted_store(project_dir, plant):
+    """A puregit store in ``project_dir`` whose ``content.git`` holds the
+    payload ``plant`` writes, opened again once it is there, as a store
+    received from someone else is: the engine connects to a repository that
+    already carries the payload. Returns that engine, the repository, the
+    payload's name and the marker it appends to (in ``tmp_path``)"""
+    PUREGIT.skip_if_unavailable()
+    open_store(project_dir, "puregit")
+    repository = os.path.join(provenance_of(project_dir), "content.git")
+    marker = project_dir.parent / "marker.txt"
+    name = plant(repository, marker)
+    engine = open_store(project_dir, "puregit").content_database_engine
+    return engine, repository, name, marker
+
+
+def runs(marker):
+    """The lines the payload appended to ``marker``, one per run"""
+    if not marker.exists():
+        return []
+    return marker.read_text(encoding="utf-8").splitlines()
+
+
+def commit_through_the_engine(engine, project_dir, repository):
+    """``put`` a file and ``commit_content``; True when master names the
+    commit the engine returned"""
+    engine.put(b"a\n", str(project_dir / "a.txt"))
+    commit = engine.commit_content("m")
+    return git_system.show_ref("refs/heads/master", repository) == commit
+
+
+@POSIX_PAYLOADS
+@PAYLOADS
+def test_committing_content_runs_code_from_the_stores_content_git(
+        plant, project_dir):
+    """``commit_content`` lands on master, and on the way git runs the
+    payload of the store's ``content.git``: the hook on ``update-ref``, the
+    fsmonitor command on the commands that read the index
+    (``update-index``, ``write-tree``, ``rm --cached``). How many times is
+    git's business, so only the payload's name is compared"""
+    engine, repository, name, marker = planted_store(project_dir, plant)
+
+    assert commit_through_the_engine(engine, project_dir, repository)
+    assert set(runs(marker)) == {name}
+
+
+@POSIX_PAYLOADS
+@PAYLOADS
+@known_defects(CODE_FROM_THE_STORE)
+def test_git_never_runs_code_from_the_stores_content_git_desired(
+        plant, project_dir):
+    """Desired (#399): committing content runs neither the store's hooks
+    nor its ``core.fsmonitor`` command, and the commit still lands on
+    master"""
+    engine, repository, _, marker = planted_store(project_dir, plant)
+
+    committed = commit_through_the_engine(engine, project_dir, repository)
+
+    assert runs(marker) == [], (
+        "git ran code from the store's content.git: {}".format(runs(marker)))
+    assert committed
+
+
+@POSIX_PAYLOADS
+@PAYLOADS
+def test_git_told_to_skip_hooks_and_fsmonitor_runs_neither_payload(
+        plant, project_dir):
+    """Control: the commands of ``commit_content``, run by the test's own
+    git with ``-c core.hooksPath=/dev/null -c core.fsmonitor=false`` on the
+    same store, move master and leave the marker absent: the machine's git
+    can commit there without the store's code, so the twin can pass"""
+    _, repository, _, marker = planted_store(project_dir, plant)
+    blob = git_text("hash-object", "-w", "--stdin", input=b"a\n",
+                    cwd=repository)
+
+    git(*WITHOUT_STORE_CODE, "update-index", "--add", "--cacheinfo",
+        "100644", blob, "a.txt", cwd=repository)
+    tree = git_text(*WITHOUT_STORE_CODE, "write-tree", cwd=repository)
+    git(*WITHOUT_STORE_CODE, "rm", "-r", "--cached", "--quiet", ".",
+        cwd=repository)
+    parent = git_text(*WITHOUT_STORE_CODE, "rev-parse", "refs/heads/master",
+                      cwd=repository)
+    commit = git_text(*WITHOUT_STORE_CODE, "commit-tree", tree, "-p", parent,
+                      "-m", "m", cwd=repository)
+    git(*WITHOUT_STORE_CODE, "update-ref", "refs/heads/master", commit,
+        cwd=repository)
+
+    assert git_text(*WITHOUT_STORE_CODE, "rev-parse", "refs/heads/master",
+                    cwd=repository) == commit
+    assert runs(marker) == []

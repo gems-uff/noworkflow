@@ -23,7 +23,8 @@ from ..persistence import relational, content
 from ..cmd.cmd_diff import Diff as DiffCMD
 from ..ipython.dotmagic import DotDisplay
 
-import subprocess
+# Runs now for the /commands/* routes
+import subprocess  # nosec B404
 from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
 from ..persistence import content
