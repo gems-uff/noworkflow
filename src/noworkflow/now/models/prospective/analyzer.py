@@ -21,6 +21,8 @@ from .utils import (
 class DefinitionProvenanceAnalyzer:
     """Analyzes code structure and builds control-flow provenance graph"""
 
+    STRUCTURAL_HEADERS = ('else', 'try', 'exception', 'finally')
+
     def __init__(self, trial_id: str):
         self.trial_id = trial_id
         self.graphviz = GraphvizWrapper(trial_id).initialize()
@@ -55,6 +57,7 @@ class DefinitionProvenanceAnalyzer:
         self.last: List[int] = []
         self.block: List[str] = []
         self.type: List[str] = []
+        self.component_id: List[Optional[int]] = []
 
         self.node_hash: List[str] = []
         self.node_else: List[Optional[str]] = []
@@ -340,6 +343,7 @@ class DefinitionProvenanceAnalyzer:
         self.column.append(0)
         self.block.append('Start')
         self.type.append('start-code')
+        self.component_id.append(None)
         self.hash_index.append(0)
         self.graphviz.node('start', label='Start')
         self.generic_hash.append('{}name{}'.format(0, 0))
@@ -355,6 +359,7 @@ class DefinitionProvenanceAnalyzer:
         self.column.append(0)
         self.block.append('End')
         self.type.append('end-code')
+        self.component_id.append(None)
         self.graphviz.node('end', label='End')
         element = '{}{}'.format(self.last[-1] + 1, 0)
         self.hash_index.append(int(element))
@@ -431,7 +436,8 @@ class DefinitionProvenanceAnalyzer:
         self._start_node()
 
         for codes in rows:
-            start_line, final_line, types_line, block_line, colum_line = codes
+            (component_id, start_line, final_line, types_line,
+             block_line, colum_line) = codes
 
             nodes_hash = self._create_hash_code(start_line, types_line, final_line)
             label = mapper.get_element('label', start_line, block_line)
@@ -503,6 +509,7 @@ class DefinitionProvenanceAnalyzer:
                 self.node_if.append(None)
                 self.node_hash.append(nodes_hash)
                 self.type.append(types_line)
+                self.component_id.append(component_id)
 
     def _create_function_end_list(self):
         """Track function end points"""
@@ -665,16 +672,57 @@ class DefinitionProvenanceAnalyzer:
         results = query.all()
         if results:
             return [
-                (comp.first_char_line, comp.last_char_line, comp.type,
-                 comp.name, comp.first_char_column)
+                (comp.id, comp.first_char_line, comp.last_char_line,
+                 comp.type, comp.name, comp.first_char_column)
                 for comp in results
             ]
         else:
             print("Something went wrong in the trial verification!")
             return None
 
+    def _highlight_unexecuted_nodes(self):
+        """Render code nodes not used during the trial in gray."""
+        executed_lines = {
+            row[0] for row in self.queries.get_executed_lines().all()
+        }
+
+        # An empty result may represent an old or incomplete capture. In that
+        # case, keep the prospective graph neutral instead of graying it all.
+        if not executed_lines:
+            return
+
+        activated_blocks = {
+            row[0] for row in self.queries.get_activated_code_blocks().all()
+        }
+        inactive = set()
+
+        for index, node in enumerate(self.node_hash):
+            if node in ('start', 'end'):
+                continue
+
+            if self.type[index] == 'function_def':
+                if self.component_id[index] not in activated_blocks:
+                    inactive.add(node)
+            elif self.start[index] not in executed_lines:
+                inactive.add(node)
+
+        # Structural headers generally have no Evaluation of their own. If
+        # the first node in their body ran, the header was necessarily used.
+        for index in range(1, len(self.node_hash)):
+            if self.node_hash[index] in inactive:
+                continue
+
+            previous = self.node_hash[index - 1]
+            if any(marker in previous for marker in self.STRUCTURAL_HEADERS):
+                inactive.discard(previous)
+
+        drawer = GraphDrawer(self.graphviz)
+        for node in self.node_hash:
+            if node in inactive:
+                drawer.mark_inactive(node)
+
     def build_prospective_graph(self):
-        """Main orchestration method - builds complete provenance graph"""
+        """Build the complete graph and overlay execution state."""
         self.create_all_nodes(self.code_components())
         self._create_global_end_node()
         self._format_column()
@@ -691,5 +739,6 @@ class DefinitionProvenanceAnalyzer:
         self._get_point_code()
         self._verify_function_check()
         self.linking_nodes_graph()
+        self._highlight_unexecuted_nodes()
 
         return self.graphviz.source

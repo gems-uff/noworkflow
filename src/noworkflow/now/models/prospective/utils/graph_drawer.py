@@ -9,6 +9,7 @@ class GraphDrawer:
         self.graphProv = provenance_graph
         self.color = dict(nodes='#85CBC0',
                           assign='#976BAA',
+                          inactive='#EBEBEB',
                           notes='#808080',
                           times='#FFDE6A')
         self.shape = dict(loops='ellipse',
@@ -99,3 +100,7 @@ class GraphDrawer:
             return [True, self.graphProv]
         except SystemError:
             return [False, None]
+
+    def mark_inactive(self, hashing):
+        """Render an existing code node as not executed."""
+        self.graphProv.node(hashing, fillcolor=self.color['inactive'])

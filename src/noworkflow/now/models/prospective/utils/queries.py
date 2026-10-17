@@ -9,6 +9,7 @@ from __future__ import (absolute_import, print_function,
 from ....persistence import relational
 from ....persistence.models.code_component import CodeComponent
 from ....persistence.models.evaluation import Evaluation
+from ....persistence.models.activation import Activation
 
 
 class ProspectiveQueries:
@@ -147,6 +148,34 @@ class ProspectiveQueries:
                 (CodeComponent.m.first_char_line != -1)
             )
             .order_by(CodeComponent.m.first_char_line)
+        )
+
+    def get_executed_lines(self):
+        """Get distinct source lines that produced evaluations."""
+        return (
+            self.session.query(CodeComponent.m.first_char_line)
+            .join(
+                Evaluation.m,
+                (Evaluation.m.code_component_id == CodeComponent.m.id) &
+                (Evaluation.m.trial_id == CodeComponent.m.trial_id)
+            )
+            .filter(
+                (CodeComponent.m.trial_id == self.trial_id) &
+                (CodeComponent.m.first_char_line != -1)
+            )
+            .distinct()
+            .order_by(CodeComponent.m.first_char_line)
+        )
+
+    def get_activated_code_blocks(self):
+        """Get distinct code blocks activated during the trial."""
+        return (
+            self.session.query(Activation.m.code_block_id)
+            .filter(
+                (Activation.m.trial_id == self.trial_id) &
+                (Activation.m.code_block_id.isnot(None))
+            )
+            .distinct()
         )
 
     def get_variable_contents(self):
