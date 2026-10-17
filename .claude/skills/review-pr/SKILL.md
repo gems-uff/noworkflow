@@ -32,6 +32,7 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 | `src/noworkflow/tests/__init__.py`, or tests moved | Parity between the two runners (step 6) |
 | Branch behind `main` | `merge-downstream` |
 | A suspected defect | `prove-candidate` |
+| An alert of the `CodeQL` check (how to read it, and the route for a fork: step 6) | `prove-candidate` with the other candidates of step 3, then step 4: an alert the PR introduces is discussed in it |
 | A PR that depends on an unpublished `pyposast` | `dependencies`: blocked until that release |
 | Any change that must be measured | `safe-refactor` |
 | Green, measured and integrated | `release`, when the maintainer decides |
@@ -133,6 +134,11 @@ also gives it the author's comments.
   cleans the tree again. Check that it is `completed` before treating the list
   as closed.
 
+The alerts of the `CodeQL` check join its findings as candidates of step 3;
+step 6 says how to read them and when the list is complete. A PR from a fork
+has no `CodeQL` check: start its analysis now (step 6), so that its alerts
+reach the triage and the single round of step 4.
+
 ## 2. Read the diff
 
 **Say first what kind of PR this is** and declare the expected differences
@@ -166,6 +172,10 @@ repository does not keep:
   holds with the branch up to date, so do not wait for the routing of step 1
   to look. `git merge-tree --write-tree origin/main HEAD` shows the conflicts,
   and `git show <tree>:<file>` the merged file, without touching the tree.
+
+**A change to a vis route, a content engine, a subprocess call or a workflow
+is read for security as if CodeQL were not there**: those are where it sees
+least, and step 6 lists what it does not see.
 
 When the PR touches `pyproject.toml` or `uv.lock`, what decides the review is
 what changed **in the dependency**, not what the author wrote: the notes of
@@ -367,6 +377,69 @@ does not — every supported Python, macOS, the frontend guard, lint, SAST, the
 audits — and it is the measurement that reaches the blind spots `AGENTS.md`
 lists.
 
+**CodeQL is not a job of `ci.yml`.** Its default setup, in the repository
+settings, analyzes every PR to `main` from a branch of this repository and
+posts the `CodeQL` check. The check annotates each alert the PR adds in the
+lines it changes, and fails only on one of severity error or of security
+severity high or critical; a lower one leaves it green and is still a
+candidate. `gh api "repos/gems-uff/noworkflow/code-scanning/alerts?pr=<N>&state=open"`
+lists them. **The check reports as each language finishes**: it can show
+completed, with only the workflows analyzed, while Python and TypeScript still
+run. A summary that warns of configurations "not found" is partial; read it
+once the analysis run has finished (its `success` says the analysis ran, not
+that it found nothing — the verdict stays the check):
+
+```bash
+gh api "repos/gems-uff/noworkflow/actions/runs?head_sha=$(gh pr view <N> --json headRefOid -q .headRefOid)" \
+  --jq '.workflow_runs[] | select(.path == "dynamic/github-code-scanning/codeql") | "\(.status) \(.conclusion)"'
+```
+
+Each alert is a candidate like any other: `prove-candidate`, then fixed in the
+PR, or explained in it for a maintainer to dismiss with that reason. The
+ruleset on `main` requires code-scanning results and blocks on an alert at
+those same severities, so the merge button refuses a PR with such an alert,
+or whose analysis is missing or still running. Maintainers integrate by a
+fast-forward push, which the ruleset lets repository admins bypass, so for
+them the check is read, not enforced.
+
+**No analysis is not "no alert".** A PR whose last push predates the setup
+has no `CodeQL` check until its branch gets a new push (the catch-up merge of
+`merge-downstream` is one). **A PR from a fork never gets one**: default setup
+skips forks. Its code is analyzed through a branch of this repository, as
+soon as the checkout of step 1 (and the catch-up merge, if any, so that what
+is analyzed is what would land) allows. The push, the branch and the PR are
+the maintainer's, like every push (`AGENTS.md`): prepare the tree and ask, as
+step 4 does with a reproduction. The commands:
+
+```bash
+git diff --name-only origin/main...HEAD -- .github/   # read these first (below)
+git push origin HEAD:refs/heads/codeql-pr-<N>
+gh pr create --base main --head codeql-pr-<N> \
+  --title "Do not merge: CodeQL analysis of #<N>" --body "CodeQL analysis of #<N>, closed once the analysis finishes."
+# <M>: the number at the end of the URL that gh pr create printed. Wait until the
+# runs query above, with head_sha=$(git rev-parse HEAD), prints "completed".
+gh api "repos/gems-uff/noworkflow/code-scanning/alerts?pr=<M>&state=open"
+gh pr close <M> --delete-branch
+```
+
+The push runs this repository's workflows **as the fork wrote them**, with
+this repository's token and permissions, which the fork's own PR never has: a
+change under `.github/` is read, and judged harmless, before the push, never
+after.
+
+**A green `CodeQL` is not a security review.** CodeQL sees untrusted input
+only where its models recognize it, and the vis's own code mostly escapes
+them: the route's URL parameters are not a source, because CodeQL does not
+follow `app = WebServer().app` back to Flask (only `flask.request` is,
+whatever part of the request is read from it); nor is data read back from
+the store; and calls through `__getattr__` (`content.get`) or `args.func`,
+SQL run through `relational.engine.raw_connection()`, a missing Host/Origin
+check and a state-changing GET are outside what it follows. In a workflow, an
+event field interpolated into a `run` step (`${{ github.event.* }}`) is
+reported only when the job can write: a job with `contents: read` gets no
+alert for it. That is why step 2 reads a change to a vis route, a content
+engine, a subprocess call or a workflow as if CodeQL were not there.
+
 **`gh pr checks <N>` exits non-zero while a check is pending, when one
 failed, and when the branch has no checks at all** (a PR older than the
 workflow), so treating a non-zero exit as a transient error to swallow makes
@@ -393,7 +466,9 @@ them.
 
 Before this, all of it has to be true: the full suite green on the branch, the
 checks the table routed done, `main` synchronized, working tree clean, CI
-green at the tip, and the second list of step 1 empty — otherwise
+green at the tip, the `CodeQL` analysis finished with each alert fixed or
+dismissed (step 6; for a fork, through its branch of this repository), and the
+second list of step 1 empty — otherwise
 `merge-downstream` and measure again. The worktrees of step 3 are removed.
 Your part of this step ends with that list, checked; the integration itself
 is the maintainer's, and these are the commands they run:

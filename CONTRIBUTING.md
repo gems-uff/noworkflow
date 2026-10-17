@@ -103,6 +103,18 @@ once it is integrated and nothing is left to do.
   and `experimental.yml`, or below the floor in `flaky.yml`; when you add
   tests, raise the floors in the same PR. The reference leg also counts the
   goldens, which the other legs deselect, so its floor is higher.
+- **No new code-scanning alert.** CodeQL analyzes the pull requests to
+  `main` opened from a branch of this repository: the Python, the
+  JavaScript and TypeScript of `src/frontend` (the vis and the Jupyter
+  extension) and the workflows. It runs from the repository settings
+  (default setup), so no file in `.github/workflows/` configures it. Its
+  `CodeQL` check annotates each alert the PR adds in the lines it changes,
+  and fails only when one is of severity error or of security severity high
+  or critical: a lower one leaves the check green and still counts here.
+  Fix each alert, or, when you believe it is a false positive, say why in
+  the PR: a maintainer dismisses it on GitHub with that reason. A pull
+  request from a fork gets no `CodeQL` check (default setup skips forks); a
+  maintainer runs the analysis for it before integrating.
 - **The goldens, when an output changes.** A change to what a command prints
   shows up as a golden mismatch on the reference leg. Record the new
   goldens on the reference platform (see "End-to-end tests and goldens"

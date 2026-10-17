@@ -62,7 +62,14 @@ of date, fix it there.
   `flaky.yml` and the one of the `paper-example` job; the reference leg also
   counts the goldens, which the other legs deselect), **and the floors go
   up in the same PR that adds tests**;
-  `uv run ruff check .` clean; CI green at the tip of the branch; and, whenever
+  `uv run ruff check .` clean; CI green at the tip of the branch; no new
+  CodeQL alert in the PR, or each one fixed or explained there for a
+  maintainer to dismiss (the `CodeQL` check, described in "What a pull
+  request needs" in `CONTRIBUTING.md`, and read as step 6 of `review-pr`
+  says); for a commit that reaches `main` without a PR, no open alert of
+  `main` created by its analysis, once that analysis has finished (`gh api
+  "repos/gems-uff/noworkflow/code-scanning/alerts?ref=refs/heads/main&state=open&sort=created&direction=desc"`
+  lists the newest first); and, whenever
   `src/frontend` changes, `src/noworkflow/now/vis/static/dist/bundle.js`
   rebuilt and committed in the same commit (the `frontend` job rebuilds it
   and fails on any difference). The `bundle.js.map` the build rewrites is
