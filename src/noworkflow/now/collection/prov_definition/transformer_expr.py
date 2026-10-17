@@ -381,7 +381,13 @@ class RewriteDependencies(ast.NodeTransformer):
         new_keys, new_values = [], []
         for index, (key, value) in enumerate(zip(node.keys, node.values)):
             self.composition_edge = (dict_code_component, Component.S_KEY_VALUE, index)
-            new_key, new_value = self._dict_itemize(key, value)
+            if key is None:
+                new_key = None
+                new_value = self.rewriter.capture(
+                    value, mode=Dependency.ITEM
+                )
+            else:
+                new_key, new_value = self._dict_itemize(key, value)
             new_keys.append(new_key)
             new_values.append(new_value)
 

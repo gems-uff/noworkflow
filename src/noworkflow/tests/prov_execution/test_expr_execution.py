@@ -405,6 +405,18 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_a_kv_a.repr, '1')
         self.assertEqual(var_a_kv_b.repr, '2')
 
+    def test_dict_unpacking_definition(self):
+        """Test dictionary unpacking definition"""
+        self.script("source = {'a': 1}\n"
+                    "result = {**source}\n"
+                    "# other")
+
+        var_source = self.get_evaluation(name="source", mode="r")
+        var_result = self.get_evaluation(name="{**source}")
+
+        self.assert_dependency(var_result, var_source, "item")
+        self.assertEqual(var_result.repr, "{'a': 1}")
+
     def test_list_definition(self):
         """Test list definition"""
         self.script("e = 1\n"
