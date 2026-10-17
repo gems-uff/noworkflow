@@ -299,15 +299,21 @@ COMMAND_ROUTES = {
 }
 
 # Requests that reach the collab route with a command other than push or
-# pull, and the word that lands before --url. "dot-dot" is a raw path that
-# browsers normalize away and other clients need not. The last two are URLs
-# the frontend builds: a restore of a file to an absolute target (the path
-# converter refuses a segment that starts with "/") and a dataflow whose
-# "Visualization depth" was emptied (the number input leaves "").
+# pull, and the word that lands before --url. "run" and "debug" take the
+# segment after --url as the script to trace, and "demo" takes --dir and
+# starts by erasing that directory (#220); the recorder runs none of them.
+# "dot-dot" is a raw path that browsers normalize away and other clients
+# need not. The last two are URLs the frontend builds: a restore of a file
+# to an absolute target (the path converter refuses a segment that starts
+# with "/") and a dataflow whose "Visualization depth" was emptied (the
+# number input leaves "").
 UNKNOWN_COMMANDS = {
     "gc": (lambda vis: collab_url("gc"), "gc"),
     "restore": (lambda vis: collab_url("restore"), "restore"),
     "export": (lambda vis: collab_url("export"), "export"),
+    "run": (lambda vis: collab_url("run"), "run"),
+    "debug": (lambda vis: collab_url("debug"), "debug"),
+    "demo": (lambda vis: collab_url("demo"), "demo"),
     "dot-dot": (lambda vis: collab_url(".."), ".."),
     "restore-file-to-an-absolute-target": (
         lambda vis: restore_file_url(

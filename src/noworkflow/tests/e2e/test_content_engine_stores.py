@@ -18,6 +18,10 @@ such a store:
 - ``now restore`` without ``--content-engine`` reads the store as plain;
 - ``now restore -i`` prints puregit's debug lines and crashes on a prefix
   of a file name;
+- ``now restore --content-engine puregit`` runs an executable
+  ``hooks/reference-transaction`` of the store's ``content.git`` when it
+  commits the backup trial: git takes that directory as the repository
+  and honors its hooks (#399);
 - a script that reads a file under ``.git/`` makes ``now run`` crash after
   the trial is stored;
 - under ``now run``, a script that starts a process with the spawn start
@@ -28,11 +32,13 @@ such a store:
 What a test expects comes from the store's SQLite file, from the test's own
 ``git`` and from the script's meaning. Each known defect has a
 characterization and a ``_desired`` twin decorated with ``known_defects``.
-The tests that depend on tree paths or on ``git gc`` are not run on
-Windows, where neither was measured. The script writes its file in binary
-mode, so the file holds the same bytes on every system.
+The tests that depend on tree paths, on ``git gc`` or on a planted hook (an
+sh script) are not run on Windows, where none was measured. The script
+writes its file in binary mode, so the file holds the same bytes on every
+system.
 """
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -63,6 +69,9 @@ SCRIPT_AS_PLAIN = repr(
 WINDOWS_NOT_MEASURED = pytest.mark.skipif(
     os.name == "nt", reason="not measured on Windows: tree paths use os.sep, "
     "and git gc goes through shell=True")
+POSIX_HOOK = pytest.mark.skipif(
+    os.name == "nt", reason="not measured on Windows: the hook is an sh "
+    "script with an executable mode")
 
 GC_FLAGS = Defect(
     "#224: cmd_gc calls content.gc() without -agg, and "
@@ -93,6 +102,12 @@ DOT_GIT_PATH = Defect(
     "component, git update-index rejects it, and commit_content raises "
     "after the trial is stored, leaving its content unreferenced",
     signature="Invalid path '.git/HEAD'")
+HOOK_OF_THE_STORE = Defect(
+    "#399: git_system runs git with cwd set to the store's content.git and "
+    "never overrides core.hooksPath, so git runs that repository's own "
+    "hooks: the commit of now restore's backup trial runs an executable "
+    "hooks/reference-transaction (update-ref)",
+    signature="git ran code from the store's content.git")
 MAIN_WITHOUT_SPEC = Defect(
     "#325: Metascript.clear_namespace empties "
     "__main__ and restores only __name__, __file__ and __builtins__, and "
@@ -424,6 +439,62 @@ def test_restore_by_a_file_name_prefix_on_a_puregit_store_desired(
 
     assert result.returncode == 0, str(result)
     assert result.stdout == "[now] File version not found!\n"
+
+
+def restore_with_a_hook_in_the_store(project):
+    """``now restore --content-engine puregit 1`` after the script changed,
+    on a store whose ``content.git`` holds an executable
+    ``hooks/reference-transaction``, as a store received from someone else
+    may; the hook appends its name to a marker in ``tmp_path``. Returns the
+    result and the marker's lines, one per run of the hook"""
+    marker = project.root / "marker.txt"
+    hook = project.store / "content.git" / "hooks" / "reference-transaction"
+    # git init copies hooks/ from its templates, which a git may lack.
+    hook.parent.mkdir(exist_ok=True)
+    hook.write_text(
+        "#!/bin/sh\necho reference-transaction >> {}\n".format(
+            shlex.quote(str(marker))),
+        encoding="utf-8", newline="\n")
+    hook.chmod(0o755)
+    project.write("script.py", SCRIPT + "# changed\n")
+
+    result = project.run("restore", "--content-engine", "puregit", "1",
+                         expect=None, allow_stderr=True)
+
+    if not marker.exists():
+        return result, []
+    return result, marker.read_text(encoding="utf-8").splitlines()
+
+
+@POSIX_HOOK
+def test_restore_on_a_puregit_store_runs_the_hook_of_its_content_git(
+        puregit_store):
+    """``now restore`` records the backup trial, puts the script back and
+    exits 0; committing the backup trial's content (``update-ref``) runs
+    the store's hook. How many times is git's business, so only the hook's
+    name is compared"""
+    result, runs = restore_with_a_hook_in_the_store(puregit_store)
+
+    assert result.returncode == 0, str(result)
+    assert "[now] Backup Trial " in result.stdout
+    assert (puregit_store.path / "script.py").read_text(
+        encoding="utf-8") == SCRIPT
+    assert set(runs) == {"reference-transaction"}
+
+
+@POSIX_HOOK
+@known_defects(HOOK_OF_THE_STORE)
+def test_restore_never_runs_code_from_the_stores_content_git_desired(
+        puregit_store):
+    """Desired (#399): ``now restore`` runs no hook of the store's
+    ``content.git`` and still restores the script"""
+    result, runs = restore_with_a_hook_in_the_store(puregit_store)
+
+    assert runs == [], (
+        "git ran code from the store's content.git: {}".format(runs))
+    assert result.returncode == 0, str(result)
+    assert (puregit_store.path / "script.py").read_text(
+        encoding="utf-8") == SCRIPT
 
 
 # ---------------------------------------------------------------------------

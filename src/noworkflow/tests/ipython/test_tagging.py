@@ -18,9 +18,12 @@ written: ``backward_deps`` and ``global_backward_deps`` take the trial from
 ``__noworkflow__``, which a fake collector in the builtins provides
 here (``fake_collector``; ``monkeypatch`` takes it back); the comparison
 helpers keep each trial's operations in a ``shelve`` named ``ops`` in the
-current directory, so they run in a temporary one. The table helpers
-import pandas, which only the ``paper`` dependency group installs and no
-extra of noWorkflow declares (#392): where it is missing,
+current directory, so they run in a temporary one. A shelve stores its
+values as pickles, so comparing two trials runs the code an ``ops`` file
+names (#400): the tests craft one whose payload only creates an empty
+marker file in the temporary directory, and close the file it opens. The
+table helpers import pandas, which only the ``paper`` dependency group
+installs and no extra of noWorkflow declares (#392): where it is missing,
 the paths that never reach it run with an empty module standing in for
 it, and the others skip. No CI
 leg that runs this module has pandas; the reference-leg container
@@ -45,9 +48,11 @@ import builtins
 import dbm
 import importlib.metadata
 import importlib.util
+import io
 import json
 import os
 import re
+import shelve
 import subprocess
 import sys
 import types
@@ -168,6 +173,15 @@ TAGGING_PANDAS = Defect(
     "pyproject.toml lists only in the `paper` dependency group, never in "
     "[project.dependencies] or an extra (demo, notebook, all)",
     signature="no requirement of noworkflow names pandas",
+)
+OPS_UNPICKLE = Defect(
+    "#400: tagging/var_tagging.py trial_diff and "
+    "trial_intersection_diff read shelf[trial] from shelve.open('ops') in "
+    "the current directory, which is pickle.loads of the stored bytes: a "
+    "value whose __reduce__ names a callable calls it, so an ops file that "
+    "came with a directory someone else made runs its author's code as "
+    "soon as two trials are compared",
+    signature="comparing two trials ran code from the ops file",
 )
 
 
@@ -316,6 +330,56 @@ def store_operations(capsys):
     for trial, operations in OPERATIONS.items():
         var_tagging.store_operations(trial, operations)
     assert capsys.readouterr().out == "Dictionary stored in shelve.\n" * 2
+
+
+class OpenOnLoad:
+    """A value whose unpickling calls ``open(path, "w")``: the payload of an
+    ``ops`` file someone else made, harmless here (it creates an empty file
+    in ``tmp_path``, and the test closes the file it returns)
+    """
+
+    def __init__(self, path):
+        self.path = path
+
+    def __reduce__(self):
+        return (builtins.open, (self.path, "w"))
+
+
+def craft_ops(directory):
+    """Write the ``ops`` shelve of ``directory`` as someone else would:
+    trial ``A`` holds an ``OpenOnLoad`` of ``directory/MARKER``, trial ``B``
+    a plain dict; return MARKER's path, which nothing has created yet
+
+    ``shelve`` picks the ``dbm`` backend the helpers get, so this is the
+    file they open, whatever that backend names it (``shelve_files``).
+    """
+    marker = directory / "MARKER"
+    with shelve.open(str(directory / "ops")) as shelf:
+        shelf["A"] = OpenOnLoad(str(marker))
+        shelf["B"] = OPERATIONS["B"]
+    files = shelve_files(directory)
+    assert files
+    created = marker.exists()
+    assert not created
+    return marker
+
+
+def close_opened(marker, returned=None, error=None):
+    """Close the files on ``marker`` that the payload opened, and return
+    them: in what a helper returned, or in the frames of the error it
+    raised
+    """
+    values = list(returned) if isinstance(returned, tuple) else [returned]
+    traceback = error.__traceback__ if error is not None else None
+    while traceback is not None:
+        values.extend(traceback.tb_frame.f_locals.values())
+        traceback = traceback.tb_next
+    opened = {id(value): value for value in values
+              if isinstance(value, io.IOBase)
+              and getattr(value, "name", None) == str(marker)}
+    for value in opened.values():
+        value.close()
+    return list(opened.values())
 
 
 # --- tagging under now run --------------------------------------------------
@@ -609,6 +673,87 @@ def test_trial_intersection_diff_compares_the_common_operations(
     table = var_tagging.trial_intersection_diff("A", "B")
     rows = sorted(map(tuple, table[["key", "A", "B"]].values.tolist()))
     assert rows == [("b", "6", "8"), ("c", "6", "8")]
+
+
+def test_trial_diff_executes_code_from_the_ops_file(in_tmp, capsys):
+    """``trial_diff`` unpickles both trials from the ``ops`` shelve of the
+    current directory, and unpickling calls what a pickle names: on the
+    crafted shelve it creates MARKER and returns, with no error, the file
+    the payload opened and trial ``B`` as stored. Listing the trials and
+    storing another create nothing: the keys are not pickled, and storing
+    pickles only the new value
+
+    Characterization of #400.
+    """
+    marker = craft_ops(in_tmp)
+    assert sorted(var_tagging.resume_trials()) == ["A", "B"]
+    var_tagging.store_operations("C", OPERATIONS["A"])
+    assert capsys.readouterr().out == "Dictionary stored in shelve.\n"
+    created = marker.exists()
+    assert not created
+    first, second = var_tagging.trial_diff("A", "B", raw=True)
+    returned_the_file = close_opened(marker, (first, second)) == [first]
+    created = marker.exists()
+    assert created
+    assert returned_the_file
+    assert second == OPERATIONS["B"]
+
+
+def test_trial_intersection_diff_executes_code_from_the_ops_file(
+        in_tmp, capsys, pandas_or_stand_in):
+    """``trial_intersection_diff`` unpickles both trials too: on the crafted
+    shelve it creates MARKER, then fails on the value the payload returned,
+    a file where it expects a dict, without printing anything (reading the
+    shelve succeeded)
+
+    Characterization of #400. pandas is imported before the shelve is read
+    and used only after it, so an empty module stands in for it where it is
+    missing.
+    """
+    marker = craft_ops(in_tmp)
+    with pytest.raises(AttributeError,
+                       match="object has no attribute 'items'") as raised:
+        var_tagging.trial_intersection_diff("A", "B")
+    left_the_file = len(close_opened(marker, error=raised.value)) == 1
+    created = marker.exists()
+    assert created
+    assert left_the_file
+    assert capsys.readouterr().out == ""
+
+
+# The helpers that compare two trials, each called on the crafted shelve.
+COMPARING_HELPERS = {
+    "trial_diff": lambda: var_tagging.trial_diff("A", "B", raw=True),
+    "trial_intersection_diff":
+        lambda: var_tagging.trial_intersection_diff("A", "B"),
+}
+
+
+@pytest.mark.parametrize("helper", list(COMPARING_HELPERS))
+@known_defects(OPS_UNPICKLE)
+def test_comparing_two_trials_does_not_execute_code_from_the_ops_file_desired(
+        in_tmp, pandas_or_stand_in, helper):
+    """Comparing two trials never runs code that the ``ops`` file names: on
+    the crafted shelve, MARKER is never created
+
+    Any error is accepted. A fix may refuse trial ``A`` (an unpickler that
+    refuses every global raises UnpicklingError) or no longer read this
+    file (the trial is then missing); the property is about the payload
+    only, and what comparing returns or raises is for the other tests
+    (#392 pins the error of ``trial_intersection_diff`` for a trial it
+    cannot read).
+    """
+    marker = craft_ops(in_tmp)
+    returned = error = None
+    try:
+        returned = COMPARING_HELPERS[helper]()
+    except Exception as raised:  # pylint: disable=broad-except
+        error = raised
+    close_opened(marker, returned, error)
+    created = marker.exists()
+    assert not created, (
+        "comparing two trials ran code from the ops file: {} created "
+        "MARKER".format(helper))
 
 
 def test_var_tag_values_lists_a_tag_across_trials(connected_tags):

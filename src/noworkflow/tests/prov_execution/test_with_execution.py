@@ -14,9 +14,15 @@ and what a coarse ``with`` still does, so removing the ``except`` fails
 here and not only in the e2e syntax corpus.
 
 In fine granularity, a ``with`` of several items pairs its targets with
-the items in reverse (#316); the nested form is the
-control. The context managers are ``contextlib.nullcontext`` and
-``open(os.devnull)``: a context manager the script defines has its
+the items in reverse (#316); the nested form is the control. The same
+pairing crashes on a subscript or attribute target: with two bound items,
+its line pops the other item's ``Assign``, which holds no access for it,
+and ``Collector._extract_assign_access`` takes its ``eval`` fallback,
+where ``access_depa`` is unbound. The ``UnboundLocalError`` leaves from
+the ``with`` line, after Python bound the targets and before the body, so
+the script stops there, or its own ``try`` catches the collector's error
+and skips the body. The context managers are ``contextlib.nullcontext``
+and ``open(os.devnull)``: a context manager the script defines has its
 ``__enter__`` rewritten and takes the path of #310.
 
 The ``_desired`` twins are in ``TestWithExecutionDesired``, which is not
@@ -41,6 +47,17 @@ WITH_FILES = Defect(
     WITH_ITEMS.reason + "; the file x depends on is not the one it holds, "
     "so the assign reference becomes a plain dependency",
     signature="'x': [(\"open(devnull, 'rb')\"")
+WITH_ACCESS = Defect(
+    "#316: with two bound items, the line of a subscript or attribute "
+    "target pops the Assign of the other item (Collector.pop_assign), "
+    "which holds no access for that target, so "
+    "Collector._extract_assign_access (collector.py) takes its eval "
+    "fallback and its return reads access_depa, which only the other "
+    "branch binds; the UnboundLocalError reaches the script at the with "
+    "line, after Python bound the targets and before the body",
+    signature="cannot access local variable 'access_depa'")
+ACCESS_ERROR = ("cannot access local variable 'access_depa' where it is not "
+                "associated with a value")
 
 ONE_ITEM = ("# script.py\n"
             "from os import devnull\n"
@@ -66,6 +83,33 @@ NESTED = ("# script.py\n"
           "    with nullcontext(2) as y:\n"
           "        with nullcontext(3) as z:\n"
           "            pass\n")
+SUBSCRIPT_FIRST = ("# script.py\n"
+                   "from contextlib import nullcontext\n"
+                   "box = [0]\n"
+                   "reached = False\n"
+                   "with nullcontext(1) as box[0], nullcontext(2) as other:\n"
+                   "    reached = True\n"
+                   "after = True\n")
+SUBSCRIPT_FIRST_IN_TRY = ("# script.py\n"
+                          "from contextlib import nullcontext\n"
+                          "box = [0]\n"
+                          "reached = False\n"
+                          "caught = None\n"
+                          "try:\n"
+                          "    with nullcontext(1) as box[0], "
+                          "nullcontext(2) as other:\n"
+                          "        reached = True\n"
+                          "except Exception as exc:\n"
+                          "    caught = type(exc).__name__ + ': ' + str(exc)\n"
+                          "after = True\n")
+NESTED_SUBSCRIPT = ("# script.py\n"
+                    "from contextlib import nullcontext\n"
+                    "box = [0]\n"
+                    "reached = False\n"
+                    "with nullcontext(1) as box[0]:\n"
+                    "    with nullcontext(2) as other:\n"
+                    "        reached = True\n"
+                    "after = True\n")
 
 
 def unpack_target(target_expr):
@@ -213,6 +257,58 @@ class TestWithExecution(TargetTestCase):
             {"x": [("open(devnull)", "assign", True)],
              "y": [("open(devnull, 'rb')", "assign", True)]})
 
+    def test_with_of_two_items_with_a_subscript_target(self):
+        """``with nullcontext(1) as box[0], nullcontext(2) as other`` stops
+        the script with ``UnboundLocalError`` on ``access_depa``, after
+        Python bound both targets and before the body
+
+        #316. The line of ``box[0]`` pops the ``Assign`` of
+        ``nullcontext(2)``, which holds no access for it, and the ``eval``
+        fallback of ``Collector._extract_assign_access`` leaves
+        ``access_depa`` unbound. That line comes first in the rewritten
+        body and carries the position of the target, so the error leaves
+        from the ``with`` line.
+        """
+        message = self.collect(SUBSCRIPT_FIRST)
+        self.assertEqual(message.splitlines()[0],
+                         "UnboundLocalError({!r})".format(ACCESS_ERROR))
+        self.assertTrue("_extract_assign_access" in message,
+                        "the traceback does not pass through "
+                        "_extract_assign_access")
+        namespace = self.metascript.namespace
+        self.assertEqual((namespace["box"], namespace["other"]), ([1], 2))
+        self.assertIs(namespace["reached"], False)
+        self.assertNotIn("after", namespace)
+
+    def test_with_of_two_items_with_a_subscript_target_inside_try(self):
+        """Inside a ``try`` of the script, the same ``with`` skips its
+        body, the script's handler catches the collector's
+        ``UnboundLocalError``, and the trial finishes successfully
+
+        #316: the error leaves from the ``with`` line, so the script's
+        own ``except`` catches it.
+        """
+        self.assertEqual(self.collect(SUBSCRIPT_FIRST_IN_TRY), SUCCESS)
+        namespace = self.metascript.namespace
+        self.assertEqual(namespace["caught"],
+                         "UnboundLocalError: " + ACCESS_ERROR)
+        self.assertEqual((namespace["box"], namespace["other"]), ([1], 2))
+        self.assertIs(namespace["reached"], False)
+        self.assertIs(namespace["after"], True)
+
+    def test_nested_with_with_a_subscript_target_runs(self):
+        """Control: nested ``with`` statements bind ``box[0]`` and
+        ``other`` and run the body, as Python does
+
+        The first line of each body pops its own item's ``Assign``, so the
+        line of ``box[0]`` finds the access recorded when Python bound it.
+        """
+        self.assertEqual(self.collect(NESTED_SUBSCRIPT), SUCCESS)
+        namespace = self.metascript.namespace
+        self.assertEqual((namespace["box"], namespace["other"]), ([1], 2))
+        self.assertIs(namespace["reached"], True)
+        self.assertIs(namespace["after"], True)
+
 
 class TestWithExecutionDesired(TargetTestCase):
     """What a ``with`` should record once its defects are fixed
@@ -251,3 +347,28 @@ class TestWithExecutionDesired(TargetTestCase):
             self.target_dependencies("x", "y"),
             {"x": [("open(devnull)", "assign", True)],
              "y": [("open(devnull, 'rb')", "assign", True)]})
+
+    @known_defects(WITH_ACCESS)
+    def test_with_of_two_items_with_a_subscript_target_desired(self):
+        """``with nullcontext(1) as box[0], nullcontext(2) as other`` runs
+        as in Python: both targets bound, the body run, the script
+        finished
+        """
+        self.assertEqual(self.collect(SUBSCRIPT_FIRST), SUCCESS)
+        namespace = self.metascript.namespace
+        self.assertEqual((namespace["box"], namespace["other"]), ([1], 2))
+        self.assertIs(namespace["reached"], True)
+        self.assertIs(namespace["after"], True)
+
+    @known_defects(WITH_ACCESS)
+    def test_with_of_two_items_with_a_subscript_target_inside_try_desired(
+            self):
+        """Inside a ``try`` of the script, the same ``with`` raises
+        nothing: the handler does not run and the body does
+        """
+        self.assertEqual(self.collect(SUBSCRIPT_FIRST_IN_TRY), SUCCESS)
+        namespace = self.metascript.namespace
+        self.assertIsNone(namespace["caught"])
+        self.assertEqual((namespace["box"], namespace["other"]), ([1], 2))
+        self.assertIs(namespace["reached"], True)
+        self.assertIs(namespace["after"], True)

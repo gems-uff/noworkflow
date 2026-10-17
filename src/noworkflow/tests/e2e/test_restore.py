@@ -9,11 +9,13 @@ Run as processes on real stores:
   deleted subdirectory included), records a ``backup`` trial when the
   project differs from the head, and ``-f FILE -t TARGET`` writes one
   version of one file elsewhere;
-- the defects of restore: a binary local module crashes it (#183), a
-  restored executable loses its executable bit (#205), ``-f`` with the
-  default ``-i 1`` deletes an unrelated target, a backup trial records the
-  parent of the project as its path, and ``--dir`` from another directory
-  writes into the current directory;
+- the defects of restore: a binary local module crashes it (#183), the
+  backup trial imports every local module of the head, changed or not, to
+  read its version, so their code runs and a module that exits at import
+  aborts the restore (#396), a restored executable loses its executable
+  bit (#205), ``-f`` with the default ``-i 1`` deletes an unrelated
+  target, a backup trial records the parent of the project as its path,
+  and ``--dir`` from another directory writes into the current directory;
 - ``--dir`` of ``run`` and ``list``, and the sibling import that ``run
   --dir`` breaks;
 - ``now gc`` (#224) and ``now import`` on the plain content engine, both of
@@ -27,8 +29,11 @@ paths). Behavior that is a known defect has a characterization test, which
 pins what ``now`` does today, and a twin with the same name plus
 ``_desired``, marked ``xfail(strict=True, raises=AssertionError)``, that
 describes what it should do and cites the issue that will flip it. Both are
-named after the scenario, not the outcome. Tracebacks are never compared
-whole, only their last line.
+named after the scenario, not the outcome. The twins of #396 differ in two
+ways: they go through ``known_defects``, which also checks that today's
+failure carries the signature of its defect, and they are named after the
+property a fix guarantees, as security tests are (``AGENTS.md``).
+Tracebacks are never compared whole, only their last line.
 """
 import importlib.machinery
 import os
@@ -44,6 +49,7 @@ import pytest
 
 import noworkflow
 
+from ..helpers.defects import Defect, known_defects
 from .harness import (
     CORPUS, WEATHER_ARGS, NowProject, last_line, runs_this_interpreter,
     same_path)
@@ -393,6 +399,271 @@ def test_restore_with_a_binary_local_module_desired(project):
     assert not [trial for trial in project.trials()
                 if trial["status"] == "ongoing"]
     assert (project.path / "data.txt").read_text(encoding="utf-8") == "one\n"
+
+
+# ---------------------------------------------------------------------------
+# restore executes the project's local modules (#396)
+# ---------------------------------------------------------------------------
+
+EXECUTES_MODULES = Defect(
+    reason="#396: cmd_restore.Restore.create_backup, which runs when any "
+           "file of the head trial differs from the disk, reads the version "
+           "of every local module of the head, changed or not, by importing "
+           "the file on disk (importlib.util.spec_from_file_location and "
+           "spec.loader.exec_module) inside the now restore process, so "
+           "every top-level statement of those modules runs",
+    signature="now restore executed helper.py",
+)
+EXIT_AT_IMPORT = Defect(
+    reason="#396: cmd_restore.Restore.create_backup imports every local "
+           "module of the head trial inside try/except Exception, which "
+           "does not catch SystemExit: a module that parses sys.argv with "
+           "argparse at import ends now restore with exit 2 after the "
+           "backup trial is created and before anything is restored, "
+           "leaving that trial ongoing",
+    signature="helper: error: unrecognized arguments: restore",
+)
+# script.py imports helper.py; the next restore undoes an edit of helper.py.
+IMPORTER = "import helper\n\nprint(helper.__version__)\n"
+IMPORTED_V1 = '__version__ = "1.0"\n'
+# script.py imports helper.py and reads data.txt; the next restore undoes a
+# change of data.txt alone.
+READER = (
+    "import helper\n"
+    "\n"
+    "with open('data.txt', encoding='utf-8') as handle:\n"
+    "    print(helper.__version__, handle.read().strip())\n"
+)
+# An edit whose parser rejects the arguments of whoever imports it: in now
+# restore, sys.argv[1:] is ["restore"]. The prog keeps the message the same
+# on every Python (from 3.14 the default prog of `python -m` changed).
+EXITS_AT_IMPORT = (
+    "import argparse\n"
+    "\n"
+    '__version__ = "2.0"\n'
+    'argparse.ArgumentParser(prog="helper").parse_args()\n'
+)
+EXECUTED = "helper.py executed\n"
+
+
+def writes_a_marker(marker, version="2.0"):
+    """``helper.py`` at ``version``, appending ``EXECUTED`` to ``marker``
+    (outside the project) each time it runs"""
+    return (
+        "__version__ = {!r}\n"
+        "\n"
+        "with open({!r}, 'a', encoding='utf-8') as handle:\n"
+        "    handle.write({!r})\n"
+    ).format(version, str(marker), EXECUTED)
+
+
+def helper_modules(project, trial_id):
+    """The ``module`` rows named ``helper`` of a trial"""
+    return project.query(
+        "SELECT version, path FROM module WHERE trial_id = ? "
+        "AND name = 'helper' ORDER BY id", trial_id)
+
+
+def run_then_edit_the_imported_module(project, edited):
+    """``now run script.py``, which imports ``helper.py`` at version 1.0;
+    then ``helper.py`` is rewritten as ``edited``
+
+    Returns the trial. ``helper.py`` is then the only file that differs from
+    the head, so the next ``now restore`` records a backup trial before it
+    puts version 1.0 back. Every edit is longer than version 1.0, so the
+    bytecode ``now run`` cached for it, which the import checks by the
+    source's size and modification time, is stale.
+    """
+    project.write("script.py", IMPORTER)
+    project.write("helper.py", IMPORTED_V1)
+    result = project.run("run", "script.py")
+    assert result.stdout == "1.0\n", str(result)
+    trials = project.trials()
+    assert [trial["status"] for trial in trials] == ["finished"]
+    modules = helper_modules(project, trials[0]["id"])
+    assert [module["version"] for module in modules] == ["1.0"]
+    assert same_path(modules[0]["path"], project.path / "helper.py")
+    project.write("helper.py", edited)
+    return trials[0]
+
+
+def run_then_change_the_input(project, marker):
+    """``now run script.py``, which imports ``helper.py`` (version 1.0,
+    which appends ``EXECUTED`` to ``marker`` when it runs) and reads
+    ``data.txt``; then ``data.txt`` changes
+
+    Returns the trial. ``data.txt`` is then the only file that differs from
+    the head, so the next ``now restore`` records a backup trial before it
+    puts ``data.txt`` back; ``helper.py`` is the file that ran in the
+    trial, untouched since, and ``marker`` holds the one line of that run.
+    """
+    project.write("script.py", READER)
+    project.write("helper.py", writes_a_marker(marker, "1.0"))
+    project.write("data.txt", "one\n")
+    result = project.run("run", "script.py")
+    assert result.stdout == "1.0 one\n", str(result)
+    trials = project.trials()
+    assert [trial["status"] for trial in trials] == ["finished"]
+    modules = helper_modules(project, trials[0]["id"])
+    assert [module["version"] for module in modules] == ["1.0"]
+    assert same_path(modules[0]["path"], project.path / "helper.py")
+    assert marker.read_text(encoding="utf-8") == EXECUTED
+    project.write("data.txt", "two\n")
+    return trials[0]
+
+
+def test_restore_with_a_changed_local_module(project, tmp_path):
+    """``now restore`` after an edit of ``helper.py`` records the backup
+    trial's version of ``helper`` by importing the edited file, so the
+    edit's top-level statements run inside ``now restore``: the marker gets
+    one line, the backup records version 2.0 (read from the module it ran),
+    and then version 1.0 is restored with exit 0 (#396 changes it)
+
+    The control is the marker before ``now restore``: neither ``now run``
+    (version 1.0 has no marker code) nor the edit wrote it.
+    """
+    marker = tmp_path / "executed.txt"
+    trial = run_then_edit_the_imported_module(project, writes_a_marker(marker))
+    assert not marker.exists()
+
+    result = project.run("restore")
+
+    assert marker.read_text(encoding="utf-8") == EXECUTED
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
+        IMPORTED_V1)
+    backup = only_backup(project)
+    assert result.stdout.splitlines() == [
+        "[now] helper.py has changed",
+        "[now] Backup Trial {} created".format(backup["id"]),
+        "[now] File helper.py from trial {} restored".format(trial["id"]),
+    ]
+    assert [module["version"] for module in helper_modules(
+        project, backup["id"])] == ["2.0"]
+
+
+@known_defects(EXECUTES_MODULES)
+def test_restore_does_not_execute_a_changed_local_module_desired(
+        project, tmp_path):
+    """``now restore`` writes files back and records the backup trial
+    without running any code of the project: the edited ``helper.py`` never
+    runs, the backup still records a ``helper`` module, and version 1.0 is
+    restored with exit 0
+
+    The version the backup records for ``helper`` is the fix's choice (the
+    head's when the code hash matches it, a static read of ``__version__``,
+    or None), so it is not asserted.
+    """
+    marker = tmp_path / "executed.txt"
+    run_then_edit_the_imported_module(project, writes_a_marker(marker))
+
+    result = project.run("restore", expect=None, allow_stderr=True)
+
+    assert not marker.exists(), "now restore executed helper.py"
+    assert result.returncode == 0, str(result)
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
+        IMPORTED_V1)
+    backup = only_backup(project)
+    assert len(helper_modules(project, backup["id"])) == 1
+
+
+def test_restore_with_an_unchanged_local_module(project, tmp_path):
+    """``now restore`` after only ``data.txt`` changed still imports
+    ``helper.py``, which did not change, to record its version in the
+    backup trial: the marker gets a second line after the one of ``now
+    run``, the backup records version 1.0, and ``data.txt`` is restored
+    with exit 0 (#396 changes it)
+
+    A fix that stops importing only the modules that changed leaves this
+    pair as it is, while it flips the pair above.
+    """
+    marker = tmp_path / "executed.txt"
+    trial = run_then_change_the_input(project, marker)
+
+    result = project.run("restore")
+
+    assert marker.read_text(encoding="utf-8") == EXECUTED * 2
+    assert (project.path / "data.txt").read_text(encoding="utf-8") == "one\n"
+    backup = only_backup(project)
+    assert result.stdout.splitlines() == [
+        "[now] data.txt has changed",
+        "[now] Backup Trial {} created".format(backup["id"]),
+        "[now] File data.txt from trial {} restored".format(trial["id"]),
+    ]
+    assert [module["version"] for module in helper_modules(
+        project, backup["id"])] == ["1.0"]
+
+
+@known_defects(EXECUTES_MODULES)
+def test_restore_does_not_execute_an_unchanged_local_module_desired(
+        project, tmp_path):
+    """``now restore`` of a project where only an input changed runs none
+    of its local modules either: the marker keeps the one line of ``now
+    run``, the backup still records a ``helper`` module, and ``data.txt``
+    is restored with exit 0
+
+    That ``helper.py`` ran once in the trial does not make it safe to run:
+    the project and its store may come from elsewhere (a clone, an
+    archive). The version the backup records is the fix's choice, as in
+    the twin above.
+    """
+    marker = tmp_path / "executed.txt"
+    run_then_change_the_input(project, marker)
+
+    result = project.run("restore", expect=None, allow_stderr=True)
+
+    assert marker.read_text(encoding="utf-8") == EXECUTED, (
+        "now restore executed helper.py")
+    assert result.returncode == 0, str(result)
+    assert (project.path / "data.txt").read_text(encoding="utf-8") == "one\n"
+    backup = only_backup(project)
+    assert len(helper_modules(project, backup["id"])) == 1
+
+
+def test_restore_with_a_module_that_exits_at_import(project):
+    """An edit of ``helper.py`` that parses ``sys.argv`` with argparse at
+    import ends ``now restore`` inside the backup: the module's parser
+    rejects ``restore`` and raises SystemExit, which ``except Exception``
+    does not catch, so ``now restore`` exits 2 with the module's usage
+    error, restores nothing and leaves the backup trial ``ongoing``, with
+    the restore command, no finish and no tag (#396 changes it)"""
+    run_then_edit_the_imported_module(project, EXITS_AT_IMPORT)
+
+    result = project.run("restore", expect=2, allow_stderr=True)
+
+    assert result.stderr.splitlines() == [
+        "usage: helper [-h]",
+        "helper: error: unrecognized arguments: restore",
+    ], str(result)
+    assert result.stdout == "[now] helper.py has changed\n"
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
+        EXITS_AT_IMPORT)
+    trials = project.trials()
+    assert [trial["status"] for trial in trials] == ["finished", "ongoing"]
+    ongoing = trials[-1]
+    assert ongoing["command"] == "restore"
+    assert ongoing["finish"] is None
+    assert project.tags(ongoing["id"]) == []
+
+
+@known_defects(EXIT_AT_IMPORT)
+def test_a_module_that_exits_at_import_does_not_abort_restore_desired(
+        project):
+    """A changed local module that exits when imported does not stop ``now
+    restore``: it exits 0, puts version 1.0 back and ends the backup trial
+    as ``backup``, with no trial left ``ongoing``
+
+    A fix that stops importing the modules flips this pair and the two
+    above; a fix that only catches SystemExit flips this pair alone.
+    """
+    run_then_edit_the_imported_module(project, EXITS_AT_IMPORT)
+
+    result = project.run("restore", expect=None, allow_stderr=True)
+
+    assert result.returncode == 0, str(result)
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
+        IMPORTED_V1)
+    assert [trial["status"] for trial in project.trials()] == [
+        "finished", "backup"]
 
 
 # ---------------------------------------------------------------------------

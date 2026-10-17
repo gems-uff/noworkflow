@@ -14,7 +14,12 @@ two scripts that crash the clustered modes without ``-w``
 text and ``-j`` forms from 3.14 (#241), every form from
 3.15 (#241); ``harness.export_ast_failure`` says which form
 fails where. ``export ipynb`` writes a notebook into the current directory,
-so each of its tests builds a weather project of its own.
+so each of its tests builds a weather project of its own. The scripts
+whose text writes a double quote or a backslash into the DOT of ``export
+dataflow`` or ``export prospective`` (#401) are run each in a project of
+its own, and their graphs are read by ``DotGraph``, which follows
+Graphviz's lexer and grammar, so that no test needs Graphviz (#393); the
+graphs of the shared stores are its control.
 
 The goldens are compared on the reference leg only; the structural tests run
 on every leg. ``export prolog`` records the whole environment of the machine
@@ -27,10 +32,15 @@ with fixed messages.
 Known defects get a characterization of what ``now`` does today and a
 ``_desired`` twin marked ``xfail(strict=True, raises=AssertionError)``,
 which turns green when the issue in its reason is fixed. The two share a
-name that says the scenario, never the outcome.
+name that says the scenario, never the outcome. The twins of #401 go
+through ``known_defects``, which also checks that today's failure carries
+the signature of its defect, and accept any escaping that Graphviz reads
+back as the text of the code or of the value: they check what a label
+draws, not how it is spelled.
 """
 import ast
 import collections
+import html
 import json
 import os
 import re
@@ -48,6 +58,7 @@ from noworkflow.tests.e2e.normalize import (
     clause_arity, prolog_facts, prolog_statements, strip_prolog_predicate,
     usable_hostname,
 )
+from noworkflow.tests.helpers.defects import Defect, known_defects
 
 # --- export prolog ----------------------------------------------------------
 
@@ -114,6 +125,48 @@ CALL_REASON = (
     "(looplessCoarseGrain)"
 )
 KEY_ERROR = re.compile(r"KeyError: 'e_\d+'")
+# Scripts whose text writes a double quote or a backslash into a label
+# (#401), each run in a project of its own.
+ESCAPED_QUOTE_SCRIPT = 'print("say \\"hi\\"")\n'
+QUOTED_CLASS_SCRIPT = (
+    "def init(self, v):\n"
+    "    self.v = v * 2\n"
+    "\n"
+    "\n"
+    "K = type('a\"b', (), {'__init__': init})\n"
+    "k = K(1)\n"
+)
+# The repr of a str always ends in its quote: only a __repr__ ends a value
+# in a backslash.
+BACKSLASH_REPR_SCRIPT = (
+    "class R:\n"
+    "    def __repr__(self):\n"
+    '        return "C:\\\\data\\\\"\n'
+    "\n"
+    "\n"
+    "r = R()\n"
+)
+ESCAPED_QUOTE = Defect(
+    reason="#401: dot_visitor.escape puts a backslash before each double "
+           "quote of a name but doubles no backslash, and Attributes.dot "
+           'writes it between quotes as it is: the \\" of a string literal '
+           'becomes \\\\", which DOT reads as an escaped backslash and the '
+           "closing quote of the label",
+    signature=r'[label="1 \"say \\"hi\\"\""',
+)
+CLUSTER_LABEL = Defect(
+    reason="#401: DotVisitor.visit_cluster writes the activation name into "
+           "the cluster's label with no escaping at all: a double quote in "
+           "the name closes the label, and the rest of the name is read as "
+           "DOT",
+    signature='label = "a"b";',
+)
+TRAILING_BACKSLASH = Defect(
+    reason="#401: dot_visitor.escape doubles no backslash, so a value whose "
+           "repr ends in an odd number of backslashes escapes the closing "
+           "quote of its label, which runs on into the next attribute",
+    signature=r'C:\data\" fillcolor',
+)
 
 # --- export ast -------------------------------------------------------------
 
@@ -139,6 +192,29 @@ def ast_form_params():
 
 
 AST_FORMS = ast_form_params()
+
+# --- export prospective -----------------------------------------------------
+
+# The condition `s == r"a\:b"`, which the prospective graph cuts at its
+# first ':' (#401): whole, and as it is cut.
+BACKSLASH_CONDITION_SCRIPT = (
+    's = "x"\n'
+    'if s == r"a\\:b":\n'
+    '    print("match")\n'
+)
+CONDITION = " Condition:"
+WHOLE_CONDITION = 's == r"a\\:b"'
+CUT_CONDITION = 's == r"a\\'
+PROSPECTIVE_LABEL = Defect(
+    reason="#401: GraphDrawer passes code text to the graphviz library as "
+           "labels without graphviz.escape, and NodeMapper.get_condition "
+           "cuts the condition at the first ':' of the line, one inside a "
+           "string literal too: a condition cut after a backslash ends its "
+           "label in an odd backslash, which the library warns about and "
+           "leaves in place",
+    signature="DotSyntaxWarning: expect syntax error scanning invalid quoted "
+              "string",
+)
 
 # --- export ipynb -----------------------------------------------------------
 
@@ -346,6 +422,227 @@ def skip_unless_same_python(project):
     if version != sys.version_info[:2]:
         pytest.skip("NOW_E2E_CMD runs another Python version, for which "
                     "export_ast_failure() and the xfail marks do not hold")
+
+
+def export_of(project, script, *args, **kwargs):
+    """``now export <args>`` after ``now run script.py``, with ``script``
+    as the text of ``script.py``; ``kwargs`` go to the export's run
+    """
+    project.write("script.py", script)
+    project.run("run", "script.py")
+    return project.run("export", *args, **kwargs)
+
+
+# --- DOT text, read without Graphviz (#393) ---------------------------------
+
+# The tokens of DOT (https://graphviz.org/doc/info/lang.html) that the
+# exports write. In a quoted string the lexer takes a backslash and the
+# character after it as a pair, so `\\"` ends the string. The exports write
+# neither comments nor HTML strings, so a `#` or a `<` outside a quoted
+# string means that a string ended early.
+DOT_TOKEN = re.compile(r'''
+    (?P<space>\s+)
+  | (?P<string>"(?:[^"\\]|\\.)*")
+  | (?P<edgeop>->|--)
+  | (?P<id>[A-Za-z_\x80-\U0010ffff][\w\x80-\U0010ffff]*
+          |-?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?))
+  | (?P<punct>[{}\[\];,=:])
+''', re.VERBOSE | re.DOTALL)
+DOT_KEYWORDS = {"strict", "graph", "digraph", "subgraph", "node", "edge"}
+DOT_ESCAPE = re.compile(r"\\(.)", re.DOTALL)
+# The HTML entities Graphviz decodes in a label, always with the semicolon.
+HTML_ENTITY = re.compile(
+    r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+
+
+class DotGraph:
+    """A DOT graph as Graphviz's grammar reads it: the attributes of each
+    node statement (``nodes``), the attributes each subgraph assigns
+    (``subgraphs``) and the edges, every value as written, without its
+    quotes (``rendered`` gives the text a label draws)
+
+    Raises AssertionError, with the whole text, where the grammar rejects
+    it or where a quoted string ended early (a ``#`` or a ``<`` outside
+    one, which Graphviz may still read as a comment or an HTML string), so
+    a test can assert that an export is well-formed DOT without Graphviz
+    (#393). Only what the exports write is read: an edge joins node ids,
+    never subgraphs, and no ``+`` joins two strings.
+    """
+
+    def __init__(self, text):
+        self.text = text
+        self.tokens = []
+        position = 0
+        while position < len(text):
+            match = DOT_TOKEN.match(text, position)
+            if match is None:
+                self.fail("unexpected {!r}".format(text[position]), position)
+            if match.lastgroup != "space":
+                self.tokens.append((match.lastgroup, match.group(), position))
+            position = match.end()
+        self.index = 0
+        self.nodes, self.subgraphs, self.edges = {}, [], []
+        self.read_graph()
+
+    def fail(self, problem, position=None):
+        if position is None:
+            position = (self.tokens[self.index][2]
+                        if self.index < len(self.tokens) else len(self.text))
+        raise AssertionError("not a DOT graph: {} at line {}\n{}".format(
+            problem, self.text.count("\n", 0, position) + 1, self.text))
+
+    def peek(self, offset=0):
+        """``(kind, text)`` of a token ahead, ``(None, None)`` past the end"""
+        index = self.index + offset
+        if index < len(self.tokens):
+            return self.tokens[index][:2]
+        return None, None
+
+    def keyword(self):
+        """The next token as a lowercase keyword, or None"""
+        kind, text = self.peek()
+        if kind == "id" and text.lower() in DOT_KEYWORDS:
+            return text.lower()
+        return None
+
+    def accept(self, punctuation):
+        """Consume the next token if it is ``punctuation``"""
+        if self.peek() == ("punct", punctuation):
+            self.index += 1
+            return True
+        return False
+
+    def expect(self, punctuation):
+        if not self.accept(punctuation):
+            self.fail("expected {!r} instead of {!r}".format(
+                punctuation, self.peek()[1]))
+
+    def take_id(self):
+        """The next token, an ID, without the quotes of a string"""
+        kind, text = self.peek()
+        if kind not in ("id", "string") or self.keyword():
+            self.fail("expected an ID instead of {!r}".format(text))
+        self.index += 1
+        return text[1:-1] if kind == "string" else text
+
+    def read_graph(self):
+        if self.keyword() == "strict":
+            self.index += 1
+        if self.keyword() not in ("graph", "digraph"):
+            self.fail("expected graph or digraph")
+        self.index += 1
+        if self.peek() != ("punct", "{"):
+            self.take_id()
+        self.read_body()
+        if self.index < len(self.tokens):
+            self.fail("text after the graph")
+
+    def read_body(self):
+        """``{ statements }``: the attributes they assign to the graph"""
+        assigned = {}
+        self.expect("{")
+        while not self.accept("}"):
+            self.read_statement(assigned)
+            self.accept(";")
+        return assigned
+
+    def read_statement(self, assigned):
+        keyword = self.keyword()
+        if keyword in ("graph", "node", "edge"):
+            self.index += 1
+            attributes = self.read_attributes()
+            if keyword == "graph":
+                assigned.update(attributes)
+        elif keyword == "subgraph" or self.peek() == ("punct", "{"):
+            name = None
+            if keyword == "subgraph":
+                self.index += 1
+                if self.peek() != ("punct", "{"):
+                    name = self.take_id()
+            self.subgraphs.append((name, self.read_body()))
+        elif self.peek(1) == ("punct", "="):
+            name = self.take_id()
+            self.index += 1
+            assigned[name] = self.take_id()
+        else:
+            tail = self.read_node_id()
+            heads = []
+            while self.peek()[0] == "edgeop":
+                self.index += 1
+                heads.append(self.read_node_id())
+            attributes = self.read_attributes()
+            if not heads:
+                self.nodes.setdefault(tail, {}).update(attributes)
+            for head in heads:
+                self.edges.append((tail, head, attributes))
+                tail = head
+
+    def read_node_id(self):
+        name = self.take_id()
+        while self.accept(":"):  # a port, then a compass point
+            self.take_id()
+        return name
+
+    def read_attributes(self):
+        attributes = {}
+        while self.accept("["):
+            while not self.accept("]"):
+                key = self.take_id()
+                self.expect("=")
+                attributes[key] = self.take_id()
+                if not self.accept(";"):
+                    self.accept(",")
+        return attributes
+
+
+def rendered(value):
+    """The text Graphviz draws for a label, given its value as ``DotGraph``
+    returns it
+
+    In Graphviz's order (``make_label`` in ``lib/common/labels.c``): the
+    lexer reads ``\\"`` as a quote and drops a backslash before a line end;
+    ``\\N``, ``\\G``, ``\\E``, ``\\H``, ``\\T`` and ``\\L`` become names of
+    the graph (kept here as a NUL and the letter, which no text of these
+    tests holds); HTML entities are decoded; then ``\\n``, ``\\l`` and
+    ``\\r`` break the line, and any other escaped character, a backslash
+    included, stands for itself.
+    """
+    text = DOT_ESCAPE.sub(
+        lambda match: {'"': '"', "\n": ""}.get(match.group(1),
+                                                match.group()),
+        value)
+    text = DOT_ESCAPE.sub(
+        lambda match: ("\0" + match.group(1) if match.group(1) in "GNETHL"
+                       else match.group()),
+        text)
+    text = HTML_ENTITY.sub(lambda match: html.unescape(match.group()), text)
+    return DOT_ESCAPE.sub(
+        lambda match: "\n" if match.group(1) in "nlr" else match.group(1),
+        text)
+
+
+def drawn_labels(graph):
+    """``{node: text}``: what the label of each node statement draws"""
+    return {node: rendered(attributes["label"])
+            for node, attributes in graph.nodes.items()
+            if "label" in attributes}
+
+
+def drawn_cluster_labels(graph):
+    """What the label each subgraph assigns draws, sorted"""
+    return sorted(rendered(assigned["label"])
+                  for _, assigned in graph.subgraphs if "label" in assigned)
+
+
+def same_expression(text, source):
+    """Whether Python reads ``text`` as the same expression as ``source``,
+    whatever its spelling (quotes, raw prefix, spaces)
+    """
+    try:
+        return (ast.dump(ast.parse(text, mode="eval"))
+                == ast.dump(ast.parse(source, mode="eval")))
+    except (SyntaxError, ValueError):
+        return False
 
 
 # --- test 13: export prolog -------------------------------------------------
@@ -596,6 +893,119 @@ def test_export_dataflow_of_nested_and_repeated_calls_in_the_other_modes(
     assert_digraph(result)
 
 
+@pytest.mark.parametrize("mode", DATAFLOW_MODES)
+def test_export_dataflow_reads_as_dot_in_each_mode(dataflow_project, mode):
+    """``DotGraph`` reads the graph of each mode of ``simulation.py``, and
+    its access node draws ``input.txt``
+
+    Control of the #401 twins: the text of ``simulation.py`` holds double
+    quotes, but no ``\\"`` and no trailing backslash, so its graphs are
+    well-formed today, and the reader accepts them.
+    """
+    result = dataflow_project.run("export", "dataflow", "-m", mode)
+    graph = DotGraph(result.stdout)
+    assert "input.txt" in drawn_labels(graph).values(), str(result)
+    assert graph.edges, str(result)
+
+
+def test_export_dataflow_of_a_string_literal_with_an_escaped_quote(project):
+    """``export dataflow`` of ``print("say \\"hi\\"")``, with the default
+    options, writes each ``\\"`` of the literal as ``\\\\"``: an escaped
+    backslash, then the quote that closes the label, so Graphviz rejects
+    the graph, and so does ``DotGraph`` (#401 changes it)
+    """
+    result = export_of(project, ESCAPED_QUOTE_SCRIPT, "dataflow")
+
+    assert r'[label="1 print(\"say \\"hi\\"\")"' in result.stdout, str(result)
+    assert r'[label="1 \"say \\"hi\\"\""' in result.stdout, str(result)
+    with pytest.raises(AssertionError,
+                       match=r"^not a DOT graph: unexpected '\\\\'"):
+        DotGraph(result.stdout)
+
+
+@known_defects(ESCAPED_QUOTE)
+def test_export_dataflow_of_a_string_literal_with_an_escaped_quote_desired(
+        project):
+    """``export dataflow`` of ``print("say \\"hi\\"")`` is well-formed DOT
+    whose labels draw the source text of each node, ``\\"`` included
+
+    Any escaping that Graphviz reads back as that text passes (a backslash
+    before each backslash and quote, or HTML entities): what is checked is
+    what ``rendered`` draws, not how the label is spelled.
+    """
+    result = export_of(project, ESCAPED_QUOTE_SCRIPT, "dataflow")
+
+    graph = DotGraph(result.stdout)
+    assert sorted(drawn_labels(graph).values()) == sorted([
+        '1 print("say \\"hi\\"")', "-1 print", '1 "say \\"hi\\""',
+    ]), result.stdout
+
+
+def test_export_dataflow_of_a_class_named_with_a_quote(project):
+    """``export dataflow`` of a class built with ``type('a"b', ...)``
+    writes its activation name into the cluster's label as it is, so the
+    label ends at the name's quote and the rest is read as DOT: Graphviz
+    draws stray nodes made of the graph's own text, and ``DotGraph``
+    rejects the graph (#401 changes it)
+    """
+    result = export_of(project, QUOTED_CLASS_SCRIPT, "dataflow")
+
+    lines = [line.strip() for line in result.stdout.splitlines()]
+    assert 'label = "a"b";' in lines, str(result)
+    assert 'label = "init";' in lines, str(result)
+    with pytest.raises(AssertionError,
+                       match="^not a DOT graph: unexpected '#'"):
+        DotGraph(result.stdout)
+
+
+@known_defects(CLUSTER_LABEL)
+def test_export_dataflow_of_a_class_named_with_a_quote_desired(project):
+    """``export dataflow`` of a class named ``a"b`` is well-formed DOT: the
+    cluster of the class draws ``a"b``, the one of ``init`` draws
+    ``init``, and every node is an evaluation or an activation (``e_N``),
+    none made of the graph's text
+    """
+    result = export_of(project, QUOTED_CLASS_SCRIPT, "dataflow")
+
+    graph = DotGraph(result.stdout)
+    assert drawn_cluster_labels(graph) == ['a"b', "init"], result.stdout
+    strays = sorted(node for node in graph.nodes
+                    if not re.fullmatch(r"e_\d+", node))
+    assert strays == [], result.stdout
+
+
+def test_export_dataflow_of_a_value_ending_in_a_backslash(project):
+    """``export dataflow --value-length 55`` of an object whose repr is
+    ``C:\\data\\`` ends the value's label in a backslash, which escapes the
+    closing quote: the label runs on into ``fillcolor``, and Graphviz and
+    ``DotGraph`` reject the graph (#401 changes it)
+    """
+    result = export_of(project, BACKSLASH_REPR_SCRIPT, "dataflow",
+                       "--value-length", "55")
+
+    assert result.stdout.count(r'C:\data\" fillcolor') == 2, str(result)
+    with pytest.raises(AssertionError,
+                       match="^not a DOT graph: unexpected '#'"):
+        DotGraph(result.stdout)
+
+
+@known_defects(TRAILING_BACKSLASH)
+def test_export_dataflow_of_a_value_ending_in_a_backslash_desired(project):
+    """``export dataflow --value-length 55`` of an object whose repr is
+    ``C:\\data\\`` is well-formed DOT whose labels draw that repr, every
+    backslash kept, under the code of each node
+    """
+    result = export_of(project, BACKSLASH_REPR_SCRIPT, "dataflow",
+                       "--value-length", "55")
+
+    graph = DotGraph(result.stdout)
+    assert sorted(drawn_labels(graph).values()) == sorted([
+        "1 return =\n<class '__main__.R'>",
+        "6 R() =\nC:\\data\\",
+        "6 r =\nC:\\data\\",
+    ]), result.stdout
+
+
 # --- test 16: export ast ----------------------------------------------------
 
 
@@ -681,6 +1091,63 @@ def test_export_prospective_is_the_same_for_two_trials_of_the_same_code(
     two = two_trial_project.run("export", "prospective", second)
     assert_digraph(one, prefix="strict digraph {")
     assert one.stdout == two.stdout
+
+
+def test_export_prospective_reads_as_dot(two_trial_project):
+    """``DotGraph`` reads the prospective graph of the weather script, and
+    its ``Start`` and ``End`` nodes draw their names
+
+    Control of the #401 twin: the labels of the weather script hold double
+    quotes, written as ``\\"``, but no trailing backslash.
+    """
+    result = two_trial_project.run("export", "prospective")
+    graph = DotGraph(result.stdout)
+    labels = drawn_labels(graph)
+    assert (labels.get("start"), labels.get("end")) == ("Start", "End"), (
+        str(result))
+    assert graph.edges, str(result)
+
+
+def test_export_prospective_of_a_condition_ending_in_a_backslash(project):
+    """``export prospective`` of ``if s == r"a\\:b":`` cuts the condition
+    at the ``:`` inside the literal, so its label ends in a backslash,
+    which escapes the closing quote: the graphviz library warns on stderr,
+    ``now`` exits 0, and Graphviz and ``DotGraph`` reject the graph (#401
+    changes it)
+    """
+    result = export_of(project, BACKSLASH_CONDITION_SCRIPT, "prospective",
+                       allow_stderr=True)
+
+    assert PROSPECTIVE_LABEL.signature in result.stderr, str(result)
+    assert r'  s == r\"a\" color="#808080"' in result.stdout, str(result)
+    with pytest.raises(AssertionError,
+                       match="^not a DOT graph: unexpected '#'"):
+        DotGraph(result.stdout)
+
+
+@known_defects(PROSPECTIVE_LABEL)
+def test_export_prospective_of_a_condition_ending_in_a_backslash_desired(
+        project):
+    """``export prospective`` of ``if s == r"a\\:b":`` prints no warning
+    and well-formed DOT, whose condition note draws the condition, every
+    backslash kept: cut at the first ``:`` as today (``s == r"a\\``), or
+    whole, as its source text or in any other form Python reads as the
+    same expression (``ast.unparse`` writes ``s == 'a\\\\:b'``)
+
+    A fix may leave the cut alone, or take the condition from the tree.
+    """
+    result = export_of(project, BACKSLASH_CONDITION_SCRIPT, "prospective",
+                       expect=None, allow_stderr=True)
+
+    assert result.stderr == "", str(result)
+    assert result.returncode == 0, str(result)
+    graph = DotGraph(result.stdout)
+    notes = [label for label in drawn_labels(graph).values()
+             if label.startswith(CONDITION)]
+    assert len(notes) == 1, result.stdout
+    condition = notes[0][len(CONDITION):].strip()
+    assert (condition == CUT_CONDITION
+            or same_expression(condition, WHOLE_CONDITION)), result.stdout
 
 
 # --- export ipynb -----------------------------------------------------------
