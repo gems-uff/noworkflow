@@ -7,17 +7,19 @@ Covers what one ``now run`` leaves in a real store (the trial, its automatic
 tag, the local module, the file accesses and their content); how it reports
 each way a script can end: normally, with an uncaught exception, through
 ``sys.exit`` with a positive, a negative or a zero code, without a code or
-with a message, with a ``KeyboardInterrupt`` and through ``os._exit``; the
-usage errors of a missing script; and the flags ``-v``, ``-r jsonpickle``
-and ``-b``. The rule of the automatic tags is pinned here because the
-goldens of the other modules show tags.
+with a message, with a ``KeyboardInterrupt`` and through ``os._exit``, and
+when the script keeps a cursor on its own store; the usage errors of a
+missing script; and the flags ``-v``, ``-r jsonpickle``, ``-b``, ``-s`` and
+``-S``. The rule of the automatic tags is pinned here because the goldens
+of the other modules show tags.
 
 Behavior that is a known defect has a characterization test, which pins what
 ``now`` does today, and a twin with the same name plus ``_desired``, marked
-``xfail(strict=True)``, that describes what it should do and cites the issue
-that will flip it. The name says the scenario, never the outcome. Tracebacks
-are never compared whole: they hold noWorkflow's own line numbers and carets
-that change with the Python version.
+``xfail(strict=True)`` (directly, or through ``known_defects``, which also
+checks the signature of the failure), that describes what it should do and
+cites the issue that will flip it. The name says the scenario, never the
+outcome. Tracebacks are never compared whole: they hold noWorkflow's own
+line numbers and carets that change with the Python version.
 """
 import os
 import re
@@ -26,8 +28,10 @@ import sys
 
 import pytest
 
+from ..helpers.defects import Defect, known_defects
 from .harness import (
     WEATHER_ARGS,
+    NowProject,
     build_weather,
     last_line,
     runs_this_interpreter,
@@ -490,6 +494,234 @@ def test_run_bypass_modules_without_a_previous_trial_desired(project):
     assert not (project.path / "output.csv").exists()
     assert project.store.exists()
     assert project.trials() == []
+
+
+# Partial provenance (-s, -S): a script that sleeps past the first save
+# period, then makes more calls, and only then has a child process count
+# the rows of its store. The child reads it, not the script: the script
+# holds no connection to the store while noWorkflow could be writing to it,
+# and noWorkflow writes nothing while the script waits in subprocess.run,
+# for at most a minute.
+PARTIAL_SCRIPT = (
+    '"""Has a child count the rows of the store after the first save '
+    'period"""\n'
+    "import subprocess\n"
+    "import sys\n"
+    "import time\n"
+    "\n"
+    "time.sleep(0.05)\n"
+    "total = 0\n"
+    "for number in range(20):\n"
+    "    total += abs(-number)\n"
+    "counted = subprocess.run(\n"
+    '    [sys.executable, "count_rows.py"], capture_output=True, text=True,\n'
+    "    timeout=60)\n"
+    "print(counted.stdout.strip())\n"
+)
+COUNT_ROWS = (
+    '"""Counts, read-only, the trials and the evaluations of the store"""\n'
+    "import sqlite3\n"
+    "from pathlib import Path\n"
+    "\n"
+    'store = Path(__file__).resolve().parent / ".noworkflow" / "db.sqlite"\n'
+    'connection = sqlite3.connect(store.as_uri() + "?mode=ro", uri=True)\n'
+    "try:\n"
+    "    statuses = [row[0] for row in connection.execute(\n"
+    '        "SELECT status FROM trial")]\n'
+    "    evaluations = connection.execute(\n"
+    '        "SELECT COUNT(*) FROM evaluation").fetchone()[0]\n'
+    "finally:\n"
+    "    connection.close()\n"
+    'print("trials:", statuses)\n'
+    'print("evaluations stored while the script runs:", evaluations)\n'
+)
+NOTHING_STORED = "evaluations stored while the script runs: 0"
+SAVE_FREQUENCY = Defect(
+    "#381: the Collector (collector.py) is created with the "
+    "Metascript, and reload_metascript(first=True) sets last_partial_save "
+    "to get_time() while Metascript._trial_start_checkpoint is still 0: "
+    "the raw perf_counter(), whose reference point CPython leaves "
+    "undefined (the boot of the machine on macOS and on Linux; measured "
+    "on macOS with Python 3.11 to 3.15 and on Linux with 3.15, the "
+    "reference container, the other Linux versions being the CI legs; "
+    "Windows by mechanism); Metascript.create_trial_args "
+    "(collection/metadata.py) then sets the checkpoint, get_time() "
+    "restarts near 0, and Collector.time() stores a partial trial only "
+    "once the run has lasted longer than that reference point preceded "
+    "the start of `now`",
+    signature=NOTHING_STORED)
+CALL_STORAGE_FREQUENCY = Defect(
+    "#382: -S/--call-storage-frequency is parsed "
+    "into Metascript.call_storage_frequency (collection/metadata.py, "
+    "Metascript._read_args), which nothing reads: Collector "
+    "(prov_execution/collector.py) stores partial provenance only from "
+    "Collector.time() under -s, and the reader that counted closed "
+    "activations went with prov_execution/profiler.py; no number of calls "
+    "makes the collector store a partial trial, independently of "
+    "#381 (with -s at 0 there is no save period at all)",
+    signature=NOTHING_STORED)
+
+
+def run_counting_rows(project, *flags):
+    """``now run <flags> partial.py``: the lines the child printed"""
+    project.write("partial.py", PARTIAL_SCRIPT)
+    project.write("count_rows.py", COUNT_ROWS)
+    result = project.run("run", *flags, "partial.py")
+    lines = result.stdout.splitlines()
+    assert len(lines) == 2, str(result)
+    assert lines[0] == "trials: ['ongoing']", str(result)
+    return lines[1]
+
+
+def stored_while_running(line):
+    """The number of evaluations a line of ``count_rows.py`` reports"""
+    prefix, _, count = line.rpartition(": ")
+    assert prefix == NOTHING_STORED.rpartition(": ")[0], line
+    return int(count)
+
+
+def test_run_with_a_save_frequency(project):
+    """``-s 1`` asks for partial provenance every millisecond, but nothing
+    reaches the store before the script ends: 50 ms in, the trial is
+    ongoing with no evaluation, and the final store has them
+    (characterization of #381)"""
+    line = run_counting_rows(project, "-s", "1")
+    assert line == NOTHING_STORED
+    trial = only_trial(project)
+    assert trial["status"] == "finished"
+    assert project.count("evaluation", trial["id"]) > 0
+
+
+@known_defects(SAVE_FREQUENCY)
+def test_run_with_a_save_frequency_desired(project):
+    """With ``-s 1``, the evaluations of the first 50 ms are in the store
+    while the script still runs"""
+    line = run_counting_rows(project, "-s", "1")
+    assert stored_while_running(line) > 0, line
+
+
+def test_run_with_a_call_storage_frequency(project):
+    """``-S 1`` asks for partial provenance after every call, but nothing
+    reaches the store before the script ends: after the script's calls,
+    the trial is ongoing with no evaluation, and the final store has them;
+    the trial still records ``call_storage_frequency`` among its arguments
+    (characterization of #382)"""
+    line = run_counting_rows(project, "-S", "1")
+    assert line == NOTHING_STORED
+    trial = only_trial(project)
+    assert trial["status"] == "finished"
+    assert project.count("evaluation", trial["id"]) > 0
+    assert project.query(
+        "SELECT value FROM argument "
+        "WHERE trial_id = ? AND name = 'call_storage_frequency'",
+        trial["id"]) == [{"value": "1"}]
+
+
+@known_defects(CALL_STORAGE_FREQUENCY)
+def test_run_with_a_call_storage_frequency_desired(project):
+    """With ``-S 1``, the evaluations of the calls already made are in the
+    store while the script still runs"""
+    line = run_counting_rows(project, "-S", "1")
+    assert stored_while_running(line) > 0, line
+
+
+# A script that reads the store of its own trial, read-only, and leaves
+# its statement unfinished: a cursor with unread rows (the arguments are
+# stored before the script runs). The control reads every row.
+CURSOR_SCRIPT = (
+    '"""Reads the arguments of the store it runs in, {}"""\n'
+    "import sqlite3\n"
+    "from pathlib import Path\n"
+    "\n"
+    'store = Path(__file__).resolve().parent / ".noworkflow" / "db.sqlite"\n'
+    'connection = sqlite3.connect(store.as_uri() + "?mode=ro", uri=True)\n'
+    'cursor = connection.execute("SELECT name FROM argument")\n'
+    "{}"
+    "connection.close()\n"
+)
+KEEPS_CURSOR = CURSOR_SCRIPT.format(
+    "one row only",
+    'first = cursor.fetchone()\n'
+    'print("read one row")\n')
+FINISHES_CURSOR = CURSOR_SCRIPT.format(
+    "every row",
+    "rows = cursor.fetchall()\n"
+    'print("read every row:", len(rows) > 1)\n')
+UNSTORED_MESSAGE = [
+    "[now] invalid noWorkflow database",
+    "[now] it is probably outdated",
+]
+STORE_LOCKED_BY_SCRIPT = Defect(
+    "#383: run (cmd/cmd_run.py) stores the trial in "
+    "the process that ran the script, while the script's cursor is still "
+    "alive: its globals live on in Metascript.namespace (__main__.__dict__, "
+    "Execution.collect_provenance in prov_execution/execution.py), and "
+    "#309 keeps call values alive in Collector.activations, so even a "
+    "cursor plain Python would have released holds on. Its unfinished "
+    "statement keeps a read lock (Connection.close() does not finalize "
+    "it), the first write after the script, Deployment.store_provenance "
+    "through Model.store (persistence/models/base.py), fails with "
+    "'database is locked' after SQLite's busy timeout, and main() in "
+    "now/cmd/__init__.py catches every OperationalError, prints 'invalid "
+    "noWorkflow database' and 'it is probably outdated' on stdout and "
+    "returns: `now` exits with 0 (#226 is related) and the trial stays "
+    "'ongoing' with only its arguments",
+    signature=UNSTORED_MESSAGE[0])
+
+
+@pytest.fixture(scope="module")
+def kept_cursor(tmp_path_factory):
+    """``(project, control, result)``: ``now run`` of the script that
+    reads every row of its store, then of the one that leaves its cursor
+    unfinished, in the same store
+
+    The second run waits for SQLite's busy timeout, about five seconds:
+    the tests share it.
+    """
+    project = NowProject(tmp_path_factory.mktemp("kept_cursor"))
+    project.write("finishes_cursor.py", FINISHES_CURSOR)
+    project.write("keeps_cursor.py", KEEPS_CURSOR)
+    control = project.run("run", "finishes_cursor.py", expect=None,
+                          allow_stderr=True)
+    result = project.run("run", "keeps_cursor.py", expect=None,
+                         allow_stderr=True)
+    return project, control, result
+
+
+def test_run_script_that_keeps_a_cursor_on_its_store(kept_cursor):
+    """A script that leaves a statement on its own store unfinished keeps
+    a read lock until ``now`` writes the trial: the first write fails,
+    ``now`` reports an invalid, outdated database on stdout and exits with
+    0, and the trial stays ongoing with its arguments only; the same
+    reading run to the end (the control) is stored whole
+    (characterization of #383)"""
+    project, control, result = kept_cursor
+    assert control.returncode == 0 and control.stderr == "", str(control)
+    assert control.stdout == "read every row: True\n", str(control)
+    assert result.returncode == 0 and result.stderr == "", str(result)
+    assert result.stdout.splitlines() == (
+        ["read one row"] + UNSTORED_MESSAGE), str(result)
+    first, second = project.trials()
+    assert first["status"] == "finished"
+    assert project.count("evaluation", first["id"]) > 0
+    assert second["status"] == "ongoing"
+    assert second["finish"] is None
+    assert project.count("argument", second["id"]) > 0
+    stored = {table: project.count(table, second["id"])
+              for table in ("environment_attr", "code_component",
+                            "evaluation", "tag")}
+    assert stored == dict.fromkeys(stored, 0)
+
+
+@known_defects(STORE_LOCKED_BY_SCRIPT)
+def test_run_script_that_keeps_a_cursor_on_its_store_desired(kept_cursor):
+    """The trial of a script that reads its own store is stored whole, and
+    ``now`` prints only what the script printed"""
+    project, _, result = kept_cursor
+    assert result.stdout == "read one row\n", str(result)
+    trial = project.trials()[-1]
+    assert trial["status"] == "finished"
+    assert project.count("evaluation", trial["id"]) > 0
 
 
 # What the script prints without noWorkflow: the rows of data.dat.

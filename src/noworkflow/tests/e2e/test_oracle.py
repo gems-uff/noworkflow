@@ -16,11 +16,47 @@ of Python semantics that rewriting or wrapping could change: file I/O
 through every wrapped entry point, argument passing, evaluation order,
 generators, classes, exceptions, scopes, local packages, the command line
 and the standard streams, containers, numbers and text, and Python
-functions called back by builtins. Each theme also runs under coarse
-granularity (``-cg``, ids ``<theme>-cg``), and ``modules.py`` also with
-``-c package`` (``modules-package``), so that the local package is
-rewritten too; that case also requires the package's classes among the
-trial's code components, since the main script alone records evaluations.
+functions called back by builtins. A second group of themes
+(``PROCESS_THEMES``) starts external processes, one way each:
+``subprocess.run`` with and without ``capture_output``,
+``run(check=True)`` and ``check_call`` with a failing child,
+``check_output``, ``Popen``, ``shell=True``, ``os.system``, ``os.popen``,
+``os.posix_spawn`` and ``os.posix_spawnp`` (with file actions, reaped by
+``os.waitpid``), and ``multiprocessing`` with the fork start method.
+Each one starts a child, ``children/child.py`` (a plain script) run by
+``sys.executable`` or, with fork, a function of the script, once writing
+a file that the script reads back and once not; flushes stdout before
+every child that inherits it, so that the order of the lines does not
+depend on buffering; quotes the command lines it hands to a shell for
+the platform's shell, with an argument and a file name that have a
+space, and stops when a shell did not run the child; and decodes exit
+statuses by ``os.name``. A forked child inherits whatever the collector
+installed in the process (audit hooks, once #202 adds them), so the
+waits on a child that runs code of the script after a fork have a
+timeout, after which the script kills the child and fails: the Queue's
+get and the joins of ``multiprocessing`` (``Pool.join``, which takes
+none, runs in a helper thread that the script waits for), every
+``os.waitpid`` of a script (``os.fork()``, ``os.posix_spawn``), polled,
+and the run of the ``preexec_fn`` child once it started. Two waits have
+no bound: inside ``Popen``, the read of the pipe through which a
+``preexec_fn`` child reports a failure before its exec, and, after the
+Pool's helper thread timed out, the join of the workers that leaving the
+Pool's ``with`` block terminates; there only the timeout with which the
+harness runs the whole script (``NowProject.run``,
+``oracle.run_plain``) remains. Elsewhere a child that hangs, or dies
+before it answers, fails the case within the script's timeout instead
+of hanging the run. The other children, which ``subprocess``,
+``os.system`` and ``os.popen`` start through exec, run only
+``children/child.py``, which never blocks (its stdin is a pipe, a file
+or the null device the harness gives), and are waited for without one
+(``os.system`` and ``os.popen`` take none). The
+scripts that need what Windows lacks (``os.fork()``, ``preexec_fn``,
+``os.posix_spawn``) are skipped there with the reason (``case`` takes
+``marks``). Each theme also runs under coarse granularity (``-cg``, ids
+``<theme>-cg``), and ``modules.py`` also with ``-c package``
+(``modules-package``), so that the local package is rewritten too; that
+case also requires the package's classes among the trial's code
+components, since the main script alone records evaluations.
 
 Both runs use the harness's synthetic environment (UTF-8 mode, a fixed
 hash seed, terminal width and no colors), so the oracle compares what
@@ -29,9 +65,10 @@ noWorkflow changes under UTF-8 mode only: an ``open()`` without
 before Python 3.15) is out of its reach.
 
 Layout of ``corpus/oracle``: every ``*.py`` at its top level is a script
-that ``CASES`` runs; what the scripts import or read is either a
-subdirectory (the ``toolkit`` package) or a file that is not ``*.py``
-(``inventory.txt``), and is declared in ``SUPPORT``.
+that ``CASES`` runs; what the scripts import, read or start is either a
+subdirectory (the ``toolkit`` package, the ``children`` the process themes
+start) or a file that is not ``*.py`` (``inventory.txt``), and is declared
+in ``SUPPORT``.
 ``test_oracle_lists_every_script`` enforces both, so a script added
 without a case, or a file a script left in the corpus, fails it (it skips
 hidden files and the clutter of file managers, ``Thumbs.db`` and
@@ -65,8 +102,10 @@ there is no characterization twin that pins today's behavior: the reason
 records the mechanism and the signature pins today's failure.
 
 The map of marks is measured, never guessed: run this module with
-``--runxfail`` on every Python of the matrix (it was first measured on
-macOS) and give each ``Defect`` ``since``/``before`` covering exactly the
+``--runxfail`` on every Python of the matrix (it was measured on macOS
+with Python 3.11 to 3.15 and on Linux with 3.15, the reference
+container; the other Linux versions are the CI legs) and give each
+``Defect`` ``since``/``before`` covering exactly the
 versions where its case fails, and ``systems`` when a mark differs by
 platform. A fix that turns a case green fails it with XPASS(strict) until
 its ``Defect`` leaves ``CASES`` in the same change. The marks
@@ -111,10 +150,10 @@ from .oracle import (
 )
 
 ORACLE = CORPUS / "oracle"
-# What the scripts read or import, next to them: the data file of
-# file_io.py and the package of modules.py, open_wrapper_warning.py and
-# open_files_kept_alive.py.
-SUPPORT = ("inventory.txt", "toolkit")
+# What the scripts read, import or start, next to them: the data file of
+# file_io.py, the package of modules.py, open_wrapper_warning.py and
+# open_files_kept_alive.py, and the child of the process themes.
+SUPPORT = ("inventory.txt", "toolkit", "children")
 # Clutter that the file manager of a system leaves, not a script.
 IGNORED = ("Thumbs.db", "desktop.ini")
 # Whether the standard library is on another drive than the projects,
@@ -124,6 +163,18 @@ IGNORED = ("Thumbs.db", "desktop.ini")
 STDLIB_ON_ANOTHER_DRIVE = os.name == "nt" and (
     os.path.splitdrive(sysconfig.get_paths()["stdlib"])[0].lower()
     != os.path.splitdrive(tempfile.gettempdir())[0].lower())
+# What the scripts that start processes use and Windows lacks: os.fork(),
+# called directly or by the fork start method of multiprocessing, the
+# preexec_fn of subprocess, and os.posix_spawn.
+NEEDS_FORK = pytest.mark.skipif(
+    os.name == "nt",
+    reason="os.fork() and the fork start method do not exist on Windows")
+NEEDS_PREEXEC_FN = pytest.mark.skipif(
+    os.name == "nt",
+    reason="subprocess does not support preexec_fn on Windows")
+NEEDS_POSIX_SPAWN = pytest.mark.skipif(
+    os.name == "nt",
+    reason="os.posix_spawn and os.posix_spawnp do not exist on Windows")
 
 # The arguments command_line.py receives: positionals, options, a repeated
 # flag and a value with a space.
@@ -548,16 +599,78 @@ COARSE_AUGASSIGN_TARGET = Defect(
     "transformer_expr.py) leaves it without target_expr: AttributeError "
     "in the transformer, and the script never runs",
     signature="assign\n    new_target.target_expr,")
+FORK_EPILOGUE = Defect(
+    "#375: a child that os.fork() makes in the traced script, "
+    "unless it leaves through os._exit, leaves the exec() of the script "
+    "in Execution.collect_provenance (prov_execution/execution.py) as the "
+    "parent does and runs the rest of run (cmd/cmd_run.py) as `now`: "
+    "collect_provenance catches its SystemExit; the store_provenance of "
+    "deployment, definition and execution store the trial again from the "
+    "child (Execution.store_provenance stores it through Collector.store "
+    "first, and only then prints '[now] the execution exited via "
+    "sys.exit(). Exit status: 3' on stdout; a child that exits with 0 "
+    "stores just the same, silently); Tag.create_automatic_tag adds one "
+    "more automatic tag per child; and the child exits as `now`. The "
+    "parent stores last, and the INSERT OR REPLACE of Model.store "
+    "(persistence/models/base.py) replaces only the rows whose keys it "
+    "reaches: the rows of the child's branch (its exit activation) stay in "
+    "the parent's trial, which mixes two processes. #226 is behind it: "
+    "`now` exits with 0 whatever the script did, so the parent's waitpid "
+    "reads 0 instead of the child's 3. The oracle sees only the [now] line "
+    "and the 0: a fix of #226 alone keeps the line, so the case stays red "
+    "with this signature, and it flips once the child neither prints the "
+    "line nor exits with 0, whatever becomes of the extra tags and rows, "
+    "which the oracle does not compare",
+    signature="[now] the execution exited via sys.exit(). Exit status: 3")
+IF_BODY_CONTEXT = Defect(
+    "#376: visit_If (transformer_stmt.py), which has no "
+    "branch for coarse granularity, rewrites an if statement into a try "
+    "that raises a ConditionException (the classes of "
+    "ConditionExceptions, prov_execution/structures.py) and runs each "
+    "branch, elif and else included, in the except clause that catches it, "
+    "so the branch runs while noWorkflow's exception is being handled: an "
+    "exception raised there gets it as __context__ (instead of None, or of "
+    "the exception the script is handling, which becomes the "
+    "ConditionException's own __context__, one link further), "
+    "sys.exc_info() returns it, a bare raise re-raises it instead of the "
+    "script's exception, which an except clause for that exception no "
+    "longer catches, and a bare raise where the script handles no "
+    "exception re-raises it instead of raising RuntimeError('No active "
+    "exception to reraise')",
+    signature="handling: ConditionException")
+FORK_WARNING_FRAME = Defect(
+    "#271: the script calls os.fork() through Collector._call "
+    "(collector.py), like every other call, and the DeprecationWarning "
+    "that os.fork() raises from Python 3.12 in a process with more than "
+    "one thread is attributed to the nearest Python frame, the line of "
+    "Collector._call that calls future.func: collector.py, where the "
+    "default filters, which show a DeprecationWarning only for __main__, "
+    "drop it (the mechanism of caller_frame.py; -cg loses it the same "
+    "way, although no case runs this script with -cg)",
+    signature="shown: []", since=(3, 12))
+PREEXEC_FN_CALLBACK = Defect(
+    "#266: subprocess.Popen calls preexec_fn in the child from "
+    "_posixsubprocess.fork_exec, a C function, so a function of the script "
+    "there takes the white-box-after-black-box path of new_function_def "
+    "(Collector._function_def, collector.py) and gets the argument "
+    "dependencies of the script's call to subprocess.run: IndexError in "
+    "match_arguments (collector.py) in the child, which fork_exec never "
+    "prints and Popen reports in the parent only as "
+    "SubprocessError('Exception occurred in preexec_fn.'), and the program "
+    "never runs. A preexec_fn that takes *args and **kwargs, or one "
+    "parameter with a default, absorbs those arguments and works",
+    signature="Exception occurred in preexec_fn")
 
 
-def case(script, *args, flags=(), defects=(), suffix=""):
+def case(script, *args, flags=(), defects=(), suffix="", marks=()):
     """One oracle script run with ``args`` and the ``now run`` flags
 
     The id is the script's stem plus ``suffix``; ``defects`` are its known
-    defects, whose marks apply where they show.
+    defects, whose marks apply where they show; ``marks`` are other marks
+    of the case, such as the skip of a script that a system cannot run.
     """
     return pytest.param(script, args, flags, defects, id=script[:-3] + suffix,
-                        marks=defect_marks(defects))
+                        marks=list(marks) + defect_marks(defects))
 
 
 # Themes: each compares equal on every supported version, and under -cg
@@ -576,6 +689,25 @@ THEMES = (
     ("numbers_text.py", ()),
     ("callback_functions.py", ()),
 )
+# Themes that start external processes: children/child.py run by
+# sys.executable, or a function of the script in a forked process.
+PROCESS_THEMES = (
+    ("subprocess_run.py", ()),
+    ("subprocess_check.py", ()),
+    ("subprocess_check_output.py", ()),
+    ("subprocess_popen.py", ()),
+    ("subprocess_shell.py", ()),
+    ("os_system.py", ()),
+    ("os_popen.py", ()),
+    ("os_posix_spawn.py", ()),
+    ("multiprocessing_fork.py", ()),
+)
+ALL_THEMES = THEMES + PROCESS_THEMES
+# The marks of a theme, under every set of flags.
+THEME_MARKS = {
+    "os_posix_spawn.py": (NEEDS_POSIX_SPAWN,),
+    "multiprocessing_fork.py": (NEEDS_FORK,),
+}
 # The themes that -cg does not run like plain Python. classes.py holds both
 # a decorator that is a name and an augmented assignment to an attribute:
 # the transformer stops at the first, so the run shows #236's signature
@@ -593,10 +725,12 @@ COARSE_DEFECTS = {
 PACKAGE_CLASSES = ("Circle", "Square")
 
 CASES = (
-    [case(script, *args) for script, args in THEMES]
+    [case(script, *args, marks=THEME_MARKS.get(script, ()))
+     for script, args in ALL_THEMES]
     + [case(script, *args, flags=("-cg",), suffix="-cg",
-            defects=COARSE_DEFECTS.get(script, ()))
-       for script, args in THEMES]
+            defects=COARSE_DEFECTS.get(script, ()),
+            marks=THEME_MARKS.get(script, ()))
+       for script, args in ALL_THEMES]
     + [case("modules.py", flags=("-c", "package"), suffix="-package")]
     + [
         # Constructs split out of the themes: one mechanism each.
@@ -651,6 +785,13 @@ CASES = (
         case("open_wrapper_warning.py", defects=(OPEN_WRAPPER_FRAME,)),
         case("class_body_genexp.py", defects=(CLASS_BODY_GENEXP_SCOPE,)),
         case("codec_import.py", defects=(MODULE_ON_ANOTHER_DRIVE,)),
+        case("if_body_exception_context.py", defects=(IF_BODY_CONTEXT,)),
+        case("fork_child_exit_status.py", defects=(FORK_EPILOGUE,),
+             marks=(NEEDS_FORK,)),
+        case("fork_with_threads_warning.py", defects=(FORK_WARNING_FRAME,),
+             marks=(NEEDS_FORK,)),
+        case("subprocess_preexec_fn.py", defects=(PREEXEC_FN_CALLBACK,),
+             marks=(NEEDS_PREEXEC_FN,)),
     ]
 )
 
@@ -695,14 +836,14 @@ def test_oracle_script_runs_like_plain_python(project, script, args, flags,
 def test_oracle_lists_every_script():
     """Every top-level script of corpus/oracle is a case run without flags,
     every case names an existing script, and nothing else lies next to them
-    but what the scripts read or import"""
+    but what the scripts read, import or start"""
     ids = [param.id for param in CASES]
     assert len(ids) == len(set(ids)), "two cases share an id"
     on_disk = sorted(path.name for path in ORACLE.glob("*.py"))
     unflagged = sorted(param.values[0] for param in CASES
                        if not param.values[2])
     assert unflagged == on_disk
-    themes = {script for script, _ in THEMES}
+    themes = {script for script, _ in ALL_THEMES}
     flagged = {param.values[0] for param in CASES if param.values[2]}
     assert flagged <= themes, "flags only rerun a theme"
     others = sorted(

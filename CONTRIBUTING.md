@@ -275,8 +275,10 @@ Never edit a golden by hand: record it again.
 After every test, the root `conftest.py` checks that the test left no process
 state behind (the collector replaces the `open` functions, adds builtins and
 an import finder, and some commands write into the current directory) and
-fails it otherwise; `NOW_LEAK_CHECK=warn uv run pytest` only reports, in the
-LEAKS section of the summary. It also replaces this machine's hostname with
+no child process running (a `subprocess.Popen` dropped without waiting, a
+`multiprocessing` child not joined, which it kills), and fails it
+otherwise; `NOW_LEAK_CHECK=warn uv run pytest` only reports, in the LEAKS
+section of the summary. It also replaces this machine's hostname with
 `<HOSTNAME>` in every report pytest prints, so that a failure log can be
 pasted (`src/noworkflow/tests/helpers/reports.py`).
 

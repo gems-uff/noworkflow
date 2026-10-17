@@ -73,7 +73,8 @@ of date, fix it there.
   a `.noworkflow/` or `.last_trial` in the tree, a test leaked, and neither
   is ever committed. The leak detector in the same file fails a test that
   leaves such a file, or the collector's process state (the `open`s, the
-  builtins, `sys.meta_path`, `sys.argv`, `__main__`, the cwd), behind;
+  builtins, `sys.meta_path`, `sys.argv`, `__main__`, the cwd), or a child
+  process it started and never waited for, behind; it kills that child.
   `NOW_LEAK_CHECK=warn` only reports while you investigate.
 - **Installing software on the machine needs the human's go-ahead.** That
   covers uv, a Python interpreter, Node, a container engine, Rosetta, a
@@ -261,7 +262,19 @@ neither executes:
   `corpus/oracle/` with plain Python and with `now run`, under the
   harness's synthetic UTF-8 environment and with the flags its cases name;
   an encoding the legacy locale chooses, another flag of `now run` or a
-  construct no script uses is compared nowhere.
+  construct no script uses is compared nowhere. Its process scripts compare
+  what the children of a traced script print and write, never what the
+  store records about them; the ones that need `os.fork`, `preexec_fn` or
+  `os.posix_spawn` skip on Windows, and spawn and forkserver (#325, #334)
+  run nowhere.
+- **External processes and compiled code:** `test_external_processes.py`
+  pins what the store records when a traced script starts a process, and
+  `test_compiled_modules.py` how an extension module of the standard
+  library and a library loaded through `ctypes` are recorded (`_dbm` on
+  POSIX; on Windows `winsound`, a choice no leg has measured). #202 and
+  #203 change these characterizations on purpose. The leak detector sees
+  the children of the pytest process only, never what a `now` run as a
+  process leaves behind.
 - **The exports off the reference leg:** goldens compare `prolog`, `prov`,
   `dataflow` and `prospective` on the reference leg only (Linux, the newest
   blocking Python); on every other leg nothing compares their output.
@@ -305,6 +318,18 @@ and what came out, in the PR.
   the originals, or a test that runs the collector and then opens a file, sees
   the wrappers. The originals are kept in
   `src/noworkflow/now/persistence/content/safeopen.py`.
+- **The module table holds only modules imported for the first time.** A
+  module already in `sys.modules` when the script starts never reaches the
+  import finder, and `now` loads about a thousand before it (json through
+  SQLAlchemy, subprocess through `pkg_resources`), more or fewer by how it
+  starts and by the interpreter's build (#380). A test of the module table
+  imports a module measured absent at the top of a traced script, such as
+  `_dbm`.
+- **A child of `os.fork()` in a traced script runs `now`'s epilogue** when
+  it leaves through `sys.exit` or by returning: it stores the trial again,
+  prints `[now]` lines and exits 0 (#375). A corpus script ends its forked
+  children with `os._exit`, unless that is its subject, and bounds every
+  wait on them.
 - **The in-process suite never writes a store to disk.** `noworkflow.tests`
   connects the persistence layer to in-memory stores on import
   (`src/noworkflow/tests/helpers/persistence.py`). A defect in the SQLite

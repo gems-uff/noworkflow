@@ -11,7 +11,9 @@ directories under ``tmp_path``, never the session's), and checks that
 Files are the exception: they are reported and kept, since they may be the
 user's. Modules of noWorkflow itself and of installed libraries are never
 blamed, except the scripts under ``tests/examples`` and ``tests/e2e/corpus``;
-those tests point the package constants at a tree under ``tmp_path``.
+those tests point the package constants at a tree under ``tmp_path``. A
+child process left running is killed; every test here that starts one also
+kills it in a ``finally``.
 
 The last tests run a child pytest with a copy of the root ``conftest.py``,
 to prove that the conftest runs the detector around every test and obeys
@@ -21,18 +23,24 @@ synthetic environment and shares no state with this process.
 The detector itself is what undoes each leak. The autouse fixture below is
 only the fallback for a broken detector: it restores the opens, the
 builtins, ``sys.meta_path``, ``sys.argv``, ``sys.path[0]``, ``__main__``,
-the probe modules and the current directory, so that a failing test here
-never leaks into the rest of the suite.
+the probe modules and the current directory, and kills the children the
+test left, so that a failing test here never leaks into the rest of the
+suite.
 """
 import builtins
 import codecs
 import importlib.machinery
 import importlib.util
 import io
+import multiprocessing
 import os
 import re
+import signal
+import subprocess
 import sys
+import time
 import types
+import warnings
 
 import pytest
 
@@ -56,6 +64,45 @@ OPEN_TARGETS = [
     pytest.param(os, "os.open", id="os.open"),
 ]
 
+# A child that runs for a minute unless it is killed, and one that ends.
+SLEEP = [sys.executable, "-c", "import time; time.sleep(60)"]
+QUICK = [sys.executable, "-c", "pass"]
+# Seconds a test here waits for a child it killed itself.
+REAP_TIMEOUT = 10
+NEEDS_ACTIVE = pytest.mark.skipif(
+    getattr(subprocess, "_active", None) is None,
+    reason="subprocess._active is None on Windows: subprocess keeps no "
+    "list of the Popen objects dropped while their child runs, so the "
+    "detector cannot find a dropped child there")
+
+
+def unreaped_children():
+    """``{pid: child}`` the fallback below kills, found without leaks.py"""
+    children = {child.pid: child
+                for child in multiprocessing.active_children()}
+    for popen in list(getattr(subprocess, "_active", None) or ()):
+        children.setdefault(popen.pid, popen)
+    return children
+
+
+def reap(child):
+    """Kill a child a test here started, if it still runs, and wait for it
+
+    Neither ``Popen.kill`` nor ``Process.kill`` signals a child that was
+    already reaped, so a pid the system reused is never touched.
+    """
+    try:
+        child.kill()
+    except OSError:
+        pass
+    if isinstance(child, subprocess.Popen):
+        child.wait(timeout=REAP_TIMEOUT)
+        active = getattr(subprocess, "_active", None) or []
+        if child in active:
+            active.remove(child)
+    else:
+        child.join(REAP_TIMEOUT)
+
 
 @pytest.fixture(autouse=True)
 def restore_process():
@@ -72,9 +119,13 @@ def restore_process():
     main = sys.modules["__main__"]
     main_vars = dict(vars(main))
     cwd = os.getcwd()
+    children = set(unreaped_children())
     try:
         yield
     finally:
+        for pid, child in unreaped_children().items():
+            if pid not in children:
+                reap(child)
         for module, original in opens:
             module.open = original
         for name in set(vars(builtins)) - builtin_names:
@@ -530,6 +581,184 @@ def test_undo_collection_restores_the_opens_builtins_and_finders():
     assert UnrelatedFinder in sys.meta_path
 
 
+# Child processes -------------------------------------------------------------
+
+def sleeper():
+    """Start a child that sleeps for a minute, with no pipe to this process"""
+    return subprocess.Popen(SLEEP, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
+
+
+def dropped_sleeper():
+    """Start a sleeper and drop its Popen, as a test that forgets it does
+
+    Returns the object that ``Popen.__del__`` kept in ``subprocess._active``
+    because the child still ran. The ResourceWarning that ``__del__``
+    emits is the leak itself, ignored here.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ResourceWarning)
+        pid = sleeper().pid
+    kept = [popen for popen in subprocess._active if popen.pid == pid]
+    assert len(kept) == 1, "Popen.__del__ kept no running child"
+    return kept[0]
+
+
+def spawned_sleeper():
+    """Start a multiprocessing child that sleeps for a minute
+
+    The spawn context exists on every platform and starts a new
+    interpreter, so nothing of this process is forked.
+    """
+    child = multiprocessing.get_context("spawn").Process(
+        target=time.sleep, args=(60,))
+    child.start()
+    return child
+
+
+def waited_popen():
+    """A Popen waited for, then dropped"""
+    subprocess.Popen(QUICK).wait()
+
+
+def subprocess_run():
+    """A child that ``subprocess.run`` waits for"""
+    subprocess.run(QUICK, check=True)
+
+
+def joined_process():
+    """A multiprocessing child joined after it ends"""
+    child = multiprocessing.get_context("spawn").Process(
+        target=time.sleep, args=(0,))
+    child.start()
+    child.join()
+
+
+def is_running(child):
+    """Whether a Popen's or a Process's child has not ended"""
+    if isinstance(child, subprocess.Popen):
+        return child.poll() is None
+    return child.is_alive()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="subprocess keeps no list of "
+                    "dropped Popen objects on Windows")
+def test_subprocess_keeps_a_dropped_running_child_in_active():
+    """Premise: on POSIX ``Popen.__del__`` keeps a running child
+
+    The detector finds a dropped ``Popen`` in ``subprocess._active``, a
+    private name. Without the list, the tests of a dropped child would be
+    skipped, as on Windows, instead of failing.
+    """
+    assert isinstance(getattr(subprocess, "_active", None), list)
+    popen = dropped_sleeper()
+    try:
+        assert is_running(popen)
+    finally:
+        reap(popen)
+
+
+@NEEDS_ACTIVE
+def test_a_dropped_popen_whose_child_runs_is_reported_and_killed(baseline):
+    """A Popen collected while its child runs leaves the child behind
+
+    Nothing would ever wait for that child, which outlives pytest. The
+    check names it, kills it and reaps it.
+    """
+    snapshot = baseline.snapshot()
+    popen = dropped_sleeper()
+    try:
+        assert baseline.check(snapshot) == [
+            "child process {} left running (subprocess.Popen dropped "
+            "without wait())".format(popen.pid)]
+        assert popen.returncode == -signal.SIGKILL
+        assert popen not in subprocess._active
+    finally:
+        reap(popen)
+
+
+def test_a_multiprocessing_child_not_joined_is_reported_and_killed(
+        baseline):
+    """A child not joined holds pytest at exit until it ends
+
+    ``multiprocessing`` joins its children when the process exits, so the
+    session would wait for the whole sleep. The check names the child,
+    kills it and joins it.
+    """
+    snapshot = baseline.snapshot()
+    child = spawned_sleeper()
+    try:
+        assert baseline.check(snapshot) == [
+            "child process {} left running (multiprocessing.Process not "
+            "joined)".format(child.pid)]
+        assert child.exitcode is not None
+        assert child not in multiprocessing.active_children()
+    finally:
+        reap(child)
+
+
+@pytest.mark.parametrize("finish", [
+    pytest.param(waited_popen, id="popen-waited"),
+    pytest.param(subprocess_run, id="subprocess.run"),
+    pytest.param(joined_process, id="process-joined"),
+])
+def test_a_child_that_was_waited_for_is_not_blamed(baseline, finish):
+    """Control: a child the test reaped is no leak"""
+    snapshot = baseline.snapshot()
+    finish()
+
+    assert baseline.check(snapshot) == []
+
+
+@pytest.mark.parametrize("start", [
+    pytest.param(dropped_sleeper, marks=NEEDS_ACTIVE, id="dropped-popen"),
+    pytest.param(spawned_sleeper, id="multiprocessing"),
+])
+def test_a_child_running_before_the_snapshot_is_neither_blamed_nor_killed(
+        baseline, start):
+    """The check stops only the children started after its snapshot
+
+    A child that already ran when the test began, such as one started
+    while the test modules were imported, is not the test's to kill.
+    """
+    child = start()
+    try:
+        snapshot = baseline.snapshot()
+        assert baseline.check(snapshot) == []
+        assert is_running(child)
+    finally:
+        reap(child)
+
+
+@NEEDS_ACTIVE
+def test_a_child_that_survives_the_kill_is_reported_once_without_hanging(
+        baseline, monkeypatch):
+    """A child that does not end is reported, and kept for the next snapshot
+
+    The check waits ``STOP_TIMEOUT`` seconds at most, so a child that
+    ignores the kill never hangs the session; it stays in
+    ``subprocess._active``, where the next snapshot counts it, so no later
+    test is blamed for it. The kill is a no-op here.
+    """
+    monkeypatch.setattr(leaks, "STOP_TIMEOUT", 0.2)
+    snapshot = baseline.snapshot()
+    popen = dropped_sleeper()
+    try:
+        monkeypatch.setattr(popen, "kill", lambda: None)
+
+        assert baseline.check(snapshot) == [
+            "child process {} left running (subprocess.Popen dropped "
+            "without wait()), and still running after a kill".format(
+                popen.pid)]
+        assert is_running(popen)
+        assert popen in subprocess._active
+        assert baseline.check(baseline.snapshot()) == []
+    finally:
+        monkeypatch.undo()
+        reap(popen)
+
+
 # The root conftest.py runs the detector -------------------------------------
 
 LEAKING_TEST = (
@@ -544,6 +773,22 @@ CLEAN_TEST = (
     "    assert True\n"
 )
 LEAK_LINE = "test_child.py::test_leaks: names added to builtins: __noworkflow__"
+# Writes the pid of the child it drops to the file this test names.
+DROPPING_TEST = (
+    "import subprocess\n"
+    "import sys\n"
+    "\n"
+    "\n"
+    "def test_drops_a_child():\n"
+    "    popen = subprocess.Popen(\n"
+    "        [sys.executable, '-c', 'import time; time.sleep(60)'],\n"
+    "        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,\n"
+    "        stderr=subprocess.DEVNULL)\n"
+    "    with open({pid_file!r}, 'w') as fil:\n"
+    "        fil.write(str(popen.pid))\n"
+)
+DROPPED_LINE = ("test_child.py::test_drops_a_child: child process {} left "
+                "running (subprocess.Popen dropped without wait())")
 LEAKS_HEADER = re.compile(r"=+ LEAKS =+")
 def leaks_section(output):
     """The lines after the LEAKS header of a pytest summary, or None"""
@@ -568,6 +813,62 @@ def test_the_root_conftest_fails_a_test_that_leaks(request, tmp_path):
     assert "1 passed" in summary and "1 error" in summary, report
     assert "the test left process state behind" in result.stdout, report
     assert LEAK_LINE in (leaks_section(result.stdout) or []), report
+
+
+def exists(pid):
+    """Whether a process with this pid exists (POSIX)"""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    return True
+
+
+def kill_recorded(pid_file):
+    """Kill the child whose pid a child test recorded, if it still runs"""
+    if not pid_file.exists():
+        return
+    pid = int(pid_file.read_text(encoding="utf-8"))
+    if exists(pid):
+        os.kill(pid, signal.SIGKILL)
+
+
+@NEEDS_ACTIVE
+@pytest.mark.parametrize("mode", ["fail", "warn"])
+def test_the_root_conftest_kills_a_child_that_a_test_drops(request, tmp_path,
+                                                           mode):
+    """A dropped child is reported, and is gone when pytest ends
+
+    Under ``fail`` it is a teardown error, under ``warn`` a line in the
+    LEAKS section; in both the detector kills it. Without the detector, the
+    sleeper would outlive the child pytest: its pid would still exist after
+    the child pytest exits. The ``finally`` kills it then, so that a broken
+    detector leaves nothing running.
+    """
+    pid_file = tmp_path / "child.pid"
+    try:
+        result = run_child_pytest(
+            request, tmp_path, DROPPING_TEST.format(pid_file=str(pid_file)),
+            mode)
+        report = child_report(result)
+        summary = last_line(result.stdout)
+        assert pid_file.exists(), report
+        pid = int(pid_file.read_text(encoding="utf-8"))
+        if mode == "fail":
+            assert result.returncode != 0, report
+            assert "1 passed" in summary and "1 error" in summary, report
+            assert "the test left process state behind" in result.stdout, (
+                report)
+        else:
+            assert result.returncode == 0, report
+            assert "1 passed" in summary and "error" not in summary, report
+        assert DROPPED_LINE.format(pid) in (
+            leaks_section(result.stdout) or []), report
+        assert not exists(pid), "the dropped child outlived the child pytest"
+    finally:
+        kill_recorded(pid_file)
 
 
 def test_the_root_conftest_only_reports_a_leak_under_warn(request,

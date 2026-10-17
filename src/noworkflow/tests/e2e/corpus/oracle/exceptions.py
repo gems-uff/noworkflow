@@ -15,11 +15,13 @@ does; the code around them and their handlers are traced.
 Split out: an exception raised by the condition of a conditional
 expression, or by its branches twice in one activation
 (conditional_expression_errors.py), one caught inside a function that runs
-in another call's arguments (exception_in_call_arguments.py), and one
-raised by the first iterable of a generator expression
-(genexp_iterable_raises.py), and one raised by the test of an ``if`` or a
-``while`` statement (condition_test_errors.py). Under ``-cg``: #236
-(``@contextlib.contextmanager``).
+in another call's arguments (exception_in_call_arguments.py), one raised
+by the first iterable of a generator expression
+(genexp_iterable_raises.py), one raised by the test of an ``if`` or a
+``while`` statement (condition_test_errors.py), and the context of one
+raised inside a branch of an ``if``, and what ``sys.exc_info()`` and a
+bare ``raise`` see there (if_body_exception_context.py). Under ``-cg``:
+#236 (``@contextlib.contextmanager``).
 """
 import contextlib
 import sys

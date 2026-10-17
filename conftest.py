@@ -11,9 +11,14 @@ It also runs the leak detector (``noworkflow/tests/helpers/leaks.py``): after
 every test, process state that collecting provenance changes (the ``open``
 functions, the builtins, ``sys.meta_path``, ``sys.argv``, ``__main__``, the
 current directory, files written into it) must be as it was after
-collection. ``NOW_LEAK_CHECK=warn`` only reports in the LEAKS section of the
-summary instead of failing the test; ``NOW_LEAK_AUDIT=1`` also reports the
-rows each test leaves in the in-memory store.
+collection, and no child process the test started (a ``subprocess.Popen``
+dropped without waiting, a ``multiprocessing`` child not joined) may still
+be running; the detector kills such a child. The snapshot is taken before
+the fixtures are set up, so a child kept running by a fixture of class,
+module or session scope would be blamed on the first test that uses it.
+``NOW_LEAK_CHECK=warn`` only reports in the LEAKS section of the summary
+instead of failing the test; ``NOW_LEAK_AUDIT=1`` also reports the rows
+each test leaves in the in-memory store.
 
 Every report, of a test or of a collection, and the traceback of an
 INTERNALERROR have this machine's hostname replaced by ``<HOSTNAME>``

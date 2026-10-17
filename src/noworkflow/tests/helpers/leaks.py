@@ -13,16 +13,22 @@ an in-process ``now run`` replaces ``sys.argv``, ``sys.path[0]`` and the
 first one), and several commands write files into the current directory.
 None of it is undone by noWorkflow.
 
+A test that starts a child process and never waits for it leaks too: a
+``subprocess.Popen`` dropped while its child runs leaves the child running
+after pytest exits, and a ``multiprocessing`` child that is not joined makes
+pytest hang at exit until the child ends. Neither is reported by pytest.
+
 The root ``conftest.py`` takes a ``Baseline`` after collection, and around
 every test compares the state with it: a difference is a leak of that test,
 which is reported and then undone, so that one leak is never blamed on every
-later test.
+later test. A leaked child is undone by killing it and waiting for it.
 """
 import builtins
 import codecs
 import fnmatch
 import io
 import os
+import subprocess
 import sys
 import sysconfig
 
@@ -73,6 +79,13 @@ OPENS = (
     (os, "os.open", safeopen.os_open),
 )
 
+# How the check names the two kinds of children it finds.
+DROPPED_POPEN = "subprocess.Popen dropped without wait()"
+NOT_JOINED = "multiprocessing.Process not joined"
+# Seconds the check waits for a child it killed; a kill ends a child at once,
+# so the limit only keeps a child that ignores it from hanging the session.
+STOP_TIMEOUT = 5
+
 
 def is_finder(entry):
     """Whether a ``sys.meta_path`` entry is noWorkflow's import finder
@@ -100,6 +113,62 @@ def undo_collection():
                         if not is_finder(entry)]
 
 
+def running_children():
+    """``{pid: (kind, child)}`` of the children this process has not reaped
+
+    Two places keep a child after the test lost it: ``multiprocessing``
+    keeps every process it started until it is joined (``active_children()``
+    reaps the ones that ended; it is asked only when ``multiprocessing`` was
+    imported, before which no such child can exist), and on POSIX
+    ``Popen.__del__`` puts a ``Popen`` collected while its child runs in
+    ``subprocess._active``, until ``subprocess._cleanup()`` reaps it.
+
+    Not seen: a running ``Popen`` that a test still references (it is not
+    dropped yet), a dropped ``Popen`` on Windows (``subprocess._active`` is
+    None there), the child of a bare ``os.fork()``, and the children of
+    another process, such as what a script run by ``now`` as a process
+    leaves behind.
+    """
+    children = {}
+    process = sys.modules.get("multiprocessing.process")
+    if process is not None:
+        for child in process.active_children():
+            children[child.pid] = (NOT_JOINED, child)
+    active = getattr(subprocess, "_active", None)
+    if active is not None:
+        subprocess._cleanup()
+        for popen in list(active):
+            children.setdefault(popen.pid, (DROPPED_POPEN, popen))
+    return children
+
+
+def stop_child(child):
+    """Kill a leaked child and reap it; whether it ended
+
+    A ``Popen`` that ended leaves ``subprocess._active``; one that did not
+    stays there, so the next snapshot counts it and no later test is
+    blamed for it. The kind is told by ``join``, not by ``isinstance``:
+    were ``subprocess.Popen`` replaced (a collection that patches it and
+    leaks the patch), a ``Popen`` of the original class would not be an
+    instance of the replacement.
+    """
+    try:
+        child.kill()
+    except OSError:
+        pass
+    if hasattr(child, "join"):
+        child.join(STOP_TIMEOUT)
+        return child.exitcode is not None
+    try:
+        child.wait(timeout=STOP_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return False
+    active = getattr(subprocess, "_active", None) or []
+    if child in active:
+        active.remove(child)
+    return True
+
+
 def stray_files(directories):
     """``{path}`` of the files in ``directories`` named like STRAY_PATTERNS"""
     found = set()
@@ -120,6 +189,14 @@ class Baseline:
 
     ``scan_dirs`` are searched for stray files; a module imported from a
     file under ``watched_dirs`` is a traced script's module.
+
+    A child process that was running at ``snapshot`` is never reported nor
+    killed by ``check``. The root conftest takes the snapshot before the
+    fixtures are set up, so a fixture of function scope may start a child
+    as long as its teardown waits for it, but a child that a fixture of
+    wider scope (class, module, session) keeps running across tests would
+    be blamed on the first test that sets the fixture up, and killed. No
+    fixture does that today; one that does needs its children exempted.
     """
 
     def __init__(self, cwd, scan_dirs, watched_dirs):
@@ -135,18 +212,28 @@ class Baseline:
         self.main_vars = dict(vars(self.main)) if self.main else {}
 
     def snapshot(self):
-        """What a test may add to: the modules and the stray files"""
+        """What a test may add to: modules, stray files, running children"""
         dirs = self.scan_dirs + [os.getcwd()]
-        return set(sys.modules), stray_files(dirs)
+        return set(sys.modules), stray_files(dirs), set(running_children())
 
     def check(self, snapshot):
         """Describe every leak since ``snapshot`` and undo what can be undone
 
         Returns a list of strings, empty when the test left nothing behind.
         Files are reported and never removed: they may be the user's.
+        Children are killed and reaped.
         """
-        modules_before, files_before = snapshot
+        modules_before, files_before, children_before = snapshot
         leaks = []
+        # Children first: one still running could go on writing the files
+        # looked for below.
+        for pid, (kind, child) in sorted(running_children().items()):
+            if pid in children_before:
+                continue
+            leak = "child process {} left running ({})".format(pid, kind)
+            if not stop_child(child):
+                leak += ", and still running after a kill"
+            leaks.append(leak)
         cwd = os.path.realpath(os.getcwd())
         if cwd != self.cwd:
             leaks.append("current directory changed to {}".format(cwd))
