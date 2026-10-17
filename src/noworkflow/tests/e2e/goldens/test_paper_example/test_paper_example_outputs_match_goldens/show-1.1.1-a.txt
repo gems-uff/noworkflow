@@ -1026,7 +1026,7 @@
       28: f1_score (<TIMESTAMP> - <TIMESTAMP>)
           Return value: <CHECKPOINT>
       30: open (<TIMESTAMP> - <TIMESTAMP>)
-          Return value: <noworkflow.now.collection.prov_execution.collector.TextFileProxy object at <ADDRESS>>
+          Return value: <noworkflow.now.collection.prov_execution.file_access_proxy.TextFileProxy object at <ADDRESS>>
       30: str (<TIMESTAMP> - <TIMESTAMP>)
           Return value: '<CHECKPOINT>'
       30: str (<TIMESTAMP> - <TIMESTAMP>)
