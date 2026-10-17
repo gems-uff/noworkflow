@@ -4,7 +4,8 @@
 # Please, consult the license terms in the LICENSE file.
 """IPython extensions to display dot files"""
 
-import subprocess
+# Runs Graphviz, and Inkscape for PDF, to draw DOT text
+import subprocess  # nosec B404
 import platform
 import errno
 import sys
@@ -46,7 +47,9 @@ def run_dot(dot, ext="svg", prog="dot", extra=None):
     """Run graphviz for `dot` text and returns its output"""
     extra = extra or []
     args = [prog] + extra + ['-T', ext]
-    process = subprocess.Popen(
+    # No shell; prog and extra are the defaults or the user's own %%dot options,
+    # and the graph goes to stdin
+    process = subprocess.Popen(  # nosec B603
         args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
         startupinfo=STARTUPINFO
     )
@@ -93,7 +96,8 @@ def dot_to_pdf(dot, prog, extra, force_ink=False):
             # Assumes that graphviz already generated the svg
             ink_args = ["inkscape", "-D", "-z", "--file={}".format(filename1),
                         "--export-pdf={}".format(filename2)]
-            subprocess.check_call(ink_args, startupinfo=STARTUPINFO)
+            # No shell; a fixed argv over the two temporary files made above
+            subprocess.check_call(ink_args, startupinfo=STARTUPINFO)  # nosec B603
         except OSError as e:
             if e.errno == errno.ENOENT:
                 if force_ink:

@@ -39,7 +39,9 @@ class NoworkflowMagics(Magics):
     """Generate noWorkflow magics"""
 
     def __init__(self, shell):
-        super(NoworkflowMagics, self).__init__(shell=shell)
+        # shell is the IPython shell; passed by keyword, bandit takes it for
+        # subprocess's shell=True (B604)
+        super(NoworkflowMagics, self).__init__(shell)
         self.commands = [
             cls(command, cls.__doc__, magic_type=magic_type)
             for command, magic_type, cls in MAGICS

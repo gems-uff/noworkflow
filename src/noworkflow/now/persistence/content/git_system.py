@@ -1,4 +1,5 @@
-import subprocess
+# Runs git in the puregit store's content.git
+import subprocess  # nosec B404
 import os
 
 def execute(cmd, default=None, **kwargs):
@@ -15,7 +16,8 @@ def execute(cmd, default=None, **kwargs):
 
 def is_git_installed():
     try:
-        p = subprocess.Popen("git")
+        # Probes for git on the PATH: a literal name, no shell, no argument
+        p = subprocess.Popen("git")  # nosec B603 B607
         p.wait()
         return True
     except OSError:
@@ -29,7 +31,8 @@ def init(path):
 
 def hash_object(content, git_path):
     cmd = ["git", "hash-object", "-w", "--stdin"]
-    p = subprocess.Popen(
+    # No shell; a fixed argv, and the content goes to git on stdin
+    p = subprocess.Popen(  # nosec B603
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
         stdin=subprocess.PIPE, cwd=git_path)
     out = p.communicate(content)[0]

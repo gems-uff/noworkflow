@@ -112,17 +112,29 @@ jobs:
         if: ${{ !cancelled() && steps.sync.outcome == 'success' && github.event_name != 'schedule' }}
         run: uv run --no-sync ruff check --output-format=github .
 
-      # SAST. bandit-baseline.json is the inventory of the findings that
-      # existed when this job was created; only findings outside it fail.
-      # Matching ignores line numbers, so unrelated edits do not break it.
-      # Round 3 (#223) turns the inventory into `# nosec Bxxx` comments with a
-      # reason, or real fixes, and deletes the file. Regenerate it only in
-      # that round:
+      # SAST. A flagged site that is intended carries `# nosec Bxxx`, with
+      # the reason on the line above. bandit-baseline.json lists the real
+      # findings that wait for a fix, each with its issue (the inventory is in
+      # #223); an entry leaves in the commit that fixes it. bandit's -b
+      # matches file, test, severity, confidence and text, never the line or
+      # the count, so one entry hides every finding of its test in its file.
+      # The diff after it compares the findings one by one: it fails on a new
+      # one (`>`) and on an entry whose finding is gone (`<`). A `# nosec`
+      # without a test id silences every test on its line, so the grep
+      # refuses it. Regenerate the baseline in that commit with:
       #   uv run bandit -c pyproject.toml -r src/noworkflow -q -f json \
       #     | jq '{results: .results}' > bandit-baseline.json
       - name: SAST (bandit)
         if: ${{ !cancelled() && steps.sync.outcome == 'success' && github.event_name != 'schedule' }}
-        run: uv run --no-sync bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json
+        run: |
+          uv run --no-sync bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json
+          uv run --no-sync bandit -c pyproject.toml -r src/noworkflow -q -f json -o "$RUNNER_TEMP/bandit.json" || [ $? -eq 1 ]
+          pairs='.results[] | "\(.filename) \(.test_id)"'
+          diff <(jq -r "$pairs" bandit-baseline.json | sort) <(jq -r "$pairs" "$RUNNER_TEMP/bandit.json" | sort) \
+            || { echo "::error::bandit's findings differ from bandit-baseline.json (< only in the baseline, > only in this run)"; exit 1; }
+          if grep -rnE --include='*.py' --exclude-dir=tests '#[[:space:]]*nosec[[:space:]]*(:[[:space:]]*)?($|#)' src/noworkflow; then
+            echo "::error::a # nosec without a test id (Bxxx) silences every test on its line"; exit 1
+          fi
 
       # The wheel is what `pip install noworkflow` gets. version.txt and
       # bundle.js reach it only through package-data globs; if a glob or the
