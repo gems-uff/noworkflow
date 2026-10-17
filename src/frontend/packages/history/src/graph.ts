@@ -584,7 +584,10 @@ export
       .attr("stroke", "#000")
       .attr("stroke-width", "2.5px")
       .attr("fill", function (d: VisibleHistoryNode) {
-        var proportion = Math.round(200 * (1.0 - (parseInt(d.title) / self.maxId)) + 50);
+        // Use the sequential node id (d.id), not parseInt(d.title): trial ids are
+        // UUIDs in noWorkflow 2.x, so parseInt(title) yields 0/NaN and washes the
+        // gradient toward white (hiding failed/backup trials in the summarized graph).
+        var proportion = Math.round(200 * (1.0 - (d.id / self.maxId)) + 50);
         if (d.status === 'unfinished') {
           return d.gradient ? d3_rgb(255, proportion, proportion, 255).toString() : "rgb(238, 200, 241)";
         }

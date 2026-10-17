@@ -1,0 +1,5 @@
+# Review requests on pull requests go to the team, not to a person, so the
+# list survives whoever holds the role. The ruleset on `main` does not require
+# a code owner review (`require_code_owner_review: false`): this file only
+# makes GitHub request one automatically, which matters for PRs from forks.
+* @gems-uff/noworkflow

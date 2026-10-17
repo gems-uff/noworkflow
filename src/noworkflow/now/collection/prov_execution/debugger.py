@@ -10,7 +10,8 @@ from __future__ import (absolute_import, print_function,
 
 import atexit
 import os
-import subprocess
+# Starts the programs of the now_vis() and now_notebook() builtins
+import subprocess  # nosec B404
 import sys
 import threading
 import webbrowser
@@ -100,7 +101,8 @@ def debugger_builtins(provider, namespace, metascript):
             print("now vis: {}".format(url))
             with redirect_output():
                 vis[0] = True
-                proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
+                # No shell; a fixed argv except the port of the script's own now_vis() call
+                proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)  # nosec B603
                 CHILDREN_PID.append(proc)
 
         if browser and (browser_open ^ (browser == "maybe")):

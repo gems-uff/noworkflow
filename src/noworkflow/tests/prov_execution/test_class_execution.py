@@ -9,7 +9,7 @@ from __future__ import (absolute_import, print_function,
 
 from parameterized import parameterized
 
-from ...now.utils.cross_version import PY2, PY3, PY36, only
+from ...now.utils.cross_version import PY2, PY3, PY36
 from ..collection_testcase import CollectionTestCase
 
 

@@ -102,7 +102,8 @@ NAME = "name"
 #  expr.visit_Name
 NONLOCAL = "nonlocal"
 #  stmt.visit_Nonlocal
-PASS = "pass"
+# The component type of `pass` statements, not a password
+PASS = "pass"  # nosec B105
 #  stmt.visit_Pass
 PARAM = "param"
 #  stmt.process_arg

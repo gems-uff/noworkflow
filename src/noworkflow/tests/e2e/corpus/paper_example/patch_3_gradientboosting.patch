@@ -1,0 +1,23 @@
+--- a/credit_card_fraud.py
++++ b/credit_card_fraud.py
+@@ -1,6 +1,6 @@
+ from sklearn.decomposition import PCA
+ from sklearn.metrics import roc_auc_score, f1_score
+-from sklearn.ensemble import RandomForestClassifier
++from sklearn.ensemble import GradientBoostingClassifier
+ from imblearn.under_sampling import RandomUnderSampler
+ from sklearn.model_selection import train_test_split
+ import pandas as pd
+@@ -19,9 +19,9 @@
+     return rus
+ 
+ def get_ypred(X_train, X_test, y_train):
+-    rf = RandomForestClassifier()
+-    rf.fit(X_train, y_train)
+-    return rf.predict(X_test)
++    gb = GradientBoostingClassifier()
++    gb.fit(X_train, y_train)
++    return gb.predict(X_test)
+ 
+ def save_metrics(y_test, y_pred):
+     roc_metric = roc_auc_score(y_test, y_pred)

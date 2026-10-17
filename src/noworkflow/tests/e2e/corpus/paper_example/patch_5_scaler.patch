@@ -1,0 +1,20 @@
+--- a/credit_card_fraud.py
++++ b/credit_card_fraud.py
+@@ -3,6 +3,7 @@
+ from sklearn.ensemble import RandomForestClassifier
+ from imblearn.under_sampling import RandomUnderSampler
+ from sklearn.model_selection import train_test_split
++from sklearn.preprocessing import StandardScaler
+ import pandas as pd
+ import sys
+ 
+@@ -38,7 +39,8 @@
+ if len(sys.argv) > 1:
+     random_seed = int(sys.argv[1])
+ rus = get_rus(random_seed)
+-X_resampled, y_resampled = rus.fit_resample(pca.fit_transform(X), y)
++X_scaled = StandardScaler().fit_transform(X)
++X_resampled, y_resampled = rus.fit_resample(pca.fit_transform(X_scaled), y)
+ X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=random_seed)
+ y_pred = get_ypred(X_train, X_test, y_train)
+ save_metrics(y_test, y_pred)

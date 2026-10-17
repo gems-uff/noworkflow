@@ -14,10 +14,9 @@ import sys
 
 from future.utils import viewitems
 
-from ..now.persistence import persistence_config
+from .helpers.persistence import connect_in_memory
 
-persistence_config.connect(".")
-persistence_config.mock()
+connect_in_memory()
 
 #from .prov_deployment import TestProvDeployment
 from .prov_definition import TestCodeBlockDefinition
@@ -25,6 +24,10 @@ from .prov_definition import TestCodeComponentDefinition
 from .prov_definition import TestReconstruction
 from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
 from .prov_execution import TestClassExecution, TestDepthExecution
+from .prov_execution import TestFileAccessExecution, TestCollectorCleanup
+from .prov_execution import TestFStringParts, TestYieldFrom
+from .prov_execution import TestClassStatement, TestMemberLookupWithoutDict
+from .prov_execution import TestWithExecution, TestUnpackingExecution
 from .dependency import TestClusterizer, TestClusterizerConfig
 from .dependency import TestProspectiveClusterizer
 from .dependency import TestActivationClusterizer, TestDependencyClusterizer
@@ -33,6 +36,7 @@ from .cross_version_test import TestCrossVersion
 from ..now.persistence.models import ORDER
 from ..now.utils import formatter
 from ..now.utils import functions
+from ..patterns import machinery
 
 
 
@@ -42,6 +46,7 @@ tests_modules = {
 
 tests_modules["formatter"] = formatter.__name__
 tests_modules["functions"] = functions.__name__
+tests_modules["machinery"] = machinery.__name__
 
 loader = unittest.TestLoader()
 doctests = unittest.TestSuite()
@@ -63,6 +68,14 @@ execution.addTests(loader.loadTestsFromTestCase(TestStmtExecution))
 execution.addTests(loader.loadTestsFromTestCase(TestExprExecution))
 execution.addTests(loader.loadTestsFromTestCase(TestDepthExecution))
 execution.addTests(loader.loadTestsFromTestCase(TestClassExecution))
+execution.addTests(loader.loadTestsFromTestCase(TestFileAccessExecution))
+execution.addTests(loader.loadTestsFromTestCase(TestCollectorCleanup))
+execution.addTests(loader.loadTestsFromTestCase(TestFStringParts))
+execution.addTests(loader.loadTestsFromTestCase(TestYieldFrom))
+execution.addTests(loader.loadTestsFromTestCase(TestClassStatement))
+execution.addTests(loader.loadTestsFromTestCase(TestMemberLookupWithoutDict))
+execution.addTests(loader.loadTestsFromTestCase(TestWithExecution))
+execution.addTests(loader.loadTestsFromTestCase(TestUnpackingExecution))
 
 collection = unittest.TestSuite()
 collection.addTests(definition)

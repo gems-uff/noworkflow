@@ -1,0 +1,30 @@
+[now] trial tags:
+  Tag: 1.1.2 Type: AUTO
+[now] trial information:
+  Id: <UUID1>
+  Sequence Key: 2
+  Status: Finished
+  Inherited Id: None
+  Script: simulation.py
+  Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28
+  Start: <TIMESTAMP>
+  Finish: <TIMESTAMP>
+  Duration: <DURATION>
+[now] this trial has the following arguments:
+  script: '<PROJECT>/simulation.py'
+  bypass_modules: False
+  depth: 1000
+  serializer: 'repr'
+  collect_values: 'all'
+  context: 'main'
+  save_frequency: 0
+  call_storage_frequency: 10000
+  coarse_granularity: False
+  name: None
+  dir: None
+  verbose: False
+  message: None
+  content_engine: None
+  create_last: False
+  meta: False
+  argv: ['simulation.py', 'data1.dat', 'data2.dat']

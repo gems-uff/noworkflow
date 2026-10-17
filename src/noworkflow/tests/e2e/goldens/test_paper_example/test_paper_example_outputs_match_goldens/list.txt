@@ -1,0 +1,67 @@
+[now] trials available in the provenance store:
+  [*]Trial <UUID1>: run credit_card_fraud.py
+                                                 with code hash 7b37007618e4d03616352063871a0572579126da
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 1
+                                                 Tag: 1.1.1 Type: AUTO
+  [*]Trial <UUID2>: run credit_card_fraud.py
+                                                 with code hash 7b37007618e4d03616352063871a0572579126da
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 2
+                                                 Tag: 1.1.2 Type: AUTO
+  [*]Trial <UUID3>: run credit_card_fraud.py
+                                                 with code hash 7b37007618e4d03616352063871a0572579126da
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 3
+                                                 Tag: 1.1.3 Type: AUTO
+  [*]Trial <UUID4>: run credit_card_fraud.py 40
+                                                 with code hash 7b37007618e4d03616352063871a0572579126da
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 4
+                                                 Tag: 1.2.1 Type: AUTO
+  [*]Trial <UUID5>: run credit_card_fraud.py
+                                                 with code hash 4291cb396e301a3629b2b4b4d86659e2e26b2d65
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 5
+                                                 Tag: 2.1.1 Type: AUTO
+  [*]Trial <UUID6>: run credit_card_fraud.py 40
+                                                 with code hash 4291cb396e301a3629b2b4b4d86659e2e26b2d65
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 6
+                                                 Tag: 2.2.1 Type: AUTO
+  [*]Trial <UUID7>: run credit_card_fraud.py
+                                                 with code hash 1bb1ae1b20bf8e4f22827f250c8c9fbdf2871fb0
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 7
+                                                 Tag: 3.1.1 Type: AUTO
+  [f]Trial <UUID8>: run credit_card_fraud.py
+                                                 with code hash 93785cc57da0341486494eed5818c6cd9f7ebc98
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 8
+                                                 Tag: 4.1.1 Type: AUTO
+  [*]Trial <UUID9>: run credit_card_fraud.py
+                                                 with code hash ff6e9b42b3226aaace0745a64068dec95fc1baff
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 9
+                                                 Tag: 5.1.1 Type: AUTO
+  [*]Trial <UUID10>: run credit_card_fraud.py
+                                                 with code hash 66c7915a0819fc79620f665ceca5c20366ce1ca5
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 10
+                                                 Tag: 6.1.1 Type: AUTO
+  [b]Trial <UUID11>: restore 5.1.1
+                                                 with code hash dc9b678e3413435facf2b671290072b31f372224
+                                                 ran from <TIMESTAMP> to <TIMESTAMP>
+                                                 duration: <DURATION>
+                                                 Sequence Key: 11
+                                                 Tag: 7.0.0 Type: AUTO

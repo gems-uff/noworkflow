@@ -25,7 +25,8 @@ class ContentDatabaseEngine(object):
 
         def put(content=None, filename="generic"):
             """Mock put"""
-            hash_code = hashlib.sha1(content).hexdigest()
+            # Only the tests mock the store; the id copies the plain engine's
+            hash_code = hashlib.sha1(content, usedforsecurity=False).hexdigest()
             self.temp[hash_code] = content
             return hash_code
 
