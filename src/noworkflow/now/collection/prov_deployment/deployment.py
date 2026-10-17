@@ -6,7 +6,7 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import importlib
+import importlib.metadata
 import modulefinder
 import os
 import platform
@@ -14,7 +14,6 @@ import socket
 import sys
 import weakref
 import getpass
-import pkg_resources
 
 from future.utils import viewitems, native_str
 from future.builtins import map as cvmap
@@ -88,8 +87,7 @@ class Deployment(object):
 
         # Check package declared module version
         try:
-            # ToDo: This is slow! Is there any alternative?
-            return pkg_resources.get_distribution(module_name).version
+            return importlib.metadata.version(module_name)
         except Exception:                                                        # pylint: disable=broad-except
             pass
 
