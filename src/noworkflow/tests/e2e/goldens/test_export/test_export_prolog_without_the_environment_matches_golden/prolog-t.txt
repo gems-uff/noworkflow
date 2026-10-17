@@ -430,7 +430,7 @@ code_component('<UUID1>', 334, '<class ''_io.TextIOWrapper''>', 'type', 'w', -1,
 code_component('<UUID1>', 335, '<class ''_csv.reader''>', 'type', 'w', -1, -1, -1, -1, nil).
 code_component('<UUID1>', 336, 'float', 'global', 'w', -1, -1, -1, -1, nil).
 code_component('<UUID1>', 337, '<class ''NoneType''>', 'type', 'w', -1, -1, -1, -1, nil).
-code_component('<UUID1>', 338, '<class ''noworkflow.now.collection.prov_execution.collector.TextFileProxy''>', 'type', 'w', -1, -1, -1, -1, nil).
+code_component('<UUID1>', 338, '<class ''noworkflow.now.collection.prov_execution.file_access_proxy.TextFileProxy''>', 'type', 'w', -1, -1, -1, -1, nil).
 code_component('<UUID1>', 339, '<class ''_csv.writer''>', 'type', 'w', -1, -1, -1, -1, nil).
 code_component('<UUID1>', 340, 'zip', 'global', 'w', -1, -1, -1, -1, nil).
 code_component('<UUID1>', 341, 'print', 'global', 'w', -1, -1, -1, -1, nil).
@@ -817,12 +817,12 @@ evaluation('<UUID1>', 287, <CHECKPOINT>, 232, 206, '<function Collector.new_open
 evaluation('<UUID1>', 288, <CHECKPOINT>, 233, 206, 'output.csv', 204).
 evaluation('<UUID1>', 289, <CHECKPOINT>, 234, 206, 'w', 289).
 evaluation('<UUID1>', 290, <CHECKPOINT>, 235, 206, '', 290).
-evaluation('<UUID1>', 291, <CHECKPOINT>, 227, 206, '<noworkflow.now.collection.prov_execution.collector.TextFileProxy object at <ADDRESS>>', 291).
-evaluation('<UUID1>', 292, <CHECKPOINT>, 338, 0, '<class ''noworkflow.now.collection.prov_execution.collector.TextFileProxy''>', 292).
-evaluation('<UUID1>', 293, <CHECKPOINT>, 236, 206, '<noworkflow.now.collection.prov_execution.collector.TextFileProxy object at <ADDRESS>>', 291).
+evaluation('<UUID1>', 291, <CHECKPOINT>, 227, 206, '<noworkflow.now.collection.prov_execution.file_access_proxy.TextFileProxy object at <ADDRESS>>', 291).
+evaluation('<UUID1>', 292, <CHECKPOINT>, 338, 0, '<class ''noworkflow.now.collection.prov_execution.file_access_proxy.TextFileProxy''>', 292).
+evaluation('<UUID1>', 293, <CHECKPOINT>, 236, 206, '<noworkflow.now.collection.prov_execution.file_access_proxy.TextFileProxy object at <ADDRESS>>', 291).
 evaluation('<UUID1>', 294, <CHECKPOINT>, 186, 206, '<module ''csv'' from ''<BASE_PREFIX>/lib/python3.15/csv.py''>', 294).
 evaluation('<UUID1>', 295, <CHECKPOINT>, 184, 206, '<built-in function writer>', 295).
-evaluation('<UUID1>', 296, <CHECKPOINT>, 187, 206, '<noworkflow.now.collection.prov_execution.collector.TextFileProxy object at <ADDRESS>>', 291).
+evaluation('<UUID1>', 296, <CHECKPOINT>, 187, 206, '<noworkflow.now.collection.prov_execution.file_access_proxy.TextFileProxy object at <ADDRESS>>', 291).
 evaluation('<UUID1>', 297, <CHECKPOINT>, 181, 206, '<_csv.writer object at <ADDRESS>>', 297).
 evaluation('<UUID1>', 298, <CHECKPOINT>, 339, 0, '<class ''_csv.writer''>', 298).
 evaluation('<UUID1>', 299, <CHECKPOINT>, 180, 206, '<_csv.writer object at <ADDRESS>>', 297).

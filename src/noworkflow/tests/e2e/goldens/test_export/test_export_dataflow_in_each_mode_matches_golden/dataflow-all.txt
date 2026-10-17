@@ -37,7 +37,7 @@ digraph e_1 {
     e_19 [label="-1 <class '_io.TextIOWrapper'>" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_18 [label="17 open(sys.argv[1])" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
     a_<A1> [label="input.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
-    e_56 [label="-1 <class 'noworkflow.now.co ... collector.TextFileProxy'>" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
+    e_56 [label="-1 <class 'noworkflow.now.co ... ess_proxy.TextFileProxy'>" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
     e_55 [label="22 open(\"result.txt\", \"w\", newline=\"\n\")" fillcolor="#3A85B9" fontcolor="white" shape="box" style="filled"];
     a_<A2> [label="result.txt" fillcolor="white" fontcolor="black" shape="box" style="rounded,filled"];
     e_60 [label="-1 <class 'method'>" fillcolor="#85CBD0" fontcolor="black" shape="box" style="rounded,filled"];
