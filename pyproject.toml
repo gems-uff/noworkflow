@@ -37,7 +37,7 @@ dependencies = [
     "parameterized",
     "requests",
     "ipykernel",
-    "zipp==3.15",
+    "zipp==3.19.1",
     "importlib-metadata==6.4.1",
     "typing-extensions>=4.5.0,<5",
     "setuptools<72",
