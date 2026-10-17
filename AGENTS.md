@@ -227,9 +227,10 @@ run `now` as a process on a real store in a temporary directory. What
 neither executes:
 
 - **Commands the e2e tests do not run:** `vis` (the server; its routes run
-  in process, see below), `push`, `pull`, `kernel`, `debug`, `evaluation`,
-  `clean`, and `demo` outside the reference leg (see below). For the
-  commands they do run, only the flags their tests name are covered.
+  in process, see below), `push`, `pull`, `kernel`, `debug`, `evaluation`
+  (its query options run through `clean`), and `demo` outside the reference
+  leg (see below). For the commands they do run, only the flags their tests
+  name are covered.
 - **`now vis`:** the server itself (`now vis` as a process: `cmd_vis.py`,
   the port, `--host`, `--dir`); the write routes (experiments, groups,
   annotations, remotes, the collaboration import and the files it receives)
@@ -294,9 +295,15 @@ neither executes:
   tests read exports back, only where `swipl` is on the PATH; they skip
   elsewhere. In CI the legs of the `test` job and the `paper-example` job
   install it, the experimental Windows legs do not.
-- **Jupyter:** the magics (`%now_run`, `%now_ip`) and the kernel in
-  `src/noworkflow/kernel/` are only imported (`test_import_smoke.py`), never
-  run (#254); the lab extension has no automated test.
+- **Jupyter:** the magics run in an in-process IPython shell
+  (`src/noworkflow/tests/ipython/`), never under a kernel: the kernel in
+  `src/noworkflow/kernel/` is only imported (#315), so `now clean` never
+  meets a notebook trial, and the lab extension has no automated test.
+  `%%now_run --interactive` gets past #313's import only through a stand-in
+  of the tests. `%%dot` and the diagrams of `%now_schema` skip where
+  Graphviz's `dot` is missing, `%%now_prolog` without `pyswip`, which no
+  leg installs, and the tagging helpers that import pandas where the
+  `paper` group is not synced (it is in the reference container only).
 - **`push`, `pull`, `demo`:** a remote server and the demo projects are
   exercised by hand or not at all; the exception is `demo 1` (marked `slow`),
   which the reference leg runs because it syncs the `demo` extra

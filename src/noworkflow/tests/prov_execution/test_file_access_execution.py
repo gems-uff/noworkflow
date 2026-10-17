@@ -8,17 +8,17 @@
 ``os.open``. The first tests pin when ``content_hash_after`` is captured;
 the others pin how the positional arguments after the name are read: as
 ``builtins.open``'s ``(mode, buffering)``, which records ``os.open``'s
-permission bits and a positional buffering as reads
-(#317). Their controls pass the same values by
-keyword, or leave the permission bits out.
+permission bits, a positional buffering and every file pathlib opens
+(``Path.open`` passes both to ``io.open`` positionally) as reads (#317).
+Their controls pass the same values by keyword, or leave the permission
+bits out.
 
 The ``_desired`` twins are in ``TestFileAccessExecutionDesired``, which is
 not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the marks
 of ``known_defects``. Both classes share ``FileAccessTestCase``, which has
 no tests, so that no test runs twice.
 """
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import hashlib
 import io
@@ -56,6 +56,14 @@ POSITIONAL_BUFFERING = Defect(
     "buffering is a read, so the write proxy does not wrap it and "
     "content_hash_after is the hash of the truncated file",
     signature="('r', 1, False)")
+PATHLIB_OPEN = Defect(
+    OPEN_POSITIONAL_MODE + ": pathlib.Path.open calls io.open(self, mode, "
+    "buffering, encoding, errors, newline), so every file pathlib opens "
+    "for writing (Path.open, write_text, write_bytes) is a read whose "
+    "buffering is pathlib's -1, the write proxy does not wrap it, and a "
+    "file written through the object Path.open returns keeps the hash of "
+    "the truncated file",
+    signature="('r', -1, False)")
 
 
 def os_open_script(permission):
@@ -73,6 +81,11 @@ POSITIONAL_BUFFERING_SCRIPT = ("# script.py\n"
                                "f = open('out.txt', 'w', 1)\n"
                                "f.write('DATA')\n"
                                "f.close()\n")
+
+PATHLIB_SCRIPT = ("# script.py\n"
+                  "from pathlib import Path\n"
+                  "with Path('out.txt').open('w') as f:\n"
+                  "    f.write('DATA')\n")
 
 
 class _DummyFileAccess(object):
@@ -104,9 +117,12 @@ class FileAccessTestCase(CollectionTestCase):
         os.chdir(self.tmpdir)
 
     def tearDown(self):
+        # The collection is undone first (CollectionTestCase.tearDown):
+        # while the collector's os.open wrapper is installed, rmtree cannot
+        # remove the directory (#371).
+        super(FileAccessTestCase, self).tearDown()
         os.chdir(self.olddir)
         shutil.rmtree(self.tmpdir, ignore_errors=True)
-        super(FileAccessTestCase, self).tearDown()
 
     def file_accesses(self, basename):
         """Return file_access objects for a basename, ordered by id"""
@@ -273,6 +289,30 @@ class TestFileAccessExecution(FileAccessTestCase):
             (access.mode, access.buffering, access.content_hash_after),
             ("w", 1, sha1(b"DATA")))
 
+    def test_pathlib_open_for_writing(self):
+        """``Path(path).open('w')`` is recorded as a read whose buffering is
+        pathlib's default, -1, and the content written through it is lost:
+        content_hash_after is the empty file's
+
+        #317: pathlib passes the mode and the buffering to ``io.open``
+        positionally.
+        """
+        access = self.access_of(PATHLIB_SCRIPT)
+        self.assertEqual(
+            (access.mode, access.buffering, access.content_hash_after),
+            ("r", -1, EMPTY_SHA1))
+
+    def test_open_with_keyword_mode_records_a_write(self):
+        """Control: ``open(path, mode='w')`` records a write with the
+        default buffering and the content written through it
+        """
+        access = self.access_of("# script.py\n"
+                                "with open('out.txt', mode='w') as f:\n"
+                                "    f.write('DATA')\n")
+        self.assertEqual(
+            (access.mode, access.buffering, access.content_hash_after),
+            ("w", "default", sha1(b"DATA")))
+
 
 class TestFileAccessExecutionDesired(FileAccessTestCase):
     """What the open wrappers should record once their defects are fixed
@@ -302,3 +342,14 @@ class TestFileAccessExecutionDesired(FileAccessTestCase):
             (access.mode, access.buffering,
              access.content_hash_after == sha1(b"DATA")),
             ("w", 1, True))
+
+    @known_defects(PATHLIB_OPEN)
+    def test_pathlib_open_for_writing_desired(self):
+        """``Path(path).open('w')`` is ``open(path, 'w', buffering=-1)``: a
+        write with pathlib's buffering and the content written through it
+        """
+        access = self.access_of(PATHLIB_SCRIPT)
+        self.assertEqual(
+            (access.mode, access.buffering,
+             access.content_hash_after == sha1(b"DATA")),
+            ("w", -1, True))
