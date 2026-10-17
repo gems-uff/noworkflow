@@ -21,7 +21,7 @@ connect_in_memory()
 #from .prov_deployment import TestProvDeployment
 from .prov_definition import TestCodeBlockDefinition
 from .prov_definition import TestCodeComponentDefinition
-from .prov_definition import TestReconstruction
+from .prov_definition import TestReconstruction, TestTrialAst
 from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
 from .prov_execution import TestClassExecution, TestDepthExecution
 from .prov_execution import TestFileAccessExecution, TestCollectorCleanup
@@ -61,6 +61,7 @@ definition = unittest.TestSuite()
 definition.addTests(loader.loadTestsFromTestCase(TestCodeBlockDefinition))
 definition.addTests(loader.loadTestsFromTestCase(TestCodeComponentDefinition))
 definition.addTests(loader.loadTestsFromTestCase(TestReconstruction))
+definition.addTests(loader.loadTestsFromTestCase(TestTrialAst))
 
 execution = unittest.TestSuite()
 execution.addTests(loader.loadTestsFromTestCase(TestScript))
