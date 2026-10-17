@@ -31,7 +31,7 @@ To showcase how these features can take your experiment management to another le
 
 ## Noworkflow Setup
 
-To perform this tutorial, we highly recommend setting up a Conda environment on your system, which involves installing the noWorkflow package and Jupyter Lab. To reproduce the experimental Notebooks, you can clone this repository as well. Take advantage of the [_requirements.txt_](requirements.txt) file to accelerate your setup with pip tools.
+To perform this tutorial, we highly recommend setting up a Conda environment on your system, which involves installing the noWorkflow package and Jupyter Lab. To reproduce the experimental Notebooks, you can clone this repository as well. Take advantage of the [_environment-snapshot.txt_](environment-snapshot.txt) file to accelerate your setup with pip tools.
 
 First, clone our use case tutorial to your local machine and create a separate environment:
 
@@ -42,7 +42,7 @@ cd noworkflow
 # Create a conda env
 conda create -n noworkflow python=3.10
 conda activate noworkflow
-pip install -r ./Examples/usecase_credit_fraud/requirements.txt
+pip install -r ./Examples/usecase_credit_fraud/environment-snapshot.txt
 ```
 
 Install the noWorkflow:

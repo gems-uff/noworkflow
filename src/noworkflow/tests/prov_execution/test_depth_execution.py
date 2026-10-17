@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from ...now.utils.cross_version import PY3, only
+from ...now.utils.cross_version import PY3
 
 from ..collection_testcase import CollectionTestCase
 

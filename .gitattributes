@@ -1,0 +1,5 @@
+* text=auto eol=lf
+src/noworkflow/now/vis/static/dist/bundle.js -text linguist-generated=true
+src/noworkflow/now/vis/static/dist/bundle.js.map -text linguist-generated=true
+src/noworkflow/tests/e2e/corpus/** -text
+*.dat -text

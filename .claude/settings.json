@@ -1,0 +1,13 @@
+{
+  "sandbox": {
+    "enabled": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest *)",
+      "Bash(uv run ruff *)",
+      "Bash(uv run bandit *)",
+      "Bash(uv lock --check)"
+    ]
+  }
+}

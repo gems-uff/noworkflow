@@ -1,0 +1,148 @@
+strict digraph {
+	node [color=black fillcolor="#85CBC0" shape=box style=filled]
+	nodesep=0.4 size=15
+	start [label=Start]
+	"6import6" [label="6: import pandas as pd" fillcolor="#976BAA"]
+	"7import7" [label="7: import sys" fillcolor="#976BAA"]
+	"9function_def10" [label="9: def get_df()"]
+	"10return10" [label="10: return pd.read_csv('creditcard.csv', encoding='utf-8')"]
+	"10call10" [label="10: pd.read_csv('creditcard.csv', encoding='utf-8')"]
+	"12function_def14" [label="12: def get_pca()"]
+	"13assign13" [label="13: pca_components = 3" fillcolor="#976BAA"]
+	"14return14" [label="14: return PCA(n_components=pca_components)"]
+	"14call14" [label="14: PCA(n_components=pca_components)"]
+	"16function_def19" [label="16: def get_rus(random_seed)"]
+	"17for18c" [label=" Variable: i
+ i in range(2)" color="#808080" fillcolor=white shape=note]
+	"17for18" [label="17: for" shape=diamond]
+	"17for18" -> "17for18c" [arrowhead=none color="#808080" style=dashed]
+	"18assign18" [label="18: rus = RandomUnderSampler(random_state=random_seed)" fillcolor="#976BAA"]
+	"18call18" [label="18: RandomUnderSampler(random_state=random_seed)"]
+	"19return19" [label="19: return rus"]
+	"21function_def24" [label="21: def get_ypred(X_train, X_test, y_train)"]
+	"22assign22" [label="22: rf = RandomForestClassifier()" fillcolor="#976BAA"]
+	"22call22" [label="22: RandomForestClassifier()"]
+	"23call23" [label="23: rf.fit(X_train, y_train)"]
+	"24return24" [label="24: return rf.predict(X_test)"]
+	"24call24" [label="24: rf.predict(X_test)"]
+	"26function_def30" [label="26: def save_metrics(y_test, y_pred)"]
+	"27assign27" [label="27: roc_metric = roc_auc_score(y_test, y_pred)" fillcolor="#976BAA"]
+	"27call27" [label="27: roc_auc_score(y_test, y_pred)"]
+	"28assign28" [label="28: f1_metric = f1_score(y_test, y_pred)" fillcolor="#976BAA"]
+	"28call28" [label="28: f1_score(y_test, y_pred)"]
+	"30call30" [label="30: open(\"out.txt\", \"w\").write(\"ROC=\"+str(roc_metric)+\"\nF1=\"+str(f1_metric))"]
+	"33assign33" [label="33: df = get_df()" fillcolor="#976BAA"]
+	"33call33" [label="33: get_df()"]
+	"34assign34" [label="34: X = df.drop('Class', axis=1)" fillcolor="#976BAA"]
+	"34call34" [label="34: df.drop('Class', axis=1)"]
+	"35assign35" [label="35: y = df['Class']" fillcolor="#976BAA"]
+	"36assign36" [label="36: pca = get_pca()" fillcolor="#976BAA"]
+	"36call36" [label="36: get_pca()"]
+	"37assign37" [label="37: random_seed = 42" fillcolor="#976BAA"]
+	"38if39c" [label=" Condition:
+  len(sys.argv) > 1" color="#808080" fillcolor=white shape=note]
+	"38if39" [label="38: if" shape=diamond]
+	"38if39" -> "38if39c" [arrowhead=none color="#808080" style=dashed]
+	"38call38" [label="38: len(sys.argv)"]
+	"39assign39" [label="39: random_seed = int(sys.argv[1])" fillcolor="#976BAA"]
+	"39call39" [label="39: int(sys.argv[1])"]
+	"40assign40" [label="40: rus = get_rus(random_seed)" fillcolor="#976BAA"]
+	"40call40" [label="40: get_rus(random_seed)"]
+	"41assign41" [label="41: X_resampled, y_resampled = rus.fit_resample(pca.fit_transform(X), y)" fillcolor="#976BAA"]
+	"41call41" [label="41: rus.fit_resample(pca.fit_transform(X), y)"]
+	"42assign42" [label="42: X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=random_seed)" fillcolor="#976BAA"]
+	"42call42" [label="42: train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=random_seed)"]
+	"43assign43" [label="43: y_pred = get_ypred(X_train, X_test, y_train)" fillcolor="#976BAA"]
+	"43call43" [label="43: get_ypred(X_train, X_test, y_train)"]
+	"44call44" [label="44: save_metrics(y_test, y_pred)"]
+	end [label=End]
+	"18call18" -> "17for18" [style=dashed]
+	"17for18" -> "19return19" [label=" End Loop"]
+	"33call33" -> "9function_def10" [style=dashed]
+	"36call36" -> "12function_def14" [style=dashed]
+	"40call40" -> "16function_def19" [style=dashed]
+	"43call43" -> "21function_def24" [style=dashed]
+	"44call44" -> "26function_def30" [style=dashed]
+	start -> "6import6"
+	"6import6" -> "7import7"
+	"7import7" -> "12function_def14"
+	"9function_def10" -> "10return10"
+	"10return10" -> "10call10"
+	"12function_def14" -> "13assign13"
+	"13assign13" -> "14return14"
+	"14return14" -> "14call14"
+	"16function_def19" -> "17for18"
+	"17for18" -> "18assign18"
+	"18assign18" -> "18call18"
+	"21function_def24" -> "22assign22"
+	"22assign22" -> "22call22"
+	"22call22" -> "23call23"
+	"23call23" -> "24return24"
+	"24return24" -> "24call24"
+	"26function_def30" -> "27assign27"
+	"27assign27" -> "27call27"
+	"27call27" -> "28assign28"
+	"28assign28" -> "28call28"
+	"28call28" -> "30call30"
+	"33assign33" -> "33call33"
+	"33call33" -> "34assign34"
+	"34assign34" -> "34call34"
+	"34call34" -> "35assign35"
+	"35assign35" -> "36assign36"
+	"36assign36" -> "36call36"
+	"36call36" -> "37assign37"
+	"37assign37" -> "38if39"
+	"38if39" -> "38call38" [label="   True"]
+	"38call38" -> "39assign39"
+	"39assign39" -> "39call39"
+	"39call39" -> "40assign40"
+	"40assign40" -> "40call40"
+	"40call40" -> "41assign41"
+	"41assign41" -> "41call41"
+	"41call41" -> "42assign42"
+	"42assign42" -> "42call42"
+	"42call42" -> "43assign43"
+	"43assign43" -> "43call43"
+	"43call43" -> "44call44"
+	"44call44" -> end
+	subgraph cluster3 {
+		style=dashed
+		"9function_def10"
+		"10return10"
+		"10call10"
+	}
+	subgraph cluster6 {
+		style=dashed
+		"12function_def14"
+		"13assign13"
+		"14return14"
+		"14call14"
+	}
+	subgraph cluster10 {
+		style=dashed
+		"16function_def19"
+		"17for18"
+		"17for18c"
+		"18assign18"
+		"18call18"
+		"19return19"
+	}
+	subgraph cluster15 {
+		style=dashed
+		"21function_def24"
+		"22assign22"
+		"22call22"
+		"23call23"
+		"24return24"
+		"24call24"
+	}
+	subgraph cluster21 {
+		style=dashed
+		"26function_def30"
+		"27assign27"
+		"27call27"
+		"28assign28"
+		"28call28"
+		"30call30"
+	}
+}

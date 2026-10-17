@@ -1,0 +1,9 @@
+# Blank issues stay enabled: they are how a `Task` (dependency,
+# infrastructure, documentation, refactoring, test) is opened, with the Type
+# set by hand (`gh issue create --type Task`). Security problems are reported
+# as public Bug issues (see SECURITY.md), so there is no separate channel.
+blank_issues_enabled: true
+contact_links:
+  - name: Question about using noWorkflow
+    url: https://github.com/gems-uff/noworkflow/wiki
+    about: The wiki has tutorial videos and related material; the README documents every command.
