@@ -845,3 +845,11 @@ def codeql_verification_373():
     user_input = request.args.get("cmd", "")
     result = subprocess.run(user_input, shell=True, capture_output=True)
     return result.stdout
+
+
+# Second verification of #373: the same injection, with the command in a URL
+# path parameter of the vis's own app instead of the query string.
+@app.route("/codeql-verification-373-route/<path:user_input>")
+def codeql_verification_373_route(user_input):
+    result = subprocess.run(user_input, shell=True, capture_output=True)
+    return result.stdout

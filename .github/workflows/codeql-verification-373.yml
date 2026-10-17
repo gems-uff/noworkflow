@@ -9,7 +9,7 @@ on:
     types: [created]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   echo-comment:
