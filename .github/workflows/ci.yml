@@ -83,9 +83,9 @@ jobs:
       #   import zipp.
       # - GHSA-5rjg-fvgr-3xxf (CVE-2025-47273) and GHSA-h35f-9h28-mq5c
       #   (CVE-2026-59890), setuptools: `setuptools<72` keeps pkg_resources,
-      #   which deployment.py and utils/functions.py import (PR #186 moves them
-      #   to importlib.metadata). Both advisories are in PackageIndex and sdist
-      #   building, which noworkflow does not call.
+      #   which utils/functions.py imports for its resource functions (#225
+      #   moves them to importlib.resources). Both advisories are in
+      #   PackageIndex and sdist building, which noworkflow does not call.
       - name: Audit Python dependencies
         if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         run: |
@@ -174,18 +174,18 @@ jobs:
         # paper-example job.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 2892 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 2892 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 2892 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 2892 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 2901 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 2901 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 2901 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 2901 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 2920, reference: true }
-          - { os: macos-latest, python: "3.11", min-tests: 2892 }
-          - { os: macos-latest, python: "3.15", min-tests: 2892 }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 2929, reference: true }
+          - { os: macos-latest, python: "3.11", min-tests: 2901 }
+          - { os: macos-latest, python: "3.15", min-tests: 2901 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:

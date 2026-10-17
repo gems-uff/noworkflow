@@ -434,9 +434,16 @@ and therefore the first suspects when an upgrade breaks something:
 - `src/noworkflow/now/ipython/magics/now_run.py`: swaps `sys.argv`,
   `sys.path[0]` and `sys.modules["__main__"]` for the shell's user module
   while the cell runs, and swaps them back by hand.
-- `pkg_resources` (`prov_deployment/deployment.py` and `utils/functions.py`):
-  the reason for the `setuptools<72` pin; the migration to
-  `importlib.metadata` is tracked in the open PR that removes the pin.
+- `pkg_resources` (`utils/functions.py`, for its resource functions): the
+  reason for the `setuptools<72` pin; its move to `importlib.resources` is
+  part of #225. Importing it also appends `setuptools/_vendor` to
+  `sys.path`, which a traced script then sees.
+- `importlib.metadata` (`prov_deployment/deployment.py`): `get_version`
+  looks a module's distribution up from inside the import finder, while the
+  script runs. Before 3.15 a distribution whose metadata has no version
+  gives `None` instead of raising, PEP 503 folds the dots of a module name
+  into `-`, and the lookup asks every finder in `sys.meta_path`, the
+  script's own included (#417).
 - SQLAlchemy 1.4: `relational_database.py` uses the 1.4 declarative and
   session API, and the pin keeps the 2.0 series out.
 - `pyposast` is a sibling project (`JoaoFelipe/pyposast`): the AST positions

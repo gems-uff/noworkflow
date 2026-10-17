@@ -303,19 +303,21 @@ def test_the_import_scanner_finds_every_form_of_import(tmp_path):
 
 
 PKG_RESOURCES_IMPORTERS = {
-    "now/collection/prov_deployment/deployment.py",
     "now/utils/functions.py",
 }
 
 
-def test_pkg_resources_is_imported_by_exactly_deployment_and_utils_functions():
-    """Two modules import pkg_resources, and PR #186 removes only one
+def test_pkg_resources_is_imported_by_exactly_utils_functions():
+    """One module imports pkg_resources: utils/functions.py, for its
+    resource functions
 
     pkg_resources comes from setuptools and is gone from setuptools 82 on;
     the setuptools pin in pyproject.toml, and the two setuptools advisories
-    that ci.yml ignores, exist because of these imports (#225). A runtime
-    check cannot see #186 land, because utils/functions.py keeps
-    pkg_resources loaded; only a per-file scan can.
+    that ci.yml ignores, exist because of this import (#225).
+    prov_deployment/deployment.py imported it too until PR #186 moved its
+    version lookup to importlib.metadata. The scan reads the source file by
+    file, so it names the module that imports pkg_resources, which a look
+    at sys.modules cannot.
     """
     found = _importers("pkg_resources")
     gone = sorted(PKG_RESOURCES_IMPORTERS - set(found))
@@ -323,10 +325,11 @@ def test_pkg_resources_is_imported_by_exactly_deployment_and_utils_functions():
     message = []
     if gone:
         message.append(
-            "{} no longer import(s) pkg_resources (PR #186 removes "
-            "deployment.py's). Remove it from PKG_RESOURCES_IMPORTERS in this "
-            "module and fix the comment over the 'Audit Python dependencies' "
-            "step in .github/workflows/ci.yml, which names both importers. "
+            "{} no longer import(s) pkg_resources. Remove it from "
+            "PKG_RESOURCES_IMPORTERS in this module and fix the comment over "
+            "the 'Audit Python dependencies' step in .github/workflows/ci.yml "
+            "and the pkg_resources entry of 'Patches of third-party "
+            "internals' in AGENTS.md, which name the importers. "
             "While any module imports pkg_resources, setuptools must stay "
             "below 82, the first release without it (#225). When the set is "
             "empty, drop the setuptools pin in pyproject.toml, `uv lock`, "
