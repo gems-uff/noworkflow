@@ -147,7 +147,11 @@ def searchable_hostnames(request, tmp_path):
     if not names:
         pytest.skip("this machine's hostname is too short or too generic "
                     "to search for (normalize.usable_hostname)")
-    printed = " ".join((str(tmp_path), str(Path.home()), getpass.getuser(),
+    try:
+        login = getpass.getuser()
+    except (KeyError, OSError):  # no login name for this uid (a container)
+        login = ""
+    printed = " ".join((str(tmp_path), str(Path.home()), login,
                         sys.prefix, sys.base_prefix,
                         str(request.config.rootpath)))
     if occurrences(names, printed):
