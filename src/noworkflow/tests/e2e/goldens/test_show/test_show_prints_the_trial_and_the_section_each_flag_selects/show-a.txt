@@ -108,7 +108,7 @@
         23: append (<TIMESTAMP> - <TIMESTAMP>)
             Return value: None
       36: open (<TIMESTAMP> - <TIMESTAMP>)
-          Return value: <noworkflow.now.collection.prov_execution.collector.TextFileProxy object at <ADDRESS>>
+          Return value: <noworkflow.now.collection.prov_execution.file_access_proxy.TextFileProxy object at <ADDRESS>>
       37: writer (<TIMESTAMP> - <TIMESTAMP>)
           Return value: <_csv.writer object at <ADDRESS>>
       38: writerow (<TIMESTAMP> - <TIMESTAMP>)
