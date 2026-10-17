@@ -33,6 +33,7 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 | Branch behind `main` | `merge-downstream` |
 | A suspected defect | `prove-candidate` |
 | An alert of the `CodeQL` check (how to read it, and the route for a fork: step 6) | `prove-candidate` with the other candidates of step 3, then step 4: an alert the PR introduces is discussed in it |
+| A red `SAST (bandit)` step (how to read it: step 6) | `prove-candidate` with the other candidates of step 3: an intended site gets `# nosec Bxxx` with the reason on the line above, in the PR; a real one gets an issue and its entry in `bandit-baseline.json`, never a `nosec` |
 | A PR that depends on an unpublished `pyposast` | `dependencies`: blocked until that release |
 | Any change that must be measured | `safe-refactor` |
 | Green, measured and integrated | `release`, when the maintainer decides |
@@ -376,6 +377,18 @@ Check also the CI at the tip of the branch: it runs what the local machine
 does not — every supported Python, macOS, the frontend guard, lint, SAST, the
 audits — and it is the measurement that reaches the blind spots `AGENTS.md`
 lists.
+
+**The `SAST (bandit)` step fails three ways**, each with its own message:
+`-b` prints a finding whose kind the baseline lacks in that file; the `diff`
+prints `> <file> <test>` for a new finding of a kind the baseline already
+has there (bandit's `-b` alone would hide it), and `< <file> <test>` for an
+entry whose finding is gone, which the commit of the fix removes by
+regenerating the file (the command is next to the step in `ci.yml`); the
+`grep` refuses a `# nosec` without a test id. A `nosec` on a line with nested
+calls makes bandit warn "nosec encountered ... but no failed test" on every
+run, without failing: that warning is the only sign of a stale `nosec`, so
+keep it meaningful (put the `nosec` where no nested call shares its line, or
+say it in code, as `hashlib.sha1(..., usedforsecurity=False)` does).
 
 **CodeQL is not a job of `ci.yml`.** Its default setup, in the repository
 settings, analyzes every PR to `main` from a branch of this repository and
