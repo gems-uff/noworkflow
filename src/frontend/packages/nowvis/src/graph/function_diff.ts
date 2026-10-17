@@ -178,8 +178,8 @@ export function functionDiffWindow(functionDiffJson : any, windowIdAndTitle:stri
 
       if(changeText.includes("changed")){
         if(property == "duration"){
-          functionDiffJson[property+"_function_trial1"] = functionDiffJson[property+"_function_trial1"].toString() + " miliseconds"
-          functionDiffJson[property+"_function_trial2"] = functionDiffJson[property+"_function_trial2"].toString() + " miliseconds"
+          functionDiffJson[property+"_function_trial1"] = Number(functionDiffJson[property+"_function_trial1"]).toFixed(2) + " microseconds"
+          functionDiffJson[property+"_function_trial2"] = Number(functionDiffJson[property+"_function_trial2"]).toFixed(2) + " microseconds"
         }
 
         let spanProperty = functionDiffWindow.append("span").attr("id", "diff-function-"+property+"-span-"+crypto.randomUUID());

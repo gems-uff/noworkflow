@@ -168,15 +168,9 @@ class TestClusterizer(CollectionTestCase):
         created = clusterizer.created
         self.assertEqual([
             ((created[vara_r][1], created[vara_w][1]), {REFERENCE_ATTR}),
-            ((created[varc_w][1], created[vara_r][1]), 
+            ((created[varc_w][1], created[vara_r][1]),
                 {REFERENCE_ATTR, PROPAGATED_ATTR}),
         ], sorted([item for item in viewitems(clusterizer.dependencies)]))
-        from ...now.models.dependency_graph.prov_visitor import ProvVisitor
-        visitor = ProvVisitor(clusterizer, create_activities=True)
-        visitor.visit(clusterizer)
-        prov = "\n".join(visitor.result)
-        with open("/home/joao/vprov.provn", "w") as f:
-            f.write(prov)
 
     def test_chain_of_evaluations_with_same_assignment_synonymer(self):
         self.script("# script.py\n"

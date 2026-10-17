@@ -1,0 +1,170 @@
+strict digraph {
+	node [color=black fillcolor="#85CBC0" shape=box style=filled]
+	nodesep=0.4 size=15
+	start [label=Start]
+	"6import6" [label="6: import csv" fillcolor="#976BAA"]
+	"7import7" [label="7: import sys" fillcolor="#976BAA"]
+	"12function_def17" [label="12: def csv_read(path)"]
+	"13assign13" [label="13: data = []" fillcolor="#976BAA"]
+	"14with16" [label="14: with open(path, newline=\"\") as handle:
+        for row in csv.reader(handle, delimiter=\":\"):
+            data.append([float(value) for value in row])" fillcolor="#976BAA"]
+	"14call14" [label="14: open(path, newline=\"\")"]
+	"15for16c" [label=" Variable: row
+ row in csv.reader(handle, delimiter=\"" color="#808080" fillcolor=white shape=note]
+	"15for16" [label="15: for" shape=diamond]
+	"15for16" -> "15for16c" [arrowhead=none color="#808080" style=dashed]
+	"15call15" [label="15: csv.reader(handle, delimiter=\":\")"]
+	"16call16" [label="16: data.append([float(value) for value in row])"]
+	"17return17" [label="17: return data"]
+	"20function_def24" [label="20: def extract_column(data, column)"]
+	"21assign21" [label="21: col_data = []" fillcolor="#976BAA"]
+	"22for23c" [label=" Variable: row
+ row in data" color="#808080" fillcolor=white shape=note]
+	"22for23" [label="22: for" shape=diamond]
+	"22for23" -> "22for23c" [arrowhead=none color="#808080" style=dashed]
+	"23call23" [label="23: col_data.append(row[column])"]
+	"24return24" [label="24: return col_data"]
+	"27function_def30" [label="27: def run_simulation(path_a, path_b, scale)"]
+	"28assign28" [label="28: a = csv_read(path_a)" fillcolor="#976BAA"]
+	"28call28" [label="28: csv_read(path_a)"]
+	"29assign29" [label="29: b = csv_read(path_b)" fillcolor="#976BAA"]
+	"29call29" [label="29: csv_read(path_b)"]
+	"30return30" [label="30: return simulate(a, b, scale)"]
+	"30call30" [label="30: simulate(a, b, scale)"]
+	"33function_def41" [label="33: def write_output(path, data)"]
+	"34assign34" [label="34: temperature = extract_column(data, 0)" fillcolor="#976BAA"]
+	"34call34" [label="34: extract_column(data, 0)"]
+	"35assign35" [label="35: precipitation = extract_column(data, 1)" fillcolor="#976BAA"]
+	"35call35" [label="35: extract_column(data, 1)"]
+	"36with40" [label="36: with open(path, \"w\", newline=\"\") as handle:
+        writer = csv.writer(handle)
+        writer.writerow([\"temperature\", \"precipitation\"])
+        for t, p in zip(temperature, precipitation):
+            writer.writerow([t, p])" fillcolor="#976BAA"]
+	"36call36" [label="36: open(path, \"w\", newline=\"\")"]
+	"37assign37" [label="37: writer = csv.writer(handle)" fillcolor="#976BAA"]
+	"37call37" [label="37: csv.writer(handle)"]
+	"38call38" [label="38: writer.writerow([\"temperature\", \"precipitation\"])"]
+	"39for40c" [label=" Variable: t, p
+ t, p in zip(temperature, precipitation)" color="#808080" fillcolor=white shape=note]
+	"39for40" [label="39: for" shape=diamond]
+	"39for40" -> "39for40c" [arrowhead=none color="#808080" style=dashed]
+	"39call39" [label="39: zip(temperature, precipitation)"]
+	"40call40" [label="40: writer.writerow([t, p])"]
+	"41return41" [label="41: return len(temperature)"]
+	"41call41" [label="41: len(temperature)"]
+	"45assign45" [label="45: data_a = sys.argv[1]" fillcolor="#976BAA"]
+	"46assign46" [label="46: data_b = sys.argv[2]" fillcolor="#976BAA"]
+	"47assign47" [label="47: scale = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0" fillcolor="#976BAA"]
+	"47call47" [label="47: float(sys.argv[3])"]
+	"48assign48" [label="48: data = run_simulation(data_a, data_b, scale)" fillcolor="#976BAA"]
+	"48call48" [label="48: run_simulation(data_a, data_b, scale)"]
+	"49assign49" [label="49: total = write_output(\"output.csv\", data)" fillcolor="#976BAA"]
+	"49call49" [label="49: write_output(\"output.csv\", data)"]
+	"50call50" [label="50: print(\"rows:\", total)"]
+	end [label=End]
+	"40call40" -> "39for40" [style=dashed]
+	"23call23" -> "22for23" [style=dashed]
+	"16call16" -> "15for16" [style=dashed]
+	"22for23" -> "24return24" [label=" End Loop"]
+	"39for40" -> "22for23" [label=" End Loop"]
+	"28call28" -> "12function_def17" [style=dashed]
+	"29call29" -> "12function_def17" [style=dashed]
+	"34call34" -> "20function_def24" [style=dashed]
+	"35call35" -> "20function_def24" [style=dashed]
+	"48call48" -> "27function_def30" [style=dashed]
+	"49call49" -> "33function_def41" [style=dashed]
+	start -> "6import6"
+	"6import6" -> "7import7"
+	"7import7" -> "20function_def24"
+	"12function_def17" -> "13assign13"
+	"13assign13" -> "14with16"
+	"14with16" -> "14call14"
+	"14call14" -> "15for16"
+	"15for16" -> "15call15"
+	"15call15" -> "16call16"
+	"16call16" -> "17return17"
+	"20function_def24" -> "21assign21"
+	"21assign21" -> "22for23"
+	"22for23" -> "23call23"
+	"27function_def30" -> "28assign28"
+	"28assign28" -> "28call28"
+	"28call28" -> "29assign29"
+	"29assign29" -> "29call29"
+	"29call29" -> "30return30"
+	"30return30" -> "30call30"
+	"33function_def41" -> "34assign34"
+	"34assign34" -> "34call34"
+	"34call34" -> "35assign35"
+	"35assign35" -> "35call35"
+	"35call35" -> "36with40"
+	"36with40" -> "36call36"
+	"36call36" -> "37assign37"
+	"37assign37" -> "37call37"
+	"37call37" -> "38call38"
+	"38call38" -> "39for40"
+	"39for40" -> "39call39"
+	"39call39" -> "40call40"
+	"40call40" -> "41return41"
+	"41return41" -> "41call41"
+	"45assign45" -> "46assign46"
+	"46assign46" -> "47assign47"
+	"47assign47" -> "47call47"
+	"47call47" -> "48assign48"
+	"48assign48" -> "48call48"
+	"48call48" -> "49assign49"
+	"49assign49" -> "49call49"
+	"49call49" -> "50call50"
+	"50call50" -> end
+	subgraph cluster3 {
+		style=dashed
+		"12function_def17"
+		"13assign13"
+		"14with16"
+		"14call14"
+		"15for16"
+		"15for16c"
+		"15call15"
+		"16call16"
+		"17return17"
+	}
+	subgraph cluster11 {
+		style=dashed
+		"20function_def24"
+		"21assign21"
+		"22for23"
+		"22for23c"
+		"23call23"
+		"24return24"
+	}
+	subgraph cluster16 {
+		style=dashed
+		"27function_def30"
+		"28assign28"
+		"28call28"
+		"29assign29"
+		"29call29"
+		"30return30"
+		"30call30"
+	}
+	subgraph cluster23 {
+		style=dashed
+		"33function_def41"
+		"34assign34"
+		"34call34"
+		"35assign35"
+		"35call35"
+		"36with40"
+		"36call36"
+		"37assign37"
+		"37call37"
+		"38call38"
+		"39for40"
+		"39for40c"
+		"39call39"
+		"40call40"
+		"41return41"
+		"41call41"
+	}
+}

@@ -12,7 +12,8 @@ import os
 from os.path import join, dirname, exists
 from textwrap import dedent
 from pkg_resources import resource_string, resource_listdir, resource_isdir
-from subprocess import Popen, PIPE
+# Runs Graphviz's dot for run_dot below
+from subprocess import Popen, PIPE  # nosec B404
 
 
 MODULE = __name__
@@ -111,7 +112,8 @@ def erase(directory, everything=False):
 
 def run_dot(code, format_='png'):
     """run_dot"""
-    process = Popen(
+    # Graphviz's dot from the PATH, no shell; callers pass a literal format
+    process = Popen(  # nosec B603 B607
         ["dot", "-T", format_], stdout=PIPE, stdin=PIPE, stderr=PIPE
     )
     try:

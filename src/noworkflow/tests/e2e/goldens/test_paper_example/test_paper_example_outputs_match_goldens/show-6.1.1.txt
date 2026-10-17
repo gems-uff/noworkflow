@@ -1,0 +1,12 @@
+[now] trial tags:
+  Tag: 6.1.1 Type: AUTO
+[now] trial information:
+  Id: <UUID1>
+  Sequence Key: 10
+  Status: Finished
+  Inherited Id: None
+  Script: credit_card_fraud.py
+  Code hash: 66c7915a0819fc79620f665ceca5c20366ce1ca5
+  Start: <TIMESTAMP>
+  Finish: <TIMESTAMP>
+  Duration: <DURATION>
