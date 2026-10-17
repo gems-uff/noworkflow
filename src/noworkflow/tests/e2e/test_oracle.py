@@ -91,13 +91,12 @@ constructs instead of sampling it by hand; the corpus above is the
 regression suite such a search would add to.
 """
 import os
-import sysconfig
-import tempfile
 
 import pytest
 
 from .harness import CORPUS
 from .oracle import (
+    STDLIB_ON_ANOTHER_DRIVE,
     Defect,
     Outcome,
     assert_same_outcome,
@@ -117,13 +116,6 @@ ORACLE = CORPUS / "oracle"
 SUPPORT = ("inventory.txt", "toolkit")
 # Clutter that the file manager of a system leaves, not a script.
 IGNORED = ("Thumbs.db", "desktop.ini")
-# Whether the standard library is on another drive than the projects,
-# which live under pytest's temporary directory: Windows with Python
-# installed on another drive, as on the CI runners that use
-# python-build-standalone.
-STDLIB_ON_ANOTHER_DRIVE = os.name == "nt" and (
-    os.path.splitdrive(sysconfig.get_paths()["stdlib"])[0].lower()
-    != os.path.splitdrive(tempfile.gettempdir())[0].lower())
 
 # The arguments command_line.py receives: positionals, options, a repeated
 # flag and a value with a space.
