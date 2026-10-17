@@ -1,0 +1,19 @@
+# Deliberate code injection for the verification of #373 (CodeQL code
+# scanning). This branch is never merged; it exists only so that the PR
+# analysis reports an alert, and it is deleted afterwards. An issue_comment
+# workflow only ever runs from the default branch, so this file never runs.
+name: CodeQL verification 373 (never merged)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  echo-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo the comment
+        run: echo "${{ github.event.comment.body }}"

@@ -836,3 +836,12 @@ def db_query():
 
         if conn:
             conn.close()
+
+# Deliberate command injection for the verification of #373 (CodeQL code
+# scanning). This branch is never merged; it exists only so that the PR
+# analysis reports an alert, and it is deleted afterwards.
+@app.route("/codeql-verification-373")
+def codeql_verification_373():
+    user_input = request.args.get("cmd", "")
+    result = subprocess.run(user_input, shell=True, capture_output=True)
+    return result.stdout

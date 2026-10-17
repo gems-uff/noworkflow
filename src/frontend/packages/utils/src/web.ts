@@ -34,3 +34,10 @@ function json(innertext:string, sub: Element, url: string, fn: (data: any) => vo
     i.appendChild(text);
   });
 }
+// Deliberate DOM XSS for the verification of #373 (CodeQL code scanning).
+// This branch is never merged; it exists only so that the PR analysis
+// reports an alert, and it is deleted afterwards.
+export
+function codeqlVerification373(sub: Element) {
+  sub.innerHTML = decodeURIComponent(window.location.hash.substring(1));
+}
