@@ -22,9 +22,6 @@ Known defects have a characterization of today's behavior and a
   The frontend builds the activation URL from the root
   (``/trials/<tid>/activations/<aid>.json``), so only a URL typed by hand
   reaches it; it builds no ``flow.pdf`` URL at all.
-- #128: ``flow.pdf`` fails in ``DependencyConfig.clusterizer`` with
-  ``KeyError: 'simulation'``, before graphviz runs, so the failure is the
-  same with or without ``dot`` on the PATH.
 - #241: the definition AST rebuilt by ``TrialAst`` fails from Python 3.14
   (``ast.parse`` validates the tree, whose statements have no ``lineno``)
   and, differently, from 3.15 (``ast.Module(name=...)`` is rejected).
@@ -61,13 +58,6 @@ SCRIPT = "simulation.py"
 FUNCTION = "run_simulation"
 
 
-FLOW_PDF_MODE = Defect(
-    reason="#128: DependencyConfig() defaults mode to 'simulation', a key "
-           "DependencyConfig.clusterizer() does not map, so the "
-           "trial.dot.export_text() of the flow.pdf view raises KeyError "
-           "before graphviz runs",
-    signature="KeyError: 'simulation'",
-)
 AST_LINENO = Defect(
     reason="#241: from Python 3.14 ast.parse() validates the tree that "
            "TrialAst (models/ast/trial_ast.py) rebuilds from the store, "
@@ -210,8 +200,8 @@ def get_pdf(vis, route):
     """GET a ``flow.pdf`` route; skip where graphviz cannot draw it
 
     Without ``dot``, ``DotDisplay`` falls back to the DOT text and the view
-    raises ``KeyError: 'application/pdf'``. Today #128 fails earlier, with
-    or without ``dot``, so this skip never hides it.
+    raises ``KeyError: 'application/pdf'``. The dataflow export runs before
+    that, so a failure there is not skipped.
     """
     try:
         return vis.get(route)
@@ -543,25 +533,10 @@ def test_prospective_dot_of_an_unknown_trial_answers_500(vis):
 # --- flow.pdf ---------------------------------------------------------------
 
 
-def test_flow_pdf_raises_key_error_before_graphviz_runs(vis, monkeypatch):
-    """Today ``flow.pdf`` raises ``KeyError: 'simulation'`` and never calls
-    graphviz
-
-    Characterization of #128.
-    """
-    calls = []
-    monkeypatch.setattr(dotmagic, "run_dot",
-                        lambda *args, **kwargs: calls.append(args))
-    trial_id = vis.trial_ids[0]
-    with pytest.raises(KeyError, match=re.escape("'simulation'")):
-        vis.get("/trials/{}/flow.pdf".format(trial_id))
-    assert calls == []
-
-
-@known_defects(FLOW_PDF_MODE)
-def test_flow_pdf_desired(vis_own):
+def test_flow_pdf_answers_the_dataflow_as_a_pdf(vis_own):
     """``flow.pdf`` answers the trial's dataflow drawn by graphviz as a PDF
-    named ``flow.pdf`` (skipped without ``dot``, once #128 is fixed)
+    named ``flow.pdf`` (skipped without ``dot``, after the dataflow export
+    has run)
     """
     trial_id = vis_own.trial_ids[0]
     response = get_pdf(vis_own, "/trials/{}/flow.pdf".format(trial_id))
@@ -571,10 +546,34 @@ def test_flow_pdf_desired(vis_own):
     assert response.get_data().startswith(b"%PDF")
 
 
-def test_flow_pdf_under_an_experiment_fails_on_the_prefix_first(vis):
+def test_flow_pdf_sends_what_graphviz_draws_of_the_dataflow(vis, monkeypatch):
+    """``flow.pdf`` hands the trial's dataflow to graphviz and sends the PDF
+    it draws, named ``flow.pdf``; graphviz is replaced, so this runs where
+    ``dot`` is not on the PATH too
+    """
+    drawn = []
+
+    def fake_dot_to_pdf(dot, prog, extra, force_ink=False):
+        drawn.append(dot)
+        return b"%PDF-fake"
+
+    monkeypatch.setattr(dotmagic, "dot_to_pdf", fake_dot_to_pdf)
+    trial_id = vis.trial_ids[0]
+    response = vis.get("/trials/{}/flow.pdf".format(trial_id))
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.headers.get("Content-Disposition") == (
+        "inline; filename=flow.pdf")
+    assert response.get_data() == b"%PDF-fake"
+    assert len(drawn) == 1
+    assert drawn[0].startswith("digraph e_")
+
+
+def test_flow_pdf_under_an_experiment_raises_type_error(vis):
     """Today ``flow.pdf`` under ``/experiments/<expCode>/`` raises the
-    ``TypeError`` of EXPERIMENT_PREFIX before the view runs, so #128 does
-    not show there
+    ``TypeError`` of EXPERIMENT_PREFIX before the view runs
+
+    Characterization of EXPERIMENT_PREFIX.
     """
     trial_id = vis.trial_ids[0]
     with pytest.raises(TypeError, match=re.escape(
@@ -582,10 +581,10 @@ def test_flow_pdf_under_an_experiment_fails_on_the_prefix_first(vis):
         vis.get(Vis.routes("trials/{}/flow.pdf")[1].format(trial_id))
 
 
-@known_defects(EXPERIMENT_PREFIX, FLOW_PDF_MODE)
+@known_defects(EXPERIMENT_PREFIX)
 def test_flow_pdf_under_an_experiment_desired(vis_own):
     """Under ``/experiments/<expCode>/`` ``flow.pdf`` answers what it
-    answers at the root; both defects stand in the way, the prefix first
+    answers at the root
     """
     trial_id = vis_own.trial_ids[0]
     route = Vis.routes("trials/{}/flow.pdf")[1].format(trial_id)

@@ -261,7 +261,8 @@ neither executes:
   temporary directory; the rows only push and pull create are added through
   the models or in SQL. The `/commands/*` routes that start `now` run with
   `subprocess.run` replaced, so only the argv they build and how they answer
-  are checked. No test gets a PDF out of `flow.pdf` (#128 fails first), and
+  are checked. A PDF out of `flow.pdf` is checked only where Graphviz's
+  `dot` is on the PATH, which no CI leg installs, and
   `prospective.dot` is drawn for a handful of scripts. The `frontend` job
   proves that the committed bundle matches the sources, that the extension
   type-checks and that the count of `tsc` errors of the vis does not grow.
