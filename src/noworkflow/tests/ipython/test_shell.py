@@ -61,6 +61,7 @@ from .support import (
     PROMPTS,
     broken_magics_classes,
     command_line,
+    import_models,
     magics_classes,
     names_taken,
     open_shell,
@@ -115,8 +116,11 @@ def process_state():
     """What a shell may change for the whole process and must put back
 
     The leak detector's list is checked with a ``Baseline`` of the test's
-    own; this is the rest.
+    own; this is the rest. The models are imported first, so the
+    defaults compare the same classes whether or not a trial was created
+    in between (#415).
     """
+    import_models()
     return {
         "cwd": os.getcwd(),
         # A digest: the values are this machine's.

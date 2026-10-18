@@ -33,7 +33,8 @@ magics change for the whole process is set or saved here, and undone:
   same is repaired and reported, as a collection left behind is;
 - what the magics change for the process: ``dotmagic.LOADED`` (``%%dot``
   registers once per process), the ``DEFAULT`` of every model class
-  (``%now_set_default``), ``utils.io.verbose``;
+  (``%now_set_default``; the modules that define model classes are
+  imported first, ``import_models``), ``utils.io.verbose``;
 - what IPython itself leaves: the singleton, the ``atexit`` entries, the
   ``%%script`` event-loop thread, ``sys.modules['__main__']``, the
   builtins ``__IPYTHON__`` and ``display``, the prompts and the last
@@ -80,6 +81,7 @@ import gc
 import importlib
 import importlib.util
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -88,6 +90,7 @@ import tempfile
 import threading
 import types
 from io import StringIO
+from pathlib import Path
 
 import pytest
 from IPython.core import magic as ipython_magic
@@ -96,6 +99,7 @@ from IPython.core.magic import Magics
 from IPython.utils.capture import capture_output
 from traitlets.config import Config
 
+from noworkflow import now
 from noworkflow.now.ipython import dotmagic
 from noworkflow.now.persistence.models import MetaModel
 from noworkflow.now.utils import io as now_io
@@ -477,9 +481,35 @@ def set_environment(patch, env):
         patch.setenv(key, value)
 
 
+def model_modules():
+    """The modules of ``noworkflow.now`` that define a model class"""
+    root = Path(now.__file__).parent
+    declares = re.compile(r"^\s+__modelname__ = ", re.MULTILINE)
+    names = []
+    for path in sorted(root.rglob("*.py")):
+        if declares.search(path.read_text(encoding="utf-8")):
+            module = path.parent if path.name == "__init__.py" else path
+            parts = module.relative_to(root.parent).with_suffix("").parts
+            names.append(".".join(("noworkflow",) + parts))
+    return names
+
+
+def import_models():
+    """Import every module that defines a model class
+
+    Importing one registers its class in ``MetaModel.__classes__``, and
+    ``Trial.__init__`` imports some of them lazily: without this, the
+    first trial of the process would add a class that a snapshot of the
+    models taken before it lacks (#415).
+    """
+    for name in model_modules():
+        importlib.import_module(name)
+
+
 @contextlib.contextmanager
 def model_defaults_kept():
     """Put back the ``DEFAULT`` of every model class (%now_set_default)"""
+    import_models()
     saved = {model: dict(model.DEFAULT)
              for model in MetaModel.__classes__.values()}
     try:
