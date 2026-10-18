@@ -490,7 +490,13 @@ is the maintainer's, and these are the commands they run:
 git checkout main && git pull --ff-only
 git merge --ff-only <branch>                # fails if the branch is behind
 git push origin main
+git push origin --delete <branch>           # a branch of this repository only
+git branch -d <branch>
 ```
+
+After the fast-forward the branch points to a commit `main` already
+contains, so deleting it loses nothing. A fork's branch lives in the
+author's remote and is theirs to delete; only the local copy goes.
 
 Then the maintainer closes the issue (`gh issue close <issue> --reason
 completed`), unless the PR delivered only part of it: integrated into `main`

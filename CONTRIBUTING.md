@@ -64,7 +64,9 @@ The lifecycle of a branch is:
 5. The maintainer reviews it, following the `review-pr` skill in
    `.claude/skills/`.
 6. The maintainer merges `issue_NNN` into `main`. Because of step 3 this is a
-   fast-forward.
+   fast-forward. The maintainer then deletes `issue_NNN`, on GitHub and
+   locally: it points to a commit `main` already contains, so nothing is
+   lost.
 7. The maintainer closes the issue, unless something is left to do: `main`
    is the baseline, and an issue integrated there and finished is done. The
    release that ships it is found from the commits, through the
