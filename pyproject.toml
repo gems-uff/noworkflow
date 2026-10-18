@@ -44,7 +44,11 @@ dependencies = [
     "setuptools<72",
     "nbformat",
     "graphviz",
-    "flask"
+    # 2.3.3: the first release that requires a Werkzeug (2.3.7) whose
+    # routing does not use ast.Str, which Python 3.14 removed; with an
+    # older one `now vis` fails building its first route. Below 2.3 the
+    # routes also answer differently from what tests/vis pins.
+    "flask>=2.3.3"
 ]
 
 [project.optional-dependencies]

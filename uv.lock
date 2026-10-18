@@ -2245,7 +2245,7 @@ requires-dist = [
     { name = "apted" },
     { name = "cython", marker = "extra == 'all'" },
     { name = "cython", marker = "extra == 'demo'" },
-    { name = "flask" },
+    { name = "flask", specifier = ">=2.3.3" },
     { name = "flask", marker = "extra == 'demo'" },
     { name = "future" },
     { name = "graphviz" },
