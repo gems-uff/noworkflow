@@ -58,7 +58,7 @@ of date, fix it there.
   the fix and green after it. See `SECURITY.md`.
 - **Definition of done:** `uv run pytest` green from the repository root;
   the test count at or above the floor of every leg (`min-tests` in
-  `.github/workflows/ci.yml` and `experimental.yml`, the one in
+  `.github/workflows/ci.yml`, `pre-release.yml` and `experimental.yml`, the one in
   `flaky.yml` and the one of the `paper-example` job; the reference leg also
   counts the goldens, which the other legs deselect), **and the floors go
   up in the same PR that adds tests**;
@@ -268,12 +268,14 @@ neither executes:
   type-checks and that the count of `tsc` errors of the vis does not grow.
   By hand, `golden-run` (step 4) and the smoke of `rebuild-vis` serve a
   corpus store over a real port and fetch the routes `read_store.py` lists.
-- **Windows and macOS:** the matrix runs on Ubuntu for every Python version;
-  macOS runs only the floor and the newest version, and Windows the same two
-  as experimental legs that do not block and, while `experimental.yml` is
-  suspended (its header says until when), run only by hand. Path separators
-  and encodings differ there, and the versions in between are not run on
-  either.
+- **Windows and macOS:** a push runs the matrix on Ubuntu only, for every
+  Python version. macOS runs every version in `pre-release.yml`, by hand
+  before a release; Windows runs the floor and the newest as experimental
+  legs that do not block and, while `experimental.yml` is suspended (its
+  header says until when), run only by hand too. Path separators and
+  encodings differ there: a change that touches them runs
+  `pre-release.yml` (and `experimental.yml`) on its branch before it
+  reaches `main`.
 - **Syntax per Python version:** the collector rewrites the AST, and each
   Python version adds nodes. The syntax corpus of the e2e tests
   (`corpus/syntax/`, `test_syntax_corpus.py`) traces one script per
@@ -396,7 +398,9 @@ and what came out, in the PR.
   `Using --randomly-seed=N` (absent under `-q`) and `--randomly-seed=N`
   replay it, `-p no:randomly` runs in file order. A test red under some
   seed depends on another test; the fix is that pair, never a fixed order
-  for the suite.
+  for the suite. Under pytest-xdist (`-n 4`, as the CI legs run) the seed
+  fixes the collection, not which worker runs what after what: replay a
+  red that the seed does not repeat with `-n 0` and the seed.
 - **Trial ids are UUIDs**, not the integers of older versions. A reproduction
   that passes `1` as a trial id is talking to `sequence_key`, not to the id.
 - **A version-specific bug is proven with that version:** `uv run --isolated
@@ -537,11 +541,15 @@ with the measurements behind it, is issue #237):
   version that reaches end of life leaves in the next minor release, never
   in a patch release. `requires-python`, the classifiers and the CI matrix
   change in the same commit.
-- **Matrix:** Linux runs every supported minor; macOS and Windows run the
-  floor and the newest; all of them blocking (Windows stays experimental
-  until the model doctests stop assuming POSIX paths). The next Python runs
-  on Linux as an experimental leg from its first beta (May) and is promoted
-  when the suite passes on it, with the October release as the target.
+- **Matrix:** on every push, Linux runs every supported minor, blocking,
+  with four pytest-xdist workers per leg. Before a release, `pre-release.yml`
+  runs Linux and macOS on every supported minor, by hand; Windows runs the
+  floor and the newest in `experimental.yml` until the model doctests stop
+  assuming POSIX paths (#374), and then joins `pre-release.yml`. The next
+  Python runs on Linux as an experimental leg from its first beta (May) and
+  is promoted when the suite passes on it, with the October release as the
+  target. The record of the move of macOS out of the push, with the
+  measurements behind it, is issue #426.
 - **Reference leg** (coverage, goldens, `flaky.yml`, and the Python of the
   `checks` and `paper-example` jobs): Linux on the newest blocking version.
   It moves when a new version is promoted, and the goldens are regenerated
@@ -554,9 +562,13 @@ with the measurements behind it, is issue #237):
 - **Runner images:** the `-latest` labels, which GitHub moves to the newest
   generally available image.
 
-Why only the ends on macOS and Windows: defects specific to a system (paths,
-encodings, the file system) rarely depend on the Python version; the floor
-catches what became obsolete, the newest what is new. On Windows the two ends
+Why macOS only before a release: defects specific to a system (paths,
+encodings, the file system) rarely depend on the Python version, and in 99
+runs of `ci.yml` with macOS on every push no Python version failed alone and
+macOS failed alone once, while its legs, on a 3-core runner where workers
+barely help, set the pace of every push (#426). Why Windows only at the
+ends while it is experimental: the floor catches what became obsolete, the
+newest what is new. On Windows the two ends
 also read files differently: from 3.15 UTF-8 mode is on by default (PEP 686),
 so an `open()` without `encoding=` reads the locale encoding (usually cp1252)
 on older versions and UTF-8 on newer ones.

@@ -241,9 +241,9 @@ one touches:
 |---|---|---|
 | Supported range | `requires-python` and the classifiers in `pyproject.toml` | the floor; the classifiers with every blocking leg |
 | Lint target | ruff's `target-version` in `pyproject.toml` | the floor |
-| Linux legs | the `test` matrix of `ci.yml` (and the comment over the floor) | every supported minor |
+| Linux legs | the `test` matrix of `ci.yml` (and the comment over the floor); the `python` list of `pre-release.yml` | every supported minor |
 | Reference leg | `reference: true` and its `min-tests` in `ci.yml`; the Python of the `checks` and `paper-example` jobs, their step names and the label of the paper example's summary; `flaky.yml` (setup and reproduction line) | the newest blocking version |
-| macOS legs | `ci.yml` | the floor and the newest |
+| macOS legs | `pre-release.yml`, by hand before a release (the same `python` list as its Linux legs) | every supported minor |
 | Windows legs, next version | `experimental.yml` (its header and `on:` as well) | the floor and the newest; the next version's leg |
 | Goldens | `src/noworkflow/tests/e2e/goldens/` and `goldens/REFERENCE` | the reference leg |
 | User docs | `README.md` (the minimum version and the tested range); `Examples/*/README.md` and the bug template, when they name a version out of the range | the range |
@@ -291,7 +291,7 @@ The target is the October release of the version. In one commit:
 - `ci.yml`: the version enters the `test` matrix on Linux as the new
   reference (`reference: true`, with the reference leg's `min-tests`); the
   previous reference becomes a plain leg with the `min-tests` of the others;
-  the newest macOS leg moves to it; the Python of `checks` and of
+  `pre-release.yml` gains the version in its `python` list; the Python of `checks` and of
   `paper-example` moves with the reference, with every other mention of it
   (`git grep -n -F '<old reference>' -- .github`).
 - `experimental.yml`: the pre-release leg leaves; the newest Windows leg
@@ -328,9 +328,9 @@ Never in a patch release. In one commit:
 
 - `pyproject.toml`: the floor of `requires-python`, the classifier, ruff's
   `target-version`.
-- `ci.yml`: the Linux floor leg leaves, the macOS floor moves to the new
-  floor, and the comment over the floor follows; `experimental.yml`: the same
-  for Windows.
+- `ci.yml`: the Linux floor leg leaves, and the comment over the floor
+  follows; `pre-release.yml`: the version leaves its `python` list;
+  `experimental.yml`: the Windows floor moves to the new floor.
 - `uv.lock`: `uv lock`, nothing upgraded. The forks below the new floor
   leave; `lock_versions.sh` of `dependencies` shows that nothing else moved.
 - `README.md`, the documents the table lists that name the removed version,
@@ -343,7 +343,8 @@ it included, leaves in steps of its own, measured like any refactoring
 
 ## What the matrix does not cover
 
-- The middle versions on macOS and Windows, and Windows as a blocking leg.
+- macOS on a push: it runs only when someone runs `pre-release.yml`.
+- The middle versions on Windows, and Windows as a blocking leg.
 - The goldens and the paper's running example off the reference platform.
 - A construct outside the syntax corpus and the examples, on any version:
   the AST is exercised only where a test runs a script that contains it ("A

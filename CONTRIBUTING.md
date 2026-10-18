@@ -101,8 +101,9 @@ once it is integrated and nothing is left to do.
   `main` and passes on the branch; say so in the PR. For a new command or
   option, a test that runs it.
 - **The suite green, and the count not below the floor.** CI fails a leg
-  whose test count drops below `min-tests` in `.github/workflows/ci.yml`
-  and `experimental.yml`, or below the floor in `flaky.yml`; when you add
+  whose test count drops below `min-tests` in `.github/workflows/ci.yml`,
+  `pre-release.yml` and `experimental.yml`, or below the floor in
+  `flaky.yml`; when you add
   tests, raise the floors in the same PR. The reference leg also counts the
   goldens, which the other legs deselect, so its floor is higher.
 - **No new code-scanning alert.** CodeQL analyzes the pull requests to
@@ -232,6 +233,7 @@ From the repository root, with `.venv` set up as above:
 
 ```bash
 uv run pytest                # the whole suite
+uv run pytest -n 4           # the same, in four processes (pytest-xdist)
 uv run ruff check .          # lint
 uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json   # SAST
 uv run now run script.py     # the `now` of the working tree
@@ -261,6 +263,20 @@ the same order:
 ```bash
 uv run pytest --randomly-seed=1234   # the order of that run
 uv run pytest -p no:randomly         # file order, to tell order from code
+```
+
+About 80% of the suite's time is spent waiting for the `now` processes the
+end-to-end tests start, so it runs well in parallel: the Linux legs of CI
+use `-n 4`, one worker per vCPU of the runner, about three times faster
+than one process. On a laptop, `-n 4` is a good start; more workers than
+performance cores gain little, because each test gets slower. Under
+pytest-xdist the seed still fixes the order of collection, but not which
+worker runs which test after which, so a red that depends on another test
+may not come back with the same seed and `-n 4`. Replay it in one process,
+with the seed of the run, and then in file order:
+
+```bash
+uv run pytest -n 0 --randomly-seed=1234   # one process, the order of that run
 ```
 
 To run the suite on another Python version, uv installs the interpreter

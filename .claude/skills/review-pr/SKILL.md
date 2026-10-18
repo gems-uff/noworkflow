@@ -374,9 +374,11 @@ runs), and the usual cause is a new test class that was not added to the
 suites in `tests/__init__.py` (step 3 of `safe-refactor`).
 
 Check also the CI at the tip of the branch: it runs what the local machine
-does not — every supported Python, macOS, the frontend guard, lint, SAST, the
-audits — and it is the measurement that reaches the blind spots `AGENTS.md`
-lists.
+does not — every supported Python on Linux, the frontend guard, lint, SAST,
+the audits — and it is the measurement that reaches the blind spots
+`AGENTS.md` lists. A push does not run macOS: for a change that touches
+paths, encodings or the file system, run `pre-release.yml` on the branch
+(`gh workflow run pre-release.yml --ref <branch>`) and read it too.
 
 **The `SAST (bandit)` step fails three ways**, each with its own message:
 `-b` prints a finding whose kind the baseline lacks in that file; the `diff`

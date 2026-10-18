@@ -1,0 +1,98 @@
+name: Pre-release matrix
+
+# The whole matrix, run by hand before a release (the `release` skill) and
+# whenever a change may depend on the system: Linux and macOS on every
+# Python version python.org maintains. A push runs only the Linux legs of
+# ci.yml: in 99 runs of ci.yml no Python version failed alone and the only
+# leg that failed alone was macOS, while the macOS legs set the pace of
+# every push (#426). The Windows legs join this matrix when they pass
+# (#374), and experimental.yml then goes away.
+on:
+  workflow_dispatch:
+
+# No job writes to the repository: only checkout, setup and artifact upload.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+# The interpreter uv downloads, never the runner image's (see ci.yml).
+env:
+  UV_MANAGED_PYTHON: "1"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        # min-tests: the non-golden floor of ci.yml; raise both together.
+        # workers: one per vCPU. The Linux runner has 4; the macOS runner has
+        # 3 and 7 GB, where three workers measured only 1.25 times faster
+        # than one (#426).
+        include:
+          - { os: ubuntu-latest, min-tests: 2919, workers: 4 }
+          - { os: macos-latest, min-tests: 2919, workers: 3 }
+    name: test (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python ${{ matrix.python }}
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      - name: Install dependencies
+        id: sync
+        run: uv sync --locked
+
+      # SWI-Prolog on every leg, as in ci.yml: without swipl the patterns
+      # tests and the Prolog-fact tests skip.
+      - name: Install SWI-Prolog (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+
+      - name: Install SWI-Prolog (macOS)
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install swi-prolog
+
+      # Goldens exist for the reference leg of ci.yml only, and the `paper`
+      # tests run in its paper-example job.
+      - name: Run tests
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper" | tee pytest.log
+
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
+            "${{ matrix.os }}, ${{ matrix.python }}" \
+            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper"'
+
+      # The suite runs `now` through `python -m noworkflow`; this runs the
+      # installed console script from a plain directory, as in ci.yml.
+      - name: CLI smoke test
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -o pipefail
+          mkdir now-smoke && cd now-smoke
+          now() { uv run --no-sync --project "$GITHUB_WORKSPACE" now "$@"; }
+          printf 'print("hello from noWorkflow")\n' > hello.py
+          now --version
+          now run hello.py | tee run.log
+          grep -q "hello from noWorkflow" run.log
+          now list | tee list.log
+          grep -q "run hello.py" list.log

@@ -379,7 +379,8 @@ The full suite from the root (`uv run pytest`), the count against the floor
 and, when `tests/__init__.py` is in the merge, the parity between the two
 runners — the three are in `safe-refactor`. `uv run ruff check .`. Then the
 maintainer pushes, so that CI measures at the tip what the local machine does
-not: every supported Python, macOS, the frontend guard, the audits.
+not: every supported Python on Linux, the frontend guard, the audits (macOS
+only through `pre-release.yml`, run by hand).
 
 With one reservation worth keeping: **a green suite does not prove the
 absence of a semantic conflict.** Of the places listed above, the suite

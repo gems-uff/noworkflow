@@ -75,14 +75,20 @@ the note.
 - **CI green at that commit**: every blocking leg, `frontend`,
   `paper-example` and `checks` (the lock, the audits, and a build of the
   package that checks `version.txt` and `bundle.js` are in the wheel). That
-  run is the suite on every supported Python; there is nothing to rerun
-  locally for it. **Green does not cover two audits**: the npm audit gates
+  run is the suite on every supported Python, on Linux; there is nothing to
+  rerun locally for it. **Green does not cover two audits**: the npm audit gates
   only advisories of `high` and above in what reaches `bundle.js` (read its
   log for the moderate ones: `gh run view --job <checks job> --log | grep
   vulnerabilities`), and pip-audit ignores the advisories listed next to its
   step. Both describe what this release ships — `bundle.js` holds the npm
   side's code, and the runtime pins reach users' environments — so the
   maintainer decides whether the release waits and whether the note says so.
+- **The pre-release matrix green on that commit**: Linux and macOS on every
+  supported Python, which a push does not run. `gh workflow run
+  pre-release.yml --ref main` once the bump is on `main`; the run's
+  `headSha` must be the bump commit (`gh run list --workflow pre-release.yml
+  --limit 1 --json databaseId,headSha,conclusion`). A red there blocks the
+  release like a red in `ci.yml`.
 - **The experimental legs, run by hand on that commit** while their workflow
   is suspended, as its header asks before a release: `gh workflow run
   experimental.yml --ref main` once the bump is on `main`; the run's
@@ -370,7 +376,7 @@ cd <outside>/nw-release && printf '%s' '<version>' > src/noworkflow/resources/ve
 ```
 
 Check the prerequisites that can be read (none dispatches anything: for the
-experimental legs, write what would run and which previous run it would be
+pre-release matrix and the experimental legs, write what would run and which previous run it would be
 compared with). Then steps 1 to 4 in that worktree — `uv build` takes the
 bump from the working files — the dry run included, and the note of step 7
 drafted in `<scratch>/notes.md` from what step 1 found.

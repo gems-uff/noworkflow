@@ -155,14 +155,16 @@ jobs:
   test:
     if: github.event_name != 'schedule'
     # Legs are independent: a red on one version does not cancel the others,
-    # so the panel tells whether a failure is specific to a version or system.
+    # so the panel tells whether a failure is specific to a version.
     # Legs still under observation (next Python, Windows) live in
-    # experimental.yml; promoting one means moving it to this matrix.
+    # experimental.yml; promoting the next Python means moving it to this
+    # matrix.
     #
     # The legs follow "Python versions" in AGENTS.md: Linux runs every
     # version python.org maintains (requires-python and the classifiers in
-    # pyproject.toml change with this list); macOS runs the floor and the
-    # newest.
+    # pyproject.toml change with this list). macOS runs in pre-release.yml,
+    # by hand before a release: on its 3-core runner the suite barely gains
+    # from workers, and its legs set the pace of every push (#426).
     strategy:
       fail-fast: false
       matrix:
@@ -184,8 +186,6 @@ jobs:
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
           - { os: ubuntu-latest, python: "3.15", min-tests: 2947, reference: true }
-          - { os: macos-latest, python: "3.11", min-tests: 2919 }
-          - { os: macos-latest, python: "3.15", min-tests: 2919 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -214,21 +214,12 @@ jobs:
 
       # SWI-Prolog on every leg: the patterns tests compare each rule with
       # rules.pl over the `now export prolog -r` of that leg's Python, and the
-      # Prolog-fact tests read exports back; without swipl they skip. Linux
-      # takes the package of the paper-example job and of the reference
-      # container, macOS Homebrew's.
-      - name: Install SWI-Prolog (Linux)
-        if: runner.os == 'Linux'
+      # Prolog-fact tests read exports back; without swipl they skip. The
+      # package of the paper-example job and of the reference container.
+      - name: Install SWI-Prolog
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
-
-      - name: Install SWI-Prolog (macOS)
-        if: runner.os == 'macOS'
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: "1"
-          HOMEBREW_NO_INSTALL_CLEANUP: "1"
-        run: brew install swi-prolog
 
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
@@ -238,13 +229,19 @@ jobs:
       # GOLDEN=require fails a golden that nobody recorded instead of
       # skipping it, and GOLDEN_ACTUAL_DIR collects the actual output of every
       # mismatch for the artifact below.
+      # -n 4: four pytest-xdist workers, one per vCPU of the runner; about 80%
+      # of the time is spent waiting for the `now` the e2e tests start, and
+      # four workers measured 3.1 to 3.5 times faster than one (#426). The
+      # seed fixes the order of collection, not which worker runs what: a red
+      # that depends on another test is replayed serially (-n 0, see
+      # "Running locally" in CONTRIBUTING.md).
       - name: Run tests
         env:
           GOLDEN: ${{ matrix.reference && 'require' || '' }}
           GOLDEN_ACTUAL_DIR: ${{ runner.temp }}/golden-actual
         run: |
           set -o pipefail
-          args=()
+          args=(-n 4)
           if [ "${{ matrix.reference }}" = "true" ]; then
             args+=(-m "not paper" --cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
           else
@@ -260,9 +257,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           if [ "${{ matrix.reference }}" = "true" ]; then
-            repro='uv sync --locked --extra demo --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -m "not paper"'
+            repro='uv sync --locked --extra demo --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -n 4 -m "not paper"'
           else
-            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden and not paper"'
+            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n 4 -m "not golden and not paper"'
           fi
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" "$repro"
