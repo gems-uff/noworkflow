@@ -412,8 +412,9 @@ npm ls <name> --prefix src/frontend --package-lock-only                         
 
 Both read the lock without `node_modules`. `--omit=dev`: only the runtime
 dependencies of the packages reach the bundle; the build tools do not ship.
-The audit runs in CI's `checks` job; the comment there says why it is not a
-gate yet.
+The audit is a gate in CI's `checks` job, at `high` and on the runtime
+dependencies only; the build tools' advisories are read with the same
+command without `--omit=dev`, and wait for a campaign.
 
 The step is one package, but npm does not move one entry. A direct
 dependency of a workspace package is changed in its `package.json` (`npm

@@ -95,14 +95,15 @@ jobs:
             --ignore-vuln GHSA-5rjg-fvgr-3xxf \
             --ignore-vuln GHSA-h35f-9h28-mq5c
 
-      # Not a gate yet: the critical runtime advisories (elliptic, pbkdf2,
-      # sha.js) come from crypto-browserify, a dependency of @noworkflow/nowvis
-      # whose code ends up in bundle.js, and fixing them means rebuilding the
-      # bundle, which is Round 3 (#225). Until then the red shows on the step
-      # without failing the job. --package-lock-only: no node_modules needed.
+      # A gate on what reaches users: --omit=dev keeps the runtime dependencies
+      # of the workspace packages, whose code webpack puts into bundle.js; the
+      # build tools do not ship and are not gated. The audit reads today's
+      # advisory database, so an advisory published against a locked package
+      # turns this step red on any change; the fix is an update of that
+      # package (the dependencies skill), not an ignore. --package-lock-only:
+      # no node_modules needed.
       - name: Audit frontend dependencies
         if: ${{ !cancelled() }}
-        continue-on-error: true
         run: npm audit --prefix src/frontend --package-lock-only --omit=dev --audit-level=high
 
       # Phase A of the lint: only rules already at zero are selected; the

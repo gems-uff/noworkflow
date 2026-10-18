@@ -76,8 +76,9 @@ the note.
   `paper-example` and `checks` (the lock, the audits, and a build of the
   package that checks `version.txt` and `bundle.js` are in the wheel). That
   run is the suite on every supported Python; there is nothing to rerun
-  locally for it. **Green does not cover two audits**: the npm audit is not a
-  gate (read its log: `gh run view --job <checks job> --log | grep
+  locally for it. **Green does not cover two audits**: the npm audit gates
+  only advisories of `high` and above in what reaches `bundle.js` (read its
+  log for the moderate ones: `gh run view --job <checks job> --log | grep
   vulnerabilities`), and pip-audit ignores the advisories listed next to its
   step. Both describe what this release ships — `bundle.js` holds the npm
   side's code, and the runtime pins reach users' environments — so the
