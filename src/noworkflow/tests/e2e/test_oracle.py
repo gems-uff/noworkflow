@@ -674,6 +674,14 @@ DISTRIBUTIONS_LISTED_TWICE = Defect(
     "the standard PathFinder each walk sys.path, and every distribution "
     "comes back twice",
     signature="oracle-marker listed: 2")
+SETUPTOOLS_VENDOR_PATH = Defect(
+    "#419: now/utils/functions.py imports pkg_resources at startup (for "
+    "resource_string, resource_listdir and resource_isdir), and "
+    "pkg_resources/__init__.py appends setuptools/_vendor to sys.path; "
+    "nothing removes it, so the script runs with it and imports the "
+    "packages setuptools vendors. #225's move of utils/functions.py to "
+    "importlib.resources removes the import",
+    signature="setuptools/_vendor on sys.path: 1")
 
 
 def case(script, *args, flags=(), defects=(), suffix="", marks=()):
@@ -809,6 +817,7 @@ CASES = (
         case("distribution_finder.py", defects=(DISTRIBUTION_LOOKUP,)),
         case("duplicate_distributions.py",
              defects=(DISTRIBUTIONS_LISTED_TWICE,)),
+        case("setuptools_vendor_path.py", defects=(SETUPTOOLS_VENDOR_PATH,)),
     ]
 )
 

@@ -437,7 +437,7 @@ and therefore the first suspects when an upgrade breaks something:
 - `pkg_resources` (`utils/functions.py`, for its resource functions): the
   reason for the `setuptools<72` pin; its move to `importlib.resources` is
   part of #225. Importing it also appends `setuptools/_vendor` to
-  `sys.path`, which a traced script then sees.
+  `sys.path`, which a traced script then sees (#419).
 - `importlib.metadata` (`prov_deployment/deployment.py`): `get_version`
   looks a module's distribution up from inside the import finder, while the
   script runs. Before 3.15 a distribution whose metadata has no version
