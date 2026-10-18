@@ -49,13 +49,19 @@ combination is broken. That is a semantic conflict, and it **is born at the
 merge**: before it, the defect existed nowhere.
 
 Hence the practical consequence: **whoever merges resolves it, before the
-push.** It does not become an item on the list of whoever wrote the code,
-because there was no defect in anyone's code. Fix it in a commit of its own,
-on top of the merge, with the explanation in the message — the merge stays
-verifiable against the automatic merge, and whoever reads it later understands
-why that fix appeared out of nowhere. Both commits are the maintainer's, as
-`AGENTS.md` says, one after the other: the merge first, then the fix on top
-of it once it is recorded. Leave each ready in the tree and ask.
+push, in the merge itself.** It does not become an item on the list of
+whoever wrote the code, because there was no defect in anyone's code. A
+conflict is resolved in the merge whether git saw it or not, so the
+resolution goes in the merge commit, and the body of its message says what
+conflicted and how it was resolved: without that, a reader takes a
+resolution in a file git merged by itself for content lost by hand. Nothing
+is lost by putting it there: the automatic merge can be rebuilt at any time
+from the two parents, and the difference between the two is exactly the
+resolution (the next sections, and `check_merge.sh`). The merge commit is the
+maintainer's, as `AGENTS.md` says: leave it ready in the tree and ask. When
+the semantic conflict shows only after the merge was recorded, and it has not
+been pushed, the resolution joins it with `git commit --amend`; once pushed,
+it can only go on top.
 
 ## Before: measure the distance
 
@@ -261,10 +267,20 @@ where it lives in this project:
   merge tells. It also holds for a branch that is already up to date: "up to
   date" is a statement about the instant of the measurement, and the test can
   land on `main` after it. There is no version to resynchronize here: decide
-  which side is right, the test or the model, and fix the wrong one before the
+  which side is right, the test or the model, and fix the wrong one in the
   merge.
+- **A defect that `main` pins and the branch fixes.** `main` characterizes a
+  known defect (a test that asserts today's failure) and marks its `_desired`
+  twin with `known_defects`, which is `xfail(strict=True)`; the branch fixes
+  the defect without knowing either. After the merge the characterization
+  fails and the twin reports XPASS(strict). The resolution removes the
+  characterization, takes the `Defect` off every twin (a twin that still
+  carries another `Defect` keeps it) and renames a twin that no longer
+  describes a pending state, and the documents that say the defect still
+  fails (`AGENTS.md`, the known noise of `golden-run`) follow.
+  `git grep '#<issue>'` over `main` finds all of them before the merge.
 
-When one of the first three bites, the fix on top of the merge also leaves a
+When one of the first three bites, the resolution in the merge also leaves a
 guard, or the merge after this one repeats the search: a test that fails the
 next time the other side moves — the arity of a model's Prolog facts against
 the arity `rules.pl` uses, a `CollectionTestCase` for the construct the
