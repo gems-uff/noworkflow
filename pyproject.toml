@@ -92,7 +92,9 @@ dev = [
     "pytest-randomly>=5",
     "ruff>=0.14",
     "bandit[toml]>=1.7.10",
-    "pip-audit>=2.7",
+    # 2.9: --locked, which audits a PEP 751 pylock.toml (the audit step of
+    # ci.yml).
+    "pip-audit>=2.9",
 ]
 # What the paper's running example imports (src/noworkflow/tests/e2e/corpus/
 # paper_example). Not in dev, so the matrix legs stay light: only the

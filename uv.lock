@@ -2284,7 +2284,7 @@ provides-extras = ["demo", "notebook", "all"]
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", extras = ["toml"], specifier = ">=1.7.10" },
-    { name = "pip-audit", specifier = ">=2.7" },
+    { name = "pip-audit", specifier = ">=2.9" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=5" },
     { name = "pytest-randomly", specifier = ">=5" },

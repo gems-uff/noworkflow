@@ -9,7 +9,8 @@ pins, the advisories that ``pip-audit`` ignores in ``ci.yml``, the lint and
 coverage exclusions of ``py2module.py``, the e2e tests that characterize
 the CLI, the committed ``bundle.js``, the documented ``now vis`` default,
 the way the suite keeps its store in memory and its corpus out of
-collection, the uv-managed Python of the CI legs. One test per fact, named as the fact; the docstring says why
+collection, the uv-managed Python of the CI legs, the lock export that
+``pip-audit`` reads whole. One test per fact, named as the fact; the docstring says why
 the code depends on it, and the assert message says what to edit, and under
 which issue, when it falls.
 
@@ -912,3 +913,85 @@ def test_every_workflow_that_installs_uv_requires_uv_managed_python(request):
         "top-level env: of the workflow, so a leg may run the runner image's "
         "Python instead of the one uv downloads. Add it, with the pointer to "
         "the comment in ci.yml (#264).".format(", ".join(missing)))
+
+
+# 11. pip-audit reads a pylock.toml without its markers ------------------------
+
+# One entry per kind of marker: none, one that holds on any Python 3, one
+# that holds on no Python 3, one that holds on no platform.
+AUDITED = (
+    ("first", "1.0", None),
+    ("second", "2.0", "python_version >= '3'"),
+    ("third", "3.0", "python_version < '3'"),
+    ("fourth", "4.0", "sys_platform == 'no-such-platform'"),
+)
+MSG_PYLOCK = (
+    "pip-audit --locked collected {} from a pylock.toml whose entries are {}. "
+    "The 'Audit Python dependencies' step of .github/workflows/ci.yml relies "
+    "on --locked reading every entry, its marker not evaluated, so that the "
+    "versions uv.lock keeps for other Python forks and platforms are audited "
+    "too. Find how the installed pip-audit audits every fork, rewrite that "
+    "step and its comment, and the pip-audit section of the dependencies "
+    "skill (#225)."
+)
+MSG_REQUIREMENTS = (
+    "pip-audit -r collected {} from a requirements file whose lines are {}, "
+    "with the markers that hold on no Python 3 and on no platform. It used "
+    "to skip them: if it no longer does, test_pip_audit_reads_every_entry_"
+    "of_a_pylock no longer shows what the audit step of ci.yml gains from "
+    "the pylock export; rewrite this control."
+)
+
+
+def _collected(source):
+    """``{(name, version)}`` of what a pip-audit dependency source collects"""
+    return {(dep.name, str(dep.version)) for dep in source.collect()}
+
+
+def test_pip_audit_reads_every_entry_of_a_pylock(tmp_path):
+    """``pip-audit --locked`` audits every entry of a PEP 751 lock
+
+    The audit step of ci.yml exports uv.lock as a pylock.toml and audits
+    it with ``--locked``. uv.lock keeps some packages at one version per
+    Python fork, and some only on one platform, each entry with its
+    environment marker; the step audits them all from one Linux runner on
+    one Python because pip-audit reads the entries without evaluating their
+    markers. Offline: collecting the dependencies queries nothing.
+    """
+    from pip_audit._dependency_source import PyLockSource
+
+    lines = ['lock-version = "1.0"', 'created-by = "test"', ""]
+    for name, version, marker in AUDITED:
+        lines += ["[[packages]]", 'name = "{}"'.format(name),
+                  'version = "{}"'.format(version)]
+        if marker:
+            lines.append('marker = "{}"'.format(marker))
+        lines.append("")
+    pylock = tmp_path / "pylock.toml"
+    pylock.write_text("\n".join(lines), encoding="utf-8")
+    expected = {(name, version) for name, version, _ in AUDITED}
+    found = _collected(PyLockSource([pylock]))
+    assert found == expected, MSG_PYLOCK.format(sorted(found), sorted(expected))
+
+
+def test_pip_audit_skips_requirements_whose_marker_is_false(tmp_path):
+    """Control: ``pip-audit -r`` skips the lines whose marker is false here
+
+    The same entries as a requirements export, the form the audit step used
+    before: only the lines whose marker holds on this interpreter are
+    collected, so a requirements audit sees one fork. Without this, the
+    premise above could pass on entries that every form of audit reads.
+    """
+    from pip_audit._dependency_source import RequirementSource
+
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("".join(
+        "{}=={}{}\n".format(name, version,
+                            " ; " + marker if marker else "")
+        for name, version, marker in AUDITED), encoding="utf-8")
+    found = _collected(RequirementSource(
+        [requirements], no_deps=True, disable_pip=True))
+    assert found == {("first", "1.0"), ("second", "2.0")}, (
+        MSG_REQUIREMENTS.format(sorted(found), [
+            line for line in requirements.read_text(
+                encoding="utf-8").splitlines()]))

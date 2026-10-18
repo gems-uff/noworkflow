@@ -231,8 +231,8 @@ audit go to the issue that will act on them, as a comment.
   Only the intended package may move, one line per fork. And **a fix may land
   on one Python fork and not on another**: the last release that supports the
   oldest `requires-python` can predate the fix, so the oldest fork stays
-  vulnerable while the newer ones are clean. The per-fork audit below says
-  so; then the choice is between an ignored advisory in `ci.yml`, with that
+  vulnerable while the newer ones are clean. The audit below says so; then
+  the choice is between an ignored advisory in `ci.yml`, with that
   reason and the issue that removes it, and a decision about the Python
   floor.
 - The suite by `safe-refactor` (the changelog of the dependency first, then
@@ -246,43 +246,35 @@ audit go to the issue that will act on them, as a comment.
 
 ```bash
 uv sync --locked      # pip-audit comes from the dev group; --no-sync below keeps uv from touching .venv
-uv export --locked --format requirements-txt --no-emit-project --all-groups --all-extras --no-hashes -o requirements-audit.txt
-uv run --no-sync pip-audit -r requirements-audit.txt --no-deps --disable-pip --strict --desc on
+uv export --locked --format pylock.toml --no-emit-project --all-groups --all-extras -o <outside>/audit/pylock.toml
+uv run --no-sync pip-audit --locked <outside>/audit --strict --desc on
 ```
 
+`<outside>` is any directory outside the checkout (the export creates it);
+`--locked` reads `pylock.toml` and `pylock.*.toml` in the directory given.
 Before arguing that a series "no longer gets security patches", measure. Two
 things decide what the audit sees:
 
 - **The extras enter the export only with `--all-extras`.** They are in the
   lock, but without the flag the Jupyter stack, matplotlib and numpy are never
   audited.
-- **pip-audit audits only the fork of the interpreter that runs it.** The
-  export writes each locked version with its environment marker
-  (`; python_full_version < '<version>'`), and pip-audit evaluates the
-  marker on its own interpreter and skips, silently, every line whose marker
-  is false. The run above audits the Python of `.venv`; the other forks are
-  audited by running the tool on a Python inside each, from outside the
-  project:
+- **The format of the export decides which Python forks are audited.** A
+  requirements export writes each locked version with its environment
+  marker (`; python_full_version < '<version>'`), and `pip-audit -r`
+  evaluates the marker on its own interpreter and skips, silently, every
+  line whose marker is false: it audits the fork of the Python that runs
+  it, on its platform, and nothing else. A `pylock.toml` is read entry by
+  entry, no marker evaluated, so `--locked` audits every version of every
+  fork and platform, whatever the interpreter. A finding names the package
+  and the version; `lock_versions.sh` (or the `marker` of that entry in the
+  export) says which fork holds it.
 
-  ```bash
-  cd <outside> && uv run --isolated --no-project --python <version> --with pip-audit \
-    pip-audit -r <checkout>/requirements-audit.txt --no-deps --disable-pip --strict
-  ```
-
-  once per range of the lock's `resolution-markers` (the top of `uv.lock`),
-  not once per leg of the matrix: the matrix skips Pythons the lock still
-  resolves for. Lines with a platform marker (Windows-only packages, for
-  instance) are skipped the same way on any other platform.
-
-The gate in CI (the audit step of `ci.yml`) audits what its own export and
-its own interpreter let it see; compare that with the two points above before
-trusting its green. An ignore is added there only with the reason and the
-issue that removes it (`AGENTS.md`), and it leaves in the step that removes
-the pin; an ignore for an advisory of a fork the gate does not audit records
-the decision but changes nothing in the gate. pip-audit prints PYSEC ids and repeats a finding once per alias
-description; `--ignore-vuln` also accepts the GHSA ids `ci.yml` lists, so the
-way to check the ignore list is to run with it and read "N ignored".
-`requirements-audit.txt` in the root is ignored by git.
+The gate in CI (the audit step of `ci.yml`) runs these commands. An ignore
+is added there only with the reason and the issue that removes it
+(`AGENTS.md`), and it leaves in the step that removes the pin. pip-audit
+prints PYSEC ids and repeats a finding once per alias description;
+`--ignore-vuln` also accepts the GHSA ids `ci.yml` lists, so the way to
+check the ignore list is to run with it and read "N ignored".
 
 ### Diagnosis: is some pin blocking something?
 
