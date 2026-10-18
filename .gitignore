@@ -89,7 +89,6 @@ node_modules/
 .coverage.*
 htmlcov/
 coverage.xml
-/requirements-audit.txt
 src/frontend/packages/*/lib/
 .claude/settings.local.json
 

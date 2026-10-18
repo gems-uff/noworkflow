@@ -131,6 +131,7 @@ else
     echo "  yes, in these files:"
     git -c core.quotePath=false diff --numstat --no-renames "$AUTO" "$MERGE_TREE" | sed 's/^/    /'
     echo "  (read it: git diff $AUTO $MERGE_TREE -- <file>)"
+    echo "  a semantic conflict is resolved in the merge too: the merge message says what each one resolves"
   fi
   if [ -n "$CONFLICTED" ]; then
     echo "  the two parents conflict in:"

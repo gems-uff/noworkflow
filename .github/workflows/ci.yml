@@ -70,17 +70,17 @@ jobs:
         id: sync
         run: uv sync --locked
 
-      # Audits exactly the versions in uv.lock (every group, every platform
-      # marker), not whatever this runner happens to resolve. --no-deps and
-      # --disable-pip: the export is already the full pinned set, so pip-audit
-      # only queries the advisories.
+      # Audits every version in uv.lock: every group and extra, every Python
+      # fork and every platform, not whatever this runner happens to resolve.
+      # The export is a PEP 751 lock, whose entries pip-audit --locked reads
+      # without evaluating their markers. A requirements export would not do:
+      # pip-audit -r evaluates each line's marker on its own interpreter and
+      # silently skips the false ones, auditing this runner's fork only.
+      # --locked reads pylock.toml and pylock.*.toml in the directory given.
       #
       # Ignored advisories, present since the job was created; each one leaves
       # with the pin that keeps it, in Round 3 (#225). Never add one here
       # without the reason and the issue that removes it.
-      # - GHSA-jfmj-5v4g-7637 (CVE-2024-5569, zipp): `zipp==3.15` in
-      #   [project.dependencies] has no recorded reason; noworkflow does not
-      #   import zipp.
       # - GHSA-5rjg-fvgr-3xxf (CVE-2025-47273) and GHSA-h35f-9h28-mq5c
       #   (CVE-2026-59890), setuptools: `setuptools<72` keeps pkg_resources,
       #   which utils/functions.py imports for its resource functions (#225
@@ -89,9 +89,8 @@ jobs:
       - name: Audit Python dependencies
         if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         run: |
-          uv export --locked --format requirements-txt --no-emit-project --all-groups --no-hashes -o requirements-audit.txt
-          uv run --no-sync pip-audit -r requirements-audit.txt --no-deps --disable-pip --strict --desc on \
-            --ignore-vuln GHSA-jfmj-5v4g-7637 \
+          uv export --locked --format pylock.toml --no-emit-project --all-groups --all-extras -o "$RUNNER_TEMP/audit/pylock.toml"
+          uv run --no-sync pip-audit --locked "$RUNNER_TEMP/audit" --strict --desc on \
             --ignore-vuln GHSA-5rjg-fvgr-3xxf \
             --ignore-vuln GHSA-h35f-9h28-mq5c
 

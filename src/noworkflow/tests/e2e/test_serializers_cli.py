@@ -7,10 +7,10 @@ The serializer decides the text that a real store keeps in
 ``evaluation.repr`` for every value. The other e2e tests run the default,
 ``repr``; these run ``-r jsonpickle`` and ``-r jsonpickle_content``
 with the jsonpickle stub of ``helpers/jsonpickle_stub.py`` written next to
-the script (jsonpickle is not a dependency, and the script's directory
-shadows an installed one), and ``-r simple`` on a class whose ``__repr__``
-reads an attribute that ``__init__`` sets, which crashes the default
-serializer (#307). The values are read back with SQL on the store.
+the script (jsonpickle comes only with the ``all`` extra, which no CI
+leg syncs, and the script's directory shadows an installed one), and
+``-r simple`` on a class whose ``__repr__`` reads an attribute that
+``__init__`` sets, which crashes the default serializer (#307). The values are read back with SQL on the store.
 
 ``now export prolog`` writes text columns through ``PrologRepr``, which
 drops the first letter of a file name such as ``l'Avenue.txt``

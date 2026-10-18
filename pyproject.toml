@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+# 77: the SPDX `license` expression and `license-files` (PEP 639).
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,7 +16,8 @@ authors = [
     {name = "Arthur Paiva", email = "arthur.paiva@id.uff.br"},
     {name = "Other collaborators"},
 ]
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["scientific", "experiments", "provenance", "python"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -33,17 +35,22 @@ dependencies = [
     "pyposast",
     "apted",
     "future",
-    "SQLAlchemy>=1.4.29,<=1.4.47",
+    # <2: the models use the 1.4 API that 2.0 removed (select([...]),
+    # Connection.execute with autocommit, string statements; the SQLAlchemy
+    # premises of tests/premises say where). >=1.4.29 came with 8fdde50,
+    # which moved the test helpers to Session.get.
+    "SQLAlchemy>=1.4.29,<2",
     "parameterized",
     "requests",
     "ipykernel",
-    "zipp==3.15",
-    "importlib-metadata==6.4.1",
-    "typing-extensions>=4.5.0,<5",
     "setuptools<72",
     "nbformat",
     "graphviz",
-    "flask"
+    # 2.3.3: the first release that requires a Werkzeug (2.3.7) whose
+    # routing does not use ast.Str, which Python 3.14 removed; with an
+    # older one `now vis` fails building its first route. Below 2.3 the
+    # routes also answer differently from what tests/vis pins.
+    "flask>=2.3.3"
 ]
 
 [project.optional-dependencies]
@@ -51,7 +58,7 @@ demo = ["flask", "matplotlib", "numpy", "cython"]
 notebook = ["pyposast", "ipython", "jupyter"]
 all = [
     "pyposast", "ipython", "jupyter", "pyswip-alt",
-    "matplotlib", "numpy", "cython"
+    "matplotlib", "numpy", "cython", "jsonpickle"
 ]
 
 [project.scripts]
@@ -61,6 +68,7 @@ now = "noworkflow:main"
 Homepage = "https://gems-uff.github.io/noworkflow/"
 Repository = "https://github.com/gems-uff/noworkflow.git"
 Issues = "https://github.com/gems-uff/noworkflow/issues"
+Changelog = "https://github.com/gems-uff/noworkflow/releases"
 
 
 [tool.setuptools.package-data]
@@ -87,7 +95,9 @@ dev = [
     "pytest-randomly>=5",
     "ruff>=0.14",
     "bandit[toml]>=1.7.10",
-    "pip-audit>=2.7",
+    # 2.9: --locked, which audits a PEP 751 pylock.toml (the audit step of
+    # ci.yml).
+    "pip-audit>=2.9",
 ]
 # What the paper's running example imports (src/noworkflow/tests/e2e/corpus/
 # paper_example). Not in dev, so the matrix legs stay light: only the

@@ -9,7 +9,8 @@ pins, the advisories that ``pip-audit`` ignores in ``ci.yml``, the lint and
 coverage exclusions of ``py2module.py``, the e2e tests that characterize
 the CLI, the committed ``bundle.js``, the documented ``now vis`` default,
 the way the suite keeps its store in memory and its corpus out of
-collection, the uv-managed Python of the CI legs. One test per fact, named as the fact; the docstring says why
+collection, the uv-managed Python of the CI legs, the lock export that
+``pip-audit`` reads whole. One test per fact, named as the fact; the docstring says why
 the code depends on it, and the assert message says what to edit, and under
 which issue, when it falls.
 
@@ -28,7 +29,6 @@ package, ``tests/`` excluded.
 """
 import ast
 import functools
-import importlib.metadata
 import inspect
 import io
 import os
@@ -57,7 +57,6 @@ from noworkflow.tests.premises import corpus_spy
 PACKAGE = Path(noworkflow.__file__).resolve().parent
 PY2MODULE = PACKAGE / "now" / "collection" / "prov_deployment" / "py2module.py"
 # Relative to the repository root (request.config.rootpath).
-CI_YML = Path(".github") / "workflows" / "ci.yml"
 BUNDLE = Path("src") / "noworkflow" / "now" / "vis" / "static" / "dist" / "bundle.js"
 ROOT_CORPUS = Path("src") / "noworkflow" / "tests" / "e2e" / "corpus"
 SPY_PLUGIN = "noworkflow.tests.premises.corpus_spy"
@@ -183,13 +182,13 @@ def test_noworkflow_still_calls_sqlalchemy_apis_that_2_0_removed(monkeypatch):
         sites)
 
 
-# 2 and 3. Imports seen by an AST scan of the runtime package ------------------
+# 2. Imports seen by an AST scan of the runtime package ------------------------
 
 # Paths relative to the scanned root, with "/". The test package is not code
 # that noWorkflow runs: its scripts (the examples, the e2e corpus) may use
 # the syntax of any Python or import anything, and no pin depends on them.
 SCAN_EXCLUDE = ("tests",)
-# Never parses as Python 3 (premise 5); its imports are Python 2's. Matched
+# Never parses as Python 3 (premise 4); its imports are Python 2's. Matched
 # by its whole relative path: another file with that name is scanned.
 SCAN_SKIP = (PY2MODULE.relative_to(PACKAGE).as_posix(),)
 MSG_SCAN = (
@@ -263,7 +262,7 @@ def _importers(name, root=PACKAGE):
 
 
 def test_the_import_scanner_finds_every_form_of_import(tmp_path):
-    """Control: the scan behind the pkg_resources and zipp premises sees imports
+    """Control: the scan behind the pkg_resources premise sees imports
 
     ``import x``, ``import x.y as z``, ``from x import y`` inside a function,
     ``importlib.import_module("x")`` and ``__import__("x")`` are found;
@@ -271,8 +270,9 @@ def test_the_import_scanner_finds_every_form_of_import(tmp_path):
     not. The tree mirrors the package: the top-level ``tests/`` and
     py2module.py at its own path are neither read nor parsed (both hold
     files that do not parse here), while a nested ``tests`` directory and a
-    py2module.py elsewhere are scanned. Without this, "noWorkflow does not
-    import zipp" could pass because the scanner sees nothing.
+    py2module.py elsewhere are scanned. Without this, "no module but
+    utils/functions.py imports pkg_resources" could pass because the
+    scanner sees nothing.
     """
     files = {
         "plain.py": "import zipp\n",
@@ -345,71 +345,7 @@ def test_pkg_resources_is_imported_by_exactly_utils_functions():
     assert not message, "\n".join(message)
 
 
-# 3. zipp ---------------------------------------------------------------------
-
-ZIPP_ADVISORY = "GHSA-jfmj-5v4g-7637"
-ZIPP_FIXED = "3.19.1"
-
-
-def test_zipp_is_below_the_fix_exactly_while_ci_ignores_its_advisory(request):
-    """ci.yml ignores the zipp advisory if and only if zipp is still vulnerable
-
-    ``zipp==3.15`` in pyproject.toml has no recorded reason, and
-    GHSA-jfmj-5v4g-7637 (CVE-2024-5569) is fixed in 3.19.1; the pip-audit
-    step ignores it on the ground that noWorkflow never imports zipp. Two
-    sided: a stale ignore after the upgrade fails, and so does an advisory
-    left unignored while the vulnerable version is installed.
-    """
-    from packaging.version import Version
-
-    ci = request.config.rootpath / CI_YML
-    if not ci.is_file():
-        pytest.skip("{} is not here: the suite runs outside the checkout".format(
-            CI_YML.as_posix()))
-    text = ci.read_text(encoding="utf-8")
-    assert "pip-audit" in text, (
-        "{} has no pip-audit step any more: this premise compares the zipp "
-        "version with the advisories that step ignores. Delete it, or point "
-        "it at the step that audits the dependencies now.".format(
-            CI_YML.as_posix()))
-    installed = Version(importlib.metadata.version("zipp"))
-    vulnerable = installed < Version(ZIPP_FIXED)
-    ignored = re.search(r"--ignore-vuln[ =]+" + re.escape(ZIPP_ADVISORY)
-                        + r"\b", text) is not None
-    if ignored:
-        message = (
-            "zipp is {}, at or above {} (the fix of {}), but "
-            ".github/workflows/ci.yml still passes --ignore-vuln {} to "
-            "pip-audit. Remove that flag and the zipp paragraph of the "
-            "comment over the 'Audit Python dependencies' step (#225)."
-        ).format(installed, ZIPP_FIXED, ZIPP_ADVISORY, ZIPP_ADVISORY)
-    else:
-        message = (
-            "zipp is {}, below {}, and .github/workflows/ci.yml no longer "
-            "ignores {}: pip-audit --strict fails the CI on it. Upgrade zipp "
-            "to {} or later (the zipp pin in pyproject.toml, `uv lock`; "
-            "dependencies skill, #225), or restore the --ignore-vuln with its "
-            "reason in the comment."
-        ).format(installed, ZIPP_FIXED, ZIPP_ADVISORY, ZIPP_FIXED)
-    assert vulnerable == ignored, message
-
-
-def test_noworkflow_does_not_import_zipp():
-    """No module of the package imports zipp
-
-    The ignore of GHSA-jfmj-5v4g-7637 in ci.yml relies on it: the vulnerable
-    code is only reachable through a caller that walks a zip with zipp.
-    The scanner's control is test_the_import_scanner_finds_every_form_of_import.
-    """
-    found = _importers("zipp")
-    assert not found, (
-        "noWorkflow now imports zipp at {}. The --ignore-vuln {} in "
-        ".github/workflows/ci.yml relies on it not doing so: upgrade zipp to "
-        "{} or later instead of ignoring the advisory (#225).".format(
-            found, ZIPP_ADVISORY, ZIPP_FIXED))
-
-
-# 4. argparse drops unknown arguments ------------------------------------------
+# 3. argparse drops unknown arguments ------------------------------------------
 
 
 def test_unknown_arguments_are_dropped_without_error(monkeypatch):
@@ -465,7 +401,7 @@ def test_a_known_option_without_its_value_still_exits_2(monkeypatch, capsys):
         "until this is understood (#226).".format(code, len(seen), error))
 
 
-# 5. py2module.py ----------------------------------------------------------------
+# 4. py2module.py ----------------------------------------------------------------
 
 
 def test_py2module_does_not_compile_on_python_3():
@@ -499,7 +435,7 @@ def test_py2module_does_not_compile_on_python_3():
         "now/collection/prov_definition/definition.py.")
 
 
-# 6. The bundle that `now vis` serves ----------------------------------------------
+# 5. The bundle that `now vis` serves ----------------------------------------------
 
 
 @pytest.fixture(scope="module")
@@ -608,7 +544,7 @@ def test_the_served_bundle_does_not_say_miliseconds(served_bundle):
         "the bundle as src/frontend/development.md describes.".format(count))
 
 
-# 7. `now vis` listens on localhost:5000 by default ---------------------------------
+# 6. `now vis` listens on localhost:5000 by default ---------------------------------
 
 MSG_VIS_DEFAULT = (
     "now vis no longer listens on localhost:5000 by default ({}). "
@@ -681,7 +617,7 @@ def test_now_vis_forwards_host_and_port_from_the_command_line(monkeypatch):
         "nothing until _now_vis_run_arguments is fixed".format(called))
 
 
-# 8. print_msg does not follow sys.stdout ----------------------------------------------
+# 7. print_msg does not follow sys.stdout ----------------------------------------------
 
 
 def test_print_msg_does_not_follow_a_swapped_sys_stdout(monkeypatch):
@@ -725,7 +661,7 @@ def test_print_follows_a_swapped_sys_stdout(monkeypatch):
         "nothing".format(captured))
 
 
-# 9. Importing the test package keeps the store in memory -------------------------------
+# 8. Importing the test package keeps the store in memory -------------------------------
 
 CONNECT_THEN_MOCK = (
     "from noworkflow.now.persistence import persistence_config as config\n"
@@ -779,7 +715,7 @@ def test_connecting_before_mocking_creates_a_store_in_the_cwd(tmp_path):
             sorted(path.name for path in cwd.iterdir())))
 
 
-# 10. No corpus file reaches collection ------------------------------------------------
+# 9. No corpus file reaches collection ------------------------------------------------
 
 MSG_CORPUS = (
     "pytest reached corpus scripts during collection:\n  {}\nThe scripts "
@@ -928,7 +864,7 @@ def test_no_corpus_item_or_module_in_this_session(request):
         "\n  ".join(items + sorted(modules)))
 
 
-# 11. The CI legs run the Python that uv downloads -----------------------------
+# 10. The CI legs run the Python that uv downloads -----------------------------
 
 WORKFLOWS = Path(".github") / "workflows"
 
@@ -977,3 +913,85 @@ def test_every_workflow_that_installs_uv_requires_uv_managed_python(request):
         "top-level env: of the workflow, so a leg may run the runner image's "
         "Python instead of the one uv downloads. Add it, with the pointer to "
         "the comment in ci.yml (#264).".format(", ".join(missing)))
+
+
+# 11. pip-audit reads a pylock.toml without its markers ------------------------
+
+# One entry per kind of marker: none, one that holds on any Python 3, one
+# that holds on no Python 3, one that holds on no platform.
+AUDITED = (
+    ("first", "1.0", None),
+    ("second", "2.0", "python_version >= '3'"),
+    ("third", "3.0", "python_version < '3'"),
+    ("fourth", "4.0", "sys_platform == 'no-such-platform'"),
+)
+MSG_PYLOCK = (
+    "pip-audit --locked collected {} from a pylock.toml whose entries are {}. "
+    "The 'Audit Python dependencies' step of .github/workflows/ci.yml relies "
+    "on --locked reading every entry, its marker not evaluated, so that the "
+    "versions uv.lock keeps for other Python forks and platforms are audited "
+    "too. Find how the installed pip-audit audits every fork, rewrite that "
+    "step and its comment, and the pip-audit section of the dependencies "
+    "skill (#225)."
+)
+MSG_REQUIREMENTS = (
+    "pip-audit -r collected {} from a requirements file whose lines are {}, "
+    "with the markers that hold on no Python 3 and on no platform. It used "
+    "to skip them: if it no longer does, test_pip_audit_reads_every_entry_"
+    "of_a_pylock no longer shows what the audit step of ci.yml gains from "
+    "the pylock export; rewrite this control."
+)
+
+
+def _collected(source):
+    """``{(name, version)}`` of what a pip-audit dependency source collects"""
+    return {(dep.name, str(dep.version)) for dep in source.collect()}
+
+
+def test_pip_audit_reads_every_entry_of_a_pylock(tmp_path):
+    """``pip-audit --locked`` audits every entry of a PEP 751 lock
+
+    The audit step of ci.yml exports uv.lock as a pylock.toml and audits
+    it with ``--locked``. uv.lock keeps some packages at one version per
+    Python fork, and some only on one platform, each entry with its
+    environment marker; the step audits them all from one Linux runner on
+    one Python because pip-audit reads the entries without evaluating their
+    markers. Offline: collecting the dependencies queries nothing.
+    """
+    from pip_audit._dependency_source import PyLockSource
+
+    lines = ['lock-version = "1.0"', 'created-by = "test"', ""]
+    for name, version, marker in AUDITED:
+        lines += ["[[packages]]", 'name = "{}"'.format(name),
+                  'version = "{}"'.format(version)]
+        if marker:
+            lines.append('marker = "{}"'.format(marker))
+        lines.append("")
+    pylock = tmp_path / "pylock.toml"
+    pylock.write_text("\n".join(lines), encoding="utf-8")
+    expected = {(name, version) for name, version, _ in AUDITED}
+    found = _collected(PyLockSource([pylock]))
+    assert found == expected, MSG_PYLOCK.format(sorted(found), sorted(expected))
+
+
+def test_pip_audit_skips_requirements_whose_marker_is_false(tmp_path):
+    """Control: ``pip-audit -r`` skips the lines whose marker is false here
+
+    The same entries as a requirements export, the form the audit step used
+    before: only the lines whose marker holds on this interpreter are
+    collected, so a requirements audit sees one fork. Without this, the
+    premise above could pass on entries that every form of audit reads.
+    """
+    from pip_audit._dependency_source import RequirementSource
+
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("".join(
+        "{}=={}{}\n".format(name, version,
+                            " ; " + marker if marker else "")
+        for name, version, marker in AUDITED), encoding="utf-8")
+    found = _collected(RequirementSource(
+        [requirements], no_deps=True, disable_pip=True))
+    assert found == {("first", "1.0"), ("second", "2.0")}, (
+        MSG_REQUIREMENTS.format(sorted(found), [
+            line for line in requirements.read_text(
+                encoding="utf-8").splitlines()]))

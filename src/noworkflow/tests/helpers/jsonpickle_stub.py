@@ -4,11 +4,10 @@
 """A stand-in for jsonpickle, in the test process and in a project
 
 ``now run -r jsonpickle`` and ``-r jsonpickle_content`` import jsonpickle
-when they serialize the first value, and jsonpickle is not a dependency of
-noWorkflow (neither ``pyproject.toml`` nor ``uv.lock`` has it). The stub
-keeps the one property of the real ``jsonpickle.encode`` that the
-serializers rely on, that it returns a ``str`` (measured with jsonpickle
-4.1), and writes a JSON text that says what it was given: the ``repr`` of
+when they serialize the first value, and jsonpickle comes only with the
+``all`` extra, which no CI leg syncs. The stub keeps the one property of
+the real ``jsonpickle.encode`` that the serializers rely on, that it
+returns a ``str`` (measured with jsonpickle 4.1), and writes a JSON text that says what it was given: the ``repr`` of
 the value and the ``keys`` flag.
 
 ``SOURCE`` is the module's text. ``write_into(project)`` writes it as
