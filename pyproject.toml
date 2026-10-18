@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+# 77: the SPDX `license` expression and `license-files` (PEP 639).
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,7 +16,8 @@ authors = [
     {name = "Arthur Paiva", email = "arthur.paiva@id.uff.br"},
     {name = "Other collaborators"},
 ]
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["scientific", "experiments", "provenance", "python"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -66,6 +68,7 @@ now = "noworkflow:main"
 Homepage = "https://gems-uff.github.io/noworkflow/"
 Repository = "https://github.com/gems-uff/noworkflow.git"
 Issues = "https://github.com/gems-uff/noworkflow/issues"
+Changelog = "https://github.com/gems-uff/noworkflow/releases"
 
 
 [tool.setuptools.package-data]
