@@ -50,7 +50,9 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 import typing
+import warnings
 
 import pytest
 
@@ -59,6 +61,10 @@ SKIP_REASON = "SWI-Prolog (swipl) is not on the PATH"
 # The process timeout is the time limit inside Prolog plus this margin, for
 # loading the facts and starting the process.
 PROCESS_MARGIN = 30
+# Seconds a process that wrote its last line gets to exit before it is
+# killed, and how often the wait looks at the output in the meantime.
+EXIT_GRACE = 2
+WAIT_SLICE = 0.2
 VARIABLE_NAME = re.compile(r"[A-Z_][A-Za-z0-9_]*\Z")
 
 Compound = collections.namedtuple("Compound", "name args")
@@ -356,16 +362,13 @@ def _run(job, body, timeout):
             handle.write(body)
             handle.write("\njob({}, {}).\n".format(
                 quoted_atom(_posix(output)), job))
-        try:
-            completed = subprocess.run(
-                [swipl, "-f", "none", "-q", "-g", "nowtest_swipl:main",
-                 "-t", "halt", driver],
-                cwd=directory, stdin=subprocess.DEVNULL, capture_output=True,
-                encoding="utf-8", errors="replace", timeout=timeout,
-            )
-            stderr, status = completed.stderr, completed.returncode
-        except subprocess.TimeoutExpired as expired:
-            stderr, status = _text(expired.stderr), None
+        process = subprocess.Popen(
+            [swipl, "-f", "none", "-q", "-g", "nowtest_swipl:main",
+             "-t", "halt", driver],
+            cwd=directory, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, encoding="utf-8", errors="replace",
+        )
+        stderr, status = _wait(process, output, timeout)
         lines = []
         if os.path.exists(output):
             with open(output, encoding="utf-8") as handle:
@@ -375,6 +378,47 @@ def _run(job, body, timeout):
                     except ValueError:
                         break  # cut short by the timeout
     return lines, stderr, status
+
+
+def _wait(process, output, timeout):
+    """Wait for ``swipl``; return (stderr, exit status or None)
+
+    None when the process was killed: at ``timeout``, or ``EXIT_GRACE``
+    seconds after it wrote ``{"done":true}`` without exiting. Ubuntu's
+    SWI-Prolog 9 sometimes blocks in the ``halt`` that follows a goal run
+    under ``call_with_time_limit``; its output is complete then, so the
+    callers take it, and a warning says that the process had to be killed.
+    """
+    deadline = time.monotonic() + timeout
+    done_at = None
+    while True:
+        try:
+            _, stderr = process.communicate(timeout=WAIT_SLICE)
+            return stderr, process.returncode
+        except subprocess.TimeoutExpired:
+            pass
+        now = time.monotonic()
+        if done_at is None and _finished(output):
+            done_at = now
+        late = done_at is not None and now - done_at > EXIT_GRACE
+        if late or now > deadline:
+            process.kill()
+            _, stderr = process.communicate()
+            if late:
+                warnings.warn(
+                    "swipl wrote its whole output and did not exit within "
+                    "{} s; killed".format(EXIT_GRACE), RuntimeWarning)
+            return stderr, None
+
+
+def _finished(output):
+    """Whether the driver wrote its last line, ``{"done":true}``"""
+    try:
+        with open(output, encoding="utf-8") as handle:
+            return any(json.loads(line).get("done")
+                       for line in handle if line.endswith("\n"))
+    except (OSError, ValueError):
+        return False
 
 
 def _text(data):
@@ -447,7 +491,7 @@ def solutions(facts_path, goal, variables, time_limit=10,
         time_limit, limit)
     timeout = time_limit + PROCESS_MARGIN
     lines, stderr, status = _run(job, _SOLUTIONS, timeout)
-    rows, error, ended = [], None, False
+    rows, error, ended, done = [], None, False, False
     for line in lines:
         if line.get("q") == -1:
             raise RuntimeError("swipl could not load {}: {}".format(
@@ -461,7 +505,11 @@ def solutions(facts_path, goal, variables, time_limit=10,
             error = _error_text(line)
         elif "end" in line:
             ended = True
-    if not ended and error is None:
+        elif line.get("done"):
+            done = True
+    # Killed between the end of the goal and the last line, the process may
+    # have lost rows it had not flushed: only "done" proves the output whole.
+    if not (ended and done) and error is None:
         error = _stopped(status, timeout)
     return Solutions(rows, error, stderr)
 

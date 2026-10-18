@@ -16,6 +16,8 @@ is not on the PATH (CI installs it only where the paper example runs).
 """
 import fractions
 import math
+import subprocess
+import sys
 import time
 
 import pytest
@@ -32,6 +34,13 @@ edge(b, c).
 spin :- repeat, fail.
 loop :- loop.
 """
+# Writes the driver's last line to the file it is given, then never exits.
+HANGS_AFTER_DONE = (
+    "import sys, time\n"
+    "with open(sys.argv[1], 'w', encoding='utf-8') as handle:\n"
+    "    handle.write('{\"done\":true}\\n')\n"
+    "time.sleep(600)\n"
+)
 
 
 @pytest.fixture
@@ -150,6 +159,41 @@ def test_the_time_limit_ends_a_goal_that_never_answers(facts):
     assert time.monotonic() - started < 5
     assert (result.rows, result.error) == (
         [], "time_limit_exceeded: Time limit exceeded")
+
+
+def test_a_process_that_wrote_its_last_line_and_hangs_is_killed_soon(
+        tmp_path):
+    """Ubuntu's SWI-Prolog 9 sometimes blocks in ``halt`` after the goal;
+    its output is complete, so the wait kills it ``EXIT_GRACE`` seconds
+    after ``{"done":true}`` instead of at the process timeout, and warns.
+    A Python child stands in for that swipl."""
+    output = tmp_path / "output.jsonl"
+    process = subprocess.Popen(
+        [sys.executable, "-c", HANGS_AFTER_DONE, str(output)],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, encoding="utf-8")
+    started = time.monotonic()
+    with pytest.warns(RuntimeWarning, match="did not exit"):
+        _, status = swipl._wait(process, str(output), timeout=60)
+    assert time.monotonic() - started < swipl.EXIT_GRACE + 10
+    assert status is None
+    assert process.poll() is not None
+
+
+def test_a_process_killed_before_its_last_line_is_an_error(tmp_path,
+                                                         monkeypatch):
+    """The goal ended (``end``), but the process was killed before
+    ``{"done":true}``: rows it had not flushed may be lost, so the result
+    is an error, with the rows that arrived"""
+    path = tmp_path / "facts.pl"
+    path.write_text(FACTS, encoding="utf-8")
+    lines = [{"q": 0, "row": [7]}, {"q": 0, "end": True}]
+    monkeypatch.setattr(swipl, "_run", lambda job, body, timeout: (
+        lines, "", None))
+    result = solutions(path, "X = 7", ["X"])
+    assert result.rows == [(7,)]
+    assert result.error == "swipl did not finish within {} s".format(
+        10 + swipl.PROCESS_MARGIN)
 
 
 def test_the_inference_limit_ends_an_endless_recursion(facts):
