@@ -151,7 +151,8 @@ def create_source_loader(metascript, loader):
                     code, id_, transformed = metascript.definition.collect(
                         None, source_path, "exec"
                     )
-                    exec(code, module.__dict__)
+                    # Runs, instrumented, the module that the script's import would run anyway
+                    exec(code, module.__dict__)  # nosec B102
                     create_module = True # Override bypass_modules
                 else:
                     if create_module:

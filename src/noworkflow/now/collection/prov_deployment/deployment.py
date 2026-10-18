@@ -6,15 +6,15 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import importlib
+import importlib.metadata
 import modulefinder
 import os
 import platform
+import re
 import socket
 import sys
 import weakref
 import getpass
-import pkg_resources
 
 from future.utils import viewitems, native_str
 from future.builtins import map as cvmap
@@ -25,6 +25,21 @@ from ...utils.io import print_msg, redirect_output
 from ...utils.metaprofiler import meta_profiler
 from ...utils.cross_version import string
 from ...utils.functions import version
+
+
+# Bound when noWorkflow starts, so that a traced script that patches
+# importlib.metadata (unittest.mock in a test suite) does not reach it
+find_distribution = importlib.metadata.distribution
+
+
+def distribution_key(name):
+    """A distribution name as pkg_resources compared it: case and runs of
+    "-" and "_" do not matter, dots do
+
+    importlib.metadata also folds dots (PEP 503), so the submodule
+    flask.json would find the plugin Flask-JSON.
+    """
+    return re.sub(r"[-_]+", "-", name).lower()
 
 
 class Deployment(object):
@@ -88,9 +103,19 @@ class Deployment(object):
 
         # Check package declared module version
         try:
-            # ToDo: This is slow! Is there any alternative?
-            return pkg_resources.get_distribution(module_name).version
-        except Exception:                                                        # pylint: disable=broad-except
+            metadata = find_distribution(module_name).metadata
+            dist_name = metadata.get("Name")
+            dist_version = metadata.get("Version")
+            # Metadata that names no version is not a version; before 3.15
+            # importlib.metadata.version returns None for it instead of raising
+            if (isinstance(dist_name, string) and isinstance(dist_version, string)
+                    and dist_version
+                    and distribution_key(dist_name) == distribution_key(module_name)):
+                return native_str(dist_version)
+        # A module name is rarely a distribution's name, and broken metadata
+        # raises more than PackageNotFoundError (KeyError, UnicodeDecodeError);
+        # any failure falls back to the attributes below
+        except Exception:                                                        # pylint: disable=broad-except  # nosec B110
             pass
 
         # Check explicitly declared module version
@@ -104,7 +129,8 @@ class Deployment(object):
                         return ".".join(cvmap(str, module_version))
                 except AttributeError:
                     pass
-        except Exception:                                                        # pylint: disable=broad-except
+        # A module whose attributes raise still gets its row, without a version
+        except Exception:                                                        # pylint: disable=broad-except  # nosec B110
             pass
 
         # If no other option work, return None

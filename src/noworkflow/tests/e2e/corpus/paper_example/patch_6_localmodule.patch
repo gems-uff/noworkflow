@@ -1,0 +1,15 @@
+--- a/credit_card_fraud.py
++++ b/credit_card_fraud.py
+@@ -5,9 +5,11 @@
+ from sklearn.model_selection import train_test_split
+ import pandas as pd
+ import sys
++from preprocessing import prepare
+ 
+ def get_df():
+-    return pd.read_csv('creditcard.csv', encoding='utf-8')
++    prepare('creditcard.csv', 'prepared.csv')
++    return pd.read_csv('prepared.csv', encoding='utf-8')
+ 
+ def get_pca():
+     pca_components = 10

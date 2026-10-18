@@ -11,7 +11,7 @@ module.exports = {
         // Add '.ts' and '.tsx' as a resolvable extension.
         extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
         fallback: {
-            crypto: require.resolve("crypto-browserify"),
+            crypto: false,
             stream: require.resolve("stream-browserify"),
             buffer: require.resolve("buffer/"),
             vm: require.resolve("vm-browserify"),

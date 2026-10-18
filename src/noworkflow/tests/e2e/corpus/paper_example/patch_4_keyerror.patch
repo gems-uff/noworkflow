@@ -1,0 +1,11 @@
+--- a/credit_card_fraud.py
++++ b/credit_card_fraud.py
+@@ -32,7 +32,7 @@
+ 
+ df = get_df()
+ X = df.drop('Class', axis=1)
+-y = df['Class']
++y = df['Clas']
+ pca = get_pca()
+ random_seed = 42
+ if len(sys.argv) > 1:

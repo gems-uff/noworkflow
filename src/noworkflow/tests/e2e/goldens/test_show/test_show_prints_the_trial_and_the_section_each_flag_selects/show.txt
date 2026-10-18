@@ -1,0 +1,12 @@
+[now] trial tags:
+  Tag: 1.1.2 Type: AUTO
+[now] trial information:
+  Id: <UUID1>
+  Sequence Key: 2
+  Status: Finished
+  Inherited Id: None
+  Script: simulation.py
+  Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28
+  Start: <TIMESTAMP>
+  Finish: <TIMESTAMP>
+  Duration: <DURATION>

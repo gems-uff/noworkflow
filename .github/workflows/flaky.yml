@@ -1,0 +1,71 @@
+name: Flaky tests (multi-trial)
+
+# Ten independent runs of the suite on the reference leg, each in its own
+# random order (pytest-randomly). A test that fails in some trials and not in
+# others depends on timing or on the order of the tests; the seed in each
+# trial's summary reproduces that order.
+on:
+  workflow_dispatch:
+
+# No job writes to the repository: only checkout, setup and artifact upload.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+# The CPython that uv downloads, never the runner's: see ci.yml.
+env:
+  UV_MANAGED_PYTHON: "1"
+
+jobs:
+  flaky-tests:
+    name: Trial ${{ matrix.trial }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        trial: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # The reference leg's Python: it moves with `reference` in ci.yml.
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.15"
+          enable-cache: true
+
+      # The package of the `test` job in ci.yml: without swipl the patterns
+      # and Prolog-fact tests skip, and no trial would repeat them.
+      - name: Install SWI-Prolog
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m "not golden and not paper" | tee "test-log-trial-${{ matrix.trial }}.log"
+
+      # The non-golden floor of ci.yml: these trials deselect the goldens,
+      # which only the reference leg compares, and the paper example, which
+      # has a job of its own.
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2904 \
+            "trial ${{ matrix.trial }}" \
+            'uv sync --locked --python 3.15 && uv run --no-sync pytest -m "not golden and not paper"'
+
+      - name: Upload the log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-trial-${{ matrix.trial }}
+          path: test-log-trial-${{ matrix.trial }}.log

@@ -15,6 +15,7 @@ from ..now.collection.metadata import Metascript
 from ..now.models.ast import create_trees
 from ..now.utils.cross_version import PY3
 from .helpers import models
+from .helpers.leaks import undo_collection
 
 
 NAME = "noworkflow/tests/examples/script.py"
@@ -27,6 +28,18 @@ def cluster(evaluation_nid):
 
 class CollectionTestCase(unittest.TestCase):
     """Helpers to test noWorkflow collection"""
+
+    def tearDown(self):
+        """Undo what collecting provenance changes in the process
+
+        Execution.configure replaces the four ``open`` functions and adds
+        names to the builtins, and collect_provenance inserts a module finder
+        in sys.meta_path that it only removes when the script succeeds. The
+        collector restores none of that, so every test would otherwise leak
+        into the next one (the leak detector in the root conftest.py would
+        fail it).
+        """
+        undo_collection()
 
     def find_all(self, store, **kwargs):
         """Find objects in object store by kwargs attributes"""
@@ -86,6 +99,20 @@ class CollectionTestCase(unittest.TestCase):
             self.assertEqual(self.metascript.execution.msg,
                              "the execution of trial -1 finished successfully")
             self.executed = True
+
+    def collect(self, code, **kwargs):
+        """Collect a script that may fail, as ``now run`` does
+
+        Unlike ``execute``, it does not assert that the script succeeded:
+        it returns the message of the execution. ``kwargs`` go to the
+        ``Metascript`` (for example ``coarse_granularity=True``).
+        """
+        # pylint: disable=attribute-defined-outside-init
+        self.maxDiff = None
+        self.script(code, **kwargs)
+        self.metascript.execution.collect_provenance()
+        self.executed = True
+        return self.metascript.execution.msg
 
     def clean_execution(self):
         """Clear database and execute"""
@@ -233,7 +260,7 @@ class CollectionTestCase(unittest.TestCase):
             ))
         print("Evaluations")
         for eva in viewvalues(self.metascript.evaluations_store.store):
-            if not eva.id in used_evals:
+            if eva.id not in used_evals:
                 print("  {}".format(
                     self.evaluation_repr(eva),
                 ))

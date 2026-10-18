@@ -7,8 +7,9 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from ..collection_testcase import CollectionTestCase
+from ..helpers.versions import only
 
-from ...now.utils.cross_version import PY2, PY36, only
+from ...now.utils.cross_version import PY2, PY36
 from ...now.models.ast import CodeWriter
 
 

@@ -1,0 +1,12 @@
+[now] trial diff:
+  Start changed from <TIMESTAMP> to <TIMESTAMP>
+  Finish changed from <TIMESTAMP> to <TIMESTAMP>
+  Duration text changed from <DURATION> to <DURATION>
+  Code hash changed from 7b37007618e4d03616352063871a0572579126da to 66c7915a0819fc79620f665ceca5c20366ce1ca5
+  Sequence key changed from 1 to 10
+  Parent id changed from <None> to <UUID1>
+
+[now] Brief file access diff
+[Additions]            | [Removals] | [Changes]
+(rb) prepared.csv      |            | (w) out.txt (new)
+(w) prepared.csv (new) |            |
