@@ -393,7 +393,7 @@ jobs:
       # runs whatever the bundle comparison said.
       - name: Type-check the vis (baseline)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: bash ../../.github/scripts/tsc-baseline.sh 8
+        run: bash ../../.github/scripts/tsc-baseline.sh 4
 
   # The running example of the noWorkflow 2 paper (#257), replayed from
   # src/noworkflow/tests/e2e/corpus/paper_example: a red here means the tool
