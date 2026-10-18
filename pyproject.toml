@@ -43,7 +43,7 @@ dependencies = [
     "parameterized",
     "requests",
     "ipykernel",
-    "setuptools<72",
+    "setuptools<84",
     "nbformat",
     "graphviz",
     # 2.3.3: the first release that requires a Werkzeug (2.3.7) whose
