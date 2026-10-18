@@ -106,9 +106,9 @@ only to measure, and the sync of step 3 of `CONTRIBUTING.md` goes back to the
 author with the rest of the round (step 4).
 
 **Read the issue and its comments, not only the title**, and also those of the
-related and closed issues — in English and in Portuguese, the way `AGENTS.md`
-prescribes (`gh issue list --state all --search`, `git log --all
---grep="#NNN"`). That is where the product decision already taken, the reverted
+related and closed issues — found the way `AGENTS.md` prescribes before
+opening an issue (issuefinder, then `git log --all --grep="#NNN"`). That is
+where the product decision already taken, the reverted
 attempt and what was already verified live; without it, it is easy to treat as
 new a part that was already settled, or to reopen a closed discussion.
 
@@ -301,7 +301,7 @@ and `AGENTS.md` has the cycle.
 Two things that do **not** justify handing back, and become a written note: a
 deviation from the commit-message convention, and an adjacent finding outside
 the PR's scope — that one becomes its own issue (search the existing ones
-first, closed included, in both languages).
+first, as `AGENTS.md` prescribes).
 
 ## 5. Cover the gaps
 

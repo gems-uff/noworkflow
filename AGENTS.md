@@ -106,11 +106,20 @@ of date, fix it there.
   work where "one commit per step" seems to authorize committing alone.
 - Documentation and comments say **"the maintainer"**, never a person's name:
   the role outlives whoever holds it.
-- **Before opening an issue, search the existing ones, closed included:**
-  `gh issue list --state all --search "<term>"`, in English and in Portuguese
-  (older issues and comments are in both). When a related issue exists, also
-  read the commits that mention it (`git log --all --grep="#NNN"`): that is
-  where the product decision, the reverted attempt or the partial fix is.
+- **Before opening an issue, search the existing ones, closed included,**
+  with [issuefinder](https://github.com/gems-uff/issuefinder) over the draft
+  of the new one: `uv run --project ../issuefinder issuefinder query -f
+  <draft>` from the checkout. It matches by meaning across English and
+  Portuguese (older issues and comments are in both) and by exact tokens (an
+  error message, a name, a path), and it syncs the issues before answering.
+  It lives in a sibling directory of the checkout; when it is missing, clone
+  it there (`gh repo clone gems-uff/issuefinder ../issuefinder`). Its
+  environment and its model (about 3 GB) land outside the checkout, so
+  setting it up is an install and needs the human's go-ahead; until then,
+  search with `gh issue list --state all --search "<term>"`, in both
+  languages. When a related issue exists, also read the commits that mention
+  it (`git log --all --grep="#NNN"`): that is where the product decision, the
+  reverted attempt or the partial fix is.
 - **An issue is born with its Type set:** `gh issue create --type Bug`, or
   `gh issue edit N --type Feature` afterwards. The three values are `Bug`
   (the tool does badly what it already does), `Feature` (a new capability or a

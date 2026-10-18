@@ -192,6 +192,11 @@ Optional, each for one purpose:
   skips those tests without it. The test of the `%%now_prolog` magic needs
   `pyswip-alt` too, and skips without it. The reference-leg container and the legs
   of the `test` job of CI have it.
+- **[issuefinder](https://github.com/gems-uff/issuefinder)**, cloned next to
+  the checkout (`../issuefinder`), to search the existing issues before
+  opening one: it finds an issue written with other words or in the other
+  language, which a keyword search misses. Its README has the setup; the
+  environment and the model take about 3 GB.
 
 ### Setting up `.venv`
 
