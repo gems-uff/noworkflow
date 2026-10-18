@@ -1,6 +1,6 @@
 """Decorators that are a name or an attribute, not a call: staticmethod,
 classmethod, functools.cache and a function of the script; property is in
-decorator_property.py (#298; #236 under
+decorator_property.py (#236 under
 -cg)"""
 import functools
 

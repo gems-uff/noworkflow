@@ -1,5 +1,5 @@
-"""Doubled braces in f-strings, next to replacement fields
-(#299)"""
+"""Doubled braces in f-strings, next to replacement
+fields"""
 
 name = "items"
 count = 3

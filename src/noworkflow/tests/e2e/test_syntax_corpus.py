@@ -160,17 +160,6 @@ POSITIONAL_ONLY = (
     "ones, and process_parameters (transformer_stmt.py), which both call, "
     "never reads arguments.posonlyargs: "
 )
-DECORATED_DEFINITIONS = (
-    "#298: pyposast's adjust_decorator "
-    "(pyposast/visitor.py) looks up the '@' of each decorator with "
-    "ElementDict.find_previous (pyposast/parser.py), whose bisect_left lands "
-    "on the decorator's own '@' when the decorator follows it with no "
-    "space, and steps back one: each decorated definition starts at the "
-    "'@' token before its own (a matrix multiplication counts), and the "
-    "one that holds the first '@' of the file wraps to the last '@' of the "
-    "file (index -1), pulled back to the earlier of that and the start of "
-    "its own last statement; "
-)
 COARSE_TARGET = (
     "#275: under -cg, visit_augassign and "
     "visit_annassign (transformer_stmt.py) take the coarse shortcut only "
@@ -207,17 +196,6 @@ DECORATOR_FALLBACK = Defect(
     "never runs",
     "'Name' object has no attribute 'name'",
 )
-POSITIONAL_ONLY_DEFAULTS = Defect(
-    "#304: when no positional-only "
-    "parameter has a default and every positional-or-keyword parameter "
-    "after '/' has one, pyposast's visit_arguments (pyposast/visitor.py) "
-    "pairs the positional-only parameters with those defaults, finds no "
-    "'=' after them (find_next_equal, pyposast/utils.py, returns (None, "
-    "None)) and NodeWithPosition (pyposast/node_helpers.py) raises "
-    "TypeError unpacking it before the transformer runs; the script never "
-    "runs (fixed upstream by JoaoFelipe/pyposast#3, open)",
-    "cannot unpack non-iterable NoneType object",
-)
 LAZY_IMPORT_IN_TRY = (
     "#292: process_script (transformer_stmt.py) wraps "
     "the module body in try/except/finally, and Python rejects a lazy "
@@ -225,31 +203,6 @@ LAZY_IMPORT_IN_TRY = (
     "Definition.collect, definition.py)"
 )
 LAZY_IMPORT_SIGNATURE = "lazy import not allowed inside try/except blocks"
-FSTRING_PREFIX = (
-    "#302: before Python 3.12 an f-string is a "
-    "single STRING token, and TokenCollector.loop (pyposast/parser.py) "
-    "takes a STRING token for an f-string only when it starts with a "
-    "lowercase 'f' (t_string.startswith('f')), so for any other prefix "
-    "(F, RF, rf, Rf, rF, FR, Fr) it records none of the f-string's braces "
-    "and collects none of its fields; visit_JoinedStr (pyposast/visitor.py) "
-    "then looks the '{' of each field up from the start of the f-string "
-    "(ElementDict.find_next, "
-    "pyposast/parser.py), which takes the next brace of the file, of a "
-    "later display or lowercase f-string (not exercised here), and raises "
-    "IndexError when none follows"
-)
-FSTRING_PREFIX_SIGNATURE = (
-    "in visit_JoinedStr\n"
-    "    value.bracket = self.brackets.find_next(last_position)")
-FSTRING_NESTED_STRING = (
-    "#301: pyposast's visit_JoinedStr "
-    "(pyposast/visitor.py) places an f-string at the first string token "
-    "that ends after the f-string starts (ElementDict.find_next, "
-    "pyposast/parser.py), and a string inside one of its fields, a nested "
-    "f-string or a plain string, ends before the f-string does: the "
-    "f-string takes the span of that string, and an f-string with no "
-    "string in its fields is placed right"
-)
 
 # The source text of the f-strings of fstring_prefix.py.
 PREFIXED = ('F"hello {name}"', r'rf"\d+ {count}"', r'Rf"\t{name}"',
@@ -308,15 +261,6 @@ CASES = (
                     ("fstring", 10, PREFIXED[3]), ("fvalue", 10, "{count}"),
                     ("fstring", 11, PREFIXED[4]), ("fvalue", 11, "{name}"),
                     ("fstring", 12, PREFIXED[5]), ("fvalue", 12, "{count}")),
-        runs=(Defect(
-            FSTRING_PREFIX + ": the first field of the script raises "
-            "IndexError before the transformer runs, which escapes "
-            "Definition.parse (definition.py), so the script never runs",
-            FSTRING_PREFIX_SIGNATURE, before=(3, 12)),),
-        transforms=(Defect(
-            FSTRING_PREFIX + ": IndexError before the transformer runs, "
-            "and nothing is evaluated",
-            FSTRING_PREFIX_SIGNATURE, before=(3, 12)),),
     ),
     # The outer f-string is named only on line 9: on lines 10 and 11 the
     # JoinedStr of each format spec is recorded with the span of the whole
@@ -348,17 +292,6 @@ CASES = (
         "f-string assigned and passed with a second argument",
         components=(("fstring", 6, TOTAL), ("fstring", 7, TOTAL),
                     ("fstring", 8, TOTAL)),
-        transforms=(Defect(
-            "#300: pyposast's visit_Call "
-            "(pyposast/visitor.py) narrows a call's only argument by one "
-            "character at each end (increment_node_position, "
-            "pyposast/node_helpers.py), expecting it to span the call's "
-            "parentheses, as update_expr_parenthesis makes every expression "
-            "that visit_expr wraps; visit_JoinedStr is not wrapped, so the "
-            "f-string loses its first and last characters, while the same "
-            "f-string assigned to a name or passed with a second argument "
-            "is placed right",
-            misplaced("fstring", 7, (6, 8), name=TOTAL)),),
     ),
     Case(
         "fstring_braces",
@@ -368,26 +301,10 @@ CASES = (
                     ("fvalue", 7, "{name}"), ("fvalue", 7, "{count}"),
                     ("fstring", 8, 'f"{{}} placeholder and {count}"'),
                     ("fvalue", 8, "{count}")),
-        runs=(Defect(
-            "#299: before Python 3.12 an f-string "
-            "is a single STRING token, and TokenCollector.loop "
-            "(pyposast/parser.py), which extract_tokens runs from the "
-            "constructor of pyposast's LineProvenanceVisitor, matches its "
-            "braces itself: it pairs the first brace of a literal '{{' "
-            "with the next unmatched '}' and re-tokenizes the text between "
-            "them, which starts with an unclosed '{': tokenize.TokenError "
-            "before the transformer runs; the script never runs",
-            "TokenError", before=(3, 12)),),
-        transforms=(Defect(
-            "#299: TokenCollector.loop "
-            "(pyposast/parser.py) raises tokenize.TokenError on an f-string "
-            "with a literal '{{' before the transformer runs: nothing is "
-            "evaluated",
-            "TokenError", before=(3, 12)),),
     ),
     # Not named: the inner f-string of line 9, whose format spec is recorded
-    # with its span, and the fields inside a format spec, which Python 3.11
-    # records with the span of the field that holds the spec.
+    # with its span, and {width}, the field of the outer format spec, which
+    # takes the span of {value:.{precision}f} (#423).
     Case(
         "fstring_nested",
         "f-strings nested in a field and in a format spec, each assigned "
@@ -395,6 +312,7 @@ CASES = (
         components=(("fstring", 9, NESTED_FORMAT_SPEC),
                     ("fvalue", 9, "{f'{value:.{precision}f}':>{width}}"),
                     ("fvalue", 9, "{value:.{precision}f}"),
+                    ("fvalue", 9, "{precision}"),
                     ("fstring", 10, NESTED_JOIN),
                     ("fstring", 10, "f'<{item}>'"),
                     ("fvalue", 10, "{', '.join(f'<{item}>' for item in items)}"),
@@ -403,9 +321,6 @@ CASES = (
                     ("fstring", 11, NESTED_MIDDLE),
                     ("fvalue", 11, '''{f"{f'{width}'}"}'''),
                     ("fvalue", 11, "{f'{width}'}"), ("fvalue", 11, "{width}")),
-        transforms=(Defect(
-            FSTRING_NESTED_STRING,
-            misplaced("fstring", 9, name=NESTED_FORMAT_SPEC)),),
     ),
     Case(
         "fstring_pep701",
@@ -422,9 +337,6 @@ CASES = (
                     ("fvalue", 8, "{\n    len(names)  # how many names\n}"),
                     ("fstring", 11, BACKSLASH),
                     ("fvalue", 11, r"""{'\n'.join(names)}""")),
-        transforms=(Defect(
-            FSTRING_NESTED_STRING,
-            misplaced("fstring", 6, name=SAME_QUOTE)),),
     ),
     Case(
         "except_star",
@@ -481,20 +393,6 @@ CASES = (
         "PEP 750 template strings, with and without interpolations "
         "(no visitor)",
         min_py=(3, 14),
-        runs=(Defect(
-            "#262: pyposast has no positions for TemplateStr and "
-            "Interpolation: its visit_Str (pyposast/visitor.py) looks the "
-            "string parts of the t-string up among the string tokens, where "
-            "there are none, and ElementDict.find_next (pyposast/parser.py) "
-            "raises IndexError before the transformer runs; the exception "
-            "escapes Definition.parse (definition.py), so the script never "
-            "runs",
-            "in visit_Str"),),
-        transforms=(Defect(
-            "#262: pyposast raises IndexError in visit_Str "
-            "(pyposast/visitor.py) on the t-string before the transformer "
-            "runs: only the script's own code component is stored",
-            "in visit_Str"),),
     ),
     Case(
         "async_await",
@@ -591,9 +489,6 @@ CASES = (
         components=(("class_def", 6, "Item"), ("class_def", 13, "Point"),
                     ("ann_assign", 8), ("ann_assign", 10),
                     ("ann_assign", 16)),
-        transforms=(Defect(
-            DECORATED_DEFINITIONS + "Point starts at the '@' of Item",
-            misplaced("class_def", 13, (6,), name="Point")),),
     ),
     Case(
         "decorator_with_args",
@@ -613,9 +508,6 @@ CASES = (
             "and re-enters itself through Collector._call until "
             "RecursionError",
             "RecursionError x-greeting greet thing"),),
-        transforms=(Defect(
-            DECORATED_DEFINITIONS + "greet starts at the '@' of wrapper",
-            misplaced("function_def", 22, (8,), name="greet")),),
     ),
     Case(
         "decorator",
@@ -625,17 +517,15 @@ CASES = (
                     ("function_def", 23, "make"),
                     ("function_def", 29, "square"),
                     ("function_def", 35, "plain")),
-        transforms=(Defect(
-            DECORATED_DEFINITIONS + "make starts at the '@' of double",
-            misplaced("function_def", 23, (19,), name="make")),),
     ),
     Case(
         "decorator-cg",
         "decorators that are a name or an attribute under coarse "
-        "granularity (no component is listed: the function_defs would add "
-        "the pyposast misplacement of the decorator case)",
+        "granularity (only the first function_def is listed: the failing "
+        "run stores none of the later ones)",
         script="decorator",
         flags=("-cg",),
+        components=(("function_def", 19, "double"),),
         runs=(DECORATOR_FALLBACK,),
         transforms=(DECORATOR_FALLBACK,),
     ),
@@ -653,26 +543,12 @@ CASES = (
             "a __dict__ (a property here) rejects the assignment: "
             "AttributeError",
             "'property' object has no attribute 'original_def'"),),
-        transforms=(Defect(
-            DECORATED_DEFINITIONS + "the setter starts at the getter's '@'",
-            misplaced("function_def", 13, (9, 11), name="celsius")),),
     ),
     Case(
         "decorated_definitions",
         "consecutive decorated classes whose names are never used again",
         components=(("class_def", 12, "First"),
                     ("class_def", 17, "Second")),
-        runs=(Defect(
-            DECORATED_DEFINITIONS + "visit_ClassDef (pyposast/visitor.py) "
-            "then looks for the class name after that position, and the "
-            "first decorated class of the file, which lands on a later '@', "
-            "has a name never used after it: IndexError before the "
-            "transformer runs; the script never runs",
-            "self.names[node.name].find_next(position)"),),
-        transforms=(Defect(
-            DECORATED_DEFINITIONS + "visit_ClassDef raises IndexError "
-            "looking for the class name after it: nothing is evaluated",
-            "self.names[node.name].find_next(position)"),),
     ),
     Case(
         "starred_targets",
@@ -716,18 +592,17 @@ CASES = (
         "dictionary unpacking in a display",
         components=(("dict", 5), ("dict", 7)),
         runs=(Defect(
-            "#201 (PR, with JoaoFelipe/pyposast#2): pyposast's "
-            "visit_dict_like (pyposast/visitor.py) reads the position of "
-            "every key, and the key of a ** item is None: AttributeError "
-            "before the transformer runs; the exception escapes "
-            "Definition.parse (definition.py), so the script never runs",
-            "in visit_dict_like"),),
+            "#201 (PR): visit_Dict (transformer_expr.py) hands every item "
+            "to _dict_itemize, which reads the position of its key, and the "
+            "key of a ** item is None: AttributeError in the transformer; "
+            "the exception escapes Definition.parse (definition.py), so the "
+            "script never runs",
+            "in _dict_itemize"),),
         transforms=(Defect(
-            "#201 (PR, with JoaoFelipe/pyposast#2): pyposast raises "
-            "AttributeError on the None key of a ** item before the "
-            "transformer runs: only the script's own code component is "
-            "stored",
-            "in visit_dict_like"),),
+            "#201 (PR): _dict_itemize (transformer_expr.py) raises "
+            "AttributeError on the None key of a ** item: nothing is "
+            "evaluated",
+            "in _dict_itemize"),),
     ),
     Case(
         "class_bases",
@@ -957,8 +832,6 @@ CASES = (
         "a default after '/' with no default before it, in a def and a "
         "lambda that are never called",
         components=(("param", 7, "factor"), ("param", 11, "factor")),
-        runs=(POSITIONAL_ONLY_DEFAULTS,),
-        transforms=(POSITIONAL_ONLY_DEFAULTS,),
     ),
     Case(
         "keyword_only",
@@ -1033,24 +906,8 @@ CASES = (
         components=(("import", 11), ("import_from", 12)),
         runs=(Defect(LAZY_IMPORT_IN_TRY + ", so the script never runs",
                      LAZY_IMPORT_SIGNATURE),),
-        transforms=(Defect(
-            LAZY_IMPORT_IN_TRY + ": nothing is evaluated; "
-            "#303 is a second layer behind it, so the "
-            "case flips only when both are fixed",
-            LAZY_IMPORT_SIGNATURE),
-                    Defect(
-            "#303: start_by_keyword "
-            "(pyposast/node_helpers.py) expects an import statement to "
-            "start at its keyword, and with the 'lazy' soft keyword in "
-            "front it falls back to ElementDict.find_previous "
-            "(pyposast/parser.py), which takes the previous 'import' token "
-            "of the file, or wraps to the last one when none precedes: the "
-            "lazy import starts at the plain import before it (and a lazy "
-            "from at its 'from', without 'lazy'). Every lazy import sits at "
-            "module level, which "
-            "process_script (transformer_stmt.py) always wraps in try, so "
-            "the case flips only when #292 is fixed too",
-            misplaced("import", 11, (4, 5)))),
+        transforms=(Defect(LAZY_IMPORT_IN_TRY + ": nothing is evaluated",
+                           LAZY_IMPORT_SIGNATURE),),
     ),
     Case(
         "lazy_import_alone",
@@ -1060,10 +917,8 @@ CASES = (
         components=(("import", 10),),
         runs=(Defect(LAZY_IMPORT_IN_TRY + ", so the script never runs",
                      LAZY_IMPORT_SIGNATURE),),
-        transforms=(Defect(
-            LAZY_IMPORT_IN_TRY + ": nothing is evaluated (the lazy import "
-            "is the only 'import' token, so pyposast keeps it on its line)",
-            LAZY_IMPORT_SIGNATURE),),
+        transforms=(Defect(LAZY_IMPORT_IN_TRY + ": nothing is evaluated",
+                           LAZY_IMPORT_SIGNATURE),),
     ),
     Case(
         "comprehension_filters",

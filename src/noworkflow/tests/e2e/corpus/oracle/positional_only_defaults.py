@@ -1,5 +1,5 @@
-"""A parameter with a default after the positional-only marker
-(#304)
+"""A parameter with a default after the positional-only marker,
+with no default before it
 
 ``scale`` takes ``value`` positionally and ``factor`` either way, with a
 default; the lambda does the same. Neither is called, so the

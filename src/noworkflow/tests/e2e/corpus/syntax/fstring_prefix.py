@@ -1,6 +1,6 @@
 """f-strings whose prefix does not start with a lowercase f: F, rf, Rf,
-rF, FR and Fr, each with a replacement field and assigned to a name
-(#302)"""
+rF, FR and Fr, each with a replacement field and assigned to a
+name"""
 
 name = "ana"
 count = 3

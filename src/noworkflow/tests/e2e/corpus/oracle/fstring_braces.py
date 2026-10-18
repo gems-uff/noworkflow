@@ -1,4 +1,4 @@
-"""Doubled braces in f-strings (#299)
+"""Doubled braces in f-strings
 
 Templates that keep literal braces next to interpolated values, as in
 generated JSON or format strings.

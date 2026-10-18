@@ -1,6 +1,6 @@
 """f-strings nested in f-strings, in a replacement field and in a format
-spec, with a different quote at each level (valid before PEP 701)
-(#301)"""
+spec, with a different quote at each level
+(valid before PEP 701)"""
 
 width = 10
 precision = 3

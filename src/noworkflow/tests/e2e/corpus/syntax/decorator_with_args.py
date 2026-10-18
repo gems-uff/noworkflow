@@ -1,5 +1,5 @@
 """Decorators that take arguments, stacked on a function and on a class
-(#306, #298)"""
+(#306)"""
 import functools
 
 

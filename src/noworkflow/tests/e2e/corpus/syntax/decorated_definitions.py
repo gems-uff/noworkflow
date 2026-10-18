@@ -1,5 +1,5 @@
 """Consecutive decorated classes whose names are never used again, recorded
-by a registry-style decorator (#298)"""
+by a registry-style decorator"""
 
 REGISTRY = []
 

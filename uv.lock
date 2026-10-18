@@ -2867,10 +2867,11 @@ wheels = [
 
 [[package]]
 name = "pyposast"
-version = "1.6.2"
+version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/06/03/6ca5b1b68907785102609f6caac38983178102fb905756c9bbc9d65f8005/pyposast-1.7.0.tar.gz", hash = "sha256:17055cdf028e7a3a2ea7518743cc19edf42781b87fe1cd3f80b61a179688ba75", size = 36873, upload-time = "2026-10-18T03:07:25.451Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/3a/ba1a6d07d7592c1c4bfc381403c3736dbe2bdae921157f9500cf4a97783b/PyPosAST-1.6.2-py2.py3-none-any.whl", hash = "sha256:a5da7d6b586ea4f4d8f66124e09f02ce14be8180506e84103759a19d6bebf5c3", size = 23638, upload-time = "2024-09-25T17:53:13.775Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/0a/d45455c88fd1d64d0b763aacdadaadc27898e7810cec7fd0ba6f6dfdafcf/pyposast-1.7.0-py2.py3-none-any.whl", hash = "sha256:b0c5078a3de2255bba7b4d1a6a8099186ceb702cf71c120f255510f47bb5eb44", size = 24204, upload-time = "2026-10-18T03:07:24.157Z" },
 ]
 
 [[package]]

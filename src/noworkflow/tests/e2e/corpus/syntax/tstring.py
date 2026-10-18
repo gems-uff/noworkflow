@@ -1,5 +1,5 @@
 """Template strings (PEP 750, 3.14): t"..." with interpolations, a format
-spec and none at all (#262)"""
+spec and none at all"""
 
 name = "noWorkflow"
 version = 2

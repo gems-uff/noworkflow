@@ -26,9 +26,9 @@ The expected values never come from the collector: the spans come from the
 script's text, the parts from Python's own ``ast``, and the values from
 plain Python semantics, read back from the script's namespace where an
 object is involved (reprs carry addresses). The f-strings avoid the
-constructs of the other open f-string issues (no ``{{``, no ``F``/``rf``
-prefix, no string inside a field, no f-string as a call's only argument,
-#299 to #302), so that only #160 shows.
+constructs that the syntax corpus pins on their own (no ``{{``, no
+``F``/``rf`` prefix, no string inside a field, no f-string as a call's
+only argument), so that only #160 shows.
 """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)

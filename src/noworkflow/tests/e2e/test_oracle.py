@@ -327,16 +327,6 @@ POSITIONAL_ONLY_PARAMETERS = Defect(
     "match_arguments (collector.py) reads .active from one of the script's "
     "values: AttributeError",
     signature="object has no attribute 'active'")
-PYPOSAST_POSITIONAL_ONLY_DEFAULTS = Defect(
-    "#304: when no positional-only "
-    "parameter has a default and every positional-or-keyword parameter "
-    "after '/' has one, pyposast's visit_arguments (pyposast/visitor.py) "
-    "pairs the positional-only parameters with those defaults, finds no "
-    "'=' after them (find_next_equal, pyposast/utils.py, returns (None, "
-    "None)) and NodeWithPosition (pyposast/node_helpers.py) raises "
-    "TypeError unpacking it before the transformer runs; the script never "
-    "runs (fixed upstream by JoaoFelipe/pyposast#3, open)",
-    signature="cannot unpack non-iterable NoneType object")
 LAMBDA_IN_COLLECTION = Defect(
     "#290: the decorator that Collector._function_def "
     "(collector.py) returns pushes a DependencyAware on the enclosing "
@@ -445,14 +435,6 @@ RECURSION_DEPTH = Defect(
     "default recursion limit of 1000 stops a recursion 400 levels deep "
     "with RecursionError",
     signature="400 levels: RecursionError")
-PYPOSAST_FSTRING_BRACES = Defect(
-    "#299: before Python 3.12 an f-string is a "
-    "single token, and pyposast's TokenCollector.loop (pyposast/parser.py) "
-    "matches its braces itself: it pairs the first brace of a literal '{{' "
-    "with the next unmatched '}' and re-tokenizes the text between them, "
-    "which starts with an unclosed '{': tokenize.TokenError before the "
-    "transformer runs; the script never runs",
-    signature="TokenError", before=(3, 12))
 BUILTINS_IS_A_DICT = Defect(
     "#269: Metascript.clear_namespace "
     "(collection/metadata.py) sets the script's __builtins__ to the "
@@ -774,8 +756,7 @@ CASES = (
         case("abc_class_repr.py", defects=(CLASS_REPR_UNDER_A_METACLASS,)),
         case("value_comparisons.py", defects=(COLLECTOR_COMPARES_VALUES,)),
         case("positional_only.py", defects=(POSITIONAL_ONLY_PARAMETERS,)),
-        case("positional_only_defaults.py",
-             defects=(PYPOSAST_POSITIONAL_ONLY_DEFAULTS,)),
+        case("positional_only_defaults.py"),
         case("lambda_in_collection.py", defects=(LAMBDA_IN_COLLECTION,)),
         case("class_body_comprehension.py",
              defects=(CLASS_BODY_COMPREHENSION,)),
@@ -790,7 +771,7 @@ CASES = (
         case("dropped_generator.py", defects=(GENERATOR_ACTIVATION_CYCLE,)),
         case("open_files_kept_alive.py", defects=(OPEN_FILES_KEPT_ALIVE,)),
         case("deep_recursion.py", defects=(RECURSION_DEPTH,)),
-        case("fstring_braces.py", defects=(PYPOSAST_FSTRING_BRACES,)),
+        case("fstring_braces.py"),
         case("builtins_module.py", defects=(BUILTINS_IS_A_DICT,)),
         case("genexp_iterable_snapshot.py",
              defects=(GENEXP_LAZY_FIRST_ITERABLE,)),

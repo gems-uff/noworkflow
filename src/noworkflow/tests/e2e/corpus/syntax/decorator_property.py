@@ -1,5 +1,5 @@
 """property used as a decorator, for a getter and a setter
-(#281, #298)"""
+(#281)"""
 
 
 class Temperature:

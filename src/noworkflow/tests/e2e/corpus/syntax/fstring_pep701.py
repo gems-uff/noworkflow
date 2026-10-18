@@ -1,6 +1,6 @@
 """PEP 701 f-strings (3.12): the same quote nested, a replacement field that
-spans lines and holds a comment, and a backslash inside a field
-(#301)"""
+spans lines and holds a comment, and a backslash inside a
+field"""
 
 names = ["ana", "bia"]
 same_quote = f"{f"{f"{1 + 1}"}"}"

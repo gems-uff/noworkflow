@@ -1,5 +1,5 @@
-"""@dataclass with arguments: defaults, default_factory, order and frozen
-(#298)"""
+"""@dataclass with arguments: defaults, default_factory, order and
+frozen"""
 from dataclasses import asdict, dataclass, field
 
 
