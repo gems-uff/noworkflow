@@ -151,8 +151,10 @@ from .oracle import (
 ORACLE = CORPUS / "oracle"
 # What the scripts read, import or start, next to them: the data file of
 # file_io.py, the package of modules.py, open_wrapper_warning.py and
-# open_files_kept_alive.py, and the child of the process themes.
-SUPPORT = ("inventory.txt", "toolkit", "children")
+# open_files_kept_alive.py, the child of the process themes, and the
+# distribution that duplicate_distributions.py counts.
+SUPPORT = ("inventory.txt", "toolkit", "children",
+           "oracle_marker-1.0.dist-info")
 # Clutter that the file manager of a system leaves, not a script.
 IGNORED = ("Thumbs.db", "desktop.ini")
 # What the scripts that start processes use and Windows lacks: os.fork(),
@@ -662,6 +664,16 @@ DISTRIBUTION_LOOKUP = Defect(
     "answers a question per module that plain Python never asks, and its "
     "code runs traced",
     signature="asked for: ['sched'")
+DISTRIBUTIONS_LISTED_TWICE = Defect(
+    "#420: Execution.collect_provenance (prov_execution/execution.py) puts "
+    "the Finder that finder(metascript) builds in "
+    "prov_deployment/py3module.py first in sys.meta_path around the exec of "
+    "the script; Finder subclasses PathFinder for its find_spec and so "
+    "inherits find_distributions, and importlib.metadata.Distribution."
+    "discover asks every finder of sys.meta_path that has it: Finder and "
+    "the standard PathFinder each walk sys.path, and every distribution "
+    "comes back twice",
+    signature="oracle-marker listed: 2")
 
 
 def case(script, *args, flags=(), defects=(), suffix="", marks=()):
@@ -795,6 +807,8 @@ CASES = (
         case("subprocess_preexec_fn.py", defects=(PREEXEC_FN_CALLBACK,),
              marks=(NEEDS_PREEXEC_FN,)),
         case("distribution_finder.py", defects=(DISTRIBUTION_LOOKUP,)),
+        case("duplicate_distributions.py",
+             defects=(DISTRIBUTIONS_LISTED_TWICE,)),
     ]
 )
 
