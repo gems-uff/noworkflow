@@ -99,10 +99,10 @@ it can go.
   and an audit only lists the candidates.
 - A module that imports a package no declaration covers — the git content
   engines in `src/noworkflow/now/persistence/content/` import `pygit2` and
-  `dulwich`; `persistence/serializers.py` imports `jsonpickle`; the magics
-  import IPython, declared only in the extras — is the same kind of product
-  decision: an extra, a runtime dependency, or a documented "install it
-  yourself". Write the decision in an issue, not in a guess.
+  `dulwich`; the magics import IPython, declared only in the extras — is
+  the same kind of product decision: an extra, a runtime dependency, or a
+  documented "install it yourself". Write the decision in an issue, not in
+  a guess.
 - A test-only package in `[project.dependencies]` exists because the tests
   ship inside the wheel (`src/noworkflow/tests`). The reason belongs next to
   it as a comment; it leaves with the tests.

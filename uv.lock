@@ -1338,6 +1338,15 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonpickle"
+version = "4.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/37/95fb728a57b0b17864041daea006bbedd9765e8030755e4ca84ba20ae137/jsonpickle-4.1.4.tar.gz", hash = "sha256:8adf24cca611809b55ff5ed2ace850e1a3e4370dad5d363df71569b8f46c9645", size = 317936, upload-time = "2026-10-15T15:16:53.184Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/25/7fc775e2c25d5484a1333bb2d3d59adf024438dee1ff416675293fb6ea75/jsonpickle-4.1.4-py3-none-any.whl", hash = "sha256:c46024ba4acd8adb9a8b8485d074e141cbfacafe334c2aa982e5b32efabc2f0e", size = 47763, upload-time = "2026-10-15T15:16:51.794Z" },
+]
+
+[[package]]
 name = "jsonpointer"
 version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2205,6 +2214,7 @@ dependencies = [
 all = [
     { name = "cython" },
     { name = "ipython" },
+    { name = "jsonpickle" },
     { name = "jupyter" },
     { name = "matplotlib" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -2252,6 +2262,7 @@ requires-dist = [
     { name = "ipykernel" },
     { name = "ipython", marker = "extra == 'all'" },
     { name = "ipython", marker = "extra == 'notebook'" },
+    { name = "jsonpickle", marker = "extra == 'all'" },
     { name = "jupyter", marker = "extra == 'all'" },
     { name = "jupyter", marker = "extra == 'notebook'" },
     { name = "matplotlib", marker = "extra == 'all'" },
