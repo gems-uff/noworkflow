@@ -1190,18 +1190,6 @@ wheels = [
 ]
 
 [[package]]
-name = "importlib-metadata"
-version = "6.4.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "zipp" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/20/fc/a0e728307f38609ef849d813c95dc974d344a3d395f62013ddcd8fbe0bfe/importlib_metadata-6.4.1.tar.gz", hash = "sha256:eb1a7933041f0f85c94cd130258df3fb0dec060ad8c1c9318892ef4192c47ce1", size = 52684, upload-time = "2023-04-15T15:24:54.043Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/1d/11424f62d6057539224541f69282c300f11ac3f7dde8a92294145af8ea7f/importlib_metadata-6.4.1-py3-none-any.whl", hash = "sha256:63ace321e24167d12fbb176b6015f4dbe06868c54a2af4f15849586afb9027fd", size = 22557, upload-time = "2023-04-15T15:24:52.338Z" },
-]
-
-[[package]]
 name = "iniconfig"
 version = "2.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2204,7 +2192,6 @@ dependencies = [
     { name = "flask" },
     { name = "future" },
     { name = "graphviz" },
-    { name = "importlib-metadata" },
     { name = "ipykernel" },
     { name = "nbformat" },
     { name = "parameterized" },
@@ -2264,7 +2251,6 @@ requires-dist = [
     { name = "flask", marker = "extra == 'demo'" },
     { name = "future" },
     { name = "graphviz" },
-    { name = "importlib-metadata", specifier = "==6.4.1" },
     { name = "ipykernel" },
     { name = "ipython", marker = "extra == 'all'" },
     { name = "ipython", marker = "extra == 'notebook'" },
