@@ -339,6 +339,25 @@ CASES = (
                     ("fvalue", 11, r"""{'\n'.join(names)}""")),
     ),
     Case(
+        "fstring_spec_field",
+        "a field in the format spec of a field whose expression holds a "
+        "brace, a nested f-string's field or a dict display, next to the "
+        "same spec after a plain name",
+        components=(("fvalue", 7, "{width}"), ("fvalue", 8, "{width}"),
+                    ("fvalue", 9, "{width}")),
+        transforms=(Defect(
+            "#423: pyposast's visit_FormattedValue "
+            "(pyposast/visitor.py) looks the '{' of each field of the format "
+            "spec up from just after the '{' of the field that holds the "
+            "spec (visit_string_like, brackets.find_next, "
+            "pyposast/parser.py), and the expression of that field comes "
+            "first: a brace inside it, the field of a nested f-string or a "
+            "dict display, is found before the spec's own, and the spec's "
+            "field takes its span, while the same spec after a plain name "
+            "is placed right",
+            misplaced("fvalue", 8, (7,), name="{width}")),),
+    ),
+    Case(
         "except_star",
         "except* over an exception group (TryStar, no visitor)",
     ),
