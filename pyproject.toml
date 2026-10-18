@@ -33,7 +33,11 @@ dependencies = [
     "pyposast",
     "apted",
     "future",
-    "SQLAlchemy>=1.4.29,<=1.4.47",
+    # <2: the models use the 1.4 API that 2.0 removed (select([...]),
+    # Connection.execute with autocommit, string statements; the SQLAlchemy
+    # premises of tests/premises say where). >=1.4.29 came with 8fdde50,
+    # which moved the test helpers to Session.get.
+    "SQLAlchemy>=1.4.29,<2",
     "parameterized",
     "requests",
     "ipykernel",
