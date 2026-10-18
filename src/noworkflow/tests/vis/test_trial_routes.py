@@ -45,6 +45,7 @@ from datetime import datetime, timedelta
 import pytest
 from werkzeug.http import http_date
 
+from noworkflow.now.ipython import dotmagic
 from noworkflow.tests.e2e.harness import WEATHER_ARGS, same_path
 
 from .support import (
@@ -543,6 +544,29 @@ def test_flow_pdf_answers_the_dataflow_as_a_pdf(vis_own):
     assert response.mimetype == "application/pdf"
     assert "flow.pdf" in response.headers.get("Content-Disposition", "")
     assert response.get_data().startswith(b"%PDF")
+
+
+def test_flow_pdf_sends_what_graphviz_draws_of_the_dataflow(vis, monkeypatch):
+    """``flow.pdf`` hands the trial's dataflow to graphviz and sends the PDF
+    it draws, named ``flow.pdf``; graphviz is replaced, so this runs where
+    ``dot`` is not on the PATH too
+    """
+    drawn = []
+
+    def fake_dot_to_pdf(dot, prog, extra, force_ink=False):
+        drawn.append(dot)
+        return b"%PDF-fake"
+
+    monkeypatch.setattr(dotmagic, "dot_to_pdf", fake_dot_to_pdf)
+    trial_id = vis.trial_ids[0]
+    response = vis.get("/trials/{}/flow.pdf".format(trial_id))
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.headers.get("Content-Disposition") == (
+        "inline; filename=flow.pdf")
+    assert response.get_data() == b"%PDF-fake"
+    assert len(drawn) == 1
+    assert drawn[0].startswith("digraph e_")
 
 
 def test_flow_pdf_under_an_experiment_raises_type_error(vis):

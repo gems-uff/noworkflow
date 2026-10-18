@@ -474,9 +474,7 @@ grep -rliF "$(hostname -s)" "$R"/read/*/masked
 
 Differences that are not the change:
 
-- `GET /trials/<id>/flow.pdf` answers 500 on a version without the fix of
-  #128 (`KeyError: 'simulation'` in the dependency configuration, before
-  graphviz is called), and on any version where Graphviz's `dot` is not on
+- `GET /trials/<id>/flow.pdf` answers 500 where Graphviz's `dot` is not on
   the PATH (`KeyError: 'application/pdf'`).
 - `now export ast` fails on recent Pythons, in some forms or in all
   (`export_ast_failure` in `harness.py` says which, #241). Its goldens are
