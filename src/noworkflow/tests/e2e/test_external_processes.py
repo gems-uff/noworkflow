@@ -55,6 +55,7 @@ import contextlib
 import dataclasses
 import os
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 
@@ -909,6 +910,33 @@ def test_modules_imported_before_the_script_desired(preimported):
     assert NOT_PREIMPORTED in preimported
     missing = [name for name in PREIMPORTED if name not in preimported]
     assert not missing, "no module row for {}".format(missing)
+
+
+def test_the_version_lookup_records_no_module_of_its_own(tmp_path):
+    """get_version (prov_deployment/deployment.py) reads a distribution's
+    metadata from inside the import finder, while the script runs; what
+    that reading imports for the first time (importlib.metadata._adapters,
+    email.policy) must not get a module row as if the script had imported
+    it. The oracle is the same script under plain Python, which prints the
+    modules its import of idna brings."""
+    project = NowProject(tmp_path)
+    project.copy_corpus("processes")
+    python = plain_python(project.command)
+    if python is None:
+        pytest.skip("no plain interpreter next to {}".format(project.command))
+    plain = subprocess.run(
+        [python, "metadata_lookup.py"], cwd=str(project.path), env=project.env,
+        stdin=subprocess.DEVNULL, capture_output=True, encoding="utf-8",
+        errors="replace", timeout=120)
+    assert plain.returncode == 0, plain.stderr
+    imported = set(ast.literal_eval(plain.stdout.strip()))
+    run_now(project, "run", "metadata_lookup.py")
+    with reading(project) as trial:
+        recorded = {module.name for module in trial.modules}
+    assert "idna" in recorded, (
+        "precondition: noWorkflow imported idna before the script, so it "
+        "has no module row (#380) and its version is never looked up")
+    assert sorted(recorded - imported) == []
 
 
 # What an exec loses: the rows that run (cmd/cmd_run.py) stores after the

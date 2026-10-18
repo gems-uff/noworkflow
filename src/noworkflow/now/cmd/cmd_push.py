@@ -4,7 +4,8 @@
 # Please, consult the license terms in the LICENSE file.
 """"now push" command"""
 
-import requests
+# requests is imported where a request is sent: every `now` imports every
+# command, and it would cost each of them its import (#426).
 import os
 import json
 from ..persistence import persistence_config
@@ -42,6 +43,7 @@ class Push(Command):
     
     def get(self,url):
         headers = {'Accept-Encoding': 'gzip'}
+        import requests
         response=requests.get(url, headers=headers)
         return json.loads(response.content)
 
@@ -72,6 +74,7 @@ class Push(Command):
         url=self.url+"/collab/bundle"
         
         ziped_data=gzip_compress(json.dumps(bundle.__json__()).encode())
+        import requests
         response=requests.post(url, data= ziped_data, headers=headers)
         return response.status_code
     
@@ -79,6 +82,7 @@ class Push(Command):
         print("Sending file: "+fileName)
         headers = {'Content-Encoding': 'gzip'}
         ziped_data=gzip_compress(content.get(fileName))
+        import requests
         response=requests.post(url, data= ziped_data, headers=headers)
         if(response.status_code!=201):
             print("Error sending file: "+fileName)
@@ -104,6 +108,7 @@ class Push(Command):
                 'files': ('files.zip', zipF,'application/zip')
             }
             
+            import requests
             response = requests.post(filesUrl, files=multipart_form_data)
             if response.status_code == 400:
                 print(self.text_exporting_files_failed + " " + sourceFiles)

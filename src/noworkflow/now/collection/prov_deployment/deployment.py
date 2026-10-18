@@ -32,6 +32,26 @@ from ...utils.functions import version
 find_distribution = importlib.metadata.distribution
 
 
+def load_metadata_modules():
+    """Import, before any script, what reading a distribution's metadata
+    imports (importlib.metadata._adapters, email.policy and its kin)
+
+    get_version reads metadata from inside the import finder, while the
+    script runs, and a module imported there for the first time would be
+    recorded as one the script imported. Reading noWorkflow's own metadata
+    takes the same path as reading any other's.
+    """
+    try:
+        find_distribution("noworkflow").metadata
+    # Not installed as a distribution: nothing to warm, and get_version
+    # falls back to the attributes
+    except Exception:                                                            # pylint: disable=broad-except  # nosec B110
+        pass
+
+
+load_metadata_modules()
+
+
 def distribution_key(name):
     """A distribution name as pkg_resources compared it: case and runs of
     "-" and "_" do not matter, dots do

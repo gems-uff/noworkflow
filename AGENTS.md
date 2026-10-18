@@ -457,7 +457,12 @@ and therefore the first suspects when an upgrade breaks something:
   script runs. Before 3.15 a distribution whose metadata has no version
   gives `None` instead of raising, PEP 503 folds the dots of a module name
   into `-`, and the lookup asks every finder in `sys.meta_path`, the
-  script's own included (#417).
+  script's own included (#417). Whatever reading metadata imports
+  (`importlib.metadata._adapters`, `email.policy`...) must already be in
+  `sys.modules` when the script starts, or it gets a module row as the
+  script's: `load_metadata_modules` reads noWorkflow's own metadata on
+  import for that, instead of relying on another import of `now` to bring
+  them (`test_the_version_lookup_records_no_module_of_its_own`).
 - SQLAlchemy 1.4: `relational_database.py` uses the 1.4 declarative and
   session API, and the pin keeps the 2.0 series out.
 - `pyposast` is a sibling project (`JoaoFelipe/pyposast`): the AST positions

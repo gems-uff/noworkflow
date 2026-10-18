@@ -4,7 +4,8 @@
 # Please, consult the license terms in the LICENSE file.
 """"now push" command"""
 
-import requests
+# requests is imported where a request is sent: every `now` imports every
+# command, and it would cost each of them its import (#426).
 import os
 import json
 from ..persistence import persistence_config
@@ -41,6 +42,7 @@ class Pull(Command):
 
     def get(self,url):
         headers = {'Accept-Encoding': 'gzip'}
+        import requests
         response=requests.get(url, headers=headers)
         return json.loads(response.content)
 
@@ -70,6 +72,7 @@ class Pull(Command):
     def importFile(self,url):
         print("Importing file: "+url)
         headers = {'Accept-Encoding': 'gzip'}
+        import requests
         response=requests.get(url, headers=headers)
         content.put(response.content, None)
 
