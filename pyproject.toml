@@ -93,6 +93,9 @@ dev = [
     # 5.0: the first version whose order depends on the seed alone, so the
     # seed in a CI summary reproduces that order on any machine.
     "pytest-randomly>=5",
+    # Runs the suite in parallel (`-n 4` on the Linux legs of ci.yml, #426).
+    # 3.8: the version measured with this suite.
+    "pytest-xdist>=3.8",
     "ruff>=0.14",
     "bandit[toml]>=1.7.10",
     # 2.9: --locked, which audits a PEP 751 pylock.toml (the audit step of
