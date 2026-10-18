@@ -37,7 +37,6 @@ dependencies = [
     "parameterized",
     "requests",
     "ipykernel",
-    "typing-extensions>=4.5.0,<5",
     "setuptools<72",
     "nbformat",
     "graphviz",
