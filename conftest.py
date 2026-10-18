@@ -20,6 +20,11 @@ module or session scope would be blamed on the first test that uses it.
 instead of failing the test; ``NOW_LEAK_AUDIT=1`` also reports the rows
 each test leaves in the in-memory store.
 
+Under pytest-xdist (``-n 4`` on the Linux legs of CI) each worker runs its
+own session, with its own scratch directory and leak detector; the
+controller runs no test, stays in the invocation directory and prints the
+LEAKS section from what the workers' reports carry.
+
 Every report, of a test or of a collection, and the traceback of an
 INTERNALERROR have this machine's hostname replaced by ``<HOSTNAME>``
 before pytest prints them (``noworkflow/tests/helpers/reports.py``, which
@@ -59,9 +64,20 @@ LEAKS = pytest.StashKey[list]()
 LEAK_AUDIT = pytest.StashKey[list]()
 LEAK_SNAPSHOT = pytest.StashKey[tuple]()
 LEAK_ROWS = pytest.StashKey[dict]()
+# Names of the ``user_properties`` that carry a leak, or a line of the leak
+# audit, from the teardown of a test to the terminal summary. A report
+# reaches the summary of the process that prints it: under pytest-xdist,
+# the controller's, not the stash of the worker that ran the test.
+LEAK_PROPERTY = "noworkflow_leak"
+LEAK_AUDIT_PROPERTY = "noworkflow_leak_audit"
+# The session's config, for ``pytest_runtest_logreport``, which gets only
+# the report.
+_CONFIG = None
 
 
 def pytest_configure(config):
+    global _CONFIG
+    _CONFIG = config
     mode = os.environ.get("NOW_LEAK_CHECK", "fail")
     if mode not in LEAK_MODES:
         raise pytest.UsageError(
@@ -75,13 +91,23 @@ def pytest_configure(config):
     import noworkflow.tests.helpers.reports  # noqa: F401
 
 
+@pytest.hookimpl(trylast=True)
 def pytest_sessionstart(session):
     """Run the whole session from a scratch directory.
 
     Whatever a test writes to the current directory (``.noworkflow/``,
     ``.last_trial``, output files) lands there instead of in the checkout.
+
+    ``trylast``: pytest-cov records the current directory in its own
+    ``pytest_sessionstart`` under pytest-xdist and returns to it when it
+    finishes, after the scratch directory is gone. The controller of
+    pytest-xdist runs no test and stays where it is, so the workers start
+    in the invocation directory and resolve relative test paths, the
+    ``testpaths`` included, against it.
     """
     config = session.config
+    if config.pluginmanager.has_plugin("dsession"):
+        return
     config._noworkflow_origin = os.getcwd()
     config._noworkflow_scratch = tempfile.mkdtemp(prefix="noworkflow-tests-")
     os.chdir(config._noworkflow_scratch)
@@ -188,13 +214,13 @@ def _check_leaks(item):
                  for table in sorted(after)
                  if after[table] > before.get(table, 0)]
         if grown:
-            config.stash[LEAK_AUDIT].append(
-                "{}: {}".format(item.nodeid, ", ".join(grown)))
+            item.user_properties.append((LEAK_AUDIT_PROPERTY, "{}: {}".format(
+                item.nodeid, ", ".join(grown))))
     leaks = baseline.check(snapshot)
     if not leaks:
         return
-    config.stash[LEAKS].extend(
-        "{}: {}".format(item.nodeid, leak) for leak in leaks)
+    item.user_properties.extend(
+        (LEAK_PROPERTY, "{}: {}".format(item.nodeid, leak)) for leak in leaks)
     if config._noworkflow_leak_mode == "fail":
         pytest.fail(
             "the test left process state behind (undone now, so later tests "
@@ -212,8 +238,18 @@ def pytest_runtest_logreport(report):
     ``tryfirst`` runs this ahead of the terminal and of ``--junitxml``.
     The report is complete here: the captured output of a subtest is
     attached after ``pytest_runtest_makereport``.
+
+    Also collects, from the teardown report, the leaks the test left for
+    the LEAKS section.
     """
     _mask_hostname(report)
+    if report.when != "teardown" or _CONFIG is None:
+        return
+    for name, value in report.user_properties:
+        if name == LEAK_PROPERTY:
+            _CONFIG.stash[LEAKS].append(value)
+        elif name == LEAK_AUDIT_PROPERTY:
+            _CONFIG.stash[LEAK_AUDIT].append(value)
 
 
 @pytest.hookimpl(tryfirst=True)
