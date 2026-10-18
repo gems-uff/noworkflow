@@ -12,6 +12,8 @@ import sys
 import os
 import tempfile
 from collections import OrderedDict
+# Only the exception class, bound here: the tests replace the module above
+from subprocess import SubprocessError  # nosec B404
 
 LOADED = False
 
@@ -75,7 +77,8 @@ def run_dot(dot, ext="svg", prog="dot", extra=None):
 def dot_to_pdf(dot, prog, extra, force_ink=False):
     """Convert dot to pdf.
     First try to use graphviz (dot -> svg) and inkscape (svg -> pdf).
-    If it fails, use graphviz (dot -> pdf)"""
+    If it fails, use graphviz (dot -> pdf), unless force_ink: then the
+    failure raises RuntimeError"""
 
     try:
         svg_text = run_dot(dot, "svg", prog, extra)
@@ -86,8 +89,11 @@ def dot_to_pdf(dot, prog, extra, force_ink=False):
             raise
         return run_dot(dot, "pdf", prog, extra)
 
-    fd1, filename1 = tempfile.mkstemp()
-    fd2, filename2 = tempfile.mkstemp()
+    # The suffixes matter: Inkscape 1.x adds ".pdf" to an export name
+    # without an extension and writes the PDF there, while 0.92 writes to
+    # the name it is given (#404).
+    fd1, filename1 = tempfile.mkstemp(suffix=".svg")
+    fd2, filename2 = tempfile.mkstemp(suffix=".pdf")
     try:
         os.write(fd1, svg_text)
         os.close(fd1)
@@ -98,13 +104,18 @@ def dot_to_pdf(dot, prog, extra, force_ink=False):
                         "--export-pdf={}".format(filename2)]
             # No shell; a fixed argv over the two temporary files made above
             subprocess.check_call(ink_args, startupinfo=STARTUPINFO)  # nosec B603
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                if force_ink:
-                    raise
-                return run_dot(dot, "pdf", prog, extra)
-        with open(filename2, "rb") as file:
-            return file.read()
+            with open(filename2, "rb") as file:
+                pdf = file.read()
+            if not pdf:
+                raise RuntimeError("inkscape wrote an empty PDF")
+            return pdf
+        # Missing, not executable, failed or silent: an empty or partial
+        # file is never a PDF to publish
+        except (OSError, SubprocessError, RuntimeError) as error:
+            if force_ink:
+                raise RuntimeError(
+                    "inkscape could not convert the svg: {}".format(error))
+            return run_dot(dot, "pdf", prog, extra)
     finally:
         os.remove(filename1)
         os.remove(filename2)

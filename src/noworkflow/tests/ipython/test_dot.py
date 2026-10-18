@@ -23,8 +23,9 @@ need no Graphviz.
 The PDF formats (``pdf``, ``ink.pdf`` and ``--save <name>.pdf``) convert
 Graphviz's SVG with Inkscape, which no leg installs either: a fake
 ``check_call`` that answers as Inkscape 1.4.4 does runs everywhere, and one
-test runs the installed Inkscape where there is one. With 1.x the PDF comes
-out empty (#404).
+test runs the installed Inkscape where there is one. A conversion that fails
+or writes nothing falls back to Graphviz's PDF, or, under ``ink.pdf``, which
+forces Inkscape, to the cell's text (#404).
 """
 import json
 import os
@@ -59,15 +60,6 @@ LOST_MESSAGE = Defect(
     "sys.stderr is captured (an in-process shell, %%capture, a Windows "
     "kernel); ipykernel on Linux and macOS forwards that descriptor",
     signature="Incomplete input",
-)
-
-EMPTY_PDF = Defect(
-    "#404: dotmagic.dot_to_pdf hands Inkscape two temporary files that "
-    "mkstemp made without a suffix, with Inkscape 0.92's options; Inkscape "
-    "1.x converts --export-pdf=<pdf> to --export-filename=<pdf>, adds .pdf "
-    "to a name without an extension and writes <pdf>.pdf, so dot_to_pdf "
-    "returns the empty <pdf> and leaves the PDF in the temporary directory",
-    signature="holds b''",
 )
 
 GRAPH = "digraph G { a -> b }"
@@ -166,6 +158,32 @@ def fake_inkscape_1(monkeypatch):
     return conversions
 
 
+def converter(behavior):
+    """A ``check_call`` for ``dot_to_pdf`` that does not convert: it
+    ``fails`` (exits non-zero), ``writes nothing`` (exits 0) or is
+    ``missing`` (cannot start)"""
+    def check_call(args, **kwargs):
+        if behavior == "fails":
+            raise subprocess.CalledProcessError(1, args)
+        if behavior == "missing":
+            raise FileNotFoundError(2, "No such file or directory", args[0])
+        return 0
+    return check_call
+
+
+@pytest.fixture
+def fake_converter(monkeypatch):
+    """``fake_converter(behavior)``: ``%%dot`` draws with
+    ``FakeGraphviz`` and converts with ``converter(behavior)``"""
+    monkeypatch.setattr(FakeGraphviz, "calls", [])
+
+    def install(behavior):
+        monkeypatch.setattr(dotmagic, "subprocess", types.SimpleNamespace(
+            Popen=FakeGraphviz, PIPE=subprocess.PIPE,
+            check_call=converter(behavior)))
+    return install
+
+
 def temporary_files(shell):
     """The names in the shell's temporary directory (``tempfile.tempdir``)"""
     return set(os.listdir(shell.project.tmp))
@@ -219,84 +237,73 @@ def test_dot_pdf_without_inkscape_falls_back_to_graphviz(shell):
     assert data.startswith(b"%PDF")
 
 
-def test_dot_pdf_with_inkscape_1(fake_inkscape_1, shell):
-    """With Inkscape 1.x, ``%%dot -f pdf`` publishes an empty PDF and leaves
-    the real one in the temporary directory (characterization of #404,
-    with a fake Inkscape that answers as 1.4.4 does)
-
-    ``dot_to_pdf`` passes Inkscape 0.92's options and a suffixless output
-    file; 1.x writes ``<output>.pdf``, and ``dot_to_pdf`` returns the empty
-    ``<output>``. The cell succeeds and reports nothing.
-    """
+def test_dot_pdf_with_inkscape_1_publishes_its_pdf(fake_inkscape_1, shell):
+    """With Inkscape 1.x, ``%%dot -f pdf`` publishes Inkscape's PDF and
+    leaves nothing in the temporary directory (a fake Inkscape that answers
+    as 1.4.4 does): the output file already ends in ``.pdf``, so 1.x writes
+    to the name it is given"""
     before = temporary_files(shell)
     cell = ran(shell, "%%dot -f pdf\n" + GRAPH)
     published = [dict(output.data) for output in cell.outputs]
-    left = temporary_files(shell) - before
-    assert published == [{"application/pdf": b""}]
+    assert published == [{"application/pdf": CONVERTED}], cell.describe()
     assert cell.stderr == ""
-    assert [args[:3] for args in fake_inkscape_1] == [["inkscape", "-D", "-z"]]
-    assert [name.endswith(".pdf") for name in left] == [True]
-    assert (shell.project.tmp / left.pop()).read_bytes() == CONVERTED
-
-
-@known_defects(EMPTY_PDF)
-def test_dot_pdf_with_inkscape_1_publishes_a_pdf_desired(
-        fake_inkscape_1, shell):
-    """With Inkscape 1.x, ``%%dot -f pdf`` publishes a PDF, Inkscape's or
-    Graphviz's, and leaves nothing in the temporary directory (a fake
-    Inkscape that answers as 1.4.4 does)"""
-    before = temporary_files(shell)
-    cell = ran(shell, "%%dot -f pdf\n" + GRAPH)
-    data = [output.data.get("application/pdf") for output in cell.outputs]
-    assert len(data) == 1 and data[0] is not None, cell.describe()
-    assert data[0].startswith(b"%PDF"), (
-        "the published PDF holds {!r}".format(data[0]))
     assert temporary_files(shell) == before
 
 
-def test_dot_save_pdf_with_inkscape_1(fake_inkscape_1, shell):
-    """With Inkscape 1.x, ``--save graph.pdf`` writes an empty file while
-    the cell shows its format, and leaves the real PDF in the temporary
-    directory (characterization of #404, with a fake Inkscape)"""
-    before = temporary_files(shell)
-    cell = ran(shell, "%%dot -f svg --save graph.pdf\n" + GRAPH)
-    left = temporary_files(shell) - before
-    assert cell.mimetypes == {"image/svg+xml"}
-    assert (shell.project.path / "graph.pdf").read_bytes() == b""
-    assert [name.endswith(".pdf") for name in left] == [True]
-
-
-@known_defects(EMPTY_PDF)
-def test_dot_save_pdf_with_inkscape_1_writes_a_pdf_desired(
-        fake_inkscape_1, shell):
-    """With Inkscape 1.x, ``--save graph.pdf`` writes a PDF, Inkscape's or
-    Graphviz's, and leaves nothing in the temporary directory (a fake
-    Inkscape)"""
+def test_dot_save_pdf_with_inkscape_1_writes_its_pdf(fake_inkscape_1, shell):
+    """With Inkscape 1.x, ``--save graph.pdf`` writes Inkscape's PDF and
+    leaves nothing in the temporary directory (a fake Inkscape)"""
     before = temporary_files(shell)
     ran(shell, "%%dot -f svg --save graph.pdf\n" + GRAPH)
     saved = (shell.project.path / "graph.pdf").read_bytes()
-    assert saved.startswith(b"%PDF"), "graph.pdf holds {!r}".format(saved)
+    assert saved == CONVERTED, "graph.pdf holds {!r}".format(saved)
     assert temporary_files(shell) == before
+
+
+@pytest.mark.parametrize("converter", ["fails", "writes nothing", "missing"])
+def test_dot_pdf_falls_back_to_graphviz_when_inkscape_does_not_convert(
+        fake_converter, shell, converter):
+    """``%%dot -f pdf`` publishes Graphviz's PDF when the conversion
+    exits non-zero, exits 0 without writing, or cannot start; never an
+    empty PDF, and nothing is left in the temporary directory"""
+    fake_converter(converter)
+    before = temporary_files(shell)
+    cell = ran(shell, "%%dot -f pdf\n" + GRAPH)
+    published = [dict(output.data) for output in cell.outputs]
+    assert published == [{"application/pdf": DRAWN["pdf"]}], cell.describe()
+    assert cell.stderr == ""
+    assert temporary_files(shell) == before
+
+
+def test_dot_ink_pdf_reports_a_conversion_that_writes_nothing(
+        fake_converter, shell):
+    """``-f ink.pdf`` forces Inkscape: when it writes nothing, the cell
+    says so on stderr and shows its text, as for any other failure"""
+    fake_converter("writes nothing")
+    cell = ran(shell, "%%dot -f ink.pdf\n" + GRAPH)
+    assert cell.mimetypes == {"text/plain"}
+    assert "inkscape could not convert the svg" in cell.stderr
+    assert "Fallback to dot text" in cell.stderr
 
 
 @needs_dot
 @pytest.mark.skipif(INKSCAPE is None, reason="inkscape is not on the PATH")
 def test_dot_pdf_with_the_installed_inkscape_1(shell):
     """With the installed Inkscape, when it is 1.x, ``%%dot -f pdf``
-    publishes an empty PDF and leaves the real one in the temporary
-    directory (characterization of #404 with the real programs; no CI leg
-    installs Inkscape, so it runs only where one is installed)"""
+    publishes a PDF and leaves nothing in the temporary directory (the real
+    programs; no CI leg installs Inkscape, so it runs only where one is
+    installed)"""
     version = subprocess.run([INKSCAPE, "--version"], capture_output=True,
                              text=True, check=False).stdout
     if not version.startswith("Inkscape 1."):
         pytest.skip("not Inkscape 1.x: {!r}".format(version[:40]))
     before = temporary_files(shell)
     cell = ran(shell, "%%dot -f pdf\n" + GRAPH)
-    published = [dict(output.data) for output in cell.outputs]
-    left = temporary_files(shell) - before
-    assert published == [{"application/pdf": b""}]
-    assert [name.endswith(".pdf") for name in left] == [True]
-    assert (shell.project.tmp / left.pop()).read_bytes().startswith(b"%PDF")
+    data = [output.data.get("application/pdf") for output in cell.outputs]
+    assert len(data) == 1 and data[0] is not None, cell.describe()
+    assert data[0].startswith(b"%PDF"), (
+        "the published PDF holds {!r}".format(data[0][:40]))
+    assert temporary_files(shell) == before
 
 
 @needs_dot
