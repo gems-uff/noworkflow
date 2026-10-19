@@ -193,6 +193,19 @@ def ast_form_params():
 
 AST_FORMS = ast_form_params()
 
+# A dict display with a ** item between two key-value pairs (#427), and the
+# ast.dump of the display that `export ast` rebuilds, whose constants hold
+# the source text of each key and value.
+DICT_UNPACKING_SCRIPT = (
+    "base = {'a': 1}\n"
+    "merged = {'z': 0, **base, 'y': 2}\n"
+)
+DICT_UNPACKING_DUMP = (
+    "Dict(keys=[Constant(value=\"'z'\"), None, Constant(value=\"'y'\")], "
+    "values=[Constant(value='0'), Name(id='base', ctx=Load()), "
+    "Constant(value='2')])"
+)
+
 # --- export prospective -----------------------------------------------------
 
 # The condition `s == r"a\:b"`, which the prospective graph cuts at its
@@ -1068,6 +1081,35 @@ def test_export_ast_in_each_form_desired(two_trial_project, form):
         assert output.startswith("digraph {"), str(result)
         assert re.search(r"^\s*node\d+ \[label=\"Module\b", output,
                          re.MULTILINE), str(result)
+
+
+@pytest.mark.parametrize("form", AST_FORMS)
+def test_export_ast_of_a_dict_display_that_unpacks(project, form):
+    """``export ast`` rebuilds ``{'z': 0, **base, 'y': 2}`` as Python's AST
+    has it, with ``None`` as the key of ``**base`` between the other two
+    items: the transformer records no ``key_value`` for a ``**`` item, only
+    its operand (#427)
+    """
+    result = export_of(project, DICT_UNPACKING_SCRIPT, "ast",
+                       *EXPORT_AST_FORMS[form])
+    if form == "dot":
+        graph = DotGraph(result.stdout)
+        labels = drawn_labels(graph)
+        display = [node for node, label in labels.items()
+                   if label == "Dict\n{'z': 0, **base, 'y': 2}"]
+        assert len(display) == 1, str(result)
+        items = sorted(labels[head] for tail, head, _ in graph.edges
+                       if tail == display[0])
+        assert items == ["Constant\n'y'", "Constant\n'z'", "Constant\n0",
+                         "Constant\n2", "Name\nbase"], str(result)
+        return
+    if form == "json":
+        trial_id = project.trials()[-1]["id"]
+        dump = ast.literal_eval(result.stdout)["ast"][trial_id]
+    else:
+        dump = result.stdout
+    assert re.sub(r"\s", "", DICT_UNPACKING_DUMP) in re.sub(r"\s", "", dump), (
+        str(result))
 
 
 # --- export prospective -----------------------------------------------------

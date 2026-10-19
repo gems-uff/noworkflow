@@ -452,8 +452,13 @@ class TrialAst(object):
             composition.whole_id == part_node and whole_node.content.append(
                 whole_node.name)
         elif isinstance(whole_node, ast.Dict):
-            whole_node.keys.append(part_node[0])
-            whole_node.values.append(part_node[1])
+            if isinstance(part_node, ast.AST):
+                # The operand of **: the transformer records no key_value
+                whole_node.keys.append(None)
+                whole_node.values.append(part_node)
+            else:
+                whole_node.keys.append(part_node[0])
+                whole_node.values.append(part_node[1])
 
         elif isinstance(whole_node, ast.Expr):
             whole_node.value = part_node
