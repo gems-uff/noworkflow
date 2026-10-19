@@ -193,10 +193,13 @@ PLAIN_STDOUT = (
 )
 PLAIN_FILES = {"cell_open.txt", "cell_pathlib.txt", "cell_os.txt",
                "child_out.txt"}
-# What the plain cell (and its child) writes into files.
+# What the plain cell (and its child) writes into files. Every line ends in
+# os.linesep: on Windows text mode writes CRLF, and so does os.open without
+# O_BINARY.
 PLAIN_CONTENTS = {
-    b"written with the cell's open\n", b"written with pathlib\n",
-    b"written with os.open\n", b"leaf\n", b"written by the child\n",
+    (line + os.linesep).encode("utf-8") for line in (
+        "written with the cell's open", "written with pathlib",
+        "written with os.open", "leaf", "written by the child")
 }
 # The lines of the plain cell that an --interactive cell before it changes
 # without a defect: the cell's __file__ stays in the namespace, as after

@@ -27,6 +27,7 @@ machine's hostname (``trial.user_id``): trials are compared field by field
 and never printed.
 """
 import importlib.util
+import os
 import sys
 import warnings
 
@@ -347,11 +348,13 @@ def test_now_restore_of_a_cell_trial(shell):
     The same mechanism as #390 (without ``--name`` the file
     is named after the cell's temporary file); which file restoring a cell
     should write is for that issue to decide, so no twin states it.
+    IPython writes the cell to its file in text mode, so on Windows the
+    file, and the trial's code that the magic returns, end lines in CRLF.
     """
     code = "print('in the cell')\n"
     shell.ok("%%now_run --name cellA\n" + code)
     result = ran(shell, "%now_restore").result
-    assert result == code
+    assert result == code.replace("\n", os.linesep)
     assert read_files(shell.project) == {"cellA": code}
 
 

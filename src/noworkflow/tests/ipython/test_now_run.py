@@ -654,11 +654,15 @@ def test_now_run_in_the_background_desired(shell):
 
 def test_now_run_with_out_keeps_the_output_in_a_variable(shell):
     """``--out NAME`` reaches ``%%script``: what ``now run`` prints goes to
-    the variable instead of the cell's output, and the trial is recorded"""
+    the variable instead of the cell's output, and the trial is recorded
+
+    ``%%script`` keeps the child's bytes as they come, and a print ends in
+    os.linesep (CRLF on Windows), as in plain IPython.
+    """
     cell = ran(shell, "%%now_run --name quiet --out captured\nprint('kept')")
     shown = "kept" in cell.stdout
     assert not shown, cell.describe()
-    assert shell.user_ns["captured"] == "kept\n"
+    assert shell.user_ns["captured"] == "kept" + os.linesep
     assert scripts_and_statuses(shell.project) == [("quiet", "finished")]
 
 
