@@ -7,9 +7,6 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-
-import unittest
-
 from ...now.utils.cross_version import PY2, PY3, PY36
 
 from ..collection_testcase import CollectionTestCase
@@ -936,7 +933,6 @@ class TestExprExecution(CollectionTestCase):
         self.assertEqual(var_b.repr, '"\'1\'"')
 
     @only(PY36)
-    @unittest.skip("ToDo: fix pyposast")
     def test_joined_str_and_formatted_value(self):
         """Test bool expr collection"""
         self.script("# script.py\n"
