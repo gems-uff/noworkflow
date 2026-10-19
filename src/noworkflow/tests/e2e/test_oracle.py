@@ -358,11 +358,12 @@ WITH_WITHOUT_AS = Defect(
 CALLBACK_ARGUMENTS = Defect(
     "#266: a Python callback called by a C builtin (re.sub, iter with a "
     "sentinel, print and str.format calling __str__, print calling "
-    "__repr__ among other arguments, zip calling __iter__) takes the "
-    "white-box-after-black-box path of new_function_def "
-    "(Collector._function_def, collector.py), which hands it the builtin "
-    "call's argument dependencies; when they outnumber its parameters, "
-    "match_arguments (collector.py) raises IndexError",
+    "__repr__ among other arguments, zip calling __iter__, a dict display "
+    "calling keys of a mapping inside a function of two parameters) takes "
+    "the white-box-after-black-box path of new_function_def "
+    "(Collector._function_def, collector.py), which hands it the "
+    "enclosing call's argument dependencies; when they outnumber its "
+    "parameters, match_arguments (collector.py) raises IndexError",
     signature="failed: IndexError('list index out of range')")
 YIELD_FROM_CALLBACK = Defect(
     "#266: the operand of yield from is not rewritten (visit_YieldFrom, "

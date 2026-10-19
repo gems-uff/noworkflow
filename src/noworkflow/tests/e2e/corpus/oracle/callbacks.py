@@ -3,13 +3,16 @@
 A log formatter: ``re.sub`` with a replacement function, ``iter`` over a
 parameterless callable with a sentinel, ``print`` and ``str.format``
 calling a ``__str__``, ``print`` calling a ``__repr__`` among other
-arguments, and ``zip`` calling an ``__iter__``: each callback has fewer
-parameters than the builtin call that reaches it has arguments. Each call
+arguments, ``zip`` calling an ``__iter__``, and a dict display unpacking
+a mapping of the script inside a function of two parameters, which calls
+its ``keys`` and ``__getitem__``: each callback has fewer parameters than
+the call that reaches it has arguments. Each call
 runs in its own ``try``, so that every trigger shows. The callbacks that
 work today (``map``, ``filter``, ``sorted`` and ``max`` keys,
 ``functools.reduce``, a ``defaultdict`` factory) are in
 callback_functions.py.
 """
+import collections.abc
 import re
 
 LINES = ["error disk full", "warn cpu hot", "error net down"]
@@ -51,6 +54,24 @@ class Words:
         return iter(self.text.split())
 
 
+class Settings(collections.abc.Mapping):
+    def __init__(self, data):
+        self.data = data
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
+
+
+def with_defaults(settings, defaults):
+    return {**defaults, **settings}
+
+
 def failed(error):
     print("failed:", repr(error))
 
@@ -77,5 +98,9 @@ except Exception as error:
     failed(error)
 try:
     print(list(zip(Words("a b"), Words("c d"))))
+except Exception as error:
+    failed(error)
+try:
+    print(with_defaults(Settings({"level": "warn"}), {"color": "red"}))
 except Exception as error:
     failed(error)
