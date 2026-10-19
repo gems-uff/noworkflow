@@ -430,10 +430,20 @@ gh api "repos/gems-uff/noworkflow/code-scanning/alerts?pr=<M>&state=open"
 gh pr close <M> --delete-branch
 ```
 
+**Close the mirror PR as soon as its alerts are read, before step 7.** Once
+`main` contains its head, GitHub marks it merged and deletes its branch by
+itself, and `gh pr close <M> --delete-branch` fails.
+
 The push runs this repository's workflows **as the fork wrote them**, with
 this repository's token and permissions, which the fork's own PR never has: a
 change under `.github/` is read, and judged harmless, before the push, never
 after.
+
+**The fork's own CI run may wait in `action_required`**: GitHub asks for
+approval before running workflows for a first-time contributor, also when the
+push to the fork's branch was a maintainer's. The runs of `codeql-pr-<N>`
+(its push and its PR) test the same SHA: read the CI at the tip there, and
+approving the fork's run is optional.
 
 **A green `CodeQL` is not a security review.** CodeQL sees untrusted input
 only where its models recognize it, and the vis's own code mostly escapes
@@ -475,7 +485,8 @@ them.
 Before this, all of it has to be true: the full suite green on the branch, the
 checks the table routed done, `main` synchronized, working tree clean, CI
 green at the tip, the `CodeQL` analysis finished with each alert fixed or
-dismissed (step 6; for a fork, through its branch of this repository), and the
+dismissed (step 6; for a fork, through its branch of this repository, whose
+mirror PR is already closed), and the
 second list of step 1 empty — otherwise
 `merge-downstream` and measure again. The worktrees of step 3 are removed.
 Your part of this step ends with that list, checked; the integration itself
