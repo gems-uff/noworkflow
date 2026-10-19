@@ -15,7 +15,11 @@ Run as processes on real stores:
   aborts the restore (#396), a restored executable loses its executable
   bit (#205), ``-f`` with the default ``-i 1`` deletes an unrelated
   target, a backup trial records the parent of the project as its path,
-  and ``--dir`` from another directory writes into the current directory;
+  ``--dir`` from another directory writes into the current directory, and
+  files outside the project are put back when they are in a sibling
+  directory whose name starts with the project's or, on Windows from
+  Python 3.13, when the script opened them by a rooted path without a
+  drive (#440);
 - ``--dir`` of ``run`` and ``list``, and the sibling import that ``run
   --dir`` breaks;
 - ``now gc`` (#224) and ``now import`` on the plain content engine, both of
@@ -724,6 +728,146 @@ def test_restore_of_a_deleted_executable_desired(project):
 
     mode = stat.S_IMODE((project.path / "tool.sh").stat().st_mode)
     assert mode == before, "{} != {}".format(oct(mode), oct(before))
+
+
+# ---------------------------------------------------------------------------
+# restore and the files a trial opened outside the project (#440)
+# ---------------------------------------------------------------------------
+
+OUTSIDE_CHANGED = "now restore changed files outside the project"
+SIBLING_PREFIX = Defect(
+    reason="#440: Trial.versioned_files takes an absolute path for one of "
+           "the project when it starts with the trial's path, with or "
+           "without a separator after it, so now restore puts back the "
+           "files of a sibling directory whose name starts with the "
+           "project's",
+    signature=OUTSIDE_CHANGED)
+ROOTED_PATH = Defect(
+    reason="#440: Trial.versioned_files keeps every file access whose name "
+           "os.path.isabs takes as relative, and from Python 3.13 Windows "
+           "takes a rooted path without a drive (\\dir\\file) as relative, "
+           "so now restore puts back the files outside the project that the "
+           "script opened by such a path",
+    signature=OUTSIDE_CHANGED, since=(3, 13), systems=("win32",))
+
+
+def without_the_drive(path):
+    """``path`` without its drive: on Windows a rooted path, which the
+    current drive completes; elsewhere ``path`` itself"""
+    return os.path.splitdrive(path)[1]
+
+
+def run_on_files_outside_the_project(project, outside, name=str):
+    """``now run script.py``, which reads ``outside/read.txt`` and creates
+    ``outside/created.txt``, opening each by ``name`` of its path; then
+    ``read.txt`` changes
+
+    Returns the two files. ``outside`` is a directory next to the project,
+    and the trial records each access by the name the script opened, so
+    nothing in the project differs from the trial afterwards: a restore
+    that keeps to the project has nothing to put back.
+    """
+    outside.mkdir()
+    read, created = outside / "read.txt", outside / "created.txt"
+    read.write_bytes(b"one\n")
+    names = [name(str(read)), name(str(created))]
+    project.write("script.py", (
+        "with open({!r}, encoding='utf-8') as handle:\n"
+        "    print(handle.read().strip())\n"
+        "with open({!r}, 'w', encoding='utf-8') as handle:\n"
+        "    handle.write('created')\n").format(*names))
+    result = project.run("run", "script.py")
+    assert result.stdout == "one\n", str(result)
+    accesses = {access["name"] for access in project.query(
+        "SELECT name FROM file_access")}
+    assert accesses >= set(names), accesses
+    read.write_bytes(b"two\n")
+    return read, created
+
+
+def sibling_named_after_the_project(project):
+    """``project-data``, next to the project, from the path the trial
+    records (``now run`` resolves the script's links)"""
+    return Path(os.path.realpath(project.path)).with_name("project-data")
+
+
+def assert_restore_keeps_to_the_project(project, read, created):
+    """``now restore`` leaves ``read`` and ``created`` as they are and,
+    with nothing of the project changed, records no backup trial"""
+    result = project.run("restore", expect=None, allow_stderr=True)
+
+    assert (read.read_bytes(), created.exists()) == (b"two\n", True), (
+        "{}\n{}".format(OUTSIDE_CHANGED, result))
+    assert result.returncode == 0, str(result)
+    assert result.stderr == "", str(result)
+    assert backup_trials(project) == []
+
+
+def assert_restore_puts_back_the_files_outside(project, read, created):
+    """``now restore`` records a backup trial, writes back what ``read``
+    held when the trial read it and removes ``created``, which the trial
+    created"""
+    result = project.run("restore", expect=None, allow_stderr=True)
+
+    assert result.returncode == 0, str(result)
+    assert read.read_bytes() == b"one\n", str(result)
+    assert not created.exists(), str(result)
+    assert len(backup_trials(project)) == 1, str(result)
+
+
+def test_restore_after_a_run_on_files_of_a_sibling_directory_named_after_the_project(
+        project):
+    """A script reads and creates files in ``project-data``, next to
+    ``project``, by absolute paths: ``now restore`` takes them for files of
+    the project, puts back the one it read and removes the one it created
+    (#440 changes it)
+
+    The control is the twin of the rooted paths, whose files are in
+    ``outside``: on every system but Windows from 3.13, ``now restore``
+    leaves them alone.
+    """
+    read, created = run_on_files_outside_the_project(
+        project, sibling_named_after_the_project(project))
+
+    assert_restore_puts_back_the_files_outside(project, read, created)
+
+
+@known_defects(SIBLING_PREFIX)
+def test_restore_leaves_alone_the_files_of_a_sibling_directory_named_after_the_project_desired(
+        project):
+    """``now restore`` puts back only the files of the project:
+    ``project-data`` is not part of ``project``"""
+    read, created = run_on_files_outside_the_project(
+        project, sibling_named_after_the_project(project))
+
+    assert_restore_keeps_to_the_project(project, read, created)
+
+
+@pytest.mark.skipif(not ROOTED_PATH.applies(), reason=(
+    "a rooted path without a drive is absolute on this system; the _desired "
+    "twin covers it"))
+def test_restore_after_a_run_on_files_outside_the_project_by_rooted_paths(
+        project, tmp_path):
+    """On Windows from Python 3.13, a script reads and creates files outside
+    the project by rooted paths without a drive: ``now restore`` takes them
+    for files of the project, puts back the one it read and removes the one
+    it created (#440 changes it)"""
+    read, created = run_on_files_outside_the_project(
+        project, tmp_path / "outside", without_the_drive)
+
+    assert_restore_puts_back_the_files_outside(project, read, created)
+
+
+@known_defects(ROOTED_PATH)
+def test_restore_leaves_alone_the_files_a_script_opened_outside_the_project_by_rooted_paths_desired(
+        project, tmp_path):
+    """``now restore`` puts back only the files of the project, whatever
+    path the script opened the others by; elsewhere than on Windows the path
+    without the drive is the absolute path"""
+    read, created = run_on_files_outside_the_project(
+        project, tmp_path / "outside", without_the_drive)
+
+    assert_restore_keeps_to_the_project(project, read, created)
 
 
 # ---------------------------------------------------------------------------
