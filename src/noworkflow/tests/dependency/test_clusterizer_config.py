@@ -7,6 +7,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import argparse
+
 from ...now.models.dependency_graph.config import DependencyConfig
 from ...now.models.dependency_graph.clusterizer import Clusterizer
 from ...now.models.dependency_graph.clusterizer import ActivationClusterizer
@@ -137,6 +139,21 @@ class TestClusterizerConfig(CollectionTestCase):
         self.assertEqual(
             SameSynonymer,
             type(config.synonymer([SameSynonymer()]))
+        )
+
+    def test_default_mode_is_fine_grain(self):
+        # trial.dot and the flow.pdf of the vis use DependencyConfig()
+        # without parsing arguments; the default must stay a mode that
+        # `now export dataflow -m` accepts.
+        config = DependencyConfig()
+        parser = argparse.ArgumentParser()
+        DependencyConfig.create_arguments(parser.add_argument)
+        self.assertEqual("fineGrain", config.mode)
+        self.assertEqual(
+            config.mode, parser.parse_args(["-m", config.mode]).mode)
+        self.assertEqual(
+            Clusterizer,
+            type(config.clusterizer(TrialMock()))
         )
 
     def test_mode_fine_grain(self):

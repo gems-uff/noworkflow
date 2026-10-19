@@ -73,7 +73,8 @@ class Execution(object):
                 metascript.code, metascript.path, "exec"
             )
             sys.meta_path.insert(0, metascript.definition.finder)
-            exec(compiled, metascript.namespace)  # pylint: disable=exec-used
+            # Runs the user's own script, instrumented: what `now run` is for
+            exec(compiled, metascript.namespace)  # pylint: disable=exec-used  # nosec B102
             sys.meta_path.remove(metascript.definition.finder)
         except SystemExit as ex:
             self.force_msg = self.partial = ex.code > 0

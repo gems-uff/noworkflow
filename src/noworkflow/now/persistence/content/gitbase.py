@@ -85,7 +85,8 @@ class GitContentDatabaseEngine(ContentDatabaseEngine):
     def _get_hash_from_content(self, content):
         """Calculate hash from content"""
         git_content = bytes_string('blob {}'.format((len(content)))) + b'\0'
-        hash = hashlib.sha1(git_content + content).hexdigest()
+        # git's blob id: it must equal the id git gives the stored object
+        hash = hashlib.sha1(git_content + content, usedforsecurity=False).hexdigest()
         return hash
 
     def _get_tree(self, trees, key):

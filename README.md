@@ -1,6 +1,10 @@
 noWorkflow
 ==========
 
+[![CI](https://github.com/gems-uff/noworkflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gems-uff/noworkflow/actions/workflows/ci.yml?query=branch%3Amain)
+[![PyPI version](https://img.shields.io/pypi/v/noworkflow.svg)](https://pypi.org/project/noworkflow/)
+[![Python versions](https://img.shields.io/pypi/pyversions/noworkflow.svg)](https://pypi.org/project/noworkflow/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 Copyright (c) 2016 Universidade Federal Fluminense (UFF).
@@ -45,13 +49,13 @@ The project started in 2013, when Leonardo Murta and Vanessa Braganholo were vis
 Publications
 ------------
 
-* MURTA, L. G. P.; BRAGANHOLO, V.; CHIRIGATI, F. S.; KOOP, D.; FREIRE, J.; [noWorkflow: Capturing and Analyzing Provenance of Scripts.] (https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2014.pdf) In: International Provenance and Annotation Workshop (IPAW), 2014, Cologne, Germany.
-* PIMENTEL, J. F. N.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; [Collecting and Analyzing Provenance on Interactive Notebooks: when IPython meets noWorkflow](https://github.com/gems-uff/noworkflow/raw/master/docs/tapp2015.pdf). In: Theory and Practice of Provenance (TaPP), 2015, Edinburgh, Scotland.
-* PIMENTEL, J. F.; FREIRE, J.; BRAGANHOLO, V.; MURTA, L. G. P.; [Tracking and Analyzing the Evolution of Provenance from Scripts](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016a.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
-* PIMENTEL, J. F.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; [Fine-grained Provenance Collection over Scripts Through Program Slicing](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016b.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
-* PIMENTEL, J. F.; DEY, S.; MCPHILLIPS, T.; BELHAJJAME, K.; KOOP, D.; MURTA, L. G. P.; BRAGANHOLO, V.; LUDÄSCHER B.; [Yin & Yang: Demonstrating Complementary Provenance from noWorkflow & YesWorkflow](https://github.com/gems-uff/noworkflow/raw/master/docs/ipaw2016c.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
-* PIMENTEL, J. F.; MURTA, L. G. P.; BRAGANHOLO, V.; FREIRE, J.; [noWorkflow: a Tool for Collecting, Analyzing, and Managing Provenance from Python Scripts](https://github.com/gems-uff/noworkflow/raw/master/docs/vldb2017.pdf). In: International Conference on Very Large Data Bases (VLDB), 2017, Munich, Germany.
-* PONTES, V.: [Reducing the Storage Overhead of the noWorkflow Content Database by using Git](https://github.com/gems-uff/noworkflow/raw/master/docs/tcc_vynivius.pdf). Final undergraduate Project, Sistemas de Informação, Universidade Federal Fluminense, 2018.
+* MURTA, L. G. P.; BRAGANHOLO, V.; CHIRIGATI, F. S.; KOOP, D.; FREIRE, J.; [noWorkflow: Capturing and Analyzing Provenance of Scripts.] (https://github.com/gems-uff/noworkflow/raw/main/docs/ipaw2014.pdf) In: International Provenance and Annotation Workshop (IPAW), 2014, Cologne, Germany.
+* PIMENTEL, J. F. N.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; [Collecting and Analyzing Provenance on Interactive Notebooks: when IPython meets noWorkflow](https://github.com/gems-uff/noworkflow/raw/main/docs/tapp2015.pdf). In: Theory and Practice of Provenance (TaPP), 2015, Edinburgh, Scotland.
+* PIMENTEL, J. F.; FREIRE, J.; BRAGANHOLO, V.; MURTA, L. G. P.; [Tracking and Analyzing the Evolution of Provenance from Scripts](https://github.com/gems-uff/noworkflow/raw/main/docs/ipaw2016a.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
+* PIMENTEL, J. F.; FREIRE, J.; MURTA, L. G. P.; BRAGANHOLO, V.; [Fine-grained Provenance Collection over Scripts Through Program Slicing](https://github.com/gems-uff/noworkflow/raw/main/docs/ipaw2016b.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
+* PIMENTEL, J. F.; DEY, S.; MCPHILLIPS, T.; BELHAJJAME, K.; KOOP, D.; MURTA, L. G. P.; BRAGANHOLO, V.; LUDÄSCHER B.; [Yin & Yang: Demonstrating Complementary Provenance from noWorkflow & YesWorkflow](https://github.com/gems-uff/noworkflow/raw/main/docs/ipaw2016c.pdf). In: International Provenance and Annotation Workshop (IPAW), 2016, McLean, Virginia.
+* PIMENTEL, J. F.; MURTA, L. G. P.; BRAGANHOLO, V.; FREIRE, J.; [noWorkflow: a Tool for Collecting, Analyzing, and Managing Provenance from Python Scripts](https://github.com/gems-uff/noworkflow/raw/main/docs/vldb2017.pdf). In: International Conference on Very Large Data Bases (VLDB), 2017, Munich, Germany.
+* PONTES, V.: [Reducing the Storage Overhead of the noWorkflow Content Database by using Git](https://github.com/gems-uff/noworkflow/raw/main/docs/tcc-vynicius.pdf). Final undergraduate Project, Sistemas de Informação, Universidade Federal Fluminense, 2018.
 * [OLIVEIRA, E.; Enabling Collaboration in Scientific Experiments. Masters Dissertation, Universidade Federal Fluminense, 2022.](/docs/Disserta__o___Eduardo_Jandre.pdf)
 
 Quick Installation
@@ -59,7 +63,7 @@ Quick Installation
 
 To install noWorkflow, you should follow these basic instructions. Note that these steps may install an older version of noWorkflow. To make sure you are using the newest stable version, please follow the "Alternative" installation procedure mentioned below. 
 
-Using Python 3.8, use pip to install noWorkflow:
+With Python 3.11 or later, use pip to install noWorkflow:
 ```
 $ pip install "noworkflow[all]"
 ```
@@ -80,12 +84,12 @@ $ git clone git@github.com:gems-uff/noworkflow.git
 ```
 If you don't have git, just download the ZIP source code from our repository and decompress the zip file into a folder. 
 
-Then, use Python to install it (the most up-to-date version of noWorkflow works with newer versions of Python. The current version was tested with Python 3.12.4. 
+Then, use Python to install it (the most up-to-date version of noWorkflow works with newer versions of Python. The current version is tested with Python 3.11 to 3.15. 
 
 Go to the folder where you decompressed the files (or where you cloned the project) and then execute the following: 
 
 ```
-$ cd noworkflow-master
+$ cd noworkflow-main
 $ python setup.py install
 $ pip install -e ".[all]"
 ```
@@ -500,25 +504,23 @@ To clean Jupyter Notebook using the collected provenance, run:
 $ now clean [trial]
 ```
 
+Using noWorkflow with an AI agent
+---------------------------------
+
+The repository ships a skill, [`skills/noworkflow/SKILL.md`](skills/noworkflow/SKILL.md), that teaches an AI coding agent how to run your scripts under noWorkflow and analyze the trials: the commands, where the data lives, research recipes and the known limitations. With Claude Code, install it for all your projects with:
+
+```bash
+$ mkdir -p ~/.claude/skills/noworkflow
+$ curl -fsSL https://raw.githubusercontent.com/gems-uff/noworkflow/main/skills/noworkflow/SKILL.md -o ~/.claude/skills/noworkflow/SKILL.md
+```
+
+or put it in `.claude/skills/noworkflow/` inside one project. Other agents that read skills or instruction files can be pointed at the same file. Then ask in plain language, for example "run simulation.py with noWorkflow and tell me what changed since the last run". Note that a provenance store records the whole environment of the machine (environment variables, user name, hostname): the skill tells the agent to warn you before sharing it.
+
 Contributing
 ------------
 
-Pull requests for bugfixes and new features are welcome!
-
-For installing the python dependencies locally, clone the repository and run:
-```
-pip install -e noworkflow/capture
-```
-
-For changes on the now vis or IPython integration files, install nodejs, Python 3 and run:
-```
-cd noworkflow/npm
-python watch.py
-```
-(If it is your first time making changes or if you changed some modules, you must first run the following command before "python watch.py":)
-```
-npm install
-```
+Pull requests for bug fixes and new features are welcome! The contribution cycle (issue first, `issue_NNN` branch, tests, pull request) and the commands to run the suite locally are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Security problems are reported as public issues; see [SECURITY.md](SECURITY.md).
 
 Included Software
 -----------------

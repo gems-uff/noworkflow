@@ -10,9 +10,10 @@ from __future__ import (absolute_import, print_function,
 
 import unittest
 
-from ...now.utils.cross_version import PY2, PY3, PY36, only
+from ...now.utils.cross_version import PY2, PY3, PY36
 
 from ..collection_testcase import CollectionTestCase
+from ..helpers.versions import only
 
 
 class TestExprExecution(CollectionTestCase):

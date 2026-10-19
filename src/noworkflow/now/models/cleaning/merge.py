@@ -3,7 +3,6 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Functions for merging notebooks"""
-import nbformat as nbf
 from collections import OrderedDict
 
 
@@ -104,6 +103,9 @@ def equal_code_cells(ocode_cell, hcode_cell):
 
 def merge_json(original, history, before=None, after=None, original_first=True, merge_code=False):
     """Merge notebooks"""
+    # Here, not at the top: `now diff` imports lcs, and every `now` imports
+    # every command (#426).
+    import nbformat as nbf
     cells = before or []
     original_cells = [create_hashable(cell) for cell in original["cells"]]
     history_cells = [create_hashable(cell) for cell in history["cells"]]

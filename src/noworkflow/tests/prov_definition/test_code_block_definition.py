@@ -8,8 +8,9 @@ from __future__ import (absolute_import, print_function,
 
 
 from ..collection_testcase import CollectionTestCase
+from ..helpers.versions import only
 
-from ...now.utils.cross_version import PY35, only
+from ...now.utils.cross_version import PY35
 
 
 class TestCodeBlockDefinition(CollectionTestCase):

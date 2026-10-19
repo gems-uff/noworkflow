@@ -1,0 +1,17 @@
+[now] trial tags:
+  Tag: 1.1.2 Type: AUTO
+[now] trial information:
+  Id: <UUID1>
+  Sequence Key: 2
+  Status: Finished
+  Inherited Id: None
+  Script: simulation.py
+  Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28
+  Start: <TIMESTAMP>
+  Finish: <TIMESTAMP>
+  Duration: <DURATION>
+[now] this trial depends on the following modules:
+  Name: simulator
+    Version: None
+    Path: <PROJECT>/simulator.py
+    Code hash: a8c1681e7004c9e8da9ede5e31d1136526bf6fcf

@@ -1,0 +1,9 @@
+[now] trial diff:
+  Start changed from <TIMESTAMP> to <TIMESTAMP>
+  Finish changed from <TIMESTAMP> to <TIMESTAMP>
+  Duration text changed from <DURATION> to <DURATION>
+  Code hash changed from eded2ea67f57b93f1dc55aa339b946424d65df28 to b107bcc0592b69ae4f6443a67df9778b9f201c85
+  Sequence key changed from 1 to 4
+  Parent id changed from <None> to <UUID1>
+
+Definition TED: 15.0

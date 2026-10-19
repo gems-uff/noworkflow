@@ -1,0 +1,65 @@
+name: Bug report
+description: noWorkflow does badly something it already does
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening, search the existing issues, closed ones included, in English and in Portuguese.
+        **Do not paste the output of `now show -e`, a Prolog export or a real `.noworkflow/` directory:** the provenance store records every environment variable, your user name and your hostname. Reproduce with a minimal script and invented values.
+  - type: textarea
+    id: script
+    attributes:
+      label: Minimal script
+      description: The smallest script that shows the problem.
+      render: python
+      placeholder: |
+        with open("out.txt", "w") as f:
+            f.write("hello")
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      description: The exact `now` command you ran.
+      placeholder: now run -v script.py
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Output, traceback or the wrong result. Mask anything from your environment.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: noWorkflow version
+      description: Output of `now -v`.
+      placeholder: "2.1.3"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python --version`.
+      placeholder: "3.13.2"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Ubuntu 24.04, macOS 15, Windows 11
+    validations:
+      required: true

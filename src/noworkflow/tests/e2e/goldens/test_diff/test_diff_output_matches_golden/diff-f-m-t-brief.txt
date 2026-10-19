@@ -1,0 +1,11 @@
+[now] trial diff:
+  Sequence key changed from 1 to 2
+  Parent id changed from <None> to <UUID1>
+
+[now] Brief modules diff
+[Additions] | [Removals] | [Changes]
+
+[now] Brief file access diff
+[Additions] | [Removals] | [Changes]
+            |            | (r) data2.dat
+            |            | (w) output.csv (new)

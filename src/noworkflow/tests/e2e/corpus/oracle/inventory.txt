@@ -1,0 +1,5 @@
+name;quantity;price
+anvil;3;125.50
+bucket;12;4.25
+chisel;7;18.00
+drill;2;89.90

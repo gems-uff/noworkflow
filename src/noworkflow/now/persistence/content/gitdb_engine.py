@@ -23,6 +23,8 @@ class GitDBPyGitEngine(PyGitEngine):
         istream = IStream("blob", len(content), BytesIO(content))
         ldb.store(istream)
         content_hash = istream.hexsha
-        filename_hash = hashlib.sha1(filename.encode('utf-8')).hexdigest()
+        # Names the file's entry in the content commit; nothing is verified with it
+        filename_hash = hashlib.sha1(
+            filename.encode('utf-8'), usedforsecurity=False).hexdigest()
         result = object_hashes[filename_hash] = str(content_hash.decode('utf-8'))
         return result

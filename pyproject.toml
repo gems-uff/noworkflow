@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+# 77: the SPDX `license` expression and `license-files` (PEP 639).
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,31 +16,41 @@ authors = [
     {name = "Arthur Paiva", email = "arthur.paiva@id.uff.br"},
     {name = "Other collaborators"},
 ]
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["scientific", "experiments", "provenance", "python"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Build Tools",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
     "pyposast",
     "apted",
     "future",
-    "SQLAlchemy>=1.4.29,<=1.4.47",
+    # <2: the models use the 1.4 API that 2.0 removed (select([...]),
+    # Connection.execute with autocommit, string statements; the SQLAlchemy
+    # premises of tests/premises say where). >=1.4.29 came with 8fdde50,
+    # which moved the test helpers to Session.get.
+    "SQLAlchemy>=1.4.29,<2",
     "parameterized",
     "requests",
     "ipykernel",
-    "zipp==3.15",
-    "importlib-metadata==6.4.1",
-    "typing-extensions>=4.5.0,<5",
     "setuptools<72",
     "nbformat",
     "graphviz",
-    "flask"
+    # 2.3.3: the first release that requires a Werkzeug (2.3.7) whose
+    # routing does not use ast.Str, which Python 3.14 removed; with an
+    # older one `now vis` fails building its first route. Below 2.3 the
+    # routes also answer differently from what tests/vis pins.
+    "flask>=2.3.3"
 ]
 
 [project.optional-dependencies]
@@ -47,7 +58,7 @@ demo = ["flask", "matplotlib", "numpy", "cython"]
 notebook = ["pyposast", "ipython", "jupyter"]
 all = [
     "pyposast", "ipython", "jupyter", "pyswip-alt",
-    "matplotlib", "numpy", "cython"
+    "matplotlib", "numpy", "cython", "jsonpickle"
 ]
 
 [project.scripts]
@@ -57,6 +68,7 @@ now = "noworkflow:main"
 Homepage = "https://gems-uff.github.io/noworkflow/"
 Repository = "https://github.com/gems-uff/noworkflow.git"
 Issues = "https://github.com/gems-uff/noworkflow/issues"
+Changelog = "https://github.com/gems-uff/noworkflow/releases"
 
 
 [tool.setuptools.package-data]
@@ -73,3 +85,119 @@ namespaces = false
 [tool.setuptools.dynamic]
 version = {file = "src/noworkflow/resources/version.txt"}
 readme = {file = "README.md", content-type = "text/markdown"}
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5",
+    # 5.0: the first version whose order depends on the seed alone, so the
+    # seed in a CI summary reproduces that order on any machine.
+    "pytest-randomly>=5",
+    # Runs the suite in parallel (`-n 4` on the Linux legs of ci.yml, #426).
+    # 3.8: the version measured with this suite.
+    "pytest-xdist>=3.8",
+    "ruff>=0.14",
+    "bandit[toml]>=1.7.10",
+    # 2.9: --locked, which audits a PEP 751 pylock.toml (the audit step of
+    # ci.yml).
+    "pip-audit>=2.9",
+]
+# What the paper's running example imports (src/noworkflow/tests/e2e/corpus/
+# paper_example). Not in dev, so the matrix legs stay light: only the
+# `paper-example` job of ci.yml and the reference-leg container sync it, and
+# without it the tests of the example skip.
+paper = [
+    "scikit-learn",
+    "imbalanced-learn",
+    "pandas",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = [
+    "src/noworkflow/tests",
+    "src/noworkflow/now/persistence/models",
+    "src/noworkflow/now/utils/formatter.py",
+    "src/noworkflow/now/utils/functions.py",
+    "src/noworkflow/patterns/machinery.py",
+]
+python_files = ["test_*.py", "*_test.py"]  # the second pattern matches cross_version_test.py
+addopts = "--doctest-modules --doctest-report=only_first_failure --durations=10 --strict-markers -ra --cov-report=term --cov-report=xml"
+markers = [
+    "golden: compares against a stored golden output",
+    "slow: needs the console `now` and matplotlib",
+    "paper: replays the paper's running example; needs the `paper` group, runs in the paper-example job",
+]
+filterwarnings = ["default::DeprecationWarning:noworkflow"]  # Round 3 promotes it to error::
+
+[tool.coverage.run]
+source = ["noworkflow"]
+omit = [
+    "*/noworkflow/tests/*",
+    "*/noworkflow/resources/*",
+    "*/prov_deployment/py2module.py",
+]
+patch = ["subprocess"]  # covers the `now` that the e2e harness runs in a subprocess
+
+[tool.ruff]
+target-version = "py311"
+# Not linted: py2module.py does not parse as Python 3; the rest are scripts
+# that noWorkflow traces (demo, test examples, e2e corpus, the root tests/),
+# the Examples notebooks, and material outside the package. "tests/" with
+# the slash is the root directory only; a bare "tests" would also match
+# src/noworkflow/tests and leave the test package unlinted.
+extend-exclude = [
+    "src/noworkflow/now/collection/prov_deployment/py2module.py",
+    "src/noworkflow/resources/demo",
+    "src/noworkflow/tests/examples",
+    "src/noworkflow/tests/e2e/corpus",
+    "tests/",
+    "Examples",
+    "history",
+    "docs",
+    "src/frontend",
+]
+# Injected into builtins by the collector while a traced script runs.
+builtins = ["__noworkflow__"]
+
+[tool.ruff.lint]
+# Phase A: ruff's default set (E4, E7, E9, F) plus W605, blocking only the
+# rules that are already at zero. Each code in `ignore` still has occurrences;
+# Round 3 (#221) fixes them and removes the code from the list. E501 never
+# (the formatter owns line length); no S, because bandit is the SAST.
+select = ["E4", "E7", "E9", "F", "W605"]
+ignore = [
+    "E402",  # module-import-not-at-top-of-file
+    "E701",  # multiple-statements-on-one-line-colon
+    "E703",  # useless-semicolon
+    "E711",  # none-comparison
+    "E712",  # true-false-comparison
+    "E721",  # type-comparison
+    "E722",  # bare-except
+    "E731",  # lambda-assignment
+    "F401",  # unused-import
+    "F403",  # undefined-local-with-import-star
+    "F811",  # redefined-while-unused
+    "F841",  # unused-variable
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Python 2 compatibility shim: names that only exist on Python 2, re-exports.
+"src/noworkflow/now/utils/cross_version.py" = ["F401", "F821"]
+# Package re-exports. F401 is still ignored globally; this entry keeps them
+# allowed once Round 3 (#221) removes F401 from `ignore`.
+"__init__.py" = ["F401"]
+# Real NameErrors, fixed in Round 3 (#221): `e` in generate.py:21 and
+# `display` (exists only inside IPython) in var_tagging.py:445.
+"src/noworkflow/now/models/prospective/generate.py" = ["F821"]
+"src/noworkflow/now/tagging/var_tagging.py" = ["F821"]
+
+[tool.bandit]
+# Tests, the traced demo scripts and the Python 2 module are not product code
+# that runs on a user's data.
+exclude_dirs = [
+    "src/noworkflow/tests",
+    "src/noworkflow/resources/demo",
+    "src/noworkflow/now/collection/prov_deployment/py2module.py",
+]
+skips = []

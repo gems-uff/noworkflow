@@ -1,0 +1,102 @@
+name: Experimental legs
+
+# Legs under observation: the next Python release and Windows. A workflow of
+# their own, so a red here shows on the PR and in the commit checks without
+# turning the CI workflow red: `ci-ok`, the badge and the required check all
+# reflect the supported matrix only. `continue-on-error` would hide the red
+# instead of isolating it. Promoting the next Python means moving it to the
+# `test` matrix in ci.yml; Windows moves to pre-release.yml, the manual
+# matrix that runs Linux and macOS on every version (#426), and this
+# workflow then goes away once no next-Python leg is under observation.
+#
+# The steps mirror the `test` job in ci.yml; keep them in sync.
+#
+# Suspended on push and pull_request since 2026-10-15. The Windows 3.15 leg
+# fails in four model doctests whose fixtures are POSIX paths, which
+# ntpath.isabs() no longer takes as absolute from 3.13 on
+# (persistence/models: file_access.py FileAccess.is_internal; trial.py
+# Trial.iterate_accesses, local_modules and versioned_files). A red on every
+# commit taught nothing new. Meanwhile, run it by hand (the Actions tab, or
+# `gh workflow run experimental.yml --ref <branch>`) before a release and
+# for a change that touches paths or file encodings. Put `push:` and
+# `pull_request:` back when those doctests pass on Windows (a product change,
+# Round 3), or when the next Python's beta leg joins this workflow,
+# whichever comes first.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# No job writes to the repository: only checkout and setup.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+# The CPython that uv downloads, never the runner's: see ci.yml.
+env:
+  UV_MANAGED_PYTHON: "1"
+
+jobs:
+  test-experimental:
+    strategy:
+      fail-fast: false
+      matrix:
+        # The next Python joins on Linux from its first beta (May) and moves
+        # to ci.yml when the suite passes on it. Windows runs the floor and
+        # the newest, and moves to pre-release.yml, on every version, once
+        # the model doctests stop assuming POSIX paths (#374).
+        include:
+          # Warns wherever open() and friends rely on the locale encoding,
+          # which is cp1252 on Windows and UTF-8 elsewhere. 3.15 turns UTF-8
+          # mode on by default (PEP 686), so the two legs read files
+          # differently.
+          - { os: windows-latest, python: "3.11", min-tests: 2924, warn-encoding: "1" }
+          - { os: windows-latest, python: "3.15", min-tests: 2924, warn-encoding: "1" }
+    name: test-experimental (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONWARNDEFAULTENCODING: ${{ matrix.warn-encoding }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python ${{ matrix.python }}
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      - name: Install dependencies
+        id: sync
+        run: uv sync --locked
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m "not golden and not paper" | tee pytest.log
+
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
+            "${{ matrix.os }}, ${{ matrix.python }}" \
+            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -m "not golden and not paper"'
+
+      - name: CLI smoke test
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -o pipefail
+          mkdir now-smoke && cd now-smoke
+          now() { uv run --no-sync --project "$GITHUB_WORKSPACE" now "$@"; }
+          printf 'print("hello from noWorkflow")\n' > hello.py
+          now --version
+          now run hello.py | tee run.log
+          grep -q "hello from noWorkflow" run.log
+          now list | tee list.log
+          grep -q "run hello.py" list.log
