@@ -158,6 +158,17 @@ mark on a version where the case passes into a failure.
   hand: `gh workflow run pre-release.yml --ref <branch>`. It has no
   concurrency group, so a second dispatch runs beside the first. Its Windows
   legs run serially, about forty minutes each.
+- **Iterating on a Windows failure** with the whole matrix costs forty
+  minutes a round. Probe instead on a branch of its own: the local `main`
+  with the fixes, plus one commit that adds a temporary workflow running a
+  single Windows leg (the newest Python) on a push to that branch, with the
+  steps of the Windows legs of `pre-release.yml` and only the modules that
+  failed (a few minutes). GitHub dispatches only workflows that exist on
+  the default branch, so the probe fires on its push. Each fix is a commit
+  on `main`, brought into the probe branch by a merge (never a
+  force-push); the probe branch is deleted at the end, and `main` carries
+  only the real commits. `pre-release.yml` in full, on the branch that will
+  be integrated, is the last measurement before `main` moves.
 
 ```bash
 gh run list --workflow <file> --branch <branch> --limit 1 --json databaseId,headSha,status,conclusion
@@ -190,10 +201,11 @@ gh run view <id> --log | grep 'Using CPython'
 A red on one leg **is not necessarily a bug**. Three categories, and the
 difference matters:
 
-1. **A test that assumes one version.** The AST of the version that wrote it,
-   a rooted POSIX path in a fixture, the locale encoding. The test is wrong,
-   not the tool: it asserts what the tool never promised on that version.
-   Fix the test.
+1. **A test that assumes one version or one system.** The AST of the
+   version that wrote it, a rooted POSIX path in a fixture, the locale
+   encoding, a line end: on Windows text mode writes CRLF, and so does
+   `os.open` without `O_BINARY`. The test is wrong, not the tool: it
+   asserts what the tool never promised there. Fix the test.
 2. **A real defect that the reference version hid.** An AST node the
    transformer does not handle, a path that only breaks on Windows, a
    package locked at another version on that Python fork. A `Bug` issue
@@ -203,8 +215,11 @@ difference matters:
    parse the new grammar yet (a fix there reaches this repository only
    through a release: `dependencies`), a pre-release interpreter, a package
    with no wheel for that interpreter built from source, an interpreter build
-   that lacks a module, a uv too old to know the version. Not a verdict on
-   the change.
+   that lacks a module, a uv too old to know the version, a Windows runner
+   whose temporary directory is on another drive than Python (C: and D:,
+   which `pre-release.yml` evens out by pointing `TEMP` at `RUNNER_TEMP`:
+   a project on another drive than the modules it imports measures that
+   drive split, not the test's subject). Not a verdict on the change.
 
 Suspect the third first: it is the easiest to cause without noticing and the
 one that produces the most misleading diagnosis. Then compare with the same

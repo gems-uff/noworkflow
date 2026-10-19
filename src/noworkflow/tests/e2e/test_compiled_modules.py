@@ -50,17 +50,15 @@ the other Linux versions are the CI legs, where the test of #183 in
 ``test_restore.py`` (``build_binary_module_store``) also finds and
 imports the same ``lib-dynload`` file.
 
-Windows: ``winsound``, not measured: the Windows legs run only by hand,
-in ``pre-release.yml``, and no run has measured it. CPython does not build
-``_dbm`` there. The choice is reasoned from CPython's build: ``winsound``
-is a project of its own in ``PCbuild`` that becomes ``winsound.pyd`` in
-the ``DLLs`` directory, outside ``python3X.dll``, and the Windows
-distributions of python-build-standalone are shared builds that keep that
-layout; no module of the standard library, of noWorkflow or of its locked
-dependencies imports it; importing it plays no sound. The first Windows
-run should confirm that ``find_spec("winsound").origin`` is a file and
-that no test here skips. ``winsound`` belongs to no package, so the
-package test is POSIX only.
+Windows: ``winsound``, measured on the Windows legs of ``pre-release.yml``
+(#374): ``find_spec("winsound").origin`` is ``DLLs\\winsound.pyd``, a
+file, and only the package tests skip. CPython does not build ``_dbm``
+there. ``winsound`` is a project of its own in ``PCbuild`` that becomes
+``winsound.pyd`` in the ``DLLs`` directory, outside ``python3X.dll``, and
+the Windows distributions of python-build-standalone are shared builds that
+keep that layout; no module of the standard library, of noWorkflow or of
+its locked dependencies imports it; importing it plays no sound.
+``winsound`` belongs to no package, so the package tests are POSIX only.
 
 Where the module is missing or built in, the tests skip with the reason,
 which the ``-ra`` summary of the leg lists, except on POSIX under CI

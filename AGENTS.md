@@ -273,7 +273,9 @@ neither executes:
   Python version. macOS and Windows run every version in `pre-release.yml`,
   by hand before a release. Path separators, encodings, processes and the
   shell differ there: a change that touches them runs `pre-release.yml` on
-  its branch before it reaches `main`.
+  its branch before it reaches `main`. The Windows legs keep the projects
+  on Python's drive, so a project on another drive than the modules it
+  imports (#294) runs nowhere.
 - **Syntax per Python version:** the collector rewrites the AST, and each
   Python version adds nodes. The syntax corpus of the e2e tests
   (`corpus/syntax/`, `test_syntax_corpus.py`) traces one script per
@@ -293,7 +295,7 @@ neither executes:
   pins what the store records when a traced script starts a process, and
   `test_compiled_modules.py` how an extension module of the standard
   library and a library loaded through `ctypes` are recorded (`_dbm` on
-  POSIX; on Windows `winsound`, a choice no leg has measured). #202 and
+  POSIX, `winsound` on Windows, which only `pre-release.yml` runs). #202 and
   #203 change these characterizations on purpose. The leak detector sees
   the children of the pytest process only, never what a `now` run as a
   process leaves behind.
