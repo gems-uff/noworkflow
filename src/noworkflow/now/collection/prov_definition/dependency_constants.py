@@ -42,6 +42,7 @@ FUNC = "func"
 #  expr.visit_Call
 ITEM = "item"
 #  expr._itemize
+#  expr.visit_Dict
 #  expr.yield
 KEY = "key"
 #  expr._dict_itemize

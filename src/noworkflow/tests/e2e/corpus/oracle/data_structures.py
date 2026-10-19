@@ -9,9 +9,9 @@ of a tuple, starred names in list, tuple and set displays,
 ``collections``, ``heapq``, ``bisect`` and ``copy``. Python functions
 called back by builtins are in callback_functions.py and callbacks.py, a
 lambda inside a display or a comprehension in lambda_in_collection.py; a
-dict display with ``**`` (#201 (PR))
-and a starred operand that is not a name, an attribute or a subscript are
-left to the syntax corpus.
+dict display with ``**`` and a starred operand that is not a name, an
+attribute or a subscript are left to the syntax corpus (dict_unpacking.py
+and starred_display.py).
 """
 import bisect
 import collections

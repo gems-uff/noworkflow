@@ -371,6 +371,11 @@ class RewriteDependencies(ast.NodeTransformer):
                 <now>.dict_key(<act>, #, <exc>)(<act>, #`a: b`, |a|):
                     <now>.dict_value(<act>, #, <exc>)(<act>, #`a: b`, |b|)
             })
+        and the operand of a ** item into an item dependency, with no
+        key_value and no member:
+            {**c}
+        Into:
+            <now>.dict(<act>, #, <exc>)(<act>, #`{**c}`, {**|c|})
         """
         node.name = pyposast.extract_code(self.rewriter.lcode, node)
         dict_code_component = self.rewriter.create_code_component(

@@ -1,4 +1,4 @@
-"""Dictionary unpacking in a display, {**d} (PEP 448, #201)"""
+"""Dictionary unpacking in a display, {**d} (PEP 448, #427)"""
 
 base = {"a": 1, "b": 2}
 extra = {"b": 3, "c": 4}

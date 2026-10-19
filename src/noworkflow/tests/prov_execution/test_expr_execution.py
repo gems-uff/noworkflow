@@ -417,6 +417,50 @@ class TestExprExecution(CollectionTestCase):
         self.assert_dependency(var_result, var_source, "item")
         self.assertEqual(var_result.repr, "{'a': 1}")
 
+    def test_dict_unpacking_between_keys_keeps_every_item(self):
+        """Test dictionary unpacking between key-value pairs"""
+        self.script("source = {'a': 1}\n"
+                    "result = {'x': 0, **source, 'y': 2}\n"
+                    "# other")
+
+        var_source = self.get_evaluation(name="source", mode="r")
+        var_result = self.get_evaluation(name="{'x': 0, **source, 'y': 2}")
+        var_kv_x = self.get_evaluation(name="'x': 0")
+        var_kv_y = self.get_evaluation(name="'y': 2")
+
+        self.assert_dependency(var_result, var_source, "item")
+        self.assert_dependency(var_result, var_kv_x, "item")
+        self.assert_dependency(var_result, var_kv_y, "item")
+        self.assert_member(var_result, var_kv_x, "['x']")
+        self.assert_member(var_result, var_kv_y, "['y']")
+        self.assertEqual(var_result.repr, "{'x': 0, 'a': 1, 'y': 2}")
+
+    def test_dict_unpacking_of_two_sources_depends_on_both(self):
+        """Test dictionary unpacking of two mappings"""
+        self.script("first = {'k': 1}\n"
+                    "second = {'k': 2}\n"
+                    "result = {**first, **second}\n"
+                    "# other")
+
+        var_first = self.get_evaluation(name="first", mode="r")
+        var_second = self.get_evaluation(name="second", mode="r")
+        var_result = self.get_evaluation(name="{**first, **second}")
+
+        self.assert_dependency(var_result, var_first, "item")
+        self.assert_dependency(var_result, var_second, "item")
+        self.assertEqual(var_result.repr, "{'k': 2}")
+
+    def test_dict_unpacking_of_a_call_depends_on_the_call(self):
+        """Test dictionary unpacking of a call result"""
+        self.script("result = {**dict(a=1)}\n"
+                    "# other")
+
+        var_call = self.get_evaluation(name="dict(a=1)", type="call")
+        var_result = self.get_evaluation(name="{**dict(a=1)}")
+
+        self.assert_dependency(var_result, var_call, "item")
+        self.assertEqual(var_result.repr, "{'a': 1}")
+
     def test_list_definition(self):
         """Test list definition"""
         self.script("e = 1\n"
