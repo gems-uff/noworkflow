@@ -59,6 +59,19 @@ jobs:
         id: sync
         run: uv sync --locked
 
+      # The runner's temporary directory is on C:, while the checkout, its
+      # .venv and the Python uv installs are under D:\a. A project on another
+      # drive than the modules it imports is #294, which crashes the first
+      # import of a module under `now run`; with every project of the suite
+      # there, the legs measured #294 instead of what each test is about.
+      # pytest's temporary directory follows TEMP and TMP, so the projects
+      # share Python's drive, as on a machine with everything on one drive.
+      - name: Put the temporary directory on Python's drive (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+
       # SWI-Prolog on the Linux and macOS legs, as in ci.yml: without swipl
       # the patterns tests and the Prolog-fact tests skip, as they do on the
       # Windows legs.
