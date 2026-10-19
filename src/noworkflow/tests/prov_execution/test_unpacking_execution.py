@@ -10,8 +10,8 @@ starred target from a tuple display and one iteration of ``for x, y in``;
 these tests pin the rest of the store: a starred target first, last or
 empty, a starred target or a ``for`` over a black-box iterable, every
 iteration of a ``for`` with a tuple or nested target (#154 crashed it), and
-the defects of nested starred targets, of starred items in a display and of
-unpacking an iterator or a generator. Each expected value follows from
+the defects of nested starred targets, of starred items in a display, of
+``**`` items in a dict display and of unpacking an iterator or a generator. Each expected value follows from
 Python's unpacking: which items a target receives decides what it depends
 on.
 
@@ -60,6 +60,14 @@ STARRED_DISPLAY = Defect(
     "the starred operand is one member and every later element sits at "
     "its static index: a subscript resolves to the wrong member, or none",
     signature="'combined[1]': '3'")
+DOUBLE_STARRED_DISPLAY = Defect(
+    "#429: RewriteDependencies.visit_Dict (transformer_expr.py) "
+    "captures the operand of a ** item as an item dependency with no key, "
+    "and Collector._dict (collector.py) records a member only for each "
+    "key-value pair, so the unpacked keys get no member and a pair that "
+    "a later ** overrides keeps its member: a subscript resolves to the "
+    "overridden value, or to none",
+    signature="'overridden[1]': '0'")
 GENEXP_ACTIVATION = Defect(
     "#321: the generator branch of "
     "Collector.assign_multiple (collector.py) calls create_dependencies_id "
@@ -83,6 +91,14 @@ NESTED_STARRED_BEFORE = ("# script.py\n"
 NESTED_STARRED_IN_LAST_PLACE = ("# script.py\n"
                                 "first, *(b, *c) = 1, 2, 3, 4\n")
 DISPLAYS = ("[*middle, 3]", "(*middle, 3)")
+# Int keys: a subscript with a str key never finds a member that a display
+# put there (#428).
+DOUBLE_STARRED = ("# script.py\n"
+                  "source = {1: 5}\n"
+                  "overridden = {1: 0, **source}\n"
+                  "x = overridden[1]\n"
+                  "copied = {**source}\n"
+                  "y = copied[1]\n")
 GENEXP = ("# script.py\n"
           "a, b = (z * 2 for z in [3, 4])\n")
 GENFUNC = ("# script.py\n"
@@ -390,6 +406,30 @@ class TestUnpackingExecution(TargetTestCase):
                     (literal.id, "[1]", True))
                 self.assertEqual(self.dependencies(second, "access"), [])
 
+    def test_subscript_of_a_dict_display_with_a_double_starred_item(self):
+        """In ``{1: 0, **source}`` the pair ``1: 0`` stays the member at
+        [1], so ``overridden[1]`` (5) reads 0; ``{**source}`` has no
+        member, so ``copied[1]`` (5) reads nothing
+
+        The operand of ``**`` is an item dependency, not a member
+        (#429).
+        """
+        self.assertEqual(self.collect(DOUBLE_STARRED), SUCCESS)
+        overridden = self.get_evaluation(name="{1: 0, **source}")
+        copied = self.get_evaluation(name="{**source}")
+        pair = self.get_evaluation(name="1: 0")
+        self.assert_member(overridden, pair, "[1]")
+        self.assertIsNone(self.find_member(collection_id=copied.id,
+                                           key="[1]"))
+        first = self.get_evaluation(name="overridden[1]")
+        second = self.get_evaluation(name="copied[1]")
+        self.assertEqual((first.repr, second.repr), ("5", "5"))
+        access = self.find_dependency(dependent_id=first.id, type="access")
+        self.assertEqual(
+            (access.dependency_id, access.key, access.reference),
+            (pair.id, "[1]", True))
+        self.assertEqual(self.dependencies(second, "access"), [])
+
     def test_unpacking_a_generator_expression(self):
         """Unpacking a generator expression records an ``ActivationLW`` as
         the dependent activation id of each item, and the trial cannot be
@@ -468,6 +508,16 @@ class TestUnpackingExecutionDesired(TargetTestCase):
         self.assertEqual(found, {
             display: {"combined[1]": "2", "combined[2]": "3"}
             for display in DISPLAYS})
+
+    @known_defects(DOUBLE_STARRED_DISPLAY)
+    def test_subscript_of_a_dict_display_with_a_double_starred_item_desired(
+            self):
+        """A subscript of a dict display with a ``**`` item reads the value
+        Python put at that key: ``{1: 0, **{1: 5}}`` is ``{1: 5}``
+        """
+        self.assertEqual(self.collect(DOUBLE_STARRED), SUCCESS)
+        self.assertEqual(self.access_reprs("overridden[1]", "copied[1]"),
+                         {"overridden[1]": "5", "copied[1]": "5"})
 
     @known_defects(GENEXP_ACTIVATION)
     def test_unpacking_a_generator_expression_desired(self):

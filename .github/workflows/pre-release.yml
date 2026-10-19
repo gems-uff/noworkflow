@@ -34,8 +34,8 @@ jobs:
         # 3 and 7 GB, where three workers measured only 1.25 times faster
         # than one (#426).
         include:
-          - { os: ubuntu-latest, min-tests: 2931, workers: 4 }
-          - { os: macos-latest, min-tests: 2931, workers: 3 }
+          - { os: ubuntu-latest, min-tests: 2933, workers: 4 }
+          - { os: macos-latest, min-tests: 2933, workers: 3 }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
