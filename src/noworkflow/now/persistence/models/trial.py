@@ -355,23 +355,25 @@ class Trial(AlchemyProxy):
         Doctest:
         >>> from noworkflow.tests.helpers.models import TrialConfig, new_trial
         >>> from noworkflow.tests.helpers.models import modules
-        >>> trial_id = new_trial(TrialConfig(path="/home/now"), erase=True)
+        >>> trial_id = new_trial(
+        ...     TrialConfig(path=os.path.abspath("/home/now")), erase=True)
         >>> trial = Trial(trial_id)
 
         Return empty list if there are no modules:
         >>> list(trial.local_modules)
         []
 
-        Do not return modules outside the trial path:
-        >>> m1 = modules.add(
-        ...     trial_id, "external", "1.0.1", "/home/external.py", None, 0, None)
+        Do not return modules outside the trial path (absolute paths, which
+        on Windows carry a drive):
+        >>> m1 = modules.add(trial_id, "external", "1.0.1",
+        ...     os.path.abspath("/home/external.py"), None, 0, None)
         >>> modules.do_store()
         >>> list(trial.local_modules)
         []
 
         Return modules inside the trial path:
-        >>> m2 = modules.add(
-        ...    trial_id, "inte", "1.0.1", "/home/now/inte.py", None, 0, None)
+        >>> m2 = modules.add(trial_id, "inte", "1.0.1",
+        ...    os.path.abspath("/home/now/inte.py"), None, 0, None)
         >>> modules.do_store()
         >>> list(trial.local_modules)  # doctest: +ELLIPSIS
         [module(..., 'inte', '1.0.1').]

@@ -58,7 +58,8 @@ of date, fix it there.
   the fix and green after it. See `SECURITY.md`.
 - **Definition of done:** `uv run pytest` green from the repository root;
   the test count at or above the floor of every leg (`min-tests` in
-  `.github/workflows/ci.yml`, `pre-release.yml` and `experimental.yml`, the one in
+  `.github/workflows/ci.yml`, `pre-release.yml` and, while it exists,
+  `experimental.yml`, the one in
   `flaky.yml` and the one of the `paper-example` job; the reference leg also
   counts the goldens, which the other legs deselect), **and the floors go
   up in the same PR that adds tests**;
@@ -269,13 +270,10 @@ neither executes:
   By hand, `golden-run` (step 4) and the smoke of `rebuild-vis` serve a
   corpus store over a real port and fetch the routes `read_store.py` lists.
 - **Windows and macOS:** a push runs the matrix on Ubuntu only, for every
-  Python version. macOS runs every version in `pre-release.yml`, by hand
-  before a release; Windows runs the floor and the newest as experimental
-  legs that do not block and, while `experimental.yml` is suspended (its
-  header says until when), run only by hand too. Path separators and
-  encodings differ there: a change that touches them runs
-  `pre-release.yml` (and `experimental.yml`) on its branch before it
-  reaches `main`.
+  Python version. macOS and Windows run every version in `pre-release.yml`,
+  by hand before a release. Path separators, encodings, processes and the
+  shell differ there: a change that touches them runs `pre-release.yml` on
+  its branch before it reaches `main`.
 - **Syntax per Python version:** the collector rewrites the AST, and each
   Python version adds nodes. The syntax corpus of the e2e tests
   (`corpus/syntax/`, `test_syntax_corpus.py`) traces one script per
@@ -317,7 +315,8 @@ neither executes:
   with its `rules.pl` twin over `now export prolog -r`, and the Prolog-fact
   tests read exports back, only where `swipl` is on the PATH; they skip
   elsewhere. In CI the legs of the `test` job and the `paper-example` job
-  install it, the experimental Windows legs do not.
+  install it, and so do the Linux and macOS legs of `pre-release.yml`; its
+  Windows legs do not.
 - **Jupyter:** the magics run in an in-process IPython shell
   (`src/noworkflow/tests/ipython/`), never under a kernel: the kernel in
   `src/noworkflow/kernel/` is only imported (#315), so `now clean` never
@@ -526,9 +525,10 @@ Portuguese; what gets written to the repository is translated.
 ## Python versions
 
 The supported range is `requires-python` in `pyproject.toml`; the versions
-that are actually run are the legs of `.github/workflows/ci.yml` (blocking)
-and `.github/workflows/experimental.yml` (observed, not blocking; run by
-hand while suspended). A version
+that are actually run are the legs of `.github/workflows/ci.yml` (blocking,
+on every push), of `.github/workflows/pre-release.yml` (by hand, before a
+release) and, from the next Python's first beta to its promotion, of
+`.github/workflows/experimental.yml` (observed, not blocking). A version
 is supported when it has a blocking leg, and a classifier in
 `pyproject.toml` is added only then. Locally, `uv run --isolated --locked
 --no-python-downloads --python <version> pytest` runs the suite on any of
@@ -544,13 +544,13 @@ with the measurements behind it, is issue #237):
   change in the same commit.
 - **Matrix:** on every push, Linux runs every supported minor, blocking,
   with four pytest-xdist workers per leg. Before a release, `pre-release.yml`
-  runs Linux and macOS on every supported minor, by hand; Windows runs the
-  floor and the newest in `experimental.yml` until the model doctests stop
-  assuming POSIX paths (#374), and then joins `pre-release.yml`. The next
-  Python runs on Linux as an experimental leg from its first beta (May) and
-  is promoted when the suite passes on it, with the October release as the
+  runs Linux, macOS and Windows on every supported minor, by hand. The next
+  Python runs on Linux as an experimental leg from its first beta (May), in
+  an `experimental.yml` that exists only while such a leg does, and is
+  promoted when the suite passes on it, with the October release as the
   target. The record of the move of macOS out of the push, with the
-  measurements behind it, is issue #426.
+  measurements behind it, is issue #426; of Windows into
+  `pre-release.yml`, #374.
 - **Reference leg** (coverage, goldens, `flaky.yml`, and the Python of the
   `checks` and `paper-example` jobs): Linux on the newest blocking version.
   It moves when a new version is promoted, and the goldens are regenerated
@@ -563,16 +563,15 @@ with the measurements behind it, is issue #237):
 - **Runner images:** the `-latest` labels, which GitHub moves to the newest
   generally available image.
 
-Why macOS only before a release: defects specific to a system (paths,
-encodings, the file system) rarely depend on the Python version, and in 99
-runs of `ci.yml` with macOS on every push no Python version failed alone and
-macOS failed alone once, while its legs, on a 3-core runner where workers
-barely help, set the pace of every push (#426). Why Windows only at the
-ends while it is experimental: the floor catches what became obsolete, the
-newest what is new. On Windows the two ends
-also read files differently: from 3.15 UTF-8 mode is on by default (PEP 686),
-so an `open()` without `encoding=` reads the locale encoding (usually cp1252)
-on older versions and UTF-8 on newer ones.
+Why macOS and Windows only before a release: defects specific to a system
+(paths, encodings, the file system) rarely depend on the Python version, and
+in 99 runs of `ci.yml` with macOS on every push no Python version failed
+alone and macOS failed alone once, while its legs, on a 3-core runner where
+workers barely help, set the pace of every push (#426); a Windows leg,
+serial, takes about forty minutes (#374). On Windows the versions also read
+files differently: from 3.15 UTF-8 mode is on by default (PEP 686), so an
+`open()` without `encoding=` reads the locale encoding (usually cp1252)
+before 3.15 and UTF-8 from it.
 
 Why every minor on Linux: the ends cover the middle only while no code
 branches on a middle version and no dependency resolves differently there

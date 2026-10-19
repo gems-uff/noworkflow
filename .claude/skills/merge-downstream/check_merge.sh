@@ -360,14 +360,16 @@ echo "### the test floor (min-tests)"
 # of the two numbers: whichever it keeps, the floor ends below the count. A
 # hunk resolved with one side can also leave some legs at the old floor. The
 # right number is the count of the suite after the merge.
-legs() {  # "os,python floor" for each leg of a workflow at a commit
+legs() {  # "os,python floor" for each leg of a workflow at a commit; "os floor"
+          # where the floor is set per system (pre-release.yml)
   git show "$1:$2" 2>/dev/null \
-    | sed -nE 's/.*os: *([A-Za-z0-9._-]+).*python: *"?([0-9.]+)"?.*min-tests: *([0-9]+).*/\1,\2 \3/p'
+    | sed -nE -e 's/.*os: *([A-Za-z0-9._-]+).*python: *"?([0-9.]+)"?.*min-tests: *([0-9]+).*/\1,\2 \3/p' \
+              -e 's/.*os: *([A-Za-z0-9._-]+),.*min-tests: *([0-9]+).*/\1 \2/p'
 }
 leg_floor() { printf '%s\n' "$1" | awk -v k="$2" '$1 == k { print $2; exit }'; }
 SEEN=0
 RAISED_BOTH=0
-for wf in .github/workflows/ci.yml .github/workflows/experimental.yml; do
+for wf in .github/workflows/ci.yml .github/workflows/pre-release.yml .github/workflows/experimental.yml; do
   LM=$(legs "$MERGE_C" "$wf"); LU=$(legs "$UP" "$wf"); LB=$(legs "$BR" "$wf"); L0=$(legs "$BASE" "$wf")
   [ -z "$LM$LU$LB" ] && continue
   SEEN=1

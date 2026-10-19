@@ -43,7 +43,7 @@ PRESERVE = ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT")
 WINDOWS_KEEP = ("SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "PATHEXT", "COMSPEC",
                 "PROGRAMDATA")
 # Never forwarded, on purpose: PYTHONWARNINGS, PYTHONWARNDEFAULTENCODING
-# (set by the Windows experimental legs) and PYTHONDEVMODE print warnings
+# (set by the Windows legs of pre-release.yml) and PYTHONDEVMODE print warnings
 # on stderr, PYTHONPATH and PYTHONSTARTUP change what runs, FORCE_COLOR
 # colors argparse and tracebacks, LANG and LC_* change the recorded
 # environment.

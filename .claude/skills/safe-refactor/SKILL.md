@@ -215,7 +215,7 @@ longer matches `python_files`, a doctest that left a docstring, a
 `parameterized` list that lost an entry. It vanishes with the same effect as
 a regression, and without an alarm. CI fails a leg below `min-tests`; locally,
 the baseline is the floor, and tests added raise `min-tests` in
-`.github/workflows/ci.yml` and in `experimental.yml` in the same PR.
+`.github/workflows/ci.yml` and in `pre-release.yml` in the same PR.
 
 **A skip does not lower the count**: skipped is part of it, so a test that
 starts skipping keeps the total and only shows in the split between passed

@@ -329,7 +329,7 @@ single test, with the suite closing green.
 What the change touches and the suite does not execute becomes a test, by
 `safe-refactor` — including the check that the test is not empty. Where the
 test lives is in step 3 of `safe-refactor`. Tests added raise `min-tests` in
-`.github/workflows/ci.yml` and in `experimental.yml` in the same PR. What not
+`.github/workflows/ci.yml` and in `pre-release.yml` in the same PR. What not
 even the suite reaches goes to `golden-run`, `python-matrix` or `rebuild-vis`
 by the table, and the blind spots that none of them covers (`AGENTS.md`) are
 probed by hand and recorded in the PR.
@@ -464,14 +464,15 @@ workflow), so treating a non-zero exit as a transient error to swallow makes
 the waiting loop spin silently, and the silence is indistinguishable from
 "still running". Pending *is* the state, not a failure to query it: decide by
 the text of the output, never by the exit status. The status the ruleset
-requires is `ci-ok`; the `test-experimental (...)` legs come from
-`experimental.yml` and are not required — a red there is compared with the
-same leg on `main` (`gh run list --workflow experimental.yml --branch main
---limit 1`) before being charged to the PR. While that workflow is suspended
-(its header says until when) the PR has no such legs: when the diff touches
-paths or file encodings, run it by hand on the PR's branch (`gh workflow run
-experimental.yml --ref <branch>`). A PR from a fork has no `coverage`
-job, by the guard in `ci.yml`; that is not a failure either.
+requires is `ci-ok`; the `test-experimental (...)` leg of the next Python,
+while `experimental.yml` exists, is not required — a red there is compared
+with the same leg on `main` (`gh run list --workflow experimental.yml
+--branch main --limit 1`) before being charged to the PR. macOS and Windows
+never run on a PR: when the diff touches paths, file encodings, processes
+or the shell, run `pre-release.yml` by hand on the PR's branch (`gh
+workflow run pre-release.yml --ref <branch>`) and compare its reds with its
+last run on `main`. A PR from a fork has no `coverage` job, by the guard in
+`ci.yml`; that is not a failure either.
 
 Then what the table routes: `dependencies` for the lock and the workflows,
 `python-matrix` when the collector changed (and `golden-run` when that

@@ -6,6 +6,8 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
+import os
+
 from datetime import datetime, timedelta
 from textwrap import dedent
 from sqlalchemy import select, func
@@ -24,6 +26,13 @@ from ...now.collection.metadata import Metascript
 trial_list = {}
 meta = None
 m1, m2 = 1, 2
+
+# Absolute on the running system, as the paths of a real trial: from Python
+# 3.13, Windows takes a rooted path without a drive (/home/now) as relative,
+# and the models tell the project's files apart with os.path.isabs (#374).
+TRIAL_PATH = os.path.abspath("/home/now")
+EXTERNAL_PATH = os.path.abspath("/home/external.py")
+INTERNAL_PATH = os.path.abspath("/home/internal.py")
 
 def restart_object_store(trial_id=None):
     """Restart all object store"""
@@ -62,7 +71,7 @@ def erase_database():
 erase_db = erase_database
 
 def trial_params(year=2016, month=4, day=8, hour=1, minute=18, second=0,
-                 bypass_modules=False, script="main.py", path="/home/now"):
+                 bypass_modules=False, script="main.py", path=TRIAL_PATH):
     """Return default trial params"""
     return {
         "script": script,
@@ -475,7 +484,7 @@ class TrialConfig(ConfigObj):
             self, status="ongoing", script="main.py", docstring="block",
             year=2016, month=4, day=8, hour=1, minute=18, second=0,
             duration=65, main_duration=60, main_start=1,
-            path="/home/now", bypass_modules=False):
+            path=TRIAL_PATH, bypass_modules=False):
         # pylint: disable=too-many-arguments
         super(TrialConfig, self).__init__()
         self.trial_start = datetime(
@@ -601,17 +610,17 @@ def create_trial(
             global m1, m2, mc1, mc2
             mc1 = meta.code_components_store.add(
                 meta.trial_id,
-                "/home/external.py", "module", "w", 1, 0, 1, 4, -1
+                EXTERNAL_PATH, "module", "w", 1, 0, 1, 4, -1
             )
             meta.code_blocks_store.add(mc1, meta.trial_id, "aaaa", False, None, "codeblock")
             mc2 = meta.code_components_store.add(
                 meta.trial_id,
-                "/home/internal.py", "module", "w", 1, 0, 1, 4, -1
+                INTERNAL_PATH, "module", "w", 1, 0, 1, 4, -1
             )
             meta.code_blocks_store.add(mc2, meta.trial_id, "bbbb", False, None, "codeblock")
             m1 = meta.modules_store.add(
                 meta.trial_id,
-                "external", "1.0.1", "/home/external.py", mc1, False, None)
+                "external", "1.0.1", EXTERNAL_PATH, mc1, False, None)
             m2 = meta.modules_store.add(
                 meta.trial_id,
                 "internal", "", "internal.py", mc2, False, None)

@@ -50,8 +50,8 @@ the other Linux versions are the CI legs, where the test of #183 in
 ``test_restore.py`` (``build_binary_module_store``) also finds and
 imports the same ``lib-dynload`` file.
 
-Windows: ``winsound``, not measured: the Windows legs are experimental and
-run only by hand, and no run has measured it. CPython does not build
+Windows: ``winsound``, not measured: the Windows legs run only by hand,
+in ``pre-release.yml``, and no run has measured it. CPython does not build
 ``_dbm`` there. The choice is reasoned from CPython's build: ``winsound``
 is a project of its own in ``PCbuild`` that becomes ``winsound.pyd`` in
 the ``DLLs`` directory, outside ``python3X.dll``, and the Windows

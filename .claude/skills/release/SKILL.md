@@ -83,19 +83,19 @@ the note.
   step. Both describe what this release ships — `bundle.js` holds the npm
   side's code, and the runtime pins reach users' environments — so the
   maintainer decides whether the release waits and whether the note says so.
-- **The pre-release matrix green on that commit**: Linux and macOS on every
-  supported Python, which a push does not run. `gh workflow run
+- **The pre-release matrix green on that commit**: Linux, macOS and Windows
+  on every supported Python, which a push does not run. `gh workflow run
   pre-release.yml --ref main` once the bump is on `main`; the run's
   `headSha` must be the bump commit (`gh run list --workflow pre-release.yml
   --limit 1 --json databaseId,headSha,conclusion`). A red there blocks the
   release like a red in `ci.yml`.
-- **The experimental legs, run by hand on that commit** while their workflow
-  is suspended, as its header asks before a release: `gh workflow run
-  experimental.yml --ref main` once the bump is on `main`; the run's
-  `headSha` must be the bump commit (`gh run list --workflow experimental.yml
-  --limit 1 --json databaseId,headSha,conclusion`). Its failures are compared
-  with the previous run of the same legs (`gh run view <id> --log-failed |
-  grep FAILED`); anything new goes to the maintainer before going on.
+- **The experimental leg of the next Python**, when `experimental.yml`
+  exists (from the first beta, in May, to the promotion): its last run on
+  the bump commit (`gh run list --workflow experimental.yml --limit 1 --json
+  databaseId,headSha,conclusion`). It does not block; its failures are
+  compared with the previous run of the same leg (`gh run view <id>
+  --log-failed | grep FAILED`), and anything new goes to the maintainer
+  before going on.
 
 ## Steps
 
@@ -376,7 +376,7 @@ cd <outside>/nw-release && printf '%s' '<version>' > src/noworkflow/resources/ve
 ```
 
 Check the prerequisites that can be read (none dispatches anything: for the
-pre-release matrix and the experimental legs, write what would run and which previous run it would be
+pre-release matrix and the experimental leg, write what would run and which previous run it would be
 compared with). Then steps 1 to 4 in that worktree — `uv build` takes the
 bump from the working files — the dry run included, and the note of step 7
 drafted in `<scratch>/notes.md` from what step 1 found.

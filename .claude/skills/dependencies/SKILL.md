@@ -461,7 +461,8 @@ The series rule holds: `releases/latest` is the newest, not necessarily the
 same series; `gh api --paginate repos/<owner>/<repo>/tags --jq '.[].name'`
 lists the tags, and the newest patch of the pinned series is the target. A
 new major of an `actions/*` is a decision like any other. The same action
-appears in several workflows (`ci.yml`, `experimental.yml`, `flaky.yml`):
+appears in several workflows (`ci.yml`, `pre-release.yml`, `flaky.yml`, and
+`experimental.yml` while it exists):
 one step moves all of them, to the same SHA. `setup-uv` installs the
 `required-version` of `[tool.uv]` when there is one, and the newest uv
 otherwise, unless `version:` is given; that uv is the one to compare with

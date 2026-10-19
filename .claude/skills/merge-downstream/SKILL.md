@@ -249,7 +249,7 @@ where it lives in this project:
   version of those files: pytest finds the test by its file name, and the
   imports would only bring back the list `main` removed.
 - **The test floor.** Both sides added tests and each raised `min-tests` in
-  `.github/workflows/ci.yml` and `experimental.yml` by its own delta. The
+  `.github/workflows/ci.yml` and `pre-release.yml` by its own delta. The
   lines conflict, the resolution keeps one of the numbers, and the floor ends
   below the count whichever it keeps — which CI never notices, because it
   only fails below the floor. The right number is the count of the suite

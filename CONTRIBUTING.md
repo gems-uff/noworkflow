@@ -102,7 +102,7 @@ once it is integrated and nothing is left to do.
   option, a test that runs it.
 - **The suite green, and the count not below the floor.** CI fails a leg
   whose test count drops below `min-tests` in `.github/workflows/ci.yml`,
-  `pre-release.yml` and `experimental.yml`, or below the floor in
+  `pre-release.yml` and, while it exists, `experimental.yml`, or below the floor in
   `flaky.yml`; when you add
   tests, raise the floors in the same PR. The reference leg also counts the
   goldens, which the other legs deselect, so its floor is higher.

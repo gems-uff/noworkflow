@@ -183,8 +183,8 @@ class FileAccess(AlchemyProxy):
         >>> from noworkflow.tests.helpers.models import AccessConfig
         >>> from noworkflow.now.persistence.models import Activation
         >>> access_config = AccessConfig(
-        ...     read_file="a.txt", read_hash="ab", write_file="/x/b.txt",
-        ...     write_hash_before=None)
+        ...     read_file="a.txt", read_hash="ab",
+        ...     write_file=os.path.abspath("/x/b.txt"), write_hash_before=None)
         >>> trial_id = new_trial(TrialConfig("finished"),
         ...                      access=access_config, erase=True)
 
@@ -192,7 +192,8 @@ class FileAccess(AlchemyProxy):
         >>> FileAccess((trial_id, access_config.r_access.id)).is_internal
         True
 
-        Indicate new files:
+        Indicate files outside the trial path (absolute paths, which on
+        Windows carry a drive):
         >>> FileAccess((trial_id, access_config.w_access.id)).is_internal
         False
         """

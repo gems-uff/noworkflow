@@ -1,6 +1,6 @@
 ---
 name: python-matrix
-description: Runs the suite on every Python version of the CI matrix — locally with uv, on Linux x86_64 in the reference container, on the CI legs and on the experimental Windows legs — checks that the collector still handles a construct on each version, triages a failure that shows on one leg only, and keeps the matrix in step with python.org (the experimental leg of the next version, its promotion with the move of the reference leg and its goldens, the removal of the version that reached end of life). Use when a change touches the collector or the AST rewriting, when an issue names a Python version, when one leg is red and the others green, and when python.org releases or retires a version.
+description: Runs the suite on every Python version of the CI matrix — locally with uv, on Linux x86_64 in the reference container, on the CI legs and on the macOS and Windows legs of the pre-release matrix — checks that the collector still handles a construct on each version, triages a failure that shows on one leg only, and keeps the matrix in step with python.org (the experimental leg of the next version, its promotion with the move of the reference leg and its goldens, the removal of the version that reached end of life). Use when a change touches the collector or the AST rewriting, when an issue names a Python version, when one leg is red and the others green, and when python.org releases or retires a version.
 ---
 
 # The suite on every supported Python
@@ -151,12 +151,13 @@ mark on a version where the case passes into a failure.
   docker image rm noworkflow-reference:<v>
   ```
 - **The CI legs**: a push runs `ci.yml` on any branch; `gh workflow run
-  ci.yml --ref <branch>` runs it again without one. **Windows** is in
-  `experimental.yml`, which runs only by hand while its header says it is
-  suspended: `gh workflow run experimental.yml --ref <branch>`. On a branch
-  other than `main`, a dispatch cancels the run still going (the workflows'
+  ci.yml --ref <branch>` runs it again without one. On a branch other than
+  `main`, that dispatch cancels the run still going (the workflow's
   concurrency group); on `main` it queues behind it. Either way, wait for it
-  first.
+  first. **macOS and Windows** are in `pre-release.yml`, which runs only by
+  hand: `gh workflow run pre-release.yml --ref <branch>`. It has no
+  concurrency group, so a second dispatch runs beside the first. Its Windows
+  legs run serially, about forty minutes each.
 
 ```bash
 gh run list --workflow <file> --branch <branch> --limit 1 --json databaseId,headSha,status,conclusion
@@ -168,7 +169,7 @@ gh run view <id> --log | grep 'Using CPython'
 
 - **Check `headSha`** against `git rev-parse <branch>`: right after a push or
   a dispatch the newest run may still be the previous one, and the newest run
-  of a suspended workflow can be many commits old.
+  of a workflow run by hand can be many commits old.
 - **Decide by the text.** `gh run watch --exit-status` on a finished run
   answers at once with the run's verdict; `gh pr checks` exits non-zero
   while a check is pending, not only when one failed (`review-pr`, step 6).
@@ -243,8 +244,8 @@ one touches:
 | Lint target | ruff's `target-version` in `pyproject.toml` | the floor |
 | Linux legs | the `test` matrix of `ci.yml` (and the comment over the floor); the `python` list of `pre-release.yml` | every supported minor |
 | Reference leg | `reference: true` and its `min-tests` in `ci.yml`; the Python of the `checks` and `paper-example` jobs, their step names and the label of the paper example's summary; `flaky.yml` (setup and reproduction line) | the newest blocking version |
-| macOS legs | `pre-release.yml`, by hand before a release (the same `python` list as its Linux legs) | every supported minor |
-| Windows legs, next version | `experimental.yml` (its header and `on:` as well) | the floor and the newest; the next version's leg |
+| macOS and Windows legs | `pre-release.yml`, by hand before a release (the same `python` list as its Linux legs) | every supported minor |
+| Next version | `experimental.yml`, which exists only from its first beta to its promotion | the next version's leg |
 | Goldens | `src/noworkflow/tests/e2e/goldens/` and `goldens/REFERENCE` | the reference leg |
 | User docs | `README.md` (the minimum version and the tested range); `Examples/*/README.md` and the bug template, when they name a version out of the range | the range |
 | Agent docs | sentences that name a version in `AGENTS.md`, `CONTRIBUTING.md` and `.claude/skills/` (`git grep -n -F '<version>' -- AGENTS.md CONTRIBUTING.md .claude/skills`) | when the versions they name leave |
@@ -259,8 +260,16 @@ hit: a package pinned at the same digits is not a Python version).
 
 ### The next version's pre-releases: an experimental leg
 
-From its first beta, the next version runs on Linux in `experimental.yml`:
+From its first beta, the next version runs on Linux in `experimental.yml`,
+a workflow of its own so that a red there shows on the commit without
+turning `ci.yml` red (`ci-ok`, the badge and the required check reflect the
+supported matrix only; `continue-on-error` would hide the red instead):
 
+- The workflow is created for the leg, on `push` and `pull_request`, with
+  the steps of the `test` job of `ci.yml` minus the goldens and coverage.
+  Its last version is in the history: `git show "$(git log
+  --diff-filter=D --format=%H -1 -- .github/workflows/experimental.yml)^:.github/workflows/experimental.yml"`.
+  It is not a required check.
 - uv must know the pre-release: `uv python list --only-downloads <next>`
   lists it. The request `"<next>"` (the minor alone) selects the newest
   pre-release while there is no final; `<next>.0` and `>=<next>` do not.
@@ -268,9 +277,6 @@ From its first beta, the next version runs on Linux in `experimental.yml`:
   leg is `python: "<next>"`. CI installs the newest uv, which may know a
   newer pre-release than the local one.
 - The leg gets the `min-tests` of the other non-reference legs.
-- When the workflow is suspended and its header names this leg as the moment
-  to resume, the same commit puts `push:` and `pull_request:` back under
-  `on:` and rewrites the header paragraph that explains the suspension.
 - The heaviest compiled dependencies are in the `paper` group, which only
   the reference platform syncs: they meet the new version on promotion day.
   Whether the pre-release leg also syncs that group and runs `-m paper` is
@@ -294,10 +300,8 @@ The target is the October release of the version. In one commit:
   `pre-release.yml` gains the version in its `python` list; the Python of `checks` and of
   `paper-example` moves with the reference, with every other mention of it
   (`git grep -n -F '<old reference>' -- .github`).
-- `experimental.yml`: the pre-release leg leaves; the newest Windows leg
-  moves to the new version. If `push:` came back only for the pre-release leg
-  and the reason for the suspension still holds, suspend it again, and update
-  any version its header names. `flaky.yml`: the reference Python.
+- `experimental.yml` leaves with its leg (`git rm`). `flaky.yml`: the
+  reference Python.
 - `pyproject.toml`: the classifier. `README.md`: the tested range.
 - The goldens, recorded again in the container **after** `ci.yml` changed
   (the script reads the version from it) and **after** `goldens/REFERENCE`
@@ -329,8 +333,7 @@ Never in a patch release. In one commit:
 - `pyproject.toml`: the floor of `requires-python`, the classifier, ruff's
   `target-version`.
 - `ci.yml`: the Linux floor leg leaves, and the comment over the floor
-  follows; `pre-release.yml`: the version leaves its `python` list;
-  `experimental.yml`: the Windows floor moves to the new floor.
+  follows; `pre-release.yml`: the version leaves its `python` list.
 - `uv.lock`: `uv lock`, nothing upgraded. The forks below the new floor
   leave; `lock_versions.sh` of `dependencies` shows that nothing else moved.
 - `README.md`, the documents the table lists that name the removed version,
@@ -343,8 +346,9 @@ it included, leaves in steps of its own, measured like any refactoring
 
 ## What the matrix does not cover
 
-- macOS on a push: it runs only when someone runs `pre-release.yml`.
-- The middle versions on Windows, and Windows as a blocking leg.
+- macOS and Windows on a push: they run only when someone runs
+  `pre-release.yml`. Its Windows legs install no SWI-Prolog, so the
+  patterns and Prolog-fact tests skip there.
 - The goldens and the paper's running example off the reference platform.
 - A construct outside the syntax corpus and the examples, on any version:
   the AST is exercised only where a test runs a script that contains it ("A

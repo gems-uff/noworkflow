@@ -1,12 +1,11 @@
 name: Pre-release matrix
 
 # The whole matrix, run by hand before a release (the `release` skill) and
-# whenever a change may depend on the system: Linux and macOS on every
-# Python version python.org maintains. A push runs only the Linux legs of
-# ci.yml: in 99 runs of ci.yml no Python version failed alone and the only
-# leg that failed alone was macOS, while the macOS legs set the pace of
-# every push (#426). The Windows legs join this matrix when they pass
-# (#374), and experimental.yml then goes away.
+# whenever a change may depend on the system: Linux, macOS and Windows on
+# every Python version python.org maintains. A push runs only the Linux legs
+# of ci.yml: in 99 runs of ci.yml no Python version failed alone and the
+# only leg that failed alone was macOS, while the macOS legs set the pace of
+# every push (#426). Windows joined once its legs passed (#374).
 on:
   workflow_dispatch:
 
@@ -27,17 +26,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
         # min-tests: the non-golden floor of ci.yml; raise both together.
         # workers: one per vCPU. The Linux runner has 4; the macOS runner has
         # 3 and 7 GB, where three workers measured only 1.25 times faster
-        # than one (#426).
+        # than one (#426). Windows runs serially (-n 0): workers there were
+        # never measured.
+        # warn-encoding: warns wherever open() and friends rely on the locale
+        # encoding, which is cp1252 on Windows and UTF-8 elsewhere. 3.15
+        # turns UTF-8 mode on by default (PEP 686), so the Windows legs read
+        # files differently below and from 3.15.
         include:
           - { os: ubuntu-latest, min-tests: 2957, workers: 4 }
           - { os: macos-latest, min-tests: 2957, workers: 3 }
+          - { os: windows-latest, min-tests: 2957, workers: 0, warn-encoding: "1" }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
+    env:
+      PYTHONWARNDEFAULTENCODING: ${{ matrix.warn-encoding }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -52,8 +59,9 @@ jobs:
         id: sync
         run: uv sync --locked
 
-      # SWI-Prolog on every leg, as in ci.yml: without swipl the patterns
-      # tests and the Prolog-fact tests skip.
+      # SWI-Prolog on the Linux and macOS legs, as in ci.yml: without swipl
+      # the patterns tests and the Prolog-fact tests skip, as they do on the
+      # Windows legs.
       - name: Install SWI-Prolog (Linux)
         if: runner.os == 'Linux'
         run: |
