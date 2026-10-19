@@ -127,8 +127,7 @@ PREIMPORTED_MODULES = Defect(
     "itself imported before the script is already in sys.modules and is "
     "never recorded (now/cmd/__init__.py imports SQLAlchemy and every "
     "command: json arrives through SQLAlchemy and cmd_push.py, subprocess "
-    "through pkg_resources and packaging, from now/utils/functions.py, and "
-    "cmd_demo.py)",
+    "through now/utils/functions.py and cmd_demo.py)",
     signature="no module row for ['json', 'subprocess']")
 EXEC_LOSES_TRIAL = Defect(
     "#377: run (cmd/cmd_run.py) stores the trial, "
@@ -861,10 +860,10 @@ def test_fork_child_content_blobs_desired(stores):
 # The modules of preimported.py. json and subprocess are imported by
 # noWorkflow itself before any script: now/cmd/__init__.py imports
 # SQLAlchemy, which imports json, and every command, and cmd_push.py
-# imports json and cmd_demo.py subprocess at module level (pkg_resources
-# brings subprocess first, through packaging), so that holds on every leg
-# and every interpreter build. tabnanny is a pure-Python tool of the
-# standard library on every supported version and system, and nothing that
+# imports json and utils/functions.py and cmd_demo.py subprocess at module
+# level, so that holds on every leg and every interpreter build. tabnanny
+# is a pure-Python tool of the standard library on every supported version
+# and system, and nothing that
 # `now run` imports before the script imports it (measured at the top of a
 # script under `now run` on 3.11 to 3.15; colorsys, which looked as good,
 # is imported before the script by prompt_toolkit, a dependency of

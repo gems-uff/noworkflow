@@ -359,11 +359,11 @@ and what came out, in the PR.
   `src/noworkflow/now/persistence/content/safeopen.py`.
 - **The module table holds only modules imported for the first time.** A
   module already in `sys.modules` when the script starts never reaches the
-  import finder, and `now` loads about a thousand before it (json through
-  SQLAlchemy, subprocess through `pkg_resources`), more or fewer by how it
-  starts and by the interpreter's build (#380). A test of the module table
-  imports a module measured absent at the top of a traced script, such as
-  `_dbm`.
+  import finder, and `now` loads more than eight hundred before it (json
+  through SQLAlchemy, subprocess through `utils/functions.py`), more or
+  fewer by how it starts and by the interpreter's build (#380). A test of
+  the module table imports a module measured absent at the top of a traced
+  script, such as `_dbm`.
 - **A child of `os.fork()` in a traced script runs `now`'s epilogue** when
   it leaves through `sys.exit` or by returning: it stores the trial again,
   prints `[now]` lines and exits 0 (#375). A corpus script ends its forked
@@ -448,10 +448,6 @@ and therefore the first suspects when an upgrade breaks something:
 - `src/noworkflow/now/ipython/magics/now_run.py`: swaps `sys.argv`,
   `sys.path[0]` and `sys.modules["__main__"]` for the shell's user module
   while the cell runs, and swaps them back by hand.
-- `pkg_resources` (`utils/functions.py`, for its resource functions): the
-  reason for the `setuptools<72` pin; its move to `importlib.resources` is
-  part of #225. Importing it also appends `setuptools/_vendor` to
-  `sys.path`, which a traced script then sees (#419).
 - `importlib.metadata` (`prov_deployment/deployment.py`): `get_version`
   looks a module's distribution up from inside the import finder, while the
   script runs. Before 3.15 a distribution whose metadata has no version

@@ -4,8 +4,8 @@
 """Premises: the facts behind pins, ignores, exclusions and workarounds
 
 A premise test does not check what noWorkflow should do. It pins a fact
-that some line of the repository relies on: the SQLAlchemy and setuptools
-pins, the advisories that ``pip-audit`` ignores in ``ci.yml``, the lint and
+that some line of the repository relies on: the SQLAlchemy pin, the
+setuptools that ``[project.dependencies]`` leaves out, the lint and
 coverage exclusions of ``py2module.py``, the e2e tests that characterize
 the CLI, the committed ``bundle.js``, the documented ``now vis`` default,
 the way the suite keeps its store in memory and its corpus out of
@@ -262,7 +262,7 @@ def _importers(name, root=PACKAGE):
 
 
 def test_the_import_scanner_finds_every_form_of_import(tmp_path):
-    """Control: the scan behind the pkg_resources premise sees imports
+    """Control: the scan behind the setuptools premise sees imports
 
     ``import x``, ``import x.y as z``, ``from x import y`` inside a function,
     ``importlib.import_module("x")`` and ``__import__("x")`` are found;
@@ -270,9 +270,8 @@ def test_the_import_scanner_finds_every_form_of_import(tmp_path):
     not. The tree mirrors the package: the top-level ``tests/`` and
     py2module.py at its own path are neither read nor parsed (both hold
     files that do not parse here), while a nested ``tests`` directory and a
-    py2module.py elsewhere are scanned. Without this, "no module but
-    utils/functions.py imports pkg_resources" could pass because the
-    scanner sees nothing.
+    py2module.py elsewhere are scanned. Without this, "no module imports
+    setuptools" could pass because the scanner sees nothing.
     """
     files = {
         "plain.py": "import zipp\n",
@@ -302,47 +301,27 @@ def test_the_import_scanner_finds_every_form_of_import(tmp_path):
     }
 
 
-PKG_RESOURCES_IMPORTERS = {
-    "now/utils/functions.py",
-}
+def test_no_module_imports_setuptools_or_pkg_resources():
+    """No module of the package imports setuptools or pkg_resources
 
-
-def test_pkg_resources_is_imported_by_exactly_utils_functions():
-    """One module imports pkg_resources: utils/functions.py, for its
-    resource functions
-
-    pkg_resources comes from setuptools and is gone from setuptools 82 on;
-    the setuptools pin in pyproject.toml, and the two setuptools advisories
-    that ci.yml ignores, exist because of this import (#225).
-    prov_deployment/deployment.py imported it too until PR #186 moved its
-    version lookup to importlib.metadata. The scan reads the source file by
-    file, so it names the module that imports pkg_resources, which a look
-    at sys.modules cannot.
+    [project.dependencies] does not declare setuptools: utils/functions.py
+    reads the package's resources through importlib.resources, and
+    prov_deployment/deployment.py looks versions up through
+    importlib.metadata (#225). pkg_resources is gone from setuptools 82 on,
+    and importing it put setuptools/_vendor on the sys.path of every traced
+    script (#419). The dev group installs setuptools for
+    tests/test_import_smoke.py only, so the suite would not notice a module
+    that starts importing it; a user's environment may have no setuptools.
+    The scan reads the source file by file, so it names the module, which a
+    look at sys.modules cannot.
     """
-    found = _importers("pkg_resources")
-    gone = sorted(PKG_RESOURCES_IMPORTERS - set(found))
-    new = sorted(set(found) - PKG_RESOURCES_IMPORTERS)
-    message = []
-    if gone:
-        message.append(
-            "{} no longer import(s) pkg_resources. Remove it from "
-            "PKG_RESOURCES_IMPORTERS in this module and fix the comment over "
-            "the 'Audit Python dependencies' step in .github/workflows/ci.yml "
-            "and the pkg_resources entry of 'Patches of third-party "
-            "internals' in AGENTS.md, which name the importers. "
-            "While any module imports pkg_resources, setuptools must stay "
-            "below 82, the first release without it (#225). When the set is "
-            "empty, drop the setuptools pin in pyproject.toml, `uv lock`, "
-            "remove the two setuptools --ignore-vuln (GHSA-5rjg-fvgr-3xxf, "
-            "GHSA-h35f-9h28-mq5c) and their comment in ci.yml, and delete "
-            "this premise.".format(", ".join(gone)))
-    if new:
-        message.append(
-            "{} started importing pkg_resources, which is deprecated and "
-            "absent from setuptools 82 and later (#225). Use "
-            "importlib.metadata or importlib.resources instead.".format(
-                ", ".join("{}:{}".format(path, found[path]) for path in new)))
-    assert not message, "\n".join(message)
+    found = dict(_importers("pkg_resources"), **_importers("setuptools"))
+    assert not found, (
+        "{} import(s) setuptools or pkg_resources, which [project."
+        "dependencies] does not declare (#225). Use importlib.resources or "
+        "importlib.metadata, or declare setuptools with the reason next to "
+        "it.".format(", ".join("{}:{}".format(path, lines)
+                               for path, lines in sorted(found.items()))))
 
 
 # 3. argparse drops unknown arguments ------------------------------------------

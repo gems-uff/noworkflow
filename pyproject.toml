@@ -43,7 +43,6 @@ dependencies = [
     "parameterized",
     "requests",
     "ipykernel",
-    "setuptools<72",
     "nbformat",
     "graphviz",
     # 2.3.3: the first release that requires a Werkzeug (2.3.7) whose
@@ -101,6 +100,10 @@ dev = [
     # 2.9: --locked, which audits a PEP 751 pylock.toml (the audit step of
     # ci.yml).
     "pip-audit>=2.9",
+    # tests/test_import_smoke.py asks setuptools which packages the wheel
+    # ships; no module of noworkflow imports it (#225). 77: the floor of
+    # [build-system], whose package discovery the test reproduces.
+    "setuptools>=77",
 ]
 # What the paper's running example imports (src/noworkflow/tests/e2e/corpus/
 # paper_example). Not in dev, so the matrix legs stay light: only the

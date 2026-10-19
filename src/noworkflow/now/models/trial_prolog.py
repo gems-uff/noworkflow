@@ -23,7 +23,7 @@ from ..persistence import relational
 from .graphs.diagram import ViewPrologDiagram
 
 
-RULES = "../resources/rules.pl"
+RULES = "resources/rules.pl"
 
 
 class TrialProlog(Model):

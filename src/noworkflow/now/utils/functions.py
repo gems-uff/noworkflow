@@ -9,16 +9,14 @@ from __future__ import (absolute_import, print_function,
 import inspect
 import os
 
+from importlib import resources
 from os.path import join, dirname, exists
 from textwrap import dedent
-from pkg_resources import resource_string, resource_listdir, resource_isdir
 # Runs Graphviz's dot for run_dot below
 from subprocess import Popen, PIPE  # nosec B404
 
 
-MODULE = __name__
-MODULE = MODULE[:MODULE.rfind(".")]
-MODULE = MODULE[:MODULE.rfind(".")]
+PACKAGE = __name__.split(".")[0]
 NOWORKFLOW_DIR = dirname(dirname(dirname(__file__)))
 
 
@@ -46,27 +44,40 @@ def wrap(string, initial="  ", other="\n  "):
     return initial + other.join(dedent(string).split("\n"))
 
 
+def resource_path(name):
+    """Traversable of a resource, named relative to the noworkflow package
+
+    The parts of name may be separated by "/" or by "\\", since now demo
+    builds names with os.path.join.
+    """
+    path = resources.files(PACKAGE)
+    for part in name.replace("\\", "/").split("/"):
+        if part:
+            path = path / part
+    return path
+
+
 def resource(filename, encoding=None):
-    """Access resource content via setuptools"""
-    content = resource_string(MODULE, filename)
+    """Access resource content via importlib.resources"""
+    content = resource_path(filename).read_bytes()
     if encoding:
         return content.decode(encoding=encoding)
     return content
 
 
 def resource_ls(path):
-    """Access resource directory via setuptools"""
-    return resource_listdir(MODULE, path)
+    """List resource directory via importlib.resources"""
+    return [entry.name for entry in resource_path(path).iterdir()]
 
 
 def resource_is_dir(path):
-    """Access resource directory via setuptools"""
-    return resource_isdir(MODULE, path)
+    """Check resource directory via importlib.resources"""
+    return resource_path(path).is_dir()
 
 
 def version():
     """Return noWorkflow version"""
-    return resource("../resources/version.txt", encoding="utf-8").strip()
+    return resource("resources/version.txt", encoding="utf-8").strip()
 
 
 def abstract():

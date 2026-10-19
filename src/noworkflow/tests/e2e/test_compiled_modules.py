@@ -334,19 +334,30 @@ def test_diff_modules_after_the_import_was_removed(extension_project):
         result.stdout)
 
 
+# Modules of the standard library that ``import ctypes`` imports in plain
+# Python: sysconfig on 3.13 and 3.14 (measured on python-build-standalone,
+# 3.11 to 3.15, macOS). Nothing imports it before the script since
+# utils/functions.py stopped importing pkg_resources (#225), so a script
+# that imports ctypes brings it, and its row is the script's.
+CTYPES_IMPORTS = ("sysconfig",)
+
+
 def is_ctypes_module(name):
-    """Whether ``name`` is part of ``ctypes``: the package, a submodule, or
-    ``_ctypes``, a file of its own where the build does not link it in"""
-    return name in ("ctypes", "_ctypes") or name.startswith("ctypes.")
+    """Whether ``name`` is part of ``ctypes``: the package, a submodule,
+    ``_ctypes``, a file of its own where the build does not link it in, or
+    a module of ``CTYPES_IMPORTS``"""
+    return (name in ("ctypes", "_ctypes") + CTYPES_IMPORTS
+            or name.startswith("ctypes."))
 
 
 def test_run_records_no_module_for_a_library_loaded_through_ctypes(
         project, extension_file):
     """A library that the script loads with ``ctypes.CDLL`` has no
     ``module`` row: the import finder never sees it. The trial records
-    only modules of ``ctypes`` itself (``ctypes`` and ``ctypes._endian``
-    on python-build-standalone 3.11 to 3.15 on macOS; none where noWorkflow
-    imported ``ctypes`` before the script), and the call is an activation
+    only modules of ``ctypes`` itself and what it imports (``ctypes`` and
+    ``ctypes._endian`` on python-build-standalone 3.11 to 3.15 on macOS,
+    plus ``sysconfig`` on 3.13 and 3.14; none where noWorkflow imported
+    ``ctypes`` before the script), and the call is an activation
     without a code block. The library is the ``EXTENSION`` file, a real
     shared library that ``extension_file`` already located, so the test
     depends on no library the runner may lack.

@@ -237,7 +237,7 @@ where it lives in this project:
 - **A dependency moved under code written against its internals.**
   `AGENTS.md` ("Patches of third-party internals") lists the code that
   depends on the internals of Python or of a library: the `open` wrappers,
-  `pkg_resources`, the SQLAlchemy 1.4 API, `pyposast`, the magics. When one
+  the SQLAlchemy 1.4 API, `pyposast`, the magics. When one
   side moved one of those packages in `uv.lock` and the other side touched
   the code written against it, the two pass separately. The lock diff below
   says which packages moved; for each one that the list names, read its

@@ -78,21 +78,13 @@ jobs:
       # silently skips the false ones, auditing this runner's fork only.
       # --locked reads pylock.toml and pylock.*.toml in the directory given.
       #
-      # Ignored advisories, present since the job was created; each one leaves
-      # with the pin that keeps it, in Round 3 (#225). Never add one here
-      # without the reason and the issue that removes it.
-      # - GHSA-5rjg-fvgr-3xxf (CVE-2025-47273) and GHSA-h35f-9h28-mq5c
-      #   (CVE-2026-59890), setuptools: `setuptools<72` keeps pkg_resources,
-      #   which utils/functions.py imports for its resource functions (#225
-      #   moves them to importlib.resources). Both advisories are in
-      #   PackageIndex and sdist building, which noworkflow does not call.
+      # No advisory is ignored. Never add an --ignore-vuln here without the
+      # reason and the issue that removes it.
       - name: Audit Python dependencies
         if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         run: |
           uv export --locked --format pylock.toml --no-emit-project --all-groups --all-extras -o "$RUNNER_TEMP/audit/pylock.toml"
-          uv run --no-sync pip-audit --locked "$RUNNER_TEMP/audit" --strict --desc on \
-            --ignore-vuln GHSA-5rjg-fvgr-3xxf \
-            --ignore-vuln GHSA-h35f-9h28-mq5c
+          uv run --no-sync pip-audit --locked "$RUNNER_TEMP/audit" --strict --desc on
 
       # A gate on what reaches users: --omit=dev keeps the runtime dependencies
       # of the workspace packages, whose code webpack puts into bundle.js; the
@@ -136,16 +128,18 @@ jobs:
             echo "::error::a # nosec without a test id (Bxxx) silences every test on its line"; exit 1
           fi
 
-      # The wheel is what `pip install noworkflow` gets. version.txt and
-      # bundle.js reach it only through package-data globs; if a glob or the
-      # build backend drops them, `now --version` and `now vis` break on
-      # install while the suite, which runs from the source tree, stays green.
+      # The wheel is what `pip install noworkflow` gets. version.txt,
+      # rules.pl, the demos and bundle.js reach it only through package-data
+      # globs; if a glob or the build backend drops them, `now --version`,
+      # `now export prolog -r`, `now demo` and `now vis` break on install
+      # while the suite, which runs from the source tree, stays green.
       - name: Build the package
         if: ${{ !cancelled() && github.event_name != 'schedule' }}
         run: |
           uv build
           contents=$(unzip -Z1 dist/*.whl)
-          for file in noworkflow/resources/version.txt noworkflow/now/vis/static/dist/bundle.js; do
+          for file in noworkflow/resources/version.txt noworkflow/resources/rules.pl \
+              noworkflow/resources/demo/1/steps.txt noworkflow/now/vis/static/dist/bundle.js; do
             if ! grep -qxF "$file" <<<"$contents"; then
               echo "::error::$file is missing from the wheel"
               exit 1
@@ -176,16 +170,16 @@ jobs:
         # paper-example job.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 2943 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 2943 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 2943 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 2943 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 2949 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 2949 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 2949 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 2949 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 2971, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 2977, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:

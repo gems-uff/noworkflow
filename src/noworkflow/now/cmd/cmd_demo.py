@@ -18,7 +18,7 @@ from ..utils.functions import recursive_copy, erase
 from .command import Command
 
 
-DEMO = "../resources/demo"
+DEMO = "resources/demo"
 
 
 class Demo(Command):

@@ -141,7 +141,7 @@ order:
    diff <N> --name-only`).
 2. **Is it imported at all.** By the module, which is not always the
    distribution: `-` becomes `_`, the case may differ (`SQLAlchemy` is
-   `sqlalchemy`), and `setuptools` is imported as `pkg_resources`.
+   `sqlalchemy`), and the name may be another (`pyswip-alt` is `pyswip`).
 
    ```bash
    grep -rn --include='*.py' -E '^\s*(import|from) <module>\b' src/noworkflow
@@ -494,10 +494,11 @@ its reach:
   experiments), stay a hand probe.
 - **The Jupyter stack** (`ipykernel`, the `notebook` extra) and `requests`
   (push and pull): no automated test; a hand probe, recorded in the PR.
-- **`setuptools`.** `pkg_resources` is imported when `now` starts, so the
-  suite proves it imports on the version of the lock; the wheel is built by
-  the `[build-system]` setuptools, which is another version — `uv build` in
-  the `checks` job is what proves the build.
+- **`setuptools`.** No module of `noworkflow` imports it (a premise in
+  `tests/premises` holds that); the `dev` group's copy serves only
+  `test_import_smoke.py`, and the wheel is built by the `[build-system]`
+  setuptools, which is another version — `uv build` in the `checks` job is
+  what proves the build.
 - **The other Python forks of the lock.** The local suite runs on one fork;
   the matrix runs the others, and the oldest leg is the one where a fix may
   be missing.
