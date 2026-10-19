@@ -345,13 +345,11 @@ pair "the transformer changed on the upstream side, the collector on the branch 
 pair "the transformer changed on the branch side, the collector on the upstream side" "$BR" "$TRANSFORMER" "$UP" "$COLLECTOR"
 pair "dependencies moved on the upstream side, code written against a library's internals on the branch side" "$UP" "$DEPS" "$BR" "$PATCHED"
 pair "dependencies moved on the branch side, code written against a library's internals on the upstream side" "$BR" "$DEPS" "$UP" "$PATCHED"
-UP_T=$(touched "$UP" src/noworkflow/tests/__init__.py)
-BR_T=$(touched "$BR" src/noworkflow/tests/__init__.py)
-if [ -n "$UP_T" ] && [ -n "$BR_T" ]; then
-  echo "  ATTENTION  src/noworkflow/tests/__init__.py changed on both sides: the two runners may disagree after the merge"
+BR_T=$(touched "$BR" src/noworkflow/tests/__init__.py src/noworkflow/tests/dependency/__init__.py \
+  src/noworkflow/tests/prov_definition/__init__.py src/noworkflow/tests/prov_execution/__init__.py)
+if [ -n "$BR_T" ]; then
+  echo "  ATTENTION  the branch side changed a tests package __init__.py: tests are found by file name, keep main's version"
   FOUND=1
-elif [ -n "$UP_T$BR_T" ]; then
-  echo "  src/noworkflow/tests/__init__.py changed on one side: the parity of the two runners is part of the closing"
 fi
 [ "$FOUND" = 0 ] && echo "  none of the known pairs; the suite after the merge is still the measurement"
 

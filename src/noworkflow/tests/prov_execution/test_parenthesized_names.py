@@ -14,8 +14,7 @@ the same way, and a later ``src`` finds nothing (#432).
 
 Each characterization pins today's facts and its ``_desired`` twin, in
 ``TestParenthesizedNamesDesired``, states the behavior the issue asks
-for, marked with ``known_defects``. pytest collects the module by its
-name; it is not registered in ``tests/__init__.py`` (#227).
+for, marked with ``known_defects``.
 """
 from ..collection_testcase import CollectionTestCase
 from ..helpers.defects import Defect, known_defects
@@ -72,9 +71,6 @@ class TestParenthesizedNames(ParenthesizedNameCase):
 class TestParenthesizedNamesDesired(ParenthesizedNameCase):
     """What the read of a parenthesized name should record once
     #432 is fixed
-
-    Not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the
-    marks of ``known_defects``.
     """
 
     @known_defects(PARENTHESIZED_NAME)

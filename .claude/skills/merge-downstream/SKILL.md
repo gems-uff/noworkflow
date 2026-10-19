@@ -242,11 +242,12 @@ where it lives in this project:
   the code written against it, the two pass separately. The lock diff below
   says which packages moved; for each one that the list names, read its
   changelog between the two locked versions (`safe-refactor`, step 1).
-- **`tests/__init__.py` and pytest discovery.** A test class the branch added
-  is found by pytest by file name; `run_tests.py` only sees it through the
-  import in `src/noworkflow/tests/__init__.py`. When `main` also changed that
-  file, the merge may be clean and the two runners disagree: the parity check
-  of step 7 of `safe-refactor` after the merge.
+- **A branch that still registers its tests.** A branch based before `main`
+  dropped the hand-built suites may add imports or suites to
+  `src/noworkflow/tests/__init__.py` or to the `__init__.py` of
+  `dependency/`, `prov_definition/` and `prov_execution/`. Keep `main`'s
+  version of those files: pytest finds the test by its file name, and the
+  imports would only bring back the list `main` removed.
 - **The test floor.** Both sides added tests and each raised `min-tests` in
   `.github/workflows/ci.yml` and `experimental.yml` by its own delta. The
   lines conflict, the resolution keeps one of the numbers, and the floor ends
@@ -375,17 +376,16 @@ says so; the frontend job's steps there, and `git diff --quiet` on
 
 ## Closing
 
-The full suite from the root (`uv run pytest`), the count against the floor
-and, when `tests/__init__.py` is in the merge, the parity between the two
-runners — the three are in `safe-refactor`. `uv run ruff check .`. Then the
+The full suite from the root (`uv run pytest`) and the count against the
+floor — both are in `safe-refactor`. `uv run ruff check .`. Then the
 maintainer pushes, so that CI measures at the tip what the local machine does
 not: every supported Python on Linux, the frontend guard, the audits (macOS
 only through `pre-release.yml`, run by hand).
 
 With one reservation worth keeping: **a green suite does not prove the
 absence of a semantic conflict.** Of the places listed above, the suite
-settles the handler (when a test exercises the construct), the parity, the
-floor and the test from `main`; it never reaches the readers of a model — the
+settles the handler (when a test exercises the construct), the floor and
+the test from `main`; it never reaches the readers of a model — the
 exports, the Prolog rules, the vis — nor the bundle (`AGENTS.md`, "Blind
 spots of the suite"). The suite closes the merge; what looks for the semantic
 conflict there are the checks above, `golden-run` when the merge touched

@@ -16,10 +16,8 @@ fix of #149 in ``Collector.full_member_lookup``.
 Each characterization pins today's facts, and its ``_desired`` twin states
 the behavior the issue asks for, marked with ``known_defects``: it is an
 ``xfail(strict=True)`` whose failure must carry the signature of its
-defect. The twins live in the sibling ``Test<Subject>Desired`` classes,
-which ``run_tests.py`` does not load, because that runner ignores pytest
-marks; the other classes are registered in ``tests/__init__.py``. Every
-mechanism is pure Python and gives the same facts on every supported
+defect. The twins live in the sibling ``Test<Subject>Desired`` classes.
+Every mechanism is pure Python and gives the same facts on every supported
 version, so no mark is limited by version or system.
 
 The expected values never come from the collector: the spans come from the

@@ -14,8 +14,7 @@ display did, and the str key ``'1'`` reads the member of the int key ``1``
 
 Each characterization pins today's facts and its ``_desired`` twin, in
 ``TestSubscriptKeysDesired``, states the behavior the issue asks for,
-marked with ``known_defects``. pytest collects the module by its name; it
-is not registered in ``tests/__init__.py`` (#227).
+marked with ``known_defects``.
 """
 from operator import attrgetter
 
@@ -89,11 +88,7 @@ class TestSubscriptKeys(SubscriptKeyCase):
 
 
 class TestSubscriptKeysDesired(SubscriptKeyCase):
-    """What a subscript of a dict should read once #428 is fixed
-
-    Not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the
-    marks of ``known_defects``.
-    """
+    """What a subscript of a dict should read once #428 is fixed"""
 
     @known_defects(STR_KEY)
     def test_subscript_of_a_dict_by_key_type_desired(self):

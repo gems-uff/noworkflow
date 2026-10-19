@@ -16,9 +16,7 @@ Python's unpacking: which items a target receives decides what it depends
 on.
 
 Each characterization of a defect has a ``_desired`` twin in
-``TestUnpackingExecutionDesired``, marked by ``known_defects``. That class
-is not registered in ``tests/__init__.py``: ``run_tests.py`` ignores pytest
-marks, so a twin would fail there.
+``TestUnpackingExecutionDesired``, marked by ``known_defects``.
 """
 from operator import attrgetter
 
@@ -469,11 +467,7 @@ class TestUnpackingExecution(TargetTestCase):
 
 
 class TestUnpackingExecutionDesired(TargetTestCase):
-    """What unpacking should record once its defects are fixed
-
-    Not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the
-    marks of ``known_defects``.
-    """
+    """What unpacking should record once its defects are fixed"""
     # pylint: disable=invalid-name
 
     @known_defects(STARRED_ITERATOR)

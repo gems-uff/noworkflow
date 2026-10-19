@@ -13,10 +13,9 @@ permission bits, a positional buffering and every file pathlib opens
 Their controls pass the same values by keyword, or leave the permission
 bits out.
 
-The ``_desired`` twins are in ``TestFileAccessExecutionDesired``, which is
-not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the marks
-of ``known_defects``. Both classes share ``FileAccessTestCase``, which has
-no tests, so that no test runs twice.
+The ``_desired`` twins are in ``TestFileAccessExecutionDesired``. Both
+classes share ``FileAccessTestCase``, which has no tests, so that no test
+runs twice.
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -315,11 +314,7 @@ class TestFileAccessExecution(FileAccessTestCase):
 
 
 class TestFileAccessExecutionDesired(FileAccessTestCase):
-    """What the open wrappers should record once their defects are fixed
-
-    Not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the
-    marks of ``known_defects``.
-    """
+    """What the open wrappers should record once their defects are fixed"""
     # pylint: disable=invalid-name
 
     @known_defects(OS_OPEN_PERMISSION)

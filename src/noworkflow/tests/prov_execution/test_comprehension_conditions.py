@@ -15,8 +15,7 @@ after the comprehension take it as a dependency (#431).
 
 Each characterization pins today's facts and its ``_desired`` twin, in
 ``TestComprehensionConditionsDesired``, states the behavior the issue asks
-for, marked with ``known_defects``. pytest collects the module by its
-name; it is not registered in ``tests/__init__.py`` (#227).
+for, marked with ``known_defects``.
 """
 from ..collection_testcase import CollectionTestCase
 from ..helpers.defects import Defect, known_defects
@@ -83,9 +82,6 @@ class TestComprehensionConditions(ComprehensionConditionCase):
 class TestComprehensionConditionsDesired(ComprehensionConditionCase):
     """What a filtered ``for`` followed by another ``for`` should do once
     #431 is fixed
-
-    Not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the
-    marks of ``known_defects``.
     """
 
     @known_defects(FILTER_COUNT)

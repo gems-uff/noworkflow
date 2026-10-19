@@ -127,12 +127,9 @@ point here:
   script it needs goes under `e2e/corpus/`, never named `test_*.py`. A known
   defect is a characterization test plus a `_desired` twin marked
   `xfail(strict=True)` with the issue that flips it.
-- A method added to an existing class needs nothing else. **A new test class
-  is also imported and added to its suite in
-  `src/noworkflow/tests/__init__.py`** (and exported by the package's
-  `__init__.py`): that is how `run_tests.py` finds it; pytest finds it by the
-  file name alone, and the two counts diverge until it is done. The e2e and
-  premise tests are pytest functions that `run_tests.py` never runs.
+- A test needs nothing besides its file: pytest collects every `test_*.py`
+  under `src/noworkflow/tests/` (`python_files` and `testpaths` in
+  `pyproject.toml`), and no `__init__.py` lists the tests.
 
 When the path is unreachable in the test environment (a git content engine,
 the Jupyter kernel), a test with a double fixing the APIs it depends on is
@@ -225,12 +222,6 @@ starts skipping keeps the total and only shows in the split between passed
 and skipped and in the `-ra` lines. Compare the three numbers of the last
 line with the baseline's, not their sum alone.
 
-When `src/noworkflow/tests/__init__.py` changed, compare the two runners as
-well: `uv run python run_tests.py` prints `Ran N tests`, and N must equal
-pytest's count. An import dropped there shrinks only the suite that
-`run_tests.py` builds by hand — pytest collects by file name and does not
-read those imports — so a difference between the two is what tells.
-
 ### 8. Interpret according to the nature of the change
 
 Here the criterion changes, and you are the one who decides:
@@ -258,7 +249,7 @@ an unexpected difference and rationalize it as intentional.
   before pytest starts. With the `.venv` already in sync (`uv sync --locked`,
   outside the sandbox if it has to be), `UV_CACHE_DIR=<scratchpad>/uv uv run
   --no-sync pytest` runs the suite inside it; the same prefix serves
-  `run_tests.py` and `now`.
+  `now`.
 - `-x` stops at the first failure, `-k <expression>` selects by name (the
   doctests of the models too), and a node id
   (`src/noworkflow/tests/prov_execution/test_stmt_execution.py::TestStmtExecution::test_name`)

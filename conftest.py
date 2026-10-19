@@ -297,7 +297,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 def _erase_before_model_doctest(item):
     """Start every model doctest from an empty database.
 
-    ``run_tests.py`` runs the model doctests in the order of ``ORDER`` and
+    The model doctests were written to run in the order of ``ORDER``, and
     only some of them begin with ``erase=True``, so they rely on what the
     previous doctest left behind. pytest collects the modules alphabetically;
     erasing the database before each doctest removes the dependency without

@@ -2,101 +2,13 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-"""Load tests"""
-# pylint: disable=invalid-name
-# pylint: disable=wrong-import-position
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+"""noWorkflow's test suite, run by pytest from the repository root
 
-import doctest
-import unittest
-import sys
-
-from future.utils import viewitems
-
+pytest finds every test by its file name (``python_files`` and
+``testpaths`` in ``pyproject.toml``); nothing here lists them. Importing
+the package connects the persistence layer to in-memory stores, before any
+test module is imported.
+"""
 from .helpers.persistence import connect_in_memory
 
 connect_in_memory()
-
-#from .prov_deployment import TestProvDeployment
-from .prov_definition import TestCodeBlockDefinition
-from .prov_definition import TestCodeComponentDefinition
-from .prov_definition import TestReconstruction
-from .prov_execution import TestScript, TestStmtExecution, TestExprExecution
-from .prov_execution import TestClassExecution, TestDepthExecution
-from .prov_execution import TestFileAccessExecution, TestCollectorCleanup
-from .prov_execution import TestFStringParts, TestYieldFrom
-from .prov_execution import TestClassStatement, TestMemberLookupWithoutDict
-from .prov_execution import TestWithExecution, TestUnpackingExecution
-from .dependency import TestClusterizer, TestClusterizerConfig
-from .dependency import TestProspectiveClusterizer
-from .dependency import TestActivationClusterizer, TestDependencyClusterizer
-from .dependency import TestDataflowModel
-from .cross_version_test import TestCrossVersion
-
-from ..now.persistence.models import ORDER
-from ..now.utils import formatter
-from ..now.utils import functions
-from ..patterns import machinery
-
-
-
-tests_modules = {
-    model.__name__: model.__module__ for model in ORDER
-}
-
-tests_modules["formatter"] = formatter.__name__
-tests_modules["functions"] = functions.__name__
-tests_modules["machinery"] = machinery.__name__
-
-loader = unittest.TestLoader()
-doctests = unittest.TestSuite()
-for name, module in viewitems(tests_modules):
-    model_test = doctest.DocTestSuite(
-        sys.modules[module],
-        optionflags=doctest.REPORT_ONLY_FIRST_FAILURE)
-    locals()[name] = model_test
-    doctests.addTests(model_test)
-
-definition = unittest.TestSuite()
-definition.addTests(loader.loadTestsFromTestCase(TestCodeBlockDefinition))
-definition.addTests(loader.loadTestsFromTestCase(TestCodeComponentDefinition))
-definition.addTests(loader.loadTestsFromTestCase(TestReconstruction))
-
-execution = unittest.TestSuite()
-execution.addTests(loader.loadTestsFromTestCase(TestScript))
-execution.addTests(loader.loadTestsFromTestCase(TestStmtExecution))
-execution.addTests(loader.loadTestsFromTestCase(TestExprExecution))
-execution.addTests(loader.loadTestsFromTestCase(TestDepthExecution))
-execution.addTests(loader.loadTestsFromTestCase(TestClassExecution))
-execution.addTests(loader.loadTestsFromTestCase(TestFileAccessExecution))
-execution.addTests(loader.loadTestsFromTestCase(TestCollectorCleanup))
-execution.addTests(loader.loadTestsFromTestCase(TestFStringParts))
-execution.addTests(loader.loadTestsFromTestCase(TestYieldFrom))
-execution.addTests(loader.loadTestsFromTestCase(TestClassStatement))
-execution.addTests(loader.loadTestsFromTestCase(TestMemberLookupWithoutDict))
-execution.addTests(loader.loadTestsFromTestCase(TestWithExecution))
-execution.addTests(loader.loadTestsFromTestCase(TestUnpackingExecution))
-
-collection = unittest.TestSuite()
-collection.addTests(definition)
-collection.addTests(execution)
-
-dataflow = unittest.TestSuite()
-dataflow.addTests(loader.loadTestsFromTestCase(TestClusterizer))
-dataflow.addTests(loader.loadTestsFromTestCase(TestDependencyClusterizer))
-dataflow.addTests(loader.loadTestsFromTestCase(TestActivationClusterizer))
-dataflow.addTests(loader.loadTestsFromTestCase(TestProspectiveClusterizer))
-dataflow.addTests(loader.loadTestsFromTestCase(TestClusterizerConfig))
-dataflow.addTests(loader.loadTestsFromTestCase(TestDataflowModel))
-
-
-def load_tests(loader, tests, pattern):
-    """Create test suite"""
-    # pylint: disable=unused-argument
-    suite = unittest.TestSuite()
-    suite.addTests(doctests)
-    suite.addTests(collection)
-    suite.addTests(dataflow)
-    suite.addTests(loader.loadTestsFromTestCase(TestCrossVersion))
-    return suite

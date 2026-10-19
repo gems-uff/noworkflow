@@ -25,9 +25,7 @@ and skips the body. The context managers are ``contextlib.nullcontext``
 and ``open(os.devnull)``: a context manager the script defines has its
 ``__enter__`` rewritten and takes the path of #310.
 
-The ``_desired`` twins are in ``TestWithExecutionDesired``, which is not
-registered in ``tests/__init__.py``: ``run_tests.py`` ignores the marks of
-``known_defects``.
+The ``_desired`` twins are in ``TestWithExecutionDesired``.
 """
 import ast
 import os
@@ -311,11 +309,7 @@ class TestWithExecution(TargetTestCase):
 
 
 class TestWithExecutionDesired(TargetTestCase):
-    """What a ``with`` should record once its defects are fixed
-
-    Not registered in ``tests/__init__.py``: ``run_tests.py`` ignores the
-    marks of ``known_defects``.
-    """
+    """What a ``with`` should record once its defects are fixed"""
     # pylint: disable=invalid-name
 
     @known_defects(WITH_ITEMS)

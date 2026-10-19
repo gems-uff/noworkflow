@@ -29,7 +29,6 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 | `src/noworkflow/now/persistence/**`, `src/noworkflow/now/models/**`, `src/noworkflow/now/cmd/**`, `src/noworkflow/patterns/**`, `src/noworkflow/resources/**` | `golden-run` |
 | A new or renamed command or option | `README.md` and, once it exists, `skills/noworkflow/SKILL.md`; for `run`, `restore` and `schema`, also a manual probe of the magic that inherits the parser (below) |
 | `src/noworkflow/now/ipython/**`, `src/noworkflow/kernel/**` | A blind spot of the suite: a manual probe, recorded in the PR |
-| `src/noworkflow/tests/__init__.py`, or tests moved | Parity between the two runners (step 6) |
 | Branch behind `main` | `merge-downstream` |
 | A suspected defect | `prove-candidate` |
 | An alert of the `CodeQL` check (how to read it, and the route for a fork: step 6) | `prove-candidate` with the other candidates of step 3, then step 4: an alert the PR introduces is discussed in it |
@@ -201,7 +200,7 @@ scratchpad, or the checkout's parent:
 ```bash
 base=$(git merge-base origin/main HEAD)
 git worktree add <outside>/nw-base "$base"
-cd <outside>/nw-base && uv sync && uv run pytest   # run_tests.py at an old base (below)
+cd <outside>/nw-base && uv sync && uv run pytest   # at an old base, its run_tests.py (below)
 ```
 
 **The merge-base may predate the pytest configuration and the lock**: a
@@ -209,8 +208,10 @@ cd <outside>/nw-base && uv sync && uv run pytest   # run_tests.py at an old base
 `uv sync` resolves fresh and installs no pytest (`uv run pytest` fails to
 spawn), and `uv run --with pytest pytest` would collect without the doctests
 and without the scratch directory, so its count is not comparable. The runner
-at such a commit is `uv run python run_tests.py`, and its `Ran N tests` is
-comparable with pytest's count here (the parity of step 6).
+at such a commit is its own `run_tests.py` (`uv run python run_tests.py -v`
+names each test it runs). It ran only the suites assembled by hand in
+`tests/__init__.py`, so compare its tests one by one with the same tests
+here, never its `Ran N tests` with pytest's count.
 
 It is also how you find out that **a candidate already held before the PR**:
 it is not a regression, and the message to the author changes from "you broke
@@ -327,8 +328,7 @@ single test, with the suite closing green.
 
 What the change touches and the suite does not execute becomes a test, by
 `safe-refactor` — including the check that the test is not empty. Where the
-test lives, and what a new test class needs so that both runners find it, is
-in step 3 of `safe-refactor`. Tests added raise `min-tests` in
+test lives is in step 3 of `safe-refactor`. Tests added raise `min-tests` in
 `.github/workflows/ci.yml` and in `experimental.yml` in the same PR. What not
 even the suite reaches goes to `golden-run`, `python-matrix` or `rebuild-vis`
 by the table, and the blind spots that none of them covers (`AGENTS.md`) are
@@ -364,14 +364,7 @@ defect were still there.
 
 ## 6. Measure
 
-The full suite by `safe-refactor`, compared with the baseline. When the diff
-touches `src/noworkflow/tests/__init__.py` or moves tests, also the **parity
-between the two runners**: `uv run python run_tests.py` prints `Ran N tests`,
-and pytest's passed + skipped + xfailed + xpassed must be the same N — a test
-that one runner collects and the other does not is a test that only runs on
-one machine. When the two differ, pytest is the reference (it is what CI
-runs), and the usual cause is a new test class that was not added to the
-suites in `tests/__init__.py` (step 3 of `safe-refactor`).
+The full suite by `safe-refactor`, compared with the baseline.
 
 Check also the CI at the tip of the branch: it runs what the local machine
 does not — every supported Python on Linux, the frontend guard, lint, SAST,

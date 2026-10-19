@@ -10,19 +10,17 @@ when the script succeeds, and ``Execution.configure`` replaces the four
 These tests look at the process right after the collection, before
 ``CollectionTestCase.tearDown`` undoes it (that tearDown is what keeps the
 rest of the suite clean). Each characterization of a defect has a
-``_desired`` twin marked ``expectedFailure`` that states the behavior the
-issue asks for.
-
-They are ``unittest`` methods so that ``run_tests.py`` runs them too.
+``_desired`` twin that states the behavior the issue asks for, marked by
+``known_defects``.
 """
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import builtins
 import sys
-import unittest
 
 from ..collection_testcase import CollectionTestCase
+from ..helpers.defects import Defect, known_defects
 from ..helpers.leaks import INJECTED_BUILTINS, OPENS, is_finder
 
 # Where the collector's ``open`` wrapper is defined.
@@ -36,6 +34,24 @@ EXITS = ("# script.py\n"
          "sys.exit(1)\n")
 SUCCEEDS = ("# script.py\n"
             "x = 1\n")
+
+FINDER_ON_ERROR = Defect(
+    "#226: Execution.collect_provenance (execution.py) inserts the import "
+    "finder (py3module.finder) in sys.meta_path before the exec of the "
+    "script and removes it right after, with no finally, so an exception "
+    "or a SystemExit leaves it there",
+    signature="finder.<locals>.Finder'>")
+OPENS_LEFT = Defect(
+    "#250: Execution.configure (execution.py) replaces the four opens with "
+    "Collector.new_open wrappers, and nothing puts the originals back when "
+    "the script finishes",
+    signature="['builtins.open', 'io.open', 'codecs.open', 'os.open'] "
+              "!= []")
+OUTSIDE_OPEN = Defect(
+    "#250: the open wrappers stay after the script finishes, and the root "
+    "activation is still active, so Collector.new_open records an open by "
+    "code outside the script as a file access of the finished trial",
+    signature="test_collector_cleanup.py' unexpectedly found in")
 
 
 class TestCollectorCleanup(CollectionTestCase):
@@ -73,7 +89,7 @@ class TestCollectorCleanup(CollectionTestCase):
         self.assertIn(finder, sys.meta_path)
         self.assertEqual(self.finders(), [finder])
 
-    @unittest.expectedFailure
+    @known_defects(FINDER_ON_ERROR)
     def test_collecting_a_script_that_raises_leaves_the_finder_desired(self):
         """Desired (#226): the finder leaves sys.meta_path on an exception"""
         self.collect(RAISES)
@@ -90,7 +106,7 @@ class TestCollectorCleanup(CollectionTestCase):
             msg, "the execution exited via sys.exit(). Exit status: 1")
         self.assertEqual(self.finders(), [self.metascript.definition.finder])
 
-    @unittest.expectedFailure
+    @known_defects(FINDER_ON_ERROR)
     def test_collecting_a_script_that_exits_leaves_the_finder_desired(self):
         """Desired (#226): the finder leaves sys.meta_path on sys.exit()"""
         self.collect(EXITS)
@@ -108,7 +124,7 @@ class TestCollectorCleanup(CollectionTestCase):
              for module, name, _ in OPENS},
             {name: WRAPPER for _, name, _ in OPENS})
 
-    @unittest.expectedFailure
+    @known_defects(OPENS_LEFT)
     def test_after_collection_the_opens_are_still_the_wrappers_desired(self):
         """Desired: once the script finishes, the opens are Python's again
 
@@ -131,7 +147,7 @@ class TestCollectorCleanup(CollectionTestCase):
         self.collect(SUCCEEDS)
         self.assertIn(__file__, self.outside_open())
 
-    @unittest.expectedFailure
+    @known_defects(OUTSIDE_OPEN)
     def test_after_collection_an_outside_open_is_recorded_desired(self):
         """Desired: a finished trial records nothing else
 

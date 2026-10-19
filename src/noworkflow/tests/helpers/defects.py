@@ -92,8 +92,7 @@ def known_defects(*defects):
     an ``AssertionError`` (``"<Type>: <message>"``), so that a twin whose
     defect is a crash needs no ``try``. Where no defect applies, the test
     runs untouched and must pass. Works on plain functions and on
-    ``unittest`` methods; a class that ``run_tests.py`` loads must not hold
-    decorated methods, because that runner ignores the marks.
+    ``unittest`` methods.
     """
     def decorate(test):
         @functools.wraps(test)
