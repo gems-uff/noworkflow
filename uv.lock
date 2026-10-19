@@ -2281,7 +2281,7 @@ requires-dist = [
     { name = "numpy", marker = "extra == 'all'" },
     { name = "numpy", marker = "extra == 'demo'" },
     { name = "parameterized" },
-    { name = "pyposast" },
+    { name = "pyposast", specifier = ">=1.7.0" },
     { name = "pyposast", marker = "extra == 'all'" },
     { name = "pyposast", marker = "extra == 'notebook'" },
     { name = "pyswip-alt", marker = "extra == 'all'" },

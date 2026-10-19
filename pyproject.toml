@@ -32,7 +32,10 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "pyposast",
+    # 1.7.0: with 1.6, `now run` fails collecting the definitions of a script
+    # with {**d}, a positional-only parameter with a default or a decorated
+    # definition (AttributeError, TypeError, IndexError; #225).
+    "pyposast>=1.7.0",
     "apted",
     "future",
     # <2: the models use the 1.4 API that 2.0 removed (select([...]),
