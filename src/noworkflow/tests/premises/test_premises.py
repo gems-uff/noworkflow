@@ -10,9 +10,10 @@ coverage exclusions of ``py2module.py``, the e2e tests that characterize
 the CLI, the committed ``bundle.js``, the documented ``now vis`` default,
 the way the suite keeps its store in memory and its corpus out of
 collection, the uv-managed Python of the CI legs, the lock export that
-``pip-audit`` reads whole. One test per fact, named as the fact; the docstring says why
-the code depends on it, and the assert message says what to edit, and under
-which issue, when it falls.
+``pip-audit`` reads whole, the warning filter of the suite.
+One test per fact, named as the fact; the docstring says why the code
+depends on it, and the assert message says what to edit, and under which
+issue, when it falls.
 
 Wherever a premise asserts an absence (no warning, no import, no file, no
 collected path), a paired control proves that the same instrument does see
@@ -122,7 +123,9 @@ MSG_SA_FELL = (
     "error::sqlalchemy.exc.RemovedIn20Warning` must be green; then relax the "
     "SQLAlchemy pin in pyproject.toml (dependencies skill, #225), update the "
     "SQLAlchemy entry under 'Patches of third-party internals' in AGENTS.md, "
-    "and delete the three SQLAlchemy premises in this module."
+    "remove the Base20DeprecationWarning exception of filterwarnings in "
+    "pyproject.toml and its test in this module, and delete the three "
+    "SQLAlchemy premises in this module."
 )
 
 
@@ -974,3 +977,56 @@ def test_pip_audit_skips_requirements_whose_marker_is_false(tmp_path):
         MSG_REQUIREMENTS.format(sorted(found), [
             line for line in requirements.read_text(
                 encoding="utf-8").splitlines()]))
+
+
+# 12. The warning filter of the suite ---------------------------------------------
+
+MSG_WARNING_FILTER = (
+    "A DeprecationWarning attributed to a noworkflow module no longer fails "
+    "the test: filterwarnings in pyproject.toml must start with "
+    "error::DeprecationWarning:noworkflow (#221)."
+)
+MSG_SA_EXCEPTION = (
+    "SQLAlchemy's warning about the 2.0 API, attributed to a noworkflow "
+    "module, was {}. While the SQLAlchemy pin keeps 1.4, filterwarnings in "
+    "pyproject.toml lists default::sqlalchemy.exc.Base20DeprecationWarning "
+    "after the error:: entry, so that SQLAlchemy's once-per-process warning "
+    "does not fail whichever test reaches the first 1.4-only API (#221)."
+)
+
+
+def test_a_deprecation_that_noworkflow_triggers_fails_the_test():
+    """A DeprecationWarning attributed to a noworkflow module is an error
+
+    filterwarnings in pyproject.toml turns it into an exception, so the test
+    whose code path reaches a deprecated API fails instead of adding a line
+    to the warnings summary that nobody reads.
+    """
+    try:
+        warnings.warn_explicit("probe", DeprecationWarning, "probe.py", 1,
+                               module="noworkflow.probe")
+    except DeprecationWarning as error:
+        assert str(error) == "probe"
+    else:
+        pytest.fail(MSG_WARNING_FILTER)
+
+
+def test_sqlalchemy_2_0_warnings_stay_warnings():
+    """Control: SQLAlchemy's warnings about its 2.0 API stay warnings
+
+    SQLAlchemy 1.4 emits one Base20DeprecationWarning per process, at the
+    first use of an API that 2.0 removed, attributed to the module that
+    used it: one of noWorkflow's, while the pin of premise 1 holds. The
+    exception that follows the error entry keeps it a warning; without it
+    the first such query of each process would fail its test.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        try:
+            warnings.warn_explicit(
+                "probe", sqlalchemy.exc.MovedIn20Warning, "probe.py", 1,
+                module="noworkflow.probe")
+        except sqlalchemy.exc.MovedIn20Warning:
+            pytest.fail(MSG_SA_EXCEPTION.format("raised"))
+    categories = [warning.category for warning in caught]
+    assert categories == [sqlalchemy.exc.MovedIn20Warning], (
+        MSG_SA_EXCEPTION.format("not recorded: {}".format(categories)))

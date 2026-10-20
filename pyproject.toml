@@ -134,7 +134,17 @@ markers = [
     "slow: needs the console `now` and matplotlib",
     "paper: replays the paper's running example; needs the `paper` group, runs in the paper-example job",
 ]
-filterwarnings = ["default::DeprecationWarning:noworkflow"]  # Round 3 promotes it to error::
+# A deprecation that noWorkflow's own code triggers fails the test that
+# triggers it. The exceptions, listed after it so that they take precedence,
+# are known and tracked: SQLAlchemy 1.4 warns once per process at the first
+# use of an API that 2.0 removed, the use the SQLAlchemy pin keeps (the
+# premises in test_premises.py); trial_ast builds ast nodes with arguments
+# that Python 3.13 deprecated and 3.15 rejects (#241, leaves with its fix).
+filterwarnings = [
+    "error::DeprecationWarning:noworkflow",
+    "default::sqlalchemy.exc.Base20DeprecationWarning",
+    "default::DeprecationWarning:noworkflow.now.models.ast.trial_ast",
+]
 
 [tool.coverage.run]
 source = ["noworkflow"]
