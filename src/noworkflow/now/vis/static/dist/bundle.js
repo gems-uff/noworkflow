@@ -6888,6 +6888,7 @@ var Private;
             if (id === overrideCursorID && Private.cursorBackdrop.isConnected) {
                 document.removeEventListener('pointermove', alignBackdrop, true);
                 Private.cursorBackdrop.removeEventListener('scroll', propagateBackdropScroll, true);
+                // Removing the element from the DOM also releases the pointer capture.
                 body.removeChild(Private.cursorBackdrop);
             }
         });
@@ -6901,6 +6902,21 @@ var Private;
             return;
         }
         Private.cursorBackdrop.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
+        // Capture the pointer to the cursor backdrop, ensuring that the cursor
+        // override and any other pointer listeners on the document are respected
+        // even if the pointer drifts over an iframe. When the backdrop element is
+        // removed from the DOM when the override dispose is called, any pointer
+        // capture is released.
+        try {
+            if (!Private.cursorBackdrop.hasPointerCapture(event.pointerId)) {
+                Private.cursorBackdrop.setPointerCapture(event.pointerId);
+            }
+        }
+        catch (e) {
+            // Ignore errors in pointer capture to guard defensively against failures,
+            // e.g., older browsers or synthetic events in tests that don't have
+            // active pointers.
+        }
     }
     /**
      * Propagate the scroll event from the backdrop element to the scroll target.
@@ -10198,6 +10214,10 @@ class Widget {
     }
     /**
      * Test whether the widget is explicitly hidden.
+     *
+     * #### Notes
+     * You should prefer `!{@link isVisible}` over `{@link isHidden}` if you want to know if the
+     * widget is hidden as this does not test if the widget is hidden because one of its ancestors is hidden.
      */
     get isHidden() {
         return this.testFlag(Widget.Flag.IsHidden);
@@ -10208,9 +10228,20 @@ class Widget {
      * #### Notes
      * A widget is visible when it is attached to the DOM, is not
      * explicitly hidden, and has no explicitly hidden ancestors.
+     *
+     * Since 2.7.0, this does not rely on the {@link Widget.Flag.IsVisible} flag.
+     * It recursively checks the visibility of all parent widgets.
      */
     get isVisible() {
-        return this.testFlag(Widget.Flag.IsVisible);
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        let parent = this;
+        do {
+            if (parent.isHidden || !parent.isAttached) {
+                return false;
+            }
+            parent = parent.parent;
+        } while (parent != null);
+        return true;
     }
     /**
      * The title object for the widget.
@@ -10539,6 +10570,9 @@ class Widget {
      *
      * #### Notes
      * This will not typically be called directly by user code.
+     *
+     * Since 2.7.0, {@link Widget.Flag.IsVisible} is deprecated.
+     * It will be removed in a future version.
      */
     testFlag(flag) {
         return (this._flags & flag) !== 0;
@@ -10548,6 +10582,9 @@ class Widget {
      *
      * #### Notes
      * This will not typically be called directly by user code.
+     *
+     * Since 2.7.0, {@link Widget.Flag.IsVisible} is deprecated.
+     * It will be removed in a future version.
      */
     setFlag(flag) {
         this._flags |= flag;
@@ -10557,6 +10594,9 @@ class Widget {
      *
      * #### Notes
      * This will not typically be called directly by user code.
+     *
+     * Since 2.7.0, {@link Widget.Flag.IsVisible} is deprecated.
+     * It will be removed in a future version.
      */
     clearFlag(flag) {
         this._flags &= ~flag;
@@ -10785,6 +10825,10 @@ class Widget {
                     // @ts-expect-error content-visibility unknown by DOM lib types
                     this.node.style.contentVisibility = 'hidden';
                     this.node.style.zIndex = '-1';
+                    // Set opacity to 0 so that the widget's box (e.g. borders or
+                    // background) does not shine through despite the content being
+                    // skipped by `content-visibility`.
+                    this.node.style.opacity = '0';
                     break;
             }
         }
@@ -10801,6 +10845,7 @@ class Widget {
                     // @ts-expect-error content-visibility unknown by DOM lib types
                     this.node.style.contentVisibility = '';
                     this.node.style.zIndex = '';
+                    this.node.style.opacity = '';
                     break;
             }
         }
@@ -10840,6 +10885,9 @@ class Widget {
         Flag[Flag["IsHidden"] = 4] = "IsHidden";
         /**
          * The widget is visible.
+         *
+         * @deprecated since 2.7.0, apply that flag consistently was not reliable
+         * so it was dropped in favor of a recursive check of the visibility of all parents.
          */
         Flag[Flag["IsVisible"] = 8] = "IsVisible";
         /**
@@ -12079,6 +12127,13 @@ var Utils;
         return Math.max(0, Math.floor(value));
     }
     Utils.clampDimension = clampDimension;
+    /**
+     * Whether a pointer event came from touch input.
+     */
+    function isTouchEvent(event) {
+        return 'pointerType' in event && event.pointerType === 'touch';
+    }
+    Utils.isTouchEvent = isTouchEvent;
 })(Utils || (Utils = {}));
 var Utils$1 = Utils;
 
@@ -12868,7 +12923,7 @@ class AccordionLayout extends SplitLayout {
      * @param widget - The widget to attach to the parent.
      */
     attachWidget(index, widget) {
-        const title = Private$g.createTitle(this.renderer, widget.title);
+        const title = Private$g.createTitle(this.renderer, widget.title, !widget.isHidden);
         _lumino_algorithm__WEBPACK_IMPORTED_MODULE_0__.ArrayExt.insert(this._titles, index, title);
         // Add the title node to the parent before the widget.
         this.parent.node.appendChild(title);
@@ -13397,12 +13452,16 @@ var Private$e;
  *
  * #### Notes
  * This class provides a convenience wrapper around {@link AccordionLayout}.
+ *
+ * See also the related [example](../../examples/accordionpanel/index.html) and
+ * its [source](https://github.com/jupyterlab/lumino/tree/main/examples/example-accordionpanel).
  */
 class AccordionPanel extends SplitPanel {
     /**
      * Construct a new accordion panel.
      *
      * @param options - The options for initializing the accordion panel.
+     *
      */
     constructor(options = {}) {
         super({ ...options, layout: Private$d.createLayout(options) });
@@ -14496,6 +14555,7 @@ class CommandPalette extends Widget {
     constructor(options) {
         super({ node: Private$a.createNode() });
         this._activeIndex = -1;
+        this._itemTriggered = new _lumino_signaling__WEBPACK_IMPORTED_MODULE_5__.Signal(this);
         this._items = [];
         this._results = null;
         this.addClass('lm-CommandPalette');
@@ -14512,6 +14572,21 @@ class CommandPalette extends Widget {
         this._items.length = 0;
         this._results = null;
         super.dispose();
+    }
+    /**
+     * A signal emitted when the user triggers a command item.
+     *
+     * #### Notes
+     * This signal is emitted when an enabled item is clicked, or when
+     * `Enter` is pressed while an enabled item is active. It is not
+     * emitted for a header, or for a command which is executed by other
+     * means, such as a key binding or a menu.
+     *
+     * The signal is emitted before the command is executed and before
+     * the query text is cleared.
+     */
+    get itemTriggered() {
+        return this._itemTriggered;
     }
     /**
      * The command palette search node.
@@ -14673,6 +14748,50 @@ class CommandPalette extends Widget {
         }
     }
     /**
+     * Create the search results for a query.
+     *
+     * @param query - The raw text of the search input.
+     *
+     * @returns The search results, in display order.
+     *
+     * #### Notes
+     * The default implementation of this method returns the results of
+     * `CommandPalette.search()` for the palette items.
+     *
+     * The palette renders every returned result, so the results should
+     * not include items which are not visible. Triggering a header result
+     * replaces the query with the header category.
+     *
+     * The results are cached until `refresh()` is called. A subclass
+     * which uses external state should call `refresh()` when that state
+     * changes.
+     *
+     * A subclass may reimplement this method as needed.
+     */
+    search(query) {
+        return CommandPalette.search(this.items, query);
+    }
+    /**
+     * Get the index of the result to activate for new search results.
+     *
+     * @param query - The raw text of the search input.
+     *
+     * @param results - The search results returned by `search()`.
+     *
+     * @returns The index of the result to activate, or `-1` for none.
+     *
+     * #### Notes
+     * The default implementation of this method returns the index of the
+     * first enabled item when the query is not empty, and `-1` otherwise.
+     *
+     * The returned index should refer to an enabled item result.
+     *
+     * A subclass may reimplement this method as needed.
+     */
+    initialActiveIndex(query, results) {
+        return query ? _lumino_algorithm__WEBPACK_IMPORTED_MODULE_0__.ArrayExt.findFirstIndex(results, Private$a.canActivate) : -1;
+    }
+    /**
      * A message handler invoked on a `'before-attach'` message.
      */
     onBeforeAttach(msg) {
@@ -14713,7 +14832,9 @@ class CommandPalette extends Widget {
      * A message handler invoked on an `'update-request'` message.
      */
     onUpdateRequest(msg) {
-        if (this.isHidden) {
+        if (!this.isVisible) {
+            // Ensure to clear the content if the widget is hidden
+            _lumino_virtualdom__WEBPACK_IMPORTED_MODULE_8__.VirtualDOM.render(null, this.contentNode);
             return;
         }
         // Fetch the current query text and content node.
@@ -14723,11 +14844,9 @@ class CommandPalette extends Widget {
         let results = this._results;
         if (!results) {
             // Generate and store the new search results.
-            results = this._results = Private$a.search(this._items, query);
+            results = this._results = this.search(query);
             // Reset the active index.
-            this._activeIndex = query
-                ? _lumino_algorithm__WEBPACK_IMPORTED_MODULE_0__.ArrayExt.findFirstIndex(results, Private$a.canActivate)
-                : -1;
+            this._activeIndex = this.initialActiveIndex(query, results);
         }
         // If there is no query and no results, clear the content.
         if (!query && results.length === 0) {
@@ -14881,6 +15000,8 @@ class CommandPalette extends Widget {
         if (!part.item.isEnabled) {
             return;
         }
+        // Emit the item triggered signal before the execution.
+        this._itemTriggered.emit(part.item);
         // Execute the item.
         this.commands.execute(part.item.command, part.item.args);
         // Clear the query text.
@@ -15124,6 +15245,32 @@ class CommandPalette extends Widget {
      * The default `Renderer` instance.
      */
     CommandPalette.defaultRenderer = new Renderer();
+    /**
+     * Search an array of command items for fuzzy matches.
+     *
+     * @param items - The command items to search.
+     *
+     * @param query - The query text to match against the items.
+     *
+     * @returns The search results for the query.
+     *
+     * #### Notes
+     * Items which are not visible are excluded. Whitespace in the query
+     * is ignored. An empty query matches all items, ordered by category,
+     * rank, and label. Otherwise, the matched items are ordered by match
+     * quality.
+     *
+     * Each run of items which share a category is preceded by a header
+     * result for that category.
+     *
+     * This function is used by the default implementation of the protected
+     * `search()` method of a command palette. A subclass can use it to
+     * compose the default results with custom results.
+     */
+    function search(items, query) {
+        return Private$a.search(items, query);
+    }
+    CommandPalette.search = search;
 })(CommandPalette || (CommandPalette = {}));
 /**
  * The namespace for the module implementation details.
@@ -15499,6 +15646,7 @@ class Menu extends Widget {
         this._activeIndex = -1;
         this._openTimerID = 0;
         this._closeTimerID = 0;
+        this._pendingTouchActivation = false;
         this._items = [];
         this._childMenu = null;
         this._parentMenu = null;
@@ -15772,7 +15920,11 @@ class Menu extends Widget {
      * This is a no-op if the item is not in the menu.
      */
     removeItem(item) {
-        this.removeItemAt(this._items.indexOf(item));
+        let index = this._items.indexOf(item);
+        if (index === -1) {
+            return;
+        }
+        this.removeItemAt(index);
     }
     /**
      * Remove the item at a given index from the menu.
@@ -15840,7 +15992,7 @@ class Menu extends Widget {
      * This is a no-op if the menu is already attached to the DOM.
      */
     open(x, y, options = {}) {
-        var _a, _b;
+        var _a, _b, _c;
         // Bail early if the menu is already attached.
         if (this.isAttached) {
             return;
@@ -15850,8 +16002,9 @@ class Menu extends Widget {
         let forceY = options.forceY || false;
         const host = (_a = options.host) !== null && _a !== void 0 ? _a : null;
         const ref = (_b = options.ref) !== null && _b !== void 0 ? _b : null;
+        const horizontalAlignment = (_c = options.horizontalAlignment) !== null && _c !== void 0 ? _c : (document.documentElement.dir === 'rtl' ? 'right' : 'left');
         // Open the menu as a root menu.
-        Private$9.openRootMenu(this, x, y, forceX, forceY, host, ref);
+        Private$9.openRootMenu(this, x, y, forceX, forceY, horizontalAlignment, host, ref);
         // Activate the menu to accept keyboard input.
         this.activate();
     }
@@ -15870,20 +16023,23 @@ class Menu extends Widget {
             case 'keydown':
                 this._evtKeyDown(event);
                 break;
-            case 'mouseup':
-                this._evtMouseUp(event);
+            case 'click':
+                this._evtClick(event);
                 break;
-            case 'mousemove':
-                this._evtMouseMove(event);
+            case 'pointerup':
+                this._evtPointerUp(event);
                 break;
-            case 'mouseenter':
-                this._evtMouseEnter(event);
+            case 'pointermove':
+                this._evtPointerMove(event);
                 break;
-            case 'mouseleave':
-                this._evtMouseLeave(event);
+            case 'pointerenter':
+                this._evtPointerEnter(event);
                 break;
-            case 'mousedown':
-                this._evtMouseDown(event);
+            case 'pointerleave':
+                this._evtPointerLeave(event);
+                break;
+            case 'pointerdown':
+                this._evtPointerDown(event);
                 break;
             case 'contextmenu':
                 event.preventDefault();
@@ -15896,24 +16052,27 @@ class Menu extends Widget {
      */
     onBeforeAttach(msg) {
         this.node.addEventListener('keydown', this);
-        this.node.addEventListener('mouseup', this);
-        this.node.addEventListener('mousemove', this);
-        this.node.addEventListener('mouseenter', this);
-        this.node.addEventListener('mouseleave', this);
+        this.node.addEventListener('click', this);
+        this.node.addEventListener('pointerup', this);
+        this.node.addEventListener('pointermove', this);
+        this.node.addEventListener('pointerenter', this);
+        this.node.addEventListener('pointerleave', this);
         this.node.addEventListener('contextmenu', this);
-        document.addEventListener('mousedown', this, true);
+        document.addEventListener('pointerdown', this, true);
     }
     /**
      * A message handler invoked on an `'after-detach'` message.
      */
     onAfterDetach(msg) {
         this.node.removeEventListener('keydown', this);
-        this.node.removeEventListener('mouseup', this);
-        this.node.removeEventListener('mousemove', this);
-        this.node.removeEventListener('mouseenter', this);
-        this.node.removeEventListener('mouseleave', this);
+        this.node.removeEventListener('click', this);
+        this.node.removeEventListener('pointerup', this);
+        this.node.removeEventListener('pointermove', this);
+        this.node.removeEventListener('pointerenter', this);
+        this.node.removeEventListener('pointerleave', this);
         this.node.removeEventListener('contextmenu', this);
-        document.removeEventListener('mousedown', this, true);
+        document.removeEventListener('pointerdown', this, true);
+        this._pendingTouchActivation = false;
     }
     /**
      * A message handler invoked on an `'activate-request'` message.
@@ -15956,6 +16115,7 @@ class Menu extends Widget {
         this._cancelCloseTimer();
         // Reset the active index.
         this.activeIndex = -1;
+        this._pendingTouchActivation = false;
         // Close any open child menu.
         let childMenu = this._childMenu;
         if (childMenu) {
@@ -16057,26 +16217,53 @@ class Menu extends Widget {
         }
     }
     /**
-     * Handle the `'mouseup'` event for the menu.
+     * Handle the `'pointerup'` event for the menu.
      *
      * #### Notes
      * This listener is attached to the menu node.
      */
-    _evtMouseUp(event) {
+    _evtPointerUp(event) {
         if (event.button !== 0) {
+            return;
+        }
+        if (Utils$1.isTouchEvent(event)) {
+            this._pendingTouchActivation = this._activateItemFromEvent(event);
+            event.stopPropagation();
             return;
         }
         event.preventDefault();
         event.stopPropagation();
+        this._activateItemFromEvent(event);
         this.triggerActiveItem();
     }
     /**
-     * Handle the `'mousemove'` event for the menu.
+     * Handle the `'click'` event for the menu.
      *
      * #### Notes
      * This listener is attached to the menu node.
      */
-    _evtMouseMove(event) {
+    _evtClick(event) {
+        if (!this._pendingTouchActivation) {
+            return;
+        }
+        this._pendingTouchActivation = false;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!this._activateItemFromEvent(event)) {
+            return;
+        }
+        this.triggerActiveItem();
+    }
+    /**
+     * Handle the `'pointermove'` event for the menu.
+     *
+     * #### Notes
+     * This listener is attached to the menu node.
+     */
+    _evtPointerMove(event) {
+        if (Utils$1.isTouchEvent(event)) {
+            return;
+        }
         // Hit test the item nodes for the item under the mouse.
         let index = _lumino_algorithm__WEBPACK_IMPORTED_MODULE_0__.ArrayExt.findFirstIndex(this.contentNode.children, node => {
             return _lumino_domutils__WEBPACK_IMPORTED_MODULE_2__.ElementExt.hitTest(node, event.clientX, event.clientY);
@@ -16109,12 +16296,15 @@ class Menu extends Widget {
         this._startOpenTimer();
     }
     /**
-     * Handle the `'mouseenter'` event for the menu.
+     * Handle the `'pointerenter'` event for the menu.
      *
      * #### Notes
      * This listener is attached to the menu node.
      */
-    _evtMouseEnter(event) {
+    _evtPointerEnter(event) {
+        if (Utils$1.isTouchEvent(event)) {
+            return;
+        }
         // Synchronize the active ancestor items.
         for (let menu = this._parentMenu; menu; menu = menu._parentMenu) {
             menu._cancelOpenTimer();
@@ -16123,12 +16313,15 @@ class Menu extends Widget {
         }
     }
     /**
-     * Handle the `'mouseleave'` event for the menu.
+     * Handle the `'pointerleave'` event for the menu.
      *
      * #### Notes
      * This listener is attached to the menu node.
      */
-    _evtMouseLeave(event) {
+    _evtPointerLeave(event) {
+        if (Utils$1.isTouchEvent(event)) {
+            return;
+        }
         // Cancel any pending submenu opening.
         this._cancelOpenTimer();
         // If there is no open child menu, just reset the active index.
@@ -16147,12 +16340,13 @@ class Menu extends Widget {
         this._startCloseTimer();
     }
     /**
-     * Handle the `'mousedown'` event for the menu.
+     * Handle the `'pointerdown'` event for the menu.
      *
      * #### Notes
      * This listener is attached to the document node.
      */
-    _evtMouseDown(event) {
+    _evtPointerDown(event) {
+        this._pendingTouchActivation = false;
         // Bail if the menu is not a root menu.
         if (this._parentMenu) {
             return;
@@ -16162,7 +16356,9 @@ class Menu extends Widget {
         // is allowed to propagate. This allows other code to act on the
         // event, such as focusing the clicked element.
         if (Private$9.hitTestMenus(this, event.clientX, event.clientY)) {
-            event.preventDefault();
+            if (!Utils$1.isTouchEvent(event)) {
+                event.preventDefault();
+            }
             event.stopPropagation();
         }
         else {
@@ -16208,6 +16404,19 @@ class Menu extends Widget {
         }
         // Activate the child menu.
         submenu.activate();
+    }
+    /**
+     * Activate the menu item under an event.
+     */
+    _activateItemFromEvent(event) {
+        let index = _lumino_algorithm__WEBPACK_IMPORTED_MODULE_0__.ArrayExt.findFirstIndex(this.contentNode.children, node => {
+            return _lumino_domutils__WEBPACK_IMPORTED_MODULE_2__.ElementExt.hitTest(node, event.clientX, event.clientY);
+        });
+        if (index === -1) {
+            return false;
+        }
+        this.activeIndex = index;
+        return true;
     }
     /**
      * Close the child menu immediately.
@@ -16433,7 +16642,13 @@ class Menu extends Widget {
                     if (!data.item.isEnabled) {
                         aria['aria-disabled'] = 'true';
                     }
-                    aria.role = 'menuitem';
+                    if (data.item.isToggleable || data.item.isToggled) {
+                        aria.role = 'menuitemcheckbox';
+                        aria['aria-checked'] = `${data.item.isToggled}`;
+                    }
+                    else {
+                        aria.role = 'menuitem';
+                    }
             }
             return aria;
         }
@@ -16618,7 +16833,7 @@ var Private$9;
     /**
      * Open a menu as a root menu at the target location.
      */
-    function openRootMenu(menu, x, y, forceX, forceY, host, ref) {
+    function openRootMenu(menu, x, y, forceX, forceY, horizontalAlignment, host, ref) {
         // Get the current position and size of the main viewport.
         const windowData = getWindowData();
         let px = windowData.pageXOffset;
@@ -16639,6 +16854,10 @@ var Private$9;
         Widget.attach(menu, host || document.body, ref);
         // Measure the size of the menu.
         let { width, height } = node.getBoundingClientRect();
+        // align the menu to the right of the target if requested or language is RTL
+        if (horizontalAlignment === 'right') {
+            x -= width;
+        }
         // Adjust the X position of the menu to fit on-screen.
         if (!forceX && x + width > px + cw) {
             x = px + cw - width;
@@ -16882,6 +17101,15 @@ var Private$9;
         get isToggled() {
             if (this.type === 'command') {
                 return this._commands.isToggled(this.command, this.args);
+            }
+            return false;
+        }
+        /**
+         * Whether the menu item is toggleable.
+         */
+        get isToggleable() {
+            if (this.type === 'command') {
+                return this._commands.isToggleable(this.command, this.args);
             }
             return false;
         }
@@ -17170,6 +17398,12 @@ class TabBar extends Widget {
         this._titlesEditable = false;
         this._previousTitle = null;
         this._dragData = null;
+        this._tabSizeFrozen = false;
+        this._frozenTabWidths = null;
+        this._unfreezeRunID = 0;
+        this._unfreezeFallbackTimerID = 0;
+        this._unfreezeTransitionListener = null;
+        this._pendingTouchCloseRequest = null;
         this._addButtonEnabled = false;
         this._tabMoved = new _lumino_signaling__WEBPACK_IMPORTED_MODULE_5__.Signal(this);
         this._currentChanged = new _lumino_signaling__WEBPACK_IMPORTED_MODULE_5__.Signal(this);
@@ -17534,6 +17768,22 @@ class TabBar extends Widget {
      * This is a no-op if the index is out of range.
      */
     removeTabAt(index) {
+        let indexIsValid = index >= 0 && index < this._titles.length;
+        if (this._tabSizeFrozen) {
+            if (indexIsValid) {
+                // Capture the widths of all tabs that will remain.
+                let tabs = this.contentNode.children;
+                this._frozenTabWidths = [];
+                for (let i = 0, n = tabs.length; i < n; ++i) {
+                    if (i !== index) {
+                        this._frozenTabWidths.push(tabs[i].offsetWidth);
+                    }
+                }
+            }
+            else {
+                this._frozenTabWidths = null;
+            }
+        }
         // Release the mouse before making any changes.
         this._releaseMouse();
         // Remove the title from the array.
@@ -17621,6 +17871,12 @@ class TabBar extends Widget {
             case 'pointerup':
                 this._evtPointerUp(event);
                 break;
+            case 'pointerleave':
+                this._evtPointerLeave(event);
+                break;
+            case 'click':
+                this._evtClick(event);
+                break;
             case 'dblclick':
                 this._evtDblClick(event);
                 break;
@@ -17640,6 +17896,8 @@ class TabBar extends Widget {
      */
     onBeforeAttach(msg) {
         this.node.addEventListener('pointerdown', this);
+        this.node.addEventListener('pointerleave', this);
+        this.node.addEventListener('click', this);
         this.node.addEventListener('dblclick', this);
         this.node.addEventListener('keydown', this);
     }
@@ -17648,8 +17906,13 @@ class TabBar extends Widget {
      */
     onAfterDetach(msg) {
         this.node.removeEventListener('pointerdown', this);
+        this.node.removeEventListener('pointerleave', this);
+        this.node.removeEventListener('click', this);
         this.node.removeEventListener('dblclick', this);
         this.node.removeEventListener('keydown', this);
+        this._clearUnfreezeTransitionState();
+        this._clearTabSizeFreezeState();
+        this._pendingTouchCloseRequest = null;
         this._releaseMouse();
     }
     /**
@@ -17674,6 +17937,23 @@ class TabBar extends Widget {
             content[i] = renderer.renderTab({ title, current, zIndex, tabIndex });
         }
         _lumino_virtualdom__WEBPACK_IMPORTED_MODULE_8__.VirtualDOM.render(content, this.contentNode);
+        if (this._tabSizeFrozen) {
+            let tabs = this.contentNode.children;
+            if (this._frozenTabWidths &&
+                this._frozenTabWidths.length === tabs.length) {
+                for (let i = 0, n = tabs.length; i < n; ++i) {
+                    this._setFrozenTabSize(tabs[i], this._frozenTabWidths[i]);
+                }
+                this._frozenTabWidths = null;
+            }
+            else {
+                this._frozenTabWidths = null;
+                for (let i = 0, n = tabs.length; i < n; ++i) {
+                    let tab = tabs[i];
+                    this._setFrozenTabSize(tab, tab.offsetWidth);
+                }
+            }
+        }
     }
     /**
      * Get the index of the tab which handles tabindex="0".
@@ -17839,6 +18119,7 @@ class TabBar extends Widget {
      * Handle the `'pointerdown'` event for the tab bar.
      */
     _evtPointerDown(event) {
+        this._pendingTouchCloseRequest = null;
         // Do nothing if it's not a left or middle mouse press.
         if (event.button !== 0 && event.button !== 1) {
             return;
@@ -17864,8 +18145,15 @@ class TabBar extends Widget {
         if (index === -1 && !addButtonClicked) {
             return;
         }
+        // Check if the close icon was pressed.
+        let icon = index !== -1
+            ? tabs[index].querySelector(this.renderer.closeIconSelector)
+            : null;
+        let closeIconPressed = !!icon && icon.contains(event.target);
         // Pressing on a tab stops the event propagation.
-        event.preventDefault();
+        if (!closeIconPressed || !Utils$1.isTouchEvent(event)) {
+            event.preventDefault();
+        }
         event.stopPropagation();
         // Initialize the non-measured parts of the drag data.
         this._dragData = {
@@ -17891,8 +18179,7 @@ class TabBar extends Widget {
             return;
         }
         // Do nothing else if the close icon is clicked.
-        let icon = tabs[index].querySelector(this.renderer.closeIconSelector);
-        if (icon && icon.contains(event.target)) {
+        if (closeIconPressed) {
             return;
         }
         // Add the extra listeners if the tabs are movable.
@@ -18003,8 +18290,11 @@ class TabBar extends Widget {
         if (!data) {
             return;
         }
+        const isTouch = Utils$1.isTouchEvent(event);
         // Stop the event propagation.
-        event.preventDefault();
+        if (!isTouch) {
+            event.preventDefault();
+        }
         event.stopPropagation();
         // Remove the extra mouse event listeners.
         this.document.removeEventListener('pointermove', this, true);
@@ -18045,6 +18335,11 @@ class TabBar extends Widget {
             // Emit the close requested signal if the close icon was released.
             let icon = tabs[index].querySelector(this.renderer.closeIconSelector);
             if (icon && icon.contains(event.target)) {
+                this._tabSizeFrozen = true;
+                if (isTouch) {
+                    this._pendingTouchCloseRequest = { index, title };
+                    return;
+                }
                 this._tabCloseRequested.emit({ index, title });
                 return;
             }
@@ -18157,6 +18452,27 @@ class TabBar extends Widget {
         }
     }
     /**
+     * Handle the `'click'` event for the tab bar.
+     */
+    _evtClick(event) {
+        const request = this._pendingTouchCloseRequest;
+        if (!request) {
+            return;
+        }
+        this._pendingTouchCloseRequest = null;
+        event.preventDefault();
+        event.stopPropagation();
+        const tab = this.contentNode.children[request.index];
+        const icon = tab === null || tab === void 0 ? void 0 : tab.querySelector(this.renderer.closeIconSelector);
+        if (this._titles[request.index] !== request.title ||
+            !icon ||
+            !icon.contains(event.target)) {
+            this._clearTabSizeFreezeState();
+            return;
+        }
+        this._tabCloseRequested.emit(request);
+    }
+    /**
      * Adjust the current index for a tab move operation.
      *
      * This method will not cause the actual current tab to change.
@@ -18255,6 +18571,102 @@ class TabBar extends Widget {
      */
     _onTitleChanged(sender) {
         this.update();
+    }
+    /**
+     * Handle the `'pointerleave'` event for the tab bar.
+     *
+     * This restores the natural tab sizing after tabs were frozen
+     * due to a close-icon click.
+     */
+    _evtPointerLeave(event) {
+        // Do nothing if tab sizes are not currently frozen.
+        if (!this._tabSizeFrozen) {
+            return;
+        }
+        // Unfreeze tab sizes.
+        this._tabSizeFrozen = false;
+        this._frozenTabWidths = null;
+        // Start a new unfreeze run and clear stale listeners/timers.
+        this._unfreezeRunID++;
+        let runID = this._unfreezeRunID;
+        this._clearUnfreezeTransitionState();
+        // Add the unfreezing class to enable a smooth width transition.
+        this.addClass('lm-mod-unfreezing');
+        // Clear the inline width on all tabs, triggering the CSS transition.
+        let tabs = this.contentNode.children;
+        for (let i = 0, n = tabs.length; i < n; ++i) {
+            let tab = tabs[i];
+            tab.style.width = '';
+            tab.style.flexBasis = '';
+        }
+        if (tabs.length === 0) {
+            this.removeClass('lm-mod-unfreezing');
+        }
+        else {
+            let onTransitionDone = (event) => {
+                let propertyName = event.propertyName;
+                if (propertyName === 'width' || propertyName === 'flex-basis') {
+                    this._finalizeUnfreezeRun(runID);
+                }
+            };
+            this._unfreezeTransitionListener = onTransitionDone;
+            this.node.addEventListener('transitionend', onTransitionDone);
+            this.node.addEventListener('transitioncancel', onTransitionDone);
+            this._unfreezeFallbackTimerID = window.setTimeout(() => {
+                this._finalizeUnfreezeRun(runID);
+            }, 2000);
+        }
+        // Schedule an update to re-render the tabs at natural size.
+        this.update();
+    }
+    /**
+     * Apply a frozen size to a tab.
+     *
+     * The width is mirrored to `flex-basis` so frozen sizing works even when
+     * themes define tab sizing through flex rules.
+     */
+    _setFrozenTabSize(tab, width) {
+        let size = `${width}px`;
+        tab.style.width = size;
+        tab.style.flexBasis = size;
+    }
+    /**
+     * Finish an in-flight unfreeze transition run.
+     */
+    _finalizeUnfreezeRun(runID) {
+        if (runID !== this._unfreezeRunID) {
+            return;
+        }
+        this._clearUnfreezeTransitionState();
+        this.removeClass('lm-mod-unfreezing');
+    }
+    /**
+     * Remove unfreeze listeners and timers.
+     */
+    _clearUnfreezeTransitionState() {
+        if (this._unfreezeTransitionListener) {
+            this.node.removeEventListener('transitionend', this._unfreezeTransitionListener);
+            this.node.removeEventListener('transitioncancel', this._unfreezeTransitionListener);
+            this._unfreezeTransitionListener = null;
+        }
+        if (this._unfreezeFallbackTimerID !== 0) {
+            clearTimeout(this._unfreezeFallbackTimerID);
+            this._unfreezeFallbackTimerID = 0;
+        }
+    }
+    /**
+     * Clear transient tab-size freeze state and styles.
+     */
+    _clearTabSizeFreezeState() {
+        this._tabSizeFrozen = false;
+        this._frozenTabWidths = null;
+        this.removeClass('lm-mod-unfreezing');
+        let tabs = this.contentNode.children;
+        for (let i = 0, n = tabs.length; i < n; ++i) {
+            let tab = tabs[i];
+            tab.style.width = '';
+            tab.style.flexBasis = '';
+        }
     }
 }
 /**
@@ -20296,6 +20708,10 @@ var Private$6;
 |----------------------------------------------------------------------------*/
 /**
  * A widget which provides a flexible docking area for widgets.
+ *
+ * #### Notes
+ * See also the related [example](../../examples/dockpanel/index.html) and
+ * its [source](https://github.com/jupyterlab/lumino/tree/main/examples/example-dockpanel).
  */
 class DockPanel extends Widget {
     /**
@@ -22465,6 +22881,10 @@ var Private$4;
 |----------------------------------------------------------------------------*/
 /**
  * A widget which displays menus as a canonical menu bar.
+ *
+ * #### Notes
+ * See also the related [example](../../examples/menubar/index.html) and
+ * its [source](https://github.com/jupyterlab/lumino/tree/main/examples/example-menubar).
  */
 class MenuBar extends Widget {
     /**
@@ -22749,11 +23169,12 @@ class MenuBar extends Widget {
             case 'keydown':
                 this._evtKeyDown(event);
                 break;
-            case 'mousedown':
-                this._evtMouseDown(event);
+            case 'pointerdown':
+                this._evtPointerDown(event);
                 break;
-            case 'mousemove':
-                this._evtMouseMove(event);
+            case 'pointermove':
+            case 'pointerleave':
+                this._evtPointerMove(event);
                 break;
             case 'focusout':
                 this._evtFocusOut(event);
@@ -22769,8 +23190,9 @@ class MenuBar extends Widget {
      */
     onBeforeAttach(msg) {
         this.node.addEventListener('keydown', this);
-        this.node.addEventListener('mousedown', this);
-        this.node.addEventListener('mousemove', this);
+        this.node.addEventListener('pointerdown', this);
+        this.node.addEventListener('pointermove', this);
+        this.node.addEventListener('pointerleave', this);
         this.node.addEventListener('focusout', this);
         this.node.addEventListener('contextmenu', this);
     }
@@ -22779,8 +23201,9 @@ class MenuBar extends Widget {
      */
     onAfterDetach(msg) {
         this.node.removeEventListener('keydown', this);
-        this.node.removeEventListener('mousedown', this);
-        this.node.removeEventListener('mousemove', this);
+        this.node.removeEventListener('pointerdown', this);
+        this.node.removeEventListener('pointermove', this);
+        this.node.removeEventListener('pointerleave', this);
         this.node.removeEventListener('focusout', this);
         this.node.removeEventListener('contextmenu', this);
         this._closeChildMenu();
@@ -23020,9 +23443,9 @@ class MenuBar extends Widget {
         }
     }
     /**
-     * Handle the `'mousedown'` event for the menu bar.
+     * Handle the `'pointerdown'` event for the menu bar.
      */
-    _evtMouseDown(event) {
+    _evtPointerDown(event) {
         // Bail if the mouse press was not on the menu bar. This can occur
         // when the document listener is installed for an active menu bar.
         if (!_lumino_domutils__WEBPACK_IMPORTED_MODULE_2__.ElementExt.hitTest(this.node, event.clientX, event.clientY)) {
@@ -23062,9 +23485,12 @@ class MenuBar extends Widget {
         }
     }
     /**
-     * Handle the `'mousemove'` event for the menu bar.
+     * Handle the `'pointermove'` event for the menu bar.
      */
-    _evtMouseMove(event) {
+    _evtPointerMove(event) {
+        if (Utils$1.isTouchEvent(event)) {
+            return;
+        }
         // Check if the mouse is over one of the menu items.
         let index = _lumino_algorithm__WEBPACK_IMPORTED_MODULE_0__.ArrayExt.findFirstIndex(this.contentNode.children, node => {
             return _lumino_domutils__WEBPACK_IMPORTED_MODULE_2__.ElementExt.hitTest(node, event.clientX, event.clientY);
@@ -23152,7 +23578,7 @@ class MenuBar extends Widget {
             oldMenu.close();
         }
         else {
-            document.addEventListener('mousedown', this, true);
+            document.addEventListener('pointerdown', this, true);
         }
         // Update the tab focus index and ensure the menu bar is updated.
         this._tabFocusIndex = this.activeIndex;
@@ -23185,7 +23611,7 @@ class MenuBar extends Widget {
         // Remove the active class from the menu bar.
         this.removeClass('lm-mod-active');
         // Remove the document listeners.
-        document.removeEventListener('mousedown', this, true);
+        document.removeEventListener('pointerdown', this, true);
         // Clear the internal menu reference.
         let menu = this._childMenu;
         this._childMenu = null;
@@ -23205,7 +23631,7 @@ class MenuBar extends Widget {
         // Remove the active class from the menu bar.
         this.removeClass('lm-mod-active');
         // Remove the document listeners.
-        document.removeEventListener('mousedown', this, true);
+        document.removeEventListener('pointerdown', this, true);
         // Clear the internal menu reference.
         this._childMenu = null;
         // Reset the active index.
@@ -71962,6 +72388,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/*
 
 .lm-DockPanel-handle {
   z-index: 2;
+  touch-action: none;
 }
 
 .lm-DockPanel-handle.lm-mod-hidden {
@@ -72006,7 +72433,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/*
 .lm-DockPanel-overlay.lm-mod-hidden {
   display: none !important;
 }
-`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/dockpanel.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;AACZ;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,kBAAkB;EAClB,MAAM;EACN,OAAO;EACP,WAAW;EACX,YAAY;EACZ,WAAW;AACb;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,SAAS;EACT,cAAc;EACd,2BAA2B;AAC7B;;AAEA;EACE,QAAQ;EACR,eAAe;EACf,2BAA2B;AAC7B;;AAEA;EACE,UAAU;EACV,sBAAsB;EACtB,oBAAoB;AACtB;;AAEA;EACE,wBAAwB;AAC1B","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-DockPanel {\n  z-index: 0;\n}\n\n.lm-DockPanel-widget {\n  z-index: 0;\n}\n\n.lm-DockPanel-tabBar {\n  z-index: 1;\n}\n\n.lm-DockPanel-handle {\n  z-index: 2;\n}\n\n.lm-DockPanel-handle.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-DockPanel-handle:after {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  content: '';\n}\n\n.lm-DockPanel-handle[data-orientation='horizontal'] {\n  cursor: ew-resize;\n}\n\n.lm-DockPanel-handle[data-orientation='vertical'] {\n  cursor: ns-resize;\n}\n\n.lm-DockPanel-handle[data-orientation='horizontal']:after {\n  left: 50%;\n  min-width: 8px;\n  transform: translateX(-50%);\n}\n\n.lm-DockPanel-handle[data-orientation='vertical']:after {\n  top: 50%;\n  min-height: 8px;\n  transform: translateY(-50%);\n}\n\n.lm-DockPanel-overlay {\n  z-index: 3;\n  box-sizing: border-box;\n  pointer-events: none;\n}\n\n.lm-DockPanel-overlay.lm-mod-hidden {\n  display: none !important;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/dockpanel.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,kBAAkB;EAClB,MAAM;EACN,OAAO;EACP,WAAW;EACX,YAAY;EACZ,WAAW;AACb;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,SAAS;EACT,cAAc;EACd,2BAA2B;AAC7B;;AAEA;EACE,QAAQ;EACR,eAAe;EACf,2BAA2B;AAC7B;;AAEA;EACE,UAAU;EACV,sBAAsB;EACtB,oBAAoB;AACtB;;AAEA;EACE,wBAAwB;AAC1B","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-DockPanel {\n  z-index: 0;\n}\n\n.lm-DockPanel-widget {\n  z-index: 0;\n}\n\n.lm-DockPanel-tabBar {\n  z-index: 1;\n}\n\n.lm-DockPanel-handle {\n  z-index: 2;\n  touch-action: none;\n}\n\n.lm-DockPanel-handle.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-DockPanel-handle:after {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  content: '';\n}\n\n.lm-DockPanel-handle[data-orientation='horizontal'] {\n  cursor: ew-resize;\n}\n\n.lm-DockPanel-handle[data-orientation='vertical'] {\n  cursor: ns-resize;\n}\n\n.lm-DockPanel-handle[data-orientation='horizontal']:after {\n  left: 50%;\n  min-width: 8px;\n  transform: translateX(-50%);\n}\n\n.lm-DockPanel-handle[data-orientation='vertical']:after {\n  top: 50%;\n  min-height: 8px;\n  transform: translateY(-50%);\n}\n\n.lm-DockPanel-overlay {\n  z-index: 3;\n  box-sizing: border-box;\n  pointer-events: none;\n}\n\n.lm-DockPanel-overlay.lm-mod-hidden {\n  display: none !important;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -72120,6 +72547,8 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/*
 .lm-Menu {
   z-index: 10000;
   position: absolute;
+  top: 0;
+  left: 0;
   white-space: nowrap;
   overflow-x: hidden;
   overflow-y: auto;
@@ -72161,7 +72590,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/*
   display: table-cell;
   text-align: right;
 }
-`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/menu.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,cAAc;EACd,kBAAkB;EAClB,mBAAmB;EACnB,kBAAkB;EAClB,gBAAgB;EAChB,aAAa;EACb,yBAAyB;EACzB,sBAAsB;EACtB,qBAAqB;EACrB,iBAAiB;AACnB;;AAEA;EACE,SAAS;EACT,UAAU;EACV,cAAc;EACd,qBAAqB;AACvB;;AAEA;EACE,kBAAkB;AACpB;;AAEA;;EAEE,wBAAwB;AAC1B;;AAEA;;EAEE,mBAAmB;EACnB,kBAAkB;AACpB;;AAEA;EACE,mBAAmB;EACnB,gBAAgB;AAClB;;AAEA;EACE,mBAAmB;EACnB,iBAAiB;AACnB","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-Menu {\n  z-index: 10000;\n  position: absolute;\n  white-space: nowrap;\n  overflow-x: hidden;\n  overflow-y: auto;\n  outline: none;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  -ms-user-select: none;\n  user-select: none;\n}\n\n.lm-Menu-content {\n  margin: 0;\n  padding: 0;\n  display: table;\n  list-style-type: none;\n}\n\n.lm-Menu-item {\n  display: table-row;\n}\n\n.lm-Menu-item.lm-mod-hidden,\n.lm-Menu-item.lm-mod-collapsed {\n  display: none !important;\n}\n\n.lm-Menu-itemIcon,\n.lm-Menu-itemSubmenuIcon {\n  display: table-cell;\n  text-align: center;\n}\n\n.lm-Menu-itemLabel {\n  display: table-cell;\n  text-align: left;\n}\n\n.lm-Menu-itemShortcut {\n  display: table-cell;\n  text-align: right;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/menu.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,cAAc;EACd,kBAAkB;EAClB,MAAM;EACN,OAAO;EACP,mBAAmB;EACnB,kBAAkB;EAClB,gBAAgB;EAChB,aAAa;EACb,yBAAyB;EACzB,sBAAsB;EACtB,qBAAqB;EACrB,iBAAiB;AACnB;;AAEA;EACE,SAAS;EACT,UAAU;EACV,cAAc;EACd,qBAAqB;AACvB;;AAEA;EACE,kBAAkB;AACpB;;AAEA;;EAEE,wBAAwB;AAC1B;;AAEA;;EAEE,mBAAmB;EACnB,kBAAkB;AACpB;;AAEA;EACE,mBAAmB;EACnB,gBAAgB;AAClB;;AAEA;EACE,mBAAmB;EACnB,iBAAiB;AACnB","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-Menu {\n  z-index: 10000;\n  position: absolute;\n  top: 0;\n  left: 0;\n  white-space: nowrap;\n  overflow-x: hidden;\n  overflow-y: auto;\n  outline: none;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  -ms-user-select: none;\n  user-select: none;\n}\n\n.lm-Menu-content {\n  margin: 0;\n  padding: 0;\n  display: table;\n  list-style-type: none;\n}\n\n.lm-Menu-item {\n  display: table-row;\n}\n\n.lm-Menu-item.lm-mod-hidden,\n.lm-Menu-item.lm-mod-collapsed {\n  display: none !important;\n}\n\n.lm-Menu-itemIcon,\n.lm-Menu-itemSubmenuIcon {\n  display: table-cell;\n  text-align: center;\n}\n\n.lm-Menu-itemLabel {\n  display: table-cell;\n  text-align: left;\n}\n\n.lm-Menu-itemShortcut {\n  display: table-cell;\n  text-align: right;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -72346,6 +72775,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/*
 
 .lm-SplitPanel-handle {
   z-index: 1;
+  touch-action: none;
 }
 
 .lm-SplitPanel-handle.lm-mod-hidden {
@@ -72380,7 +72810,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/*
   min-height: 8px;
   transform: translateY(-50%);
 }
-`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/splitpanel.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;AACZ;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,kBAAkB;EAClB,MAAM;EACN,OAAO;EACP,WAAW;EACX,YAAY;EACZ,WAAW;AACb;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,SAAS;EACT,cAAc;EACd,2BAA2B;AAC7B;;AAEA;EACE,QAAQ;EACR,eAAe;EACf,2BAA2B;AAC7B","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-SplitPanel-child {\n  z-index: 0;\n}\n\n.lm-SplitPanel-handle {\n  z-index: 1;\n}\n\n.lm-SplitPanel-handle.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-SplitPanel-handle:after {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  content: '';\n}\n\n.lm-SplitPanel[data-orientation='horizontal'] > .lm-SplitPanel-handle {\n  cursor: ew-resize;\n}\n\n.lm-SplitPanel[data-orientation='vertical'] > .lm-SplitPanel-handle {\n  cursor: ns-resize;\n}\n\n.lm-SplitPanel[data-orientation='horizontal'] > .lm-SplitPanel-handle:after {\n  left: 50%;\n  min-width: 8px;\n  transform: translateX(-50%);\n}\n\n.lm-SplitPanel[data-orientation='vertical'] > .lm-SplitPanel-handle:after {\n  top: 50%;\n  min-height: 8px;\n  transform: translateY(-50%);\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/splitpanel.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,UAAU;AACZ;;AAEA;EACE,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,kBAAkB;EAClB,MAAM;EACN,OAAO;EACP,WAAW;EACX,YAAY;EACZ,WAAW;AACb;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,SAAS;EACT,cAAc;EACd,2BAA2B;AAC7B;;AAEA;EACE,QAAQ;EACR,eAAe;EACf,2BAA2B;AAC7B","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-SplitPanel-child {\n  z-index: 0;\n}\n\n.lm-SplitPanel-handle {\n  z-index: 1;\n  touch-action: none;\n}\n\n.lm-SplitPanel-handle.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-SplitPanel-handle:after {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  content: '';\n}\n\n.lm-SplitPanel[data-orientation='horizontal'] > .lm-SplitPanel-handle {\n  cursor: ew-resize;\n}\n\n.lm-SplitPanel[data-orientation='vertical'] > .lm-SplitPanel-handle {\n  cursor: ns-resize;\n}\n\n.lm-SplitPanel[data-orientation='horizontal'] > .lm-SplitPanel-handle:after {\n  left: 50%;\n  min-width: 8px;\n  transform: translateX(-50%);\n}\n\n.lm-SplitPanel[data-orientation='vertical'] > .lm-SplitPanel-handle:after {\n  top: 50%;\n  min-height: 8px;\n  transform: translateY(-50%);\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -72506,13 +72936,19 @@ ___CSS_LOADER_EXPORT___.push([module.id, `/*
   transition: none;
 }
 
+.lm-TabBar.lm-mod-unfreezing .lm-TabBar-tab {
+  transition:
+    width 150ms ease,
+    flex-basis 150ms ease;
+}
+
 .lm-TabBar-tabLabel .lm-TabBar-tabInput {
   user-select: all;
   width: 100%;
   box-sizing: border-box;
   background: inherit;
 }
-`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/tabbar.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,aAAa;EACb,yBAAyB;EACzB,sBAAsB;EACtB,qBAAqB;EACrB,iBAAiB;AACnB;;AAEA;EACE,mBAAmB;EACnB,qBAAqB;AACvB;;AAEA;EACE,sBAAsB;EACtB,qBAAqB;AACvB;;AAEA;EACE,SAAS;EACT,UAAU;EACV,aAAa;EACb,cAAc;EACd,qBAAqB;AACvB;;AAEA;EACE,mBAAmB;AACrB;;AAEA;EACE,sBAAsB;AACxB;;AAEA;EACE,aAAa;EACb,mBAAmB;EACnB,sBAAsB;EACtB,gBAAgB;EAChB,kBAAkB,EAAE,6BAA6B;AACnD;;AAEA;;EAEE,cAAc;AAChB;;AAEA;EACE,cAAc;EACd,gBAAgB;EAChB,mBAAmB;AACrB;;AAEA;EACE,gBAAgB;EAChB,WAAW;EACX,sBAAsB;AACxB;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,kBAAkB;AACpB;;AAEA;EACE,OAAO;EACP,2BAA2B;AAC7B;;AAEA;EACE,MAAM;EACN,0BAA0B;AAC5B;;AAEA;EACE,gBAAgB;AAClB;;AAEA;EACE,gBAAgB;EAChB,WAAW;EACX,sBAAsB;EACtB,mBAAmB;AACrB","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-TabBar {\n  display: flex;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  -ms-user-select: none;\n  user-select: none;\n}\n\n.lm-TabBar[data-orientation='horizontal'] {\n  flex-direction: row;\n  align-items: flex-end;\n}\n\n.lm-TabBar[data-orientation='vertical'] {\n  flex-direction: column;\n  align-items: flex-end;\n}\n\n.lm-TabBar-content {\n  margin: 0;\n  padding: 0;\n  display: flex;\n  flex: 1 1 auto;\n  list-style-type: none;\n}\n\n.lm-TabBar[data-orientation='horizontal'] > .lm-TabBar-content {\n  flex-direction: row;\n}\n\n.lm-TabBar[data-orientation='vertical'] > .lm-TabBar-content {\n  flex-direction: column;\n}\n\n.lm-TabBar-tab {\n  display: flex;\n  flex-direction: row;\n  box-sizing: border-box;\n  overflow: hidden;\n  touch-action: none; /* Disable native Drag/Drop */\n}\n\n.lm-TabBar-tabIcon,\n.lm-TabBar-tabCloseIcon {\n  flex: 0 0 auto;\n}\n\n.lm-TabBar-tabLabel {\n  flex: 1 1 auto;\n  overflow: hidden;\n  white-space: nowrap;\n}\n\n.lm-TabBar-tabInput {\n  user-select: all;\n  width: 100%;\n  box-sizing: border-box;\n}\n\n.lm-TabBar-tab.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-TabBar-addButton.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-TabBar.lm-mod-dragging .lm-TabBar-tab {\n  position: relative;\n}\n\n.lm-TabBar.lm-mod-dragging[data-orientation='horizontal'] .lm-TabBar-tab {\n  left: 0;\n  transition: left 150ms ease;\n}\n\n.lm-TabBar.lm-mod-dragging[data-orientation='vertical'] .lm-TabBar-tab {\n  top: 0;\n  transition: top 150ms ease;\n}\n\n.lm-TabBar.lm-mod-dragging .lm-TabBar-tab.lm-mod-dragging {\n  transition: none;\n}\n\n.lm-TabBar-tabLabel .lm-TabBar-tabInput {\n  user-select: all;\n  width: 100%;\n  box-sizing: border-box;\n  background: inherit;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../../node_modules/@lumino/widgets/style/tabbar.css"],"names":[],"mappings":"AAAA;;;EAGE;;AAEF;;;;;;;8EAO8E;;AAE9E;EACE,aAAa;EACb,yBAAyB;EACzB,sBAAsB;EACtB,qBAAqB;EACrB,iBAAiB;AACnB;;AAEA;EACE,mBAAmB;EACnB,qBAAqB;AACvB;;AAEA;EACE,sBAAsB;EACtB,qBAAqB;AACvB;;AAEA;EACE,SAAS;EACT,UAAU;EACV,aAAa;EACb,cAAc;EACd,qBAAqB;AACvB;;AAEA;EACE,mBAAmB;AACrB;;AAEA;EACE,sBAAsB;AACxB;;AAEA;EACE,aAAa;EACb,mBAAmB;EACnB,sBAAsB;EACtB,gBAAgB;EAChB,kBAAkB,EAAE,6BAA6B;AACnD;;AAEA;;EAEE,cAAc;AAChB;;AAEA;EACE,cAAc;EACd,gBAAgB;EAChB,mBAAmB;AACrB;;AAEA;EACE,gBAAgB;EAChB,WAAW;EACX,sBAAsB;AACxB;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,wBAAwB;AAC1B;;AAEA;EACE,kBAAkB;AACpB;;AAEA;EACE,OAAO;EACP,2BAA2B;AAC7B;;AAEA;EACE,MAAM;EACN,0BAA0B;AAC5B;;AAEA;EACE,gBAAgB;AAClB;;AAEA;EACE;;yBAEuB;AACzB;;AAEA;EACE,gBAAgB;EAChB,WAAW;EACX,sBAAsB;EACtB,mBAAmB;AACrB","sourcesContent":["/*\n * Copyright (c) Jupyter Development Team.\n * Distributed under the terms of the Modified BSD License.\n */\n\n/*-----------------------------------------------------------------------------\n| Copyright (c) Jupyter Development Team.\n| Copyright (c) 2014-2017, PhosphorJS Contributors\n|\n| Distributed under the terms of the BSD 3-Clause License.\n|\n| The full license is in the file LICENSE, distributed with this software.\n|----------------------------------------------------------------------------*/\n\n.lm-TabBar {\n  display: flex;\n  -webkit-user-select: none;\n  -moz-user-select: none;\n  -ms-user-select: none;\n  user-select: none;\n}\n\n.lm-TabBar[data-orientation='horizontal'] {\n  flex-direction: row;\n  align-items: flex-end;\n}\n\n.lm-TabBar[data-orientation='vertical'] {\n  flex-direction: column;\n  align-items: flex-end;\n}\n\n.lm-TabBar-content {\n  margin: 0;\n  padding: 0;\n  display: flex;\n  flex: 1 1 auto;\n  list-style-type: none;\n}\n\n.lm-TabBar[data-orientation='horizontal'] > .lm-TabBar-content {\n  flex-direction: row;\n}\n\n.lm-TabBar[data-orientation='vertical'] > .lm-TabBar-content {\n  flex-direction: column;\n}\n\n.lm-TabBar-tab {\n  display: flex;\n  flex-direction: row;\n  box-sizing: border-box;\n  overflow: hidden;\n  touch-action: none; /* Disable native Drag/Drop */\n}\n\n.lm-TabBar-tabIcon,\n.lm-TabBar-tabCloseIcon {\n  flex: 0 0 auto;\n}\n\n.lm-TabBar-tabLabel {\n  flex: 1 1 auto;\n  overflow: hidden;\n  white-space: nowrap;\n}\n\n.lm-TabBar-tabInput {\n  user-select: all;\n  width: 100%;\n  box-sizing: border-box;\n}\n\n.lm-TabBar-tab.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-TabBar-addButton.lm-mod-hidden {\n  display: none !important;\n}\n\n.lm-TabBar.lm-mod-dragging .lm-TabBar-tab {\n  position: relative;\n}\n\n.lm-TabBar.lm-mod-dragging[data-orientation='horizontal'] .lm-TabBar-tab {\n  left: 0;\n  transition: left 150ms ease;\n}\n\n.lm-TabBar.lm-mod-dragging[data-orientation='vertical'] .lm-TabBar-tab {\n  top: 0;\n  transition: top 150ms ease;\n}\n\n.lm-TabBar.lm-mod-dragging .lm-TabBar-tab.lm-mod-dragging {\n  transition: none;\n}\n\n.lm-TabBar.lm-mod-unfreezing .lm-TabBar-tab {\n  transition:\n    width 150ms ease,\n    flex-basis 150ms ease;\n}\n\n.lm-TabBar-tabLabel .lm-TabBar-tabInput {\n  user-select: all;\n  width: 100%;\n  box-sizing: border-box;\n  background: inherit;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
