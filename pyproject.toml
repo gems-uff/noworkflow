@@ -174,11 +174,13 @@ extend-exclude = [
 builtins = ["__noworkflow__"]
 
 [tool.ruff.lint]
-# ruff's default set (E4, E7, E9, F) plus W605 and B006 (mutable argument
-# defaults), all blocking. An intended exception carries `# noqa: <code>` on
-# its line, with the reason on the line above, like `# nosec`. E501 never
-# (the formatter owns line length); no S, because bandit is the SAST.
-select = ["E4", "E7", "E9", "F", "W605", "B006"]
+# ruff's default set (E4, E7, E9, F) plus W605, B006 (mutable argument
+# defaults) and I (import order), all blocking. An intended exception carries
+# `# noqa: <code>` on its line, with the reason on the line above, like
+# `# nosec`; an import block whose order matters, `# isort: off` and
+# `# isort: on` around it, with the reason. E501 never (the formatter owns
+# line length); no S, because bandit is the SAST.
+select = ["E4", "E7", "E9", "F", "W605", "B006", "I"]
 
 [tool.ruff.lint.per-file-ignores]
 # Python 2 compatibility shim: names that only exist on Python 2, re-exports.

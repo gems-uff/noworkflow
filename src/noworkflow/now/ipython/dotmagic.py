@@ -4,10 +4,11 @@
 # Please, consult the license terms in the LICENSE file.
 """IPython extensions to display dot files"""
 
-# Runs Graphviz, and Inkscape for PDF, to draw DOT text
 import errno
 import os
 import platform
+
+# Runs Graphviz, and Inkscape for PDF, to draw DOT text
 import subprocess  # nosec B404
 import sys
 import tempfile

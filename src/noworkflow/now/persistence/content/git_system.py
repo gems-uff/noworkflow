@@ -1,5 +1,6 @@
-# Runs git in the puregit store's content.git
 import os
+
+# Runs git in the puregit store's content.git
 import subprocess  # nosec B404
 
 
