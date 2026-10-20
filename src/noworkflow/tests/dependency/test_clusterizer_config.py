@@ -36,12 +36,14 @@ from ..collection_testcase import CollectionTestCase
 
 class TrialMock(object):
     """Mock trial"""
+
     # pylint: disable=too-few-public-methods
     initial_activation = None
 
 
 class TestClusterizerConfig(CollectionTestCase):
     """Test Clusterizer Configuration"""
+
     # pylint: disable=missing-docstring
     # pylint: disable=invalid-name
     # pylint: disable=too-many-public-methods
@@ -106,7 +108,7 @@ class TestClusterizerConfig(CollectionTestCase):
         config.show_external_files = True
         self.assertEqual(
             FilterExternalAccessesOut,
-            type(config.filter([FilterExternalAccessesOut()]))
+            type(config.filter([FilterExternalAccessesOut()])),
         )
 
     def test_default_synonymer_combine_accesses(self):
@@ -140,10 +142,7 @@ class TestClusterizerConfig(CollectionTestCase):
         config = DependencyConfig()
         config.combine_accesses = False
         config.combine_assignments = False
-        self.assertEqual(
-            SameSynonymer,
-            type(config.synonymer([SameSynonymer()]))
-        )
+        self.assertEqual(SameSynonymer, type(config.synonymer([SameSynonymer()])))
 
     def test_default_mode_is_fine_grain(self):
         # trial.dot and the flow.pdf of the vis use DependencyConfig()
@@ -153,50 +152,32 @@ class TestClusterizerConfig(CollectionTestCase):
         parser = argparse.ArgumentParser()
         DependencyConfig.create_arguments(parser.add_argument)
         self.assertEqual("fineGrain", config.mode)
-        self.assertEqual(
-            config.mode, parser.parse_args(["-m", config.mode]).mode)
-        self.assertEqual(
-            Clusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
+        self.assertEqual(config.mode, parser.parse_args(["-m", config.mode]).mode)
+        self.assertEqual(Clusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_fine_grain(self):
         config = DependencyConfig()
         config.mode = "fineGrain"
-        self.assertEqual(
-            Clusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
+        self.assertEqual(Clusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_activation(self):
         config = DependencyConfig()
         config.mode = "activation"
-        self.assertEqual(
-            ActivationClusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
+        self.assertEqual(ActivationClusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_all(self):
         config = DependencyConfig()
         config.mode = "all"
-        self.assertEqual(
-            DependencyClusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
+        self.assertEqual(DependencyClusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_coarse_grain(self):
         config = DependencyConfig()
         config.mode = "coarseGrain"
         self.assertEqual(
-            RetrospectiveClusterizer,
-            type(config.clusterizer(TrialMock()))
+            RetrospectiveClusterizer, type(config.clusterizer(TrialMock()))
         )
-        
+
     def test_mode_loopless_coarse_grain(self):
         config = DependencyConfig()
         config.mode = "looplessCoarseGrain"
-        self.assertEqual(
-            ProspectiveClusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
-
+        self.assertEqual(ProspectiveClusterizer, type(config.clusterizer(TrialMock())))

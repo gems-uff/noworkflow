@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """History Model"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ..persistence.models.base import Model
@@ -37,6 +38,7 @@ class History(Model):
         history.graph.width = 600
         history.graph.height = 200
     """
+
     __modelname__ = "History"
 
     DEFAULT = {
@@ -59,7 +61,7 @@ class History(Model):
         self.script = "*"
         self.status = "*"
         self.summarize = False
-        self.expId=kwargs.get('expId', None)
+        self.expId = kwargs.get("expId", None)
         self.graph = HistoryGraph(self)
         self.initialize_default(kwargs)
         self.status_options = ["*", "finished", "unfinished", "backup"]

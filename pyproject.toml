@@ -173,6 +173,10 @@ extend-exclude = [
 # Injected into builtins by the collector while a traced script runs.
 builtins = ["__noworkflow__"]
 
+[tool.ruff.format]
+# LF in the repository and in the working tree, on every platform (.gitattributes).
+line-ending = "lf"
+
 [tool.ruff.lint]
 # ruff's default set (E4, E7, E9, F) plus W605, B006 (mutable argument
 # defaults) and I (import order), all blocking. An intended exception carries

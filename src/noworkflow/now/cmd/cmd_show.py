@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now show' command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -28,11 +29,13 @@ def print_function_activation(trial, activation, level=1):
         return
     text = wrap(
         "{0.line}: {0.name} ({0.start} - {0.finish})".format(activation),
-        initial="  " * level)
+        initial="  " * level,
+    )
     indent = text.index(": ") + 2
     print(text)
-    activation.show(print_=lambda x, offset=0: print(
-        wrap(x, initial=" " * (indent + offset))))
+    activation.show(
+        print_=lambda x, offset=0: print(wrap(x, initial=" " * (indent + offset)))
+    )
 
     for inner_activation in activation.activations:
         print_function_activation(trial, inner_activation, level + 1)
@@ -43,25 +46,43 @@ class Show(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("trial", type=str, nargs="?",
-                help="trial id or none for last trial")
-        add_arg("-m", "--modules", action="store_true",
-                help="shows module dependencies")
-        add_arg("-d", "--definition", action="store_true",
-                help="shows the definition provenance")
-        add_arg("-e", "--environment", action="store_true",
-                help="shows the environment conditions")
-        add_arg("-a", "--function-activations", action="store_true",
-                help="shows function activations")
-        add_arg("-p", "--arguments", action="store_true",
-                help="shows noworkflow parameters")
-        add_arg("-f", "--file-accesses", action="store_true",
-                help="shows read/write access to files")
-        add_arg("--dir", type=str,
-                help="set project path where is the database. Default to "
-                     "current directory")
-        add_arg("--content-engine", type=str,
-                help="set the content database engine")
+        add_arg("trial", type=str, nargs="?", help="trial id or none for last trial")
+        add_arg(
+            "-m", "--modules", action="store_true", help="shows module dependencies"
+        )
+        add_arg(
+            "-d",
+            "--definition",
+            action="store_true",
+            help="shows the definition provenance",
+        )
+        add_arg(
+            "-e",
+            "--environment",
+            action="store_true",
+            help="shows the environment conditions",
+        )
+        add_arg(
+            "-a",
+            "--function-activations",
+            action="store_true",
+            help="shows function activations",
+        )
+        add_arg(
+            "-p", "--arguments", action="store_true", help="shows noworkflow parameters"
+        )
+        add_arg(
+            "-f",
+            "--file-accesses",
+            action="store_true",
+            help="shows read/write access to files",
+        )
+        add_arg(
+            "--dir",
+            type=str,
+            help="set project path where is the database. Default to current directory",
+        )
+        add_arg("--content-engine", type=str, help="set the content database engine")
 
     def execute(self, args):
         persistence_config.content_engine = args.content_engine
@@ -69,10 +90,9 @@ class Show(Command):
         trial = Trial(trial_ref=args.trial)
         print_msg("trial tags:", True)
         print_trial_relationship(trial.tags)
-        
+
         print_msg("trial information:", True)
         trial.show(print_=lambda x: print(wrap(x)))
-        
 
         if args.modules:
             print_msg("this trial depends on the following modules:", True)
@@ -80,19 +100,20 @@ class Show(Command):
 
         if args.definition:
             print_msg("this trial has the following code blocks:", True)
-            print_trial_relationship(sorted(
-                trial.code_blocks, key=lambda x: x.id
-            ))
+            print_trial_relationship(sorted(trial.code_blocks, key=lambda x: x.id))
 
         if args.environment:
-            print_msg("this trial has been executed under the following"
-                      " environment conditions", True)
-            print_trial_relationship(trial.environment_attrs, breakline="\n",
-                                     other="\n  ")
+            print_msg(
+                "this trial has been executed under the following"
+                " environment conditions",
+                True,
+            )
+            print_trial_relationship(
+                trial.environment_attrs, breakline="\n", other="\n  "
+            )
 
         if args.function_activations:
-            print_msg("this trial has the following function activation "
-                      "tree:", True)
+            print_msg("this trial has the following function activation tree:", True)
             print_function_activation(trial, trial.initial_activation)
 
         if args.file_accesses:
@@ -101,5 +122,4 @@ class Show(Command):
 
         if args.arguments:
             print_msg("this trial has the following arguments:", True)
-            print_trial_relationship(trial.arguments, breakline="\n",
-                                     other="\n  ")
+            print_trial_relationship(trial.arguments, breakline="\n", other="\n  ")

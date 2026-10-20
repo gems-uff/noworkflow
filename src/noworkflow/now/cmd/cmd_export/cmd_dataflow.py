@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now export dataflow'command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -20,31 +21,40 @@ class Dataflow(Command):
         add_arg = self.add_argument
 
         DependencyConfig.create_arguments(add_arg)
-        add_arg("--value-length", type=int, default=0,
-                help="R|maximum length of values (default: 0)\n"
-                     "0 indicates that values should be hidden.\n"
-                     "The values appear on the second line of node lables.\n"
-                     "E.g. if it is set to '10', it will show 'data.dat',\n"
-                     "but it will transform 'data2.dat' in to 'da...dat'\n"
-                     "to respect the length restriction (note that '' is\n"
-                     "part of the value).\n"
-                     "Minimum displayable value: 5. Suggested: 55.")
-        add_arg("-n", "--name-length", type=int, default=55,
-                help="R|maximum length of names (default: 55)\n"
-                     "0 indicates that values should be hidden.\n"
-                     "Minimum displayable value: 5. Suggested: 55.")
+        add_arg(
+            "--value-length",
+            type=int,
+            default=0,
+            help="R|maximum length of values (default: 0)\n"
+            "0 indicates that values should be hidden.\n"
+            "The values appear on the second line of node lables.\n"
+            "E.g. if it is set to '10', it will show 'data.dat',\n"
+            "but it will transform 'data2.dat' in to 'da...dat'\n"
+            "to respect the length restriction (note that '' is\n"
+            "part of the value).\n"
+            "Minimum displayable value: 5. Suggested: 55.",
+        )
+        add_arg(
+            "-n",
+            "--name-length",
+            type=int,
+            default=55,
+            help="R|maximum length of names (default: 55)\n"
+            "0 indicates that values should be hidden.\n"
+            "Minimum displayable value: 5. Suggested: 55.",
+        )
         """ # ToDo: prolog filter
         add_arg("-f", "--filter", type=str,
                 help="R|filter dataflow by a variable/file name.\n"
                      "It requires pyswip.")
         """
-        add_arg("trial", type=str, nargs="?",
-                help="trial id or none for last trial")
-        add_arg("--dir", type=str,
-                help="set project path where is the database. Default to "
-                     "current directory")
-        add_arg("--content-engine", type=str,
-                help="set the content database engine")
+        add_arg("trial", type=str, nargs="?", help="trial id or none for last trial")
+        add_arg(
+            "--dir",
+            type=str,
+            help="set project path where is the database. Default to current directory",
+        )
+        add_arg("--content-engine", type=str, help="set the content database engine")
 
     def execute(self, args):
         persistence_config.content_engine = args.content_engine

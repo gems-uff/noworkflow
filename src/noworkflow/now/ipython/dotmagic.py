@@ -41,7 +41,7 @@ MIME_MAP = {
 
 STARTUPINFO = None
 
-if platform.system().lower() == 'windows':
+if platform.system().lower() == "windows":
     STARTUPINFO = subprocess.STARTUPINFO()
     STARTUPINFO.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     STARTUPINFO.wShowWindow = subprocess.SW_HIDE
@@ -50,15 +50,14 @@ if platform.system().lower() == 'windows':
 def run_dot(dot, ext="svg", prog="dot", extra=None):
     """Run graphviz for `dot` text and returns its output"""
     extra = extra or []
-    args = [prog] + extra + ['-T', ext]
+    args = [prog] + extra + ["-T", ext]
     # No shell; prog and extra are the defaults or the user's own %%dot options,
     # and the graph goes to stdin
     process = subprocess.Popen(  # nosec B603
-        args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-        startupinfo=STARTUPINFO
+        args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=STARTUPINFO
     )
     try:
-        tout, terr = process.communicate(dot.encode('utf-8'))
+        tout, terr = process.communicate(dot.encode("utf-8"))
     except (OSError, IOError) as err:
         if err.errno != errno.ENOENT:
             raise
@@ -70,8 +69,9 @@ def run_dot(dot, ext="svg", prog="dot", extra=None):
         if terr is None:
             terr = b"Incomplete input"
         raise RuntimeError(
-            'dot exited with error code {0}\n{1}'
-            .format(process.returncode, terr.decode('utf-8'))
+            "dot exited with error code {0}\n{1}".format(
+                process.returncode, terr.decode("utf-8")
+            )
         )
     return tout
 
@@ -102,8 +102,13 @@ def dot_to_pdf(dot, prog, extra, force_ink=False):
         os.close(fd2)
         try:
             # Assumes that graphviz already generated the svg
-            ink_args = ["inkscape", "-D", "-z", "--file={}".format(filename1),
-                        "--export-pdf={}".format(filename2)]
+            ink_args = [
+                "inkscape",
+                "-D",
+                "-z",
+                "--file={}".format(filename1),
+                "--export-pdf={}".format(filename2),
+            ]
             # No shell; a fixed argv over the two temporary files made above
             subprocess.check_call(ink_args, startupinfo=STARTUPINFO)  # nosec B603
             with open(filename2, "rb") as file:
@@ -116,7 +121,8 @@ def dot_to_pdf(dot, prog, extra, force_ink=False):
         except (OSError, SubprocessError, RuntimeError) as error:
             if force_ink:
                 raise RuntimeError(
-                    "inkscape could not convert the svg: {}".format(error))
+                    "inkscape could not convert the svg: {}".format(error)
+                )
             return run_dot(dot, "pdf", prog, extra)
     finally:
         os.remove(filename1)
@@ -137,7 +143,7 @@ class DotDisplay(object):
     def save(self, *files, formats=None):
         """Save dot file into specific format"""
         extensions = self.extensions
-        formats = formats or [x.split('.')[-1] for x in files]
+        formats = formats or [x.split(".")[-1] for x in files]
         self.extensions = set(formats)
         result = self.display_result()
         self.extensions = extensions
@@ -186,6 +192,7 @@ class DotDisplay(object):
 
     def _ipython_display_(self):
         from IPython.display import display
+
         result = self.display_result()
         display(result, raw=True)
 
@@ -203,29 +210,33 @@ def load_ipython_extension(ipython):
         Add cell magic %%dot to display dot graph in Jupyter"""
 
         @magic_arguments()
-        @argument('-p', '--prog', default="dot", type=str, help="Command for rendering (dot, neato, ...)")
-        @argument('-f', '--format', default="png", help="Output format")
-        @argument('-s', '--save', default=[], nargs="+", help="Save files")
-        @argument('extra', default=[], nargs='*', help="Extra options for graphviz")
+        @argument(
+            "-p",
+            "--prog",
+            default="dot",
+            type=str,
+            help="Command for rendering (dot, neato, ...)",
+        )
+        @argument("-f", "--format", default="png", help="Output format")
+        @argument("-s", "--save", default=[], nargs="+", help="Save files")
+        @argument("extra", default=[], nargs="*", help="Extra options for graphviz")
         @cell_magic
         def dot(self, line, cell):
             """%%dot magic"""
             # Remove comment on %%provn line
             pos = line.find("#")
-            line = line[:pos if pos != -1 else None]
+            line = line[: pos if pos != -1 else None]
 
             formatter = DollarFormatter()
-            line = formatter.vformat(
-                line, args=[], kwargs=self.shell.user_ns.copy()
-            )
+            line = formatter.vformat(line, args=[], kwargs=self.shell.user_ns.copy())
             args = parse_argstring(self.dot, line)
             dot_display = DotDisplay(cell, args.format, args.prog, args.extra)
 
             if args.save:
                 dot_display.save(*args.save)
             return dot_display
-        
-    global LOADED                                                               # pylint: disable=global-statement, invalid-name
+
+    global LOADED  # pylint: disable=global-statement, invalid-name
     ipython = get_ipython()
     if not LOADED and ipython:
         ipython.register_magics(DotMagic)

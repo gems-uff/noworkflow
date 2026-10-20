@@ -2,7 +2,8 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""" Define Metadata classes to be used as configuration """
+"""Define Metadata classes to be used as configuration"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -43,24 +44,16 @@ MAIN = 0
 PACKAGE = 1
 ALL = 2
 
-CONTEXTS = {
-    "main": MAIN,
-    "package": PACKAGE,
-    "all": ALL
-}
+CONTEXTS = {"main": MAIN, "package": PACKAGE, "all": ALL}
 
 NO_VALUES = 0
 RELEVANT_VALUES = 1
 ALL_VALUES = 2
 
-COLLECT_VALUES = {
-    "none": NO_VALUES,
-    "relevant": RELEVANT_VALUES,
-    "all": ALL_VALUES
-}
+COLLECT_VALUES = {"none": NO_VALUES, "relevant": RELEVANT_VALUES, "all": ALL_VALUES}
 
 
-class Metascript(object):                                                        # pylint: disable=too-many-instance-attributes
+class Metascript(object):  # pylint: disable=too-many-instance-attributes
     """Metascript object. Contain storages and arguments"""
 
     def __init__(self, **kwargs):
@@ -139,7 +132,6 @@ class Metascript(object):                                                       
         # Content engine : str
         self.content_engine = None
 
-
         # Trial time
         self._trial_start_checkpoint = 0
 
@@ -155,7 +147,6 @@ class Metascript(object):                                                       
         self.tagged_var_dict = {}
         self.dep_dict = {}
 
-
     @property
     def context(self):
         """Return context"""
@@ -170,11 +161,13 @@ class Metascript(object):                                                       
         """Clear namespace dict"""
         if erase:
             self.namespace.clear()
-        self.namespace.update({
-            "__name__": "__main__",
-            "__file__": self.path,
-            "__builtins__": __builtins__,
-        })
+        self.namespace.update(
+            {
+                "__name__": "__main__",
+                "__file__": self.path,
+                "__builtins__": __builtins__,
+            }
+        )
 
     def get_time(self):
         """Get perf time in seconds (float)"""
@@ -201,8 +194,15 @@ class Metascript(object):                                                       
         self.context = args.context
         return self
 
-    def read_ipython_args(self, args, directory, filename, argv, create_last,   # pylint: disable=too-many-arguments
-                          cmd=None):
+    def read_ipython_args(
+        self,
+        args,
+        directory,
+        filename,
+        argv,
+        create_last,  # pylint: disable=too-many-arguments
+        cmd=None,
+    ):
         """Read magic line argument object"""
         if not cmd:
             cmd = "run " + " ".join(argv)
@@ -274,7 +274,7 @@ class Metascript(object):                                                       
         """Create arguments"""
         for arg in vars(args):
             value = getattr(args, arg)
-            if arg not in ("func", ):
+            if arg not in ("func",):
                 self.arguments_store.add(self.trial_id, arg, repr(value))
 
     def create_last(self):
@@ -286,17 +286,15 @@ class Metascript(object):                                                       
 
     def create_automatic_tag_args(self):
         """Return arguments for Tag.create_automatic_tag"""
-        return (
-            self.trial_id,
-            self.code_blocks_store[1].code_hash,
-            self.command
-        )
+        return (self.trial_id, self.code_blocks_store[1].code_hash, self.command)
 
     def create_trial_args(self):
         """Return arguments for Trial.create"""
         start, self._trial_start_checkpoint = datetime.now(), perf_counter()
         return (
-            self.name, start, self.command,
+            self.name,
+            start,
+            self.command,
             os.path.dirname(self.path),
-            self.bypass_modules
+            self.bypass_modules,
         )

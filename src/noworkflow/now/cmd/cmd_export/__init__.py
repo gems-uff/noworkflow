@@ -17,6 +17,7 @@ from .cmd_prov import Prov
 
 class Export(Command):
     """Export the collected provenance of a trial to different formats"""
+
     def add_arguments(self):
         export_sub = self.parser.add_subparsers(dest="what", required=True)
         commands = [
@@ -29,6 +30,6 @@ class Export(Command):
         ]
         for cmd in commands:
             cmd.create_parser(export_sub)
-            
+
     def execute(self, args):
         print("Please select an export type")

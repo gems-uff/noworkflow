@@ -33,13 +33,13 @@ if PY3:
     import reprlib
     from itertools import zip_longest
 
-    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes,
-                 type(Ellipsis))
+    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes, type(Ellipsis))
     string = (str, bytes)
     raw_bytes = (bytes, bytearray)
     perf_counter = time.perf_counter
 else:
     import __builtin__ as builtins
+
     try:
         import cPickle as pickle
     except ImportError:
@@ -55,6 +55,7 @@ else:
 
 cross_compile = compile
 
+
 def to_unicode(text):
     """Convert bytes to unicode"""
     return text.decode("utf-8") if isinstance(text, raw_bytes) else text
@@ -63,7 +64,7 @@ def to_unicode(text):
 def bytes_string(text, encode="utf-8"):
     """Return a bytes object on Python 3 and a str object on Python 2"""
     if not PY3:
-        if isinstance(text, unicode):                                            # pylint: disable=undefined-variable
+        if isinstance(text, unicode):  # pylint: disable=undefined-variable
             result = text.encode(encode)
         else:
             result = text

@@ -10,6 +10,7 @@ The queries here need no store: the helper rule ``member`` answers from a
 Python list, and a list of ``(result, binds)`` pairs stands in for a query
 where the machinery cannot produce the case (a BLANK bind).
 """
+
 import pytest
 
 from noworkflow.patterns import BLANK, var
@@ -63,17 +64,26 @@ def test_outcome_returns_the_value_or_the_exception_text():
 
 def test_assert_rows_compares_multisets_and_returns_the_rows():
     assert assert_rows(lambda: [(2,), (1,), (1,)], [(1,), (2,), (1,)]) == [
-        (2,), (1,), (1,)]
+        (2,),
+        (1,),
+        (1,),
+    ]
 
 
-@pytest.mark.parametrize("actual, expected, line", [
-    ([(1,)], [(1,), (2,)], "only in the store (1): (2,)"),
-    ([(1,), (3,), (3,)], [(1,)], "only in the rule (2): (3,) x2"),
-    ([(1,), (1,), (1,)], [(1,)], "repeats 2 solutions"),
-    ([(1,), (1,)], [(1,), (1,), (1,)], "only in the store (1): (1,)"),
-    ([(BLANK,), (ABSENT,), (UNBOUND,)], [(1,), (2,), (3,)],
-     "unbound in 3 solutions"),
-])
+@pytest.mark.parametrize(
+    "actual, expected, line",
+    [
+        ([(1,)], [(1,), (2,)], "only in the store (1): (2,)"),
+        ([(1,), (3,), (3,)], [(1,)], "only in the rule (2): (3,) x2"),
+        ([(1,), (1,), (1,)], [(1,)], "repeats 2 solutions"),
+        ([(1,), (1,)], [(1,), (1,), (1,)], "only in the store (1): (1,)"),
+        (
+            [(BLANK,), (ABSENT,), (UNBOUND,)],
+            [(1,), (2,), (3,)],
+            "unbound in 3 solutions",
+        ),
+    ],
+)
 def test_each_difference_has_its_own_line(actual, expected, line):
     with pytest.raises(AssertionError) as caught:
         assert_rows(lambda: actual, expected)
@@ -103,7 +113,12 @@ def test_a_defect_without_the_signature_fails_outright():
 
 def test_normalize_prolog_maps_access_ids_and_nil():
     """``f<id>`` is an access id, ``nil`` is None, at any depth"""
-    row = ("f12", "nil", "file.txt", 3, ("f1", "f2"),
-           Compound("-", ("f3", "nil")))
+    row = ("f12", "nil", "file.txt", 3, ("f1", "f2"), Compound("-", ("f3", "nil")))
     assert normalize_prolog(row) == (
-        12, None, "file.txt", 3, (1, 2), Compound("-", (3, None)))
+        12,
+        None,
+        "file.txt",
+        3,
+        (1, 2),
+        Compound("-", (3, None)),
+    )

@@ -9,6 +9,7 @@ pytest finds every test by its file name (``python_files`` and
 the package connects the persistence layer to in-memory stores, before any
 test module is imported.
 """
+
 from .helpers.persistence import connect_in_memory
 
 connect_in_memory()

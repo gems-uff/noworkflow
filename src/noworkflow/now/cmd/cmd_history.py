@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now history' command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -17,16 +18,28 @@ class History(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("-s", "--script", type=str, default="*",
-                help="show history of specific script")
-        add_arg("-e", "--status", type=str, default="*",
-                choices=["*", "finished", "unfinished", "backup"],
-                help="show only trials in a specific status")
-        add_arg("--dir", type=str,
-                help="set demo path. Default to CWD/demo<number>"
-                     "where <number> is the demo identification")
-        add_arg("--content-engine", type=str,
-                help="set the content database engine")
+        add_arg(
+            "-s",
+            "--script",
+            type=str,
+            default="*",
+            help="show history of specific script",
+        )
+        add_arg(
+            "-e",
+            "--status",
+            type=str,
+            default="*",
+            choices=["*", "finished", "unfinished", "backup"],
+            help="show only trials in a specific status",
+        )
+        add_arg(
+            "--dir",
+            type=str,
+            help="set demo path. Default to CWD/demo<number>"
+            "where <number> is the demo identification",
+        )
+        add_arg("--content-engine", type=str, help="set the content database engine")
 
     def execute(self, args):
         persistence_config.content_engine = args.content_engine

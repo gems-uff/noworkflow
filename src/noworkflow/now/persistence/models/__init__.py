@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Persistence Models"""
+
 from __future__ import absolute_import, division, print_function
 
 from future.utils import text_to_native_str as n
@@ -40,18 +41,31 @@ from . import relationships
 # isort: on
 
 ORDER = [
-    Trial, Head, Tag, GraphCache, Argument, # Trial
-    Module, EnvironmentAttr,  # Deployment
-    CodeComponent, CodeBlock, Composition, Experiment,  # Definition
-    Evaluation, Activation, Dependency, Member,  # Execution
-    FileAccess, StageTags,  # Execution
-    Group, MemberOfGroup, User, ExtendedAnnotation,  # additional info
+    Trial,
+    Head,
+    Tag,
+    GraphCache,
+    Argument,  # Trial
+    Module,
+    EnvironmentAttr,  # Deployment
+    CodeComponent,
+    CodeBlock,
+    Composition,
+    Experiment,  # Definition
+    Evaluation,
+    Activation,
+    Dependency,
+    Member,  # Execution
+    FileAccess,
+    StageTags,  # Execution
+    Group,
+    MemberOfGroup,
+    User,
+    ExtendedAnnotation,  # additional info
 ]
 
 
-__all__ = [
-    n(x.__modelname__) for x in ORDER
-] + [
+__all__ = [n(x.__modelname__) for x in ORDER] + [
     "MetaModel",
     "Model",
     "proxy",

@@ -4,6 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 """Syntax utils"""
 
+
 class SyntaxUtils:
     def __init__(self):
         pass
@@ -11,41 +12,41 @@ class SyntaxUtils:
     @staticmethod
     def compare_loop(node):
         """
-           Check loop structures
-           return: string list, syntax name
-           dependencies: all
+        Check loop structures
+        return: string list, syntax name
+        dependencies: all
         """
-        return 'for' in node or 'while' in node
+        return "for" in node or "while" in node
 
     @staticmethod
     def compare_condition(node):
         """
-           Check condition structures
-           return: string list, syntax name
-           dependencies: all
+        Check condition structures
+        return: string list, syntax name
+        dependencies: all
         """
-        return 'elif' in node or 'else' in node
+        return "elif" in node or "else" in node
 
     @staticmethod
     def get_call(types, block):
         """
-            Check call structures
-            return: string list, syntax name
-            dependencies: all
+        Check call structures
+        return: string list, syntax name
+        dependencies: all
         """
-        syntaxCall = types == 'call' or types == 'aug_assign'
-        syntaxRange = 'range(' not in block
+        syntaxCall = types == "call" or types == "aug_assign"
+        syntaxRange = "range(" not in block
 
         return syntaxCall and syntaxRange
 
     @staticmethod
     def get_others():
         """
-           Check type of the elements in Array List
-           return: string list, syntax name
-           dependencies: all
+        Check type of the elements in Array List
+        return: string list, syntax name
+        dependencies: all
         """
-        return ['global', 'pass', 'break', 'continue', 'assign', 'with', 'aug_assign']
+        return ["global", "pass", "break", "continue", "assign", "with", "aug_assign"]
 
     @staticmethod
     def get_try():
@@ -54,7 +55,7 @@ class SyntaxUtils:
         return: string list, syntax name
         dependencies: all
         """
-        return ['try', 'exception']
+        return ["try", "exception"]
 
     @staticmethod
     def get_loop():
@@ -63,7 +64,7 @@ class SyntaxUtils:
         return: string list, syntax name
         dependencies: all
         """
-        return ['for', 'while']
+        return ["for", "while"]
 
     @staticmethod
     def get_index_array(item, array):

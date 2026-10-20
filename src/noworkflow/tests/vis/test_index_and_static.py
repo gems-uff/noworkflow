@@ -27,6 +27,7 @@ builds such a request: a missing file at the root whose name has a hyphen
 answers the page (``/<tid>-<graph_mode>`` catches it), and the zipper also
 compresses a client that refuses gzip (``gzip;q=0``) and a ``206`` range.
 """
+
 import contextlib
 import gzip
 import html.parser
@@ -54,8 +55,7 @@ MISSING = "/dist/no_such_file.js"
 
 # The files webpack emits next to the bundle under a content hash, and the
 # first bytes each kind of file starts with.
-ASSET = re.compile(
-    rb"\b[0-9a-f]{20,32}\.(?:png|svg|gif|jpe?g|woff2?|ttf|eot)\b")
+ASSET = re.compile(rb"\b[0-9a-f]{20,32}\.(?:png|svg|gif|jpe?g|woff2?|ttf|eot)\b")
 MAGIC = {
     ".png": (b"\x89PNG\r\n\x1a\n",),
     ".gif": (b"GIF87a", b"GIF89a"),
@@ -68,14 +68,15 @@ MAGIC = {
 # What each 20-hex asset holds today: the line webpack writes for an asset
 # module, naming the real image.
 WEBPACK_LINE = re.compile(
-    rb'^export default __webpack_public_path__ \+ "([0-9a-f]{32}\.png)";\s*$')
+    rb'^export default __webpack_public_path__ \+ "([0-9a-f]{32}\.png)";\s*$'
+)
 
 SCROLLBAR_ICONS = Defect(
     reason="#263: the file-loader rule of the nowvis webpack config "
-           "processes again the asset modules that css-loader emits, so "
-           "bundle.js names 20-hex .png files whose content is the line "
-           "'export default __webpack_public_path__ + \"<32-hex>.png\"' "
-           "instead of the image",
+    "processes again the asset modules that css-loader emits, so "
+    "bundle.js names 20-hex .png files whose content is the line "
+    "'export default __webpack_public_path__ + \"<32-hex>.png\"' "
+    "instead of the image",
     signature="export default __webpack_public_path__",
 )
 
@@ -97,8 +98,7 @@ class Page(html.parser.HTMLParser):
         values = dict(attrs)
         if tag == "input":
             self.inputs[values.get("id")] = values.get("value")
-            self.input_attributes[values.get("id")] = sorted(
-                name for name, _ in attrs)
+            self.input_attributes[values.get("id")] = sorted(name for name, _ in attrs)
         elif tag == "link" and values.get("rel") == "stylesheet":
             self.stylesheets.append(values.get("href"))
         elif tag == "script" and "src" in values:
@@ -107,17 +107,19 @@ class Page(html.parser.HTMLParser):
 
 # The stylesheet the template links (font-awesome, under the static folder).
 STYLESHEET = Page(
-    (STATIC.parent / "templates" / "index.html").read_text(
-        encoding="utf-8")).stylesheets[0]
+    (STATIC.parent / "templates" / "index.html").read_text(encoding="utf-8")
+).stylesheets[0]
 
 
 def page(vis, route):
     """GET ``route``, check that it is the HTML page, and parse it"""
     response = vis.get(route)
     assert response.status_code == 200, "GET {}: status {}".format(
-        route, response.status_code)
+        route, response.status_code
+    )
     assert response.mimetype == "text/html", "GET {}: {}".format(
-        route, response.mimetype)
+        route, response.mimetype
+    )
     return Page(response.get_data(as_text=True))
 
 
@@ -133,17 +135,18 @@ def static_file(relative):
 
 def experiments_of(project):
     """The store's experiments as the page lists them, ordered by id"""
-    return sorted(project.query(
-        "SELECT id, name, description FROM experiment"),
-        key=lambda row: row["id"])
+    return sorted(
+        project.query("SELECT id, name, description FROM experiment"),
+        key=lambda row: row["id"],
+    )
 
 
 def server_flag(project):
     """``server`` as the store says: an experiment, or no trial outside one"""
-    experiments = project.query(
-        "SELECT COUNT(*) AS n FROM experiment")[0]["n"]
+    experiments = project.query("SELECT COUNT(*) AS n FROM experiment")[0]["n"]
     trials = project.query(
-        "SELECT COUNT(*) AS n FROM trial WHERE experiment_id IS NULL")[0]["n"]
+        "SELECT COUNT(*) AS n FROM trial WHERE experiment_id IS NULL"
+    )[0]["n"]
     return str(bool(experiments) or not trials)
 
 
@@ -154,15 +157,17 @@ def add_experiment(project, name, description):
     with contextlib.closing(sqlite3.connect(path)) as connection:
         with connection:
             connection.execute(
-                "INSERT INTO experiment (id, name, description) "
-                "VALUES (?, ?, ?)", (experiment_id, name, description))
+                "INSERT INTO experiment (id, name, description) VALUES (?, ?, ?)",
+                (experiment_id, name, description),
+            )
     return experiment_id
 
 
 def hashed_assets():
     """The hashed file names ``bundle.js`` names, as on disk"""
-    return sorted({match.decode() for match in ASSET.findall(
-        static_file("dist/bundle.js"))})
+    return sorted(
+        {match.decode() for match in ASSET.findall(static_file("dist/bundle.js"))}
+    )
 
 
 def magic_ok(name, body):
@@ -175,8 +180,7 @@ def magic_ok(name, body):
 
 @pytest.fixture(scope="module")
 def _experiment_store(tmp_path_factory):
-    project = build_weather(NowProject(
-        tmp_path_factory.mktemp("vis_index_experiment")))
+    project = build_weather(NowProject(tmp_path_factory.mktemp("vis_index_experiment")))
     add_experiment(project, "it's <b>one</b>", 'a "quoted" & <i>tagged</i>')
     return project
 
@@ -188,7 +192,8 @@ def experiment_store(_experiment_store):
     before = _experiment_store.fingerprint()
     yield _experiment_store
     assert _experiment_store.fingerprint() == before, (
-        "the test changed the module's experiment store")
+        "the test changed the module's experiment store"
+    )
 
 
 # --- index ------------------------------------------------------------------
@@ -209,14 +214,15 @@ def test_index_loads_the_bundle_and_the_stylesheet(vis):
 def test_index_of_a_store_with_trials_and_no_experiment(vis):
     """On the two-trial store the inputs say: no experiment, none selected,
     and ``server`` False, so the frontend shows the history"""
-    assert vis.project.query("SELECT COUNT(*) AS n FROM experiment")[0][
-        "n"] == 0, "premise: the shared store has no experiment"
+    assert vis.project.query("SELECT COUNT(*) AS n FROM experiment")[0]["n"] == 0, (
+        "premise: the shared store has no experiment"
+    )
     root = page(vis, "/")
-    assert set(root.inputs) == {
-        "experimentsIn", "selectedExperiment", "server"}
+    assert set(root.inputs) == {"experimentsIn", "selectedExperiment", "server"}
     assert root.inputs["experimentsIn"] is not None
-    assert sorted(json.loads(root.inputs["experimentsIn"]),
-                  key=lambda row: row["id"]) == experiments_of(vis.project)
+    assert sorted(
+        json.loads(root.inputs["experimentsIn"]), key=lambda row: row["id"]
+    ) == experiments_of(vis.project)
     assert root.inputs["selectedExperiment"] == ""
     assert root.inputs["server"] == server_flag(vis.project) == "False"
 
@@ -229,7 +235,8 @@ def test_trial_and_graph_mode_route_renders_the_same_page(vis):
     for route in ("/{}-tree".format(first), "/{}-exact_match".format(first)):
         response = vis.get(route)
         assert response.status_code == 200, "GET {}: status {}".format(
-            route, response.status_code)
+            route, response.status_code
+        )
         assert response.get_data() == root, route
 
 
@@ -259,9 +266,14 @@ def test_experiment_page_selects_its_code(vis):
     assert experiment.scripts == root.scripts
 
 
-@pytest.mark.parametrize("code", [
-    "it's", 'a"b<c>&d', "x' autofocus onfocus='alert(1)",
-])
+@pytest.mark.parametrize(
+    "code",
+    [
+        "it's",
+        'a"b<c>&d',
+        "x' autofocus onfocus='alert(1)",
+    ],
+)
 def test_experiment_code_is_escaped_in_the_page(vis, code):
     """A code with quotes or markup reaches ``selectedExperiment`` intact,
     as text: it adds no attribute and no element to the page"""
@@ -331,33 +343,46 @@ def test_stylesheet_and_its_fonts_are_served(vis):
         target = urllib.parse.urlsplit(urllib.parse.urljoin(href, url)).path
         font = vis.get(target)
         assert font.status_code == 200, "GET {}: status {}".format(
-            target, font.status_code)
+            target, font.status_code
+        )
         body = font.get_data()
         assert body == static_file(target.lstrip("/")), target
         assert magic_ok(target, body), "GET {}: not a font".format(target)
 
 
-@pytest.mark.parametrize("route", [
-    MISSING, "/static/dist/no_such_file.js", "/no_such_file.css",
-    "/dist/", "/dist",
-])
+@pytest.mark.parametrize(
+    "route",
+    [
+        MISSING,
+        "/static/dist/no_such_file.js",
+        "/no_such_file.css",
+        "/dist/",
+        "/dist",
+    ],
+)
 def test_missing_static_file_answers_404(vis, route):
     """A file the static folder does not have, or a directory, answers 404"""
     status = vis.get(route).status_code
     assert status == 404, "GET {}: status {}".format(route, status)
 
 
-@pytest.mark.parametrize("route", [
-    "/%2e%2e/views.py", "/dist/%2e%2e/%2e%2e/views.py",
-    "/static/%2e%2e/views.py", "/%2e%2e/templates/index.html",
-    "/dist/../../views.py",
-])
+@pytest.mark.parametrize(
+    "route",
+    [
+        "/%2e%2e/views.py",
+        "/dist/%2e%2e/%2e%2e/views.py",
+        "/static/%2e%2e/views.py",
+        "/%2e%2e/templates/index.html",
+        "/dist/../../views.py",
+    ],
+)
 def test_path_out_of_the_static_folder_answers_404(vis, route):
     """A path that climbs out of ``now/vis/static`` answers 404, not the
     file next to it"""
     response = vis.get(route)
     assert response.status_code == 404, "GET {}: status {}".format(
-        route, response.status_code)
+        route, response.status_code
+    )
     assert b"def static_proxy" not in response.get_data()
 
 
@@ -421,8 +446,7 @@ def test_static_file_revalidates_with_its_etag(vis):
     etag = vis.get(route).headers.get("ETag")
     assert etag, "no ETag"
     for headers in ({}, GZIP):
-        response = vis.get(route, headers=dict(headers, **{
-            "If-None-Match": etag}))
+        response = vis.get(route, headers=dict(headers, **{"If-None-Match": etag}))
         assert response.status_code == 304, response.status_code
         assert response.get_data() == b""
         assert "Content-Encoding" not in response.headers
@@ -442,15 +466,13 @@ def test_json_response_is_gzipped_when_the_client_accepts_it(vis):
     body = zipped.get_data()
     assert int(zipped.headers["Content-Length"]) == len(body)
     same = gzip.decompress(body) == plain.get_data()
-    assert same, "GET {}: the gzip body differs from the plain one".format(
-        HISTORY)
+    assert same, "GET {}: the gzip body differs from the plain one".format(HISTORY)
 
 
 def test_bundle_is_gzipped_when_the_client_accepts_it(vis):
     """The bundle, the largest response, comes back compressed and
     decompresses to the file on disk"""
-    response = vis.get(BUNDLE_ROUTE, headers={
-        "Accept-Encoding": "gzip, deflate, br"})
+    response = vis.get(BUNDLE_ROUTE, headers={"Accept-Encoding": "gzip, deflate, br"})
     assert response.status_code == 200, response.status_code
     assert response.headers.get("Content-Encoding") == "gzip"
     body = response.get_data()
@@ -475,8 +497,7 @@ def test_gzip_refused_with_q0_is_still_sent(vis):
 
     Characterization (robustness): browsers do not send ``q=0`` for gzip.
     """
-    response = vis.get(HISTORY, headers={
-        "Accept-Encoding": "gzip;q=0, identity"})
+    response = vis.get(HISTORY, headers={"Accept-Encoding": "gzip;q=0, identity"})
     assert response.headers.get("Content-Encoding") == "gzip"
 
 
@@ -490,6 +511,5 @@ def test_range_request_is_gzipped_after_the_slice(vis):
     response = vis.get(BUNDLE_ROUTE, headers=dict(GZIP, Range="bytes=0-9"))
     assert response.status_code == 206, response.status_code
     assert response.headers.get("Content-Encoding") == "gzip"
-    assert response.headers.get("Content-Range") == "bytes 0-9/{}".format(
-        len(bundle))
+    assert response.headers.get("Content-Range") == "bytes 0-9/{}".format(len(bundle))
     assert gzip.decompress(response.get_data()) == bundle[:10]

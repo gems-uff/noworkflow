@@ -103,6 +103,12 @@ jobs:
         if: ${{ !cancelled() && steps.sync.outcome == 'success' && github.event_name != 'schedule' }}
         run: uv run --no-sync ruff check --output-format=github .
 
+      # The formatter owns layout and line endings ([tool.ruff.format] in
+      # pyproject.toml). Run `uv run ruff format` on the files you touch.
+      - name: Format
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' && github.event_name != 'schedule' }}
+        run: uv run --no-sync ruff format --check .
+
       # SAST. A flagged site that is intended carries `# nosec Bxxx`, with
       # the reason on the line above. bandit-baseline.json lists the real
       # findings that wait for a fix, each with its issue (the inventory is in

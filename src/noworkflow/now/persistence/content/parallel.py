@@ -4,18 +4,18 @@
 # Please, consult the license terms in the LICENSE file.
 """Content database engine parallel generics"""
 
+
 def create_distributed(cls, name=None):
     from multiprocessing import JoinableQueue, Manager, Process, cpu_count
 
     from . import safeopen
-    class Worker(Process):
 
+    class Worker(Process):
         def __init__(self, task_queue, engine):
             with safeopen.use_safe_open():
                 Process.__init__(self)
                 self.task_queue = task_queue
                 self.engine = engine
-            
 
         def run(self):
             while True:
@@ -28,9 +28,7 @@ def create_distributed(cls, name=None):
                 self.engine.do_put(*queue_content)
                 self.task_queue.task_done()
 
-
     class Distributed(cls):
-
         def __init__(self, config):
             super(Distributed, self).__init__(config)
             self.tasks = None
@@ -73,7 +71,7 @@ def create_distributed(cls, name=None):
                 # Wait for all of the tasks to finish
                 self.tasks.join()
                 self.processes_started = False
-        
+
     Distributed.__name__ = name or ("Distributed" + cls.__name__)
     return Distributed
 
@@ -84,7 +82,6 @@ def create_pool(cls, name=None):
     from . import safeopen
 
     class ProcessingPool(cls):
-
         def __init__(self, config):
             super(ProcessingPool, self).__init__(config)
             self.pool = None
@@ -115,15 +112,15 @@ def create_pool(cls, name=None):
                 self.pool.close()
                 self.pool.join()
                 self.processes_started = False
-        
+
     ProcessingPool.__name__ = name or ("Pool" + cls.__name__)
     return ProcessingPool
 
 
 def create_threading(cls, name=None):
     import threading
-    class Threading(cls):
 
+    class Threading(cls):
         def __init__(self, config):
             super(Threading, self).__init__(config)
             self.persistence_threads = []
@@ -131,7 +128,9 @@ def create_threading(cls, name=None):
 
         def put(self, content, filename="generic"):  # pylint: disable=method-hidden
             """Put content in the content database"""
-            t = threading.Thread(target=self.do_put, args=self.put_attr(content, filename))
+            t = threading.Thread(
+                target=self.do_put, args=self.put_attr(content, filename)
+            )
             self.persistence_threads.append(t)
             t.start()
             content_hash = self._get_hash_from_content(content)
@@ -141,15 +140,14 @@ def create_threading(cls, name=None):
             """Join and close threads"""
             for t in self.persistence_threads:
                 t.join()
-            
+
             self.persistence_threads = []
 
     Threading.__name__ = name or ("Threading" + cls.__name__)
     return Threading
-        
+
 
 class NullLock(object):
-
     def acquire(self, block=False):
         return True
 

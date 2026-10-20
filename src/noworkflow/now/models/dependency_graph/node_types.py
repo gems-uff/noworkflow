@@ -4,21 +4,27 @@
 # Please, consult the license terms in the LICENSE file.
 """Define node types for dependency graph"""
 
+
 class FakeActivation(object):
     """Fake activation for clusters, when initial_activation is None"""
+
     # pylint: disable=too-few-public-methods
     # pylint: disable=invalid-name
     # pylint: disable=missing-docstring
     id = 1
     name = ""
+
     class this_evaluation(object):
         id = 1
+
         class code_component(object):
             name = ""
             first_char_line = 1
             first_char_column = 0
+
         repr = "a"
         checkpoint = None
+
     activations = []
 
 
@@ -52,6 +58,7 @@ class Node(object):
 
 class AccessNode(Node):
     """Access node"""
+
     def __init__(self, access):
         super(AccessNode, self).__init__(self.get_node_id(access.id))
         self.access = access
@@ -65,6 +72,7 @@ class AccessNode(Node):
 
 class EvaluationNode(Node):
     """Evaluation node"""
+
     def __init__(self, evaluation):
         super(EvaluationNode, self).__init__(self.get_node_id(evaluation.id))
         self.evaluation = evaluation
@@ -84,6 +92,7 @@ class EvaluationNode(Node):
 
 class ActivationNode(EvaluationNode):
     """Activation node"""
+
     def __init__(self, activation, evaluation):
         super(ActivationNode, self).__init__(evaluation)
         self.activation = activation
@@ -92,12 +101,12 @@ class ActivationNode(EvaluationNode):
 
 class ClusterNode(ActivationNode):
     """Cluster node"""
+
     def __init__(self, activation, evaluation=None, depth=1):
         if activation is None:
             activation = FakeActivation()
         super(ClusterNode, self).__init__(
-            activation,
-            evaluation or activation.this_evaluation
+            activation, evaluation or activation.this_evaluation
         )
         # List of elements inside cluster
         self.elements = []
@@ -113,6 +122,4 @@ class ClusterNode(ActivationNode):
         self.elements.append(node)
 
     def to_tree(self):
-        return (
-            self.node_id, self.cluster_id, [x.to_tree() for x in self.elements]
-        )
+        return (self.node_id, self.cluster_id, [x.to_tree() for x in self.elements])

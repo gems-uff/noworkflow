@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define formatters for usual data structures to be used on IPython"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import Counter
@@ -12,15 +13,15 @@ from future.utils import lmap
 from .cross_version import to_unicode
 
 
-class PrettyStr(object):                                                         # pylint: disable=too-few-public-methods
+class PrettyStr(object):  # pylint: disable=too-few-public-methods
     """Display lines with line breaks"""
 
-    def _repr_pretty_(self, pretty, cycle):                                      # pylint: disable=unused-argument
+    def _repr_pretty_(self, pretty, cycle):  # pylint: disable=unused-argument
         """Pretty repr for IPython"""
         pretty.text(str(self))
 
 
-class PrettyLines(PrettyStr):                                                    # pylint: disable=too-few-public-methods
+class PrettyLines(PrettyStr):  # pylint: disable=too-few-public-methods
     """Display lines with line breaks
 
 
@@ -127,12 +128,14 @@ class Table(list, PrettyStr):
             if self.has_header:
                 header = next(iterator)
                 if self.show_header:
-                    result += " ".join("{0:>{1}}".format(x, size[i])
-                                       for i, x in enumerate(header))
+                    result += " ".join(
+                        "{0:>{1}}".format(x, size[i]) for i, x in enumerate(header)
+                    )
                     result += "\n"
             for row in iterator:
-                result += " ".join("{0:>{1}}".format(x, size[i])
-                                   for i, x in enumerate(row))
+                result += " ".join(
+                    "{0:>{1}}".format(x, size[i]) for i, x in enumerate(row)
+                )
                 result += "\n"
         except StopIteration:
             pass

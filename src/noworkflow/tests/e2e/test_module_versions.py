@@ -42,17 +42,25 @@ def test_run_records_the_version_of_a_distribution_on_the_path(project):
     """The ``module`` rows of ``helper`` and ``ns.sub`` hold ``1.0`` and
     ``2.5``"""
     project.write("vendor/helper.py", '__version__ = "2.5"\n')
-    project.write("vendor/helper-1.0.dist-info/METADATA",
-                  "Metadata-Version: 2.1\nName: helper\nVersion: 1.0\n")
+    project.write(
+        "vendor/helper-1.0.dist-info/METADATA",
+        "Metadata-Version: 2.1\nName: helper\nVersion: 1.0\n",
+    )
     project.write("vendor/ns/sub.py", '__version__ = "2.5"\n')
-    project.write("vendor/ns_sub-3.0.dist-info/METADATA",
-                  "Metadata-Version: 2.1\nName: ns-sub\nVersion: 3.0\n")
+    project.write(
+        "vendor/ns_sub-3.0.dist-info/METADATA",
+        "Metadata-Version: 2.1\nName: ns-sub\nVersion: 3.0\n",
+    )
     project.write("script.py", SCRIPT)
     result = project.run("run", "script.py")
     assert "2.5 2.5" in result.stdout
-    trial, = project.trials()
+    (trial,) = project.trials()
     rows = project.query(
         "SELECT name, version FROM module WHERE trial_id = ? "
-        "AND name IN ('helper', 'ns.sub') ORDER BY name", trial["id"])
+        "AND name IN ('helper', 'ns.sub') ORDER BY name",
+        trial["id"],
+    )
     assert [(row["name"], row["version"]) for row in rows] == [
-        ("helper", "1.0"), ("ns.sub", "2.5")]
+        ("helper", "1.0"),
+        ("ns.sub", "2.5"),
+    ]

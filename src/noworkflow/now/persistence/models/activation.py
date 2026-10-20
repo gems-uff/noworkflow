@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Activation Model"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import timedelta
@@ -84,19 +85,24 @@ class Activation(AlchemyProxy):
     >>> list(activation.member_membership)  # doctest: +ELLIPSIS
     [member(...]
     """
+
     __tablename__ = "activation"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "id"],
-                             ["evaluation.trial_id",
-                              "evaluation.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "code_block_id"],
-                             ["code_block.trial_id", "code_block.id"],
-                             ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["trial_id", "id"],
+            ["evaluation.trial_id", "evaluation.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["trial_id", "code_block_id"],
+            ["code_block.trial_id", "code_block.id"],
+            ondelete="CASCADE",
+        ),
     )
     trial_id = Column(String, index=True)
-    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     name = Column(Text)
     start_checkpoint = Column(Float)
     code_block_id = Column(Integer, index=True)
@@ -112,18 +118,22 @@ class Activation(AlchemyProxy):
     #   this_evaluation: 1 Evaluation
     #   trial: 1 Trial
 
-    prolog_description = PrologDescription("activation", (
-        PrologTrial("trial_id", link="evaluation.trial_id"),
-        PrologAttribute("id", link="evaluation.id"),
-        PrologRepr("name"),
-        PrologAttribute("start_checkpoint"),
-        PrologNullable("code_block_id", link="code_block.id"),
-    ), description=(
-        "informs that in a given trial (*TrialId*),\n"
-        "a block *Id* with *Name* was activated\n"
-        "at (*Start*).\n"
-        "This activation was defined by *CodeBlockId*."
-    ))
+    prolog_description = PrologDescription(
+        "activation",
+        (
+            PrologTrial("trial_id", link="evaluation.trial_id"),
+            PrologAttribute("id", link="evaluation.id"),
+            PrologRepr("name"),
+            PrologAttribute("start_checkpoint"),
+            PrologNullable("code_block_id", link="code_block.id"),
+        ),
+        description=(
+            "informs that in a given trial (*TrialId*),\n"
+            "a block *Id* with *Name* was activated\n"
+            "at (*Start*).\n"
+            "This activation was defined by *CodeBlockId*."
+        ),
+    )
 
     @query_many_property
     def activations(self):
@@ -148,14 +158,22 @@ class Activation(AlchemyProxy):
         >>> activation.id in ids
         True
         """
-        #from IPython import embed; embed()
+        # from IPython import embed; embed()
         from .evaluation import Evaluation
-        return relational.session.query(Activation.m).join(Evaluation.m, (
-            (Activation.m.trial_id == Evaluation.m.trial_id) &
-            (Activation.m.id == Evaluation.m.id)
-        )).filter(
-            (Activation.m.trial_id == self.trial_id) &
-            (Evaluation.m.activation_id == self.id)
+
+        return (
+            relational.session.query(Activation.m)
+            .join(
+                Evaluation.m,
+                (
+                    (Activation.m.trial_id == Evaluation.m.trial_id)
+                    & (Activation.m.id == Evaluation.m.id)
+                ),
+            )
+            .filter(
+                (Activation.m.trial_id == self.trial_id)
+                & (Evaluation.m.activation_id == self.id)
+            )
         )
 
     @property
@@ -232,19 +250,16 @@ class Activation(AlchemyProxy):
         """
         # pylint: disable=not-an-iterable
         if max_depth == -1:
-            max_depth = float('inf')
+            max_depth = float("inf")
 
         for access in self.file_accesses:
             if external or access.is_internal:
                 yield access
         if depth + 1 > max_depth:
             for act in self.activations:
-                act_accesses = act.recursive_accesses(
-                    depth + 1, max_depth, external
-                )
+                act_accesses = act.recursive_accesses(depth + 1, max_depth, external)
                 for access in act_accesses:
                     yield access
-                    
 
     @property
     def caller(self):
@@ -390,9 +405,7 @@ class Activation(AlchemyProxy):
         >>> activation.duration
         42000000
         """
-        return int(
-            (self.finish_checkpoint - self.start_checkpoint) * 1000000
-        )
+        return int((self.finish_checkpoint - self.start_checkpoint) * 1000000)
 
     def __key(self):
         return (self.trial_id, self.name, self.line)
@@ -401,8 +414,7 @@ class Activation(AlchemyProxy):
         return hash(self.__key())
 
     def __eq__(self, other):
-        return self.__key() == other.__key()                                     # pylint: disable=protected-access
-
+        return self.__key() == other.__key()  # pylint: disable=protected-access
 
     def filter_evaluations_by_type(self, type_):
         """Filter evaluations by type. Return (name, value)
@@ -428,25 +440,32 @@ class Activation(AlchemyProxy):
         from .evaluation import Evaluation
 
         joined_eval = join(
-            Evaluation.t, CodeComponent.t,
-            ((Evaluation.m.trial_id == CodeComponent.m.trial_id) &
-             (Evaluation.m.code_component_id == CodeComponent.m.id))
+            Evaluation.t,
+            CodeComponent.t,
+            (
+                (Evaluation.m.trial_id == CodeComponent.m.trial_id)
+                & (Evaluation.m.code_component_id == CodeComponent.m.id)
+            ),
         )
         joined = join(
-            Activation.t, joined_eval,
-            ((Evaluation.m.trial_id == Activation.m.trial_id) &
-             (Evaluation.m.activation_id == Activation.m.id))
+            Activation.t,
+            joined_eval,
+            (
+                (Evaluation.m.trial_id == Activation.m.trial_id)
+                & (Evaluation.m.activation_id == Activation.m.id)
+            ),
         )
         query = (
             select([CodeComponent.m.name, Evaluation.m.repr])
             .select_from(joined)
-            .where((Activation.m.trial_id == self.trial_id) &
-                   (Activation.m.id == self.id) &
-                   (CodeComponent.m.type == type_))
+            .where(
+                (Activation.m.trial_id == self.trial_id)
+                & (Activation.m.id == self.id)
+                & (CodeComponent.m.type == type_)
+            )
         )
         for result in relational.session.execute(query):
             yield result
-
 
     def show(self, print_=lambda x, offset=0: print(x)):
         """Show Activation
@@ -478,21 +497,27 @@ class Activation(AlchemyProxy):
         """
         global_evaluations = list(self.filter_evaluations_by_type("global"))
         if global_evaluations:
-            print_("{name}: {values}".format(
-                name="Globals", values=", ".join(
-                    "{0} = {1}".format(*evaluation)
-                    for evaluation in global_evaluations
+            print_(
+                "{name}: {values}".format(
+                    name="Globals",
+                    values=", ".join(
+                        "{0} = {1}".format(*evaluation)
+                        for evaluation in global_evaluations
+                    ),
                 )
-            ))
+            )
 
         param_evaluations = list(self.filter_evaluations_by_type("param"))
         if param_evaluations:
-            print_("{name}: {values}".format(
-                name="Parameters", values=", ".join(
-                    "{0} = {1}".format(*evaluation)
-                    for evaluation in param_evaluations
+            print_(
+                "{name}: {values}".format(
+                    name="Parameters",
+                    values=", ".join(
+                        "{0} = {1}".format(*evaluation)
+                        for evaluation in param_evaluations
+                    ),
                 )
-            ))
+            )
 
         return_value = self.this_evaluation.repr
         if return_value:

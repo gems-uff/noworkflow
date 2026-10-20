@@ -2,6 +2,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Python version gates for the test suite"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
@@ -13,5 +14,4 @@ def only(*versions):
     Otherwise the test is skipped, not dropped, so it stays visible in the
     count.
     """
-    return unittest.skipUnless(
-        any(versions), "not supported by this Python version")
+    return unittest.skipUnless(any(versions), "not supported by this Python version")

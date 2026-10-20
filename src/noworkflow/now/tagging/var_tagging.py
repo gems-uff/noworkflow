@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Variable tagging"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
@@ -89,7 +90,8 @@ class NotebookQuerierOptions(QuerierOptions):
                     ):
                         if neighbor_code_comp.container_id is not None:
                             if (
-                                neighbor_code_comp.container_id not in self.body_function_def
+                                neighbor_code_comp.container_id
+                                not in self.body_function_def
                                 or self.level
                             ):
                                 if (
@@ -197,8 +199,8 @@ def now_tag_variable(var_name, value):
     tagged_var_dict[name] = [dep_evaluation.id, value, activation_id, trial_id]
 
     # Force collection of evaluation value when there is a tag
-    dep_evaluation.repr = __noworkflow__.metascript.serialize(value) 
-    #print(dep_evaluation)
+    dep_evaluation.repr = __noworkflow__.metascript.serialize(value)
+    # print(dep_evaluation)
     # Writing it	  # Writing it
     __noworkflow__.stage_tags.add(trial_id, name, value, activation_id)
 
@@ -399,6 +401,7 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
         return dict1, dict2
     else:
         from IPython.display import HTML, display
+
         plain_text_a = dict_to_text(dict1)
         plain_text_b = dict_to_text(dict2)
 
@@ -413,8 +416,8 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
             modified_code.splitlines(),
             context=False,  # Show some context lines around changes
             numlines=0,  # Number of lines of context to show
-            fromdesc=str('Trial '+trial_a),
-            todesc=str('Trial '+trial_b)
+            fromdesc=str("Trial " + trial_a),
+            todesc=str("Trial " + trial_b),
         )
 
         # Add CSS styling for left alignment
@@ -464,6 +467,7 @@ def var_tag_plot(tag_name: str):
     # pandas first: without it, the helper reports the import that no
     # requirement of noWorkflow brings (#392), with or without matplotlib
     import pandas as pd
+
     # isort: split
     import matplotlib.pyplot as plt
 
@@ -505,6 +509,7 @@ def var_tag_values(tag_name: str) -> DataFrame:
             - 'value': The value attributed to the tag in float format.
     """
     import pandas as pd
+
     access_list = list(
         proxy_gen(
             relational.session.query(StageTags.m).filter(StageTags.m.name == tag_name)
@@ -521,10 +526,12 @@ def var_tag_values(tag_name: str) -> DataFrame:
             temp_value = str(i.tag_name)
         else:
             temp_value = str(i.tag_name)
-               
+
         values_list.append([i.trial_id, i.trial_id[-5:], i.name, temp_value])
 
-    df = pd.DataFrame(values_list, columns=["trial_id", "short_trial_id", "tag", "value"])
+    df = pd.DataFrame(
+        values_list, columns=["trial_id", "short_trial_id", "tag", "value"]
+    )
     return df
 
 
@@ -559,6 +566,7 @@ def trial_intersection_diff(trial_a: str, trial_b: str) -> DataFrame:
         df = trial_intersection_diff('trial_12345', 'trial_67890')
     """
     import pandas as pd
+
     # Retrieve the ops dictionary from the shelve file
     try:
         with shelve.open("ops") as shelf:

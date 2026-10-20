@@ -19,6 +19,7 @@ to in-memory stores, is never touched.
 
 pytest imports this module for its doctests: nothing here runs at import.
 """
+
 import contextlib
 import dataclasses
 import hashlib
@@ -53,8 +54,10 @@ COMMIT_DATE = "1767225600 +0000"
 # subdirectory, under the home or outside the project has backslashes, and
 # git_system.garbage_collection hands a list to cmd.exe through shell=True.
 WINDOWS_NOT_MEASURED = pytest.mark.skipif(
-    os.name == "nt", reason="not measured on Windows: the git engines build "
-    "tree paths with os.sep, and git gc goes through shell=True")
+    os.name == "nt",
+    reason="not measured on Windows: the git engines build "
+    "tree paths with os.sep, and git gc goes through shell=True",
+)
 
 
 def sha1_hex(content):
@@ -78,12 +81,20 @@ def git(*args, cwd, input=None, check=True):  # pylint: disable=redefined-builti
     ``GIT_TIMEOUT``. A failure raises AssertionError with git's output.
     """
     completed = subprocess.run(
-        ["git", *args], cwd=str(cwd), input=input, capture_output=True,
-        timeout=GIT_TIMEOUT)
+        ["git", *args],
+        cwd=str(cwd),
+        input=input,
+        capture_output=True,
+        timeout=GIT_TIMEOUT,
+    )
     if check and completed.returncode != 0:
-        raise AssertionError("git {} exited with {}:\n{}".format(
-            " ".join(args), completed.returncode,
-            completed.stderr.decode("utf-8", "replace")))
+        raise AssertionError(
+            "git {} exited with {}:\n{}".format(
+                " ".join(args),
+                completed.returncode,
+                completed.stderr.decode("utf-8", "replace"),
+            )
+        )
     return completed.stdout
 
 
@@ -115,8 +126,7 @@ def shown(identity):
 
 def read_plain(provenance, content_hash):
     """The bytes the plain store keeps for a hash: content/<h[:2]>/<h[2:]>"""
-    path = os.path.join(str(provenance), "content", content_hash[:2],
-                        content_hash[2:])
+    path = os.path.join(str(provenance), "content", content_hash[:2], content_hash[2:])
     with open(path, "rb") as stored:
         return stored.read()
 
@@ -124,24 +134,32 @@ def read_plain(provenance, content_hash):
 def plain_hashes(provenance):
     """The hashes of every file under the plain store's ``content/``"""
     root = os.path.join(str(provenance), "content")
-    return sorted(os.path.basename(directory) + name
-                  for directory, _, names in os.walk(root) for name in names)
+    return sorted(
+        os.path.basename(directory) + name
+        for directory, _, names in os.walk(root)
+        for name in names
+    )
 
 
 def read_git(provenance, content_hash):
     """The bytes of a blob, read by the test's own ``git cat-file blob``"""
-    return git("cat-file", "blob", content_hash,
-               cwd=os.path.join(str(provenance), "content.git"))
+    return git(
+        "cat-file",
+        "blob",
+        content_hash,
+        cwd=os.path.join(str(provenance), "content.git"),
+    )
 
 
 def git_blobs(provenance):
     """The ids of every blob in ``content.git``, loose or packed"""
     lines = git_lines(
-        "cat-file", "--batch-all-objects",
+        "cat-file",
+        "--batch-all-objects",
         "--batch-check=%(objectname) %(objecttype)",
-        cwd=os.path.join(str(provenance), "content.git"))
-    return sorted(line.split()[0] for line in lines
-                  if line.split()[1] == "blob")
+        cwd=os.path.join(str(provenance), "content.git"),
+    )
+    return sorted(line.split()[0] for line in lines if line.split()[1] == "blob")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -173,20 +191,35 @@ class EngineSpec:
     def skip_if_unavailable(self):
         """Skip the test when the engine cannot run on this machine"""
         if self.requires_binary and shutil.which(self.requires_binary) is None:
-            pytest.skip("the {} engine needs `{}` on the PATH".format(
-                self.name, self.requires_binary))
-        if (self.requires_module
-                and importlib.util.find_spec(self.requires_module) is None):
-            pytest.skip("the {} engine needs the {} module".format(
-                self.name, self.requires_module))
+            pytest.skip(
+                "the {} engine needs `{}` on the PATH".format(
+                    self.name, self.requires_binary
+                )
+            )
+        if (
+            self.requires_module
+            and importlib.util.find_spec(self.requires_module) is None
+        ):
+            pytest.skip(
+                "the {} engine needs the {} module".format(
+                    self.name, self.requires_module
+                )
+            )
 
 
 PLAIN = EngineSpec(
-    "plain", "content", sha1_hex, read_plain, plain_hashes,
-    FileNotFoundError)
+    "plain", "content", sha1_hex, read_plain, plain_hashes, FileNotFoundError
+)
 PUREGIT = EngineSpec(
-    "puregit", "content.git", git_blob_hex, read_git, git_blobs,
-    subprocess.CalledProcessError, requires_binary="git", git=True)
+    "puregit",
+    "content.git",
+    git_blob_hex,
+    read_git,
+    git_blobs,
+    subprocess.CalledProcessError,
+    requires_binary="git",
+    git=True,
+)
 ENGINES = (PLAIN, PUREGIT)
 GIT_ENGINES = tuple(spec for spec in ENGINES if spec.git)
 
@@ -225,8 +258,7 @@ def fingerprint(directory):
         for name in names:
             path = os.path.join(root, name)
             with open(path, "rb") as handle:
-                result[os.path.relpath(path, str(directory))] = sha1_hex(
-                    handle.read())
+                result[os.path.relpath(path, str(directory))] = sha1_hex(handle.read())
     return result
 
 
@@ -241,5 +273,6 @@ def git_output_on_failure(capsys):
     try:
         yield
     except subprocess.CalledProcessError as error:
-        raise AssertionError("{}\ngit printed: {}".format(
-            error, capsys.readouterr().out)) from error
+        raise AssertionError(
+            "{}\ngit printed: {}".format(error, capsys.readouterr().out)
+        ) from error

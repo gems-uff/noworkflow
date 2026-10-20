@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define io utility functions"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
@@ -12,14 +13,14 @@ from future.utils import viewitems
 from .cross_version import StringIO
 
 LABEL = "[now] "
-verbose = False                                                                  # pylint: disable=invalid-name
+verbose = False  # pylint: disable=invalid-name
 
 STDIN = sys.stdin
 STDOUT = sys.stdout
 STDERR = sys.stderr
 
 
-class redirect_output(object):                                                   # pylint: disable=invalid-name, too-few-public-methods
+class redirect_output(object):  # pylint: disable=invalid-name, too-few-public-methods
     """Redirect output to stream"""
 
     def __init__(self, outputs=None):

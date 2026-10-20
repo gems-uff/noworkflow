@@ -42,6 +42,7 @@ script (the hostname inside ``trial``'s user id among them): never put a
 whole facts file, or the solutions of a goal that binds those values, into
 an assertion message.
 """
+
 import collections
 import fractions
 import json
@@ -127,8 +128,15 @@ def swipl_or_skip():
 
 
 _QUOTED = {
-    "\\": "\\\\", "'": "''", "\n": "\\n", "\t": "\\t", "\r": "\\r",
-    "\a": "\\a", "\b": "\\b", "\f": "\\f", "\v": "\\v",
+    "\\": "\\\\",
+    "'": "''",
+    "\n": "\\n",
+    "\t": "\\t",
+    "\r": "\\r",
+    "\a": "\\a",
+    "\b": "\\b",
+    "\f": "\\f",
+    "\v": "\\v",
 }
 
 
@@ -337,8 +345,9 @@ def _value(item):
     if "rational" in item:
         return fractions.Fraction(*item["rational"])
     if "compound" in item:
-        return Compound(_codes(item["compound"]),
-                        tuple(_value(arg) for arg in item["args"]))
+        return Compound(
+            _codes(item["compound"]), tuple(_value(arg) for arg in item["args"])
+        )
     return Other(_codes(item["other"]))
 
 
@@ -360,13 +369,25 @@ def _run(job, body, timeout):
         with open(driver, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(_PRELUDE)
             handle.write(body)
-            handle.write("\njob({}, {}).\n".format(
-                quoted_atom(_posix(output)), job))
+            handle.write("\njob({}, {}).\n".format(quoted_atom(_posix(output)), job))
         process = subprocess.Popen(
-            [swipl, "-f", "none", "-q", "-g", "nowtest_swipl:main",
-             "-t", "halt", driver],
-            cwd=directory, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, encoding="utf-8", errors="replace",
+            [
+                swipl,
+                "-f",
+                "none",
+                "-q",
+                "-g",
+                "nowtest_swipl:main",
+                "-t",
+                "halt",
+                driver,
+            ],
+            cwd=directory,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+            errors="replace",
         )
         stderr, status = _wait(process, output, timeout)
         lines = []
@@ -407,7 +428,9 @@ def _wait(process, output, timeout):
             if late:
                 warnings.warn(
                     "swipl wrote its whole output and did not exit within "
-                    "{} s; killed".format(EXIT_GRACE), RuntimeWarning)
+                    "{} s; killed".format(EXIT_GRACE),
+                    RuntimeWarning,
+                )
             return stderr, None
 
 
@@ -415,8 +438,9 @@ def _finished(output):
     """Whether the driver wrote its last line, ``{"done":true}``"""
     try:
         with open(output, encoding="utf-8") as handle:
-            return any(json.loads(line).get("done")
-                       for line in handle if line.endswith("\n"))
+            return any(
+                json.loads(line).get("done") for line in handle if line.endswith("\n")
+            )
     except (OSError, ValueError):
         return False
 
@@ -435,12 +459,10 @@ def _posix(path):
 def _stopped(status, timeout):
     if status is None:
         return "swipl did not finish within {} s".format(timeout)
-    return "swipl stopped before the goal finished (exit status {})".format(
-        status)
+    return "swipl stopped before the goal finished (exit status {})".format(status)
 
 
-def solutions(facts_path, goal, variables, time_limit=10,
-              inference_limit=5_000_000):
+def solutions(facts_path, goal, variables, time_limit=10, inference_limit=5_000_000):
     """Load ``facts_path`` into ``swipl`` and collect the solutions of ``goal``
 
     ``facts_path`` is a file (or a list of files, loaded in order) in UTF-8,
@@ -486,19 +508,28 @@ def solutions(facts_path, goal, variables, time_limit=10,
         raise ValueError("time_limit must be positive")
     limit = "none" if inference_limit is None else str(int(inference_limit))
     job = "query([{}], {}, [{}], {:.3f}, {})".format(
-        ", ".join(files), quoted_atom(goal),
+        ", ".join(files),
+        quoted_atom(goal),
         ", ".join(quoted_atom(name) for name in variables),
-        time_limit, limit)
+        time_limit,
+        limit,
+    )
     timeout = time_limit + PROCESS_MARGIN
     lines, stderr, status = _run(job, _SOLUTIONS, timeout)
     rows, error, ended, done = [], None, False, False
     for line in lines:
         if line.get("q") == -1:
-            raise RuntimeError("swipl could not load {}: {}".format(
-                ", ".join(map(os.fspath, facts_path)), _error_text(line)))
+            raise RuntimeError(
+                "swipl could not load {}: {}".format(
+                    ", ".join(map(os.fspath, facts_path)), _error_text(line)
+                )
+            )
         if "missing" in line:
-            raise ValueError("the goal {!r} does not use the variables {}"
-                             .format(goal, _codes(line["missing"])))
+            raise ValueError(
+                "the goal {!r} does not use the variables {}".format(
+                    goal, _codes(line["missing"])
+                )
+            )
         if "row" in line:
             rows.append(tuple(_value(item) for item in line["row"]))
         elif "error" in line:
@@ -537,14 +568,21 @@ def read_terms(path, time_limit=10):
         if "clause" in line:
             clauses[(_codes(line["clause"]), line["arity"])] += 1
         elif "line" in line:
-            errors.append("{}:{}: {}".format(
-                line["line"], line["column"], _codes(line["message"]).strip()))
+            errors.append(
+                "{}:{}: {}".format(
+                    line["line"], line["column"], _codes(line["message"]).strip()
+                )
+            )
         elif "error" in line:
-            raise RuntimeError("swipl could not read {}: {}".format(
-                os.fspath(path), _error_text(line)))
+            raise RuntimeError(
+                "swipl could not read {}: {}".format(os.fspath(path), _error_text(line))
+            )
         elif line.get("done"):
             done = True
     if not done:
-        raise RuntimeError("{} reading {}\n{}".format(
-            _stopped(status, timeout), os.fspath(path), stderr))
+        raise RuntimeError(
+            "{} reading {}\n{}".format(
+                _stopped(status, timeout), os.fspath(path), stderr
+            )
+        )
     return ReadTerms(clauses, errors)

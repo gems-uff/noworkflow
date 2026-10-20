@@ -20,6 +20,7 @@ demo step reaches that branch, and no shipped demo has one (all use
 real graphviz never takes (``communicate`` raising); the tests that run
 graphviz itself skip where ``dot`` is not on the PATH.
 """
+
 import io
 import os
 import shutil
@@ -37,9 +38,11 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 # --- abstract ---------------------------------------------------------------
 
+
 def test_abstract_raises_naming_the_method_that_called_it():
     """The exception is a plain ``Exception`` whose message names the
     function that called ``abstract``, as ``Command.execute`` does"""
+
     def execute():
         abstract()
 
@@ -58,6 +61,7 @@ def test_abstract_raises_naming_the_method_that_called_it():
 
 # --- erase ------------------------------------------------------------------
 
+
 def make_tree(root, paths):
     """Create each path under ``root``: a file, or a directory when it ends
     with ``/``"""
@@ -72,32 +76,47 @@ def make_tree(root, paths):
 
 def left_in(root):
     """The relative paths left under ``root``, with ``/`` on every system"""
-    return sorted(path.relative_to(root).as_posix()
-                  for path in root.rglob("*"))
+    return sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
 
 
 def test_erase_keeps_the_provenance_store_and_removes_the_rest(tmp_path):
     """Files and directories go, empty ones included; ``.noworkflow`` and
     everything in it stay, and so does the directory itself"""
-    make_tree(tmp_path, [
-        "a.txt", "sub/b.txt", "sub/deep/c.txt", "emptydir/",
-        ".noworkflow/db.sqlite", ".noworkflow/content/ab/cd",
-    ])
+    make_tree(
+        tmp_path,
+        [
+            "a.txt",
+            "sub/b.txt",
+            "sub/deep/c.txt",
+            "emptydir/",
+            ".noworkflow/db.sqlite",
+            ".noworkflow/content/ab/cd",
+        ],
+    )
     erase(str(tmp_path))
     assert tmp_path.is_dir()
     assert left_in(tmp_path) == [
-        ".noworkflow", ".noworkflow/content", ".noworkflow/content/ab",
-        ".noworkflow/content/ab/cd", ".noworkflow/db.sqlite",
+        ".noworkflow",
+        ".noworkflow/content",
+        ".noworkflow/content/ab",
+        ".noworkflow/content/ab/cd",
+        ".noworkflow/db.sqlite",
     ]
 
 
 def test_erase_everything_empties_the_directory_but_keeps_it(tmp_path):
     """``everything=True`` (``>ERASE_ALL``, the first step of every shipped
     demo) removes the store as well, and leaves the directory empty"""
-    make_tree(tmp_path, [
-        "a.txt", "sub/deep/c.txt", "emptydir/", ".noworkflow/db.sqlite",
-        ".noworkflow/content/ab/cd",
-    ])
+    make_tree(
+        tmp_path,
+        [
+            "a.txt",
+            "sub/deep/c.txt",
+            "emptydir/",
+            ".noworkflow/db.sqlite",
+            ".noworkflow/content/ab/cd",
+        ],
+    )
     erase(str(tmp_path), everything=True)
     assert tmp_path.is_dir()
     assert left_in(tmp_path) == []
@@ -107,14 +126,22 @@ def test_erase_keeps_every_path_that_contains_dot_noworkflow(tmp_path):
     """Characterization: the check is a substring of the whole path, so a
     file whose name contains ``.noworkflow``, and a directory such as
     ``x.noworkflow-demos`` with all its files, survive as well"""
-    make_tree(tmp_path, [
-        "my.noworkflow.txt", "x.noworkflow-demos/a.txt",
-        "x.noworkflow-demos/sub/b.txt", "plain.txt",
-    ])
+    make_tree(
+        tmp_path,
+        [
+            "my.noworkflow.txt",
+            "x.noworkflow-demos/a.txt",
+            "x.noworkflow-demos/sub/b.txt",
+            "plain.txt",
+        ],
+    )
     erase(str(tmp_path))
     assert left_in(tmp_path) == [
-        "my.noworkflow.txt", "x.noworkflow-demos", "x.noworkflow-demos/a.txt",
-        "x.noworkflow-demos/sub", "x.noworkflow-demos/sub/b.txt",
+        "my.noworkflow.txt",
+        "x.noworkflow-demos",
+        "x.noworkflow-demos/a.txt",
+        "x.noworkflow-demos/sub",
+        "x.noworkflow-demos/sub/b.txt",
     ]
 
 
@@ -125,8 +152,7 @@ def test_erase_with_a_store_in_a_subdirectory(tmp_path):
     make_tree(tmp_path, ["sub/.noworkflow/db.sqlite", "sub/x.txt"])
     with pytest.raises(OSError):
         erase(str(tmp_path))
-    assert left_in(tmp_path) == [
-        "sub", "sub/.noworkflow", "sub/.noworkflow/db.sqlite"]
+    assert left_in(tmp_path) == ["sub", "sub/.noworkflow", "sub/.noworkflow/db.sqlite"]
 
 
 def test_erase_of_a_missing_directory_does_nothing(tmp_path):
@@ -140,6 +166,7 @@ def test_erase_of_a_missing_directory_does_nothing(tmp_path):
 
 # --- run_dot ----------------------------------------------------------------
 
+
 class FakeProcess:
     """What ``run_dot`` uses of a ``Popen``: ``communicate``, the pipes,
     ``wait`` and ``returncode``
@@ -148,8 +175,7 @@ class FakeProcess:
     raises ``fail`` without setting the return code, which ``wait`` sets.
     """
 
-    def __init__(self, args, kwargs, returncode=0, stdout=b"", stderr=b"",
-                 fail=None):
+    def __init__(self, args, kwargs, returncode=0, stdout=b"", stderr=b"", fail=None):
         self.args = args
         self.kwargs = kwargs
         self.input = None
@@ -203,8 +229,9 @@ def test_run_dot_reads_the_pipes_when_communicate_fails(monkeypatch):
     """When ``communicate`` raises ``OSError`` (a broken pipe), the output
     is read from the pipes, and the process is waited for before its return
     code is read"""
-    created = fake_popen(monkeypatch, stdout=b"<svg/>",
-                         fail=BrokenPipeError(32, "Broken pipe"))
+    created = fake_popen(
+        monkeypatch, stdout=b"<svg/>", fail=BrokenPipeError(32, "Broken pipe")
+    )
     assert run_dot("digraph {}", "svg") == b"<svg/>"
     assert created[0].waited
 
@@ -215,8 +242,7 @@ def test_run_dot_raises_runtime_error_with_the_stderr_of_dot(monkeypatch):
     fake_popen(monkeypatch, returncode=1, stderr=b"Error: bad \xc3\xa9")
     with pytest.raises(RuntimeError) as raised:
         run_dot("digraph {", "svg")
-    assert str(raised.value) == (
-        "dot exited with error:\n[stderr]\nError: bad é")
+    assert str(raised.value) == ("dot exited with error:\n[stderr]\nError: bad é")
 
 
 @pytest.mark.skipif(DOT is None, reason=NO_DOT)

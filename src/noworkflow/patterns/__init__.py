@@ -48,7 +48,6 @@ __all__ = [
     "set_options_in_rule",
     "prolog_rule",
     "var",
-
     "activation",
     "argument",
     "code_block",

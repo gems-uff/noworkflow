@@ -2,7 +2,8 @@
 # Copyright (c) 2021 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""""now list" command"""
+""" "now list" command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -19,39 +20,54 @@ class Clean(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("trial", type=str, nargs="?",
-                help="trial id or none for last trial")
-        add_arg("-o", "--output", type=str,
-                help="Notebook output name. By default it is clean-notebook-[Trial].ipynb")
-        add_arg("-j", "--notebook", type=str,
-                help="Previous notebook for merging markdown cells")
-        add_arg("--header", action="store_true",
-                help="Create header")
-        add_arg("--merge-last", action="store_true",
-                help="Add cells from merged notebook after the clean notebook in ambiguous situations")
-        add_arg("--merge-code", action="store_true",
-                help="Also restore code cells from previous notebook during merge")
-        add_arg("--add-empty", action="store_true",
-                help="Add empty code cell in the end")
+        add_arg("trial", type=str, nargs="?", help="trial id or none for last trial")
+        add_arg(
+            "-o",
+            "--output",
+            type=str,
+            help="Notebook output name. By default it is clean-notebook-[Trial].ipynb",
+        )
+        add_arg(
+            "-j",
+            "--notebook",
+            type=str,
+            help="Previous notebook for merging markdown cells",
+        )
+        add_arg("--header", action="store_true", help="Create header")
+        add_arg(
+            "--merge-last",
+            action="store_true",
+            help="Add cells from merged notebook after the clean notebook in ambiguous situations",
+        )
+        add_arg(
+            "--merge-code",
+            action="store_true",
+            help="Also restore code cells from previous notebook during merge",
+        )
+        add_arg(
+            "--add-empty", action="store_true", help="Add empty code cell in the end"
+        )
         add_query_arguments(add_arg)
-                
-        add_arg("--dir", type=str,
-                help="set project path where is the database. Default to "
-                     "current directory")
-        add_arg("--content-engine", type=str,
-                help="set the content database engine")
+
+        add_arg(
+            "--dir",
+            type=str,
+            help="set project path where is the database. Default to current directory",
+        )
+        add_arg("--content-engine", type=str, help="set the content database engine")
 
     def execute(self, args):
         persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
-        
+
         trial = Trial(trial_ref=args.trial)
         result = list(proxy_gen(query_evaluations(args)))
 
         from ..models.cleaning import create_clean, create_merged_from_cells, get_cells
         from ..models.dependency_querier import PreloadedQuerierOptions
+
         options = PreloadedQuerierOptions(trial, visit_out=False)
-       
+
         cells = get_cells(result, options)
         if not cells:
             print("Trial {} is not a notebook trial".format(args.trial))
@@ -62,13 +78,21 @@ class Clean(Command):
 
         if not merge:
             create_clean(
-                cells, filename, name, 
-                args.header, args.add_empty,
+                cells,
+                filename,
+                name,
+                args.header,
+                args.add_empty,
             )
         else:
             create_merged_from_cells(
-                cells, filename, args.notebook, name,
-                args.header, args.add_empty,
-                not args.merge_last, args.merge_code
+                cells,
+                filename,
+                args.notebook,
+                name,
+                args.header,
+                args.add_empty,
+                not args.merge_last,
+                args.merge_code,
             )
         print("Created clean notebook: {}".format(filename))

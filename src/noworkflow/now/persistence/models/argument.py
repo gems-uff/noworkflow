@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Argument Model"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from sqlalchemy import (
@@ -49,23 +50,26 @@ class Argument(AlchemyProxy):
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
     )
     trial_id = Column(String, index=True)
-    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     name = Column(Text)
     value = Column(Text)
 
     # Relationship attributes (see relationships.py):
     #   trial: 1 Trial
 
-    prolog_description = PrologDescription("argument", (
-        PrologTrial("trial_id", link="trial.id"),
-        PrologRepr("name"),
-        PrologRepr("value"),
-    ), description=(
-        "informs that in a given trial (*TrialId*),\n"
-        "an argument (*Name*)\n"
-        "was passed with *Value*."
-    ))
-
+    prolog_description = PrologDescription(
+        "argument",
+        (
+            PrologTrial("trial_id", link="trial.id"),
+            PrologRepr("name"),
+            PrologRepr("value"),
+        ),
+        description=(
+            "informs that in a given trial (*TrialId*),\n"
+            "an argument (*Name*)\n"
+            "was passed with *Value*."
+        ),
+    )
 
     def show(self, print_=lambda x, offset=0: print(x)):
         """Show object

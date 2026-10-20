@@ -129,6 +129,7 @@ feeding each program to the same comparator, would search the space of
 constructs instead of sampling it by hand; the corpus above is the
 regression suite such a search would add to.
 """
+
 import os
 
 import pytest
@@ -153,8 +154,7 @@ ORACLE = CORPUS / "oracle"
 # file_io.py, the package of modules.py, open_wrapper_warning.py and
 # open_files_kept_alive.py, the child of the process themes, and the
 # distribution that duplicate_distributions.py counts.
-SUPPORT = ("inventory.txt", "toolkit", "children",
-           "oracle_marker-1.0.dist-info")
+SUPPORT = ("inventory.txt", "toolkit", "children", "oracle_marker-1.0.dist-info")
 # Clutter that the file manager of a system leaves, not a script.
 IGNORED = ("Thumbs.db", "desktop.ini")
 # What the scripts that start processes use and Windows lacks: os.fork(),
@@ -162,18 +162,27 @@ IGNORED = ("Thumbs.db", "desktop.ini")
 # preexec_fn of subprocess, and os.posix_spawn.
 NEEDS_FORK = pytest.mark.skipif(
     os.name == "nt",
-    reason="os.fork() and the fork start method do not exist on Windows")
+    reason="os.fork() and the fork start method do not exist on Windows",
+)
 NEEDS_PREEXEC_FN = pytest.mark.skipif(
-    os.name == "nt",
-    reason="subprocess does not support preexec_fn on Windows")
+    os.name == "nt", reason="subprocess does not support preexec_fn on Windows"
+)
 NEEDS_POSIX_SPAWN = pytest.mark.skipif(
-    os.name == "nt",
-    reason="os.posix_spawn and os.posix_spawnp do not exist on Windows")
+    os.name == "nt", reason="os.posix_spawn and os.posix_spawnp do not exist on Windows"
+)
 
 # The arguments command_line.py receives: positionals, options, a repeated
 # flag and a value with a space.
-COMMAND_LINE_ARGS = ("data.csv", "--count", "3", "-vv", "--tag", "a",
-                     "--tag", "two words")
+COMMAND_LINE_ARGS = (
+    "data.csv",
+    "--count",
+    "3",
+    "-vv",
+    "--tag",
+    "a",
+    "--tag",
+    "two words",
+)
 
 
 # Known defects. Each reason starts with its issue and states the mechanism;
@@ -188,7 +197,8 @@ CALLER_FRAME = Defect(
     "vars() return _call's locals, dir() lists none of the script's "
     "names, sys._getframe() is _call, and the stacklevel of warnings.warn "
     "points one frame short, into the function that warned",
-    signature="frame: _call")
+    signature="frame: _call",
+)
 SUPER_CALL = Defect(
     "#162: zero-argument super() is called from Collector._call "
     "(collector.py), a frame without the __class__ cell, so it raises "
@@ -198,13 +208,15 @@ SUPER_CALL = Defect(
     "class, while the __class__ cell holds the first, and a zero-argument "
     "super() run in the right frame would still raise TypeError, so the "
     "case flips only when both are fixed",
-    signature="super(): __class__ cell not found")
+    signature="super(): __class__ cell not found",
+)
 DEF_RUNS_TWICE = Defect(
     "#282: process_body (transformer_stmt.py) emits an "
     "untransformed copy of each def as __now_original_<name>, so its "
     "decorators and default expressions run twice, the first time on a "
     "function named __now_original_<name>",
-    signature="wrap __now_original_greet")
+    signature="wrap __now_original_greet",
+)
 ABSTRACT_METHOD_COPY = Defect(
     "#282: process_body (transformer_stmt.py) emits an "
     "untransformed copy of each def as __now_original_<name>; in a class "
@@ -213,18 +225,21 @@ ABSTRACT_METHOD_COPY = Defect(
     "abstract, listed in __abstractmethods__, and no subclass overrides it "
     "under that name: ABCMeta refuses to instantiate any subclass "
     "(TypeError)",
-    signature="_Shape__now_original_area")
+    signature="_Shape__now_original_area",
+)
 DOCSTRINGS_LOST = Defect(
     "#283: process_script (transformer_stmt.py) starts the "
     "rewritten module with noWorkflow's assignments, so the module's "
     "__doc__ is never set and resolves to the builtins module's docstring",
-    signature="Built-in functions, types, exceptions, and other objects.")
+    signature="Built-in functions, types, exceptions, and other objects.",
+)
 FUNCTION_DOCSTRINGS_LOST = Defect(
     "#283: visit_FunctionDef (transformer_stmt.py) puts "
     "the match_arguments call first in every function body, so the "
     "docstring is no longer the body's first statement and __doc__ is None "
     "for functions and methods alike; a class keeps its docstring",
-    signature="list - (no help)")
+    signature="list - (no help)",
+)
 FUNCTION_SIGNATURE = Defect(
     "#285: visit_FunctionDef (transformer_stmt.py) "
     "prepends six __now_* parameters to every function, and "
@@ -234,14 +249,16 @@ FUNCTION_SIGNATURE = Defect(
     "so Signature.bind of the script's arguments fails, and a call with "
     "too many positional arguments is reported with six more expected and "
     "given",
-    signature="takes 8 positional arguments but 9 were given")
+    signature="takes 8 positional arguments but 9 were given",
+)
 FUNCTION_DEFAULTS = Defect(
     "#285: Collector._function_def (collector.py) "
     "replaces each function with new_function_def(*args, **kwargs), and "
     "functools.wraps copies the function's name, docstring and "
     "__wrapped__ to it but not __defaults__ or __kwdefaults__, so the "
     "script reads the wrapper's: None",
-    signature="defaults: None None")
+    signature="defaults: None None",
+)
 CALL_ERROR_NAMES_COLLECTOR = Defect(
     "#270: visit_Call (transformer_expr.py) "
     "turns f(...) into __noworkflow__.call(...)(...), and Collector.call "
@@ -253,7 +270,8 @@ CALL_ERROR_NAMES_COLLECTOR = Defect(
     "and __qualname__ would fix this message and keep _call's frame, and "
     "handing the frame-reading builtins the script's frame would fix those "
     "and keep this message",
-    signature="Collector._call() got multiple values for keyword argument")
+    signature="Collector._call() got multiple values for keyword argument",
+)
 KEYWORD_NAMED_SELF = Defect(
     "#289: Collector.call (collector.py) returns the "
     "bound method Collector._call(self, *args, **kwargs) as the callable "
@@ -262,7 +280,8 @@ KEYWORD_NAMED_SELF = Defect(
     "runs, for builtins (dict, str.format) and the script's own functions "
     "alike. The white-box path of new_function_def (Collector._function_def) "
     "calls _call the same way",
-    signature="Collector._call() got multiple values for argument 'self'")
+    signature="Collector._call() got multiple values for argument 'self'",
+)
 RENAMED_FUNCTION_RECURSION = Defect(
     "#306: new_function_def "
     "(Collector._function_def, collector.py) tells a callback from a "
@@ -274,7 +293,8 @@ RENAMED_FUNCTION_RECURSION = Defect(
     "white-box-after-black-box path, which calls the same renamed function "
     "through Collector.call and re-enters it until RecursionError, "
     "before the wrapper's body ever runs",
-    signature="calls failed: RecursionError\narea area []")
+    signature="calls failed: RecursionError\narea area []",
+)
 CLASS_CREATED_TWICE = Defect(
     "#274: Collector._class_def (collector.py) builds "
     "a second class from the namespace of the one the class statement "
@@ -283,19 +303,22 @@ CLASS_CREATED_TWICE = Defect(
     "and the __class__ cell of the methods holds the discarded first "
     "class: __class__ is not the class bound to the name, and "
     "super(__class__, self) raises TypeError",
-    signature="[('Exporter', 'output'), ('Exporter', 'output')")
+    signature="[('Exporter', 'output'), ('Exporter', 'output')",
+)
 DECORATED_OBJECT_WITHOUT_DICT = Defect(
     "#281: Collector.collect_function_def "
     "(collector.py) sets original_def on whatever the decorators returned, "
     "and a result that rejects attribute assignment (a property here, any "
     "object without a __dict__ alike) raises AttributeError",
-    signature="'property' object has no attribute 'original_def'")
+    signature="'property' object has no attribute 'original_def'",
+)
 REPR_SERIALIZER = Defect(
     "#307: the default serializer, repr_serializer "
     "(persistence/serializers.py), records values with their class's own "
     "__repr__, including self when match_arguments (collector.py) binds "
     "it at the start of __init__, before the attributes exist",
-    signature="'Money' object has no attribute 'currency'")
+    signature="'Money' object has no attribute 'currency'",
+)
 CLASS_REPR_UNDER_A_METACLASS = Defect(
     "#340: the default serializer, "
     "repr_serializer (persistence/serializers.py), skips the script's "
@@ -309,14 +332,16 @@ CLASS_REPR_UNDER_A_METACLASS = Defect(
     "only when the script's __repr__ raises flips this case too, while a "
     "class on which that __repr__ succeeds is still recorded with it (the "
     "_desired twin in persistence/test_serializers.py)",
-    signature="type object 'Shape' has no attribute 'side'")
+    signature="type object 'Shape' has no attribute 'side'",
+)
 COLLECTOR_COMPARES_VALUES = Defect(
     "#276: the collector compares the script's "
     "values with its own sentinels, key == -1 in Collector._item "
     "(collector.py) for an element of a set display and value != "
     "'<<<noWorkflow>>>' in Collector.ifexp for the value of a conditional "
     "expression, calling the script's __eq__ with an int or a str",
-    signature="object has no attribute 'parts'")
+    signature="object has no attribute 'parts'",
+)
 POSITIONAL_ONLY_PARAMETERS = Defect(
     "#297: visit_FunctionDef "
     "(transformer_stmt.py) and visit_Lambda (transformer_expr.py) prepend "
@@ -326,7 +351,8 @@ POSITIONAL_ONLY_PARAMETERS = Defect(
     "arguments to the script's positional-only parameters, and "
     "match_arguments (collector.py) reads .active from one of the script's "
     "values: AttributeError",
-    signature="object has no attribute 'active'")
+    signature="object has no attribute 'active'",
+)
 LAMBDA_IN_COLLECTION = Defect(
     "#290: the decorator that Collector._function_def "
     "(collector.py) returns pushes a DependencyAware on the enclosing "
@@ -337,13 +363,15 @@ LAMBDA_IN_COLLECTION = Defect(
     "comprehension, is collected leaves that entry where Collector._item "
     "or after_dict_item expect the collection's, and they raise "
     "AttributeError",
-    signature="'DependencyAware' object has no attribute 'items'")
+    signature="'DependencyAware' object has no attribute 'items'",
+)
 CLASS_BODY_COMPREHENSION = Defect(
     "#272: the rewritten comprehension reads "
     "__now_activation__ inside its own scope, which does not see the "
     "class body's binding, so loop() pushes on the class activation and "
     "Collector.pop_assign (collector.py) pops the module's: IndexError",
-    signature="in pop_assign")
+    signature="in pop_assign",
+)
 WITH_WITHOUT_AS = Defect(
     "#310: Collector._withitem (collector.py) appends an "
     "Assign only for an item with 'as', and the script's __enter__, called "
@@ -354,7 +382,8 @@ WITH_WITHOUT_AS = Defect(
     "again after it (the extend that catches only AttributeError): with no "
     "Assign pending, IndexError before __enter__ runs; a fix needs both "
     "reads",
-    signature="activation.assignments[-1].dependency")
+    signature="activation.assignments[-1].dependency",
+)
 CALLBACK_ARGUMENTS = Defect(
     "#266: a Python callback called by a C builtin (re.sub, iter with a "
     "sentinel, print and str.format calling __str__, print calling "
@@ -364,7 +393,8 @@ CALLBACK_ARGUMENTS = Defect(
     "(Collector._function_def, collector.py), which hands it the "
     "enclosing call's argument dependencies; when they outnumber its "
     "parameters, match_arguments (collector.py) raises IndexError",
-    signature="failed: IndexError('list index out of range')")
+    signature="failed: IndexError('list index out of range')",
+)
 YIELD_FROM_CALLBACK = Defect(
     "#266: the operand of yield from is not rewritten (visit_YieldFrom, "
     "transformer_expr.py, #161), so a parameterless generator function "
@@ -372,7 +402,8 @@ YIELD_FROM_CALLBACK = Defect(
     "collector.py) while list(), next() or sum() is the last activation, "
     "and gets that call's argument dependencies: IndexError in "
     "match_arguments (collector.py)",
-    signature="param = parameter_order[last_unfilled]")
+    signature="param = parameter_order[last_unfilled]",
+)
 ASYNC_CALLBACK = Defect(
     "#266: through #157, a coroutine's body runs after the activation of "
     "its call closed, under the activation of asyncio.run, so "
@@ -380,7 +411,8 @@ ASYNC_CALLBACK = Defect(
     "traced function it calls for a callback of asyncio.run and hands it "
     "that call's argument dependencies: IndexError in match_arguments "
     "(collector.py)",
-    signature="param = parameter_order[last_unfilled]")
+    signature="param = parameter_order[last_unfilled]",
+)
 VALUES_KEPT_ALIVE = Defect(
     "#309: Collector.activations (collector.py) keeps "
     "every closed ActivationLW until Collector.store, and with it the "
@@ -390,7 +422,8 @@ VALUES_KEPT_ALIVE = Defect(
     "a call outlives the script's last reference to it, so its __del__ "
     "never runs, and a weakref.finalize callback runs only at exit, "
     "through its atexit hook",
-    signature="start\nTEMPORARY\nafter rebind\n")
+    signature="start\nTEMPORARY\nafter rebind\n",
+)
 LAST_ASSIGN_KEPT_ALIVE = Defect(
     "#291: visit_assign (transformer_stmt.py) "
     "rewrites each assignment to bind __now__assign__, in the script's "
@@ -399,7 +432,8 @@ LAST_ASSIGN_KEPT_ALIVE = Defect(
     "assigned value until the next assignment rebinds the name: an object "
     "deleted right after its assignment stays alive, and its __del__ does "
     "not run at del",
-    signature="creating a handle\nafter del\n")
+    signature="creating a handle\nafter del\n",
+)
 ATTRIBUTE_CONTAINER_KEPT_ALIVE = Defect(
     "#267: Collector.__setitem__ and "
     "Collector.__getitem__ (collector.py) keep the object of each "
@@ -408,7 +442,8 @@ ATTRIBUTE_CONTAINER_KEPT_ALIVE = Defect(
     "object stays alive until the next attribute or subscript access "
     "replaces it, so del does not release an object whose attribute the "
     "script set last",
-    signature="creating a record\nafter del, saved: False\n")
+    signature="creating a record\nafter del, saved: False\n",
+)
 GENERATOR_ACTIVATION_CYCLE = Defect(
     "#286: new_function_def "
     "(Collector._function_def, collector.py) keeps the generator that a "
@@ -421,7 +456,8 @@ GENERATOR_ACTIVATION_CYCLE = Defect(
     "#309), so its finally does not run when break "
     "leaves it. Holding the generator weakly there turns the case green "
     "on its own",
-    signature="read first\nafter loop\n")
+    signature="read first\nafter loop\n",
+)
 OPEN_FILES_KEPT_ALIVE = Defect(
     "#295: the open wrapper (Collector.new_open, "
     "collector.py) keeps every file opened for writing in "
@@ -429,20 +465,23 @@ OPEN_FILES_KEPT_ALIVE = Defect(
     "of Collector.store flushes it but never closes it, so a file object "
     "the script drops without close() is neither released nor flushed, "
     "and reading the file back at once sees it empty (related to #250)",
-    signature="read back: ''")
+    signature="read back: ''",
+)
 RECURSION_DEPTH = Defect(
     "#305: each call of a traced function adds the frames "
     "of Collector._call and new_function_def (collector.py), so the "
     "default recursion limit of 1000 stops a recursion 400 levels deep "
     "with RecursionError",
-    signature="400 levels: RecursionError")
+    signature="400 levels: RecursionError",
+)
 BUILTINS_IS_A_DICT = Defect(
     "#269: Metascript.clear_namespace "
     "(collection/metadata.py) sets the script's __builtins__ to the "
     "__builtins__ of metadata.py, which in an imported module is the dict "
     "of the builtins module, not the module that `python script.py` "
     "gives: attribute access on it fails",
-    signature="'dict' object has no attribute 'len'")
+    signature="'dict' object has no attribute 'len'",
+)
 GENEXP_LAZY_FIRST_ITERABLE = Defect(
     "#288: visit_generator "
     "(transformer_expr.py) wraps the first iterable of a generator "
@@ -452,7 +491,8 @@ GENEXP_LAZY_FIRST_ITERABLE = Defect(
     "the __iter__ of the first iterable, and whatever it reads or raises, "
     "moves from the line that creates the generator expression to its "
     "first use",
-    signature="pending: ['HELLO', 'LATE']")
+    signature="pending: ['HELLO', 'LATE']",
+)
 GENEXP_FIRST_ITERABLE_ERROR = Defect(
     "#287: the finally of Collector.genexp "
     "(collector.py) assumes the generator expression was created: when "
@@ -463,7 +503,8 @@ GENEXP_FIRST_ITERABLE_ERROR = Defect(
     "exception, which its except clause no longer catches; with value "
     "bound, the IndexError of activation.dependencies[-1] would replace it "
     "instead",
-    signature="cannot access local variable 'value'")
+    signature="cannot access local variable 'value'",
+)
 CLASS_BODY_GENEXP_SCOPE = Defect(
     "#273: Python evaluates the first iterable of a "
     "generator expression in the enclosing scope, and the rewritten "
@@ -472,7 +513,8 @@ CLASS_BODY_GENEXP_SCOPE = Defect(
     "NameError. #287 then replaces that "
     "NameError with its UnboundLocalError; the case flips with this fix "
     "alone",
-    signature="context: NameError: name 'size' is not defined")
+    signature="context: NameError: name 'size' is not defined",
+)
 MODULE_ON_ANOTHER_DRIVE = Defect(
     "#294: noWorkflow's module finder "
     "(prov_deployment/py3module.py, the loaders' exec_module) records each "
@@ -482,8 +524,10 @@ MODULE_ON_ANOTHER_DRIVE = Defect(
     "the project (the standard library of a Python installed on another "
     "drive), relpath raises ValueError and the import fails in the script, "
     "here the import of colorsys and of the latin-1 codec",
-    signature="path is on mount", systems=("win32",),
-    condition=STDLIB_ON_ANOTHER_DRIVE)
+    signature="path is on mount",
+    systems=("win32",),
+    condition=STDLIB_ON_ANOTHER_DRIVE,
+)
 YIELD_IN_CALL_ARGUMENT = Defect(
     "#311: Collector.call (collector.py) pushes a "
     "FutureActivation on "
@@ -497,7 +541,8 @@ YIELD_IN_CALL_ARGUMENT = Defect(
     "arguments of the call that popped it (print's): "
     "print('first', next(accumulator)) runs list.append with two "
     "arguments. The yield's operand is a plain name",
-    signature="list.append() takes exactly one argument (2 given)")
+    signature="list.append() takes exactly one argument (2 given)",
+)
 EXCEPTION_IN_CALL_ARGUMENTS = Defect(
     "#311: the same stack of pending calls "
     "(Collector.call, collector.py): an exception raised "
@@ -506,7 +551,8 @@ EXCEPTION_IN_CALL_ARGUMENTS = Defect(
     "Collector._call never runs to pop it; when the exception is caught "
     "inside a function that runs in another call's arguments, that call "
     "pops the stale entry and runs results.append with print's arguments",
-    signature="list.append() takes exactly one argument (2 given)")
+    signature="list.append() takes exactly one argument (2 given)",
+)
 CONDITIONAL_EXPRESSION_EXCEPTION = Defect(
     "#280: the finally of Collector.ifexp "
     "(collector.py) assumes the conditional expression finished its "
@@ -517,7 +563,8 @@ CONDITIONAL_EXPRESSION_EXCEPTION = Defect(
     "statement's, and the finally pops one more (at module level the "
     "activation's base entry), until none is left; either way "
     "IndexError('pop from empty list') replaces the script's exception",
-    signature="failed: IndexError('pop from empty list')")
+    signature="failed: IndexError('pop from empty list')",
+)
 CONDITION_TEST_EXCEPTION = Defect(
     "#279: visit_If and visit_While "
     "(transformer_stmt.py) wrap the statement in a try whose finally calls "
@@ -536,7 +583,8 @@ CONDITION_TEST_EXCEPTION = Defect(
     "Collector.ifexp (#280) does not "
     "repair it. The signature names remove_condition, which "
     "conditional_expression_errors.py does not print",
-    signature="IndexError('pop from empty list') in remove_condition")
+    signature="IndexError('pop from empty list') in remove_condition",
+)
 FILE_PROXY_TYPE = Defect(
     "#284: the open wrapper (Collector.new_open, "
     "collector.py) returns every file opened by path with a mode that "
@@ -546,7 +594,8 @@ FILE_PROXY_TYPE = Defect(
     "TextIOWrapper, BufferedWriter or FileIO; isinstance against the io "
     "base classes still holds, against those concrete classes it does "
     "not, and a file opened for reading is not wrapped",
-    signature="TextFileProxy")
+    signature="TextFileProxy",
+)
 OPEN_WRAPPER_FRAME = Defect(
     "#296: the open wrapper (Collector.new_open, "
     "collector.py) runs between the code that calls open and the real "
@@ -557,7 +606,8 @@ OPEN_WRAPPER_FRAME = Defect(
     "caller the frame of Collector._call (#271) stands "
     "between them as well, so the script calls open from a module that "
     "the default context does not rewrite",
-    signature="('collector.py', 'RuntimeWarning')")
+    signature="('collector.py', 'RuntimeWarning')",
+)
 COARSE_DECORATOR = Defect(
     "#236: under -cg, RewriteDependencies.visit (transformer_expr.py) "
     "captures a decorator that is a name or an attribute without creating "
@@ -565,8 +615,8 @@ COARSE_DECORATOR = Defect(
     "RewriteAST._ast_num_from_component_id (transformer_stmt.py), whose "
     "create_code_component reads node.name: AttributeError in the "
     "transformer, and the script never runs",
-    signature="in _ast_num_from_component_id\n"
-              "    id_ = self.create_code_component(")
+    signature="in _ast_num_from_component_id\n    id_ = self.create_code_component(",
+)
 COARSE_AUGASSIGN_TARGET = Defect(
     "#275: under -cg, visit_augassign and "
     "visit_annassign (transformer_stmt.py) take the coarse path only for "
@@ -575,7 +625,8 @@ COARSE_AUGASSIGN_TARGET = Defect(
     "capture, which under coarse granularity (RewriteDependencies.visit, "
     "transformer_expr.py) leaves it without target_expr: AttributeError "
     "in the transformer, and the script never runs",
-    signature="assign\n    new_target.target_expr,")
+    signature="assign\n    new_target.target_expr,",
+)
 FORK_EPILOGUE = Defect(
     "#375: a child that os.fork() makes in the traced script, "
     "unless it leaves through os._exit, leaves the exec() of the script "
@@ -598,7 +649,8 @@ FORK_EPILOGUE = Defect(
     "with this signature, and it flips once the child neither prints the "
     "line nor exits with 0, whatever becomes of the extra tags and rows, "
     "which the oracle does not compare",
-    signature="[now] the execution exited via sys.exit(). Exit status: 3")
+    signature="[now] the execution exited via sys.exit(). Exit status: 3",
+)
 IF_BODY_CONTEXT = Defect(
     "#376: visit_If (transformer_stmt.py), which has no "
     "branch for coarse granularity, rewrites an if statement into a try "
@@ -614,7 +666,8 @@ IF_BODY_CONTEXT = Defect(
     "longer catches, and a bare raise where the script handles no "
     "exception re-raises it instead of raising RuntimeError('No active "
     "exception to reraise')",
-    signature="handling: ConditionException")
+    signature="handling: ConditionException",
+)
 FORK_WARNING_FRAME = Defect(
     "#271: the script calls os.fork() through Collector._call "
     "(collector.py), like every other call, and the DeprecationWarning "
@@ -624,7 +677,9 @@ FORK_WARNING_FRAME = Defect(
     "default filters, which show a DeprecationWarning only for __main__, "
     "drop it (the mechanism of caller_frame.py; -cg loses it the same "
     "way, although no case runs this script with -cg)",
-    signature="shown: []", since=(3, 12))
+    signature="shown: []",
+    since=(3, 12),
+)
 PREEXEC_FN_CALLBACK = Defect(
     "#266: subprocess.Popen calls preexec_fn in the child from "
     "_posixsubprocess.fork_exec, a C function, so a function of the script "
@@ -636,7 +691,8 @@ PREEXEC_FN_CALLBACK = Defect(
     "SubprocessError('Exception occurred in preexec_fn.'), and the program "
     "never runs. A preexec_fn that takes *args and **kwargs, or one "
     "parameter with a default, absorbs those arguments and works",
-    signature="Exception occurred in preexec_fn")
+    signature="Exception occurred in preexec_fn",
+)
 DISTRIBUTION_LOOKUP = Defect(
     "#417: the loaders of prov_deployment/py3module.py call "
     "Deployment.get_version (prov_deployment/deployment.py) for every "
@@ -646,7 +702,8 @@ DISTRIBUTION_LOOKUP = Defect(
     "find_distributions, the script's own among them: the script's finder "
     "answers a question per module that plain Python never asks, and its "
     "code runs traced",
-    signature="asked for: ['sched'")
+    signature="asked for: ['sched'",
+)
 DISTRIBUTIONS_LISTED_TWICE = Defect(
     "#420: Execution.collect_provenance (prov_execution/execution.py) puts "
     "the Finder that finder(metascript) builds in "
@@ -656,7 +713,8 @@ DISTRIBUTIONS_LISTED_TWICE = Defect(
     "discover asks every finder of sys.meta_path that has it: Finder and "
     "the standard PathFinder each walk sys.path, and every distribution "
     "comes back twice",
-    signature="oracle-marker listed: 2")
+    signature="oracle-marker listed: 2",
+)
 
 
 def case(script, *args, flags=(), defects=(), suffix="", marks=()):
@@ -666,8 +724,14 @@ def case(script, *args, flags=(), defects=(), suffix="", marks=()):
     defects, whose marks apply where they show; ``marks`` are other marks
     of the case, such as the skip of a script that a system cannot run.
     """
-    return pytest.param(script, args, flags, defects, id=script[:-3] + suffix,
-                        marks=list(marks) + defect_marks(defects))
+    return pytest.param(
+        script,
+        args,
+        flags,
+        defects,
+        id=script[:-3] + suffix,
+        marks=list(marks) + defect_marks(defects),
+    )
 
 
 # Themes: each compares equal on every supported version, and under -cg
@@ -722,12 +786,21 @@ COARSE_DEFECTS = {
 PACKAGE_CLASSES = ("Circle", "Square")
 
 CASES = (
-    [case(script, *args, marks=THEME_MARKS.get(script, ()))
-     for script, args in ALL_THEMES]
-    + [case(script, *args, flags=("-cg",), suffix="-cg",
+    [
+        case(script, *args, marks=THEME_MARKS.get(script, ()))
+        for script, args in ALL_THEMES
+    ]
+    + [
+        case(
+            script,
+            *args,
+            flags=("-cg",),
+            suffix="-cg",
             defects=COARSE_DEFECTS.get(script, ()),
-            marks=THEME_MARKS.get(script, ()))
-       for script, args in ALL_THEMES]
+            marks=THEME_MARKS.get(script, ()),
+        )
+        for script, args in ALL_THEMES
+    ]
     + [case("modules.py", flags=("-c", "package"), suffix="-package")]
     + [
         # Constructs split out of the themes: one mechanism each.
@@ -743,54 +816,55 @@ CASES = (
         case("keyword_named_self.py", defects=(KEYWORD_NAMED_SELF,)),
         case("wraps_decorator.py", defects=(RENAMED_FUNCTION_RECURSION,)),
         case("class_hooks.py", defects=(CLASS_CREATED_TWICE,)),
-        case("decorated_property.py",
-             defects=(DECORATED_OBJECT_WITHOUT_DICT,)),
+        case("decorated_property.py", defects=(DECORATED_OBJECT_WITHOUT_DICT,)),
         case("repr_during_init.py", defects=(REPR_SERIALIZER,)),
         case("abc_class_repr.py", defects=(CLASS_REPR_UNDER_A_METACLASS,)),
         case("value_comparisons.py", defects=(COLLECTOR_COMPARES_VALUES,)),
         case("positional_only.py", defects=(POSITIONAL_ONLY_PARAMETERS,)),
         case("positional_only_defaults.py"),
         case("lambda_in_collection.py", defects=(LAMBDA_IN_COLLECTION,)),
-        case("class_body_comprehension.py",
-             defects=(CLASS_BODY_COMPREHENSION,)),
+        case("class_body_comprehension.py", defects=(CLASS_BODY_COMPREHENSION,)),
         case("with_without_as.py", defects=(WITH_WITHOUT_AS,)),
         case("callbacks.py", defects=(CALLBACK_ARGUMENTS,)),
         case("yield_from_builtin.py", defects=(YIELD_FROM_CALLBACK,)),
         case("async_tasks.py", defects=(ASYNC_CALLBACK,)),
         case("values_kept_alive.py", defects=(VALUES_KEPT_ALIVE,)),
         case("last_assign_kept_alive.py", defects=(LAST_ASSIGN_KEPT_ALIVE,)),
-        case("attribute_kept_alive.py",
-             defects=(ATTRIBUTE_CONTAINER_KEPT_ALIVE,)),
+        case("attribute_kept_alive.py", defects=(ATTRIBUTE_CONTAINER_KEPT_ALIVE,)),
         case("dropped_generator.py", defects=(GENERATOR_ACTIVATION_CYCLE,)),
         case("open_files_kept_alive.py", defects=(OPEN_FILES_KEPT_ALIVE,)),
         case("deep_recursion.py", defects=(RECURSION_DEPTH,)),
         case("fstring_braces.py"),
         case("builtins_module.py", defects=(BUILTINS_IS_A_DICT,)),
-        case("genexp_iterable_snapshot.py",
-             defects=(GENEXP_LAZY_FIRST_ITERABLE,)),
-        case("genexp_iterable_raises.py",
-             defects=(GENEXP_FIRST_ITERABLE_ERROR,)),
+        case("genexp_iterable_snapshot.py", defects=(GENEXP_LAZY_FIRST_ITERABLE,)),
+        case("genexp_iterable_raises.py", defects=(GENEXP_FIRST_ITERABLE_ERROR,)),
         case("yield_in_call_argument.py", defects=(YIELD_IN_CALL_ARGUMENT,)),
-        case("exception_in_call_arguments.py",
-             defects=(EXCEPTION_IN_CALL_ARGUMENTS,)),
-        case("conditional_expression_errors.py",
-             defects=(CONDITIONAL_EXPRESSION_EXCEPTION,)),
-        case("condition_test_errors.py",
-             defects=(CONDITION_TEST_EXCEPTION,)),
+        case("exception_in_call_arguments.py", defects=(EXCEPTION_IN_CALL_ARGUMENTS,)),
+        case(
+            "conditional_expression_errors.py",
+            defects=(CONDITIONAL_EXPRESSION_EXCEPTION,),
+        ),
+        case("condition_test_errors.py", defects=(CONDITION_TEST_EXCEPTION,)),
         case("file_object_type.py", defects=(FILE_PROXY_TYPE,)),
         case("open_wrapper_warning.py", defects=(OPEN_WRAPPER_FRAME,)),
         case("class_body_genexp.py", defects=(CLASS_BODY_GENEXP_SCOPE,)),
         case("codec_import.py", defects=(MODULE_ON_ANOTHER_DRIVE,)),
         case("if_body_exception_context.py", defects=(IF_BODY_CONTEXT,)),
-        case("fork_child_exit_status.py", defects=(FORK_EPILOGUE,),
-             marks=(NEEDS_FORK,)),
-        case("fork_with_threads_warning.py", defects=(FORK_WARNING_FRAME,),
-             marks=(NEEDS_FORK,)),
-        case("subprocess_preexec_fn.py", defects=(PREEXEC_FN_CALLBACK,),
-             marks=(NEEDS_PREEXEC_FN,)),
+        case(
+            "fork_child_exit_status.py", defects=(FORK_EPILOGUE,), marks=(NEEDS_FORK,)
+        ),
+        case(
+            "fork_with_threads_warning.py",
+            defects=(FORK_WARNING_FRAME,),
+            marks=(NEEDS_FORK,),
+        ),
+        case(
+            "subprocess_preexec_fn.py",
+            defects=(PREEXEC_FN_CALLBACK,),
+            marks=(NEEDS_PREEXEC_FN,),
+        ),
         case("distribution_finder.py", defects=(DISTRIBUTION_LOOKUP,)),
-        case("duplicate_distributions.py",
-             defects=(DISTRIBUTIONS_LISTED_TWICE,)),
+        case("duplicate_distributions.py", defects=(DISTRIBUTIONS_LISTED_TWICE,)),
         case("setuptools_vendor_path.py"),
     ]
 )
@@ -805,19 +879,25 @@ def assert_package_rewritten(project):
     a ``class_def`` component for each class of toolkit/shapes.py.
     """
     trial = project.trials()[0]
-    found = {row["name"] for row in project.query(
-        "SELECT name FROM code_component WHERE trial_id = ? "
-        "AND type = 'class_def'", trial["id"])}
+    found = {
+        row["name"]
+        for row in project.query(
+            "SELECT name FROM code_component WHERE trial_id = ? AND type = 'class_def'",
+            trial["id"],
+        )
+    }
     missing = sorted(set(PACKAGE_CLASSES) - found)
     if missing:
-        pytest.fail("-c package did not rewrite toolkit: no class_def "
-                    "component for {}".format(", ".join(missing)),
-                    pytrace=False)
+        pytest.fail(
+            "-c package did not rewrite toolkit: no class_def component for {}".format(
+                ", ".join(missing)
+            ),
+            pytrace=False,
+        )
 
 
 @pytest.mark.parametrize("script, args, flags, defects", CASES)
-def test_oracle_script_runs_like_plain_python(project, script, args, flags,
-                                              defects):
+def test_oracle_script_runs_like_plain_python(project, script, args, flags, defects):
     """The script leaves the same return code, outputs and files when
     ``now run`` traces it, and the run was traced"""
     skip_unless_same_python(project)
@@ -825,8 +905,12 @@ def test_oracle_script_runs_like_plain_python(project, script, args, flags,
     if plain.returncode != 0 or not plain.stdout:
         # Not an AssertionError: a broken script must never pass for the
         # known defect of its case.
-        pytest.fail("the script itself fails under plain Python; fix the "
-                    "script\n{}".format(plain), pytrace=False)
+        pytest.fail(
+            "the script itself fails under plain Python; fix the script\n{}".format(
+                plain
+            ),
+            pytrace=False,
+        )
     assert_same_outcome(plain, traced, defects)
     assert_traced(project)
     if "package" in flags:
@@ -840,24 +924,31 @@ def test_oracle_lists_every_script():
     ids = [param.id for param in CASES]
     assert len(ids) == len(set(ids)), "two cases share an id"
     on_disk = sorted(path.name for path in ORACLE.glob("*.py"))
-    unflagged = sorted(param.values[0] for param in CASES
-                       if not param.values[2])
+    unflagged = sorted(param.values[0] for param in CASES if not param.values[2])
     assert unflagged == on_disk
     themes = {script for script, _ in ALL_THEMES}
     flagged = {param.values[0] for param in CASES if param.values[2]}
     assert flagged <= themes, "flags only rerun a theme"
     others = sorted(
-        path.name for path in ORACLE.iterdir()
-        if path.suffix != ".py" and path.name != "__pycache__"
-        and not path.name.startswith(".") and path.name not in IGNORED)
+        path.name
+        for path in ORACLE.iterdir()
+        if path.suffix != ".py"
+        and path.name != "__pycache__"
+        and not path.name.startswith(".")
+        and path.name not in IGNORED
+    )
     assert others == sorted(SUPPORT), (
-        "a file a script left behind, or support not declared in SUPPORT")
-    collected = [name for name in on_disk
-                 if name.startswith("test_") or name.endswith("_test.py")]
+        "a file a script left behind, or support not declared in SUPPORT"
+    )
+    collected = [
+        name
+        for name in on_disk
+        if name.startswith("test_") or name.endswith("_test.py")
+    ]
     assert not collected, "pytest would collect {}".format(collected)
 
 
-CONTROL = '''\
+CONTROL = """\
 import builtins
 import sys
 
@@ -868,7 +959,7 @@ if traced:
     sys.stderr.write("traced\\n")
 with open("control.txt", "w", encoding="utf-8") as control:
     control.write("traced\\n" if traced else "plain\\n")
-'''
+"""
 
 
 def test_oracle_detects_difference(project):
@@ -899,13 +990,16 @@ BASE = Outcome("python", 0, "total: 3\n", "", {"out.txt": "a" * 40})
 VARIANTS = {
     "stdout": (dict(stdout="total: 3!\n"), "stdout differs"),
     "stderr": (dict(stderr="warning\n"), "stderr differs"),
-    "return code": (dict(returncode=1),
-                    "return code: python 0, now run 1"),
-    "file content": (dict(files={"out.txt": "b" * 40}),
-                     "file out.txt: content differs"),
+    "return code": (dict(returncode=1), "return code: python 0, now run 1"),
+    "file content": (
+        dict(files={"out.txt": "b" * 40}),
+        "file out.txt: content differs",
+    ),
     "file missing": (dict(files={}), "file out.txt: only python wrote it"),
-    "file extra": (dict(files={"out.txt": "a" * 40, "new.txt": "c" * 40}),
-                   "file new.txt: only now run wrote it"),
+    "file extra": (
+        dict(files={"out.txt": "a" * 40, "new.txt": "c" * 40}),
+        "file new.txt: only now run wrote it",
+    ),
 }
 
 

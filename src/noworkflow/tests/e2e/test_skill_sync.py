@@ -16,6 +16,7 @@ test_command_lists_match_the_source keeps in step with the source.
 The skill lives at the root of the repository, outside the package, so a
 wheel does not carry it: there the tests skip instead of failing.
 """
+
 import re
 from pathlib import Path
 
@@ -38,8 +39,10 @@ EXPORT_WORD = re.compile(r"(?<![\w%-])now[ \t]+export[ \t]+([A-Za-z][\w-]*)")
 def skill_code():
     """The code of the skill: fenced blocks and inline spans, one string"""
     if not SKILL.is_file():
-        pytest.skip("{} is not in this installation: the skill ships with "
-                    "the repository, not with the package".format(SKILL))
+        pytest.skip(
+            "{} is not in this installation: the skill ships with "
+            "the repository, not with the package".format(SKILL)
+        )
     text = SKILL.read_text(encoding="utf-8")
     blocks = FENCED_BLOCK.findall(text)
     prose = FENCED_BLOCK.sub("", text)
@@ -50,28 +53,33 @@ def skill_code():
 def test_every_command_appears_in_the_skill(skill_code, command):
     """The skill shows ``now <command>`` for each command of ``main()``"""
     assert command in NOW_WORD.findall(skill_code), (
-        "skills/noworkflow/SKILL.md never shows `now {}`".format(command))
+        "skills/noworkflow/SKILL.md never shows `now {}`".format(command)
+    )
 
 
 @pytest.mark.parametrize("name", EXPORT_FORMATS)
 def test_every_export_format_appears_in_the_skill(skill_code, name):
     """The skill shows ``now export <format>`` for each export format"""
     assert name in EXPORT_WORD.findall(skill_code), (
-        "skills/noworkflow/SKILL.md never shows `now export {}`".format(name))
+        "skills/noworkflow/SKILL.md never shows `now export {}`".format(name)
+    )
 
 
 def test_every_command_the_skill_shows_exists(skill_code):
     """Each ``now <word>`` in the skill's code is a command of ``main()``"""
     unknown = sorted(set(NOW_WORD.findall(skill_code)) - set(COMMANDS))
     assert unknown == [], (
-        "skills/noworkflow/SKILL.md shows commands that do not exist: "
-        "{}".format(unknown))
+        "skills/noworkflow/SKILL.md shows commands that do not exist: {}".format(
+            unknown
+        )
+    )
 
 
 def test_every_export_format_the_skill_shows_exists(skill_code):
     """Each ``now export <word>`` in the skill's code is an export format"""
-    unknown = sorted(
-        set(EXPORT_WORD.findall(skill_code)) - set(EXPORT_FORMATS))
+    unknown = sorted(set(EXPORT_WORD.findall(skill_code)) - set(EXPORT_FORMATS))
     assert unknown == [], (
-        "skills/noworkflow/SKILL.md shows export formats that do not "
-        "exist: {}".format(unknown))
+        "skills/noworkflow/SKILL.md shows export formats that do not exist: {}".format(
+            unknown
+        )
+    )

@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test Expr collection"""
+
 # pylint: disable=too-many-lines
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -13,6 +14,7 @@ from ..helpers.versions import only
 
 class TestExprExecution(CollectionTestCase):
     """Test Excution Stmt collection"""
+
     # pylint: disable=invalid-name
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-statements
@@ -20,15 +22,13 @@ class TestExprExecution(CollectionTestCase):
 
     def test_num(self):
         """Test num collection"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "# other")
+        self.script("# script.py\na = 2\n# other")
 
         var_a = self.get_evaluation(name="a")
         var_2 = self.get_evaluation(name="2")
-        var_int = self.get_evaluation(name=self.rtype('int'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
-        
+        var_int = self.get_evaluation(name=self.rtype("int"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
+
         self.assert_dependency(var_a, var_2, "assign", True)
         self.assert_type(var_2, var_int)
         self.assert_type(var_a, var_int)
@@ -39,14 +39,12 @@ class TestExprExecution(CollectionTestCase):
 
     def test_str(self):
         """Test str collection"""
-        self.script("# script.py\n"
-                    "a = '2'\n"
-                    "# other")
+        self.script("# script.py\na = '2'\n# other")
 
         var_a = self.get_evaluation(name="a")
         var_2 = self.get_evaluation(name="'2'")
-        var_str = self.get_evaluation(name=self.rtype('str'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_str = self.get_evaluation(name=self.rtype("str"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         self.assert_dependency(var_a, var_2, "assign", True)
         self.assert_type(var_2, var_str)
@@ -58,20 +56,18 @@ class TestExprExecution(CollectionTestCase):
 
     def test_bytes(self):
         """Test bytes collection"""
-        self.script("# script.py\n"
-                    "a = b'2'\n"
-                    "# other")
+        self.script("# script.py\na = b'2'\n# other")
 
         var_a = self.get_evaluation(name="a")
         var_2 = (
-            self.get_evaluation(name="'2'") or
-            self.get_evaluation(name="b'2'") # Python 2
+            self.get_evaluation(name="'2'")
+            or self.get_evaluation(name="b'2'")  # Python 2
         )
         var_bytes = (
-            self.get_evaluation(name=self.rtype('bytes')) or
-            self.get_evaluation(name=self.rtype('str')) # Python 2
+            self.get_evaluation(name=self.rtype("bytes"))
+            or self.get_evaluation(name=self.rtype("str"))  # Python 2
         )
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         self.assert_dependency(var_a, var_2, "assign", True)
         self.assert_type(var_2, var_bytes)
@@ -86,14 +82,12 @@ class TestExprExecution(CollectionTestCase):
     @only(PY3)
     def test_ellipsis(self):
         """Test ... collection"""
-        self.script("# script.py\n"
-                    "a = ...\n"
-                    "# other")
+        self.script("# script.py\na = ...\n# other")
 
         var_a = self.get_evaluation(name="a")
         var_ellipsis = self.get_evaluation(name="...")
-        var_ellipsis_type = self.get_evaluation(name=self.rtype('ellipsis'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_ellipsis_type = self.get_evaluation(name=self.rtype("ellipsis"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
         self.assert_dependency(var_a, var_ellipsis, "assign", True)
         self.assert_type(var_ellipsis, var_ellipsis_type)
         self.assert_type(var_a, var_ellipsis_type)
@@ -103,14 +97,12 @@ class TestExprExecution(CollectionTestCase):
 
     def test_true(self):
         """Test True collection"""
-        self.script("# script.py\n"
-                    "a = True\n"
-                    "# other")
+        self.script("# script.py\na = True\n# other")
 
         var_a = self.get_evaluation(name="a")
         var_true = self.get_evaluation(name="True")
-        var_bool = self.get_evaluation(name=self.rtype('bool'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_bool = self.get_evaluation(name=self.rtype("bool"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         self.assert_dependency(var_a, var_true, "assign", True)
         self.assert_type(var_true, var_bool)
@@ -121,14 +113,12 @@ class TestExprExecution(CollectionTestCase):
 
     def test_false(self):
         """Test False collection"""
-        self.script("# script.py\n"
-                    "a = False\n"
-                    "# other")
+        self.script("# script.py\na = False\n# other")
 
         var_a = self.get_evaluation(name="a")
         var_false = self.get_evaluation(name="False")
-        var_bool = self.get_evaluation(name=self.rtype('bool'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_bool = self.get_evaluation(name=self.rtype("bool"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         self.assert_dependency(var_a, var_false, "assign", True)
         self.assert_type(var_false, var_bool)
@@ -139,14 +129,12 @@ class TestExprExecution(CollectionTestCase):
 
     def test_none(self):
         """Test None collection"""
-        self.script("# script.py\n"
-                    "a = None\n"
-                    "# other")
+        self.script("# script.py\na = None\n# other")
 
         var_a = self.get_evaluation(name="a")
         var_none = self.get_evaluation(name="None")
-        var_nonetype = self.get_evaluation(name=self.rtype('NoneType'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_nonetype = self.get_evaluation(name=self.rtype("NoneType"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         self.assert_dependency(var_a, var_none, "assign", True)
         self.assert_type(var_none, var_nonetype)
@@ -157,12 +145,10 @@ class TestExprExecution(CollectionTestCase):
 
     def test_global(self):
         """Test global collection"""
-        self.script("# script.py\n"
-                    "a = int\n"
-                    "# other")
+        self.script("# script.py\na = int\n# other")
         var_a = self.get_evaluation(name="a")
         var_int = self.get_evaluation(name="int")
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         self.assert_dependency(var_a, var_int, "assign", True)
         self.assert_type(var_a, var_type)
@@ -171,10 +157,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_name(self):
         """Test name collection"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "b = a\n"
-                    "# other")
+        self.script("# script.py\na = 2\nb = a\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b")
@@ -182,12 +165,9 @@ class TestExprExecution(CollectionTestCase):
 
     def test_bool_op(self):
         """Test bool expr collection"""
-        self.script("# script.py\n"
-                    "a = True\n"
-                    "b = False\n"
-                    "c = True\n"
-                    "d = a and b or c\n"
-                    "# other")
+        self.script(
+            "# script.py\na = True\nb = False\nc = True\nd = a and b or c\n# other"
+        )
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b", mode="r")
@@ -204,12 +184,9 @@ class TestExprExecution(CollectionTestCase):
 
     def test_bool_op_cut(self):
         """Test bool expr collection. 'b' is not evaluated"""
-        self.script("# script.py\n"
-                    "a = False\n"
-                    "b = True\n"
-                    "c = True\n"
-                    "d = a and b or c\n"
-                    "# other")
+        self.script(
+            "# script.py\na = False\nb = True\nc = True\nd = a and b or c\n# other"
+        )
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b", mode="r")
@@ -226,11 +203,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_bin_op(self):
         """Test bin expr collection"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "b = 5\n"
-                    "c = a + b\n"
-                    "# other")
+        self.script("# script.py\na = 2\nb = 5\nc = a + b\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b", mode="r")
@@ -243,12 +216,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_compare(self):
         """Test bin expr collection"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "b = 5\n"
-                    "c = 7\n"
-                    "d = a < b < c\n"
-                    "# other")
+        self.script("# script.py\na = 2\nb = 5\nc = 7\nd = a < b < c\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b", mode="r")
@@ -263,12 +231,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_compare_cut(self):
         """Test bin expr collection"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "b = 1\n"
-                    "c = 7\n"
-                    "d = a < b < c\n"
-                    "# other")
+        self.script("# script.py\na = 2\nb = 1\nc = 7\nd = a < b < c\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b", mode="r")
@@ -283,10 +246,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_unary_op(self):
         """Test unary expr collection"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "b = ~a\n"
-                    "# other")
+        self.script("# script.py\na = 2\nb = ~a\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_na = self.get_evaluation(name="~a")
@@ -297,19 +257,17 @@ class TestExprExecution(CollectionTestCase):
 
     def test_external_call(self):
         """Test external call collection"""
-        self.script("# script.py\n"
-                    "a = '1'\n"
-                    "b = int(a)\n"
-                    "# other",
-                    capture_func_component=False)
+        self.script(
+            "# script.py\na = '1'\nb = int(a)\n# other", capture_func_component=False
+        )
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
         var_b = self.get_evaluation(name="b")
         var_int = self.get_evaluation(name="int", type="name")
         call = self.get_evaluation(name="int(a)", type="call")
-        var_int_type = self.get_evaluation(name=self.rtype('int'))
-        var_str = self.get_evaluation(name=self.rtype('str'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_int_type = self.get_evaluation(name=self.rtype("int"))
+        var_str = self.get_evaluation(name=self.rtype("str"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         self.assertIsNone(var_int)
 
@@ -335,19 +293,17 @@ class TestExprExecution(CollectionTestCase):
 
     def test_external_call_with_func(self):
         """Test external call collection with func collection"""
-        self.script("# script.py\n"
-                    "a = '1'\n"
-                    "b = int(a)\n"
-                    "# other",
-                    capture_func_component=True)
+        self.script(
+            "# script.py\na = '1'\nb = int(a)\n# other", capture_func_component=True
+        )
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
         var_b = self.get_evaluation(name="b")
         call = self.get_evaluation(name="int(a)", type="call")
         var_int = self.get_evaluation(name="int", type="name")
         var_int_type = self.get_evaluation(name="int", type="global")
-        var_str = self.get_evaluation(name=self.rtype('str'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_str = self.get_evaluation(name=self.rtype("str"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
@@ -370,11 +326,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_dict_definition(self):
         """Test dict definition"""
-        self.script("e = 'a'\n"
-                    "f = 1\n"
-                    "a = {e: f, 'b': 2}\n"
-                    "b = a\n"
-                    "# other")
+        self.script("e = 'a'\nf = 1\na = {e: f, 'b': 2}\nb = a\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_aw = self.get_evaluation(name="a", mode="w")
@@ -397,14 +349,12 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_dict, var_a_kv_b, "['b']")
 
         self.assertEqual(var_dict.repr, "{'a': 1, 'b': 2}")
-        self.assertEqual(var_a_kv_a.repr, '1')
-        self.assertEqual(var_a_kv_b.repr, '2')
+        self.assertEqual(var_a_kv_a.repr, "1")
+        self.assertEqual(var_a_kv_b.repr, "2")
 
     def test_dict_unpacking_definition(self):
         """Test dictionary unpacking definition"""
-        self.script("source = {'a': 1}\n"
-                    "result = {**source}\n"
-                    "# other")
+        self.script("source = {'a': 1}\nresult = {**source}\n# other")
 
         var_source = self.get_evaluation(name="source", mode="r")
         var_result = self.get_evaluation(name="{**source}")
@@ -414,9 +364,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_dict_unpacking_between_keys_keeps_every_item(self):
         """Test dictionary unpacking between key-value pairs"""
-        self.script("source = {'a': 1}\n"
-                    "result = {'x': 0, **source, 'y': 2}\n"
-                    "# other")
+        self.script("source = {'a': 1}\nresult = {'x': 0, **source, 'y': 2}\n# other")
 
         var_source = self.get_evaluation(name="source", mode="r")
         var_result = self.get_evaluation(name="{'x': 0, **source, 'y': 2}")
@@ -432,10 +380,9 @@ class TestExprExecution(CollectionTestCase):
 
     def test_dict_unpacking_of_two_sources_depends_on_both(self):
         """Test dictionary unpacking of two mappings"""
-        self.script("first = {'k': 1}\n"
-                    "second = {'k': 2}\n"
-                    "result = {**first, **second}\n"
-                    "# other")
+        self.script(
+            "first = {'k': 1}\nsecond = {'k': 2}\nresult = {**first, **second}\n# other"
+        )
 
         var_first = self.get_evaluation(name="first", mode="r")
         var_second = self.get_evaluation(name="second", mode="r")
@@ -447,8 +394,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_dict_unpacking_of_a_call_depends_on_the_call(self):
         """Test dictionary unpacking of a call result"""
-        self.script("result = {**dict(a=1)}\n"
-                    "# other")
+        self.script("result = {**dict(a=1)}\n# other")
 
         var_call = self.get_evaluation(name="dict(a=1)", type="call")
         var_result = self.get_evaluation(name="{**dict(a=1)}")
@@ -458,10 +404,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_list_definition(self):
         """Test list definition"""
-        self.script("e = 1\n"
-                    "a = [e, 2]\n"
-                    "b = a\n"
-                    "# other")
+        self.script("e = 1\na = [e, 2]\nb = a\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_aw = self.get_evaluation(name="a", mode="w")
@@ -480,15 +423,12 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_list, var_a_i1, "[1]")
 
         self.assertEqual(var_list.repr, "[1, 2]")
-        self.assertEqual(var_a_e.repr, '1')
-        self.assertEqual(var_a_i1.repr, '2')
+        self.assertEqual(var_a_e.repr, "1")
+        self.assertEqual(var_a_i1.repr, "2")
 
     def test_tuple_definition(self):
         """Test list definition"""
-        self.script("e = 1\n"
-                    "a = (e, 2)\n"
-                    "b = a\n"
-                    "# other")
+        self.script("e = 1\na = (e, 2)\nb = a\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_aw = self.get_evaluation(name="a", mode="w")
@@ -507,15 +447,12 @@ class TestExprExecution(CollectionTestCase):
         self.assert_member(var_list, var_a_i1, "[1]")
 
         self.assertEqual(var_list.repr, "(1, 2)")
-        self.assertEqual(var_a_e.repr, '1')
-        self.assertEqual(var_a_i1.repr, '2')
+        self.assertEqual(var_a_e.repr, "1")
+        self.assertEqual(var_a_i1.repr, "2")
 
     def test_set_definition(self):
         """Test set definition"""
-        self.script("e = 1\n"
-                    "a = {e, 2}\n"
-                    "b = a\n"
-                    "# other")
+        self.script("e = 1\na = {e, 2}\nb = a\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_aw = self.get_evaluation(name="a", mode="w")
@@ -535,15 +472,12 @@ class TestExprExecution(CollectionTestCase):
 
         vrepr = "{1, 2}" if PY3 else "set([1, 2])"
         self.assertEqual(var_list.repr, vrepr)
-        self.assertEqual(var_a_e.repr, '1')
-        self.assertEqual(var_a_i1.repr, '2')
+        self.assertEqual(var_a_e.repr, "1")
+        self.assertEqual(var_a_i1.repr, "2")
 
     def test_subscript_definition(self):
         """Test subscript definition"""
-        self.script("e = []\n"
-                    "a = [e, 2]\n"
-                    "b = a[0]\n"
-                    "# other")
+        self.script("e = []\na = [e, 2]\nb = a[0]\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_0 = self.get_evaluation(name="0")
@@ -558,10 +492,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_subscript_slice_definition(self):
         """Test subscript definition"""
-        self.script("e = []\n"
-                    "a = [e, 3]\n"
-                    "b = a[1:2]\n"
-                    "# other")
+        self.script("e = []\na = [e, 3]\nb = a[1:2]\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_slice = self.get_evaluation(name="1:2")
@@ -579,10 +510,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_attribute_definition(self):
         """Test attribute definition"""
-        self.script("def a(): pass\n"
-                    "a.x = 0\n"
-                    "b = a.x\n"
-                    "# other")
+        self.script("def a(): pass\na.x = 0\nb = a.x\n# other")
 
         var_ax_w = self.get_evaluation(name="a.x", first_char_line=2)
         var_a = self.get_evaluation(name="a", mode="r", first_char_line=3)
@@ -595,12 +523,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_lambda_definition(self):
         """Test return collection"""
-        self.script("# script.py\n"
-                    "f = lambda x: x\n"
-                    "a = 2\n"
-                    "b = f(a)\n"
-                    "# other")
-
+        self.script("# script.py\nf = lambda x: x\na = 2\nb = f(a)\n# other")
 
         lambda_eval = self.get_evaluation(name="lambda x: x")
         write_f_eval = self.get_evaluation(name="f", mode="w")
@@ -631,10 +554,10 @@ class TestExprExecution(CollectionTestCase):
         self.assertTrue(bool(call.checkpoint))
         self.assertEqual(param_x_eval.activation_id, activation.id)
         self.assertTrue(bool(param_x_eval.checkpoint))
-        self.assertEqual(script_act.context['a'], write_a_eval)
-        self.assertEqual(script_act.context['b'], write_b_eval)
-        self.assertEqual(script_act.context['f'], write_f_eval)
-        self.assertEqual(activation.context['x'], param_x_eval)
+        self.assertEqual(script_act.context["a"], write_a_eval)
+        self.assertEqual(script_act.context["b"], write_b_eval)
+        self.assertEqual(script_act.context["f"], write_f_eval)
+        self.assertEqual(activation.context["x"], param_x_eval)
 
         self.assert_dependency(write_f_eval, lambda_eval, "assign", True)
         self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
@@ -644,10 +567,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_ifexp_true_definition(self):
         """Test return collection"""
-        self.script("# script.py\n"
-                    "x = 2 if 1 else 3\n"
-                    "# other")
-
+        self.script("# script.py\nx = 2 if 1 else 3\n# other")
 
         ifexp = self.get_evaluation(name="2 if 1 else 3")
         var_x = self.get_evaluation(name="x")
@@ -664,10 +584,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_ifexp_false_definition(self):
         """Test return collection"""
-        self.script("# script.py\n"
-                    "x = 2 if 0 else 3\n"
-                    "# other")
-
+        self.script("# script.py\nx = 2 if 0 else 3\n# other")
 
         ifexp = self.get_evaluation(name="2 if 0 else 3")
         var_x = self.get_evaluation(name="x")
@@ -684,9 +601,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_list_comprehension_definition(self):
         """Test list comprehension definition"""
-        self.script("a = [x * 2 for x in [3, 4] if 1]\n"
-                    "b = a\n"
-                    "# other")
+        self.script("a = [x * 2 for x in [3, 4] if 1]\nb = a\n# other")
 
         var_xs_w = self.get_evaluations(name="x", mode="w")
         var_xs_r = self.get_evaluations(name="x", mode="r")
@@ -728,9 +643,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_set_comprehension_definition(self):
         """Test set comprehension definition"""
-        self.script("a = {x * 2 for x in [3, 4] if 1}\n"
-                    "b = a\n"
-                    "# other")
+        self.script("a = {x * 2 for x in [3, 4] if 1}\nb = a\n# other")
 
         var_xs_w = self.get_evaluations(name="x", mode="w")
         var_xs_r = self.get_evaluations(name="x", mode="r")
@@ -773,9 +686,7 @@ class TestExprExecution(CollectionTestCase):
 
     def test_dict_comprehension_definition(self):
         """Test set comprehension definition"""
-        self.script("a = {x * 2: 5 for x in [3, 4] if 1}\n"
-                    "b = a\n"
-                    "# other")
+        self.script("a = {x * 2: 5 for x in [3, 4] if 1}\nb = a\n# other")
 
         var_xs_w = self.get_evaluations(name="x", mode="w")
         var_xs_r = self.get_evaluations(name="x", mode="r")
@@ -828,11 +739,9 @@ class TestExprExecution(CollectionTestCase):
 
     def test_generator_expression_variable(self):
         """Test for loop"""
-        self.script("a = (z * 2 for z in [3, 4] if 1)\n"
-                    "b = a\n"
-                    "for x in b:"
-                    "    y = x\n"
-                    "# other")
+        self.script(
+            "a = (z * 2 for z in [3, 4] if 1)\nb = a\nfor x in b:    y = x\n# other"
+        )
 
         var_gen = self.get_evaluation(name="(z * 2 for z in [3, 4] if 1)")
         var_a_w = self.get_evaluation(name="a", mode="w")
@@ -899,16 +808,13 @@ class TestExprExecution(CollectionTestCase):
     @only(PY2)
     def test_repr(self):
         """Test external call collection"""
-        self.script("# script.py\n"
-                    "a = '1'\n"
-                    "b = `a`\n"
-                    "# other")
+        self.script("# script.py\na = '1'\nb = `a`\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
         var_b = self.get_evaluation(name="b")
         call = self.get_evaluation(name="`a`", type="call")
-        var_str = self.get_evaluation(name=self.rtype('str'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_str = self.get_evaluation(name=self.rtype("str"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
@@ -928,16 +834,12 @@ class TestExprExecution(CollectionTestCase):
         self.assert_type(var_type, var_type)
 
         self.assertEqual(var_a.repr, "'1'")
-        self.assertEqual(var_b.repr, '"\'1\'"')
+        self.assertEqual(var_b.repr, "\"'1'\"")
 
     @only(PY36)
     def test_joined_str_and_formatted_value(self):
         """Test bool expr collection"""
-        self.script("# script.py\n"
-                    "a = 1\n"
-                    "b = 2\n"
-                    "d = f'a: {a}; b: {b}'\n"
-                    "# other")
+        self.script("# script.py\na = 1\nb = 2\nd = f'a: {a}; b: {b}'\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b", mode="r")

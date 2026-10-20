@@ -19,6 +19,7 @@ itself, with the options read from ``pyproject.toml``; it is plain
 directory listing, the same on every system and Python version (measured
 on macOS with 3.11 to 3.15).
 """
+
 import importlib
 import importlib.util
 import tomllib
@@ -38,9 +39,9 @@ DATA_DIRECTORIES = ("resources", "tests")
 
 KERNEL_NOT_SHIPPED = Defect(
     reason="#341: src/noworkflow/kernel has no "
-           "__init__.py and pyproject.toml sets namespaces = false, so the "
-           "wheel lacks the module that the kernelspec of `now kernel` runs "
-           "(python -m noworkflow.kernel: No module named noworkflow.kernel)",
+    "__init__.py and pyproject.toml sets namespaces = false, so the "
+    "wheel lacks the module that the kernelspec of `now kernel` runs "
+    "(python -m noworkflow.kernel: No module named noworkflow.kernel)",
     signature="noworkflow.kernel is not among the packages",
 )
 
@@ -54,15 +55,20 @@ def find_options(root):
 def discovered_packages(root):
     """The packages that setuptools builds the wheel from"""
     options = find_options(root)
-    finder = (setuptools.find_namespace_packages
-              if options.get("namespaces", True)
-              else setuptools.find_packages)
+    finder = (
+        setuptools.find_namespace_packages
+        if options.get("namespaces", True)
+        else setuptools.find_packages
+    )
     packages = set()
     for where in options.get("where", ["."]):
-        packages.update(finder(
-            where=str(root / where),
-            include=options.get("include", ("*",)),
-            exclude=options.get("exclude", ())))
+        packages.update(
+            finder(
+                where=str(root / where),
+                include=options.get("include", ("*",)),
+                exclude=options.get("exclude", ()),
+            )
+        )
     return packages
 
 
@@ -81,8 +87,10 @@ def module_directories(package_dir):
 def root(request):
     """The checkout, or skip outside one"""
     rootpath = request.config.rootpath
-    if not (rootpath / "pyproject.toml").is_file() or not (
-            rootpath / "src" / "noworkflow").is_dir():
+    if (
+        not (rootpath / "pyproject.toml").is_file()
+        or not (rootpath / "src" / "noworkflow").is_dir()
+    ):
         pytest.skip("not a checkout of noWorkflow")
     return rootpath
 
@@ -93,16 +101,23 @@ def test_ipython_magics_import():
     each under its own name
     """
     from IPython.core.magic import Magics
+
     magics = importlib.import_module("noworkflow.now.ipython.magics")
     command = importlib.import_module("noworkflow.now.ipython.magics.command")
     assert issubclass(magics.NoworkflowMagics, Magics)
     assert callable(magics.register_magics)
-    assert [name for name, _, cls in magics.MAGICS
-            if not issubclass(cls, command.IpythonCommandMagic)] == []
-    modules = sorted(path.stem for path
-                     in Path(magics.__file__).parent.glob("now_*.py"))
-    assert sorted(cls.__module__.rsplit(".", 1)[1]
-                  for _, _, cls in magics.MAGICS) == modules
+    assert [
+        name
+        for name, _, cls in magics.MAGICS
+        if not issubclass(cls, command.IpythonCommandMagic)
+    ] == []
+    modules = sorted(
+        path.stem for path in Path(magics.__file__).parent.glob("now_*.py")
+    )
+    assert (
+        sorted(cls.__module__.rsplit(".", 1)[1] for _, _, cls in magics.MAGICS)
+        == modules
+    )
     names = [name for name, _, _ in magics.MAGICS]
     assert len(set(names)) == len(names)
 
@@ -113,6 +128,7 @@ def test_kernel_modules_import(name):
     kernel, and importing ``__main__`` starts nothing
     """
     from ipykernel.ipkernel import IPythonKernel
+
     module = importlib.import_module("noworkflow.kernel." + name)
     nowkernel = importlib.import_module("noworkflow.kernel.nowkernel")
     assert issubclass(nowkernel.NowKernel, IPythonKernel)
@@ -152,8 +168,11 @@ def test_package_discovery_of_the_kernel(root):
     assert sorted(left_out) == ["noworkflow.kernel"]
     with open(root / "pyproject.toml", "rb") as handle:
         data = tomllib.load(handle)["tool"]["setuptools"]["package-data"]
-    assert [pattern for pattern in data.get("noworkflow", [])
-            if pattern.startswith("kernel")] == []
+    assert [
+        pattern
+        for pattern in data.get("noworkflow", [])
+        if pattern.startswith("kernel")
+    ] == []
 
 
 @known_defects(KERNEL_NOT_SHIPPED)
@@ -163,5 +182,7 @@ def test_package_discovery_of_the_kernel_desired(root):
     """
     packages = discovered_packages(root)
     assert "noworkflow.kernel" in packages, (
-        "noworkflow.kernel is not among the packages that setuptools "
-        "finds: {}".format(sorted(packages)))
+        "noworkflow.kernel is not among the packages that setuptools finds: {}".format(
+            sorted(packages)
+        )
+    )

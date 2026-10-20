@@ -12,10 +12,7 @@ class NodeVisitor(object):
 
     def visit(self, node):
         """Visit a node. Dispatches visitor function"""
-        func = getattr(
-            self, "visit_{}".format(node.type),
-            self.generic_visit
-        )
+        func = getattr(self, "visit_{}".format(node.type), self.generic_visit)
         func(node)
 
     def generic_visit(self, node):

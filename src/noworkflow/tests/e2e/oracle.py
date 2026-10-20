@@ -26,6 +26,7 @@ failure measured today. A test that fails without that signature fails
 outright instead of passing as expected, so a second defect hidden behind
 the first, or a new regression, cannot hide behind the mark.
 """
+
 import dataclasses
 import difflib
 import functools
@@ -52,7 +53,8 @@ from .harness import CORPUS, PRESERVE_PREFIXES, runs_this_interpreter
 # python-build-standalone. The condition of the #294 defects.
 STDLIB_ON_ANOTHER_DRIVE = os.name == "nt" and (
     os.path.splitdrive(sysconfig.get_paths()["stdlib"])[0].lower()
-    != os.path.splitdrive(tempfile.gettempdir())[0].lower())
+    != os.path.splitdrive(tempfile.gettempdir())[0].lower()
+)
 
 
 @dataclasses.dataclass
@@ -69,9 +71,14 @@ class Outcome:
         return (
             "--- {} ---\nreturn code: {}\n[stdout]\n{}\n[stderr]\n{}\n"
             "[files]\n{}".format(
-                self.label, self.returncode, self.stdout, self.stderr,
-                "\n".join("{} {}".format(digest, path)
-                          for path, digest in sorted(self.files.items()))
+                self.label,
+                self.returncode,
+                self.stdout,
+                self.stderr,
+                "\n".join(
+                    "{} {}".format(digest, path)
+                    for path, digest in sorted(self.files.items())
+                ),
             )
         )
 
@@ -93,8 +100,7 @@ def plain_python(command):
         first = b""
     if first.startswith(b"#!"):
         named = first[2:].decode("utf-8", "replace").strip().split(" ")[0]
-        if (os.path.basename(named).startswith("python")
-                and os.path.isfile(named)):
+        if os.path.basename(named).startswith("python") and os.path.isfile(named):
             return named
     directory = os.path.dirname(command[0])
     for name in ("python", "python3", "python.exe"):
@@ -106,8 +112,7 @@ def plain_python(command):
 
 @functools.lru_cache(maxsize=None)
 def child_version(command):
-    """``(major, minor)`` of the Python that ``command`` traces with, or None
-    """
+    """``(major, minor)`` of the Python that ``command`` traces with, or None"""
     if runs_this_interpreter(command):
         return sys.version_info[:2]
     python = plain_python(command)
@@ -115,8 +120,11 @@ def child_version(command):
         return None
     completed = subprocess.run(
         [python, "-c", "import sys; print(*sys.version_info[:2])"],
-        stdin=subprocess.DEVNULL, capture_output=True, text=True,
-        timeout=60)
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
     if completed.returncode != 0:
         return None
     return tuple(int(part) for part in completed.stdout.split())
@@ -134,9 +142,10 @@ def skip_unless_same_python(project):
     if version is None:
         pytest.skip("no Python found for {}".format(project.command[0]))
     if version != sys.version_info[:2]:
-        pytest.skip("NOW_E2E_CMD traces with Python {}.{}; the version "
-                    "gates and the marks follow this interpreter".format(
-                        *version))
+        pytest.skip(
+            "NOW_E2E_CMD traces with Python {}.{}; the version "
+            "gates and the marks follow this interpreter".format(*version)
+        )
 
 
 def fresh_copy(project, corpus):
@@ -154,8 +163,11 @@ def run_plain(project, script, *args):
     python = plain_python(project.command)
     if python is None:
         pytest.skip("no Python found for {}".format(project.command[0]))
-    env = {key: value for key, value in project.env.items()
-           if not key.startswith(PRESERVE_PREFIXES)}
+    env = {
+        key: value
+        for key, value in project.env.items()
+        if not key.startswith(PRESERVE_PREFIXES)
+    }
     completed = subprocess.run(
         [python, script] + [str(arg) for arg in args],
         cwd=str(project.path),
@@ -166,17 +178,22 @@ def run_plain(project, script, *args):
         errors="replace",
         timeout=120,
     )
-    return Outcome("python", completed.returncode, completed.stdout,
-                   completed.stderr, project.files())
+    return Outcome(
+        "python",
+        completed.returncode,
+        completed.stdout,
+        completed.stderr,
+        project.files(),
+    )
 
 
 def run_traced(project, script, *args, flags=()):
     """Run ``now run <flags> <script> <args>`` in the project"""
-    result = project.run("run", *flags, script, *args, expect=None,
-                         allow_stderr=True)
+    result = project.run("run", *flags, script, *args, expect=None, allow_stderr=True)
     label = " ".join(("now run",) + tuple(flags))
-    return Outcome(label, result.returncode, result.stdout, result.stderr,
-                   project.files())
+    return Outcome(
+        label, result.returncode, result.stdout, result.stderr, project.files()
+    )
 
 
 def run_both(project, corpus, script, *args, flags=()):
@@ -186,8 +203,7 @@ def run_both(project, corpus, script, *args, flags=()):
     missing script fails outright, so that no xfail mark absorbs it.
     """
     if not (CORPUS / corpus / script).is_file():
-        pytest.fail("no script {} in corpus/{}".format(script, corpus),
-                    pytrace=False)
+        pytest.fail("no script {} in corpus/{}".format(script, corpus), pytrace=False)
     fresh_copy(project, corpus)
     plain = run_plain(project, script, *args)
     fresh_copy(project, corpus)
@@ -199,17 +215,24 @@ def differences(plain, traced):
     """Every way two outcomes differ, as readable lines; empty when equal"""
     found = []
     if plain.returncode != traced.returncode:
-        found.append("return code: {} {}, {} {}".format(
-            plain.label, plain.returncode, traced.label, traced.returncode))
+        found.append(
+            "return code: {} {}, {} {}".format(
+                plain.label, plain.returncode, traced.label, traced.returncode
+            )
+        )
     for stream in ("stdout", "stderr"):
         expected, actual = getattr(plain, stream), getattr(traced, stream)
         if expected != actual:
             diff = difflib.unified_diff(
                 [repr(line) + "\n" for line in expected.splitlines(True)],
                 [repr(line) + "\n" for line in actual.splitlines(True)],
-                plain.label, traced.label, lineterm="\n")
-            found.append("{} differs (one repr per line):\n{}".format(
-                stream, "".join(diff)))
+                plain.label,
+                traced.label,
+                lineterm="\n",
+            )
+            found.append(
+                "{} differs (one repr per line):\n{}".format(stream, "".join(diff))
+            )
     for path in sorted(set(plain.files) | set(traced.files)):
         expected, actual = plain.files.get(path), traced.files.get(path)
         if expected == actual:
@@ -217,11 +240,13 @@ def differences(plain, traced):
         if actual is None:
             found.append("file {}: only {} wrote it".format(path, plain.label))
         elif expected is None:
-            found.append("file {}: only {} wrote it".format(
-                path, traced.label))
+            found.append("file {}: only {} wrote it".format(path, traced.label))
         else:
-            found.append("file {}: content differs ({} {}, {} {})".format(
-                path, plain.label, expected, traced.label, actual))
+            found.append(
+                "file {}: content differs ({} {}, {} {})".format(
+                    path, plain.label, expected, traced.label, actual
+                )
+            )
     return found
 
 
@@ -235,7 +260,8 @@ def assert_same_outcome(plain, traced, defects=()):
     if not found:
         return
     message = "{} does not run like plain Python:\n{}\n\n{}\n\n{}".format(
-        traced.label, "\n".join(found), plain, traced)
+        traced.label, "\n".join(found), plain, traced
+    )
     expect_known_failure(defects, message)
     raise AssertionError(message)
 
@@ -249,10 +275,14 @@ def assert_traced(project):
     """
     trials = project.trials()
     if len(trials) != 1:
-        pytest.fail("expected one trial in the store, found {}".format(
-            len(trials)), pytrace=False)
+        pytest.fail(
+            "expected one trial in the store, found {}".format(len(trials)),
+            pytrace=False,
+        )
     evaluations = project.count("evaluation", trials[0]["id"])
     if evaluations == 0:
-        pytest.fail("the trial recorded no evaluation: the script ran "
-                    "without the transformer (see `now run -v`)",
-                    pytrace=False)
+        pytest.fail(
+            "the trial recorded no evaluation: the script ran "
+            "without the transformer (see `now run -v`)",
+            pytrace=False,
+        )

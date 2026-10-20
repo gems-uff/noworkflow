@@ -19,6 +19,7 @@ Several assertions characterize defects: the test of the current behavior
 and a ``_desired`` twin, marked ``xfail(strict=True)``, that turns green when
 the issue in its reason is fixed.
 """
+
 import ast
 import os
 import re
@@ -37,9 +38,24 @@ VERSION_FILE = PACKAGE_DIR / "resources" / "version.txt"
 # and the formats of `now export`; test_command_lists_match_the_source keeps
 # both lists in step with the source.
 COMMANDS = (
-    "run", "debug", "list", "show", "diff", "export", "import", "push",
-    "pull", "restore", "vis", "demo", "history", "schema", "kernel", "gc",
-    "evaluation", "clean",
+    "run",
+    "debug",
+    "list",
+    "show",
+    "diff",
+    "export",
+    "import",
+    "push",
+    "pull",
+    "restore",
+    "vis",
+    "demo",
+    "history",
+    "schema",
+    "kernel",
+    "gc",
+    "evaluation",
+    "clean",
 )
 EXPORT_FORMATS = ("prolog", "prov", "dataflow", "ast", "ipynb", "prospective")
 
@@ -49,14 +65,22 @@ NO_STORE_THERE = "there is no provenance store in the informed directory"
 # The report of a missing store, in either wording.
 NO_STORE_LINE = re.compile(
     r"\[now\] there is no provenance store in the (current|informed) "
-    r"directory\n")
+    r"directory\n"
+)
 
 # Every command that opens an existing store, with the arguments it needs to
 # get that far. `import` opens the store of --source; without it, it crashes
 # before opening anything.
 STORE_READERS = (
-    ("list",), ("show",), ("history",), ("diff", "1", "2"), ("restore",),
-    ("gc",), ("evaluation",), ("clean",), ("vis",),
+    ("list",),
+    ("show",),
+    ("history",),
+    ("diff", "1", "2"),
+    ("restore",),
+    ("gc",),
+    ("evaluation",),
+    ("clean",),
+    ("vis",),
     ("import", "--source", "."),
 ) + tuple(("export", name) for name in EXPORT_FORMATS)
 
@@ -79,18 +103,15 @@ def command_classes(path, function):
         for statement in ast.walk(node):
             if not isinstance(statement, ast.Assign):
                 continue
-            if [ast.unparse(target) for target in statement.targets] != [
-                    "commands"]:
+            if [ast.unparse(target) for target in statement.targets] != ["commands"]:
                 continue
             classes = []
             for element in statement.value.elts:
                 assert isinstance(element, ast.Call), ast.unparse(element)
-                assert not element.args and not element.keywords, (
-                    ast.unparse(element))
+                assert not element.args and not element.keywords, ast.unparse(element)
                 classes.append(element.func.id)
             return classes
-    raise AssertionError("no `commands = [...]` in {}() of {}".format(
-        function, path))
+    raise AssertionError("no `commands = [...]` in {}() of {}".format(function, path))
 
 
 def listed_commands(help_text):
@@ -120,13 +141,14 @@ def test_command_lists_match_the_source():
     from noworkflow.now.cmd import cmd_export
 
     main_classes = command_classes(CMD_DIR / "__init__.py", "main")
-    assert [getattr(cmd, name)().cmd for name in main_classes] == list(
-        COMMANDS)
+    assert [getattr(cmd, name)().cmd for name in main_classes] == list(COMMANDS)
 
     export_classes = command_classes(
-        CMD_DIR / "cmd_export" / "__init__.py", "add_arguments")
-    assert [getattr(cmd_export, name)().cmd
-            for name in export_classes] == list(EXPORT_FORMATS)
+        CMD_DIR / "cmd_export" / "__init__.py", "add_arguments"
+    )
+    assert [getattr(cmd_export, name)().cmd for name in export_classes] == list(
+        EXPORT_FORMATS
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -165,11 +187,15 @@ def test_commands_in_the_top_level_help(project):
     """
     result = project.run()
     assert listed_commands(result.stdout) == [
-        name for name in COMMANDS if name != "import"]
+        name for name in COMMANDS if name != "import"
+    ]
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#253: `import` has no help line, so `now -h` omits it"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=("#253: `import` has no help line, so `now -h` omits it"),
+)
 def test_commands_in_the_top_level_help_desired(project):
     """The top-level help lists all 18 commands, in the order of main()"""
     result = project.run()
@@ -206,8 +232,11 @@ def test_store_reader_without_a_store(project, args):
     assert_untouched(project)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#226: print_msg writes errors to stdout"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=("#226: print_msg writes errors to stdout"),
+)
 def test_store_reader_without_a_store_desired(project):
     """The missing-store error goes to stderr, rc 1, and stdout stays empty"""
     result = project.run("list", expect=1, allow_stderr=True)
@@ -227,15 +256,19 @@ def test_missing_store_wording(project):
     assert result.stdout == "[now] {}\n".format(NO_STORE_THERE)
 
     (project.root / "other").mkdir()
-    result = project.run("list", "--dir", os.path.join("..", "other"),
-                         expect=1)
+    result = project.run("list", "--dir", os.path.join("..", "other"), expect=1)
     assert result.stdout == "[now] {}\n".format(NO_STORE_THERE)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#253: the readers always pass a directory to "
-    "connect_existing, so without --dir the message says 'informed "
-    "directory'"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#253: the readers always pass a directory to "
+        "connect_existing, so without --dir the message says 'informed "
+        "directory'"
+    ),
+)
 def test_missing_store_wording_desired(project):
     """Without ``--dir`` the report names the current directory; with it, not
 
@@ -248,8 +281,9 @@ def test_missing_store_wording_desired(project):
 
     other = project.root / "other"
     other.mkdir()
-    result = project.run("list", "--dir", os.path.join("..", "other"),
-                         expect=1, allow_stderr=True)
+    result = project.run(
+        "list", "--dir", os.path.join("..", "other"), expect=1, allow_stderr=True
+    )
     output = result.stdout + result.stderr
     assert "no provenance store" in output, str(result)
     assert "current directory" not in output, str(result)
@@ -283,8 +317,7 @@ def test_unknown_command_exits_2_listing_every_command(project):
     assert result.stdout == ""
     assert "invalid choice: 'bogus-command'" in result.stderr, str(result)
     choices = re.search(r"\(choose from (.*)\)", result.stderr).group(1)
-    assert [choice.strip("'\"") for choice in choices.split(", ")] == list(
-        COMMANDS)
+    assert [choice.strip("'\"") for choice in choices.split(", ")] == list(COMMANDS)
     assert_untouched(project)
 
 
@@ -300,13 +333,17 @@ def test_unknown_option_after_a_command(two_trial_project):
     assert result.stdout == expected
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#226: unknown arguments are dropped by parse_known_args instead of "
-    "failing with rc 2"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#226: unknown arguments are dropped by parse_known_args instead of "
+        "failing with rc 2"
+    ),
+)
 def test_unknown_option_after_a_command_desired(two_trial_project):
     """``now list --bogus`` is an argparse error: rc 2, nothing listed"""
-    result = two_trial_project.run("list", "--bogus", expect=None,
-                                   allow_stderr=True)
+    result = two_trial_project.run("list", "--bogus", expect=None, allow_stderr=True)
     assert result.returncode == 2, str(result)
     assert "unrecognized arguments: --bogus" in result.stderr, str(result)
     assert result.stdout == "", str(result)
@@ -322,14 +359,19 @@ def test_unknown_option_without_a_command(project):
     assert result.stdout == ""
     assert result.stderr.startswith("Traceback"), str(result)
     assert result.stderr.rstrip().endswith(
-        "AttributeError: 'Namespace' object has no attribute 'func'"), (
-            str(result))
+        "AttributeError: 'Namespace' object has no attribute 'func'"
+    ), str(result)
     assert_untouched(project)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#226: an unknown option without a command crashes with AttributeError "
-    "instead of failing with rc 2"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#226: an unknown option without a command crashes with AttributeError "
+        "instead of failing with rc 2"
+    ),
+)
 def test_unknown_option_without_a_command_desired(project):
     """``now --bogus`` is an argparse error: rc 2, no traceback"""
     result = project.run("--bogus", expect=None, allow_stderr=True)
@@ -343,8 +385,7 @@ def test_export_without_a_format_exits_2(project):
     """``now export`` alone is an argparse error: rc 2, usage on stderr"""
     result = project.run("export", expect=2, allow_stderr=True)
     assert result.stdout == ""
-    assert "the following arguments are required" in result.stderr, (
-        str(result))
+    assert "the following arguments are required" in result.stderr, str(result)
     assert_untouched(project)
 
 
@@ -361,12 +402,14 @@ def test_show_of_a_missing_trial(two_trial_project):
     assert result.stdout == "[now] Trial 99 not found\n"
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#226: 'Trial X not found' exits 0 and is printed on stdout"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=("#226: 'Trial X not found' exits 0 and is printed on stdout"),
+)
 def test_show_of_a_missing_trial_desired(two_trial_project):
     """``now show 99`` exits 1 with the message on stderr"""
-    result = two_trial_project.run("show", "99", expect=None,
-                                   allow_stderr=True)
+    result = two_trial_project.run("show", "99", expect=None, allow_stderr=True)
     assert result.returncode == 1, str(result)
     assert "Trial 99 not found" in result.stderr, str(result)
     assert result.stdout == "", str(result)
@@ -381,12 +424,14 @@ def test_diff_with_a_missing_trial(two_trial_project):
     assert result.stdout == "[now] Trial 99 not found\n"
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#226: 'Trial X not found' exits 0 and is printed on stdout"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=("#226: 'Trial X not found' exits 0 and is printed on stdout"),
+)
 def test_diff_with_a_missing_trial_desired(two_trial_project):
     """``now diff 1 99`` exits 1 with the message on stderr"""
-    result = two_trial_project.run("diff", "1", "99", expect=None,
-                                   allow_stderr=True)
+    result = two_trial_project.run("diff", "1", "99", expect=None, allow_stderr=True)
     assert result.returncode == 1, str(result)
     assert "Trial 99 not found" in result.stderr, str(result)
     assert result.stdout == "", str(result)

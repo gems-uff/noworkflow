@@ -8,13 +8,12 @@ from .querier_options import QuerierOptions
 
 
 class DependencyQuerier(object):
-
     def __init__(self, options=None):
         self.options = options or QuerierOptions()
         self.last_search = (None, None)
 
     def navigate_dependencies(self, initial_evaluations, visited=None, stop_on=None):
-        self.options.reset_arrows()    
+        self.options.reset_arrows()
         nodes_to_visit = []
         visited = visited or set()
         for evaluation in initial_evaluations:
@@ -36,5 +35,3 @@ class DependencyQuerier(object):
                         if len(found) == len(stop_on):
                             return nodes_to_visit, visited, found
         return nodes_to_visit, visited, found
-
-    

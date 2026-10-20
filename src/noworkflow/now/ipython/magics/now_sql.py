@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%%now_sql' magic"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from future.utils import text_to_native_str, viewkeys, viewvalues
@@ -38,13 +39,15 @@ class NowSQL(IpythonCommandMagic):
     def add_arguments(self):
         super(NowSQL, self).add_arguments()
         add_arg = self.add_argument
-        add_arg("--result", type=str,
-                help="""The variable in which the result will be stored""")
+        add_arg(
+            "--result",
+            type=str,
+            help="""The variable in which the result will be stored""",
+        )
 
     def execute(self, func, line, cell, magic_cls):
         formatter = DollarFormatter()
-        cell = formatter.vformat(cell, args=[],
-                                 kwargs=magic_cls.shell.user_ns.copy())
+        cell = formatter.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         result = relational.query(text_to_native_str(cell))
         if args.result:

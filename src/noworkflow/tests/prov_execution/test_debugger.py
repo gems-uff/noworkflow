@@ -52,6 +52,7 @@ twin carries both halves of #397, and each half of #403, which a fix can
 take one at a time, has a twin of its own. The store holds this machine's
 hostname (``trial.user_id``) and environment: no test reads them.
 """
+
 import argparse
 import builtins
 import dataclasses
@@ -106,11 +107,16 @@ SCRIPT = "print('traced')\n"
 # notebook ...`, and a Python on `-m notebook` without -P or -I runs
 # ./notebook.py, because the start directory comes first on its sys.path.
 PLANTED = ("notebook", "notebook.py")
-PLANTED_CODE = ("with open({marker!r}, 'w') as marker:\n"
-                "    marker.write('ran')\n")
+PLANTED_CODE = "with open({marker!r}, 'w') as marker:\n    marker.write('ran')\n"
 # The builtins that debugger_builtins defines.
-BUILTINS = ["now_ipython", "now_notebook", "now_save", "now_trial",
-            "now_vis", "set_trace"]
+BUILTINS = [
+    "now_ipython",
+    "now_notebook",
+    "now_save",
+    "now_trial",
+    "now_vis",
+    "set_trace",
+]
 # What a fix may look for before it starts Jupyter: its packages (through an
 # import, importlib.util.find_spec or importlib.metadata) and its commands
 # (through shutil.which).
@@ -215,8 +221,11 @@ def notebook_call(project, monkeypatch):
     monkeypatch.setattr(debugger, "CHILDREN_PID", [])
     monkeypatch.chdir(project.path)
     metascript = Metascript(
-        trial_id=trial["id"], name="script.py", dir=str(project.path),
-        path=str(project.path / "script.py"))
+        trial_id=trial["id"],
+        name="script.py",
+        dir=str(project.path),
+        path=str(project.path / "script.py"),
+    )
     namespace = {}
     with connected_to(project.path):
         debugger.debugger_builtins(SavesNothing(), namespace, metascript)
@@ -263,13 +272,15 @@ def jupyter_findable(project, monkeypatch):
         info.mkdir()
         (info / "METADATA").write_text(
             "Metadata-Version: 2.1\nName: {}\nVersion: 0.0.0\n".format(name),
-            encoding="utf-8")
+            encoding="utf-8",
+        )
     for name in JUPYTER_COMMANDS:
         write_command(commands, name)
         write_command(project.path, name)
     monkeypatch.syspath_prepend(str(site))
-    monkeypatch.setenv("PATH", os.pathsep.join(
-        [str(commands), os.environ.get("PATH", "")]))
+    monkeypatch.setenv(
+        "PATH", os.pathsep.join([str(commands), os.environ.get("PATH", "")])
+    )
     loaded = set(sys.modules)
     yield
     for name in set(sys.modules) - loaded:
@@ -284,8 +295,11 @@ def notebooks_given(command, options):
     option, or the current directory), as absolute paths.
     """
     directory = options.get("cwd") or os.getcwd()
-    paths = [os.path.join(directory, argument) for argument in command[1:]
-             if argument.endswith(".ipynb")]
+    paths = [
+        os.path.join(directory, argument)
+        for argument in command[1:]
+        if argument.endswith(".ipynb")
+    ]
     return [path for path in paths if os.path.isfile(path)]
 
 
@@ -316,8 +330,7 @@ def starts_ipython_terminal(command):
     the file to run.
     """
     name = os.path.splitext(os.path.basename(command[0]))[0].lower()
-    return (name in ("ipython", "ipython3")
-            or python_module(command)[1] == "IPython")
+    return name in ("ipython", "ipython3") or python_module(command)[1] == "IPython"
 
 
 def test_debugger_builtins_fill_a_dict_namespace():
@@ -332,8 +345,7 @@ def test_debugger_builtins_fill_a_dict_namespace():
     assert [name for name in BUILTINS if name in vars(builtins)] == []
 
 
-def test_now_notebook_fails_on_the_arguments_it_gives_the_export(
-        notebook_call):
+def test_now_notebook_fails_on_the_arguments_it_gives_the_export(notebook_call):
     """``now_notebook()`` raises ``AttributeError: 'Namespace' object has
     no attribute 'content_engine'``: it calls ``Ipynb().execute`` with
     ``Namespace(trial=None, dir=None)``, and ``Ipynb.execute`` reads
@@ -344,8 +356,7 @@ def test_now_notebook_fails_on_the_arguments_it_gives_the_export(
     before = project.files()
     with pytest.raises(AttributeError) as raised:
         notebook_call.now_notebook()
-    assert str(raised.value) == (
-        "'Namespace' object has no attribute 'content_engine'")
+    assert str(raised.value) == ("'Namespace' object has no attribute 'content_engine'")
     assert notebook_call.starts.commands == []
     assert debugger.CHILDREN_PID == []
     assert project.files() == before
@@ -353,7 +364,8 @@ def test_now_notebook_fails_on_the_arguments_it_gives_the_export(
 
 
 def test_now_notebook_past_the_export_starts_ipython_notebook(
-        notebook_call, monkeypatch):
+    notebook_call, monkeypatch
+):
     """With ``Ipynb.execute`` replaced by a stub, ``now_notebook()`` asks
     the export for ``Namespace(trial=None, dir=None)`` (the last trial of
     the current directory's store, not the running one) and starts
@@ -366,8 +378,9 @@ def test_now_notebook_past_the_export_starts_ipython_notebook(
     planted ``./notebook`` would run. Nothing runs here, because the
     command is only recorded (characterization of #397)"""
     exports = []
-    monkeypatch.setattr(debugger.Ipynb, "execute",
-                        lambda self, args: exports.append(vars(args)))
+    monkeypatch.setattr(
+        debugger.Ipynb, "execute", lambda self, args: exports.append(vars(args))
+    )
     assert notebook_call.now_notebook() is None
     assert exports == [{"trial": None, "dir": None}]
     [(command, options)] = notebook_call.starts.commands
@@ -383,7 +396,8 @@ def test_now_notebook_past_the_export_starts_ipython_notebook(
 
 @known_defects(EXPORT_NAMESPACE, IPYTHON_TERMINAL)
 def test_now_notebook_never_runs_a_file_from_the_current_directory_desired(
-        notebook_call, jupyter_findable):
+    notebook_call, jupyter_findable
+):
     """``now_notebook()`` exports the trial and starts one program on the
     notebook, and the command it starts runs no file of the current
     directory: no command line through a shell; not IPython's terminal,
@@ -409,38 +423,42 @@ def test_now_notebook_never_runs_a_file_from_the_current_directory_desired(
     notebook_call.now_notebook()
     commands = notebook_call.starts.commands
     assert len(commands) == 1, "now_notebook started {!r}".format(
-        [command for command, _ in commands])
+        [command for command, _ in commands]
+    )
     [(command, options)] = commands
     assert not isinstance(command, str) and not options.get("shell"), (
-        "now_notebook starts a command line through the shell: {!r}".format(
-            command))
+        "now_notebook starts a command line through the shell: {!r}".format(command)
+    )
     command = [os.fspath(argument) for argument in command]
     notebooks = notebooks_given(command, options)
     assert len(notebooks) == 1, (
-        "now_notebook starts {!r}, which names no exported notebook".format(
-            command))
+        "now_notebook starts {!r}, which names no exported notebook".format(command)
+    )
     with open(notebooks[0], encoding="utf-8") as notebook:
         assert "cells" in json.load(notebook)
     assert not starts_ipython_terminal(command), (
         "now_notebook starts IPython's terminal, which runs its first "
-        "argument as a script of the current directory: {!r}".format(command))
+        "argument as a script of the current directory: {!r}".format(command)
+    )
     program = os.fspath(options.get("executable") or command[0])
     assert os.path.isabs(program), (
-        "now_notebook starts {!r} from the PATH: {!r}".format(
-            program, command))
+        "now_notebook starts {!r} from the PATH: {!r}".format(program, command)
+    )
     directory = options.get("cwd") or os.getcwd()
     assert not same_path(os.path.dirname(program), directory), (
-        "now_notebook starts {!r}, a file of the current directory".format(
-            program))
+        "now_notebook starts {!r}, a file of the current directory".format(program)
+    )
     python_options, module = python_module(command)
-    safe_path = (any(option in ("-P", "-I") for option in python_options)
-                 or bool((options.get("env") or {}).get("PYTHONSAFEPATH")))
+    safe_path = any(option in ("-P", "-I") for option in python_options) or bool(
+        (options.get("env") or {}).get("PYTHONSAFEPATH")
+    )
     assert module is None or safe_path, (
         "now_notebook starts Python on -m {0} without -P or -I, so a "
-        "{0}.py in the current directory runs instead: {1!r}".format(
-            module, command))
+        "{0}.py in the current directory runs instead: {1!r}".format(module, command)
+    )
     assert not notebook_call.marker.exists(), (
-        "a planted file of the current directory ran")
+        "a planted file of the current directory ran"
+    )
 
 
 # now_vis (#403) ------------------------------------------------------------
@@ -476,8 +494,9 @@ class VisScenario:
 # os.chdir(os.path.dirname(__file__)) do.
 VIS_SCENARIOS = [
     VisScenario("store-next-to-the-script", "script.py"),
-    VisScenario("relative-dir-then-chdir", "sub/script.py", dir="project",
-                moves_to="sub"),
+    VisScenario(
+        "relative-dir-then-chdir", "sub/script.py", dir="project", moves_to="sub"
+    ),
 ]
 VIS_SCENARIO_IDS = [scenario.id for scenario in VIS_SCENARIOS]
 
@@ -542,15 +561,14 @@ def vis_call(project, monkeypatch, request):
     cwd = project.root
     with real_stores():
         metascript = Metascript().read_cmd_args(
-            now_run_arguments(scenario.command()),
-            cmd=" ".join(scenario.command()))
+            now_run_arguments(scenario.command()), cmd=" ".join(scenario.command())
+        )
         metascript.trial_id = trial["id"]
         debugger.debugger_builtins(SavesNothing(), namespace, metascript)
         if scenario.moves_to:
             cwd = project.path / scenario.moves_to
             monkeypatch.chdir(cwd)
-        yield VisCall(namespace["now_vis"], starts, project, project.path,
-                      cwd)
+        yield VisCall(namespace["now_vis"], starts, project, project.path, cwd)
 
 
 @pytest.fixture
@@ -564,8 +582,9 @@ def other_now(project, monkeypatch):
     commands = project.root / "bin"
     commands.mkdir()
     planted = write_command(commands, "now")
-    monkeypatch.setenv("PATH", os.pathsep.join(
-        [str(commands), os.environ.get("PATH", "")]))
+    monkeypatch.setenv(
+        "PATH", os.pathsep.join([str(commands), os.environ.get("PATH", "")])
+    )
     return planted
 
 
@@ -583,7 +602,7 @@ def directory_given(command, options):
         if argument == "--dir":
             return os.path.join(directory, next(arguments, ""))
         if argument.startswith("--dir="):
-            return os.path.join(directory, argument[len("--dir="):])
+            return os.path.join(directory, argument[len("--dir=") :])
     return directory
 
 
@@ -594,8 +613,9 @@ def same_name(path, expected):
     see the venv's packages: resolving links, as ``same_path`` does, would
     take the one for the other.
     """
-    return (os.path.normcase(os.path.abspath(path))
-            == os.path.normcase(os.path.abspath(expected)))
+    return os.path.normcase(os.path.abspath(path)) == os.path.normcase(
+        os.path.abspath(expected)
+    )
 
 
 def noworkflow_arguments(command, options):
@@ -612,19 +632,20 @@ def noworkflow_arguments(command, options):
     if same_name(program, sys.executable):
         python_options, module = python_module(command)
         if module in ("noworkflow", "noworkflow.__main__"):
-            return command[len(python_options) + 3:]
+            return command[len(python_options) + 3 :]
         return None
     name = os.path.normcase(os.path.splitext(os.path.basename(program))[0])
-    directories = (sysconfig.get_path("scripts"),
-                   os.path.dirname(sys.executable))
-    if name == "now" and any(same_name(os.path.dirname(program), directory)
-                             for directory in directories):
+    directories = (sysconfig.get_path("scripts"), os.path.dirname(sys.executable))
+    if name == "now" and any(
+        same_name(os.path.dirname(program), directory) for directory in directories
+    ):
         return command[1:]
     return None
 
 
 def test_now_vis_with_another_now_first_on_the_path_starts_that_now(
-        vis_call, other_now, capsys):
+    vis_call, other_now, capsys
+):
     """``now_vis(port=5999)`` prints its URL and starts ``['now', 'vis',
     '-p', '5999']``: ``now`` is a bare name, which a lookup on the PATH
     (``shutil.which``, and ``Popen`` itself on POSIX) resolves to the
@@ -644,16 +665,13 @@ def test_now_vis_with_another_now_first_on_the_path_starts_that_now(
     [(command, options)] = vis_call.starts.commands
     assert command[:2] == ["now", "vis"]
     assert "executable" not in options
-    assert (options["stdout"], options["stderr"]) == (
-        debugger.FNULL, debugger.FNULL)
+    assert (options["stdout"], options["stderr"]) == (debugger.FNULL, debugger.FNULL)
     assert len(debugger.CHILDREN_PID) == 1
     assert same_path(shutil.which(command[0]), other_now)
 
 
-@pytest.mark.parametrize("vis_call", VIS_SCENARIOS, indirect=True,
-                         ids=VIS_SCENARIO_IDS)
-def test_now_vis_for_a_store_outside_the_current_directory_gives_no_dir(
-        vis_call):
+@pytest.mark.parametrize("vis_call", VIS_SCENARIOS, indirect=True, ids=VIS_SCENARIO_IDS)
+def test_now_vis_for_a_store_outside_the_current_directory_gives_no_dir(vis_call):
     """``now_vis()`` gives ``now vis`` neither ``--dir`` nor a ``cwd``, so
     the child starts in the current directory of the call and, as
     ``cmd_vis.py`` does without ``--dir``, takes the store from there: the
@@ -678,8 +696,7 @@ def test_now_vis_for_a_store_outside_the_current_directory_gives_no_dir(
 
 
 @known_defects(NOW_VIS_FROM_PATH)
-def test_now_vis_starts_the_noworkflow_of_this_interpreter_desired(
-        vis_call, other_now):
+def test_now_vis_starts_the_noworkflow_of_this_interpreter_desired(vis_call, other_now):
     """``now_vis()`` starts ``now vis`` of the noWorkflow that records the
     trial, whatever the PATH holds: no command line through a shell; the
     program by an absolute path, not a name looked up on the PATH (where
@@ -696,25 +713,29 @@ def test_now_vis_starts_the_noworkflow_of_this_interpreter_desired(
     vis_call.now_vis(browser=False, save=False, port=PORT)
     commands = vis_call.starts.commands
     assert len(commands) == 1, "now_vis started {!r}".format(
-        [command for command, _ in commands])
+        [command for command, _ in commands]
+    )
     [(command, options)] = commands
     assert not isinstance(command, str) and not options.get("shell"), (
-        "now_vis starts a command line through the shell: {!r}".format(
-            command))
+        "now_vis starts a command line through the shell: {!r}".format(command)
+    )
     command = [os.fspath(argument) for argument in command]
     program = os.fspath(options.get("executable") or command[0])
-    assert os.path.isabs(program), (
-        "now_vis starts {!r} from the PATH: {!r}".format(program, command))
+    assert os.path.isabs(program), "now_vis starts {!r} from the PATH: {!r}".format(
+        program, command
+    )
     arguments = noworkflow_arguments(command, options)
     assert arguments is not None, (
-        "now_vis starts {!r}, not the noWorkflow of this interpreter: "
-        "{!r}".format(program, command))
+        "now_vis starts {!r}, not the noWorkflow of this interpreter: {!r}".format(
+            program, command
+        )
+    )
     assert arguments[:1] == ["vis"], (
-        "now_vis starts noWorkflow on {!r}, not on vis".format(arguments))
+        "now_vis starts noWorkflow on {!r}, not on vis".format(arguments)
+    )
 
 
-@pytest.mark.parametrize("vis_call", VIS_SCENARIOS, indirect=True,
-                         ids=VIS_SCENARIO_IDS)
+@pytest.mark.parametrize("vis_call", VIS_SCENARIOS, indirect=True, ids=VIS_SCENARIO_IDS)
 @known_defects(NOW_VIS_WITHOUT_DIR)
 def test_now_vis_points_now_vis_at_the_trials_store_desired(vis_call):
     """``now_vis()`` starts one ``now vis`` on the trial's store directory,
@@ -738,14 +759,16 @@ def test_now_vis_points_now_vis_at_the_trials_store_desired(vis_call):
     vis_call.now_vis(browser=False, save=False, port=PORT)
     commands = vis_call.starts.commands
     assert len(commands) == 1, "now_vis started {!r}".format(
-        [command for command, _ in commands])
+        [command for command, _ in commands]
+    )
     [(command, options)] = commands
     assert not isinstance(command, str) and not options.get("shell"), (
-        "now_vis starts a command line through the shell: {!r}".format(
-            command))
+        "now_vis starts a command line through the shell: {!r}".format(command)
+    )
     command = [os.fspath(argument) for argument in command]
     directory = directory_given(command, options)
     store = str(vis_call.store)
     assert same_path(directory, store), (
         "now_vis points now vis at {!r}, not at the trial's store directory "
-        "{!r}: {!r}".format(directory, store, command))
+        "{!r}: {!r}".format(directory, store, command)
+    )

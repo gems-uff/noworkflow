@@ -50,6 +50,7 @@ scenario. They were measured on macOS with Python 3.11 to 3.15 and on
 Linux with 3.15 (the reference container); the other Linux versions are
 the CI legs.
 """
+
 import ast
 import contextlib
 import dataclasses
@@ -73,18 +74,19 @@ from noworkflow.tests.helpers.defects import Defect, known_defects
 from noworkflow.tests.helpers.persistence import connected_to
 
 POSIX_FORK = pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="the fork start method does not exist on Windows")
+    sys.platform == "win32", reason="the fork start method does not exist on Windows"
+)
 POSIX_SPAWN = pytest.mark.skipif(
-    not hasattr(os, "posix_spawn"),
-    reason="os.posix_spawn exists only on POSIX systems")
+    not hasattr(os, "posix_spawn"), reason="os.posix_spawn exists only on POSIX systems"
+)
 OS_FORK = pytest.mark.skipif(
-    not hasattr(os, "fork"),
-    reason="os.fork exists only on POSIX systems")
+    not hasattr(os, "fork"), reason="os.fork exists only on POSIX systems"
+)
 POSIX_EXEC = pytest.mark.skipif(
     os.name == "nt",
     reason="on Windows os.execv starts a new process and ends the caller "
-           "instead of replacing its image; not measured there")
+    "instead of replacing its image; not measured there",
+)
 # What the child of every script writes from what it reads.
 CHILD_INPUT = b"child input\n"
 CHILD_OUTPUT = b"child:child input\n"
@@ -106,7 +108,8 @@ RAISING_CALL_DEPS = Defect(
     "None in _call, close_activation stores get_value(None), the string "
     "'None', as the call's value (ToDo #77 in "
     "Execution.collect_provenance, execution.py)",
-    signature="dependencies {}")
+    signature="dependencies {}",
+)
 FORK_BLOBS = Defect(
     "#379: the open wrappers that Execution.configure "
     "(execution.py) installs survive into a child of os.fork; in the "
@@ -118,7 +121,8 @@ FORK_BLOBS = Defect(
     "engine writes each blob at once (plain into .noworkflow/content, "
     "puregit as loose objects), while the FileAccess objects that would "
     "name them die with the child at os._exit",
-    signature="content blobs that no row references")
+    signature="content blobs that no row references",
+)
 PREIMPORTED_MODULES = Defect(
     "#380: the finder of prov_deployment/py3module.py, "
     "which Execution.collect_provenance (execution.py) puts in "
@@ -128,7 +132,8 @@ PREIMPORTED_MODULES = Defect(
     "never recorded (now/cmd/__init__.py imports SQLAlchemy and every "
     "command: json arrives through SQLAlchemy and cmd_push.py, subprocess "
     "through now/utils/functions.py and cmd_demo.py)",
-    signature="no module row for ['json', 'subprocess']")
+    signature="no module row for ['json', 'subprocess']",
+)
 EXEC_LOSES_TRIAL = Defect(
     "#377: run (cmd/cmd_run.py) stores the trial, "
     "'ongoing', and its arguments before Execution.collect_provenance "
@@ -144,7 +149,8 @@ EXEC_LOSES_TRIAL = Defect(
     "the trial could be stored (os._exit raises none: test_run.py pins "
     "that case with no twin)",
     signature="status 'ongoing', nothing stored in ['code_component', "
-              "'evaluation', 'module', 'tag'], .last_trial written: False")
+    "'evaluation', 'module', 'tag'], .last_trial written: False",
+)
 FORK_EPILOGUE = Defect(
     "#375: a child that os.fork() makes in the traced script "
     "leaves the exec of the script in Execution.collect_provenance "
@@ -157,8 +163,8 @@ FORK_EPILOGUE = Defect(
     "rows whose keys it reaches, so the activations of a child's branch "
     "stay in the trial, over evaluations of the parent with the same ids. "
     "Every child that does not leave through os._exit runs this epilogue",
-    signature="3 automatic tags, activations of the children: "
-              "['exit', 'exit']")
+    signature="3 automatic tags, activations of the children: ['exit', 'exit']",
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -201,21 +207,32 @@ def child_done(text):
     """A repr of the child's stdout, ``b'child-done\\n'`` or ``\\r\\n``"""
     value = literal(text)
     return isinstance(value, (bytes, str)) and value.strip() in (
-        b"child-done", "child-done")
+        b"child-done",
+        "child-done",
+    )
 
 
 def communicated(text):
     value = literal(text)
-    return (isinstance(value, tuple) and len(value) == 2
-            and child_done(repr(value[0])) and value[1] is None)
+    return (
+        isinstance(value, tuple)
+        and len(value) == 2
+        and child_done(repr(value[0]))
+        and value[1] is None
+    )
 
 
 def waited(text):
     """The repr of what ``os.waitpid`` returns for a child that exited
     with 0: its pid and the status 0"""
     value = literal(text)
-    return (isinstance(value, tuple) and len(value) == 2
-            and isinstance(value[0], int) and value[0] > 0 and value[1] == 0)
+    return (
+        isinstance(value, tuple)
+        and len(value) == 2
+        and isinstance(value[0], int)
+        and value[0] > 0
+        and value[1] == 0
+    )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -227,72 +244,147 @@ class Kind:
 
 
 KINDS = {
-    "run": Kind("run.py", (
-        Call("run", "subprocess.run(",
-             ("list", "literal", "literal", "literal"), "result",
-             lambda text: text.startswith("CompletedProcess(args=[")
-             and text.endswith(
-                 ", returncode=0, stdout='child-done\\n', stderr='')")),
-    )),
-    "check_output": Kind("check_output.py", (
-        Call("check_output", "subprocess.check_output(",
-             ("list", "literal"), "output", child_done),
-    )),
-    "popen": Kind("popen.py", (
-        # The repr is taken when Popen returns, before any wait, and
-        # Popen.__repr__ cuts it at 80 characters.
-        Call("Popen", "subprocess.Popen(", ("attribute", "list"), "process",
-             lambda text: text.startswith("<Popen: returncode: None args: [")
-             and len(text) <= 80),
-        # A tuple unpacked into out and err: no "assign" dependency.
-        Call("communicate", "process.communicate(", ("literal",), None,
-             communicated),
-    )),
-    "shell": Kind("shell.py", (
-        Call("run", "subprocess.run(", ("literal", "literal", "name"),
-             "result",
-             lambda text: text.startswith("CompletedProcess(args=")
-             and text.endswith(", returncode=0)")),
-    )),
-    "system": Kind("system.py", (
-        Call("system", "os.system(", ("name",), "status",
-             lambda text: text == "0"),
-    )),
-    "os_popen": Kind("os_popen.py", (
-        Call("popen", "os.popen(", ("name",), "pipe",
-             matches(r"<os\._wrap_close object at 0x[0-9a-fA-F]+>")),
-        Call("read", "pipe.read(", (), "output", child_done),
-        Call("close", "pipe.close(", (), "status",
-             lambda text: text == "None"),
-    )),
-    "posix_spawn": Kind("posix_spawn.py", (
-        # sys.executable, the argument list and os.environ.
-        Call("posix_spawn", "os.posix_spawn(",
-             ("attribute", "attribute", "list"), "pid",
-             matches(r"[1-9][0-9]*")),
-        # A tuple unpacked into waited and status: no "assign" dependency.
-        Call("waitpid", "os.waitpid(", ("literal", "name"), None, waited),
-        Call("waitstatus_to_exitcode", "os.waitstatus_to_exitcode(",
-             ("name",), None, lambda text: text == "0"),
-    )),
-    "fork": Kind("fork.py", (
-        Call("get_context", "multiprocessing.get_context(", ("literal",),
-             "context", matches(
-                 r"<multiprocessing\.context\.ForkContext object at "
-                 r"0x[0-9a-fA-F]+>")),
-        # The class of a fork context's Process is ForkProcess.
-        Call("ForkProcess", "context.Process(", ("name", "tuple"),
-             "process", matches(
-                 r"<ForkProcess name='ForkProcess-\d+' parent=\d+ initial>")),
-        Call("start", "process.start(", (), None,
-             lambda text: text == "None"),
-        Call("join", "process.join(", ("literal",), None,
-             lambda text: text == "None"),
-    )),
+    "run": Kind(
+        "run.py",
+        (
+            Call(
+                "run",
+                "subprocess.run(",
+                ("list", "literal", "literal", "literal"),
+                "result",
+                lambda text: (
+                    text.startswith("CompletedProcess(args=[")
+                    and text.endswith(
+                        ", returncode=0, stdout='child-done\\n', stderr='')"
+                    )
+                ),
+            ),
+        ),
+    ),
+    "check_output": Kind(
+        "check_output.py",
+        (
+            Call(
+                "check_output",
+                "subprocess.check_output(",
+                ("list", "literal"),
+                "output",
+                child_done,
+            ),
+        ),
+    ),
+    "popen": Kind(
+        "popen.py",
+        (
+            # The repr is taken when Popen returns, before any wait, and
+            # Popen.__repr__ cuts it at 80 characters.
+            Call(
+                "Popen",
+                "subprocess.Popen(",
+                ("attribute", "list"),
+                "process",
+                lambda text: (
+                    text.startswith("<Popen: returncode: None args: [")
+                    and len(text) <= 80
+                ),
+            ),
+            # A tuple unpacked into out and err: no "assign" dependency.
+            Call(
+                "communicate", "process.communicate(", ("literal",), None, communicated
+            ),
+        ),
+    ),
+    "shell": Kind(
+        "shell.py",
+        (
+            Call(
+                "run",
+                "subprocess.run(",
+                ("literal", "literal", "name"),
+                "result",
+                lambda text: (
+                    text.startswith("CompletedProcess(args=")
+                    and text.endswith(", returncode=0)")
+                ),
+            ),
+        ),
+    ),
+    "system": Kind(
+        "system.py",
+        (Call("system", "os.system(", ("name",), "status", lambda text: text == "0"),),
+    ),
+    "os_popen": Kind(
+        "os_popen.py",
+        (
+            Call(
+                "popen",
+                "os.popen(",
+                ("name",),
+                "pipe",
+                matches(r"<os\._wrap_close object at 0x[0-9a-fA-F]+>"),
+            ),
+            Call("read", "pipe.read(", (), "output", child_done),
+            Call("close", "pipe.close(", (), "status", lambda text: text == "None"),
+        ),
+    ),
+    "posix_spawn": Kind(
+        "posix_spawn.py",
+        (
+            # sys.executable, the argument list and os.environ.
+            Call(
+                "posix_spawn",
+                "os.posix_spawn(",
+                ("attribute", "attribute", "list"),
+                "pid",
+                matches(r"[1-9][0-9]*"),
+            ),
+            # A tuple unpacked into waited and status: no "assign" dependency.
+            Call("waitpid", "os.waitpid(", ("literal", "name"), None, waited),
+            Call(
+                "waitstatus_to_exitcode",
+                "os.waitstatus_to_exitcode(",
+                ("name",),
+                None,
+                lambda text: text == "0",
+            ),
+        ),
+    ),
+    "fork": Kind(
+        "fork.py",
+        (
+            Call(
+                "get_context",
+                "multiprocessing.get_context(",
+                ("literal",),
+                "context",
+                matches(
+                    r"<multiprocessing\.context\.ForkContext object at "
+                    r"0x[0-9a-fA-F]+>"
+                ),
+            ),
+            # The class of a fork context's Process is ForkProcess.
+            Call(
+                "ForkProcess",
+                "context.Process(",
+                ("name", "tuple"),
+                "process",
+                matches(r"<ForkProcess name='ForkProcess-\d+' parent=\d+ initial>"),
+            ),
+            Call("start", "process.start(", (), None, lambda text: text == "None"),
+            Call(
+                "join", "process.join(", ("literal",), None, lambda text: text == "None"
+            ),
+        ),
+    ),
 }
 # The kinds whose child is a new interpreter, not a fork of the parent.
 NEW_INTERPRETER_KINDS = [
-    "run", "check_output", "popen", "shell", "system", "os_popen",
+    "run",
+    "check_output",
+    "popen",
+    "shell",
+    "system",
+    "os_popen",
     pytest.param("posix_spawn", marks=POSIX_SPAWN),
 ]
 ALL_KINDS = NEW_INTERPRETER_KINDS + [pytest.param("fork", marks=POSIX_FORK)]
@@ -325,8 +417,7 @@ def build_store(factory, script):
     run_now(project, "run", script)
     trials = project.trials()
     assert [trial["status"] for trial in trials] == ["finished"]
-    assert project.tags(trials[0]["id"]) == [
-        {"type": "AUTO", "name": "1.1.1"}]
+    assert project.tags(trials[0]["id"]) == [{"type": "AUTO", "name": "1.1.1"}]
     return project
 
 
@@ -342,6 +433,7 @@ def stores(tmp_path_factory):
         if script not in built:
             built[script] = build_store(tmp_path_factory, script)
         return built[script]
+
     return get
 
 
@@ -354,16 +446,18 @@ def reading(project):
     with connected_to(project.path):
         yield Trial(trial_id)
     assert project.fingerprint() == before, (
-        "the test changed the shared store of {}".format(project.root.name))
+        "the test changed the shared store of {}".format(project.root.name)
+    )
 
 
 def call_activation(trial, call):
     """The one activation of ``call`` in ``trial``"""
     found = [
-        activation for activation in trial.activations
+        activation
+        for activation in trial.activations
         if activation.name == call.name
-        and activation.this_evaluation.code_component.name.startswith(
-            call.source)]
+        and activation.this_evaluation.code_component.name.startswith(call.source)
+    ]
     # A count: pytest would show the list, whose items are Prolog facts.
     count = len(found)
     assert count == 1, "{} activations of {!r}".format(count, call.source)
@@ -373,28 +467,36 @@ def call_activation(trial, call):
 def script_activation(trial):
     """The activation of the script itself: ``__main__``, whose code block
     is the trial's main block"""
-    found = [activation for activation in trial.activations
-             if activation.name == "__main__"
-             and activation.code_block_id == trial.main_id]
+    found = [
+        activation
+        for activation in trial.activations
+        if activation.name == "__main__" and activation.code_block_id == trial.main_id
+    ]
     count = len(found)
     assert count == 1, "{} activations of the script".format(count)
     return found[0]
 
 
 def dependency_types(evaluation):
-    return Counter(dependency.type
-                   for dependency in evaluation.dependencies_as_dependent)
+    return Counter(
+        dependency.type for dependency in evaluation.dependencies_as_dependent
+    )
 
 
 def executables(project, trial_id):
     """The paths a module row must not name: each ``sys.executable`` the
     script evaluated, and the interpreter that ``now`` runs on"""
-    paths = {literal(row["repr"]) for row in project.query(
-        "SELECT evaluation.repr FROM evaluation JOIN code_component "
-        "ON code_component.trial_id = evaluation.trial_id "
-        "AND code_component.id = evaluation.code_component_id "
-        "WHERE evaluation.trial_id = ? "
-        "AND code_component.name = 'sys.executable'", trial_id)}
+    paths = {
+        literal(row["repr"])
+        for row in project.query(
+            "SELECT evaluation.repr FROM evaluation JOIN code_component "
+            "ON code_component.trial_id = evaluation.trial_id "
+            "AND code_component.id = evaluation.code_component_id "
+            "WHERE evaluation.trial_id = ? "
+            "AND code_component.name = 'sys.executable'",
+            trial_id,
+        )
+    }
     paths.add(plain_python(tuple(project.command)))
     paths.discard(None)
     return paths
@@ -402,8 +504,10 @@ def executables(project, trial_id):
 
 def names_the_child(project, modules):
     """Whether a module row names the child's script"""
-    return any(same_path(module.path, project.path / "child.py")
-               or "child" in module.name for module in modules)
+    return any(
+        same_path(module.path, project.path / "child.py") or "child" in module.name
+        for module in modules
+    )
 
 
 def masked(project, name):
@@ -418,8 +522,9 @@ def content_blobs(project):
     content = project.store / "content"
     if not content.is_dir():
         return None
-    return {path.parent.name + path.name for path in content.glob("*/*")
-            if path.is_file()}
+    return {
+        path.parent.name + path.name for path in content.glob("*/*") if path.is_file()
+    }
 
 
 def unreferenced_blobs(project):
@@ -430,11 +535,15 @@ def unreferenced_blobs(project):
     stored = content_blobs(project)
     if stored is None:
         pytest.skip("the store does not use the plain content engine")
-    referenced = {row["hash"] for row in project.query(
-        "SELECT code_hash AS hash FROM code_block "
-        "UNION SELECT content_hash_before FROM file_access "
-        "UNION SELECT content_hash_after FROM file_access "
-        "UNION SELECT content_hash FROM graph_cache")}
+    referenced = {
+        row["hash"]
+        for row in project.query(
+            "SELECT code_hash AS hash FROM code_block "
+            "UNION SELECT content_hash_before FROM file_access "
+            "UNION SELECT content_hash_after FROM file_access "
+            "UNION SELECT content_hash FROM graph_cache"
+        )
+    }
     return stored - referenced
 
 
@@ -460,30 +569,30 @@ def test_process_call_is_an_opaque_activation(stores, kind):
             # can hold the executable's path, and pytest shows the repr of
             # each model whose attribute an assertion compares.
             in_trial = activation.trial_id == trial.id
-            assert in_trial, "{}: an activation of another trial".format(
-                call.source)
+            assert in_trial, "{}: an activation of another trial".format(call.source)
             no_block_id = activation.code_block_id is None
             assert no_block_id, "{}: a code block id".format(call.source)
             no_block = activation.code_block is None
             assert no_block, "{}: a code block".format(call.source)
             evaluations = len(list(activation.evaluations))
             assert evaluations == 0, "{}: {} evaluations".format(
-                call.source, evaluations)
+                call.source, evaluations
+            )
             accesses = len(list(activation.file_accesses))
-            assert accesses == 0, "{}: {} file accesses".format(
-                call.source, accesses)
+            assert accesses == 0, "{}: {} file accesses".format(call.source, accesses)
             by_script = activation.caller.id == script.id
-            assert by_script, "{}: not called by the script".format(
-                call.source)
+            assert by_script, "{}: not called by the script".format(call.source)
             evaluation = activation.this_evaluation
             is_call = evaluation.code_component.type == "call"
             assert is_call, "{}: not evaluated by a call".format(call.source)
             in_script = evaluation.activation_id == script.id
-            assert in_script, "{}: evaluated outside the script".format(
-                call.source)
+            assert in_script, "{}: evaluated outside the script".format(call.source)
             null = project.query(
                 "SELECT typeof(code_block_id) AS type FROM activation "
-                "WHERE trial_id = ? AND id = ?", trial.id, activation.id)
+                "WHERE trial_id = ? AND id = ?",
+                trial.id,
+                activation.id,
+            )
             assert null == [{"type": "null"}], call.source
 
 
@@ -514,27 +623,36 @@ def test_process_call_arguments_are_evaluations_of_the_caller(stores, kind):
             sql = project.query(
                 "SELECT type, COUNT(*) AS n FROM dependency "
                 "WHERE trial_id = ? AND dependent_id = ? GROUP BY type",
-                trial.id, evaluation.id)
+                trial.id,
+                evaluation.id,
+            )
             assert {row["type"]: row["n"] for row in sql} == expected
 
             links = defaultdict(list)
             for dependency in evaluation.dependencies_as_dependent:
                 links[dependency.type].append(dependency.dependency)
-            func, = links["func"]
+            (func,) = links["func"]
             # Booleans: the callee and the arguments are evaluations.
-            attribute = (func.code_component.type == "attribute"
-                         and func.code_component.name == call.func)
+            attribute = (
+                func.code_component.type == "attribute"
+                and func.code_component.name == call.func
+            )
             assert attribute, "{}: the callee is not {!r}".format(
-                call.source, call.func)
+                call.source, call.func
+            )
             arguments = links["argument"]
-            assert sorted(argument.code_component.type
-                          for argument in arguments) == list(call.arguments)
+            assert sorted(
+                argument.code_component.type for argument in arguments
+            ) == list(call.arguments)
             assert sorted(argument.id for argument in arguments) == sorted(
-                dependency.id for dependency in links["dependency"])
-            in_script = [argument.activation_id
-                         for argument in arguments] == [script.id] * count
-            assert in_script, "{}: an argument evaluated outside the " \
-                "script".format(call.source)
+                dependency.id for dependency in links["dependency"]
+            )
+            in_script = [argument.activation_id for argument in arguments] == [
+                script.id
+            ] * count
+            assert in_script, "{}: an argument evaluated outside the script".format(
+                call.source
+            )
             for argument in arguments:
                 value = literal(argument.repr)
                 if argument.code_component.type == "list":
@@ -542,8 +660,7 @@ def test_process_call_arguments_are_evaluations_of_the_caller(stores, kind):
                     assert words == CHILD_WORDS, call.source
                     if runs_this_interpreter():
                         same = same_path(value[0], sys.executable)
-                        assert same, "the list does not start with " \
-                            "the executable"
+                        assert same, "the list does not start with the executable"
                 elif argument.code_component.type == "tuple":
                     assert value == FORK_ARGUMENTS
 
@@ -565,16 +682,14 @@ def test_process_call_value_is_the_repr_of_its_result(stores, kind):
         for call in KINDS[kind].calls:
             evaluation = call_activation(trial, call).this_evaluation
             # Booleans: the reprs can hold the executable's path.
-            shaped = evaluation.repr is not None and call.value(
-                evaluation.repr)
-            assert shaped, "the value of {!r} has another shape".format(
-                call.source)
+            shaped = evaluation.repr is not None and call.value(evaluation.repr)
+            assert shaped, "the value of {!r} has another shape".format(call.source)
             assigned = [
                 dependency.dependent.code_component.name
                 for dependency in evaluation.dependencies_as_dependency
-                if dependency.type == "assign"]
-            assert assigned == ([call.assigned] if call.assigned else []), (
-                call.source)
+                if dependency.type == "assign"
+            ]
+            assert assigned == ([call.assigned] if call.assigned else []), call.source
 
 
 # --- the files ---------------------------------------------------------------
@@ -598,27 +713,33 @@ def test_child_file_accesses_are_not_recorded(stores, kind):
         trial_id = trial.id
         script = script_activation(trial)
         accesses = list(trial.file_accesses)
-        assert [masked(project, access.name)
-                for access in accesses] == ["parent_in.txt"]
-        access, = accesses
+        assert [masked(project, access.name) for access in accesses] == [
+            "parent_in.txt"
+        ]
+        (access,) = accesses
         # Booleans: a file access's repr is its Prolog fact, which holds
         # the absolute name of the file.
         read = access.mode == "r"
         assert read, "the access is not a read"
-        by_open = (access.activation.name == "open"
-                   and access.activation.caller.id == script.id)
+        by_open = (
+            access.activation.name == "open"
+            and access.activation.caller.id == script.id
+        )
         assert by_open, "the access is not made by an open of the script"
-        hashed = (access.content_hash_before == parent_input
-                  and access.content_hash_after == parent_input)
+        hashed = (
+            access.content_hash_before == parent_input
+            and access.content_hash_after == parent_input
+        )
         assert hashed, "the hashes are not those of parent_in.txt"
-        calls = {call_activation(trial, call).id
-                 for call in KINDS[kind].calls}
+        calls = {call_activation(trial, call).id for call in KINDS[kind].calls}
         apart = access.activation_id not in calls
         assert apart, "the access belongs to a call that starts a process"
     rows = project.query(
-        "SELECT name, mode FROM file_access WHERE trial_id = ?", trial_id)
-    assert [(masked(project, row["name"]), row["mode"])
-            for row in rows] == [("parent_in.txt", "r")]
+        "SELECT name, mode FROM file_access WHERE trial_id = ?", trial_id
+    )
+    assert [(masked(project, row["name"]), row["mode"]) for row in rows] == [
+        ("parent_in.txt", "r")
+    ]
 
 
 # --- the modules -------------------------------------------------------------
@@ -642,8 +763,9 @@ def test_process_call_adds_no_module(stores, kind):
         assert sorted(module.name for module in modules) == expected
         paths = executables(project, trial.id)
         assert paths, "the script evaluated no sys.executable"
-        named = any(same_path(module.path, path)
-                    for module in modules for path in paths)
+        named = any(
+            same_path(module.path, path) for module in modules for path in paths
+        )
         assert not named, "a module row names the executable"
         # A boolean: pytest would show the modules passed to the call,
         # whose Prolog facts hold their paths.
@@ -690,12 +812,15 @@ def test_fork_adds_only_multiprocessing_modules(stores):
         added = {module.name for module in modules} - expected
         assert "multiprocessing.popen_fork" in added
         foreign = sorted(
-            name for name in added - SPAWN_IMPORTS - MULTIPROCESSING_C
-            if not name.startswith("multiprocessing."))
+            name
+            for name in added - SPAWN_IMPORTS - MULTIPROCESSING_C
+            if not name.startswith("multiprocessing.")
+        )
         assert foreign == []
         paths = executables(project, trial.id)
-        named = any(same_path(module.path, path)
-                    for module in modules for path in paths)
+        named = any(
+            same_path(module.path, path) for module in modules for path in paths
+        )
         assert not named, "a module row names the executable"
         # A boolean: pytest would show the modules passed to the call,
         # whose Prolog facts hold their paths.
@@ -734,24 +859,24 @@ def test_process_call_leaves_no_unreferenced_content(stores, kind):
 
 # The calls of raising_calls.py that raise, and those that return.
 RAISING_CALLS = (
-    Call("run", "subprocess.run(", ("list", "literal", "literal"), None,
-         None),
+    Call("run", "subprocess.run(", ("list", "literal", "literal"), None, None),
     Call("int", 'int("x", 10)', ("literal", "literal"), None, None),
     Call("boom", "boom(", ("literal", "name"), None, None),
 )
-RETURNING_INT = Call("int", 'int("7", 10)', ("literal", "literal"), None,
-                     None)
+RETURNING_INT = Call("int", 'int("7", 10)', ("literal", "literal"), None, None)
 RETURNING_FUNCTION = Call("fine", "fine(", ("literal", "name"), None, None)
 
 
 def parameter_bindings(activation):
     """The dependency types of each parameter of a script function's
     activation, by parameter name"""
-    return {evaluation.code_component.name: sorted(
-                dependency.type
-                for dependency in evaluation.dependencies_as_dependent)
-            for evaluation in activation.evaluations
-            if evaluation.code_component.type == "param"}
+    return {
+        evaluation.code_component.name: sorted(
+            dependency.type for dependency in evaluation.dependencies_as_dependent
+        )
+        for evaluation in activation.evaluations
+        if evaluation.code_component.type == "param"
+    }
 
 
 def test_call_that_raises(stores):
@@ -774,39 +899,38 @@ def test_call_that_raises(stores):
             activation = call_activation(trial, call)
             evaluation = activation.this_evaluation
             traced = activation.code_block_id is not None
-            assert traced == (call.name == "boom"), (
-                "{}: a code block: {}".format(call.source, traced))
+            assert traced == (call.name == "boom"), "{}: a code block: {}".format(
+                call.source, traced
+            )
             # Counts and booleans: an evaluation's repr is its Prolog
             # fact, and a value can hold the executable's path.
             dependencies = len(list(evaluation.dependencies_as_dependent))
             assert dependencies == 0, "{}: {} dependencies".format(
-                call.source, dependencies)
+                call.source, dependencies
+            )
             is_none = evaluation.repr == "None"
-            assert is_none, "{}: the value is not 'None'".format(
-                call.source)
+            assert is_none, "{}: the value is not 'None'".format(call.source)
             stored = project.query(
                 "SELECT quote(repr) AS repr FROM evaluation "
-                "WHERE trial_id = ? AND id = ?", trial.id, evaluation.id)
+                "WHERE trial_id = ? AND id = ?",
+                trial.id,
+                evaluation.id,
+            )
             stored_none = stored == [{"repr": "'None'"}]
-            assert stored_none, "{}: the stored value is not 'None'".format(
-                call.source)
+            assert stored_none, "{}: the stored value is not 'None'".format(call.source)
         # Locals and booleans: pytest would show the models.
-        bindings = parameter_bindings(call_activation(
-            trial, RAISING_CALLS[-1]))
+        bindings = parameter_bindings(call_activation(trial, RAISING_CALLS[-1]))
         assert bindings == {"first": ["argument"], "second": ["argument"]}
         evaluation = call_activation(trial, RETURNING_INT).this_evaluation
         types = dependency_types(evaluation)
         assert types == {"func": 1, "argument": 2, "dependency": 2}
         returned = evaluation.repr == "7"
-        assert returned, "{}: the value is not '7'".format(
-            RETURNING_INT.source)
-        evaluation = call_activation(
-            trial, RETURNING_FUNCTION).this_evaluation
+        assert returned, "{}: the value is not '7'".format(RETURNING_INT.source)
+        evaluation = call_activation(trial, RETURNING_FUNCTION).this_evaluation
         types = dependency_types(evaluation)
         assert types == {"func": 1, "argument": 2, "use": 1}
         returned = evaluation.repr == "3"
-        assert returned, "{}: the value is not '3'".format(
-            RETURNING_FUNCTION.source)
+        assert returned, "{}: the value is not '3'".format(RETURNING_FUNCTION.source)
 
 
 @known_defects(RAISING_CALL_DEPS)
@@ -816,12 +940,11 @@ def test_call_that_raises_desired(stores):
     project = stores("raising_calls.py")
     with reading(project) as trial:
         for call in RAISING_CALLS:
-            types = dependency_types(
-                call_activation(trial, call).this_evaluation)
-            kept = (types["func"] == 1
-                    and types["argument"] == len(call.arguments))
+            types = dependency_types(call_activation(trial, call).this_evaluation)
+            kept = types["func"] == 1 and types["argument"] == len(call.arguments)
             assert kept, "{}: dependencies {}".format(
-                call.source, dict(sorted(types.items())))
+                call.source, dict(sorted(types.items()))
+            )
 
 
 # What the fork's child opened: its input, its output and os.devnull, empty.
@@ -845,7 +968,9 @@ def test_fork_child_content_blobs(stores):
     others = len(orphans - FORK_CHILD_BLOBS)
     assert orphans == FORK_CHILD_BLOBS, (
         "{} of the child's blobs are not orphans, {} other orphans".format(
-            missing, others))
+            missing, others
+        )
+    )
 
 
 @POSIX_FORK
@@ -853,8 +978,7 @@ def test_fork_child_content_blobs(stores):
 def test_fork_child_content_blobs_desired(stores):
     """Every blob of the content store is named by a row of the store"""
     orphans = unreferenced_blobs(stores("fork.py"))
-    assert not orphans, "{} content blobs that no row references".format(
-        len(orphans))
+    assert not orphans, "{} content blobs that no row references".format(len(orphans))
 
 
 # The modules of preimported.py. json and subprocess are imported by
@@ -882,8 +1006,10 @@ def preimported(tmp_path_factory):
     result = run_now(project, "run", "preimported.py")
     unchanged = result.stdout.splitlines() == [repr(PREIMPORTED)]
     assert unchanged, (
-        "the modules noWorkflow imports before the script changed:\n"
-        "{}".format(project.normalize(result.stdout)))
+        "the modules noWorkflow imports before the script changed:\n{}".format(
+            project.normalize(result.stdout)
+        )
+    )
     with reading(project) as trial:
         return {module.name for module in trial.modules}
 
@@ -924,9 +1050,15 @@ def test_the_version_lookup_records_no_module_of_its_own(tmp_path):
     if python is None:
         pytest.skip("no plain interpreter next to {}".format(project.command))
     plain = subprocess.run(
-        [python, "metadata_lookup.py"], cwd=str(project.path), env=project.env,
-        stdin=subprocess.DEVNULL, capture_output=True, encoding="utf-8",
-        errors="replace", timeout=120)
+        [python, "metadata_lookup.py"],
+        cwd=str(project.path),
+        env=project.env,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=120,
+    )
     assert plain.returncode == 0, plain.stderr
     imported = set(ast.literal_eval(plain.stdout.strip()))
     run_now(project, "run", "metadata_lookup.py")
@@ -934,14 +1066,23 @@ def test_the_version_lookup_records_no_module_of_its_own(tmp_path):
         recorded = {module.name for module in trial.modules}
     assert "idna" in recorded, (
         "precondition: noWorkflow imported idna before the script, so it "
-        "has no module row (#380) and its version is never looked up")
+        "has no module row (#380) and its version is never looked up"
+    )
     assert sorted(recorded - imported) == []
 
 
 # What an exec loses: the rows that run (cmd/cmd_run.py) stores after the
 # script, and those the desired twin expects back.
-LOST_TABLES = ("environment_attr", "module", "code_component", "code_block",
-               "evaluation", "activation", "file_access", "tag")
+LOST_TABLES = (
+    "environment_attr",
+    "module",
+    "code_component",
+    "code_block",
+    "evaluation",
+    "activation",
+    "file_access",
+    "tag",
+)
 KEPT_TABLES = ("code_component", "evaluation", "module", "tag")
 
 
@@ -949,11 +1090,9 @@ def what_was_kept(project):
     """``(status, lost, last)`` of the only trial of ``project``: its
     status, the tables of ``KEPT_TABLES`` with no row of it, and whether
     ``.last_trial`` was written"""
-    trial, = project.trials()
-    lost = [table for table in KEPT_TABLES
-            if project.count(table, trial["id"]) == 0]
-    return (trial["status"], lost,
-            (project.path / ".last_trial").exists())
+    (trial,) = project.trials()
+    lost = [table for table in KEPT_TABLES if project.count(table, trial["id"]) == 0]
+    return (trial["status"], lost, (project.path / ".last_trial").exists())
 
 
 @pytest.fixture(scope="module")
@@ -965,8 +1104,9 @@ def replaced(tmp_path_factory):
     runs = {}
     for label, args in (("control", ()), ("exec", ("exec",))):
         project = NowProject(tmp_path_factory.mktemp("execv_" + label))
-        plain, traced = run_both(project, "processes", "execv.py", *args,
-                                 flags=("--create_last",))
+        plain, traced = run_both(
+            project, "processes", "execv.py", *args, flags=("--create_last",)
+        )
         runs[label] = (project, plain, traced)
     return runs
 
@@ -990,29 +1130,32 @@ def test_script_that_replaces_itself_through_exec(replaced):
     # paths of the checkout, of the interpreter and of the project.
     for label, (project, plain, traced) in replaced.items():
         found = differences(plain, traced)
-        assert not found, "{}: {}".format(
-            label, project.normalize("\n".join(found)))
+        assert not found, "{}: {}".format(label, project.normalize("\n".join(found)))
 
     control, _, _ = replaced["control"]
     # What the twin asks of the exec holds for the control.
     assert what_was_kept(control) == ("finished", [], True)
-    trial, = control.trials()
-    assert [row["name"] for row in control.query(
-        "SELECT name FROM module WHERE trial_id = ?", trial["id"])] == [
-            "square"]
+    (trial,) = control.trials()
+    assert [
+        row["name"]
+        for row in control.query(
+            "SELECT name FROM module WHERE trial_id = ?", trial["id"]
+        )
+    ] == ["square"]
 
     project, _, traced = replaced["exec"]
-    replaced_image = (traced.returncode == 3 and traced.stdout.splitlines()
-                      == ["before exec 9", "child-done"])
+    replaced_image = traced.returncode == 3 and traced.stdout.splitlines() == [
+        "before exec 9",
+        "child-done",
+    ]
     assert replaced_image, shown(project, traced)
     assert (project.path / "child_out.txt").read_bytes() == CHILD_OUTPUT
-    trial, = project.trials()
+    (trial,) = project.trials()
     assert trial["status"] == "ongoing"
     assert trial["finish"] is None
     assert trial["main_id"] is None
     assert project.count("argument", trial["id"]) > 0
-    stored = {table: project.count(table, trial["id"])
-              for table in LOST_TABLES}
+    stored = {table: project.count(table, trial["id"]) for table in LOST_TABLES}
     assert stored == dict.fromkeys(LOST_TABLES, 0)
     assert what_was_kept(project) == ("ongoing", list(KEPT_TABLES), False)
     blobs = content_blobs(project)
@@ -1032,7 +1175,9 @@ def test_script_that_replaces_itself_through_exec_desired(replaced):
     status, lost, last = what_was_kept(replaced["exec"][0])
     assert status != "ongoing" and not lost and last, (
         "status {!r}, nothing stored in {}, .last_trial written: {}".format(
-            status, lost, last))
+            status, lost, last
+        )
+    )
 
 
 @pytest.fixture(scope="module")
@@ -1048,9 +1193,14 @@ def children_rows(project, trial_id):
     """The automatic tags of the trial and the names of the activations of
     ``exit``, which only a child's branch calls"""
     tags = [tag for tag in project.tags(trial_id) if tag["type"] == "AUTO"]
-    exits = [row["name"] for row in project.query(
-        "SELECT name FROM activation WHERE trial_id = ? AND name = 'exit' "
-        "ORDER BY id", trial_id)]
+    exits = [
+        row["name"]
+        for row in project.query(
+            "SELECT name FROM activation WHERE trial_id = ? AND name = 'exit' "
+            "ORDER BY id",
+            trial_id,
+        )
+    ]
     return tags, exits
 
 
@@ -1081,9 +1231,10 @@ def test_forked_children_that_leave_through_sys_exit(forked_exits):
     assert exited, shown(project, traced)
     printed = traced.stdout.splitlines() == [
         "[now] the execution exited via sys.exit(). Exit status: 3",
-        "exit codes [0, 0, 3]"]
+        "exit codes [0, 0, 3]",
+    ]
     assert printed, shown(project, traced)
-    trial, = project.trials()
+    (trial,) = project.trials()
     assert trial["status"] == "finished"
     tags, exits = children_rows(project, trial["id"])
     assert tags == [{"type": "AUTO", "name": "1.1.1"}] * 3
@@ -1091,19 +1242,22 @@ def test_forked_children_that_leave_through_sys_exit(forked_exits):
     # The source text of the evaluation that has the id of each activation
     # of exit, the parent's: the child's own row, the call sys.exit(code),
     # was replaced.
-    shared = [row["name"] for row in project.query(
-        "SELECT code_component.name FROM activation "
-        "JOIN evaluation ON evaluation.trial_id = activation.trial_id "
-        "AND evaluation.id = activation.id "
-        "JOIN code_component ON code_component.trial_id = evaluation.trial_id "
-        "AND code_component.id = evaluation.code_component_id "
-        "WHERE activation.trial_id = ? AND activation.name = 'exit'",
-        trial["id"])]
-    assert len(shared) == len(exits) and "sys.exit(code)" not in shared, (
-        shared)
+    shared = [
+        row["name"]
+        for row in project.query(
+            "SELECT code_component.name FROM activation "
+            "JOIN evaluation ON evaluation.trial_id = activation.trial_id "
+            "AND evaluation.id = activation.id "
+            "JOIN code_component ON code_component.trial_id = evaluation.trial_id "
+            "AND code_component.id = evaluation.code_component_id "
+            "WHERE activation.trial_id = ? AND activation.name = 'exit'",
+            trial["id"],
+        )
+    ]
+    assert len(shared) == len(exits) and "sys.exit(code)" not in shared, shared
     controls = project.query(
-        "SELECT id FROM activation WHERE trial_id = ? AND name = '_exit'",
-        trial["id"])
+        "SELECT id FROM activation WHERE trial_id = ? AND name = '_exit'", trial["id"]
+    )
     assert controls == []
 
 
@@ -1114,8 +1268,8 @@ def test_forked_children_that_leave_through_sys_exit_desired(forked_exits):
     ``sys.exit`` is the parent's alone: one automatic tag, and no
     activation that only a child's branch calls"""
     project, _, _ = forked_exits
-    trial, = project.trials()
+    (trial,) = project.trials()
     tags, exits = children_rows(project, trial["id"])
     assert len(tags) == 1 and not exits, (
-        "{} automatic tags, activations of the children: {}".format(
-            len(tags), exits))
+        "{} automatic tags, activations of the children: {}".format(len(tags), exits)
+    )

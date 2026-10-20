@@ -4,8 +4,10 @@
 # Please, consult the license terms in the LICENSE file.
 """NowNode model"""
 
+
 class NowNode(object):
     """Represents a reconstruction of a AST node"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self, component, block=None):

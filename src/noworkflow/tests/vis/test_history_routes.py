@@ -38,6 +38,7 @@ sends raise (robustness), and a summarized history holds only the trials
 with an automatic tag. Their mechanisms are plain Python and SQL, the same
 on every version and system.
 """
+
 import contextlib
 import datetime
 import re
@@ -61,56 +62,65 @@ from .support import (
 
 # Fields History adds to each trial's columns (HistoryGraph.graph), and the
 # columns it leaves out.
-NODE_EXTRA = {"level", "status", "tooltip", "duration_text", "code_hash",
-              "str_start", "str_finish", "display"}
+NODE_EXTRA = {
+    "level",
+    "status",
+    "tooltip",
+    "duration_text",
+    "code_hash",
+    "str_start",
+    "str_finish",
+    "display",
+}
 NODE_IGNORED = {"start", "finish"}
 EDGE_KEYS = {"source", "target", "right", "level"}
 GRAPH_KEYS = {"nodes", "edges", "scripts", "width", "height"}
 
 HISTORY_CACHE = Defect(
     reason="#337: HistoryGraph.history_data caches the nodes in the class "
-           "attribute HistoryGraph.cache under (script, status, summarize, "
-           "trial count) without the experiment, so "
-           "/experiments/<B>/trials.json answers the nodes of an experiment "
-           "fetched before it that has as many trials",
-    signature="experiment two shows the trials of the experiment fetched "
-              "before it",
+    "attribute HistoryGraph.cache under (script, status, summarize, "
+    "trial count) without the experiment, so "
+    "/experiments/<B>/trials.json answers the nodes of an experiment "
+    "fetched before it that has as many trials",
+    signature="experiment two shows the trials of the experiment fetched before it",
 )
 UNTAGGED_TRIAL = Defect(
     reason="#358: get_all_trials_ids_and_tags (views.py) "
-           "answers list(trial.tags)[0].name for every trial, and a run "
-           "that ends before Tag.create_automatic_tag (Ctrl+C while #251 is "
-           "open, os._exit, a killed process) leaves a trial without a tag, "
-           "so the route raises IndexError and answers 500",
+    "answers list(trial.tags)[0].name for every trial, and a run "
+    "that ends before Tag.create_automatic_tag (Ctrl+C while #251 is "
+    "open, os._exit, a killed process) leaves a trial without a tag, "
+    "so the route raises IndexError and answers 500",
     signature="IndexError: list index out of range",
 )
 PARENT_ELSEWHERE = Defect(
     reason="#359: HistoryGraph._create_graph links "
-           "each trial to its parent_id even when the parent is not among the "
-           "trials it loaded (one of another experiment, or of none), and "
-           "_create_edges then looks the parent up in the trial map, so the "
-           "plain history (summarize=0, what the page loads first) raises "
-           "KeyError on the parent's id and answers 500",
+    "each trial to its parent_id even when the parent is not among the "
+    "trials it loaded (one of another experiment, or of none), and "
+    "_create_edges then looks the parent up in the trial map, so the "
+    "plain history (summarize=0, what the page loads first) raises "
+    "KeyError on the parent's id and answers 500",
     signature="raises KeyError on the id of a parent it did not load",
 )
 ONGOING_TRIAL = Defect(
     reason="#367: a run that ends before the collector "
-           "stores its status (os._exit, a killed process; Ctrl+C while #251 "
-           "is open) leaves the trial "
-           "'ongoing', a status History.status_options (and the vis's "
-           "status filter) does not offer, and the filter compares the "
-           "status for equality, so only '*' shows that trial",
+    "stores its status (os._exit, a killed process; Ctrl+C while #251 "
+    "is open) leaves the trial "
+    "'ongoing', a status History.status_options (and the vis's "
+    "status filter) does not offer, and the filter compares the "
+    "status for equality, so only '*' shows that trial",
     signature="the ongoing trial is selected by no status option",
 )
 
 
 def history_url(script="*", execution="*", summarize=False, prefix=""):
     """The URL ``HistoryWidget.url`` builds, under ``prefix``"""
+
     def component(value):  # encodeURIComponent
         return urllib.parse.quote(value, safe="!~*'()")
+
     return "{}/trials.json?script={}&execution={}&summarize={}".format(
-        prefix, component(script), component(execution),
-        "1" if summarize else "0")
+        prefix, component(script), component(execution), "1" if summarize else "0"
+    )
 
 
 def experiment_prefix(code):
@@ -146,8 +156,7 @@ def node_ids(graph):
 def edge_pairs(graph):
     """Each edge as (source id, target id), sorted"""
     ids = node_ids(graph)
-    return sorted((ids[edge["source"]], ids[edge["target"]])
-                  for edge in graph["edges"])
+    return sorted((ids[edge["source"]], ids[edge["target"]]) for edge in graph["edges"])
 
 
 def trial_rows(project, experiment=None):
@@ -155,29 +164,38 @@ def trial_rows(project, experiment=None):
     started, as History lists them"""
     if experiment is None:
         return project.query(
-            "SELECT * FROM trial WHERE experiment_id IS NULL ORDER BY start")
+            "SELECT * FROM trial WHERE experiment_id IS NULL ORDER BY start"
+        )
     return project.query(
-        "SELECT * FROM trial WHERE experiment_id = ? ORDER BY start",
-        experiment)
+        "SELECT * FROM trial WHERE experiment_id = ? ORDER BY start", experiment
+    )
 
 
 def scripts_of(project):
     """The scripts the history lists: every trial's, without directories"""
-    return {row["script"].rsplit("/", 1)[-1] for row in project.query(
-        "SELECT DISTINCT script FROM trial")}
+    return {
+        row["script"].rsplit("/", 1)[-1]
+        for row in project.query("SELECT DISTINCT script FROM trial")
+    }
 
 
 def auto_tags(project):
     """``{trial id: name}`` of the automatic tags"""
-    return {row["trial_id"]: row["name"] for row in project.query(
-        "SELECT trial_id, name FROM tag WHERE type = 'AUTO'")}
+    return {
+        row["trial_id"]: row["name"]
+        for row in project.query("SELECT trial_id, name FROM tag WHERE type = 'AUTO'")
+    }
 
 
 def first_tags(project):
     """``{trial id: name}`` of each tagged trial's tag of lowest id"""
-    return {row["trial_id"]: row["name"] for row in project.query(
-        "SELECT trial_id, name FROM tag WHERE id IN "
-        "(SELECT MIN(id) FROM tag GROUP BY trial_id)")}
+    return {
+        row["trial_id"]: row["name"]
+        for row in project.query(
+            "SELECT trial_id, name FROM tag WHERE id IN "
+            "(SELECT MIN(id) FROM tag GROUP BY trial_id)"
+        )
+    }
 
 
 def as_time(text):
@@ -202,22 +220,36 @@ def _experiments_store(tmp_path_factory):
         project.run("run", script)
     one, two, child = [row["id"] for row in project.trials()]
     assert project.trial(child)["parent_id"] == two, (
-        "premise: the second run of two.py has the first as its parent")
+        "premise: the second run of two.py has the first as its parent"
+    )
     assert project.trial(two)["parent_id"] is None, (
-        "premise: the first run of two.py has no parent")
+        "premise: the first run of two.py has no parent"
+    )
     codes = {name: str(uuid.uuid4()) for name in ("one", "two", "child")}
     trials = {"one": one, "two": two, "child": child}
     write_store(
         project,
-        *[("INSERT INTO experiment (id, name, description) VALUES (?, ?, ?)",
-           (code, "experiment {}".format(name), ""))
-          for name, code in codes.items()],
-        *[("UPDATE trial SET experiment_id = ? WHERE id = ?",
-           (codes[name], trials[name])) for name in codes],
+        *[
+            (
+                "INSERT INTO experiment (id, name, description) VALUES (?, ?, ?)",
+                (code, "experiment {}".format(name), ""),
+            )
+            for name, code in codes.items()
+        ],
+        *[
+            (
+                "UPDATE trial SET experiment_id = ? WHERE id = ?",
+                (codes[name], trials[name]),
+            )
+            for name in codes
+        ],
         # Sorts before the automatic tag by name, after it by id.
-        ("INSERT INTO tag (trial_id, type, name, timestamp) "
-         "VALUES (?, 'MANUAL', '0-manual', "
-         "(SELECT timestamp FROM tag WHERE trial_id = ?))", (one, one)),
+        (
+            "INSERT INTO tag (trial_id, type, name, timestamp) "
+            "VALUES (?, 'MANUAL', '0-manual', "
+            "(SELECT timestamp FROM tag WHERE trial_id = ?))",
+            (one, one),
+        ),
     )
     return project, codes
 
@@ -233,7 +265,8 @@ def experiments_store(_experiments_store):
     before = project.fingerprint()
     yield project, codes
     assert project.fingerprint() == before, (
-        "the test changed the module's experiments store")
+        "the test changed the module's experiments store"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -245,13 +278,17 @@ def _interrupted_store(tmp_path_factory):
     for script in ("finishes.py", "raises.py", "exits.py"):
         project.run("run", script, expect=None, allow_stderr=True)
     statuses = {row["script"]: row["status"] for row in project.trials()}
-    assert statuses == {"finishes.py": "finished", "raises.py": "unfinished",
-                        "exits.py": "ongoing"}, (
-        "premise: the statuses the three runs leave")
+    assert statuses == {
+        "finishes.py": "finished",
+        "raises.py": "unfinished",
+        "exits.py": "ongoing",
+    }, "premise: the statuses the three runs leave"
     untagged = project.query(
-        "SELECT script FROM trial WHERE id NOT IN (SELECT trial_id FROM tag)")
+        "SELECT script FROM trial WHERE id NOT IN (SELECT trial_id FROM tag)"
+    )
     assert [row["script"] for row in untagged] == ["exits.py"], (
-        "premise: only the run that left through os._exit has no tag")
+        "premise: only the run that left through os._exit has no tag"
+    )
     return project
 
 
@@ -262,7 +299,8 @@ def interrupted_store(_interrupted_store):
     before = _interrupted_store.fingerprint()
     yield _interrupted_store
     assert _interrupted_store.fingerprint() == before, (
-        "the test changed the module's interrupted store")
+        "the test changed the module's interrupted store"
+    )
 
 
 # --- /trials.json -----------------------------------------------------------
@@ -282,9 +320,18 @@ def test_history_has_a_node_per_trial(vis):
     tags = auto_tags(vis.project)
     for node, row in zip(graph["nodes"], rows):
         assert set(node) == set(row) - NODE_IGNORED | NODE_EXTRA
-        for column in ("id", "script", "status", "sequence_key", "parent_id",
-                       "command", "path", "main_id", "experiment_id",
-                       "modules_inherited_from_trial_id"):
+        for column in (
+            "id",
+            "script",
+            "status",
+            "sequence_key",
+            "parent_id",
+            "command",
+            "path",
+            "main_id",
+            "experiment_id",
+            "modules_inherited_from_trial_id",
+        ):
             # A boolean: the path names the user's temporary directory.
             same = node[column] == row[column]
             assert same, column
@@ -293,13 +340,14 @@ def test_history_has_a_node_per_trial(vis):
         assert node["display"] == tags[row["id"]]
         code_hash = vis.project.query(
             "SELECT code_hash FROM code_block WHERE trial_id = ? AND id = ?",
-            row["id"], row["main_id"])[0]["code_hash"]
+            row["id"],
+            row["main_id"],
+        )[0]["code_hash"]
         assert node["code_hash"] == code_hash
         assert isinstance(node["level"], int)
         assert isinstance(node["duration_text"], str)
         # Booleans: the tooltip and user_id name the user and the hostname.
-        texts = isinstance(node["tooltip"], str) and isinstance(
-            node["user_id"], str)
+        texts = isinstance(node["tooltip"], str) and isinstance(node["user_id"], str)
         assert texts, "tooltip and user_id are text"
 
 
@@ -311,12 +359,13 @@ def test_history_edges_link_each_trial_to_its_parent(vis):
         assert set(edge) == EDGE_KEYS
     shown = set(node_ids(graph))
     expected = sorted(
-        (row["id"], row["parent_id"] if row["parent_id"] in shown
-         else row["id"])
-        for row in trial_rows(vis.project))
+        (row["id"], row["parent_id"] if row["parent_id"] in shown else row["id"])
+        for row in trial_rows(vis.project)
+    )
     assert edge_pairs(graph) == expected
     assert any(source != target for source, target in expected), (
-        "premise: a trial of the shared store has its parent")
+        "premise: a trial of the shared store has its parent"
+    )
 
 
 def test_summarized_history_has_a_node_per_version(vis):
@@ -328,21 +377,21 @@ def test_summarized_history_has_a_node_per_version(vis):
     tags = auto_tags(vis.project)
     versions = {}
     for trial_id, name in tags.items():
-        versions.setdefault(".".join(name.split(".")[:2]), set()).add(
-            trial_id)
+        versions.setdefault(".".join(name.split(".")[:2]), set()).add(trial_id)
     assert len(versions) < len(tags), (
-        "premise: two trials of the shared store share a version")
-    assert {row["status"] for row in trial_rows(vis.project)} == {
-        "finished"}, "premise: every trial of the shared store finished"
-    plain = {node["id"]: node
-             for node in history(vis, history_url())["nodes"]}
+        "premise: two trials of the shared store share a version"
+    )
+    assert {row["status"] for row in trial_rows(vis.project)} == {"finished"}, (
+        "premise: every trial of the shared store finished"
+    )
+    plain = {node["id"]: node for node in history(vis, history_url())["nodes"]}
     graph = history(vis, history_url(summarize=True))
     assert set(graph) == GRAPH_KEYS
-    assert {node["id"]: {trial["id"] for trial in node["trials"]}
-            for node in graph["nodes"]} == versions
+    assert {
+        node["id"]: {trial["id"] for trial in node["trials"]} for node in graph["nodes"]
+    } == versions
     for node in graph["nodes"]:
-        assert set(node) == {"id", "display", "parent_id", "level", "trials",
-                             "status"}
+        assert set(node) == {"id", "display", "parent_id", "level", "trials", "status"}
         assert node["display"] == node["id"]
         assert node["status"] == "finished"
         for trial in node["trials"]:
@@ -359,8 +408,8 @@ def test_script_filter_selects_the_trials_of_a_script(vis):
     for script in scripts_of(vis.project):
         graph = history(vis, history_url(script=script))
         assert node_ids(graph) == [
-            row["id"] for row in trial_rows(vis.project)
-            if row["script"] == script]
+            row["id"] for row in trial_rows(vis.project) if row["script"] == script
+        ]
     graph = history(vis, history_url(script="no_such_script.py"))
     assert graph["nodes"] == [] and graph["edges"] == []
     assert set(graph["scripts"]) == scripts_of(vis.project)
@@ -373,16 +422,14 @@ def test_status_filter_selects_the_trials_of_a_status(vis, summarize):
     the versions); ``*`` keeps them all"""
     rows = trial_rows(vis.project)
     for status in History().status_options:
-        graph = history(vis, history_url(execution=status,
-                                         summarize=summarize))
+        graph = history(vis, history_url(execution=status, summarize=summarize))
         if summarize:
-            found = [trial["id"] for node in graph["nodes"]
-                     for trial in node["trials"]]
+            found = [trial["id"] for node in graph["nodes"] for trial in node["trials"]]
         else:
             found = node_ids(graph)
         assert sorted(found) == sorted(
-            row["id"] for row in rows if status in ("*", row["status"])), (
-            status)
+            row["id"] for row in rows if status in ("*", row["status"])
+        ), status
 
 
 def test_unknown_experiment_has_an_empty_history(vis):
@@ -390,22 +437,32 @@ def test_unknown_experiment_has_an_empty_history(vis):
     and no edge, plain or summarized; the graph still lists every script
     of the store"""
     for summarize in (False, True):
-        graph = history(vis, history_url(
-            summarize=summarize, prefix=experiment_prefix(EXPERIMENT)))
+        graph = history(
+            vis, history_url(summarize=summarize, prefix=experiment_prefix(EXPERIMENT))
+        )
         assert graph["nodes"] == [] and graph["edges"] == []
         assert set(graph["scripts"]) == scripts_of(vis.project)
 
 
-@pytest.mark.parametrize("route, failure", [
-    ("/trials.json", r"TypeError: int\(\) argument must be"),
-    ("/trials", r"TypeError: int\(\) argument must be"),
-    ("/experiments/{}/trials.json".format(EXPERIMENT),
-     r"TypeError: int\(\) argument must be"),
-    ("/trials.json?summarize=0",
-     r"AttributeError: 'NoneType' object has no attribute 'lower'"),
-    ("/trials.json?script=*&execution=*&summarize=true",
-     r"ValueError: invalid literal for int\(\)"),
-])
+@pytest.mark.parametrize(
+    "route, failure",
+    [
+        ("/trials.json", r"TypeError: int\(\) argument must be"),
+        ("/trials", r"TypeError: int\(\) argument must be"),
+        (
+            "/experiments/{}/trials.json".format(EXPERIMENT),
+            r"TypeError: int\(\) argument must be",
+        ),
+        (
+            "/trials.json?summarize=0",
+            r"AttributeError: 'NoneType' object has no attribute 'lower'",
+        ),
+        (
+            "/trials.json?script=*&execution=*&summarize=true",
+            r"ValueError: invalid literal for int\(\)",
+        ),
+    ],
+)
 def test_history_without_the_frontend_query_raises(vis, route, failure):
     """Today the history routes need ``summarize`` as an integer and
     ``execution`` present: without the query string the frontend builds
@@ -418,8 +475,9 @@ def test_history_without_the_frontend_query_raises(vis, route, failure):
     assert error is not None and re.match(failure, error), error
 
 
-def test_history_of_each_experiment_shows_its_trials(experiments_store,
-                                                     vis_for, monkeypatch):
+def test_history_of_each_experiment_shows_its_trials(
+    experiments_store, vis_for, monkeypatch
+):
     """Fetched on an empty history cache, the history of an experiment
     whose trials have their parents in it holds the trials of that
     experiment, and ``/trials.json`` the trials of none (here, no trial)"""
@@ -427,16 +485,15 @@ def test_history_of_each_experiment_shows_its_trials(experiments_store,
     vis = vis_for(project)
     for name in ("one", "two"):
         monkeypatch.setattr(HistoryGraph, "cache", {})
-        graph = history(vis, history_url(
-            prefix=experiment_prefix(codes[name])))
+        graph = history(vis, history_url(prefix=experiment_prefix(codes[name])))
         assert node_ids(graph) == [
-            row["id"] for row in trial_rows(project, codes[name])], name
+            row["id"] for row in trial_rows(project, codes[name])
+        ], name
     monkeypatch.setattr(HistoryGraph, "cache", {})
     assert history(vis, history_url())["nodes"] == []
 
 
-def test_history_of_a_second_experiment_after_a_first(experiments_store,
-                                                      vis_for):
+def test_history_of_a_second_experiment_after_a_first(experiments_store, vis_for):
     """Today the history of experiment ``two``, fetched after the history
     of experiment ``one`` (both with one trial), shows the trial of ``one``
 
@@ -444,10 +501,13 @@ def test_history_of_a_second_experiment_after_a_first(experiments_store,
     """
     project, codes = experiments_store
     vis = vis_for(project)
-    ones, twos = ([row["id"] for row in trial_rows(project, codes[name])]
-                  for name in ("one", "two"))
+    ones, twos = (
+        [row["id"] for row in trial_rows(project, codes[name])]
+        for name in ("one", "two")
+    )
     assert len(ones) == len(twos) == 1 and ones != twos, (
-        "premise: experiments one and two hold one trial each")
+        "premise: experiments one and two hold one trial each"
+    )
     first = history(vis, history_url(prefix=experiment_prefix(codes["one"])))
     second = history(vis, history_url(prefix=experiment_prefix(codes["two"])))
     assert node_ids(first) == ones
@@ -456,25 +516,28 @@ def test_history_of_a_second_experiment_after_a_first(experiments_store,
 
 @known_defects(HISTORY_CACHE)
 def test_history_of_a_second_experiment_after_a_first_desired(
-        experiments_store, vis_for):
+    experiments_store, vis_for
+):
     """The history of each experiment shows its own trials, whatever
     experiment was shown before"""
     project, codes = experiments_store
     vis = vis_for(project)
-    ones, twos = ([row["id"] for row in trial_rows(project, codes[name])]
-                  for name in ("one", "two"))
+    ones, twos = (
+        [row["id"] for row in trial_rows(project, codes[name])]
+        for name in ("one", "two")
+    )
     first = history(vis, history_url(prefix=experiment_prefix(codes["one"])))
     assert node_ids(first) == ones
-    shown = node_ids(history(vis, history_url(
-        prefix=experiment_prefix(codes["two"]))))
+    shown = node_ids(history(vis, history_url(prefix=experiment_prefix(codes["two"]))))
     assert shown == twos, (
         "the history of experiment two shows the trials of the experiment "
-        "fetched before it" if shown == ones else
-        "the history of experiment two shows other trials than its own")
+        "fetched before it"
+        if shown == ones
+        else "the history of experiment two shows other trials than its own"
+    )
 
 
-def test_history_of_a_trial_whose_parent_is_elsewhere(experiments_store,
-                                                      vis_for):
+def test_history_of_a_trial_whose_parent_is_elsewhere(experiments_store, vis_for):
     """Today the plain history of an experiment with a trial whose parent
     is not in it raises KeyError on the parent's id, and ``now vis``
     answers 500; the summarized history of that experiment holds the trial
@@ -486,33 +549,36 @@ def test_history_of_a_trial_whose_parent_is_elsewhere(experiments_store,
     (child,) = trial_rows(project, codes["child"])
     prefix = experiment_prefix(codes["child"])
     assert crash(vis, history_url(prefix=prefix)) == "KeyError: {!r}".format(
-        child["parent_id"])
+        child["parent_id"]
+    )
     graph = history(vis, history_url(prefix=prefix, summarize=True))
-    assert [trial["id"] for node in graph["nodes"]
-            for trial in node["trials"]] == [child["id"]]
+    assert [trial["id"] for node in graph["nodes"] for trial in node["trials"]] == [
+        child["id"]
+    ]
 
 
 @known_defects(PARENT_ELSEWHERE)
 def test_history_of_a_trial_whose_parent_is_elsewhere_desired(
-        experiments_store, vis_for):
+    experiments_store, vis_for
+):
     """The plain history of an experiment holds its trials, and its edges
     stay among them"""
     project, codes = experiments_store
     vis = vis_for(project)
     (child,) = trial_rows(project, codes["child"])
     try:
-        graph = history(vis, history_url(
-            prefix=experiment_prefix(codes["child"])))
+        graph = history(vis, history_url(prefix=experiment_prefix(codes["child"])))
     except AssertionError as error:
         assert str(error) != "KeyError: {!r}".format(child["parent_id"]), (
-            "the history raises KeyError on the id of a parent it did not "
-            "load")
+            "the history raises KeyError on the id of a parent it did not load"
+        )
         raise
     assert node_ids(graph) == [child["id"]]
     shown = range(len(graph["nodes"]))
     for edge in graph["edges"]:
         assert edge["source"] in shown and edge["target"] in shown, (
-            "an edge leaves the history")
+            "an edge leaves the history"
+        )
 
 
 def test_trial_without_a_tag_is_shown_by_its_id(interrupted_store, vis_for):
@@ -528,7 +594,8 @@ def test_trial_without_a_tag_is_shown_by_its_id(interrupted_store, vis_for):
 
 
 def test_summarized_history_leaves_out_a_trial_without_a_tag(
-        interrupted_store, vis_for):
+    interrupted_store, vis_for
+):
     """Today a summarized history holds only the trials with an automatic
     tag: the ``ongoing`` trial is in no version node
 
@@ -536,8 +603,7 @@ def test_summarized_history_leaves_out_a_trial_without_a_tag(
     """
     vis = vis_for(interrupted_store)
     graph = history(vis, history_url(summarize=True))
-    inside = sorted(trial["id"] for node in graph["nodes"]
-                    for trial in node["trials"])
+    inside = sorted(trial["id"] for node in graph["nodes"] for trial in node["trials"])
     assert inside == sorted(auto_tags(interrupted_store))
     assert len(inside) < len(trial_rows(interrupted_store))
 
@@ -556,29 +622,29 @@ def test_ongoing_trial_is_selected_only_by_all(interrupted_store, vis_for):
         if status == "*":
             continue
         found = node_ids(history(vis, history_url(execution=status)))
-        assert found == [row["id"] for row in rows
-                         if row["status"] == status], status
+        assert found == [row["id"] for row in rows if row["status"] == status], status
         selected.update(found)
-    assert [row["status"] for row in rows
-            if row["id"] not in selected] == ["ongoing"]
+    assert [row["status"] for row in rows if row["id"] not in selected] == ["ongoing"]
 
 
 @known_defects(ONGOING_TRIAL)
-def test_ongoing_trial_is_selected_only_by_all_desired(interrupted_store,
-                                                       vis_for):
+def test_ongoing_trial_is_selected_only_by_all_desired(interrupted_store, vis_for):
     """Every trial is kept by some status option besides ``*``"""
     vis = vis_for(interrupted_store)
     selected = set()
     for status in History().status_options:
         if status != "*":
-            selected.update(node_ids(history(
-                vis, history_url(execution=status))))
-    left = [row["status"] for row in trial_rows(interrupted_store)
-            if row["id"] not in selected]
+            selected.update(node_ids(history(vis, history_url(execution=status))))
+    left = [
+        row["status"]
+        for row in trial_rows(interrupted_store)
+        if row["id"] not in selected
+    ]
     assert left == [], (
         "the ongoing trial is selected by no status option"
-        if left == ["ongoing"] else
-        "trials selected by no status option: {}".format(left))
+        if left == ["ongoing"]
+        else "trials selected by no status option: {}".format(left)
+    )
 
 
 # --- /getAllTrialsIdsAndTags ------------------------------------------------
@@ -587,15 +653,14 @@ def test_ongoing_trial_is_selected_only_by_all_desired(interrupted_store,
 def test_ids_and_tags_name_each_trial(vis):
     """Each trial comes once, with the name of its tag (each trial of the
     shared store has one)"""
-    counts = vis.project.query(
-        "SELECT COUNT(*) AS n FROM tag GROUP BY trial_id")
+    counts = vis.project.query("SELECT COUNT(*) AS n FROM tag GROUP BY trial_id")
     assert [row["n"] for row in counts] == [1] * len(vis.trial_ids), (
-        "premise: one tag per trial")
+        "premise: one tag per trial"
+    )
     answer = vis.json("/getAllTrialsIdsAndTags")
     assert all(set(entry) == {"id", "tag"} for entry in answer)
     assert sorted(entry["id"] for entry in answer) == sorted(vis.trial_ids)
-    assert {entry["id"]: entry["tag"] for entry in answer} == first_tags(
-        vis.project)
+    assert {entry["id"]: entry["tag"] for entry in answer} == first_tags(vis.project)
 
 
 def test_ids_and_tags_of_a_trial_with_two_tags(experiments_store, vis_for):
@@ -608,17 +673,19 @@ def test_ids_and_tags_of_a_trial_with_two_tags(experiments_store, vis_for):
     """
     project, _ = experiments_store
     vis = vis_for(project)
-    counts = {row["trial_id"]: row["n"] for row in project.query(
-        "SELECT trial_id, COUNT(*) AS n FROM tag GROUP BY trial_id")}
+    counts = {
+        row["trial_id"]: row["n"]
+        for row in project.query(
+            "SELECT trial_id, COUNT(*) AS n FROM tag GROUP BY trial_id"
+        )
+    }
     assert max(counts.values()) == 2, "premise: a trial has two tags"
     answer = vis.json("/getAllTrialsIdsAndTags")
-    assert {entry["id"]: entry["tag"] for entry in answer} == first_tags(
-        project)
+    assert {entry["id"]: entry["tag"] for entry in answer} == first_tags(project)
     assert len(answer) == len(project.trials())
 
 
-def test_ids_and_tags_with_a_trial_without_a_tag(interrupted_store,
-                                                 vis_for):
+def test_ids_and_tags_with_a_trial_without_a_tag(interrupted_store, vis_for):
     """Today a trial without a tag (a run that left through ``os._exit``)
     makes the route raise IndexError, and ``now vis`` answers 500
 
@@ -626,17 +693,18 @@ def test_ids_and_tags_with_a_trial_without_a_tag(interrupted_store,
     """
     vis = vis_for(interrupted_store)
     assert crash(vis, "/getAllTrialsIdsAndTags") == (
-        "IndexError: list index out of range")
+        "IndexError: list index out of range"
+    )
 
 
 @known_defects(UNTAGGED_TRIAL)
-def test_ids_and_tags_with_a_trial_without_a_tag_desired(interrupted_store,
-                                                         vis_for):
+def test_ids_and_tags_with_a_trial_without_a_tag_desired(interrupted_store, vis_for):
     """Every trial comes once, a tagged one with its tag"""
     vis = vis_for(interrupted_store)
     answer = vis.json("/getAllTrialsIdsAndTags")
     assert sorted(entry["id"] for entry in answer) == sorted(
-        row["id"] for row in interrupted_store.trials())
+        row["id"] for row in interrupted_store.trials()
+    )
     tags = first_tags(interrupted_store)
     for entry in answer:
         if entry["id"] in tags:
@@ -663,5 +731,4 @@ def test_experiment_ids_and_tags_raises_desired(vis):
     route = Vis.routes("getAllTrialsIdsAndTags")[1]
     answer = vis.json(route)
     assert sorted(entry["id"] for entry in answer) == sorted(vis.trial_ids)
-    assert {entry["id"]: entry["tag"] for entry in answer} == first_tags(
-        vis.project)
+    assert {entry["id"]: entry["tag"] for entry in answer} == first_tags(vis.project)

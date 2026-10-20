@@ -27,6 +27,7 @@ checkout are located through ``request.config.rootpath`` or
 runs from a scratch directory); the import premises scan the runtime
 package, ``tests/`` excluded.
 """
+
 import ast
 import functools
 import inspect
@@ -93,7 +94,8 @@ def _python(args, cwd, env):
 def _report(result):
     """A child process's outcome, for assertion messages"""
     return "return code {}\n--- stdout ---\n{}\n--- stderr ---\n{}".format(
-        result.returncode, tail(result.stdout), tail(result.stderr))
+        result.returncode, tail(result.stdout), tail(result.stderr)
+    )
 
 
 # 1. SQLAlchemy < 2 is still needed ------------------------------------------
@@ -140,9 +142,13 @@ def _removed_in_20_sites(monkeypatch, call):
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         call()
-    return sorted({(Path(warning.filename).name, warning.lineno)
-                   for warning in caught
-                   if issubclass(warning.category, removed)})
+    return sorted(
+        {
+            (Path(warning.filename).name, warning.lineno)
+            for warning in caught
+            if issubclass(warning.category, removed)
+        }
+    )
 
 
 def test_installed_sqlalchemy_is_the_1_4_series():
@@ -154,7 +160,8 @@ def test_installed_sqlalchemy_is_the_1_4_series():
     the next premise says when the pin may go.
     """
     assert sqlalchemy.__version__.startswith("1.4."), MSG_SA_SERIES.format(
-        sqlalchemy.__version__)
+        sqlalchemy.__version__
+    )
 
 
 def test_sqlalchemy_warn_20_switch_flags_a_legacy_select(monkeypatch):
@@ -164,7 +171,8 @@ def test_sqlalchemy_warn_20_switch_flags_a_legacy_select(monkeypatch):
     working rather than because noWorkflow stopped using removed APIs.
     """
     sites = _removed_in_20_sites(
-        monkeypatch, lambda: sqlalchemy.select([sqlalchemy.literal(1)]))
+        monkeypatch, lambda: sqlalchemy.select([sqlalchemy.literal(1)])
+    )
     assert sites, MSG_SA_INSTRUMENT
 
 
@@ -177,10 +185,9 @@ def test_noworkflow_still_calls_sqlalchemy_apis_that_2_0_removed(monkeypatch):
     and writes nothing.
     """
     sites = _removed_in_20_sites(
-        monkeypatch,
-        lambda: Trial.last_trial(script="premise.py", check=True))
-    assert any(name == "trial.py" for name, _ in sites), MSG_SA_FELL.format(
-        sites)
+        monkeypatch, lambda: Trial.last_trial(script="premise.py", check=True)
+    )
+    assert any(name == "trial.py" for name, _ in sites), MSG_SA_FELL.format(sites)
 
 
 # 2. Imports seen by an AST scan of the runtime package ------------------------
@@ -198,8 +205,7 @@ MSG_SCAN = (
 
 def _scanned(relative):
     """Whether the import scan reads a module, given its path under the root"""
-    return not ("__pycache__" in relative.parts
-                or relative.parts[0] in SCAN_EXCLUDE)
+    return not ("__pycache__" in relative.parts or relative.parts[0] in SCAN_EXCLUDE)
 
 
 def _imported_names(tree):
@@ -213,13 +219,19 @@ def _imported_names(tree):
                 yield node.module, node.lineno
         elif isinstance(node, ast.Call) and node.args:
             func = node.func
-            name = (func.id if isinstance(func, ast.Name)
-                    else func.attr if isinstance(func, ast.Attribute)
-                    else None)
+            name = (
+                func.id
+                if isinstance(func, ast.Name)
+                else func.attr
+                if isinstance(func, ast.Attribute)
+                else None
+            )
             first = node.args[0]
-            if (name in ("__import__", "import_module")
-                    and isinstance(first, ast.Constant)
-                    and isinstance(first.value, str)):
+            if (
+                name in ("__import__", "import_module")
+                and isinstance(first, ast.Constant)
+                and isinstance(first.value, str)
+            ):
                 yield first.value, node.lineno
 
 
@@ -242,7 +254,8 @@ def _import_index(root):
             continue
         index[relative.as_posix()] = tuple(_imported_names(tree))
     assert not unparsable, MSG_SCAN.format(
-        sys.version.split()[0], "; ".join(unparsable))
+        sys.version.split()[0], "; ".join(unparsable)
+    )
     return index
 
 
@@ -250,8 +263,11 @@ def _importers(name, root=PACKAGE):
     """``{relative path: [lines]}`` of the modules under root that import name"""
     found = {}
     for relative, imports in _import_index(str(root)).items():
-        lines = [line for module, line in imports
-                 if module == name or module.startswith(name + ".")]
+        lines = [
+            line
+            for module, line in imports
+            if module == name or module.startswith(name + ".")
+        ]
         if lines:
             found[relative] = lines
     return found
@@ -312,8 +328,12 @@ def test_no_module_imports_setuptools_or_pkg_resources():
         "{} import(s) setuptools or pkg_resources, which [project."
         "dependencies] does not declare (#225). Use importlib.resources or "
         "importlib.metadata, or declare setuptools with the reason next to "
-        "it.".format(", ".join("{}:{}".format(path, lines)
-                               for path, lines in sorted(found.items()))))
+        "it.".format(
+            ", ".join(
+                "{}:{}".format(path, lines) for path, lines in sorted(found.items())
+            )
+        )
+    )
 
 
 # 3. argparse drops unknown arguments ------------------------------------------
@@ -329,8 +349,9 @@ def test_unknown_arguments_are_dropped_without_error(monkeypatch):
     """
     seen = []
     monkeypatch.setattr(List, "execute", lambda self, args: seen.append(args))
-    monkeypatch.setattr(sys, "argv",
-                        ["now", "list", "--no-such-flag", "stray-positional"])
+    monkeypatch.setattr(
+        sys, "argv", ["now", "list", "--no-such-flag", "stray-positional"]
+    )
     message = (
         "`now list --no-such-flag stray-positional` no longer runs list: "
         "now/cmd/__init__.py stopped dropping unknown arguments ({}). Flip "
@@ -346,7 +367,8 @@ def test_unknown_arguments_are_dropped_without_error(monkeypatch):
     except SystemExit as exc:
         pytest.fail(message.format("SystemExit({!r})".format(exc.code)))
     assert result is None and len(seen) == 1, message.format(
-        "main() returned {!r}, list ran {} time(s)".format(result, len(seen)))
+        "main() returned {!r}, list ran {} time(s)".format(result, len(seen))
+    )
 
 
 def test_a_known_option_without_its_value_still_exits_2(monkeypatch, capsys):
@@ -369,7 +391,8 @@ def test_a_known_option_without_its_value_still_exits_2(monkeypatch, capsys):
         "`now list --dir` (missing value) no longer exits 2 through argparse "
         "(exit code {!r}, list ran {} time(s), stderr {!r}): the premise "
         "test_unknown_arguments_are_dropped_without_error measures nothing "
-        "until this is understood (#226).".format(code, len(seen), error))
+        "until this is understood (#226).".format(code, len(seen), error)
+    )
 
 
 # 4. The bundle that `now vis` serves ----------------------------------------------
@@ -383,12 +406,14 @@ def served_bundle():
     route never touches the provenance store).
     """
     from noworkflow.now.vis.views import app
+
     response = app.test_client().get("/dist/bundle.js")
     try:
         assert response.status_code == 200, (
             "the vis app answered {} to /dist/bundle.js, which "
             "templates/index.html loads: `now vis` would show a blank "
-            "page".format(response.status_code))
+            "page".format(response.status_code)
+        )
         return response.get_data()
     finally:
         response.close()
@@ -413,15 +438,16 @@ def _committed_bundle(root):
     bytes on every system.
     """
     if shutil.which("git") is None:
-        pytest.skip("git is not installed: the committed bundle.js is "
-                    "unreachable")
+        pytest.skip("git is not installed: the committed bundle.js is unreachable")
     top = _git(root, "rev-parse", "--show-toplevel")
     if top.returncode != 0 or not same_path(
-            top.stdout.decode("utf-8", "replace").strip(), root):
-        pytest.skip("the rootdir is not the top of a git checkout: the suite "
-                    "runs outside the repository")
-    if _git(root, "rev-parse", "--verify", "--quiet",
-            "HEAD^{commit}").returncode != 0:
+        top.stdout.decode("utf-8", "replace").strip(), root
+    ):
+        pytest.skip(
+            "the rootdir is not the top of a git checkout: the suite "
+            "runs outside the repository"
+        )
+    if _git(root, "rev-parse", "--verify", "--quiet", "HEAD^{commit}").returncode != 0:
         pytest.skip("the checkout has no HEAD commit")
     shown = _git(root, "show", "HEAD:" + BUNDLE.as_posix())
     if shown.returncode != 0:
@@ -447,7 +473,9 @@ def test_now_vis_serves_the_committed_bundle(request, served_bundle):
         "{}. Run `uv sync --locked` for a stale install; commit a rebuilt "
         "bundle in the same commit as the src/frontend change that produced "
         "it, as src/frontend/development.md describes.".format(
-            len(served_bundle), BUNDLE.as_posix(), len(committed)))
+            len(served_bundle), BUNDLE.as_posix(), len(committed)
+        )
+    )
 
 
 def test_the_served_bundle_labels_durations_in_microseconds(served_bundle):
@@ -463,7 +491,8 @@ def test_the_served_bundle_labels_durations_in_microseconds(served_bundle):
         "the served bundle.js does not contain 'microseconds' any more, so "
         "test_the_served_bundle_does_not_say_miliseconds proves nothing. "
         "Find where function_diff.ts labels durations now and point both "
-        "tests at that label.")
+        "tests at that label."
+    )
 
 
 def test_the_served_bundle_does_not_say_miliseconds(served_bundle):
@@ -478,7 +507,8 @@ def test_the_served_bundle_does_not_say_miliseconds(served_bundle):
         "the served bundle.js says 'miliseconds' {} time(s) again (the "
         "function-diff label). Fix "
         "src/frontend/packages/nowvis/src/graph/function_diff.ts and rebuild "
-        "the bundle as src/frontend/development.md describes.".format(count))
+        "the bundle as src/frontend/development.md describes.".format(count)
+    )
 
 
 # 5. `now vis` listens on localhost:5000 by default ---------------------------------
@@ -508,12 +538,11 @@ def _now_vis_run_arguments(monkeypatch, *args):
         calls.append(dict(bound.arguments))
 
     config_class = type(persistence_config)
-    monkeypatch.setattr(persistence_config, "content_engine",
-                        persistence_config.content_engine)
-    monkeypatch.setattr(config_class, "connect",
-                        lambda self, path=None: None)
-    monkeypatch.setattr(config_class, "connect_existing",
-                        lambda self, path=None: None)
+    monkeypatch.setattr(
+        persistence_config, "content_engine", persistence_config.content_engine
+    )
+    monkeypatch.setattr(config_class, "connect", lambda self, path=None: None)
+    monkeypatch.setattr(config_class, "connect_existing", lambda self, path=None: None)
     monkeypatch.setattr(cmd_vis, "run", fake_run)
     monkeypatch.setattr(sys, "argv", ["now", "vis"] + list(args))
     now_cmd.main()
@@ -530,14 +559,22 @@ def test_now_vis_listens_on_localhost_port_5000_by_default(monkeypatch):
     the defaults of cmd_vis.run.
     """
     called = _now_vis_run_arguments(monkeypatch)
-    defaults = {name: parameter.default for name, parameter
-                in inspect.signature(VIS_RUN).parameters.items()}
+    defaults = {
+        name: parameter.default
+        for name, parameter in inspect.signature(VIS_RUN).parameters.items()
+    }
     found = "command line: host={!r} port={!r}; run(): host={!r} port={!r}".format(
-        called.get("host"), called.get("port"),
-        defaults.get("host"), defaults.get("port"))
-    assert (called.get("host"), called.get("port"),
-            defaults.get("host"), defaults.get("port")) == (
-        "localhost", 5000, "localhost", 5000), MSG_VIS_DEFAULT.format(found)
+        called.get("host"),
+        called.get("port"),
+        defaults.get("host"),
+        defaults.get("port"),
+    )
+    assert (
+        called.get("host"),
+        called.get("port"),
+        defaults.get("host"),
+        defaults.get("port"),
+    ) == ("localhost", 5000, "localhost", 5000), MSG_VIS_DEFAULT.format(found)
 
 
 def test_now_vis_forwards_host_and_port_from_the_command_line(monkeypatch):
@@ -546,12 +583,12 @@ def test_now_vis_forwards_host_and_port_from_the_command_line(monkeypatch):
     Without it, the premise above could pass because the stub saw constants
     instead of what `now vis` parsed.
     """
-    called = _now_vis_run_arguments(monkeypatch, "--host", "127.0.0.1",
-                                    "-p", "5001")
+    called = _now_vis_run_arguments(monkeypatch, "--host", "127.0.0.1", "-p", "5001")
     assert (called.get("host"), called.get("port")) == ("127.0.0.1", 5001), (
         "now vis --host 127.0.0.1 -p 5001 reached run() as {!r}: "
         "test_now_vis_listens_on_localhost_port_5000_by_default measures "
-        "nothing until _now_vis_run_arguments is fixed".format(called))
+        "nothing until _now_vis_run_arguments is fixed".format(called)
+    )
 
 
 # 6. print_msg does not follow sys.stdout ----------------------------------------------
@@ -569,8 +606,7 @@ def test_print_msg_does_not_follow_a_swapped_sys_stdout(monkeypatch):
     """
     buffer = io.StringIO()
     monkeypatch.setattr(sys, "stdout", buffer)
-    print_msg("premise check: this line goes to the stdout bound at import",
-              force=True)
+    print_msg("premise check: this line goes to the stdout bound at import", force=True)
     captured = buffer.getvalue()
     assert captured == "", (
         "print_msg now follows sys.stdout ({!r} landed in the swapped "
@@ -579,7 +615,8 @@ def test_print_msg_does_not_follow_a_swapped_sys_stdout(monkeypatch):
         "for this (print_msg.__defaults__ patches, subprocess-only checks), "
         "and re-check the e2e assertions about which stream carries [now] "
         "messages; if errors moved to stderr, flip their characterizations "
-        "into the _desired twins (#226).".format(captured))
+        "into the _desired twins (#226).".format(captured)
+    )
 
 
 def test_print_follows_a_swapped_sys_stdout(monkeypatch):
@@ -595,7 +632,8 @@ def test_print_follows_a_swapped_sys_stdout(monkeypatch):
     assert captured == "premise control\n", (
         "a plain print did not reach the swapped sys.stdout ({!r}): "
         "test_print_msg_does_not_follow_a_swapped_sys_stdout measures "
-        "nothing".format(captured))
+        "nothing".format(captured)
+    )
 
 
 # 7. Importing the test package keeps the store in memory -------------------------------
@@ -621,8 +659,7 @@ def test_importing_noworkflow_tests_writes_nothing_to_the_cwd(tmp_path):
     """
     cwd = tmp_path / "cwd"
     cwd.mkdir()
-    result = _python(["-c", "import noworkflow.tests"], cwd,
-                     _child_env(tmp_path))
+    result = _python(["-c", "import noworkflow.tests"], cwd, _child_env(tmp_path))
     assert result.returncode == 0, _report(result)
     entries = sorted(path.name for path in cwd.iterdir())
     assert entries == [], (
@@ -630,7 +667,8 @@ def test_importing_noworkflow_tests_writes_nothing_to_the_cwd(tmp_path):
         "connect_in_memory() (src/noworkflow/tests/helpers/persistence.py) "
         "must pin the plain engine and call mock() before connect(); "
         "otherwise every run opens a real .noworkflow/db.sqlite in the "
-        "current directory that persists between runs.".format(entries))
+        "current directory that persists between runs.".format(entries)
+    )
 
 
 def test_connecting_before_mocking_creates_a_store_in_the_cwd(tmp_path):
@@ -649,7 +687,9 @@ def test_connecting_before_mocking_creates_a_store_in_the_cwd(tmp_path):
         "(the directory holds {}): "
         "test_importing_noworkflow_tests_writes_nothing_to_the_cwd measures "
         "nothing until its control creates a store again".format(
-            sorted(path.name for path in cwd.iterdir())))
+            sorted(path.name for path in cwd.iterdir())
+        )
+    )
 
 
 # 8. No corpus file reaches collection ------------------------------------------------
@@ -666,8 +706,9 @@ MSG_CORPUS = (
 
 
 def _spy_lines(output):
-    return [line for line in output.splitlines()
-            if line.startswith(corpus_spy.MARKER + " ")]
+    return [
+        line for line in output.splitlines() if line.startswith(corpus_spy.MARKER + " ")
+    ]
 
 
 def test_the_corpus_spy_recognizes_a_path_under_the_corpus():
@@ -697,8 +738,7 @@ CORPUS_SCRIPT = (
 )
 
 
-def test_the_corpus_spy_reports_corpus_paths_and_keeps_them_unimported(
-        tmp_path):
+def test_the_corpus_spy_reports_corpus_paths_and_keeps_them_unimported(tmp_path):
     """Control: in a child pytest, the spy reports the corpus paths it is shown
 
     A synthetic tree with ``--doctest-modules`` and no ignore glob: the
@@ -713,25 +753,40 @@ def test_the_corpus_spy_reports_corpus_paths_and_keeps_them_unimported(
     (corpus / "weather").mkdir(parents=True)
     (e2e / "harness.txt").write_text("not a test\n", encoding="utf-8")
     (corpus / "script.py").write_text(CORPUS_SCRIPT, encoding="utf-8")
-    (corpus / "weather" / "data1.dat").write_text("1.0:0.5\n",
-                                                  encoding="utf-8")
+    (corpus / "weather" / "data1.dat").write_text("1.0:0.5\n", encoding="utf-8")
     ini = tree / "pytest.ini"
-    ini.write_text("[pytest]\naddopts = --doctest-modules\n",
-                   encoding="utf-8")
+    ini.write_text("[pytest]\naddopts = --doctest-modules\n", encoding="utf-8")
     result = _python(
-        ["-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider",
-         "-p", SPY_PLUGIN, "-c", str(ini), "--rootdir", str(tree), str(tree)],
-        tree, _child_env(tmp_path))
+        [
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "-p",
+            SPY_PLUGIN,
+            "-c",
+            str(ini),
+            "--rootdir",
+            str(tree),
+            str(tree),
+        ],
+        tree,
+        _child_env(tmp_path),
+    )
     lines = _spy_lines(result.stdout)
     expected = sorted(
-        "{} reached src/noworkflow/tests/e2e/corpus/{}".format(
-            corpus_spy.MARKER, name)
-        for name in ("script.py", "weather"))
+        "{} reached src/noworkflow/tests/e2e/corpus/{}".format(corpus_spy.MARKER, name)
+        for name in ("script.py", "weather")
+    )
     assert lines and sorted(lines[:-1]) == expected, _report(result)
-    assert re.fullmatch(r"\S+ done files=\d+ e2e=1 corpus=2", lines[-1]), (
-        _report(result))
+    assert re.fullmatch(r"\S+ done files=\d+ e2e=1 corpus=2", lines[-1]), _report(
+        result
+    )
     assert not (corpus / "imported.txt").exists(), (
-        "the spy let pytest import a corpus script\n" + _report(result))
+        "the spy let pytest import a corpus script\n" + _report(result)
+    )
 
 
 def test_no_corpus_file_reaches_collection(request, tmp_path):
@@ -751,24 +806,39 @@ def test_no_corpus_file_reaches_collection(request, tmp_path):
     if not (root / "conftest.py").is_file() or not (root / ROOT_CORPUS).is_dir():
         pytest.skip("the suite runs outside the checkout")
     result = _python(
-        ["-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider",
-         "-p", SPY_PLUGIN],
-        root, _child_env(tmp_path))
+        [
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "-p",
+            SPY_PLUGIN,
+        ],
+        root,
+        _child_env(tmp_path),
+    )
     lines = _spy_lines(result.stdout)
     done = [line for line in lines if " done " in line]
     assert done, (
         "the corpus spy never wrote its summary: the child `pytest "
         "--collect-only` did not get to the end of its session, so this "
-        "premise measured nothing\n" + _report(result))
+        "premise measured nothing\n" + _report(result)
+    )
     reached = [line for line in lines if " reached " in line]
-    reached += [line for line in result.stdout.splitlines()
-                if "::" in line and "e2e/corpus/" in line.split("::")[0]]
+    reached += [
+        line
+        for line in result.stdout.splitlines()
+        if "::" in line and "e2e/corpus/" in line.split("::")[0]
+    ]
     assert not reached, MSG_CORPUS.format("\n  ".join(reached))
     e2e = int(re.search(r"\be2e=(\d+)", done[-1]).group(1))
     assert e2e > 0, (
         "the corpus spy saw no file next to the corpus ({}): the walk never "
         "reached src/noworkflow/tests/e2e, so an empty report proves nothing. "
-        "Check testpaths in pyproject.toml.".format(done[-1]))
+        "Check testpaths in pyproject.toml.".format(done[-1])
+    )
 
 
 def _module_file(module):
@@ -789,16 +859,19 @@ def test_no_corpus_item_or_module_in_this_session(request):
     left here was imported by collection.
     """
     corpus = os.path.normcase(os.path.realpath(CORPUS)) + os.sep
-    items = [item.nodeid for item in request.session.items
-             if corpus_spy.is_corpus_path(item.path)]
+    items = [
+        item.nodeid
+        for item in request.session.items
+        if corpus_spy.is_corpus_path(item.path)
+    ]
     modules = []
     for name, module in list(sys.modules.items()):
         filename = _module_file(module)
-        if filename and os.path.normcase(
-                os.path.realpath(filename)).startswith(corpus):
+        if filename and os.path.normcase(os.path.realpath(filename)).startswith(corpus):
             modules.append("module {} ({})".format(name, filename))
     assert not items and not modules, MSG_CORPUS.format(
-        "\n  ".join(items + sorted(modules)))
+        "\n  ".join(items + sorted(modules))
+    )
 
 
 # 9. The CI legs run the Python that uv downloads ------------------------------
@@ -833,23 +906,34 @@ def test_every_workflow_that_installs_uv_requires_uv_managed_python(request):
     """
     directory = request.config.rootpath / WORKFLOWS
     if not directory.is_dir():
-        pytest.skip("{} is not here: the suite runs outside the checkout".format(
-            WORKFLOWS.as_posix()))
-    workflows = {path.name: path.read_text(encoding="utf-8")
-                 for path in sorted(directory.glob("*.y*ml"))}
-    with_uv = [name for name, text in workflows.items()
-               if "astral-sh/setup-uv@" in text]
+        pytest.skip(
+            "{} is not here: the suite runs outside the checkout".format(
+                WORKFLOWS.as_posix()
+            )
+        )
+    workflows = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in sorted(directory.glob("*.y*ml"))
+    }
+    with_uv = [
+        name for name, text in workflows.items() if "astral-sh/setup-uv@" in text
+    ]
     assert "ci.yml" in with_uv, (
         "ci.yml no longer runs astral-sh/setup-uv: this premise looks for "
         "the workflows that install uv by that action. Point it at what "
-        "installs uv now.")
-    missing = [name for name in with_uv
-               if _top_level_env(workflows[name]).get("UV_MANAGED_PYTHON") != "1"]
+        "installs uv now."
+    )
+    missing = [
+        name
+        for name in with_uv
+        if _top_level_env(workflows[name]).get("UV_MANAGED_PYTHON") != "1"
+    ]
     assert not missing, (
-        "{} run(s) astral-sh/setup-uv without UV_MANAGED_PYTHON: \"1\" in the "
+        '{} run(s) astral-sh/setup-uv without UV_MANAGED_PYTHON: "1" in the '
         "top-level env: of the workflow, so a leg may run the runner image's "
         "Python instead of the one uv downloads. Add it, with the pointer to "
-        "the comment in ci.yml (#264).".format(", ".join(missing)))
+        "the comment in ci.yml (#264).".format(", ".join(missing))
+    )
 
 
 # 10. pip-audit reads a pylock.toml without its markers ------------------------
@@ -899,8 +983,11 @@ def test_pip_audit_reads_every_entry_of_a_pylock(tmp_path):
 
     lines = ['lock-version = "1.0"', 'created-by = "test"', ""]
     for name, version, marker in AUDITED:
-        lines += ["[[packages]]", 'name = "{}"'.format(name),
-                  'version = "{}"'.format(version)]
+        lines += [
+            "[[packages]]",
+            'name = "{}"'.format(name),
+            'version = "{}"'.format(version),
+        ]
         if marker:
             lines.append('marker = "{}"'.format(marker))
         lines.append("")
@@ -922,16 +1009,20 @@ def test_pip_audit_skips_requirements_whose_marker_is_false(tmp_path):
     from pip_audit._dependency_source import RequirementSource
 
     requirements = tmp_path / "requirements.txt"
-    requirements.write_text("".join(
-        "{}=={}{}\n".format(name, version,
-                            " ; " + marker if marker else "")
-        for name, version, marker in AUDITED), encoding="utf-8")
-    found = _collected(RequirementSource(
-        [requirements], no_deps=True, disable_pip=True))
-    assert found == {("first", "1.0"), ("second", "2.0")}, (
-        MSG_REQUIREMENTS.format(sorted(found), [
-            line for line in requirements.read_text(
-                encoding="utf-8").splitlines()]))
+    requirements.write_text(
+        "".join(
+            "{}=={}{}\n".format(name, version, " ; " + marker if marker else "")
+            for name, version, marker in AUDITED
+        ),
+        encoding="utf-8",
+    )
+    found = _collected(
+        RequirementSource([requirements], no_deps=True, disable_pip=True)
+    )
+    assert found == {("first", "1.0"), ("second", "2.0")}, MSG_REQUIREMENTS.format(
+        sorted(found),
+        [line for line in requirements.read_text(encoding="utf-8").splitlines()],
+    )
 
 
 # 11. The warning filter of the suite ---------------------------------------------
@@ -958,8 +1049,9 @@ def test_a_deprecation_that_noworkflow_triggers_fails_the_test():
     to the warnings summary that nobody reads.
     """
     try:
-        warnings.warn_explicit("probe", DeprecationWarning, "probe.py", 1,
-                               module="noworkflow.probe")
+        warnings.warn_explicit(
+            "probe", DeprecationWarning, "probe.py", 1, module="noworkflow.probe"
+        )
     except DeprecationWarning as error:
         assert str(error) == "probe"
     else:
@@ -978,10 +1070,15 @@ def test_sqlalchemy_2_0_warnings_stay_warnings():
     with warnings.catch_warnings(record=True) as caught:
         try:
             warnings.warn_explicit(
-                "probe", sqlalchemy.exc.MovedIn20Warning, "probe.py", 1,
-                module="noworkflow.probe")
+                "probe",
+                sqlalchemy.exc.MovedIn20Warning,
+                "probe.py",
+                1,
+                module="noworkflow.probe",
+            )
         except sqlalchemy.exc.MovedIn20Warning:
             pytest.fail(MSG_SA_EXCEPTION.format("raised"))
     categories = [warning.category for warning in caught]
-    assert categories == [sqlalchemy.exc.MovedIn20Warning], (
-        MSG_SA_EXCEPTION.format("not recorded: {}".format(categories)))
+    assert categories == [sqlalchemy.exc.MovedIn20Warning], MSG_SA_EXCEPTION.format(
+        "not recorded: {}".format(categories)
+    )

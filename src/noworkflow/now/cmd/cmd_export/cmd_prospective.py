@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now prospective'command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -18,10 +19,12 @@ class Prospective(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("trial", type=str, nargs="?",
-                help="trial id or none for last trial")
-        add_arg("--dir", type=str,
-                help="set project path where is the database. Default to current directory")
+        add_arg("trial", type=str, nargs="?", help="trial id or none for last trial")
+        add_arg(
+            "--dir",
+            type=str,
+            help="set project path where is the database. Default to current directory",
+        )
 
     def execute(self, args):
         persistence_config.connect_existing(args.dir or os.getcwd())

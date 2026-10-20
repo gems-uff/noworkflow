@@ -30,6 +30,7 @@ checks are counts.
 The mask itself is checked on every traceback style pytest renders, with
 an invented hostname.
 """
+
 import getpass
 import re
 import socket
@@ -50,7 +51,7 @@ from .helpers.reports import (
 
 MARK = "report-368"
 
-HOLDS_A_TRIAL = '''\
+HOLDS_A_TRIAL = """\
 import unittest
 
 import pytest
@@ -118,7 +119,7 @@ def test_twin_assertion_desired(connected_two_trials):
 
 def check_status(trial):
     assert trial.status == MARK, MARK + " twin-assertion"
-'''.format(mark=MARK)
+""".format(mark=MARK)
 
 # Each failure the child reports: the title of its section, and the text
 # that shows the report is still useful.
@@ -146,21 +147,31 @@ def searchable_hostnames(request, tmp_path):
     interpreter and the checkout), where it would be counted as a leak.
     """
     host = socket.gethostname()
-    names = [name for name in {host, host.split(".")[0]}
-             if usable_hostname(name)]
+    names = [name for name in {host, host.split(".")[0]} if usable_hostname(name)]
     if not names:
-        pytest.skip("this machine's hostname is too short or too generic "
-                    "to search for (normalize.usable_hostname)")
+        pytest.skip(
+            "this machine's hostname is too short or too generic "
+            "to search for (normalize.usable_hostname)"
+        )
     try:
         login = getpass.getuser()
     except (KeyError, OSError):  # no login name for this uid (a container)
         login = ""
-    printed = " ".join((str(tmp_path), str(Path.home()), login,
-                        sys.prefix, sys.base_prefix,
-                        str(request.config.rootpath)))
+    printed = " ".join(
+        (
+            str(tmp_path),
+            str(Path.home()),
+            login,
+            sys.prefix,
+            sys.base_prefix,
+            str(request.config.rootpath),
+        )
+    )
     if occurrences(names, printed):
-        pytest.skip("this machine's hostname is part of a path or a name "
-                    "that a report prints anyway")
+        pytest.skip(
+            "this machine's hostname is part of a path or a name "
+            "that a report prints anyway"
+        )
     return names
 
 
@@ -168,8 +179,7 @@ def pieces(name, size=12):
     """The pieces of ``size`` characters of ``name``, or the whole name"""
     if len(name) <= size:
         return {name.lower()}
-    return {name[index:index + size].lower()
-            for index in range(len(name) - size + 1)}
+    return {name[index : index + size].lower() for index in range(len(name) - size + 1)}
 
 
 def occurrences(names, text):
@@ -188,9 +198,8 @@ def sections(output):
     found = {}
     marks = list(SECTION.finditer(output))
     for index, match in enumerate(marks):
-        end = (marks[index + 1].start() if index + 1 < len(marks)
-               else len(output))
-        found[match.group(1)] = output[match.end():end]
+        end = marks[index + 1].start() if index + 1 < len(marks) else len(output)
+        found[match.group(1)] = output[match.end() : end]
     return found
 
 
@@ -203,10 +212,10 @@ def child_output(result, tmp_path):
     return output, saved
 
 
-@pytest.mark.parametrize("runxfail", [False, True],
-                         ids=["plain", "runxfail"])
+@pytest.mark.parametrize("runxfail", [False, True], ids=["plain", "runxfail"])
 def test_a_failing_test_that_holds_a_trial_never_prints_the_hostname(
-        request, tmp_path, runxfail):
+    request, tmp_path, runxfail
+):
     """The child's report names no host, and still says what failed"""
     names = searchable_hostnames(request, tmp_path)
     args = ["--runxfail"] if runxfail else []
@@ -215,24 +224,30 @@ def test_a_failing_test_that_holds_a_trial_never_prints_the_hostname(
     expected = dict(REPORTS, **(TWIN_REPORTS if runxfail else {}))
     found = sections(output)
     missing = sorted(set(expected) - set(found))
-    assert not missing, "no report for {} (the child's output is in {})" \
-        .format(missing, saved)
-    useless = sorted(title for title, text in expected.items()
-                     if text not in found[title])
-    assert not useless, "reports without their message: {} (see {})" \
-        .format(useless, saved)
+    assert not missing, "no report for {} (the child's output is in {})".format(
+        missing, saved
+    )
+    useless = sorted(
+        title for title, text in expected.items() if text not in found[title]
+    )
+    assert not useless, "reports without their message: {} (see {})".format(
+        useless, saved
+    )
     count = occurrences(names, output)
-    per_report = {title: occurrences(names, text)
-                  for title, text in found.items()
-                  if occurrences(names, text)}
+    per_report = {
+        title: occurrences(names, text)
+        for title, text in found.items()
+        if occurrences(names, text)
+    }
     assert count == 0, (
         "the child's output names this machine's hostname {} time(s), per "
-        "report {}; see {}, never paste it".format(count, per_report, saved))
-    unmasked = sorted(title for title in expected
-                      if PLACEHOLDER not in found[title])
+        "report {}; see {}, never paste it".format(count, per_report, saved)
+    )
+    unmasked = sorted(title for title in expected if PLACEHOLDER not in found[title])
     assert not unmasked, (
         "reports where no trial was masked, so the test no longer holds "
-        "one there: {} (see {})".format(unmasked, saved))
+        "one there: {} (see {})".format(unmasked, saved)
+    )
 
 
 COLLECTION_ERROR = """\
@@ -243,8 +258,7 @@ raise RuntimeError("collected on " + socket.gethostname())
 
 
 @pytest.mark.parametrize("args", [(), ("--pdb",)], ids=["plain", "pdb"])
-def test_a_collection_error_never_prints_the_hostname(request, tmp_path,
-                                                      args):
+def test_a_collection_error_never_prints_the_hostname(request, tmp_path, args):
     """A test module that fails to import is reported masked as well,
     also by ``--pdb``, which prints the report before
     ``pytest_collectreport`` (the child's stdin is empty, so the debugger
@@ -255,17 +269,18 @@ def test_a_collection_error_never_prints_the_hostname(request, tmp_path,
     count = occurrences(names, output)
     assert count == 0, (
         "the child's output names this machine's hostname {} time(s); see "
-        "{}, never paste it".format(count, saved))
+        "{}, never paste it".format(count, saved)
+    )
     assert "collected on " + PLACEHOLDER in output, (
-        "the message is not in the report (see {})".format(saved))
+        "the message is not in the report (see {})".format(saved)
+    )
 
 
 FAKE_HOST = "fakehost-368.example.org"
 FAKE_RULES = hostname_rules(FAKE_HOST)
 # Shaped like the hostnames of GitHub's macOS runners (test_normalize.py),
 # long enough for pytest to cut it inside a repr.
-LONG_HOST = ("iad20-eo1214-1524f517-96a6-4d74-9157-c1ff51b279a0"
-             "-56481D34DF8F.local")
+LONG_HOST = "iad20-eo1214-1524f517-96a6-4d74-9157-c1ff51b279a0-56481D34DF8F.local"
 
 
 def holds(argument):
@@ -287,18 +302,17 @@ def failure_holding_the_fake_host():
     raise AssertionError("wraps() did not raise")
 
 
-@pytest.mark.parametrize("style",
-                         ["long", "short", "line", "native", "value", "no"])
+@pytest.mark.parametrize("style", ["long", "short", "line", "native", "value", "no"])
 def test_mask_reaches_every_traceback_style(style):
     """Arguments, locals, messages and the chained cause are masked in
     every style, and what is not the hostname stays"""
     longrepr = failure_holding_the_fake_host().getrepr(
-        style=style, funcargs=True, showlocals=True, chain=True)
+        style=style, funcargs=True, showlocals=True, chain=True
+    )
     assert FAKE_HOST in str(longrepr), "the style does not show the host"
     text = str(mask(longrepr, FAKE_RULES))
     assert occurrences([FAKE_HOST], text) == 0, text
-    assert "raised by wraps() with user {}\\nowtest".format(
-        PLACEHOLDER) in text, text
+    assert "raised by wraps() with user {}\\nowtest".format(PLACEHOLDER) in text, text
 
 
 def cut_by_pytest(head, tail):
@@ -317,9 +331,11 @@ def test_mask_reaches_a_hostname_that_pytest_cut():
         excinfo = pytest.ExceptionInfo.from_current()
     text = str(excinfo.getrepr(style="long", funcargs=True))
     assert LONG_HOST not in text and occurrences([LONG_HOST], text) >= 2, (
-        "pytest no longer cuts both arguments inside the host:\n" + text)
-    masked = str(mask(excinfo.getrepr(style="long", funcargs=True),
-                      hostname_rules(LONG_HOST)))
+        "pytest no longer cuts both arguments inside the host:\n" + text
+    )
+    masked = str(
+        mask(excinfo.getrepr(style="long", funcargs=True), hostname_rules(LONG_HOST))
+    )
     assert occurrences([LONG_HOST], masked) == 0, masked
     assert "user_" + PLACEHOLDER + "..." in masked, masked
     assert "..." + PLACEHOLDER + "\\\\nowtest" in masked, masked
@@ -330,28 +346,44 @@ def test_the_reports_mask_this_machine_with_every_rule():
     for this machine's hostname, read once"""
     expected = hostname_rules(socket.gethostname())
     assert [rule.pattern for rule in HOSTNAME_RULES] == [
-        rule.pattern for rule in expected]
+        rule.pattern for rule in expected
+    ]
 
 
 def test_mask_report_masks_the_failure_and_the_captured_output():
     """A report's sections, a string failure, an xfail reason and a skip's
     tuple"""
     report = pytest.TestReport(
-        "test_x.py::test_x", ("test_x.py", 1, "test_x"), {}, "failed",
-        "failed on " + FAKE_HOST.upper(), "call",
-        sections=[("Captured stdout call", "user " + FAKE_HOST + "\n")])
+        "test_x.py::test_x",
+        ("test_x.py", 1, "test_x"),
+        {},
+        "failed",
+        "failed on " + FAKE_HOST.upper(),
+        "call",
+        sections=[("Captured stdout call", "user " + FAKE_HOST + "\n")],
+    )
     mask_report(report, FAKE_RULES)
     assert report.longrepr == "failed on " + PLACEHOLDER
-    assert report.sections == [("Captured stdout call",
-                                "user " + PLACEHOLDER + "\n")]
+    assert report.sections == [("Captured stdout call", "user " + PLACEHOLDER + "\n")]
     xfailed = pytest.TestReport(
-        "test_x.py::test_z", ("test_x.py", 3, "test_z"), {}, "skipped",
-        None, "call", wasxfail="fails on " + FAKE_HOST)
+        "test_x.py::test_z",
+        ("test_x.py", 3, "test_z"),
+        {},
+        "skipped",
+        None,
+        "call",
+        wasxfail="fails on " + FAKE_HOST,
+    )
     mask_report(xfailed, FAKE_RULES)
     assert xfailed.wasxfail == "fails on " + PLACEHOLDER
     skipped = pytest.TestReport(
-        "test_x.py::test_y", ("test_x.py", 2, "test_y"), {}, "skipped",
-        ("test_x.py", 2, "Skipped: no " + FAKE_HOST), "setup")
+        "test_x.py::test_y",
+        ("test_x.py", 2, "test_y"),
+        {},
+        "skipped",
+        ("test_x.py", 2, "Skipped: no " + FAKE_HOST),
+        "setup",
+    )
     mask_report(skipped, FAKE_RULES)
     assert skipped.longrepr == ("test_x.py", 2, "Skipped: no " + PLACEHOLDER)
 
@@ -360,7 +392,8 @@ def test_mask_keeps_a_longer_label_that_contains_the_host():
     """The rules of the goldens: the host is never part of a longer label"""
     text = "xfakehost-368.example.org, fakehost-3689 and fakehost-368..."
     assert mask(text, FAKE_RULES) == text.replace(
-        "fakehost-368...", PLACEHOLDER + "...")
+        "fakehost-368...", PLACEHOLDER + "..."
+    )
 
 
 def test_an_unsearchable_hostname_masks_nothing():
@@ -368,7 +401,12 @@ def test_an_unsearchable_hostname_masks_nothing():
     as it is"""
     assert hostname_rules("localhost") == [] and hostname_rules("abc") == []
     report = pytest.TestReport(
-        "test_x.py::test_x", ("test_x.py", 1, "test_x"), {}, "failed",
-        "failed on localhost", "call")
+        "test_x.py::test_x",
+        ("test_x.py", 1, "test_x"),
+        {},
+        "failed",
+        "failed on localhost",
+        "call",
+    )
     mask_report(report, hostname_rules("localhost"))
     assert report.longrepr == "failed on localhost"

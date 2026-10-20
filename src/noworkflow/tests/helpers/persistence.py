@@ -2,6 +2,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Persistence wiring shared by both test runners"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import contextlib
@@ -48,8 +49,7 @@ def connected_to(path):
     """
     path = os.path.abspath(str(path))
     if not persistence_config._has_provenance(path):
-        raise FileNotFoundError(
-            "no provenance store in {}".format(path))
+        raise FileNotFoundError("no provenance store in {}".format(path))
     with real_stores():
         persistence_config.connect(path)
         yield
@@ -77,11 +77,15 @@ def real_stores():
     same mocked content engine. The blocks nest.
     """
     saved_config = (
-        persistence_config.base_path, persistence_config.provenance_path,
-        persistence_config.should_mock, persistence_config.content_engine,
+        persistence_config.base_path,
+        persistence_config.provenance_path,
+        persistence_config.should_mock,
+        persistence_config.content_engine,
     )
     saved_relational = (
-        relational.db_path, relational.engine, relational._session_map,
+        relational.db_path,
+        relational.engine,
+        relational._session_map,
     )
     saved_content = (content.content_path, content.content_database_engine)
     saved_create_engine = relational_database.create_engine
@@ -117,9 +121,13 @@ def real_stores():
         for engine in engines:
             engine.dispose()
         relational.db_path, relational.engine, relational._session_map = (
-            saved_relational)
+            saved_relational
+        )
         relational.session_factory.configure(bind=relational.engine)
         content.content_path, content.content_database_engine = saved_content
-        (persistence_config.base_path, persistence_config.provenance_path,
-         persistence_config.should_mock,
-         persistence_config.content_engine) = saved_config
+        (
+            persistence_config.base_path,
+            persistence_config.provenance_path,
+            persistence_config.should_mock,
+            persistence_config.content_engine,
+        ) = saved_config

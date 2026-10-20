@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%now_set_default' magic"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
@@ -29,11 +30,18 @@ class NowSetDefault(IpythonCommandMagic):
     def add_arguments(self):
         super(NowSetDefault, self).add_arguments()
         add_arg = self.add_argument
-        add_arg("--model", type=str, default="*",
-                choices=["*"] + list(viewkeys(MetaModel.__classes__)),
-                help="""specifies the model""")
-        add_arg("defaults", nargs=argparse.REMAINDER,
-                help="Default assingments. Use the format var=value")
+        add_arg(
+            "--model",
+            type=str,
+            default="*",
+            choices=["*"] + list(viewkeys(MetaModel.__classes__)),
+            help="""specifies the model""",
+        )
+        add_arg(
+            "defaults",
+            nargs=argparse.REMAINDER,
+            help="Default assingments. Use the format var=value",
+        )
 
     def execute(self, func, line, cell, magic_cls):
         pattern = re.compile(r"\s*(?P<left>[\w\.]+)\s*=\s*(?P<right>\w+)\s*")

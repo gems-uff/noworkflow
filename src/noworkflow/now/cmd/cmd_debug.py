@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now debug' command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from .cmd_run import Run
@@ -10,7 +11,7 @@ from .cmd_run import Run
 
 class Debug(Run):
     """Debug a script collecting its provenance
-       This command is similar to Run, but defines different variables"""
+    This command is similar to Run, but defines different variables"""
 
     def __init__(self, *args, **kwargs):
         super(Debug, self).__init__(*args, **kwargs)

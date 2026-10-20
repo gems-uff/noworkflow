@@ -37,6 +37,7 @@ sh script) are not run on Windows, where none was measured. The script
 writes its file in binary mode, so the file holds the same bytes on every
 system.
 """
+
 import os
 import shlex
 import shutil
@@ -57,67 +58,74 @@ from .harness import last_line
 from .oracle import STDLIB_ON_ANOTHER_DRIVE, Defect, known_defects
 
 pytestmark = pytest.mark.skipif(
-    shutil.which("git") is None, reason="the puregit engine needs `git`")
-
-SCRIPT = (
-    "with open('data.txt', 'wb') as handle:\n"
-    "    handle.write(b'hello\\n')\n"
+    shutil.which("git") is None, reason="the puregit engine needs `git`"
 )
+
+SCRIPT = "with open('data.txt', 'wb') as handle:\n    handle.write(b'hello\\n')\n"
 DATA = b"hello\n"
 # Where the plain engine looks for the script's content: the path of git's
 # blob id in the plain layout, content/<h[:2]>/<h[2:]>, as the message of a
 # FileNotFoundError shows it (the repr of the path: Windows' backslashes
 # come doubled).
 SCRIPT_BLOB = git_blob_hex(SCRIPT.encode("utf-8"))
-SCRIPT_AS_PLAIN = repr(
-    os.path.join("content", SCRIPT_BLOB[:2], SCRIPT_BLOB[2:]))[1:-1]
+SCRIPT_AS_PLAIN = repr(os.path.join("content", SCRIPT_BLOB[:2], SCRIPT_BLOB[2:]))[1:-1]
 WINDOWS_NOT_MEASURED = pytest.mark.skipif(
-    os.name == "nt", reason="not measured on Windows: tree paths use os.sep, "
-    "and git gc goes through shell=True")
+    os.name == "nt",
+    reason="not measured on Windows: tree paths use os.sep, "
+    "and git gc goes through shell=True",
+)
 POSIX_HOOK = pytest.mark.skipif(
-    os.name == "nt", reason="not measured on Windows: the hook is an sh "
-    "script with an executable mode")
+    os.name == "nt",
+    reason="not measured on Windows: the hook is an sh script with an executable mode",
+)
 
 GC_FLAGS = Defect(
     "#224: cmd_gc calls content.gc() without -agg, and "
     "git_system.garbage_collection passes ['git gc', '--quiet', ...] with "
     "shell=True, so the shell runs a bare `git gc`",
-    signature="traced: ['git gc']")
+    signature="traced: ['git gc']",
+)
 COMMITTER_IDENTITY = Defect(
     "#327: git_system.commit_tree sets only the "
     "author, so git needs the user's identity for the committer; without "
     "one, the initial commit of content.git fails and now run exits 1 "
     "before the script runs",
-    signature="Committer identity unknown")
+    signature="Committer identity unknown",
+)
 ENGINE_NOT_DETECTED = Defect(
     "#332: define_engine never selects "
     "puregit for an existing content.git, so now restore reads the store "
     "as plain, finds every file changed (sha1 against git's blob ids), "
     "records a backup trial and crashes looking for the script's git blob "
     "id in the plain layout",
-    signature=SCRIPT_AS_PLAIN)
+    signature=SCRIPT_AS_PLAIN,
+)
 FIND_SUBHASH = (
     "#330: PureGitEngine.find_subhash prints its "
     "arguments and every object, returns bytes, and takes file names from "
-    "`git rev-list --objects --all` as candidates")
+    "`git rev-list --objects --all` as candidates"
+)
 FIND_SUBHASH_PRINTS = Defect(FIND_SUBHASH, signature="b'ce013625'")
 FIND_SUBHASH_NAME = Defect(FIND_SUBHASH, signature="b'script.py'")
 DOT_GIT_PATH = Defect(
     "#329: gitbase._inc_name keeps the '.git/' "
     "component, git update-index rejects it, and commit_content raises "
     "after the trial is stored, leaving its content unreferenced",
-    signature="Invalid path '.git/HEAD'")
+    signature="Invalid path '.git/HEAD'",
+)
 HOOK_OF_THE_STORE = Defect(
     "#399: git_system runs git with cwd set to the store's content.git and "
     "never overrides core.hooksPath, so git runs that repository's own "
     "hooks: the commit of now restore's backup trial runs an executable "
     "hooks/reference-transaction (update-ref)",
-    signature="git ran code from the store's content.git")
+    signature="git ran code from the store's content.git",
+)
 MAIN_WITHOUT_SPEC = Defect(
     "#325: Metascript.clear_namespace empties "
     "__main__ and restores only __name__, __file__ and __builtins__, and "
     "the spawn and forkserver start methods read __main__.__spec__",
-    signature="module '__main__' has no attribute '__spec__'")
+    signature="module '__main__' has no attribute '__spec__'",
+)
 SPAWN_ON_ANOTHER_DRIVE = Defect(
     "#294: noWorkflow's module finder records "
     "each module the script imports with create_code_block, which calls "
@@ -125,15 +133,22 @@ SPAWN_ON_ANOTHER_DRIVE = Defect(
     "on another drive than the project, relpath raises ValueError at the "
     "import of multiprocessing.popen_spawn_win32, before the spawn start "
     "method reads __main__.__spec__",
-    signature="path is on mount", systems=("win32",),
-    condition=STDLIB_ON_ANOTHER_DRIVE)
+    signature="path is on mount",
+    systems=("win32",),
+    condition=STDLIB_ON_ANOTHER_DRIVE,
+)
 
 
 def store_git(project, *args):
     """Run the test's own ``git`` in the store's ``content.git``"""
     completed = subprocess.run(
-        ["git", *args], cwd=str(project.store / "content.git"),
-        env=project.env, capture_output=True, encoding="utf-8", timeout=30)
+        ["git", *args],
+        cwd=str(project.store / "content.git"),
+        env=project.env,
+        capture_output=True,
+        encoding="utf-8",
+        timeout=30,
+    )
     assert completed.returncode == 0, completed.stderr
     return completed.stdout.splitlines()
 
@@ -144,17 +159,22 @@ def commit_log(project):
     The identities pass through ``shown``: one the test did not set is
     never printed.
     """
-    return [(subject, shown(author), shown(committer))
-            for subject, author, committer in (
-                line.split("|") for line in store_git(
-                    project, "log", "--format=%s|%an <%ae>|%cn <%ce>",
-                    "refs/heads/master"))]
+    return [
+        (subject, shown(author), shown(committer))
+        for subject, author, committer in (
+            line.split("|")
+            for line in store_git(
+                project, "log", "--format=%s|%an <%ae>|%cn <%ce>", "refs/heads/master"
+            )
+        )
+    ]
 
 
 def loose_and_packed(project):
     """``(loose, packed)`` object counts of the store's ``content.git``"""
-    counts = dict(line.split(": ") for line in store_git(
-        project, "count-objects", "-v"))
+    counts = dict(
+        line.split(": ") for line in store_git(project, "count-objects", "-v")
+    )
     return int(counts["count"]), int(counts["in-pack"])
 
 
@@ -163,14 +183,16 @@ def puregit_project(project):
     """``project`` with a synthetic git identity and configuration"""
     config = project.root / "gitconfig"
     config.write_text("", encoding="utf-8")
-    project.env.update({
-        "GIT_CONFIG_GLOBAL": str(config),
-        "GIT_CONFIG_NOSYSTEM": "1",
-        "GIT_AUTHOR_NAME": IDENTITY_NAME,
-        "GIT_AUTHOR_EMAIL": IDENTITY_EMAIL,
-        "GIT_COMMITTER_NAME": IDENTITY_NAME,
-        "GIT_COMMITTER_EMAIL": IDENTITY_EMAIL,
-    })
+    project.env.update(
+        {
+            "GIT_CONFIG_GLOBAL": str(config),
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_AUTHOR_NAME": IDENTITY_NAME,
+            "GIT_AUTHOR_EMAIL": IDENTITY_EMAIL,
+            "GIT_COMMITTER_NAME": IDENTITY_NAME,
+            "GIT_COMMITTER_EMAIL": IDENTITY_EMAIL,
+        }
+    )
     project.write("script.py", SCRIPT)
     return project
 
@@ -186,8 +208,8 @@ def puregit_store(puregit_project):
 # now run
 # ---------------------------------------------------------------------------
 
-def test_a_puregit_run_commits_the_trial_with_the_synthetic_identity(
-        puregit_store):
+
+def test_a_puregit_run_commits_the_trial_with_the_synthetic_identity(puregit_store):
     """``now run`` creates ``content.git`` (no ``content/``) and commits the
     trial on master: the script and the file it wrote, under git's blob ids
     (which the store's database records), by Noworkflow. The committer is
@@ -196,22 +218,24 @@ def test_a_puregit_run_commits_the_trial_with_the_synthetic_identity(
     trial = puregit_store.trials()[0]
     accesses = puregit_store.query(
         "SELECT name, content_hash_after FROM file_access WHERE trial_id = ?",
-        trial["id"])
+        trial["id"],
+    )
 
-    assert sorted(os.listdir(puregit_store.store)) == [
-        "content.git", "db.sqlite"]
-    assert accesses == [
-        {"name": "data.txt", "content_hash_after": git_blob_hex(DATA)}]
+    assert sorted(os.listdir(puregit_store.store)) == ["content.git", "db.sqlite"]
+    assert accesses == [{"name": "data.txt", "content_hash_after": git_blob_hex(DATA)}]
     log = commit_log(puregit_store)
     assert [(subject, author) for subject, author, _ in log] == [
         ("Trial {}".format(trial["id"]), NOWORKFLOW_AUTHOR),
-        ("Initial Commit", NOWORKFLOW_AUTHOR)]
-    assert [committer in (IDENTITY, NOWORKFLOW_AUTHOR)
-            for _, _, committer in log] == [True, True]
-    assert set(store_git(puregit_store, "ls-tree", "-r",
-                         "refs/heads/master")) == {
+        ("Initial Commit", NOWORKFLOW_AUTHOR),
+    ]
+    assert [committer in (IDENTITY, NOWORKFLOW_AUTHOR) for _, _, committer in log] == [
+        True,
+        True,
+    ]
+    assert set(store_git(puregit_store, "ls-tree", "-r", "refs/heads/master")) == {
         "100644 blob {}\tdata.txt".format(git_blob_hex(DATA)),
-        "100644 blob {}\tscript.py".format(SCRIPT_BLOB)}
+        "100644 blob {}\tscript.py".format(SCRIPT_BLOB),
+    }
 
 
 def run_without_identity(project):
@@ -224,9 +248,16 @@ def run_without_identity(project):
         del project.env["GIT_{}_NAME".format(role)]
         del project.env["GIT_{}_EMAIL".format(role)]
     (project.root / "gitconfig").write_text(
-        "[user]\n\tuseConfigOnly = true\n", encoding="utf-8")
-    return project.run("run", "--content-engine", "puregit", "script.py",
-                       expect=None, allow_stderr=True)
+        "[user]\n\tuseConfigOnly = true\n", encoding="utf-8"
+    )
+    return project.run(
+        "run",
+        "--content-engine",
+        "puregit",
+        "script.py",
+        expect=None,
+        allow_stderr=True,
+    )
 
 
 def test_run_with_puregit_without_a_git_identity(puregit_project):
@@ -238,8 +269,8 @@ def test_run_with_puregit_without_a_git_identity(puregit_project):
     assert result.returncode == 1, str(result)
     assert "Committer identity unknown" in result.stdout
     assert last_line(result.stderr).startswith(
-        "subprocess.CalledProcessError: Command '['git', 'commit-tree'"), (
-        str(result))
+        "subprocess.CalledProcessError: Command '['git', 'commit-tree'"
+    ), str(result)
     assert not (puregit_project.path / "data.txt").exists()
     assert os.listdir(puregit_project.store) == ["content.git"]
 
@@ -259,16 +290,22 @@ def run_reading_dot_git(project):
     ``.git/HEAD``"""
     (project.path / ".git").mkdir()
     (project.path / ".git" / "HEAD").write_bytes(b"ref: refs/heads/main\n")
-    project.write("script.py",
-                  "with open('.git/HEAD') as handle:\n"
-                  "    print(handle.read().strip())\n")
-    return project.run("run", "--content-engine", "puregit", "script.py",
-                       expect=None, allow_stderr=True)
+    project.write(
+        "script.py",
+        "with open('.git/HEAD') as handle:\n    print(handle.read().strip())\n",
+    )
+    return project.run(
+        "run",
+        "--content-engine",
+        "puregit",
+        "script.py",
+        expect=None,
+        allow_stderr=True,
+    )
 
 
 @WINDOWS_NOT_MEASURED
-def test_run_with_puregit_of_a_script_that_reads_under_dot_git(
-        puregit_project):
+def test_run_with_puregit_of_a_script_that_reads_under_dot_git(puregit_project):
     """The trial is stored as finished, then the commit of its content
     fails on the tree path '.git/HEAD': exit 1, and master keeps only the
     initial commit"""
@@ -278,24 +315,25 @@ def test_run_with_puregit_of_a_script_that_reads_under_dot_git(
     assert "Invalid path '.git/HEAD'" in result.stdout
     assert last_line(result.stderr).startswith(
         "subprocess.CalledProcessError: Command '['git', 'update-index', "
-        "'--add', '--cacheinfo', '100644', "), str(result)
-    assert [trial["status"] for trial in puregit_project.trials()] == [
-        "finished"]
-    assert store_git(puregit_project, "log", "--format=%s",
-                     "refs/heads/master") == ["Initial Commit"]
+        "'--add', '--cacheinfo', '100644', "
+    ), str(result)
+    assert [trial["status"] for trial in puregit_project.trials()] == ["finished"]
+    assert store_git(puregit_project, "log", "--format=%s", "refs/heads/master") == [
+        "Initial Commit"
+    ]
 
 
 @WINDOWS_NOT_MEASURED
 @known_defects(DOT_GIT_PATH)
-def test_run_with_puregit_of_a_script_that_reads_under_dot_git_desired(
-        puregit_project):
+def test_run_with_puregit_of_a_script_that_reads_under_dot_git_desired(puregit_project):
     """Desired: the run succeeds and the content it read is reachable from
     master, so that ``now gc`` keeps it"""
     result = run_reading_dot_git(puregit_project)
 
     assert result.returncode == 0, str(result)
     assert git_blob_hex(b"ref: refs/heads/main\n") in store_git(
-        puregit_project, "rev-list", "--objects", "--all")
+        puregit_project, "rev-list", "--objects", "--all"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -303,8 +341,10 @@ def test_run_with_puregit_of_a_script_that_reads_under_dot_git_desired(
 # ---------------------------------------------------------------------------
 
 GC_ARGS = pytest.mark.parametrize(
-    "args, flags", [((), " --quiet"), (("-agg",), " --quiet --aggressive")],
-    ids=["default", "aggressive"])
+    "args, flags",
+    [((), " --quiet"), (("-agg",), " --quiet --aggressive")],
+    ids=["default", "aggressive"],
+)
 
 
 def gc_under_trace(project, args):
@@ -320,7 +360,7 @@ def gc_under_trace(project, args):
     for line in trace.read_text(encoding="utf-8").splitlines():
         command = line.split("trace: ", 1)[-1].strip()
         if command.startswith("built-in: git gc"):
-            commands.append(command[len("built-in: "):])
+            commands.append(command[len("built-in: ") :])
     return result, commands
 
 
@@ -354,6 +394,7 @@ def test_gc_on_a_puregit_store_desired(puregit_store, args, flags):
 # now restore
 # ---------------------------------------------------------------------------
 
+
 def test_restore_of_a_puregit_store_without_the_engine_flag(puregit_store):
     """Without ``--content-engine``, ``now restore`` reads the store as
     plain: it adds an empty ``content/``, finds the unchanged script
@@ -368,13 +409,15 @@ def test_restore_of_a_puregit_store_without_the_engine_flag(puregit_store):
     assert stderr.startswith("FileNotFoundError: [Errno 2] "), str(result)
     assert stderr.endswith(SCRIPT_AS_PLAIN + "'"), str(result)
     assert sorted(os.listdir(puregit_store.store)) == [
-        "content", "content.git", "db.sqlite"]
+        "content",
+        "content.git",
+        "db.sqlite",
+    ]
     assert len(puregit_store.trials()) == 2
 
 
 @known_defects(ENGINE_NOT_DETECTED)
-def test_restore_of_a_puregit_store_without_the_engine_flag_desired(
-        puregit_store):
+def test_restore_of_a_puregit_store_without_the_engine_flag_desired(puregit_store):
     """Desired: the store is read with the engine that wrote it; nothing
     changed, so restore succeeds without a second content database"""
     result = puregit_store.run("restore", "1", expect=None, allow_stderr=True)
@@ -385,9 +428,20 @@ def test_restore_of_a_puregit_store_without_the_engine_flag_desired(
 
 def restore_data(project, file_id, engine="puregit"):
     """``now restore 1 -f data.txt -i <file_id> -t out.txt``"""
-    return project.run("restore", "1", "--content-engine", engine,
-                       "-f", "data.txt", "-i", file_id, "-t", "out.txt",
-                       expect=None, allow_stderr=True)
+    return project.run(
+        "restore",
+        "1",
+        "--content-engine",
+        engine,
+        "-f",
+        "data.txt",
+        "-i",
+        file_id,
+        "-t",
+        "out.txt",
+        expect=None,
+        allow_stderr=True,
+    )
 
 
 def test_restore_by_a_hash_prefix_on_a_puregit_store(puregit_store):
@@ -432,13 +486,13 @@ def test_restore_by_a_file_name_prefix_on_a_puregit_store(puregit_store):
     assert result.returncode == 1, str(result)
     assert last_line(result.stderr) == (
         "subprocess.CalledProcessError: Command '['git', 'cat-file', '-p', "
-        "b'script.py']' returned non-zero exit status 128.")
+        "b'script.py']' returned non-zero exit status 128."
+    )
     assert not (puregit_store.path / "out.txt").exists()
 
 
 @known_defects(FIND_SUBHASH_NAME)
-def test_restore_by_a_file_name_prefix_on_a_puregit_store_desired(
-        puregit_store):
+def test_restore_by_a_file_name_prefix_on_a_puregit_store_desired(puregit_store):
     """Desired: as on plain, no version is found"""
     result = restore_data(puregit_store, "script")
 
@@ -458,13 +512,17 @@ def restore_with_a_hook_in_the_store(project):
     hook.parent.mkdir(exist_ok=True)
     hook.write_text(
         "#!/bin/sh\necho reference-transaction >> {}\n".format(
-            shlex.quote(str(marker))),
-        encoding="utf-8", newline="\n")
+            shlex.quote(str(marker))
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
     hook.chmod(0o755)
     project.write("script.py", SCRIPT + "# changed\n")
 
-    result = project.run("restore", "--content-engine", "puregit", "1",
-                         expect=None, allow_stderr=True)
+    result = project.run(
+        "restore", "--content-engine", "puregit", "1", expect=None, allow_stderr=True
+    )
 
     if not marker.exists():
         return result, []
@@ -472,8 +530,7 @@ def restore_with_a_hook_in_the_store(project):
 
 
 @POSIX_HOOK
-def test_restore_on_a_puregit_store_runs_the_hook_of_its_content_git(
-        puregit_store):
+def test_restore_on_a_puregit_store_runs_the_hook_of_its_content_git(puregit_store):
     """``now restore`` records the backup trial, puts the script back and
     exits 0; committing the backup trial's content (``update-ref``) runs
     the store's hook. How many times is git's business, so only the hook's
@@ -482,24 +539,20 @@ def test_restore_on_a_puregit_store_runs_the_hook_of_its_content_git(
 
     assert result.returncode == 0, str(result)
     assert "[now] Backup Trial " in result.stdout
-    assert (puregit_store.path / "script.py").read_text(
-        encoding="utf-8") == SCRIPT
+    assert (puregit_store.path / "script.py").read_text(encoding="utf-8") == SCRIPT
     assert set(runs) == {"reference-transaction"}
 
 
 @POSIX_HOOK
 @known_defects(HOOK_OF_THE_STORE)
-def test_restore_never_runs_code_from_the_stores_content_git_desired(
-        puregit_store):
+def test_restore_never_runs_code_from_the_stores_content_git_desired(puregit_store):
     """Desired (#399): ``now restore`` runs no hook of the store's
     ``content.git`` and still restores the script"""
     result, runs = restore_with_a_hook_in_the_store(puregit_store)
 
-    assert runs == [], (
-        "git ran code from the store's content.git: {}".format(runs))
+    assert runs == [], "git ran code from the store's content.git: {}".format(runs)
     assert result.returncode == 0, str(result)
-    assert (puregit_store.path / "script.py").read_text(
-        encoding="utf-8") == SCRIPT
+    assert (puregit_store.path / "script.py").read_text(encoding="utf-8") == SCRIPT
 
 
 # ---------------------------------------------------------------------------
@@ -533,8 +586,13 @@ def test_spawn_script_runs_under_python(project):
     project.write("script.py", SPAWN_SCRIPT)
 
     completed = subprocess.run(
-        [sys.executable, "script.py"], cwd=str(project.path), env=project.env,
-        capture_output=True, encoding="utf-8", timeout=60)
+        [sys.executable, "script.py"],
+        cwd=str(project.path),
+        env=project.env,
+        capture_output=True,
+        encoding="utf-8",
+        timeout=60,
+    )
 
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == ["child", "child exit code: 0"]
@@ -549,8 +607,8 @@ def test_spawn_under_now_run(project):
     result = project.run("run", "script.py")
 
     assert result.stdout == (
-        "start raised AttributeError: module '__main__' has no attribute "
-        "'__spec__'\n"), str(result)
+        "start raised AttributeError: module '__main__' has no attribute '__spec__'\n"
+    ), str(result)
 
 
 @known_defects(MAIN_WITHOUT_SPEC, SPAWN_ON_ANOTHER_DRIVE)

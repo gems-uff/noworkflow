@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight objects for storage during collection"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from future.utils import viewitems, viewvalues
@@ -21,7 +22,7 @@ class ObjectStore(object):
         self.cls = cls
         self.store = {}
         self.order = []
-        self.id = 0                                                              # pylint: disable=invalid-name
+        self.id = 0  # pylint: disable=invalid-name
         self.count = 0
 
     def __getitem__(self, index):
@@ -38,7 +39,7 @@ class ObjectStore(object):
         self.store[self.id] = self.cls(self.id, *args)
         self.order.append(self.id)
         return self.id
-    
+
     def add_from_object(self, obje):
         """Add object to store"""
         self.id += 1
@@ -65,7 +66,7 @@ class ObjectStore(object):
         """Remove object from storage"""
         for key, val in viewitems(self.store):
             if val == value:
-                #self.order.remove(key)
+                # self.order.remove(key)
                 del self.store[key]
                 self.count -= 1
 
@@ -126,6 +127,7 @@ class ObjectStore(object):
         """Store object store into database"""
         self.cls.model.store(self, partial)
 
+
 class SharedObjectStore(ObjectStore):
     """Temporary storage for LW objects. Share ids"""
 
@@ -162,20 +164,20 @@ def define_attrs(required, extra=None):
     return slots, attributes
 
 
-class BaseLW(object):                                                            # pylint: disable=too-few-public-methods
+class BaseLW(object):  # pylint: disable=too-few-public-methods
     """Lightweight modules base class"""
 
     def keys(self):
         """Return attributes that should be saved"""
-        return self.attributes                                                   # pylint: disable=no-member
+        return self.attributes  # pylint: disable=no-member
 
     def set_trial_id(self, value):
         self.trial_id = value
 
     def __iter__(self):
-        return iter(self.attributes)                                             # pylint: disable=no-member
+        return iter(self.attributes)  # pylint: disable=no-member
 
     def __getitem__(self, key):
-        if key in self.nullable and getattr(self, key) == -1:                     # pylint: disable=no-member
+        if key in self.nullable and getattr(self, key) == -1:  # pylint: disable=no-member
             return None
         return getattr(self, key)

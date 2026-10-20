@@ -23,6 +23,7 @@ git engines are git's behavior or pure Python, the same on every system;
 the tests that depend on tree paths or on ``git gc`` are not run on Windows,
 where neither was measured.
 """
+
 import itertools
 import os
 import subprocess
@@ -66,12 +67,9 @@ CONTENTS = [
     pytest.param(bytes(range(256)) * 400, id="100KiB"),
 ]
 # The git engines only: dulwich and pygit inherit gitbase's gc(aggressive).
-GIT_SPECS = pytest.mark.parametrize(
-    "engine_spec", GIT_ENGINES, ids=str, indirect=True)
-PUREGIT_ONLY = pytest.mark.parametrize(
-    "engine_spec", [PUREGIT], ids=str, indirect=True)
-PLAIN_ONLY = pytest.mark.parametrize(
-    "engine_spec", [PLAIN], ids=str, indirect=True)
+GIT_SPECS = pytest.mark.parametrize("engine_spec", GIT_ENGINES, ids=str, indirect=True)
+PUREGIT_ONLY = pytest.mark.parametrize("engine_spec", [PUREGIT], ids=str, indirect=True)
+PLAIN_ONLY = pytest.mark.parametrize("engine_spec", [PLAIN], ids=str, indirect=True)
 # A missing hash: no sha1 of a content starts with 40 zeros.
 MISSING = "0" * 40
 # A real SHA-1 collision: the first 320 bytes of shattered-1.pdf and
@@ -88,34 +86,39 @@ SHATTERED_HEADER = bytes.fromhex(
     "537562747970652035203020522f46696c7465722036203020522f436f6c6f72"
     "53706163652037203020522f4c656e6774682038203020522f42697473506572"
     "436f6d706f6e656e7420383e3e0a73747265616d0affd8fffe00245348412d31"
-    "20697320646561642121212121852fec092339759c39b1a1c63c4c97e1fffe01")
+    "20697320646561642121212121852fec092339759c39b1a1c63c4c97e1fffe01"
+)
 SHATTERED_1 = SHATTERED_HEADER + bytes.fromhex(
     "7346dc9166b67e118f029ab621b2560ff9ca67cca8c7f85ba84c79030c2b3de2"
     "18f86db3a90901d5df45c14f26fedfb3dc38e96ac22fe7bd728f0e45bce046d2"
     "3c570feb141398bb552ef5a0a82be331fea48037b8b5d71f0e332edf93ac3500"
-    "eb4ddc0decc1a864790c782c76215660dd309791d06bd0af3f98cda4bc4629b1")
+    "eb4ddc0decc1a864790c782c76215660dd309791d06bd0af3f98cda4bc4629b1"
+)
 SHATTERED_2 = SHATTERED_HEADER + bytes.fromhex(
     "7f46dc93a6b67e013b029aaa1db2560b45ca67d688c7f84b8c4c791fe02b3df6"
     "14f86db1690901c56b45c1530afedfb76038e972722fe7ad728f0e4904e046c2"
     "30570fe9d41398abe12ef5bc942be33542a4802d98b5d70f2a332ec37fac3514"
-    "e74ddc0f2cc1a874cd0c78305a21566461309789606bd0bf3f98cda8044629a1")
+    "e74ddc0f2cc1a874cd0c78305a21566461309789606bd0bf3f98cda8044629a1"
+)
 SHATTERED_SHA1 = "f92d74e3874587aaf443d1db961d4e26dde13e9c"
 
 GC_ARGUMENT = Defect(
     "#224: now gc calls content.gc() with no argument, and "
     "PlainEngine.gc(content_hash) requires one",
-    signature="gc() missing 1 required positional argument: 'content_hash'")
+    signature="gc() missing 1 required positional argument: 'content_hash'",
+)
 GC_AGGRESSIVE = Defect(
     "#224: now gc never passes -agg to the engine, and neither "
     "PlainEngine.gc(content_hash) nor PureGitEngine.gc(self), which shadows "
     "gitbase's gc(aggressive=False), accepts it",
-    signature="gc() got an unexpected keyword argument 'aggressive'")
+    signature="gc() got an unexpected keyword argument 'aggressive'",
+)
 PLAIN_PUT_FILENAME = Defect(
     "#247: PlainEngine.put(content, filename) has no default for filename, "
     "which ContentDatabaseEngine.put defaults to 'generic'; cmd_import "
     "calls content.put(content)",
-    signature="PlainEngine.put() missing 1 required positional argument: "
-              "'filename'")
+    signature="PlainEngine.put() missing 1 required positional argument: 'filename'",
+)
 
 
 def _abspath_none_message():
@@ -135,76 +138,94 @@ ABSPATH_NONE = _abspath_none_message()
 GIT_PUT_NONE = Defect(
     "#247: cmd_pull calls content.put(content, None), and "
     "GitContentDatabaseEngine._inc_name passes None to os.path.abspath",
-    signature=ABSPATH_NONE)
+    signature=ABSPATH_NONE,
+)
 PLAIN_GET_PATH = Defect(
     "#224: PlainEngine.get joins content_path, hash[:2] and hash[2:] "
     "without validating the hash, and os.path.join drops the content "
     "directory at an absolute component, so a path-shaped hash reads any "
     "file",
-    signature="PlainEngine.get read a file outside the content directory")
+    signature="PlainEngine.get read a file outside the content directory",
+)
 SHA1_COLLISION = Defect(
     "#398: PlainEngine.do_put names a content by hashlib.sha1 of its bytes "
     "and writes it only if no file has that name yet, and PlainEngine.get "
     "returns that file as it is: of two contents that share a SHA-1, the "
     "second gets the first's id and only the first's bytes are kept",
-    signature="gives the first content's bytes")
+    signature="gives the first content's bytes",
+)
 COMMITTER_IDENTITY = Defect(
     "#327: git_system.commit_tree sets only "
     "GIT_AUTHOR_NAME/EMAIL, so git takes the committer from the user's "
     "git configuration or guesses it from the machine; without one, "
     "PureGitEngine.connect raises CalledProcessError on commit-tree",
-    signature="Committer identity unknown")
+    signature="Committer identity unknown",
+)
 CONFIGURED_COMMITTER = Defect(
-    COMMITTER_IDENTITY.reason,
-    signature="committer: " + CONFIGURED_IDENTITY)
+    COMMITTER_IDENTITY.reason, signature="committer: " + CONFIGURED_IDENTITY
+)
 REPOSITORY_ENV = (
     "#328: git_system runs every git "
     "command in the inherited environment, so GIT_DIR or GIT_INDEX_FILE "
     "(exported by a git hook) wins over cwd=content.git: update-ref moves "
     "the other repository's master, and update-index and `git rm -r "
-    "--cached .` rewrite its index")
-INDEX_OF_ANOTHER_REPOSITORY = Defect(
-    REPOSITORY_ENV, signature="[('D', 'a')]")
+    "--cached .` rewrite its index"
+)
+INDEX_OF_ANOTHER_REPOSITORY = Defect(REPOSITORY_ENV, signature="[('D', 'a')]")
 # The whole history: 'Trial T' alone is also in the message of a failed
 # `git commit-tree ... -m 'Trial T'`.
 GIT_DIR_OF_ANOTHER_REPOSITORY = Defect(
     REPOSITORY_ENV,
     signature="master of the other repository: "
-              "['Trial T', 'Initial Commit', 'user work']")
+    "['Trial T', 'Initial Commit', 'user work']",
+)
 INVALID_TREE_PATH = (
     "#329: gitbase._inc_name keeps '.git/' "
     "components and tests the project directory as a string prefix "
     "(a sibling directory becomes '../<sibling>/...'); git update-index "
     "rejects both, so commit_content raises and the trial's content stays "
-    "unreferenced, for git gc to prune")
+    "unreferenced, for git gc to prune"
+)
 DOT_GIT_PATH = Defect(INVALID_TREE_PATH, signature="Invalid path '.git/HEAD'")
-SIBLING_PATH = Defect(
-    INVALID_TREE_PATH, signature="Invalid path '../project2/x.txt'")
+SIBLING_PATH = Defect(INVALID_TREE_PATH, signature="Invalid path '../project2/x.txt'")
 FIND_SUBHASH = (
     "#330: PureGitEngine.find_subhash prints its "
     "arguments and every object, returns the bytes token, and scans `git "
     "rev-list --objects --all` split on whitespace, so file names are "
-    "candidates")
+    "candidates"
+)
 FIND_SUBHASH_BYTES = Defect(
-    FIND_SUBHASH, signature="b'ce013625030ba8dba906f756967f9e9ca394464a'")
+    FIND_SUBHASH, signature="b'ce013625030ba8dba906f756967f9e9ca394464a'"
+)
 FIND_SUBHASH_NAME = Defect(FIND_SUBHASH, signature="b'script.py'")
 CONFIG_PATH = Defect(
     "#353: PersistenceConfig.__init__ sets "
     "self.path, whose setter iterates self.delegate, before self.delegate "
     "exists",
-    signature="'PersistenceConfig' object has no attribute 'delegate'")
+    signature="'PersistenceConfig' object has no attribute 'delegate'",
+)
 GIT_BASE_PATH = Defect(
     "#353: GitContentDatabaseEngine.__init__ "
     "sets self.base_path = None after ContentDatabaseEngine.__init__ ran "
     "set_path; only ContentDatabase.set_path, which runs it again, hides it",
-    signature="startswith first arg must be str or a tuple of str, "
-              "not NoneType")
+    signature="startswith first arg must be str or a tuple of str, not NoneType",
+)
 
 
 def master_of(repository):
     """The commit ``refs/heads/master`` names, or None"""
-    found = git("rev-parse", "--verify", "-q", "refs/heads/master",
-                cwd=repository, check=False).decode("utf-8").strip()
+    found = (
+        git(
+            "rev-parse",
+            "--verify",
+            "-q",
+            "refs/heads/master",
+            cwd=repository,
+            check=False,
+        )
+        .decode("utf-8")
+        .strip()
+    )
     return found or None
 
 
@@ -215,11 +236,24 @@ def commit_fields(repository, commit):
     never printed.
     """
     # Not stripped: the parents line of an initial commit is empty.
-    parents, tree, subject, author, committer = git(
-        "log", "-1", "--format=%P%n%T%n%s%n%an <%ae>%n%cn <%ce>", commit,
-        cwd=repository).decode("utf-8").split("\n")[:5]
-    return {"parents": parents.split(), "tree": tree, "subject": subject,
-            "author": shown(author), "committer": shown(committer)}
+    parents, tree, subject, author, committer = (
+        git(
+            "log",
+            "-1",
+            "--format=%P%n%T%n%s%n%an <%ae>%n%cn <%ce>",
+            commit,
+            cwd=repository,
+        )
+        .decode("utf-8")
+        .split("\n")[:5]
+    )
+    return {
+        "parents": parents.split(),
+        "tree": tree,
+        "subject": subject,
+        "author": shown(author),
+        "committer": shown(committer),
+    }
 
 
 def tree_of(repository, commit):
@@ -250,14 +284,16 @@ def contents_sharing_a_prefix(blob_hash, length=4):
 
 def loose_and_packed(repository):
     """``(loose, packed)`` object counts of ``git count-objects -v``"""
-    counts = dict(line.split(": ") for line in git_lines(
-        "count-objects", "-v", cwd=repository))
+    counts = dict(
+        line.split(": ") for line in git_lines("count-objects", "-v", cwd=repository)
+    )
     return int(counts["count"]), int(counts["in-pack"])
 
 
 # ---------------------------------------------------------------------------
 # The contract, on every engine
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.usefixtures("engine")
 def test_connect_creates_only_the_engine_directory(engine_spec, project_dir):
@@ -269,19 +305,23 @@ def test_connect_creates_only_the_engine_directory(engine_spec, project_dir):
     assert sorted(os.listdir(provenance)) == [engine_spec.directory]
     if engine_spec.git:
         repository = os.path.join(provenance, engine_spec.directory)
-        assert [name for name in ("HEAD", "objects", "refs")
-                if not os.path.exists(os.path.join(repository, name))] == []
-        assert git_text("rev-parse", "--is-bare-repository",
-                        cwd=repository) == "true"
+        assert [
+            name
+            for name in ("HEAD", "objects", "refs")
+            if not os.path.exists(os.path.join(repository, name))
+        ] == []
+        assert git_text("rev-parse", "--is-bare-repository", cwd=repository) == "true"
 
 
 @pytest.mark.parametrize("content", CONTENTS)
 def test_put_returns_the_hash_the_store_format_defines(
-        engine, engine_spec, project_dir, content):
+    engine, engine_spec, project_dir, content
+):
     """``put`` returns the sha1 of the bytes on plain, git's blob id on the
     git engines"""
     assert engine.put(content, str(project_dir / "f.txt")) == (
-        engine_spec.blob_hash(content))
+        engine_spec.blob_hash(content)
+    )
 
 
 def test_git_blob_formula_matches_git_hash_object(isolated_git):
@@ -289,9 +329,9 @@ def test_git_blob_formula_matches_git_hash_object(isolated_git):
     PUREGIT.skip_if_unavailable()
     for param in CONTENTS:
         content = param.values[0]
-        assert git_text("hash-object", "--stdin", input=content,
-                        cwd=isolated_git.root) == git_blob_hex(content), (
-            param.id)
+        assert git_text(
+            "hash-object", "--stdin", input=content, cwd=isolated_git.root
+        ) == git_blob_hex(content), param.id
 
 
 @pytest.mark.parametrize("content", CONTENTS)
@@ -304,7 +344,8 @@ def test_get_returns_the_bytes_put(engine, project_dir, content):
 
 
 def test_put_of_the_same_content_twice_stores_one_copy(
-        engine, engine_spec, project_dir):
+    engine, engine_spec, project_dir
+):
     """The hash names the content: a second ``put`` of the same bytes under
     another name returns the same hash, and the store holds one copy"""
     first = engine.put(b"same\n", str(project_dir / "a.txt"))
@@ -314,15 +355,15 @@ def test_put_of_the_same_content_twice_stores_one_copy(
     assert engine_spec.stored_hashes(provenance_of(project_dir)) == [first]
 
 
-def test_put_stores_the_content_in_the_store_format(
-        engine, engine_spec, project_dir):
+def test_put_stores_the_content_in_the_store_format(engine, engine_spec, project_dir):
     """The content is where the store format puts it: content/<h[:2]>/<h[2:]>
     for plain, a blob that the test's own ``git cat-file`` reads for the git
     engines"""
     content_hash = engine.put(b"stored\n", str(project_dir / "f.txt"))
 
-    assert engine_spec.read_stored(
-        provenance_of(project_dir), content_hash) == b"stored\n"
+    assert (
+        engine_spec.read_stored(provenance_of(project_dir), content_hash) == b"stored\n"
+    )
 
 
 def test_get_of_a_missing_hash_raises(engine, engine_spec):
@@ -351,14 +392,17 @@ def test_find_subhash_of_a_missing_prefix_is_none(engine, project_dir):
 
 
 def test_find_subhash_with_an_ambiguous_prefix_returns_one_of_the_matches(
-        engine, engine_spec, project_dir):
+    engine, engine_spec, project_dir
+):
     """A prefix that two stored hashes share gives one of them, without an
     error; which one follows the file system (plain) or rev-list (puregit),
     so the test never names it. Whether git's "ambiguous" error is the
     right answer is a product question, not a defect"""
     first, second = contents_sharing_a_prefix(engine_spec.blob_hash)
-    hashes = {engine.put(first, str(project_dir / "first.txt")),
-              engine.put(second, str(project_dir / "second.txt"))}
+    hashes = {
+        engine.put(first, str(project_dir / "first.txt")),
+        engine.put(second, str(project_dir / "second.txt")),
+    }
     engine.commit_content("m")
     prefix = min(hashes)[:4]
 
@@ -366,29 +410,30 @@ def test_find_subhash_with_an_ambiguous_prefix_returns_one_of_the_matches(
 
 
 def test_commit_content_keeps_every_content_readable(
-        engine, engine_spec, project_dir, isolated_git):
+    engine, engine_spec, project_dir, isolated_git
+):
     """Contents put inside the project, in a subdirectory and outside it all
     stay readable after ``commit_content``"""
     if engine_spec.git and os.name == "nt":
-        pytest.skip("not measured on Windows: the git engines build tree "
-                    "paths with os.sep")
+        pytest.skip(
+            "not measured on Windows: the git engines build tree paths with os.sep"
+        )
     puts = {
         str(project_dir / "a.txt"): b"a\n",
         str(project_dir / "sub" / "b.txt"): b"b\n",
         str(isolated_git.root / "outside" / "c.txt"): b"c\n",
     }
-    hashes = {engine.put(content, name): content
-              for name, content in puts.items()}
+    hashes = {engine.put(content, name): content for name, content in puts.items()}
 
     engine.commit_content("m")
 
-    assert {content_hash: engine.get(content_hash)
-            for content_hash in hashes} == hashes
+    assert {content_hash: engine.get(content_hash) for content_hash in hashes} == hashes
 
 
 # ---------------------------------------------------------------------------
 # The plain engine
 # ---------------------------------------------------------------------------
+
 
 @PLAIN_ONLY
 def test_plain_commit_content_changes_nothing(engine, project_dir):
@@ -403,7 +448,8 @@ def test_plain_commit_content_changes_nothing(engine, project_dir):
 
 @PLAIN_ONLY
 def test_plain_find_subhash_uses_the_first_two_characters_as_directory(
-        engine, project_dir):
+    engine, project_dir
+):
     """The first two characters of the prefix name the directory: a
     one-character prefix finds nothing, a two-character one searches that
     directory, and a prefix that matches no file there finds nothing
@@ -438,8 +484,8 @@ def test_plain_gc_without_arguments(engine, project_dir):
         engine.gc()
 
     assert str(raised.value) == (
-        "PlainEngine.gc() missing 1 required positional argument: "
-        "'content_hash'")
+        "PlainEngine.gc() missing 1 required positional argument: 'content_hash'"
+    )
     assert fingerprint(provenance_of(project_dir)) == before
 
 
@@ -454,8 +500,7 @@ def test_plain_gc_without_arguments_desired(engine, project_dir):
     assert fingerprint(provenance_of(project_dir)) == before
 
 
-@pytest.mark.parametrize("engine_spec", [PLAIN, PUREGIT], ids=str,
-                         indirect=True)
+@pytest.mark.parametrize("engine_spec", [PLAIN, PUREGIT], ids=str, indirect=True)
 def test_gc_with_aggressive(engine, engine_spec):
     """``gc(aggressive=True)`` raises TypeError on plain and on puregit,
     whose gc(self) shadows gitbase's gc(aggressive=False) (#224)"""
@@ -465,14 +510,12 @@ def test_gc_with_aggressive(engine, engine_spec):
     assert "unexpected keyword argument 'aggressive'" in str(raised.value)
 
 
-@pytest.mark.parametrize("engine_spec", [PLAIN, PUREGIT], ids=str,
-                         indirect=True)
+@pytest.mark.parametrize("engine_spec", [PLAIN, PUREGIT], ids=str, indirect=True)
 @known_defects(GC_AGGRESSIVE)
 def test_gc_with_aggressive_desired(engine, engine_spec):
     """Desired (#224): ``gc(aggressive=True)`` runs and returns None"""
     if engine_spec.git and os.name == "nt":
-        pytest.skip("not measured on Windows: git gc goes through "
-                    "shell=True")
+        pytest.skip("not measured on Windows: git gc goes through shell=True")
     assert engine.gc(aggressive=True) is None
 
 
@@ -483,8 +526,8 @@ def test_put_without_a_file_name(engine):
         engine.put(b"x\n")
 
     assert str(raised.value) == (
-        "PlainEngine.put() missing 1 required positional argument: "
-        "'filename'")
+        "PlainEngine.put() missing 1 required positional argument: 'filename'"
+    )
 
 
 @PLAIN_ONLY
@@ -505,9 +548,10 @@ def test_puregit_put_without_a_file_name_uses_generic(engine, engine_spec):
     content_hash = engine.put(b"x\n")
 
     assert content_hash == engine_spec.blob_hash(b"x\n")
-    assert [(os.path.basename(name), stored)
-            for name, stored in engine.object_hashes.items()] == [
-        ("generic", content_hash)]
+    assert [
+        (os.path.basename(name), stored)
+        for name, stored in engine.object_hashes.items()
+    ] == [("generic", content_hash)]
 
 
 @PUREGIT_ONLY
@@ -563,7 +607,8 @@ def test_plain_get_of_a_path_instead_of_a_hash_desired(engine, isolated_git):
     except (OSError, ValueError, KeyError):
         read = None
     assert read != b"outside the store\n", (
-        "PlainEngine.get read a file outside the content directory")
+        "PlainEngine.get read a file outside the content directory"
+    )
 
 
 def put_shattered_pair(engine, project_dir):
@@ -582,8 +627,11 @@ def test_shattered_prefixes_differ_and_share_a_sha1():
     ids, which hash ``blob 320\\0`` before the bytes, differ (the git
     control below checks them against what puregit's ``git hash-object
     -w`` returns)"""
-    differing = [index for index, (one, two)
-                 in enumerate(zip(SHATTERED_1, SHATTERED_2)) if one != two]
+    differing = [
+        index
+        for index, (one, two) in enumerate(zip(SHATTERED_1, SHATTERED_2))
+        if one != two
+    ]
 
     assert len(SHATTERED_1) == len(SHATTERED_2) == 320
     assert len(differing) == 62
@@ -593,7 +641,8 @@ def test_shattered_prefixes_differ_and_share_a_sha1():
 
 @PLAIN_ONLY
 def test_plain_keeps_only_the_first_of_two_contents_that_share_a_sha1(
-        engine, engine_spec, project_dir):
+    engine, engine_spec, project_dir
+):
     """Two different contents that share a SHA-1 get one id on plain
     (#398): the second ``put`` returns the first's id and writes nothing,
     the store holds one file, with the first content's bytes (read by the
@@ -609,8 +658,7 @@ def test_plain_keeps_only_the_first_of_two_contents_that_share_a_sha1(
 
 @PLAIN_ONLY
 @known_defects(SHA1_COLLISION)
-def test_plain_tells_apart_two_contents_that_share_a_sha1_desired(
-        engine, project_dir):
+def test_plain_tells_apart_two_contents_that_share_a_sha1_desired(engine, project_dir):
     """Desired (#398): two different contents that share a SHA-1 are never
     taken for one another: ``get`` of the id each ``put`` returned gives
     back that ``put``'s bytes. The issue leaves the kind of fix to the
@@ -630,14 +678,16 @@ def test_plain_tells_apart_two_contents_that_share_a_sha1_desired(
         read = engine.get(second)
         assert read != SHATTERED_1, (
             "get of the id the second put returned ({}) gives the first "
-            "content's bytes".format(second))
+            "content's bytes".format(second)
+        )
         assert read == SHATTERED_2
     assert engine.get(first) == SHATTERED_1
 
 
 @GIT_SPECS
 def test_git_tells_apart_two_contents_that_share_a_sha1(
-        engine, engine_spec, project_dir):
+    engine, engine_spec, project_dir
+):
     """Control of #398: the git engines name a content by its blob id, the
     SHA-1 of ``blob <size>\\0`` and the bytes, which the SHAttered prefixes
     do not share. The two ``put``s return the two blob ids, the test's own
@@ -645,28 +695,34 @@ def test_git_tells_apart_two_contents_that_share_a_sha1(
     first, second = put_shattered_pair(engine, project_dir)
 
     provenance = provenance_of(project_dir)
-    assert [first, second] == [engine_spec.blob_hash(SHATTERED_1),
-                               engine_spec.blob_hash(SHATTERED_2)]
+    assert [first, second] == [
+        engine_spec.blob_hash(SHATTERED_1),
+        engine_spec.blob_hash(SHATTERED_2),
+    ]
     assert first != second
-    assert [engine_spec.read_stored(provenance, content_hash)
-            for content_hash in (first, second)] == [SHATTERED_1, SHATTERED_2]
-    assert [engine.get(first), engine.get(second)] == [
-        SHATTERED_1, SHATTERED_2]
+    assert [
+        engine_spec.read_stored(provenance, content_hash)
+        for content_hash in (first, second)
+    ] == [SHATTERED_1, SHATTERED_2]
+    assert [engine.get(first), engine.get(second)] == [SHATTERED_1, SHATTERED_2]
 
 
 # ---------------------------------------------------------------------------
 # The git engines: the repository, the commits and the tree paths
 # ---------------------------------------------------------------------------
 
+
 @GIT_SPECS
 @pytest.mark.usefixtures("engine")
 def test_git_connect_records_an_initial_commit_with_the_empty_tree(
-        project_dir, isolated_git):
+    project_dir, isolated_git
+):
     """``connect`` makes master an initial commit: no parent, the empty tree
     (as the test's own git computes it), "Initial Commit", by Noworkflow"""
     repository = git_store(project_dir)
-    empty_tree = git_text("hash-object", "-t", "tree", "--stdin", input=b"",
-                          cwd=isolated_git.root)
+    empty_tree = git_text(
+        "hash-object", "-t", "tree", "--stdin", input=b"", cwd=isolated_git.root
+    )
 
     fields = commit_fields(repository, master_of(repository))
 
@@ -687,14 +743,14 @@ def test_git_reconnect_keeps_the_history(engine_spec, project_dir):
     open_store(project_dir, engine_spec.name)
 
     assert master_of(repository) == before
-    assert git_text("rev-list", "--count", "refs/heads/master",
-                    cwd=repository) == "1"
+    assert git_text("rev-list", "--count", "refs/heads/master", cwd=repository) == "1"
 
 
 @WINDOWS_NOT_MEASURED
 @GIT_SPECS
 def test_git_commit_content_records_a_commit_of_the_files_put(
-        engine, engine_spec, project_dir):
+    engine, engine_spec, project_dir
+):
     """``commit_content`` returns the new master: a commit whose parent is
     the previous master, whose message is the one passed, and whose tree
     maps the project-relative paths to git's blob ids of the contents (a
@@ -704,8 +760,9 @@ def test_git_commit_content_records_a_commit_of_the_files_put(
     engine.put(b"a1\n", str(project_dir / "a.txt"))
     engine.put(b"a2\n", str(project_dir / "a.txt"))
     engine.put(b"b\n", str(project_dir / "sub" / "b.txt"))
-    first, second, nested = (engine_spec.blob_hash(content)
-                             for content in (b"a1\n", b"a2\n", b"b\n"))
+    first, second, nested = (
+        engine_spec.blob_hash(content) for content in (b"a1\n", b"a2\n", b"b\n")
+    )
 
     commit = engine.commit_content("Trial T")
 
@@ -716,7 +773,10 @@ def test_git_commit_content_records_a_commit_of_the_files_put(
     assert fields["subject"] == "Trial T"
     assert fields["author"] == NOWORKFLOW_AUTHOR
     assert tree_of(repository, commit) == {
-        "a.txt": first, "a.txt - v2": second, "sub/b.txt": nested}
+        "a.txt": first,
+        "a.txt - v2": second,
+        "sub/b.txt": nested,
+    }
 
 
 @GIT_SPECS
@@ -726,13 +786,11 @@ def test_git_commit_content_with_an_empty_message(engine, project_dir):
 
     commit = engine.commit_content("")
 
-    assert commit_fields(git_store(project_dir), commit)["subject"] == (
-        "<empty>")
+    assert commit_fields(git_store(project_dir), commit)["subject"] == ("<empty>")
 
 
 @PUREGIT_ONLY
-def test_puregit_commits_record_the_identity_the_environment_sets(
-        engine, project_dir):
+def test_puregit_commits_record_the_identity_the_environment_sets(engine, project_dir):
     """Premise of every git test: the initial commit and a trial's commit
     never record the machine's identity. Today the committer is the
     fixture's (the puregit-committer-identity defect); with it fixed, it is
@@ -743,15 +801,15 @@ def test_puregit_commits_record_the_identity_the_environment_sets(
 
     trial = engine.commit_content("Trial T")
 
-    assert [commit_fields(repository, commit)["committer"]
-            in (IDENTITY, NOWORKFLOW_AUTHOR)
-            for commit in (initial, trial)] == [True, True]
+    assert [
+        commit_fields(repository, commit)["committer"] in (IDENTITY, NOWORKFLOW_AUTHOR)
+        for commit in (initial, trial)
+    ] == [True, True]
 
 
 @WINDOWS_NOT_MEASURED
 @PUREGIT_ONLY
-def test_puregit_names_files_by_where_they_live(
-        engine, project_dir, isolated_git):
+def test_puregit_names_files_by_where_they_live(engine, project_dir, isolated_git):
     """Tree paths are project-relative inside the project,
     ``noworkflow_home/...`` under the home directory and
     ``noworkflow_root/<absolute path>`` elsewhere"""
@@ -773,18 +831,15 @@ def test_puregit_names_files_by_where_they_live(
 
 
 @PUREGIT_ONLY
-def test_puregit_shortens_names_longer_than_4096_characters(
-        engine, project_dir):
+def test_puregit_shortens_names_longer_than_4096_characters(engine, project_dir):
     """A tree path longer than 4096 characters becomes
     ``noworkflow_long/<basename>``, or ``noworkflow_long/long`` when the
     basename alone is too long (the naming rule, no file system)"""
     long_directory = str(project_dir / ("d" * 4100) / "f.txt")
     long_basename = str(project_dir / ("x" * 4100))
 
-    assert engine._inc_name(long_directory) == os.path.join(
-        "noworkflow_long", "f.txt")
-    assert engine._inc_name(long_basename) == os.path.join(
-        "noworkflow_long", "long")
+    assert engine._inc_name(long_directory) == os.path.join("noworkflow_long", "f.txt")
+    assert engine._inc_name(long_basename) == os.path.join("noworkflow_long", "long")
 
 
 @WINDOWS_NOT_MEASURED
@@ -793,9 +848,12 @@ def test_git_gc_packs_the_loose_objects(engine, project_dir):
     """``gc()`` packs every loose object (``git count-objects`` before and
     after), and every committed content still reads back"""
     repository = git_store(project_dir)
-    hashes = {engine.put(b"c%d\n" % number,
-                         str(project_dir / "f{}.txt".format(number))):
-              b"c%d\n" % number for number in range(3)}
+    hashes = {
+        engine.put(
+            b"c%d\n" % number, str(project_dir / "f{}.txt".format(number))
+        ): b"c%d\n" % number
+        for number in range(3)
+    }
     engine.commit_content("m")
     loose, packed = loose_and_packed(repository)
     assert loose > 0 and packed == 0
@@ -803,14 +861,12 @@ def test_git_gc_packs_the_loose_objects(engine, project_dir):
     engine.gc()
 
     assert loose_and_packed(repository) == (0, loose)
-    assert {content_hash: engine.get(content_hash)
-            for content_hash in hashes} == hashes
+    assert {content_hash: engine.get(content_hash) for content_hash in hashes} == hashes
 
 
 @WINDOWS_NOT_MEASURED
 @PUREGIT_ONLY
-def test_puregit_gc_prunes_content_that_was_never_committed(
-        engine, project_dir):
+def test_puregit_gc_prunes_content_that_was_never_committed(engine, project_dir):
     """``gc()`` prunes a blob that no commit reaches once it is older than
     git's default gc.pruneExpire (two weeks; the objects are aged with
     os.utime): the committed content survives, the other is gone"""
@@ -818,8 +874,7 @@ def test_puregit_gc_prunes_content_that_was_never_committed(
     engine.commit_content("m")
     uncommitted = engine.put(b"never committed\n", str(project_dir / "b.txt"))
     month_ago = time.time() - 30 * 24 * 3600
-    for directory, _, names in os.walk(
-            os.path.join(git_store(project_dir), "objects")):
+    for directory, _, names in os.walk(os.path.join(git_store(project_dir), "objects")):
         for name in names:
             os.utime(os.path.join(directory, name), (month_ago, month_ago))
 
@@ -834,9 +889,9 @@ def test_puregit_gc_prunes_content_that_was_never_committed(
 # puregit: find_subhash
 # ---------------------------------------------------------------------------
 
+
 @PUREGIT_ONLY
-def test_puregit_find_subhash_sees_only_committed_content(
-        engine, project_dir):
+def test_puregit_find_subhash_sees_only_committed_content(engine, project_dir):
     """``find_subhash`` walks ``git rev-list --objects --all``: a content
     put but not committed is not found, and is found after the commit"""
     content_hash = engine.put(b"hello\n", str(project_dir / "a.txt"))
@@ -848,8 +903,7 @@ def test_puregit_find_subhash_sees_only_committed_content(
 
 
 @PUREGIT_ONLY
-def test_puregit_find_subhash_prints_and_returns_bytes(
-        engine, project_dir, capsys):
+def test_puregit_find_subhash_prints_and_returns_bytes(engine, project_dir, capsys):
     """``find_subhash`` returns the hash as bytes and prints the prefix, the
     list of objects and each object it looked at"""
     content_hash = engine.put(b"hello\n", str(project_dir / "a.txt"))
@@ -868,7 +922,8 @@ def test_puregit_find_subhash_prints_and_returns_bytes(
 @PUREGIT_ONLY
 @known_defects(FIND_SUBHASH_BYTES)
 def test_puregit_find_subhash_prints_and_returns_bytes_desired(
-        engine, project_dir, capsys):
+    engine, project_dir, capsys
+):
     """Desired: ``find_subhash`` returns text and prints nothing, as plain
     does"""
     content_hash = engine.put(b"hello\n", str(project_dir / "a.txt"))
@@ -881,10 +936,14 @@ def test_puregit_find_subhash_prints_and_returns_bytes_desired(
     assert capsys.readouterr().out == ""
 
 
-@pytest.mark.parametrize("engine_spec, expected", [
-    pytest.param(PLAIN, None, id="plain"),
-    pytest.param(PUREGIT, b"script.py", id="puregit"),
-], indirect=["engine_spec"])
+@pytest.mark.parametrize(
+    "engine_spec, expected",
+    [
+        pytest.param(PLAIN, None, id="plain"),
+        pytest.param(PUREGIT, b"script.py", id="puregit"),
+    ],
+    indirect=["engine_spec"],
+)
 def test_find_subhash_of_a_file_name_prefix(engine, project_dir, expected):
     """A prefix of a file name: plain finds nothing (no hash starts with
     "s"), puregit returns the file name, which ``now restore -i`` then
@@ -909,6 +968,7 @@ def test_find_subhash_of_a_file_name_prefix_desired(engine, project_dir):
 # puregit: the committer identity
 # ---------------------------------------------------------------------------
 
+
 def without_identity(monkeypatch, isolated_git, config):
     """Remove the synthetic identity and write the global configuration"""
     for role in ("AUTHOR", "COMMITTER"):
@@ -921,11 +981,13 @@ def without_identity(monkeypatch, isolated_git, config):
 # no-identity path is the same on every machine.
 CONFIG_ONLY = "[user]\n\tuseConfigOnly = true\n"
 CONFIGURED_USER = "[user]\n\tname = {}\n\temail = {}\n".format(
-    CONFIGURED_NAME, CONFIGURED_EMAIL)
+    CONFIGURED_NAME, CONFIGURED_EMAIL
+)
 
 
 def test_puregit_connect_without_a_git_identity(
-        isolated_git, project_dir, monkeypatch, capsys):
+    isolated_git, project_dir, monkeypatch, capsys
+):
     """Without a committer identity, ``connect`` raises CalledProcessError
     on ``git commit-tree`` (git prints "Committer identity unknown") and
     leaves ``content.git`` without a master"""
@@ -944,7 +1006,8 @@ def test_puregit_connect_without_a_git_identity(
 
 @known_defects(COMMITTER_IDENTITY)
 def test_puregit_connect_without_a_git_identity_desired(
-        isolated_git, project_dir, monkeypatch, capsys):
+    isolated_git, project_dir, monkeypatch, capsys
+):
     """Desired: noWorkflow already names the author; the store needs no
     identity of the user's, and ``connect`` makes the initial commit"""
     PUREGIT.skip_if_unavailable()
@@ -957,7 +1020,8 @@ def test_puregit_connect_without_a_git_identity_desired(
 
 
 def test_puregit_commit_takes_the_committer_from_the_git_configuration(
-        isolated_git, project_dir, monkeypatch):
+    isolated_git, project_dir, monkeypatch
+):
     """Without ``GIT_COMMITTER_*``, the committer is the user configured in
     git (a fake one here), while the author is Noworkflow"""
     PUREGIT.skip_if_unavailable()
@@ -973,7 +1037,8 @@ def test_puregit_commit_takes_the_committer_from_the_git_configuration(
 
 @known_defects(CONFIGURED_COMMITTER)
 def test_puregit_commit_takes_the_committer_from_the_git_configuration_desired(
-        isolated_git, project_dir, monkeypatch):
+    isolated_git, project_dir, monkeypatch
+):
     """Desired: the store records no identity of the user's; the committer
     is the author noWorkflow sets"""
     PUREGIT.skip_if_unavailable()
@@ -990,6 +1055,7 @@ def test_puregit_commit_takes_the_committer_from_the_git_configuration_desired(
 # puregit: GIT_DIR and GIT_INDEX_FILE of another repository
 # ---------------------------------------------------------------------------
 
+
 def user_repository(isolated_git):
     """A repository of the user's: "a" committed on master, "b" staged"""
     repository = isolated_git.root / "user-repo"
@@ -1005,16 +1071,17 @@ def user_repository(isolated_git):
 
 def staged(repository):
     """``(status, path)`` of what the repository has staged"""
-    return [tuple(line.split("\t")) for line in git_lines(
-        "diff", "--cached", "--name-status", cwd=repository)]
+    return [
+        tuple(line.split("\t"))
+        for line in git_lines("diff", "--cached", "--name-status", cwd=repository)
+    ]
 
 
 def commit_with_the_index_of(repository, project_dir, monkeypatch):
     """Connect a store, then put and commit under GIT_INDEX_FILE of
     ``repository``, the way a git hook exports it"""
     engine = open_store(project_dir, "puregit").content_database_engine
-    monkeypatch.setenv("GIT_INDEX_FILE",
-                       str(repository / ".git" / "index"))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(repository / ".git" / "index"))
     try:
         engine.put(b"x\n", str(project_dir / "x.txt"))
         engine.commit_content("Trial T")
@@ -1023,7 +1090,8 @@ def commit_with_the_index_of(repository, project_dir, monkeypatch):
 
 
 def test_puregit_commit_with_the_index_of_another_repository(
-        isolated_git, project_dir, monkeypatch):
+    isolated_git, project_dir, monkeypatch
+):
     """Under another repository's GIT_INDEX_FILE, a trial's commit empties
     that index: the staged "b" is gone and "a" shows as deleted"""
     PUREGIT.skip_if_unavailable()
@@ -1037,7 +1105,8 @@ def test_puregit_commit_with_the_index_of_another_repository(
 
 @known_defects(INDEX_OF_ANOTHER_REPOSITORY)
 def test_puregit_commit_with_the_index_of_another_repository_desired(
-        isolated_git, project_dir, monkeypatch):
+    isolated_git, project_dir, monkeypatch
+):
     """Desired: the store never touches another repository's index"""
     PUREGIT.skip_if_unavailable()
     repository = user_repository(isolated_git)
@@ -1059,7 +1128,8 @@ def commit_with_the_git_dir_of(repository, project_dir, monkeypatch):
 
 
 def test_puregit_commit_with_the_git_dir_of_another_repository(
-        isolated_git, project_dir, monkeypatch):
+    isolated_git, project_dir, monkeypatch
+):
     """Under another repository's GIT_DIR, the store's initial commit and
     the trial's commit land on that repository's master, and the store's
     own ``content.git`` has no master"""
@@ -1068,30 +1138,34 @@ def test_puregit_commit_with_the_git_dir_of_another_repository(
 
     commit_with_the_git_dir_of(repository, project_dir, monkeypatch)
 
-    assert git_lines("log", "--format=%s", "refs/heads/master",
-                     cwd=repository) == [
-        "Trial T", "Initial Commit", "user work"]
+    assert git_lines("log", "--format=%s", "refs/heads/master", cwd=repository) == [
+        "Trial T",
+        "Initial Commit",
+        "user work",
+    ]
     assert master_of(git_store(project_dir)) is None
 
 
 @known_defects(GIT_DIR_OF_ANOTHER_REPOSITORY)
 def test_puregit_commit_with_the_git_dir_of_another_repository_desired(
-        isolated_git, project_dir, monkeypatch):
+    isolated_git, project_dir, monkeypatch
+):
     """Desired: another repository's master stays where it was"""
     PUREGIT.skip_if_unavailable()
     repository = user_repository(isolated_git)
 
     commit_with_the_git_dir_of(repository, project_dir, monkeypatch)
 
-    history = git_lines("log", "--format=%s", "refs/heads/master",
-                        cwd=repository)
-    assert history == ["user work"], (
-        "master of the other repository: {}".format(history))
+    history = git_lines("log", "--format=%s", "refs/heads/master", cwd=repository)
+    assert history == ["user work"], "master of the other repository: {}".format(
+        history
+    )
 
 
 # ---------------------------------------------------------------------------
 # puregit: tree paths git rejects
 # ---------------------------------------------------------------------------
+
 
 @WINDOWS_NOT_MEASURED
 @PUREGIT_ONLY
@@ -1115,32 +1189,31 @@ def test_puregit_commit_of_a_file_under_dot_git(engine, project_dir, capsys):
 @WINDOWS_NOT_MEASURED
 @PUREGIT_ONLY
 @known_defects(DOT_GIT_PATH)
-def test_puregit_commit_of_a_file_under_dot_git_desired(
-        engine, project_dir, capsys):
+def test_puregit_commit_of_a_file_under_dot_git_desired(engine, project_dir, capsys):
     """Desired: the commit succeeds and reaches the content, so that git gc
     keeps it"""
-    content_hash = engine.put(b"ref: refs/heads/main\n",
-                              str(project_dir / ".git" / "HEAD"))
+    content_hash = engine.put(
+        b"ref: refs/heads/main\n", str(project_dir / ".git" / "HEAD")
+    )
 
     with git_output_on_failure(capsys):
         engine.commit_content("m")
 
-    reachable = git_text("rev-list", "--objects", "--all",
-                         cwd=git_store(project_dir))
+    reachable = git_text("rev-list", "--objects", "--all", cwd=git_store(project_dir))
     assert content_hash in reachable
 
 
 @WINDOWS_NOT_MEASURED
 @PUREGIT_ONLY
 def test_puregit_commit_of_a_file_in_a_sibling_with_the_project_prefix(
-        engine, project_dir, capsys):
+    engine, project_dir, capsys
+):
     """A file in ``<project>2/`` starts with the project's path as a
     string, so its tree path is '../project2/x.txt', which ``git
     update-index`` rejects"""
     sibling = str(project_dir) + "2"
 
-    assert engine._inc_name(os.path.join(sibling, "x.txt")) == (
-        "../project2/x.txt")
+    assert engine._inc_name(os.path.join(sibling, "x.txt")) == ("../project2/x.txt")
     engine.name_counter.clear()
     engine.put(b"x\n", os.path.join(sibling, "x.txt"))
     with pytest.raises(subprocess.CalledProcessError):
@@ -1152,7 +1225,8 @@ def test_puregit_commit_of_a_file_in_a_sibling_with_the_project_prefix(
 @PUREGIT_ONLY
 @known_defects(SIBLING_PATH)
 def test_puregit_commit_of_a_file_in_a_sibling_with_the_project_prefix_desired(
-        engine, project_dir, capsys):
+    engine, project_dir, capsys
+):
     """Desired: a file outside the project is named like the others outside
     it, and the commit succeeds with no path that climbs out of the tree"""
     engine.put(b"x\n", os.path.join(str(project_dir) + "2", "x.txt"))
@@ -1160,13 +1234,17 @@ def test_puregit_commit_of_a_file_in_a_sibling_with_the_project_prefix_desired(
     with git_output_on_failure(capsys):
         commit = engine.commit_content("m")
 
-    assert [path for path in tree_of(git_store(project_dir), commit)
-            if path.startswith("..")] == []
+    assert [
+        path
+        for path in tree_of(git_store(project_dir), commit)
+        if path.startswith("..")
+    ] == []
 
 
 # ---------------------------------------------------------------------------
 # Construction: the config, the git engine, the base classes and the mock
 # ---------------------------------------------------------------------------
+
 
 def test_persistence_config_with_a_path(tmp_path):
     """``PersistenceConfig(path)`` raises AttributeError: the path setter
@@ -1175,7 +1253,8 @@ def test_persistence_config_with_a_path(tmp_path):
         PersistenceConfig(str(tmp_path))
 
     assert str(raised.value) == (
-        "'PersistenceConfig' object has no attribute 'delegate'")
+        "'PersistenceConfig' object has no attribute 'delegate'"
+    )
 
 
 @known_defects(CONFIG_PATH)
@@ -1206,12 +1285,12 @@ def test_git_engine_constructed_without_a_content_database(project_dir):
     with pytest.raises(TypeError) as raised:
         engine.put(b"x\n", str(project_dir / "x.txt"))
     assert str(raised.value) == (
-        "startswith first arg must be str or a tuple of str, not NoneType")
+        "startswith first arg must be str or a tuple of str, not NoneType"
+    )
 
 
 @known_defects(GIT_BASE_PATH)
-def test_git_engine_constructed_without_a_content_database_desired(
-        project_dir):
+def test_git_engine_constructed_without_a_content_database_desired(project_dir):
     """Desired: ``__init__`` keeps the base path ``set_path`` computed, and
     the engine round-trips"""
     PUREGIT.skip_if_unavailable()
@@ -1250,8 +1329,7 @@ def test_base_engine_operations_are_abstract(tmp_path):
         "gc": lambda: engine.gc(MISSING),
         "commit_content": lambda: engine.commit_content("m"),
         "create_initial_commit": git_engine.create_initial_commit,
-        "create_commit_object": lambda: git_engine.create_commit_object(
-            "m", MISSING),
+        "create_commit_object": lambda: git_engine.create_commit_object("m", MISSING),
         "new_tree": lambda: git_engine.new_tree(""),
         "insert_blob": lambda: git_engine.insert_blob(None, "b", MISSING),
         "insert_tree": lambda: git_engine.insert_tree(None, "t", MISSING),

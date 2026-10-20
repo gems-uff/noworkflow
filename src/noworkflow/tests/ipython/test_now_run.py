@@ -42,6 +42,7 @@ IPython splits a magic's line with ``arg_split``: as a POSIX shell does,
 except on Windows, where it is ``CommandLineToArgvW`` and single quotes
 do not group. The tests that quote with single quotes skip there.
 """
+
 import ast
 import asyncio
 import os
@@ -109,7 +110,7 @@ NOW_FROM_PATH = Defect(
 STALE_LAST_TRIAL = Defect(
     "#387: magics/now_run.py NowRun.execute reads "
     "<dir>/.last_trial whatever ScriptMagics.shebang did: when `now` cannot "
-    "be started (shebang prints \"Couldn't find program\" and returns) or "
+    'be started (shebang prints "Couldn\'t find program" and returns) or '
     "runs in the background (--bg returns at once), the file still names "
     "the previous run's trial",
     signature="the magic read the .last_trial of the previous run",
@@ -152,26 +153,29 @@ FORMS = {"line": "%now_run script.py", "cell": "%%now_run\n" + RAN}
 posix_split = pytest.mark.skipif(
     os.name == "nt",
     reason="on Windows IPython splits a magic's line with "
-           "CommandLineToArgvW (IPython.utils._process_win32.arg_split), "
-           "where single quotes do not group; not measured there")
+    "CommandLineToArgvW (IPython.utils._process_win32.arg_split), "
+    "where single quotes do not group; not measured there",
+)
 fake_now = pytest.mark.skipif(
     os.name == "nt",
     reason="the fake `now` is a /bin/sh script without an extension, which "
-           "Windows cannot start; how Windows looks `now` up is not "
-           "measured")
+    "Windows cannot start; how Windows looks `now` up is not "
+    "measured",
+)
 empty_path = pytest.mark.skipif(
     os.name == "nt",
     reason="on Windows CreateProcess searches directories outside PATH "
-           "first, so an empty PATH may not hide `now`; not measured")
+    "first, so an empty PATH may not hide `now`; not measured",
+)
 lacks_py3compat = pytest.mark.skipif(
     not INTERACTIVE_IMPORT.condition,
-    reason="this IPython still has IPython.utils.py3compat")
+    reason="this IPython still has IPython.utils.py3compat",
+)
 
 
 def failed_int(trial_id):
     """What #313 prints after a run, naming the trial it could not read"""
-    return "Failed invalid literal for int() with base 10: '{}'".format(
-        trial_id)
+    return "Failed invalid literal for int() with base 10: '{}'".format(trial_id)
 
 
 def scripts_and_statuses(project):
@@ -187,8 +191,8 @@ def trial_ids(project):
 def recorded_argv(project, trial_id):
     """The ``sys.argv`` a trial recorded"""
     rows = project.query(
-        "SELECT value FROM argument WHERE trial_id = ? AND name = 'argv'",
-        trial_id)
+        "SELECT value FROM argument WHERE trial_id = ? AND name = 'argv'", trial_id
+    )
     return ast.literal_eval(rows[0]["value"])
 
 
@@ -262,9 +266,8 @@ def test_now_run_of_a_cell(shell):
     project = shell.project
     shell.ok("count = 3")
     cell = shell.run(
-        "%%now_run --name cellA $count x2\n"
-        "import sys\n"
-        "print('cell argv', sys.argv[1:])")
+        "%%now_run --name cellA $count x2\nimport sys\nprint('cell argv', sys.argv[1:])"
+    )
     executed = cell.success and "cell argv ['3', 'x2']" in cell.stdout
     assert executed, cell.describe()
     assert scripts_and_statuses(project) == [("cellA", "finished")]
@@ -273,9 +276,9 @@ def test_now_run_of_a_cell(shell):
     argv = recorded_argv(project, trial_id)
     assert argv[1:] == ["3", "x2"]
     cell_file = argv[0]
-    in_tmp = (os.path.basename(cell_file).startswith("now_run_")
-              and same_path(os.path.dirname(os.path.dirname(cell_file)),
-                            project.tmp))
+    in_tmp = os.path.basename(cell_file).startswith("now_run_") and same_path(
+        os.path.dirname(os.path.dirname(cell_file)), project.tmp
+    )
     assert in_tmp, "the cell is not a now_run_ file in the project's tmp"
     printed = failed_int(trial_id) in cell.stdout
     assert printed, cell.describe()
@@ -293,10 +296,14 @@ def test_now_run_of_a_cell_desired(shell):
 
 
 @posix_split
-@pytest.mark.parametrize("code, printed", [
-    ("%now_run script.py 'a b' c", "script argv ['a b', 'c']"),
-    ("%%now_run 'a b' c\n" + SCRIPT, "script argv ['a b', 'c']"),
-], ids=["line", "cell"])
+@pytest.mark.parametrize(
+    "code, printed",
+    [
+        ("%now_run script.py 'a b' c", "script argv ['a b', 'c']"),
+        ("%%now_run 'a b' c\n" + SCRIPT, "script argv ['a b', 'c']"),
+    ],
+    ids=["line", "cell"],
+)
 def test_now_run_keeps_a_quoted_argument_whole(shell, code, printed):
     """An argument quoted on the magic's line reaches the script whole"""
     shell.project.write("script.py", SCRIPT)
@@ -326,8 +333,10 @@ def test_now_run_with_dir_records_the_trial_in_that_store(shell):
 
 
 NO_SCRIPT_LINES = pytest.mark.parametrize(
-    "line", ["%now_run", "%now_run --name only", "%now_run --interactive"],
-    ids=["empty", "options only", "interactive only"])
+    "line",
+    ["%now_run", "%now_run --name only", "%now_run --interactive"],
+    ids=["empty", "options only", "interactive only"],
+)
 
 
 @NO_SCRIPT_LINES
@@ -353,15 +362,22 @@ def test_now_run_without_a_script_desired(shell, line):
 # Lines that end each way with --content-engine sequential_plain, a name of
 # the plain engine other than the shell's "plain" (real_stores): the setting
 # changes, the engine the shell uses would not.
-CONTENT_ENGINE_LINES = pytest.mark.parametrize("code, ending", [
-    ("%now_run --content-engine sequential_plain",
-     "IndexError: list index out of range"),
-    pytest.param(
-        "%%now_run --interactive --content-engine sequential_plain\nx = 1",
-        "ModuleNotFoundError: No module named 'IPython.utils.py3compat'",
-        marks=lacks_py3compat),
-    ("%now_run --content-engine sequential_plain script.py", "ok"),
-], ids=["no script", "interactive", "a script"])
+CONTENT_ENGINE_LINES = pytest.mark.parametrize(
+    "code, ending",
+    [
+        (
+            "%now_run --content-engine sequential_plain",
+            "IndexError: list index out of range",
+        ),
+        pytest.param(
+            "%%now_run --interactive --content-engine sequential_plain\nx = 1",
+            "ModuleNotFoundError: No module named 'IPython.utils.py3compat'",
+            marks=lacks_py3compat,
+        ),
+        ("%now_run --content-engine sequential_plain script.py", "ok"),
+    ],
+    ids=["no script", "interactive", "a script"],
+)
 
 
 @CONTENT_ENGINE_LINES
@@ -399,7 +415,8 @@ def test_content_engine_setting_after_now_run_desired(shell, code, ending):
     kept = persistence_config.content_engine == before
     assert kept, (
         "the content engine setting stayed at the line's --content-engine\n"
-        + cell.describe())
+        + cell.describe()
+    )
 
 
 def test_now_run_in_a_directory_with_a_space(tmp_path):
@@ -413,8 +430,10 @@ def test_now_run_in_a_directory_with_a_space(tmp_path):
         cells = [shell.run(code) for code in FORMS.values()]
         count = trial_count(project)
     for cell in cells:
-        cut = (cell.error_type == "CalledProcessError"
-               and "can't open file 'space" in cell.stderr)
+        cut = (
+            cell.error_type == "CalledProcessError"
+            and "can't open file 'space" in cell.stderr
+        )
         assert cut, cell.describe()
     assert count == 0
 
@@ -437,8 +456,10 @@ def test_now_run_with_a_name_with_a_space(shell):
     and takes ``cell`` for the script, and no trial is recorded
     (characterization of #385)"""
     cell = shell.run("%%now_run --name 'my cell'\n" + RAN)
-    cut = (cell.error_type == "CalledProcessError"
-           and "can't open file 'cell'" in cell.stderr)
+    cut = (
+        cell.error_type == "CalledProcessError"
+        and "can't open file 'cell'" in cell.stderr
+    )
     assert cut, cell.describe()
     assert trial_count(shell.project) == 0
 
@@ -475,9 +496,11 @@ def check_quoted_dir_desired(shell, name):
     cell, other, connected, added = run_with_a_quoted_dir(shell, name)
     assert not connected, (
         "the magic connected to the quoted --dir, a path relative to the "
-        "current directory\n" + cell.describe())
-    recorded = (cell.success and "Failed [Errno 2]" not in cell.stdout
-                and other.store.is_dir())
+        "current directory\n" + cell.describe()
+    )
+    recorded = (
+        cell.success and "Failed [Errno 2]" not in cell.stdout and other.store.is_dir()
+    )
     assert recorded, cell.describe()
     assert scripts_and_statuses(other) == [("script.py", "finished")]
     assert added == []
@@ -493,9 +516,12 @@ def test_now_run_with_a_quoted_dir(shell):
     cell, other, connected, added = run_with_a_quoted_dir(shell, "other")
     assert connected, "no store where the quoted --dir leads"
     assert added == ["'"]
-    failed = (cell.success and "ran" in cell.stdout
-              and "Failed [Errno 2] No such file or directory" in cell.stdout
-              and "'/.last_trial" in cell.stdout)
+    failed = (
+        cell.success
+        and "ran" in cell.stdout
+        and "Failed [Errno 2] No such file or directory" in cell.stdout
+        and "'/.last_trial" in cell.stdout
+    )
     assert failed, cell.describe()
     assert scripts_and_statuses(other) == [("script.py", "finished")]
     assert trial_count(shell.project) == 0
@@ -518,8 +544,10 @@ def test_now_run_with_a_quoted_dir_with_a_space(shell):
     cell, other, connected, added = run_with_a_quoted_dir(shell, "other dir")
     assert connected, "no store where the quoted --dir leads"
     assert added == ["'"]
-    cut = (cell.error_type == "CalledProcessError"
-           and "can't open file 'dir/project'" in cell.stderr)
+    cut = (
+        cell.error_type == "CalledProcessError"
+        and "can't open file 'dir/project'" in cell.stderr
+    )
     assert cut, cell.describe()
     created = other.store.exists()
     assert not created, "OTHER has a store"
@@ -557,8 +585,7 @@ def test_now_run_with_another_now_first_on_path_desired(shell, form):
     project = shell.project
     project.write("script.py", RAN)
     cell = run_with_path(shell, FORMS[form], put_fake_now_first(project))
-    recorded = (trial_count(project) == 1
-                and "another now on PATH" not in cell.stdout)
+    recorded = trial_count(project) == 1 and "another now on PATH" not in cell.stdout
     assert recorded, cell.describe()
 
 
@@ -578,8 +605,10 @@ def test_now_run_when_now_cannot_start(shell):
     cell = run_with_path(shell, "trial = %now_run script.py", empty)
     missing = cell.success and "Couldn't find program: 'now'" in cell.stdout
     assert missing, cell.describe()
-    stale = (failed_int(previous) in cell.stdout
-             or getattr(shell.user_ns.get("trial"), "id", None) == previous)
+    stale = (
+        failed_int(previous) in cell.stdout
+        or getattr(shell.user_ns.get("trial"), "id", None) == previous
+    )
     assert stale, cell.describe()
     assert trial_count(project) == 1
 
@@ -600,11 +629,13 @@ def test_now_run_when_now_cannot_start_desired(shell):
     empty = project.root / "empty"
     empty.mkdir()
     cell = run_with_path(shell, "trial = %now_run script.py", empty)
-    stale = (previous in cell.stdout
-             or getattr(shell.user_ns.get("trial"), "id", None) == previous)
+    stale = (
+        previous in cell.stdout
+        or getattr(shell.user_ns.get("trial"), "id", None) == previous
+    )
     assert not stale, (
-        "the magic read the .last_trial of the previous run\n"
-        + cell.describe())
+        "the magic read the .last_trial of the previous run\n" + cell.describe()
+    )
 
 
 def test_now_run_in_the_background(shell):
@@ -624,12 +655,16 @@ def test_now_run_in_the_background(shell):
     cell = ran(shell, "trial = %now_run --bg gated.py")
     (project.path / "go").write_text("", encoding="utf-8")
     returncode = wait_last_child(shell)
-    stale = (failed_int(previous) in cell.stdout
-             or getattr(shell.user_ns.get("trial"), "id", None) == previous)
+    stale = (
+        failed_int(previous) in cell.stdout
+        or getattr(shell.user_ns.get("trial"), "id", None) == previous
+    )
     assert stale, cell.describe()
     assert returncode == 0
     assert scripts_and_statuses(project) == [
-        ("script.py", "finished"), ("gated.py", "finished")]
+        ("script.py", "finished"),
+        ("gated.py", "finished"),
+    ]
     assert shell.last_trial_id() == trial_ids(project)[1]
 
 
@@ -645,11 +680,13 @@ def test_now_run_in_the_background_desired(shell):
     cell = shell.run("trial = %now_run --bg gated.py")
     (project.path / "go").write_text("", encoding="utf-8")
     wait_last_child(shell)
-    stale = (previous in cell.stdout
-             or getattr(shell.user_ns.get("trial"), "id", None) == previous)
+    stale = (
+        previous in cell.stdout
+        or getattr(shell.user_ns.get("trial"), "id", None) == previous
+    )
     assert not stale, (
-        "the magic read the .last_trial of the previous run\n"
-        + cell.describe())
+        "the magic read the .last_trial of the previous run\n" + cell.describe()
+    )
 
 
 def test_now_run_with_out_keeps_the_output_in_a_variable(shell):
@@ -675,15 +712,15 @@ def test_now_run_of_a_cell_that_raises(shell):
     CalledProcessError.
     """
     code = "raise ValueError('in the cell')"
-    control = shell.run("%%script {}\n{}".format(
-        command_line([sys.executable]), code))
+    control = shell.run("%%script {}\n{}".format(command_line([sys.executable]), code))
     failed = control.error_type == "CalledProcessError"
     assert failed, control.describe()
     cell = shell.run("%%now_run --name raiser\n" + code)
-    reported = (cell.success
-                and "the execution finished with an uncaught exception"
-                in cell.stdout
-                and "ValueError: in the cell" in cell.stdout)
+    reported = (
+        cell.success
+        and "the execution finished with an uncaught exception" in cell.stdout
+        and "ValueError: in the cell" in cell.stdout
+    )
     assert reported, cell.describe()
     assert wait_last_child(shell) == 0
     assert scripts_and_statuses(shell.project) == [("raiser", "unfinished")]
@@ -708,7 +745,8 @@ INTERACTIVE_CELL = (
     "import sys\n"
     "seen = list(sys.argv)\n"
     "name = __name__\n"
-    "count = sum(range(arg))")
+    "count = sum(range(arg))"
+)
 
 
 def run_interactive_cell(shell):
@@ -730,13 +768,12 @@ def run_interactive_cell(shell):
         "the cell succeeded": cell.success,
         "the cell ran in the namespace": namespace.get("count") == 6,
         "__name__ was '__main__'": namespace.get("name") == "__main__",
-        "sys.argv was the cell's file and the line's arguments":
-            seen[1:] == ["7", "8"] and same_path(
-                namespace.get("__file__") or "", seen[0] or ""),
-        "the trial is recorded, finished":
-            scripts_and_statuses(project) == [("cellI", "finished")],
-        "the magic returned the trial":
-            returned is not None and trial_ids(project) == [returned],
+        "sys.argv was the cell's file and the line's arguments": seen[1:] == ["7", "8"]
+        and same_path(namespace.get("__file__") or "", seen[0] or ""),
+        "the trial is recorded, finished": scripts_and_statuses(project)
+        == [("cellI", "finished")],
+        "the magic returned the trial": returned is not None
+        and trial_ids(project) == [returned],
         "no .last_trial was written": shell.last_trial_id() is None,
     }
     return cell, [name for name, holds in checks.items() if not holds]
@@ -753,8 +790,11 @@ def test_interactive_cell(shell):
     """
     argv, path0 = list(sys.argv), sys.path[0]
     shell.ok("arg = 4")
-    ran(shell, INTERACTIVE_CELL,
-        "ModuleNotFoundError: No module named 'IPython.utils.py3compat'")
+    ran(
+        shell,
+        INTERACTIVE_CELL,
+        "ModuleNotFoundError: No module named 'IPython.utils.py3compat'",
+    )
     assert "count" not in shell.user_ns
     assert trial_count(shell.project) == 0
     assert collection_leftovers() == []
@@ -769,7 +809,8 @@ def test_interactive_cell_desired(shell):
     trial it recorded"""
     cell, failed = run_interactive_cell(shell)
     assert failed == [], "does not hold: {}\n{}".format(
-        "; ".join(failed), cell.describe())
+        "; ".join(failed), cell.describe()
+    )
 
 
 def test_interactive_cell_past_the_import(stand_in, shell):
@@ -779,4 +820,5 @@ def test_interactive_cell_past_the_import(stand_in, shell):
     the trial it recorded, without writing ``.last_trial``"""
     cell, failed = run_interactive_cell(shell)
     assert failed == [], "does not hold: {}\n{}".format(
-        "; ".join(failed), cell.describe())
+        "; ".join(failed), cell.describe()
+    )

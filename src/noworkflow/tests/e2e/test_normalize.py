@@ -41,6 +41,7 @@ are only read; the graph twins are written by ``diff -a`` and ``-d``. A
 comparison of two outputs fails with their changed lines, this machine's
 hostname, login and home directory redacted.
 """
+
 import collections
 import datetime
 import difflib
@@ -88,8 +89,13 @@ CI_YML = CHECKOUT / ".github" / "workflows" / "ci.yml"
 HOST = "runnervm0abc12"
 # The run behind the dataflow goldens (test_export.py).
 DATAFLOW_ARGS = ("run", "simulation.py", "input.txt", "xyz")
-DATAFLOW_MODES = ("activation", "coarseGrain", "looplessCoarseGrain",
-                  "fineGrain", "all")
+DATAFLOW_MODES = (
+    "activation",
+    "coarseGrain",
+    "looplessCoarseGrain",
+    "fineGrain",
+    "all",
+)
 # #248: `now diff` prints the replaced modules, file accesses
 # and environment attributes in the order of a set of pairs
 # (models/diff.py, diff_set). The pairs hash tuples that may hold None, and
@@ -97,8 +103,7 @@ DATAFLOW_MODES = ("activation", "coarseGrain", "looplessCoarseGrain",
 # moves: two runs print the blocks in different orders. The version of
 # another installation (NOW_E2E_CMD) is unknown, so it is compared the same
 # way.
-DIFF_SET_ORDER_VARIES = (sys.version_info < (3, 12)
-                         or not runs_this_interpreter())
+DIFF_SET_ORDER_VARIES = sys.version_info < (3, 12) or not runs_this_interpreter()
 # A `now diff` header whose blocks come from diff_set.
 REPLACED_HEADER = re.compile(r"\[now\] \d+ [\w ]+ replaced:")
 
@@ -110,14 +115,16 @@ def read_only(projects):
     unchanged = [project.fingerprint() for project in projects] == before
     assert unchanged, (
         "a test changed one of the module's read-only twin stores; build a "
-        "store of its own with the `project` fixture")
+        "store of its own with the `project` fixture"
+    )
 
 
 @pytest.fixture(scope="module")
 def _twin_stores(tmp_path_factory):
     root = tmp_path_factory.mktemp("normalize")
-    return tuple(build_weather(NowProject(root / name), trials=2)
-                 for name in ("a", "b"))
+    return tuple(
+        build_weather(NowProject(root / name), trials=2) for name in ("a", "b")
+    )
 
 
 @pytest.fixture
@@ -136,8 +143,9 @@ def graph_twins(tmp_path_factory):
     freshly built ones, so the order of the cases does not matter.
     """
     root = tmp_path_factory.mktemp("normalize_graph")
-    return tuple(build_weather(NowProject(root / name), trials=2)
-                 for name in ("a", "b"))
+    return tuple(
+        build_weather(NowProject(root / name), trials=2) for name in ("a", "b")
+    )
 
 
 @pytest.fixture(scope="module")
@@ -227,9 +235,19 @@ def assert_same_output(first, second):
     and a failing normalizer may leave the hostname in them.
     """
     same = first == second
-    assert same, redact("the outputs differ:\n" + "\n".join(
-        difflib.unified_diff(first.splitlines(), second.splitlines(),
-                             "first", "second", n=0, lineterm="")))
+    assert same, redact(
+        "the outputs differ:\n"
+        + "\n".join(
+            difflib.unified_diff(
+                first.splitlines(),
+                second.splitlines(),
+                "first",
+                "second",
+                n=0,
+                lineterm="",
+            )
+        )
+    )
 
 
 def assert_equalized(first, second, args):
@@ -237,10 +255,13 @@ def assert_equalized(first, second, args):
     outputs on the two stores"""
     raw_first, raw_second = output(first, args), output(second, args)
     differ = raw_first != raw_second
-    assert differ, ("the two stores printed the same raw output: the "
-                    "normalizer has nothing to equalize here")
-    assert_same_output(comparable(first, args, raw_first),
-                       comparable(second, args, raw_second))
+    assert differ, (
+        "the two stores printed the same raw output: the "
+        "normalizer has nothing to equalize here"
+    )
+    assert_same_output(
+        comparable(first, args, raw_first), comparable(second, args, raw_second)
+    )
 
 
 def activation_id(project, name, sequence_key):
@@ -249,16 +270,27 @@ def activation_id(project, name, sequence_key):
         "SELECT activation.id FROM activation "
         "JOIN trial ON trial.id = activation.trial_id "
         "WHERE activation.name = ? AND trial.sequence_key = ? "
-        "ORDER BY activation.id", name, sequence_key)
+        "ORDER BY activation.id",
+        name,
+        sequence_key,
+    )
     assert rows, "no activation of {} in trial {}".format(name, sequence_key)
     return str(rows[0]["id"])
 
 
 def function_diff(name):
     """``now diff 1 2 -fa`` on the activations of ``name``"""
+
     def args(project):
-        return ("diff", "1", "2", "-fa", activation_id(project, name, 1),
-                activation_id(project, name, 2))
+        return (
+            "diff",
+            "1",
+            "2",
+            "-fa",
+            activation_id(project, name, 1),
+            activation_id(project, name, 2),
+        )
+
     return args
 
 
@@ -271,8 +303,7 @@ def export_ast_marks(form):
     failure = export_ast_failure(form)
     if failure is None:
         return []
-    return [pytest.mark.xfail(strict=True, raises=AssertionError,
-                              reason=failure)]
+    return [pytest.mark.xfail(strict=True, raises=AssertionError, reason=failure)]
 
 
 def export_ast_args(form):
@@ -297,15 +328,18 @@ EQUALIZED = [
     pytest.param(("diff", "1", "2"), id="diff"),
     pytest.param(("diff", "1", "2", "-f", "-m", "-t"), id="diff-f-m-t"),
     pytest.param(("diff", "1", "2", "--brief"), id="diff-brief"),
-    pytest.param(("diff", "1", "2", "-f", "-m", "-t", "--brief"),
-                 id="diff-f-m-t-brief"),
+    pytest.param(
+        ("diff", "1", "2", "-f", "-m", "-t", "--brief"), id="diff-f-m-t-brief"
+    ),
     pytest.param(("export", "prolog", "-t"), id="export-prolog-t"),
     pytest.param(("export", "prolog", "-t", "-r"), id="export-prolog-t-r"),
     pytest.param(("export", "prov"), id="export-prov"),
-    pytest.param(export_ast_args("json"), id="export-ast-json",
-                 marks=export_ast_marks("json")),
-    pytest.param(export_ast_args("dot"), id="export-ast-dot",
-                 marks=export_ast_marks("dot")),
+    pytest.param(
+        export_ast_args("json"), id="export-ast-json", marks=export_ast_marks("json")
+    ),
+    pytest.param(
+        export_ast_args("dot"), id="export-ast-dot", marks=export_ast_marks("dot")
+    ),
 ]
 
 
@@ -329,8 +363,7 @@ GRAPH_DIFFS = [
 
 
 @pytest.mark.parametrize("args", GRAPH_DIFFS)
-def test_normalizer_equalizes_the_diffs_that_write_the_graph_cache(
-        graph_twins, args):
+def test_normalizer_equalizes_the_diffs_that_write_the_graph_cache(graph_twins, args):
     """``diff -a`` and ``-d``, which store their trees in the graph cache,
     give raw outputs that differ (the trial ids) and normalized outputs
     that are equal on two stores of their own"""
@@ -341,11 +374,18 @@ def test_normalizer_equalizes_the_diffs_that_write_the_graph_cache(
 # no clock, no path. The text form of `export ast` is a dump of the tree.
 BYTE_IDENTICAL = [
     pytest.param("twins", ("export", "prospective"), id="export-prospective"),
-    pytest.param("twins", export_ast_args("text"), id="export-ast-text",
-                 marks=export_ast_marks("text")),
+    pytest.param(
+        "twins",
+        export_ast_args("text"),
+        id="export-ast-text",
+        marks=export_ast_marks("text"),
+    ),
 ] + [
-    pytest.param("dataflow_twins", ("export", "dataflow", "-m", mode),
-                 id="export-dataflow-" + mode)
+    pytest.param(
+        "dataflow_twins",
+        ("export", "dataflow", "-m", mode),
+        id="export-dataflow-" + mode,
+    )
     for mode in DATAFLOW_MODES
 ]
 
@@ -356,21 +396,27 @@ def test_normalizer_keeps_identical_outputs_equal(request, stores, args):
     stores: the masks (UUID and node numbering, paths) introduce no
     difference of their own"""
     first, second = request.getfixturevalue(stores)
-    assert_same_output(comparable(first, args, output(first, args)),
-                       comparable(second, args, output(second, args)))
+    assert_same_output(
+        comparable(first, args, output(first, args)),
+        comparable(second, args, output(second, args)),
+    )
 
 
 def test_sorted_replaced_blocks_orders_only_the_replaced_sections():
     """Control of the comparison before Python 3.12: the replaced file
     accesses in either order give the same text, and the lines of the other
     sections keep their order"""
+
     def diff(*names):
         return (
             "[now] trial diff:\n  Sequence key changed from 1 to 2\n"
             "  Parent id changed from <None> to <UUID1>\n\n"
-            "[now] 2 file accesses replaced:\n" + "".join(
+            "[now] 2 file accesses replaced:\n"
+            + "".join(
                 "  Name: {}\n    Checkpoint changed from <CHECKPOINT> to "
-                "<CHECKPOINT>\n\n".format(name) for name in names)
+                "<CHECKPOINT>\n\n".format(name)
+                for name in names
+            )
             + "[now] 0 modules added:\n\n"
         )
 
@@ -415,8 +461,7 @@ VOLATILE_TOKEN = re.compile(
     r"|(?P<pid>(?<=Environment attribute PID changed from )\d+ to \d+)"
 )
 # Tokens of varying width: the difflib hint under their line varies too.
-VARYING_WIDTH = {"timestamp", "duration", "checkpoint", "address",
-                 "microseconds"}
+VARYING_WIDTH = {"timestamp", "duration", "checkpoint", "address", "microseconds"}
 # Values no run of the corpus prints: ten hours, a whole day minus a second.
 DURATIONS = (
     datetime.timedelta(hours=10, minutes=2, seconds=3, microseconds=4),
@@ -452,23 +497,29 @@ def perturb(text, seed=216, keep=()):
         counts[kind] += 1
         if kind == "uuid":
             if value not in uuids:
-                uuids[value] = str(uuid.UUID(int=rng.getrandbits(128),
-                                             version=4))
+                uuids[value] = str(uuid.UUID(int=rng.getrandbits(128), version=4))
             return uuids[value]
         if kind == "timestamp":
             moved = datetime.datetime.fromisoformat(value) + datetime.timedelta(
-                days=37, hours=5, minutes=11, seconds=7,
-                microseconds=rng.randrange(1, 10 ** 6))
+                days=37,
+                hours=5,
+                minutes=11,
+                seconds=7,
+                microseconds=rng.randrange(1, 10**6),
+            )
             return str(moved.replace(microsecond=0) if index % 2 else moved)
         if kind == "duration":
             return str(DURATIONS[index % len(DURATIONS)])
         if kind == "epoch":
             # As utils/prolog.py prints it: str() of whole microseconds / 1e6.
-            micro = (round(float(value) * 10 ** 6) + 37 * 86400 * 10 ** 6
-                     + rng.randrange(1, 10 ** 6))
+            micro = (
+                round(float(value) * 10**6)
+                + 37 * 86400 * 10**6
+                + rng.randrange(1, 10**6)
+            )
             if index % 2:
-                micro -= micro % 10 ** 6
-            return str(micro / 10 ** 6)
+                micro -= micro % 10**6
+            return str(micro / 10**6)
         if kind == "microseconds":
             return MICROSECONDS[index % len(MICROSECONDS)] + " microseconds"
         if kind == "checkpoint":
@@ -488,21 +539,18 @@ def perturb(text, seed=216, keep=()):
                 return "0x{:016X}".format(rng.getrandbits(44))
             return "0x{:x}".format(rng.getrandbits(44) | 1 << 44)
         assert kind == "pid", kind
-        return "{} to {}".format(rng.randrange(2, 10),
-                                 rng.randrange(10 ** 6, 4194304))
+        return "{} to {}".format(rng.randrange(2, 10), rng.randrange(10**6, 4194304))
 
     lines = []
     previous = set()
     for line in text.split("\n"):
         if line.startswith("? ") and previous & VARYING_WIDTH:
-            lines.append("? " + " " * rng.randrange(1, 40)
-                         + "^" * rng.randrange(1, 9))
+            lines.append("? " + " " * rng.randrange(1, 40) + "^" * rng.randrange(1, 9))
             kinds.add("hint")
             previous = set()
             continue
         found = set()
-        kept = [span.span() for pattern in keep
-                for span in pattern.finditer(line)]
+        kept = [span.span() for pattern in keep for span in pattern.finditer(line)]
 
         def replace(match):
             if any(start <= match.start() < end for start, end in kept):
@@ -520,19 +568,19 @@ def perturb(text, seed=216, keep=()):
 PERTURBED = [
     pytest.param(("list",), {"uuid", "timestamp", "duration"}, id="list"),
     pytest.param(("history",), {"uuid"}, id="history"),
-    pytest.param(("show", "-a"), {"uuid", "timestamp", "duration", "address"},
-                 id="show-a"),
-    pytest.param(("show", "-f"), {"uuid", "timestamp", "duration"},
-                 id="show-f"),
-    pytest.param(("show", "-p"), {"uuid", "timestamp", "duration"},
-                 id="show-p"),
+    pytest.param(
+        ("show", "-a"), {"uuid", "timestamp", "duration", "address"}, id="show-a"
+    ),
+    pytest.param(("show", "-f"), {"uuid", "timestamp", "duration"}, id="show-f"),
+    pytest.param(("show", "-p"), {"uuid", "timestamp", "duration"}, id="show-p"),
     pytest.param(("diff", "1", "2"), {"uuid", "timestamp"}, id="diff"),
-    pytest.param(("diff", "1", "2", "-f"), {"uuid", "timestamp"},
-                 id="diff-f"),
+    pytest.param(("diff", "1", "2", "-f"), {"uuid", "timestamp"}, id="diff-f"),
     pytest.param(("diff", "1", "2", "-e"), {"uuid", "pid"}, id="diff-e"),
-    pytest.param(("export", "prolog"),
-                 {"uuid", "epoch", "checkpoint", "address"},
-                 id="export-prolog"),
+    pytest.param(
+        ("export", "prolog"),
+        {"uuid", "epoch", "checkpoint", "address"},
+        id="export-prolog",
+    ),
     pytest.param(("export", "prov"), {"address"}, id="export-prov"),
     pytest.param(function_diff("simulate"), {"uuid"}, id="diff-fa-simulate"),
     pytest.param(function_diff("csv_read"), {"uuid"}, id="diff-fa-csv_read"),
@@ -546,28 +594,27 @@ def hostname_patterns(hostname=None):
     on GitHub's macOS runners it even contains a UUID-shaped segment
     (``iad20-...-<uuid>-...local``) that would otherwise be rewritten.
     """
-    return host_rules(socket.gethostname() if hostname is None
-                      else hostname)
+    return host_rules(socket.gethostname() if hostname is None else hostname)
 
 
 @pytest.mark.parametrize("command, required", PERTURBED)
-def test_normalizer_ignores_rewritten_volatile_tokens(twins, command,
-                                                      required):
+def test_normalizer_ignores_rewritten_volatile_tokens(twins, command, required):
     """Rewriting every volatile token of a real output, as another run
     would print it, leaves the normalized output unchanged"""
     project = twins[0]
     args = command(project) if callable(command) else command
     raw = output(project, args)
     flags = re.IGNORECASE if os.name == "nt" else 0
-    roots = [re.compile(path_pattern(path), flags)
-             for path in path_variants(project.root)]
+    roots = [
+        re.compile(path_pattern(path), flags) for path in path_variants(project.root)
+    ]
     perturbed = perturb(raw, keep=roots + hostname_patterns())
     assert required <= perturbed.kinds, "perturb() found nothing to rewrite"
-    survivors = sorted({token for token in perturbed.originals
-                        if token in perturbed.text})
+    survivors = sorted(
+        {token for token in perturbed.originals if token in perturbed.text}
+    )
     assert survivors == [], "perturb() left original tokens in place"
-    assert_same_output(project.normalize(perturbed.text),
-                       project.normalize(raw))
+    assert_same_output(project.normalize(perturbed.text), project.normalize(raw))
 
 
 def test_short_checkpoints_are_masked_by_position():
@@ -586,21 +633,20 @@ def test_short_checkpoints_are_masked_by_position():
     )
     lines = Normalizer(hostname=HOST)(text).splitlines()
     assert lines[0] == "activation('<UUID1>', 9, 'load', <CHECKPOINT>, 6)."
-    assert lines[1] == ("evaluation('<UUID1>', 248, <CHECKPOINT>, 172, 206, "
-                        "'f(a, b)', 7).")
-    assert lines[2] == ("access('<UUID1>', f1, 'data.csv', 'r', 'ab', 'ab', "
-                        "<CHECKPOINT>, 10).")
-    assert lines[3] == ("member('<UUID1>', 0, 1, 0, 11, '.x, y', "
-                        "<CHECKPOINT>, 'Put').")
+    assert lines[1] == (
+        "evaluation('<UUID1>', 248, <CHECKPOINT>, 172, 206, 'f(a, b)', 7)."
+    )
+    assert lines[2] == (
+        "access('<UUID1>', f1, 'data.csv', 'r', 'ab', 'ab', <CHECKPOINT>, 10)."
+    )
+    assert lines[3] == ("member('<UUID1>', 0, 1, 0, 11, '.x, y', <CHECKPOINT>, 'Put').")
     assert lines[4].count("<CHECKPOINT>") == 2
-    assert lines[5] == ("    Checkpoint changed from <CHECKPOINT> to "
-                        "<CHECKPOINT>")
+    assert lines[5] == ("    Checkpoint changed from <CHECKPOINT> to <CHECKPOINT>")
     assert lines[6] == "  Return value: 0.5"
 
 
 @pytest.mark.parametrize("mode", ("activation", "fineGrain"))
-def test_access_ids_shifted_by_the_environment_normalize_alike(
-        dataflow_twins, mode):
+def test_access_ids_shifted_by_the_environment_normalize_alike(dataflow_twins, mode):
     """A dataflow whose access ids are all higher, as when the imported
     libraries read more files of another environment first, normalizes to
     the same text; which access is which still shows"""
@@ -608,14 +654,18 @@ def test_access_ids_shifted_by_the_environment_normalize_alike(
     raw = project.run("export", "dataflow", "-m", mode).stdout
     ids = sorted({int(n) for n in re.findall(r"\ba_(\d+) \[", raw)})
     assert len(ids) >= 2, "the dataflow corpus should draw two accesses"
-    shifted = re.sub(r"\ba_(\d+)\b",
-                     lambda match: "a_{}".format(int(match.group(1)) + 7), raw)
+    shifted = re.sub(
+        r"\ba_(\d+)\b", lambda match: "a_{}".format(int(match.group(1)) + 7), raw
+    )
     assert shifted != raw
     assert project.normalize(shifted) == project.normalize(raw)
     # Control: two accesses that trade labels are another graph.
     first, second = ("a_{} [label=".format(n + 7) for n in ids[:2])
-    swapped = (shifted.replace(first, "<FIRST>").replace(second, first)
-               .replace("<FIRST>", second))
+    swapped = (
+        shifted.replace(first, "<FIRST>")
+        .replace(second, first)
+        .replace("<FIRST>", second)
+    )
     assert project.normalize(swapped) != project.normalize(raw)
 
 
@@ -626,7 +676,7 @@ def test_access_nodes_are_renumbered_only_in_the_dot_syntax():
         '    e_3 [label="2 open(\\"a_12\\")"];\n'
         '    a_12 [label="out.txt"];\n'
         '    a_9 [label="in.txt"];\n'
-        "    a_12 -> e_3 [style=\"dashed\"];\n"
+        '    a_12 -> e_3 [style="dashed"];\n'
         "    e_3 -> a_9 ;\n"
         "  3: a_12 = a_9\n"
     )
@@ -634,7 +684,7 @@ def test_access_nodes_are_renumbered_only_in_the_dot_syntax():
         '    e_3 [label="2 open(\\"a_12\\")"];\n'
         '    a_<A1> [label="out.txt"];\n'
         '    a_<A2> [label="in.txt"];\n'
-        "    a_<A1> -> e_3 [style=\"dashed\"];\n"
+        '    a_<A1> -> e_3 [style="dashed"];\n'
         "    e_3 -> a_<A2> ;\n"
         "  3: a_12 = a_9\n"
     )
@@ -643,12 +693,11 @@ def test_access_nodes_are_renumbered_only_in_the_dot_syntax():
 def test_hostname_with_a_uuid_survives_perturbation():
     """A hostname that contains a UUID-shaped segment, like those of
     GitHub's macOS runners, is masked whole, and ``perturb`` keeps it"""
-    host = ("iad20-eo1214-1524f517-96a6-4d74-9157-c1ff51b279a0"
-            "-56481D34DF8F.local")
+    host = "iad20-eo1214-1524f517-96a6-4d74-9157-c1ff51b279a0-56481D34DF8F.local"
     raw = (
         "trial('9d5c0e7e-0b37-4b3a-9f3e-6c1b7a2d5e10', 'main.py', "
         "'{}\\\\nowtest').\n"
-        "entity(user_{}\\nowtest, [type=\"script:user\"])\n".format(host, host)
+        'entity(user_{}\\nowtest, [type="script:user"])\n'.format(host, host)
     )
     normalize = Normalizer(hostname=host)
     assert host not in normalize(raw)
@@ -672,9 +721,17 @@ def test_perturb_rewrites_each_kind_of_token():
         "? kept, under a line without volatile tokens\n"
     )
     perturbed = perturb(raw)
-    assert perturbed.kinds == {"uuid", "timestamp", "duration", "epoch",
-                               "checkpoint", "microseconds", "hint",
-                               "address", "pid"}
+    assert perturbed.kinds == {
+        "uuid",
+        "timestamp",
+        "duration",
+        "epoch",
+        "checkpoint",
+        "microseconds",
+        "hint",
+        "address",
+        "pid",
+    }
     lines = perturbed.text.split("\n")
     new_id = re.search(r"[0-9a-f-]{36}", lines[0]).group(0)
     assert new_id in lines[1]
@@ -700,9 +757,9 @@ def test_normalizer_keeps_content_hashes(twins, project):
     assert len(original.splitlines()) == len(changed.splitlines())
     differing = [pair for pair in pairs if pair[0] != pair[1]]
     assert differing
-    assert all(line.startswith("    Content hash ")
-               for pair in differing for line in pair), "\n".join(
-                   "{!r} -> {!r}".format(*pair) for pair in differing)
+    assert all(
+        line.startswith("    Content hash ") for pair in differing for line in pair
+    ), "\n".join("{!r} -> {!r}".format(*pair) for pair in differing)
     before = sha1((CORPUS / "weather" / "data2.dat").read_bytes())
     after = sha1(WEATHER_DATA2_TRIAL2.encode("utf-8"))
     assert "Content hash before: {}".format(before) in original
@@ -732,8 +789,7 @@ def test_normalizer_keeps_line_numbers(twins, project):
     script = (project.path / "simulation.py").read_text(encoding="utf-8")
     project.write("simulation.py", "# one line more\n" + script)
     project.run(*WEATHER_ARGS)
-    original = twins[0].normalize(
-        twins[0].run("show", "-a", "1").stdout).splitlines()
+    original = twins[0].normalize(twins[0].run("show", "-a", "1").stdout).splitlines()
     shifted = project.normalize(project.run("show", "-a").stdout).splitlines()
     assert len(original) == len(shifted)
     moved = 0
@@ -743,8 +799,7 @@ def test_normalizer_keeps_line_numbers(twins, project):
         if before.startswith("  Code hash: "):
             assert after.startswith("  Code hash: ")
             continue
-        old, new = ACTIVATION_LINE.fullmatch(before), ACTIVATION_LINE.fullmatch(
-            after)
+        old, new = ACTIVATION_LINE.fullmatch(before), ACTIVATION_LINE.fullmatch(after)
         assert old and new, "{!r} -> {!r}".format(before, after)
         assert (old["indent"], old["rest"]) == (new["indent"], new["rest"])
         assert int(new["line"]) == int(old["line"]) + 1
@@ -760,26 +815,29 @@ def test_hostname_is_masked_after_a_word_character():
     prov``), in its Prolog escape and as a whole FQDN"""
     normalize = Normalizer(hostname=HOST + ".internal.cloudapp.net")
     text = (
-        "entity(user_runnervm0abc12\\nowtest, [type=\"script:user\", "
-        "label=\"nowtest\"])\n"
+        'entity(user_runnervm0abc12\\nowtest, [type="script:user", '
+        'label="nowtest"])\n'
         "trial('<UUID1>', 'runnervm0abc12\\\\nowtest').\n"
         "HOSTNAME: runnervm0abc12.internal.cloudapp.net\n"
         "upper RUNNERVM0ABC12\n"
     )
     assert normalize(text) == (
-        "entity(user_<HOSTNAME>\\nowtest, [type=\"script:user\", "
-        "label=\"nowtest\"])\n"
+        'entity(user_<HOSTNAME>\\nowtest, [type="script:user", '
+        'label="nowtest"])\n'
         "trial('<UUID1>', '<HOSTNAME>\\\\nowtest').\n"
         "HOSTNAME: <HOSTNAME>\n"
         "upper <HOSTNAME>\n"
     )
 
 
-@pytest.mark.parametrize("hostname, text", [
-    pytest.param(HOST, "runnervm0abc123 xrunnervm0abc12", id="longer-word"),
-    pytest.param("mac", "mac machine mac.local", id="too-short"),
-    pytest.param("localhost", "localhost:8000", id="localhost"),
-])
+@pytest.mark.parametrize(
+    "hostname, text",
+    [
+        pytest.param(HOST, "runnervm0abc123 xrunnervm0abc12", id="longer-word"),
+        pytest.param("mac", "mac machine mac.local", id="too-short"),
+        pytest.param("localhost", "localhost:8000", id="localhost"),
+    ],
+)
 def test_hostname_is_masked_only_whole_and_usable(hostname, text):
     """A hostname inside a longer name, a short one and ``localhost`` are
     left alone"""
@@ -796,8 +854,7 @@ def test_windows_path_is_masked_in_every_backslash_spelling():
     quadrupled = doubled.replace("\\", "\\\\")
     text = (
         "Path: {}\nscript: '{}'\nargument('<UUID1>', 'script', '{}').\n"
-        "from {}\n".format(native, doubled, quadrupled,
-                           native.replace("\\", "/"))
+        "from {}\n".format(native, doubled, quadrupled, native.replace("\\", "/"))
     )
     assert normalize(text) == (
         "Path: <PROJECT>\\simulation.py\n"
@@ -811,9 +868,11 @@ def test_path_is_not_masked_inside_a_longer_sibling():
     """The pattern of ``/tmp/x/project`` leaves ``/tmp/x/project2`` and
     other longer names alone"""
     normalize = Normalizer([("<PROJECT>", "/tmp/x/project")], hostname=HOST)
-    text = ("/tmp/x/project2/a.py /tmp/x/project.bak /tmp/x/project-old "
-            "/tmp/x/project_1\n/tmp/x/project/a.py '/tmp/x/project' "
-            "/tmp/x/project")
+    text = (
+        "/tmp/x/project2/a.py /tmp/x/project.bak /tmp/x/project-old "
+        "/tmp/x/project_1\n/tmp/x/project/a.py '/tmp/x/project' "
+        "/tmp/x/project"
+    )
     assert normalize(text) == (
         "/tmp/x/project2/a.py /tmp/x/project.bak /tmp/x/project-old "
         "/tmp/x/project_1\n<PROJECT>/a.py '<PROJECT>' <PROJECT>\n"
@@ -837,96 +896,121 @@ def test_site_packages_is_masked_after_the_traceback_prefix():
     )
 
 
-@pytest.mark.parametrize("text, expected", [
-    pytest.param(
-        "Start: 2026-10-14 15:16:14\nFinish: 2026-10-14 15:16:14.040445\n"
-        "at 2026-10-14T15:16:14.5",
-        "Start: <TIMESTAMP>\nFinish: <TIMESTAMP>\nat <TIMESTAMP>\n",
-        id="timestamp-without-fraction"),
-    pytest.param(
-        "duration: 10:02:03.000004\nDuration: 23:59:59\n"
-        "Duration text changed from 0:00:00.097311 to 12:00:00",
-        "duration: <DURATION>\nDuration: <DURATION>\n"
-        "Duration text changed from <DURATION> to <DURATION>\n",
-        id="duration-of-many-hours"),
-    pytest.param(
-        "Checkpoint changed from 1.5e-05 to 0.08310495795088261\n"
-        "access('<UUID1>', f1, 'data.csv', 'r', nil, nil, 9.5e-05, 10).\n"
-        "activation('<UUID1>', 9, 'load', 1.0841227079508826, 6).\n"
-        "activation('<UUID1>', 10, 'f', 2.3456789012345e-06, 7).",
-        "Checkpoint changed from <CHECKPOINT> to <CHECKPOINT>\n"
-        "access('<UUID1>', f1, 'data.csv', 'r', nil, nil, <CHECKPOINT>, 10).\n"
-        "activation('<UUID1>', 9, 'load', <CHECKPOINT>, 6).\n"
-        "activation('<UUID1>', 10, 'f', <CHECKPOINT>, 7).\n",
-        id="exponent-checkpoint"),
-    pytest.param(
-        "trial('<UUID1>', 'main.py', 1791990978.726691, 1791990978.0).",
-        "trial('<UUID1>', 'main.py', <EPOCH>, <EPOCH>).\n",
-        id="epoch"),
-    pytest.param(
-        "<function f at 0x10d593560> <object at 0x000001D2C3B4A5F0>",
-        "<function f at <ADDRESS>> <object at <ADDRESS>>\n",
-        id="address-any-case-and-width"),
-    pytest.param(
-        "Parent id changed from <None> to 1524f517-96a6-4d74-9157-c1ff51b279a0"
-        "\naccess('41aa0480-3c40-4e4e-b952-0e92806c729c', f1)."
-        "\naccess('1524f517-96a6-4d74-9157-c1ff51b279a0', f2).",
-        "Parent id changed from <None> to <UUID1>\naccess('<UUID2>', f1)."
-        "\naccess('<UUID1>', f2).\n",
-        id="uuids-numbered-by-first-use"),
-    pytest.param(
-        'node4504630224 [label="Module"]\nnode4504630288 [label="Expr"]\n'
-        "node4504630224 -> node4504630288\nnode12",
-        'node<N1> [label="Module"]\nnode<N2> [label="Expr"]\n'
-        "node<N1> -> node<N2>\nnode12\n",
-        id="ast-node-ids-numbered-by-first-use"),
-    pytest.param(
-        "  PID: 4242\n  OS_RELEASE: synthetic\n  OS_VERSION: #1 SMP synthetic\n"
-        "  PROCESSOR: synthetic\n  PIDFILE: kept\n"
-        "  Environment attribute PID changed from 4242 to 4243\n"
-        "  Environment attribute USER changed from a to b",
-        "  PID: <MASKED>\n  OS_RELEASE: <MASKED>\n  OS_VERSION: <MASKED>\n"
-        "  PROCESSOR: <MASKED>\n  PIDFILE: kept\n"
-        "  Environment attribute PID changed from <MASKED>\n"
-        "  Environment attribute USER changed from a to b\n",
-        id="volatile-environment-lines"),
-    pytest.param(
-        "  PROCESSOR: \n  MACHINE: arm64\n  PID: 4242",
-        "  PROCESSOR: <MASKED>\n  MACHINE: arm64\n  PID: <MASKED>\n",
-        id="empty-volatile-value-keeps-the-next-line"),
-    pytest.param(
-        "noWorkflow 9.8.7\nnoWorkflow 10.0.0rc2.dev3+g1a2b3c4\n"
-        "the noWorkflow project",
-        "noWorkflow <NOWORKFLOW_VERSION>\nnoWorkflow <NOWORKFLOW_VERSION>\n"
-        "the noWorkflow project\n",
-        id="noworkflow-version"),
-    pytest.param(
-        "- 206.25 microseconds\n+ 1.5 microseconds",
-        "- <N> microseconds\n+ <N> microseconds\n",
-        id="function-duration"),
-    pytest.param("line one  \r\nline two\t\r\n\r\n", "line one\nline two\n",
-                 id="line-ends-and-trailing-spaces"),
-])
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        pytest.param(
+            "Start: 2026-10-14 15:16:14\nFinish: 2026-10-14 15:16:14.040445\n"
+            "at 2026-10-14T15:16:14.5",
+            "Start: <TIMESTAMP>\nFinish: <TIMESTAMP>\nat <TIMESTAMP>\n",
+            id="timestamp-without-fraction",
+        ),
+        pytest.param(
+            "duration: 10:02:03.000004\nDuration: 23:59:59\n"
+            "Duration text changed from 0:00:00.097311 to 12:00:00",
+            "duration: <DURATION>\nDuration: <DURATION>\n"
+            "Duration text changed from <DURATION> to <DURATION>\n",
+            id="duration-of-many-hours",
+        ),
+        pytest.param(
+            "Checkpoint changed from 1.5e-05 to 0.08310495795088261\n"
+            "access('<UUID1>', f1, 'data.csv', 'r', nil, nil, 9.5e-05, 10).\n"
+            "activation('<UUID1>', 9, 'load', 1.0841227079508826, 6).\n"
+            "activation('<UUID1>', 10, 'f', 2.3456789012345e-06, 7).",
+            "Checkpoint changed from <CHECKPOINT> to <CHECKPOINT>\n"
+            "access('<UUID1>', f1, 'data.csv', 'r', nil, nil, <CHECKPOINT>, 10).\n"
+            "activation('<UUID1>', 9, 'load', <CHECKPOINT>, 6).\n"
+            "activation('<UUID1>', 10, 'f', <CHECKPOINT>, 7).\n",
+            id="exponent-checkpoint",
+        ),
+        pytest.param(
+            "trial('<UUID1>', 'main.py', 1791990978.726691, 1791990978.0).",
+            "trial('<UUID1>', 'main.py', <EPOCH>, <EPOCH>).\n",
+            id="epoch",
+        ),
+        pytest.param(
+            "<function f at 0x10d593560> <object at 0x000001D2C3B4A5F0>",
+            "<function f at <ADDRESS>> <object at <ADDRESS>>\n",
+            id="address-any-case-and-width",
+        ),
+        pytest.param(
+            "Parent id changed from <None> to 1524f517-96a6-4d74-9157-c1ff51b279a0"
+            "\naccess('41aa0480-3c40-4e4e-b952-0e92806c729c', f1)."
+            "\naccess('1524f517-96a6-4d74-9157-c1ff51b279a0', f2).",
+            "Parent id changed from <None> to <UUID1>\naccess('<UUID2>', f1)."
+            "\naccess('<UUID1>', f2).\n",
+            id="uuids-numbered-by-first-use",
+        ),
+        pytest.param(
+            'node4504630224 [label="Module"]\nnode4504630288 [label="Expr"]\n'
+            "node4504630224 -> node4504630288\nnode12",
+            'node<N1> [label="Module"]\nnode<N2> [label="Expr"]\n'
+            "node<N1> -> node<N2>\nnode12\n",
+            id="ast-node-ids-numbered-by-first-use",
+        ),
+        pytest.param(
+            "  PID: 4242\n  OS_RELEASE: synthetic\n  OS_VERSION: #1 SMP synthetic\n"
+            "  PROCESSOR: synthetic\n  PIDFILE: kept\n"
+            "  Environment attribute PID changed from 4242 to 4243\n"
+            "  Environment attribute USER changed from a to b",
+            "  PID: <MASKED>\n  OS_RELEASE: <MASKED>\n  OS_VERSION: <MASKED>\n"
+            "  PROCESSOR: <MASKED>\n  PIDFILE: kept\n"
+            "  Environment attribute PID changed from <MASKED>\n"
+            "  Environment attribute USER changed from a to b\n",
+            id="volatile-environment-lines",
+        ),
+        pytest.param(
+            "  PROCESSOR: \n  MACHINE: arm64\n  PID: 4242",
+            "  PROCESSOR: <MASKED>\n  MACHINE: arm64\n  PID: <MASKED>\n",
+            id="empty-volatile-value-keeps-the-next-line",
+        ),
+        pytest.param(
+            "noWorkflow 9.8.7\nnoWorkflow 10.0.0rc2.dev3+g1a2b3c4\n"
+            "the noWorkflow project",
+            "noWorkflow <NOWORKFLOW_VERSION>\nnoWorkflow <NOWORKFLOW_VERSION>\n"
+            "the noWorkflow project\n",
+            id="noworkflow-version",
+        ),
+        pytest.param(
+            "- 206.25 microseconds\n+ 1.5 microseconds",
+            "- <N> microseconds\n+ <N> microseconds\n",
+            id="function-duration",
+        ),
+        pytest.param(
+            "line one  \r\nline two\t\r\n\r\n",
+            "line one\nline two\n",
+            id="line-ends-and-trailing-spaces",
+        ),
+    ],
+)
 def test_volatile_token_is_masked(text, expected):
     """Each volatile token is masked at the edges of its format"""
     assert Normalizer(hostname=HOST)(text) == expected
 
 
-@pytest.mark.parametrize("text", [
-    pytest.param("  Sequence Key: 2\n  Tag: 1.1.2 Type: AUTO", id="trial"),
-    pytest.param("  Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28",
-                 id="sha1"),
-    pytest.param("        16: float (<TIMESTAMP> - <TIMESTAMP>)",
-                 id="line-number"),
-    pytest.param("    Activation id changed from 89 to 100", id="ids"),
-    pytest.param("  Activations TED: 2.0\n  Definition TED: 0.0", id="teds"),
-    pytest.param("Parameters: path_a = 'data1.dat', scale = 1.0\n"
-                 "Return value: [[2.0, 0.7], [2.5, 0.3]]", id="values"),
-    pytest.param("{'evaluation_id': 65, 'code_line': 16, 'code_column': 12}",
-                 id="evaluation"),
-    pytest.param("e_179 -> e_22 [style=\"dashed\"]\nversion:checkpoint=\"291\"",
-                 id="graph-ids"),
-])
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("  Sequence Key: 2\n  Tag: 1.1.2 Type: AUTO", id="trial"),
+        pytest.param(
+            "  Code hash: eded2ea67f57b93f1dc55aa339b946424d65df28", id="sha1"
+        ),
+        pytest.param("        16: float (<TIMESTAMP> - <TIMESTAMP>)", id="line-number"),
+        pytest.param("    Activation id changed from 89 to 100", id="ids"),
+        pytest.param("  Activations TED: 2.0\n  Definition TED: 0.0", id="teds"),
+        pytest.param(
+            "Parameters: path_a = 'data1.dat', scale = 1.0\n"
+            "Return value: [[2.0, 0.7], [2.5, 0.3]]",
+            id="values",
+        ),
+        pytest.param(
+            "{'evaluation_id': 65, 'code_line': 16, 'code_column': 12}", id="evaluation"
+        ),
+        pytest.param(
+            'e_179 -> e_22 [style="dashed"]\nversion:checkpoint="291"', id="graph-ids"
+        ),
+    ],
+)
 def test_semantic_values_survive_normalization(text):
     """Sequence keys, tags, hashes, line numbers, ids and values are the
     output under test: normalization leaves them as they are"""
@@ -966,10 +1050,16 @@ def test_difflib_hints_are_dropped_only_under_masked_lines():
 def function_diff_duration(before, after):
     """The duration section of ``now diff -fa`` as ``cmd_diff.py`` prints
     it: difflib's lines joined by newlines, then ``print('\\n')``"""
-    compared = difflib.Differ().compare([before + " microseconds"],
-                                        [after + " microseconds"])
-    return ("[now] The duration changed:\n\n" + "\n".join(compared) + "\n"
-            + "\n\n" + "[now] The variables didn't change\n\n")
+    compared = difflib.Differ().compare(
+        [before + " microseconds"], [after + " microseconds"]
+    )
+    return (
+        "[now] The duration changed:\n\n"
+        + "\n".join(compared)
+        + "\n"
+        + "\n\n"
+        + "[now] The variables didn't change\n\n"
+    )
 
 
 def test_function_diff_duration_normalizes_the_same_with_or_without_hint():
@@ -986,13 +1076,15 @@ def test_python_version_is_masked_only_whole():
     """The version of the running Python becomes ``<PYTHON_VERSION>``;
     another version, and the same digits inside a longer number, stay"""
     version = platform.python_version()
-    other = "{}.{}.{}".format(sys.version_info.major, sys.version_info.minor,
-                              sys.version_info.micro + 1)
-    text = "PYTHON_VERSION: {0}\nPython {1}\n{0}.1 1{0}".format(version,
-                                                              other)
+    other = "{}.{}.{}".format(
+        sys.version_info.major, sys.version_info.minor, sys.version_info.micro + 1
+    )
+    text = "PYTHON_VERSION: {0}\nPython {1}\n{0}.1 1{0}".format(version, other)
     assert Normalizer(hostname=HOST)(text) == (
         "PYTHON_VERSION: <PYTHON_VERSION>\nPython {1}\n{0}.1 1{0}\n".format(
-            version, other))
+            version, other
+        )
+    )
 
 
 def test_project_through_a_symlink_is_masked_in_both_spellings(tmp_path):
@@ -1009,12 +1101,13 @@ def test_project_through_a_symlink_is_masked_in_both_spellings(tmp_path):
     typed = link / "project"
     resolved = os.path.realpath(typed)
     assert Path(resolved).parts[-2:] == ("real", "project"), (
-        "the symlink did not resolve")
+        "the symlink did not resolve"
+    )
     normalize = Normalizer([("<PROJECT>", typed)], hostname=HOST)
-    text = "argv: {}/simulation.py\nscript: {}/simulation.py".format(
-        typed, resolved)
+    text = "argv: {}/simulation.py\nscript: {}/simulation.py".format(typed, resolved)
     assert normalize(text) == (
-        "argv: <PROJECT>/simulation.py\nscript: <PROJECT>/simulation.py\n")
+        "argv: <PROJECT>/simulation.py\nscript: <PROJECT>/simulation.py\n"
+    )
 
 
 def test_json_numbers_the_uuids_in_sorted_key_order():
@@ -1027,10 +1120,10 @@ def test_json_numbers_the_uuids_in_sorted_key_order():
     reordered = json.dumps({"a": {"y": second, "z": 1}, "b": first})
     normalize = Normalizer(hostname=HOST)
     assert normalize.json(written) == (
-        '{\n "a": {\n  "y": "<UUID1>",\n  "z": 1\n },\n "b": "<UUID2>"\n}\n')
+        '{\n "a": {\n  "y": "<UUID1>",\n  "z": 1\n },\n "b": "<UUID2>"\n}\n'
+    )
     assert normalize.json(reordered) == normalize.json(written)
-    assert normalize(written) == (
-        '{"b": "<UUID1>", "a": {"z": 1, "y": "<UUID2>"}}\n')
+    assert normalize(written) == ('{"b": "<UUID1>", "a": {"z": 1, "y": "<UUID2>"}}\n')
 
 
 def test_full_precision_float_is_masked_as_a_checkpoint():
@@ -1040,8 +1133,7 @@ def test_full_precision_float_is_masked_as_a_checkpoint():
     not compute such values"""
     text = "Return value: [{!r}, 0.7]".format(1 / 3)
     assert text == "Return value: [0.3333333333333333, 0.7]"
-    assert Normalizer(hostname=HOST)(text) == (
-        "Return value: [<CHECKPOINT>, 0.7]\n")
+    assert Normalizer(hostname=HOST)(text) == ("Return value: [<CHECKPOINT>, 0.7]\n")
 
 
 # --- golden hygiene ----------------------------------------------------------
@@ -1053,8 +1145,7 @@ FORBIDDEN = (
     ("PATH=", re.compile(re.escape("PATH="))),
     ("/Users/", re.compile(re.escape("/Users/"))),
     ("/home/", re.compile(re.escape("/home/"))),
-    ("C:\\Users", re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/]+Users\b",
-                             re.IGNORECASE)),
+    ("C:\\Users", re.compile(r"(?<![A-Za-z])[A-Za-z]:[\\/]+Users\b", re.IGNORECASE)),
 )
 
 
@@ -1070,8 +1161,7 @@ def environment_markers(home=None, hostname=None):
     home = str(Path.home()) if home is None else home
     if len(Path(home).parts) >= 3:
         flags = re.IGNORECASE if os.name == "nt" else 0
-        markers.append(("the home directory",
-                        re.compile(path_pattern(home), flags)))
+        markers.append(("the home directory", re.compile(path_pattern(home), flags)))
     hostname = socket.gethostname() if hostname is None else hostname
     markers.extend(("the hostname", rule) for rule in host_rules(hostname))
     return markers
@@ -1082,10 +1172,11 @@ def environment_leaks(files, root, markers):
     found = []
     for path in files:
         text = Path(path).read_text(encoding="utf-8", errors="replace")
-        labels = sorted({label for label, pattern in markers
-                         if pattern.search(text)})
-        found += ["{}: {}".format(Path(path).relative_to(root).as_posix(),
-                                  label) for label in labels]
+        labels = sorted({label for label, pattern in markers if pattern.search(text)})
+        found += [
+            "{}: {}".format(Path(path).relative_to(root).as_posix(), label)
+            for label in labels
+        ]
     return found
 
 
@@ -1093,8 +1184,12 @@ def golden_files(directory):
     """Every file under a goldens directory except REFERENCE"""
     if not directory.exists():
         return []
-    return [path for path in sorted(directory.rglob("*")) if path.is_file()
-            and path.relative_to(directory).as_posix() != golden.REFERENCE_NAME]
+    return [
+        path
+        for path in sorted(directory.rglob("*"))
+        if path.is_file()
+        and path.relative_to(directory).as_posix() != golden.REFERENCE_NAME
+    ]
 
 
 def golden_environment_leaks(directory, markers=None):
@@ -1110,17 +1205,22 @@ def golden_layout_problems(directory):
     problems = []
     for path in golden_files(directory):
         relative = path.relative_to(directory)
-        if (len(relative.parts) != 3 or path.suffix != ".txt"
-                or not golden.NAME.fullmatch(path.stem)):
+        if (
+            len(relative.parts) != 3
+            or path.suffix != ".txt"
+            or not golden.NAME.fullmatch(path.stem)
+        ):
             problems.append(relative.as_posix())
     return problems
 
 
 def orphan_golden_directories(directory, functions):
     """``<module>/<function>`` directories with goldens but no golden test"""
-    stored = {tuple(path.split("/")[:2])
-              for path in golden.stored_goldens(directory)
-              if path.count("/") >= 2}
+    stored = {
+        tuple(path.split("/")[:2])
+        for path in golden.stored_goldens(directory)
+        if path.count("/") >= 2
+    }
     return sorted("/".join(pair) for pair in stored - set(functions))
 
 
@@ -1129,12 +1229,13 @@ def tracked_notebooks():
     git = shutil.which("git")
     if git is None:
         pytest.skip("git is not installed")
-    if not (CHECKOUT / "pyproject.toml").exists() or not (
-            CHECKOUT / ".git").exists():
+    if not (CHECKOUT / "pyproject.toml").exists() or not (CHECKOUT / ".git").exists():
         pytest.skip("this module does not run from a checkout")
     completed = subprocess.run(
         [git, "-C", str(CHECKOUT), "ls-files", "-z", "--", "*.ipynb"],
-        stdin=subprocess.DEVNULL, capture_output=True, encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        encoding="utf-8",
         errors="replace",
     )
     if completed.returncode != 0:
@@ -1147,9 +1248,13 @@ CI_SYSTEMS = {"ubuntu": "linux", "macos": "darwin", "windows": "win32"}
 
 def ci_reference_platform(workflow):
     """``<sys.platform> <major>.<minor>`` of the ``reference: true`` leg"""
-    legs = [line for line in workflow.splitlines()
-            if not line.lstrip().startswith("#") and "python:" in line
-            and re.search(r"\breference:\s*true\b", line)]
+    legs = [
+        line
+        for line in workflow.splitlines()
+        if not line.lstrip().startswith("#")
+        and "python:" in line
+        and re.search(r"\breference:\s*true\b", line)
+    ]
     assert len(legs) == 1, "expected one reference leg, found {}".format(legs)
     system = re.search(r"\bos:\s*([\w.-]+)", legs[0]).group(1)
     python = re.search(r"\bpython:\s*\"?(\d+\.\d+)\b", legs[0]).group(1)
@@ -1160,8 +1265,10 @@ def test_no_orphan_golden_directory():
     """Every ``goldens/<module>/<function>/`` belongs to a test function
     marked golden in ``e2e/<module>.py``: a renamed test leaves none
     behind"""
-    assert orphan_golden_directories(golden.REPOSITORY_GOLDENS,
-                                     golden.golden_functions()) == []
+    assert (
+        orphan_golden_directories(golden.REPOSITORY_GOLDENS, golden.golden_functions())
+        == []
+    )
 
 
 def test_golden_files_are_txt_under_module_and_function():
@@ -1189,10 +1296,12 @@ def test_reference_platform_matches_the_ci_reference_leg():
     if not CI_YML.exists():
         pytest.skip("no .github/workflows/ci.yml (not a checkout)")
     reference = (golden.REPOSITORY_GOLDENS / golden.REFERENCE_NAME).read_text(
-        encoding="utf-8")
+        encoding="utf-8"
+    )
     assert re.fullmatch(r"[a-z][a-z0-9]* \d+\.\d+\n?", reference), reference
     assert reference.strip() == ci_reference_platform(
-        CI_YML.read_text(encoding="utf-8"))
+        CI_YML.read_text(encoding="utf-8")
+    )
 
 
 def plant(directory, relative, text):
@@ -1221,26 +1330,36 @@ def test_hygiene_checks_flag_planted_violations(tmp_path):
     for name, text in leaks.items():
         plant(directory, good + name, text)
     plant(directory, "test_gone/test_renamed/out.txt", "clean\n")
-    for misplaced in ("test_kept/loose.txt", good + "out.json",
-                      good + "Upper.txt", good + "deeper/out.txt"):
+    for misplaced in (
+        "test_kept/loose.txt",
+        good + "out.json",
+        good + "Upper.txt",
+        good + "deeper/out.txt",
+    ):
         plant(directory, misplaced, "clean\n")
 
     functions = {("test_kept", "test_function")}
-    assert orphan_golden_directories(directory, functions) == [
-        "test_gone/test_renamed"]
-    assert sorted(golden_layout_problems(directory)) == sorted([
-        "test_kept/loose.txt", good + "out.json", good + "Upper.txt",
-        good + "deeper/out.txt"])
+    assert orphan_golden_directories(directory, functions) == ["test_gone/test_renamed"]
+    assert sorted(golden_layout_problems(directory)) == sorted(
+        [
+            "test_kept/loose.txt",
+            good + "out.json",
+            good + "Upper.txt",
+            good + "deeper/out.txt",
+        ]
+    )
     markers = environment_markers(home="/srv/fakehome/nowtest", hostname=HOST)
-    assert sorted(golden_environment_leaks(directory, markers)) == sorted([
-        good + "env.txt: environment(",
-        good + "path.txt: PATH=",
-        good + "mac.txt: /Users/",
-        good + "linux.txt: /home/",
-        good + "windows.txt: C:\\Users",
-        good + "home.txt: the home directory",
-        good + "host.txt: the hostname",
-    ])
+    assert sorted(golden_environment_leaks(directory, markers)) == sorted(
+        [
+            good + "env.txt: environment(",
+            good + "path.txt: PATH=",
+            good + "mac.txt: /Users/",
+            good + "linux.txt: /home/",
+            good + "windows.txt: C:\\Users",
+            good + "home.txt: the home directory",
+            good + "host.txt: the hostname",
+        ]
+    )
 
 
 def test_ci_reference_platform_reads_the_reference_leg():
@@ -1305,17 +1424,21 @@ def test_strip_prolog_predicate_removes_the_whole_environment_block():
     that spans lines included; the other predicates stay byte for byte,
     ``environment_extra`` too"""
     stripped = strip_prolog_predicate(
-        PROLOG_TRIAL + PROLOG_ENVIRONMENT + PROLOG_REST, "environment")
+        PROLOG_TRIAL + PROLOG_ENVIRONMENT + PROLOG_REST, "environment"
+    )
     assert PROLOG_TRIAL in stripped and PROLOG_REST in stripped
     assert "environment(" not in stripped
     assert "environment/3" not in stripped
     assert "second line" not in stripped
     assert "a environment attribute" not in stripped
-    assert ([line for line in stripped.splitlines() if line]
-            == [line for line in (PROLOG_TRIAL + PROLOG_REST).splitlines()
-                if line])
+    assert [line for line in stripped.splitlines() if line] == [
+        line for line in (PROLOG_TRIAL + PROLOG_REST).splitlines() if line
+    ]
     assert prolog_facts(stripped) == {
-        "trial": (2, {2}), "environment_extra": (2, {2}), "module": (2, {2})}
+        "trial": (2, {2}),
+        "environment_extra": (2, {2}),
+        "module": (2, {2}),
+    }
 
 
 def test_strip_prolog_predicate_on_a_real_export(twins):
@@ -1327,9 +1450,13 @@ def test_strip_prolog_predicate_on_a_real_export(twins):
     assert "environment(" not in stripped
 
     def clauses(text, drop=()):
-        return [body for kind, body in prolog_statements(text)
-                if kind == "clause" and not body.startswith(drop)]
+        return [
+            body
+            for kind, body in prolog_statements(text)
+            if kind == "clause" and not body.startswith(drop)
+        ]
 
     assert clauses(stripped) == clauses(
-        raw, ("environment(", ":- dynamic(environment/"))
+        raw, ("environment(", ":- dynamic(environment/")
+    )
     assert len(clauses(stripped)) > 100

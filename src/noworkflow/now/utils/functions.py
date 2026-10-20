@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define utility functions"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import inspect
@@ -23,7 +24,7 @@ def recgetattr(obj, attrs, default=None):
     if attrs:
         return getattr(recgetattr(obj, attrs, None), cattr, default)
     return getattr(obj, cattr, default)
-    
+
 
 def wrap(string, initial="  ", other="\n  "):
     """Re-indent indented text
@@ -119,18 +120,19 @@ def erase(directory, everything=False):
                 os.rmdir(path)
 
 
-def run_dot(code, format_='png'):
+def run_dot(code, format_="png"):
     """run_dot"""
     # Graphviz's dot from the PATH, no shell; callers pass a literal format
     process = Popen(  # nosec B603 B607
         ["dot", "-T", format_], stdout=PIPE, stdin=PIPE, stderr=PIPE
     )
     try:
-        stdout, stderr = process.communicate(code.encode('utf-8'))
+        stdout, stderr = process.communicate(code.encode("utf-8"))
     except (OSError, IOError):  # pylint: disable=unused-variable
         stdout, stderr = process.stdout.read(), process.stderr.read()
         process.wait()
     if process.returncode != 0:
-        raise RuntimeError('dot exited with error:\n[stderr]\n{0}'
-                           .format(stderr.decode('utf-8')))
+        raise RuntimeError(
+            "dot exited with error:\n[stderr]\n{0}".format(stderr.decode("utf-8"))
+        )
     return stdout

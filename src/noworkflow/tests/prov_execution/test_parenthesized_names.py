@@ -16,6 +16,7 @@ Each characterization pins today's facts and its ``_desired`` twin, in
 ``TestParenthesizedNamesDesired``, states the behavior the issue asks
 for, marked with ``known_defects``.
 """
+
 from ..collection_testcase import CollectionTestCase
 from ..helpers.defects import Defect, known_defects
 
@@ -26,7 +27,8 @@ PARENTHESIZED_NAME = Defect(
     "passes Collector.name the text of the node's span, which includes "
     "the parentheses around the name, so the lookup of '(src)' finds no "
     "variable and the read has no assignment dependency",
-    signature="'(src)': []")
+    signature="'(src)': []",
+)
 
 # The same read with and without parentheses, each in a script of its own.
 SCRIPTS = {
@@ -51,7 +53,10 @@ class ParenthesizedNameCase(CollectionTestCase):
                 evaluations[dep.dependency_id].repr
                 for dep in self.find_all(
                     self.metascript.dependencies_store.store,
-                    dependent_id=read.id, type="assignment")]
+                    dependent_id=read.id,
+                    type="assignment",
+                )
+            ]
         return found
 
 
@@ -63,9 +68,10 @@ class TestParenthesizedNames(ParenthesizedNameCase):
         ``r = (src) + [2]`` and ``src`` after ``(src) = [1]`` record a read
         of ``src`` that depends on nothing (#432)
         """
-        self.assertEqual(self.read_links(),
-                         {"src": ["[1]"], "(src)": [], "(src) + [2]": [],
-                          "(src) = [1]": []})
+        self.assertEqual(
+            self.read_links(),
+            {"src": ["[1]"], "(src)": [], "(src) + [2]": [], "(src) = [1]": []},
+        )
 
 
 class TestParenthesizedNamesDesired(ParenthesizedNameCase):
@@ -78,6 +84,12 @@ class TestParenthesizedNamesDesired(ParenthesizedNameCase):
         """Parentheses change nothing: every read depends on the
         assignment of ``src``
         """
-        self.assertEqual(self.read_links(),
-                         {"src": ["[1]"], "(src)": ["[1]"],
-                          "(src) + [2]": ["[1]"], "(src) = [1]": ["[1]"]})
+        self.assertEqual(
+            self.read_links(),
+            {
+                "src": ["[1]"],
+                "(src)": ["[1]"],
+                "(src) + [2]": ["[1]"],
+                "(src) = [1]": ["[1]"],
+            },
+        )

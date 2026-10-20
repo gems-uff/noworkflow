@@ -4,7 +4,6 @@
 # Please, consult the license terms in the LICENSE file.
 """Helpers for Prolog Extraction"""
 
-
 from datetime import datetime
 from string import ascii_letters
 
@@ -38,24 +37,24 @@ class PrologDescription(object):
     def retract(self, trial_id):
         """Return prolog retract for trial"""
         return "retract({0.name}({1}))".format(
-            self, ', '.join(x.retract(trial_id) for x in self.attributes)
+            self, ", ".join(x.retract(trial_id) for x in self.attributes)
         )
 
     def fact(self, obj):
         """Convert obj to prolog fact"""
         return "{0.name}({1}).".format(
-            self, ', '.join(str(x.fact(obj)) for x in self.attributes)
+            self, ", ".join(str(x.fact(obj)) for x in self.attributes)
         )
 
     def empty(self):
         """Return empty fact"""
         return "{0.name}({1}).".format(
-            self, ', '.join(x.empty() for x in self.attributes)
+            self, ", ".join(x.empty() for x in self.attributes)
         )
 
     def __repr__(self):
         return "{0.name}({1}).".format(
-            self, ', '.join(x.variable() for x in self.attributes)
+            self, ", ".join(x.variable() for x in self.attributes)
         )
 
 
@@ -81,7 +80,7 @@ class PrologAttribute(object):
             obj = getattr(obj, attr0)
         return getattr(obj, attr)
 
-    def retract(self, trial_id):                                                 # pylint: disable=unused-argument, no-self-use
+    def retract(self, trial_id):  # pylint: disable=unused-argument, no-self-use
         """Attribute does not identify fact. Retrun _"""
         return "_"
 
@@ -89,14 +88,14 @@ class PrologAttribute(object):
         """Return attribute self.attr_name of obj as str"""
         return str(self.value(obj))
 
-    def empty(self):                                                             # pylint: disable=no-self-use
+    def empty(self):  # pylint: disable=no-self-use
         """Represent empty attribute"""
         return "0"
 
 
 class PrologTrial(PrologAttribute):
     """Represent Trial id attribute, used for retract"""
-    
+
     def fact(self, obj):
         return "'{}'".format(self.value(obj).replace("'", "''"))
 
@@ -146,13 +145,13 @@ class PrologNullable(PrologAttribute):
     def fact(self, obj):
         """Replace None by nil if attribute self.attr_name of obj"""
         value = self.value(obj)
-        if(self.name == 'parent_id') and value is not None:
+        if (self.name == "parent_id") and value is not None:
             value = "'{}'".format(value.replace("'", "''"))
-        if(self.name == 'modules_inherited_from_trial_id') and value is not None:
+        if (self.name == "modules_inherited_from_trial_id") and value is not None:
             value = "'{}'".format(value.replace("'", "''"))
-        if(self.name == 'experiment_id') and value is not None:
+        if (self.name == "experiment_id") and value is not None:
             value = "'{}'".format(value.replace("'", "''"))
-        if(self.name == 'user_id') and value is not None:
+        if (self.name == "user_id") and value is not None:
             value = "'{}'".format(value.replace("'", "''"))
         return str(value) if value is not None else "nil"
 

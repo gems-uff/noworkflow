@@ -38,6 +38,7 @@ the signature of its defect, and accept any escaping that Graphviz reads
 back as the text of the code or of the value: they check what a label
 draws, not how it is spelled.
 """
+
 import ast
 import collections
 import html
@@ -76,8 +77,7 @@ PROLOG_CASES = [
     ("prolog-t-r", ("-t", "-r")),
 ]
 # Attributes that deployment.py records on every system.
-REQUIRED_ENVIRONMENT = {"PYTHON_VERSION", "NOWORKFLOW_VERSION", "USER",
-                        "HOSTNAME"}
+REQUIRED_ENVIRONMENT = {"PYTHON_VERSION", "NOWORKFLOW_VERSION", "USER", "HOSTNAME"}
 ENVIRONMENT_FACT = re.compile(
     r"environment\('(?:[^']|'')*', '((?:[^']|'')*)', '((?:[^']|'')*)'\)\.\s*$",
     re.DOTALL,
@@ -89,8 +89,13 @@ BUILTIN_CALLS = {("member", 2)}
 
 # --- export dataflow --------------------------------------------------------
 
-DATAFLOW_MODES = ("activation", "coarseGrain", "looplessCoarseGrain",
-                  "fineGrain", "all")
+DATAFLOW_MODES = (
+    "activation",
+    "coarseGrain",
+    "looplessCoarseGrain",
+    "fineGrain",
+    "all",
+)
 # `-w` with the write of `data` crashes the clustered modes, and so does the
 # default mode (coarseGrain) when `-m` is omitted.
 WDF_CRASHES = [
@@ -105,15 +110,13 @@ WDF_REASON = (
 )
 # `-w` works in the three unclustered modes with the write of `data`, and in
 # every mode with the write of `size`.
-WDF_CONTROLS = (
-    [(mode, "data") for mode in ("activation", "fineGrain", "all")]
-    + [(mode, "size") for mode in DATAFLOW_MODES]
-)
+WDF_CONTROLS = [(mode, "data") for mode in ("activation", "fineGrain", "all")] + [
+    (mode, "size") for mode in DATAFLOW_MODES
+]
 # The label of a DOT node or cluster: `label="..."` or `label = "..."`.
 DOT_LABEL = re.compile(r'\blabel\s*=\s*"((?:[^"\\]|\\.)*)"')
 # A file access node: `a_<n> [label="<file name>" ...`.
-ACCESS_NODE = re.compile(r'^\s*a_\d+ \[label="((?:[^"\\]|\\.)*)"',
-                         re.MULTILINE)
+ACCESS_NODE = re.compile(r'^\s*a_\d+ \[label="((?:[^"\\]|\\.)*)"', re.MULTILINE)
 PLOT = re.compile(r"\bplot\b")
 CALL_SCRIPTS = ("nested_call.py", "repeated_call.py")
 # f(g(x)) crashes both clustered modes; a call site that runs more than once
@@ -124,7 +127,9 @@ CALL_CRASHES = [
     ("repeated_call.py", "looplessCoarseGrain"),
 ]
 CALL_CONTROLS = [
-    (script, mode) for script in CALL_SCRIPTS for mode in DATAFLOW_MODES
+    (script, mode)
+    for script in CALL_SCRIPTS
+    for mode in DATAFLOW_MODES
     if (script, mode) not in CALL_CRASHES
 ]
 CALL_REASON = (
@@ -148,33 +153,28 @@ QUOTED_CLASS_SCRIPT = (
 # The repr of a str always ends in its quote: only a __repr__ ends a value
 # in a backslash.
 BACKSLASH_REPR_SCRIPT = (
-    "class R:\n"
-    "    def __repr__(self):\n"
-    '        return "C:\\\\data\\\\"\n'
-    "\n"
-    "\n"
-    "r = R()\n"
+    'class R:\n    def __repr__(self):\n        return "C:\\\\data\\\\"\n\n\nr = R()\n'
 )
 ESCAPED_QUOTE = Defect(
     reason="#401: dot_visitor.escape puts a backslash before each double "
-           "quote of a name but doubles no backslash, and Attributes.dot "
-           'writes it between quotes as it is: the \\" of a string literal '
-           'becomes \\\\", which DOT reads as an escaped backslash and the '
-           "closing quote of the label",
+    "quote of a name but doubles no backslash, and Attributes.dot "
+    'writes it between quotes as it is: the \\" of a string literal '
+    'becomes \\\\", which DOT reads as an escaped backslash and the '
+    "closing quote of the label",
     signature=r'[label="1 \"say \\"hi\\"\""',
 )
 CLUSTER_LABEL = Defect(
     reason="#401: DotVisitor.visit_cluster writes the activation name into "
-           "the cluster's label with no escaping at all: a double quote in "
-           "the name closes the label, and the rest of the name is read as "
-           "DOT",
+    "the cluster's label with no escaping at all: a double quote in "
+    "the name closes the label, and the rest of the name is read as "
+    "DOT",
     signature='label = "a"b";',
 )
 TRAILING_BACKSLASH = Defect(
     reason="#401: dot_visitor.escape doubles no backslash, so a value whose "
-           "repr ends in an odd number of backslashes escapes the closing "
-           "quote of its label, which runs on into the next attribute",
-    signature=r'C:\data\" fillcolor',
+    "repr ends in an odd number of backslashes escapes the closing "
+    "quote of its label, which runs on into the next attribute",
+    signature=r"C:\data\" fillcolor",
 )
 
 # --- export ast -------------------------------------------------------------
@@ -194,8 +194,11 @@ def ast_form_params():
     params = []
     for form in EXPORT_AST_FORMS:
         failure = export_ast_failure(form)
-        marks = [pytest.mark.xfail(strict=True, raises=AssertionError,
-                                   reason=failure)] if failure else []
+        marks = (
+            [pytest.mark.xfail(strict=True, raises=AssertionError, reason=failure)]
+            if failure
+            else []
+        )
         params.append(pytest.param(form, marks=marks, id=form))
     return params
 
@@ -205,10 +208,7 @@ AST_FORMS = ast_form_params()
 # A dict display with a ** item between two key-value pairs (#427), and the
 # ast.dump of the display that `export ast` rebuilds, whose constants hold
 # the source text of each key and value.
-DICT_UNPACKING_SCRIPT = (
-    "base = {'a': 1}\n"
-    "merged = {'z': 0, **base, 'y': 2}\n"
-)
+DICT_UNPACKING_SCRIPT = "base = {'a': 1}\nmerged = {'z': 0, **base, 'y': 2}\n"
 DICT_UNPACKING_DUMP = (
     "Dict(keys=[Constant(value=\"'z'\"), None, Constant(value=\"'y'\")], "
     "values=[Constant(value='0'), Name(id='base', ctx=Load()), "
@@ -219,23 +219,18 @@ DICT_UNPACKING_DUMP = (
 
 # The condition `s == r"a\:b"`, which the prospective graph cuts at its
 # first ':' (#401): whole, and as it is cut.
-BACKSLASH_CONDITION_SCRIPT = (
-    's = "x"\n'
-    'if s == r"a\\:b":\n'
-    '    print("match")\n'
-)
+BACKSLASH_CONDITION_SCRIPT = 's = "x"\nif s == r"a\\:b":\n    print("match")\n'
 CONDITION = " Condition:"
 WHOLE_CONDITION = 's == r"a\\:b"'
 CUT_CONDITION = 's == r"a\\'
 PROSPECTIVE_LABEL = Defect(
     reason="#401: GraphDrawer passes code text to the graphviz library as "
-           "labels without graphviz.escape, and NodeMapper.get_condition "
-           "cuts the condition at the first ':' of the line, one inside a "
-           "string literal too: a condition cut after a backslash ends its "
-           "label in an odd backslash, which the library warns about and "
-           "leaves in place",
-    signature="DotSyntaxWarning: expect syntax error scanning invalid quoted "
-              "string",
+    "labels without graphviz.escape, and NodeMapper.get_condition "
+    "cuts the condition at the first ':' of the line, one inside a "
+    "string literal too: a condition cut after a backslash ends its "
+    "label in an odd backslash, which the library warns about and "
+    "leaves in place",
+    signature="DotSyntaxWarning: expect syntax error scanning invalid quoted string",
 )
 
 # --- export ipynb -----------------------------------------------------------
@@ -259,9 +254,11 @@ def environment_facts(text):
 
 def declared_arities(text):
     """``{name: N}`` of the ``:- dynamic(name/N).`` declarations"""
-    return {name: declared
-            for name, (declared, _) in prolog_facts(text).items()
-            if declared is not None}
+    return {
+        name: declared
+        for name, (declared, _) in prolog_facts(text).items()
+        if declared is not None
+    }
 
 
 def rule_calls(rules):
@@ -287,7 +284,7 @@ def rule_calls(rules):
         if not neck:
             continue
         for match in CALL.finditer(body):
-            calls[(match.group(1), clause_arity(body[match.end():]))] += 1
+            calls[(match.group(1), clause_arity(body[match.end() :]))] += 1
     return calls
 
 
@@ -298,7 +295,7 @@ def prolog_parts(project):
     # A boolean, so that a failure never prints the environment facts.
     same_facts = with_rules.startswith(facts)
     assert same_facts, "`-t -r` does not start with the facts of `-t`"
-    return facts, with_rules[len(facts):]
+    return facts, with_rules[len(facts) :]
 
 
 def stale_rule_calls(project):
@@ -310,10 +307,13 @@ def stale_rule_calls(project):
     calls = rule_calls(rules)
     # Not vacuous: the rules call the facts.
     assert ("evaluation", declared["evaluation"]) in calls, (
-        "the rules never call evaluation/{}".format(declared["evaluation"]))
+        "the rules never call evaluation/{}".format(declared["evaluation"])
+    )
     return {
-        (name, arity, declared[name]) for name, arity in calls
-        if name in declared and arity != declared[name]
+        (name, arity, declared[name])
+        for name, arity in calls
+        if name in declared
+        and arity != declared[name]
         and (name, arity) not in BUILTIN_CALLS
     }
 
@@ -327,7 +327,8 @@ def written_evaluation(project, variable):
         "AND code_component.trial_id = evaluation.trial_id "
         "WHERE evaluation.trial_id = ? AND code_component.name = ? "
         "AND code_component.mode = 'w' AND code_component.type = 'name'",
-        trial_id, variable,
+        trial_id,
+        variable,
     )
     assert len(rows) == 1, "{} writes of {!r}".format(len(rows), variable)
     return rows[0]["id"]
@@ -347,10 +348,8 @@ def not_derived(dot, variable):
     ``size`` is written: for ``size``, its access node.
     """
     if variable == "data":
-        return [label for label in DOT_LABEL.findall(dot)
-                if PLOT.search(label)]
-    return [label for label in ACCESS_NODE.findall(dot)
-            if label == "result.txt"]
+        return [label for label in DOT_LABEL.findall(dot) if PLOT.search(label)]
+    return [label for label in ACCESS_NODE.findall(dot) if label == "result.txt"]
 
 
 def assert_derivation_graph(project, mode_args, variable):
@@ -369,7 +368,8 @@ def assert_derivation_graph(project, mode_args, variable):
     assert_digraph(result)
     graph = result.stdout
     assert attribute_lines(graph) < attribute_lines(whole.stdout), (
-        "-w did not shrink the graph\n{}".format(result))
+        "-w did not shrink the graph\n{}".format(result)
+    )
     # Not vacuous: the whole graph has what -w must leave out.
     assert not_derived(whole.stdout, variable), str(whole)
     assert not_derived(graph, variable) == [], str(result)
@@ -392,19 +392,18 @@ def read_only(*projects):
     before = [project.fingerprint() for project in projects]
     yield
     assert [project.fingerprint() for project in projects] == before, (
-        "the test changed a store shared by the module")
+        "the test changed a store shared by the module"
+    )
 
 
 @pytest.fixture(scope="module")
 def _simulation_store(tmp_path_factory):
-    return build_dataflow(tmp_path_factory, "simulation.py", "input.txt",
-                          "xyz")
+    return build_dataflow(tmp_path_factory, "simulation.py", "input.txt", "xyz")
 
 
 @pytest.fixture(scope="module")
 def _call_stores(tmp_path_factory):
-    return {script: build_dataflow(tmp_path_factory, script)
-            for script in CALL_SCRIPTS}
+    return {script: build_dataflow(tmp_path_factory, script) for script in CALL_SCRIPTS}
 
 
 @pytest.fixture
@@ -438,12 +437,14 @@ def skip_unless_same_python(project):
     if runs_this_interpreter(project.command):
         return
     rows = project.query(
-        "SELECT value FROM environment_attr WHERE name = 'PYTHON_VERSION' "
-        "LIMIT 1")
+        "SELECT value FROM environment_attr WHERE name = 'PYTHON_VERSION' LIMIT 1"
+    )
     version = tuple(int(part) for part in rows[0]["value"].split(".")[:2])
     if version != sys.version_info[:2]:
-        pytest.skip("NOW_E2E_CMD runs another Python version, for which "
-                    "export_ast_failure() and the xfail marks do not hold")
+        pytest.skip(
+            "NOW_E2E_CMD runs another Python version, for which "
+            "export_ast_failure() and the xfail marks do not hold"
+        )
 
 
 def export_of(project, script, *args, **kwargs):
@@ -462,19 +463,21 @@ def export_of(project, script, *args, **kwargs):
 # character after it as a pair, so `\\"` ends the string. The exports write
 # neither comments nor HTML strings, so a `#` or a `<` outside a quoted
 # string means that a string ended early.
-DOT_TOKEN = re.compile(r'''
+DOT_TOKEN = re.compile(
+    r"""
     (?P<space>\s+)
   | (?P<string>"(?:[^"\\]|\\.)*")
   | (?P<edgeop>->|--)
   | (?P<id>[A-Za-z_\x80-\U0010ffff][\w\x80-\U0010ffff]*
           |-?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?))
   | (?P<punct>[{}\[\];,=:])
-''', re.VERBOSE | re.DOTALL)
+""",
+    re.VERBOSE | re.DOTALL,
+)
 DOT_KEYWORDS = {"strict", "graph", "digraph", "subgraph", "node", "edge"}
 DOT_ESCAPE = re.compile(r"\\(.)", re.DOTALL)
 # The HTML entities Graphviz decodes in a label, always with the semicolon.
-HTML_ENTITY = re.compile(
-    r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+HTML_ENTITY = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
 
 
 class DotGraph:
@@ -508,10 +511,16 @@ class DotGraph:
 
     def fail(self, problem, position=None):
         if position is None:
-            position = (self.tokens[self.index][2]
-                        if self.index < len(self.tokens) else len(self.text))
-        raise AssertionError("not a DOT graph: {} at line {}\n{}".format(
-            problem, self.text.count("\n", 0, position) + 1, self.text))
+            position = (
+                self.tokens[self.index][2]
+                if self.index < len(self.tokens)
+                else len(self.text)
+            )
+        raise AssertionError(
+            "not a DOT graph: {} at line {}\n{}".format(
+                problem, self.text.count("\n", 0, position) + 1, self.text
+            )
+        )
 
     def peek(self, offset=0):
         """``(kind, text)`` of a token ahead, ``(None, None)`` past the end"""
@@ -536,8 +545,9 @@ class DotGraph:
 
     def expect(self, punctuation):
         if not self.accept(punctuation):
-            self.fail("expected {!r} instead of {!r}".format(
-                punctuation, self.peek()[1]))
+            self.fail(
+                "expected {!r} instead of {!r}".format(punctuation, self.peek()[1])
+            )
 
     def take_id(self):
         """The next token, an ID, without the quotes of a string"""
@@ -630,30 +640,36 @@ def rendered(value):
     included, stands for itself.
     """
     text = DOT_ESCAPE.sub(
-        lambda match: {'"': '"', "\n": ""}.get(match.group(1),
-                                                match.group()),
-        value)
+        lambda match: {'"': '"', "\n": ""}.get(match.group(1), match.group()), value
+    )
     text = DOT_ESCAPE.sub(
-        lambda match: ("\0" + match.group(1) if match.group(1) in "GNETHL"
-                       else match.group()),
-        text)
+        lambda match: (
+            "\0" + match.group(1) if match.group(1) in "GNETHL" else match.group()
+        ),
+        text,
+    )
     text = HTML_ENTITY.sub(lambda match: html.unescape(match.group()), text)
     return DOT_ESCAPE.sub(
-        lambda match: "\n" if match.group(1) in "nlr" else match.group(1),
-        text)
+        lambda match: "\n" if match.group(1) in "nlr" else match.group(1), text
+    )
 
 
 def drawn_labels(graph):
     """``{node: text}``: what the label of each node statement draws"""
-    return {node: rendered(attributes["label"])
-            for node, attributes in graph.nodes.items()
-            if "label" in attributes}
+    return {
+        node: rendered(attributes["label"])
+        for node, attributes in graph.nodes.items()
+        if "label" in attributes
+    }
 
 
 def drawn_cluster_labels(graph):
     """What the label each subgraph assigns draws, sorted"""
-    return sorted(rendered(assigned["label"])
-                  for _, assigned in graph.subgraphs if "label" in assigned)
+    return sorted(
+        rendered(assigned["label"])
+        for _, assigned in graph.subgraphs
+        if "label" in assigned
+    )
 
 
 def same_expression(text, source):
@@ -661,8 +677,9 @@ def same_expression(text, source):
     whatever its spelling (quotes, raw prefix, spaces)
     """
     try:
-        return (ast.dump(ast.parse(text, mode="eval"))
-                == ast.dump(ast.parse(source, mode="eval")))
+        return ast.dump(ast.parse(text, mode="eval")) == ast.dump(
+            ast.parse(source, mode="eval")
+        )
     except (SyntaxError, ValueError):
         return False
 
@@ -673,7 +690,8 @@ def same_expression(text, source):
 @pytest.mark.golden
 @pytest.mark.parametrize("name, args", PROLOG_CASES, ids=["t", "t-r"])
 def test_export_prolog_without_the_environment_matches_golden(
-        request, two_trial_project, name, args):
+    request, two_trial_project, name, args
+):
     """``export prolog -t`` and ``-t -r`` print the same facts as the golden
     once the ``environment`` predicate is removed
 
@@ -691,8 +709,7 @@ def test_export_prolog_without_the_environment_matches_golden(
     assert_golden(request, name, text)
 
 
-def test_export_prolog_records_the_environment_by_attribute_name(
-        two_trial_project):
+def test_export_prolog_records_the_environment_by_attribute_name(two_trial_project):
     """``export prolog`` emits one ``environment/3`` fact per attribute,
     with the synthetic user, and stripping the predicate removes them all
 
@@ -715,7 +732,8 @@ def test_export_prolog_records_the_environment_by_attribute_name(
     assert not declared, "the environment declaration survived the strip"
     # The rest of the export stays.
     assert prolog_facts(stripped).keys() == (
-        prolog_facts(result.stdout).keys() - {"environment"})
+        prolog_facts(result.stdout).keys() - {"environment"}
+    )
 
 
 def test_export_prolog_facts_match_their_declarations(two_trial_project):
@@ -726,12 +744,15 @@ def test_export_prolog_facts_match_their_declarations(two_trial_project):
     facts, rules = prolog_parts(two_trial_project)
     found = prolog_facts(facts)
     assert {"trial", "environment", "evaluation", "dependency"} <= set(found)
-    undeclared = sorted(name for name, (declared, _) in found.items()
-                        if declared is None)
+    undeclared = sorted(
+        name for name, (declared, _) in found.items() if declared is None
+    )
     assert undeclared == []
-    mismatched = {name: (declared, sorted(arities))
-                  for name, (declared, arities) in found.items()
-                  if not arities <= {declared}}
+    mismatched = {
+        name: (declared, sorted(arities))
+        for name, (declared, arities) in found.items()
+        if not arities <= {declared}
+    }
     assert mismatched == {}
     assert rules.strip(), "`-r` appended no rules"
 
@@ -751,13 +772,13 @@ def test_export_prolog_rules_calling_trial_and_dependency(two_trial_project):
 
 
 @pytest.mark.xfail(
-    strict=True, raises=AssertionError,
+    strict=True,
+    raises=AssertionError,
     reason="#249: the rules of `export prolog -r` call "
-           "trial/9 and dependency/6, while the facts are trial/12 and "
-           "dependency/10",
+    "trial/9 and dependency/6, while the facts are trial/12 and "
+    "dependency/10",
 )
-def test_export_prolog_rules_calling_trial_and_dependency_desired(
-        two_trial_project):
+def test_export_prolog_rules_calling_trial_and_dependency_desired(two_trial_project):
     """Every rule of ``export prolog -r`` calls the fact predicates with
     their declared arity
     """
@@ -775,14 +796,14 @@ def test_export_prov_matches_golden(request, two_trial_project):
     result = two_trial_project.run("export", "prov")
     text = two_trial_project.normalize(result.stdout)
     # A boolean, so that a failure never prints an unmasked hostname.
-    masked = ('entity(user_<HOSTNAME>\\nowtest, [type="script:user", '
-              'label="nowtest"])') in text.splitlines()
+    masked = (
+        'entity(user_<HOSTNAME>\\nowtest, [type="script:user", label="nowtest"])'
+    ) in text.splitlines()
     assert masked, "no user entity masked as user_<HOSTNAME>\\nowtest"
     assert_golden(request, "prov", text)
 
 
-def test_export_prov_names_the_user_after_the_host_and_the_user(
-        two_trial_project):
+def test_export_prov_names_the_user_after_the_host_and_the_user(two_trial_project):
     """``export prov`` declares its two prefixes and ends with one user
     entity named ``user_<hostname>\\<user>``, which the normalizer masks
     """
@@ -798,13 +819,14 @@ def test_export_prov_names_the_user_after_the_host_and_the_user(
     assert one_user, "expected one user entity"
     host = socket.gethostname()
     expected = 'entity(user_{}\\{}, [type="script:user", label="{}"])'.format(
-        host, USER, USER)
+        host, USER, USER
+    )
     named_after_host = users[0] == expected
     assert named_after_host, "the user entity is not user_<hostname>\\<user>"
     if usable_hostname(host):
         masked = two_trial_project.normalize(users[0]) == (
-            'entity(user_<HOSTNAME>\\nowtest, [type="script:user", '
-            'label="nowtest"])\n')
+            'entity(user_<HOSTNAME>\\nowtest, [type="script:user", label="nowtest"])\n'
+        )
         assert masked, "the normalizer does not mask the hostname"
 
 
@@ -813,12 +835,12 @@ def test_export_prov_names_the_user_after_the_host_and_the_user(
 
 @pytest.mark.golden
 @pytest.mark.parametrize("mode", DATAFLOW_MODES)
-def test_export_dataflow_in_each_mode_matches_golden(
-        request, dataflow_project, mode):
+def test_export_dataflow_in_each_mode_matches_golden(request, dataflow_project, mode):
     """``export dataflow -m <mode>`` prints the DOT graph of the golden"""
     result = dataflow_project.run("export", "dataflow", "-m", mode)
-    assert_golden(request, "dataflow-" + mode.lower(),
-                  dataflow_project.normalize(result.stdout))
+    assert_golden(
+        request, "dataflow-" + mode.lower(), dataflow_project.normalize(result.stdout)
+    )
 
 
 @pytest.mark.parametrize("mode", DATAFLOW_MODES)
@@ -838,7 +860,8 @@ def test_export_dataflow_defaults_to_coarse_grain(dataflow_project):
 
 @pytest.mark.parametrize("mode, variable", WDF_CONTROLS)
 def test_export_dataflow_wdf_draws_only_what_derived_the_evaluation(
-        dataflow_project, mode, variable):
+    dataflow_project, mode, variable
+):
     """``-w <eid>`` draws a smaller graph than the same mode without it,
     keeping what derived the evaluation and leaving out what did not
 
@@ -861,8 +884,9 @@ def test_export_dataflow_wdf_in_a_clustered_mode(dataflow_project, mode_args):
     ``wasDerivedFrom`` filter of ``-w`` left out of the graph.
     """
     eid = written_evaluation(dataflow_project, "data")
-    result = dataflow_project.run("export", "dataflow", *mode_args, "-w", eid,
-                                  expect=1, allow_stderr=True)
+    result = dataflow_project.run(
+        "export", "dataflow", *mode_args, "-w", eid, expect=1, allow_stderr=True
+    )
     assert result.stdout == "", str(result)
     assert "Traceback (most recent call last):" in result.stderr, str(result)
     assert KEY_ERROR.fullmatch(last_line(result.stderr)), str(result)
@@ -870,8 +894,7 @@ def test_export_dataflow_wdf_in_a_clustered_mode(dataflow_project, mode_args):
 
 @pytest.mark.xfail(strict=True, raises=AssertionError, reason=WDF_REASON)
 @pytest.mark.parametrize("mode_args", WDF_CRASHES)
-def test_export_dataflow_wdf_in_a_clustered_mode_desired(
-        dataflow_project, mode_args):
+def test_export_dataflow_wdf_in_a_clustered_mode_desired(dataflow_project, mode_args):
     """``-w`` with the write of ``data`` draws, in the clustered modes too,
     only what derived the evaluation
     """
@@ -879,8 +902,7 @@ def test_export_dataflow_wdf_in_a_clustered_mode_desired(
 
 
 @pytest.mark.parametrize("script, mode", CALL_CRASHES)
-def test_export_dataflow_of_nested_and_repeated_calls(
-        call_projects, script, mode):
+def test_export_dataflow_of_nested_and_repeated_calls(call_projects, script, mode):
     """Without ``-w``, a nested call ``f(g(x))`` crashes both clustered
     modes and a call site that runs more than once crashes
     looplessCoarseGrain: rc 1 and a ``KeyError`` traceback
@@ -889,8 +911,9 @@ def test_export_dataflow_of_nested_and_repeated_calls(
     the one of #200 (``created[dep_act_node_id]`` in ``process_cluster``),
     but no ``-w`` filter is involved: the graph is the whole trial.
     """
-    result = call_projects[script].run("export", "dataflow", "-m", mode,
-                                       expect=1, allow_stderr=True)
+    result = call_projects[script].run(
+        "export", "dataflow", "-m", mode, expect=1, allow_stderr=True
+    )
     assert result.stdout == "", str(result)
     assert "Traceback (most recent call last):" in result.stderr, str(result)
     assert KEY_ERROR.fullmatch(last_line(result.stderr)), str(result)
@@ -899,7 +922,8 @@ def test_export_dataflow_of_nested_and_repeated_calls(
 @pytest.mark.xfail(strict=True, raises=AssertionError, reason=CALL_REASON)
 @pytest.mark.parametrize("script, mode", CALL_CRASHES)
 def test_export_dataflow_of_nested_and_repeated_calls_desired(
-        call_projects, script, mode):
+    call_projects, script, mode
+):
     """Every mode draws the graph of a nested or repeated call"""
     result = call_projects[script].run("export", "dataflow", "-m", mode)
     assert_digraph(result)
@@ -907,7 +931,8 @@ def test_export_dataflow_of_nested_and_repeated_calls_desired(
 
 @pytest.mark.parametrize("script, mode", CALL_CONTROLS)
 def test_export_dataflow_of_nested_and_repeated_calls_in_the_other_modes(
-        call_projects, script, mode):
+    call_projects, script, mode
+):
     """The modes that #242 does not break draw the same
     scripts
     """
@@ -940,14 +965,12 @@ def test_export_dataflow_of_a_string_literal_with_an_escaped_quote(project):
 
     assert r'[label="1 print(\"say \\"hi\\"\")"' in result.stdout, str(result)
     assert r'[label="1 \"say \\"hi\\"\""' in result.stdout, str(result)
-    with pytest.raises(AssertionError,
-                       match=r"^not a DOT graph: unexpected '\\\\'"):
+    with pytest.raises(AssertionError, match=r"^not a DOT graph: unexpected '\\\\'"):
         DotGraph(result.stdout)
 
 
 @known_defects(ESCAPED_QUOTE)
-def test_export_dataflow_of_a_string_literal_with_an_escaped_quote_desired(
-        project):
+def test_export_dataflow_of_a_string_literal_with_an_escaped_quote_desired(project):
     """``export dataflow`` of ``print("say \\"hi\\"")`` is well-formed DOT
     whose labels draw the source text of each node, ``\\"`` included
 
@@ -958,9 +981,13 @@ def test_export_dataflow_of_a_string_literal_with_an_escaped_quote_desired(
     result = export_of(project, ESCAPED_QUOTE_SCRIPT, "dataflow")
 
     graph = DotGraph(result.stdout)
-    assert sorted(drawn_labels(graph).values()) == sorted([
-        '1 print("say \\"hi\\"")', "-1 print", '1 "say \\"hi\\""',
-    ]), result.stdout
+    assert sorted(drawn_labels(graph).values()) == sorted(
+        [
+            '1 print("say \\"hi\\"")',
+            "-1 print",
+            '1 "say \\"hi\\""',
+        ]
+    ), result.stdout
 
 
 def test_export_dataflow_of_a_class_named_with_a_quote(project):
@@ -975,8 +1002,7 @@ def test_export_dataflow_of_a_class_named_with_a_quote(project):
     lines = [line.strip() for line in result.stdout.splitlines()]
     assert 'label = "a"b";' in lines, str(result)
     assert 'label = "init";' in lines, str(result)
-    with pytest.raises(AssertionError,
-                       match="^not a DOT graph: unexpected '#'"):
+    with pytest.raises(AssertionError, match="^not a DOT graph: unexpected '#'"):
         DotGraph(result.stdout)
 
 
@@ -991,8 +1017,7 @@ def test_export_dataflow_of_a_class_named_with_a_quote_desired(project):
 
     graph = DotGraph(result.stdout)
     assert drawn_cluster_labels(graph) == ['a"b', "init"], result.stdout
-    strays = sorted(node for node in graph.nodes
-                    if not re.fullmatch(r"e_\d+", node))
+    strays = sorted(node for node in graph.nodes if not re.fullmatch(r"e_\d+", node))
     assert strays == [], result.stdout
 
 
@@ -1002,12 +1027,12 @@ def test_export_dataflow_of_a_value_ending_in_a_backslash(project):
     closing quote: the label runs on into ``fillcolor``, and Graphviz and
     ``DotGraph`` reject the graph (#401 changes it)
     """
-    result = export_of(project, BACKSLASH_REPR_SCRIPT, "dataflow",
-                       "--value-length", "55")
+    result = export_of(
+        project, BACKSLASH_REPR_SCRIPT, "dataflow", "--value-length", "55"
+    )
 
-    assert result.stdout.count(r'C:\data\" fillcolor') == 2, str(result)
-    with pytest.raises(AssertionError,
-                       match="^not a DOT graph: unexpected '#'"):
+    assert result.stdout.count(r"C:\data\" fillcolor") == 2, str(result)
+    with pytest.raises(AssertionError, match="^not a DOT graph: unexpected '#'"):
         DotGraph(result.stdout)
 
 
@@ -1017,15 +1042,18 @@ def test_export_dataflow_of_a_value_ending_in_a_backslash_desired(project):
     ``C:\\data\\`` is well-formed DOT whose labels draw that repr, every
     backslash kept, under the code of each node
     """
-    result = export_of(project, BACKSLASH_REPR_SCRIPT, "dataflow",
-                       "--value-length", "55")
+    result = export_of(
+        project, BACKSLASH_REPR_SCRIPT, "dataflow", "--value-length", "55"
+    )
 
     graph = DotGraph(result.stdout)
-    assert sorted(drawn_labels(graph).values()) == sorted([
-        "1 return =\n<class '__main__.R'>",
-        "6 R() =\nC:\\data\\",
-        "6 r =\nC:\\data\\",
-    ]), result.stdout
+    assert sorted(drawn_labels(graph).values()) == sorted(
+        [
+            "1 return =\n<class '__main__.R'>",
+            "6 R() =\nC:\\data\\",
+            "6 r =\nC:\\data\\",
+        ]
+    ), result.stdout
 
 
 # --- test 16: export ast ----------------------------------------------------
@@ -1042,8 +1070,7 @@ def test_export_ast_matches_golden(request, two_trial_project, form):
     """
     skip_unless_same_python(two_trial_project)
     result = two_trial_project.run("export", "ast", *EXPORT_AST_FORMS[form])
-    assert_golden(request, "ast-" + form,
-                  two_trial_project.normalize(result.stdout))
+    assert_golden(request, "ast-" + form, two_trial_project.normalize(result.stdout))
 
 
 @pytest.mark.parametrize("form", EXPORT_AST_FORMS)
@@ -1058,11 +1085,14 @@ def test_export_ast_in_each_form(two_trial_project, form):
     """
     failure = export_ast_failure(form)
     if failure is None:
-        pytest.skip("`export ast` in this form works on this Python; the "
-                    "_desired twin is the test")
+        pytest.skip(
+            "`export ast` in this form works on this Python; the "
+            "_desired twin is the test"
+        )
     skip_unless_same_python(two_trial_project)
-    result = two_trial_project.run("export", "ast", *EXPORT_AST_FORMS[form],
-                                   expect=1, allow_stderr=True)
+    result = two_trial_project.run(
+        "export", "ast", *EXPORT_AST_FORMS[form], expect=1, allow_stderr=True
+    )
     assert result.stdout == "", str(result)
     error = last_line(result.stderr)
     assert error.startswith("TypeError: "), str(result)
@@ -1088,8 +1118,9 @@ def test_export_ast_in_each_form_desired(two_trial_project, form):
         assert data["ast"][trial_id].startswith("Module("), str(result)
     else:
         assert output.startswith("digraph {"), str(result)
-        assert re.search(r"^\s*node\d+ \[label=\"Module\b", output,
-                         re.MULTILINE), str(result)
+        assert re.search(r"^\s*node\d+ \[label=\"Module\b", output, re.MULTILINE), str(
+            result
+        )
 
 
 @pytest.mark.parametrize("form", AST_FORMS)
@@ -1099,26 +1130,35 @@ def test_export_ast_of_a_dict_display_that_unpacks(project, form):
     items: the transformer records no ``key_value`` for a ``**`` item, only
     its operand (#427)
     """
-    result = export_of(project, DICT_UNPACKING_SCRIPT, "ast",
-                       *EXPORT_AST_FORMS[form])
+    result = export_of(project, DICT_UNPACKING_SCRIPT, "ast", *EXPORT_AST_FORMS[form])
     if form == "dot":
         graph = DotGraph(result.stdout)
         labels = drawn_labels(graph)
-        display = [node for node, label in labels.items()
-                   if label == "Dict\n{'z': 0, **base, 'y': 2}"]
+        display = [
+            node
+            for node, label in labels.items()
+            if label == "Dict\n{'z': 0, **base, 'y': 2}"
+        ]
         assert len(display) == 1, str(result)
-        items = sorted(labels[head] for tail, head, _ in graph.edges
-                       if tail == display[0])
-        assert items == ["Constant\n'y'", "Constant\n'z'", "Constant\n0",
-                         "Constant\n2", "Name\nbase"], str(result)
+        items = sorted(
+            labels[head] for tail, head, _ in graph.edges if tail == display[0]
+        )
+        assert items == [
+            "Constant\n'y'",
+            "Constant\n'z'",
+            "Constant\n0",
+            "Constant\n2",
+            "Name\nbase",
+        ], str(result)
         return
     if form == "json":
         trial_id = project.trials()[-1]["id"]
         dump = ast.literal_eval(result.stdout)["ast"][trial_id]
     else:
         dump = result.stdout
-    assert re.sub(r"\s", "", DICT_UNPACKING_DUMP) in re.sub(r"\s", "", dump), (
-        str(result))
+    assert re.sub(r"\s", "", DICT_UNPACKING_DUMP) in re.sub(r"\s", "", dump), str(
+        result
+    )
 
 
 # --- export prospective -----------------------------------------------------
@@ -1128,12 +1168,12 @@ def test_export_ast_of_a_dict_display_that_unpacks(project, form):
 def test_export_prospective_matches_golden(request, two_trial_project):
     """``export prospective`` prints the DOT graph of the golden"""
     result = two_trial_project.run("export", "prospective")
-    assert_golden(request, "prospective",
-                  two_trial_project.normalize(result.stdout))
+    assert_golden(request, "prospective", two_trial_project.normalize(result.stdout))
 
 
 def test_export_prospective_is_the_same_for_two_trials_of_the_same_code(
-        two_trial_project):
+    two_trial_project,
+):
     """The prospective graph comes from the code alone: the two trials ran
     the same script on different data and draw the same graph
     """
@@ -1154,8 +1194,7 @@ def test_export_prospective_reads_as_dot(two_trial_project):
     result = two_trial_project.run("export", "prospective")
     graph = DotGraph(result.stdout)
     labels = drawn_labels(graph)
-    assert (labels.get("start"), labels.get("end")) == ("Start", "End"), (
-        str(result))
+    assert (labels.get("start"), labels.get("end")) == ("Start", "End"), str(result)
     assert graph.edges, str(result)
 
 
@@ -1166,19 +1205,18 @@ def test_export_prospective_of_a_condition_ending_in_a_backslash(project):
     ``now`` exits 0, and Graphviz and ``DotGraph`` reject the graph (#401
     changes it)
     """
-    result = export_of(project, BACKSLASH_CONDITION_SCRIPT, "prospective",
-                       allow_stderr=True)
+    result = export_of(
+        project, BACKSLASH_CONDITION_SCRIPT, "prospective", allow_stderr=True
+    )
 
     assert PROSPECTIVE_LABEL.signature in result.stderr, str(result)
     assert r'  s == r\"a\" color="#808080"' in result.stdout, str(result)
-    with pytest.raises(AssertionError,
-                       match="^not a DOT graph: unexpected '#'"):
+    with pytest.raises(AssertionError, match="^not a DOT graph: unexpected '#'"):
         DotGraph(result.stdout)
 
 
 @known_defects(PROSPECTIVE_LABEL)
-def test_export_prospective_of_a_condition_ending_in_a_backslash_desired(
-        project):
+def test_export_prospective_of_a_condition_ending_in_a_backslash_desired(project):
     """``export prospective`` of ``if s == r"a\\:b":`` prints no warning
     and well-formed DOT, whose condition note draws the condition, every
     backslash kept: cut at the first ``:`` as today (``s == r"a\\``), or
@@ -1187,18 +1225,25 @@ def test_export_prospective_of_a_condition_ending_in_a_backslash_desired(
 
     A fix may leave the cut alone, or take the condition from the tree.
     """
-    result = export_of(project, BACKSLASH_CONDITION_SCRIPT, "prospective",
-                       expect=None, allow_stderr=True)
+    result = export_of(
+        project,
+        BACKSLASH_CONDITION_SCRIPT,
+        "prospective",
+        expect=None,
+        allow_stderr=True,
+    )
 
     assert result.stderr == "", str(result)
     assert result.returncode == 0, str(result)
     graph = DotGraph(result.stdout)
-    notes = [label for label in drawn_labels(graph).values()
-             if label.startswith(CONDITION)]
+    notes = [
+        label for label in drawn_labels(graph).values() if label.startswith(CONDITION)
+    ]
     assert len(notes) == 1, result.stdout
-    condition = notes[0][len(CONDITION):].strip()
-    assert (condition == CUT_CONDITION
-            or same_expression(condition, WHOLE_CONDITION)), result.stdout
+    condition = notes[0][len(CONDITION) :].strip()
+    assert condition == CUT_CONDITION or same_expression(condition, WHOLE_CONDITION), (
+        result.stdout
+    )
 
 
 # --- export ipynb -----------------------------------------------------------
@@ -1219,8 +1264,7 @@ def test_export_ipynb_writes_the_current_trial_notebook(weather_project):
     assert notebook["cells"]
 
 
-def test_export_ipynb_writes_into_the_current_directory_despite_dir(
-        weather_project):
+def test_export_ipynb_writes_into_the_current_directory_despite_dir(weather_project):
     """``export ipynb --dir <project>`` reads the store in ``--dir`` and
     writes the notebook into the current directory, not into ``--dir``
 
@@ -1229,8 +1273,9 @@ def test_export_ipynb_writes_into_the_current_directory_despite_dir(
     elsewhere = weather_project.root / "elsewhere"
     elsewhere.mkdir()
     before = weather_project.files()
-    result = weather_project.run("export", "ipynb", "--dir",
-                                 weather_project.path, cwd=elsewhere)
+    result = weather_project.run(
+        "export", "ipynb", "--dir", weather_project.path, cwd=elsewhere
+    )
     assert result.stdout == "", str(result)
     assert sorted(os.listdir(elsewhere)) == [CURRENT_NOTEBOOK]
     json.loads((elsewhere / CURRENT_NOTEBOOK).read_text(encoding="utf-8"))

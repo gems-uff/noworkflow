@@ -37,6 +37,7 @@ An unknown trial id crashes most of these routes (``now vis`` answers an
 HTML 500): characterized only, since the frontend builds these URLs from
 the ids the history gives it.
 """
+
 import ast
 import re
 import shutil
@@ -67,22 +68,31 @@ FUNCTION = "run_simulation"
 
 AST_LINENO = Defect(
     reason="#241: from Python 3.14 ast.parse() validates the tree that "
-           "TrialAst (models/ast/trial_ast.py) rebuilds from the store, "
-           "whose statements have no lineno",
+    "TrialAst (models/ast/trial_ast.py) rebuilds from the store, "
+    "whose statements have no lineno",
     signature='required field "lineno" missing',
-    since=(3, 14), before=(3, 15),
+    since=(3, 14),
+    before=(3, 15),
 )
 AST_MODULE_NAME = Defect(
     reason="#241: from Python 3.15 AST constructors reject unknown "
-           "keywords, and TrialAst (models/ast/trial_ast.py) builds "
-           "ast.Module(name=...)",
+    "keywords, and TrialAst (models/ast/trial_ast.py) builds "
+    "ast.Module(name=...)",
     signature="ast.Module.__init__ got an unexpected keyword argument 'name'",
     since=(3, 15),
 )
 AST_DEFECTS = (AST_LINENO, AST_MODULE_NAME)
 ACTIVATION_KEYS = {
-    "id", "line", "name", "start", "finish", "duration", "globals",
-    "parameters", "return_value", "hash",
+    "id",
+    "line",
+    "name",
+    "start",
+    "finish",
+    "duration",
+    "globals",
+    "parameters",
+    "return_value",
+    "hash",
 }
 ENVIRONMENT_KEYS = {"trial_id", "id", "name", "value"}
 
@@ -117,8 +127,10 @@ def script_function(project, name):
 def first_activation(project, trial_id, name):
     """The first activation of a function in a trial"""
     rows = project.query(
-        "SELECT * FROM activation WHERE trial_id = ? AND name = ? "
-        "ORDER BY id", trial_id, name)
+        "SELECT * FROM activation WHERE trial_id = ? AND name = ? ORDER BY id",
+        trial_id,
+        name,
+    )
     assert rows, "no activation of {} in the trial".format(name)
     return rows[0]
 
@@ -127,19 +139,26 @@ def activation_row(project, trial_id, activation_id):
     """The activation row, or None"""
     rows = project.query(
         "SELECT * FROM activation WHERE trial_id = ? AND id = ?",
-        trial_id, activation_id)
+        trial_id,
+        activation_id,
+    )
     return rows[0] if rows else None
 
 
 def evaluation_row(project, trial_id, evaluation_id):
     """The evaluation row and the line of its code component"""
-    return one(project.query(
-        "SELECT evaluation.*, code_component.first_char_line AS line "
-        "FROM evaluation JOIN code_component "
-        "ON code_component.trial_id = evaluation.trial_id "
-        "AND code_component.id = evaluation.code_component_id "
-        "WHERE evaluation.trial_id = ? AND evaluation.id = ?",
-        trial_id, evaluation_id), "evaluation {}".format(evaluation_id))
+    return one(
+        project.query(
+            "SELECT evaluation.*, code_component.first_char_line AS line "
+            "FROM evaluation JOIN code_component "
+            "ON code_component.trial_id = evaluation.trial_id "
+            "AND code_component.id = evaluation.code_component_id "
+            "WHERE evaluation.trial_id = ? AND evaluation.id = ?",
+            trial_id,
+            evaluation_id,
+        ),
+        "evaluation {}".format(evaluation_id),
+    )
 
 
 def evaluations_of_type(project, trial_id, activation_id, type_):
@@ -152,7 +171,11 @@ def evaluations_of_type(project, trial_id, activation_id, type_):
         "ON code_component.trial_id = evaluation.trial_id "
         "AND code_component.id = evaluation.code_component_id "
         "WHERE evaluation.trial_id = ? AND evaluation.activation_id = ? "
-        "AND code_component.type = ?", trial_id, activation_id, type_)
+        "AND code_component.type = ?",
+        trial_id,
+        activation_id,
+        type_,
+    )
     return sorted("{} = {}".format(row["name"], row["repr"]) for row in rows)
 
 
@@ -165,8 +188,7 @@ def access_stack(project, trial_id, activation_id):
     names = []
     current = activation_row(project, trial_id, activation_id)
     while current is not None:
-        caller_id = evaluation_row(
-            project, trial_id, current["id"])["activation_id"]
+        caller_id = evaluation_row(project, trial_id, current["id"])["activation_id"]
         caller = activation_row(project, trial_id, caller_id)
         if caller is not None:
             names.insert(0, current["name"])
@@ -221,8 +243,9 @@ def get_pdf(vis, route):
 # --- dependencies -----------------------------------------------------------
 
 
-@pytest.mark.parametrize("route", Vis.routes("trials/{}/dependencies.json")
-                         + ["/trials/{}/dependencies"])
+@pytest.mark.parametrize(
+    "route", Vis.routes("trials/{}/dependencies.json") + ["/trials/{}/dependencies"]
+)
 def test_dependencies_are_the_modules_of_each_trial(vis, route):
     """Each trial's ``dependencies`` lists the rows of ``module`` for that
     trial (or for the trial it inherited them from), every column plus the
@@ -238,11 +261,12 @@ def test_dependencies_are_the_modules_of_each_trial(vis, route):
             "SELECT module.*, code_block.code_hash FROM module "
             "LEFT JOIN code_block ON code_block.trial_id = module.trial_id "
             "AND code_block.id = module.code_block_id "
-            "WHERE module.trial_id = ? ORDER BY module.id", owner)
+            "WHERE module.trial_id = ? ORDER BY module.id",
+            owner,
+        )
         assert rows, "the weather trials import a local module"
         modules = sorted(body["all"], key=lambda module: module["id"])
-        assert [module["id"] for module in modules] == [
-            row["id"] for row in rows]
+        assert [module["id"] for module in modules] == [row["id"] for row in rows]
         for module, row in zip(modules, rows):
             assert set(module) == set(row)
             if row["transformed"] is not None:
@@ -256,21 +280,24 @@ def test_dependencies_code_hash_names_the_source_of_the_module(vis):
     """
     trial_id = vis.trial_ids[-1]
     body = vis.json("/trials/{}/dependencies.json".format(trial_id))
-    local = sorted(path.stem for path in vis.project.path.glob("*.py")
-                   if path.name != SCRIPT)
+    local = sorted(
+        path.stem for path in vis.project.path.glob("*.py") if path.name != SCRIPT
+    )
     assert sorted(module["name"] for module in body["all"]) == local
     for module in body["all"]:
         source = vis.project.path / (module["name"] + ".py")
         assert same_path(module["path"], source), "the module's path"
-        assert vis.project.content(module["code_hash"]) == (
-            source.read_bytes()), "the stored source of " + module["name"]
+        assert vis.project.content(module["code_hash"]) == (source.read_bytes()), (
+            "the stored source of " + module["name"]
+        )
 
 
 # --- environment ------------------------------------------------------------
 
 
-@pytest.mark.parametrize("route", Vis.routes("trials/{}/environment.json")
-                         + ["/trials/{}/environment"])
+@pytest.mark.parametrize(
+    "route", Vis.routes("trials/{}/environment.json") + ["/trials/{}/environment"]
+)
 def test_environment_has_one_item_per_attribute_name(vis, route):
     """``environment`` lists one item per attribute name the store recorded
     for the trial (a name recorded twice, as ``OS_NAME``, comes once), each
@@ -286,7 +313,8 @@ def test_environment_has_one_item_per_attribute_name(vis, route):
         items = body["all"]
         rows = vis.project.query(
             "SELECT id, name, value FROM environment_attr WHERE trial_id = ?",
-            trial["id"])
+            trial["id"],
+        )
         names = [item["name"] for item in items]
         assert len(names) == len(set(names)), "a name comes twice"
         assert set(names) == {row["name"] for row in rows}
@@ -298,18 +326,17 @@ def test_environment_has_one_item_per_attribute_name(vis, route):
             assert (item["id"], item["name"]) in ids, item["name"]
             # Booleans first: introspection would print the value.
             is_text = isinstance(item["value"], str)
-            assert is_text, "{}: the value is not a string".format(
-                item["name"])
+            assert is_text, "{}: the value is not a string".format(item["name"])
             stored = item["value"] == values[item["id"]]
-            assert stored, "{}: not the value of its row".format(
-                item["name"])
+            assert stored, "{}: not the value of its row".format(item["name"])
 
 
 # --- file accesses ----------------------------------------------------------
 
 
-@pytest.mark.parametrize("route", Vis.routes("trials/{}/file_accesses.json")
-                         + ["/trials/{}/file_accesses"])
+@pytest.mark.parametrize(
+    "route", Vis.routes("trials/{}/file_accesses.json") + ["/trials/{}/file_accesses"]
+)
 def test_file_accesses_are_the_rows_of_each_trial(vis, route):
     """``file_accesses`` lists the rows of ``file_access`` for the trial,
     every column, plus the ``stack`` of activations that opened the file;
@@ -320,17 +347,15 @@ def test_file_accesses_are_the_rows_of_each_trial(vis, route):
         assert set(body) == {"file_accesses", "trial_path"}
         assert body["trial_path"] == trial["path"]
         rows = vis.project.query(
-            "SELECT * FROM file_access WHERE trial_id = ? ORDER BY id",
-            trial["id"])
+            "SELECT * FROM file_access WHERE trial_id = ? ORDER BY id", trial["id"]
+        )
         assert rows, "the weather script reads and writes files"
-        accesses = sorted(body["file_accesses"],
-                          key=lambda access: access["id"])
+        accesses = sorted(body["file_accesses"], key=lambda access: access["id"])
         assert len(accesses) == len(rows)
         for access, row in zip(accesses, rows):
             stack = access.pop("stack")
             assert access == row
-            assert stack == access_stack(
-                vis.project, trial["id"], row["activation_id"])
+            assert stack == access_stack(vis.project, trial["id"], row["activation_id"])
 
 
 def test_file_accesses_of_the_last_trial_hash_the_project_files(vis):
@@ -344,8 +369,7 @@ def test_file_accesses_of_the_last_trial_hash_the_project_files(vis):
     modes = set()
     for access in body["file_accesses"]:
         modes.add(access["mode"])
-        key = ("content_hash_after" if "w" in access["mode"]
-               else "content_hash_before")
+        key = "content_hash_after" if "w" in access["mode"] else "content_hash_before"
         assert access[key] == files[access["name"]], access["name"]
         assert access["stack"].endswith(" -> open"), access["name"]
     assert modes == {"r", "w"}
@@ -354,8 +378,7 @@ def test_file_accesses_of_the_last_trial_hash_the_project_files(vis):
 # --- activations ------------------------------------------------------------
 
 
-ACTIVATION_ROUTES = ["/trials/{}/activations/{}.json",
-                     "/trials/{}/activations/{}"]
+ACTIVATION_ROUTES = ["/trials/{}/activations/{}.json", "/trials/{}/activations/{}"]
 EXPERIMENT_ACTIVATION_ROUTES = [
     Vis.routes("trials/{}/activations/{}.json")[1],
     Vis.routes("trials/{}/activations/{}")[1],
@@ -378,23 +401,31 @@ def test_activation_answers_its_record(vis, route):
     body = vis.json(route.format(trial["id"], aid))
     assert set(body) == ACTIVATION_KEYS
     evaluation = evaluation_row(vis.project, trial["id"], aid)
-    block = one(vis.project.query(
-        "SELECT code_hash FROM code_block WHERE trial_id = ? AND id = ?",
-        trial["id"], activation["code_block_id"]), "code block")
+    block = one(
+        vis.project.query(
+            "SELECT code_hash FROM code_block WHERE trial_id = ? AND id = ?",
+            trial["id"],
+            activation["code_block_id"],
+        ),
+        "code block",
+    )
     elapsed = evaluation["checkpoint"] - activation["start_checkpoint"]
     # The frontend only prints the id: a string today, the URL's segment.
     assert str(body["id"]) == str(aid)
     assert body["name"] == activation["name"]
     assert body["line"] == evaluation["line"]
-    served = (served_instant(body["finish"])
-              - served_instant(body["start"])).total_seconds()
+    served = (
+        served_instant(body["finish"]) - served_instant(body["start"])
+    ).total_seconds()
     # Each time is truncated to the second.
     assert abs(served - elapsed) < 1
     assert abs(body["duration"] - elapsed * 1000000) <= 1
     assert sorted(body["globals"]) == evaluations_of_type(
-        vis.project, trial["id"], aid, "global")
+        vis.project, trial["id"], aid, "global"
+    )
     assert sorted(body["parameters"]) == evaluations_of_type(
-        vis.project, trial["id"], aid, "param")
+        vis.project, trial["id"], aid, "param"
+    )
     assert body["return_value"] == evaluation["repr"]
     assert body["hash"] == block["code_hash"]
 
@@ -410,19 +441,20 @@ def test_activation_matches_the_script(vis):
     body = vis.json("/trials/{}/activations/{}.json".format(trial_id, aid))
     source = script_source(vis.project)
     node = script_function(vis.project, FUNCTION)
-    calls = [call.lineno for call in ast.walk(ast.parse(source))
-             if isinstance(call, ast.Call)
-             and getattr(call.func, "id", None) == FUNCTION]
+    calls = [
+        call.lineno
+        for call in ast.walk(ast.parse(source))
+        if isinstance(call, ast.Call) and getattr(call.func, "id", None) == FUNCTION
+    ]
     assert body["line"] in calls
     names = [parameter.split(" = ")[0] for parameter in body["parameters"]]
     assert sorted(names) == sorted(arg.arg for arg in node.args.args)
     first, second = node.args.args[:2]
-    assert "{} = {!r}".format(first.arg, WEATHER_ARGS[2]) in body[
-        "parameters"]
-    assert "{} = {!r}".format(second.arg, WEATHER_ARGS[3]) in body[
-        "parameters"]
+    assert "{} = {!r}".format(first.arg, WEATHER_ARGS[2]) in body["parameters"]
+    assert "{} = {!r}".format(second.arg, WEATHER_ARGS[3]) in body["parameters"]
     assert vis.project.content(body["hash"]) == ast.get_source_segment(
-        source, node).encode("utf-8")
+        source, node
+    ).encode("utf-8")
 
 
 def test_activation_without_code_block_has_an_empty_hash(vis):
@@ -432,9 +464,10 @@ def test_activation_without_code_block_has_an_empty_hash(vis):
     trial_id = vis.trial_ids[0]
     activation = vis.project.query(
         "SELECT * FROM activation WHERE trial_id = ? "
-        "AND code_block_id IS NULL ORDER BY id", trial_id)[0]
-    body = vis.json("/trials/{}/activations/{}.json".format(
-        trial_id, activation["id"]))
+        "AND code_block_id IS NULL ORDER BY id",
+        trial_id,
+    )[0]
+    body = vis.json("/trials/{}/activations/{}.json".format(trial_id, activation["id"]))
     assert body["name"] == activation["name"]
     assert body["hash"] == ""
 
@@ -448,13 +481,13 @@ def test_activation_times_are_local_times_labeled_gmt(vis):
     """
     trial = vis.project.trials()[0]
     activation = first_activation(vis.project, trial["id"], FUNCTION)
-    body = vis.json("/trials/{}/activations/{}.json".format(
-        trial["id"], activation["id"]))
+    body = vis.json(
+        "/trials/{}/activations/{}.json".format(trial["id"], activation["id"])
+    )
     for key, stored in stored_times(vis.project, trial, activation).items():
         # A boolean: both sides together would tell the machine's zone.
         naive = body[key] == http_date(stored)
-        assert naive, "{}: not the store's naive time as an HTTP date".format(
-            key)
+        assert naive, "{}: not the store's naive time as an HTTP date".format(key)
         assert body[key].endswith(" GMT"), key
 
 
@@ -465,8 +498,9 @@ def test_activation_times_desired(vis):
     """
     trial = vis.project.trials()[0]
     activation = first_activation(vis.project, trial["id"], FUNCTION)
-    body = vis.json("/trials/{}/activations/{}.json".format(
-        trial["id"], activation["id"]))
+    body = vis.json(
+        "/trials/{}/activations/{}.json".format(trial["id"], activation["id"])
+    )
     for key, stored in stored_times(vis.project, trial, activation).items():
         recorded = stored.replace(tzinfo=NOW_RUN_ZONE)
         gap = (served_instant(body[key]) - recorded).total_seconds()
@@ -476,8 +510,8 @@ def test_activation_times_desired(vis):
         on_time = abs(gap) < 1
         shifted = abs(gap - NOW_RUN_UTC_OFFSET) < 1
         assert on_time, "{}: not the recorded instant{}".format(
-            key, ", off by the UTC offset of now run's zone"
-            if shifted else "")
+            key, ", off by the UTC offset of now run's zone" if shifted else ""
+        )
 
 
 @pytest.mark.parametrize("route", EXPERIMENT_ACTIVATION_ROUTES)
@@ -489,8 +523,7 @@ def test_activation_under_an_experiment_raises_type_error(vis, route):
     """
     trial_id = vis.trial_ids[0]
     aid = first_activation(vis.project, trial_id, FUNCTION)["id"]
-    with pytest.raises(TypeError, match=re.escape(
-            EXPERIMENT_PREFIX.signature)):
+    with pytest.raises(TypeError, match=re.escape(EXPERIMENT_PREFIX.signature)):
         vis.get(route.format(trial_id, aid))
 
 
@@ -534,7 +567,8 @@ def test_prospective_dot_of_an_unknown_trial_answers_500(vis):
     assert response.status_code == 500
     assert response.mimetype == "text/plain"
     assert response.get_data(as_text=True) == (
-        "Unexpected error: Trial {} not found".format(trial_id))
+        "Unexpected error: Trial {} not found".format(trial_id)
+    )
 
 
 # --- flow.pdf ---------------------------------------------------------------
@@ -569,8 +603,7 @@ def test_flow_pdf_sends_what_graphviz_draws_of_the_dataflow(vis, monkeypatch):
     response = vis.get("/trials/{}/flow.pdf".format(trial_id))
     assert response.status_code == 200
     assert response.mimetype == "application/pdf"
-    assert response.headers.get("Content-Disposition") == (
-        "inline; filename=flow.pdf")
+    assert response.headers.get("Content-Disposition") == ("inline; filename=flow.pdf")
     assert response.get_data() == b"%PDF-fake"
     assert len(drawn) == 1
     assert drawn[0].startswith("digraph e_")
@@ -583,8 +616,7 @@ def test_flow_pdf_under_an_experiment_raises_type_error(vis):
     Characterization of EXPERIMENT_PREFIX.
     """
     trial_id = vis.trial_ids[0]
-    with pytest.raises(TypeError, match=re.escape(
-            EXPERIMENT_PREFIX.signature)):
+    with pytest.raises(TypeError, match=re.escape(EXPERIMENT_PREFIX.signature)):
         vis.get(Vis.routes("trials/{}/flow.pdf")[1].format(trial_id))
 
 
@@ -605,9 +637,10 @@ def test_flow_pdf_under_an_experiment_desired(vis_own):
 # --- definition AST ---------------------------------------------------------
 
 
-@pytest.mark.skipif(not any(defect.applies() for defect in AST_DEFECTS),
-                    reason="#241 does not show on this Python: the "
-                           "_desired twin is the test")
+@pytest.mark.skipif(
+    not any(defect.applies() for defect in AST_DEFECTS),
+    reason="#241 does not show on this Python: the _desired twin is the test",
+)
 def test_definition_ast_raises_type_error_on_recent_pythons(vis):
     """Today ``/definition/<trial_id>/ast.json`` raises ``TypeError``: on
     3.14 ``required field "lineno" missing``, from 3.15
@@ -637,30 +670,38 @@ def test_definition_ast_desired(vis):
     statements = keyword(root, "body").elts
     script = ast.parse(script_source(vis.project))
     assert [call_name(node) for node in statements] == [
-        type(node).__name__ for node in script.body]
-    functions = [keyword(node, "name").value for node in statements
-                 if call_name(node) == "FunctionDef"]
+        type(node).__name__ for node in script.body
+    ]
+    functions = [
+        keyword(node, "name").value
+        for node in statements
+        if call_name(node) == "FunctionDef"
+    ]
     assert functions == [node.name for node in script_functions(vis.project)]
 
 
 # --- unknown ids ------------------------------------------------------------
 
 
-@pytest.mark.parametrize("route", [
-    "/trials/{}/dependencies.json",
-    "/trials/{}/environment.json",
-    "/trials/{}/file_accesses.json",
-    "/trials/{}/flow.pdf",
-    "/definition/{}/ast.json",
-])
+@pytest.mark.parametrize(
+    "route",
+    [
+        "/trials/{}/dependencies.json",
+        "/trials/{}/environment.json",
+        "/trials/{}/file_accesses.json",
+        "/trials/{}/flow.pdf",
+        "/definition/{}/ast.json",
+    ],
+)
 def test_an_unknown_trial_raises_runtime_error(vis, route):
     """Today an unknown trial id raises ``RuntimeError: Trial <id> not
     found`` from ``Trial()``, before anything else the view does; ``now
     vis`` answers an HTML 500
     """
     trial_id = unknown_trial_id(vis)
-    with pytest.raises(RuntimeError, match="Trial {} not found".format(
-            re.escape(trial_id))):
+    with pytest.raises(
+        RuntimeError, match="Trial {} not found".format(re.escape(trial_id))
+    ):
         vis.get(route.format(trial_id))
 
 
@@ -672,8 +713,8 @@ def test_an_unknown_activation_raises_attribute_error(vis, which):
     """
     trial_id = vis.trial_ids[0]
     last = vis.project.query(
-        "SELECT MAX(id) AS id FROM activation WHERE trial_id = ?",
-        trial_id)[0]["id"]
+        "SELECT MAX(id) AS id FROM activation WHERE trial_id = ?", trial_id
+    )[0]["id"]
     if which == "trial":
         trial_id, aid = unknown_trial_id(vis), 1
     else:

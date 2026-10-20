@@ -14,6 +14,7 @@ another installation (the golden-run compares two versions of noWorkflow
 this way); point it at an installed ``now``, not at ``uvx``/``uv run``,
 which would start from an empty cache in each test's temporary home.
 """
+
 import contextlib
 import dataclasses
 import hashlib
@@ -40,8 +41,14 @@ PRESERVE_PREFIXES = ("COVERAGE_", "COV_CORE_")
 PRESERVE = ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT")
 # Windows cannot start Python without SYSTEMROOT (sockets fail), and
 # ``shell=True`` needs COMSPEC.
-WINDOWS_KEEP = ("SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "PATHEXT", "COMSPEC",
-                "PROGRAMDATA")
+WINDOWS_KEEP = (
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "PATHEXT",
+    "COMSPEC",
+    "PROGRAMDATA",
+)
 # Never forwarded, on purpose: PYTHONWARNINGS, PYTHONWARNDEFAULTENCODING
 # (set by the Windows legs of pre-release.yml) and PYTHONDEVMODE print warnings
 # on stderr, PYTHONPATH and PYTHONSTARTUP change what runs, FORCE_COLOR
@@ -64,8 +71,10 @@ def now_command():
     parts = shlex.split(custom, posix=os.name != "nt")
     if os.name == "nt":
         # Non-POSIX shlex keeps the quotes that protect a path with spaces.
-        parts = [part[1:-1] if len(part) > 1 and part[0] == part[-1] == '"'
-                 else part for part in parts]
+        parts = [
+            part[1:-1] if len(part) > 1 and part[0] == part[-1] == '"' else part
+            for part in parts
+        ]
     # Absolute: the child runs in the project directory.
     parts[0] = os.path.abspath(shutil.which(parts[0]) or parts[0])
     return parts
@@ -128,8 +137,7 @@ def clean_env(home, tmp, command=None):
         "TMP": tmp,
     }
     if os.name == "nt":
-        env.update({key: os.environ[key] for key in WINDOWS_KEEP
-                    if key in os.environ})
+        env.update({key: os.environ[key] for key in WINDOWS_KEEP if key in os.environ})
         env["APPDATA"] = os.path.join(home, "AppData", "Roaming")
         env["LOCALAPPDATA"] = os.path.join(home, "AppData", "Local")
     for key, value in os.environ.items():
@@ -149,9 +157,12 @@ class Result:
 
     def __str__(self):
         return (
-            "$ now {}\nreturn code: {}\n--- stdout ---\n{}\n--- stderr ---\n{}"
-            .format(" ".join(self.args), self.returncode,
-                    tail(self.stdout), tail(self.stderr))
+            "$ now {}\nreturn code: {}\n--- stdout ---\n{}\n--- stderr ---\n{}".format(
+                " ".join(self.args),
+                self.returncode,
+                tail(self.stdout),
+                tail(self.stderr),
+            )
         )
 
 
@@ -167,8 +178,9 @@ def same_path(stored, expected):
     noWorkflow stores real paths (on macOS the temporary directories are
     symlinks: /var -> /private/var); Windows compares paths without case.
     """
-    return (os.path.normcase(os.path.realpath(str(stored)))
-            == os.path.normcase(os.path.realpath(str(expected))))
+    return os.path.normcase(os.path.realpath(str(stored))) == os.path.normcase(
+        os.path.realpath(str(expected))
+    )
 
 
 def tail(text, lines=40):
@@ -176,8 +188,7 @@ def tail(text, lines=40):
     parts = text.splitlines()
     if len(parts) <= lines:
         return text
-    return "[... {} lines ...]\n".format(len(parts) - lines) + "\n".join(
-        parts[-lines:])
+    return "[... {} lines ...]\n".format(len(parts) - lines) + "\n".join(parts[-lines:])
 
 
 class NowProject:
@@ -193,12 +204,14 @@ class NowProject:
             directory.mkdir(parents=True, exist_ok=True)
         self.command = list(command or NOW_CMD)
         self.env = clean_env(self.home, self.tmp, self.command)
-        self.normalize = Normalizer([
-            ("<PROJECT>", self.path),
-            ("<HOME>", self.home),
-            ("<TMP>", self.tmp),
-            ("<ROOT>", self.root),
-        ])
+        self.normalize = Normalizer(
+            [
+                ("<PROJECT>", self.path),
+                ("<HOME>", self.home),
+                ("<TMP>", self.tmp),
+                ("<ROOT>", self.root),
+            ]
+        )
 
     @property
     def store(self):
@@ -222,20 +235,21 @@ class NowProject:
             errors="replace",
             timeout=timeout,
         )
-        result = Result(args, completed.returncode, completed.stdout,
-                        completed.stderr)
+        result = Result(args, completed.returncode, completed.stdout, completed.stderr)
         if expect is not None:
-            assert result.returncode == expect, (
-                "expected return code {}\n{}".format(expect, result))
+            assert result.returncode == expect, "expected return code {}\n{}".format(
+                expect, result
+            )
         if not allow_stderr:
-            assert result.stderr == "", "expected an empty stderr\n{}".format(
-                result)
+            assert result.stderr == "", "expected an empty stderr\n{}".format(result)
         return result
 
     def copy_corpus(self, name):
         """Copy ``corpus/<name>`` into the project, keeping the file modes"""
         shutil.copytree(
-            CORPUS / name, self.path, dirs_exist_ok=True,
+            CORPUS / name,
+            self.path,
+            dirs_exist_ok=True,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
 
@@ -277,24 +291,28 @@ class NowProject:
             "SELECT DISTINCT trial.* FROM trial "
             "LEFT JOIN tag ON tag.trial_id = trial.id "
             "WHERE trial.id = ? OR tag.name = ? OR trial.sequence_key = ?",
-            str(ref), str(ref), str(ref),
+            str(ref),
+            str(ref),
+            str(ref),
         )
         assert len(rows) == 1, "trial {!r}: {} matches".format(ref, len(rows))
         return rows[0]
 
     def tags(self, trial_id):
         return self.query(
-            "SELECT type, name FROM tag WHERE trial_id = ? ORDER BY id",
-            trial_id)
+            "SELECT type, name FROM tag WHERE trial_id = ? ORDER BY id", trial_id
+        )
 
     def count(self, table, trial_id):
         """Rows of ``table`` that belong to a trial"""
-        tables = {row["name"] for row in self.query(
-            "SELECT name FROM sqlite_master WHERE type = 'table'")}
+        tables = {
+            row["name"]
+            for row in self.query("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
         assert table in tables, "no table {!r} in the store".format(table)
         return self.query(
-            'SELECT COUNT(*) AS n FROM "{}" WHERE trial_id = ?'.format(table),
-            trial_id)[0]["n"]
+            'SELECT COUNT(*) AS n FROM "{}" WHERE trial_id = ?'.format(table), trial_id
+        )[0]["n"]
 
     def content(self, content_hash):
         """The bytes the plain content engine stored under a hash
@@ -328,8 +346,7 @@ class NowProject:
         store = {}
         for path in sorted(self.store.rglob("*")):
             if path.is_file():
-                store[path.relative_to(self.store).as_posix()] = sha1(
-                    path.read_bytes())
+                store[path.relative_to(self.store).as_posix()] = sha1(path.read_bytes())
         return store, self.files()
 
 
@@ -345,7 +362,7 @@ def sha1(data):
 EXPORT_AST_PY314 = (
     "#241: from Python 3.14 ast.parse() validates the tree "
     "rebuilt by models/ast/trial_ast.py, whose statements have no lineno "
-    "(TypeError: required field \"lineno\" missing from stmt)"
+    '(TypeError: required field "lineno" missing from stmt)'
 )
 EXPORT_AST_PY315 = (
     "#241: from Python 3.15 AST constructors reject unknown "
@@ -398,8 +415,7 @@ def weather_project(project):
 
 @pytest.fixture(scope="session")
 def _two_trial_store(tmp_path_factory):
-    return build_weather(NowProject(tmp_path_factory.mktemp("two_trials")),
-                         trials=2)
+    return build_weather(NowProject(tmp_path_factory.mktemp("two_trials")), trials=2)
 
 
 @pytest.fixture
@@ -417,7 +433,8 @@ def two_trial_project(_two_trial_store):
     yield _two_trial_store
     assert _two_trial_store.fingerprint() == before, (
         "the test changed the shared two-trial store or its project files; "
-        "use build_weather(project, trials=2) for a store of its own")
+        "use build_weather(project, trials=2) for a store of its own"
+    )
 
 
 @pytest.fixture
@@ -456,7 +473,8 @@ def two_trial_prolog(_two_trial_store, tmp_path_factory):
             handle.write(result.stdout)
         exports[trial["id"]] = path
     assert _two_trial_store.fingerprint() == before, (
-        "`now export prolog -r` changed the shared two-trial store")
+        "`now export prolog -r` changed the shared two-trial store"
+    )
     return exports
 
 
@@ -469,6 +487,9 @@ def console_now():
     """
     found = shutil.which("now", path=os.path.dirname(sys.executable))
     if not found:
-        pytest.skip("the `now` console script is not installed next to "
-                    "{}".format(sys.executable))
+        pytest.skip(
+            "the `now` console script is not installed next to {}".format(
+                sys.executable
+            )
+        )
     return [found]

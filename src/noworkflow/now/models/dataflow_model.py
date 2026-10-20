@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Dataflow Model Object"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ..persistence.models.base import Model
@@ -60,6 +61,7 @@ class DataflowModel(Model):
     def _ipython_display_(self):
         from IPython import get_ipython
         from IPython.display import display
+
         ipython = get_ipython()
         obj = ipython.run_cell_magic(
             "dot", "--format {}".format(self.format), self.export_text()

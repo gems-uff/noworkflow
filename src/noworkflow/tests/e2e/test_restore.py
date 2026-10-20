@@ -39,6 +39,7 @@ failure carries the signature of its defect, and they are named after the
 property a fix guarantees, as security tests are (``AGENTS.md``).
 Tracebacks are never compared whole, only their last line.
 """
+
 import importlib.machinery
 import os
 import shutil
@@ -123,21 +124,21 @@ def corpus_bytes(name):
 
 
 def backup_trials(project):
-    return [trial for trial in project.trials()
-            if trial["status"] == "backup"]
+    return [trial for trial in project.trials() if trial["status"] == "backup"]
 
 
 def only_backup(project):
     backups = backup_trials(project)
-    assert len(backups) == 1, "expected one backup trial, found {}".format(
-        len(backups))
+    assert len(backups) == 1, "expected one backup trial, found {}".format(len(backups))
     return backups[0]
 
 
 def write_access(project, trial_id, name):
     rows = project.query(
-        "SELECT * FROM file_access WHERE trial_id = ? AND name = ? "
-        "ORDER BY id", trial_id, name)
+        "SELECT * FROM file_access WHERE trial_id = ? AND name = ? ORDER BY id",
+        trial_id,
+        name,
+    )
     assert rows, "trial {} has no access to {}".format(trial_id, name)
     return rows[0]
 
@@ -162,8 +163,10 @@ def query_store(directory, sql, *params):
 # restore: the project and the backup trial
 # ---------------------------------------------------------------------------
 
+
 def test_restore_recreates_a_deleted_output_directory_with_the_state_before_the_trial(
-        project):
+    project,
+):
     """``now restore 2`` after ``out/`` is deleted recreates
     ``out/sub/result.txt`` with what it held before trial 2 ran, which is
     trial 1's output"""
@@ -177,10 +180,11 @@ def test_restore_recreates_a_deleted_output_directory_with_the_state_before_the_
 
     restored = project.path / "out" / "sub" / "result.txt"
     assert restored.read_bytes() == TRIAL1_OUTPUT
-    assert restored.read_bytes() == project.content(
-        written["content_hash_after"])
-    assert (write_access(project, second["id"], RESULT)
-            ["content_hash_before"] == written["content_hash_after"])
+    assert restored.read_bytes() == project.content(written["content_hash_after"])
+    assert (
+        write_access(project, second["id"], RESULT)["content_hash_before"]
+        == written["content_hash_after"]
+    )
     backup = only_backup(project)
     assert result.stdout.splitlines() == [
         "[now] {} has changed".format(RESULT),
@@ -189,8 +193,7 @@ def test_restore_recreates_a_deleted_output_directory_with_the_state_before_the_
     ]
 
 
-def test_restore_of_a_changed_project_records_a_backup_trial_tagged_x_0_0(
-        project):
+def test_restore_of_a_changed_project_records_a_backup_trial_tagged_x_0_0(project):
     """The backup trial that restore records has status ``backup``, the
     restore command, the head as parent, and an AUTO tag ``X.0.0`` whose
     major is one past the largest automatic tag"""
@@ -207,16 +210,17 @@ def test_restore_of_a_changed_project_records_a_backup_trial_tagged_x_0_0(
     assert backup["command"] == "restore 2"
     assert backup["parent_id"] == second["id"]
     assert backup["finish"] is not None
-    earlier = [tag["name"] for trial in (first, second)
-               for tag in project.tags(trial["id"])]
+    earlier = [
+        tag["name"] for trial in (first, second) for tag in project.tags(trial["id"])
+    ]
     assert earlier == ["1.1.1", "1.1.2"]
     major = max(int(name.split(".")[0]) for name in earlier) + 1
     assert project.tags(backup["id"]) == [
-        {"type": "AUTO", "name": "{}.0.0".format(major)}]
+        {"type": "AUTO", "name": "{}.0.0".format(major)}
+    ]
 
 
-def test_restore_of_the_first_trial_leaves_out_an_output_it_had_not_written(
-        project):
+def test_restore_of_the_first_trial_leaves_out_an_output_it_had_not_written(project):
     """Control: ``now restore 1`` restores the inputs and the module of
     trial 1 and does not recreate ``out/``, which did not exist before
     trial 1 ran"""
@@ -226,30 +230,26 @@ def test_restore_of_the_first_trial_leaves_out_an_output_it_had_not_written(
     project.run("restore", "1")
 
     assert not (project.path / "out").exists()
-    assert (project.path / "data.txt").read_bytes() == corpus_bytes(
-        "data.txt")
-    assert (project.path / "helper.py").read_bytes() == corpus_bytes(
-        "helper.py")
+    assert (project.path / "data.txt").read_bytes() == corpus_bytes("data.txt")
+    assert (project.path / "helper.py").read_bytes() == corpus_bytes("helper.py")
 
 
 def test_restore_file_writes_the_trial_version_into_the_target_creating_parent_dirs(
-        project):
+    project,
+):
     """``now restore 1 -f data.txt -t TARGET`` writes trial 1's
     ``data.txt`` into TARGET, creates its missing parent directories, leaves
     ``data.txt`` alone and records no trial"""
     build_restore(project)
 
-    result = project.run("restore", "1", "-f", "data.txt", "-t",
-                         "old_data.txt")
+    result = project.run("restore", "1", "-f", "data.txt", "-t", "old_data.txt")
     assert result.stdout == "[now] File old_data.txt restored\n"
-    result = project.run("restore", "1", "-f", "data.txt", "-t",
-                         "new/deep/target.txt")
+    result = project.run("restore", "1", "-f", "data.txt", "-t", "new/deep/target.txt")
     assert result.stdout == "[now] File new/deep/target.txt restored\n"
 
     original = corpus_bytes("data.txt")
     assert (project.path / "old_data.txt").read_bytes() == original
-    assert (project.path / "new" / "deep" / "target.txt").read_bytes() == (
-        original)
+    assert (project.path / "new" / "deep" / "target.txt").read_bytes() == (original)
     assert (project.path / "data.txt").read_text(encoding="utf-8") == DATA_V2
     assert len(project.trials()) == 2
 
@@ -269,10 +269,15 @@ def test_restore_file_onto_an_existing_target(project):
     assert len(project.trials()) == 2
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#246: restore -f FILE -t EXISTING with the "
-    "default -i 1 deletes the target when the first access had no "
-    "before-hash"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#246: restore -f FILE -t EXISTING with the "
+        "default -i 1 deletes the target when the first access had no "
+        "before-hash"
+    ),
+)
 def test_restore_file_onto_an_existing_target_desired(project):
     """Restoring a version that did not exist into an existing target
     leaves the target alone (or restores something into it); it never
@@ -280,8 +285,9 @@ def test_restore_file_onto_an_existing_target_desired(project):
     build_restore(project)
     project.write("target.txt", "keep\n")
 
-    project.run("restore", "1", "-f", RESULT, "-t", "target.txt",
-                expect=None, allow_stderr=True)
+    project.run(
+        "restore", "1", "-f", RESULT, "-t", "target.txt", expect=None, allow_stderr=True
+    )
 
     assert (project.path / "target.txt").exists()
 
@@ -289,6 +295,7 @@ def test_restore_file_onto_an_existing_target_desired(project):
 # ---------------------------------------------------------------------------
 # restore with a binary local module (#183)
 # ---------------------------------------------------------------------------
+
 
 def dbm_extension():
     """The ``_dbm`` extension module of this interpreter, or None
@@ -299,8 +306,8 @@ def dbm_extension():
     into the interpreter have no file.
     """
     directory = os.path.join(
-        sys.base_prefix, "lib", "python%d.%d" % sys.version_info[:2],
-        "lib-dynload")
+        sys.base_prefix, "lib", "python%d.%d" % sys.version_info[:2], "lib-dynload"
+    )
     for suffix in importlib.machinery.EXTENSION_SUFFIXES:
         candidate = os.path.join(directory, "_dbm" + suffix)
         if os.path.isfile(candidate):
@@ -334,41 +341,56 @@ def build_binary_module_store(project):
     a ``_dbm`` outside the project, which restore would not re-read.
     """
     if not runs_this_interpreter(project.command):
-        pytest.skip("NOW_E2E_CMD runs now on another interpreter: the _dbm "
-                    "copied into the project and the checks on it come from "
-                    "the interpreter that runs the tests")
+        pytest.skip(
+            "NOW_E2E_CMD runs now on another interpreter: the _dbm "
+            "copied into the project and the checks on it come from "
+            "the interpreter that runs the tests"
+        )
     extension = dbm_extension()
     if extension is None:
-        pytest.skip("no _dbm extension file in lib-dynload of this "
-                    "interpreter (Windows, or _dbm built in)")
+        pytest.skip(
+            "no _dbm extension file in lib-dynload of this "
+            "interpreter (Windows, or _dbm built in)"
+        )
     if not detect_encoding_rejects(Path(extension).read_bytes()):
-        pytest.skip("tokenize.detect_encoding accepts the first line of "
-                    "this _dbm, so restore decodes it and #183 does not "
-                    "reproduce with it")
+        pytest.skip(
+            "tokenize.detect_encoding accepts the first line of "
+            "this _dbm, so restore decodes it and #183 does not "
+            "reproduce with it"
+        )
     shutil.copy(extension, str(project.path))
     # A copy whose shared libraries are found relative to lib-dynload, or a
     # _dbm built into the interpreter, would not import from the project.
     probe = subprocess.run(
         [sys.executable, "-c", "import _dbm; print(_dbm.__file__)"],
-        cwd=str(project.path), env=project.env, stdin=subprocess.DEVNULL,
-        capture_output=True, encoding="utf-8", errors="replace")
+        cwd=str(project.path),
+        env=project.env,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if probe.returncode != 0 or not same_path(
-            os.path.dirname(probe.stdout.strip()), project.path):
-        pytest.skip("the copy of _dbm does not import from the project "
-                    "directory on this interpreter")
+        os.path.dirname(probe.stdout.strip()), project.path
+    ):
+        pytest.skip(
+            "the copy of _dbm does not import from the project "
+            "directory on this interpreter"
+        )
     project.write("main.py", BINARY_MODULE_SCRIPT)
     project.write("data.txt", "one\n")
     project.run("run", "main.py")
     trial = project.trials()[0]
     assert trial["status"] == "finished"
     modules = project.query(
-        "SELECT path FROM module WHERE trial_id = ? AND name = '_dbm'",
-        trial["id"])
-    assert len(modules) == 1, "expected one _dbm module, found {}".format(
-        len(modules))
+        "SELECT path FROM module WHERE trial_id = ? AND name = '_dbm'", trial["id"]
+    )
+    assert len(modules) == 1, "expected one _dbm module, found {}".format(len(modules))
     if not same_path(os.path.dirname(modules[0]["path"]), project.path):
-        pytest.skip("now recorded a _dbm outside the project, so restore "
-                    "does not treat it as a local module")
+        pytest.skip(
+            "now recorded a _dbm outside the project, so restore "
+            "does not treat it as a local module"
+        )
     project.write("data.txt", "two\n")
     return project
 
@@ -385,8 +407,7 @@ def test_restore_with_a_binary_local_module(project):
     last = last_line(result.stderr)
     assert last.startswith("SyntaxError: "), str(result)
     assert any(message in last for message in DETECT_ENCODING_ERRORS), last
-    ongoing = [trial for trial in project.trials()
-               if trial["status"] == "ongoing"]
+    ongoing = [trial for trial in project.trials() if trial["status"] == "ongoing"]
     assert len(ongoing) == 1
     assert ongoing[0]["command"] == "restore 1"
     assert ongoing[0]["finish"] is None
@@ -394,9 +415,14 @@ def test_restore_with_a_binary_local_module(project):
     assert (project.path / "data.txt").read_text(encoding="utf-8") == "two\n"
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#183: restore crashes with SyntaxError on a binary local module and "
-    "leaves an 'ongoing' trial"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#183: restore crashes with SyntaxError on a binary local module and "
+        "leaves an 'ongoing' trial"
+    ),
+)
 def test_restore_with_a_binary_local_module_desired(project):
     """Restore treats a binary local module as binary: it exits 0, restores
     the input and leaves no trial ``ongoing``"""
@@ -405,8 +431,7 @@ def test_restore_with_a_binary_local_module_desired(project):
     result = project.run("restore", "1", expect=None, allow_stderr=True)
 
     assert result.returncode == 0, str(result)
-    assert not [trial for trial in project.trials()
-                if trial["status"] == "ongoing"]
+    assert not [trial for trial in project.trials() if trial["status"] == "ongoing"]
     assert (project.path / "data.txt").read_text(encoding="utf-8") == "one\n"
 
 
@@ -416,20 +441,20 @@ def test_restore_with_a_binary_local_module_desired(project):
 
 EXECUTES_MODULES = Defect(
     reason="#396: cmd_restore.Restore.create_backup, which runs when any "
-           "file of the head trial differs from the disk, reads the version "
-           "of every local module of the head, changed or not, by importing "
-           "the file on disk (importlib.util.spec_from_file_location and "
-           "spec.loader.exec_module) inside the now restore process, so "
-           "every top-level statement of those modules runs",
+    "file of the head trial differs from the disk, reads the version "
+    "of every local module of the head, changed or not, by importing "
+    "the file on disk (importlib.util.spec_from_file_location and "
+    "spec.loader.exec_module) inside the now restore process, so "
+    "every top-level statement of those modules runs",
     signature="now restore executed helper.py",
 )
 EXIT_AT_IMPORT = Defect(
     reason="#396: cmd_restore.Restore.create_backup imports every local "
-           "module of the head trial inside try/except Exception, which "
-           "does not catch SystemExit: a module that parses sys.argv with "
-           "argparse at import ends now restore with exit 2 after the "
-           "backup trial is created and before anything is restored, "
-           "leaving that trial ongoing",
+    "module of the head trial inside try/except Exception, which "
+    "does not catch SystemExit: a module that parses sys.argv with "
+    "argparse at import ends now restore with exit 2 after the "
+    "backup trial is created and before anything is restored, "
+    "leaving that trial ongoing",
     signature="helper: error: unrecognized arguments: restore",
 )
 # script.py imports helper.py; the next restore undoes an edit of helper.py.
@@ -470,7 +495,9 @@ def helper_modules(project, trial_id):
     """The ``module`` rows named ``helper`` of a trial"""
     return project.query(
         "SELECT version, path FROM module WHERE trial_id = ? "
-        "AND name = 'helper' ORDER BY id", trial_id)
+        "AND name = 'helper' ORDER BY id",
+        trial_id,
+    )
 
 
 def run_then_edit_the_imported_module(project, edited):
@@ -538,21 +565,20 @@ def test_restore_with_a_changed_local_module(project, tmp_path):
     result = project.run("restore")
 
     assert marker.read_text(encoding="utf-8") == EXECUTED
-    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
-        IMPORTED_V1)
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (IMPORTED_V1)
     backup = only_backup(project)
     assert result.stdout.splitlines() == [
         "[now] helper.py has changed",
         "[now] Backup Trial {} created".format(backup["id"]),
         "[now] File helper.py from trial {} restored".format(trial["id"]),
     ]
-    assert [module["version"] for module in helper_modules(
-        project, backup["id"])] == ["2.0"]
+    assert [module["version"] for module in helper_modules(project, backup["id"])] == [
+        "2.0"
+    ]
 
 
 @known_defects(EXECUTES_MODULES)
-def test_restore_does_not_execute_a_changed_local_module_desired(
-        project, tmp_path):
+def test_restore_does_not_execute_a_changed_local_module_desired(project, tmp_path):
     """``now restore`` writes files back and records the backup trial
     without running any code of the project: the edited ``helper.py`` never
     runs, the backup still records a ``helper`` module, and version 1.0 is
@@ -569,8 +595,7 @@ def test_restore_does_not_execute_a_changed_local_module_desired(
 
     assert not marker.exists(), "now restore executed helper.py"
     assert result.returncode == 0, str(result)
-    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
-        IMPORTED_V1)
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (IMPORTED_V1)
     backup = only_backup(project)
     assert len(helper_modules(project, backup["id"])) == 1
 
@@ -598,13 +623,13 @@ def test_restore_with_an_unchanged_local_module(project, tmp_path):
         "[now] Backup Trial {} created".format(backup["id"]),
         "[now] File data.txt from trial {} restored".format(trial["id"]),
     ]
-    assert [module["version"] for module in helper_modules(
-        project, backup["id"])] == ["1.0"]
+    assert [module["version"] for module in helper_modules(project, backup["id"])] == [
+        "1.0"
+    ]
 
 
 @known_defects(EXECUTES_MODULES)
-def test_restore_does_not_execute_an_unchanged_local_module_desired(
-        project, tmp_path):
+def test_restore_does_not_execute_an_unchanged_local_module_desired(project, tmp_path):
     """``now restore`` of a project where only an input changed runs none
     of its local modules either: the marker keeps the one line of ``now
     run``, the backup still records a ``helper`` module, and ``data.txt``
@@ -621,7 +646,8 @@ def test_restore_does_not_execute_an_unchanged_local_module_desired(
     result = project.run("restore", expect=None, allow_stderr=True)
 
     assert marker.read_text(encoding="utf-8") == EXECUTED, (
-        "now restore executed helper.py")
+        "now restore executed helper.py"
+    )
     assert result.returncode == 0, str(result)
     assert (project.path / "data.txt").read_text(encoding="utf-8") == "one\n"
     backup = only_backup(project)
@@ -644,8 +670,7 @@ def test_restore_with_a_module_that_exits_at_import(project):
         "helper: error: unrecognized arguments: restore",
     ], str(result)
     assert result.stdout == "[now] helper.py has changed\n"
-    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
-        EXITS_AT_IMPORT)
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (EXITS_AT_IMPORT)
     trials = project.trials()
     assert [trial["status"] for trial in trials] == ["finished", "ongoing"]
     ongoing = trials[-1]
@@ -655,8 +680,7 @@ def test_restore_with_a_module_that_exits_at_import(project):
 
 
 @known_defects(EXIT_AT_IMPORT)
-def test_a_module_that_exits_at_import_does_not_abort_restore_desired(
-        project):
+def test_a_module_that_exits_at_import_does_not_abort_restore_desired(project):
     """A changed local module that exits when imported does not stop ``now
     restore``: it exits 0, puts version 1.0 back and ends the backup trial
     as ``backup``, with no trial left ``ongoing``
@@ -669,18 +693,15 @@ def test_a_module_that_exits_at_import_does_not_abort_restore_desired(
     result = project.run("restore", expect=None, allow_stderr=True)
 
     assert result.returncode == 0, str(result)
-    assert (project.path / "helper.py").read_text(encoding="utf-8") == (
-        IMPORTED_V1)
-    assert [trial["status"] for trial in project.trials()] == [
-        "finished", "backup"]
+    assert (project.path / "helper.py").read_text(encoding="utf-8") == (IMPORTED_V1)
+    assert [trial["status"] for trial in project.trials()] == ["finished", "backup"]
 
 
 # ---------------------------------------------------------------------------
 # restore and the executable bit (#205)
 # ---------------------------------------------------------------------------
 
-POSIX_ONLY = pytest.mark.skipif(
-    os.name == "nt", reason="Windows has no executable bit")
+POSIX_ONLY = pytest.mark.skipif(os.name == "nt", reason="Windows has no executable bit")
 
 
 def restore_deleted_executable(project):
@@ -697,8 +718,10 @@ def restore_deleted_executable(project):
 
     result = project.run("restore", "1")
 
-    assert "[now] File tool.sh from trial {} restored".format(
-        project.trials()[0]["id"]) in result.stdout.splitlines()
+    assert (
+        "[now] File tool.sh from trial {} restored".format(project.trials()[0]["id"])
+        in result.stdout.splitlines()
+    )
     assert tool.read_bytes() == corpus_bytes("tool.sh")
     return mode
 
@@ -720,8 +743,11 @@ def test_restore_of_a_deleted_executable(project):
 
 
 @POSIX_ONLY
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#205: restore loses the executable bit of a restored file"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=("#205: restore loses the executable bit of a restored file"),
+)
 def test_restore_of_a_deleted_executable_desired(project):
     """A restored ``tool.sh`` gets back the mode it had (0755)
 
@@ -742,18 +768,22 @@ def test_restore_of_a_deleted_executable_desired(project):
 OUTSIDE_CHANGED = "now restore changed files outside the project"
 SIBLING_PREFIX = Defect(
     reason="#440: Trial.versioned_files takes an absolute path for one of "
-           "the project when it starts with the trial's path, with or "
-           "without a separator after it, so now restore puts back the "
-           "files of a sibling directory whose name starts with the "
-           "project's",
-    signature=OUTSIDE_CHANGED)
+    "the project when it starts with the trial's path, with or "
+    "without a separator after it, so now restore puts back the "
+    "files of a sibling directory whose name starts with the "
+    "project's",
+    signature=OUTSIDE_CHANGED,
+)
 ROOTED_PATH = Defect(
     reason="#440: Trial.versioned_files keeps every file access whose name "
-           "os.path.isabs takes as relative, and from Python 3.13 Windows "
-           "takes a rooted path without a drive (\\dir\\file) as relative, "
-           "so now restore puts back the files outside the project that the "
-           "script opened by such a path",
-    signature=OUTSIDE_CHANGED, since=(3, 13), systems=("win32",))
+    "os.path.isabs takes as relative, and from Python 3.13 Windows "
+    "takes a rooted path without a drive (\\dir\\file) as relative, "
+    "so now restore puts back the files outside the project that the "
+    "script opened by such a path",
+    signature=OUTSIDE_CHANGED,
+    since=(3, 13),
+    systems=("win32",),
+)
 
 
 def without_the_drive(path):
@@ -776,15 +806,20 @@ def run_on_files_outside_the_project(project, outside, name=str):
     read, created = outside / "read.txt", outside / "created.txt"
     read.write_bytes(b"one\n")
     names = [name(str(read)), name(str(created))]
-    project.write("script.py", (
-        "with open({!r}, encoding='utf-8') as handle:\n"
-        "    print(handle.read().strip())\n"
-        "with open({!r}, 'w', encoding='utf-8') as handle:\n"
-        "    handle.write('created')\n").format(*names))
+    project.write(
+        "script.py",
+        (
+            "with open({!r}, encoding='utf-8') as handle:\n"
+            "    print(handle.read().strip())\n"
+            "with open({!r}, 'w', encoding='utf-8') as handle:\n"
+            "    handle.write('created')\n"
+        ).format(*names),
+    )
     result = project.run("run", "script.py")
     assert result.stdout == "one\n", str(result)
-    accesses = {access["name"] for access in project.query(
-        "SELECT name FROM file_access")}
+    accesses = {
+        access["name"] for access in project.query("SELECT name FROM file_access")
+    }
     assert accesses >= set(names), accesses
     read.write_bytes(b"two\n")
     return read, created
@@ -801,8 +836,9 @@ def assert_restore_keeps_to_the_project(project, read, created):
     with nothing of the project changed, records no backup trial"""
     result = project.run("restore", expect=None, allow_stderr=True)
 
-    assert (read.read_bytes(), created.exists()) == (b"two\n", True), (
-        "{}\n{}".format(OUTSIDE_CHANGED, result))
+    assert (read.read_bytes(), created.exists()) == (b"two\n", True), "{}\n{}".format(
+        OUTSIDE_CHANGED, result
+    )
     assert result.returncode == 0, str(result)
     assert result.stderr == "", str(result)
     assert backup_trials(project) == []
@@ -821,7 +857,8 @@ def assert_restore_puts_back_the_files_outside(project, read, created):
 
 
 def test_restore_after_a_run_on_files_of_a_sibling_directory_named_after_the_project(
-        project):
+    project,
+):
     """A script reads and creates files in ``project-data``, next to
     ``project``, by absolute paths: ``now restore`` takes them for files of
     the project, puts back the one it read and removes the one it created
@@ -832,45 +869,56 @@ def test_restore_after_a_run_on_files_of_a_sibling_directory_named_after_the_pro
     leaves them alone.
     """
     read, created = run_on_files_outside_the_project(
-        project, sibling_named_after_the_project(project))
+        project, sibling_named_after_the_project(project)
+    )
 
     assert_restore_puts_back_the_files_outside(project, read, created)
 
 
 @known_defects(SIBLING_PREFIX)
 def test_restore_leaves_alone_the_files_of_a_sibling_directory_named_after_the_project_desired(
-        project):
+    project,
+):
     """``now restore`` puts back only the files of the project:
     ``project-data`` is not part of ``project``"""
     read, created = run_on_files_outside_the_project(
-        project, sibling_named_after_the_project(project))
+        project, sibling_named_after_the_project(project)
+    )
 
     assert_restore_keeps_to_the_project(project, read, created)
 
 
-@pytest.mark.skipif(not ROOTED_PATH.applies(), reason=(
-    "a rooted path without a drive is absolute on this system; the _desired "
-    "twin covers it"))
+@pytest.mark.skipif(
+    not ROOTED_PATH.applies(),
+    reason=(
+        "a rooted path without a drive is absolute on this system; the _desired "
+        "twin covers it"
+    ),
+)
 def test_restore_after_a_run_on_files_outside_the_project_by_rooted_paths(
-        project, tmp_path):
+    project, tmp_path
+):
     """On Windows from Python 3.13, a script reads and creates files outside
     the project by rooted paths without a drive: ``now restore`` takes them
     for files of the project, puts back the one it read and removes the one
     it created (#440 changes it)"""
     read, created = run_on_files_outside_the_project(
-        project, tmp_path / "outside", without_the_drive)
+        project, tmp_path / "outside", without_the_drive
+    )
 
     assert_restore_puts_back_the_files_outside(project, read, created)
 
 
 @known_defects(ROOTED_PATH)
 def test_restore_leaves_alone_the_files_a_script_opened_outside_the_project_by_rooted_paths_desired(
-        project, tmp_path):
+    project, tmp_path
+):
     """``now restore`` puts back only the files of the project, whatever
     path the script opened the others by; elsewhere than on Windows the path
     without the drive is the absolute path"""
     read, created = run_on_files_outside_the_project(
-        project, tmp_path / "outside", without_the_drive)
+        project, tmp_path / "outside", without_the_drive
+    )
 
     assert_restore_keeps_to_the_project(project, read, created)
 
@@ -879,8 +927,10 @@ def test_restore_leaves_alone_the_files_a_script_opened_outside_the_project_by_r
 # --dir
 # ---------------------------------------------------------------------------
 
+
 def test_run_with_dir_stores_the_trial_in_that_directory_and_list_dir_reads_it(
-        project, tmp_path):
+    project, tmp_path
+):
     """``now run --dir STORE hello.py`` creates the store in STORE, not next
     to the script, and ``now list --dir STORE`` from another directory
     lists the trial"""
@@ -912,8 +962,7 @@ def run_weather_with_dir_elsewhere(project, tmp_path):
     """
     storage = NowProject(tmp_path / "storage")
     project.copy_corpus("weather")
-    result = project.run(WEATHER_ARGS[0], "--dir", storage.path,
-                         *WEATHER_ARGS[1:])
+    result = project.run(WEATHER_ARGS[0], "--dir", storage.path, *WEATHER_ARGS[1:])
     trials = storage.trials()
     assert len(trials) == 1
     return result, trials[0]
@@ -932,9 +981,14 @@ def test_run_with_dir_elsewhere(project, tmp_path):
     assert not (project.path / "output.csv").exists()
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#244: run --dir replaces sys.path[0], so the "
-    "script's sibling modules stop importing"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#244: run --dir replaces sys.path[0], so the "
+        "script's sibling modules stop importing"
+    ),
+)
 def test_run_with_dir_elsewhere_desired(project, tmp_path):
     """With the store elsewhere, the script still imports its sibling module
     and the trial finishes"""
@@ -950,8 +1004,15 @@ def restore_with_dir_from_elsewhere(project, tmp_path):
     """
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
-    result = project.run("restore", "1", "--dir", project.path,
-                         cwd=elsewhere, expect=None, allow_stderr=True)
+    result = project.run(
+        "restore",
+        "1",
+        "--dir",
+        project.path,
+        cwd=elsewhere,
+        expect=None,
+        allow_stderr=True,
+    )
     return result, elsewhere
 
 
@@ -974,14 +1035,21 @@ def test_restore_with_dir_from_another_cwd(project, tmp_path):
     assert project.files() == before
     backup = only_backup(project)
     assert backup["command"].startswith("restore 1 --dir ")
-    assert "[now] Backup Trial {} created".format(
-        backup["id"]) in result.stdout.splitlines()
+    assert (
+        "[now] Backup Trial {} created".format(backup["id"])
+        in result.stdout.splitlines()
+    )
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#245: restore --dir run from another cwd writes into "
-    "the cwd, then fails with FileNotFoundError after committing a backup "
-    "trial"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#245: restore --dir run from another cwd writes into "
+        "the cwd, then fails with FileNotFoundError after committing a backup "
+        "trial"
+    ),
+)
 def test_restore_with_dir_from_another_cwd_desired(project, tmp_path):
     """``restore --dir`` restores the files of the project it names and
     writes nothing into the current directory"""
@@ -991,10 +1059,8 @@ def test_restore_with_dir_from_another_cwd_desired(project, tmp_path):
 
     assert result.returncode == 0, str(result)
     assert os.listdir(str(elsewhere)) == []
-    assert (project.path / "helper.py").read_bytes() == corpus_bytes(
-        "helper.py")
-    assert (project.path / "data.txt").read_bytes() == corpus_bytes(
-        "data.txt")
+    assert (project.path / "helper.py").read_bytes() == corpus_bytes("helper.py")
+    assert (project.path / "data.txt").read_bytes() == corpus_bytes("data.txt")
     assert not (project.path / "out" / "sub" / "result.txt").exists()
 
 
@@ -1020,9 +1086,14 @@ def test_backup_trial_path(project):
     assert (project.path / project.path.name / "helper.py").is_file()
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#245: a backup trial records the parent of the "
-    "project as its path, so restoring it writes <proj>/<projname>/module.py"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#245: a backup trial records the parent of the "
+        "project as its path, so restoring it writes <proj>/<projname>/module.py"
+    ),
+)
 def test_backup_trial_path_desired(project):
     """A backup trial stores the project directory as its ``path``, and
     restoring it writes nothing outside the project's own layout"""
@@ -1037,7 +1108,8 @@ def test_backup_trial_path_desired(project):
 # ---------------------------------------------------------------------------
 
 GC_ARGS = pytest.mark.parametrize(
-    "args", [(), ("-agg",)], ids=["default", "aggressive"])
+    "args", [(), ("-agg",)], ids=["default", "aggressive"]
+)
 
 
 @GC_ARGS
@@ -1057,15 +1129,21 @@ def test_gc_on_a_plain_store(weather_project, args):
 
     assert last_line(result.stderr) == (
         "TypeError: PlainEngine.gc() missing 1 required positional argument: "
-        "'content_hash'"), str(result)
+        "'content_hash'"
+    ), str(result)
     assert result.stdout == ""
     assert weather_project.fingerprint() == before
 
 
 @GC_ARGS
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#224: now gc on a plain store raises TypeError, because it calls "
-    "PlainEngine.gc() without the content_hash it requires"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#224: now gc on a plain store raises TypeError, because it calls "
+        "PlainEngine.gc() without the content_hash it requires"
+    ),
+)
 def test_gc_on_a_plain_store_desired(weather_project, args):
     """``now gc`` (with or without ``-agg``) succeeds on a plain store"""
     result = weather_project.run("gc", *args, expect=None, allow_stderr=True)
@@ -1104,12 +1182,14 @@ def test_import_into_an_empty_project(weather_project, tmp_path):
     """
     target = NowProject(tmp_path / "target")
 
-    result = target.run("import", "--source", weather_project.path,
-                        expect=1, allow_stderr=True)
+    result = target.run(
+        "import", "--source", weather_project.path, expect=1, allow_stderr=True
+    )
 
     assert last_line(result.stderr) == (
         "TypeError: PlainEngine.put() missing 1 required positional "
-        "argument: 'filename'"), str(result)
+        "argument: 'filename'"
+    ), str(result)
     assert (target.store / "content").is_dir()
     assert not (target.store / "db.sqlite").exists()
 
@@ -1126,8 +1206,9 @@ def test_import_into_an_empty_project_desired(weather_project, tmp_path):
     target = NowProject(tmp_path / "target")
     source = weather_project.trials()[0]
 
-    result = target.run("import", "--source", weather_project.path,
-                        expect=None, allow_stderr=True)
+    result = target.run(
+        "import", "--source", weather_project.path, expect=None, allow_stderr=True
+    )
 
     assert result.returncode == 0, str(result)
     listed = target.run("list")
@@ -1165,11 +1246,15 @@ DEMO_1_TRIALS = [
 
 def demo_run_commands(demo_id):
     """The ``now run`` commands of a demo's steps, in order"""
-    path = (Path(noworkflow.__file__).resolve().parent / "resources" / "demo"
-            / demo_id / "steps.txt")
+    path = (
+        Path(noworkflow.__file__).resolve().parent
+        / "resources"
+        / "demo"
+        / demo_id
+        / "steps.txt"
+    )
     lines = path.read_text(encoding="utf-8").splitlines()
-    return [line[len("$now "):] for line in lines
-            if line.startswith("$now run ")]
+    return [line[len("$now ") :] for line in lines if line.startswith("$now run ")]
 
 
 def run_demo_1(tmp_path, console_now):
@@ -1184,18 +1269,25 @@ def run_demo_1(tmp_path, console_now):
     project = NowProject(tmp_path, command=console_now)
     # The console script runs on the interpreter next to it.
     probe = subprocess.run(
-        [sys.executable, "-c", FIND_MATPLOTLIB], env=project.env,
-        cwd=str(project.tmp), stdin=subprocess.DEVNULL, capture_output=True)
+        [sys.executable, "-c", FIND_MATPLOTLIB],
+        env=project.env,
+        cwd=str(project.tmp),
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+    )
     if probe.returncode != 0:
-        pytest.skip("demo 1 needs matplotlib, which the interpreter of the "
-                    "console `now` cannot import")
+        pytest.skip(
+            "demo 1 needs matplotlib, which the interpreter of the "
+            "console `now` cannot import"
+        )
 
     result = project.run("demo", "1", allow_stderr=True, timeout=600)
 
     assert result.stdout.startswith("Creating Demo 1\n"), str(result)
     trials = query_store(
         project.path / "demo_1",
-        "SELECT command, status FROM trial ORDER BY sequence_key")
+        "SELECT command, status FROM trial ORDER BY sequence_key",
+    )
     return [(trial["command"], trial["status"]) for trial in trials]
 
 
@@ -1208,20 +1300,27 @@ def test_demo_1_through_the_console_script(tmp_path, console_now):
     changes it)"""
     trials = run_demo_1(tmp_path, console_now)
 
-    assert [command for command, _ in trials
-            if command.startswith("run ")] == demo_run_commands("1")
+    assert [
+        command for command, _ in trials if command.startswith("run ")
+    ] == demo_run_commands("1")
     assert trials == DEMO_1_TRIALS, str(trials)
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#252: step 3 of demo 1 calls "
-    "extract_column(dat, 1) in simulation.py, so its runs end unfinished"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#252: step 3 of demo 1 calls "
+        "extract_column(dat, 1) in simulation.py, so its runs end unfinished"
+    ),
+)
 def test_demo_1_through_the_console_script_desired(tmp_path, console_now):
     """Every ``$now run`` step of demo 1 finishes"""
     trials = run_demo_1(tmp_path, console_now)
 
-    runs = [(command, status) for command, status in trials
-            if command.startswith("run ")]
+    runs = [
+        (command, status) for command, status in trials if command.startswith("run ")
+    ]
     assert [command for command, _ in runs] == demo_run_commands("1")
     assert {status for _, status in runs} == {"finished"}, str(trials)

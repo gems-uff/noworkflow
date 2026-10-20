@@ -37,6 +37,7 @@ pytest would otherwise print the namespace (with its trials, whose repr
 holds the hostname) or ``sys.argv`` (paths under ``tmp_path``, which hold
 the login).
 """
+
 import builtins
 import contextlib
 import dataclasses
@@ -110,8 +111,12 @@ BUILTINS = "the cells' __builtins__ swapped"
 FILE = "__file__ swapped into the cells' namespace"
 # As collection_leftovers() says it.
 FINDER = "noWorkflow's import finder left in sys.meta_path"
-OPENS = ["builtins.open replaced", "io.open replaced", "codecs.open replaced",
-         "os.open replaced"]
+OPENS = [
+    "builtins.open replaced",
+    "io.open replaced",
+    "codecs.open replaced",
+    "os.open replaced",
+]
 INJECTED = "names added to builtins: " + ", ".join(leaks.INJECTED_BUILTINS)
 # What a module imported after the cell was loaded by.
 LATER_IMPORT = "a later import loaded by noWorkflow's finder"
@@ -120,8 +125,14 @@ LATER_IMPORT = "a later import loaded by noWorkflow's finder"
 # (#202 plans a patch of Popen) and did not put it back would change every
 # later cell.
 PROCESS_FUNCTIONS = (
-    (subprocess, "Popen"), (os, "system"), (os, "popen"), (os, "fork"),
-    (os, "posix_spawn"), (os, "posix_spawnp"), (os, "execv"), (os, "execve"),
+    (subprocess, "Popen"),
+    (os, "system"),
+    (os, "popen"),
+    (os, "fork"),
+    (os, "posix_spawn"),
+    (os, "posix_spawnp"),
+    (os, "execv"),
+    (os, "execve"),
     (os, "spawnv"),
 )
 
@@ -130,7 +141,7 @@ PROCESS_FUNCTIONS = (
 # ``builtins.open``), pathlib, ``os.open`` on a directory (``shutil.rmtree``)
 # and a child process, with relative paths only: the output is the same in
 # every project.
-PLAIN_CELL = r'''
+PLAIN_CELL = r"""
 import builtins, codecs, io, os, pathlib, shutil, subprocess, sys, warnings
 with open("cell_open.txt", "w", encoding="utf-8") as handle:
     handle.write("written with the cell's open\n")
@@ -176,7 +187,7 @@ print("child file:", pathlib.Path("child_out.txt").read_text(
     encoding="utf-8").strip())
 print("__name__:", __name__)
 print("__file__ defined:", "__file__" in globals())
-'''
+"""
 PLAIN_STDOUT = (
     "builtins.open: written with the cell's open\n"
     "io.open: written with the cell's open\n"
@@ -191,15 +202,19 @@ PLAIN_STDOUT = (
     "__name__: __main__\n"
     "__file__ defined: False\n"
 )
-PLAIN_FILES = {"cell_open.txt", "cell_pathlib.txt", "cell_os.txt",
-               "child_out.txt"}
+PLAIN_FILES = {"cell_open.txt", "cell_pathlib.txt", "cell_os.txt", "child_out.txt"}
 # What the plain cell (and its child) writes into files. Every line ends in
 # os.linesep: on Windows text mode writes CRLF, and so does os.open without
 # O_BINARY.
 PLAIN_CONTENTS = {
-    (line + os.linesep).encode("utf-8") for line in (
-        "written with the cell's open", "written with pathlib",
-        "written with os.open", "leaf", "written by the child")
+    (line + os.linesep).encode("utf-8")
+    for line in (
+        "written with the cell's open",
+        "written with pathlib",
+        "written with os.open",
+        "leaf",
+        "written by the child",
+    )
 }
 # The lines of the plain cell that an --interactive cell before it changes
 # without a defect: the cell's __file__ stays in the namespace, as after
@@ -211,37 +226,39 @@ WITH_FILE = "__file__ defined: True\n"
 # (Windows) it never calls os.open.
 RMTREE_USES_OS_OPEN = getattr(shutil.rmtree, "avoids_symlink_attacks", False)
 REMOVED = "rmtree removed the tree: True\n"
-NOT_REMOVED = ("rmtree failed: IsADirectoryError\n"
-               "rmtree removed the tree: False\n")
+NOT_REMOVED = "rmtree failed: IsADirectoryError\nrmtree removed the tree: False\n"
 
 # Two %%now_run cells in a row; the second one takes an argument.
 NOW_RUN_CELLS = (
     ("%%now_run --name c1\nx = 1\nprint('c1', x)", "c1 1"),
-    ("%%now_run --name c2 5\nimport sys\ny = int(sys.argv[1]) * 2\n"
-     "print('c2', y)", "c2 10"),
+    (
+        "%%now_run --name c2 5\nimport sys\ny = int(sys.argv[1]) * 2\nprint('c2', y)",
+        "c2 10",
+    ),
 )
 # The same in the shell's namespace: the second reads what the first set.
 INTERACTIVE_SETUP = "arg = 4"
 INTERACTIVE_CELLS = (
-    ("%%now_run --name i1 --interactive\nc = sum(range(arg))\n"
-     "print('i1', c)", "i1 6"),
-    ("%%now_run --name i2 --interactive\nd = c * 2\nprint('i2', d)",
-     "i2 12"),
+    ("%%now_run --name i1 --interactive\nc = sum(range(arg))\nprint('i1', c)", "i1 6"),
+    ("%%now_run --name i2 --interactive\nd = c * 2\nprint('i2', d)", "i2 12"),
 )
 INTERACTIVE_TRIALS = [("i1", "finished"), ("i2", "finished")]
 # A cell after an --interactive one: it writes a file with its own open
 # (IPython's, which no collection wraps) and reads it back as a library
 # would, through io.open.
-LATER_CELL = ("import pathlib\n"
-              "with open('later.txt', 'wb') as handle:\n"
-              "    handle.write(b'written later\\n')\n"
-              "text = pathlib.Path('later.txt').read_text(encoding='utf-8')")
+LATER_CELL = (
+    "import pathlib\n"
+    "with open('later.txt', 'wb') as handle:\n"
+    "    handle.write(b'written later\\n')\n"
+    "text = pathlib.Path('later.txt').read_text(encoding='utf-8')"
+)
 LATER_CONTENT = b"written later\n"
 
 # The #313 characterization holds only where IPython lacks the module.
 lacks_py3compat = pytest.mark.skipif(
     not INTERACTIVE_IMPORT.condition,
-    reason="this IPython still has IPython.utils.py3compat")
+    reason="this IPython still has IPython.utils.py3compat",
+)
 
 
 def printed(cell, text=""):
@@ -274,20 +291,19 @@ def plain_ipython(root):
     return cell, files
 
 
-def plain_cell_differences(cell, files, control, control_files,
-                           stdout=None):
+def plain_cell_differences(cell, files, control, control_files, stdout=None):
     """How the plain cell differs from the control, as fixed labels
 
     ``stdout`` is what the cell must print, the control's by default.
     """
     expected = control.stdout if stdout is None else stdout
     checks = (
-        ((cell.success, cell.error_type)
-         == (control.success, control.error_type),
-         "the plain cell had another outcome"),
+        (
+            (cell.success, cell.error_type) == (control.success, control.error_type),
+            "the plain cell had another outcome",
+        ),
         (cell.stdout == expected, "the plain cell printed other lines"),
-        (cell.stderr == control.stderr,
-         "the plain cell wrote other lines to stderr"),
+        (cell.stderr == control.stderr, "the plain cell wrote other lines to stderr"),
         (files == control_files, "the plain cell left other files"),
     )
     return [label for holds, label in checks if not holds]
@@ -296,7 +312,8 @@ def plain_cell_differences(cell, files, control, control_files,
 def compared(cell, control):
     """Both cells for an assertion message, masked"""
     return "{}\n=== in plain IPython ===\n{}".format(
-        cell.describe(), control.describe())
+        cell.describe(), control.describe()
+    )
 
 
 def store_state(project):
@@ -305,21 +322,31 @@ def store_state(project):
     Read through sqlite3 and the directory listing: nothing here goes
     through the ``open`` functions a collection may have left wrapped.
     """
-    tables = [row["name"] for row in project.query(
-        "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")]
-    rows = {table: project.query(
-        'SELECT COUNT(*) AS n FROM "{}"'.format(table))[0]["n"]
-        for table in tables}
+    tables = [
+        row["name"]
+        for row in project.query(
+            "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
+        )
+    ]
+    rows = {
+        table: project.query('SELECT COUNT(*) AS n FROM "{}"'.format(table))[0]["n"]
+        for table in tables
+    }
     content = project.store / "content"
-    files = sorted(path.relative_to(content).as_posix()
-                   for path in content.rglob("*") if path.is_file())
+    files = sorted(
+        path.relative_to(content).as_posix()
+        for path in content.rglob("*")
+        if path.is_file()
+    )
     return rows, files
 
 
 def process_functions():
     """``{name: function}`` of the ways a cell starts a process"""
-    return {"{}.{}".format(module.__name__, name): getattr(module, name, None)
-            for module, name in PROCESS_FUNCTIONS}
+    return {
+        "{}.{}".format(module.__name__, name): getattr(module, name, None)
+        for module, name in PROCESS_FUNCTIONS
+    }
 
 
 def replaced_since(before):
@@ -423,8 +450,9 @@ def interactive_then_plain(project, stand_in):
             replaced = replaced_since(functions)
         finally:
             leaks.undo_collection()
-    return AfterInteractive(cells, trials, left, replaced, plain,
-                            (before, after), project.files())
+    return AfterInteractive(
+        cells, trials, left, replaced, plain, (before, after), project.files()
+    )
 
 
 def as_plain_ipython(run, control, control_files):
@@ -441,16 +469,20 @@ def as_plain_ipython(run, control, control_files):
     differences = [label for label in run.left if label != FILE]
     differences += ["{} replaced".format(name) for name in run.replaced]
     differences += plain_cell_differences(
-        run.plain, run.files, control, control_files,
-        control.stdout.replace(WITHOUT_FILE, WITH_FILE))
+        run.plain,
+        run.files,
+        control,
+        control_files,
+        control.stdout.replace(WITHOUT_FILE, WITH_FILE),
+    )
     if run.store[1] != run.store[0]:
         differences.append("the plain cell added to the store")
     assert differences == [], "{}\n{}".format(
-        "; ".join(differences), compared(run.plain, control))
+        "; ".join(differences), compared(run.plain, control)
+    )
 
 
-def test_cells_after_two_now_run_cells_behave_as_in_plain_ipython(
-        project):
+def test_cells_after_two_now_run_cells_behave_as_in_plain_ipython(project):
     """After two ``%%now_run`` cells, a plain cell does what it does in
     plain IPython
 
@@ -477,7 +509,8 @@ def test_cells_after_two_now_run_cells_behave_as_in_plain_ipython(
         cell = shell.run(PLAIN_CELL)
         after = store_state(project)
         differences = plain_cell_differences(
-            cell, project.files(), control, control_files)
+            cell, project.files(), control, control_files
+        )
         assert differences == [], compared(cell, control)
         assert after == before
         left = collection_leftovers() + swaps_left(shell, argv, path0)
@@ -487,8 +520,7 @@ def test_cells_after_two_now_run_cells_behave_as_in_plain_ipython(
 
 
 @lacks_py3compat
-def test_interactive_cells_fail_and_leave_the_next_cell_untouched(
-        project):
+def test_interactive_cells_fail_and_leave_the_next_cell_untouched(project):
     """Two ``%%now_run --interactive`` cells fail before running their
     code, and the plain cell after them does what it does in plain IPython
 
@@ -504,8 +536,8 @@ def test_interactive_cells_fail_and_leave_the_next_cell_untouched(
         for code, _ in INTERACTIVE_CELLS:
             cell = shell.run(code)
             failed = cell.error_text == (
-                "ModuleNotFoundError: No module named "
-                "'IPython.utils.py3compat'")
+                "ModuleNotFoundError: No module named 'IPython.utils.py3compat'"
+            )
             assert failed, cell.describe()
         executed = defined(shell, "c") is not None
         assert not executed, "the code of the first cell ran"
@@ -514,7 +546,8 @@ def test_interactive_cells_fail_and_leave_the_next_cell_untouched(
         cell = shell.run(PLAIN_CELL)
         after = store_state(project)
         differences = plain_cell_differences(
-            cell, project.files(), control, control_files)
+            cell, project.files(), control, control_files
+        )
         assert differences == [], compared(cell, control)
         assert after == before
         left = collection_leftovers() + swaps_left(shell, argv, path0)
@@ -522,8 +555,7 @@ def test_interactive_cells_fail_and_leave_the_next_cell_untouched(
 
 
 @known_defects(INTERACTIVE_IMPORT, COLLECTION_LEFT)
-def test_interactive_cells_run_and_leave_the_next_cell_untouched_desired(
-        project):
+def test_interactive_cells_run_and_leave_the_next_cell_untouched_desired(project):
     """Two ``%%now_run --interactive`` cells run in the shell's namespace,
     each records its trial, and the plain cell after them does what it
     does in plain IPython
@@ -537,8 +569,7 @@ def test_interactive_cells_run_and_leave_the_next_cell_untouched_desired(
     as_plain_ipython(run, control, control_files)
 
 
-def test_cells_after_two_interactive_cells_meet_the_collection_left(
-        project):
+def test_cells_after_two_interactive_cells_meet_the_collection_left(project):
     """Past #313's import, two ``--interactive`` cells run and record
     their trials, and the plain cell after them meets their collection,
     still installed in the notebook's process
@@ -570,8 +601,9 @@ def test_cells_after_two_interactive_cells_meet_the_collection_left(
     if RMTREE_USES_OS_OPEN:
         expected = expected.replace(REMOVED, NOT_REMOVED)
         expected_files["cell_tree/sub/leaf.txt"] = sha1(b"leaf\n")
-    as_measured = (printed(plain) and plain.stdout == expected
-                   and plain.stderr == control.stderr)
+    as_measured = (
+        printed(plain) and plain.stdout == expected and plain.stderr == control.stderr
+    )
     assert as_measured, compared(plain, control)
     assert run.files == expected_files
     (rows_before, blobs_before), (rows_after, blobs_after) = run.store
@@ -582,8 +614,7 @@ def test_cells_after_two_interactive_cells_meet_the_collection_left(
 
 
 @known_defects(COLLECTION_LEFT)
-def test_cells_after_two_interactive_cells_behave_as_in_plain_ipython_desired(
-        project):
+def test_cells_after_two_interactive_cells_behave_as_in_plain_ipython_desired(project):
     """Past #313's import, two ``--interactive`` cells run and record
     their trials, and the plain cell after them does what it does in
     plain IPython: nothing of the collections left in the process, the
@@ -595,8 +626,7 @@ def test_cells_after_two_interactive_cells_behave_as_in_plain_ipython_desired(
     as_plain_ipython(run, control, control_files)
 
 
-def test_an_interactive_cell_leaves_the_collection_installed(
-        stand_in, shell):
+def test_an_interactive_cell_leaves_the_collection_installed(stand_in, shell):
     """After an ``--interactive`` cell that succeeds, the collection stays
     installed in the shell's process
 
@@ -640,8 +670,7 @@ def test_an_interactive_cell_leaves_the_collection_installed(
 
 
 @known_defects(COLLECTION_LEFT)
-def test_an_interactive_cell_puts_the_collection_away_desired(
-        stand_in, shell):
+def test_an_interactive_cell_puts_the_collection_away_desired(stand_in, shell):
     """After an ``--interactive`` cell that succeeds, the process is the
     notebook's again
 
@@ -656,8 +685,11 @@ def test_an_interactive_cell_puts_the_collection_away_desired(
     try:
         succeeded = printed(cell, text)
         assert succeeded, cell.describe()
-        left = [label for label in collection_leftovers()
-                + swaps_left(shell, argv, path0) if label != FILE]
+        left = [
+            label
+            for label in collection_leftovers() + swaps_left(shell, argv, path0)
+            if label != FILE
+        ]
         before = store_state(project)
         later = shell.run(LATER_CELL)
         after = store_state(project)
@@ -696,9 +728,12 @@ RAISING = {
     # Exception, so it leaves run() before the restores.
     "keyboard-interrupt": Raising(
         "raise KeyboardInterrupt",
-        KeyboardInterrupt, "ongoing", "in Execution.collect_provenance(",
+        KeyboardInterrupt,
+        "ongoing",
+        "in Execution.collect_provenance(",
         (ARGV, PATH0, BUILTINS, FILE, FINDER, LATER_IMPORT),
-        (INTERACTIVE_SWAPS, FINDER_LEFT)),
+        (INTERACTIVE_SWAPS, FINDER_LEFT),
+    ),
     # The script ends normally, and Collector.store raises: the collector's
     # os.open records the directory, and store reads it as a file (#371).
     # Once #371 is fixed, this case needs another way to make store fail.
@@ -706,28 +741,38 @@ RAISING = {
         "import os\nos.mkdir('folder')\ntry:\n"
         "    os.close(os.open('folder', os.O_RDONLY))\n"
         "except OSError:\n    pass",
-        OSError, "ongoing", "in Collector.store(",
+        OSError,
+        "ongoing",
+        "in Collector.store(",
         (ARGV, PATH0, BUILTINS, FILE),
-        (INTERACTIVE_SWAPS,)),
+        (INTERACTIVE_SWAPS,),
+    ),
     # collect_provenance compares the exit code with 0: None raises
     # TypeError there (#226), which leaves run().
     "sys-exit-without-code": Raising(
         "import sys\nsys.exit()",
-        TypeError, "ongoing", "in Execution.collect_provenance(",
+        TypeError,
+        "ongoing",
+        "in Execution.collect_provenance(",
         (ARGV, PATH0, BUILTINS, FILE, FINDER, LATER_IMPORT),
-        (INTERACTIVE_SWAPS, FINDER_LEFT)),
+        (INTERACTIVE_SWAPS, FINDER_LEFT),
+    ),
     "sys-exit": Raising(
         "import sys\nsys.exit(3)",
-        None, "unfinished",
+        None,
+        "unfinished",
         "the execution exited via sys.exit(). Exit status: 3",
         (FILE, FINDER, LATER_IMPORT),
-        (FINDER_LEFT,)),
+        (FINDER_LEFT,),
+    ),
     "exception": Raising(
         "1 / 0",
-        None, "unfinished",
+        None,
+        "unfinished",
         "the execution finished with an uncaught exception",
         (FILE, FINDER, LATER_IMPORT),
-        (FINDER_LEFT,)),
+        (FINDER_LEFT,),
+    ),
 }
 
 
@@ -744,24 +789,25 @@ def run_raising(project, case):
     with py3compat_stand_in():
         with open_shell(project) as shell:
             argv, path0 = list(sys.argv), sys.path[0]
-            cell = shell.run(
-                "%%now_run --name k1 --interactive 7 8\n" + case.code)
+            cell = shell.run("%%now_run --name k1 --interactive 7 8\n" + case.code)
             try:
                 left = swaps_left(shell, argv, path0) + [
-                    FINDER for entry in sys.meta_path
-                    if leaks.is_finder(entry)]
+                    FINDER for entry in sys.meta_path if leaks.is_finder(entry)
+                ]
                 swapped_in = {
-                    "sys.argv is the cell's file and its arguments":
-                        sys.argv == [defined(shell, "__file__"), "7", "8"],
-                    "sys.path[0] is the project":
-                        same_path(sys.path[0], project.path),
-                    "the cells' __builtins__ is the builtins' dict":
-                        defined(shell, "__builtins__") is vars(builtins),
+                    "sys.argv is the cell's file and its arguments": sys.argv
+                    == [defined(shell, "__file__"), "7", "8"],
+                    "sys.path[0] is the project": same_path(sys.path[0], project.path),
+                    "the cells' __builtins__ is the builtins' dict": defined(
+                        shell, "__builtins__"
+                    )
+                    is vars(builtins),
                 }
                 with not_imported("colorsys"):
                     later = shell.run("import colorsys")
                     if later.success and (
-                            loader_module("colorsys") == leaks.FINDER_MODULE):
+                        loader_module("colorsys") == leaks.FINDER_MODULE
+                    ):
                         left.append(LATER_IMPORT)
                 trials = trials_of(project)
             finally:
@@ -772,8 +818,7 @@ def run_raising(project, case):
 
 
 @pytest.mark.parametrize("case", list(RAISING.values()), ids=list(RAISING))
-def test_an_interactive_cell_that_raises_leaves_its_swaps(
-        project, case):
+def test_an_interactive_cell_that_raises_leaves_its_swaps(project, case):
     """An ``--interactive`` cell that does not end normally leaves
     ``now_run.py``'s swaps or the collection's import finder in place,
     and closing the shell puts them back
@@ -791,8 +836,9 @@ def test_an_interactive_cell_that_raises_leaves_its_swaps(
     -i`` does. Once the shell and the stand-in are closed, the leak
     detector finds nothing.
     """
-    baseline = leaks.Baseline(cwd=os.getcwd(), scan_dirs=[os.getcwd()],
-                              watched_dirs=[str(project.root)])
+    baseline = leaks.Baseline(
+        cwd=os.getcwd(), scan_dirs=[os.getcwd()], watched_dirs=[str(project.root)]
+    )
     snapshot = baseline.snapshot()
     cell, trials, left, swapped_in = run_raising(project, case)
     if case.error is None:
@@ -810,11 +856,14 @@ def test_an_interactive_cell_that_raises_leaves_its_swaps(
     assert clean, project.normalize("\n".join(leaked))
 
 
-@pytest.mark.parametrize("case", [
-    pytest.param(case, id=name, marks=defect_marks(case.defects))
-    for name, case in RAISING.items()])
-def test_an_interactive_cell_that_raises_restores_its_swaps_desired(
-        project, case):
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(case, id=name, marks=defect_marks(case.defects))
+        for name, case in RAISING.items()
+    ],
+)
+def test_an_interactive_cell_that_raises_restores_its_swaps_desired(project, case):
     """After an ``--interactive`` cell that does not end normally,
     ``sys.argv``, ``sys.path[0]``, ``sys.modules['__main__']`` and the
     cells' ``__name__`` and ``__builtins__`` are as before the cell, the

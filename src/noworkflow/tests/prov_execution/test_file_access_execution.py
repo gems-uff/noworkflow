@@ -17,6 +17,7 @@ The ``_desired`` twins are in ``TestFileAccessExecutionDesired``. Both
 classes share ``FileAccessTestCase``, which has no tests, so that no test
 runs twice.
 """
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import hashlib
@@ -46,15 +47,18 @@ OPEN_POSITIONAL_MODE = (
     "positional arguments of all four wrapped functions as builtins.open's "
     "(mode, buffering) and records the mode only when exactly one follows "
     "the name, so with two or more the access keeps the default mode 'r' "
-    "and the second becomes the buffering")
+    "and the second becomes the buffering"
+)
 OS_OPEN_PERMISSION = Defect(
     OPEN_POSITIONAL_MODE + ": os.open's permission bits (0o644 is 420)",
-    signature="('r', 420)")
+    signature="('r', 420)",
+)
 POSITIONAL_BUFFERING = Defect(
     OPEN_POSITIONAL_MODE + ": a file opened for writing with a positional "
     "buffering is a read, so the write proxy does not wrap it and "
     "content_hash_after is the hash of the truncated file",
-    signature="('r', 1, False)")
+    signature="('r', 1, False)",
+)
 PATHLIB_OPEN = Defect(
     OPEN_POSITIONAL_MODE + ": pathlib.Path.open calls io.open(self, mode, "
     "buffering, encoding, errors, newline), so every file pathlib opens "
@@ -62,33 +66,38 @@ PATHLIB_OPEN = Defect(
     "buffering is pathlib's -1, the write proxy does not wrap it, and a "
     "file written through the object Path.open returns keeps the hash of "
     "the truncated file",
-    signature="('r', -1, False)")
+    signature="('r', -1, False)",
+)
 
 
 def os_open_script(permission):
     """A script that writes DATA through ``os.open``, with or without the
     permission bits after the flags
     """
-    return ("# script.py\n"
-            "import os\n"
-            "fd = os.open('out.txt', os.O_WRONLY | os.O_CREAT{})\n"
-            "os.write(fd, b'DATA')\n"
-            "os.close(fd)\n").format(", 0o644" if permission else "")
+    return (
+        "# script.py\n"
+        "import os\n"
+        "fd = os.open('out.txt', os.O_WRONLY | os.O_CREAT{})\n"
+        "os.write(fd, b'DATA')\n"
+        "os.close(fd)\n"
+    ).format(", 0o644" if permission else "")
 
 
-POSITIONAL_BUFFERING_SCRIPT = ("# script.py\n"
-                               "f = open('out.txt', 'w', 1)\n"
-                               "f.write('DATA')\n"
-                               "f.close()\n")
+POSITIONAL_BUFFERING_SCRIPT = (
+    "# script.py\nf = open('out.txt', 'w', 1)\nf.write('DATA')\nf.close()\n"
+)
 
-PATHLIB_SCRIPT = ("# script.py\n"
-                  "from pathlib import Path\n"
-                  "with Path('out.txt').open('w') as f:\n"
-                  "    f.write('DATA')\n")
+PATHLIB_SCRIPT = (
+    "# script.py\n"
+    "from pathlib import Path\n"
+    "with Path('out.txt').open('w') as f:\n"
+    "    f.write('DATA')\n"
+)
 
 
 class _DummyFileAccess(object):
     """Minimal file_access stand-in for unit-testing the proxy directly"""
+
     def __init__(self, name):
         self.name = name
         self.content_hash_after = None
@@ -97,6 +106,7 @@ class _DummyFileAccess(object):
 
 class _DummyCollector(object):
     """Minimal collector stand-in exposing open_write_files for the proxy"""
+
     def __init__(self):
         self.open_write_files = {}
 
@@ -106,6 +116,7 @@ class FileAccessTestCase(CollectionTestCase):
 
     It has no tests: both test classes below derive from it.
     """
+
     # pylint: disable=invalid-name
 
     def setUp(self):
@@ -153,13 +164,14 @@ class TestFileAccessExecution(FileAccessTestCase):
     The last tests pin what the positional arguments after the name
     record.
     """
+
     # pylint: disable=invalid-name
 
     def test_with_open_write_captures_written_content(self):
         """A with-open write captures the written content, not an empty file"""
-        self.script("# script.py\n"
-                    "with open('out.txt', 'w') as f:\n"
-                    "    f.write('CONTENT')\n")
+        self.script(
+            "# script.py\nwith open('out.txt', 'w') as f:\n    f.write('CONTENT')\n"
+        )
         self.execute()
         accesses = self.file_accesses("out.txt")
         self.assertEqual(len(accesses), 1)
@@ -168,10 +180,9 @@ class TestFileAccessExecution(FileAccessTestCase):
 
     def test_explicit_close_captures_written_content(self):
         """An explicit close() captures the written content"""
-        self.script("# script.py\n"
-                    "f = open('out.txt', 'w')\n"
-                    "f.write('CONTENT')\n"
-                    "f.close()\n")
+        self.script(
+            "# script.py\nf = open('out.txt', 'w')\nf.write('CONTENT')\nf.close()\n"
+        )
         self.execute()
         accesses = self.file_accesses("out.txt")
         self.assertEqual(len(accesses), 1)
@@ -179,13 +190,15 @@ class TestFileAccessExecution(FileAccessTestCase):
 
     def test_two_closes_same_path_capture_distinct_content(self):
         """Each close of the same path records its own final content"""
-        self.script("# script.py\n"
-                    "f = open('a.txt', 'w')\n"
-                    "f.write('FIRST')\n"
-                    "f.close()\n"
-                    "g = open('a.txt', 'w+')\n"
-                    "g.write('SECOND_LONGER')\n"
-                    "g.close()\n")
+        self.script(
+            "# script.py\n"
+            "f = open('a.txt', 'w')\n"
+            "f.write('FIRST')\n"
+            "f.close()\n"
+            "g = open('a.txt', 'w+')\n"
+            "g.write('SECOND_LONGER')\n"
+            "g.close()\n"
+        )
         self.execute()
         accesses = self.file_accesses("a.txt")
         self.assertEqual(len(accesses), 2)
@@ -193,14 +206,15 @@ class TestFileAccessExecution(FileAccessTestCase):
         self.assertEqual(accesses[1].content_hash_after, sha1(b"SECOND_LONGER"))
         # The second open reads the content the first close wrote.
         self.assertEqual(accesses[1].content_hash_before, sha1(b"FIRST"))
-        self.assertNotEqual(accesses[0].content_hash_after,
-                            accesses[1].content_hash_after)
+        self.assertNotEqual(
+            accesses[0].content_hash_after, accesses[1].content_hash_after
+        )
 
     def test_binary_write_captures_written_content(self):
         """A binary (wb) write is captured through the buffered proxy"""
-        self.script("# script.py\n"
-                    "with open('out.bin', 'wb') as f:\n"
-                    "    f.write(b'BYTES')\n")
+        self.script(
+            "# script.py\nwith open('out.bin', 'wb') as f:\n    f.write(b'BYTES')\n"
+        )
         self.execute()
         accesses = self.file_accesses("out.bin")
         self.assertEqual(len(accesses), 1)
@@ -210,9 +224,7 @@ class TestFileAccessExecution(FileAccessTestCase):
         """Read-mode accesses are left unwrapped and still capture after"""
         with io.open(os.path.join(self.tmpdir, "in.txt"), "w") as fil:
             fil.write("DATA")
-        self.script("# script.py\n"
-                    "with open('in.txt') as f:\n"
-                    "    data = f.read()\n")
+        self.script("# script.py\nwith open('in.txt') as f:\n    data = f.read()\n")
         self.execute()
         accesses = self.file_accesses("in.txt")
         self.assertEqual(len(accesses), 1)
@@ -221,9 +233,9 @@ class TestFileAccessExecution(FileAccessTestCase):
 
     def test_never_closed_write_captured_by_final_sweep(self):
         """A write file the script never closes is captured when storing"""
-        self.script("# script.py\n"
-                    "f = open('never.txt', 'w')\n"
-                    "f.write('NEVER_CLOSED')\n")
+        self.script(
+            "# script.py\nf = open('never.txt', 'w')\nf.write('NEVER_CLOSED')\n"
+        )
         # clean_execution runs store_provenance, which triggers the final
         # sweep in Collector.store for files that were never closed.
         self.clean_execution()
@@ -274,19 +286,23 @@ class TestFileAccessExecution(FileAccessTestCase):
         access = self.access_of(POSITIONAL_BUFFERING_SCRIPT)
         self.assertEqual(
             (access.mode, access.buffering, access.content_hash_after),
-            ("r", 1, EMPTY_SHA1))
+            ("r", 1, EMPTY_SHA1),
+        )
 
     def test_open_with_keyword_buffering_records_a_write(self):
         """Control: ``open(path, 'w', buffering=1)`` records a write with
         that buffering and the content it writes
         """
-        access = self.access_of("# script.py\n"
-                                "f = open('out.txt', 'w', buffering=1)\n"
-                                "f.write('DATA')\n"
-                                "f.close()\n")
+        access = self.access_of(
+            "# script.py\n"
+            "f = open('out.txt', 'w', buffering=1)\n"
+            "f.write('DATA')\n"
+            "f.close()\n"
+        )
         self.assertEqual(
             (access.mode, access.buffering, access.content_hash_after),
-            ("w", 1, sha1(b"DATA")))
+            ("w", 1, sha1(b"DATA")),
+        )
 
     def test_pathlib_open_for_writing(self):
         """``Path(path).open('w')`` is recorded as a read whose buffering is
@@ -299,22 +315,25 @@ class TestFileAccessExecution(FileAccessTestCase):
         access = self.access_of(PATHLIB_SCRIPT)
         self.assertEqual(
             (access.mode, access.buffering, access.content_hash_after),
-            ("r", -1, EMPTY_SHA1))
+            ("r", -1, EMPTY_SHA1),
+        )
 
     def test_open_with_keyword_mode_records_a_write(self):
         """Control: ``open(path, mode='w')`` records a write with the
         default buffering and the content written through it
         """
-        access = self.access_of("# script.py\n"
-                                "with open('out.txt', mode='w') as f:\n"
-                                "    f.write('DATA')\n")
+        access = self.access_of(
+            "# script.py\nwith open('out.txt', mode='w') as f:\n    f.write('DATA')\n"
+        )
         self.assertEqual(
             (access.mode, access.buffering, access.content_hash_after),
-            ("w", "default", sha1(b"DATA")))
+            ("w", "default", sha1(b"DATA")),
+        )
 
 
 class TestFileAccessExecutionDesired(FileAccessTestCase):
     """What the open wrappers should record once their defects are fixed"""
+
     # pylint: disable=invalid-name
 
     @known_defects(OS_OPEN_PERMISSION)
@@ -324,8 +343,7 @@ class TestFileAccessExecutionDesired(FileAccessTestCase):
         """
         without = self.access_of(os_open_script(permission=False)).mode
         access = self.access_of(os_open_script(permission=True))
-        self.assertEqual((access.mode, access.buffering),
-                         (without, "default"))
+        self.assertEqual((access.mode, access.buffering), (without, "default"))
 
     @known_defects(POSITIONAL_BUFFERING)
     def test_open_with_positional_buffering_desired(self):
@@ -334,9 +352,9 @@ class TestFileAccessExecutionDesired(FileAccessTestCase):
         """
         access = self.access_of(POSITIONAL_BUFFERING_SCRIPT)
         self.assertEqual(
-            (access.mode, access.buffering,
-             access.content_hash_after == sha1(b"DATA")),
-            ("w", 1, True))
+            (access.mode, access.buffering, access.content_hash_after == sha1(b"DATA")),
+            ("w", 1, True),
+        )
 
     @known_defects(PATHLIB_OPEN)
     def test_pathlib_open_for_writing_desired(self):
@@ -345,6 +363,6 @@ class TestFileAccessExecutionDesired(FileAccessTestCase):
         """
         access = self.access_of(PATHLIB_SCRIPT)
         self.assertEqual(
-            (access.mode, access.buffering,
-             access.content_hash_after == sha1(b"DATA")),
-            ("w", -1, True))
+            (access.mode, access.buffering, access.content_hash_after == sha1(b"DATA")),
+            ("w", -1, True),
+        )

@@ -18,6 +18,7 @@ the original, so a stray call still works) and always put the originals
 back before they end. ``use_safe_open`` sets a per-thread flag that the
 collector reads to leave noWorkflow's own reads unrecorded.
 """
+
 import builtins
 import codecs
 import contextlib
@@ -40,8 +41,12 @@ PYTHON_OPENS = {
     "codecs.open": codecs.open,
     "os.open": os.open,
 }
-MODULES = {"builtins.open": builtins, "io.open": io, "codecs.open": codecs,
-           "os.open": os}
+MODULES = {
+    "builtins.open": builtins,
+    "io.open": io,
+    "codecs.open": codecs,
+    "os.open": os,
+}
 SAFEOPEN_COPIES = {
     "builtins.open": safeopen.std_open,
     "io.open": safeopen.io_open,
@@ -49,21 +54,24 @@ SAFEOPEN_COPIES = {
     "os.open": safeopen.os_open,
 }
 BUILTINS_SHAPES = pytest.mark.parametrize(
-    "shape", ["dict", "module"],
-    ids=["builtins-is-a-dict", "builtins-is-a-module"])
+    "shape", ["dict", "module"], ids=["builtins-is-a-dict", "builtins-is-a-module"]
+)
 
 BUILTINS_OPEN_KEPT = Defect(
     "#353: safeopen.restore_open saves "
     "__builtins__['open'] after it set builtins.open to the original, and "
     "__builtins__ is the builtins module (or its dict), so the finally "
     "block writes the original back over the restored wrapper",
-    signature="'builtins.open': 'original'")
+    signature="'builtins.open': 'original'",
+)
 
 
 def stand_in(original):
     """A distinct function that forwards to ``original``"""
+
     def open_stand_in(*args, **kwargs):
         return original(*args, **kwargs)
+
     return open_stand_in
 
 
@@ -86,8 +94,7 @@ def stand_ins_installed(monkeypatch, shape="dict"):
     """Install stand-ins for the four opens; ``shape`` "module" makes
     safeopen see ``__builtins__`` as the builtins module. Everything is
     undone on exit, also after a failure."""
-    stand_ins = {name: stand_in(original)
-                 for name, original in PYTHON_OPENS.items()}
+    stand_ins = {name: stand_in(original) for name, original in PYTHON_OPENS.items()}
     with monkeypatch.context() as patch:
         if shape == "module":
             patch.setattr(safeopen, "__builtins__", builtins)
@@ -112,30 +119,34 @@ def test_safeopen_keeps_pythons_opens():
 
 
 @BUILTINS_SHAPES
-def test_restore_open_brings_back_the_originals_inside_the_block(
-        monkeypatch, shape):
+def test_restore_open_brings_back_the_originals_inside_the_block(monkeypatch, shape):
     """Inside the block the four opens are Python's; after it the stand-ins
     of io, codecs and os are back, but builtins.open stays Python's"""
     inside, after = restore_open_states(monkeypatch, shape)
 
     assert inside == dict.fromkeys(MODULES, "original")
-    assert after == {"builtins.open": "original", "io.open": "stand-in",
-                     "codecs.open": "stand-in", "os.open": "stand-in"}
+    assert after == {
+        "builtins.open": "original",
+        "io.open": "stand-in",
+        "codecs.open": "stand-in",
+        "os.open": "stand-in",
+    }
 
 
 @BUILTINS_SHAPES
 @known_defects(BUILTINS_OPEN_KEPT)
 def test_restore_open_brings_back_the_originals_inside_the_block_desired(
-        monkeypatch, shape):
+    monkeypatch, shape
+):
     """Desired: after the block every open is what it was before it"""
     _, after = restore_open_states(monkeypatch, shape)
 
-    assert after == dict.fromkeys(MODULES, "stand-in"), (
-        "after the block: {}".format(after))
+    assert after == dict.fromkeys(MODULES, "stand-in"), "after the block: {}".format(
+        after
+    )
 
 
-def test_restore_open_puts_the_stand_ins_back_after_an_exception(
-        monkeypatch):
+def test_restore_open_puts_the_stand_ins_back_after_an_exception(monkeypatch):
     """An exception inside the block propagates, and the opens come back
     as after a normal exit"""
     with stand_ins_installed(monkeypatch) as stand_ins:
@@ -144,8 +155,12 @@ def test_restore_open_puts_the_stand_ins_back_after_an_exception(
                 raise ValueError("inside")
         after = state(stand_ins)
 
-    assert after == {"builtins.open": "original", "io.open": "stand-in",
-                     "codecs.open": "stand-in", "os.open": "stand-in"}
+    assert after == {
+        "builtins.open": "original",
+        "io.open": "stand-in",
+        "codecs.open": "stand-in",
+        "os.open": "stand-in",
+    }
 
 
 def test_engine_restore_open_is_safeopen_restore_open(monkeypatch, tmp_path):
@@ -155,7 +170,8 @@ def test_engine_restore_open_is_safeopen_restore_open(monkeypatch, tmp_path):
     engine = PlainEngine(config)
 
     assert restore_open_states(monkeypatch, restore=engine.restore_open) == (
-        restore_open_states(monkeypatch))
+        restore_open_states(monkeypatch)
+    )
 
 
 def test_use_safe_open_is_per_thread_and_nests(tmp_path):
@@ -189,5 +205,8 @@ def test_print_open_prints_the_four_originals(capsys):
     safeopen.print_open()
 
     assert capsys.readouterr().out.splitlines() == [
-        str(io.open), str(io.open), codecs.open.__code__.co_filename,
-        str(os.open)]
+        str(io.open),
+        str(io.open),
+        codecs.open.__code__.co_filename,
+        str(os.open),
+    ]

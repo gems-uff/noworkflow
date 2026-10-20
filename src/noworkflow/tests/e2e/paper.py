@@ -11,6 +11,7 @@ harness, applying the patches without a ``patch`` binary, on the synthetic
 dataset that ``synthetic_dataset`` writes, or on the real one when
 ``NOW_PAPER_DATASET`` names it.
 """
+
 import os
 import random
 import re
@@ -35,32 +36,42 @@ RUN_TIMEOUT = 600
 # test_run_trials_sh_is_the_replayed_sequence parses run_trials.sh and fails
 # when the two drift apart (a new tag of the package changes it).
 STEPS = (
-    ("run",),                                       # 1.1.1
-    ("run",),                                       # 1.1.2
-    ("run",),                                       # 1.1.3
-    ("run", "40"),                                  # 1.2.1
+    ("run",),  # 1.1.1
+    ("run",),  # 1.1.2
+    ("run",),  # 1.1.3
+    ("run", "40"),  # 1.2.1
     ("apply", "patch_2_pca.patch"),
-    ("run",),                                       # 2.1.1
-    ("run", "40"),                                  # 2.2.1
+    ("run",),  # 2.1.1
+    ("run", "40"),  # 2.2.1
     ("apply", "patch_3_gradientboosting.patch"),
-    ("run",),                                       # 3.1.1
+    ("run",),  # 3.1.1
     ("apply", "patch_4_keyerror.patch"),
-    ("run-fails",),                                 # 4.1.1
+    ("run-fails",),  # 4.1.1
     ("restore", "2.1.1"),
     ("apply", "patch_5_scaler.patch"),
-    ("run",),                                       # 5.1.1
+    ("run",),  # 5.1.1
     ("restore", "-a", "2.1.1"),
     ("copy", "preprocessing.py"),
     ("apply", "patch_6_localmodule.patch"),
-    ("run",),                                       # 6.1.1
+    ("run",),  # 6.1.1
     ("append", "\n# scratch edit to trigger a backup trial\n"),
-    ("restore", "5.1.1"),                           # backup 7.0.0
+    ("restore", "5.1.1"),  # backup 7.0.0
 )
 TRIAL_HISTORY_MARKER = "# --- Trial history"
 # The automatic tag of each run of STEPS, in order (fig:now-history; the
 # restore of 5.1.1 adds the backup 7.0.0).
-RUN_TAGS = ("1.1.1", "1.1.2", "1.1.3", "1.2.1", "2.1.1", "2.2.1", "3.1.1",
-            "4.1.1", "5.1.1", "6.1.1")
+RUN_TAGS = (
+    "1.1.1",
+    "1.1.2",
+    "1.1.3",
+    "1.2.1",
+    "2.1.1",
+    "2.2.1",
+    "3.1.1",
+    "4.1.1",
+    "5.1.1",
+    "6.1.1",
+)
 
 
 def run_trials_steps(text):
@@ -73,8 +84,9 @@ def run_trials_steps(text):
     """
     _, found, history = text.partition(TRIAL_HISTORY_MARKER)
     if not found:
-        raise ValueError("run_trials.sh has no {!r} section".format(
-            TRIAL_HISTORY_MARKER))
+        raise ValueError(
+            "run_trials.sh has no {!r} section".format(TRIAL_HISTORY_MARKER)
+        )
     steps = []
     # The rest of the marker line is a ruler.
     for line in history.splitlines()[1:]:
@@ -102,14 +114,20 @@ def run_trials_steps(text):
                 steps.append(("restore",) + tuple(command[2:]))
             elif command[0] == "cp" and len(command) == 3:
                 steps.append(("copy", os.path.basename(command[2])))
-            elif (command[0] == "printf" and len(command) == 4
-                  and command[2] == ">>" and command[3] == SCRIPT):
+            elif (
+                command[0] == "printf"
+                and len(command) == 4
+                and command[2] == ">>"
+                and command[3] == SCRIPT
+            ):
                 text = command[1].encode().decode("unicode_escape")
                 steps.append(("append", text))
             else:
                 raise ValueError(
-                    "run_trials.sh runs {!r}, which the replay does not "
-                    "know".format(" ".join(command)))
+                    "run_trials.sh runs {!r}, which the replay does not know".format(
+                        " ".join(command)
+                    )
+                )
     return tuple(steps)
 
 
@@ -126,8 +144,7 @@ def apply_patch(directory, patch):
     lines = patch.splitlines(keepends=True)
     targets = [line[4:].strip() for line in lines if line.startswith("+++ ")]
     if len(targets) != 1:
-        raise ValueError("expected one file in the patch, found {}".format(
-            targets))
+        raise ValueError("expected one file in the patch, found {}".format(targets))
     name = targets[0].split("/", 1)[1]
     path = directory / name
     with open(path, encoding="utf-8", newline="") as handle:
@@ -153,9 +170,14 @@ def apply_patch(directory, patch):
                 if position >= len(source) or source[position] != text:
                     raise ValueError(
                         "{} line {}: expected {!r}, found {!r}".format(
-                            name, position + 1, text,
-                            source[position] if position < len(source)
-                            else "end of file"))
+                            name,
+                            position + 1,
+                            text,
+                            source[position]
+                            if position < len(source)
+                            else "end of file",
+                        )
+                    )
                 position += 1
                 if kind == " ":
                     result.append(text)
@@ -196,8 +218,7 @@ def synthetic_dataset(seed=1):
     up, down = 5.0, 10.0
 
     def features(shift):
-        return [rng.gauss(shift if column < 10 else 0.0, 1.0)
-                for column in range(27)]
+        return [rng.gauss(shift if column < 10 else 0.0, 1.0) for column in range(27)]
 
     def time():
         return rng.randint(0, 160000)
@@ -218,21 +239,24 @@ def synthetic_dataset(seed=1):
     rows += [twin + [up, twin_amount, 1] for _ in range(twin_frauds)]
     rows += [twin + [-down, twin_amount, 0] for _ in range(twin_normals)]
     rows.sort(key=lambda row: row[0])
-    header = ["Time"] + ["V{}".format(i) for i in range(1, 29)] + [
-        "Amount", "Class"]
+    header = ["Time"] + ["V{}".format(i) for i in range(1, 29)] + ["Amount", "Class"]
     lines = [",".join('"{}"'.format(name) for name in header)]
     for row in rows:
-        lines.append(",".join(
-            ["{:d}".format(row[0])]
-            + ["{:.6f}".format(value) for value in row[1:29]]
-            + ["{:.2f}".format(row[29]), '"{:d}"'.format(row[30])]
-        ))
+        lines.append(
+            ",".join(
+                ["{:d}".format(row[0])]
+                + ["{:.6f}".format(value) for value in row[1:29]]
+                + ["{:.2f}".format(row[29]), '"{:d}"'.format(row[30])]
+            )
+        )
     return "\n".join(lines) + "\n"
 
 
 DOT_TOKEN = re.compile(
     r'\s*(?:(?P<quoted>"(?:[^"\\]|\\.)*")|(?P<punct>->|[\[\]{};,=])'
-    r'|(?P<word>[\w.#-]+))', re.S)
+    r"|(?P<word>[\w.#-]+))",
+    re.S,
+)
 
 
 def dot_tokens(text):
@@ -243,8 +267,11 @@ def dot_tokens(text):
         match = DOT_TOKEN.match(text, index)
         if not match or match.end() == index:
             if text[index:].strip():
-                raise ValueError("unexpected DOT text at {}: {!r}".format(
-                    index, text[index:index + 30]))
+                raise ValueError(
+                    "unexpected DOT text at {}: {!r}".format(
+                        index, text[index : index + 30]
+                    )
+                )
             break
         index = match.end()
         if match.group("quoted"):
@@ -330,8 +357,10 @@ def labelled(text):
 
     return (
         [label(node) for node in nodes],
-        {(label(source), label(target), "dashed" in attrs.get("style", ""))
-         for source, target, attrs in edges},
+        {
+            (label(source), label(target), "dashed" in attrs.get("style", ""))
+            for source, target, attrs in edges
+        },
     )
 
 
@@ -372,15 +401,15 @@ def trial_sources(steps=STEPS):
         elif kind == "apply":
             with tempfile.TemporaryDirectory() as directory:
                 directory = Path(directory)
-                (directory / SCRIPT).write_text(files[SCRIPT],
-                                                encoding="utf-8", newline="")
-                apply_patch(directory, (PAPER_CORPUS / args[0]).read_text(
-                    encoding="utf-8"))
-                files[SCRIPT] = (directory / SCRIPT).read_text(
-                    encoding="utf-8")
+                (directory / SCRIPT).write_text(
+                    files[SCRIPT], encoding="utf-8", newline=""
+                )
+                apply_patch(
+                    directory, (PAPER_CORPUS / args[0]).read_text(encoding="utf-8")
+                )
+                files[SCRIPT] = (directory / SCRIPT).read_text(encoding="utf-8")
         elif kind == "copy":
-            files[args[0]] = (PAPER_CORPUS / args[0]).read_text(
-                encoding="utf-8")
+            files[args[0]] = (PAPER_CORPUS / args[0]).read_text(encoding="utf-8")
         elif kind == "append":
             files[SCRIPT] += args[0]
     return result
@@ -399,27 +428,37 @@ def replay(project, steps=STEPS):
         kind, args = step[0], step[1:]
         result = None
         if kind == "run":
-            result = project.run("run", SCRIPT, *args, allow_stderr=True,
-                                 timeout=RUN_TIMEOUT)
+            result = project.run(
+                "run", SCRIPT, *args, allow_stderr=True, timeout=RUN_TIMEOUT
+            )
         elif kind == "run-fails":
             # `now run` exits with 0 after an uncaught exception (#226), so
             # run_trials.sh's `|| echo` never fires; the trial's status is
             # what the tests check.
-            result = project.run("run", SCRIPT, *args, expect=None,
-                                 allow_stderr=True, timeout=RUN_TIMEOUT)
+            result = project.run(
+                "run",
+                SCRIPT,
+                *args,
+                expect=None,
+                allow_stderr=True,
+                timeout=RUN_TIMEOUT,
+            )
             assert "KeyError" in result.stdout + result.stderr, (
                 "the failing trial of run_trials.sh did not raise its "
-                "KeyError\n{}".format(result))
+                "KeyError\n{}".format(result)
+            )
         elif kind == "restore":
             result = project.run("restore", *args)
         elif kind == "apply":
-            apply_patch(project.path, (PAPER_CORPUS / args[0]).read_text(
-                encoding="utf-8"))
+            apply_patch(
+                project.path, (PAPER_CORPUS / args[0]).read_text(encoding="utf-8")
+            )
         elif kind == "copy":
             shutil.copyfile(PAPER_CORPUS / args[0], project.path / args[0])
         elif kind == "append":
-            with open(project.path / SCRIPT, "a", encoding="utf-8",
-                      newline="") as handle:
+            with open(
+                project.path / SCRIPT, "a", encoding="utf-8", newline=""
+            ) as handle:
                 handle.write(args[0])
         else:
             raise ValueError("unknown step {!r}".format(step))

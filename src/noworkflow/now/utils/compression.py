@@ -10,13 +10,13 @@ from io import StringIO as StringIO
 
 def gzip_compress(data):
     gzip_buffer = IO()
-    gzip_file = gzip.GzipFile(mode='wb',
-                              fileobj=gzip_buffer)
+    gzip_file = gzip.GzipFile(mode="wb", fileobj=gzip_buffer)
     gzip_file.write(data)
     gzip_file.close()
     return gzip_buffer.getvalue()
 
+
 def gzip_uncompress(data):
-    fakefile=IO(data)
-    uncompressed = gzip.GzipFile(fileobj=fakefile, mode='rb')
+    fakefile = IO(data)
+    uncompressed = gzip.GzipFile(fileobj=fakefile, mode="rb")
     return uncompressed.read()

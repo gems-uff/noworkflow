@@ -72,6 +72,7 @@ appears in a failing assertion, is masked too.
 ``py3compat_stand_in`` gets past it on the test side only. The known
 defects that more than one module pins are defined here, once.
 """
+
 import asyncio
 import atexit
 import builtins
@@ -121,16 +122,16 @@ STOP_TIMEOUT = 10
 PROGRAMS = ("dot", "swipl", "inkscape")
 FOUND = {program: shutil.which(program) for program in PROGRAMS}
 DOT = FOUND["dot"]
-needs_dot = pytest.mark.skipif(
-    DOT is None, reason="Graphviz's dot is not on the PATH")
+needs_dot = pytest.mark.skipif(DOT is None, reason="Graphviz's dot is not on the PATH")
 
 # The home of the user running the tests, masked in assertion messages
 # unless it is a root ("/" where the tests run as a user without a passwd
 # entry, as in the reference-leg container), whose pattern would match
 # between any two characters.
 REAL_HOME = os.path.expanduser("~")
-HOME_MASK = ([("<REAL_HOME>", REAL_HOME)]
-             if os.path.dirname(REAL_HOME) != REAL_HOME else [])
+HOME_MASK = (
+    [("<REAL_HOME>", REAL_HOME)] if os.path.dirname(REAL_HOME) != REAL_HOME else []
+)
 
 # What IPython adds to the builtins and to ``sys`` when a shell starts and
 # never takes back.
@@ -213,13 +214,14 @@ def collection_leftovers():
     The four ``open`` functions, the injected builtins and the import
     finder (``helpers/leaks.py``); an empty list when nothing is left.
     """
-    found = ["{} replaced".format(name) for module, name, original
-             in leaks.OPENS if module.open is not original]
-    injected = [name for name in leaks.INJECTED_BUILTINS
-                if name in vars(builtins)]
+    found = [
+        "{} replaced".format(name)
+        for module, name, original in leaks.OPENS
+        if module.open is not original
+    ]
+    injected = [name for name in leaks.INJECTED_BUILTINS if name in vars(builtins)]
     if injected:
-        found.append("names added to builtins: {}".format(
-            ", ".join(injected)))
+        found.append("names added to builtins: {}".format(", ".join(injected)))
     if any(leaks.is_finder(entry) for entry in sys.meta_path):
         found.append("noWorkflow's import finder left in sys.meta_path")
     return found
@@ -269,8 +271,11 @@ class Cell:
         return set().union(*(output.data for output in self.outputs))
 
     def __repr__(self):
-        return self.normalize("<Cell {!r} success={} error={}>".format(
-            self.code.partition("\n")[0], self.success, self.error_type))
+        return self.normalize(
+            "<Cell {!r} success={} error={}>".format(
+                self.code.partition("\n")[0], self.success, self.error_type
+            )
+        )
 
     def describe(self):
         """The cell and its outcome for an assertion message
@@ -281,13 +286,13 @@ class Cell:
         """
         first, _, rest = self.code.partition("\n")
         text = "cell: {}{}\nsuccess: {}".format(
-            first, " [...]" if rest.strip() else "", self.success)
+            first, " [...]" if rest.strip() else "", self.success
+        )
         if self.error is not None:
             text += "\nerror: " + self.error_text
-        text += (
-            "\n--- stdout ---\n{}\n--- stderr ---\n{}\n--- [now] ---\n{}"
-            .format(tail(self.stdout), tail(self.stderr),
-                    tail(self.messages)))
+        text += "\n--- stdout ---\n{}\n--- stderr ---\n{}\n--- [now] ---\n{}".format(
+            tail(self.stdout), tail(self.stderr), tail(self.messages)
+        )
         return self.normalize(text)
 
 
@@ -306,15 +311,20 @@ class Children:
 
     def wrap(self, create):
         """``asyncio.create_subprocess_exec`` that records the process"""
+
         async def create_subprocess_exec(*args, **kwargs):
             process = await create(*args, **kwargs)
             self.started.append((asyncio.get_running_loop(), process))
             return process
+
         return create_subprocess_exec
 
     def running(self):
-        return [(loop, process) for loop, process in self.started
-                if process.returncode is None]
+        return [
+            (loop, process)
+            for loop, process in self.started
+            if process.returncode is None
+        ]
 
     def kill_running(self):
         """Kill every recorded process that still runs"""
@@ -327,8 +337,7 @@ class Children:
         """Kill what still runs and wait for it, while the loop runs"""
         for loop, process in self.running():
             self.killed += 1
-            future = asyncio.run_coroutine_threadsafe(
-                kill_and_wait(process), loop)
+            future = asyncio.run_coroutine_threadsafe(kill_and_wait(process), loop)
             with contextlib.suppress(Exception):
                 future.result(STOP_TIMEOUT)
 
@@ -358,12 +367,15 @@ class Shell:
         self.ip = ip
         self.project = project
         self.children = children
-        self.normalize = Normalizer([
-            ("<PROJECT>", project.path),
-            ("<HOME>", project.home),
-            ("<TMP>", project.tmp),
-            ("<ROOT>", project.root),
-        ] + HOME_MASK)
+        self.normalize = Normalizer(
+            [
+                ("<PROJECT>", project.path),
+                ("<HOME>", project.home),
+                ("<TMP>", project.tmp),
+                ("<ROOT>", project.root),
+            ]
+            + HOME_MASK
+        )
 
     @property
     def user_ns(self):
@@ -399,9 +411,12 @@ class Shell:
             normalize=self.normalize,
         )
         if self.children.killed != killed:
-            pytest.fail("the cell ran longer than {} s; its process was "
-                        "killed\n{}".format(timeout, cell.describe()),
-                        pytrace=False)
+            pytest.fail(
+                "the cell ran longer than {} s; its process was killed\n{}".format(
+                    timeout, cell.describe()
+                ),
+                pytrace=False,
+            )
         return cell
 
     def ok(self, code, **kwargs):
@@ -510,8 +525,7 @@ def import_models():
 def model_defaults_kept():
     """Put back the ``DEFAULT`` of every model class (%now_set_default)"""
     import_models()
-    saved = {model: dict(model.DEFAULT)
-             for model in MetaModel.__classes__.values()}
+    saved = {model: dict(model.DEFAULT) for model in MetaModel.__classes__.values()}
     try:
         yield
     finally:
@@ -523,8 +537,7 @@ def model_defaults_kept():
 @contextlib.contextmanager
 def magic_table_kept():
     """Put back IPython's table of pending magics (#384)"""
-    saved = {kind: dict(table)
-             for kind, table in ipython_magic.magics.items()}
+    saved = {kind: dict(table) for kind, table in ipython_magic.magics.items()}
     try:
         yield
     finally:
@@ -553,9 +566,14 @@ def names_taken(cls):
     table = vars(cls).get("magics")
     if not isinstance(table, dict):
         return []
-    return sorted({name for magics in table.values()
-                   for name, method in magics.items()
-                   if isinstance(method, str) and not hasattr(cls, method)})
+    return sorted(
+        {
+            name
+            for magics in table.values()
+            for name, method in magics.items()
+            if isinstance(method, str) and not hasattr(cls, method)
+        }
+    )
 
 
 def broken_magics_classes():
@@ -582,8 +600,11 @@ def repair_magics_classes(classes):
         for magics in vars(cls)["magics"].values():
             for name in names:
                 magics.pop(name, None)
-        taken.append("{}.{} took the pending magics {}".format(
-            cls.__module__, cls.__qualname__, ", ".join(names)))
+        taken.append(
+            "{}.{} took the pending magics {}".format(
+                cls.__module__, cls.__qualname__, ", ".join(names)
+            )
+        )
     return taken
 
 
@@ -596,8 +617,11 @@ def ipython_leftovers_removed():
     shell's frames alive.
     """
     names = set(vars(builtins))
-    saved = {name: getattr(sys, name) for name in PROMPTS + LAST_EXCEPTION
-             if hasattr(sys, name)}
+    saved = {
+        name: getattr(sys, name)
+        for name in PROMPTS + LAST_EXCEPTION
+        if hasattr(sys, name)
+    }
     try:
         yield
     finally:
@@ -619,13 +643,12 @@ def start_shell(directory):
     """
     if InteractiveShell.initialized():
         raise RuntimeError(
-            "an IPython shell is still the singleton: a test before this "
-            "one left it")
+            "an IPython shell is still the singleton: a test before this one left it"
+        )
     config = Config()
     config.HistoryManager.hist_file = ":memory:"
     config.InteractiveShell.colors = "nocolor"
-    return InteractiveShell.instance(
-        config=config, ipython_dir=str(directory))
+    return InteractiveShell.instance(config=config, ipython_dir=str(directory))
 
 
 def warm_up(ip):
@@ -704,8 +727,11 @@ def open_shell(project, extension=True):
             patch.setattr(dotmagic, "LOADED", False)
             patch.setattr(now_io, "verbose", now_io.verbose)
             children = Children()
-            patch.setattr(asyncio, "create_subprocess_exec",
-                          children.wrap(asyncio.create_subprocess_exec))
+            patch.setattr(
+                asyncio,
+                "create_subprocess_exec",
+                children.wrap(asyncio.create_subprocess_exec),
+            )
             stack.enter_context(model_defaults_kept())
             stack.enter_context(magic_table_kept())
             stack.enter_context(ipython_leftovers_removed())
@@ -720,21 +746,24 @@ def open_shell(project, extension=True):
             finally:
                 leftovers = close_shell(ip, children)
     finally:
-        taken = repair_magics_classes([
-            cls for cls in broken_magics_classes()
-            if cls not in broken_before])
+        taken = repair_magics_classes(
+            [cls for cls in broken_magics_classes() if cls not in broken_before]
+        )
     failures = []
     if leftovers:
         failures.append(
             "the shell left what a collection changes behind (undone now): "
             "{}\nA test that expects it asserts it and calls "
-            "helpers.leaks.undo_collection().".format("; ".join(leftovers)))
+            "helpers.leaks.undo_collection().".format("; ".join(leftovers))
+        )
     if taken:
         failures.append(
             "a magics class was defined while the extension's names were "
             "pending (#384; repaired now): {}\nImport what "
             "defines it in warm_up, before the extension loads.".format(
-                "; ".join(taken)))
+                "; ".join(taken)
+            )
+        )
     if failures:
         pytest.fail("\n".join(failures), pytrace=False)
 

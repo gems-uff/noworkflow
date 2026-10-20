@@ -20,6 +20,7 @@ test needs Graphviz (#393). Known defects get a characterization of what
 ``known_defects``, which cites the issue (``#NNN``) and the signature of
 today's failure.
 """
+
 from types import SimpleNamespace
 
 import pytest
@@ -33,9 +34,9 @@ from noworkflow.tests.helpers.defects import Defect, known_defects
 BOTH_QUOTES = 'say "it\'s"'
 BOTH_QUOTES_LABEL = Defect(
     reason='#401: DrawVisitor.dot_text writes each label as "{!r}" with no '
-           "escaping: the repr of a str that holds a quote character holds "
-           "a raw double quote (one of the str's own, or the delimiters of "
-           "the repr), and the first one closes the label",
+    "escaping: the repr of a str that holds a quote character holds "
+    "a raw double quote (one of the str's own, or the delimiters of "
+    "the repr), and the first one closes the label",
     signature='[label="\'say "it\\\'s"\'"]',
 )
 
@@ -44,11 +45,14 @@ def draw(value):
     """``(node, dot_text)``: ``DrawVisitor`` over a ``name`` node whose
     ``value`` attribute is ``value``
     """
-    component = SimpleNamespace(id=1, trial_id="t", type="name",
-                                name="target")
-    composition = SimpleNamespace(whole_id=1, part_id=None, type="value",
-                                  position=None,
-                                  extra="str({!r})".format(value))
+    component = SimpleNamespace(id=1, trial_id="t", type="name", name="target")
+    composition = SimpleNamespace(
+        whole_id=1,
+        part_id=None,
+        type="value",
+        position=None,
+        extra="str({!r})".format(value),
+    )
     node = create_trees([component], {}, [composition])[1]
     visitor = DrawVisitor()
     visitor.visit(node)
@@ -65,8 +69,7 @@ def assert_draws(node, value, text):
     origin, target, attributes = graph.edges[0]
     assert rendered(attributes["label"]) == "value", text
     assert rendered(graph.nodes[origin]["label"]) == repr(node), text
-    assert rendered(graph.nodes[target]["label"]) in (
-        repr(value), value), text
+    assert rendered(graph.nodes[target]["label"]) in (repr(value), value), text
 
 
 def test_draw_visitor_label_of_a_plain_value():
@@ -96,8 +99,7 @@ def test_draw_visitor_label_of_a_value_with_both_quotes():
         '  n0 -> n1 [label="value"]',
         "}",
     ]
-    with pytest.raises(AssertionError,
-                       match=r"^not a DOT graph: unexpected '\\\\'"):
+    with pytest.raises(AssertionError, match=r"^not a DOT graph: unexpected '\\\\'"):
         DotGraph(text)
 
 

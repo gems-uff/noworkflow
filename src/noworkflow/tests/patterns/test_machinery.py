@@ -28,6 +28,7 @@ called with a keyword that is not one of its attributes fails on its first
 row; the timestamp rules reach that through stale attribute names
 (``test_timestamp_rules.py``).
 """
+
 import collections
 import doctest
 
@@ -57,19 +58,22 @@ ABANDONED = Defect(
     "RuleQuery.apply_function unbind the variables after the last result, "
     "not in a finally, so a query left by break, next() or an exception "
     "keeps them bound and filters the next query that uses them",
-    "stays bound")
+    "stays bound",
+)
 OPTION_BINDING = Defect(
     "#344: RuleQuery.apply_function resets to "
     "BLANK, after each result, every variable in self.binds, including the "
     "option that prepare_values bound, so only the first result of each "
     "value of the option binds it",
-    "results bind no K")
+    "results bind no K",
+)
 GETATTR = Defect(
     "#343: ModelRule.__getattr__ indexes "
     "self._names and raises KeyError instead of AttributeError for an "
     "unknown name, which hasattr, getattr with a default and doctest's "
     "finder (inspect.unwrap) expect",
-    "KeyError: 'nope'")
+    "KeyError: 'nope'",
+)
 
 TRIALS = pytest.mark.parametrize("number", [1, 2], ids=["trial1", "trial2"])
 
@@ -89,7 +93,8 @@ def explored(kind, value):
 
 
 OPTION_RULES = pytest.mark.parametrize(
-    "rule", [pairs, explored], ids=["restricted", "explored"])
+    "rule", [pairs, explored], ids=["restricted", "explored"]
+)
 
 
 def trial_id(project, number):
@@ -147,8 +152,7 @@ def test_the_variable_factory_returns_one_variable_per_name():
     created = factory(3)
     assert len({id(variable) for variable in created}) == 3
     assert [repr(variable) for variable in factory("a b")] == ["a", "b"]
-    assert [repr(variable) for variable in factory(("z", "w"))] == [
-        "z", "w"]
+    assert [repr(variable) for variable in factory(("z", "w"))] == ["z", "w"]
     assert isinstance(factory(), Variable)
 
 
@@ -187,8 +191,10 @@ def test_a_null_query_joined_with_anything_has_no_results():
     """A NullQuery on either side of ``&`` makes the join a NullQuery"""
     x = var("X")
     assert list(NullQuery()) == []
-    for query in (NullQuery() & rules.member(x, [1]),
-                  rules.member(x, [1]) & NullQuery()):
+    for query in (
+        NullQuery() & rules.member(x, [1]),
+        rules.member(x, [1]) & NullQuery(),
+    ):
         assert isinstance(query, NullQuery)
         assert list(query) == []
 
@@ -215,20 +221,17 @@ def test_a_set_option_accepts_a_value_outside_it():
 def test_a_join_narrows_an_explored_option():
     """K bound by the left side of ``&`` selects one option, or none"""
     k, v = var("K V")
-    assert bindings(rules.member(k, ["b"]) & pairs(k, v), k, v) == [
-        ("b", 1), ("b", 2)]
+    assert bindings(rules.member(k, ["b"]) & pairs(k, v), k, v) == [("b", 1), ("b", 2)]
     assert bindings(rules.member(k, ["c"]) & pairs(k, v), k, v) == []
 
 
 @OPTION_RULES
-def test_an_unbound_option_is_bound_only_on_the_first_result_of_each_value(
-        rule):
+def test_an_unbound_option_is_bound_only_on_the_first_result_of_each_value(rule):
     """With K unbound the rule explores a and b, but from the second result
     of each value on, K is BLANK in the binds
     """
     k, v = var("K V")
-    assert bindings(rule(k, v), k, v) == [
-        ("a", 1), (BLANK, 2), ("b", 1), (BLANK, 2)]
+    assert bindings(rule(k, v), k, v) == [("a", 1), (BLANK, 2), ("b", 1), (BLANK, 2)]
 
 
 @OPTION_RULES
@@ -280,16 +283,17 @@ def test_a_model_rule_documents_its_prolog_attributes(two_trial_project):
     """The docstring of ``code_component`` is its Prolog head, whose
     attributes are the columns of the table, in the table's order
     """
-    columns = [row["name"] for row in two_trial_project.query(
-        "PRAGMA table_info(code_component)")]
+    columns = [
+        row["name"]
+        for row in two_trial_project.query("PRAGMA table_info(code_component)")
+    ]
     rule = patterns.code_component
     assert rule.__doc__ == "code_component({})".format(", ".join(columns))
     assert dir(rule) == sorted(columns)
 
 
 @TRIALS
-def test_a_model_rule_matches_the_rows_of_its_table(
-        connected_two_trials, number):
+def test_a_model_rule_matches_the_rows_of_its_table(connected_two_trials, number):
     """``activation(T, Id, Name)`` answers the activations of trial T, and
     only them: both trials ran the same script, so a rule that ignored T
     would answer every row twice
@@ -297,45 +301,56 @@ def test_a_model_rule_matches_the_rows_of_its_table(
     project = connected_two_trials
     trial = trial_id(project, number)
     expected = sql_rows(
-        project, "SELECT id, name FROM activation WHERE trial_id = ?", trial)
+        project, "SELECT id, name FROM activation WHERE trial_id = ?", trial
+    )
     identifier, name = var("Id Name")
-    assert_rows(lambda: bindings(patterns.activation(
-        trial, identifier, name), identifier, name), expected)
+    assert_rows(
+        lambda: bindings(
+            patterns.activation(trial, identifier, name), identifier, name
+        ),
+        expected,
+    )
 
 
 @TRIALS
 def test_a_model_rule_with_a_repeated_variable_matches_equal_columns(
-        connected_two_trials, number):
+    connected_two_trials, number
+):
     """``code_component(T, Z, first_char_line=Z)`` answers the components
     whose id equals their first line
     """
     project = connected_two_trials
     trial = trial_id(project, number)
     expected = sql_rows(
-        project, "SELECT id FROM code_component "
-        "WHERE trial_id = ? AND id = first_char_line", trial)
-    total = sql_rows(project, "SELECT id FROM code_component "
-                     "WHERE trial_id = ?", trial)
+        project,
+        "SELECT id FROM code_component WHERE trial_id = ? AND id = first_char_line",
+        trial,
+    )
+    total = sql_rows(project, "SELECT id FROM code_component WHERE trial_id = ?", trial)
     assert 0 < len(expected) < len(total), "the case does not filter"
     z = var("Z")
-    assert_rows(lambda: bindings(patterns.code_component(
-        trial, z, first_char_line=z), z), expected)
+    assert_rows(
+        lambda: bindings(patterns.code_component(trial, z, first_char_line=z), z),
+        expected,
+    )
 
 
 @TRIALS
-def test_a_model_rule_accepts_a_sqlalchemy_condition(
-        connected_two_trials, number):
+def test_a_model_rule_accepts_a_sqlalchemy_condition(connected_two_trials, number):
     """A SQLAlchemy expression in place of an argument filters the rows"""
     project = connected_two_trials
     trial = trial_id(project, number)
     expected = sql_rows(
-        project, "SELECT id FROM code_component "
-        "WHERE trial_id = ? AND first_char_line > 40", trial)
+        project,
+        "SELECT id FROM code_component WHERE trial_id = ? AND first_char_line > 40",
+        trial,
+    )
     assert expected, "no component after line 40"
     rule = patterns.code_component
     q = var("Q")
-    assert_rows(lambda: bindings(rule(
-        trial, q, rule.first_char_line > 40), q), expected)
+    assert_rows(
+        lambda: bindings(rule(trial, q, rule.first_char_line > 40), q), expected
+    )
 
 
 @TRIALS
@@ -347,18 +362,22 @@ def test_a_join_binds_the_shared_variable(connected_two_trials, number):
     project = connected_two_trials
     trial = trial_id(project, number)
     expected = sql_rows(
-        project, "SELECT evaluation.id FROM evaluation "
+        project,
+        "SELECT evaluation.id FROM evaluation "
         "JOIN code_component ON code_component.trial_id = evaluation.trial_id"
         " AND code_component.id = evaluation.code_component_id "
         "WHERE evaluation.trial_id = ? AND code_component.name = 'csv_read'",
-        trial)
+        trial,
+    )
     assert expected, "no evaluation of csv_read"
     code, evaluation = var("_code E")
-    query = (patterns.evaluation(trial, evaluation, code_component_id=code)
-             & patterns.code_component(trial, code, "csv_read"))
+    query = patterns.evaluation(
+        trial, evaluation, code_component_id=code
+    ) & patterns.code_component(trial, code, "csv_read")
     results = [dict(binds) for _, binds in query]
     assert all(set(binds) == {evaluation} for binds in results), (
-        "binds other than E: {}".format(results))
+        "binds other than E: {}".format(results)
+    )
     assert collections.Counter(
         (binds[evaluation],) for binds in results
     ) == collections.Counter(expected)
@@ -366,31 +385,32 @@ def test_a_join_binds_the_shared_variable(connected_two_trials, number):
 
 @TRIALS
 def test_a_function_rule_accepts_a_model_rule_and_keywords(
-        connected_two_trials, number):
+    connected_two_trials, number
+):
     """``name`` takes the model as its name, as the model rule itself or
     as a keyword, and its other arguments as keywords too
     """
     project = connected_two_trials
     trial = trial_id(project, number)
     expected = sql_rows(
-        project, "SELECT id, name FROM file_access WHERE trial_id = ?", trial)
+        project, "SELECT id, name FROM file_access WHERE trial_id = ?", trial
+    )
     assert expected, "no file access"
     calls = {
         "model rule": lambda i, n: rules.name(trial, patterns.access, i, n),
-        "keywords": lambda i, n: rules.name(
-            trial, model="access", id=i, name=n),
+        "keywords": lambda i, n: rules.name(trial, model="access", id=i, name=n),
         "name": lambda i, n: rules.name(trial, "access", i, n),
     }
     for label, call in calls.items():
         identifier, name = var("Id Name")
         rows = bindings(call(identifier, name), identifier, name)
-        assert collections.Counter(rows) == collections.Counter(expected), (
-            label)
+        assert collections.Counter(rows) == collections.Counter(expected), label
 
 
 @TRIALS
 def test_a_model_rule_with_an_unknown_keyword_fails_on_its_first_row(
-        connected_two_trials, number):
+    connected_two_trials, number
+):
     """A keyword that is not an attribute of the rule (``start`` for
     ``activation``, whose attribute is ``start_checkpoint``) becomes the
     attribute BLANK: a variable raises KeyError(BLANK) when the first row

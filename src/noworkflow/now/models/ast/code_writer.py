@@ -10,6 +10,7 @@ from .model import NowNode
 
 class CodeWriter(NodeVisitor):
     """Use NowNode tree to rewrite code"""
+
     # pylint: disable=missing-docstring
 
     def __init__(self, node=None):
@@ -84,6 +85,7 @@ class CodeWriter(NodeVisitor):
         if node.value:
             self.visit(node.op_pos[1])
             self.visit(node.value)
+
     visit_ann_target = write  # When the annotation has no value
     visit_annotation = write
 
@@ -112,7 +114,7 @@ class CodeWriter(NodeVisitor):
     visit_future_import = write
     visit_import_from = write  # ToDo: write parts after collection
     visit_import = write  # ToDo: write parts after collection
-    visit_arguments = write # Todo: write parts of arguments
+    visit_arguments = write  # Todo: write parts of arguments
 
     visit_name = write
     visit_literal = write
@@ -120,9 +122,7 @@ class CodeWriter(NodeVisitor):
     visit_syntax = write
     visit_identifier = write
 
-
     def visit_attribute(self, node):
         self.visit(node.value)
         self.write(".")
         self.write(node.attr)
-

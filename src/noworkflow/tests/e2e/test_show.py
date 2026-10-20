@@ -16,6 +16,7 @@ it prints the machine's environment, so its test checks attribute names and
 the few values the harness controls, and never prints a value, not even in
 an assertion message.
 """
+
 import collections
 import platform
 import re
@@ -39,13 +40,16 @@ SHOW_CASES = [
 ]
 
 ENVIRONMENT_HEADER = (
-    "[now] this trial has been executed under the following environment "
-    "conditions"
+    "[now] this trial has been executed under the following environment conditions"
 )
 # Attributes that every system records (deployment.py); the rest depends on
 # os.sysconf_names, os.confstr_names and the environment of the system.
 REQUIRED_ATTRIBUTES = {
-    "PYTHON_VERSION", "NOWORKFLOW_VERSION", "USER", "HOSTNAME", "PID",
+    "PYTHON_VERSION",
+    "NOWORKFLOW_VERSION",
+    "USER",
+    "HOSTNAME",
+    "PID",
     "OS_NAME",
 }
 VERSION = re.compile(r"\d+\.\d+\.\d+\S*")
@@ -53,8 +57,7 @@ VERSION = re.compile(r"\d+\.\d+\.\d+\S*")
 
 def checkout_version():
     """The version.txt of the noworkflow package this interpreter imports"""
-    path = Path(noworkflow.__file__).resolve().parent / "resources" / (
-        "version.txt")
+    path = Path(noworkflow.__file__).resolve().parent / "resources" / ("version.txt")
     return path.read_text(encoding="utf-8").strip()
 
 
@@ -80,23 +83,27 @@ def environment_attributes(stdout):
 
 @pytest.mark.golden
 def test_list_shows_each_trial_with_its_code_hash_sequence_key_and_tag(
-        request, two_trial_project):
+    request, two_trial_project
+):
     """``now list`` prints every trial with its command, code hash, times,
     sequence key and automatic tag."""
     result = two_trial_project.run("list")
     assert_golden(request, "list", two_trial_project.normalize(result.stdout))
 
 
-def test_list_names_every_stored_trial_in_the_order_they_ran(
-        two_trial_project):
+def test_list_names_every_stored_trial_in_the_order_they_ran(two_trial_project):
     """``now list`` names each trial of the store once, in insertion order
     (the query has no ORDER BY), with its sequence key and tag."""
     project = two_trial_project
     stdout = project.run("list").stdout
     trials = project.trials()
     assert len(trials) == 2
-    ids = re.findall(r"^  \[\*\]Trial (\S+): run simulation\.py "
-                     r"data1\.dat data2\.dat$", stdout, re.MULTILINE)
+    ids = re.findall(
+        r"^  \[\*\]Trial (\S+): run simulation\.py "
+        r"data1\.dat data2\.dat$",
+        stdout,
+        re.MULTILINE,
+    )
     keys = re.findall(r"^ +Sequence Key: (\d+)$", stdout, re.MULTILINE)
     tags = re.findall(r"^ +Tag: (\S+) Type: AUTO$", stdout, re.MULTILINE)
     assert ids == [trial["id"] for trial in trials]
@@ -106,10 +113,10 @@ def test_list_names_every_stored_trial_in_the_order_they_ran(
 
 
 @pytest.mark.golden
-@pytest.mark.parametrize(
-    "name, args", SHOW_CASES, ids=[name for name, _ in SHOW_CASES])
+@pytest.mark.parametrize("name, args", SHOW_CASES, ids=[name for name, _ in SHOW_CASES])
 def test_show_prints_the_trial_and_the_section_each_flag_selects(
-        request, two_trial_project, name, args):
+    request, two_trial_project, name, args
+):
     """``now show [trial] [flag]`` prints the tags and the trial, then the
     modules (-m), code blocks (-d), activation tree (-a), file accesses (-f)
     or arguments (-p)."""
@@ -127,12 +134,14 @@ def test_show_without_a_trial_shows_the_last_trial(two_trial_project):
     assert "  Id: {}\n".format(last["id"]) in default
     for ref in (last["sequence_key"], tag, last["id"]):
         assert project.run("show", ref).stdout == default, (
-            "now show {} differs from now show".format(ref))
+            "now show {} differs from now show".format(ref)
+        )
     assert project.run("show", "1").stdout != default
 
 
 def test_show_environment_lists_the_recorded_attributes_with_the_synthetic_user(
-        two_trial_project):
+    two_trial_project,
+):
     """``now show -e`` prints every environment attribute recorded for the
     last trial, including the ones every system records; the user is the
     harness's, HOME its temporary home, and the versions are the child's.
@@ -147,15 +156,19 @@ def test_show_environment_lists_the_recorded_attributes_with_the_synthetic_user(
     result = project.run("show", "-e", expect=None, allow_stderr=True)
     clean = result.returncode == 0 and result.stderr == ""
     assert clean, "now show -e: return code {}, {} characters on stderr".format(
-        result.returncode, len(result.stderr))
+        result.returncode, len(result.stderr)
+    )
     attributes = environment_attributes(result.stdout)
     names = collections.Counter(name for name, _ in attributes)
-    stored = collections.Counter(row["name"] for row in project.query(
-        "SELECT name FROM environment_attr WHERE trial_id = ?", last["id"]))
+    stored = collections.Counter(
+        row["name"]
+        for row in project.query(
+            "SELECT name FROM environment_attr WHERE trial_id = ?", last["id"]
+        )
+    )
     assert names == stored, "show -e and the store disagree on the names"
     missing = REQUIRED_ATTRIBUTES - set(names)
-    assert not missing, "attributes missing from show -e: {}".format(
-        sorted(missing))
+    assert not missing, "attributes missing from show -e: {}".format(sorted(missing))
 
     def values(name):
         return [value for key, value in attributes if key == name]
@@ -164,19 +177,19 @@ def test_show_environment_lists_the_recorded_attributes_with_the_synthetic_user(
     # which reads LOGNAME first: both must be the synthetic user.
     users = values("USER")
     synthetic = len(users) == 2 and all(value == USER for value in users)
-    assert synthetic, "{} USER attribute(s), not all {!r}".format(
-        len(users), USER)
+    assert synthetic, "{} USER attribute(s), not all {!r}".format(len(users), USER)
     homes = values("HOME")
     temporary = homes == [str(project.home)]
     assert temporary, (
-        "{} HOME attribute(s), expected one equal to the temporary home"
-        .format(len(homes)))
+        "{} HOME attribute(s), expected one equal to the temporary home".format(
+            len(homes)
+        )
+    )
 
-    python, = values("PYTHON_VERSION")
-    version, = values("NOWORKFLOW_VERSION")
+    (python,) = values("PYTHON_VERSION")
+    (version,) = values("NOWORKFLOW_VERSION")
     if runs_this_interpreter(project.command):
-        same = (python == platform.python_version()
-                and version == checkout_version())
+        same = python == platform.python_version() and version == checkout_version()
         assert same, "the recorded versions are not this interpreter's"
     else:
         shaped = bool(VERSION.fullmatch(python) and VERSION.fullmatch(version))
@@ -188,12 +201,12 @@ def test_history_draws_every_trial_newest_first(request, two_trial_project):
     """``now history`` draws one node per trial, newest first, with its
     script and tag."""
     result = two_trial_project.run("history")
-    assert_golden(request, "history",
-                  two_trial_project.normalize(result.stdout))
+    assert_golden(request, "history", two_trial_project.normalize(result.stdout))
 
 
 def test_history_filtered_by_the_script_that_ran_equals_the_full_history(
-        two_trial_project):
+    two_trial_project,
+):
     """``now history -s simulation.py`` keeps both trials: its output is
     the unfiltered history, byte for byte."""
     project = two_trial_project
@@ -203,12 +216,17 @@ def test_history_filtered_by_the_script_that_ran_equals_the_full_history(
     assert ids == [trial["id"] for trial in reversed(project.trials())]
 
 
-@pytest.mark.parametrize("args", [
-    ("-e", "backup"),
-    ("-s", "other.py"),
-], ids=["no-backup-trial", "no-trial-of-the-script"])
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("-e", "backup"),
+        ("-s", "other.py"),
+    ],
+    ids=["no-backup-trial", "no-trial-of-the-script"],
+)
 def test_history_without_a_matching_trial_prints_a_single_empty_line(
-        two_trial_project, args):
+    two_trial_project, args
+):
     """``now history`` whose filter matches no trial prints one empty line
     and returns 0."""
     assert two_trial_project.run("history", *args).stdout == "\n"

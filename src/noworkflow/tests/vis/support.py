@@ -26,6 +26,7 @@ run`` records them in: ``NOW_RUN_UTC_OFFSET`` and ``served_instant``. Never
 put the offset, or a served and a stored time side by side, in a message:
 together they tell the machine's zone.
 """
+
 import dataclasses
 import email.utils
 import json
@@ -55,10 +56,13 @@ def _now_run_utc_offset():
     """
     tmp = tempfile.gettempdir()
     completed = subprocess.run(
-        [sys.executable, "-c",
-         "import time; print(time.localtime().tm_gmtoff)"],
-        env=clean_env(tmp, tmp), capture_output=True, text=True, check=True,
-        timeout=60)
+        [sys.executable, "-c", "import time; print(time.localtime().tm_gmtoff)"],
+        env=clean_env(tmp, tmp),
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    )
     return int(completed.stdout)
 
 
@@ -70,19 +74,19 @@ NOW_RUN_ZONE = timezone(timedelta(seconds=NOW_RUN_UTC_OFFSET))
 # before the view runs.
 EXPERIMENT_PREFIX = Defect(
     reason="#355: views.py declares an "
-           "/experiments/<expCode>/ route for views whose signature has no "
-           "expCode parameter, so Flask's call raises TypeError and the "
-           "route answers 500",
+    "/experiments/<expCode>/ route for views whose signature has no "
+    "expCode parameter, so Flask's call raises TypeError and the "
+    "route answers 500",
     signature="got an unexpected keyword argument 'expCode'",
 )
 # The twins assert through booleans with this signature in the message.
 LOCAL_TIME_AS_GMT = Defect(
     reason="#366: the store records times as naive "
-           "local times (datetime.now()), and Flask's JSON provider formats "
-           "a naive datetime with http_date, which reads it as UTC, so the "
-           "trials of diff/<t1>/<t2>/info.json, the start and finish of an "
-           "activation and the access timestamps of the function diff label "
-           "the local wall-clock time GMT",
+    "local times (datetime.now()), and Flask's JSON provider formats "
+    "a naive datetime with http_date, which reads it as UTC, so the "
+    "trials of diff/<t1>/<t2>/info.json, the start and finish of an "
+    "activation and the access timestamps of the function diff label "
+    "the local wall-clock time GMT",
     signature="off by the UTC offset of now run's zone",
     condition=NOW_RUN_UTC_OFFSET != 0,
 )
@@ -140,11 +144,12 @@ class Vis:
     def json(self, route, status=200, **kwargs):
         """GET ``route`` and return its JSON, checking status and type"""
         response = self.get(route, **kwargs)
-        assert response.status_code == status, (
-            "GET {}: status {}, expected {}".format(
-                route, response.status_code, status))
+        assert response.status_code == status, "GET {}: status {}, expected {}".format(
+            route, response.status_code, status
+        )
         assert response.mimetype == "application/json", (
-            "GET {}: {}, expected JSON".format(route, response.mimetype))
+            "GET {}: {}, expected JSON".format(route, response.mimetype)
+        )
         return json.loads(response.get_data(as_text=True))
 
     @staticmethod

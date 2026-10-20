@@ -31,8 +31,7 @@ class Attributes(object):
     def items(self):
         """Return attrs that do not start with _"""
         return {
-            key: value for key, value in viewitems(self.attr)
-            if not key.startswith("_")
+            key: value for key, value in viewitems(self.attr) if not key.startswith("_")
         }
 
     def dot(self):
@@ -40,10 +39,9 @@ class Attributes(object):
         items = self.items
         if not items:
             return ""
-        return "[{}]".format(" ".join(
-            '{}="{}"'.format(key, value)
-            for key, value in viewitems(items)
-        ))
+        return "[{}]".format(
+            " ".join('{}="{}"'.format(key, value) for key, value in viewitems(items))
+        )
 
     def join(self, other):
         """Prioritize the attributes of this object"""

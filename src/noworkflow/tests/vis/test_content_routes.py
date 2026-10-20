@@ -36,6 +36,7 @@ clickable for an added or removed write of a new file, which requests
 ``/downloadFile/null``. Measured on macOS with Python 3.11 to 3.15: none
 of it depends on the version.
 """
+
 import collections
 import hashlib
 import ntpath
@@ -54,26 +55,26 @@ from .support import EXPERIMENT, EXPERIMENT_PREFIX, Defect, known_defects
 
 SCRIPT_NAME = Defect(
     reason="#366: get_script (vis/views.py) names the "
-           "download f\"{name}.py\", while the link the frontend builds "
-           "(nowvis info/trial_info.ts) already ends in the trial's script "
-           "with its extension, so simulation.py is offered as "
-           "simulation.py.py",
+    'download f"{name}.py", while the link the frontend builds '
+    "(nowvis info/trial_info.ts) already ends in the trial's script "
+    "with its extension, so simulation.py is offered as "
+    "simulation.py.py",
     signature="'.py' appended to the script name",
 )
 FILE_NAME = Defect(
     reason="#366: get_file (vis/views.py) names the "
-           "download file_hash + file_ext with no separator, while the "
-           "frontend passes a name as file_ext (the accessed file's base "
-           "name in nowvis info/file_accesses_info.ts, the activation's "
-           "name in trial/src/graph.ts), so data1.dat is offered as "
-           "<hash>data1.dat and run_simulation as <hash>run_simulation",
+    "download file_hash + file_ext with no separator, while the "
+    "frontend passes a name as file_ext (the accessed file's base "
+    "name in nowvis info/file_accesses_info.ts, the activation's "
+    "name in trial/src/graph.ts), so data1.dat is offered as "
+    "<hash>data1.dat and run_simulation as <hash>run_simulation",
     signature="the content hash glued to the file name",
 )
 CONTENT_PATH = Defect(
     reason="#224: PlainEngine.get joins the content directory with hash[:2] "
-           "and hash[2:] without validating the hash, so every content "
-           "route of now vis serves .noworkflow/db.sqlite, the machine's "
-           "environment included, for the hash '..db.sqlite'",
+    "and hash[2:] without validating the hash, so every content "
+    "route of now vis serves .noworkflow/db.sqlite, the machine's "
+    "environment included, for the hash '..db.sqlite'",
     signature="served the store's db.sqlite",
 )
 
@@ -85,7 +86,8 @@ DB_HASH = "..db.sqlite"
 def disposition(response):
     """``(type, filename)`` of the response's Content-Disposition"""
     value, options = parse_options_header(
-        response.headers.get("Content-Disposition", ""))
+        response.headers.get("Content-Disposition", "")
+    )
     return value, options.get("filename")
 
 
@@ -93,7 +95,9 @@ def main_code_hash(project, trial):
     """The code hash of the trial's script: its main code block's"""
     rows = project.query(
         "SELECT code_hash FROM code_block WHERE trial_id = ? AND id = ?",
-        trial["id"], trial["main_id"])
+        trial["id"],
+        trial["main_id"],
+    )
     assert len(rows) == 1, "no main code block"
     return rows[0]["code_hash"]
 
@@ -101,15 +105,16 @@ def main_code_hash(project, trial):
 def script_link(project, trial):
     """The script link of the trial, as trial_info.ts builds it"""
     return "trials/{}/{}/{}".format(
-        trial["id"], main_code_hash(project, trial), trial["script"])
+        trial["id"], main_code_hash(project, trial), trial["script"]
+    )
 
 
 def stored_hashes(project):
     """Every content hash the file accesses of the store name, sorted"""
     hashes = set()
     for row in project.query(
-            "SELECT content_hash_before, content_hash_after "
-            "FROM file_access"):
+        "SELECT content_hash_before, content_hash_after FROM file_access"
+    ):
         hashes.update(value for value in row.values() if value)
     return sorted(hashes)
 
@@ -122,11 +127,10 @@ def access_links(project):
     """
     links = set()
     for row in project.query(
-            "SELECT name, content_hash_before, content_hash_after "
-            "FROM file_access"):
+        "SELECT name, content_hash_before, content_hash_after FROM file_access"
+    ):
         base = row["name"].split("/")[-1]
-        for content_hash in (row["content_hash_before"],
-                             row["content_hash_after"]):
+        for content_hash in (row["content_hash_before"], row["content_hash_after"]):
             if content_hash:
                 links.add((content_hash, base))
     assert links, "the store has no file access with content"
@@ -140,11 +144,15 @@ def activation_links(project):
     has a code block to ``/trials/files/<its code_hash>/<its name>``, both
     read from ``/trials/<tid>/activations/<aid>``.
     """
-    links = {(row["code_hash"], row["name"]) for row in project.query(
-        "SELECT activation.name, code_block.code_hash "
-        "FROM activation JOIN code_block "
-        "ON code_block.trial_id = activation.trial_id "
-        "AND code_block.id = activation.code_block_id")}
+    links = {
+        (row["code_hash"], row["name"])
+        for row in project.query(
+            "SELECT activation.name, code_block.code_hash "
+            "FROM activation JOIN code_block "
+            "ON code_block.trial_id = activation.trial_id "
+            "AND code_block.id = activation.code_block_id"
+        )
+    }
     assert links, "no activation with a code block"
     return sorted(links)
 
@@ -159,13 +167,21 @@ def absent_hash(project):
 
 def expected_files(project, trial_id):
     """What ``/files/<trial_id>`` lists, from the store, as a multiset"""
-    names = [row["name"] for row in project.query(
-        "SELECT name FROM file_access WHERE trial_id = ? AND name != 'nul'",
-        trial_id)]
-    names += [row["script"] for row in project.query(
-        "SELECT script FROM trial WHERE id = ?", trial_id)]
-    names += [ntpath.basename(row["path"]) for row in project.query(
-        "SELECT path FROM module WHERE trial_id = ?", trial_id)]
+    names = [
+        row["name"]
+        for row in project.query(
+            "SELECT name FROM file_access WHERE trial_id = ? AND name != 'nul'",
+            trial_id,
+        )
+    ]
+    names += [
+        row["script"]
+        for row in project.query("SELECT script FROM trial WHERE id = ?", trial_id)
+    ]
+    names += [
+        ntpath.basename(row["path"])
+        for row in project.query("SELECT path FROM module WHERE trial_id = ?", trial_id)
+    ]
     return collections.Counter(names)
 
 
@@ -188,13 +204,16 @@ def test_script_link_serves_the_trial_script(vis):
     for trial in vis.project.trials():
         response = vis.get("/" + script_link(vis.project, trial))
         assert response.status_code == 200, "script link: status {}".format(
-            response.status_code)
+            response.status_code
+        )
         code_hash = main_code_hash(vis.project, trial)
         assert response.get_data() == vis.project.content(code_hash), (
-            "the script link serves other bytes than its hash")
+            "the script link serves other bytes than its hash"
+        )
         script = (vis.project.path / trial["script"]).read_bytes()
         assert response.get_data() == script, (
-            "the trial's code hash is not the project's script")
+            "the trial's code hash is not the project's script"
+        )
 
 
 def test_script_link_offers_the_script_name_with_py_appended(vis):
@@ -216,8 +235,10 @@ def test_script_link_offers_the_script_name_desired(vis):
     _, filename = disposition(response)
     doubled = filename == trial["script"] + ".py"
     assert filename == trial["script"], (
-        "'.py' appended to the script name" if doubled
-        else "offered as {!r}".format(filename))
+        "'.py' appended to the script name"
+        if doubled
+        else "offered as {!r}".format(filename)
+    )
 
 
 def test_script_link_under_an_experiment_raises_type_error(vis):
@@ -226,8 +247,7 @@ def test_script_link_under_an_experiment_raises_type_error(vis):
     """
     trial = vis.project.trials()[0]
     _, prefixed = vis.routes(script_link(vis.project, trial))
-    with pytest.raises(TypeError, match="unexpected keyword argument "
-                                        "'expCode'"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'expCode'"):
         vis.get(prefixed)
 
 
@@ -249,9 +269,11 @@ def test_file_access_links_serve_the_stored_content(vis):
     for content_hash, base in access_links(vis.project):
         response = vis.get("/trials/files/{}/{}".format(content_hash, base))
         assert response.status_code == 200, "{}: status {}".format(
-            base, response.status_code)
+            base, response.status_code
+        )
         assert response.get_data() == vis.project.content(content_hash), (
-            "{}: other bytes than its hash".format(base))
+            "{}: other bytes than its hash".format(base)
+        )
 
 
 def test_file_access_links_offer_the_hash_glued_to_the_name(vis):
@@ -273,8 +295,10 @@ def test_file_access_links_offer_the_file_name_desired(vis):
         _, filename = disposition(response)
         glued = filename == content_hash + base
         assert filename == base, (
-            "the content hash glued to the file name" if glued
-            else "{} offered as {!r}".format(base, filename))
+            "the content hash glued to the file name"
+            if glued
+            else "{} offered as {!r}".format(base, filename)
+        )
 
 
 def test_activation_links_serve_the_code_block_source(vis):
@@ -284,9 +308,11 @@ def test_activation_links_serve_the_code_block_source(vis):
     for code_hash, name in activation_links(vis.project):
         response = vis.get("/trials/files/{}/{}".format(code_hash, name))
         assert response.status_code == 200, "{}: status {}".format(
-            name, response.status_code)
+            name, response.status_code
+        )
         assert response.get_data() == vis.project.content(code_hash), (
-            "{}: other bytes than its hash".format(name))
+            "{}: other bytes than its hash".format(name)
+        )
 
 
 def test_activation_links_offer_the_hash_glued_to_the_name(vis):
@@ -310,8 +336,10 @@ def test_activation_links_offer_the_activation_name_desired(vis):
         _, filename = disposition(response)
         glued = filename == code_hash + name
         assert filename == name, (
-            "the content hash glued to the file name" if glued
-            else "{} offered as {!r}".format(name, filename))
+            "the content hash glued to the file name"
+            if glued
+            else "{} offered as {!r}".format(name, filename)
+        )
 
 
 def test_file_link_under_an_experiment_raises_type_error(vis):
@@ -320,8 +348,7 @@ def test_file_link_under_an_experiment_raises_type_error(vis):
     """
     content_hash, base = access_links(vis.project)[0]
     _, prefixed = vis.routes("trials/files/{}/{}".format(content_hash, base))
-    with pytest.raises(TypeError, match="unexpected keyword argument "
-                                        "'expCode'"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'expCode'"):
         vis.get(prefixed)
 
 
@@ -329,8 +356,7 @@ def test_file_link_under_an_experiment_raises_type_error(vis):
 def test_file_link_under_an_experiment_desired(vis):
     """Under an experiment, a file link serves the same content"""
     content_hash, base = access_links(vis.project)[0]
-    plain, prefixed = vis.routes("trials/files/{}/{}".format(
-        content_hash, base))
+    plain, prefixed = vis.routes("trials/files/{}/{}".format(content_hash, base))
     response = vis.get(prefixed)
     assert response.status_code == 200
     assert response.get_data() == vis.get(plain).get_data()
@@ -352,11 +378,15 @@ def test_get_file_content_is_the_decoded_content(vis, prefixed):
         assert answer["file_content"] == expected, content_hash
 
 
-@pytest.mark.parametrize("route", [
-    "/downloadFile/{}",
-    "/experiments/{}/downloadFile/{{}}".format(EXPERIMENT),
-    "/experiments/{}/collab/files/{{}}".format(EXPERIMENT),
-], ids=["root", "experiment", "collab"])
+@pytest.mark.parametrize(
+    "route",
+    [
+        "/downloadFile/{}",
+        "/experiments/{}/downloadFile/{{}}".format(EXPERIMENT),
+        "/experiments/{}/collab/files/{{}}".format(EXPERIMENT),
+    ],
+    ids=["root", "experiment", "collab"],
+)
 def test_download_routes_serve_the_bytes(vis, route):
     """The download routes serve the stored bytes as octet-stream, with no
     file name: the function diff window names the download with its link's
@@ -366,11 +396,11 @@ def test_download_routes_serve_the_bytes(vis, route):
     for content_hash in stored_hashes(vis.project):
         response = vis.get(route.format(content_hash))
         assert response.status_code == 200, "{}: status {}".format(
-            content_hash, response.status_code)
+            content_hash, response.status_code
+        )
         assert response.mimetype == "application/octet-stream"
         assert "Content-Disposition" not in response.headers
-        assert response.get_data() == vis.project.content(content_hash), (
-            content_hash)
+        assert response.get_data() == vis.project.content(content_hash), content_hash
 
 
 CONTENT_ROUTES = {
@@ -388,7 +418,8 @@ def test_absent_hash_raises_file_not_found(vis, route):
     ``FileNotFoundError`` (``now vis`` answers 500) on every content route
     """
     url = CONTENT_ROUTES[route].format(
-        tid=vis.trial_ids[0], hash=absent_hash(vis.project))
+        tid=vis.trial_ids[0], hash=absent_hash(vis.project)
+    )
     with pytest.raises(FileNotFoundError):
         vis.get(url)
 
@@ -427,8 +458,7 @@ def test_dot_dot_hash_serves_the_store_database(vis, route):
 
 @pytest.mark.parametrize("route", sorted(CONTENT_ROUTES))
 @known_defects(CONTENT_PATH)
-def test_rejects_a_content_hash_outside_the_content_directory_desired(
-        vis, route):
+def test_rejects_a_content_hash_outside_the_content_directory_desired(vis, route):
     """A content route answers a client error, and no bytes, for a hash
     that names a file outside the content directory
     """
@@ -463,7 +493,8 @@ def test_files_names_a_module_recorded_with_backslashes(project, vis_for):
     build_weather(project)
     with project.db() as connection:
         (row,) = connection.execute(
-            "SELECT trial_id, id, path FROM module LIMIT 1").fetchall()
+            "SELECT trial_id, id, path FROM module LIMIT 1"
+        ).fetchall()
     name = ntpath.basename(row["path"])
     windows = "C:\\Users\\nowtest\\project\\" + name
     connection = sqlite3.connect(str(project.store / "db.sqlite"))
@@ -471,7 +502,8 @@ def test_files_names_a_module_recorded_with_backslashes(project, vis_for):
         with connection:
             connection.execute(
                 "UPDATE module SET path = ? WHERE trial_id = ? AND id = ?",
-                (windows, row["trial_id"], row["id"]))
+                (windows, row["trial_id"], row["id"]),
+            )
     finally:
         connection.close()
     vis = vis_for(project)

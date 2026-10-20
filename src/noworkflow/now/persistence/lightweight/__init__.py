@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight Models"""
+
 from __future__ import absolute_import, division, print_function
 
 from .activation import ActivationLW

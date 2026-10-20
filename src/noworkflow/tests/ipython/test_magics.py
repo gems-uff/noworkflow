@@ -26,6 +26,7 @@ Each known defect has a characterization named after the scenario and a
 machine's hostname (``trial.user_id``): trials are compared field by field
 and never printed.
 """
+
 import importlib.util
 import os
 import sys
@@ -115,23 +116,32 @@ def formatted(shell, value):
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         data, _ = shell.ip.display_formatter.format(value)
-    return data, [str(warning.message) for warning in caught
-                  if issubclass(warning.category, FormatterWarning)]
+    return data, [
+        str(warning.message)
+        for warning in caught
+        if issubclass(warning.category, FormatterWarning)
+    ]
 
 
 def read_files(project):
     """``{name: text}`` of the project's files"""
-    return {name: (project.path / name).read_text(encoding="utf-8")
-            for name in project.files()}
+    return {
+        name: (project.path / name).read_text(encoding="utf-8")
+        for name in project.files()
+    }
 
 
 def backup_code_hashes(project):
     """The hash of the main code of every backup trial, in order"""
-    return [row["code_hash"] for row in project.query(
-        "SELECT code_block.code_hash FROM trial JOIN code_block "
-        "ON code_block.id = trial.main_id "
-        "AND code_block.trial_id = trial.id "
-        "WHERE trial.status = 'backup' ORDER BY trial.sequence_key")]
+    return [
+        row["code_hash"]
+        for row in project.query(
+            "SELECT code_block.code_hash FROM trial JOIN code_block "
+            "ON code_block.id = trial.main_id "
+            "AND code_block.trial_id = trial.id "
+            "WHERE trial.status = 'backup' ORDER BY trial.sequence_key"
+        )
+    ]
 
 
 def restore_from_elsewhere(shell):
@@ -160,10 +170,11 @@ def test_now_sql_on_a_store_with_trials(shell):
     """``%%now_sql`` fails on a query that returns rows, whatever the rows
     (characterization of #314)"""
     two_trials(shell.project)
-    ran(shell,
+    ran(
+        shell,
         "%%now_sql\nSELECT script, status FROM trial ORDER BY sequence_key",
-        "AttributeError: "
-        "Could not locate column in row for column 'values'")
+        "AttributeError: Could not locate column in row for column 'values'",
+    )
 
 
 @known_defects(SQL_ROWS)
@@ -175,8 +186,10 @@ def test_now_sql_on_a_store_with_trials_desired(shell):
         "%%now_sql\nSELECT script, status FROM trial ORDER BY sequence_key",
     ).result
     assert [list(row) for row in result] == [
-        ["script", "status"], ["script.py", "finished"],
-        ["named", "finished"]]
+        ["script", "status"],
+        ["script.py", "finished"],
+        ["named", "finished"],
+    ]
 
 
 def test_now_sql_stores_the_rows_with_result(shell):
@@ -188,7 +201,8 @@ def test_now_sql_stores_the_rows_with_result(shell):
     result = ran(
         shell,
         "%%now_sql --result rows\n"
-        "SELECT script, status FROM trial WHERE sequence_key = $key").result
+        "SELECT script, status FROM trial WHERE sequence_key = $key",
+    ).result
     assert result is None
     rows = shell.user_ns["rows"]
     assert isinstance(rows, list)
@@ -245,14 +259,17 @@ def test_now_schema_prolog_text_in_a_store_without_trials_desired(shell):
 
 def test_now_schema_without_a_type(shell):
     """``%now_schema`` alone is a usage error that asks for the type"""
-    ran(shell, "%now_schema",
-        "UsageError: the following arguments are required: type")
+    ran(shell, "%now_schema", "UsageError: the following arguments are required: type")
 
 
-@pytest.mark.parametrize("line, mimetype", [
-    ("sql", "image/svg+xml"),
-    ("prolog --format png", "image/png"),
-], ids=["sql svg", "prolog png"])
+@pytest.mark.parametrize(
+    "line, mimetype",
+    [
+        ("sql", "image/svg+xml"),
+        ("prolog --format png", "image/png"),
+    ],
+    ids=["sql svg", "prolog png"],
+)
 def test_now_schema_diagram(shell, line, mimetype):
     """A diagram of ``%now_schema`` shows as text only: its image repr
     returns the ``%%dot`` display object, which IPython's formatter drops
@@ -261,17 +278,25 @@ def test_now_schema_diagram(shell, line, mimetype):
     shell.ok("diagram = %now_schema " + line)
     data, caught = formatted(shell, shell.user_ns["diagram"])
     assert sorted(data) == ["text/plain"]
-    dropped = any(mimetype in message and "returned invalid type" in message
-                  and "DotDisplay" in message for message in caught)
+    dropped = any(
+        mimetype in message
+        and "returned invalid type" in message
+        and "DotDisplay" in message
+        for message in caught
+    )
     assert dropped, "\n".join(caught)
 
 
 @needs_dot
 @known_defects(DIAGRAM)
-@pytest.mark.parametrize("line, mimetype, start", [
-    ("sql", "image/svg+xml", "<svg"),
-    ("prolog --format png", "image/png", b"\x89PNG"),
-], ids=["sql svg", "prolog png"])
+@pytest.mark.parametrize(
+    "line, mimetype, start",
+    [
+        ("sql", "image/svg+xml", "<svg"),
+        ("prolog --format png", "image/png", b"\x89PNG"),
+    ],
+    ids=["sql svg", "prolog png"],
+)
 def test_now_schema_diagram_desired(shell, line, mimetype, start):
     """A diagram of ``%now_schema`` shows as the image of its format"""
     shell.ok("diagram = %now_schema " + line)
@@ -302,7 +327,9 @@ def test_now_restore_of_the_last_trial(shell):
     assert result == SCRIPT_V1
     assert read_files(project) == {"script.py": SCRIPT_V1}
     assert scripts_and_statuses(project) == [
-        ("script.py", "finished"), ("script.py", "backup")]
+        ("script.py", "finished"),
+        ("script.py", "backup"),
+    ]
     assert backup_code_hashes(project) == [sha1(SCRIPT_V2.encode())]
     assert lines[0] == "[now] script.py has changed"
     assert lines[-1].startswith("[now] File script.py from trial ")
@@ -321,8 +348,7 @@ def test_now_restore_of_a_trial_run_with_a_name(shell):
     result, lines = cell.result, cell.messages.splitlines()
     assert result == SCRIPT_V1
     assert read_files(project) == {"named": SCRIPT_V1, "script.py": SCRIPT_V2}
-    assert scripts_and_statuses(project) == [
-        ("named", "finished"), ("named", "backup")]
+    assert scripts_and_statuses(project) == [("named", "finished"), ("named", "backup")]
     assert backup_code_hashes(project) == [sha1(b"")]
     assert lines[0] == "[now] named has changed"
 
@@ -386,7 +412,9 @@ def test_now_restore_with_the_dir_of_another_project(shell):
     assert read_files(shell.project) == {"script.py": SCRIPT_V1}
     assert read_files(other) == {"script.py": SCRIPT_V2}
     assert scripts_and_statuses(other) == [
-        ("script.py", "finished"), ("script.py", "backup")]
+        ("script.py", "finished"),
+        ("script.py", "backup"),
+    ]
     assert trial_count(shell.project) == 0
     assert lines[0] == "[now] script.py has changed"
     assert lines[-1].startswith("[now] File script.py from trial ")
@@ -411,7 +439,8 @@ def test_now_restore_with_a_dir_without_a_store(shell):
         cell = ran(shell, "%now_restore --dir ../elsewhere", "SystemExit: 1")
     messages = cell.messages
     assert messages == (
-        "[now] there is no provenance store in the informed directory\n")
+        "[now] there is no provenance store in the informed directory\n"
+    )
     assert ran(shell, "1 + 1").result == 2
 
 
@@ -427,7 +456,8 @@ def test_now_ls_magic_lists_the_magics(shell):
         "%now_set_default\n"
         "\n"
         "Cell magics:\n"
-        "%%now_prolog  %%now_run  %%now_sql")
+        "%%now_prolog  %%now_run  %%now_sql"
+    )
 
 
 def test_now_ip_returns_the_ipython_module(shell):
@@ -435,8 +465,11 @@ def test_now_ip_returns_the_ipython_module(shell):
     ``%now_ipython`` is not a magic"""
     ran(shell, "nip = %now_ip")
     assert shell.user_ns["nip"] is sys.modules["noworkflow.now.ipython"]
-    ran(shell, "%now_ipython",
-        "UsageError: Line magic function `%now_ipython` not found.")
+    ran(
+        shell,
+        "%now_ipython",
+        "UsageError: Line magic function `%now_ipython` not found.",
+    )
 
 
 # --- %now_set_default ----------------------------------------------------------
@@ -447,12 +480,12 @@ def test_now_set_default_changes_the_defaults_of_the_models(shell):
     it; ``--model`` limits it to one model, whose names may use ``_``
     for ``.``"""
     models = MetaModel.__classes__
-    with_width = sorted(name for name, model in models.items()
-                        if "graph.width" in model.DEFAULT)
+    with_width = sorted(
+        name for name, model in models.items() if "graph.width" in model.DEFAULT
+    )
     assert len(with_width) > 1
     shell.ok("%now_set_default graph.width=200")
-    widths = {name: models[name].DEFAULT["graph.width"]
-              for name in with_width}
+    widths = {name: models[name].DEFAULT["graph.width"] for name in with_width}
     assert widths == {name: 200 for name in with_width}
     trial_height = models["Trial"].DEFAULT["graph.height"]
     shell.ok("%now_set_default --model History graph_height=99")
@@ -487,8 +520,11 @@ def test_now_set_default_with_a_boolean_and_a_decimal_desired(shell):
 @pytest.mark.skipif(HAS_PYSWIP, reason="pyswip is installed")
 def test_now_prolog_without_pyswip(shell):
     """Without pyswip, ``%%now_prolog`` fails naming the missing module"""
-    ran(shell, "%%now_prolog\nX is 6 * 7",
-        "ModuleNotFoundError: No module named 'pyswip'")
+    ran(
+        shell,
+        "%%now_prolog\nX is 6 * 7",
+        "ModuleNotFoundError: No module named 'pyswip'",
+    )
 
 
 def test_now_prolog_queries_swi_prolog(shell):

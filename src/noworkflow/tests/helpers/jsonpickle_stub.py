@@ -17,6 +17,7 @@ puts a module built from the same text into ``sys.modules`` of the test
 process and records each call, and ``encode`` is that same function, for
 computing what the stub returned to the code under test.
 """
+
 import sys
 import types
 

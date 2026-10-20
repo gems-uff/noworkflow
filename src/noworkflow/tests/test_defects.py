@@ -7,6 +7,7 @@ The decorated function is called directly, so each outcome is observed
 without the xfail mark absorbing it: the mark itself is read from the
 function.
 """
+
 import sys
 
 import pytest
@@ -14,13 +15,13 @@ import pytest
 from noworkflow.tests.helpers.defects import Defect, known_defects
 
 HERE = Defect("#NNN: an example mechanism", "KeyError: 'spam'")
-ELSEWHERE = Defect("#NNN: an example mechanism", "KeyError: 'spam'",
-                   before=(3, 0))
+ELSEWHERE = Defect("#NNN: an example mechanism", "KeyError: 'spam'", before=(3, 0))
 
 
 def raises(error):
     def test():
         raise error
+
     return test
 
 
@@ -30,9 +31,16 @@ def marks(test):
 
 def test_a_defect_that_applies_marks_the_test_strict_xfail():
     decorated = known_defects(HERE)(raises(AssertionError("x")))
-    assert marks(decorated) == [("xfail", {
-        "strict": True, "raises": AssertionError,
-        "reason": "#NNN: an example mechanism"})]
+    assert marks(decorated) == [
+        (
+            "xfail",
+            {
+                "strict": True,
+                "raises": AssertionError,
+                "reason": "#NNN: an example mechanism",
+            },
+        )
+    ]
 
 
 def test_an_assertion_with_the_signature_stays_an_assertion():

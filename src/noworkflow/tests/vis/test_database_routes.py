@@ -31,6 +31,7 @@ characterized here without a twin. Known defects with a ``_desired`` twin:
 Their mechanisms are plain Python and SQLite, the same on every version
 (measured on macOS with Python 3.11 to 3.15).
 """
+
 import json
 import sqlite3
 
@@ -40,24 +41,24 @@ from .support import Defect, known_defects
 
 QUERY_KEYWORD_SUBSTRING = Defect(
     reason="#366: db_query refuses a query "
-           "whenever its upper-cased text contains BEGIN, COMMIT, ROLLBACK, "
-           "SAVEPOINT, RELEASE or TRANSACTION anywhere, so a read-only "
-           "SELECT that names the OS_RELEASE environment attribute or has "
-           "one of those words in a string literal answers 400",
+    "whenever its upper-cased text contains BEGIN, COMMIT, ROLLBACK, "
+    "SAVEPOINT, RELEASE or TRANSACTION anywhere, so a read-only "
+    "SELECT that names the OS_RELEASE environment attribute or has "
+    "one of those words in a string literal answers 400",
     signature="which is not allowed",
 )
 QUERY_END = Defect(
     reason="#366: db_query does not refuse END, SQLite's "
-           "synonym of COMMIT, so it commits the route's own BEGIN and the "
-           "ROLLBACK in the route's finally raises OperationalError: the "
-           "route answers 500 (and skips closing its connection)",
+    "synonym of COMMIT, so it commits the route's own BEGIN and the "
+    "ROLLBACK in the route's finally raises OperationalError: the "
+    "route answers 500 (and skips closing its connection)",
     signature="cannot rollback - no transaction is active",
 )
 QUERY_DUPLICATE_COLUMNS = Defect(
     reason="#362: db_query builds each row as "
-           "dict(zip(columns, row)), so when two columns share a name "
-           "(SELECT * over a join, as the database widget builds) only the "
-           "last one's value reaches the response, under both columns",
+    "dict(zip(columns, row)), so when two columns share a name "
+    "(SELECT * over a join, as the database widget builds) only the "
+    "last one's value reaches the response, under both columns",
     signature="lose the values of a duplicated column name",
 )
 
@@ -85,19 +86,28 @@ def query_json(vis, sql, status=200):
     response = post_query(vis, {"query": sql})
     assert response.mimetype == "application/json", (
         "POST /db/query: status {}, {}, expected JSON".format(
-            response.status_code, response.mimetype))
+            response.status_code, response.mimetype
+        )
+    )
     body = json.loads(response.get_data(as_text=True))
     assert response.status_code == status, (
         "POST /db/query: status {}, expected {}; error: {}".format(
-            response.status_code, status,
-            body.get("error") if isinstance(body, dict) else None))
+            response.status_code,
+            status,
+            body.get("error") if isinstance(body, dict) else None,
+        )
+    )
     return body
 
 
 def table_names(project, order=" ORDER BY name"):
     """The tables of the store, by the SQL the routes use"""
-    return [row["name"] for row in project.query(
-        "SELECT name FROM sqlite_master WHERE type='table'" + order)]
+    return [
+        row["name"]
+        for row in project.query(
+            "SELECT name FROM sqlite_master WHERE type='table'" + order
+        )
+    ]
 
 
 def foreign_keys(project, table):
@@ -123,10 +133,12 @@ def answer_values(answer):
     Today a row is a dict keyed by column name; a fix may send lists or
     rename repeated names, and the desired twins accept either.
     """
+
     def values(row):
         if isinstance(row, dict):
             return tuple(row.get(column) for column in answer["columns"])
         return tuple(row)
+
     return [values(row) for row in answer["rows"]]
 
 
@@ -167,30 +179,39 @@ def test_table_info_matches_pragma_for_every_table(vis):
     every_table = table_names(project, order="")
     for table in every_table:
         info = vis.json("/db/table/" + table)
-        columns = [{
-            "name": column["name"],
-            "type": column["type"],
-            "notnull": bool(column["notnull"]),
-            "default": column["dflt_value"],
-            "pk": bool(column["pk"]),
-        } for column in project.query(
-            'PRAGMA table_info("{}")'.format(table))]
-        referenced_by = [{
-            "referencing_table": other,
-            "referencing_column": key["from"],
-            "referenced_column": key["to"],
-            "on_update": key["on_update"],
-            "on_delete": key["on_delete"],
-        } for other in every_table if other != table
-            for key in foreign_keys(project, other) if key["table"] == table]
+        columns = [
+            {
+                "name": column["name"],
+                "type": column["type"],
+                "notnull": bool(column["notnull"]),
+                "default": column["dflt_value"],
+                "pk": bool(column["pk"]),
+            }
+            for column in project.query('PRAGMA table_info("{}")'.format(table))
+        ]
+        referenced_by = [
+            {
+                "referencing_table": other,
+                "referencing_column": key["from"],
+                "referenced_column": key["to"],
+                "on_update": key["on_update"],
+                "on_delete": key["on_delete"],
+            }
+            for other in every_table
+            if other != table
+            for key in foreign_keys(project, other)
+            if key["table"] == table
+        ]
         assert set(info) == {"columns", "foreign_keys", "referenced_by"}, (
-            "/db/table/{}: keys {}".format(table, sorted(info)))
-        assert info["columns"] == columns, "/db/table/{}: columns".format(
-            table)
+            "/db/table/{}: keys {}".format(table, sorted(info))
+        )
+        assert info["columns"] == columns, "/db/table/{}: columns".format(table)
         assert info["foreign_keys"] == foreign_keys(project, table), (
-            "/db/table/{}: foreign keys".format(table))
+            "/db/table/{}: foreign keys".format(table)
+        )
         assert info["referenced_by"] == referenced_by, (
-            "/db/table/{}: referenced_by".format(table))
+            "/db/table/{}: referenced_by".format(table)
+        )
 
 
 def test_table_info_of_the_trial_table_names_its_referencing_tables(vis):
@@ -220,8 +241,9 @@ def test_table_info_with_a_quote_answers_the_sql_error_with_200(vis, name):
     """
     info = vis.json("/db/table/" + name)
     assert set(info) == {"error"}, "keys {}".format(sorted(info))
-    assert "syntax error" in info["error"] or "unrecognized token" in (
-        info["error"]), "not a syntax error: {}".format(info["error"])
+    assert "syntax error" in info["error"] or "unrecognized token" in (info["error"]), (
+        "not a syntax error: {}".format(info["error"])
+    )
 
 
 # --- /db/query: what it answers ---------------------------------------------
@@ -231,8 +253,7 @@ def test_query_select_returns_the_columns_and_rows_of_the_same_sql(vis):
     """A SELECT answers its columns, and one dict per row equal to the same
     SQL on the store (the shared store's check proves it wrote nothing)
     """
-    sql = ("SELECT id, sequence_key, script, status FROM trial "
-           "ORDER BY sequence_key")
+    sql = "SELECT id, sequence_key, script, status FROM trial ORDER BY sequence_key"
     answer = query_json(vis, sql)
     expected = vis.project.query(sql)
     assert answer["columns"] == ["id", "sequence_key", "script", "status"]
@@ -248,14 +269,19 @@ def test_query_select_star_of_one_table_gives_every_column_in_order(vis):
     columns, rows = sql_result(vis.project, sql)
     answer = query_json(vis, sql)
     assert answer["columns"] == columns
-    assert [tuple(row[column] for column in columns)
-            for row in answer["rows"]] == rows
+    assert [tuple(row[column] for column in columns) for row in answer["rows"]] == rows
     assert len(rows) == len(vis.trial_ids), "one automatic tag per trial"
 
 
-@pytest.mark.parametrize("body", [
-    {"query": ""}, {"query": "  \n\t"}, {},
-], ids=["empty", "blank", "missing"])
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"query": ""},
+        {"query": "  \n\t"},
+        {},
+    ],
+    ids=["empty", "blank", "missing"],
+)
 def test_query_without_text_answers_400(vis, body):
     """An empty, blank or missing query answers 400 with an error"""
     response = post_query(vis, body)
@@ -264,16 +290,19 @@ def test_query_without_text_answers_400(vis, body):
     assert answer == {"error": "No query provided"}
 
 
-@pytest.mark.parametrize("sql, keyword", [
-    ("BEGIN", "BEGIN"),
-    ("BEGIN TRANSACTION", "BEGIN"),
-    ("COMMIT", "COMMIT"),
-    ("commit", "COMMIT"),
-    ("ROLLBACK", "ROLLBACK"),
-    ("SAVEPOINT s", "SAVEPOINT"),
-    ("RELEASE s", "RELEASE"),
-    ("COMMIT TRANSACTION", "COMMIT"),
-])
+@pytest.mark.parametrize(
+    "sql, keyword",
+    [
+        ("BEGIN", "BEGIN"),
+        ("BEGIN TRANSACTION", "BEGIN"),
+        ("COMMIT", "COMMIT"),
+        ("commit", "COMMIT"),
+        ("ROLLBACK", "ROLLBACK"),
+        ("SAVEPOINT s", "SAVEPOINT"),
+        ("RELEASE s", "RELEASE"),
+        ("COMMIT TRANSACTION", "COMMIT"),
+    ],
+)
 def test_query_with_a_transaction_statement_answers_400(vis, sql, keyword):
     """A statement that controls the transaction is refused before it
     reaches SQLite, in any case, with an error naming the keyword
@@ -284,11 +313,15 @@ def test_query_with_a_transaction_statement_answers_400(vis, sql, keyword):
     assert "not allowed" in answer["error"]
 
 
-@pytest.mark.parametrize("sql, fragment", [
-    ("SELECT * FROM no_such_table", "no such table"),
-    ("SELECT 1; SELECT 2", "one statement at a time"),
-    ("SELEKT 1", "syntax error"),
-], ids=["unknown-table", "two-statements", "syntax"])
+@pytest.mark.parametrize(
+    "sql, fragment",
+    [
+        ("SELECT * FROM no_such_table", "no such table"),
+        ("SELECT 1; SELECT 2", "one statement at a time"),
+        ("SELEKT 1", "syntax error"),
+    ],
+    ids=["unknown-table", "two-statements", "syntax"],
+)
 def test_query_error_answers_200_with_sqlites_error(vis, sql, fragment):
     """SQL that SQLite rejects answers 200 with only its error, which the
     query widget shows; a second statement is never run
@@ -301,15 +334,18 @@ def test_query_error_answers_200_with_sqlites_error(vis, sql, fragment):
 # --- /db/query: writes and transactions -------------------------------------
 
 
-@pytest.mark.parametrize("sql", [
-    "DELETE FROM trial",
-    "UPDATE trial SET script = 'other.py'",
-    "INSERT INTO remote (server_url, name, used, hide) "
-    "VALUES ('http://remote.invalid/experiments/x', 'x', 0, 0)",
-    "DROP TABLE tag",
-], ids=["delete", "update", "insert", "drop"])
-def test_query_write_is_rolled_back_and_leaves_the_store_unchanged(
-        vis_own, sql):
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "DELETE FROM trial",
+        "UPDATE trial SET script = 'other.py'",
+        "INSERT INTO remote (server_url, name, used, hide) "
+        "VALUES ('http://remote.invalid/experiments/x', 'x', 0, 0)",
+        "DROP TABLE tag",
+    ],
+    ids=["delete", "update", "insert", "drop"],
+)
+def test_query_write_is_rolled_back_and_leaves_the_store_unchanged(vis_own, sql):
     """A statement that writes runs inside the route's transaction, which
     is rolled back: it answers no rows and the store stays as it was
     """
@@ -320,8 +356,7 @@ def test_query_write_is_rolled_back_and_leaves_the_store_unchanged(
     same = vis_own.project.fingerprint() == before
     assert same, "{} changed the store".format(sql.split()[0])
     assert vis_own.trial_ids == trial_ids
-    assert table_names(vis_own.project) == vis_own.json(
-        "/db/tables")["tables"]
+    assert table_names(vis_own.project) == vis_own.json("/db/tables")["tables"]
 
 
 def test_query_write_followed_by_end_is_not_committed(vis_own):
@@ -342,8 +377,9 @@ def test_query_end_crashes_after_committing_only_the_routes_begin(vis_own):
     nothing was written
     """
     before = vis_own.project.fingerprint()
-    with pytest.raises(sqlite3.OperationalError,
-                       match="cannot rollback - no transaction is active"):
+    with pytest.raises(
+        sqlite3.OperationalError, match="cannot rollback - no transaction is active"
+    ):
         post_query(vis_own, {"query": "END"})
     same = vis_own.project.fingerprint() == before
     assert same, "END changed the store"
@@ -357,7 +393,8 @@ def test_query_end_desired(vis_own):
     before = vis_own.project.fingerprint()
     response = post_query(vis_own, {"query": "END"})
     assert response.status_code < 500, "POST /db/query: status {}".format(
-        response.status_code)
+        response.status_code
+    )
     answer = json.loads(response.get_data(as_text=True))
     assert "error" in answer, "END was not refused"
     same = vis_own.project.fingerprint() == before
@@ -367,16 +404,15 @@ def test_query_end_desired(vis_own):
 # --- /db/query: known defects -----------------------------------------------
 
 KEYWORD_AS_TEXT = [
-    ("SELECT COUNT(*) AS n FROM environment_attr WHERE name = 'OS_RELEASE'",
-     "RELEASE"),
+    ("SELECT COUNT(*) AS n FROM environment_attr WHERE name = 'OS_RELEASE'", "RELEASE"),
     ("SELECT 'commit' AS word", "COMMIT"),
 ]
 
 
-@pytest.mark.parametrize("sql, keyword", KEYWORD_AS_TEXT,
-                         ids=["attribute-name", "string-literal"])
-def test_query_refuses_a_select_with_a_keyword_inside_its_text(
-        vis, sql, keyword):
+@pytest.mark.parametrize(
+    "sql, keyword", KEYWORD_AS_TEXT, ids=["attribute-name", "string-literal"]
+)
+def test_query_refuses_a_select_with_a_keyword_inside_its_text(vis, sql, keyword):
     """A SELECT whose text merely contains a transaction keyword (an
     attribute name, a string literal) is refused with 400
     """
@@ -384,19 +420,19 @@ def test_query_refuses_a_select_with_a_keyword_inside_its_text(
     assert "keyword '{}'".format(keyword) in answer["error"]
 
 
-@pytest.mark.parametrize("sql, keyword", KEYWORD_AS_TEXT,
-                         ids=["attribute-name", "string-literal"])
+@pytest.mark.parametrize(
+    "sql, keyword", KEYWORD_AS_TEXT, ids=["attribute-name", "string-literal"]
+)
 @known_defects(QUERY_KEYWORD_SUBSTRING)
-def test_query_select_with_a_keyword_inside_its_text_desired(
-        vis, sql, keyword):
+def test_query_select_with_a_keyword_inside_its_text_desired(vis, sql, keyword):
     """A SELECT that only mentions a transaction keyword as text answers
     the rows of the same SQL on the store
     """
     response = post_query(vis, {"query": sql})
     answer = json.loads(response.get_data(as_text=True))
-    assert response.status_code == 200, (
-        "POST /db/query: status {}, refused: {}".format(
-            response.status_code, answer.get("error")))
+    assert response.status_code == 200, "POST /db/query: status {}, refused: {}".format(
+        response.status_code, answer.get("error")
+    )
     columns, rows = sql_result(vis.project, sql)
     assert answer["columns"] == columns, keyword
     assert answer_values(answer) == rows, keyword
@@ -413,12 +449,10 @@ def test_query_keeps_one_value_per_column_name(vis):
     answer = query_json(vis, JOIN_QUERY)
     assert answer["columns"] == columns
     assert len(answer["rows"]) == len(rows)
-    last = {name: len(columns) - 1 - columns[::-1].index(name)
-            for name in duplicated}
+    last = {name: len(columns) - 1 - columns[::-1].index(name) for name in duplicated}
     for row, expected in zip(answer["rows"], rows):
         assert len(row) == len(set(columns)) < len(columns)
-        same = all(row[name] == expected[index]
-                   for name, index in last.items())
+        same = all(row[name] == expected[index] for name, index in last.items())
         assert same, "a duplicated name does not hold its last column"
 
 
@@ -436,30 +470,34 @@ def test_query_keeps_every_column_desired(vis):
     assert len(answer["columns"]) == len(columns), "a column is missing"
     values = answer_values(answer)
     assert len(values) == len(rows), "a row is missing"
-    repeated = [index for index, name in enumerate(columns)
-                if columns.count(name) > 1]
-    unique = [index for index in range(len(columns))
-              if index not in repeated]
-    same_unique = all(got[index] == expected[index]
-                      for got, expected in zip(values, rows)
-                      for index in unique)
+    repeated = [index for index, name in enumerate(columns) if columns.count(name) > 1]
+    unique = [index for index in range(len(columns)) if index not in repeated]
+    same_unique = all(
+        got[index] == expected[index]
+        for got, expected in zip(values, rows)
+        for index in unique
+    )
     assert same_unique, "a column whose name is unique differs from the SQL"
     same = values == rows
     assert same, "the rows {} ({})".format(
         QUERY_DUPLICATE_COLUMNS.signature,
-        sorted({columns[index] for index in repeated}))
+        sorted({columns[index] for index in repeated}),
+    )
 
 
 # --- /db/query: request bodies the widget never sends -----------------------
 
 
-@pytest.mark.parametrize("body, error", [
-    ("null", "'NoneType' object has no attribute 'get'"),
-    ('["SELECT 1"]', "'list' object has no attribute 'get'"),
-    ('{"query": 1}', "'int' object has no attribute 'strip'"),
-], ids=["null", "list", "number"])
-def test_query_with_a_body_that_is_not_an_object_with_text_crashes(
-        vis, body, error):
+@pytest.mark.parametrize(
+    "body, error",
+    [
+        ("null", "'NoneType' object has no attribute 'get'"),
+        ('["SELECT 1"]', "'list' object has no attribute 'get'"),
+        ('{"query": 1}', "'int' object has no attribute 'strip'"),
+    ],
+    ids=["null", "list", "number"],
+)
+def test_query_with_a_body_that_is_not_an_object_with_text_crashes(vis, body, error):
     """JSON that is not an object with a string ``query`` crashes the
     route (robustness: the query widget always sends one)
     """
@@ -469,6 +507,5 @@ def test_query_with_a_body_that_is_not_an_object_with_text_crashes(
 
 def test_query_with_a_body_that_is_not_json_answers_415(vis):
     """A body without the JSON media type is refused by Flask with 415"""
-    response = vis.post("/db/query", data="SELECT 1",
-                        content_type="text/plain")
+    response = vis.post("/db/query", data="SELECT 1", content_type="text/plain")
     assert response.status_code == 415

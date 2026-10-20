@@ -21,6 +21,7 @@ The threading wrapper loses a write that fails (the thread's exception goes
 to ``threading.excepthook``), and the plain wrappers crash at the first
 ``put``; each has a characterization and a ``_desired`` twin.
 """
+
 import os
 import subprocess
 import threading
@@ -55,39 +56,47 @@ WRITE_LOST = Defect(
     "returns the hash without collecting the thread's exception, so a "
     "failed write is reported to threading.excepthook and the content is "
     "never stored",
-    signature="threading.excepthook received ['FileNotFoundError']")
+    signature="threading.excepthook received ['FileNotFoundError']",
+)
 # Windows reports a missing cwd of Popen with another OSError subclass.
 MISSING_CWD_NOT_MEASURED = pytest.mark.skipif(
-    os.name == "nt", reason="not measured on Windows: the error of Popen "
-    "with a missing cwd")
+    os.name == "nt",
+    reason="not measured on Windows: the error of Popen with a missing cwd",
+)
 PLAIN_WRAPPER = Defect(
     "#353: the parallel wrappers return "
     "self._get_hash_from_content(content), which only "
     "GitContentDatabaseEngine defines",
-    signature="object has no attribute '_get_hash_from_content'")
+    signature="object has no attribute '_get_hash_from_content'",
+)
 
 
 @pytest.fixture
 def thread_errors(monkeypatch):
     """The exception types ``threading.excepthook`` receives in the test"""
     errors = []
-    monkeypatch.setattr(threading, "excepthook",
-                        lambda args: errors.append(args.exc_type.__name__))
+    monkeypatch.setattr(
+        threading, "excepthook", lambda args: errors.append(args.exc_type.__name__)
+    )
     return errors
 
 
 def test_wrapper_classes_are_named_after_the_engine():
     """Each wrapper is named after the engine it wraps, unless a name is
     given (classes only: nothing is started)"""
-    assert [create(PureGitEngine).__name__ for create in (
-        create_distributed, create_pool, create_threading)] == [
-        "DistributedPureGitEngine", "PoolPureGitEngine",
-        "ThreadingPureGitEngine"]
+    assert [
+        create(PureGitEngine).__name__
+        for create in (create_distributed, create_pool, create_threading)
+    ] == ["DistributedPureGitEngine", "PoolPureGitEngine", "ThreadingPureGitEngine"]
     assert create_threading(PureGitEngine, name="Custom").__name__ == "Custom"
-    assert [cls.__name__ for cls in (
-        plain_engine.DistributedPlainEngine, plain_engine.PoolPlainEngine,
-        plain_engine.ThreadingPlainEngine)] == [
-        "DistributedPlainEngine", "PoolPlainEngine", "ThreadingPlainEngine"]
+    assert [
+        cls.__name__
+        for cls in (
+            plain_engine.DistributedPlainEngine,
+            plain_engine.PoolPlainEngine,
+            plain_engine.ThreadingPlainEngine,
+        )
+    ] == ["DistributedPlainEngine", "PoolPlainEngine", "ThreadingPlainEngine"]
 
 
 def test_null_lock_is_a_no_op():
@@ -105,21 +114,25 @@ def test_threading_wrapper_round_trips(project_dir):
     content reads back and the commit lists the five files"""
     PUREGIT.skip_if_unavailable()
     engine = open_store(project_dir, THREADING_PUREGIT).content_database_engine
-    contents = {"f{}.txt".format(number): b"thread %d\n" % number
-                for number in range(5)}
+    contents = {
+        "f{}.txt".format(number): b"thread %d\n" % number for number in range(5)
+    }
 
-    hashes = {name: engine.put(content, str(project_dir / name))
-              for name, content in contents.items()}
+    hashes = {
+        name: engine.put(content, str(project_dir / name))
+        for name, content in contents.items()
+    }
     engine.close()
 
-    assert hashes == {name: git_blob_hex(content)
-                      for name, content in contents.items()}
+    assert hashes == {name: git_blob_hex(content) for name, content in contents.items()}
     assert {name: engine.get(hashes[name]) for name in contents} == contents
     commit = engine.commit_content("m")
-    assert git_text("ls-tree", "--name-only", commit,
-                    cwd=os.path.join(provenance_of(project_dir),
-                                     "content.git")).splitlines() == sorted(
-        contents)
+    assert git_text(
+        "ls-tree",
+        "--name-only",
+        commit,
+        cwd=os.path.join(provenance_of(project_dir), "content.git"),
+    ).splitlines() == sorted(contents)
 
 
 def put_that_cannot_write(engine, project_dir, missing):
@@ -137,7 +150,8 @@ def put_that_cannot_write(engine, project_dir, missing):
 
 @MISSING_CWD_NOT_MEASURED
 def test_threading_wrapper_when_the_write_fails(
-        project_dir, isolated_git, thread_errors):
+    project_dir, isolated_git, thread_errors
+):
     """A write that fails in the thread is lost: ``put`` returns the hash,
     ``close`` returns, the error goes to ``threading.excepthook``, and the
     content is not in the store"""
@@ -145,7 +159,8 @@ def test_threading_wrapper_when_the_write_fails(
     engine = open_store(project_dir, THREADING_PUREGIT).content_database_engine
 
     content_hash = put_that_cannot_write(
-        engine, project_dir, str(isolated_git.root / "missing"))
+        engine, project_dir, str(isolated_git.root / "missing")
+    )
 
     assert content_hash == git_blob_hex(b"lost\n")
     assert thread_errors == ["FileNotFoundError"]
@@ -156,20 +171,20 @@ def test_threading_wrapper_when_the_write_fails(
 @MISSING_CWD_NOT_MEASURED
 @known_defects(WRITE_LOST)
 def test_threading_wrapper_when_the_write_fails_desired(
-        project_dir, isolated_git, thread_errors):
+    project_dir, isolated_git, thread_errors
+):
     """Desired: as with the sequential engine, ``put`` or ``close`` raises
     the error of the write"""
     PUREGIT.skip_if_unavailable()
     engine = open_store(project_dir, THREADING_PUREGIT).content_database_engine
 
     try:
-        put_that_cannot_write(
-            engine, project_dir, str(isolated_git.root / "missing"))
+        put_that_cannot_write(engine, project_dir, str(isolated_git.root / "missing"))
     except FileNotFoundError:
         return
     raise AssertionError(
-        "put and close returned; threading.excepthook received {}".format(
-            thread_errors))
+        "put and close returned; threading.excepthook received {}".format(thread_errors)
+    )
 
 
 def test_threading_plain_wrapper(project_dir):
@@ -183,8 +198,8 @@ def test_threading_plain_wrapper(project_dir):
     engine.close()
 
     assert str(raised.value) == (
-        "'ThreadingPlainEngine' object has no attribute "
-        "'_get_hash_from_content'")
+        "'ThreadingPlainEngine' object has no attribute '_get_hash_from_content'"
+    )
     assert database.listAll() == [sha1_hex(b"plain\n")]
 
 

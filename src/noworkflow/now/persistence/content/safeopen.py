@@ -12,6 +12,7 @@ io_open = io.open
 codecs_open = codecs.open
 os_open = os.open
 
+
 @contextmanager
 def restore_open():
     try:
@@ -40,11 +41,13 @@ def restore_open():
         except Exception:
             __builtins__.open = mock_builtins
 
+
 def print_open():
     print(std_open)
     print(io_open)
     print(codecs_open.__code__.co_filename)
     print(os_open)
+
 
 @contextmanager
 def use_safe_open():
@@ -55,6 +58,7 @@ def use_safe_open():
         yield
     finally:
         open_usage[ident] = old
+
 
 def should_use_safe_open():
     ident = threading.current_thread().ident

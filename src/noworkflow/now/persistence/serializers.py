@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Object serializers"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from array import array
@@ -17,8 +18,8 @@ def repr_serializer(value):
     repr_fn = repr
     if type(value) is not type:
         try:
-            the_repr = object.__getattribute__(value, '__repr__')
-            original_def = getattr(the_repr, 'original_def')
+            the_repr = object.__getattribute__(value, "__repr__")
+            original_def = getattr(the_repr, "original_def")
             repr_fn = original_def
         except AttributeError:
             pass
@@ -28,6 +29,7 @@ def repr_serializer(value):
 def jsonpickle_serializer(obj):
     """Use jsonpickle to get objects representation"""
     import jsonpickle
+
     return jsonpickle.encode(obj, keys=True)
 
 
@@ -35,25 +37,24 @@ def jsonpickle_content(obj):
     """Use jsonpickle to get objects representation
     Store representation in the content database"""
     import jsonpickle
+
     return "now-content:" + content.put(jsonpickle.encode(obj, keys=True), "generic")
 
 
-class SimpleSerializer(object):                                                  # pylint: disable=too-few-public-methods
+class SimpleSerializer(object):  # pylint: disable=too-few-public-methods
     """Simple serializer. Get objects representations without repr"""
 
     def _iter(self, obj, maxlevel):
         """Default serialization for iterables"""
-        return ", ".join(self.serialize(x, maxlevel=maxlevel - 1)
-                         for x in obj)
+        return ", ".join(self.serialize(x, maxlevel=maxlevel - 1) for x in obj)
 
-    def _default(self, obj):                                                     # pylint: disable=no-self-use
+    def _default(self, obj):  # pylint: disable=no-self-use
         """Default serialization for non iterables"""
         if isinstance(obj, IMMUTABLE):
             return repr(obj)
 
         if hasattr(obj, "__class__"):
-            return "<{} instance at 0x{:x}".format(
-                obj.__class__.__name__, id(obj))
+            return "<{} instance at 0x{:x}".format(obj.__class__.__name__, id(obj))
 
         if hasattr(obj, "__name__"):
             return "<{} at 0x{:x}".format(obj.__name__, id(obj))
@@ -92,8 +93,10 @@ class SimpleSerializer(object):                                                 
             result = ", ".join(
                 "({}, {})".format(
                     self.serialize(key, maxlevel - 1),
-                    self.serialize(value, maxlevel - 1)
-                ) for key, value in obj.items())
+                    self.serialize(value, maxlevel - 1),
+                )
+                for key, value in obj.items()
+            )
 
         if not typ:
             return self._default(obj)

@@ -11,6 +11,7 @@ from the standard library's own ``gzip.compress`` and ``gzip.decompress``,
 which implement RFC 1952 independently of these wrappers, so a stream one
 side writes must be one the other side reads.
 """
+
 import gzip
 
 import pytest

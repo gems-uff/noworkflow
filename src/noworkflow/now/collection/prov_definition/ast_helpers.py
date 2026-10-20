@@ -14,8 +14,14 @@ def ast_copy(new_node, old_node):
     """Copy ast location with pyposast location"""
     new_node = ast.copy_location(new_node, old_node)
     attrs = [
-        "first_line", "first_col", "last_line", "last_col", "uid",
-        "code_component_id", "code_component_expr", "type_ignores"
+        "first_line",
+        "first_col",
+        "last_line",
+        "last_col",
+        "uid",
+        "code_component_id",
+        "code_component_expr",
+        "type_ignores",
     ]
     for attr in attrs:
         if hasattr(old_node, attr):
@@ -26,37 +32,29 @@ def ast_copy(new_node, old_node):
 class ReplaceContextWithLoad(ast.NodeTransformer):
     """Replace expr_context from any node to Load context"""
 
-    def visit_Attribute(self, node):                                             # pylint: disable=invalid-name
+    def visit_Attribute(self, node):  # pylint: disable=invalid-name
         """Visit Attribute"""
-        return ast_copy(ast.Attribute(
-            self.visit(node.value), node.attr, L()
-        ), node)
+        return ast_copy(ast.Attribute(self.visit(node.value), node.attr, L()), node)
 
-    def visit_Subscript(self, node):                                             # pylint: disable=invalid-name
+    def visit_Subscript(self, node):  # pylint: disable=invalid-name
         """Visit Subscript"""
-        return ast_copy(ast.Subscript(
-            self.visit(node.value), self.visit(node.slice), L()
-        ), node)
+        return ast_copy(
+            ast.Subscript(self.visit(node.value), self.visit(node.slice), L()), node
+        )
 
-    def visit_Name(self, node):                                                  # pylint: disable=invalid-name, no-self-use
+    def visit_Name(self, node):  # pylint: disable=invalid-name, no-self-use
         """Visit Name"""
-        return ast_copy(ast.Name(
-            node.id, L()
-        ), node)
+        return ast_copy(ast.Name(node.id, L()), node)
 
-    def visit_List(self, node):                                                  # pylint: disable=invalid-name
+    def visit_List(self, node):  # pylint: disable=invalid-name
         """Visit List"""
-        return ast_copy(ast.List(
-            [self.visit(elt) for elt in node.elts], L()
-        ), node)
+        return ast_copy(ast.List([self.visit(elt) for elt in node.elts], L()), node)
 
-    def visit_Tuple(self, node):                                                 # pylint: disable=invalid-name
+    def visit_Tuple(self, node):  # pylint: disable=invalid-name
         """Visit Tuple"""
-        return ast_copy(ast.Tuple(
-            [self.visit(elt) for elt in node.elts], L()
-        ), node)
+        return ast_copy(ast.Tuple([self.visit(elt) for elt in node.elts], L()), node)
 
-    def visit_Starred(self, node):                                               # pylint: disable=invalid-name
+    def visit_Starred(self, node):  # pylint: disable=invalid-name
         """Visit Starred"""
         return self.visit(node.value)
 
@@ -157,8 +155,9 @@ def debug_tree(tree, just_print=None, show_code=None, methods=None):
 
     def visit_code(self, node):
         """visit node"""
-        print(node, getattr(node, 'lineno', None))
+        print(node, getattr(node, "lineno", None))
         import astor
+
         print(astor.to_source(node, add_line_information=True))
         return self.generic_visit(node)
 
@@ -168,14 +167,14 @@ def debug_tree(tree, just_print=None, show_code=None, methods=None):
     for node_type in show_code:
         methods["visit_" + node_type] = visit_code
 
-    visitor = type('Debugger', (DebugVisitor,), methods)()
+    visitor = type("Debugger", (DebugVisitor,), methods)()
     visitor.visit(tree)
 
 
 @contextmanager
 def temporary(obj, name, value, nested=None):
     """Set temporary attribute
-    
+
     This context manager also may add and remove a value from a nested stack.
     Pass nested as a tuple of a list and a value
     """
@@ -195,4 +194,4 @@ def select_future_imports(body):
     for i, stmt in enumerate(body):
         if isinstance(stmt, ast.ImportFrom) and stmt.module == "__future__":
             index = i
-    return body[:index + 1]
+    return body[: index + 1]

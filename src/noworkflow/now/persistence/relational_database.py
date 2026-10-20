@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Relational Database"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import threading
@@ -34,7 +35,7 @@ class RelationalDatabase(object):
         """Set content_path"""
         self.db_path = join(config.provenance_path, DB_FILENAME)
 
-    def mock(self, config):                                                      # pylint: disable=unused-argument
+    def mock(self, config):  # pylint: disable=unused-argument
         """Mock path for tests"""
         self.db_path = ""
 
@@ -48,10 +49,11 @@ class RelationalDatabase(object):
             new_db, self.db_path = True, ""
 
         self.engine = create_engine(
-            "sqlite://" + ("/" if self.db_path else "") + self.db_path,
-            echo=False)
-        self.session_factory.configure(bind=self.engine, autoflush=False,
-                                       expire_on_commit=True)
+            "sqlite://" + ("/" if self.db_path else "") + self.db_path, echo=False
+        )
+        self.session_factory.configure(
+            bind=self.engine, autoflush=False, expire_on_commit=True
+        )
         self._session_map = {}
 
         if new_db:

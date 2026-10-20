@@ -43,6 +43,7 @@ since the frontend builds these URLs from the trials of the history.
 Nothing here depends on the Python version (measured on macOS arm64 with
 Python 3.11 to 3.15).
 """
+
 import uuid
 from datetime import datetime
 
@@ -84,28 +85,30 @@ RW_SCRIPT = (
 
 PAIRS_BY_NAME = Defect(
     reason="#360: diff_set (models/diff.py) "
-           "keeps one removed element per name and pairs every added "
-           "element of that name with it, so two changed accesses to one "
-           "file (a write and a read) give two pairs that share one access "
-           "of the first trial and cross the modes, and the other access is "
-           "listed as removed",
+    "keeps one removed element per name and pairs every added "
+    "element of that name with it, so two changed accesses to one "
+    "file (a write and a read) give two pairs that share one access "
+    "of the first trial and cross the modes, and the other access is "
+    "listed as removed",
     signature="replaced pairs by name only: two pairs share one access",
 )
 INFO_CODE_HASH = Defect(
     reason="#363: the info.json view serializes trial1 "
-           "and trial2 with extra=('duration_text',) only, so they carry no "
-           "code_hash, which diff_info.ts shows when both trials ran the "
-           "same code",
+    "and trial2 with extra=('duration_text',) only, so they carry no "
+    "code_hash, which diff_info.ts shows when both trials ran the "
+    "same code",
     signature="code_hash missing from ['trial1', 'trial2']",
 )
 ACCESS_FIELDS = Defect(
     reason="#363: the file_accesses.json view of a "
-           "diff serializes each access with to_dict() alone, so the items "
-           "carry neither the stack (which trials/<tid>/file_accesses.json "
-           "sends) nor the timestamp that diff_info.ts shows",
+    "diff serializes each access with to_dict() alone, so the items "
+    "carry neither the stack (which trials/<tid>/file_accesses.json "
+    "sends) nor the timestamp that diff_info.ts shows",
     signature="accesses without the fields the Diff panel shows: "
-              "['stack', 'timestamp']",
+    "['stack', 'timestamp']",
 )
+
+
 def diff_route(kind, trial1, trial2):
     return "/diff/{}/{}/{}.json".format(trial1, trial2, kind)
 
@@ -128,7 +131,9 @@ def main_code_hash(project, row):
     """The code hash of a trial's main block, as Trial.code_hash gives it"""
     found = project.query(
         "SELECT code_hash FROM code_block WHERE trial_id = ? AND id = ?",
-        row["id"], row["main_id"])
+        row["id"],
+        row["main_id"],
+    )
     return found[0]["code_hash"] if found else ""
 
 
@@ -150,8 +155,9 @@ def served_items(kind, data):
     each replaced pair
     """
     added, removed, replaced = LISTS[kind]
-    return data[added] + data[removed] + [
-        item for pair in data[replaced] for item in pair]
+    return (
+        data[added] + data[removed] + [item for pair in data[replaced] for item in pair]
+    )
 
 
 def canonical(kind, data):
@@ -163,7 +169,8 @@ def canonical(kind, data):
     result[added] = sorted(data[added], key=ident)
     result[removed] = sorted(data[removed], key=ident)
     result[replaced] = sorted(
-        data[replaced], key=lambda pair: (ident(pair[0]), ident(pair[1])))
+        data[replaced], key=lambda pair: (ident(pair[0]), ident(pair[1]))
+    )
     return result
 
 
@@ -173,14 +180,18 @@ def without_user(item):
 
 def access_rows(project, trial_id):
     return project.query(
-        "SELECT * FROM file_access WHERE trial_id = ? ORDER BY id", trial_id)
+        "SELECT * FROM file_access WHERE trial_id = ? ORDER BY id", trial_id
+    )
 
 
 def env_pairs(project, trial_id):
     """``{(name, value)}`` of a trial's environment: never print it"""
-    return {(row["name"], row["value"]) for row in project.query(
-        "SELECT name, value FROM environment_attr WHERE trial_id = ?",
-        trial_id)}
+    return {
+        (row["name"], row["value"])
+        for row in project.query(
+            "SELECT name, value FROM environment_attr WHERE trial_id = ?", trial_id
+        )
+    }
 
 
 def module_rows(project, trial_id):
@@ -189,7 +200,9 @@ def module_rows(project, trial_id):
         "SELECT module.*, code_block.code_hash AS code_hash FROM module "
         "LEFT JOIN code_block ON code_block.trial_id = module.trial_id "
         "AND code_block.id = CAST(module.code_block_id AS INTEGER) "
-        "WHERE module.trial_id = ? ORDER BY module.id", trial_id)
+        "WHERE module.trial_id = ? ORDER BY module.id",
+        trial_id,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -200,8 +213,7 @@ def _changed_store(tmp_path_factory):
     project = NowProject(tmp_path_factory.mktemp("diff_changed"))
     project.copy_corpus("weather")
     project.run(*WEATHER_ARGS)
-    simulator = (CORPUS / "weather" / "simulator.py").read_text(
-        encoding="utf-8")
+    simulator = (CORPUS / "weather" / "simulator.py").read_text(encoding="utf-8")
     project.write("simulator.py", simulator + SIMULATOR_CHANGE)
     project.run(*WEATHER_ARGS)
     project.write("rw.py", RW_SCRIPT)
@@ -216,7 +228,8 @@ def changed(_changed_store, vis_for):
     before = _changed_store.fingerprint()
     yield vis_for(_changed_store)
     assert _changed_store.fingerprint() == before, (
-        "a diff route changed the store of test_diff_routes")
+        "a diff route changed the store of test_diff_routes"
+    )
 
 
 # --- info.json ---------------------------------------------------------------
@@ -230,8 +243,7 @@ def test_info_serves_both_trials_as_the_store_records_them(vis):
     id1, id2 = vis.trial_ids
     data = vis.json(diff_route("info", id1, id2))
     assert set(data) == {"trial1", "trial2", "trial"}
-    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project,
-                                                          id1, id2)):
+    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project, id1, id2)):
         served = data[name]
         assert set(row) <= set(served), "{}: columns missing".format(name)
         # Through a name: pytest would print the argument of isinstance().
@@ -258,12 +270,13 @@ def test_info_trial_holds_the_attributes_that_differ(vis):
     """
     id1, id2 = vis.trial_ids
     row1, row2 = trial_rows(vis.project, id1, id2)
-    hash1, hash2 = (main_code_hash(vis.project, row1),
-                    main_code_hash(vis.project, row2))
+    hash1, hash2 = (
+        main_code_hash(vis.project, row1),
+        main_code_hash(vis.project, row2),
+    )
     assert hash1 and hash1 == hash2, "the weather pair runs the same code"
     data = vis.json(diff_route("info", id1, id2))
-    expected_keys = {key for key in row1
-                     if key != "id" and row1[key] != row2[key]}
+    expected_keys = {key for key in row1 if key != "id" and row1[key] != row2[key]}
     if duration(row1) != duration(row2):
         expected_keys.add("duration_text")
     trial = data["trial"]
@@ -301,13 +314,10 @@ def test_info_trials_carry_no_code_hash_desired(vis):
     """
     id1, id2 = vis.trial_ids
     data = vis.json(diff_route("info", id1, id2))
-    missing = [name for name in ("trial1", "trial2")
-               if "code_hash" not in data[name]]
+    missing = [name for name in ("trial1", "trial2") if "code_hash" not in data[name]]
     assert not missing, "code_hash missing from {}".format(missing)
-    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project,
-                                                          id1, id2)):
-        assert data[name]["code_hash"] == main_code_hash(vis.project, row), (
-            name)
+    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project, id1, id2)):
+        assert data[name]["code_hash"] == main_code_hash(vis.project, row), name
 
 
 def test_info_times_are_local_times_labeled_gmt(vis):
@@ -317,14 +327,14 @@ def test_info_times_are_local_times_labeled_gmt(vis):
     """
     id1, id2 = vis.trial_ids
     data = vis.json(diff_route("info", id1, id2))
-    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project,
-                                                          id1, id2)):
+    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project, id1, id2)):
         for key in ("start", "finish"):
             served = data[name][key]
             # A boolean: both sides together would tell the machine's zone.
             naive = served == http_date(stored_time(row[key]))
-            assert naive, "{} {}: not the store's naive time as an HTTP " \
-                "date".format(name, key)
+            assert naive, "{} {}: not the store's naive time as an HTTP date".format(
+                name, key
+            )
             assert served.endswith(" GMT"), (name, key)
 
 
@@ -335,20 +345,20 @@ def test_info_times_are_local_times_labeled_gmt_desired(vis):
     """
     id1, id2 = vis.trial_ids
     data = vis.json(diff_route("info", id1, id2))
-    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project,
-                                                          id1, id2)):
+    for name, row in zip(("trial1", "trial2"), trial_rows(vis.project, id1, id2)):
         for key in ("start", "finish"):
             recorded = stored_time(row[key]).replace(tzinfo=NOW_RUN_ZONE)
-            gap = (served_instant(data[name][key])
-                   - recorded).total_seconds()
+            gap = (served_instant(data[name][key]) - recorded).total_seconds()
             # Today's gap is the zone's offset (the local clock read as
             # UTC), give or take the truncation to the second. Booleans
             # only: the gap would tell the machine's zone.
             on_time = abs(gap) < 1
             shifted = abs(gap - NOW_RUN_UTC_OFFSET) < 1
             assert on_time, "{} {}: not the recorded instant{}".format(
-                name, key, ", off by the UTC offset of now run's zone"
-                if shifted else "")
+                name,
+                key,
+                ", off by the UTC offset of now run's zone" if shifted else "",
+            )
 
 
 # --- dependencies.json --------------------------------------------------------
@@ -361,14 +371,20 @@ def test_dependencies_of_the_weather_pair(vis):
     id1, id2 = vis.trial_ids
     row1, row2 = trial_rows(vis.project, id1, id2)
     modules1, modules2 = (
-        [(row["name"], row["version"], row["code_hash"])
-         for row in module_rows(vis.project, trial_id)]
-        for trial_id in (id1, id2))
+        [
+            (row["name"], row["version"], row["code_hash"])
+            for row in module_rows(vis.project, trial_id)
+        ]
+        for trial_id in (id1, id2)
+    )
     assert modules1 and modules1 == modules2, "the same modules"
     data = vis.json(diff_route("dependencies", id1, id2))
     assert data == {
-        "modules_added": [], "modules_removed": [], "modules_replaced": [],
-        "t1_path": row1["path"], "t2_path": row2["path"],
+        "modules_added": [],
+        "modules_removed": [],
+        "modules_replaced": [],
+        "t1_path": row1["path"],
+        "t2_path": row2["path"],
     }
 
 
@@ -387,8 +403,7 @@ def test_dependencies_replace_a_local_module_that_changed(changed):
     assert data["modules_added"] == []
     assert data["modules_removed"] == []
     assert len(data["modules_replaced"]) == 1
-    for served, row in zip(data["modules_replaced"][0],
-                           (modules1[0], modules2[0])):
+    for served, row in zip(data["modules_replaced"][0], (modules1[0], modules2[0])):
         assert ident(served) == ident(row)
         assert served["name"] == row["name"]
         assert served["path"] == row["path"]
@@ -429,8 +444,12 @@ def test_environment_items_are_the_stored_rows(vis):
     """
     id1, id2 = vis.trial_ids
     data = vis.json(diff_route("environment", id1, id2))
-    rows = {ident(row): row for row in vis.project.query(
-        "SELECT * FROM environment_attr WHERE trial_id IN (?, ?)", id1, id2)}
+    rows = {
+        ident(row): row
+        for row in vis.project.query(
+            "SELECT * FROM environment_attr WHERE trial_id IN (?, ?)", id1, id2
+        )
+    }
     items = served_items("environment", data)
     assert items, "two runs differ at least in the pid"
     for item in items:
@@ -465,13 +484,16 @@ def test_file_accesses_replaced_are_the_files_whose_content_changed(vis):
     replaced = sorted(
         (ident(rows1[name]), ident(rows2[name]))
         for name in set(rows1) & set(rows2)
-        if any(rows1[name][key] != rows2[name][key] for key in hashes))
+        if any(rows1[name][key] != rows2[name][key] for key in hashes)
+    )
     assert set(rows1) >= {"data1.dat", "data2.dat"}
     data = vis.json(diff_route("file_accesses", id1, id2))
     assert idents(data["fa_added"]) == sorted(
-        ident(rows2[name]) for name in set(rows2) - set(rows1))
+        ident(rows2[name]) for name in set(rows2) - set(rows1)
+    )
     assert idents(data["fa_removed"]) == sorted(
-        ident(rows1[name]) for name in set(rows1) - set(rows2))
+        ident(rows1[name]) for name in set(rows1) - set(rows2)
+    )
     assert pair_idents(data["fa_replaced"]) == replaced
     names = {first["name"] for first, _ in data["fa_replaced"]}
     assert "data2.dat" in names and "data1.dat" not in names
@@ -483,8 +505,11 @@ def test_file_access_items_are_the_stored_rows(vis):
     """
     id1, id2 = vis.trial_ids
     row1, row2 = trial_rows(vis.project, id1, id2)
-    rows = {ident(row): row for trial_id in (id1, id2)
-            for row in access_rows(vis.project, trial_id)}
+    rows = {
+        ident(row): row
+        for trial_id in (id1, id2)
+        for row in access_rows(vis.project, trial_id)
+    }
     data = vis.json(diff_route("file_accesses", id1, id2))
     assert (data["t1_path"], data["t2_path"]) == (row1["path"], row2["path"])
     items = served_items("file_accesses", data)
@@ -501,7 +526,8 @@ def test_file_access_items_carry_only_the_columns(vis):
     id1, id2 = vis.trial_ids
     columns = set(access_rows(vis.project, id1)[0])
     items = served_items(
-        "file_accesses", vis.json(diff_route("file_accesses", id1, id2)))
+        "file_accesses", vis.json(diff_route("file_accesses", id1, id2))
+    )
     assert items, "the weather pair has replaced accesses"
     for item in items:
         assert set(item) == columns, item["name"]
@@ -516,27 +542,36 @@ def test_file_access_items_carry_only_the_columns_desired(vis):
     """
     id1, id2 = vis.trial_ids
     items = served_items(
-        "file_accesses", vis.json(diff_route("file_accesses", id1, id2)))
+        "file_accesses", vis.json(diff_route("file_accesses", id1, id2))
+    )
     assert items, "the weather pair has replaced accesses"
-    missing = sorted({field for item in items for field in ACCESS_FIELDS_SHOWN
-                      if field not in item})
-    assert not missing, (
-        "accesses without the fields the Diff panel shows: {}".format(
-            missing))
-    rows = {ident(row): row for trial_id in (id1, id2)
-            for row in access_rows(vis.project, trial_id)}
+    missing = sorted(
+        {field for item in items for field in ACCESS_FIELDS_SHOWN if field not in item}
+    )
+    assert not missing, "accesses without the fields the Diff panel shows: {}".format(
+        missing
+    )
+    rows = {
+        ident(row): row
+        for trial_id in (id1, id2)
+        for row in access_rows(vis.project, trial_id)
+    }
     info = vis.json(diff_route("info", id1, id2))
-    starts = {info[name]["id"]: served_instant(info[name]["start"])
-              for name in ("trial1", "trial2")}
+    starts = {
+        info[name]["id"]: served_instant(info[name]["start"])
+        for name in ("trial1", "trial2")
+    }
     stacks = {}
     for trial_id in (id1, id2):
-        for access in vis.json("/trials/{}/file_accesses.json".format(
-                trial_id))["file_accesses"]:
+        for access in vis.json("/trials/{}/file_accesses.json".format(trial_id))[
+            "file_accesses"
+        ]:
             stacks[ident(access)] = access["stack"]
     for item in items:
         assert item["stack"] == stacks[ident(item)], item["name"]
-        after_start = (served_instant(item["timestamp"])
-                       - starts[item["trial_id"]]).total_seconds()
+        after_start = (
+            served_instant(item["timestamp"]) - starts[item["trial_id"]]
+        ).total_seconds()
         checkpoint = rows[ident(item)]["checkpoint"]
         assert abs(after_start - checkpoint) < 1, item["name"]
 
@@ -557,10 +592,8 @@ def test_accesses_to_one_file_in_two_modes_pair_by_name(changed):
     modes, and the first trial's other access is listed as removed
     """
     id3, id4 = changed.trial_ids[2:]
-    first = {ident(row) for row in rw_accesses(changed.project,
-                                               id3).values()}
-    second = {ident(row) for row in rw_accesses(changed.project,
-                                                id4).values()}
+    first = {ident(row) for row in rw_accesses(changed.project, id3).values()}
+    second = {ident(row) for row in rw_accesses(changed.project, id4).values()}
     data = changed.json(diff_route("file_accesses", id3, id4))
     pairs = data["fa_replaced"]
     assert data["fa_added"] == []
@@ -582,8 +615,7 @@ def test_accesses_to_one_file_in_two_modes_pair_by_name_desired(changed):
     id3, id4 = changed.trial_ids[2:]
     rows3 = rw_accesses(changed.project, id3)
     rows4 = rw_accesses(changed.project, id4)
-    expected = sorted((ident(rows3[mode]), ident(rows4[mode]))
-                      for mode in ("w", "r"))
+    expected = sorted((ident(rows3[mode]), ident(rows4[mode])) for mode in ("w", "r"))
     data = changed.json(diff_route("file_accesses", id3, id4))
     served = {
         "added": idents(data["fa_added"]),
@@ -595,8 +627,10 @@ def test_accesses_to_one_file_in_two_modes_pair_by_name_desired(changed):
     shared = len(set(firsts)) < len(firsts)
     ok = served == {"added": [], "removed": [], "replaced": expected}
     assert ok, "{}{}, expected {}".format(
-        "replaced pairs by name only: two pairs share one access: "
-        if shared else "", served, expected)
+        "replaced pairs by name only: two pairs share one access: " if shared else "",
+        served,
+        expected,
+    )
 
 
 # --- every route --------------------------------------------------------------
@@ -614,8 +648,9 @@ def test_a_trial_diffed_with_itself_has_no_difference(vis):
     assert info["trial1"]["id"] == trial_id
     for kind, names in LISTS.items():
         data = vis.json(diff_route(kind, trial_id, trial_id))
-        assert {name: data[name] for name in names} == {
-            name: [] for name in names}, kind
+        assert {name: data[name] for name in names} == {name: [] for name in names}, (
+            kind
+        )
 
 
 def test_the_reversed_pair_swaps_the_info(vis):
@@ -625,8 +660,10 @@ def test_the_reversed_pair_swaps_the_info(vis):
     id1, id2 = vis.trial_ids
     forward = vis.json(diff_route("info", id1, id2))
     backward = vis.json(diff_route("info", id2, id1))
-    swapped = (backward["trial1"] == forward["trial2"]
-               and backward["trial2"] == forward["trial1"])
+    swapped = (
+        backward["trial1"] == forward["trial2"]
+        and backward["trial2"] == forward["trial1"]
+    )
     assert swapped, "trial1 and trial2 are not swapped"
     assert set(backward["trial"]) == set(forward["trial"])
     for key, pair in without_user(forward["trial"]).items():
@@ -645,10 +682,13 @@ def test_the_reversed_pair_swaps_each_list(vis, kind):
     assert idents(backward[added]) == idents(forward[removed])
     assert idents(backward[removed]) == idents(forward[added])
     assert pair_idents(backward[replaced]) == sorted(
-        (second, first) for first, second in pair_idents(forward[replaced]))
+        (second, first) for first, second in pair_idents(forward[replaced])
+    )
     if "t1_path" in forward:
         assert (backward["t1_path"], backward["t2_path"]) == (
-            forward["t2_path"], forward["t1_path"])
+            forward["t2_path"],
+            forward["t1_path"],
+        )
 
 
 @pytest.mark.parametrize("kind", KINDS)
@@ -658,8 +698,7 @@ def test_the_experiment_form_serves_the_same_json(vis, kind):
     """
     id1, id2 = vis.trial_ids
     path = diff_route(kind, id1, id2).lstrip("/")
-    root, experiment = (canonical(kind, vis.json(route))
-                        for route in vis.routes(path))
+    root, experiment = (canonical(kind, vis.json(route)) for route in vis.routes(path))
     same = root == experiment
     assert same, "{}: the experiment form differs".format(kind)
 

@@ -47,6 +47,7 @@ the restore-trial route answers 200 whatever ``now`` printed.
 Nothing here depends on the Python version or the system (measured on
 macOS with Python 3.11 to 3.15; Linux and Windows not run).
 """
+
 import os
 import shutil
 import sys
@@ -77,10 +78,12 @@ NO_STORE = "[now] there is no provenance store in the informed directory\n"
 # What `now push` and `now pull` print when the server does not know the
 # experiment (cmd_push.py, cmd_pull.py).
 INVALID_EXPERIMENT = {
-    "push": "{} {}\n".format(Push.text_exporting_trials_failed,
-                             Push.text_invalid_experiment_id),
-    "pull": "{} {}\n".format(Pull.text_importing_trials_failed,
-                             Pull.text_invalid_experiment_id),
+    "push": "{} {}\n".format(
+        Push.text_exporting_trials_failed, Push.text_invalid_experiment_id
+    ),
+    "pull": "{} {}\n".format(
+        Pull.text_importing_trials_failed, Pull.text_invalid_experiment_id
+    ),
 }
 
 # The checkboxes of the "Generate dataflow" form, in the order of the URL.
@@ -90,11 +93,15 @@ CHECKBOX_FLAGS = ("-T", "-t", "-H", "-hnc", "-an", "-hf")
 FRONTEND_HIDE_TIMESTAMPS = "undefined"
 # The defaults of the form, as the route passes them to `now`.
 DATAFLOW_DEFAULTS = {
-    "-a": "1", "-e": "1", "-g": "0", "-d": "0", "--value-length": "0",
-    "-n": "55", "-m": "coarseGrain",
+    "-a": "1",
+    "-e": "1",
+    "-g": "0",
+    "-d": "0",
+    "--value-length": "0",
+    "-n": "55",
+    "-m": "coarseGrain",
 }
-MODES = ("activation", "coarseGrain", "looplessCoarseGrain", "fineGrain",
-         "all")
+MODES = ("activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all")
 # appendDataflowCommandWithParameters: out of range -> the default.
 CLAMPS = [
     ("accesses", 4, "-a", "4"),
@@ -121,51 +128,50 @@ NOT_TARGETS = ("notes.dat", "annotated/data1.dat")
 # fix included, is not taken for the known defect.
 UNKNOWN_COMMAND = Defect(
     reason="#220: /commands/<collab_command>/<path:serverUrl> passes "
-           "collab_command to now without an allowlist, so any word after "
-           "/commands/ that no other route matches runs as a now subcommand "
-           "(now parses with parse_known_args: a subcommand without --url "
-           "ignores it)",
+    "collab_command to now without an allowlist, so any word after "
+    "/commands/ that no other route matches runs as a now subcommand "
+    "(now parses with parse_known_args: a subcommand without --url "
+    "ignores it)",
     signature="ran now for a collab command other than push or pull: "
-              "200 after 1 call(s)",
+    "200 after 1 call(s)",
 )
 SPACED_COMMAND = Defect(
     reason="#220: the collab route checks no allowlist and builds its argv "
-           "with (\"now \" + collab_command + \" --url \" + serverUrl)"
-           ".split(), so a collab_command with spaces (push --dir x) adds "
-           "arguments of its own to now push",
+    'with ("now " + collab_command + " --url " + serverUrl)'
+    ".split(), so a collab_command with spaces (push --dir x) adds "
+    "arguments of its own to now push",
     signature="ran now for a collab command with spaces: 200 after 1 call(s)",
 )
 SPACED_TRIAL_ID = Defect(
     reason="#220: the prov, export, dataflow and restore routes build their "
-           "argv with (\"now ... \" + trial_id).split(), so a trial id with "
-           "spaces becomes several arguments of now",
+    'argv with ("now ... " + trial_id).split(), so a trial id with '
+    "spaces becomes several arguments of now",
     signature="split the trial id into arguments of now: the argv ends with "
-              "['--dir', 'elsewhere']",
+    "['--dir', 'elsewhere']",
 )
 FOREIGN_HOST_DEFECT = Defect(
     reason="#220: now vis checks no Host header, so a page whose DNS name "
-           "rebinds to the loopback runs the /commands/* routes and reads "
-           "their answers",
+    "rebinds to the loopback runs the /commands/* routes and reads "
+    "their answers",
     signature="ran now for a request to a foreign Host: 200 after 1 call(s)",
 )
 FOREIGN_ORIGIN_DEFECT = Defect(
     reason="#220: now vis checks no Origin header, so any page open in the "
-           "browser runs the /commands/* routes with a cross-site GET",
-    signature="ran now for a request from a foreign Origin: "
-              "200 after 1 call(s)",
+    "browser runs the /commands/* routes with a cross-site GET",
+    signature="ran now for a request from a foreign Origin: 200 after 1 call(s)",
 )
 RESTORE_STATUS = Defect(
     reason="#357: the restore-file route answers "
-           "400 whenever the output of now restore contains the substring "
-           "\"not\", and a successful restore prints the restored path, so "
-           "a restore into a path containing \"not\" is reported as failed",
+    "400 whenever the output of now restore contains the substring "
+    '"not", and a successful restore prints the restored path, so '
+    'a restore into a path containing "not" is reported as failed',
     signature="a successful restore answered 400",
 )
 VIS_COMMANDS_CWD = Defect(
     reason="#356: now vis --dir P connects the store of P "
-           "and sets app.dir, but the /commands/* routes call "
-           "subprocess.run with neither cwd nor --dir, so now runs in the "
-           "server's working directory, on another store or on none",
+    "and sets app.dir, but the /commands/* routes call "
+    "subprocess.run with neither cwd nor --dir, so now runs in the "
+    "server's working directory, on another store or on none",
     signature="ran now outside the served project: cwd None, no --dir",
 )
 
@@ -173,7 +179,7 @@ VIS_COMMANDS_CWD = Defect(
 def tail(args, word):
     """The argv from ``word`` on: the subcommand and what follows it"""
     assert word in args, "{!r} is not in the argv {}".format(word, args)
-    return args[args.index(word):]
+    return args[args.index(word) :]
 
 
 def value_of(args, option):
@@ -190,7 +196,7 @@ def dir_option(args):
     found = None
     for index, arg in enumerate(args):
         if arg.startswith("--dir="):
-            found = arg[len("--dir="):]
+            found = arg[len("--dir=") :]
         elif arg == "--dir" and index + 1 < len(args):
             found = args[index + 1]
     return found
@@ -211,8 +217,7 @@ def runs_on(call, path):
 
 def outcome(response, commands):
     """The status and the number of ``now`` runs, for the twins' messages"""
-    return "{} after {} call(s)".format(response.status_code,
-                                        len(commands.calls))
+    return "{} after {} call(s)".format(response.status_code, len(commands.calls))
 
 
 def first_trial(vis):
@@ -224,7 +229,9 @@ def read_file(vis, trial_id):
     """A file the trial read, as ``/files/<trial_id>`` lists it"""
     rows = vis.project.query(
         "SELECT name FROM file_access WHERE trial_id = ? AND mode = 'r' "
-        "ORDER BY id LIMIT 1", trial_id)
+        "ORDER BY id LIMIT 1",
+        trial_id,
+    )
     assert rows, "the trial read no file"
     return rows[0]["name"]
 
@@ -232,8 +239,9 @@ def read_file(vis, trial_id):
 def an_evaluation(vis, trial_id):
     """The id of an evaluation of the trial (its last one)"""
     rows = vis.project.query(
-        "SELECT id FROM evaluation WHERE trial_id = ? ORDER BY id DESC "
-        "LIMIT 1", trial_id)
+        "SELECT id FROM evaluation WHERE trial_id = ? ORDER BY id DESC LIMIT 1",
+        trial_id,
+    )
     assert rows, "the trial has no evaluation"
     return rows[0]["id"]
 
@@ -243,13 +251,21 @@ def collab_url(command, server=REMOTE):
 
 
 def export_url(trial_id, rules="false", hide_timestamps="false"):
-    return "/commands/export/{}/{}/{}".format(trial_id, rules,
-                                              hide_timestamps)
+    return "/commands/export/{}/{}/{}".format(trial_id, rules, hide_timestamps)
 
 
-def dataflow_url(trial_id, checkboxes=None, accesses=1, evaluations=1,
-                 group=0, depth=0, value_length=0, name=55,
-                 mode="coarseGrain", evaluation_id=None):
+def dataflow_url(
+    trial_id,
+    checkboxes=None,
+    accesses=1,
+    evaluations=1,
+    group=0,
+    depth=0,
+    value_length=0,
+    name=55,
+    mode="coarseGrain",
+    evaluation_id=None,
+):
     """The URL of the "Generate dataflow" form (history_graph.ts)
 
     ``checkboxes`` maps a flag of CHECKBOX_FLAGS to the text the URL
@@ -260,8 +276,7 @@ def dataflow_url(trial_id, checkboxes=None, accesses=1, evaluations=1,
     checkboxes.setdefault("-t", FRONTEND_HIDE_TIMESTAMPS)
     segments = [trial_id]
     segments += [checkboxes.get(flag, "false") for flag in CHECKBOX_FLAGS]
-    segments += [accesses, evaluations, group, depth, value_length, name,
-                 mode]
+    segments += [accesses, evaluations, group, depth, value_length, name, mode]
     if evaluation_id is None:
         segments += ["false", 0]
     else:
@@ -277,8 +292,7 @@ def restore_trial_url(trial_id, skip=()):
 
 def restore_file_url(trial_id, name, file_id="false", target="false"):
     """The URL of the "Restore file" form: empty fields are ``false``"""
-    return "/commands/restore/file/{}/{}/{}/{}".format(
-        trial_id, name, file_id, target)
+    return "/commands/restore/file/{}/{}/{}/{}".format(trial_id, name, file_id, target)
 
 
 def restored(path):
@@ -293,7 +307,8 @@ COMMAND_ROUTES = {
     "dataflow": lambda vis: dataflow_url(first_trial(vis)),
     "restore-trial": lambda vis: restore_trial_url(first_trial(vis)),
     "restore-file": lambda vis: restore_file_url(
-        first_trial(vis), read_file(vis, first_trial(vis))),
+        first_trial(vis), read_file(vis, first_trial(vis))
+    ),
     "push": lambda vis: collab_url("push"),
     "pull": lambda vis: collab_url("pull"),
 }
@@ -317,11 +332,16 @@ UNKNOWN_COMMANDS = {
     "dot-dot": (lambda vis: collab_url(".."), ".."),
     "restore-file-to-an-absolute-target": (
         lambda vis: restore_file_url(
-            first_trial(vis), read_file(vis, first_trial(vis)),
-            target="/restored/data1.dat"),
-        "restore"),
+            first_trial(vis),
+            read_file(vis, first_trial(vis)),
+            target="/restored/data1.dat",
+        ),
+        "restore",
+    ),
     "dataflow-with-an-emptied-number": (
-        lambda vis: dataflow_url(first_trial(vis), depth=""), "dataflow"),
+        lambda vis: dataflow_url(first_trial(vis), depth=""),
+        "dataflow",
+    ),
 }
 
 # The routes the Host and Origin twins send a foreign request to.
@@ -339,13 +359,12 @@ def refused(response, commands):
 # Push and pull: /commands/<collab_command>/<path:serverUrl>
 
 
-@pytest.mark.parametrize("encoded", [False, True],
-                         ids=["plain", "percent-encoded"])
-@pytest.mark.parametrize("remote", [SERVER, REMOTE],
-                         ids=["server", "experiment"])
+@pytest.mark.parametrize("encoded", [False, True], ids=["plain", "percent-encoded"])
+@pytest.mark.parametrize("remote", [SERVER, REMOTE], ids=["server", "experiment"])
 @pytest.mark.parametrize("command", ["push", "pull"])
 def test_collab_route_runs_the_command_with_the_server_url(
-        vis, commands, command, remote, encoded):
+    vis, commands, command, remote, encoded
+):
     """push and pull run ``now <command> --url <remote>``, the URL whole
 
     The frontend puts the remote's URL unencoded after the command; encoded,
@@ -356,26 +375,24 @@ def test_collab_route_runs_the_command_with_the_server_url(
     answer = vis.json(collab_url(command, server))
     args = commands.only_call.args
     assert value_of(args, "--url") == remote, "the URL that reached now"
-    assert command in args[:args.index("--url")], "no {} before --url".format(
-        command)
+    assert command in args[: args.index("--url")], "no {} before --url".format(command)
     assert answer == {"terminal_text": PRINTED}, "the answer of the route"
 
 
 @pytest.mark.parametrize("command", ["push", "pull"])
-def test_collab_route_answers_400_when_now_writes_to_stderr(
-        vis, commands, command):
+def test_collab_route_answers_400_when_now_writes_to_stderr(vis, commands, command):
     """Anything on the stderr of ``now`` is answered as a bad address"""
     commands.completed.stdout = PRINTED.encode("utf-8")
     commands.completed.stderr = b"Traceback (most recent call last):\n"
     answer = vis.json(collab_url(command), status=400)
     assert len(commands.calls) == 1, "subprocess.run calls"
     assert answer == {"terminal_text": "Invalid server address"}, (
-        "the answer of the route")
+        "the answer of the route"
+    )
 
 
 @pytest.mark.parametrize("command", list(INVALID_EXPERIMENT))
-def test_collab_route_answers_400_on_an_invalid_experiment(
-        vis, commands, command):
+def test_collab_route_answers_400_on_an_invalid_experiment(vis, commands, command):
     """The line push or pull prints for an unknown experiment gives 400"""
     printed = INVALID_EXPERIMENT[command]
     commands.completed.stdout = printed.encode("utf-8")
@@ -391,8 +408,7 @@ def test_collab_route_with_another_command(vis, commands, name):
     commands.completed.stdout = PRINTED.encode("utf-8")
     answer = vis.json(build(vis))
     args = commands.only_call.args
-    assert word in args[:args.index("--url")], "no {} before --url".format(
-        word)
+    assert word in args[: args.index("--url")], "no {} before --url".format(word)
     assert answer == {"terminal_text": PRINTED}, "the answer of the route"
 
 
@@ -403,8 +419,10 @@ def test_collab_route_with_another_command_desired(vis, commands, name):
     route = UNKNOWN_COMMANDS[name][0](vis)
     response = vis.get(route)
     assert refused(response, commands), (
-        "ran now for a collab command other than push or pull: {}, "
-        "GET {}".format(outcome(response, commands), route))
+        "ran now for a collab command other than push or pull: {}, GET {}".format(
+            outcome(response, commands), route
+        )
+    )
 
 
 def test_collab_route_with_spaces_in_the_command(vis, commands):
@@ -413,7 +431,8 @@ def test_collab_route_with_spaces_in_the_command(vis, commands):
     args = commands.only_call.args
     assert value_of(args, "--dir") == "x", "the argument the spaces made"
     assert args.index("push") < args.index("--dir") < args.index("--url"), (
-        "push, its injected --dir, then --url")
+        "push, its injected --dir, then --url"
+    )
 
 
 @known_defects(SPACED_COMMAND)
@@ -423,14 +442,15 @@ def test_collab_route_with_spaces_in_the_command_desired(vis, commands):
     response = vis.get(route)
     assert refused(response, commands), (
         "ran now for a collab command with spaces: {}, GET {}".format(
-            outcome(response, commands), route))
+            outcome(response, commands), route
+        )
+    )
 
 
 @pytest.mark.parametrize("name", list(GUARDED_ROUTES))
 def test_command_route_for_a_foreign_host(vis, commands, name):
     """Characterization (#220): a request to another Host runs now"""
-    response = vis.get(GUARDED_ROUTES[name](vis),
-                       base_url="http://" + FOREIGN_HOST)
+    response = vis.get(GUARDED_ROUTES[name](vis), base_url="http://" + FOREIGN_HOST)
     assert response.request.host == FOREIGN_HOST, "the Host that was sent"
     assert len(commands.calls) == 1, "subprocess.run calls"
     assert response.status_code == 200, "status"
@@ -444,14 +464,15 @@ def test_command_route_for_a_foreign_host_desired(vis, commands, name):
     response = vis.get(route, base_url="http://" + FOREIGN_HOST)
     assert refused(response, commands), (
         "ran now for a request to a foreign Host: {}, GET {}".format(
-            outcome(response, commands), route))
+            outcome(response, commands), route
+        )
+    )
 
 
 @pytest.mark.parametrize("name", list(GUARDED_ROUTES))
 def test_command_route_from_a_foreign_origin(vis, commands, name):
     """Characterization (#220): a cross-site request runs now"""
-    response = vis.get(GUARDED_ROUTES[name](vis),
-                       headers={"Origin": FOREIGN_ORIGIN})
+    response = vis.get(GUARDED_ROUTES[name](vis), headers={"Origin": FOREIGN_ORIGIN})
     assert response.request.host == "localhost", "the Host is the server's"
     assert len(commands.calls) == 1, "subprocess.run calls"
     assert response.status_code == 200, "status"
@@ -465,7 +486,9 @@ def test_command_route_from_a_foreign_origin_desired(vis, commands, name):
     response = vis.get(route, headers={"Origin": FOREIGN_ORIGIN})
     assert refused(response, commands), (
         "ran now for a request from a foreign Origin: {}, GET {}".format(
-            outcome(response, commands), route))
+            outcome(response, commands), route
+        )
+    )
 
 
 # now export prov: /commands/prov/<trial_id>
@@ -482,8 +505,7 @@ def test_prov_route_exports_the_trial_as_prov(vis, commands):
     assert answer == {"prov": PROV}, "the answer of the route"
 
 
-@pytest.mark.parametrize("printed", ["", NO_STORE],
-                         ids=["nothing", "no-store"])
+@pytest.mark.parametrize("printed", ["", NO_STORE], ids=["nothing", "no-store"])
 def test_prov_route_answers_400_without_a_parenthesis(vis, commands, printed):
     """An output without ``(`` is no PROV: 400 and a fixed message"""
     commands.completed.stdout = printed.encode("utf-8")
@@ -510,11 +532,15 @@ def test_prov_route_with_spaces_in_the_trial_id_desired(vis, commands):
     commands.completed.stdout = PROV.encode("utf-8")
     response = vis.get(route)
     kept = len(commands.calls) == 1 and whole in commands.calls[0].args
-    ends = (list(commands.calls[0].args[-2:]) if len(commands.calls) == 1
-            else "{} calls".format(len(commands.calls)))
+    ends = (
+        list(commands.calls[0].args[-2:])
+        if len(commands.calls) == 1
+        else "{} calls".format(len(commands.calls))
+    )
     assert refused(response, commands) or kept, (
         "split the trial id into arguments of now: the argv ends with {}; "
-        "GET {} answered {}".format(ends, route, response.status_code))
+        "GET {} answered {}".format(ends, route, response.status_code)
+    )
 
 
 # now export prolog: /commands/export/<trial_id>/<rules>/<hide_timestamps>
@@ -523,7 +549,8 @@ def test_prov_route_with_spaces_in_the_trial_id_desired(vis, commands):
 @pytest.mark.parametrize("hide_timestamps", ["false", "true"])
 @pytest.mark.parametrize("rules", ["false", "true"])
 def test_export_route_turns_its_checkboxes_into_flags(
-        vis, commands, rules, hide_timestamps):
+    vis, commands, rules, hide_timestamps
+):
     """``now export prolog <trial>``, -r for the rules, -t for timestamps"""
     trial_id = first_trial(vis)
     commands.completed.stdout = PROLOG.encode("utf-8")
@@ -559,8 +586,7 @@ def test_dataflow_route_with_the_defaults_of_the_form(vis, commands):
 
 
 @pytest.mark.parametrize("flag", CHECKBOX_FLAGS)
-def test_dataflow_route_turns_each_checkbox_into_its_flag(
-        vis, commands, flag):
+def test_dataflow_route_turns_each_checkbox_into_its_flag(vis, commands, flag):
     """A checked box (``true``) adds its flag, and only its flag"""
     vis.json(dataflow_url(first_trial(vis), checkboxes={flag: "true"}))
     command = tail(commands.only_call.args, "export")
@@ -578,10 +604,13 @@ def test_dataflow_route_with_an_evaluation_filter(vis, commands):
 
 
 @pytest.mark.parametrize(
-    "field, value, option, expected", CLAMPS,
-    ids=["{}={}".format(field, value) for field, value, _, _ in CLAMPS])
+    "field, value, option, expected",
+    CLAMPS,
+    ids=["{}={}".format(field, value) for field, value, _, _ in CLAMPS],
+)
 def test_dataflow_route_replaces_a_number_out_of_range_by_its_default(
-        vis, commands, field, value, option, expected):
+    vis, commands, field, value, option, expected
+):
     """A number outside its range becomes the default; inside, it stays"""
     vis.json(dataflow_url(first_trial(vis), **{field: value}))
     command = tail(commands.only_call.args, "export")
@@ -609,8 +638,7 @@ def test_dataflow_route_with_an_unknown_mode(vis, commands):
 
 
 @pytest.mark.parametrize("depth", ["1.5", "1.0"])
-def test_dataflow_route_with_a_number_that_is_not_an_integer(
-        vis, commands, depth):
+def test_dataflow_route_with_a_number_that_is_not_an_integer(vis, commands, depth):
     """Characterization: ``int()`` of the segment raises, nothing runs
 
     The form's number inputs (min 0, step 1) clear a value that fails HTML
@@ -626,10 +654,12 @@ def test_dataflow_route_with_a_number_that_is_not_an_integer(
 # now restore: /commands/restore/trial/<trial_id>/<skip_script>/...
 
 
-@pytest.mark.parametrize("skip", [(), ("-s",), ("-l",), ("-a",), SKIP_FLAGS],
-                         ids=["none", "script", "modules", "accesses", "all"])
-def test_restore_trial_route_turns_its_checkboxes_into_flags(
-        vis, commands, skip):
+@pytest.mark.parametrize(
+    "skip",
+    [(), ("-s",), ("-l",), ("-a",), SKIP_FLAGS],
+    ids=["none", "script", "modules", "accesses", "all"],
+)
+def test_restore_trial_route_turns_its_checkboxes_into_flags(vis, commands, skip):
     """``now restore <trial>``, -s, -l and -a for the checked boxes"""
     trial_id = first_trial(vis)
     commands.completed.stdout = PRINTED.encode("utf-8")
@@ -654,11 +684,11 @@ def test_restore_trial_route_answers_200_whatever_now_printed(vis, commands):
 # now restore -f: /commands/restore/file/<trial_id>/<file_to_restore>/...
 
 
-@pytest.mark.parametrize("target", ["false", "restored/data1.dat"],
-                         ids=["no-target", "target"])
+@pytest.mark.parametrize(
+    "target", ["false", "restored/data1.dat"], ids=["no-target", "target"]
+)
 @pytest.mark.parametrize("file_id", ["false", "2"], ids=["no-id", "id"])
-def test_restore_file_route_runs_restore_of_the_file(
-        vis, commands, file_id, target):
+def test_restore_file_route_runs_restore_of_the_file(vis, commands, file_id, target):
     """``now restore <trial> -f <file>``, -i and -t for the filled fields"""
     trial_id = first_trial(vis)
     name = read_file(vis, trial_id)
@@ -668,7 +698,7 @@ def test_restore_file_route_runs_restore_of_the_file(
     command = tail(commands.only_call.args, "restore")
     assert command[:2] == ["restore", trial_id], "the trial"
     assert value_of(command, "-f") == name, "the file after -f"
-    after = command[command.index("-f"):]
+    after = command[command.index("-f") :]
     if file_id == "false":
         assert "-i" not in command, "-i without an id"
     else:
@@ -680,30 +710,40 @@ def test_restore_file_route_runs_restore_of_the_file(
     assert answer == {"terminal_text": printed}, "the answer of the route"
 
 
-@pytest.mark.parametrize("target", ["false", "restored/data1.dat"],
-                         ids=["no-target", "target"])
+@pytest.mark.parametrize(
+    "target", ["false", "restored/data1.dat"], ids=["no-target", "target"]
+)
 def test_restore_file_route_answers_400_when_now_writes_to_stderr(
-        vis, commands, target):
+    vis, commands, target
+):
     """Anything on stderr: 400, naming the target segment, even ``false``"""
     trial_id = first_trial(vis)
     commands.completed.stderr = b"Traceback (most recent call last):\n"
     answer = vis.json(
-        restore_file_url(trial_id, read_file(vis, trial_id), target=target),
-        status=400)
+        restore_file_url(trial_id, read_file(vis, trial_id), target=target), status=400
+    )
     assert len(commands.calls) == 1, "subprocess.run calls"
     expected = '"{}" No such file or directory'.format(target)
     assert answer == {"terminal_text": expected}, "the answer of the route"
 
 
-@pytest.mark.parametrize("printed, status", [
-    (restored("data1.dat"), 200),
-    ("[now] File version not found!\n", 400),
-    ("[now] File has not changed!\n", 400),
-    ("[now] Unable to restore file data1.dat due to [Errno 20] Not a "
-     "directory: 'data1.dat'. Skipping it\n", 400),
-], ids=["restored", "not-found", "unchanged", "unable"])
+@pytest.mark.parametrize(
+    "printed, status",
+    [
+        (restored("data1.dat"), 200),
+        ("[now] File version not found!\n", 400),
+        ("[now] File has not changed!\n", 400),
+        (
+            "[now] Unable to restore file data1.dat due to [Errno 20] Not a "
+            "directory: 'data1.dat'. Skipping it\n",
+            400,
+        ),
+    ],
+    ids=["restored", "not-found", "unchanged", "unable"],
+)
 def test_restore_file_route_status_follows_what_restore_printed(
-        vis, commands, printed, status):
+    vis, commands, printed, status
+):
     """The messages of ``now restore -f``: only a restore answers 200
 
     ``File has not changed!`` (a restore with nothing to do) answers 400
@@ -712,8 +752,9 @@ def test_restore_file_route_status_follows_what_restore_printed(
     """
     trial_id = first_trial(vis)
     commands.completed.stdout = printed.encode("utf-8")
-    answer = vis.json(restore_file_url(trial_id, read_file(vis, trial_id)),
-                      status=status)
+    answer = vis.json(
+        restore_file_url(trial_id, read_file(vis, trial_id)), status=status
+    )
     assert answer == {"terminal_text": printed}, "the answer of the route"
 
 
@@ -723,25 +764,22 @@ def test_restore_file_into_a_path_containing_not(vis, commands, target):
     trial_id = first_trial(vis)
     commands.completed.stdout = restored(target).encode("utf-8")
     answer = vis.json(
-        restore_file_url(trial_id, read_file(vis, trial_id), target=target),
-        status=400)
-    assert answer == {"terminal_text": restored(target)}, (
-        "the answer of the route")
+        restore_file_url(trial_id, read_file(vis, trial_id), target=target), status=400
+    )
+    assert answer == {"terminal_text": restored(target)}, "the answer of the route"
 
 
 @pytest.mark.parametrize("target", NOT_TARGETS)
 @known_defects(RESTORE_STATUS)
-def test_restore_file_into_a_path_containing_not_desired(
-        vis, commands, target):
+def test_restore_file_into_a_path_containing_not_desired(vis, commands, target):
     """A successful restore answers 200, whatever the path it names"""
     trial_id = first_trial(vis)
     commands.completed.stdout = restored(target).encode("utf-8")
-    route = restore_file_url(trial_id, read_file(vis, trial_id),
-                             target=target)
+    route = restore_file_url(trial_id, read_file(vis, trial_id), target=target)
     response = vis.get(route)
     assert response.status_code == 200, (
-        "a successful restore answered {}, GET {}".format(
-            response.status_code, route))
+        "a successful restore answered {}, GET {}".format(response.status_code, route)
+    )
 
 
 def test_restore_file_route_with_a_file_in_a_subdirectory(vis, commands):
@@ -768,12 +806,16 @@ def now_on_path():
     found = shutil.which("now")
     mine = shutil.which("now", path=os.path.dirname(sys.executable))
     if not (found and mine and os.path.samefile(found, mine)):
-        pytest.skip("the `now` on the PATH is not the console script next "
-                    "to {}".format(sys.executable))
+        pytest.skip(
+            "the `now` on the PATH is not the console script next to {}".format(
+                sys.executable
+            )
+        )
 
 
 def test_prov_route_runs_now_where_the_server_runs(
-        vis, now_on_path, tmp_path, monkeypatch):
+    vis, now_on_path, tmp_path, monkeypatch
+):
     """Characterization (#356) with the real ``now``
 
     The vis serves the project's store, as ``now vis --dir <project>`` does,
@@ -799,13 +841,13 @@ def test_command_route_under_vis_dir(vis, commands, monkeypatch, name):
     monkeypatch.setattr(app, "dir", str(vis.project.path), raising=False)
     vis.get(COMMAND_ROUTES[name](vis))
     assert not runs_on(commands.only_call, vis.project.path), (
-        "now runs on the served project")
+        "now runs on the served project"
+    )
 
 
 @pytest.mark.parametrize("name", list(COMMAND_ROUTES))
 @known_defects(VIS_COMMANDS_CWD)
-def test_command_route_under_vis_dir_desired(
-        vis, commands, monkeypatch, name):
+def test_command_route_under_vis_dir_desired(vis, commands, monkeypatch, name):
     """Every command runs on the store ``now vis`` serves (cwd or --dir)"""
     monkeypatch.setattr(app, "dir", str(vis.project.path), raising=False)
     route = COMMAND_ROUTES[name](vis)
@@ -813,7 +855,10 @@ def test_command_route_under_vis_dir_desired(
     call = commands.only_call
     option = dir_option(call.args)
     assert runs_on(call, vis.project.path), (
-        "ran now outside the served project: cwd {!r}, {}; GET {}, argv "
-        "{}".format(call.kwargs.get("cwd"),
-                    "no --dir" if option is None else "--dir " + option,
-                    route, call.args))
+        "ran now outside the served project: cwd {!r}, {}; GET {}, argv {}".format(
+            call.kwargs.get("cwd"),
+            "no --dir" if option is None else "--dir " + option,
+            route,
+            call.args,
+        )
+    )

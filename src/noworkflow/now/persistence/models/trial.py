@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Trial Model"""
+
 # pylint: disable=too-many-lines
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -45,6 +46,7 @@ from .head import Head
 
 def uuid_gen():
     return str(uuid.uuid4())
+
 
 @proxy_class
 class Trial(AlchemyProxy):
@@ -150,18 +152,23 @@ class Trial(AlchemyProxy):
     >>> list(trial.local_modules)  # doctest: +ELLIPSIS
     [module(...).]
     """
+
     # pylint: disable=too-many-public-methods
 
     __tablename__ = "trial"
     __table_args__ = (
-        ForeignKeyConstraint(["modules_inherited_from_trial_id"],
-                             ["trial.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(
+            ["modules_inherited_from_trial_id"], ["trial.id"], ondelete="RESTRICT"
+        ),
         ForeignKeyConstraint(["parent_id"], ["trial.id"], ondelete="SET NULL"),
         ForeignKeyConstraint(["experiment_id"], ["experiment.id"], ondelete="SET NULL"),
         ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),
-        ForeignKeyConstraint(["id", "main_id"],
-                             ["code_block.trial_id", "code_block.id"],
-                             ondelete="SET NULL", use_alter=True),
+        ForeignKeyConstraint(
+            ["id", "main_id"],
+            ["code_block.trial_id", "code_block.id"],
+            ondelete="SET NULL",
+            use_alter=True,
+        ),
         {"sqlite_autoincrement": True},
     )
     sequence_key = Column(  # pylint: disable=invalid-name
@@ -201,7 +208,7 @@ class Trial(AlchemyProxy):
 
     experiment_id = Column(Text)
     user_id = Column(Text)
-    
+
     DEFAULT = {
         "dot.format": "png",
         "graph.width": 500,
@@ -220,31 +227,34 @@ class Trial(AlchemyProxy):
         "prolog_use_cache": "prolog.use_cache",
     }
 
-    prolog_description = PrologDescription("trial", (
-        PrologTrial("id"),
-        PrologRepr("script"),
-        PrologTimestamp("start"),
-        PrologTimestamp("finish"),
-        PrologRepr("command"),
-        PrologRepr("path"),
-        PrologRepr("status"),
-        PrologNullable("modules_inherited_from_trial_id", link="trial.id"),
-        PrologNullable("experiment_id"),
-        PrologNullable("main_id", link="code_block.id"),
-        PrologNullable("parent_id", link="trial.id"),
-        PrologNullableRepr("user_id"),
-    ), description=(
-        "informs that a given trial (*Id*),\n"
-        "executed *Script* during a time period from *Start*"
-        "to *Finish*,\n"
-        "using noWokflows *command* at *Path*.\n"
-        "This trial might by backup/finished/unfinished (*Status*).\n"
-        "This trial uses modules from *ModulesInheritedFromTrialId*,\n"
-        "belongs to *ExperimentId* and *UserId*,\n"
-        "is based on *ParentId*,\n"
-        "and represents the script *CodeBlockId*."
-    ))
-
+    prolog_description = PrologDescription(
+        "trial",
+        (
+            PrologTrial("id"),
+            PrologRepr("script"),
+            PrologTimestamp("start"),
+            PrologTimestamp("finish"),
+            PrologRepr("command"),
+            PrologRepr("path"),
+            PrologRepr("status"),
+            PrologNullable("modules_inherited_from_trial_id", link="trial.id"),
+            PrologNullable("experiment_id"),
+            PrologNullable("main_id", link="code_block.id"),
+            PrologNullable("parent_id", link="trial.id"),
+            PrologNullableRepr("user_id"),
+        ),
+        description=(
+            "informs that a given trial (*Id*),\n"
+            "executed *Script* during a time period from *Start*"
+            "to *Finish*,\n"
+            "using noWokflows *command* at *Path*.\n"
+            "This trial might by backup/finished/unfinished (*Status*).\n"
+            "This trial uses modules from *ModulesInheritedFromTrialId*,\n"
+            "belongs to *ExperimentId* and *UserId*,\n"
+            "is based on *ParentId*,\n"
+            "and represents the script *CodeBlockId*."
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         if args and isinstance(args[0], relational.base):
@@ -275,8 +285,8 @@ class Trial(AlchemyProxy):
         if obj is None:
             raise RuntimeError("Trial {} not found".format(trial_ref))
         super(Trial, self).__init__(obj)
-        #self._store_pk(obj)
-        #self._restore_instance()
+        # self._store_pk(obj)
+        # self._restore_instance()
 
         from ...models.dataflow_model import DataflowModel
         from ...models.dependency_graph.config import DependencyConfig
@@ -333,7 +343,6 @@ class Trial(AlchemyProxy):
             return self.modules_inherited_from_trial.modules
         return self._modules
 
-
     @property
     def initial_activation(self):
         """Return initial activation
@@ -361,7 +370,6 @@ class Trial(AlchemyProxy):
             return None
         return self.main.this_component.first_evaluation.this_activation
 
-        
     @property
     def local_modules(self):
         """Load local modules
@@ -649,6 +657,7 @@ class Trial(AlchemyProxy):
          ('main.py', [('code_hash', '...'), ('type', 'script')])]
         """
         files = {}
+
         def add(path, info):
             """Add file to dict"""
             if os.path.isabs(path):
@@ -664,18 +673,20 @@ class Trial(AlchemyProxy):
             for module in self.local_modules:
                 code_hash = module.code_hash
                 if code_hash:
-                    add(module.path, {
-                        "code_hash": code_hash,
-                        "type": "module",
-                        "name": module.name
-                    })
+                    add(
+                        module.path,
+                        {"code_hash": code_hash, "type": "module", "name": module.name},
+                    )
         if access:
             for faccess in reversed(list(self.file_accesses)):
-                add(faccess.name, {
-                    "code_hash": faccess.content_hash_before,
-                    "type": "access",
-                    "checkpoint": faccess.checkpoint,
-                })
+                add(
+                    faccess.name,
+                    {
+                        "code_hash": faccess.content_hash_before,
+                        "type": "access",
+                        "checkpoint": faccess.checkpoint,
+                    },
+                )
 
         return files
 
@@ -718,23 +729,32 @@ class Trial(AlchemyProxy):
         # pylint: disable=not-an-iterable
         for module in self.local_modules:
             if not path or module.path.endswith(path):
-                yield module.path, {
-                    "code_hash": module.code_hash,
-                    "type": "module",
-                    "name": module.name
-                }
+                yield (
+                    module.path,
+                    {
+                        "code_hash": module.code_hash,
+                        "type": "module",
+                        "name": module.name,
+                    },
+                )
         for faccess in list(self.file_accesses):
             if not path or faccess.name.endswith(path):
-                yield faccess.name, {
-                    "code_hash": faccess.content_hash_before,
-                    "type": "access",
-                    "checkpoint": faccess.checkpoint,
-                }
-                yield faccess.name, {
-                    "code_hash": faccess.content_hash_after,
-                    "type": "access",
-                    "checkpoint": faccess.checkpoint,
-                }
+                yield (
+                    faccess.name,
+                    {
+                        "code_hash": faccess.content_hash_before,
+                        "type": "access",
+                        "checkpoint": faccess.checkpoint,
+                    },
+                )
+                yield (
+                    faccess.name,
+                    {
+                        "code_hash": faccess.content_hash_after,
+                        "type": "access",
+                        "checkpoint": faccess.checkpoint,
+                    },
+                )
 
     def create_head(self):
         """Create head for this trial
@@ -797,7 +817,8 @@ class Trial(AlchemyProxy):
         Finish: 2016-04-08 18:18:05
         Duration: 0:01:05
         """
-        print_("""\
+        print_(
+            """\
             Id: {t.id}
             Sequence Key: {t.sequence_key}
             Status: {status}
@@ -808,7 +829,8 @@ class Trial(AlchemyProxy):
             Finish: {t.finish}
             Duration: {t.duration_text}""".format(
                 t=self, status=self.status.capitalize()
-            ))
+            )
+        )
 
     def _ipython_display_(self):
         """Display history graph"""
@@ -816,9 +838,8 @@ class Trial(AlchemyProxy):
             # pylint: disable=protected-access
             return self.graph._ipython_display_()
         from IPython.display import display
-        display({
-            'text/plain': 'Trial {}'.format(self.id)
-        }, raw=True)
+
+        display({"text/plain": "Trial {}".format(self.id)}, raw=True)
 
     @classmethod  # query
     def distinct_scripts(cls):
@@ -836,8 +857,10 @@ class Trial(AlchemyProxy):
         ... ).replace("u'", "'"))
         ['main.py', 'main2.py', 'main3.py']
         """
-        return {s[0].rsplit("/", 1)[-1]
-                for s in relational.session.query(distinct(cls.m.script))}
+        return {
+            s[0].rsplit("/", 1)[-1]
+            for s in relational.session.query(distinct(cls.m.script))
+        }
 
     @classmethod  # query
     def last_trial(cls, script=None, check=False, session=None):
@@ -884,19 +907,18 @@ class Trial(AlchemyProxy):
         model = cls.m
         session = session or relational.session
         trial = (
-            session.query(model)
-            .filter(model.start.in_(
-                select([func.max(model.start)])
-                .where(model.script == script)
-            ))
+            session.query(model).filter(
+                model.start.in_(
+                    select([func.max(model.start)]).where(model.script == script)
+                )
+            )
         ).first()
         if trial or check:
             return trial
         return (
-            session.query(model)
-            .filter(model.start.in_(
-                select([func.max(model.start)])
-            ))
+            session.query(model).filter(
+                model.start.in_(select([func.max(model.start)]))
+            )
         ).first()
 
     @classmethod  # query
@@ -947,18 +969,19 @@ class Trial(AlchemyProxy):
         query = (
             session.query(model)
             .filter(
-                (model.script == script) & (
-                    model.start.like(time + "%") |
-                    model.finish.like(time + "%")
-                )
-            ).order_by(model.start)
+                (model.script == script)
+                & (model.start.like(time + "%") | model.finish.like(time + "%"))
+            )
+            .order_by(model.start)
         )
         if trial:
             query = query.filter(model.id == trial)
         return proxy(query.first())
+
     @classmethod
-    def list_from_experiment(cls,experiment,session=None):
+    def list_from_experiment(cls, experiment, session=None):
         from .experiment import Experiment  # avoid circular import
+
         session = session or relational.session
         return (
             session.query(cls.m)
@@ -969,6 +992,7 @@ class Trial(AlchemyProxy):
     @classmethod  # query
     def set_user_based_on_env(cls, trial_id, session=None):
         from .user import User
+
         session = session or relational.session
         user_name = getpass.getuser()
         user_domain = socket.gethostname()
@@ -1009,11 +1033,16 @@ class Trial(AlchemyProxy):
         True
         """
         from .tag import Tag  # avoid circular import
+
         session = session or relational.session
         return (
             session.query(cls.m)
             .outerjoin(Tag.m)
-            .filter((cls.m.id == trial_ref) | (Tag.m.name == trial_ref) | (cls.m.sequence_key == trial_ref))
+            .filter(
+                (cls.m.id == trial_ref)
+                | (Tag.m.name == trial_ref)
+                | (cls.m.sequence_key == trial_ref)
+            )
         ).first()
 
     @classmethod  # query
@@ -1073,9 +1102,7 @@ class Trial(AlchemyProxy):
             if remove:
                 Head.remove(head.id, session=relational.make_session())
         elif not head:
-            trial = cls.last_trial(
-                script=script, check=check,
-                session=session)
+            trial = cls.last_trial(script=script, check=check, session=session)
         return proxy(trial)
 
     @classmethod  # query
@@ -1112,20 +1139,18 @@ class Trial(AlchemyProxy):
         session = session or relational.session
         if not hasattr(cls, "_last_trial_id"):
             ttrial = cls.t
-            _query = (
-                select([ttrial.c.id]).where(ttrial.c.start.in_(
+            _query = select([ttrial.c.id]).where(
+                ttrial.c.start.in_(
                     select([func.max(ttrial.c.start)])
                     .select_from(ttrial)
                     .where(is_none(ttrial.c.modules_inherited_from_trial_id))
-                ))
+                )
             )
             cls.last_trial_id = str(_query)
-        an_id = session.execute(
-            cls.last_trial_id).fetchone()
+        an_id = session.execute(cls.last_trial_id).fetchone()
         if not an_id:
             raise RuntimeError(
-                "Not able to bypass modules check.\n    "
-                "No previous trial was found"
+                "Not able to bypass modules check.\n    No previous trial was found"
             )
         return an_id[0]
 
@@ -1174,6 +1199,7 @@ class Trial(AlchemyProxy):
             .where(ttrial.c.id == trial_id)
         )
         session.commit()
+
     @classmethod  # query
     def create(cls, script, start, command, path, bypass_modules, session=None):
         """Create trial and assign a new id to it
@@ -1254,16 +1280,23 @@ class Trial(AlchemyProxy):
         tid = uuid_gen()
         session.execute(
             ttrial.insert(),
-            {"id": tid, "script": script, "start": start, "command": command,
-             "path": path,
-             "status": "ongoing", "parent_id": parent_id,
-             "modules_inherited_from_trial_id": inherited_id})
+            {
+                "id": tid,
+                "script": script,
+                "start": start,
+                "command": command,
+                "path": path,
+                "status": "ongoing",
+                "parent_id": parent_id,
+                "modules_inherited_from_trial_id": inherited_id,
+            },
+        )
 
         session.commit()
         return tid
 
     @classmethod  # query
-    def reverse_trials(cls, limit, session=None,expId=None):
+    def reverse_trials(cls, limit, session=None, expId=None):
         """Return a generator with <limit> trials ordered by start time desc
 
 
@@ -1289,7 +1322,7 @@ class Trial(AlchemyProxy):
         )
 
     @classmethod  # query
-    def count(cls, session=None,expId=None):
+    def count(cls, session=None, expId=None):
         """Count number of trials on database
 
 

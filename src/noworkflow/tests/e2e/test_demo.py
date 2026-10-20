@@ -16,6 +16,7 @@ needs the console script nor matplotlib, so they run on every leg (the
 whole demo is ``test_demo_1_through_the_console_script`` of
 ``test_restore.py``).
 """
+
 import pytest
 
 from ..helpers.defects import Defect, known_defects
@@ -27,15 +28,15 @@ NO_DEMO_DIRECTORY = Defect(
     "before a $now step and once more after the last step, and only a "
     ">LOAD step creates it, so a slice without one ends in "
     "FileNotFoundError",
-    signature="Traceback (most recent call last)")
+    signature="Traceback (most recent call last)",
+)
 
 
 @pytest.mark.parametrize("steps", SLICES)
 def test_demo_slice_without_load_fails_on_a_fresh_project(project, steps):
     """The slice crashes with exit status 1, a traceback that ends in
     FileNotFoundError naming the demo directory, and no directory"""
-    result = project.run("demo", "1", "--steps", steps, expect=1,
-                         allow_stderr=True)
+    result = project.run("demo", "1", "--steps", steps, expect=1, allow_stderr=True)
 
     assert result.stdout.startswith("Creating Demo 1\n"), str(result)
     last = result.stderr.strip().splitlines()[-1]
@@ -46,10 +47,8 @@ def test_demo_slice_without_load_fails_on_a_fresh_project(project, steps):
 
 @pytest.mark.parametrize("steps", SLICES)
 @known_defects(NO_DEMO_DIRECTORY)
-def test_demo_slice_without_load_fails_on_a_fresh_project_desired(
-        project, steps):
+def test_demo_slice_without_load_fails_on_a_fresh_project_desired(project, steps):
     """A slice of the steps runs without a traceback on a fresh project"""
-    result = project.run("demo", "1", "--steps", steps, expect=None,
-                         allow_stderr=True)
+    result = project.run("demo", "1", "--steps", steps, expect=None, allow_stderr=True)
 
     assert "Traceback" not in result.stderr, result.stderr

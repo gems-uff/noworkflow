@@ -5,7 +5,9 @@ import subprocess  # nosec B404
 
 
 def execute(cmd, default=None, **kwargs):
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)
+    p = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs
+    )
     out = p.communicate()[0]
     returncode = p.wait()
     if returncode != 0:
@@ -15,6 +17,7 @@ def execute(cmd, default=None, **kwargs):
         else:
             return default
     return out
+
 
 def is_git_installed():
     try:
@@ -35,8 +38,12 @@ def hash_object(content, git_path):
     cmd = ["git", "hash-object", "-w", "--stdin"]
     # No shell; a fixed argv, and the content goes to git on stdin
     p = subprocess.Popen(  # nosec B603
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
-        stdin=subprocess.PIPE, cwd=git_path)
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stdin=subprocess.PIPE,
+        cwd=git_path,
+    )
     out = p.communicate(content)[0]
     returncode = p.wait()
     if returncode != 0:
@@ -44,9 +51,10 @@ def hash_object(content, git_path):
         raise subprocess.CalledProcessError(returncode, cmd)
     return out.decode().replace("\n", "")
 
+
 def get(content_hash, git_path):
     cmd = ["git", "cat-file", "-p", content_hash]
-    return execute(cmd, cwd=git_path)    
+    return execute(cmd, cwd=git_path)
 
 
 def update_index(mode, content_hash, filename, git_path):
@@ -72,7 +80,6 @@ def cat_file(content_hash, git_path):
 def rm_all(git_path):
     cmd = ["git", "rm", "-r", "--cached", "."]
     return execute(cmd, cwd=git_path, default=b"").decode()
-
 
 
 def commit_tree(tree_hash, commit_message, git_path, author=None, parent=None):
@@ -115,6 +122,7 @@ def show_ref(ref, git_path):
     if result:
         return result.split()[0]
     return None
+
 
 def update_ref(ref, tree, git_path):
     cmd = ["git", "update-ref", ref, tree]

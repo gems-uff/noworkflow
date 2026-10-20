@@ -6,7 +6,6 @@ from .gitbase import GitContentDatabaseEngine
 
 
 class PureGitEngine(GitContentDatabaseEngine):
-
     def __init__(self, config):
         super(PureGitEngine, self).__init__(config)
 
@@ -27,9 +26,7 @@ class PureGitEngine(GitContentDatabaseEngine):
     def put_attr(self, content, filename):
         """Return attributes for the do_put operation"""
         filename = self._inc_name(filename)
-        return (
-            self.content_path, self.object_hashes, content, filename
-        )
+        return (self.content_path, self.object_hashes, content, filename)
 
     def put(self, content, filename="generic"):  # pylint: disable=method-hidden
         """Put content in the content database"""
@@ -38,7 +35,7 @@ class PureGitEngine(GitContentDatabaseEngine):
     def get(self, content_hash):  # pylint: disable=method-hidden
         """Get content from the content database"""
         return git_system.get(content_hash, self.content_path)
- 
+
     def gc(self):
         git_system.garbage_collection(self.content_path)
 
@@ -63,22 +60,24 @@ class PureGitEngine(GitContentDatabaseEngine):
         """Creates a commit object"""
         master_ref = git_system.show_ref(self._commit_ref, self.content_path)
         result = git_system.commit_tree(
-            tree, message, self.content_path,
+            tree,
+            message,
+            self.content_path,
             parent=master_ref,
-            author=(self._commit_name, self._commit_email)
+            author=(self._commit_name, self._commit_email),
         )
         git_system.update_ref(self._commit_ref, result, self.content_path)
         return result
 
     def new_tree(self, parent):
-        if parent == '':
+        if parent == "":
             git_system.rm_all(self.content_path)
         return Tree(parent, self.content_path)
 
     def insert_blob(self, tree, basename, value):
         """Insert blob into tree"""
         tree.insert_blob(basename, value)
-    
+
     def insert_tree(self, tree, basename, value):
         """Pure-git commands to update tree allow paths on insert-blob. We do not need to break down trees"""
         pass
@@ -87,24 +86,31 @@ class PureGitEngine(GitContentDatabaseEngine):
         """Write tree to git directory"""
         return tree.write()
 
-class Tree(object):
 
+class Tree(object):
     def __init__(self, dirname, content_path):
         self.operations = []
         self.dirname = dirname
         self.content_path = os.path.join(content_path)
 
     def insert_blob(self, basename, value):
-        self.operations.append((
-            git_system.update_index,
-            ("100644", value, os.path.join(self.dirname, basename), self.content_path)
-        ))
+        self.operations.append(
+            (
+                git_system.update_index,
+                (
+                    "100644",
+                    value,
+                    os.path.join(self.dirname, basename),
+                    self.content_path,
+                ),
+            )
+        )
 
     def write(self):
         for op, args in self.operations:
             op(*args)
         result = "auto"
-        if self.dirname == '':
+        if self.dirname == "":
             result = git_system.write_tree(self.content_path)
             git_system.rm_all(self.content_path)
         return result

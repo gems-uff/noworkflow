@@ -3,27 +3,22 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight MemberOfGroup"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from .base import BaseLW, define_attrs
 
 
-class MemberOfGroupLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
+class MemberOfGroupLW(BaseLW):  # pylint: disable=too-many-instance-attributes
     """MemberOfGroup lightweight object"""
 
-    __slots__, attributes = define_attrs(
-        ["userId","groupId", "id"]
-    )
+    __slots__, attributes = define_attrs(["userId", "groupId", "id"])
 
-    def __init__(self, id,groupId,userId):
+    def __init__(self, id, groupId, userId):
 
-        self.userId = userId    
+        self.userId = userId
         self.groupId = groupId
         self.id = id
-    
+
     def __json__(self):
-        return {
-            'userId': self.userId,
-            'groupId': self.groupId,
-            'id': self.id
-        }
+        return {"userId": self.userId, "groupId": self.groupId, "id": self.id}

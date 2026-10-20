@@ -1,0 +1,6 @@
+# Mechanical commits that only reformat. `git blame` skips them once
+# `git config blame.ignoreRevsFile .git-blame-ignore-revs` is set (GitHub
+# reads the file by itself).
+
+# Issue #221: sort the imports with ruff
+6b350d01d05a0d4cf9d34ad35aeea8a91e019a52

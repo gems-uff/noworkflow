@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight Composition"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ..models import Composition
@@ -11,10 +12,10 @@ from .base import BaseLW, define_attrs
 
 class CompositionLW(BaseLW):
     """Composition lightweight object"""
+
     # pylint: disable=too-many-instance-attributes
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "part_id", "whole_id", "type", "position",
-         "extra"]
+        ["trial_id", "id", "part_id", "whole_id", "type", "position", "extra"]
     )
     nullable = set()
     model = Composition
@@ -40,14 +41,14 @@ class CompositionLW(BaseLW):
             "whole_id={0.whole_id}, "
             "part_id={0.part_id}, type={0.type})"
         ).format(self)
-    
+
     def __json__(self):
         return {
-            'trial_id': self.trial_id,
-            'id': self.id,
-            'part_id': self.part_id,
-            'whole_id': self.whole_id,
-            'type': self.type,
-            'position': self.position,
-            'extra': self.extra
+            "trial_id": self.trial_id,
+            "id": self.id,
+            "part_id": self.part_id,
+            "whole_id": self.whole_id,
+            "type": self.type,
+            "position": self.position,
+            "extra": self.extra,
         }

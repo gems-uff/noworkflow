@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight Activation"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ..models import Activation
@@ -11,11 +12,13 @@ from .base import BaseLW, define_attrs
 
 class DebugDepList(list):
     """Debug depa insertion: bind DepList to it to print each change"""
+
     # pylint: disable=E1003, E1101
 
     def pop(self, *args, **kwargs):
         """Pop"""
         import inspect
+
         result = super(DebugDepList, self).pop(*args, **kwargs)
         print("pop", len(self), inspect.stack()[1][3])
         print(self)
@@ -24,6 +27,7 @@ class DebugDepList(list):
     def append(self, *args, **kwargs):
         """Append"""
         import inspect
+
         super(DebugDepList, self).append(*args, **kwargs)
         print("append", len(self), inspect.stack()[1][3])
         print(self)
@@ -31,32 +35,56 @@ class DebugDepList(list):
     def insert(self, *args, **kwargs):
         """Insert"""
         import inspect
+
         super(DebugDepList, self).insert(*args, **kwargs)
         print("insert", len(self), inspect.stack()[1][3])
         print(self)
+
 
 DepList = list
 
 
 class ActivationLW(BaseLW):
     """Activation lightweight object"""
+
     # pylint: disable=too-many-instance-attributes
 
     __slots__, attributes = define_attrs(
-        ["trial_id", "id", "name", "start_checkpoint", "code_block_trial_id",
-         "code_block_id"],
-        ["file_accesses", "stage_tags", "context", "conditions", "permanent_conditions",
-         "evaluation", "assignments", "closure", "func",
-         "active", "depth", "parent", "generator", "last_activation", 
-         "bound_dependency", "func_evaluation", "iscell"]
+        [
+            "trial_id",
+            "id",
+            "name",
+            "start_checkpoint",
+            "code_block_trial_id",
+            "code_block_id",
+        ],
+        [
+            "file_accesses",
+            "stage_tags",
+            "context",
+            "conditions",
+            "permanent_conditions",
+            "evaluation",
+            "assignments",
+            "closure",
+            "func",
+            "active",
+            "depth",
+            "parent",
+            "generator",
+            "last_activation",
+            "bound_dependency",
+            "func_evaluation",
+            "iscell",
+        ],
     )
     nullable = {"code_block_id"}
     model = Activation
 
-    def __init__(self, evaluation, trial_id, name, start, code_block_id,id=None):
+    def __init__(self, evaluation, trial_id, name, start, code_block_id, id=None):
         # pylint: disable=too-many-arguments
         self.trial_id = trial_id
-        self.id=id if id else  evaluation.id  # pylint: disable=invalid-name
+        self.id = id if id else evaluation.id  # pylint: disable=invalid-name
         self.name = name
         self.start_checkpoint = start
         self.code_block_id = code_block_id if code_block_id else -1
@@ -82,7 +110,7 @@ class ActivationLW(BaseLW):
 
         # File accesses. Used to get the content after the activation
         self.file_accesses = []
-        
+
         # Cells tags. Used to get the content after the activation
         self.stage_tags = []
 
@@ -106,7 +134,6 @@ class ActivationLW(BaseLW):
         # Notebook
         self.iscell = False
 
-
     def is_complete(self):
         """Activation can always be removed from object store"""
         # pylint: disable=no-self-use
@@ -121,9 +148,9 @@ class ActivationLW(BaseLW):
 
     def __json__(self):
         return {
-            'trial_id': self.trial_id,
-            'id': self.id,
-            'name': self.name,
-            'start_checkpoint': self.start_checkpoint,
-            'code_block_id': self.code_block_id
+            "trial_id": self.trial_id,
+            "id": self.id,
+            "name": self.name,
+            "start_checkpoint": self.start_checkpoint,
+            "code_block_id": self.code_block_id,
         }

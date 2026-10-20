@@ -27,6 +27,7 @@ test runs the installed Inkscape where there is one. A conversion that fails
 or writes nothing falls back to Graphviz's PDF, or, under ``ink.pdf``, which
 forces Inkscape, to the cell's text (#404).
 """
+
 import json
 import os
 import shutil
@@ -64,8 +65,11 @@ LOST_MESSAGE = Defect(
 GRAPH = "digraph G { a -> b }"
 BROKEN = "digraph G { a -> }"
 # What the fake Graphviz draws, by format, and says of a broken graph.
-DRAWN = {"svg": b"<svg>fake</svg>", "png": b"\x89PNG fake",
-         "pdf": b"%PDF-1.4 fake graphviz"}
+DRAWN = {
+    "svg": b"<svg>fake</svg>",
+    "png": b"\x89PNG fake",
+    "pdf": b"%PDF-1.4 fake graphviz",
+}
 SYNTAX_ERROR = b"Error: <stdin>: syntax error in line 1 near '}'\n"
 # What the fake Inkscape writes.
 CONVERTED = b"%PDF-1.5 fake inkscape"
@@ -104,9 +108,13 @@ def fake_graphviz(monkeypatch):
     """``%%dot`` starts ``FakeGraphviz`` instead of a process; nothing else
     of the process sees it"""
     monkeypatch.setattr(FakeGraphviz, "calls", [])
-    monkeypatch.setattr(dotmagic, "subprocess", types.SimpleNamespace(
-        Popen=FakeGraphviz, PIPE=subprocess.PIPE,
-        check_call=subprocess.check_call))
+    monkeypatch.setattr(
+        dotmagic,
+        "subprocess",
+        types.SimpleNamespace(
+            Popen=FakeGraphviz, PIPE=subprocess.PIPE, check_call=subprocess.check_call
+        ),
+    )
     return FakeGraphviz.calls
 
 
@@ -152,8 +160,13 @@ def fake_inkscape_1(monkeypatch):
         return inkscape_1(args, **kwargs)
 
     monkeypatch.setattr(FakeGraphviz, "calls", [])
-    monkeypatch.setattr(dotmagic, "subprocess", types.SimpleNamespace(
-        Popen=FakeGraphviz, PIPE=subprocess.PIPE, check_call=check_call))
+    monkeypatch.setattr(
+        dotmagic,
+        "subprocess",
+        types.SimpleNamespace(
+            Popen=FakeGraphviz, PIPE=subprocess.PIPE, check_call=check_call
+        ),
+    )
     return conversions
 
 
@@ -161,12 +174,14 @@ def converter(behavior):
     """A ``check_call`` for ``dot_to_pdf`` that does not convert: it
     ``fails`` (exits non-zero), ``writes nothing`` (exits 0) or is
     ``missing`` (cannot start)"""
+
     def check_call(args, **kwargs):
         if behavior == "fails":
             raise subprocess.CalledProcessError(1, args)
         if behavior == "missing":
             raise FileNotFoundError(2, "No such file or directory", args[0])
         return 0
+
     return check_call
 
 
@@ -177,9 +192,14 @@ def fake_converter(monkeypatch):
     monkeypatch.setattr(FakeGraphviz, "calls", [])
 
     def install(behavior):
-        monkeypatch.setattr(dotmagic, "subprocess", types.SimpleNamespace(
-            Popen=FakeGraphviz, PIPE=subprocess.PIPE,
-            check_call=converter(behavior)))
+        monkeypatch.setattr(
+            dotmagic,
+            "subprocess",
+            types.SimpleNamespace(
+                Popen=FakeGraphviz, PIPE=subprocess.PIPE, check_call=converter(behavior)
+            ),
+        )
+
     return install
 
 
@@ -188,13 +208,17 @@ def temporary_files(shell):
     return set(os.listdir(shell.project.tmp))
 
 
-@pytest.mark.parametrize("fmt, mimetype, start", [
-    pytest.param("png", "image/png", b"\x89PNG", marks=needs_dot),
-    pytest.param("svg", "image/svg+xml", "<svg", marks=needs_dot),
-    pytest.param("dot.pdf", "application/pdf", b"%PDF", marks=needs_dot),
-    ("dot", "text/vnd.graphviz", GRAPH),
-    ("txt", "text/plain", GRAPH),
-], ids=["png", "svg", "pdf", "dot", "txt"])
+@pytest.mark.parametrize(
+    "fmt, mimetype, start",
+    [
+        pytest.param("png", "image/png", b"\x89PNG", marks=needs_dot),
+        pytest.param("svg", "image/svg+xml", "<svg", marks=needs_dot),
+        pytest.param("dot.pdf", "application/pdf", b"%PDF", marks=needs_dot),
+        ("dot", "text/vnd.graphviz", GRAPH),
+        ("txt", "text/plain", GRAPH),
+    ],
+    ids=["png", "svg", "pdf", "dot", "txt"],
+)
 def test_dot_publishes_the_format_it_is_given(shell, fmt, mimetype, start):
     """``%%dot -f FORMAT`` publishes one output of that format's MIME type:
     the image Graphviz draws, or the cell's own text for ``dot`` and
@@ -209,12 +233,17 @@ def test_dot_publishes_the_format_it_is_given(shell, fmt, mimetype, start):
     assert start in data[:400]
 
 
-@pytest.mark.parametrize("fmt, mimetype, drawn", [
-    ("svg", "image/svg+xml", DRAWN["svg"].decode("utf-8")),
-    ("png", "image/png", DRAWN["png"]),
-], ids=["svg", "png"])
+@pytest.mark.parametrize(
+    "fmt, mimetype, drawn",
+    [
+        ("svg", "image/svg+xml", DRAWN["svg"].decode("utf-8")),
+        ("png", "image/png", DRAWN["png"]),
+    ],
+    ids=["svg", "png"],
+)
 def test_dot_publishes_what_the_program_draws(
-        fake_graphviz, shell, fmt, mimetype, drawn):
+    fake_graphviz, shell, fmt, mimetype, drawn
+):
     """``%%dot`` sends the cell to the program as UTF-8, with ``-T`` and
     the format, and publishes what it writes (a fake Graphviz)"""
     cell = ran(shell, "%%dot -f {}\n{}".format(fmt, GRAPH))
@@ -224,8 +253,9 @@ def test_dot_publishes_what_the_program_draws(
 
 
 @needs_dot
-@pytest.mark.skipif(shutil.which("inkscape") is not None,
-                    reason="inkscape is installed")
+@pytest.mark.skipif(
+    shutil.which("inkscape") is not None, reason="inkscape is installed"
+)
 def test_dot_pdf_without_inkscape_falls_back_to_graphviz(shell):
     """``%%dot -f pdf`` converts Graphviz's SVG with inkscape; without
     inkscape it asks Graphviz for the PDF"""
@@ -261,7 +291,8 @@ def test_dot_save_pdf_with_inkscape_1_writes_its_pdf(fake_inkscape_1, shell):
 
 @pytest.mark.parametrize("converter", ["fails", "writes nothing", "missing"])
 def test_dot_pdf_falls_back_to_graphviz_when_inkscape_does_not_convert(
-        fake_converter, shell, converter):
+    fake_converter, shell, converter
+):
     """``%%dot -f pdf`` publishes Graphviz's PDF when the conversion
     exits non-zero, exits 0 without writing, or cannot start; never an
     empty PDF, and nothing is left in the temporary directory"""
@@ -274,8 +305,7 @@ def test_dot_pdf_falls_back_to_graphviz_when_inkscape_does_not_convert(
     assert temporary_files(shell) == before
 
 
-def test_dot_ink_pdf_reports_a_conversion_that_writes_nothing(
-        fake_converter, shell):
+def test_dot_ink_pdf_reports_a_conversion_that_writes_nothing(fake_converter, shell):
     """``-f ink.pdf`` forces Inkscape: when it writes nothing, the cell
     says so on stderr and shows its text, as for any other failure"""
     fake_converter("writes nothing")
@@ -292,16 +322,18 @@ def test_dot_pdf_with_the_installed_inkscape_1(shell):
     publishes a PDF and leaves nothing in the temporary directory (the real
     programs; no CI leg installs Inkscape, so it runs only where one is
     installed)"""
-    version = subprocess.run([INKSCAPE, "--version"], capture_output=True,
-                             text=True, check=False).stdout
+    version = subprocess.run(
+        [INKSCAPE, "--version"], capture_output=True, text=True, check=False
+    ).stdout
     if not version.startswith("Inkscape 1."):
         pytest.skip("not Inkscape 1.x: {!r}".format(version[:40]))
     before = temporary_files(shell)
     cell = ran(shell, "%%dot -f pdf\n" + GRAPH)
     data = [output.data.get("application/pdf") for output in cell.outputs]
     assert len(data) == 1 and data[0] is not None, cell.describe()
-    assert data[0].startswith(b"%PDF"), (
-        "the published PDF holds {!r}".format(data[0][:40]))
+    assert data[0].startswith(b"%PDF"), "the published PDF holds {!r}".format(
+        data[0][:40]
+    )
     assert temporary_files(shell) == before
 
 
@@ -320,7 +352,8 @@ def test_dot_save_writes_each_file_in_its_format(shell):
     """``--save`` writes each file in the format of its extension into the
     current directory, and the cell shows the format of ``-f``"""
     mimetypes = ran(
-        shell, "%%dot -f svg --save graph.svg graph.png\n" + GRAPH).mimetypes
+        shell, "%%dot -f svg --save graph.svg graph.png\n" + GRAPH
+    ).mimetypes
     assert mimetypes == {"image/svg+xml"}
     path = shell.project.path
     assert sorted(shell.project.files()) == ["graph.png", "graph.svg"]
@@ -377,14 +410,13 @@ def test_dot_with_a_broken_graph_and_a_fake_program(fake_graphviz, shell):
     cell = ran(shell, "%%dot -f svg\n" + BROKEN)
     assert cell.mimetypes == {"text/plain"}
     assert cell.stderr == (
-        "dot exited with error code 1\nIncomplete input\n"
-        "Fallback to dot text\n")
+        "dot exited with error code 1\nIncomplete input\nFallback to dot text\n"
+    )
     assert ["stderr" in kwargs for _, kwargs in fake_graphviz] == [False]
 
 
 @known_defects(LOST_MESSAGE)
-def test_dot_with_a_broken_graph_and_a_fake_program_desired(
-        fake_graphviz, shell):
+def test_dot_with_a_broken_graph_and_a_fake_program_desired(fake_graphviz, shell):
     """On a broken graph the cell's stderr carries the program's message
     (a fake Graphviz)"""
     cell = ran(shell, "%%dot -f svg\n" + BROKEN)
@@ -410,8 +442,7 @@ def test_dot_in_a_second_shell_of_the_process(project):
         dotmagic.LOADED = True
         second.load_extension()
         cell_magics = second.magics("cell")
-        ran(second, "%%dot\n" + GRAPH,
-            "UsageError: Cell magic `%%dot` not found.")
+        ran(second, "%%dot\n" + GRAPH, "UsageError: Cell magic `%%dot` not found.")
     assert "dot" not in cell_magics
     assert "now_run" in cell_magics
 
@@ -464,13 +495,13 @@ def two_shells(tmp_path_factory):
     """What the two shells of a child Python got"""
     project = NowProject(tmp_path_factory.mktemp("two_shells"))
     report = project.root / "report.json"
-    completed = run_python(project, TWO_SHELLS, report,
-                           project.home / ".ipython")
-    normalize = Normalizer([("<PROJECT>", project.path),
-                            ("<ROOT>", project.root)])
+    completed = run_python(project, TWO_SHELLS, report, project.home / ".ipython")
+    normalize = Normalizer([("<PROJECT>", project.path), ("<ROOT>", project.root)])
     assert completed.returncode == 0 and report.exists(), normalize(
         "the child Python failed with return code {}\n{}".format(
-            completed.returncode, tail(completed.stderr)))
+            completed.returncode, tail(completed.stderr)
+        )
+    )
     return json.loads(report.read_text(encoding="utf-8"))
 
 

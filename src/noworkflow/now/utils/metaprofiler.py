@@ -7,6 +7,7 @@
 Use it to profile noWorkflow itself.
 It is disabled by deault. To enabled, change active to True
 """
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import csv
@@ -16,7 +17,7 @@ from datetime import datetime
 from functools import wraps
 
 
-class MetaProfiler(object):                                                      # pylint: disable=too-few-public-methods
+class MetaProfiler(object):  # pylint: disable=too-few-public-methods
     """Profile noWorkflow itself"""
 
     def __init__(self, active=False):
@@ -25,9 +26,11 @@ class MetaProfiler(object):                                                     
         self.order = [
             "cmd",
             "definition",
-            "deployment", "environment", "modules",
+            "deployment",
+            "environment",
+            "modules",
             "execution",
-            "storage"
+            "storage",
         ]
         self.data = defaultdict(float)
 
@@ -45,7 +48,9 @@ class MetaProfiler(object):                                                     
                 after = datetime.now()
                 self.data[typ] += (after - before).total_seconds()
                 return result
+
             return wrapper
+
         return dec
 
     def save(self):
@@ -61,4 +66,5 @@ class MetaProfiler(object):                                                     
                 writter = csv.writer(fil)
                 writter.writerows(rows)
 
-meta_profiler = MetaProfiler(active=False)                                       # pylint: disable=invalid-name
+
+meta_profiler = MetaProfiler(active=False)  # pylint: disable=invalid-name

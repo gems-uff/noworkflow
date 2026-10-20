@@ -20,6 +20,7 @@ compared by id, never printed, and assertion messages show a cell through
 ``Cell.describe()`` and a ``now`` run through the shell's ``normalize``,
 which mask the paths, the hostname and the trial ids.
 """
+
 import nbformat
 
 # The cells that record the trials, the second one changing a value.
@@ -50,9 +51,14 @@ def record(shell, code):
 
 def component_types(project, trial_id):
     """The types of the code components of a trial that hold its code"""
-    return sorted(row["type"] for row in project.query(
-        "SELECT type FROM code_component WHERE trial_id = ? "
-        "AND type IN ('cell', 'notebook', 'script')", trial_id))
+    return sorted(
+        row["type"]
+        for row in project.query(
+            "SELECT type FROM code_component WHERE trial_id = ? "
+            "AND type IN ('cell', 'notebook', 'script')",
+            trial_id,
+        )
+    )
 
 
 def run_notebook(shell, path):
@@ -93,8 +99,7 @@ def test_exported_notebooks_of_shell_trials_run_in_the_shell(shell):
     forms = {
         first: "Trial-{}.ipynb".format(first),
         "history": "History.ipynb",
-        "diff:{}:{}".format(first, second):
-            "Diff-{}-{}.ipynb".format(first, second),
+        "diff:{}:{}".format(first, second): "Diff-{}-{}.ipynb".format(first, second),
     }
     before = set(project.files())
     for argument in forms:
@@ -109,14 +114,19 @@ def test_exported_notebooks_of_shell_trials_run_in_the_shell(shell):
     assert shown, last.describe()
 
     last = run_notebook(shell, project.path / "History.ipynb")[-1]
-    shown = (type(last.result).__name__ == "History"
-             and "application/noworkflow.history+json" in last.mimetypes)
+    shown = (
+        type(last.result).__name__ == "History"
+        and "application/noworkflow.history+json" in last.mimetypes
+    )
     assert shown, last.describe()
 
     name = forms["diff:{}:{}".format(first, second)]
     diff = run_notebook(shell, project.path / name)[-1].result
-    same = (type(diff).__name__ == "Diff" and diff.trial1.id == first
-            and diff.trial2.id == second)
+    same = (
+        type(diff).__name__ == "Diff"
+        and diff.trial1.id == first
+        and diff.trial2.id == second
+    )
     assert same, "the Diff notebook does not compare the two trials"
 
 

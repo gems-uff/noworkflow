@@ -15,6 +15,7 @@ erased before and after each test.
 ``SaveOutput``, which collects the lines, is checked writing its
 ``.provn`` file under ``tmp_path``.
 """
+
 from types import SimpleNamespace
 
 import pytest
@@ -60,10 +61,15 @@ def clean_store():
 
 def annotate(annotation, trial_id=None, experiment_id=None, **fields):
     """Create an annotation; the fields not given are NULL"""
-    values = dict(annotation=annotation, description=None,
-                  annotationFormat=None, provenanceType=None,
-                  annotationLevel=None, relatedExperiment=experiment_id,
-                  relatedTrial=trial_id)
+    values = dict(
+        annotation=annotation,
+        description=None,
+        annotationFormat=None,
+        provenanceType=None,
+        annotationLevel=None,
+        relatedExperiment=experiment_id,
+        relatedTrial=trial_id,
+    )
     values.update(fields)
     return ExtendedAnnotation.create(SimpleNamespace(**values)).id
 
@@ -72,8 +78,7 @@ def entity_lines(text):
     return [line for line in text.splitlines() if line.startswith("entity(")]
 
 
-def test_export_prov_declares_the_collaboration_entities_of_the_trial(
-        clean_store):
+def test_export_prov_declares_the_collaboration_entities_of_the_trial(clean_store):
     """The trial's user, each of the user's groups and memberships, and the
     trial's annotation become one entity each, with the values the store
     holds
@@ -82,29 +87,35 @@ def test_export_prov_declares_the_collaboration_entities_of_the_trial(
     """
     trial_id = new_trial(TrialConfig("unfinished"))
     User.create(USER_ID, "alice")
-    groups = {name: Group.create(SimpleNamespace(name=name)).id
-              for name in ("g1", "g2")}
+    groups = {
+        name: Group.create(SimpleNamespace(name=name)).id for name in ("g1", "g2")
+    }
     memberships = {
-        MemberOfGroup.create(SimpleNamespace(
-            userId=USER_ID, groupId=group_id)).id: group_id
+        MemberOfGroup.create(
+            SimpleNamespace(userId=USER_ID, groupId=group_id)
+        ).id: group_id
         for group_id in groups.values()
     }
-    experiment_id = Experiment.create(
-        SimpleNamespace(name="exp", description="d")).id
+    experiment_id = Experiment.create(SimpleNamespace(name="exp", description="d")).id
     annotation_id = annotate(
-        "note", trial_id, experiment_id, description="why",
-        annotationFormat="text", provenanceType="retrospective",
-        annotationLevel="trial")
+        "note",
+        trial_id,
+        experiment_id,
+        description="why",
+        annotationFormat="text",
+        provenanceType="retrospective",
+        annotationLevel="trial",
+    )
     relational.session.query(Trial.m).filter(Trial.m.id == trial_id).update(
-        {"user_id": USER_ID, "experiment_id": experiment_id})
+        {"user_id": USER_ID, "experiment_id": experiment_id}
+    )
     relational.session.commit()
 
     text = export_prov(Trial(trial_id)).text
     assert text.splitlines()[:2] == PREFIXES
     expected = {'entity(user_h\\alice, [type="script:user", label="alice"])'}
     expected |= {
-        'entity(group_{}, [type="script:group", label="{}"])'.format(
-            group_id, name)
+        'entity(group_{}, [type="script:group", label="{}"])'.format(group_id, name)
         for name, group_id in groups.items()
     }
     expected |= {
@@ -112,32 +123,47 @@ def test_export_prov_declares_the_collaboration_entities_of_the_trial(
         'userId="h\\alice", groupId="{}"])'.format(membership_id, group_id)
         for membership_id, group_id in memberships.items()
     }
-    expected.add(ANNOTATION.format(
-        id=annotation_id, annotation="note", description="why",
-        format="text", type="retrospective", level="trial",
-        experiment=experiment_id, trial=trial_id))
+    expected.add(
+        ANNOTATION.format(
+            id=annotation_id,
+            annotation="note",
+            description="why",
+            format="text",
+            type="retrospective",
+            level="trial",
+            experiment=experiment_id,
+            trial=trial_id,
+        )
+    )
     lines = entity_lines(text)
     assert len(lines) == len(expected)
     assert set(lines) == expected
 
 
-def test_export_prov_declares_only_the_annotations_of_the_trial(
-        clean_store):
+def test_export_prov_declares_only_the_annotations_of_the_trial(clean_store):
     """Of three annotations, only the one related to the exported trial is
     an entity, its NULL fields written as empty strings; a trial without a
     user has no user entity
     """
     trial_id = new_trial(TrialConfig("unfinished"))
     other = new_trial(TrialConfig("unfinished", script="other.py"))
-    experiment_id = Experiment.create(
-        SimpleNamespace(name="exp", description="d")).id
+    experiment_id = Experiment.create(SimpleNamespace(name="exp", description="d")).id
     mine = annotate("mine", trial_id)
     annotate("other", other)
     annotate("experiment only", experiment_id=experiment_id)
     lines = entity_lines(export_prov(Trial(trial_id)).text)
-    assert lines == [ANNOTATION.format(
-        id=mine, annotation="mine", description="", format="", type="",
-        level="", experiment="", trial=trial_id)]
+    assert lines == [
+        ANNOTATION.format(
+            id=mine,
+            annotation="mine",
+            description="",
+            format="",
+            type="",
+            level="",
+            experiment="",
+            trial=trial_id,
+        )
+    ]
 
 
 def test_save_output_writes_its_lines_to_a_provn_file(tmp_path):

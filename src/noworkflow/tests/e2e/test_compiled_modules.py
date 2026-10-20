@@ -66,6 +66,7 @@ which the ``-ra`` summary of the leg lists, except on POSIX under CI
 is a file, and a skip there would switch this net off while still
 counting toward the floor of tests, so the tests fail instead.
 """
+
 import importlib.machinery
 import importlib.util
 import os
@@ -110,7 +111,9 @@ def missing_extension(reason):
             "{} (a POSIX leg of CI, whose python-build-standalone ships "
             "_dbm as a file): the runner or the build changed; choose the "
             "module again as the docstring of test_compiled_modules.py "
-            "says".format(reason), pytrace=False)
+            "says".format(reason),
+            pytrace=False,
+        )
     pytest.skip(reason)
 
 
@@ -124,17 +127,21 @@ def extension_file():
     ``missing_extension`` decides.
     """
     if not runs_this_interpreter():
-        pytest.skip("NOW_E2E_CMD runs now on another interpreter: the {} "
-                    "file it loads is not the one this interpreter finds"
-                    .format(EXTENSION))
+        pytest.skip(
+            "NOW_E2E_CMD runs now on another interpreter: the {} "
+            "file it loads is not the one this interpreter finds".format(EXTENSION)
+        )
     spec = importlib.util.find_spec(EXTENSION)
     if spec is None:
-        missing_extension("this interpreter has no {} module".format(
-            EXTENSION))
-    if not isinstance(spec.loader, importlib.machinery.ExtensionFileLoader) \
-            or not os.path.isfile(spec.origin or ""):
-        missing_extension("{} is built into this interpreter: there is no "
-                          "file to record".format(EXTENSION))
+        missing_extension("this interpreter has no {} module".format(EXTENSION))
+    if not isinstance(
+        spec.loader, importlib.machinery.ExtensionFileLoader
+    ) or not os.path.isfile(spec.origin or ""):
+        missing_extension(
+            "{} is built into this interpreter: there is no file to record".format(
+                EXTENSION
+            )
+        )
     return spec.origin
 
 
@@ -168,19 +175,24 @@ def extension_project(_extension_store):
     before = _extension_store.fingerprint()
     yield _extension_store
     assert _extension_store.fingerprint() == before, (
-        "the test changed the shared store of this module")
+        "the test changed the shared store of this module"
+    )
 
 
 def module_rows(project, trial_id):
     """The ``module`` rows of a trial, each with its code block's hash"""
     rows = project.query(
-        "SELECT * FROM module WHERE trial_id = ? ORDER BY id", trial_id)
+        "SELECT * FROM module WHERE trial_id = ? ORDER BY id", trial_id
+    )
     for row in rows:
         blocks = project.query(
             "SELECT code_hash FROM code_block WHERE trial_id = ? AND id = ?",
-            trial_id, row["code_block_id"])
+            trial_id,
+            row["code_block_id"],
+        )
         assert len(blocks) == 1, "module {}: {} code blocks".format(
-            row["name"], len(blocks))
+            row["name"], len(blocks)
+        )
         row["code_hash"] = blocks[0]["code_hash"]
     return rows
 
@@ -195,9 +207,10 @@ def module_blocks(project, result, header):
     lines = result.stdout.splitlines()
     found = header in lines
     assert found, "no {!r} line in:\n{}".format(
-        header, project.normalize(result.stdout))
+        header, project.normalize(result.stdout)
+    )
     blocks, current = {}, None
-    for line in lines[lines.index(header) + 1:]:
+    for line in lines[lines.index(header) + 1 :]:
         if line.startswith("[now] "):
             break
         field, _, value = line.strip().partition(": ")
@@ -228,8 +241,7 @@ def check_extension_row(project, row, extension):
     assert names_the_file, project.normalize(row["path"])
     assert row["code_hash"] == sha1(data)
     stored = project.content(row["code_hash"]) == data
-    assert stored, "the content store does not hold the bytes of {}".format(
-        EXTENSION)
+    assert stored, "the content store does not hold the bytes of {}".format(EXTENSION)
     # get_version finds no distribution and no __version__.
     assert row["version"] is None
     assert row["transformed"] == 0
@@ -237,7 +249,8 @@ def check_extension_row(project, row, extension):
 
 
 def test_run_records_an_extension_module_with_the_hash_of_its_file(
-        extension_project, extension_file):
+    extension_project, extension_file
+):
     """Each trial that imports ``EXTENSION`` records exactly one module,
     that one, with the path of the file the interpreter loads, the SHA-1 of
     its bytes as code hash and those bytes in the content store; no
@@ -253,11 +266,14 @@ def test_run_records_an_extension_module_with_the_hash_of_its_file(
 
 
 @pytest.mark.skipif(
-    os.name == "nt", reason="dbm needs _dbm, which CPython does not build "
-    "on Windows, and winsound belongs to no package")
+    os.name == "nt",
+    reason="dbm needs _dbm, which CPython does not build "
+    "on Windows, and winsound belongs to no package",
+)
 @pytest.mark.parametrize("name", PACKAGE_IMPORTS)
 def test_run_records_an_extension_module_imported_through_its_package(
-        project, extension_file, name):
+    project, extension_file, name
+):
     """``import dbm`` and ``import dbm.ndbm`` record the package, its
     ``ndbm`` submodule and the ``_dbm`` extension that ``ndbm`` imports,
     each once; the ``_dbm`` row is the one a direct import records"""
@@ -271,46 +287,52 @@ def test_run_records_an_extension_module_imported_through_its_package(
     by_name = {row["name"]: row for row in rows}
     check_extension_row(project, by_name["_dbm"], extension_file)
     package = importlib.util.find_spec("dbm").origin
-    expected = {"dbm": package,
-                "dbm.ndbm": os.path.join(os.path.dirname(package), "ndbm.py")}
+    expected = {
+        "dbm": package,
+        "dbm.ndbm": os.path.join(os.path.dirname(package), "ndbm.py"),
+    }
     for module, path in expected.items():
         names_the_file = same_path(by_name[module]["path"], path)
         assert names_the_file, project.normalize(by_name[module]["path"])
         assert by_name[module]["version"] is None
 
 
-def test_show_modules_lists_the_extension_module(
-        extension_project, extension_file):
+def test_show_modules_lists_the_extension_module(extension_project, extension_file):
     """``now show <trial> -m`` lists ``EXTENSION`` alone, with its path and
     the hash of its file; the trial that dropped the import lists
     nothing"""
     result = run_now(extension_project, "show", "1", "-m")
     blocks = module_blocks(extension_project, result, SHOW_HEADER)
-    assert list(blocks) == [EXTENSION], extension_project.normalize(
-        result.stdout)
+    assert list(blocks) == [EXTENSION], extension_project.normalize(result.stdout)
     block = blocks[EXTENSION]
     names_the_file = same_path(block.get("Path", ""), extension_file)
     assert names_the_file, extension_project.normalize(result.stdout)
-    assert block.get("Code hash") == sha1(
-        Path(extension_file).read_bytes()), extension_project.normalize(
-            result.stdout)
+    assert block.get("Code hash") == sha1(Path(extension_file).read_bytes()), (
+        extension_project.normalize(result.stdout)
+    )
     assert block.get("Version") == "None"
 
     result = run_now(extension_project, "show", "3", "-m")
     assert list(module_blocks(extension_project, result, SHOW_HEADER)) == [], (
-        extension_project.normalize(result.stdout))
+        extension_project.normalize(result.stdout)
+    )
 
 
-def test_diff_modules_between_two_trials_of_the_same_script(
-        extension_project):
+def test_diff_modules_between_two_trials_of_the_same_script(extension_project):
     """``now diff 1 2 -m`` on two trials that imported the same
     ``EXTENSION`` reports no module added, removed or replaced (#204
     changes what a code hash change prints, which this pair does not
     have)"""
     result = run_now(extension_project, "diff", "1", "2", "-m")
-    assert_lines(extension_project, result, (
-        "[now] 0 modules added:", "[now] 0 modules removed:",
-        "[now] 0 modules replaced:"))
+    assert_lines(
+        extension_project,
+        result,
+        (
+            "[now] 0 modules added:",
+            "[now] 0 modules removed:",
+            "[now] 0 modules replaced:",
+        ),
+    )
 
 
 def test_diff_modules_after_the_import_was_removed(extension_project):
@@ -318,18 +340,21 @@ def test_diff_modules_after_the_import_was_removed(extension_project):
     imports ``EXTENSION``, ``now diff -m`` reports it removed, and the
     reverse diff reports it added"""
     result = run_now(extension_project, "diff", "1", "3", "-m")
-    assert_lines(extension_project, result, (
-        "[now] 0 modules added:", "[now] 1 modules removed:",
-        "[now] 0 modules replaced:"))
-    removed = module_blocks(
-        extension_project, result, "[now] 1 modules removed:")
-    assert list(removed) == [EXTENSION], extension_project.normalize(
-        result.stdout)
+    assert_lines(
+        extension_project,
+        result,
+        (
+            "[now] 0 modules added:",
+            "[now] 1 modules removed:",
+            "[now] 0 modules replaced:",
+        ),
+    )
+    removed = module_blocks(extension_project, result, "[now] 1 modules removed:")
+    assert list(removed) == [EXTENSION], extension_project.normalize(result.stdout)
 
     result = run_now(extension_project, "diff", "3", "1", "-m")
     added = module_blocks(extension_project, result, "[now] 1 modules added:")
-    assert list(added) == [EXTENSION], extension_project.normalize(
-        result.stdout)
+    assert list(added) == [EXTENSION], extension_project.normalize(result.stdout)
 
 
 # Modules of the standard library that ``import ctypes`` imports in plain
@@ -344,12 +369,12 @@ def is_ctypes_module(name):
     """Whether ``name`` is part of ``ctypes``: the package, a submodule,
     ``_ctypes``, a file of its own where the build does not link it in, or
     a module of ``CTYPES_IMPORTS``"""
-    return (name in ("ctypes", "_ctypes") + CTYPES_IMPORTS
-            or name.startswith("ctypes."))
+    return name in ("ctypes", "_ctypes") + CTYPES_IMPORTS or name.startswith("ctypes.")
 
 
 def test_run_records_no_module_for_a_library_loaded_through_ctypes(
-        project, extension_file):
+    project, extension_file
+):
     """A library that the script loads with ``ctypes.CDLL`` has no
     ``module`` row: the import finder never sees it. The trial records
     only modules of ``ctypes`` itself and what it imports (``ctypes`` and
@@ -372,16 +397,17 @@ def test_run_records_no_module_for_a_library_loaded_through_ctypes(
     assert trial["status"] == "finished"
 
     rows = project.query(
-        "SELECT name, path FROM module WHERE trial_id = ?", trial["id"])
-    others = sorted(
-        row["name"] for row in rows if not is_ctypes_module(row["name"]))
+        "SELECT name, path FROM module WHERE trial_id = ?", trial["id"]
+    )
+    others = sorted(row["name"] for row in rows if not is_ctypes_module(row["name"]))
     assert others == [], "modules that are not ctypes: {}".format(
-        project.normalize(", ".join(others)))
-    names_the_library = any(
-        same_path(row["path"], extension_file) for row in rows)
-    assert not names_the_library, (
-        "a module row names the library that ctypes loaded")
+        project.normalize(", ".join(others))
+    )
+    names_the_library = any(same_path(row["path"], extension_file) for row in rows)
+    assert not names_the_library, "a module row names the library that ctypes loaded"
     calls = project.query(
         "SELECT typeof(code_block_id) AS type FROM activation "
-        "WHERE trial_id = ? AND name = 'CDLL'", trial["id"])
+        "WHERE trial_id = ? AND name = 'CDLL'",
+        trial["id"],
+    )
     assert calls == [{"type": "null"}]

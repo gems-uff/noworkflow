@@ -17,6 +17,7 @@ position: a float with seven or more decimals is a checkpoint wherever it
 appears, so a corpus script must not compute such values (``1 / 3``); its
 results would be masked too.
 """
+
 import json
 import os
 import platform
@@ -39,9 +40,7 @@ SEP = r"[\\/]+"
 # one of these is a different path (``/tmp/project2`` is not ``/tmp/project``).
 NOT_END = r"(?![\w.-])"
 
-UUID = re.compile(
-    r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"
-)
+UUID = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b")
 # ``now export ast -d`` names nodes after ``id()`` of the AST node.
 AST_NODE = re.compile(r"\bnode\d{5,}\b")
 # ``now export dataflow`` names a file access ``a_<id>``, and the id counts
@@ -51,9 +50,7 @@ AST_NODE = re.compile(r"\bnode\d{5,}\b")
 # syntax (``a_1 [``, ``a_1 ->``, ``-> a_1``), so a script's ``a_1`` stays.
 ACCESS_NODE = re.compile(r"\ba_\d+(?= \[| ->)|(?<=-> )a_\d+\b")
 # ``str(datetime)``: the fraction is omitted when the microsecond is zero.
-TIMESTAMP = re.compile(
-    r"\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?\b"
-)
+TIMESTAMP = re.compile(r"\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?\b")
 # ``str(timedelta)``. Applied after TIMESTAMP, which contains this shape.
 DURATION = re.compile(r"(?<![\d:])\d+:\d{2}:\d{2}(?:\.\d{1,6})?(?![\d:])")
 # Seconds since 1970 of the Prolog timestamps (``now export prolog``
@@ -70,11 +67,9 @@ CHECKPOINT = re.compile(
 # of the Prolog facts (also inside the access tuples that `now diff -fa`
 # prints) and `now diff -f`. The shape rule above misses a short repr, which
 # is common on Windows, where perf_counter() ticks every 100 ns.
-CHECKPOINT_ARGUMENT = {"evaluation": 2, "activation": 3, "access": 6,
-                       "member": 6}
+CHECKPOINT_ARGUMENT = {"evaluation": 2, "activation": 3, "access": 6, "member": 6}
 FACT_START = re.compile(r"\b({})\(".format("|".join(CHECKPOINT_ARGUMENT)))
-CHECKPOINT_CHANGE = re.compile(
-    r"(Checkpoint changed from )\S+( to )\S+$", re.MULTILINE)
+CHECKPOINT_CHANGE = re.compile(r"(Checkpoint changed from )\S+( to )\S+$", re.MULTILINE)
 NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:e[-+]?\d+)?")
 ADDRESS = re.compile(r"\b0x[0-9a-fA-F]+\b")
 # The duration of an activation in ``now diff -fa``, ``round(x, 2)``.
@@ -101,8 +96,7 @@ NOWORKFLOW_VERSION = re.compile(r"\bnoWorkflow \d+(?:\.\d+)+\S*")
 # Masks that replace values of varying width. A difflib hint line (``? ^``)
 # under a line that contained one of them points at characters that the
 # mask replaced, so its columns vary from run to run.
-MASKS = ("<ADDRESS>", "<N> microseconds", "<CHECKPOINT>", "<TIMESTAMP>",
-         "<DURATION>")
+MASKS = ("<ADDRESS>", "<N> microseconds", "<CHECKPOINT>", "<TIMESTAMP>", "<DURATION>")
 
 
 def path_pattern(path):
@@ -242,8 +236,7 @@ class Normalizer:
         order in which the producer wrote the keys.
         """
         data = json.loads(text)
-        return self(json.dumps(data, sort_keys=True, indent=1,
-                               ensure_ascii=False))
+        return self(json.dumps(data, sort_keys=True, indent=1, ensure_ascii=False))
 
 
 def number(pattern, template, text):
@@ -273,8 +266,7 @@ def tidy(text):
     dropped = False
     for line in text.split("\n"):
         line = line.rstrip()
-        if (line.startswith("? ") and lines
-                and any(mask in lines[-1] for mask in MASKS)):
+        if line.startswith("? ") and lines and any(mask in lines[-1] for mask in MASKS):
             dropped = True
             continue
         if dropped and not line:
@@ -314,17 +306,17 @@ def prolog_statements(text):
             char = text[end]
             if quoted:
                 if char == "'":
-                    if text[end + 1:end + 2] == "'":
+                    if text[end + 1 : end + 2] == "'":
                         end += 2
                         continue
                     quoted = False
             elif char == "'":
                 quoted = True
-            elif char == "." and text[end + 1:end + 2] in ("\n", ""):
+            elif char == "." and text[end + 1 : end + 2] in ("\n", ""):
                 end += 1
                 break
             end += 1
-        if text[end:end + 1] == "\n":
+        if text[end : end + 1] == "\n":
             end += 1
         statements.append(("clause", text[index:end]))
         index = end
@@ -354,11 +346,11 @@ def strip_prolog_predicate(text, name):
                 stop += 1
             for position in range(start, stop):
                 keep[position] = False
-        elif kind == "clause" and (body.startswith(declaration)
-                                   or body.startswith(fact)):
+        elif kind == "clause" and (
+            body.startswith(declaration) or body.startswith(fact)
+        ):
             keep[index] = False
-    return "".join(body for (kind, body), kept in zip(statements, keep)
-                   if kept)
+    return "".join(body for (kind, body), kept in zip(statements, keep) if kept)
 
 
 def prolog_facts(text):
@@ -377,7 +369,7 @@ def prolog_facts(text):
         match = re.match(r"(\w+)\(", body)
         if match:
             declared, arities = result.get(match.group(1), (None, set()))
-            arities.add(clause_arity(body[match.end():]))
+            arities.add(clause_arity(body[match.end() :]))
             result[match.group(1)] = (declared, arities)
     return result
 
@@ -419,7 +411,7 @@ def argument_spans(text, index):
         char = text[index]
         if quoted:
             if char == "'":
-                if text[index + 1:index + 2] == "'":
+                if text[index + 1 : index + 2] == "'":
                     index += 2
                     continue
                 quoted = False
@@ -450,7 +442,7 @@ def clause_arity(arguments):
         char = arguments[index]
         if quoted:
             if char == "'":
-                if arguments[index + 1:index + 2] == "'":
+                if arguments[index + 1 : index + 2] == "'":
                     index += 2
                     continue
                 quoted = False

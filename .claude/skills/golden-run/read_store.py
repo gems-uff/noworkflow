@@ -87,6 +87,7 @@ Exit status: 0 after a report, whatever it says; 2 when the arguments are
 refused (a port that already answers included); 1 when the vis server
 never answered.
 """
+
 import argparse
 import hashlib
 import json
@@ -108,11 +109,15 @@ from noworkflow.tests.e2e.normalize import Normalizer, strip_prolog_predicate
 SHOW_FLAGS = ((), ("-m",), ("-d",), ("-a",), ("-p",), ("-f",))
 DIFF_FLAGS = ((), ("-f",), ("-m",), ("-t",), ("--brief",), ("-f", "-m", "-t"))
 PROLOG_FLAGS = ((), ("-t",), ("-t", "-r"))
-DATAFLOW_MODES = ("activation", "coarseGrain", "looplessCoarseGrain",
-                  "fineGrain", "all")
+DATAFLOW_MODES = (
+    "activation",
+    "coarseGrain",
+    "looplessCoarseGrain",
+    "fineGrain",
+    "all",
+)
 AST_FORMS = ((), ("-j",), ("-d",))
-GRAPH_MODES = ("tree", "no_match", "exact_match", "namespace_match",
-               "definition_tree")
+GRAPH_MODES = ("tree", "no_match", "exact_match", "namespace_match", "definition_tree")
 # The files webpack emits next to the bundle under a content hash.
 ASSET = re.compile(rb"\b[0-9a-f]{20,32}\.(?:png|svg|gif|jpe?g|woff2?|ttf|eot)\b")
 MAGIC = {
@@ -152,11 +157,16 @@ def fingerprint(store):
 def describe_store(db, path):
     """Schema, row counts and environment attribute names, as text"""
     lines = ["# user_version {}".format(query(db, "PRAGMA user_version")[0][0])]
-    objects = query(db, "SELECT type, name, sql FROM sqlite_master "
-                        "WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
+    objects = query(
+        db,
+        "SELECT type, name, sql FROM sqlite_master "
+        "WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+    )
     lines.append("# schema")
-    lines += ["{} {}: {}".format(kind, name, " ".join((sql or "").split()))
-              for kind, name, sql in objects]
+    lines += [
+        "{} {}: {}".format(kind, name, " ".join((sql or "").split()))
+        for kind, name, sql in objects
+    ]
     lines.append("# rows")
     for kind, name, _ in objects:
         if kind == "table":
@@ -165,22 +175,27 @@ def describe_store(db, path):
     tables = {name for kind, name, _ in objects if kind == "table"}
     if "environment_attr" in tables:
         lines.append("# environment attribute names (values left out)")
-        lines += [row[0] for row in query(
-            db, "SELECT DISTINCT name FROM environment_attr ORDER BY name")]
+        lines += [
+            row[0]
+            for row in query(
+                db, "SELECT DISTINCT name FROM environment_attr ORDER BY name"
+            )
+        ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def trial_refs(db, chosen):
     try:
-        keys = [str(row[0]) for row in query(
-            db, "SELECT sequence_key FROM trial ORDER BY sequence_key")]
+        keys = [
+            str(row[0])
+            for row in query(db, "SELECT sequence_key FROM trial ORDER BY sequence_key")
+        ]
     except sqlite3.Error as error:
         # A schema this script does not know: the commands still run, and
         # their flags are the result.
         if chosen:
             return list(chosen)
-        fail("cannot list the trials of this store ({}); give --trials".format(
-            error))
+        fail("cannot list the trials of this store ({}); give --trials".format(error))
     if chosen:
         missing = [ref for ref in chosen if ref not in keys]
         if missing:
@@ -193,8 +208,9 @@ def trial_refs(db, chosen):
 
 def trial_id(db, sequence_key):
     try:
-        return query(db, "SELECT id FROM trial WHERE sequence_key = ?",
-                     int(sequence_key))[0][0]
+        return query(
+            db, "SELECT id FROM trial WHERE sequence_key = ?", int(sequence_key)
+        )[0][0]
     except (sqlite3.Error, IndexError):
         return None
 
@@ -208,9 +224,13 @@ def trial_count(db):
 
 def single_activations(db, sequence_key):
     try:
-        rows = query(db, "SELECT activation.name, activation.id FROM activation "
-                         "JOIN trial ON trial.id = activation.trial_id "
-                         "WHERE trial.sequence_key = ?", int(sequence_key))
+        rows = query(
+            db,
+            "SELECT activation.name, activation.id FROM activation "
+            "JOIN trial ON trial.id = activation.trial_id "
+            "WHERE trial.sequence_key = ?",
+            int(sequence_key),
+        )
     except sqlite3.Error:
         return {}
     ids = {}
@@ -221,16 +241,22 @@ def single_activations(db, sequence_key):
 
 def command_list(db, trials, fa_names):
     """The commands, the ``-fa`` pairs as (id1, id2), and notes"""
-    commands = [("list",), ("history",), ("show",), ("schema", "sql"),
-                ("schema", "prolog"), ("schema", "sql", "-d"),
-                ("schema", "prolog", "-d")]
+    commands = [
+        ("list",),
+        ("history",),
+        ("show",),
+        ("schema", "sql"),
+        ("schema", "prolog"),
+        ("schema", "sql", "-d"),
+        ("schema", "prolog", "-d"),
+    ]
     for trial in trials:
         commands += [("show", trial) + flags for flags in SHOW_FLAGS]
-        commands += [("export", "prolog", trial) + flags
-                     for flags in PROLOG_FLAGS]
+        commands += [("export", "prolog", trial) + flags for flags in PROLOG_FLAGS]
         commands.append(("export", "prov", trial))
-        commands += [("export", "dataflow", trial, "-m", mode)
-                     for mode in DATAFLOW_MODES]
+        commands += [
+            ("export", "dataflow", trial, "-m", mode) for mode in DATAFLOW_MODES
+        ]
         commands.append(("export", "prospective", trial))
         commands += [("export", "ast", trial) + form for form in AST_FORMS]
     notes, pairs = [], []
@@ -243,11 +269,11 @@ def command_list(db, trials, fa_names):
         for name in names:
             if name in one and name in two:
                 pairs.append((one[name], two[name]))
-                commands.append(("diff", first, second, "-fa",
-                                 str(one[name]), str(two[name])))
+                commands.append(
+                    ("diff", first, second, "-fa", str(one[name]), str(two[name]))
+                )
             else:
-                notes.append("-fa {}: not one activation in each trial".format(
-                    name))
+                notes.append("-fa {}: not one activation in each trial".format(name))
     else:
         notes.append("one trial only: no diff")
     return commands, pairs, notes
@@ -272,8 +298,9 @@ def flags_of(result):
 def mask(project, text):
     # A traceback points into src/ on one side and into site-packages on the
     # other: the same frame under two masks.
-    return project.normalize(text).replace("<SITE>/noworkflow/",
-                                           "<NOWORKFLOW>/noworkflow/")
+    return project.normalize(text).replace(
+        "<SITE>/noworkflow/", "<NOWORKFLOW>/noworkflow/"
+    )
 
 
 def masked(project, args, text):
@@ -289,7 +316,8 @@ def last_line(project, text):
 
 def result_text(command, result):
     return "$ now {}\nreturn code: {}\n--- stdout ---\n{}--- stderr ---\n{}".format(
-        " ".join(command), result.returncode, result.stdout, result.stderr)
+        " ".join(command), result.returncode, result.stdout, result.stderr
+    )
 
 
 def port_answers(port):
@@ -302,8 +330,7 @@ def fetch(opener, port, route):
     url = "http://127.0.0.1:{}{}".format(port, route)
     try:
         with opener.open(url, timeout=60) as response:
-            return response.status, response.headers.get_content_type(), \
-                response.read()
+            return response.status, response.headers.get_content_type(), response.read()
     except urllib.error.HTTPError as error:
         return error.code, error.headers.get_content_type(), error.read()
     except (urllib.error.URLError, OSError) as error:
@@ -311,23 +338,36 @@ def fetch(opener, port, route):
 
 
 def vis_routes(ids, activation_pairs):
-    routes = ["/", "/dist/bundle.js",
-              "/trials.json?script=*&execution=*&summarize=0",
-              "/trials.json?script=*&execution=*&summarize=1"]
+    routes = [
+        "/",
+        "/dist/bundle.js",
+        "/trials.json?script=*&execution=*&summarize=0",
+        "/trials.json?script=*&execution=*&summarize=1",
+    ]
     for trial in ids:
         base = "/trials/{}".format(trial)
-        routes += [base + "/prospective.dot", base + "/dependencies.json",
-                   base + "/file_accesses.json", base + "/environment.json",
-                   base + "/flow.pdf",
-                   "/getFunctionActivations/{}".format(trial)]
+        routes += [
+            base + "/prospective.dot",
+            base + "/dependencies.json",
+            base + "/file_accesses.json",
+            base + "/environment.json",
+            base + "/flow.pdf",
+            "/getFunctionActivations/{}".format(trial),
+        ]
         routes += ["{}/{}/0.json".format(base, mode) for mode in GRAPH_MODES]
     if len(ids) >= 2:
         base = "/diff/{}/{}".format(ids[0], ids[1])
-        routes += [base + "/info.json", base + "/dependencies.json",
-                   base + "/file_accesses.json", base + "/environment.json"]
+        routes += [
+            base + "/info.json",
+            base + "/dependencies.json",
+            base + "/file_accesses.json",
+            base + "/environment.json",
+        ]
         routes += ["{}/{}-0.json".format(base, mode) for mode in GRAPH_MODES]
-        routes += ["/commands/diff/{}/{}/{}/{}".format(ids[0], one, ids[1], two)
-                   for one, two in activation_pairs]
+        routes += [
+            "/commands/diff/{}/{}/{}/{}".format(ids[0], one, ids[1], two)
+            for one, two in activation_pairs
+        ]
     return routes
 
 
@@ -346,8 +386,7 @@ def attribute_names(data):
 def vis_text(route, kind, body):
     """What is written for a route: never the bundle or the environment"""
     if route.endswith("bundle.js"):
-        return "sha1 {} size {}\n".format(hashlib.sha1(body).hexdigest(),
-                                          len(body))
+        return "sha1 {} size {}\n".format(hashlib.sha1(body).hexdigest(), len(body))
     if route.endswith(".pdf"):
         return "size {}\n".format(len(body))
     text = body.decode("utf-8", "replace")
@@ -359,8 +398,12 @@ def vis_text(route, kind, body):
         return "attribute names (values left out):\n" + "\n".join(names) + "\n"
     if kind == "application/json":
         try:
-            return json.dumps(json.loads(text), sort_keys=True, indent=1,
-                              ensure_ascii=False) + "\n"
+            return (
+                json.dumps(
+                    json.loads(text), sort_keys=True, indent=1, ensure_ascii=False
+                )
+                + "\n"
+            )
         except ValueError:
             pass
     return text
@@ -377,7 +420,8 @@ def asset_line(name, status, kind, body):
         good = None
     verdict = "-" if good is None else ("magic ok" if good else "BAD magic")
     return "{}\t{}\t{}\t{}\t{}\t{}".format(
-        name, status, kind, len(body), hashlib.sha1(body).hexdigest(), verdict)
+        name, status, kind, len(body), hashlib.sha1(body).hexdigest(), verdict
+    )
 
 
 def serve(now, project, out, port, ids, activation_pairs):
@@ -389,14 +433,21 @@ def serve(now, project, out, port, ids, activation_pairs):
     log = open(out / "vis.log", "w", encoding="utf-8")
     process = subprocess.Popen(
         [now, "vis", "-p", str(port), "--dir", str(project.path)],
-        cwd=str(project.path), env=project.env, stdin=subprocess.DEVNULL,
-        stdout=log, stderr=subprocess.STDOUT)
+        cwd=str(project.path),
+        env=project.env,
+        stdin=subprocess.DEVNULL,
+        stdout=log,
+        stderr=subprocess.STDOUT,
+    )
     try:
         deadline = time.monotonic() + 60
         while True:
             if process.poll() is not None:
-                print("vis: the server exited with {}; see {}".format(
-                    process.returncode, out / "vis.log"))
+                print(
+                    "vis: the server exited with {}; see {}".format(
+                        process.returncode, out / "vis.log"
+                    )
+                )
                 return False
             status, _, _ = fetch(opener, port, "/")
             if status is not None:
@@ -413,29 +464,38 @@ def serve(now, project, out, port, ids, activation_pairs):
             if route == "/dist/bundle.js":
                 bundle = body
             text = "GET {}\nstatus: {}\n\n{}".format(
-                route, status, vis_text(route, kind, body))
+                route, status, vis_text(route, kind, body)
+            )
             name = slug((route.strip("/").replace("?", "_") or "index",))
-            (out / "raw" / "vis" / (name + ".txt")).write_text(
-                text, encoding="utf-8")
+            (out / "raw" / "vis" / (name + ".txt")).write_text(text, encoding="utf-8")
             (out / "masked" / "vis" / (name + ".txt")).write_text(
-                mask(project, text), encoding="utf-8")
+                mask(project, text), encoding="utf-8"
+            )
             lines.append("{}\t{}\t{}".format(status, len(body), route))
         assets = []
         for name in sorted({match.decode() for match in ASSET.findall(bundle)}):
             status, kind, body = fetch(opener, port, "/dist/" + name)
             assets.append(asset_line(name, status, kind, body))
         (out / "raw" / "vis" / "assets.txt").write_text(
-            "\n".join(assets) + "\n", encoding="utf-8")
+            "\n".join(assets) + "\n", encoding="utf-8"
+        )
         (out / "masked" / "vis" / "assets.txt").write_text(
-            "\n".join(assets) + "\n", encoding="utf-8")
+            "\n".join(assets) + "\n", encoding="utf-8"
+        )
         (out / "vis.tsv").write_text("\n".join(lines) + "\n", encoding="utf-8")
-        print("vis: {} routes, {} not 200 (vis.tsv); {} assets named by the "
-              "bundle, {} not 200 or BAD (raw/vis/assets.txt)".format(
-                  len(lines),
-                  sum(1 for line in lines if not line.startswith("200")),
-                  len(assets),
-                  sum(1 for line in assets
-                      if line.split("\t")[1] != "200" or "BAD" in line)))
+        print(
+            "vis: {} routes, {} not 200 (vis.tsv); {} assets named by the "
+            "bundle, {} not 200 or BAD (raw/vis/assets.txt)".format(
+                len(lines),
+                sum(1 for line in lines if not line.startswith("200")),
+                len(assets),
+                sum(
+                    1
+                    for line in assets
+                    if line.split("\t")[1] != "200" or "BAD" in line
+                ),
+            )
+        )
         return True
     finally:
         process.terminate()
@@ -455,12 +515,16 @@ def run_last(project, db, out, arguments):
     after = trial_count(db)
     text = result_text(command, result)
     (out / "raw" / "run.txt").write_text(text, encoding="utf-8")
-    (out / "masked" / "run.txt").write_text(mask(project, text),
-                                             encoding="utf-8")
+    (out / "masked" / "run.txt").write_text(mask(project, text), encoding="utf-8")
     flags = flags_of(result)
-    print("run: return code {}, trials {} -> {}, {} (raw/run.txt)".format(
-        result.returncode, "?" if before is None else before,
-        "?" if after is None else after, ",".join(flags) or "no flag"))
+    print(
+        "run: return code {}, trials {} -> {}, {} (raw/run.txt)".format(
+            result.returncode,
+            "?" if before is None else before,
+            "?" if after is None else after,
+            ",".join(flags) or "no flag",
+        )
+    )
     if before is None or after != before + 1 or flags:
         print("  ATTENTION now run did not record a trial in this store")
 
@@ -468,22 +532,38 @@ def run_last(project, db, out, arguments):
 def main():
     parser = argparse.ArgumentParser(
         description="Read one store with one installation of noWorkflow "
-                    "(golden-run skill)")
+        "(golden-run skill)"
+    )
     parser.add_argument("now", help="the now that reads, as an absolute path")
     parser.add_argument("root", help="the store root: ROOT/project/.noworkflow")
     parser.add_argument("out", help="output directory, must not exist")
-    parser.add_argument("--trials", nargs=2, metavar=("T1", "T2"),
-                        help="sequence keys to read (default: the first two)")
-    parser.add_argument("--fa", action="append", default=[], metavar="NAME",
-                        help="function whose activations `diff -fa` compares "
-                             "(default: every function that runs once in "
-                             "each trial)")
-    parser.add_argument("--vis", type=int, metavar="PORT",
-                        help="also serve the store on PORT and fetch the "
-                             "read routes")
-    parser.add_argument("--run", metavar="ARGS",
-                        help="last, `now run ARGS` in the project with NOW "
-                             "(the upgrade path; it adds a trial)")
+    parser.add_argument(
+        "--trials",
+        nargs=2,
+        metavar=("T1", "T2"),
+        help="sequence keys to read (default: the first two)",
+    )
+    parser.add_argument(
+        "--fa",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="function whose activations `diff -fa` compares "
+        "(default: every function that runs once in "
+        "each trial)",
+    )
+    parser.add_argument(
+        "--vis",
+        type=int,
+        metavar="PORT",
+        help="also serve the store on PORT and fetch the read routes",
+    )
+    parser.add_argument(
+        "--run",
+        metavar="ARGS",
+        help="last, `now run ARGS` in the project with NOW "
+        "(the upgrade path; it adds a trial)",
+    )
     args = parser.parse_args()
 
     now = Path(args.now)
@@ -504,11 +584,15 @@ def main():
     # The harness masks the installation of the process that runs this
     # script; NOW's own installation is masked the same way, so that a
     # traceback through either console script reads <PREFIX>/bin/now.
-    project.normalize = Normalizer([
-        ("<PROJECT>", project.path), ("<HOME>", project.home),
-        ("<TMP>", project.tmp), ("<ROOT>", project.root),
-        ("<PREFIX>", now.parent.parent),
-    ])
+    project.normalize = Normalizer(
+        [
+            ("<PROJECT>", project.path),
+            ("<HOME>", project.home),
+            ("<TMP>", project.tmp),
+            ("<ROOT>", project.root),
+            ("<PREFIX>", now.parent.parent),
+        ]
+    )
     trials = trial_refs(db, args.trials)
     commands, pairs, notes = command_list(db, trials, args.fa)
     for directory in ("raw", "masked"):
@@ -523,42 +607,61 @@ def main():
         name = slug(command) + ".txt"
         (out / "raw" / name).write_text(text, encoding="utf-8")
         (out / "masked" / name).write_text(
-            masked(project, command, text), encoding="utf-8")
+            masked(project, command, text), encoding="utf-8"
+        )
         flags = flags_of(result)
-        summary.append("{}\t{}\t{}\t{}\t{}".format(
-            result.returncode, len(result.stderr.splitlines()),
-            ",".join(flags) or "-", " ".join(command),
-            last_line(project, result.stderr)))
+        summary.append(
+            "{}\t{}\t{}\t{}\t{}".format(
+                result.returncode,
+                len(result.stderr.splitlines()),
+                ",".join(flags) or "-",
+                " ".join(command),
+                last_line(project, result.stderr),
+            )
+        )
     stages.append(("after the commands", fingerprint(store)))
     (out / "summary.tsv").write_text(
-        "rc\tstderr\tflags\tcommand\tlast stderr line\n"
-        + "\n".join(summary) + "\n", encoding="utf-8")
+        "rc\tstderr\tflags\tcommand\tlast stderr line\n" + "\n".join(summary) + "\n",
+        encoding="utf-8",
+    )
 
     flagged = [line for line in summary if line.split("\t")[2] != "-"]
-    print("{} commands with {} on {} (trials {}); {} flagged; summary.tsv".format(
-        len(commands), now, store, " ".join(trials), len(flagged)))
+    print(
+        "{} commands with {} on {} (trials {}); {} flagged; summary.tsv".format(
+            len(commands), now, store, " ".join(trials), len(flagged)
+        )
+    )
     for line in flagged:
         print("  " + "\t".join(line.split("\t")[:4]))
     for note in notes:
         print("  note: " + note)
     if stages[1][1] != stages[0][1]:
-        print("  ATTENTION the store changed while it was read: the next "
-              "reader does not see the same store")
+        print(
+            "  ATTENTION the store changed while it was read: the next "
+            "reader does not see the same store"
+        )
 
     status = 0
     if args.vis is not None:
-        ids = [ident for ident in (trial_id(db, trial) for trial in trials)
-               if ident is not None]
+        ids = [
+            ident
+            for ident in (trial_id(db, trial) for trial in trials)
+            if ident is not None
+        ]
         if len(ids) < len(trials):
-            print("  note: trial ids unreadable in this store: only the "
-                  "routes that need none are fetched")
+            print(
+                "  note: trial ids unreadable in this store: only the "
+                "routes that need none are fetched"
+            )
         if not serve(str(now), project, out, args.vis, ids, pairs):
             status = 1
         else:
             stages.append(("after the vis", fingerprint(store)))
             if stages[-1][1] != stages[-2][1]:
-                print("  the vis wrote into the store (graph caches): the "
-                      "next reader starts from another fingerprint")
+                print(
+                    "  the vis wrote into the store (graph caches): the "
+                    "next reader starts from another fingerprint"
+                )
     if args.run is not None and status == 0:
         run_last(project, db, out, args.run)
         stages.append(("after now run", fingerprint(store)))
@@ -566,7 +669,8 @@ def main():
         print("run: skipped, the vis server never answered")
     (out / "fingerprint.txt").write_text(
         "".join("{}\t{}\n".format(digest, stage) for stage, digest in stages),
-        encoding="utf-8")
+        encoding="utf-8",
+    )
     sys.exit(status)
 
 

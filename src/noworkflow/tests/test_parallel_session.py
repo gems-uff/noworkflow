@@ -10,6 +10,7 @@ checks that the workers still collect, that coverage still reports, and
 that a leak in a worker still reaches the LEAKS section the controller
 prints.
 """
+
 import pytest
 
 from .e2e.harness import last_line
@@ -19,14 +20,7 @@ from .test_leak_detector import LEAK_LINE, LEAKING_TEST, leaks_section
 pytest.importorskip("xdist")
 
 WORKERS = ("-n", "2")
-TWO_TESTS = (
-    "def test_one():\n"
-    "    pass\n"
-    "\n"
-    "\n"
-    "def test_two():\n"
-    "    pass\n"
-)
+TWO_TESTS = "def test_one():\n    pass\n\n\ndef test_two():\n    pass\n"
 
 
 def test_the_workers_collect_a_relative_test_path(request, tmp_path):
@@ -40,12 +34,14 @@ def test_the_workers_collect_a_relative_test_path(request, tmp_path):
 
 
 def test_coverage_under_the_workers_reports_without_an_internal_error(
-        request, tmp_path):
+    request, tmp_path
+):
     """pytest-cov returns to the directory it recorded at session start
     once the tests end; that directory must not be the scratch directory,
     which is gone by then"""
-    result = run_child_pytest(request, tmp_path, TWO_TESTS,
-                              args=WORKERS + ("--cov", "--cov-report=term"))
+    result = run_child_pytest(
+        request, tmp_path, TWO_TESTS, args=WORKERS + ("--cov", "--cov-report=term")
+    )
     report = child_report(result)
     assert result.returncode == 0, report
     assert "INTERNALERROR" not in result.stdout + result.stderr, report
@@ -53,12 +49,10 @@ def test_coverage_under_the_workers_reports_without_an_internal_error(
 
 
 @pytest.mark.parametrize("mode", ["fail", "warn"])
-def test_a_leak_in_a_worker_reaches_the_leaks_section(request, tmp_path,
-                                                       mode):
+def test_a_leak_in_a_worker_reaches_the_leaks_section(request, tmp_path, mode):
     """The worker checks the leak; the controller prints the summary, so
     the leak travels in the test's report"""
-    result = run_child_pytest(request, tmp_path, LEAKING_TEST, mode,
-                              args=WORKERS)
+    result = run_child_pytest(request, tmp_path, LEAKING_TEST, mode, args=WORKERS)
     report = child_report(result)
     summary = last_line(result.stdout)
     if mode == "fail":

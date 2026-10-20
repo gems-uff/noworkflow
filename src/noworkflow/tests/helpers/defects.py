@@ -13,6 +13,7 @@ defect applies, the test must pass.
 
 The e2e oracle (``e2e/oracle.py``) re-exports these names.
 """
+
 import dataclasses
 import functools
 import sys
@@ -60,9 +61,13 @@ def defect_marks(defects):
     current = [defect for defect in defects if defect.applies()]
     if not current:
         return []
-    return [pytest.mark.xfail(
-        strict=True, raises=AssertionError,
-        reason="; ".join(defect.reason for defect in current))]
+    return [
+        pytest.mark.xfail(
+            strict=True,
+            raises=AssertionError,
+            reason="; ".join(defect.reason for defect in current),
+        )
+    ]
 
 
 def expect_known_failure(defects, text):
@@ -78,9 +83,10 @@ def expect_known_failure(defects, text):
         pytest.fail(
             "fails, but not with the signature of its known defect ({}); "
             "a second defect or a new regression:\n{}".format(
-                " | ".join(repr(defect.signature) for defect in current),
-                text),
-            pytrace=False)
+                " | ".join(repr(defect.signature) for defect in current), text
+            ),
+            pytrace=False,
+        )
 
 
 def known_defects(*defects):
@@ -94,6 +100,7 @@ def known_defects(*defects):
     runs untouched and must pass. Works on plain functions and on
     ``unittest`` methods.
     """
+
     def decorate(test):
         @functools.wraps(test)
         def wrapper(*args, **kwargs):
@@ -108,7 +115,9 @@ def known_defects(*defects):
                 text = "{}: {}".format(type(error).__name__, error)
                 expect_known_failure(defects, text)
                 raise AssertionError(text) from error
+
         for mark in defect_marks(defects):
             wrapper = mark(wrapper)
         return wrapper
+
     return decorate

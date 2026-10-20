@@ -20,6 +20,7 @@ and SWI reads it), or an unquoted atom that starts with a lowercase letter
 is not a term: counting commas misses both. ``test_prolog_facts.py`` checks
 the grammar against SWI-Prolog's own reader.
 """
+
 import datetime
 import re
 
@@ -41,14 +42,17 @@ STAMP = datetime.datetime(2016, 4, 8, 1, 18)
 # integer columns (each gets its own).
 KEY = 7
 
-QUOTED_ATOM = (r"'(?:[^'\\]|''"
-               r"|\\[\\'\"`abfnrtv\n]"
-               r"|\\x[0-9a-fA-F]+\\"
-               r"|\\[0-7]+\\)*'")
+QUOTED_ATOM = (
+    r"'(?:[^'\\]|''"
+    r"|\\[\\'\"`abfnrtv\n]"
+    r"|\\x[0-9a-fA-F]+\\"
+    r"|\\[0-7]+\\)*'"
+)
 NUMBER = r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"
 UNQUOTED_ATOM = r"[a-z][A-Za-z0-9_]*"
-ATOMIC = re.compile(r"\s*(?:{}|{}|{})\s*".format(
-    QUOTED_ATOM, NUMBER, UNQUOTED_ATOM), re.DOTALL)
+ATOMIC = re.compile(
+    r"\s*(?:{}|{}|{})\s*".format(QUOTED_ATOM, NUMBER, UNQUOTED_ATOM), re.DOTALL
+)
 
 
 def check_values(table):
@@ -63,8 +67,7 @@ def check_values(table):
     values = {}
     for constraint in constraints:
         if isinstance(constraint, sa.CheckConstraint):
-            match = re.match(r"\s*(\w+) IN \('([^']*)'",
-                             str(constraint.sqltext))
+            match = re.match(r"\s*(\w+) IN \('([^']*)'", str(constraint.sqltext))
             if match:
                 values[match.group(1)] = match.group(2)
     return values
@@ -87,8 +90,11 @@ def column_value(column, position, text, checks):
         return 1.5
     if isinstance(kind, sa.DateTime):
         return STAMP
-    if column.name == "trial_id" or column.name == "id" and (
-            column.table.name == "trial"):
+    if (
+        column.name == "trial_id"
+        or column.name == "id"
+        and (column.table.name == "trial")
+    ):
         return TRIAL_ID
     if column.name == "id" or column.name.endswith("_id"):
         # The ids of the collaboration models and the references to
@@ -101,8 +107,10 @@ def model_row(model, text=PROBE, nulls=()):
     """``{column: value}`` of the row that ``insert_model_row`` inserts"""
     table = model.t
     checks = check_values(table)
-    row = {column.name: column_value(column, position, text, checks)
-           for position, column in enumerate(table.columns)}
+    row = {
+        column.name: column_value(column, position, text, checks)
+        for position, column in enumerate(table.columns)
+    }
     for name in nulls:
         assert name in row, "{} has no column {}".format(table.name, name)
         row[name] = None
@@ -121,8 +129,7 @@ def insert_model_row(model, text=PROBE, nulls=()):
     relational.session.commit()
     if model is Trial:
         return Trial(trial_ref=row["id"])
-    key = tuple(row[column.name]
-                for column in model.t.primary_key.columns)
+    key = tuple(row[column.name] for column in model.t.primary_key.columns)
     return model(key if len(key) > 1 else key[0])
 
 
@@ -149,6 +156,8 @@ def non_atomic(arguments):
     >>> non_atomic(["'a''b'", " 5e-06", " None", " f7", " 1b2c-3d"])
     [(2, ' None'), (4, ' 1b2c-3d')]
     """
-    return [(index, text) for index, text in enumerate(arguments)
-            if not ATOMIC.fullmatch(text)]
-
+    return [
+        (index, text)
+        for index, text in enumerate(arguments)
+        if not ATOMIC.fullmatch(text)
+    ]

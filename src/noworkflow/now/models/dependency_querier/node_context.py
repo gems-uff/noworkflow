@@ -7,8 +7,15 @@ from .querier_options import QuerierOptions
 
 
 class NodeContext(object):
-
-    def __init__(self, evaluation, checkpoint, is_activation=False, arrow=None, steps=0, options=None):
+    def __init__(
+        self,
+        evaluation,
+        checkpoint,
+        is_activation=False,
+        arrow=None,
+        steps=0,
+        options=None,
+    ):
         self.evaluation = evaluation
         self.checkpoint = checkpoint
         self.is_activation = is_activation
@@ -18,15 +25,22 @@ class NodeContext(object):
 
     def __eq__(self, other):
         if isinstance(other, NodeContext):
-            return (
-                self.evaluation, self.checkpoint, self.is_activation
-            ) == (
-                other.evaluation, other.checkpoint, other.is_activation
+            return (self.evaluation, self.checkpoint, self.is_activation) == (
+                other.evaluation,
+                other.checkpoint,
+                other.is_activation,
             )
         return False
 
     def __hash__(self):
-        return hash((self.evaluation.trial_id, self.evaluation.id, self.checkpoint, self.is_activation))
+        return hash(
+            (
+                self.evaluation.trial_id,
+                self.evaluation.id,
+                self.checkpoint,
+                self.is_activation,
+            )
+        )
 
     def dependencies(self):
         """Context dependencies"""
@@ -40,18 +54,25 @@ class NodeContext(object):
         for dep in self.options.dependencies(evaluation):
             dependency = dep.dependency
             checkpoint = checkpoint or dependency.checkpoint
-            if dep.type == 'argument' and not self.options.visit_arguments:
+            if dep.type == "argument" and not self.options.visit_arguments:
                 continue
             yield NodeContext(
-                dependency, None,
-                arrow=dep.type, steps=self.steps + 1, options=self.options
+                dependency,
+                None,
+                arrow=dep.type,
+                steps=self.steps + 1,
+                options=self.options,
             )
 
         # Yield non-navigatable activation
         if self.options.visit_activations and evaluation.activation:
             yield NodeContext(
-                evaluation.activation.this_evaluation, None, True, 
-                arrow="<A>", steps=self.steps + 1, options=self.options
+                evaluation.activation.this_evaluation,
+                None,
+                True,
+                arrow="<A>",
+                steps=self.steps + 1,
+                options=self.options,
             )
 
         if checkpoint and self.options.visit_members:
@@ -72,7 +93,7 @@ class NodeContext(object):
                         if member_checkpoint <= checkpoint
                     ),
                     key=lambda tup: tup[0],
-                    default=None 
+                    default=None,
                 )
                 if value is not None:
                     state[key] = value
@@ -80,6 +101,9 @@ class NodeContext(object):
             # Move to parts of the state
             for key, (member_checkpoint, member) in state.items():
                 yield NodeContext(
-                    member, checkpoint, 
-                    arrow="<{}>".format(key), steps=self.steps + 1, options=self.options
+                    member,
+                    checkpoint,
+                    arrow="<{}>".format(key),
+                    steps=self.steps + 1,
+                    options=self.options,
                 )

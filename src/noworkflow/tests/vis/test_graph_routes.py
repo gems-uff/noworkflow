@@ -48,6 +48,7 @@ validation of trial ids). The experiment-prefixed forms answer like the
 root ones: both views take ``expCode``. Measured on macOS with Python 3.11
 to 3.15.
 """
+
 import contextlib
 import json
 import pickle
@@ -67,13 +68,21 @@ from .support import Defect, Vis, known_defects
 
 # The modes of the frontend's graph selector, and those built from the
 # activations (the last one is built from the code components).
-MODES = ("tree", "no_match", "exact_match", "namespace_match",
-         "definition_tree")
+MODES = ("tree", "no_match", "exact_match", "namespace_match", "definition_tree")
 ACTIVATION_MODES = MODES[:4]
 CACHES = ("0", "1")
 FORMS = {"root": 0, "experiment": 1}  # index into Vis.routes(path)
-GRAPH_KEYS = {"root", "edges", "min_duration", "max_duration", "colors",
-              "trial1", "trial2", "width", "height"}
+GRAPH_KEYS = {
+    "root",
+    "edges",
+    "min_duration",
+    "max_duration",
+    "colors",
+    "trial1",
+    "trial2",
+    "width",
+    "height",
+}
 EDGE_TYPES = {"initial", "call", "sequence", "return"}
 # What DefinitionSummarization appends to the type of a node it labels by
 # type alone, without the source: a line break and a left-to-right mark.
@@ -82,19 +91,19 @@ DATA_FILES = WEATHER_ARGS[2:]
 
 DIFF_CACHE_0 = Defect(
     reason="#366: the diff_graph view applies the "
-           "cache flag only to the DiffGraph, whose modes merge "
-           "trial1.graph.<mode>() and trial2.graph.<mode>() with the "
-           "TrialGraph's own use_cache (True), so cache 0 still serves the "
-           "trials' cached graphs",
+    "cache flag only to the DiffGraph, whose modes merge "
+    "trial1.graph.<mode>() and trial2.graph.<mode>() with the "
+    "TrialGraph's own use_cache (True), so cache 0 still serves the "
+    "trials' cached graphs",
     signature="diff cache 0 served the trial's cached graph",
 )
 DEFINITION_LABELS = Defect(
     reason="#366: DefinitionSummarization.insert_node "
-           "(models/graphs/trial_graph.py) checks the type against a set "
-           "that holds the bool of any(...) instead of the comparison types, "
-           "and the adjacent literals 'while' 'if' and 'or' 'add' "
-           "concatenate, so those nodes show their source text instead of "
-           "their type alone",
+    "(models/graphs/trial_graph.py) checks the type against a set "
+    "that holds the bool of any(...) instead of the comparison types, "
+    "and the adjacent literals 'while' 'if' and 'or' 'add' "
+    "concatenate, so those nodes show their source text instead of "
+    "their type alone",
     signature="nodes show their source text",
 )
 
@@ -102,12 +111,7 @@ DEFINITION_LABELS = Defect(
 # alone and does not (MEANT_TYPE_ONLY), and two that it does
 # (TYPE_ONLY_TODAY).
 OPS_SCRIPT = (
-    "x = 1\n"
-    "while x < 3:\n"
-    "    x = x + 1\n"
-    "if x == 3 or x > 5:\n"
-    "    y = -x\n"
-    "print(x, y)\n"
+    "x = 1\nwhile x < 3:\n    x = x + 1\nif x == 3 or x > 5:\n    y = -x\nprint(x, y)\n"
 )
 MEANT_TYPE_ONLY = ("while", "if", "or", "add", "lt", "eq", "gt")
 TYPE_ONLY_TODAY = ("usub", "expr")
@@ -149,15 +153,13 @@ def walk(root):
 
 def parents(nodes):
     """``{child index: parent node}``"""
-    return {child["index"]: node
-            for node in nodes for child in node["children"]}
+    return {child["index"]: node for node in nodes for child in node["children"]}
 
 
 def main_activation(stored):
     """The one activation of ``activations()`` that no other one called"""
     roots = [aid for aid, (_, caller) in stored.items() if caller not in stored]
-    assert len(roots) == 1, "{} activations without a caller".format(
-        len(roots))
+    assert len(roots) == 1, "{} activations without a caller".format(len(roots))
     return roots[0]
 
 
@@ -166,15 +168,20 @@ def activations(project, trial_id):
     rows = project.query(
         "SELECT a.id, a.name, e.activation_id AS caller FROM activation a "
         "JOIN evaluation e ON e.trial_id = a.trial_id AND e.id = a.id "
-        "WHERE a.trial_id = ?", trial_id)
+        "WHERE a.trial_id = ?",
+        trial_id,
+    )
     return {row["id"]: (row["name"], row["caller"]) for row in rows}
 
 
 def components(project, trial_id):
     """``{code component id: row}`` of a trial"""
-    return {row["id"]: row for row in project.query(
-        "SELECT id, name, type FROM code_component WHERE trial_id = ?",
-        trial_id)}
+    return {
+        row["id"]: row
+        for row in project.query(
+            "SELECT id, name, type FROM code_component WHERE trial_id = ?", trial_id
+        )
+    }
 
 
 def cache_rows(project, type_, mode):
@@ -182,13 +189,14 @@ def cache_rows(project, type_, mode):
     return project.query(
         "SELECT id, content_hash FROM graph_cache "
         "WHERE type = ? AND name = ? AND attributes = '' ORDER BY id",
-        type_, mode)
+        type_,
+        mode,
+    )
 
 
 def last_cache_id(project):
     """The highest ``graph_cache`` id so far (ids are never reused)"""
-    return project.query(
-        "SELECT COALESCE(MAX(id), 0) AS id FROM graph_cache")[0]["id"]
+    return project.query("SELECT COALESCE(MAX(id), 0) AS id FROM graph_cache")[0]["id"]
 
 
 def stored_graph(project, row):
@@ -209,7 +217,8 @@ def check_trial_graph(graph, trial_id):
     assert indexes == list(range(len(nodes))), "node indexes"
     assert all(node["trial_ids"] == [trial_id] for node in nodes), "trial_ids"
     assert all(set(node["activations"]) == {trial_id} for node in nodes), (
-        "activations of another trial")
+        "activations of another trial"
+    )
     assert graph["root"]["parent_index"] == -1, "root has a parent"
     for node in nodes:
         for position, child in enumerate(node["children"]):
@@ -234,9 +243,11 @@ def check_diff_graph(graph, trial1, trial2):
     assert indexes == list(range(1, len(nodes) + 1)), "node indexes"
     for node in nodes:
         assert node["trial_ids"] in ([trial1, trial2], [trial1], [trial2]), (
-            "trial_ids of node {}".format(node["index"]))
+            "trial_ids of node {}".format(node["index"])
+        )
         assert set(node["activations"]) == set(node["trial_ids"]), (
-            "activations of node {}".format(node["index"]))
+            "activations of node {}".format(node["index"])
+        )
         assert (node["original1"] is not None) == (trial1 in node["trial_ids"])
         assert (node["original2"] is not None) == (trial2 in node["trial_ids"])
     for edge in graph["edges"]:
@@ -255,15 +266,15 @@ def plant_stale_tree(vis, trial_id):
     """
     vis.json("/" + trial_url(trial_id, "tree", "0"))
     (row,) = cache_rows(vis.project, trial_type(trial_id), "tree")
-    finished, graph, nodes = pickle.loads(
-        vis.project.content(row["content_hash"]))
+    finished, graph, nodes = pickle.loads(vis.project.content(row["content_hash"]))
     graph["root"]["name"] = STALE
     stale_hash = content.put(pickle.dumps((finished, graph, nodes)), "tree")
     database = str(vis.project.store / "db.sqlite")
     with contextlib.closing(sqlite3.connect(database)) as connection:
         connection.execute(
             "UPDATE graph_cache SET content_hash = ? WHERE id = ?",
-            (stale_hash, row["id"]))
+            (stale_hash, row["id"]),
+        )
         connection.commit()
 
 
@@ -359,16 +370,23 @@ def test_activation_graph_holds_each_activation_once(vis_own, mode):
     nodes = walk(graph["root"])
     held = sorted(aid for node in nodes for aid in node["activations"][trial_id])
     assert held == sorted(stored), "the nodes do not hold the activations"
-    misnamed = [aid for node in nodes for aid in node["activations"][trial_id]
-                if stored[aid][0] != node["name"]]
+    misnamed = [
+        aid
+        for node in nodes
+        for aid in node["activations"][trial_id]
+        if stored[aid][0] != node["name"]
+    ]
     assert not misnamed, "activations under another name: {}".format(misnamed)
     parent = parents(nodes)
     misplaced = [
-        aid for node in nodes[1:] for aid in node["activations"][trial_id]
+        aid
+        for node in nodes[1:]
+        for aid in node["activations"][trial_id]
         if stored[aid][1] not in parent[node["index"]]["activations"][trial_id]
     ]
-    assert not misplaced, "activations under a node that did not call them: "\
-        "{}".format(misplaced)
+    assert not misplaced, "activations under a node that did not call them: {}".format(
+        misplaced
+    )
 
 
 def test_tree_has_a_node_per_activation_rooted_at_main(vis_own):
@@ -389,9 +407,13 @@ def test_tree_has_a_node_per_activation_rooted_at_main(vis_own):
     assert all(len(node["activations"][trial_id]) == 1 for node in nodes)
     expected = sorted(
         (node["index"], child["index"], child["children_index"])
-        for node in nodes for child in node["children"])
-    edges = sorted((edge["source"], edge["target"], edge["count"][trial_id])
-                   for edge in graph["edges"])
+        for node in nodes
+        for child in node["children"]
+    )
+    edges = sorted(
+        (edge["source"], edge["target"], edge["count"][trial_id])
+        for edge in graph["edges"]
+    )
     assert edges == expected, "edges are not the parent-child pairs"
     assert {edge["type"] for edge in graph["edges"]} == {"call"}
 
@@ -405,8 +427,11 @@ def test_graph_modes_start_at_the_root(vis_own, mode):
     trial_id = vis_own.trial_ids[0]
     graph = vis_own.json("/" + trial_url(trial_id, mode, "1"))
     root = graph["root"]["index"]
-    initial = [(edge["source"], edge["target"]) for edge in graph["edges"]
-               if edge["type"] == "initial"]
+    initial = [
+        (edge["source"], edge["target"])
+        for edge in graph["edges"]
+        if edge["type"] == "initial"
+    ]
     assert initial == [(root, root)], initial
     types = {edge["type"] for edge in graph["edges"]}
     assert types <= EDGE_TYPES, sorted(types)
@@ -428,31 +453,41 @@ def test_definition_tree_nodes_are_the_code_components(vis_own):
     trial_id = vis_own.trial_ids[0]
     script = project.trial(trial_id)["script"]
     rows = components(project, trial_id)
-    contains = {(row["part_id"], row["whole_id"]) for row in project.query(
-        "SELECT part_id, whole_id FROM composition WHERE trial_id = ?",
-        trial_id)}
+    contains = {
+        (row["part_id"], row["whole_id"])
+        for row in project.query(
+            "SELECT part_id, whole_id FROM composition WHERE trial_id = ?", trial_id
+        )
+    }
     graph = vis_own.json("/" + trial_url(trial_id, "definition_tree", "1"))
     nodes = walk(graph["root"])
     root = rows[graph["root"]["node_id"]]
     assert root["type"] == "script", root["type"]
     assert root["name"] == script, root["name"]
-    assert all(node["activations"] == {trial_id: [node["node_id"]]}
-               for node in nodes), "a node holds another component"
+    assert all(
+        node["activations"] == {trial_id: [node["node_id"]]} for node in nodes
+    ), "a node holds another component"
     held = sorted(node["node_id"] for node in nodes)
-    parts = {part for part, _ in contains  # an absent field has no part
-             if part is not None and rows[part]["type"] != "syntax"}
+    parts = {
+        part
+        for part, _ in contains  # an absent field has no part
+        if part is not None and rows[part]["type"] != "syntax"
+    }
     expected = sorted(parts | {graph["root"]["node_id"]})
     missing = sorted(set(expected) - set(held))
     assert not missing, "components without a node: {}".format(missing)
     assert held == expected, "nodes that are no such component, or twice"
-    loose = [child["node_id"] for node in nodes for child in node["children"]
-             if (child["node_id"], node["node_id"]) not in contains]
+    loose = [
+        child["node_id"]
+        for node in nodes
+        for child in node["children"]
+        if (child["node_id"], node["node_id"]) not in contains
+    ]
     assert not loose, "nodes outside their container: {}".format(loose)
     mislabeled = []
     for node in nodes:
         row = rows[node["node_id"]]
-        labels = {row["type"] + " <br> " + row["name"],
-                  row["type"] + TYPE_ONLY}
+        labels = {row["type"] + " <br> " + row["name"], row["type"] + TYPE_ONLY}
         if row["type"] == "attribute":
             labels.add(row["name"].split(".")[1])
         if node["name"] not in labels:
@@ -475,15 +510,19 @@ def test_definition_tree_shows_the_source_of_some_operators(ops_labels):
 
 
 @known_defects(DEFINITION_LABELS)
-def test_definition_tree_shows_the_source_of_some_operators_desired(
-        ops_labels):
+def test_definition_tree_shows_the_source_of_some_operators_desired(ops_labels):
     """Operators and compound statements show their type alone, like
     ``usub`` and ``expr``: the set in ``insert_node`` lists them all"""
     absent = [type_ for type_ in MEANT_TYPE_ONLY if not ops_labels.get(type_)]
     assert not absent, "no node of type {}".format(absent)
-    shown = sorted({type_ for type_ in MEANT_TYPE_ONLY
-                    for label, _ in ops_labels[type_]
-                    if label != type_ + TYPE_ONLY})
+    shown = sorted(
+        {
+            type_
+            for type_ in MEANT_TYPE_ONLY
+            for label, _ in ops_labels[type_]
+            if label != type_ + TYPE_ONLY
+        }
+    )
     assert not shown, "nodes show their source text: {}".format(shown)
 
 
@@ -519,7 +558,8 @@ def test_trial_graph_cache_1_reads_the_stored_graph(vis_own, mode):
     rows = cache_rows(project, trial_type(trial_id), mode)
     cached = vis_own.json("/" + trial_url(trial_id, mode, "1"))
     assert cache_rows(project, trial_type(trial_id), mode) == rows, (
-        "cache 1 replaced the row")
+        "cache 1 replaced the row"
+    )
     same = cached == computed
     assert same, "cache 1 answered another graph"
     _, stored = stored_graph(project, rows[0])
@@ -553,7 +593,8 @@ def test_trial_graph_cache_1_serves_whatever_the_cache_holds(own):
     stored = activations(own.project, trial_id)
     fresh = own.json("/" + trial_url(trial_id, "tree", "0"))
     assert fresh["root"]["name"] == stored[main_activation(stored)][0], (
-        "cache 0 answered the stale graph")
+        "cache 0 answered the stale graph"
+    )
     again = own.json("/" + trial_url(trial_id, "tree", "1"))
     assert again["root"]["name"] == fresh["root"]["name"], "stale again"
 
@@ -582,11 +623,12 @@ def test_diff_graph_holds_the_activations_of_both_trials(vis_own, mode):
     graph = vis_own.json("/" + diff_url(trial1, trial2, mode, "1"))
     nodes = walk(graph["root"])
     for trial_id in (trial1, trial2):
-        held = sorted(aid for node in nodes
-                      for aid in node["activations"].get(trial_id, []))
+        held = sorted(
+            aid for node in nodes for aid in node["activations"].get(trial_id, [])
+        )
         assert held == sorted(activations(project, trial_id)), (
-            "the nodes do not hold the activations of trial {}".format(
-                trial_id))
+            "the nodes do not hold the activations of trial {}".format(trial_id)
+        )
 
 
 @pytest.mark.parametrize("mode", MODES)
@@ -596,17 +638,19 @@ def test_diff_of_trials_that_ran_alike_matches_every_node(vis_own, mode):
     under one name"""
     project = vis_own.project
     trial1, trial2 = vis_own.trial_ids
-    calls = [[name for _, (name, _) in sorted(activations(project, t).items())]
-             for t in (trial1, trial2)]
+    calls = [
+        [name for _, (name, _) in sorted(activations(project, t).items())]
+        for t in (trial1, trial2)
+    ]
     assert calls[0] == calls[1], "the trials called different functions"
-    code = [sorted((row["type"], row["name"])
-                   for row in components(project, t).values())
-            for t in (trial1, trial2)]
+    code = [
+        sorted((row["type"], row["name"]) for row in components(project, t).values())
+        for t in (trial1, trial2)
+    ]
     assert code[0] == code[1], "the trials have different code"
     graph = vis_own.json("/" + diff_url(trial1, trial2, mode, "0"))
     nodes = walk(graph["root"])
-    alone = [node["index"] for node in nodes
-             if node["trial_ids"] != [trial1, trial2]]
+    alone = [node["index"] for node in nodes if node["trial_ids"] != [trial1, trial2]]
     assert not alone, "nodes of one trial: {}".format(alone)
     renamed = [node["index"] for node in nodes if "|" in node["name"]]
     assert not renamed, "nodes matched under two names: {}".format(renamed)
@@ -627,16 +671,17 @@ def test_diff_graph_marks_the_nodes_of_one_trial(grown, mode):
     check_diff_graph(graph, trial1, trial2)
     nodes = walk(graph["root"])
     alone = [node for node in nodes if node["trial_ids"] == [trial2]]
-    assert len(alone) == extra, "{} nodes of the second trial alone".format(
-        len(alone))
+    assert len(alone) == extra, "{} nodes of the second trial alone".format(len(alone))
     assert not [node for node in nodes if node["trial_ids"] == [trial1]], (
-        "nodes of the first trial alone")
+        "nodes of the first trial alone"
+    )
     for node in alone:
         assert list(node["activations"]) == [trial2], node["index"]
         assert node["original1"] is None, node["index"]
     for trial_id, stored in ((trial1, first), (trial2, second)):
-        held = sorted(aid for node in nodes
-                      for aid in node["activations"].get(trial_id, []))
+        held = sorted(
+            aid for node in nodes for aid in node["activations"].get(trial_id, [])
+        )
         assert held == sorted(stored), "activations of {}".format(trial_id)
 
 
@@ -660,10 +705,13 @@ def test_a_diff_stores_its_graph_and_the_graphs_of_both_trials(own):
     trial1, trial2 = own.trial_ids
     assert last_cache_id(project) == 0, "the new store has caches"
     own.json("/" + diff_url(trial1, trial2, "tree", "0"))
-    types = sorted(row["type"] for row in project.query(
-        "SELECT type FROM graph_cache WHERE name = 'tree'"))
-    expected = sorted([trial_type(trial1), trial_type(trial2),
-                       diff_type(trial1, trial2)])
+    types = sorted(
+        row["type"]
+        for row in project.query("SELECT type FROM graph_cache WHERE name = 'tree'")
+    )
+    expected = sorted(
+        [trial_type(trial1), trial_type(trial2), diff_type(trial1, trial2)]
+    )
     assert types == expected, "cache rows of tree"
     total = project.query("SELECT COUNT(*) AS n FROM graph_cache")[0]["n"]
     assert total == 3, "{} cache rows".format(total)
@@ -707,8 +755,7 @@ def test_diff_graph_cache_0_serves_the_trials_cached_graphs_desired(own):
     plant_stale_tree(own, trial1)
     graph = own.json("/" + diff_url(trial1, trial2, "tree", "0"))
     stale = [name for name in names(graph) if STALE in name]
-    assert not stale, "diff cache 0 served the trial's cached graph: " \
-        "{}".format(stale)
+    assert not stale, "diff cache 0 served the trial's cached graph: {}".format(stale)
 
 
 # --- URLs the frontend never builds -----------------------------------------
@@ -729,8 +776,7 @@ GRAPH_CLASS = {"trial": "TrialGraph", "diff": "DiffGraph"}
 def test_a_mode_that_is_no_attribute_raises_attribute_error(vis, kind):
     """A mode the graph does not have raises ``AttributeError`` (an HTML
     500 in ``now vis``), before anything is stored"""
-    message = "'{}' object has no attribute 'nosuchmode'".format(
-        GRAPH_CLASS[kind])
+    message = "'{}' object has no attribute 'nosuchmode'".format(GRAPH_CLASS[kind])
     with pytest.raises(AttributeError, match=message):
         vis.get(graph_route(vis, kind, mode="nosuchmode"))
 
@@ -757,6 +803,5 @@ def test_an_unknown_trial_raises_runtime_error(vis, kind):
     """A trial id the store does not have raises ``RuntimeError``"""
     unknown = str(uuid.uuid4())
     assert unknown not in vis.trial_ids
-    with pytest.raises(RuntimeError, match="Trial {} not found".format(
-            unknown)):
+    with pytest.raises(RuntimeError, match="Trial {} not found".format(unknown)):
         vis.get(graph_route(vis, kind, trial=unknown))

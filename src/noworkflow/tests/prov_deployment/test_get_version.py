@@ -69,26 +69,31 @@ def distribution(root, directory, metadata=None):
         (path / "METADATA").write_text(metadata, encoding="utf-8")
 
 
-def test_a_module_named_after_a_distribution_records_its_version(
-        get_version, tmp_path):
+def test_a_module_named_after_a_distribution_records_its_version(get_version, tmp_path):
     """The distribution's version wins over the module's ``__version__``,
     also when its directory joined ``sys.path`` after noWorkflow started
     (``tmp_path``, here)"""
-    distribution(tmp_path, "helper-1.2.3.dist-info",
-                 "Metadata-Version: 2.1\nName: helper\nVersion: 1.2.3\n")
+    distribution(
+        tmp_path,
+        "helper-1.2.3.dist-info",
+        "Metadata-Version: 2.1\nName: helper\nVersion: 1.2.3\n",
+    )
     assert get_version("helper") == "1.2.3"
 
 
-def test_a_module_without_a_distribution_records_its_own_version(
-        get_version, tmp_path):
+def test_a_module_without_a_distribution_records_its_own_version(get_version, tmp_path):
     """No distribution has the module's name: ``__version__`` is recorded"""
-    distribution(tmp_path, "other-1.2.3.dist-info",
-                 "Metadata-Version: 2.1\nName: other\nVersion: 1.2.3\n")
+    distribution(
+        tmp_path,
+        "other-1.2.3.dist-info",
+        "Metadata-Version: 2.1\nName: other\nVersion: 1.2.3\n",
+    )
     assert get_version("helper") == MODULE_VERSION
 
 
 def test_a_dotted_module_does_not_take_the_version_of_a_dashed_distribution(
-        get_version, tmp_path):
+    get_version, tmp_path
+):
     """``ns.sub`` is not the distribution ``ns-sub``
 
     PEP 503 folds ``.`` into ``-``, and ``importlib.metadata`` finds
@@ -96,28 +101,40 @@ def test_a_dotted_module_does_not_take_the_version_of_a_dashed_distribution(
     get the version of the plugin Flask-JSON. ``pkg_resources`` kept the
     dots apart, and so does ``get_version``.
     """
-    distribution(tmp_path, "ns_sub-3.0.dist-info",
-                 "Metadata-Version: 2.1\nName: ns-sub\nVersion: 3.0\n")
+    distribution(
+        tmp_path,
+        "ns_sub-3.0.dist-info",
+        "Metadata-Version: 2.1\nName: ns-sub\nVersion: 3.0\n",
+    )
     assert get_version("ns.sub") == MODULE_VERSION
 
 
 def test_a_dotted_module_matches_a_distribution_with_the_same_dots(
-        get_version, tmp_path):
+    get_version, tmp_path
+):
     """``ns.sub`` is the distribution ``ns.sub``, as ``zope.interface`` is
     the distribution that ships the module ``zope.interface``"""
-    distribution(tmp_path, "ns_sub-3.0.dist-info",
-                 "Metadata-Version: 2.1\nName: ns.sub\nVersion: 3.0\n")
+    distribution(
+        tmp_path,
+        "ns_sub-3.0.dist-info",
+        "Metadata-Version: 2.1\nName: ns.sub\nVersion: 3.0\n",
+    )
     assert get_version("ns.sub") == "3.0"
 
 
-@pytest.mark.parametrize("metadata", [
-    pytest.param(None, id="no METADATA"),
-    pytest.param("Metadata-Version: 2.1\nName: helper\n", id="no Version"),
-    pytest.param("Metadata-Version: 2.1\nName: helper\nVersion:\n",
-                 id="empty Version"),
-])
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        pytest.param(None, id="no METADATA"),
+        pytest.param("Metadata-Version: 2.1\nName: helper\n", id="no Version"),
+        pytest.param(
+            "Metadata-Version: 2.1\nName: helper\nVersion:\n", id="empty Version"
+        ),
+    ],
+)
 def test_a_distribution_without_a_version_leaves_the_module_version(
-        get_version, tmp_path, metadata):
+    get_version, tmp_path, metadata
+):
     """Metadata that names no version is not a version
 
     A leftover ``helper-1.0.dist-info`` with no ``METADATA``, or a
@@ -131,7 +148,8 @@ def test_a_distribution_without_a_version_leaves_the_module_version(
 
 
 def test_a_script_that_patches_importlib_metadata_does_not_reach_the_lookup(
-        get_version, tmp_path):
+    get_version, tmp_path
+):
     """A traced test suite that patches ``importlib.metadata`` while it
     imports a module for the first time does not change what is recorded
 
@@ -140,11 +158,14 @@ def test_a_script_that_patches_importlib_metadata_does_not_reach_the_lookup(
     ``mock.patch`` of it put its return value in the ``module`` row, and a
     bare ``MagicMock`` made ``now run`` fail when it stored the trial.
     """
-    distribution(tmp_path, "helper-1.2.3.dist-info",
-                 "Metadata-Version: 2.1\nName: helper\nVersion: 1.2.3\n")
-    with mock.patch("importlib.metadata.version",
-                    return_value="0.0-fake") as version, \
-            mock.patch("importlib.metadata.distribution",
-                       return_value=None) as find:
+    distribution(
+        tmp_path,
+        "helper-1.2.3.dist-info",
+        "Metadata-Version: 2.1\nName: helper\nVersion: 1.2.3\n",
+    )
+    with (
+        mock.patch("importlib.metadata.version", return_value="0.0-fake") as version,
+        mock.patch("importlib.metadata.distribution", return_value=None) as find,
+    ):
         recorded = get_version("helper")
     assert (recorded, version.called, find.called) == ("1.2.3", False, False)

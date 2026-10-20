@@ -11,10 +11,9 @@ from .parallel import NullLock, create_distributed, create_pool, create_threadin
 
 
 class DulwichEngine(GitContentDatabaseEngine):
-
     def __init__(self, config):
         super(DulwichEngine, self).__init__(config)
-        self._commit_encoding = 'UTF-8'
+        self._commit_encoding = "UTF-8"
         self.repo = None
         self.lock = NullLock()
 
@@ -42,9 +41,7 @@ class DulwichEngine(GitContentDatabaseEngine):
     def put_attr(self, content, filename):
         """Return attributes for the do_put operation"""
         filename = self._inc_name(filename)
-        return (
-            self.content_path, self.object_hashes, self.lock, content, filename
-        )
+        return (self.content_path, self.object_hashes, self.lock, content, filename)
 
     def put(self, content, filename="generic"):  # pylint: disable=method-hidden
         """Put content in the content database"""
@@ -78,11 +75,11 @@ class DulwichEngine(GitContentDatabaseEngine):
 
     def create_commit_object(self, message, tree):
         """Create a commit object"""
-        with self.use_safe_open(): 
+        with self.use_safe_open():
             master_ref = self.repo.get_refs().get(
                 self._commit_ref.encode("utf-8"), None
             )
-            
+
             commit = Commit()
             if master_ref is not None:
                 commit.parents = [master_ref]
@@ -97,9 +94,7 @@ class DulwichEngine(GitContentDatabaseEngine):
             commit.message = message.encode()
 
             self.repo.object_store.add_object(commit)
-            self.repo.refs[
-                self._commit_ref.encode("utf-8")
-            ] = commit.id
+            self.repo.refs[self._commit_ref.encode("utf-8")] = commit.id
 
             return commit.id
 
@@ -109,15 +104,15 @@ class DulwichEngine(GitContentDatabaseEngine):
 
     def insert_blob(self, tree, basename, value):
         """Insert blob into tree"""
-        tree.add(basename.encode('utf-8'), 0o100644, value.encode("ascii"))
+        tree.add(basename.encode("utf-8"), 0o100644, value.encode("ascii"))
 
     def insert_tree(self, tree, basename, value):
         """Insert tree into tree"""
-        tree.add(basename.encode('utf-8'), 0o040000, value)
+        tree.add(basename.encode("utf-8"), 0o040000, value)
 
     def write_tree(self, tree):
         """Write tree to git directory"""
-        with self.restore_open(): 
+        with self.restore_open():
             self.repo.object_store.add_object(tree)
             return tree.id
 

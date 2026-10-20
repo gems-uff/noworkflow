@@ -6,7 +6,7 @@ from . import safeopen
 from .base import ContentDatabaseEngine
 from .parallel import create_distributed, create_pool, create_threading
 
-STANDARD_DATABASE_DIR = 'content'
+STANDARD_DATABASE_DIR = "content"
 
 
 class PlainEngine(ContentDatabaseEngine):
@@ -45,9 +45,7 @@ class PlainEngine(ContentDatabaseEngine):
 
     def get(self, content_hash):  # pylint: disable=method-hidden
         """Get content from the content database"""
-        content_filename = join(self.content_path,
-                                content_hash[:2],
-                                content_hash[2:])
+        content_filename = join(self.content_path, content_hash[:2], content_hash[2:])
         with self.std_open(content_filename, "rb") as content_file:
             return content_file.read()
 

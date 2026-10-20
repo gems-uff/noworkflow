@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test Stmt collection"""
+
 # pylint: disable=too-many-lines
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -13,27 +14,26 @@ from ..helpers.versions import only
 
 class TestStmtExecution(CollectionTestCase):
     """Test Excution Stmt collection"""
+
     # pylint: disable=invalid-name
     # pylint: disable=too-many-locals
     # pylint: disable=too-many-public-methods
     # pylint: disable=too-many-statements
 
     def test_assign_to_name(self):
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "# other")
+        self.script("# script.py\na = 2\n# other")
 
         var_evaluation = self.get_evaluation(name="a")
         var_2 = self.get_evaluation(name="2")
-        var_int = self.get_evaluation(name=self.rtype('int'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_int = self.get_evaluation(name=self.rtype("int"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(var_evaluation.activation_id, script_eval.id)
         self.assertTrue(bool(var_evaluation.checkpoint))
-        self.assertEqual(script_act.context['a'], var_evaluation)
+        self.assertEqual(script_act.context["a"], var_evaluation)
 
         self.assert_type(var_2, var_int)
         self.assert_type(var_evaluation, var_int)
@@ -44,10 +44,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_evaluation.repr, "2")
 
     def test_assign_name_to_name(self):
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "b = a\n"
-                    "# other")
+        self.script("# script.py\na = 2\nb = a\n# other")
 
         write_a_eval = self.get_evaluation(name="a", mode="w")
         read_a_eval = self.get_evaluation(name="a", mode="r")
@@ -60,8 +57,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assertTrue(bool(read_a_eval.checkpoint))
         self.assertEqual(write_b_eval.activation_id, script_eval.id)
         self.assertTrue(bool(write_b_eval.checkpoint))
-        self.assertEqual(script_act.context['a'], write_a_eval)
-        self.assertEqual(script_act.context['b'], write_b_eval)
+        self.assertEqual(script_act.context["a"], write_a_eval)
+        self.assertEqual(script_act.context["b"], write_b_eval)
 
         self.assert_dependency(read_a_eval, write_a_eval, "assignment", True)
         self.assert_dependency(write_b_eval, read_a_eval, "assign", True)
@@ -70,24 +67,21 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(write_b_eval.repr, "2")
 
     def test_augassign_to_name(self):
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "a += 1\n"
-                    "# other")
+        self.script("# script.py\na = 2\na += 1\n# other")
 
         var_a1 = self.get_evaluation(name="a", first_char_line=2)
         var_a2w = self.get_evaluation(name="a", first_char_line=3, mode="w")
         var_a2r = self.get_evaluation(name="a", first_char_line=3, mode="r")
         var_1 = self.get_evaluation(name="1")
-        var_int = self.get_evaluation(name=self.rtype('int'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_int = self.get_evaluation(name=self.rtype("int"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(var_a2w.activation_id, script_eval.id)
         self.assertTrue(bool(var_a2w.checkpoint))
-        self.assertEqual(script_act.context['a'], var_a2w)
+        self.assertEqual(script_act.context["a"], var_a2w)
 
         self.assert_dependency(var_a2r, var_a1, "assignment", True)
         self.assert_dependency(var_a2w, var_a2r, "add_assign")
@@ -102,12 +96,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a2w.repr, "3")
 
     def test_function_definition(self):
-        self.script("# script.py\n"
-                    "def f(x):\n"
-                    "    pass\n"
-                    "a = 2\n"
-                    "b = f(a)\n"
-                    "# other")
+        self.script("# script.py\ndef f(x):\n    pass\na = 2\nb = f(a)\n# other")
 
         write_f_eval = self.get_evaluation(name="f", mode="w")
         param_x_eval = self.get_evaluation(name="x", mode="w")
@@ -136,21 +125,23 @@ class TestStmtExecution(CollectionTestCase):
         self.assertTrue(bool(call.checkpoint))
         self.assertEqual(param_x_eval.activation_id, activation.id)
         self.assertTrue(bool(param_x_eval.checkpoint))
-        self.assertEqual(script_act.context['a'], write_a_eval)
-        self.assertEqual(script_act.context['b'], write_b_eval)
-        self.assertEqual(script_act.context['f'], write_f_eval)
-        self.assertEqual(activation.context['x'], param_x_eval)
+        self.assertEqual(script_act.context["a"], write_a_eval)
+        self.assertEqual(script_act.context["b"], write_b_eval)
+        self.assertEqual(script_act.context["f"], write_f_eval)
+        self.assertEqual(activation.context["x"], param_x_eval)
 
         self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
 
     def test_function_definition_with_named_argument(self):
-        self.script("# script.py\n"
-                    "arg = 2\n"
-                    "def f(x, named=arg):\n"
-                    "    r = named + 1\n"
-                    "a = 2\n"
-                    "f(a)\n"
-                    "# other")
+        self.script(
+            "# script.py\n"
+            "arg = 2\n"
+            "def f(x, named=arg):\n"
+            "    r = named + 1\n"
+            "a = 2\n"
+            "f(a)\n"
+            "# other"
+        )
 
         def_arg_eval = self.get_evaluation(name="arg", mode="r")
         write_f_eval = self.get_evaluation(name="f", mode="w")
@@ -182,11 +173,11 @@ class TestStmtExecution(CollectionTestCase):
         self.assertTrue(bool(param_named_eval.checkpoint))
         self.assertEqual(r_eval.activation_id, activation.id)
         self.assertTrue(bool(r_eval.checkpoint))
-        self.assertEqual(script_act.context['a'], write_a_eval)
-        self.assertEqual(script_act.context['f'], write_f_eval)
-        self.assertEqual(activation.context['x'], param_x_eval)
-        self.assertEqual(activation.context['named'], param_named_eval)
-        self.assertEqual(activation.context['r'], r_eval)
+        self.assertEqual(script_act.context["a"], write_a_eval)
+        self.assertEqual(script_act.context["f"], write_f_eval)
+        self.assertEqual(activation.context["x"], param_x_eval)
+        self.assertEqual(activation.context["named"], param_named_eval)
+        self.assertEqual(activation.context["r"], r_eval)
 
         self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
         self.assert_dependency(param_named_eval, def_arg_eval, "argument", True)
@@ -194,12 +185,7 @@ class TestStmtExecution(CollectionTestCase):
     # ToDo: check kwonly defaults
 
     def test_function_definition_with_return(self):
-        self.script("# script.py\n"
-                    "def f(x):\n"
-                    "    return x\n"
-                    "a = 2\n"
-                    "b = f(a)\n"
-                    "# other")
+        self.script("# script.py\ndef f(x):\n    return x\na = 2\nb = f(a)\n# other")
 
         write_f_eval = self.get_evaluation(name="f", mode="w")
         param_x_eval = self.get_evaluation(name="x", mode="w")
@@ -229,10 +215,10 @@ class TestStmtExecution(CollectionTestCase):
         self.assertTrue(bool(call.checkpoint))
         self.assertEqual(param_x_eval.activation_id, activation.id)
         self.assertTrue(bool(param_x_eval.checkpoint))
-        self.assertEqual(script_act.context['a'], write_a_eval)
-        self.assertEqual(script_act.context['b'], write_b_eval)
-        self.assertEqual(script_act.context['f'], write_f_eval)
-        self.assertEqual(activation.context['x'], param_x_eval)
+        self.assertEqual(script_act.context["a"], write_a_eval)
+        self.assertEqual(script_act.context["b"], write_b_eval)
+        self.assertEqual(script_act.context["f"], write_f_eval)
+        self.assertEqual(activation.context["x"], param_x_eval)
 
         self.assert_dependency(param_x_eval, arg_a_eval, "argument", True)
         self.assert_dependency(read_x_eval, param_x_eval, "assignment", True)
@@ -240,9 +226,7 @@ class TestStmtExecution(CollectionTestCase):
 
     def test_tuple_assign(self):
         self.maxDiff = None
-        self.script("e = f = 1\n"
-                    "a = b, c = (e, [f, 2])\n"
-                    "# other")
+        self.script("e = f = 1\na = b, c = (e, [f, 2])\n# other")
 
         var_a = self.get_evaluation(name="a", mode="w")
         var_b = self.get_evaluation(name="b")
@@ -274,9 +258,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a_i11.repr, "2")
 
     def test_tuple_assign_not_bound(self):
-        self.script("e = f = 1\n"
-                    "a = b, c = [e] + [f]\n"
-                    "# other")
+        self.script("e = f = 1\na = b, c = [e] + [f]\n# other")
 
         var_a = self.get_evaluation(name="a", mode="w")
         var_b = self.get_evaluation(name="b")
@@ -296,14 +278,12 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(var_b, var_ef, "dependency")
         self.assert_dependency(var_c, var_ef, "dependency")
 
-         # it was not accessed
+        # it was not accessed
         self.assert_no_member(var_a, var_e, "[0]")
         self.assert_no_member(var_a, var_f, "[1]")
 
     def test_list_assign(self):
-        self.script("e = f = 1\n"
-                    "a = [b, c] = (e, [f, 2])\n"
-                    "# other")
+        self.script("e = f = 1\na = [b, c] = (e, [f, 2])\n# other")
 
         var_a = self.get_evaluation(name="a", mode="w")
         var_b = self.get_evaluation(name="b")
@@ -327,7 +307,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_member(var_list, var_a_i11, "[1]")
         self.assert_member(var_tuple, var_a_e, "[0]")
         self.assert_member(var_tuple, var_list, "[1]")
-        
+
         self.assertEqual(var_tuple.repr, "(1, [1, 2])")
         self.assertEqual(var_list.repr, "[1, 2]")
         self.assertEqual(var_a_e.repr, "1")
@@ -336,9 +316,7 @@ class TestStmtExecution(CollectionTestCase):
 
     @only(PY3)
     def test_star_assign(self):
-        self.script("e = f = 1\n"
-                    "a = b, *c, d = e, 2, 3, f, 4\n"
-                    "# other")
+        self.script("e = f = 1\na = b, *c, d = e, 2, 3, f, 4\n# other")
 
         var_a = self.get_evaluation(name="a", mode="w")
         var_b = self.get_evaluation(name="b")
@@ -378,9 +356,7 @@ class TestStmtExecution(CollectionTestCase):
 
     def test_item_assign(self):
         """Test item assignment"""
-        self.script("a = [1, 2]\n"
-                    "a[0] = 3\n"
-                    "# other")
+        self.script("a = [1, 2]\na[0] = 3\n# other")
 
         var_list = self.get_evaluation(name="[1, 2]")
         var_1 = self.get_evaluation(name="1")
@@ -402,9 +378,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_3.repr, "3")
 
     def test_negative_item_assign(self):
-        self.script("a = [1, 2]\n"
-                    "a[-2] = 3\n"
-                    "# other")
+        self.script("a = [1, 2]\na[-2] = 3\n# other")
 
         var_list = self.get_evaluation(name="[1, 2]")
         var_1 = self.get_evaluation(name="1")
@@ -428,9 +402,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_a0.repr, "3")
 
     def test_slice_item_assign(self):
-        self.script("a = [1, 2]\n"
-                    "a[0:1] = 3, 4\n"
-                    "# other")
+        self.script("a = [1, 2]\na[0:1] = 3, 4\n# other")
 
         var_list = self.get_evaluation(name="[1, 2]")
         var_1 = self.get_evaluation(name="1")
@@ -458,9 +430,7 @@ class TestStmtExecution(CollectionTestCase):
 
     @only(PY3)
     def test_starred_item_assign(self):
-        self.script("a = []\n"
-                    "*a[0:1], b = 3, 4\n"
-                    "# other")
+        self.script("a = []\n*a[0:1], b = 3, 4\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r")
         var_b = self.get_evaluation(name="b")
@@ -484,9 +454,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_b.repr, "4")
 
     def test_attribute_assign(self):
-        self.script("def a(): pass\n"
-                    "a.x = 3\n"
-                    "# other")
+        self.script("def a(): pass\na.x = 3\n# other")
 
         var_a_first = self.get_evaluation(name="a", mode="w")
         var_a = self.get_evaluation(name="a", mode="r")
@@ -503,9 +471,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_ax.repr, "3")
 
     def test_for_loop(self):
-        self.script("for x in [1, 2]:\n"
-                    "    y = x\n"
-                    "# other")
+        self.script("for x in [1, 2]:\n    y = x\n# other")
 
         var_l = self.get_evaluation(name="[1, 2]", mode="r")
         var_1 = self.get_evaluation(name="1")
@@ -538,10 +504,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_x2_w.repr, "2")
 
     def test_for_loop_variable(self):
-        self.script("lis = [1, 2]\n"
-                    "for x in lis:\n"
-                    "    y = x\n"
-                    "# other")
+        self.script("lis = [1, 2]\nfor x in lis:\n    y = x\n# other")
 
         var_l = self.get_evaluation(name="[1, 2]", mode="r")
         var_lis_w = self.get_evaluation(name="lis", mode="w")
@@ -578,10 +541,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_x2_w.repr, "2")
 
     def test_for_loop_multiple_assignment(self):
-        self.script("lis = [(1, 2)]\n"
-                    "for x, y in lis:\n"
-                    "    pass\n"
-                    "# other")
+        self.script("lis = [(1, 2)]\nfor x, y in lis:\n    pass\n# other")
 
         var_l = self.get_evaluation(name="[(1, 2)]", mode="r")
         var_lis_w = self.get_evaluation(name="lis", mode="w")
@@ -595,8 +555,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(len(var_xs_w), 1)
         self.assertEqual(len(var_ys_w), 1)
 
-        var_x1_w, = var_xs_w
-        var_y1_w, = var_ys_w
+        (var_x1_w,) = var_xs_w
+        (var_y1_w,) = var_ys_w
 
         self.assert_dependency(var_x1_w, var_lis_r, "dependency")
         self.assert_dependency(var_y1_w, var_lis_r, "dependency")
@@ -607,13 +567,9 @@ class TestStmtExecution(CollectionTestCase):
 
         self.assertEqual(var_x1_w.repr, "1")
         self.assertEqual(var_y1_w.repr, "2")
-        
+
     def test_if(self):
-        self.script("x = 2\n"
-                    "if x:\n"
-                    "    y = 3\n"
-                    "z = 4\n"
-                    "# other")
+        self.script("x = 2\nif x:\n    y = 3\nz = 4\n# other")
 
         var_x = self.get_evaluation(name="x", mode="r")
         var_y = self.get_evaluation(name="y", mode="w")
@@ -629,13 +585,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_y.repr, "3")
 
     def test_while(self):
-        self.script("x = 2\n"
-                    "while x:\n"
-                    "    y = 1\n"
-                    "    x -= y\n"
-                    "z = 4\n"
-                    "# other")
-
+        self.script("x = 2\nwhile x:\n    y = 1\n    x -= y\nz = 4\n# other")
 
         x1_w = self.get_evaluation(name="x", mode="w", first_char_line=1)
         var_xs_w = self.get_evaluations(name="x", mode="w", first_char_line=4)
@@ -680,8 +630,7 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(y2_w.repr, "1")
 
     def test_assign_multiple_generator_expression_variable(self):
-        self.script("a, b = (z * 2 for z in [3, 4] if 1)\n"
-                    "# other")
+        self.script("a, b = (z * 2 for z in [3, 4] if 1)\n# other")
 
         var_gen = self.get_evaluation(name="(z * 2 for z in [3, 4] if 1)")
         var_a_w = self.get_evaluation(name="a", mode="w")
@@ -724,11 +673,9 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(z2_2.repr, "8")
 
     def test_for_loop_multiple_generator_assignment(self):
-        self.script("lis = [(z * 2 for z in [3, 4] if 1)]\n"
-                    "for x, y in lis:\n"
-                    "    pass\n"
-                    "# other")
-
+        self.script(
+            "lis = [(z * 2 for z in [3, 4] if 1)]\nfor x, y in lis:\n    pass\n# other"
+        )
 
         var_3 = self.get_evaluation(name="3")
         var_4 = self.get_evaluation(name="4")
@@ -758,8 +705,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(len(var_xs_w), 1)
         self.assertEqual(len(var_ys_w), 1)
 
-        var_x1_w, = var_xs_w
-        var_y1_w, = var_ys_w
+        (var_x1_w,) = var_xs_w
+        (var_y1_w,) = var_ys_w
 
         self.assert_dependency(var_z1_w, var_3, "assign", True)
         self.assert_dependency(var_z2_w, var_4, "assign", True)
@@ -783,14 +730,16 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_y1_w.repr, "8")
 
     def test_generator_function_variable(self):
-        self.script("def f():\n"
-                    "    yield 3\n"
-                    "    yield 4\n"
-                    "a = f()\n"
-                    "b = a\n"
-                    "for x in b:"
-                    "    y = x\n"
-                    "# other")
+        self.script(
+            "def f():\n"
+            "    yield 3\n"
+            "    yield 4\n"
+            "a = f()\n"
+            "b = a\n"
+            "for x in b:"
+            "    y = x\n"
+            "# other"
+        )
 
         var_gen = self.get_evaluation(name="f()")
         var_a_w = self.get_evaluation(name="a", mode="w")
@@ -837,14 +786,16 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_x2_w.repr, "4")
 
     def test_collect_try(self):
-        self.script("# script.py\n"
-                    "try:\n"
-                    "    a = 2\n"
-                    "    erro\n"
-                    "except NameError as err:\n"
-                    "    b = a\n"
-                    "    c = err\n"
-                    "# other")
+        self.script(
+            "# script.py\n"
+            "try:\n"
+            "    a = 2\n"
+            "    erro\n"
+            "except NameError as err:\n"
+            "    b = a\n"
+            "    c = err\n"
+            "# other"
+        )
 
         write_a_eval = self.get_evaluation(name="a", mode="w")
         read_a_eval = self.get_evaluation(name="a", mode="r")
@@ -852,7 +803,7 @@ class TestStmtExecution(CollectionTestCase):
         write_c_eval = self.get_evaluation(name="c", mode="w")
         write_err_eval = self.get_evaluation(name="err", mode="w")
         read_err_eval = self.get_evaluation(name="err", mode="r")
-        var_int = self.get_evaluation(name=self.rtype('int'))
+        var_int = self.get_evaluation(name=self.rtype("int"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
@@ -861,8 +812,8 @@ class TestStmtExecution(CollectionTestCase):
         self.assertTrue(bool(read_a_eval.checkpoint))
         self.assertEqual(write_b_eval.activation_id, script_eval.id)
         self.assertTrue(bool(write_b_eval.checkpoint))
-        self.assertEqual(script_act.context['a'], write_a_eval)
-        self.assertEqual(script_act.context['b'], write_b_eval)
+        self.assertEqual(script_act.context["a"], write_a_eval)
+        self.assertEqual(script_act.context["b"], write_b_eval)
 
         self.assert_dependency(read_a_eval, write_a_eval, "assignment", True)
         self.assert_dependency(write_b_eval, read_a_eval, "assign", True)
@@ -876,15 +827,11 @@ class TestStmtExecution(CollectionTestCase):
 
     @only(PY2)
     def test_print(self):
-        self.script("# script.py\n"
-                    "a = ''\n"
-                    "print a,\n"
-                    "# other")
+        self.script("# script.py\na = ''\nprint a,\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
         call = self.get_evaluation(name="print a")
-        var_str = self.get_evaluation(name=self.rtype('str'))
-
+        var_str = self.get_evaluation(name=self.rtype("str"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
@@ -903,15 +850,11 @@ class TestStmtExecution(CollectionTestCase):
 
     @only(PY2)
     def test_exec(self):
-        self.script("# script.py\n"
-                    "a = 'x = 2'\n"
-                    "exec a\n"
-                    "x\n"
-                    "# other")
+        self.script("# script.py\na = 'x = 2'\nexec a\nx\n# other")
 
         var_a = self.get_evaluation(name="a", mode="r", type="name")
         call = self.get_evaluation(name="exec a")
-        var_str = self.get_evaluation(name=self.rtype('str'))
+        var_str = self.get_evaluation(name=self.rtype("str"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
@@ -927,24 +870,22 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_type(var_a, var_str)
 
         self.assertEqual(var_a.repr, "'x = 2'")
-        
+
     @only(PY36)
     def test_annassign_to_name(self):
-        self.script("# script.py\n"
-                    "a: int = 2\n"
-                    "# other")
+        self.script("# script.py\na: int = 2\n# other")
 
         var_evaluation = self.get_evaluation(name="a")
         var_2 = self.get_evaluation(name="2")
-        var_int = self.get_evaluation(name=self.rtype('int'))
-        var_type = self.get_evaluation(name=self.rtype('type'))
+        var_int = self.get_evaluation(name=self.rtype("int"))
+        var_type = self.get_evaluation(name=self.rtype("type"))
 
         script_eval = self.get_evaluation(name="script.py")
         script_act = self.metascript.activations_store[script_eval.id]
 
         self.assertEqual(var_evaluation.activation_id, script_eval.id)
         self.assertTrue(bool(var_evaluation.checkpoint))
-        self.assertEqual(script_act.context['a'], var_evaluation)
+        self.assertEqual(script_act.context["a"], var_evaluation)
 
         self.assert_dependency(var_evaluation, var_2, "assign", True)
         self.assert_type(var_evaluation, var_int)
@@ -954,11 +895,13 @@ class TestStmtExecution(CollectionTestCase):
         self.assertEqual(var_evaluation.repr, "2")
 
     def test_collect_with(self):
-        self.script("# script.py\n"
-                    "from os import devnull\n"
-                    "with open(devnull, 'w') as f:\n"
-                    "    a = f\n"
-                    "# other")
+        self.script(
+            "# script.py\n"
+            "from os import devnull\n"
+            "with open(devnull, 'w') as f:\n"
+            "    a = f\n"
+            "# other"
+        )
 
         read_devnull_eval = self.get_evaluation(name="devnull", mode="r")
         open_eval = self.get_evaluation(name="open(devnull, 'w')")
@@ -970,7 +913,6 @@ class TestStmtExecution(CollectionTestCase):
         self.assert_dependency(write_a_eval, read_f_eval, "assign", True)
         self.assert_dependency(write_f_eval, open_eval, "assign", True)
         self.assert_dependency(open_eval, read_devnull_eval, "argument", False)
-
 
     # ToDo: expr/YieldFrom
     # ToDo: expr/Await

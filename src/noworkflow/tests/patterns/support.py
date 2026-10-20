@@ -33,6 +33,7 @@ of AttributeError, which fails the collection of the whole module (the
 defect ``model-rule-getattr-keyerror``). Import the package (``from
 noworkflow import patterns``) and write ``patterns.activation``.
 """
+
 import collections
 import re
 
@@ -73,19 +74,18 @@ def bindings(query, *variables):
     """
     rows = []
     for _, binds in query:
-        rows.append(tuple(_plain(_lookup(binds, variable))
-                          for variable in variables))
+        rows.append(tuple(_plain(_lookup(binds, variable)) for variable in variables))
     return rows
 
 
 def _lookup(binds, variable):
     if isinstance(variable, Variable):
         return binds.get(variable, ABSENT)
-    found = [(key, value) for key, value in binds.items()
-             if key.name == variable]
+    found = [(key, value) for key, value in binds.items() if key.name == variable]
     if len({id(key) for key, _ in found}) > 1:
-        raise ValueError("two variables are named {!r}; pass the Variable "
-                         "itself".format(variable))
+        raise ValueError(
+            "two variables are named {!r}; pass the Variable itself".format(variable)
+        )
     return found[0][1] if found else ABSENT
 
 
@@ -117,35 +117,38 @@ def differences(actual, expected):
     if actual == expected:
         return ""
     extra, missing = actual - expected, expected - actual
-    lines = ["{} solutions in the rule, {} in the store".format(
-        sum(actual.values()), sum(expected.values()))]
+    lines = [
+        "{} solutions in the rule, {} in the store".format(
+            sum(actual.values()), sum(expected.values())
+        )
+    ]
     unbound = sum(count for row, count in extra.items() if _unbound(row))
     if unbound:
         lines.append("unbound in {} solutions".format(unbound))
-    repeats = sum(count - max(expected[row], 1)
-                  for row, count in actual.items()
-                  if count > max(expected[row], 1))
+    repeats = sum(
+        count - max(expected[row], 1)
+        for row, count in actual.items()
+        if count > max(expected[row], 1)
+    )
     if repeats:
         lines.append("repeats {} solutions".format(repeats))
-    for label, rows in (("only in the rule", extra),
-                        ("only in the store", missing)):
+    for label, rows in (("only in the rule", extra), ("only in the store", missing)):
         if rows:
-            lines.append("{} ({}): {}".format(
-                label, sum(rows.values()), _show(rows)))
+            lines.append("{} ({}): {}".format(label, sum(rows.values()), _show(rows)))
     return "\n".join(lines)
 
 
 def _unbound(row):
     values = row if isinstance(row, tuple) else (row,)
-    return any(value is marker for value in values
-               for marker in UNBOUND_MARKERS)
+    return any(value is marker for value in values for marker in UNBOUND_MARKERS)
 
 
 def _show(rows):
     shown = sorted(rows.items(), key=lambda item: repr(item[0]))
     text = ", ".join(
         repr(row) if count == 1 else "{!r} x{}".format(row, count)
-        for row, count in shown[:SHOWN_ROWS])
+        for row, count in shown[:SHOWN_ROWS]
+    )
     if len(shown) > SHOWN_ROWS:
         text += ", ... ({} more distinct)".format(len(shown) - SHOWN_ROWS)
     return text

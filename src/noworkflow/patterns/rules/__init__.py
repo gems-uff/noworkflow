@@ -5,7 +5,6 @@
 """Pattern Matching Module"""
 # pylint: disable=invalid-name, redefined-builtin
 
-
 from .access_rules import (
     access_id,
     file_read,

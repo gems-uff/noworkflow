@@ -10,6 +10,7 @@ real store (rows checked against SQL on its ``db.sqlite``) and the content
 engine reads its content directory; afterwards the in-memory stores are the
 same objects, holding the same rows.
 """
+
 import pytest
 
 from noworkflow.now.persistence import content, persistence_config, relational
@@ -19,34 +20,42 @@ from noworkflow.tests.helpers.persistence import connected_to
 
 
 def in_memory_state():
-    return (relational.engine, relational._session_map, relational.db_path,
-            content.content_database_engine, persistence_config.should_mock,
-            persistence_config.base_path)
+    return (
+        relational.engine,
+        relational._session_map,
+        relational.db_path,
+        content.content_database_engine,
+        persistence_config.should_mock,
+        persistence_config.base_path,
+    )
 
 
-def test_connected_two_trials_reads_the_trials_of_the_real_store(
-        connected_two_trials):
+def test_connected_two_trials_reads_the_trials_of_the_real_store(connected_two_trials):
     """The models list the trials that SQL finds in the store's file"""
     expected = [row["id"] for row in connected_two_trials.trials()]
     assert len(expected) == 2
-    found = [trial.id for trial in relational.session.query(
-        Trial.m).order_by(Trial.m.sequence_key)]
+    found = [
+        trial.id
+        for trial in relational.session.query(Trial.m).order_by(Trial.m.sequence_key)
+    ]
     assert found == expected
 
 
-def test_connected_two_trials_reads_the_content_of_the_real_store(
-        connected_two_trials):
+def test_connected_two_trials_reads_the_content_of_the_real_store(connected_two_trials):
     """``content.get`` returns the bytes the store holds under a hash"""
     rows = connected_two_trials.query(
         "SELECT content_hash_before FROM file_access "
         "WHERE name LIKE '%data1.dat' AND content_hash_before IS NOT NULL "
-        "LIMIT 1")
+        "LIMIT 1"
+    )
     assert rows, "the weather trials record no content of data1.dat"
     content_hash = rows[0]["content_hash_before"]
-    assert content.get(content_hash) == connected_two_trials.content(
-        content_hash)
-    accesses = relational.session.query(FileAccess.m).filter(
-        FileAccess.m.content_hash_before == content_hash).count()
+    assert content.get(content_hash) == connected_two_trials.content(content_hash)
+    accesses = (
+        relational.session.query(FileAccess.m)
+        .filter(FileAccess.m.content_hash_before == content_hash)
+        .count()
+    )
     assert accesses >= 1
 
 
@@ -60,12 +69,10 @@ def test_connected_to_brings_back_the_in_memory_stores(two_trial_project):
     before = in_memory_state()
     with connected_to(two_trial_project.path):
         assert in_memory_state() != before
-        scripts = {trial.script for trial in relational.session.query(
-            Trial.m)}
+        scripts = {trial.script for trial in relational.session.query(Trial.m)}
         assert "memory.py" not in scripts
     assert in_memory_state() == before
-    assert [trial.id for trial in relational.session.query(Trial.m)] == [
-        trial_id]
+    assert [trial.id for trial in relational.session.query(Trial.m)] == [trial_id]
     assert content.get(content.put(b"in memory")) == b"in memory"
     models.erase_database()
 

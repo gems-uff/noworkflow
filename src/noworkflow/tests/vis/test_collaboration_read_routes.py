@@ -29,6 +29,7 @@ value reaches an assertion message. No known defect here; the download of
 an unknown annotation crashes, which the frontend never asks for
 (robustness, characterized).
 """
+
 import email.message
 import types
 
@@ -56,8 +57,12 @@ from noworkflow.tests.helpers.persistence import connected_to
 from .support import EXPERIMENT
 
 INVALID_EXPERIMENT = "Invalid experiment ID"
-COLLAB_ROUTES = ["collab/files", "collab/trialsids", "collab/usersids",
-                 "collab/bundle?id={trial}"]
+COLLAB_ROUTES = [
+    "collab/files",
+    "collab/trialsids",
+    "collab/usersids",
+    "collab/bundle?id={trial}",
+]
 # What each list of a bundle holds, by the table it comes from.
 BUNDLE_TABLES = {
     "activations": "activation",
@@ -82,19 +87,37 @@ def _collab_store(tmp_path_factory):
 
     Returns the project and the ids the tests look for.
     """
-    project = build_weather(
-        NowProject(tmp_path_factory.mktemp("vis_collab")), trials=2)
+    project = build_weather(NowProject(tmp_path_factory.mktemp("vis_collab")), trials=2)
     first, _ = [row["id"] for row in project.trials()]
     user = project.query("SELECT id FROM user")[0]["id"]
     with connected_to(project.path):
         experiment = Experiment.create(
-            ExperimentLW("weather", "", "the weather corpus"))
-        experiment_note = ExtendedAnnotation.create(ExtendedAnnotationLW(
-            None, "a note on the experiment", "experiment note",
-            "plainText", "prospective", "Experiment", experiment.id, None))
-        trial_note = ExtendedAnnotation.create(ExtendedAnnotationLW(
-            None, '{"checked": true}', "trial note", "json",
-            "retrospective", "Trial", None, first))
+            ExperimentLW("weather", "", "the weather corpus")
+        )
+        experiment_note = ExtendedAnnotation.create(
+            ExtendedAnnotationLW(
+                None,
+                "a note on the experiment",
+                "experiment note",
+                "plainText",
+                "prospective",
+                "Experiment",
+                experiment.id,
+                None,
+            )
+        )
+        trial_note = ExtendedAnnotation.create(
+            ExtendedAnnotationLW(
+                None,
+                '{"checked": true}',
+                "trial note",
+                "json",
+                "retrospective",
+                "Trial",
+                None,
+                first,
+            )
+        )
         group = Group.create(GroupLW(None, "weather team", None))
         MemberOfGroup.create(MemberOfGroupLW(None, group.id, user))
         Remote.create(VISIBLE_REMOTE, "visible")
@@ -102,15 +125,21 @@ def _collab_store(tmp_path_factory):
         session = relational.session
         # Remote.create ignores ``hide``; the trial of an experiment comes
         # from ``now pull`` or ``now import`` (#247), not from ``now run``.
-        session.query(Remote.m).filter(
-            Remote.m.server_url == HIDDEN_REMOTE).update({"hide": True})
+        session.query(Remote.m).filter(Remote.m.server_url == HIDDEN_REMOTE).update(
+            {"hide": True}
+        )
         session.query(Trial.m).filter(Trial.m.id == first).update(
-            {"experiment_id": experiment.id})
+            {"experiment_id": experiment.id}
+        )
         session.commit()
     return types.SimpleNamespace(
-        project=project, experiment=experiment.id, trial=first,
-        experiment_note=experiment_note.id, trial_note=trial_note.id,
-        group=group.id)
+        project=project,
+        experiment=experiment.id,
+        trial=first,
+        experiment_note=experiment_note.id,
+        trial_note=trial_note.id,
+        group=group.id,
+    )
 
 
 @pytest.fixture
@@ -141,20 +170,23 @@ def annotation_listing(project, column, value, related):
     ``value``: the row without its content, and only the ``related`` side
     """
     rows = project.query(
-        'SELECT * FROM "extendedAnnotation" WHERE "{}" = ?'.format(column),
-        value)
-    return [{
-        "id": row["id"],
-        "annotation": "",
-        "description": row["description"],
-        "annotationFormat": row["annotationFormat"],
-        "provenanceType": row["provenanceType"],
-        "annotationLevel": row["annotationLevel"],
-        "relatedExperiment": (row["relatedExperiment"]
-                              if related == "relatedExperiment" else ""),
-        "relatedTrial": (row["relatedTrial"]
-                         if related == "relatedTrial" else ""),
-    } for row in rows]
+        'SELECT * FROM "extendedAnnotation" WHERE "{}" = ?'.format(column), value
+    )
+    return [
+        {
+            "id": row["id"],
+            "annotation": "",
+            "description": row["description"],
+            "annotationFormat": row["annotationFormat"],
+            "provenanceType": row["provenanceType"],
+            "annotationLevel": row["annotationLevel"],
+            "relatedExperiment": (
+                row["relatedExperiment"] if related == "relatedExperiment" else ""
+            ),
+            "relatedTrial": (row["relatedTrial"] if related == "relatedTrial" else ""),
+        }
+        for row in rows
+    ]
 
 
 # --- the weather store: nothing to collaborate on ---------------------------
@@ -173,7 +205,8 @@ def test_users_lists_the_user_table(vis):
     assert rows, "now run records the user who ran the trial"
     assert all(set(user) == {"id", "userLogin"} for user in users)
     same = sorted((user["id"], user["userLogin"]) for user in users) == sorted(
-        (row["id"], row["userLogin"]) for row in rows)
+        (row["id"], row["userLogin"]) for row in rows
+    )
     assert same, "/users differs from the user table"
 
 
@@ -227,10 +260,8 @@ def test_collab_route_of_an_unknown_experiment_answers_400(vis, path):
     """The ``collab`` GETs that ``now pull`` calls answer 400 with the JSON
     string that ``now pull`` and ``now push`` compare against
     """
-    assert vis.project.query(
-        "SELECT * FROM experiment WHERE id = ?", EXPERIMENT) == []
-    route = "/experiments/{}/{}".format(
-        EXPERIMENT, path.format(trial=vis.trial_ids[0]))
+    assert vis.project.query("SELECT * FROM experiment WHERE id = ?", EXPERIMENT) == []
+    route = "/experiments/{}/{}".format(EXPERIMENT, path.format(trial=vis.trial_ids[0]))
     assert vis.json(route, status=400) == INVALID_EXPERIMENT
 
 
@@ -245,8 +276,8 @@ def test_experiment_annotations_list_the_experiments_rows(collab):
     route = "/experiments/{}/extendedAnnotation".format(ids.experiment)
     listing = collab.json(route)
     assert listing == annotation_listing(
-        collab.project, "relatedExperiment", ids.experiment,
-        "relatedExperiment")
+        collab.project, "relatedExperiment", ids.experiment, "relatedExperiment"
+    )
     assert [note["id"] for note in listing] == [ids.experiment_note]
 
 
@@ -258,16 +289,20 @@ def test_trial_annotations_list_the_trials_rows(collab):
     for trial in collab.trial_ids:
         listing = collab.json("/trials/{}/extendedAnnotation".format(trial))
         assert listing == annotation_listing(
-            collab.project, "relatedTrial", trial, "relatedTrial")
+            collab.project, "relatedTrial", trial, "relatedTrial"
+        )
         expected = [ids.trial_note] if trial == ids.trial else []
         assert [note["id"] for note in listing] == expected
 
 
-@pytest.mark.parametrize("which, extension", [
-    ("experiment_note", "txt"), ("trial_note", "json"),
-])
-def test_annotation_content_downloads_as_an_attachment(
-        collab, which, extension):
+@pytest.mark.parametrize(
+    "which, extension",
+    [
+        ("experiment_note", "txt"),
+        ("trial_note", "json"),
+    ],
+)
+def test_annotation_content_downloads_as_an_attachment(collab, which, extension):
     """The content of an annotation downloads as ``<id>.<format>``, with
     ``plainText`` saved as ``.txt``
     """
@@ -277,7 +312,8 @@ def test_annotation_content_downloads_as_an_attachment(
     assert response.mimetype == "application/octet-stream"
     assert attachment_name(response) == "{}.{}".format(note, extension)
     stored = collab.project.query(
-        'SELECT annotation FROM "extendedAnnotation" WHERE id = ?', note)
+        'SELECT annotation FROM "extendedAnnotation" WHERE id = ?', note
+    )
     assert response.get_data(as_text=True) == stored[0]["annotation"]
 
 
@@ -288,12 +324,15 @@ def test_groups_lists_each_group_with_its_members(collab):
     groups = collab.json("/groups")
     rows = collab.project.query('SELECT id, name FROM "group"')
     assert [(group["id"], group["name"]) for group in groups] == [
-        (row["id"], row["name"]) for row in rows]
+        (row["id"], row["name"]) for row in rows
+    ]
     assert [group["id"] for group in groups] == [collab.ids.group]
     members = collab.project.query(
         'SELECT "user".id, "user".userLogin FROM "memberOfGroup" '
         'JOIN "user" ON "user".id = "memberOfGroup".userId '
-        'WHERE "memberOfGroup".groupId = ?', collab.ids.group)
+        'WHERE "memberOfGroup".groupId = ?',
+        collab.ids.group,
+    )
     assert members, "the fixture added the store's user"
     same = groups[0]["members"] == members
     assert same, "the members differ from memberOfGroup"
@@ -302,11 +341,12 @@ def test_groups_lists_each_group_with_its_members(collab):
 def test_remotes_lists_only_the_visible_remotes(collab):
     """``/collab/remotes/getall`` gives every remote that is not hidden"""
     rows = collab.project.query(
-        "SELECT id, server_url, name, used, hide FROM remote "
-        "WHERE NOT hide ORDER BY id")
+        "SELECT id, server_url, name, used, hide FROM remote WHERE NOT hide ORDER BY id"
+    )
     answer = collab.json("/collab/remotes/getall")["remotes"]
-    assert answer == [dict(row, used=bool(row["used"]),
-                           hide=bool(row["hide"])) for row in rows]
+    assert answer == [
+        dict(row, used=bool(row["used"]), hide=bool(row["hide"])) for row in rows
+    ]
     assert [remote["server_url"] for remote in answer] == [VISIBLE_REMOTE]
 
 
@@ -314,8 +354,12 @@ def test_trialsids_lists_the_trials_of_the_experiment(collab):
     """``collab/trialsids`` gives the ids of the experiment's trials"""
     ids = collab.ids
     route = "/experiments/{}/collab/trialsids".format(ids.experiment)
-    expected = [row["id"] for row in collab.project.query(
-        "SELECT id FROM trial WHERE experiment_id = ?", ids.experiment)]
+    expected = [
+        row["id"]
+        for row in collab.project.query(
+            "SELECT id FROM trial WHERE experiment_id = ?", ids.experiment
+        )
+    ]
     assert collab.json(route) == expected == [ids.trial]
 
 
@@ -333,8 +377,9 @@ def test_files_lists_every_content_hash(collab):
     content = collab.project.store / "content"
     if not content.is_dir():
         pytest.skip("the store does not use the plain content engine")
-    stored = sorted(path.parent.name + path.name
-                    for path in content.glob("*/*") if path.is_file())
+    stored = sorted(
+        path.parent.name + path.name for path in content.glob("*/*") if path.is_file()
+    )
     route = "/experiments/{}/collab/files".format(collab.ids.experiment)
     assert sorted(collab.json(route)) == stored
 
@@ -348,19 +393,16 @@ def test_bundle_carries_the_rows_of_the_requested_trial(collab):
     compared into a boolean.
     """
     ids = collab.ids
-    route = "/experiments/{}/collab/bundle?id={}".format(
-        ids.experiment, ids.trial)
+    route = "/experiments/{}/collab/bundle?id={}".format(ids.experiment, ids.trial)
     bundle = collab.json(route)
     assert set(bundle) == set(BUNDLE_TABLES) | {"trials", "users"}
     assert [trial["id"] for trial in bundle["trials"]] == [ids.trial]
     for key, table in BUNDLE_TABLES.items():
         assert {row["trial_id"] for row in bundle[key]} <= {ids.trial}, key
-        assert len(bundle[key]) == collab.project.count(table, ids.trial), (
-            key)
+        assert len(bundle[key]) == collab.project.count(table, ids.trial), key
     assert bundle["activations"], "the trial has activations"
     no_user = bundle["users"] == []
-    assert no_user, "the bundle carries {} users".format(
-        len(bundle["users"]))
+    assert no_user, "the bundle carries {} users".format(len(bundle["users"]))
 
 
 def test_bundle_ignores_ids_that_name_no_trial(collab):
@@ -380,5 +422,5 @@ def test_bundle_of_no_trial_is_empty(collab):
     route = "/experiments/{}/collab/bundle".format(collab.ids.experiment)
     bundle = collab.json(route)
     assert all(rows == [] for rows in bundle.values()), sorted(
-        key for key, rows in bundle.items() if rows)
-
+        key for key, rows in bundle.items() if rows
+    )

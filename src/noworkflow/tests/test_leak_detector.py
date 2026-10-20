@@ -27,6 +27,7 @@ the probe modules and the current directory, and kills the children the
 test left, so that a failing test here never leaks into the rest of the
 suite.
 """
+
 import builtins
 import codecs
 import importlib.machinery
@@ -73,13 +74,13 @@ NEEDS_ACTIVE = pytest.mark.skipif(
     getattr(subprocess, "_active", None) is None,
     reason="subprocess._active is None on Windows: subprocess keeps no "
     "list of the Popen objects dropped while their child runs, so the "
-    "detector cannot find a dropped child there")
+    "detector cannot find a dropped child there",
+)
 
 
 def unreaped_children():
     """``{pid: child}`` the fallback below kills, found without leaks.py"""
-    children = {child.pid: child
-                for child in multiprocessing.active_children()}
+    children = {child.pid: child for child in multiprocessing.active_children()}
     for popen in list(getattr(subprocess, "_active", None) or ()):
         children.setdefault(popen.pid, popen)
     return children
@@ -131,11 +132,12 @@ def restore_process():
         for name in set(vars(builtins)) - builtin_names:
             del vars(builtins)[name]
         sys.meta_path[:] = [
-            entry for entry in sys.meta_path
-            if entry in meta_path or getattr(entry, "__module__", None)
-            not in (__name__, leaks.FINDER_MODULE)]
-        for name in [name for name in sys.modules
-                     if name.startswith(PROBE_PREFIX)]:
+            entry
+            for entry in sys.meta_path
+            if entry in meta_path
+            or getattr(entry, "__module__", None) not in (__name__, leaks.FINDER_MODULE)
+        ]
+        for name in [name for name in sys.modules if name.startswith(PROBE_PREFIX)]:
             del sys.modules[name]
         argv[:] = argv_items
         sys.argv = argv
@@ -155,31 +157,36 @@ def dirs(tmp_path):
     elsewhere = tmp_path / "elsewhere"
     for directory in (scan, watched, elsewhere):
         directory.mkdir()
-    return types.SimpleNamespace(scan=str(scan), watched=str(watched),
-                                 elsewhere=str(elsewhere))
+    return types.SimpleNamespace(
+        scan=str(scan), watched=str(watched), elsewhere=str(elsewhere)
+    )
 
 
 @pytest.fixture
 def baseline(dirs):
     """A Baseline of the process as this test found it"""
-    return leaks.Baseline(cwd=os.getcwd(), scan_dirs=[dirs.scan],
-                          watched_dirs=[dirs.watched])
+    return leaks.Baseline(
+        cwd=os.getcwd(), scan_dirs=[dirs.scan], watched_dirs=[dirs.watched]
+    )
 
 
 def delegating(original):
     """A stand-in for an ``open`` function: another object, same behavior"""
+
     def fake_open(*args, **kwargs):
         return original(*args, **kwargs)
+
     return fake_open
 
 
-def fake_finder(module=leaks.FINDER_MODULE,
-                qualname="finder.<locals>.Finder"):
+def fake_finder(module=leaks.FINDER_MODULE, qualname="finder.<locals>.Finder"):
     """A class shaped like the finder that ``finder(metascript)`` creates"""
+
     class Finder:
         @classmethod
         def find_spec(cls, fullname, path=None, target=None):
             return None
+
     Finder.__module__ = module
     Finder.__qualname__ = qualname
     return Finder
@@ -219,14 +226,18 @@ def test_the_originals_the_detector_restores_are_pythons_own_functions():
     collection, the reference would be a wrapper and every check vacuous.
     """
     import _io
+
     originals = {name: original for _, name, original in leaks.OPENS}
     assert originals["builtins.open"] is _io.open
     assert originals["io.open"] is _io.open
     assert originals["os.open"] is getattr(sys.modules[os.name], "open")
     assert originals["codecs.open"].__module__ == "codecs"
     assert originals == {
-        "builtins.open": safeopen.std_open, "io.open": safeopen.io_open,
-        "codecs.open": safeopen.codecs_open, "os.open": safeopen.os_open}
+        "builtins.open": safeopen.std_open,
+        "io.open": safeopen.io_open,
+        "codecs.open": safeopen.codecs_open,
+        "os.open": safeopen.os_open,
+    }
 
 
 @pytest.mark.parametrize("module, name", OPEN_TARGETS)
@@ -237,8 +248,7 @@ def test_a_replaced_open_is_reported_and_restored(baseline, module, name):
     snapshot = baseline.snapshot()
     module.open = fake
 
-    assert baseline.check(snapshot) == [
-        "{} replaced by {!r}".format(name, fake)]
+    assert baseline.check(snapshot) == ["{} replaced by {!r}".format(name, fake)]
     assert module.open is original
 
 
@@ -247,8 +257,7 @@ def test_a_name_added_to_builtins_is_reported_and_removed(baseline):
     snapshot = baseline.snapshot()
     builtins.__noworkflow__ = object()
 
-    assert baseline.check(snapshot) == [
-        "names added to builtins: __noworkflow__"]
+    assert baseline.check(snapshot) == ["names added to builtins: __noworkflow__"]
     assert "__noworkflow__" not in vars(builtins)
 
 
@@ -259,9 +268,9 @@ def test_every_injected_builtin_is_reported_and_removed(baseline):
         setattr(builtins, name, object())
 
     assert baseline.check(snapshot) == [
-        "names added to builtins: " + ", ".join(leaks.INJECTED_BUILTINS)]
-    assert [name for name in leaks.INJECTED_BUILTINS
-            if name in vars(builtins)] == []
+        "names added to builtins: " + ", ".join(leaks.INJECTED_BUILTINS)
+    ]
+    assert [name for name in leaks.INJECTED_BUILTINS if name in vars(builtins)] == []
 
 
 def test_the_finder_is_reported_and_removed_and_other_entries_kept(baseline):
@@ -272,25 +281,31 @@ def test_the_finder_is_reported_and_removed_and_other_entries_kept(baseline):
     sys.meta_path.insert(0, finder)
 
     assert baseline.check(snapshot) == [
-        "noWorkflow's import finder left in sys.meta_path"]
+        "noWorkflow's import finder left in sys.meta_path"
+    ]
     assert finder not in sys.meta_path
     assert UnrelatedFinder in sys.meta_path
 
 
-@pytest.mark.parametrize("entry, expected", [
-    pytest.param(py3module.finder(None), True, id="the-collectors-finder"),
-    pytest.param(fake_finder(), True, id="a-class-shaped-like-it"),
-    pytest.param(importlib.machinery.PathFinder, False, id="PathFinder"),
-    pytest.param(UnrelatedFinder, False, id="another-module"),
-    pytest.param(fake_finder(module="elsewhere"), False,
-                 id="named-Finder-in-another-module"),
-    pytest.param(
-        fake_finder(qualname="create_source_loader.<locals>.SourceLoader"),
-        False, id="a-loader-of-the-finder-module"),
-    pytest.param(py3module.finder(None)(), False, id="an-instance"),
-])
-def test_is_finder_recognizes_the_class_the_collector_inserts(entry,
-                                                             expected):
+@pytest.mark.parametrize(
+    "entry, expected",
+    [
+        pytest.param(py3module.finder(None), True, id="the-collectors-finder"),
+        pytest.param(fake_finder(), True, id="a-class-shaped-like-it"),
+        pytest.param(importlib.machinery.PathFinder, False, id="PathFinder"),
+        pytest.param(UnrelatedFinder, False, id="another-module"),
+        pytest.param(
+            fake_finder(module="elsewhere"), False, id="named-Finder-in-another-module"
+        ),
+        pytest.param(
+            fake_finder(qualname="create_source_loader.<locals>.SourceLoader"),
+            False,
+            id="a-loader-of-the-finder-module",
+        ),
+        pytest.param(py3module.finder(None)(), False, id="an-instance"),
+    ],
+)
+def test_is_finder_recognizes_the_class_the_collector_inserts(entry, expected):
     """The finder is recognized by where it was defined, not by identity
 
     ``finder(metascript)`` creates a new class per collection and the
@@ -303,14 +318,13 @@ def test_is_finder_recognizes_the_class_the_collector_inserts(entry,
 def test_a_changed_current_directory_is_reported_and_undone(tmp_path):
     """The check returns to the directory the Baseline was taken in"""
     original = os.getcwd()
-    baseline = leaks.Baseline(cwd=original, scan_dirs=[],
-                              watched_dirs=[])
+    baseline = leaks.Baseline(cwd=original, scan_dirs=[], watched_dirs=[])
     snapshot = baseline.snapshot()
     os.chdir(str(tmp_path))
 
     assert baseline.check(snapshot) == [
-        "current directory changed to {}".format(
-            os.path.realpath(str(tmp_path)))]
+        "current directory changed to {}".format(os.path.realpath(str(tmp_path)))
+    ]
     assert os.path.realpath(os.getcwd()) == os.path.realpath(original)
 
 
@@ -320,8 +334,7 @@ def test_a_replaced_argv_is_reported_and_restored(baseline):
     snapshot = baseline.snapshot()
     sys.argv = ["script.py", "data.dat"]
 
-    assert baseline.check(snapshot) == [
-        "sys.argv changed to ['script.py', 'data.dat']"]
+    assert baseline.check(snapshot) == ["sys.argv changed to ['script.py', 'data.dat']"]
     assert sys.argv == original
 
 
@@ -332,7 +345,8 @@ def test_a_replaced_sys_path_0_is_reported_and_restored(baseline, tmp_path):
     sys.path[0] = str(tmp_path)
 
     assert baseline.check(snapshot) == [
-        "sys.path[0] changed to {!r}".format(str(tmp_path))]
+        "sys.path[0] changed to {!r}".format(str(tmp_path))
+    ]
     assert sys.path[0] == original
 
 
@@ -344,7 +358,8 @@ def test_a_replaced_main_module_is_reported_and_restored(baseline):
     sys.modules["__main__"] = fake
 
     assert baseline.check(snapshot) == [
-        "sys.modules['__main__'] replaced by {!r}".format(fake)]
+        "sys.modules['__main__'] replaced by {!r}".format(fake)
+    ]
     assert sys.modules["__main__"] is original
 
 
@@ -360,19 +375,16 @@ def test_a_changed_main_namespace_is_reported_and_restored(change):
     if change != "added":
         namespace[MAIN_PROBE] = before
     expected = dict(namespace)
-    baseline = leaks.Baseline(cwd=os.getcwd(), scan_dirs=[],
-                              watched_dirs=[])
+    baseline = leaks.Baseline(cwd=os.getcwd(), scan_dirs=[], watched_dirs=[])
     snapshot = baseline.snapshot()
     if change == "removed":
         del namespace[MAIN_PROBE]
     else:
         namespace[MAIN_PROBE] = object()
 
-    assert baseline.check(snapshot) == [
-        "the __main__ namespace changed: " + MAIN_PROBE]
+    assert baseline.check(snapshot) == ["the __main__ namespace changed: " + MAIN_PROBE]
     assert namespace == expected
-    assert namespace.get(MAIN_PROBE) is (None if change == "added"
-                                         else before)
+    assert namespace.get(MAIN_PROBE) is (None if change == "added" else before)
 
 
 def test_a_module_from_a_watched_dir_is_reported_and_removed(baseline, dirs):
@@ -386,17 +398,21 @@ def test_a_module_from_a_watched_dir_is_reported_and_removed(baseline, dirs):
     import_file(dirs.watched, name)
 
     assert baseline.check(snapshot) == [
-        "module {} of a traced script left in sys.modules".format(name)]
+        "module {} of a traced script left in sys.modules".format(name)
+    ]
     assert name not in sys.modules
 
 
-def test_a_module_loaded_by_the_finders_loader_is_reported_and_removed(
-        baseline):
+def test_a_module_loaded_by_the_finders_loader_is_reported_and_removed(baseline):
     """The finder's loaders mark a traced module wherever its file is"""
-    loader_type = type("SourceLoader", (), {
-        "__module__": leaks.FINDER_MODULE,
-        "__qualname__": "create_source_loader.<locals>.SourceLoader",
-    })
+    loader_type = type(
+        "SourceLoader",
+        (),
+        {
+            "__module__": leaks.FINDER_MODULE,
+            "__qualname__": "create_source_loader.<locals>.SourceLoader",
+        },
+    )
     name = PROBE_PREFIX + "loaded"
     module = types.ModuleType(name)
     module.__spec__ = importlib.machinery.ModuleSpec(name, loader_type())
@@ -404,7 +420,8 @@ def test_a_module_loaded_by_the_finders_loader_is_reported_and_removed(
     sys.modules[name] = module
 
     assert baseline.check(snapshot) == [
-        "module {} of a traced script left in sys.modules".format(name)]
+        "module {} of a traced script left in sys.modules".format(name)
+    ]
     assert name not in sys.modules
 
 
@@ -439,25 +456,37 @@ def fake_tree(tmp_path, monkeypatch):
     for directory in (package, installed):
         directory.mkdir(parents=True)
     monkeypatch.setattr(leaks, "PACKAGE_DIR", real(package))
-    monkeypatch.setattr(leaks, "TRACED_IN_PACKAGE", tuple(
-        os.path.join(real(package), "tests", *parts)
-        for parts in (("examples",), ("e2e", "corpus"))))
+    monkeypatch.setattr(
+        leaks,
+        "TRACED_IN_PACKAGE",
+        tuple(
+            os.path.join(real(package), "tests", *parts)
+            for parts in (("examples",), ("e2e", "corpus"))
+        ),
+    )
     monkeypatch.setattr(leaks, "INSTALLED", (real(installed),))
     return types.SimpleNamespace(
-        package=package, installed=installed,
-        baseline=leaks.Baseline(cwd=os.getcwd(), scan_dirs=[],
-                                watched_dirs=[str(root)]))
+        package=package,
+        installed=installed,
+        baseline=leaks.Baseline(
+            cwd=os.getcwd(), scan_dirs=[], watched_dirs=[str(root)]
+        ),
+    )
 
 
-@pytest.mark.parametrize("parts, blamed", [
-    pytest.param(("now", "persistence"), False, id="runtime-module"),
-    pytest.param(("tests",), False, id="test-module"),
-    pytest.param(("tests", "e2e"), False, id="e2e-harness"),
-    pytest.param(("tests", "examples"), True, id="examples"),
-    pytest.param(("tests", "e2e", "corpus", "weather"), True, id="e2e-corpus"),
-])
+@pytest.mark.parametrize(
+    "parts, blamed",
+    [
+        pytest.param(("now", "persistence"), False, id="runtime-module"),
+        pytest.param(("tests",), False, id="test-module"),
+        pytest.param(("tests", "e2e"), False, id="e2e-harness"),
+        pytest.param(("tests", "examples"), True, id="examples"),
+        pytest.param(("tests", "e2e", "corpus", "weather"), True, id="e2e-corpus"),
+    ],
+)
 def test_a_module_inside_the_package_is_blamed_only_in_the_traced_dirs(
-        fake_tree, parts, blamed):
+    fake_tree, parts, blamed
+):
     """noWorkflow's own modules are never a traced script's, even watched
 
     A test that imports a module of the package lazily is not a leak. The
@@ -471,14 +500,16 @@ def test_a_module_inside_the_package_is_blamed_only_in_the_traced_dirs(
     snapshot = fake_tree.baseline.snapshot()
     import_file(str(directory), name)
 
-    expected = (["module {} of a traced script left in sys.modules".format(
-        name)] if blamed else [])
+    expected = (
+        ["module {} of a traced script left in sys.modules".format(name)]
+        if blamed
+        else []
+    )
     assert fake_tree.baseline.check(snapshot) == expected
     assert (name in sys.modules) is not blamed
 
 
-def test_a_module_of_an_installed_library_is_not_blamed_even_watched(
-        fake_tree):
+def test_a_module_of_an_installed_library_is_not_blamed_even_watched(fake_tree):
     """A library in a venv under a watched directory is not a leak"""
     name = PROBE_PREFIX + "installed"
     snapshot = fake_tree.baseline.snapshot()
@@ -498,26 +529,32 @@ def test_the_exempt_directories_are_the_real_package_and_stdlib():
     name the user's directories.
     """
     package = real(os.path.dirname(noworkflow.__file__))
-    traced = (os.path.join(package, "tests", "examples"),
-              os.path.join(package, "tests", "e2e", "corpus"))
+    traced = (
+        os.path.join(package, "tests", "examples"),
+        os.path.join(package, "tests", "e2e", "corpus"),
+    )
     is_package = leaks.PACKAGE_DIR == package
     assert is_package, "leaks.PACKAGE_DIR is not the noworkflow package"
     same_traced = leaks.TRACED_IN_PACKAGE == traced
     assert same_traced, (
-        "leaks.TRACED_IN_PACKAGE is not (tests/examples, tests/e2e/corpus)")
+        "leaks.TRACED_IN_PACKAGE is not (tests/examples, tests/e2e/corpus)"
+    )
     exist = all(os.path.isdir(path) for path in traced)
     assert exist, "tests/examples or tests/e2e/corpus is missing"
     stdlib = leaks.under(real(os.__file__), leaks.INSTALLED)
     assert stdlib, "the standard library is not under leaks.INSTALLED"
 
 
-@pytest.mark.parametrize("name, is_dir", [
-    (".last_trial", False),
-    ("Current Trial.ipynb", False),
-    ("ops", False),
-    ("ops.db", False),
-    (".noworkflow", True),
-])
+@pytest.mark.parametrize(
+    "name, is_dir",
+    [
+        (".last_trial", False),
+        ("Current Trial.ipynb", False),
+        ("ops", False),
+        ("ops.db", False),
+        (".noworkflow", True),
+    ],
+)
 def test_a_stray_file_is_reported_and_kept(baseline, dirs, name, is_dir):
     """Files noWorkflow writes into the current directory are reported
 
@@ -536,8 +573,7 @@ def test_a_stray_file_is_reported_and_kept(baseline, dirs, name, is_dir):
     assert os.path.exists(path)
 
 
-def test_other_files_and_files_already_there_are_not_blamed(baseline,
-                                                            dirs):
+def test_other_files_and_files_already_there_are_not_blamed(baseline, dirs):
     """Control: only new files named like noWorkflow's are reported"""
     with open(os.path.join(dirs.scan, ".last_trial"), "w") as fil:
         fil.write("x")
@@ -573,21 +609,25 @@ def test_undo_collection_restores_the_opens_builtins_and_finders():
 
     leaks.undo_collection()
 
-    assert [name for module, name, original in leaks.OPENS
-            if module.open is not original] == []
-    assert [name for name in leaks.INJECTED_BUILTINS
-            if name in vars(builtins)] == []
+    assert [
+        name for module, name, original in leaks.OPENS if module.open is not original
+    ] == []
+    assert [name for name in leaks.INJECTED_BUILTINS if name in vars(builtins)] == []
     assert finder not in sys.meta_path
     assert UnrelatedFinder in sys.meta_path
 
 
 # Child processes -------------------------------------------------------------
 
+
 def sleeper():
     """Start a child that sleeps for a minute, with no pipe to this process"""
-    return subprocess.Popen(SLEEP, stdin=subprocess.DEVNULL,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL)
+    return subprocess.Popen(
+        SLEEP,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def dropped_sleeper():
@@ -611,8 +651,7 @@ def spawned_sleeper():
     The spawn context exists on every platform and starts a new
     interpreter, so nothing of this process is forked.
     """
-    child = multiprocessing.get_context("spawn").Process(
-        target=time.sleep, args=(60,))
+    child = multiprocessing.get_context("spawn").Process(target=time.sleep, args=(60,))
     child.start()
     return child
 
@@ -629,8 +668,7 @@ def subprocess_run():
 
 def joined_process():
     """A multiprocessing child joined after it ends"""
-    child = multiprocessing.get_context("spawn").Process(
-        target=time.sleep, args=(0,))
+    child = multiprocessing.get_context("spawn").Process(target=time.sleep, args=(0,))
     child.start()
     child.join()
 
@@ -642,8 +680,10 @@ def is_running(child):
     return child.is_alive()
 
 
-@pytest.mark.skipif(os.name == "nt", reason="subprocess keeps no list of "
-                    "dropped Popen objects on Windows")
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="subprocess keeps no list of dropped Popen objects on Windows",
+)
 def test_subprocess_keeps_a_dropped_running_child_in_active():
     """Premise: on POSIX ``Popen.__del__`` keeps a running child
 
@@ -671,15 +711,15 @@ def test_a_dropped_popen_whose_child_runs_is_reported_and_killed(baseline):
     try:
         assert baseline.check(snapshot) == [
             "child process {} left running (subprocess.Popen dropped "
-            "without wait())".format(popen.pid)]
+            "without wait())".format(popen.pid)
+        ]
         assert popen.returncode == -signal.SIGKILL
         assert popen not in subprocess._active
     finally:
         reap(popen)
 
 
-def test_a_multiprocessing_child_not_joined_is_reported_and_killed(
-        baseline):
+def test_a_multiprocessing_child_not_joined_is_reported_and_killed(baseline):
     """A child not joined holds pytest at exit until it ends
 
     ``multiprocessing`` joins its children when the process exits, so the
@@ -690,19 +730,24 @@ def test_a_multiprocessing_child_not_joined_is_reported_and_killed(
     child = spawned_sleeper()
     try:
         assert baseline.check(snapshot) == [
-            "child process {} left running (multiprocessing.Process not "
-            "joined)".format(child.pid)]
+            "child process {} left running (multiprocessing.Process not joined)".format(
+                child.pid
+            )
+        ]
         assert child.exitcode is not None
         assert child not in multiprocessing.active_children()
     finally:
         reap(child)
 
 
-@pytest.mark.parametrize("finish", [
-    pytest.param(waited_popen, id="popen-waited"),
-    pytest.param(subprocess_run, id="subprocess.run"),
-    pytest.param(joined_process, id="process-joined"),
-])
+@pytest.mark.parametrize(
+    "finish",
+    [
+        pytest.param(waited_popen, id="popen-waited"),
+        pytest.param(subprocess_run, id="subprocess.run"),
+        pytest.param(joined_process, id="process-joined"),
+    ],
+)
 def test_a_child_that_was_waited_for_is_not_blamed(baseline, finish):
     """Control: a child the test reaped is no leak"""
     snapshot = baseline.snapshot()
@@ -711,12 +756,16 @@ def test_a_child_that_was_waited_for_is_not_blamed(baseline, finish):
     assert baseline.check(snapshot) == []
 
 
-@pytest.mark.parametrize("start", [
-    pytest.param(dropped_sleeper, marks=NEEDS_ACTIVE, id="dropped-popen"),
-    pytest.param(spawned_sleeper, id="multiprocessing"),
-])
+@pytest.mark.parametrize(
+    "start",
+    [
+        pytest.param(dropped_sleeper, marks=NEEDS_ACTIVE, id="dropped-popen"),
+        pytest.param(spawned_sleeper, id="multiprocessing"),
+    ],
+)
 def test_a_child_running_before_the_snapshot_is_neither_blamed_nor_killed(
-        baseline, start):
+    baseline, start
+):
     """The check stops only the children started after its snapshot
 
     A child that already ran when the test began, such as one started
@@ -733,7 +782,8 @@ def test_a_child_running_before_the_snapshot_is_neither_blamed_nor_killed(
 
 @NEEDS_ACTIVE
 def test_a_child_that_survives_the_kill_is_reported_once_without_hanging(
-        baseline, monkeypatch):
+    baseline, monkeypatch
+):
     """A child that does not end is reported, and kept for the next snapshot
 
     The check waits ``STOP_TIMEOUT`` seconds at most, so a child that
@@ -749,8 +799,8 @@ def test_a_child_that_survives_the_kill_is_reported_once_without_hanging(
 
         assert baseline.check(snapshot) == [
             "child process {} left running (subprocess.Popen dropped "
-            "without wait()), and still running after a kill".format(
-                popen.pid)]
+            "without wait()), and still running after a kill".format(popen.pid)
+        ]
         assert is_running(popen)
         assert popen in subprocess._active
         assert baseline.check(baseline.snapshot()) == []
@@ -762,16 +812,9 @@ def test_a_child_that_survives_the_kill_is_reported_once_without_hanging(
 # The root conftest.py runs the detector -------------------------------------
 
 LEAKING_TEST = (
-    "import builtins\n"
-    "\n"
-    "\n"
-    "def test_leaks():\n"
-    "    builtins.__noworkflow__ = object()\n"
+    "import builtins\n\n\ndef test_leaks():\n    builtins.__noworkflow__ = object()\n"
 )
-CLEAN_TEST = (
-    "def test_leaves_nothing():\n"
-    "    assert True\n"
-)
+CLEAN_TEST = "def test_leaves_nothing():\n    assert True\n"
 LEAK_LINE = "test_child.py::test_leaks: names added to builtins: __noworkflow__"
 # Writes the pid of the child it drops to the file this test names.
 DROPPING_TEST = (
@@ -787,15 +830,19 @@ DROPPING_TEST = (
     "    with open({pid_file!r}, 'w') as fil:\n"
     "        fil.write(str(popen.pid))\n"
 )
-DROPPED_LINE = ("test_child.py::test_drops_a_child: child process {} left "
-                "running (subprocess.Popen dropped without wait())")
+DROPPED_LINE = (
+    "test_child.py::test_drops_a_child: child process {} left "
+    "running (subprocess.Popen dropped without wait())"
+)
 LEAKS_HEADER = re.compile(r"=+ LEAKS =+")
+
+
 def leaks_section(output):
     """The lines after the LEAKS header of a pytest summary, or None"""
     lines = output.splitlines()
     for index, line in enumerate(lines):
         if LEAKS_HEADER.fullmatch(line.strip()):
-            return lines[index + 1:]
+            return lines[index + 1 :]
     return None
 
 
@@ -837,8 +884,7 @@ def kill_recorded(pid_file):
 
 @NEEDS_ACTIVE
 @pytest.mark.parametrize("mode", ["fail", "warn"])
-def test_the_root_conftest_kills_a_child_that_a_test_drops(request, tmp_path,
-                                                           mode):
+def test_the_root_conftest_kills_a_child_that_a_test_drops(request, tmp_path, mode):
     """A dropped child is reported, and is gone when pytest ends
 
     Under ``fail`` it is a teardown error, under ``warn`` a line in the
@@ -850,8 +896,8 @@ def test_the_root_conftest_kills_a_child_that_a_test_drops(request, tmp_path,
     pid_file = tmp_path / "child.pid"
     try:
         result = run_child_pytest(
-            request, tmp_path, DROPPING_TEST.format(pid_file=str(pid_file)),
-            mode)
+            request, tmp_path, DROPPING_TEST.format(pid_file=str(pid_file)), mode
+        )
         report = child_report(result)
         summary = last_line(result.stdout)
         assert pid_file.exists(), report
@@ -859,20 +905,17 @@ def test_the_root_conftest_kills_a_child_that_a_test_drops(request, tmp_path,
         if mode == "fail":
             assert result.returncode != 0, report
             assert "1 passed" in summary and "1 error" in summary, report
-            assert "the test left process state behind" in result.stdout, (
-                report)
+            assert "the test left process state behind" in result.stdout, report
         else:
             assert result.returncode == 0, report
             assert "1 passed" in summary and "error" not in summary, report
-        assert DROPPED_LINE.format(pid) in (
-            leaks_section(result.stdout) or []), report
+        assert DROPPED_LINE.format(pid) in (leaks_section(result.stdout) or []), report
         assert not exists(pid), "the dropped child outlived the child pytest"
     finally:
         kill_recorded(pid_file)
 
 
-def test_the_root_conftest_only_reports_a_leak_under_warn(request,
-                                                          tmp_path):
+def test_the_root_conftest_only_reports_a_leak_under_warn(request, tmp_path):
     """NOW_LEAK_CHECK=warn lists the leak in the LEAKS section and passes"""
     result = run_child_pytest(request, tmp_path, LEAKING_TEST, "warn")
     report = child_report(result)
@@ -882,8 +925,7 @@ def test_the_root_conftest_only_reports_a_leak_under_warn(request,
     assert LEAK_LINE in (leaks_section(result.stdout) or []), report
 
 
-def test_the_root_conftest_passes_a_test_that_leaks_nothing(request,
-                                                            tmp_path):
+def test_the_root_conftest_passes_a_test_that_leaks_nothing(request, tmp_path):
     """Control: a clean test passes under fail mode, with no LEAKS section
 
     Without it, the two tests above could pass because the conftest blames

@@ -25,7 +25,9 @@ def escape(string, size=55):
 class ProvVisitor(ClusterVisitor):
     """Create dot file"""
 
-    def __init__(self, clusterizer, name_length=55, value_length=55, create_activities=True):
+    def __init__(
+        self, clusterizer, name_length=55, value_length=55, create_activities=True
+    ):
         super(ProvVisitor, self).__init__(clusterizer)
         self.result = []
         self.indent = ""
@@ -46,13 +48,15 @@ class ProvVisitor(ClusterVisitor):
 
     def create_members(self, dependent, type_, group):
         """Create members in group"""
-        for (dependent, dependency, style) in group:
+        for dependent, dependency, style in group:
             self.insert(
                 'hadMember({}, {}, [type="version:{}", '
                 'version:key="{}", version:checkpoint="{}"])'.format(
-                    dependent, dependency,
-                    style.get("_mode"), style.get("_key"),
-                    style.get("_checkpoint")
+                    dependent,
+                    dependency,
+                    style.get("_mode"),
+                    style.get("_key"),
+                    style.get("_checkpoint"),
                 )
             )
 
@@ -66,11 +70,7 @@ class ProvVisitor(ClusterVisitor):
                 self.counter[type_] += 1
                 g_id = "g_{}".format(self.counter["g"])
                 self.counter["g"] += 1
-                self.insert(
-                    'activity({}, [type="script:operation"])'.format(
-                        act_id
-                    )
-                )
+                self.insert('activity({}, [type="script:operation"])'.format(act_id))
                 group = list(group)
                 checkpoint = max(style.get("_checkpoint") for _, _, style in group)
                 self.insert(
@@ -80,58 +80,71 @@ class ProvVisitor(ClusterVisitor):
                 )
             else:
                 act_id, g_id = existing_activity
-            for (dependent, dependency, style) in group:
-                #if not style.get("_checkpoint"):
+            for dependent, dependency, style in group:
+                # if not style.get("_checkpoint"):
                 #    continue
                 u_id = "u_{}".format(self.counter["u"])
                 self.counter["u"] += 1
                 attributes = []
                 if style.get("_checkpoint"):
-                    attributes.append('version:checkpoint="{}"'
-                                      .format(style.get("_checkpoint")))
+                    attributes.append(
+                        'version:checkpoint="{}"'.format(style.get("_checkpoint"))
+                    )
                 self.insert(
-                    'used({}; {}, {}, -,[{}])'.format(
+                    "used({}; {}, {}, -,[{}])".format(
                         u_id, act_id, dependency, ", ".join(attributes)
                     )
                 )
                 self.create_derivation(
-                    dependent, dependency, style, act_id, g_id, u_id,
+                    dependent,
+                    dependency,
+                    style,
+                    act_id,
+                    g_id,
+                    u_id,
                 )
         else:
-            for (dependent, dependency, style) in group:
+            for dependent, dependency, style in group:
                 self.create_derivation(dependent, dependency, style)
 
-    def create_derivation(self, dependent, dependency, style, act_id="-", g_id="-", u_id="-"):
+    def create_derivation(
+        self, dependent, dependency, style, act_id="-", g_id="-", u_id="-"
+    ):
         """Create derivation"""
         # Todo: type_ == access should add extra attributes
-        #if not style.get("_checkpoint"):
+        # if not style.get("_checkpoint"):
         #    return
         attributes = []
         if style.get("_checkpoint"):
-            attributes.append('version:checkpoint="{}"'
-                              .format(style.get("_checkpoint")))
+            attributes.append(
+                'version:checkpoint="{}"'.format(style.get("_checkpoint"))
+            )
         if style.get("_reference"):
             attributes.append('type="version:Reference"')
         self.insert(
-            'wasDerivedFrom({}, {}, {}, {}, {}, [{}])'.format(
-                dependent, dependency, act_id, g_id, u_id,
-                ", ".join(attributes)
+            "wasDerivedFrom({}, {}, {}, {}, {}, [{}])".format(
+                dependent, dependency, act_id, g_id, u_id, ", ".join(attributes)
             )
         )
 
     def visit_initial(self, cluster):
         """Visit initial cluster"""
         self.indent = ""
-        self.insert("prefix script <https://dew-uff.github.io/versioned-prov/ns/script#>")
+        self.insert(
+            "prefix script <https://dew-uff.github.io/versioned-prov/ns/script#>"
+        )
         self.insert("prefix version <https://dew-uff.github.io/versioned-prov/ns#>")
 
         self.process_cluster_content(cluster)
 
-        groups = groupby((
-            (dependent, dependency, style)
-            for (dependent, dependency), styles in viewitems(self.dependencies)
-            for style in styles
-        ), key=lambda x: (x[0], x[-1].get("_type")))
+        groups = groupby(
+            (
+                (dependent, dependency, style)
+                for (dependent, dependency), styles in viewitems(self.dependencies)
+                for style in styles
+            ),
+            key=lambda x: (x[0], x[-1].get("_type")),
+        )
         for (dependent, type_), group in groups:
             if type_ == "member":
                 self.create_members(dependent, type_, group)
@@ -186,7 +199,5 @@ class ProvVisitor(ClusterVisitor):
         label = escape(node.name, self.name_length)
 
         self.insert(
-            'entity({}, [type="script:access", label="{}"])'.format(
-                node.node_id, label
-            )
+            'entity({}, [type="script:access", label="{}"])'.format(node.node_id, label)
         )

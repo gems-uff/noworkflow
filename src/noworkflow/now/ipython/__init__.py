@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """IPython Module"""
+
 from __future__ import absolute_import, division, print_function
 
 from ... import patterns
@@ -29,6 +30,7 @@ def init(path=None, ipython=None):
 
     from .dotmagic import load_ipython_extension as load_dot
     from .magics import register_magics
+
     load_dot(ipython)
     register_magics(ipython)
 
@@ -36,4 +38,4 @@ def init(path=None, ipython=None):
         path = os.getcwd()
     persistence_config.connect(path)
 
-    return u"ok"
+    return "ok"

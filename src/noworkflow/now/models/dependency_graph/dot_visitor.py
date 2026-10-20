@@ -66,7 +66,7 @@ class DotVisitor(ClusterVisitor):
             self.process_cluster_content(cluster)
 
             for (source, target), styles in viewitems(self.dependencies):
-                style = reduce((lambda x,y: x.join(y)), styles)
+                style = reduce((lambda x, y: x.join(y)), styles)
                 self.insert("{} -> {} {};".format(source, target, style))
 
     def visit_cluster(self, cluster):
@@ -89,13 +89,15 @@ class DotVisitor(ClusterVisitor):
             label_list.append(" =\n{}".format(value))
         label = "".join(label_list)
 
-        attrs = Attributes({
-            "label": label,
-            "fillcolor": "#85CBD0",
-            "fontcolor": "black",
-            "shape": "box",
-            "style": "rounded,filled",
-        })
+        attrs = Attributes(
+            {
+                "label": label,
+                "fillcolor": "#85CBD0",
+                "fontcolor": "black",
+                "shape": "box",
+                "style": "rounded,filled",
+            }
+        )
         self.insert("{} {};".format(node.node_id, attrs))
 
     def visit_activation(self, node, name=None):
@@ -108,24 +110,28 @@ class DotVisitor(ClusterVisitor):
             label_list.append(" =\n{}".format(value))
         label = "".join(label_list)
 
-        attrs = Attributes({
-            "label": label,
-            "fillcolor": "#3A85B9",
-            "fontcolor": "white",
-            "shape": "box",
-            "style": "filled",
-        })
+        attrs = Attributes(
+            {
+                "label": label,
+                "fillcolor": "#3A85B9",
+                "fontcolor": "white",
+                "shape": "box",
+                "style": "filled",
+            }
+        )
         self.insert("{} {};".format(node.node_id, attrs))
 
     def visit_access(self, node):
         """Create access node for graph"""
         label = escape(node.name, self.name_length)
 
-        attrs = Attributes({
-            "label": label,
-            "fillcolor": "white",
-            "fontcolor": "black",
-            "shape": "box",
-            "style": "rounded,filled",
-        })
+        attrs = Attributes(
+            {
+                "label": label,
+                "fillcolor": "white",
+                "fontcolor": "black",
+                "shape": "box",
+                "style": "rounded,filled",
+            }
+        )
         self.insert("{} {};".format(node.node_id, attrs))

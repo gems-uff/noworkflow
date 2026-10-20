@@ -44,6 +44,7 @@ def member(value, values, _binds):
             value.reset()
             del _binds[value]
 
+
 def _get_value(value):
     """Get value from variable"""
     if isinstance(value, Variable) and value.bound is not BLANK:
@@ -140,9 +141,13 @@ def _list_matcher(single_func, _binds, *params):
             _list_to_variable(param, param_list, result_binds)
         yield result, result_binds
 
+
 def _apply(_binds, query):
     """Apply query and update original binds"""
-    for result, binds, in query:
+    for (
+        result,
+        binds,
+    ) in query:
         new_binds = copy(_binds)
         new_binds.update(binds)
         yield result, new_binds
@@ -150,6 +155,7 @@ def _apply(_binds, query):
 
 class UniversalSet(set):
     """Intersect with this set should return the other set"""
+
     def __and__(self, other):
         return other
 

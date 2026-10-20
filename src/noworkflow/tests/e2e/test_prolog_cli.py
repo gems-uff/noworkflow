@@ -24,6 +24,7 @@ their mechanisms are in Python string formatting and the command's control
 flow, the same on every system and Python version (measured on macOS with
 3.11 to 3.15).
 """
+
 import collections
 import re
 from pathlib import Path
@@ -43,9 +44,20 @@ from noworkflow.tests.models.model_rows import fact_arguments, non_atomic
 RULES = Path(noworkflow.__file__).resolve().parent / "resources" / "rules.pl"
 
 # What `now export prolog` writes, in its order (trial_prolog.py).
-EXPORTED = ["trial", "tag", "argument", "module", "environment",
-            "code_component", "code_block", "activation", "evaluation",
-            "dependency", "access", "member"]
+EXPORTED = [
+    "trial",
+    "tag",
+    "argument",
+    "module",
+    "environment",
+    "code_component",
+    "code_block",
+    "activation",
+    "evaluation",
+    "dependency",
+    "access",
+    "member",
+]
 DEFINITION = re.compile(r"^% FACT DEFINITION: (\w+)\((.*)\)\.$", re.MULTILINE)
 DECLARATION = re.compile(r":- dynamic\((\w+)/(\d+)\)\.")
 # A node of the diagram: `name [shape=none label=<...>];`, one port per
@@ -56,15 +68,15 @@ NO_TRIAL = "[now] Trial None not found\n"
 
 SCHEMA_WITHOUT_TRIAL = Defect(
     reason="#253: cmd_schema.prolog_text builds TrialProlog(Trial()), and "
-           "Trial() raises RuntimeError('Trial None not found') in a "
-           "project without trials, which main prints with return code 0; "
-           "the descriptions and rules.pl depend on no trial",
+    "Trial() raises RuntimeError('Trial None not found') in a "
+    "project without trials, which main prints with return code 0; "
+    "the descriptions and rules.pl depend on no trial",
     signature="[now] Trial None not found",
 )
 FULLPATH_NONE = Defect(
     reason="#353: module.py describes fullpath with "
-           "PrologRepr, which writes a NULL column as the atom 'None', while "
-           "the NULL version of the same fact (PrologNullableRepr) is nil",
+    "PrologRepr, which writes a NULL column as the atom 'None', while "
+    "the NULL version of the same fact (PrologNullableRepr) is nil",
     signature="fullpath is 'None', not nil",
 )
 
@@ -72,15 +84,20 @@ FULLPATH_NONE = Defect(
 def rule_lines():
     """The clauses of ``rules.pl``, one per line (a premise pinned in
     ``models/test_prolog_facts.py``)"""
-    return [line.strip()
-            for line in RULES.read_text(encoding="utf-8").split("\n")
-            if line.strip() and not line.strip().startswith("%")]
+    return [
+        line.strip()
+        for line in RULES.read_text(encoding="utf-8").split("\n")
+        if line.strip() and not line.strip().startswith("%")
+    ]
 
 
 def declared_arities(text):
     """``{name: N}`` of the ``:- dynamic(name/N).`` of an export, in order"""
-    return {name: declared for name, (declared, _)
-            in prolog_facts(text).items() if declared is not None}
+    return {
+        name: declared
+        for name, (declared, _) in prolog_facts(text).items()
+        if declared is not None
+    }
 
 
 def facts_of(text):
@@ -97,8 +114,8 @@ def last_trial_modules(project):
     """``{id: row}`` of the modules of the last trial, from SQL"""
     trial_id = project.trials()[-1]["id"]
     rows = project.query(
-        "SELECT id, version, fullpath FROM module WHERE trial_id = ?",
-        trial_id)
+        "SELECT id, version, fullpath FROM module WHERE trial_id = ?", trial_id
+    )
     return {row["id"]: row for row in rows}
 
 
@@ -106,8 +123,7 @@ def module_facts_without_fullpath(project):
     """``[(fact arguments, normalized fact)]`` of the module facts of
     ``export prolog -t`` whose row has a NULL fullpath, which SQL shows"""
     rows = last_trial_modules(project)
-    missing = {module_id for module_id, row in rows.items()
-               if row["fullpath"] is None}
+    missing = {module_id for module_id, row in rows.items() if row["fullpath"] is None}
     # Not vacuous: the weather corpus imports a local module, whose
     # fullpath noWorkflow leaves NULL.
     assert missing, "no module of the last trial has a NULL fullpath"
@@ -160,16 +176,24 @@ def test_schema_prolog_describes_the_exported_facts(two_trial_project):
     ``rules.pl`` after the descriptions
     """
     result = two_trial_project.run("schema", "prolog")
-    definitions = [(name, len(arguments.split(", ")))
-                   for name, arguments in DEFINITION.findall(result.stdout)]
+    definitions = [
+        (name, len(arguments.split(", ")))
+        for name, arguments in DEFINITION.findall(result.stdout)
+    ]
     export = two_trial_project.run("export", "prolog", "-t").stdout
     assert definitions == list(declared_arities(export).items())
     assert [name for name, _ in definitions] == EXPORTED
     lines = [line.strip() for line in result.stdout.splitlines()]
-    last_definition = max(index for index, line in enumerate(lines)
-                          if line.startswith("% FACT DEFINITION: "))
-    assert [line for line in lines[last_definition + 1:]
-            if line and not line.startswith("%")] == rule_lines()
+    last_definition = max(
+        index
+        for index, line in enumerate(lines)
+        if line.startswith("% FACT DEFINITION: ")
+    )
+    assert [
+        line
+        for line in lines[last_definition + 1 :]
+        if line and not line.startswith("%")
+    ] == rule_lines()
 
 
 def test_schema_prolog_diagram_draws_the_exported_facts(two_trial_project):
@@ -178,8 +202,9 @@ def test_schema_prolog_diagram_draws_the_exported_facts(two_trial_project):
     """
     result = two_trial_project.run("schema", "prolog", "-d")
     assert result.stdout.startswith("digraph G{"), str(result)
-    nodes = [(name, len(PORT.findall(label)))
-             for name, label in NODE.findall(result.stdout)]
+    nodes = [
+        (name, len(PORT.findall(label))) for name, label in NODE.findall(result.stdout)
+    ]
     export = two_trial_project.run("export", "prolog", "-t").stdout
     assert nodes == list(declared_arities(export).items())
 
@@ -209,7 +234,8 @@ def test_export_prolog_facts_are_atomic_prolog_terms(two_trial_project):
 
 @pytest.mark.skipif(swipl.SWIPL is None, reason=swipl.SKIP_REASON)
 def test_export_prolog_reads_in_swi_prolog_with_the_declared_arities(
-        two_trial_project, tmp_path):
+    two_trial_project, tmp_path
+):
     """SWI-Prolog reads ``export prolog -t`` (without the environment)
     term by term with no syntax error: each declaration, and each fact with
     the arity its predicate declares
@@ -218,16 +244,15 @@ def test_export_prolog_reads_in_swi_prolog_with_the_declared_arities(
     ``test_export.py`` and the grammar above stand for.
     """
     text = strip_prolog_predicate(
-        two_trial_project.run("export", "prolog", "-t").stdout,
-        "environment")
+        two_trial_project.run("export", "prolog", "-t").stdout, "environment"
+    )
     path = tmp_path / "facts.pl"
     with open(path, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(text)
     read = swipl.read_terms(path)
     assert read.errors == []
     declared = declared_arities(text)
-    expected = collections.Counter(
-        (name, declared[name]) for name, _ in facts_of(text))
+    expected = collections.Counter((name, declared[name]) for name, _ in facts_of(text))
     expected[(":-", 1)] = len(declared)
     assert read.clauses == expected
 
@@ -247,11 +272,11 @@ def test_export_prolog_of_a_module_without_fullpath(two_trial_project):
 
 
 @known_defects(FULLPATH_NONE)
-def test_export_prolog_of_a_module_without_fullpath_desired(
-        two_trial_project):
+def test_export_prolog_of_a_module_without_fullpath_desired(two_trial_project):
     """A module whose fullpath is NULL is exported with ``nil`` as its
     fullpath
     """
     for arguments, fact in module_facts_without_fullpath(two_trial_project):
         assert arguments[7] == "nil", "fullpath is {}, not nil, in {}".format(
-            arguments[7], fact)
+            arguments[7], fact
+        )

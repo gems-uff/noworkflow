@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Diff Graph Module"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
@@ -112,7 +113,7 @@ def create_mapping(root1, root2):
             full_tooltip=True,
             tooltip={x: "Diff" for x in trial_ids},
             children_index=-1,
-            trial_ids=trial_ids
+            trial_ids=trial_ids,
         )
     else:
         root = id_to_node1[root1.index]
@@ -126,23 +127,25 @@ def merge_edges(edges1, edges2, id_to_node1, id_to_node2):
         lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     )
     for edge in edges1:
-        source = id_to_node1[edge['source']].index
-        target = id_to_node1[edge['target']].index
-        dic[source][target][edge['type']].update(edge['count'])
+        source = id_to_node1[edge["source"]].index
+        target = id_to_node1[edge["target"]].index
+        dic[source][target][edge["type"]].update(edge["count"])
     for edge in edges2:
-        source = id_to_node2[edge['source']].index
-        target = id_to_node2[edge['target']].index
-        dic[source][target][edge['type']].update(edge['count'])
+        source = id_to_node2[edge["source"]].index
+        target = id_to_node2[edge["target"]].index
+        dic[source][target][edge["type"]].update(edge["count"])
     edges = []
     for source_nid, targets in viewitems(dic):
         for target_nid, types in viewitems(targets):
             for type_, count in viewitems(types):
-                edges.append({
-                    'count': count,
-                    'source': source_nid,
-                    'target': target_nid,
-                    'type': type_,
-                })
+                edges.append(
+                    {
+                        "count": count,
+                        "source": source_nid,
+                        "target": target_nid,
+                        "type": type_,
+                    }
+                )
     return edges
 
 
@@ -151,9 +154,7 @@ def create_diff(trial_graph1, trial_graph2):
     # pylint: disable=too-many-locals
     finished1, graph1, _ = trial_graph1
     finished2, graph2, _ = trial_graph2
-    root, id_to_node1, id_to_node2 = create_mapping(
-        graph1['root'], graph2['root']
-    )
+    root, id_to_node1, id_to_node2 = create_mapping(graph1["root"], graph2["root"])
 
     nodes = []
     index = 1
@@ -190,33 +191,35 @@ def create_diff(trial_graph1, trial_graph2):
         index += 1
 
     graph = {
-        'root': root,
-        'edges': merge_edges(
-            graph1['edges'], graph2['edges'],
-            id_to_node1, id_to_node2
+        "root": root,
+        "edges": merge_edges(
+            graph1["edges"], graph2["edges"], id_to_node1, id_to_node2
         ),
-        'min_duration': {},
-        'max_duration': {},
-        'colors': {
+        "min_duration": {},
+        "max_duration": {},
+        "colors": {
             graph1["trial1"]: 1,
             graph2["trial1"]: 2,
         },
-        'trial1': graph1["trial1"],
-        'trial2': graph2["trial1"],
-        'width': graph1['width'],
-        'height': graph1['height'],
+        "trial1": graph1["trial1"],
+        "trial2": graph2["trial1"],
+        "width": graph1["width"],
+        "height": graph1["height"],
     }
-    graph['min_duration'].update(graph1['min_duration'])
-    graph['min_duration'].update(graph2['min_duration'])
-    graph['max_duration'].update(graph1['max_duration'])
-    graph['max_duration'].update(graph2['max_duration'])
+    graph["min_duration"].update(graph1["min_duration"])
+    graph["min_duration"].update(graph2["min_duration"])
+    graph["max_duration"].update(graph1["max_duration"])
+    graph["max_duration"].update(graph2["max_duration"])
     finished = finished1 and finished2
     return finished, graph, nodes
 
 
 cache = prepare_cache(  # pylint: disable=invalid-name
-    lambda self, *args, **kwargs: "diff {}:{}".format(self.diff.trial1.id,
-                                                      self.diff.trial2.id))
+    lambda self, *args, **kwargs: "diff {}:{}".format(
+        self.diff.trial1.id, self.diff.trial2.id
+    )
+)
+
 
 class DiffGraph(Graph):
     """Diff Graph Class. Present diff graph on Jupyter"""
@@ -234,31 +237,26 @@ class DiffGraph(Graph):
             1: self.no_match,
             2: self.exact_match,
             3: self.namespace_match,
-            4: self.definition_tree
+            4: self.definition_tree,
         }
 
     @cache("tree")
     def tree(self):
         """Convert tree structure into dict tree structure"""
-        return create_diff(
-            self.diff.trial1.graph.tree(),
-            self.diff.trial2.graph.tree()
-        )
+        return create_diff(self.diff.trial1.graph.tree(), self.diff.trial2.graph.tree())
 
     @cache("no_match")
     def no_match(self):
         """Convert tree structure into dict graph without node matchings"""
         return create_diff(
-            self.diff.trial1.graph.no_match(),
-            self.diff.trial2.graph.no_match()
+            self.diff.trial1.graph.no_match(), self.diff.trial2.graph.no_match()
         )
 
     @cache("exact_match")
     def exact_match(self):
         """Convert tree structure into dict graph and match equal calls"""
         return create_diff(
-            self.diff.trial1.graph.exact_match(),
-            self.diff.trial2.graph.exact_match()
+            self.diff.trial1.graph.exact_match(), self.diff.trial2.graph.exact_match()
         )
 
     @cache("namespace_match")
@@ -266,7 +264,7 @@ class DiffGraph(Graph):
         """Convert tree structure into dict graph and match namespaces"""
         return create_diff(
             self.diff.trial1.graph.namespace_match(),
-            self.diff.trial2.graph.namespace_match()
+            self.diff.trial2.graph.namespace_match(),
         )
 
     @cache("definition_tree")
@@ -274,16 +272,14 @@ class DiffGraph(Graph):
         """Convert tree structure into dict tree structure based from code_components"""
         return create_diff(
             self.diff.trial1.graph.definition_tree(),
-            self.diff.trial2.graph.definition_tree()
+            self.diff.trial2.graph.definition_tree(),
         )
 
     def _ipython_display_(self):
         from IPython.display import display
+
         bundle = {
-            'application/noworkflow.trial+json': self._modes[self.mode]()[1],
-            'text/plain': 'Diff {}:{}'.format(
-                self.diff.trial1.id,
-                self.diff.trial2.id
-            ),
+            "application/noworkflow.trial+json": self._modes[self.mode]()[1],
+            "text/plain": "Diff {}:{}".format(self.diff.trial1.id, self.diff.trial2.id),
         }
         display(bundle, raw=True)

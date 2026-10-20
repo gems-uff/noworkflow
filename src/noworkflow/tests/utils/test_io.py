@@ -16,6 +16,7 @@ it), so under pytest it is pytest's own capture object, which neither
 explicitly; the default stream is covered by the premise and by the e2e
 tests.
 """
+
 import io
 import sys
 

@@ -32,6 +32,7 @@ also lists what the mask cannot reach): the repr of a trial carries the
 hostname, and pytest prints the reprs of frame arguments, assertion
 operands, chained exceptions and captured output.
 """
+
 import os
 import shutil
 import tempfile
@@ -40,9 +41,12 @@ import pytest
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 TESTS_DIR = os.path.join(ROOT, "src", "noworkflow", "tests")
-MODELS_DIR = os.path.normcase(
-    os.path.join(ROOT, "src", "noworkflow", "now", "persistence", "models")
-) + os.sep
+MODELS_DIR = (
+    os.path.normcase(
+        os.path.join(ROOT, "src", "noworkflow", "now", "persistence", "models")
+    )
+    + os.sep
+)
 
 # Scripts that the tests execute, not test modules. They are listed here
 # rather than as ``--ignore`` in ``addopts`` because ``--ignore`` is resolved
@@ -81,7 +85,8 @@ def pytest_configure(config):
     mode = os.environ.get("NOW_LEAK_CHECK", "fail")
     if mode not in LEAK_MODES:
         raise pytest.UsageError(
-            "NOW_LEAK_CHECK={!r}: expected fail or warn".format(mode))
+            "NOW_LEAK_CHECK={!r}: expected fail or warn".format(mode)
+        )
     config._noworkflow_leak_mode = mode
     config._noworkflow_leak_audit = os.environ.get("NOW_LEAK_AUDIT") == "1"
     config._noworkflow_leak_baseline = None
@@ -161,6 +166,7 @@ def pytest_collection_finish(session):
     if scratch is None:
         return
     from noworkflow.tests.helpers.leaks import Baseline
+
     # Where a test may put a script it traces in-process: the scratch
     # directory, pytest's temporary directories and the in-package scripts.
     watched = [
@@ -188,6 +194,7 @@ def pytest_runtest_setup(item):
         item.stash[LEAK_SNAPSHOT] = baseline.snapshot()
         if config._noworkflow_leak_audit:
             from noworkflow.tests.helpers.leaks import row_counts
+
             item.stash[LEAK_ROWS] = row_counts()
     return (yield)
 
@@ -209,22 +216,28 @@ def _check_leaks(item):
         return
     if config._noworkflow_leak_audit and LEAK_ROWS in item.stash:
         from noworkflow.tests.helpers.leaks import row_counts
+
         before, after = item.stash[LEAK_ROWS], row_counts()
-        grown = ["{}=+{}".format(table, after[table] - before.get(table, 0))
-                 for table in sorted(after)
-                 if after[table] > before.get(table, 0)]
+        grown = [
+            "{}=+{}".format(table, after[table] - before.get(table, 0))
+            for table in sorted(after)
+            if after[table] > before.get(table, 0)
+        ]
         if grown:
-            item.user_properties.append((LEAK_AUDIT_PROPERTY, "{}: {}".format(
-                item.nodeid, ", ".join(grown))))
+            item.user_properties.append(
+                (LEAK_AUDIT_PROPERTY, "{}: {}".format(item.nodeid, ", ".join(grown)))
+            )
     leaks = baseline.check(snapshot)
     if not leaks:
         return
     item.user_properties.extend(
-        (LEAK_PROPERTY, "{}: {}".format(item.nodeid, leak)) for leak in leaks)
+        (LEAK_PROPERTY, "{}: {}".format(item.nodeid, leak)) for leak in leaks
+    )
     if config._noworkflow_leak_mode == "fail":
         pytest.fail(
             "the test left process state behind (undone now, so later tests "
-            "see a clean process):\n  " + "\n  ".join(leaks)
+            "see a clean process):\n  "
+            + "\n  ".join(leaks)
             + "\nSee noworkflow/tests/helpers/leaks.py; NOW_LEAK_CHECK=warn "
             "only reports.",
             pytrace=False,
@@ -272,11 +285,13 @@ def pytest_exception_interact(node, call, report):
 def pytest_internalerror(excrepr, excinfo):
     """The same for the traceback of an INTERNALERROR"""
     from noworkflow.tests.helpers.reports import HOSTNAME_RULES, mask
+
     mask(excrepr, HOSTNAME_RULES)
 
 
 def _mask_hostname(report):
     from noworkflow.tests.helpers.reports import mask_report
+
     mask_report(report)
 
 
@@ -288,8 +303,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
             terminalreporter.write_line(line)
     audit = config.stash.get(LEAK_AUDIT, [])
     if audit:
-        terminalreporter.section("LEAK AUDIT: rows left in the store",
-                                 sep="=")
+        terminalreporter.section("LEAK AUDIT: rows left in the store", sep="=")
         for line in audit:
             terminalreporter.write_line(line)
 
@@ -308,4 +322,5 @@ def _erase_before_model_doctest(item):
     if not os.path.normcase(str(item.path)).startswith(MODELS_DIR):
         return
     from noworkflow.tests.helpers.models import erase_database
+
     erase_database()

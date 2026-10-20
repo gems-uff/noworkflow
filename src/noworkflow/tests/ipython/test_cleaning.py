@@ -26,6 +26,7 @@ Known defects have a characterization of today's behavior and a
 plain Python, the same on every system (measured on macOS with Python
 3.11 to 3.15).
 """
+
 import os
 import types
 
@@ -108,29 +109,40 @@ def notebook_of(cells):
     """A notebook of ``(cell type, source)`` pairs"""
     notebook = nbformat.v4.new_notebook()
     notebook.cells = [
-        nbformat.v4.new_markdown_cell(source) if kind == "markdown"
+        nbformat.v4.new_markdown_cell(source)
+        if kind == "markdown"
         else nbformat.v4.new_code_cell(source)
-        for kind, source in cells]
+        for kind, source in cells
+    ]
     return notebook
 
 
 def history_of_two_cells():
     """The clean notebook of two cells that match two of ORIGINAL"""
     return create_clean(
-        [stand_in_cell(1, "a = 1\nb = a + 1\nb\n", "2"),
-         stand_in_cell(2, "c = b * 10\nprint(c)", "None")],
-        "unused.ipynb", create_header=False, write=False)
+        [
+            stand_in_cell(1, "a = 1\nb = a + 1\nb\n", "2"),
+            stand_in_cell(2, "c = b * 10\nprint(c)", "None"),
+        ],
+        "unused.ipynb",
+        create_header=False,
+        write=False,
+    )
 
 
 def summary(notebook):
     """``(cell type, first line, execution count)`` of each cell"""
-    return [(cell.cell_type, cell.source.split("\n")[0],
-             cell.get("execution_count")) for cell in notebook.cells]
+    return [
+        (cell.cell_type, cell.source.split("\n")[0], cell.get("execution_count"))
+        for cell in notebook.cells
+    ]
 
 
 def outputs(cell):
-    return [(output.output_type, dict(output.data), output.execution_count)
-            for output in cell.outputs]
+    return [
+        (output.output_type, dict(output.data), output.execution_count)
+        for output in cell.outputs
+    ]
 
 
 # --- lcs and merge_json -----------------------------------------------------
@@ -143,18 +155,17 @@ def test_lcs_matches_a_longest_common_subsequence():
     first, second = "abcbdab", "bdcaba"
     matches1, matches2 = lcs(first, second)
     assert len(matches1) == 4
-    assert {right: left for left, right in matches1.items()} == dict(
-        matches2)
+    assert {right: left for left, right in matches1.items()} == dict(matches2)
     pairs = sorted(matches1.items())
     assert all(first[left] == second[right] for left, right in pairs)
-    assert [right for _, right in pairs] == sorted(
-        right for _, right in pairs)
+    assert [right for _, right in pairs] == sorted(right for _, right in pairs)
 
 
 def test_lcs_with_a_comparison_and_with_nothing_in_common():
     """``equals`` decides what matches; no match gives empty dicts"""
-    matches1, _ = lcs(["A", "b"], ["a", "B"],
-                      equals=lambda x, y: x.lower() == y.lower())
+    matches1, _ = lcs(
+        ["A", "b"], ["a", "B"], equals=lambda x, y: x.lower() == y.lower()
+    )
     assert dict(matches1) == {0: 0, 1: 1}
     assert lcs([], [1]) == ({}, {})
     assert lcs([1, 2], [3]) == ({}, {})
@@ -179,8 +190,7 @@ def test_create_hashable_turns_a_cell_into_a_hashable_value():
     value = create_hashable({"a": [1, {2, 3}], "b": {"c": (4,)}})
     assert isinstance(value, Hashable)
     assert value == {"a": (1, frozenset({2, 3})), "b": {"c": (4,)}}
-    assert hash(value) == hash(create_hashable(
-        {"b": {"c": [4]}, "a": [1, {3, 2}]}))
+    assert hash(value) == hash(create_hashable({"b": {"c": [4]}, "a": [1, {3, 2}]}))
 
 
 def test_merge_json_puts_the_history_cells_among_the_original_markdown():
@@ -204,8 +214,7 @@ def test_merge_json_merge_code_keeps_the_code_the_history_lacks():
     """With ``merge_code`` the original code cells the history does not
     have stay, as they were (no execution count)
     """
-    merged = merge_json(notebook_of(ORIGINAL), history_of_two_cells(),
-                        merge_code=True)
+    merged = merge_json(notebook_of(ORIGINAL), history_of_two_cells(), merge_code=True)
     assert summary(merged) == [
         ("markdown", "# Intro", None),
         ("code", "a = 1", 1),
@@ -227,7 +236,10 @@ def test_merge_json_original_first_orders_what_does_not_match():
     original = notebook_of([("markdown", "A"), ("markdown", "B")])
     history = notebook_of([("code", "z")])
     assert [cell.source for cell in merge_json(original, history).cells] == [
-        "A", "B", "z"]
+        "A",
+        "B",
+        "z",
+    ]
     last = merge_json(original, history, original_first=False)
     assert [cell.source for cell in last.cells] == ["z", "A", "B"]
 
@@ -238,12 +250,18 @@ def test_merge_json_puts_the_cells_before_and_after_around_the_merge():
     """
     original = notebook_of([("markdown", "A")])
     history = notebook_of([("code", "z")])
-    merged = merge_json(original, history,
-                        before=[nbformat.v4.new_markdown_cell("header")],
-                        after=[nbformat.v4.new_code_cell()])
+    merged = merge_json(
+        original,
+        history,
+        before=[nbformat.v4.new_markdown_cell("header")],
+        after=[nbformat.v4.new_code_cell()],
+    )
     assert [(cell.cell_type, cell.source) for cell in merged.cells] == [
-        ("markdown", "header"), ("markdown", "A"), ("code", "z"),
-        ("code", "")]
+        ("markdown", "header"),
+        ("markdown", "A"),
+        ("code", "z"),
+        ("code", ""),
+    ]
 
 
 # --- create_clean and create_merged_from_cells ------------------------------
@@ -257,37 +275,47 @@ def test_create_clean_makes_a_code_cell_of_each_cell():
     The header names the notebook; ``add_empty`` adds an empty cell.
     """
     notebook = create_clean(
-        [stand_in_cell(3, "\nb = a + 1\nb\n", "2", "ignored"),
-         stand_in_cell(5, "print(b)", "None"),
-         stand_in_cell(7, "pass")],
-        "unused.ipynb", name="demo", add_empty=True, write=False)
+        [
+            stand_in_cell(3, "\nb = a + 1\nb\n", "2", "ignored"),
+            stand_in_cell(5, "print(b)", "None"),
+            stand_in_cell(7, "pass"),
+        ],
+        "unused.ipynb",
+        name="demo",
+        add_empty=True,
+        write=False,
+    )
     nbformat.validate(notebook)
     header, *cells, empty = notebook.cells
     assert header.cell_type == "markdown"
     assert header.source.startswith("# History of demo\nCreated at ")
     assert [(cell.source, cell.execution_count) for cell in cells] == [
-        ("b = a + 1\nb", 3), ("print(b)", 5), ("pass", 7)]
+        ("b = a + 1\nb", 3),
+        ("print(b)", 5),
+        ("pass", 7),
+    ]
     assert outputs(cells[0]) == [("execute_result", {"text/plain": "2"}, 3)]
     assert outputs(cells[1]) == outputs(cells[2]) == []
     assert (empty.cell_type, empty.source) == ("code", "")
 
 
 def test_create_clean_writes_the_notebook_into_the_current_directory(
-        tmp_path, monkeypatch):
+    tmp_path, monkeypatch
+):
     """With ``write``, the notebook goes to ``filename`` in the current
     directory, and reads back as the notebook returned
     """
     monkeypatch.chdir(tmp_path)
-    notebook = create_clean([stand_in_cell(1, "x = 1", "None")],
-                            "clean.ipynb", create_header=False)
+    notebook = create_clean(
+        [stand_in_cell(1, "x = 1", "None")], "clean.ipynb", create_header=False
+    )
     written = sorted(os.listdir(tmp_path))
     assert written == ["clean.ipynb"]
     read = nbformat.read(str(tmp_path / "clean.ipynb"), as_version=4)
     assert read == notebook
 
 
-def test_create_merged_from_cells_merges_into_the_original_file(
-        tmp_path, monkeypatch):
+def test_create_merged_from_cells_merges_into_the_original_file(tmp_path, monkeypatch):
     """The clean notebook of the cells is merged into the notebook in
     ``originalfile``, between the header and the empty cell, and written to
     ``filename``
@@ -296,7 +324,11 @@ def test_create_merged_from_cells_merges_into_the_original_file(
     nbformat.write(notebook_of(ORIGINAL), str(tmp_path / "original.ipynb"))
     create_merged_from_cells(
         [stand_in_cell(1, "a = 1\nb = a + 1\nb", "2")],
-        "merged.ipynb", "original.ipynb", "demo", add_empty=True)
+        "merged.ipynb",
+        "original.ipynb",
+        "demo",
+        add_empty=True,
+    )
     merged = nbformat.read(str(tmp_path / "merged.ipynb"), as_version=4)
     nbformat.validate(merged)
     assert merged.cells[0].source.startswith("# History of demo\n")
@@ -311,14 +343,16 @@ def test_create_merged_from_cells_merges_into_the_original_file(
 
 
 def test_create_merged_from_cells_without_the_original_writes_nothing(
-        tmp_path, monkeypatch):
+    tmp_path, monkeypatch
+):
     """A missing original notebook raises FileNotFoundError before the
     merged notebook is opened (``now clean -j``)
     """
     monkeypatch.chdir(tmp_path)
     with pytest.raises(FileNotFoundError):
-        create_merged_from_cells([stand_in_cell(1, "x = 1", "None")],
-                                 "merged.ipynb", "missing.ipynb", "demo")
+        create_merged_from_cells(
+            [stand_in_cell(1, "x = 1", "None")], "merged.ipynb", "missing.ipynb", "demo"
+        )
     written = os.listdir(tmp_path)
     assert written == []
 
@@ -358,8 +392,9 @@ def test_find_cell_cache_desired():
     statement = Component("assign", cell)
     cache = {}
     find_cell(statement, cache)
-    assert cache == {statement: cell, cell: cell}, (
-        "the cache holds {} entries".format(len(cache)))
+    assert cache == {statement: cell, cell: cell}, "the cache holds {} entries".format(
+        len(cache)
+    )
 
 
 # --- create_history ---------------------------------------------------------
@@ -387,8 +422,8 @@ def test_create_history_makes_a_notebook_of_the_shell_history(bare_shell):
     for code in HISTORY_CELLS:
         bare_shell.ok(code)
     cell = bare_shell.ok(
-        CREATE_HISTORY + "nb = create_history('History-demo.ipynb', "
-        "name='demo')")
+        CREATE_HISTORY + "nb = create_history('History-demo.ipynb', name='demo')"
+    )
     said = cell.stdout == "Created history notebook: History-demo.ipynb\n"
     assert said, cell.describe()
     notebook = bare_shell.user_ns["nb"]
@@ -397,11 +432,17 @@ def test_create_history_makes_a_notebook_of_the_shell_history(bare_shell):
     assert header.cell_type == "markdown"
     assert header.source.startswith("# History of demo\nCreated at ")
     assert [(cell.source, cell.execution_count) for cell in cells] == [
-        ("a = 1", 1), ("a + 1", 2), ("print('printed')", 3),
-        ("b = a * 10\nb", 5)]
+        ("a = 1", 1),
+        ("a + 1", 2),
+        ("print('printed')", 3),
+        ("b = a * 10\nb", 5),
+    ]
     assert [outputs(cell) for cell in cells] == [
-        [], [("execute_result", {"text/plain": "2"}, 2)], [],
-        [("execute_result", {"text/plain": "10"}, 5)]]
+        [],
+        [("execute_result", {"text/plain": "2"}, 2)],
+        [],
+        [("execute_result", {"text/plain": "10"}, 5)],
+    ]
     project = bare_shell.project.path
     written = sorted(os.listdir(project))
     assert written == ["History-demo.ipynb"]
@@ -414,12 +455,13 @@ def test_create_history_header_and_write_are_optional(bare_shell):
     leaves it out, and ``write=False`` writes nothing
     """
     bare_shell.ok("a = 1")
-    bare_shell.ok(CREATE_HISTORY + "nb = create_history('h.ipynb', "
-                  "write=False)")
+    bare_shell.ok(CREATE_HISTORY + "nb = create_history('h.ipynb', write=False)")
     header = bare_shell.user_ns["nb"].cells[0]
     assert header.source.startswith("# h.ipynb\nCreated at ")
-    cell = bare_shell.ok(CREATE_HISTORY + "nb = create_history('h.ipynb', "
-                         "create_header=False, write=False)")
+    cell = bare_shell.ok(
+        CREATE_HISTORY + "nb = create_history('h.ipynb', "
+        "create_header=False, write=False)"
+    )
     silent = cell.stdout == ""
     assert silent, cell.describe()
     sources = [each.source for each in bare_shell.user_ns["nb"].cells]
@@ -432,8 +474,9 @@ def test_create_history_header_and_write_are_optional(bare_shell):
 def sleeps(monkeypatch):
     """``getname`` polls without sleeping; the seconds it asks to sleep"""
     asked = []
-    monkeypatch.setattr(cleaning_ipython, "time",
-                        types.SimpleNamespace(sleep=asked.append))
+    monkeypatch.setattr(
+        cleaning_ipython, "time", types.SimpleNamespace(sleep=asked.append)
+    )
     return asked
 
 
@@ -463,6 +506,7 @@ def test_create_history_without_a_filename_desired(bare_shell, sleeps):
     bare_shell.ok("a = 1")
     bare_shell.ok(CREATE_HISTORY + "nb = create_history()")
     written = os.listdir(bare_shell.project.path)
-    named = (len(written) == 1 and written[0].endswith(".ipynb")
-             and "None" not in written[0])
+    named = (
+        len(written) == 1 and written[0].endswith(".ipynb") and "None" not in written[0]
+    )
     assert named, "written: {}".format(written)

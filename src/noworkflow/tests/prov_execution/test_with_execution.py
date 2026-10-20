@@ -27,6 +27,7 @@ and ``open(os.devnull)``: a context manager the script defines has its
 
 The ``_desired`` twins are in ``TestWithExecutionDesired``.
 """
+
 import ast
 import os
 
@@ -40,11 +41,13 @@ WITH_ITEMS = Defect(
     "Assign per bound item in item order and Collector.pop_assign pops the "
     "last, so the i-th of n bound targets gets the dependency of the "
     "(n+1-i)-th bound item",
-    signature="'x': ['nullcontext(3)']")
+    signature="'x': ['nullcontext(3)']",
+)
 WITH_FILES = Defect(
     WITH_ITEMS.reason + "; the file x depends on is not the one it holds, "
     "so the assign reference becomes a plain dependency",
-    signature="'x': [(\"open(devnull, 'rb')\"")
+    signature="'x': [(\"open(devnull, 'rb')\"",
+)
 WITH_ACCESS = Defect(
     "#316: with two bound items, the line of a subscript or attribute "
     "target pops the Assign of the other item (Collector.pop_assign), "
@@ -53,61 +56,74 @@ WITH_ACCESS = Defect(
     "fallback and its return reads access_depa, which only the other "
     "branch binds; the UnboundLocalError reaches the script at the with "
     "line, after Python bound the targets and before the body",
-    signature="cannot access local variable 'access_depa'")
-ACCESS_ERROR = ("cannot access local variable 'access_depa' where it is not "
-                "associated with a value")
+    signature="cannot access local variable 'access_depa'",
+)
+ACCESS_ERROR = (
+    "cannot access local variable 'access_depa' where it is not associated with a value"
+)
 
-ONE_ITEM = ("# script.py\n"
-            "from os import devnull\n"
-            "with open(devnull) as x:\n"
-            "    y = x\n")
-THREE_ITEMS = ("# script.py\n"
-               "from contextlib import nullcontext\n"
-               "with nullcontext(1) as x, nullcontext(2) as y, "
-               "nullcontext(3) as z:\n"
-               "    pass\n")
-AN_ITEM_WITHOUT_AS = ("# script.py\n"
-                      "from contextlib import nullcontext\n"
-                      "with nullcontext(1) as x, nullcontext(2), "
-                      "nullcontext(3) as z:\n"
-                      "    pass\n")
-TWO_FILES = ("# script.py\n"
-             "from os import devnull\n"
-             "with open(devnull) as x, open(devnull, 'rb') as y:\n"
-             "    pass\n")
-NESTED = ("# script.py\n"
-          "from contextlib import nullcontext\n"
-          "with nullcontext(1) as x:\n"
-          "    with nullcontext(2) as y:\n"
-          "        with nullcontext(3) as z:\n"
-          "            pass\n")
-SUBSCRIPT_FIRST = ("# script.py\n"
-                   "from contextlib import nullcontext\n"
-                   "box = [0]\n"
-                   "reached = False\n"
-                   "with nullcontext(1) as box[0], nullcontext(2) as other:\n"
-                   "    reached = True\n"
-                   "after = True\n")
-SUBSCRIPT_FIRST_IN_TRY = ("# script.py\n"
-                          "from contextlib import nullcontext\n"
-                          "box = [0]\n"
-                          "reached = False\n"
-                          "caught = None\n"
-                          "try:\n"
-                          "    with nullcontext(1) as box[0], "
-                          "nullcontext(2) as other:\n"
-                          "        reached = True\n"
-                          "except Exception as exc:\n"
-                          "    caught = type(exc).__name__ + ': ' + str(exc)\n"
-                          "after = True\n")
-NESTED_SUBSCRIPT = ("# script.py\n"
-                    "from contextlib import nullcontext\n"
-                    "box = [0]\n"
-                    "reached = False\n"
-                    "with nullcontext(1) as box[0]:\n"
-                    "    with nullcontext(2) as other:\n"
-                    "        reached = True\n"
-                    "after = True\n")
+ONE_ITEM = "# script.py\nfrom os import devnull\nwith open(devnull) as x:\n    y = x\n"
+THREE_ITEMS = (
+    "# script.py\n"
+    "from contextlib import nullcontext\n"
+    "with nullcontext(1) as x, nullcontext(2) as y, "
+    "nullcontext(3) as z:\n"
+    "    pass\n"
+)
+AN_ITEM_WITHOUT_AS = (
+    "# script.py\n"
+    "from contextlib import nullcontext\n"
+    "with nullcontext(1) as x, nullcontext(2), "
+    "nullcontext(3) as z:\n"
+    "    pass\n"
+)
+TWO_FILES = (
+    "# script.py\n"
+    "from os import devnull\n"
+    "with open(devnull) as x, open(devnull, 'rb') as y:\n"
+    "    pass\n"
+)
+NESTED = (
+    "# script.py\n"
+    "from contextlib import nullcontext\n"
+    "with nullcontext(1) as x:\n"
+    "    with nullcontext(2) as y:\n"
+    "        with nullcontext(3) as z:\n"
+    "            pass\n"
+)
+SUBSCRIPT_FIRST = (
+    "# script.py\n"
+    "from contextlib import nullcontext\n"
+    "box = [0]\n"
+    "reached = False\n"
+    "with nullcontext(1) as box[0], nullcontext(2) as other:\n"
+    "    reached = True\n"
+    "after = True\n"
+)
+SUBSCRIPT_FIRST_IN_TRY = (
+    "# script.py\n"
+    "from contextlib import nullcontext\n"
+    "box = [0]\n"
+    "reached = False\n"
+    "caught = None\n"
+    "try:\n"
+    "    with nullcontext(1) as box[0], "
+    "nullcontext(2) as other:\n"
+    "        reached = True\n"
+    "except Exception as exc:\n"
+    "    caught = type(exc).__name__ + ': ' + str(exc)\n"
+    "after = True\n"
+)
+NESTED_SUBSCRIPT = (
+    "# script.py\n"
+    "from contextlib import nullcontext\n"
+    "box = [0]\n"
+    "reached = False\n"
+    "with nullcontext(1) as box[0]:\n"
+    "    with nullcontext(2) as other:\n"
+    "        reached = True\n"
+    "after = True\n"
+)
 
 
 def unpack_target(target_expr):
@@ -118,6 +134,7 @@ def unpack_target(target_expr):
 
 class TestWithExecution(TargetTestCase):
     """What a ``with`` statement records"""
+
     # pylint: disable=invalid-name
 
     def assign_target(self, **kwargs):
@@ -126,10 +143,10 @@ class TestWithExecution(TargetTestCase):
         """
         self.script(ONE_ITEM, **kwargs)
         tree, _, transformed = self.metascript.definition.parse(
-            "script", self.metascript.code, self.metascript.path, "exec")
+            "script", self.metascript.code, self.metascript.path, "exec"
+        )
         self.assertTrue(transformed)
-        with_node = next(node for node in ast.walk(tree)
-                         if isinstance(node, ast.With))
+        with_node = next(node for node in ast.walk(tree) if isinstance(node, ast.With))
         call = with_node.body[0].value
         self.assertEqual(call.func.attr, "assign")
         return call.args[2]
@@ -165,8 +182,7 @@ class TestWithExecution(TargetTestCase):
         without it, the script stops on the ``with`` with
         ``ValueError('not enough values to unpack (expected 2, got 0)')``.
         """
-        self.assertEqual(self.collect(ONE_ITEM, coarse_granularity=True),
-                         SUCCESS)
+        self.assertEqual(self.collect(ONE_ITEM, coarse_granularity=True), SUCCESS)
         namespace = self.metascript.namespace
         self.assertIs(namespace["x"], namespace["y"])
         self.assertTrue(namespace["x"].closed)
@@ -179,12 +195,15 @@ class TestWithExecution(TargetTestCase):
         their context managers enter, and records neither
         """
         self.assertEqual(
-            self.collect("# script.py\n"
-                         "from contextlib import nullcontext\n"
-                         "with nullcontext(1) as x, nullcontext(2) as y:\n"
-                         "    pass\n",
-                         coarse_granularity=True),
-            SUCCESS)
+            self.collect(
+                "# script.py\n"
+                "from contextlib import nullcontext\n"
+                "with nullcontext(1) as x, nullcontext(2) as y:\n"
+                "    pass\n",
+                coarse_granularity=True,
+            ),
+            SUCCESS,
+        )
         namespace = self.metascript.namespace
         self.assertEqual((namespace["x"], namespace["y"]), (1, 2))
         self.assertIsNone(self.find_code_component(name="x"))
@@ -200,11 +219,13 @@ class TestWithExecution(TargetTestCase):
         self.script(THREE_ITEMS)
         self.assertEqual(
             self.target_dependencies("x", "y", "z"),
-            {"x": [("nullcontext(3)", "dependency", False)],
-             "y": [("nullcontext(2)", "dependency", False)],
-             "z": [("nullcontext(1)", "dependency", False)]})
-        self.assertEqual([self.writes(name)[0].repr for name in "xyz"],
-                         ["1", "2", "3"])
+            {
+                "x": [("nullcontext(3)", "dependency", False)],
+                "y": [("nullcontext(2)", "dependency", False)],
+                "z": [("nullcontext(1)", "dependency", False)],
+            },
+        )
+        self.assertEqual([self.writes(name)[0].repr for name in "xyz"], ["1", "2", "3"])
 
     def test_with_of_several_items_one_without_as(self):
         """Only bound items push an assignment: in ``with nullcontext(1) as
@@ -214,8 +235,10 @@ class TestWithExecution(TargetTestCase):
         #316.
         """
         self.script(AN_ITEM_WITHOUT_AS)
-        self.assertEqual(self.dependency_names("x", "z"),
-                         {"x": ["nullcontext(3)"], "z": ["nullcontext(1)"]})
+        self.assertEqual(
+            self.dependency_names("x", "z"),
+            {"x": ["nullcontext(3)"], "z": ["nullcontext(1)"]},
+        )
 
     def test_nested_with_pairs_each_target_with_its_item(self):
         """Control: nested ``with`` statements give each target the
@@ -224,9 +247,12 @@ class TestWithExecution(TargetTestCase):
         self.script(NESTED)
         self.assertEqual(
             self.target_dependencies("x", "y", "z"),
-            {"x": [("nullcontext(1)", "dependency", False)],
-             "y": [("nullcontext(2)", "dependency", False)],
-             "z": [("nullcontext(3)", "dependency", False)]})
+            {
+                "x": [("nullcontext(1)", "dependency", False)],
+                "y": [("nullcontext(2)", "dependency", False)],
+                "z": [("nullcontext(3)", "dependency", False)],
+            },
+        )
 
     def test_with_of_two_files(self):
         """With two files, x depends on the second ``open`` as a plain
@@ -238,22 +264,30 @@ class TestWithExecution(TargetTestCase):
         self.script(TWO_FILES)
         self.assertEqual(
             self.target_dependencies("x", "y"),
-            {"x": [("open(devnull, 'rb')", "dependency", False)],
-             "y": [("open(devnull)", "dependency", False)]})
+            {
+                "x": [("open(devnull, 'rb')", "dependency", False)],
+                "y": [("open(devnull)", "dependency", False)],
+            },
+        )
 
     def test_nested_with_of_files_records_an_assign_reference(self):
         """Control: nested ``with open(...)`` statements make each target an
         ``assign`` reference to its own ``open``, the file it entered
         """
-        self.script("# script.py\n"
-                    "from os import devnull\n"
-                    "with open(devnull) as x:\n"
-                    "    with open(devnull, 'rb') as y:\n"
-                    "        pass\n")
+        self.script(
+            "# script.py\n"
+            "from os import devnull\n"
+            "with open(devnull) as x:\n"
+            "    with open(devnull, 'rb') as y:\n"
+            "        pass\n"
+        )
         self.assertEqual(
             self.target_dependencies("x", "y"),
-            {"x": [("open(devnull)", "assign", True)],
-             "y": [("open(devnull, 'rb')", "assign", True)]})
+            {
+                "x": [("open(devnull)", "assign", True)],
+                "y": [("open(devnull, 'rb')", "assign", True)],
+            },
+        )
 
     def test_with_of_two_items_with_a_subscript_target(self):
         """``with nullcontext(1) as box[0], nullcontext(2) as other`` stops
@@ -268,11 +302,13 @@ class TestWithExecution(TargetTestCase):
         from the ``with`` line.
         """
         message = self.collect(SUBSCRIPT_FIRST)
-        self.assertEqual(message.splitlines()[0],
-                         "UnboundLocalError({!r})".format(ACCESS_ERROR))
-        self.assertTrue("_extract_assign_access" in message,
-                        "the traceback does not pass through "
-                        "_extract_assign_access")
+        self.assertEqual(
+            message.splitlines()[0], "UnboundLocalError({!r})".format(ACCESS_ERROR)
+        )
+        self.assertTrue(
+            "_extract_assign_access" in message,
+            "the traceback does not pass through _extract_assign_access",
+        )
         namespace = self.metascript.namespace
         self.assertEqual((namespace["box"], namespace["other"]), ([1], 2))
         self.assertIs(namespace["reached"], False)
@@ -288,8 +324,7 @@ class TestWithExecution(TargetTestCase):
         """
         self.assertEqual(self.collect(SUBSCRIPT_FIRST_IN_TRY), SUCCESS)
         namespace = self.metascript.namespace
-        self.assertEqual(namespace["caught"],
-                         "UnboundLocalError: " + ACCESS_ERROR)
+        self.assertEqual(namespace["caught"], "UnboundLocalError: " + ACCESS_ERROR)
         self.assertEqual((namespace["box"], namespace["other"]), ([1], 2))
         self.assertIs(namespace["reached"], False)
         self.assertIs(namespace["after"], True)
@@ -310,6 +345,7 @@ class TestWithExecution(TargetTestCase):
 
 class TestWithExecutionDesired(TargetTestCase):
     """What a ``with`` should record once its defects are fixed"""
+
     # pylint: disable=invalid-name
 
     @known_defects(WITH_ITEMS)
@@ -318,9 +354,10 @@ class TestWithExecutionDesired(TargetTestCase):
         context manager, as in the nested form
         """
         self.script(THREE_ITEMS)
-        self.assertEqual(self.dependency_names("x", "y", "z"),
-                         {"x": ["nullcontext(1)"], "y": ["nullcontext(2)"],
-                          "z": ["nullcontext(3)"]})
+        self.assertEqual(
+            self.dependency_names("x", "y", "z"),
+            {"x": ["nullcontext(1)"], "y": ["nullcontext(2)"], "z": ["nullcontext(3)"]},
+        )
 
     @known_defects(WITH_ITEMS)
     def test_with_of_several_items_one_without_as_desired(self):
@@ -328,8 +365,10 @@ class TestWithExecutionDesired(TargetTestCase):
         nullcontext(1) and z on nullcontext(3)
         """
         self.script(AN_ITEM_WITHOUT_AS)
-        self.assertEqual(self.dependency_names("x", "z"),
-                         {"x": ["nullcontext(1)"], "z": ["nullcontext(3)"]})
+        self.assertEqual(
+            self.dependency_names("x", "z"),
+            {"x": ["nullcontext(1)"], "z": ["nullcontext(3)"]},
+        )
 
     @known_defects(WITH_FILES)
     def test_with_of_two_files_desired(self):
@@ -339,8 +378,11 @@ class TestWithExecutionDesired(TargetTestCase):
         self.script(TWO_FILES)
         self.assertEqual(
             self.target_dependencies("x", "y"),
-            {"x": [("open(devnull)", "assign", True)],
-             "y": [("open(devnull, 'rb')", "assign", True)]})
+            {
+                "x": [("open(devnull)", "assign", True)],
+                "y": [("open(devnull, 'rb')", "assign", True)],
+            },
+        )
 
     @known_defects(WITH_ACCESS)
     def test_with_of_two_items_with_a_subscript_target_desired(self):
@@ -355,8 +397,7 @@ class TestWithExecutionDesired(TargetTestCase):
         self.assertIs(namespace["after"], True)
 
     @known_defects(WITH_ACCESS)
-    def test_with_of_two_items_with_a_subscript_target_inside_try_desired(
-            self):
+    def test_with_of_two_items_with_a_subscript_target_inside_try_desired(self):
         """Inside a ``try`` of the script, the same ``with`` raises
         nothing: the handler does not run and the body does
         """

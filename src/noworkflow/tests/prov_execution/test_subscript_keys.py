@@ -16,6 +16,7 @@ Each characterization pins today's facts and its ``_desired`` twin, in
 ``TestSubscriptKeysDesired``, states the behavior the issue asks for,
 marked with ``known_defects``.
 """
+
 from operator import attrgetter
 
 from ..collection_testcase import CollectionTestCase
@@ -29,15 +30,18 @@ STR_KEY = Defect(
     "looks a subscript up by str, so a str key of a dict display is "
     "never found and the key '1' finds the member of 1: the subscript "
     "records no access, or one on another key's value",
-    signature="\"table['a']\": None")
+    signature="\"table['a']\": None",
+)
 
-KEYS = ("# script.py\n"
-        "table = {'a': 10, 1: 20, '1': 40}\n"
-        "table['b'] = 30\n"
-        "x = table['a']\n"
-        "y = table[1]\n"
-        "w = table['1']\n"
-        "z = table['b']\n")
+KEYS = (
+    "# script.py\n"
+    "table = {'a': 10, 1: 20, '1': 40}\n"
+    "table['b'] = 30\n"
+    "x = table['a']\n"
+    "y = table[1]\n"
+    "w = table['1']\n"
+    "z = table['b']\n"
+)
 SUBSCRIPTS = ("table['a']", "table[1]", "table['1']", "table['b']")
 
 
@@ -54,10 +58,10 @@ class SubscriptKeyCase(CollectionTestCase):
         result = {}
         for name in names:
             last = max(self.get_evaluations(name=name), key=attrgetter("id"))
-            access = self.find_dependency(dependent_id=last.id,
-                                          type="access")
-            result[name] = (None if access is None
-                            else evaluations[access.dependency_id].repr)
+            access = self.find_dependency(dependent_id=last.id, type="access")
+            result[name] = (
+                None if access is None else evaluations[access.dependency_id].repr
+            )
         return result
 
 
@@ -74,17 +78,20 @@ class TestSubscriptKeys(SubscriptKeyCase):
         """
         self.assertEqual(self.collect(KEYS), SUCCESS)
         table = self.get_evaluation(name="{'a': 10, 1: 20, '1': 40}")
-        self.assert_member(table, self.get_evaluation(name="'a': 10"),
-                           "['a']")
+        self.assert_member(table, self.get_evaluation(name="'a': 10"), "['a']")
         self.assert_member(table, self.get_evaluation(name="1: 20"), "[1]")
-        self.assert_member(table, self.get_evaluation(name="'1': 40"),
-                           "['1']")
+        self.assert_member(table, self.get_evaluation(name="'1': 40"), "['1']")
         self.assertIsNotNone(self.find_member(key="[b]"))
         self.assertIsNone(self.find_member(key="[a]"))
         self.assertEqual(
             self.access_reprs(*SUBSCRIPTS),
-            {"table['a']": None, "table[1]": "20", "table['1']": "20",
-             "table['b']": "30"})
+            {
+                "table['a']": None,
+                "table[1]": "20",
+                "table['1']": "20",
+                "table['b']": "30",
+            },
+        )
 
 
 class TestSubscriptKeysDesired(SubscriptKeyCase):
@@ -98,5 +105,10 @@ class TestSubscriptKeysDesired(SubscriptKeyCase):
         self.assertEqual(self.collect(KEYS), SUCCESS)
         self.assertEqual(
             self.access_reprs(*SUBSCRIPTS),
-            {"table['a']": "10", "table[1]": "20", "table['1']": "40",
-             "table['b']": "30"})
+            {
+                "table['a']": "10",
+                "table[1]": "20",
+                "table['1']": "40",
+                "table['b']": "30",
+            },
+        )

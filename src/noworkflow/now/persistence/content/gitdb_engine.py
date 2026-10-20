@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """GitDb content database engine"""
+
 import hashlib
 from io import BytesIO
 
@@ -12,8 +13,8 @@ from .pygit_engine import PyGitEngine
 
 # ToDo: implement other methods using GitDB to not depend on PyGitEngine
 
-class GitDBPyGitEngine(PyGitEngine):
 
+class GitDBPyGitEngine(PyGitEngine):
     @staticmethod
     def do_put(content_path, object_hashes, content, filename):
         """Perform put operation. This is used in the distributed wrapper"""
@@ -23,6 +24,7 @@ class GitDBPyGitEngine(PyGitEngine):
         content_hash = istream.hexsha
         # Names the file's entry in the content commit; nothing is verified with it
         filename_hash = hashlib.sha1(
-            filename.encode('utf-8'), usedforsecurity=False).hexdigest()
-        result = object_hashes[filename_hash] = str(content_hash.decode('utf-8'))
+            filename.encode("utf-8"), usedforsecurity=False
+        ).hexdigest()
+        result = object_hashes[filename_hash] = str(content_hash.decode("utf-8"))
         return result

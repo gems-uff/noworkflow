@@ -33,9 +33,15 @@ from .name_rules import name as _name
 @prolog_rule("    evaluation(TrialId, Id, Checkpoint, _, _, _).")
 @prolog_rule("timestamp_id(TrialId, 0, Checkpoint, access) :-")
 @prolog_rule("    access(TrialId, Id, _, _, _, _, Checkpoint, _).")
-@restrict_rule(model_moment=[
-    "start", "finish", "activation", "evaluation", "access",
-])
+@restrict_rule(
+    model_moment=[
+        "start",
+        "finish",
+        "activation",
+        "evaluation",
+        "access",
+    ]
+)
 @set_options_in_rule(id=[0, BLANK])
 @create_rule
 def timestamp_id(trial_id, id, timestamp, model_moment):
@@ -80,9 +86,8 @@ def duration_id(trial_id, id, duration, _binds):
     if id == 0:
         query = trial(trial_id, start=start, finish=finish)
     else:
-        query = (
-            evaluation(trial_id, id, moment=finish) &
-            activation(trial_id, id, start=start)
+        query = evaluation(trial_id, id, moment=finish) & activation(
+            trial_id, id, start=start
         )
     for result, binds in _apply(_binds, query):
         temp_duration = finish.bound - start.bound
@@ -101,13 +106,13 @@ def duration_id(trial_id, id, duration, _binds):
 @prolog_rule("successor_id(TrialId, BeforeModel, BeforeId, activation, Id) :-")
 @prolog_rule("    successor_id(TrialId, BeforeModel, BeforeId, evaluation, Id),")
 @prolog_rule("    activation(TrialId, Id, _, _, _).")
-@restrict_rule(before_model=[
-    "start", "finish", "activation", "evaluation", "access", "trial"
-])
+@restrict_rule(
+    before_model=["start", "finish", "activation", "evaluation", "access", "trial"]
+)
 @set_options_in_rule(before_id=[0, BLANK])
-@restrict_rule(after_model=[
-    "start", "finish", "activation", "evaluation", "access", "trial"
-])
+@restrict_rule(
+    after_model=["start", "finish", "activation", "evaluation", "access", "trial"]
+)
 @set_options_in_rule(after_id=[0, BLANK])
 @create_rule
 def successor_id(trial_id, before_model, before_id, after_model, after_id, _binds):
@@ -122,22 +127,21 @@ def successor_id(trial_id, before_model, before_id, after_model, after_id, _bind
     elif after_model == "trial" and _match(after_id, 0, _binds):
         query = successor_id(trial_id, before_model, before_id, "finish", after_id)
     elif after_model == "activation":
-        query = (
-            successor_id(trial_id, before_model, before_id, "evaluation", after_id) &
-            activation(trial_id, after_id)
-        )
+        query = successor_id(
+            trial_id, before_model, before_id, "evaluation", after_id
+        ) & activation(trial_id, after_id)
     if query is not None:
         for result, binds in _apply(_binds, query):
             yield result, binds
     else:
         ts1, ts2 = var("_ts1 _ts2")
-        query = (
-            timestamp_id(trial_id, before_id, ts1, before_model) &
-            timestamp_id(trial_id, after_id, ts2, after_model)
+        query = timestamp_id(trial_id, before_id, ts1, before_model) & timestamp_id(
+            trial_id, after_id, ts2, after_model
         )
         for result, binds in _apply(_binds, query):
             if ts1.bound <= ts2.bound:
                 yield result, binds
+
 
 @prolog_rule("timestamp(TrialId, Name, Timestamp, Model) :-")
 @prolog_rule("    timestamp_id(TrialId, Id, Timestamp, Model),")
@@ -150,9 +154,15 @@ def successor_id(trial_id, before_model, before_id, after_model, after_id, _bind
 @prolog_rule("timestamp(TrialId, Name, Timestamp, finish) :-")
 @prolog_rule("    timestamp_id(TrialId, Id, Timestamp, finish),")
 @prolog_rule("    name(TrialId, activation, Id, Name).")
-@restrict_rule(model_moment=[
-    "start", "finish", "activation", "evaluation", "access",
-])
+@restrict_rule(
+    model_moment=[
+        "start",
+        "finish",
+        "activation",
+        "evaluation",
+        "access",
+    ]
+)
 @set_options_in_rule(name=["trial", BLANK])
 @set_options_in_rule(model_moment=["start", "finish", BLANK])
 @create_rule
@@ -167,10 +177,10 @@ def timestamp(trial_id, name, timestamp, model_moment):
         id = var("_")
         if model_moment in ("start", "finish"):
             name_model = "activation"
-        return (
-            timestamp_id(trial_id, id, timestamp, model_moment) &
-            _name(trial_id, name_model, id, name)
+        return timestamp_id(trial_id, id, timestamp, model_moment) & _name(
+            trial_id, name_model, id, name
         )
+
 
 @prolog_rule("duration(TrialId, Name, Duration) :-")
 @prolog_rule("    duration_id(TrialId, Id, Duration),")
@@ -187,21 +197,19 @@ def duration(trial_id, name, duration):
         return duration_id(trial_id, 0, duration)
 
     id = var("_")
-    return (
-        duration_id(trial_id, id, duration) &
-        _name(trial_id, "activation", id, name)
-    )
+    return duration_id(trial_id, id, duration) & _name(trial_id, "activation", id, name)
+
 
 @prolog_rule("successor(TrialId, BeforeModel, BeforeName, AfterModel, AfterName) :-")
 @prolog_rule("    successor_id(TrialId, BeforeModel, BeforeId, AfterModel, AfterId),")
 @prolog_rule("    name(TrialId, BeforeModel, BeforeId, BeforeName),")
 @prolog_rule("    name(TrialId, AfterModel, AfterId, AfterName).")
-@restrict_rule(before_model=[
-    "start", "finish", "activation", "evaluation", "access", "trial"
-])
-@restrict_rule(after_model=[
-    "start", "finish", "activation", "evaluation", "access", "trial"
-])
+@restrict_rule(
+    before_model=["start", "finish", "activation", "evaluation", "access", "trial"]
+)
+@restrict_rule(
+    after_model=["start", "finish", "activation", "evaluation", "access", "trial"]
+)
 @create_rule
 def successor(trial_id, before_model, before_name, after_model, after_name):
     """match *BeforeModel* instance (*BeforeName*) that ocurred
@@ -211,7 +219,7 @@ def successor(trial_id, before_model, before_name, after_model, after_name):
     """
     before_id, after_id = var("_before_id _after_id")
     return (
-        successor_id(trial_id, before_model, before_id, after_model, after_id) &
-        _name(trial_id, before_model, before_id, before_name) &
-        _name(trial_id, after_model, after_id, after_name)
+        successor_id(trial_id, before_model, before_id, after_model, after_id)
+        & _name(trial_id, before_model, before_id, before_name)
+        & _name(trial_id, after_model, after_id, after_name)
     )

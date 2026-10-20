@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Definition provenance analyzer - builds control flow graphs"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import defaultdict
@@ -84,7 +85,7 @@ class DefinitionProvenanceAnalyzer:
     def _create_condition_node(self):
         """Tag condition elements with their parent IF node"""
         for index, node in enumerate(self.node_hash):
-            if 'if' not in node:
+            if "if" not in node:
                 continue
 
             last_loop = SyntaxUtils.get_index_array(self.last[index], self.start)
@@ -120,12 +121,16 @@ class DefinitionProvenanceAnalyzer:
                 if SyntaxUtils.compare_condition(last_node):
                     while True:
                         if SyntaxUtils.compare_condition(last_node):
-                            last_else = SyntaxUtils.get_index_array(self.last[last_else], self.start)
+                            last_else = SyntaxUtils.get_index_array(
+                                self.last[last_else], self.start
+                            )
                             value = last_else - 1
                             last_node = self.node_hash[last_else]
                             break
                         else:
-                            else_ = SyntaxUtils.get_index_array(self.last[value], self.start)
+                            else_ = SyntaxUtils.get_index_array(
+                                self.last[value], self.start
+                            )
                             self.graphviz.edge(self.node_hash[else_], last_node)
                             self.visited_x.append(self.node_hash[else_])
                             self.visited_y.append(last_node)
@@ -140,12 +145,12 @@ class DefinitionProvenanceAnalyzer:
         """Chain together IF → ELIF → ELIF → ELSE sequences"""
         for index, node in enumerate(self.node_hash):
             there_element = self.node_else[index] is not None
-            if there_element and 'if' in node and 'else' in str(self.node_else[index]):
+            if there_element and "if" in node and "else" in str(self.node_else[index]):
                 this_item = self.node_hash.index(self.node_else[index]) - 1
                 next_item = self.node_hash.index(self.node_else[index])
 
                 while True:
-                    if 'else' in self.node_hash[next_item]:
+                    if "else" in self.node_hash[next_item]:
                         node_else = self.node_else[next_item]
                         next_item = self.node_hash.index(node_else)
                     else:
@@ -155,13 +160,13 @@ class DefinitionProvenanceAnalyzer:
     def _update_sequences_if_else(self):
         """Mark nodes with special handling (append '*' marker)"""
         for key, node in enumerate(self.node_hash):
-            if 'if' in node and self.node_else[key] is None:
+            if "if" in node and self.node_else[key] is None:
                 node_if = SyntaxUtils.get_index_array(self.last[key], self.start)
 
-                if 'else' in self.node_hash[node_if + 1]:
-                    self.node_else[key] = '{}*'.format(self.node_else[node_if + 1])
+                if "else" in self.node_hash[node_if + 1]:
+                    self.node_else[key] = "{}*".format(self.node_else[node_if + 1])
                 else:
-                    self.node_else[key] = '{}*'.format(self.node_hash[node_if + 1])
+                    self.node_else[key] = "{}*".format(self.node_hash[node_if + 1])
 
     def _get_call_back(self):
         """Create back-edge from last node in loop body → loop header"""
@@ -175,11 +180,12 @@ class DefinitionProvenanceAnalyzer:
 
             linked_back = SyntaxUtils.get_object_array(self.last[index], self.start)
 
-            if linked_back is not None and self.node_hash[linked_back] not in visited_array:
+            if (
+                linked_back is not None
+                and self.node_hash[linked_back] not in visited_array
+            ):
                 self.graphviz.edge(
-                    self.node_hash[linked_back],
-                    current_node,
-                    style='dashed'
+                    self.node_hash[linked_back], current_node, style="dashed"
                 )
                 visited_array.append(self.node_hash[linked_back])
 
@@ -201,7 +207,7 @@ class DefinitionProvenanceAnalyzer:
 
                 if there_element and check_element:
                     node_next = self.node_for[self._get_return_loop(node_loop)]
-                    self.graphviz.edge(node_back, node_next, style='dashed')
+                    self.graphviz.edge(node_back, node_next, style="dashed")
 
     def _get_return_loop(self, node_loop):
         """Helper to find loop return point"""
@@ -226,9 +232,7 @@ class DefinitionProvenanceAnalyzer:
             if column_node == self.column[last_node + 1]:
                 self.node_end_for[index] = self.node_hash[last_node + 1]
                 self.graphviz.edge(
-                    item,
-                    self.node_hash[last_node + 1],
-                    label=" End Loop"
+                    item, self.node_hash[last_node + 1], label=" End Loop"
                 )
                 self.visited_x.append(self.node_hash[last_node])
                 self.visited_y.append(self.node_hash[last_node + 1])
@@ -242,9 +246,7 @@ class DefinitionProvenanceAnalyzer:
                             check_column = self.column[index_node] < column_node
                             if check_column:
                                 self.graphviz.edge(
-                                    item,
-                                    self.node_hash[index_node],
-                                    label=" End Loop"
+                                    item, self.node_hash[index_node], label=" End Loop"
                                 )
                                 self.node_end_for[index] = self.node_hash[index_node]
                                 break
@@ -253,7 +255,7 @@ class DefinitionProvenanceAnalyzer:
     def _check_try(self):
         """Find all exception handlers and finally blocks for each try"""
         for index, node in enumerate(self.node_hash):
-            if 'try' not in node:
+            if "try" not in node:
                 continue
 
             try_column = self.column[index]
@@ -263,11 +265,11 @@ class DefinitionProvenanceAnalyzer:
                 if try_final == self.start[index2]:
                     break
 
-                if 'exception' in self.node_hash[index2]:
+                if "exception" in self.node_hash[index2]:
                     if try_column == self.column[index2]:
                         self.try_except[node].append(self.node_hash[index2])
 
-                elif 'finally' in self.node_hash[index2]:
+                elif "finally" in self.node_hash[index2]:
                     if try_column == self.column[index2]:
                         self.try_except[node].append(self.node_hash[index2])
 
@@ -276,9 +278,9 @@ class DefinitionProvenanceAnalyzer:
             check = False
 
             if count == 1:
-                check = 'finally' in self.try_except[key][0]
+                check = "finally" in self.try_except[key][0]
             if count == 2:
-                check = 'finally' in self.try_except[key][1]
+                check = "finally" in self.try_except[key][1]
 
             check_structure = False
             if check:
@@ -286,7 +288,7 @@ class DefinitionProvenanceAnalyzer:
                 last = SyntaxUtils.get_index_array(self.last[element], self.start)
                 self.graphviz.edge(key, self.try_except[key][1])
 
-                if 'exception' in self.try_except[key][count - 2]:
+                if "exception" in self.try_except[key][count - 2]:
                     check_structure = True
                     exception_node = self.try_except[key][count - 2]
                     element = self.node_hash.index(exception_node) - 1
@@ -296,7 +298,7 @@ class DefinitionProvenanceAnalyzer:
 
             element = self.node_hash.index(key)
             last = SyntaxUtils.get_index_array(self.last[element], self.start)
-            self.graphviz.edge(key, self.node_hash[last + 1], style='dashed')
+            self.graphviz.edge(key, self.node_hash[last + 1], style="dashed")
 
             if check_structure:
                 self.visited_y.append(self.node_hash[last + 1])
@@ -306,7 +308,7 @@ class DefinitionProvenanceAnalyzer:
         try:
             for i in range(0, len(self.node_hash) - 1):
                 current = self.node_hash[i]
-                if 'try' not in current:
+                if "try" not in current:
                     continue
 
                 intervalo_final = self.last[i]
@@ -318,7 +320,7 @@ class DefinitionProvenanceAnalyzer:
                         self.node_else[i] = self.node_hash[intervalo_start + 1]
                         break
 
-                    if 'exception' in self.node_hash[intervalo_start]:
+                    if "exception" in self.node_hash[intervalo_start]:
                         self.node_if[intervalo_start] = current
                         line_exception = intervalo_start
 
@@ -327,37 +329,37 @@ class DefinitionProvenanceAnalyzer:
                 if line_exception != -1:
                     self.node_else[line_exception - 1] = self.node_else[i]
         except Exception:
-            print('Error in try/exception linking!')
+            print("Error in try/exception linking!")
 
     def _start_node(self):
         """Create initial 'Start' node"""
-        self.node_hash.append('start')
+        self.node_hash.append("start")
         self.node_else.append(None)
         self.node_if.append(None)
         self.last.append(0)
         self.start.append(0)
         self.column.append(0)
-        self.block.append('Start')
-        self.type.append('start-code')
+        self.block.append("Start")
+        self.type.append("start-code")
         self.hash_index.append(0)
-        self.graphviz.node('start', label='Start')
-        self.generic_hash.append('{}name{}'.format(0, 0))
+        self.graphviz.node("start", label="Start")
+        self.generic_hash.append("{}name{}".format(0, 0))
         return True
 
     def _create_global_end_node(self):
         """Create final 'End' node"""
-        self.node_hash.append('end')
+        self.node_hash.append("end")
         self.node_else.append(None)
         self.node_if.append(None)
         self.last.append(self.last[-1] + 1)
         self.start.append(self.last[-1] + 1)
         self.column.append(0)
-        self.block.append('End')
-        self.type.append('end-code')
-        self.graphviz.node('end', label='End')
-        element = '{}{}'.format(self.last[-1] + 1, 0)
+        self.block.append("End")
+        self.type.append("end-code")
+        self.graphviz.node("end", label="End")
+        element = "{}{}".format(self.last[-1] + 1, 0)
         self.hash_index.append(int(element))
-        self.generic_hash.append('{}name{}'.format(self.last[-1] + 1, 0))
+        self.generic_hash.append("{}name{}".format(self.last[-1] + 1, 0))
         return True
 
     def _create_function_list(self):
@@ -368,7 +370,7 @@ class DefinitionProvenanceAnalyzer:
     def _limited(self):
         """Mark all nodes within functions"""
         for index, node in enumerate(self.node_hash):
-            if 'function_def' not in node:
+            if "function_def" not in node:
                 continue
 
             index_start = index
@@ -405,13 +407,13 @@ class DefinitionProvenanceAnalyzer:
     def _get_point_code(self):
         """Connect Start node to first code node"""
         for index, node in enumerate(self.node_hash):
-            if self.def_list[index] is None and 'start' not in node:
-                self.graphviz.edge('start', node)
+            if self.def_list[index] is None and "start" not in node:
+                self.graphviz.edge("start", node)
                 break
 
     def _create_hash_code(self, x, y, z):
         """Generate hash code for node ID"""
-        return '{}{}{}'.format(x, y, z)
+        return "{}{}{}".format(x, y, z)
 
     def _arguments_selection(self, start):
         """Get function arguments from database"""
@@ -433,7 +435,7 @@ class DefinitionProvenanceAnalyzer:
             start_line, final_line, types_line, block_line, colum_line = codes
 
             nodes_hash = self._create_hash_code(start_line, types_line, final_line)
-            label = mapper.get_element('label', start_line, block_line)
+            label = mapper.get_element("label", start_line, block_line)
 
             if nodes_hash in self.node_hash:
                 continue
@@ -443,7 +445,7 @@ class DefinitionProvenanceAnalyzer:
             if types_line in SyntaxUtils.get_others():
                 check, self.graphviz = drawer.assign(nodes_hash, label)
 
-            elif types_line == 'class_def':
+            elif types_line == "class_def":
                 self.class_def_name.append(block_line)
                 self.class_def_start.append(start_line)
                 self.class_def_final.append(final_line)
@@ -452,46 +454,48 @@ class DefinitionProvenanceAnalyzer:
                 self.call[nodes_hash].append(block_line)
                 check, self.graphviz = drawer.calls(nodes_hash, label)
 
-            elif types_line == 'import':
+            elif types_line == "import":
                 check, self.graphviz = drawer.imports(nodes_hash, label)
 
-            elif types_line == 'return':
+            elif types_line == "return":
                 check, self.graphviz = drawer.calls(nodes_hash, label)
 
-            elif types_line == 'function_def':
+            elif types_line == "function_def":
                 self.defs[nodes_hash].append(block_line)
                 args = self._arguments_selection(start_line)
-                text = mapper.get_element('function', start_line, block_line, args)
+                text = mapper.get_element("function", start_line, block_line, args)
                 check, self.graphviz = drawer.calls(nodes_hash, text)
 
-            elif types_line in ['if', 'elif', 'else', 'for', 'while']:
-                array = block_line.split('\n')
-                text = mapper.get_element('label', start_line, array[0].split(' ')[0])
-                condition = mapper.get_element('condition', types_line, array[0])
+            elif types_line in ["if", "elif", "else", "for", "while"]:
+                array = block_line.split("\n")
+                text = mapper.get_element("label", start_line, array[0].split(" ")[0])
+                condition = mapper.get_element("condition", types_line, array[0])
                 check, self.graphviz = drawer.condition(nodes_hash, text, condition)
 
-            elif types_line in SyntaxUtils.get_try() or block_line == 'finally:':
-                if types_line == 'try':
-                    text = mapper.get_element('label', start_line, 'try')
+            elif types_line in SyntaxUtils.get_try() or block_line == "finally:":
+                if types_line == "try":
+                    text = mapper.get_element("label", start_line, "try")
                     check, self.graphviz = drawer.exceptions(nodes_hash, text)
-                elif block_line == 'finally:':
-                    nodes_hash = self._create_hash_code(start_line, 'finally', colum_line)
-                    text = mapper.get_element('label', start_line, 'finally')
+                elif block_line == "finally:":
+                    nodes_hash = self._create_hash_code(
+                        start_line, "finally", colum_line
+                    )
+                    text = mapper.get_element("label", start_line, "finally")
                     check, self.graphviz = drawer.calls(nodes_hash, text)
-                elif types_line == 'exception':
-                    text = mapper.get_element('label', start_line, 'except')
+                elif types_line == "exception":
+                    text = mapper.get_element("label", start_line, "except")
                     check, self.graphviz = drawer.exceptions(nodes_hash, text)
 
-            elif block_line == 'else:':
-                nodes_hash = self._create_hash_code(start_line, 'else', colum_line)
-                text = mapper.get_element('label', start_line, 'else')
+            elif block_line == "else:":
+                nodes_hash = self._create_hash_code(start_line, "else", colum_line)
+                text = mapper.get_element("label", start_line, "else")
                 check, self.graphviz = drawer.calls(nodes_hash, text)
 
             if check:
                 dict_item = {str(colum_line): nodes_hash}
                 self.arrayHashing[start_line].append(dict_item)
-                generic = '{}name{}'.format(start_line, colum_line)
-                element = '{}{}'.format(start_line, colum_line)
+                generic = "{}name{}".format(start_line, colum_line)
+                element = "{}{}".format(start_line, colum_line)
                 self.hash_index.append(int(element))
                 self.generic_hash.append(generic)
                 self.block.append(block_line)
@@ -506,7 +510,7 @@ class DefinitionProvenanceAnalyzer:
     def _create_function_end_list(self):
         """Track function end points"""
         for i in range(0, len(self.node_hash)):
-            if 'function_def' not in self.node_hash[i]:
+            if "function_def" not in self.node_hash[i]:
                 continue
 
             end_index = SyntaxUtils.get_index_array(self.last[i], self.start)
@@ -522,29 +526,30 @@ class DefinitionProvenanceAnalyzer:
                 name_call = self.call[key_call][0]
 
                 if name_call.find(name_def) != -1:
-                    self.graphviz.edge(key_call, key_def, style='dashed')
+                    self.graphviz.edge(key_call, key_def, style="dashed")
 
     def _create_elif_list(self):
         """Create elif connection list"""
         for index, node in enumerate(self.node_hash):
-            if 'if' not in node and 'elif' not in node:
+            if "if" not in node and "elif" not in node:
                 continue
 
             id_node = index
             column = self.column[index]
 
             for k in range(index + 1, len(self.node_hash)):
-                if 'elif' in self.node_hash[k] and column == self.column[k]:
+                if "elif" in self.node_hash[k] and column == self.column[k]:
                     self.node_else[id_node] = self.node_hash[k]
                     if self.def_list[id_node] is None:
-                        self.graphviz.edge(node, self.node_hash[k], label=' False')
+                        self.graphviz.edge(node, self.node_hash[k], label=" False")
                     else:
                         if self.def_list[id_node] == self.def_list[k]:
-                            self.graphviz.edge(node, self.node_hash[k], label=' False')
+                            self.graphviz.edge(node, self.node_hash[k], label=" False")
                     break
 
     def _edge_back_in_loops(self):
         """Mark nodes within loops"""
+
         def return_object(element):
             obj = -1
             for index in range(len(self.start) - 1, -1, -1):
@@ -565,22 +570,22 @@ class DefinitionProvenanceAnalyzer:
     def _create_boxes_in_functions(self):
         """Create dashed box boundaries around function bodies"""
         for index, node in enumerate(self.node_hash):
-            if 'function_def' not in node:
+            if "function_def" not in node:
                 continue
 
             border = SyntaxUtils.get_index_array(self.last[index], self.start)
 
-            cluster_name = 'cluster{}'.format(index)
+            cluster_name = "cluster{}".format(index)
             with self.graphviz.subgraph(name=cluster_name) as subgroup:
-                subgroup.attr(style='dashed')
+                subgroup.attr(style="dashed")
 
                 for index_2 in range(index, border + 1):
                     nodes = self.node_hash[index_2]
                     subgroup.node(nodes)
 
-                    condition = ['for', 'while', 'if', 'elif']
+                    condition = ["for", "while", "if", "elif"]
                     if any(x in nodes for x in condition):
-                        subgroup.node(nodes + 'c')
+                        subgroup.node(nodes + "c")
 
     def linking_nodes_graph(self):
         """Create edges between nodes based on control flow"""
@@ -590,54 +595,62 @@ class DefinitionProvenanceAnalyzer:
             current = self.node_hash[i]
             next_node = self.node_hash[i + 1]
 
-            visit_x = (current not in self.visited_x)
-            visit_y = (next_node not in self.visited_y)
-            visit_z = (current not in hash_loop)
+            visit_x = current not in self.visited_x
+            visit_y = next_node not in self.visited_y
+            visit_z = current not in hash_loop
             checking = visit_x and visit_y and visit_z
 
             if not checking:
                 continue
 
-            if (('if' not in current) and ('else' not in current) and
-                (self.node_else[i] is not None) and (self.node_for[i] is not None)):
+            if (
+                ("if" not in current)
+                and ("else" not in current)
+                and (self.node_else[i] is not None)
+                and (self.node_for[i] is not None)
+            ):
                 self.graphviz.edge(current, self.node_for[i], style="dashed")
 
             elif current in self.def_function_after:
                 continue
 
-            elif 'function_def' in next_node:
+            elif "function_def" in next_node:
                 if next_node in self.def_function:
                     index_def_node = self.def_function.index(next_node)
                     self.graphviz.edge(current, self.def_function_final[index_def_node])
 
-            elif 'if' in current:
-                self.graphviz.edge(current, next_node, label='   True')
+            elif "if" in current:
+                self.graphviz.edge(current, next_node, label="   True")
 
-                if '*' in str(self.node_else[i]):
+                if "*" in str(self.node_else[i]):
                     hash_string = self.node_else[i]
                     if self.node_for[i] is not None:
-                        item_false = self.node_hash.index(hash_string[0:len(hash_string) - 1])
+                        item_false = self.node_hash.index(
+                            hash_string[0 : len(hash_string) - 1]
+                        )
                         if self.node_for[i] != self.node_for[item_false]:
-                            self.graphviz.edge(current, self.node_for[i], label='   False')
+                            self.graphviz.edge(
+                                current, self.node_for[i], label="   False"
+                            )
                         else:
                             self.graphviz.edge(
                                 current,
-                                hash_string[0:len(hash_string) - 1],
-                                label='   False'
+                                hash_string[0 : len(hash_string) - 1],
+                                label="   False",
                             )
 
-            elif 'try' in current:
+            elif "try" in current:
                 self.graphviz.edge(current, next_node)
 
-            elif 'exception' in current:
+            elif "exception" in current:
                 self.graphviz.edge(self.node_if[i], self.node_hash[i])
                 self.graphviz.edge(current, next_node)
 
-            elif 'else' in current:
-                self.graphviz.edge(self.node_if[i], self.node_hash[i], label='   False')
+            elif "else" in current:
+                self.graphviz.edge(self.node_if[i], self.node_hash[i], label="   False")
                 self.graphviz.edge(current, next_node)
 
-            elif 'for' in current or 'while' in current:
+            elif "for" in current or "while" in current:
                 self.graphviz.edge(current, next_node)
 
             else:
@@ -664,8 +677,13 @@ class DefinitionProvenanceAnalyzer:
         results = query.all()
         if results:
             return [
-                (comp.first_char_line, comp.last_char_line, comp.type,
-                 comp.name, comp.first_char_column)
+                (
+                    comp.first_char_line,
+                    comp.last_char_line,
+                    comp.type,
+                    comp.name,
+                    comp.first_char_column,
+                )
                 for comp in results
             ]
         else:

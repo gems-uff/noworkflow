@@ -28,6 +28,7 @@ have a characterization of today's behavior and a ``_desired`` twin marked
 through ``known_defects``; their mechanisms are plain Python, the same on
 every system (measured on macOS with Python 3.11 to 3.15).
 """
+
 import os
 
 import nbformat
@@ -50,10 +51,10 @@ PREAMBLE = "%load_ext noworkflow\nimport noworkflow.now.ipython as nip"
 # (tracebacks name files under it), unless it is a root ("/" in some
 # containers), whose pattern would match between any two characters.
 REAL_HOME = os.path.expanduser("~")
-HOME_MASK = ([("<REAL_HOME>", REAL_HOME)]
-             if os.path.dirname(REAL_HOME) != REAL_HOME else [])
-OPTION_DROPPED = (
-    "-t is dropped: `clean -t <trial>` prints what `clean` alone prints")
+HOME_MASK = (
+    [("<REAL_HOME>", REAL_HOME)] if os.path.dirname(REAL_HOME) != REAL_HOME else []
+)
+OPTION_DROPPED = "-t is dropped: `clean -t <trial>` prints what `clean` alone prints"
 # The metadata of an exported notebook that names a Python version, and
 # what it says today.
 PYTHON2_FIELDS = {
@@ -118,13 +119,16 @@ PYTHON2_KERNEL = Defect(
 @pytest.fixture(scope="module")
 def _notebook_store(tmp_path_factory):
     project = NowProject(tmp_path_factory.mktemp("notebook_cli"))
-    project.mask = Normalizer([
-        ("<PROJECT>", project.path),
-        ("<HOME>", project.home),
-        ("<TMP>", project.tmp),
-        ("<ROOT>", project.root),
-        ("<BASETEMP>", tmp_path_factory.getbasetemp()),
-    ] + HOME_MASK)
+    project.mask = Normalizer(
+        [
+            ("<PROJECT>", project.path),
+            ("<HOME>", project.home),
+            ("<TMP>", project.tmp),
+            ("<ROOT>", project.root),
+            ("<BASETEMP>", tmp_path_factory.getbasetemp()),
+        ]
+        + HOME_MASK
+    )
     project.write("script.py", SCRIPT)
     for _ in range(2):
         result = now(project, "run", "script.py")
@@ -139,7 +143,8 @@ def store(_notebook_store):
     before = _notebook_store.fingerprint()
     yield _notebook_store
     assert _notebook_store.fingerprint() == before, (
-        "the test changed the store of script.py")
+        "the test changed the store of script.py"
+    )
 
 
 def describe(project, result):
@@ -161,8 +166,10 @@ def now(project, *args, expect=0, allow_stderr=False, cwd=None):
     ended = expect is None or result.returncode == expect
     quiet = allow_stderr or result.stderr == ""
     assert ended and quiet, "expected return code {}{}\n{}".format(
-        expect, "" if allow_stderr else " and an empty stderr",
-        describe(project, result))
+        expect,
+        "" if allow_stderr else " and an empty stderr",
+        describe(project, result),
+    )
     return result
 
 
@@ -182,8 +189,17 @@ def export(project, directory, *args, expect=0):
     """
     directory.mkdir(exist_ok=True)
     before = set(path.name for path in directory.iterdir())
-    result = now(project, "export", "ipynb", *args, "--dir", project.path,
-                 cwd=directory, expect=expect, allow_stderr=True)
+    result = now(
+        project,
+        "export",
+        "ipynb",
+        *args,
+        "--dir",
+        project.path,
+        cwd=directory,
+        expect=expect,
+        allow_stderr=True,
+    )
     created = set(path.name for path in directory.iterdir()) - before
     return result, sorted(created)
 
@@ -297,8 +313,7 @@ def test_clean_index_past_the_last_evaluation(store):
         result = now(store, "clean", first, "-i", index)
         same = result.stdout == NOT_A_NOTEBOOK.format(first)
         assert same, describe(store, result)
-    result = now(store, "clean", first, "-i", count + 1, expect=1,
-                 allow_stderr=True)
+    result = now(store, "clean", first, "-i", count + 1, expect=1, allow_stderr=True)
     crashed = last_line(result.stderr) == INDEX_ERROR
     assert crashed, describe(store, result)
 
@@ -311,12 +326,11 @@ def test_clean_index_past_the_last_evaluation_desired(store):
     first = trial_ids(store)[0]
     count = store.count("evaluation", first)
     past, further = (
-        now(store, "clean", first, "-i", index, expect=None,
-            allow_stderr=True)
-        for index in (count + 1, count + 2))
+        now(store, "clean", first, "-i", index, expect=None, allow_stderr=True)
+        for index in (count + 1, count + 2)
+    )
     same = outcome(past) == outcome(further)
-    assert same, "-i N+1 does not end as -i N+2 does\n{}".format(
-        describe(store, past))
+    assert same, "-i N+1 does not end as -i N+2 does\n{}".format(describe(store, past))
 
 
 def test_evaluation_index_of_a_query_that_matches_nothing(store):
@@ -344,10 +358,10 @@ def test_evaluation_index_of_a_query_that_matches_nothing_desired(store):
     query = ("evaluation", "-t", trial_ids(store)[0]) + NO_MATCH
     first, second = (
         now(store, *query, "-i", index, expect=None, allow_stderr=True)
-        for index in (1, 2))
+        for index in (1, 2)
+    )
     same = outcome(first) == outcome(second)
-    assert same, "-i 1 does not end as -i 2 does\n{}".format(
-        describe(store, first))
+    assert same, "-i 1 does not end as -i 2 does\n{}".format(describe(store, first))
 
 
 def test_evaluation_index_below_one(store):
@@ -375,8 +389,16 @@ def test_evaluation_index_below_one_desired(store):
     """
     first = trial_ids(store)[0]
     for index in (0, -1):
-        result = now(store, "evaluation", "-t", first, "-i", index,
-                     expect=None, allow_stderr=True)
+        result = now(
+            store,
+            "evaluation",
+            "-t",
+            first,
+            "-i",
+            index,
+            expect=None,
+            allow_stderr=True,
+        )
         selected = result.stdout.startswith("Found 1 evaluation(s)")
         assert not selected, "-i {} selects an evaluation".format(index)
         assert "Traceback" not in result.stderr, describe(store, result)
@@ -389,25 +411,33 @@ def export_forms(ids):
     """``{form id: (argument, file name, second cell, last cell)}``"""
     first, second = ids
     return {
-        "id": (first, "Trial-{}.ipynb".format(first),
-               "trial = nip.Trial('{}')".format(first), "trial"),
-        "sequence-key": ("1", "Trial-1.ipynb", "trial = nip.Trial('1')",
-                         "trial"),
-        "history": ("history", "History.ipynb", "history = nip.History()",
-                    "history"),
-        "diff-ids": ("diff:{}:{}".format(first, second),
-                     "Diff-{}-{}.ipynb".format(first, second),
-                     "diff = nip.Diff('{}', '{}')".format(first, second),
-                     "diff"),
-        "diff-sequence-keys": ("diff:1:2", "Diff-1-2.ipynb",
-                               "diff = nip.Diff('1', '2')", "diff"),
+        "id": (
+            first,
+            "Trial-{}.ipynb".format(first),
+            "trial = nip.Trial('{}')".format(first),
+            "trial",
+        ),
+        "sequence-key": ("1", "Trial-1.ipynb", "trial = nip.Trial('1')", "trial"),
+        "history": ("history", "History.ipynb", "history = nip.History()", "history"),
+        "diff-ids": (
+            "diff:{}:{}".format(first, second),
+            "Diff-{}-{}.ipynb".format(first, second),
+            "diff = nip.Diff('{}', '{}')".format(first, second),
+            "diff",
+        ),
+        "diff-sequence-keys": (
+            "diff:1:2",
+            "Diff-1-2.ipynb",
+            "diff = nip.Diff('1', '2')",
+            "diff",
+        ),
     }
 
 
-@pytest.mark.parametrize("form", [
-    "id", "sequence-key", "history", "diff-ids", "diff-sequence-keys"])
-def test_export_ipynb_names_the_notebook_after_its_argument(
-        store, tmp_path, form):
+@pytest.mark.parametrize(
+    "form", ["id", "sequence-key", "history", "diff-ids", "diff-sequence-keys"]
+)
+def test_export_ipynb_names_the_notebook_after_its_argument(store, tmp_path, form):
     """Each form writes one notebook into the current directory, named
     after the argument as typed, and prints nothing
 
@@ -430,8 +460,7 @@ def test_export_ipynb_names_the_notebook_after_its_argument(
 
 
 @pytest.mark.parametrize("argument", ["nonexistent", "diff:1:nonexistent"])
-def test_export_ipynb_of_a_missing_trial_writes_nothing(
-        store, tmp_path, argument):
+def test_export_ipynb_of_a_missing_trial_writes_nothing(store, tmp_path, argument):
     """A trial that does not exist is reported as not found, and no
     notebook is written
 
@@ -452,8 +481,7 @@ def test_export_ipynb_diff_of_one_trial(store, tmp_path, argument):
     Characterization of #392.
     """
     result, created = export(store, tmp_path / "out", argument, expect=1)
-    crashed = (result.stdout == ""
-               and last_line(result.stderr) == "KeyError: 2")
+    crashed = result.stdout == "" and last_line(result.stderr) == "KeyError: 2"
     assert crashed, describe(store, result)
     assert created == [], describe(store, result)
 
@@ -467,8 +495,9 @@ def test_export_ipynb_diff_of_one_trial_desired(store, tmp_path, argument):
     result, created = export(store, tmp_path / "out", argument, expect=None)
     reported = (result.stdout + result.stderr).strip() != ""
     traceback = "Traceback" in result.stderr
-    assert reported and not traceback and created == [], (
-        "{}\ncreated: {}".format(describe(store, result), created))
+    assert reported and not traceback and created == [], "{}\ncreated: {}".format(
+        describe(store, result), created
+    )
 
 
 def test_export_ipynb_declares_a_kernel(store, tmp_path):
@@ -479,7 +508,10 @@ def test_export_ipynb_declares_a_kernel(store, tmp_path):
     """
     notebook = exported_notebook(store, tmp_path)
     assert notebook.metadata.kernelspec == {
-        "display_name": "Python 2", "language": "python", "name": "python2"}
+        "display_name": "Python 2",
+        "language": "python",
+        "name": "python2",
+    }
     assert python_fields(notebook) == PYTHON2_FIELDS
 
 
@@ -495,10 +527,13 @@ def test_export_ipynb_declares_a_kernel_desired(store, tmp_path):
         "lexer": found["lexer"] == "ipython3",
         "codemirror mode version": found["codemirror mode version"] == 3,
     }
-    still = [field for field, value in found.items()
-             if value == PYTHON2_FIELDS[field]]
-    other = ["{} {!r}".format(field, value) for field, value in found.items()
-             if not python3[field] and field not in still]
+    still = [field for field, value in found.items() if value == PYTHON2_FIELDS[field]]
+    other = [
+        "{} {!r}".format(field, value)
+        for field, value in found.items()
+        if not python3[field] and field not in still
+    ]
     wrong = (["still Python 2: " + ", ".join(still)] if still else []) + (
-        ["not Python 3: " + ", ".join(other)] if other else [])
+        ["not Python 3: " + ", ".join(other)] if other else []
+    )
     assert not wrong, "; ".join(wrong)

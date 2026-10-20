@@ -14,6 +14,6 @@ _HISTORY = ("get_cells", "create_clean", "create_merged_from_cells")
 def __getattr__(name):
     if name in _HISTORY:
         from . import history
+
         return getattr(history, name)
-    raise AttributeError("module {!r} has no attribute {!r}".format(
-        __name__, name))
+    raise AttributeError("module {!r} has no attribute {!r}".format(__name__, name))

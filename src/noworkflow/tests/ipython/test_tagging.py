@@ -44,6 +44,7 @@ Known defects have a characterization of today's behavior and a
 plain Python, the same on every system (measured on macOS with Python
 3.11 to 3.15).
 """
+
 import builtins
 import dbm
 import importlib.metadata
@@ -98,9 +99,16 @@ TAGGED = (
 # The tags in the order the script makes them: (name, tag), the name None
 # for a cell tag (see test_stage_tags_of_each_call).
 STAGE_TAGS = [
-    ("result", "6"), ("literal", "5"), ("keyword", "4"), ("swapped", "6"),
-    ("starred", "7"), (None, "stage_one"), (None, "42"),
-    (None, "inside_function"), ("inner_var", "7"), ("unpacked", "8"),
+    ("result", "6"),
+    ("literal", "5"),
+    ("keyword", "4"),
+    ("swapped", "6"),
+    ("starred", "7"),
+    (None, "stage_one"),
+    (None, "42"),
+    (None, "inside_function"),
+    ("inner_var", "7"),
+    ("unpacked", "8"),
     ("named", "30"),
 ]
 # What backward_deps("c") returns on the trial that records every value.
@@ -121,13 +129,15 @@ NEEDS_PANDAS = (
     "needs pandas, which only the `paper` dependency group installs "
     "(#392), and no CI leg that runs this test syncs that "
     "group; runs in the reference-leg container "
-    "(.github/reference-leg/run.sh) and in a .venv synced with --group paper")
+    "(.github/reference-leg/run.sh) and in a .venv synced with --group paper"
+)
 NEEDS_PANDAS_AND_MATPLOTLIB = (
     "needs pandas, which only the `paper` dependency group installs "
     "(#392), and matplotlib, from the `demo` extra; no CI leg "
     "that runs this test syncs that group: runs in the reference-leg "
     "container (.github/reference-leg/run.sh) and in a .venv synced with "
-    "--extra demo --group paper")
+    "--extra demo --group paper"
+)
 
 TAG_LAST_ARGUMENT = Defect(
     "#391: tagging/var_tagging.py now_tag_variable "
@@ -181,13 +191,14 @@ OPS_UNPICKLE = Defect(
 
 def line_of(text):
     """The number of the line of TAGGED that holds ``text``"""
-    lines = [number for number, line in enumerate(TAGGED.split("\n"), 1)
-             if text in line]
+    lines = [
+        number for number, line in enumerate(TAGGED.split("\n"), 1) if text in line
+    ]
     assert len(lines) == 1, text
     return lines[0]
 
 
-SWAPPED = line_of("var_name=\"swapped\"")
+SWAPPED = line_of('var_name="swapped"')
 STARRED = line_of("(*args)")
 UNPACKED = line_of("(**kwargs)")
 NAMED = line_of("var_name=nm")
@@ -209,16 +220,20 @@ def _tags_store(tmp_path_factory):
     ``mask`` masks this machine's paths and hostname in a message
     """
     project = NowProject(tmp_path_factory.mktemp("tags"))
-    project.mask = Normalizer([
-        ("<PROJECT>", project.path),
-        ("<HOME>", project.home),
-        ("<TMP>", project.tmp),
-        ("<ROOT>", project.root),
-        ("<BASETEMP>", tmp_path_factory.getbasetemp()),
-    ] + HOME_MASK)
+    project.mask = Normalizer(
+        [
+            ("<PROJECT>", project.path),
+            ("<HOME>", project.home),
+            ("<TMP>", project.tmp),
+            ("<ROOT>", project.root),
+            ("<BASETEMP>", tmp_path_factory.getbasetemp()),
+        ]
+        + HOME_MASK
+    )
     project.write("tagged.py", TAGGED)
-    project.outputs = [now(project, "run", *args, "tagged.py").stdout
-                       for args in ((), ("-e", "none"))]
+    project.outputs = [
+        now(project, "run", *args, "tagged.py").stdout for args in ((), ("-e", "none"))
+    ]
     return project
 
 
@@ -228,7 +243,8 @@ def tags(_tags_store):
     before = _tags_store.fingerprint()
     yield _tags_store
     assert _tags_store.fingerprint() == before, (
-        "the test changed the store of tagged.py")
+        "the test changed the store of tagged.py"
+    )
 
 
 @pytest.fixture
@@ -246,8 +262,7 @@ def querier(monkeypatch):
     ``raising=False``: a fix that drops the class attribute
     (#392) must reach the twins, not fail their setup.
     """
-    monkeypatch.setattr(NotebookQuerierOptions, "dep_list", [],
-                        raising=False)
+    monkeypatch.setattr(NotebookQuerierOptions, "dep_list", [], raising=False)
     monkeypatch.setattr(var_tagging, "nbOptions", None, raising=False)
     monkeypatch.setattr(var_tagging, "global_dep_dict", None, raising=False)
 
@@ -256,12 +271,14 @@ def querier(monkeypatch):
 def fake_collector(monkeypatch, querier):
     """Put a fake collector, ``__noworkflow__`` for a trial id, in the
     builtins"""
+
     def install(trial_id):
         collector = types.SimpleNamespace(
-            trial_id=trial_id,
-            metascript=types.SimpleNamespace(dep_dict={}))
+            trial_id=trial_id, metascript=types.SimpleNamespace(dep_dict={})
+        )
         monkeypatch.setitem(vars(builtins), "__noworkflow__", collector)
         return collector
+
     return install
 
 
@@ -269,8 +286,7 @@ def fake_collector(monkeypatch, querier):
 def pandas_or_stand_in(monkeypatch):
     """pandas, or an empty module in its place where it is missing"""
     if importlib.util.find_spec("pandas") is None:
-        monkeypatch.setitem(sys.modules, "pandas",
-                            types.ModuleType("pandas"))
+        monkeypatch.setitem(sys.modules, "pandas", types.ModuleType("pandas"))
 
 
 @pytest.fixture
@@ -286,8 +302,8 @@ def trial_ids(project):
 
 def stage_tags(project, trial_id):
     return project.query(
-        "SELECT name, tag_name FROM stage_tags WHERE trial_id = ? "
-        "ORDER BY id", trial_id)
+        "SELECT name, tag_name FROM stage_tags WHERE trial_id = ? ORDER BY id", trial_id
+    )
 
 
 def reprs(project, trial_id):
@@ -301,22 +317,27 @@ def reprs(project, trial_id):
         "ON code_component.trial_id = evaluation.trial_id "
         "AND code_component.id = evaluation.code_component_id "
         "WHERE evaluation.trial_id = ? AND code_component.mode = 'r'",
-        trial_id)
+        trial_id,
+    )
     return {(row["line"], row["code"]): row["repr"] for row in rows}
 
 
 def wrong_reprs(found, expected):
     """``<code> has repr <repr> (line <n>)`` for each unexpected repr"""
-    return ["{} has repr {} (line {})".format(code, found.get((line, code)),
-                                             line)
-            for (line, code), value in expected.items()
-            if found.get((line, code)) != value]
+    return [
+        "{} has repr {} (line {})".format(code, found.get((line, code)), line)
+        for (line, code), value in expected.items()
+        if found.get((line, code)) != value
+    ]
 
 
 def shelve_files(directory):
     """The files of the ``ops`` shelve, whatever ``dbm`` backend made them"""
-    return [name for name in os.listdir(directory)
-            if name == "ops" or name.startswith("ops.")]
+    return [
+        name
+        for name in os.listdir(directory)
+        if name == "ops" or name.startswith("ops.")
+    ]
 
 
 def store_operations(capsys):
@@ -368,9 +389,11 @@ def close_opened(marker, returned=None, error=None):
     while traceback is not None:
         values.extend(traceback.tb_frame.f_locals.values())
         traceback = traceback.tb_next
-    opened = {id(value): value for value in values
-              if isinstance(value, io.IOBase)
-              and getattr(value, "name", None) == str(marker)}
+    opened = {
+        id(value): value
+        for value in values
+        if isinstance(value, io.IOBase) and getattr(value, "name", None) == str(marker)
+    }
     for value in opened.values():
         value.close()
     return list(opened.values())
@@ -399,9 +422,10 @@ def test_stage_tags_of_each_call(tags):
     for trial_id in trial_ids(tags):
         rows = stage_tags(tags, trial_id)
         assert len(rows) == len(STAGE_TAGS)
-        found = [(row["name"] if name is not None else None,
-                  row["tag_name"])
-                 for row, (name, _) in zip(rows, STAGE_TAGS)]
+        found = [
+            (row["name"] if name is not None else None, row["tag_name"])
+            for row, (name, _) in zip(rows, STAGE_TAGS)
+        ]
         assert found == STAGE_TAGS
 
 
@@ -413,7 +437,7 @@ def test_a_tag_keeps_the_value_a_trial_does_not_record(tags):
     expected = {
         (line_of('"result", b'), "b"): "6",
         (line_of('"literal", 5'), "5"): "5",
-        (line_of('value=a + 1'), "a + 1"): "4",
+        (line_of("value=a + 1"), "a + 1"): "4",
         (line_of('"inner_var", 7'), "7"): "7",
         (line_of("b = double(a)"), "a"): None,
         (line_of("b = double(a)"), "double(a)"): None,
@@ -448,43 +472,52 @@ def test_tag_with_the_value_not_last_desired(tags):
     value passed as ``value=`` keeps its repr
     """
     every, none = (reprs(tags, trial_id) for trial_id in trial_ids(tags))
-    wrong = wrong_reprs(every, {
-        (SWAPPED, '"swapped"'): "'swapped'",
-        (STARRED, "args"): "('starred', 7)",
-        (UNPACKED, "kwargs"): "{'var_name': 'unpacked', 'value': 8}",
-        (NAMED, "nm"): "'named'",
-    }) + wrong_reprs(none, {
-        (SWAPPED, '"swapped"'): None,
-        (SWAPPED, "b"): "6",
-        (NAMED, "nm"): None,
-        (NAMED, "a * 10"): "30",
-    })
+    wrong = wrong_reprs(
+        every,
+        {
+            (SWAPPED, '"swapped"'): "'swapped'",
+            (STARRED, "args"): "('starred', 7)",
+            (UNPACKED, "kwargs"): "{'var_name': 'unpacked', 'value': 8}",
+            (NAMED, "nm"): "'named'",
+        },
+    ) + wrong_reprs(
+        none,
+        {
+            (SWAPPED, '"swapped"'): None,
+            (SWAPPED, "b"): "6",
+            (NAMED, "nm"): None,
+            (NAMED, "a * 10"): "30",
+        },
+    )
     assert wrong == [], "; ".join(wrong)
 
 
 # --- the helpers without a kernel -------------------------------------------
 
 
-@pytest.mark.parametrize("call", [
-    lambda: var_tagging.now_tag_variable("x", 1),
-    lambda: var_tagging.now_tag_cell("stage"),
-    lambda: var_tagging.backward_deps("x"),
-    lambda: var_tagging.global_backward_deps("x"),
-], ids=["now_tag_variable", "now_tag_cell", "backward_deps",
-        "global_backward_deps"])
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda: var_tagging.now_tag_variable("x", 1),
+        lambda: var_tagging.now_tag_cell("stage"),
+        lambda: var_tagging.backward_deps("x"),
+        lambda: var_tagging.global_backward_deps("x"),
+    ],
+    ids=["now_tag_variable", "now_tag_cell", "backward_deps", "global_backward_deps"],
+)
 def test_tagging_needs_a_traced_run(call):
     """Outside a traced run there is no ``__noworkflow__`` to write to or
     to read the trial from, and the builtins have no tagging function
     """
-    injected = [name for name in ("now_tag_variable", "now_tag_cell")
-                if name in vars(builtins)]
+    injected = [
+        name for name in ("now_tag_variable", "now_tag_cell") if name in vars(builtins)
+    ]
     assert injected == []
     with pytest.raises(NameError, match="__noworkflow__"):
         call()
 
 
-def test_backward_deps_lists_what_derived_a_variable(
-        connected_tags, fake_collector):
+def test_backward_deps_lists_what_derived_a_variable(connected_tags, fake_collector):
     """``backward_deps`` numbers what derived a variable, from the variable
     back to the literals, each with its repr, and keeps the result in
     ``__noworkflow__.metascript.dep_dict``
@@ -496,7 +529,8 @@ def test_backward_deps_lists_what_derived_a_variable(
 
 
 def test_global_backward_deps_lists_what_derived_every_evaluation(
-        connected_tags, fake_collector):
+    connected_tags, fake_collector
+):
     """``global_backward_deps`` follows every evaluation of the variable,
     the write and the read: here, what the write alone shows
     """
@@ -514,10 +548,15 @@ def test_backward_deps_twice(connected_tags, fake_collector):
     fake_collector(trial_ids(connected_tags)[0])
     first = var_tagging.backward_deps("c")
     second = var_tagging.backward_deps("c")
-    assert second == {index + len(first) * copy: value
-                      for copy in (0, 1) for index, value in first.items()}
-    assert (NotebookQuerierOptions(level=False).dep_list
-            is NotebookQuerierOptions(level=True).dep_list)
+    assert second == {
+        index + len(first) * copy: value
+        for copy in (0, 1)
+        for index, value in first.items()
+    }
+    assert (
+        NotebookQuerierOptions(level=False).dep_list
+        is NotebookQuerierOptions(level=True).dep_list
+    )
 
 
 @known_defects(DEP_LIST_SHARED)
@@ -528,12 +567,13 @@ def test_backward_deps_twice_desired(connected_tags, fake_collector):
     second = var_tagging.backward_deps("c")
     doubled = sorted(second.values()) == sorted(list(first.values()) * 2)
     assert second == first, (
-        "the second call returns the first's dependencies twice" if doubled
-        else "the second call returns other dependencies: {}".format(second))
+        "the second call returns the first's dependencies twice"
+        if doubled
+        else "the second call returns other dependencies: {}".format(second)
+    )
 
 
-def test_backward_deps_of_a_trial_without_values(
-        connected_tags, fake_collector):
+def test_backward_deps_of_a_trial_without_values(connected_tags, fake_collector):
     """On a trial recorded with ``-e none`` both helpers crash on the
     missing reprs
 
@@ -543,15 +583,15 @@ def test_backward_deps_of_a_trial_without_values(
     start (#315); a fake ``__noworkflow__`` names the stored trial.
     """
     fake_collector(trial_ids(connected_tags)[1])
-    for helper in (var_tagging.backward_deps,
-                   var_tagging.global_backward_deps):
+    for helper in (var_tagging.backward_deps, var_tagging.global_backward_deps):
         with pytest.raises(TypeError, match="'NoneType' has no len"):
             helper("c")
 
 
 @known_defects(BACKWARD_DEPS_NO_VALUES)
 def test_backward_deps_of_a_trial_without_values_desired(
-        connected_tags, fake_collector):
+    connected_tags, fake_collector
+):
     """On a trial recorded with ``-e none`` ``backward_deps`` still lists
     what derived the variable, the variable first, and
     ``global_backward_deps`` returns its dependencies too
@@ -575,7 +615,9 @@ def test_store_operations_keeps_each_trial_in_a_shelve(in_tmp, capsys):
     assert written == sorted(files)
     assert sorted(var_tagging.resume_trials()) == ["A", "B"]
     assert var_tagging.trial_diff("A", "B", raw=True) == (
-        OPERATIONS["A"], OPERATIONS["B"])
+        OPERATIONS["A"],
+        OPERATIONS["B"],
+    )
     with pytest.raises(KeyError):
         var_tagging.trial_diff("A", "missing", raw=True)
 
@@ -609,21 +651,27 @@ def test_trial_diff_shows_a_table_in_the_shell(bare_shell):
     bare_shell.ok(
         "from noworkflow.now.tagging import var_tagging\n"
         "var_tagging.store_operations('A', {})\n"
-        "var_tagging.store_operations('B', {})".format(
-            OPERATIONS["A"], OPERATIONS["B"]))
+        "var_tagging.store_operations('B', {})".format(OPERATIONS["A"], OPERATIONS["B"])
+    )
     cell = bare_shell.ok("var_tagging.trial_diff('A', 'B')")
     returned = cell.result is None
     assert returned, cell.describe()
-    html = [output.data["text/html"] for output in cell.outputs
-            if "text/html" in output.data]
+    html = [
+        output.data["text/html"]
+        for output in cell.outputs
+        if "text/html" in output.data
+    ]
     assert len(html) == 1, cell.describe()
-    for text in ("Trial A", "Trial B", '"diff_sub">a,&nbsp;3<',
-                 '"diff_add">x,&nbsp;1<'):
+    for text in (
+        "Trial A",
+        "Trial B",
+        '"diff_sub">a,&nbsp;3<',
+        '"diff_add">x,&nbsp;1<',
+    ):
         assert text in html[0], text
 
 
-def test_trial_intersection_diff_of_missing_trials(
-        in_tmp, capsys, pandas_or_stand_in):
+def test_trial_intersection_diff_of_missing_trials(in_tmp, capsys, pandas_or_stand_in):
     """With trials missing from the shelve, it prints one line that names
     the first missing trial and then fails on its own variable
 
@@ -638,19 +686,18 @@ def test_trial_intersection_diff_of_missing_trials(
 
 
 @known_defects(INTERSECTION_UNBOUND)
-def test_trial_intersection_diff_of_missing_trials_desired(
-        in_tmp, pandas_or_stand_in):
+def test_trial_intersection_diff_of_missing_trials_desired(in_tmp, pandas_or_stand_in):
     """With trials missing from the shelve, the error names the trial"""
     with pytest.raises(Exception) as raised:
         var_tagging.trial_intersection_diff("missing-a", "missing-b")
     error = raised.value
     names = "missing-a" in str(error) and not isinstance(
-        error, (UnboundLocalError, NameError))
+        error, (UnboundLocalError, NameError)
+    )
     assert names, "{}: {}".format(type(error).__name__, error)
 
 
-def test_trial_intersection_diff_compares_the_common_operations(
-        in_tmp, capsys):
+def test_trial_intersection_diff_compares_the_common_operations(in_tmp, capsys):
     """A row per operation both trials have, with each trial's value"""
     pytest.importorskip("pandas", reason=NEEDS_PANDAS)
     store_operations(capsys)
@@ -684,7 +731,8 @@ def test_trial_diff_executes_code_from_the_ops_file(in_tmp, capsys):
 
 
 def test_trial_intersection_diff_executes_code_from_the_ops_file(
-        in_tmp, capsys, pandas_or_stand_in):
+    in_tmp, capsys, pandas_or_stand_in
+):
     """``trial_intersection_diff`` unpickles both trials too: on the crafted
     shelve it creates MARKER, then fails on the value the payload returned,
     a file where it expects a dict, without printing anything (reading the
@@ -695,8 +743,9 @@ def test_trial_intersection_diff_executes_code_from_the_ops_file(
     missing.
     """
     marker = craft_ops(in_tmp)
-    with pytest.raises(AttributeError,
-                       match="object has no attribute 'items'") as raised:
+    with pytest.raises(
+        AttributeError, match="object has no attribute 'items'"
+    ) as raised:
         var_tagging.trial_intersection_diff("A", "B")
     left_the_file = len(close_opened(marker, error=raised.value)) == 1
     created = marker.exists()
@@ -708,15 +757,15 @@ def test_trial_intersection_diff_executes_code_from_the_ops_file(
 # The helpers that compare two trials, each called on the crafted shelve.
 COMPARING_HELPERS = {
     "trial_diff": lambda: var_tagging.trial_diff("A", "B", raw=True),
-    "trial_intersection_diff":
-        lambda: var_tagging.trial_intersection_diff("A", "B"),
+    "trial_intersection_diff": lambda: var_tagging.trial_intersection_diff("A", "B"),
 }
 
 
 @pytest.mark.parametrize("helper", list(COMPARING_HELPERS))
 @known_defects(OPS_UNPICKLE)
 def test_comparing_two_trials_does_not_execute_code_from_the_ops_file_desired(
-        in_tmp, pandas_or_stand_in, helper):
+    in_tmp, pandas_or_stand_in, helper
+):
     """Comparing two trials never runs code that the ``ops`` file names: on
     the crafted shelve, MARKER is never created
 
@@ -736,8 +785,10 @@ def test_comparing_two_trials_does_not_execute_code_from_the_ops_file_desired(
     close_opened(marker, returned, error)
     created = marker.exists()
     assert not created, (
-        "comparing two trials ran code from the ops file: {} created "
-        "MARKER".format(helper))
+        "comparing two trials ran code from the ops file: {} created MARKER".format(
+            helper
+        )
+    )
 
 
 def test_var_tag_values_lists_a_tag_across_trials(connected_tags):
@@ -746,15 +797,14 @@ def test_var_tag_values_lists_a_tag_across_trials(connected_tags):
     """
     pytest.importorskip("pandas", reason=NEEDS_PANDAS)
     table = var_tagging.var_tag_values("result")
-    assert list(table.columns) == [
-        "trial_id", "short_trial_id", "tag", "value"]
+    assert list(table.columns) == ["trial_id", "short_trial_id", "tag", "value"]
     ids = trial_ids(connected_tags)
     assert table.values.tolist() == [
-        [trial_id, trial_id[-5:], "result", "6"] for trial_id in ids]
+        [trial_id, trial_id[-5:], "result", "6"] for trial_id in ids
+    ]
 
 
-def test_var_tag_values_of_a_tag_never_stored(
-        connected_tags, pandas_or_stand_in):
+def test_var_tag_values_of_a_tag_never_stored(connected_tags, pandas_or_stand_in):
     """A tag no trial stored raises ValueError"""
     with pytest.raises(ValueError, match="No values found for tag missing"):
         var_tagging.var_tag_values("missing")
@@ -764,16 +814,17 @@ def test_var_tag_values_of_a_tag_never_stored(
 TABLE_HELPERS = {
     "var_tag_values": lambda: var_tagging.var_tag_values("result"),
     "var_tag_plot": lambda: var_tagging.var_tag_plot("result"),
-    "trial_intersection_diff":
-        lambda: var_tagging.trial_intersection_diff("A", "B"),
+    "trial_intersection_diff": lambda: var_tagging.trial_intersection_diff("A", "B"),
 }
 
 
 def requirement_names():
     """The distributions noWorkflow requires, its extras' included"""
     requirements = importlib.metadata.requires("noworkflow") or []
-    return [re.split(r"[\s;<>=!~\[(]", requirement, maxsplit=1)[0].lower()
-            for requirement in requirements]
+    return [
+        re.split(r"[\s;<>=!~\[(]", requirement, maxsplit=1)[0].lower()
+        for requirement in requirements
+    ]
 
 
 def test_table_helpers_import_pandas(monkeypatch):
@@ -831,15 +882,22 @@ def test_var_tag_plot_draws_a_bar_per_trial(tags):
     Drawn in a child Python, with matplotlib's Agg backend and its
     configuration in the temporary directory.
     """
-    if any(importlib.util.find_spec(module) is None
-           for module in ("pandas", "matplotlib")):
+    if any(
+        importlib.util.find_spec(module) is None for module in ("pandas", "matplotlib")
+    ):
         pytest.skip(NEEDS_PANDAS_AND_MATPLOTLIB)
     env = shell_env(tags)
     env.update(MPLBACKEND="Agg", MPLCONFIGDIR=str(tags.tmp / "matplotlib"))
     completed = subprocess.run(
-        [sys.executable, "-c", PLOT, str(tags.path)], cwd=str(tags.path),
-        env=env, stdin=subprocess.DEVNULL, capture_output=True,
-        encoding="utf-8", errors="replace", timeout=120)
+        [sys.executable, "-c", PLOT, str(tags.path)],
+        cwd=str(tags.path),
+        env=env,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=120,
+    )
     drawn = completed.returncode == 0
     assert drawn, tags.mask(tail(completed.stderr))
     chart = json.loads(completed.stdout.strip().split("\n")[-1])
@@ -865,7 +923,8 @@ def test_a_now_run_cell_tags_its_trial(shell):
         "a = 3\n"
         'b = now_tag_variable("result", a * 2)\n'
         'now_tag_cell("stage_one")\n'
-        "print(b)")
+        "print(b)"
+    )
     printed = "6" in cell.stdout.split()
     assert printed, cell.describe()
     rows = stage_tags(project, shell.last_trial_id())
@@ -874,6 +933,7 @@ def test_a_now_run_cell_tags_its_trial(shell):
     after = shell.run('now_tag_variable("x", 1)')
     missing = after.error_type == "NameError"
     assert missing, after.describe()
-    injected = [name for name in ("now_tag_variable", "now_tag_cell")
-                if name in vars(builtins)]
+    injected = [
+        name for name in ("now_tag_variable", "now_tag_cell") if name in vars(builtins)
+    ]
     assert injected == []

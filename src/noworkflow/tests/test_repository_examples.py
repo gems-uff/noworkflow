@@ -20,6 +20,7 @@ checkout (``request.config.rootpath``); outside one the tests skip.
 
 The root ``tests/`` is not compiled: ``tests/t1.py`` is Python 2.
 """
+
 import ast
 import re
 import sys
@@ -57,8 +58,8 @@ NEWER_SYNTAX = {
 }
 RU_MODE = Defect(
     reason="#208: Examples/demo_1/simulation*.py and "
-           "tests/weather/simulation*.py open their input with mode 'rU', "
-           "which Python 3.11 removed (ValueError: invalid mode: 'rU')",
+    "tests/weather/simulation*.py open their input with mode 'rU', "
+    "which Python 3.11 removed (ValueError: invalid mode: 'rU')",
     signature="invalid mode: 'rU'",
 )
 
@@ -66,9 +67,11 @@ RU_MODE = Defect(
 def scripts(root, directory):
     """The ``*.py`` files under ``root/directory``, hidden ones left out"""
     base = root / directory
-    return sorted(path for path in base.rglob("*.py")
-                  if not any(part.startswith(".")
-                             for part in path.relative_to(base).parts))
+    return sorted(
+        path
+        for path in base.rglob("*.py")
+        if not any(part.startswith(".") for part in path.relative_to(base).parts)
+    )
 
 
 def relative(root, path):
@@ -79,8 +82,11 @@ def relative(root, path):
 def root(request):
     """The checkout, or skip when the example directories are not there"""
     rootpath = request.config.rootpath
-    missing = [directory for directory in MODE_DIRECTORIES
-               if not (rootpath / directory).is_dir()]
+    missing = [
+        directory
+        for directory in MODE_DIRECTORIES
+        if not (rootpath / directory).is_dir()
+    ]
     if missing:
         pytest.skip("not a checkout: no {}".format(", ".join(missing)))
     return rootpath
@@ -135,13 +141,15 @@ def constant_modes(source, filename):
             continue
         func = node.func
         is_open = (isinstance(func, ast.Name) and func.id == "open") or (
-            isinstance(func, ast.Attribute) and func.attr == "open"
-            and isinstance(func.value, ast.Name) and func.value.id == "io")
+            isinstance(func, ast.Attribute)
+            and func.attr == "open"
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "io"
+        )
         if not is_open:
             continue
         modes = [node.args[1]] if len(node.args) > 1 else []
-        modes += [keyword.value for keyword in node.keywords
-                  if keyword.arg == "mode"]
+        modes += [keyword.value for keyword in node.keywords if keyword.arg == "mode"]
         for mode in modes:
             if isinstance(mode, ast.Constant) and isinstance(mode.value, str):
                 found.append((node.lineno, mode.value))
@@ -161,7 +169,8 @@ def rejected_modes(root, scratch):
                 error = mode_error(scratch, mode)
                 if error is not None:
                     rejected.setdefault((name, mode), []).append(
-                        "{}:{}: {}".format(name, line, error))
+                        "{}:{}: {}".format(name, line, error)
+                    )
     return found, rejected
 
 
@@ -189,8 +198,8 @@ def test_the_compile_check_rejects_newer_syntax_and_invalid_escapes(root):
     floor = floor_version(root)
     newer = (floor[0], floor[1] + 1)
     assert newer in NEWER_SYNTAX, (
-        "NEWER_SYNTAX needs a statement that Python {}.{} introduced"
-        .format(*newer))
+        "NEWER_SYNTAX needs a statement that Python {}.{} introduced".format(*newer)
+    )
     source = NEWER_SYNTAX[newer]
     assert compile_error(b"x = 1\n", "plain.py", floor) is None
     assert compile_error(source, "newer.py", floor) is not None
@@ -205,10 +214,14 @@ def test_the_open_mode_check_tells_valid_from_invalid_modes(tmp_path):
     """Control: ``open`` rejects ``rU``, ``U``, ``rbU`` and ``q`` with
     ``ValueError`` and accepts the usual modes, creating nothing
     """
-    assert [mode for mode in ("rU", "U", "rbU", "q")
-            if mode_error(tmp_path, mode) is None] == []
-    assert [mode for mode in ("r", "w", "x", "a+", "rb", "r+b")
-            if mode_error(tmp_path, mode) is not None] == []
+    assert [
+        mode for mode in ("rU", "U", "rbU", "q") if mode_error(tmp_path, mode) is None
+    ] == []
+    assert [
+        mode
+        for mode in ("r", "w", "x", "a+", "rb", "r+b")
+        if mode_error(tmp_path, mode) is not None
+    ] == []
     assert list(tmp_path.iterdir()) == []
 
 

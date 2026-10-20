@@ -2,7 +2,8 @@
 # Copyright (c) 2016 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-""""now import" command"""
+""" "now import" command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -17,74 +18,75 @@ from .command import Command
 
 class Import(Command):
     """"""
+
     def __init__(self, *args, **kwargs):
         super(Import, self).__init__(*args, **kwargs)
-        self.targetContent=None
-        self.sourceContent=None
+        self.targetContent = None
+        self.sourceContent = None
 
-        self.targetRelational=None
-        self.sourceRelational=None
+        self.targetRelational = None
+        self.sourceRelational = None
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("--target", type=str,
-                help="set project path where is the target database. Default to "
-                     "current directory")
-        add_arg("--source", type=str,
-                help="set absolute project path where is the database to import.")
-        add_arg("--label", type=str,
-                help="optional label for the import.")
+        add_arg(
+            "--target",
+            type=str,
+            help="set project path where is the target database. Default to "
+            "current directory",
+        )
+        add_arg(
+            "--source",
+            type=str,
+            help="set absolute project path where is the database to import.",
+        )
+        add_arg("--label", type=str, help="optional label for the import.")
 
-    def import_content(self,args):
-        
-        targetFiles=self.targetContent.listAll()
-        sourceFiles=self.sourceContent.listAll()
-        
+    def import_content(self, args):
+
+        targetFiles = self.targetContent.listAll()
+        sourceFiles = self.sourceContent.listAll()
+
         [self.addFile(x) for x in sourceFiles if x not in targetFiles]
-    
-    def addFile(self,name):
-        content=self.sourceContent.get(name)
+
+    def addFile(self, name):
+        content = self.sourceContent.get(name)
         self.targetContent.put(content)
 
-    def populate(self,args):
-        if not (args.source):  
-            raise ValueError("--source can't be empty")  
-        
-        sourceConfig=PersistenceConfig()  
-        
-        self.sourceContent=ContentDatabase(sourceConfig)  
+    def populate(self, args):
+        if not (args.source):
+            raise ValueError("--source can't be empty")
+
+        sourceConfig = PersistenceConfig()
+
+        self.sourceContent = ContentDatabase(sourceConfig)
         sourceConfig.connect_existing(args.source)
 
-        targetConfig=PersistenceConfig()  
+        targetConfig = PersistenceConfig()
 
-        self.targetContent=ContentDatabase(targetConfig) 
+        self.targetContent = ContentDatabase(targetConfig)
         targetConfig.connect(args.target or os.getcwd())
-
 
     def execute(self, args):
 
         self.populate(args)
-            
-        self.import_content(args)
-             
-        persistence_config.connect(args.target or os.getcwd())
-        targetTrials=[t for t in Trial.all()]
-       
-        persistence_config.connect(args.source)
-        sourceTrials=[t for t in Trial.all()]
-        
-        targetUuids=[x.id for x in targetTrials]
-        trialsToImport=[x for x in sourceTrials if x.id not in targetUuids]
-        trialsToImportIds=[x.id for x in trialsToImport]
 
-        bundle=export_bundle(trialsToImportIds)
-       
+        self.import_content(args)
+
+        persistence_config.connect(args.target or os.getcwd())
+        targetTrials = [t for t in Trial.all()]
+
+        persistence_config.connect(args.source)
+        sourceTrials = [t for t in Trial.all()]
+
+        targetUuids = [x.id for x in targetTrials]
+        trialsToImport = [x for x in sourceTrials if x.id not in targetUuids]
+        trialsToImportIds = [x.id for x in trialsToImport]
+
+        bundle = export_bundle(trialsToImportIds)
+
         persistence_config.connect(args.target or os.getcwd())
 
         import_bundle(bundle)
 
         print("Imported successfully")
-       
-
-
-

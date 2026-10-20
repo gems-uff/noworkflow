@@ -16,6 +16,7 @@ heads are read from the text of rules.pl, independently of the Python
 rules; an argument whose name starts with ``_`` is the rule's own (an
 option it explores), not one of the predicate's.
 """
+
 import collections
 import pathlib
 import re
@@ -79,11 +80,11 @@ def test_once_yields_only_the_first_result():
 def test_helpers_join_on_a_shared_variable():
     """``&`` keeps the values both sides answer"""
     x, y = var("X Y")
-    assert bindings(
-        rules.member(x, [1, 2]) & rules.member(x, [2, 3]), x) == [(2,)]
-    assert bindings(
-        rules.between(1, 4, y) & rules.member(y, [2, 4, 6]), y) == [
-            (2,), (4,)]
+    assert bindings(rules.member(x, [1, 2]) & rules.member(x, [2, 3]), x) == [(2,)]
+    assert bindings(rules.between(1, 4, y) & rules.member(y, [2, 4, 6]), y) == [
+        (2,),
+        (4,),
+    ]
 
 
 def test_match_binds_an_unbound_variable_and_compares_bound_ones():
@@ -112,22 +113,22 @@ def test_create_list_matches_the_cardinality():
     assert _create_list(BLANK, 2) == [BLANK, BLANK]
     created = _create_list(var("V"), 2)
     assert len(created) == 2 and len({id(item) for item in created}) == 2
-    assert all(isinstance(item, Variable) and item.bound is BLANK
-               for item in created)
+    assert all(isinstance(item, Variable) and item.bound is BLANK for item in created)
     assert _create_list(5, 2) is None
 
 
 def rules_pl_heads():
     """``{name: {arities}}`` of the clause heads of rules.pl"""
-    lines = [line.strip() for line in
-             RULES_PL.read_text(encoding="utf-8").splitlines()
-             if not line.lstrip().startswith("%")]
+    lines = [
+        line.strip()
+        for line in RULES_PL.read_text(encoding="utf-8").splitlines()
+        if not line.lstrip().startswith("%")
+    ]
     heads = collections.defaultdict(set)
     for kind, text in prolog_statements("\n".join(lines)):
         match = re.match(r"([a-z]\w*)\(", text.strip())
         if kind == "clause" and match:
-            heads[match.group(1)].add(
-                clause_arity(text.strip()[match.end():]))
+            heads[match.group(1)].add(clause_arity(text.strip()[match.end() :]))
     return heads
 
 
@@ -138,13 +139,17 @@ def test_every_rule_has_a_rules_pl_predicate_of_the_same_arity():
     """
     heads = rules_pl_heads()
     assert len(heads) > 50, "rules.pl was not parsed: {}".format(len(heads))
-    found = {name: rule for name, rule in vars(rules).items()
-             if isinstance(rule, FunctionRule) and name not in BUILTINS}
+    found = {
+        name: rule
+        for name, rule in vars(rules).items()
+        if isinstance(rule, FunctionRule) and name not in BUILTINS
+    }
     assert len(found) > 50, "the rules package lists {}".format(len(found))
     mismatches = {}
     for name, rule in sorted(found.items()):
         arity = len([arg for arg in rule.args if not arg.startswith("_")])
         if arity not in heads.get(name, ()):
             mismatches[name] = (arity, sorted(heads.get(name, ())))
-    assert mismatches == {}, (
-        "rule: (Python arity, rules.pl arities): {}".format(mismatches))
+    assert mismatches == {}, "rule: (Python arity, rules.pl arities): {}".format(
+        mismatches
+    )

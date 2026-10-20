@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Deployment provenance collector"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import getpass
@@ -40,7 +41,7 @@ def load_metadata_modules():
         find_distribution("noworkflow").metadata
     # Not installed as a distribution: nothing to warm, and get_version
     # falls back to the attributes
-    except Exception:                                                            # pylint: disable=broad-except  # nosec B110
+    except Exception:  # pylint: disable=broad-except  # nosec B110
         pass
 
 
@@ -104,10 +105,18 @@ class Deployment(object):
 
         attrs.add(trial_id, "NOWORKFLOW_VERSION", version())
 
-    def add_module(self, name, version, path, code_id, transformed=False, fullpath=None):
+    def add_module(
+        self, name, version, path, code_id, transformed=False, fullpath=None
+    ):
         """Insert module into provenance store"""
         self.metascript.modules_store.add(
-            self.metascript.trial_id, name, version, path, code_id, transformed, fullpath
+            self.metascript.trial_id,
+            name,
+            version,
+            path,
+            code_id,
+            transformed,
+            fullpath,
         )
 
     def get_version(self, module):
@@ -123,14 +132,17 @@ class Deployment(object):
             dist_version = metadata.get("Version")
             # Metadata that names no version is not a version; before 3.15
             # importlib.metadata.version returns None for it instead of raising
-            if (isinstance(dist_name, string) and isinstance(dist_version, string)
-                    and dist_version
-                    and distribution_key(dist_name) == distribution_key(module_name)):
+            if (
+                isinstance(dist_name, string)
+                and isinstance(dist_version, string)
+                and dist_version
+                and distribution_key(dist_name) == distribution_key(module_name)
+            ):
                 return native_str(dist_version)
         # A module name is rarely a distribution's name, and broken metadata
         # raises more than PackageNotFoundError (KeyError, UnicodeDecodeError);
         # any failure falls back to the attributes below
-        except Exception:                                                        # pylint: disable=broad-except  # nosec B110
+        except Exception:  # pylint: disable=broad-except  # nosec B110
             pass
 
         # Check explicitly declared module version
@@ -145,7 +157,7 @@ class Deployment(object):
                 except AttributeError:
                     pass
         # A module whose attributes raise still gets its row, without a version
-        except Exception:                                                        # pylint: disable=broad-except  # nosec B110
+        except Exception:  # pylint: disable=broad-except  # nosec B110
             pass
 
         # If no other option work, return None
@@ -162,7 +174,6 @@ class Deployment(object):
         """
         print_msg("  registering environment attributes")
         self._collect_environment_provenance()
-
 
     def store_provenance(self):
         """Store deployment provenance"""

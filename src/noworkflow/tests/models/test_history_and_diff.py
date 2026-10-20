@@ -20,6 +20,7 @@ Known defects have a characterization of today's behavior and a
 plain Python, the same on every system (measured on macOS with Python 3.11
 to 3.15).
 """
+
 from types import SimpleNamespace
 
 import IPython.display
@@ -42,16 +43,16 @@ TRIAL_JSON = "application/noworkflow.trial+json"
 
 EMPTY_STORE = Defect(
     reason="#253: HistoryGraph.__repr__ (history_graph.py) takes max() of "
-           "the lengths of the script names before checking for nodes, and "
-           "a store without trials has no script",
+    "the lengths of the script names before checking for nodes, and "
+    "a store without trials has no script",
     signature="ValueError: max()",
 )
 CACHE_KEY = Defect(
     reason="#337: HistoryGraph.history_data "
-           "caches its nodes in the class attribute HistoryGraph.cache under "
-           "(script, status, summarize, trial count), without the "
-           "experiment, so a history of another experiment with as many "
-           "trials gets the nodes of the first",
+    "caches its nodes in the class attribute HistoryGraph.cache under "
+    "(script, status, summarize, trial count), without the "
+    "experiment, so a history of another experiment with as many "
+    "trials gets the nodes of the first",
     signature="trials without an experiment: ['t2']",
 )
 
@@ -108,7 +109,8 @@ def node_ids(history):
 
 
 def test_history_display_sends_the_graph_of_every_trial(
-        two_trials, fresh_cache, display):
+    two_trials, fresh_cache, display
+):
     """``_ipython_display_`` sends one raw bundle: the graph as JSON, with
     a node per trial and the scripts, and the text that ``now history``
     prints, which names every trial
@@ -163,16 +165,15 @@ def experiment_and_trials():
     experiment ``exp``; and the id of the experiment"""
     t1 = new_trial(TrialConfig("finished", script="main.py", minute=10))
     t2 = new_trial(TrialConfig("finished", script="other.py", minute=20))
-    experiment_id = Experiment.create(
-        SimpleNamespace(name="exp", description="d")).id
+    experiment_id = Experiment.create(SimpleNamespace(name="exp", description="d")).id
     relational.session.query(Trial.m).filter(Trial.m.id == t2).update(
-        {"experiment_id": experiment_id})
+        {"experiment_id": experiment_id}
+    )
     relational.session.commit()
     return {t1: "t1", t2: "t2"}, experiment_id
 
 
-def test_history_of_two_experiments_with_one_trial_each(
-        clean_store, fresh_cache):
+def test_history_of_two_experiments_with_one_trial_each(clean_store, fresh_cache):
     """Today, after the history of an experiment, the history of the trials
     without an experiment shows the experiment's trial, because both have
     one trial; the same history without the cache is right
@@ -190,7 +191,8 @@ def test_history_of_two_experiments_with_one_trial_each(
 
 @known_defects(CACHE_KEY)
 def test_history_of_two_experiments_with_one_trial_each_desired(
-        clean_store, fresh_cache):
+    clean_store, fresh_cache
+):
     """Each history shows the trials of its own experiment, whatever was
     shown before"""
     labels, experiment_id = experiment_and_trials()
@@ -221,13 +223,11 @@ def test_diff_display_sends_the_graph_of_both_trials(two_trials, display):
     assert (graph["trial1"], graph["trial2"]) == (id1, id2)
 
 
-def test_diff_display_without_a_graph_shows_the_trial_ids(
-        two_trials, display):
+def test_diff_display_without_a_graph_shows_the_trial_ids(two_trials, display):
     """Without its graph, a diff displays only ``Diff <id1>:<id2>``, as
     plain text"""
     id1, id2 = two_trials
     diff = Diff(id1, id2)
     del diff.graph
     diff._ipython_display_()
-    assert display.calls == [
-        (({"text/plain": "Diff {}:{}".format(id1, id2)},), {})]
+    assert display.calls == [(({"text/plain": "Diff {}:{}".format(id1, id2)},), {})]

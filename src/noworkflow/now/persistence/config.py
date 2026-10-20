@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """General persistence Configurations"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
@@ -22,7 +23,7 @@ class PersistenceConfig(object):
         self.db_conn = None  # Connection to the database
         self.should_mock = False
         self.content_dir = None
-        self.content_engine = None # Force a content engine
+        self.content_engine = None  # Force a content engine
 
         if path:
             self.path = path
@@ -67,13 +68,12 @@ class PersistenceConfig(object):
 
     def connect_existing(self, path=None):
         """Connect to existing persistence. Exit if it does not exist."""
-        error_msg="there is no provenance store in the current directory"
+        error_msg = "there is no provenance store in the current directory"
         if path:
             self.path = path
-            error_msg="there is no provenance store in the informed directory"
+            error_msg = "there is no provenance store in the informed directory"
         if not self._has_provenance():
-            print_msg(error_msg,
-                      True)
+            print_msg(error_msg, True)
             sys.exit(1)
         self.connect()
 

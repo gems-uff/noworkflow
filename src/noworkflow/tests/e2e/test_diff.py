@@ -35,6 +35,7 @@ Known defects are characterized here, each with a ``_desired`` twin marked
 ``xfail(strict=True)``: the debug tuples ``-fa`` prints, and the return
 code 0 of ``-fa`` with ids that are not integers or name no function.
 """
+
 import re
 import sys
 
@@ -86,18 +87,17 @@ TED_CASES = [
 # over the rows runs once more; trial 4 adds a function and its call to the
 # script.
 EXTRA_ROWS = (("data1.dat", "2.0:0.4\n"), ("data2.dat", "1.0:0.5\n"))
-EXTRA_CODE = '''
+EXTRA_CODE = """
 
 def summary(rows):
     return "total: {}".format(rows)
 
 
 print(summary(total))
-'''
+"""
 
 # The lines -t removes from the trial diff.
-TRIAL_TIMES = (
-    "  Start changed", "  Finish changed", "  Duration text changed")
+TRIAL_TIMES = ("  Start changed", "  Finish changed", "  Duration text changed")
 
 # Attributes whose value differs between two runs in the same clean
 # environment: the process id, and on Linux the free memory pages that
@@ -105,12 +105,11 @@ TRIAL_TIMES = (
 VARYING_ATTRIBUTES = {"PID", "SC_AVPHYS_PAGES"}
 
 ENVIRONMENT_HEADER = re.compile(
-    r"^\[now\] (\d+) environment attributes (added|removed|replaced):$")
+    r"^\[now\] (\d+) environment attributes (added|removed|replaced):$"
+)
 ENVIRONMENT_ENTRY = re.compile(r"^  (\w+): ")
-ENVIRONMENT_CHANGE = re.compile(
-    r"^  Environment attribute (\S+) changed from ")
-ACCESS_HEADER = re.compile(
-    r"^\[now\] (\d+) file accesses (added|removed|replaced):$")
+ENVIRONMENT_CHANGE = re.compile(r"^  Environment attribute (\S+) changed from ")
+ACCESS_HEADER = re.compile(r"^\[now\] (\d+) file accesses (added|removed|replaced):$")
 ACCESS_NAME = "  Name: "
 # The weather function whose activations -fa compares: it runs once per
 # trial, and its argument `data` changed in trial 2.
@@ -135,7 +134,7 @@ def replaced_accesses(stdout):
         if line.startswith("[now] "):
             break
         if line.startswith(ACCESS_NAME):
-            current = line[len(ACCESS_NAME):]
+            current = line[len(ACCESS_NAME) :]
             blocks[current] = []
         elif line.strip() and current is not None:
             blocks[current].append(line.strip())
@@ -153,8 +152,7 @@ def set_order_may_vary(project):
     even with PYTHONHASHSEED=0 (#248). Under a
     ``NOW_E2E_CMD`` the version of the child is unknown, so it may vary.
     """
-    return (not runs_this_interpreter(project.command)
-            or sys.version_info < (3, 12))
+    return not runs_this_interpreter(project.command) or sys.version_info < (3, 12)
 
 
 def sort_replaced_accesses(stdout):
@@ -197,9 +195,12 @@ def brief_table(stdout, title):
     lines = lines_of(stdout)
     start = lines.index("[now] " + title) + 1
     assert [cell.strip() for cell in lines[start].split(" | ")] == [
-        "[Additions]", "[Removals]", "[Changes]"], lines[start]
+        "[Additions]",
+        "[Removals]",
+        "[Changes]",
+    ], lines[start]
     rows = []
-    for line in lines[start + 1:]:
+    for line in lines[start + 1 :]:
         if not line.strip() or line.startswith("[now] "):
             break
         rows.append([cell.strip() for cell in line.split(" | ")])
@@ -222,14 +223,12 @@ def environment_changes(stdout):
             continue
         if section is None:
             continue
-        pattern = (ENVIRONMENT_CHANGE if section == "replaced"
-                   else ENVIRONMENT_ENTRY)
+        pattern = ENVIRONMENT_CHANGE if section == "replaced" else ENVIRONMENT_ENTRY
         match = pattern.match(line)
         if match:
             names[section].add(match.group(1))
     return counts, {
-        section: {name for name in found
-                  if not name.startswith(PRESERVE_PREFIXES)}
+        section: {name for name in found if not name.startswith(PRESERVE_PREFIXES)}
         for section, found in names.items()
     }
 
@@ -241,9 +240,12 @@ def access_hashes(project, sequence_key, name):
         "file_access.content_hash_after FROM file_access "
         "JOIN trial ON trial.id = file_access.trial_id "
         "WHERE trial.sequence_key = ? AND file_access.name = ?",
-        sequence_key, name)
+        sequence_key,
+        name,
+    )
     assert len(rows) == 1, "trial {}: {} accesses to {}".format(
-        sequence_key, len(rows), name)
+        sequence_key, len(rows), name
+    )
     return rows[0]["content_hash_before"], rows[0]["content_hash_after"]
 
 
@@ -253,24 +255,30 @@ def activation_id(project, sequence_key, name):
         "SELECT activation.id FROM activation "
         "JOIN trial ON trial.id = activation.trial_id "
         "WHERE trial.sequence_key = ? AND activation.name = ?",
-        sequence_key, name)
+        sequence_key,
+        name,
+    )
     assert len(rows) == 1, "trial {}: {} activations of {}".format(
-        sequence_key, len(rows), name)
+        sequence_key, len(rows), name
+    )
     return rows[0]["id"]
 
 
 def missing_function_id(project):
     """An id that names no evaluation, hence no activation, in any trial"""
-    return project.query(
-        "SELECT MAX(id) AS id FROM evaluation")[0]["id"] + 1000
+    return project.query("SELECT MAX(id) AS id FROM evaluation")[0]["id"] + 1000
 
 
 def run_function_diff(project):
     """``now diff 1 2 -fa`` on the activations of FUNCTION"""
     return project.run(
-        "diff", "1", "2", "-fa",
+        "diff",
+        "1",
+        "2",
+        "-fa",
         activation_id(project, 1, FUNCTION),
-        activation_id(project, 2, FUNCTION))
+        activation_id(project, 2, FUNCTION),
+    )
 
 
 def debug_tuples(stdout):
@@ -285,14 +293,15 @@ def append(project, name, text):
 
 def cached_trees(project):
     """``{(graph_cache type, name)}`` of the trees cached in the store"""
-    return {(row["type"], row["name"])
-            for row in project.query("SELECT type, name FROM graph_cache")}
+    return {
+        (row["type"], row["name"])
+        for row in project.query("SELECT type, name FROM graph_cache")
+    }
 
 
 @pytest.fixture(scope="module")
 def _graph_store(tmp_path_factory):
-    project = build_weather(
-        NowProject(tmp_path_factory.mktemp("diff_graph")), trials=2)
+    project = build_weather(NowProject(tmp_path_factory.mktemp("diff_graph")), trials=2)
     for name, row in EXTRA_ROWS:
         append(project, name, row)
     project.run(*WEATHER_ARGS)
@@ -301,8 +310,11 @@ def _graph_store(tmp_path_factory):
     # Build and cache both trees of the four trials.
     project.run("diff", "1", "3", "-a", "-d")
     project.run("diff", "2", "4", "-a", "-d")
-    expected = {("trial " + trial["id"], tree)
-                for trial in project.trials() for tree in TED_TREES.values()}
+    expected = {
+        ("trial " + trial["id"], tree)
+        for trial in project.trials()
+        for tree in TED_TREES.values()
+    }
     assert cached_trees(project) == expected, str(sorted(cached_trees(project)))
     return project
 
@@ -320,16 +332,17 @@ def graph_project(_graph_store):
     before = _graph_store.fingerprint()
     yield _graph_store
     assert _graph_store.fingerprint() == before, (
-        "the test changed graph_project; every tree should already be "
-        "cached")
+        "the test changed graph_project; every tree should already be cached"
+    )
 
 
 # --- test 11: the trial diff, its sections and the trial references -------
 
 
 @pytest.mark.golden
-@pytest.mark.parametrize("name, flags", DIFF_CASES,
-                         ids=[name for name, _ in DIFF_CASES])
+@pytest.mark.parametrize(
+    "name, flags", DIFF_CASES, ids=[name for name, _ in DIFF_CASES]
+)
 def test_diff_output_matches_golden(request, two_trial_project, name, flags):
     """``now diff 1 2`` with each flag prints what the reference leg
     recorded"""
@@ -338,10 +351,14 @@ def test_diff_output_matches_golden(request, two_trial_project, name, flags):
 
 
 @pytest.mark.golden
-@pytest.mark.parametrize("name, first, second, flag", TED_GOLDEN_CASES,
-                         ids=[case[0] for case in TED_GOLDEN_CASES])
-def test_diff_tree_edit_distance_matches_golden(request, graph_project, name,
-                                                first, second, flag):
+@pytest.mark.parametrize(
+    "name, first, second, flag",
+    TED_GOLDEN_CASES,
+    ids=[case[0] for case in TED_GOLDEN_CASES],
+)
+def test_diff_tree_edit_distance_matches_golden(
+    request, graph_project, name, first, second, flag
+):
     """``now diff <first> <second> -a`` and ``-d`` print what the reference
     leg recorded, for a data change, a path change and a code change"""
     result = graph_project.run("diff", first, second, flag)
@@ -349,7 +366,8 @@ def test_diff_tree_edit_distance_matches_golden(request, graph_project, name,
 
 
 def test_diff_files_shows_the_replaced_accesses_with_their_content_hashes(
-        two_trial_project):
+    two_trial_project,
+):
     """``-f`` lists the accesses whose content changed, with both hashes
 
     ``data2.dat`` changed between the trials and ``output.csv`` did not
@@ -359,39 +377,47 @@ def test_diff_files_shows_the_replaced_accesses_with_their_content_hashes(
     project = two_trial_project
     result = project.run("diff", "1", "2", "-f", "-m", "-t")
     lines = lines_of(result.stdout)
-    for header in ("[now] 0 modules added:", "[now] 0 modules removed:",
-                   "[now] 0 modules replaced:",
-                   "[now] 0 file accesses added:",
-                   "[now] 0 file accesses removed:",
-                   "[now] 2 file accesses replaced:"):
+    for header in (
+        "[now] 0 modules added:",
+        "[now] 0 modules removed:",
+        "[now] 0 modules replaced:",
+        "[now] 0 file accesses added:",
+        "[now] 0 file accesses removed:",
+        "[now] 2 file accesses replaced:",
+    ):
         assert header in lines, str(result)
     blocks = replaced_accesses(result.stdout)
     assert set(blocks) == {"data2.dat", "output.csv"}, str(result)
 
     data2_before = sha1((CORPUS / "weather" / "data2.dat").read_bytes())
     data2_after = sha1(WEATHER_DATA2_TRIAL2.encode("utf-8"))
-    assert access_hashes(project, 1, "data2.dat") == (
-        data2_before, data2_before)
-    assert access_hashes(project, 2, "data2.dat") == (
-        data2_after, data2_after)
-    assert "Content hash before changed from {} to {}".format(
-        data2_before, data2_after) in blocks["data2.dat"], str(result)
-    assert "Content hash after changed from {} to {}".format(
-        data2_before, data2_after) in blocks["data2.dat"], str(result)
+    assert access_hashes(project, 1, "data2.dat") == (data2_before, data2_before)
+    assert access_hashes(project, 2, "data2.dat") == (data2_after, data2_after)
+    assert (
+        "Content hash before changed from {} to {}".format(data2_before, data2_after)
+        in blocks["data2.dat"]
+    ), str(result)
+    assert (
+        "Content hash after changed from {} to {}".format(data2_before, data2_after)
+        in blocks["data2.dat"]
+    ), str(result)
 
     first_before, first_after = access_hashes(project, 1, "output.csv")
     second_before, second_after = access_hashes(project, 2, "output.csv")
     assert first_before is None
     assert second_before == first_after
     assert second_after == project.files()["output.csv"]
-    assert "Content hash before changed from <None> to {}".format(
-        first_after) in blocks["output.csv"], str(result)
-    assert "Content hash after changed from {} to {}".format(
-        first_after, second_after) in blocks["output.csv"], str(result)
+    assert (
+        "Content hash before changed from <None> to {}".format(first_after)
+        in blocks["output.csv"]
+    ), str(result)
+    assert (
+        "Content hash after changed from {} to {}".format(first_after, second_after)
+        in blocks["output.csv"]
+    ), str(result)
 
 
-def test_diff_hide_timestamps_drops_the_clock_but_keeps_checkpoints(
-        two_trial_project):
+def test_diff_hide_timestamps_drops_the_clock_but_keeps_checkpoints(two_trial_project):
     """``-t`` removes start, finish, duration and access timestamps
 
     Characterization: the checkpoint of each access (seconds since the
@@ -402,24 +428,25 @@ def test_diff_hide_timestamps_drops_the_clock_but_keeps_checkpoints(
     shown = project.run("diff", "1", "2", "-f")
     hidden = project.run("diff", "1", "2", "-f", "-t")
     for prefix in TRIAL_TIMES:
-        assert any(line.startswith(prefix)
-                   for line in lines_of(shown.stdout)), str(shown)
-        assert not any(line.startswith(prefix)
-                       for line in lines_of(hidden.stdout)), str(hidden)
-    assert "  Sequence key changed from 1 to 2" in lines_of(hidden.stdout), (
-        str(hidden))
+        assert any(line.startswith(prefix) for line in lines_of(shown.stdout)), str(
+            shown
+        )
+        assert not any(line.startswith(prefix) for line in lines_of(hidden.stdout)), (
+            str(hidden)
+        )
+    assert "  Sequence key changed from 1 to 2" in lines_of(hidden.stdout), str(hidden)
 
     shown_blocks = replaced_accesses(shown.stdout)
     hidden_blocks = replaced_accesses(hidden.stdout)
-    assert set(hidden_blocks) == set(shown_blocks) == {
-        "data2.dat", "output.csv"}
+    assert set(hidden_blocks) == set(shown_blocks) == {"data2.dat", "output.csv"}
     for name, block in shown_blocks.items():
-        assert any(line.startswith("Timestamp changed")
-                   for line in block), str(shown)
-        assert not any(line.startswith("Timestamp changed")
-                       for line in hidden_blocks[name]), str(hidden)
-        assert any(line.startswith("Checkpoint changed")
-                   for line in hidden_blocks[name]), str(hidden)
+        assert any(line.startswith("Timestamp changed") for line in block), str(shown)
+        assert not any(
+            line.startswith("Timestamp changed") for line in hidden_blocks[name]
+        ), str(hidden)
+        assert any(
+            line.startswith("Checkpoint changed") for line in hidden_blocks[name]
+        ), str(hidden)
 
 
 def test_diff_brief_alone_prints_the_plain_trial_diff(two_trial_project):
@@ -431,18 +458,15 @@ def test_diff_brief_alone_prints_the_plain_trial_diff(two_trial_project):
     plain = project.run("diff", "1", "2")
     brief = project.run("diff", "1", "2", "--brief")
     assert brief.stdout == plain.stdout
-    assert "  Sequence key changed from 1 to 2" in lines_of(plain.stdout), (
-        str(plain))
+    assert "  Sequence key changed from 1 to 2" in lines_of(plain.stdout), str(plain)
 
 
-def test_diff_brief_tables_list_the_changed_files_and_no_modules(
-        two_trial_project):
+def test_diff_brief_tables_list_the_changed_files_and_no_modules(two_trial_project):
     """``-f -m -t --brief`` prints a table per section, sorted by name
 
     ``(new)`` marks the access whose file did not exist before trial 1.
     """
-    result = two_trial_project.run("diff", "1", "2", "-f", "-m", "-t",
-                                   "--brief")
+    result = two_trial_project.run("diff", "1", "2", "-f", "-m", "-t", "--brief")
     assert brief_table(result.stdout, "Brief modules diff") == []
     assert brief_table(result.stdout, "Brief file access diff") == [
         ["", "", "(r) data2.dat"],
@@ -452,7 +476,8 @@ def test_diff_brief_tables_list_the_changed_files_and_no_modules(
 
 @pytest.mark.parametrize("first, second, flag, changed", TED_CASES)
 def test_diff_tree_edit_distance_follows_what_changed_between_the_trials(
-        graph_project, first, second, flag, changed):
+    graph_project, first, second, flag, changed
+):
     """``-a`` and ``-d`` print a tree edit distance after the trial diff
 
     ``-a`` compares the activation trees and ``-d`` the definition trees.
@@ -464,10 +489,12 @@ def test_diff_tree_edit_distance_follows_what_changed_between_the_trials(
     result = graph_project.run("diff", first, second, flag)
     lines = [line for line in lines_of(result.stdout) if line.strip()]
     assert lines[0] == "[now] trial diff:", str(result)
-    assert "  Sequence key changed from {} to {}".format(
-        first, second) in lines, str(result)
-    match = re.fullmatch(r"{}: (\d+\.\d+)".format(TED_LABELS[flag]),
-                         last_line(result.stdout))
+    assert "  Sequence key changed from {} to {}".format(first, second) in lines, str(
+        result
+    )
+    match = re.fullmatch(
+        r"{}: (\d+\.\d+)".format(TED_LABELS[flag]), last_line(result.stdout)
+    )
     assert match, str(result)
     distance = float(match.group(1))
     if changed:
@@ -493,15 +520,19 @@ def test_diff_tree_edit_distance_caches_the_trees_in_the_store(project, flag):
 
     first = project.run("diff", "1", "2", flag)
     cached = project.query(
-        "SELECT type, name, content_hash FROM graph_cache ORDER BY type")
+        "SELECT type, name, content_hash FROM graph_cache ORDER BY type"
+    )
     assert [(row["type"], row["name"]) for row in cached] == [
-        ("trial " + trial_id, TED_TREES[flag]) for trial_id in trial_ids]
+        ("trial " + trial_id, TED_TREES[flag]) for trial_id in trial_ids
+    ]
     store_after = project.fingerprint()[0]
     added = sorted(set(store_after) - set(store_before))
-    assert added == sorted({
-        "content/{}/{}".format(row["content_hash"][:2],
-                               row["content_hash"][2:])
-        for row in cached}), str(added)
+    assert added == sorted(
+        {
+            "content/{}/{}".format(row["content_hash"][:2], row["content_hash"][2:])
+            for row in cached
+        }
+    ), str(added)
 
     second = project.run("diff", "1", "2", flag)
     assert second.stdout == first.stdout
@@ -509,8 +540,7 @@ def test_diff_tree_edit_distance_caches_the_trees_in_the_store(project, flag):
     assert project.files() == files_before
 
 
-def test_diff_resolves_tags_sequence_keys_and_ids_to_the_same_trials(
-        two_trial_project):
+def test_diff_resolves_tags_sequence_keys_and_ids_to_the_same_trials(two_trial_project):
     """A tag, a sequence key and a trial id name the same trial
 
     The three outputs come from three runs, so the replaced accesses are
@@ -530,15 +560,13 @@ def test_diff_resolves_tags_sequence_keys_and_ids_to_the_same_trials(
     by_key = project.run("diff", "1", "2", "-f", "-m", "-t")
     by_tag = project.run("diff", "1.1.1", "1.1.2", "-f", "-m", "-t")
     by_id = project.run("diff", first["id"], second["id"], "-f", "-m", "-t")
-    assert "  Sequence key changed from 1 to 2" in lines_of(by_key.stdout), (
-        str(by_key))
+    assert "  Sequence key changed from 1 to 2" in lines_of(by_key.stdout), str(by_key)
     expected = canonical(by_key)
     assert canonical(by_tag) == expected
     assert canonical(by_id) == expected
 
 
-def test_diff_environment_changes_only_the_process_attributes(
-        two_trial_project):
+def test_diff_environment_changes_only_the_process_attributes(two_trial_project):
     """``-e`` between two runs in the same clean environment
 
     Nothing is added or removed, and the only replaced attributes are the
@@ -548,20 +576,22 @@ def test_diff_environment_changes_only_the_process_attributes(
     harness prints the output of a failed command, and the assertions name
     attributes only.
     """
-    result = two_trial_project.run("diff", "1", "2", "-e", expect=None,
-                                   allow_stderr=True)
+    result = two_trial_project.run(
+        "diff", "1", "2", "-e", expect=None, allow_stderr=True
+    )
     clean = result.returncode == 0 and result.stderr == ""
     assert clean, "now diff -e: return code {}, {} characters on stderr".format(
-        result.returncode, len(result.stderr))
+        result.returncode, len(result.stderr)
+    )
     counts, names = environment_changes(result.stdout)
     assert set(counts) == {"added", "removed", "replaced"}
     assert names["added"] == set()
     assert names["removed"] == set()
     assert "PID" in names["replaced"]
-    assert names["replaced"] <= VARYING_ATTRIBUTES, str(
-        sorted(names["replaced"]))
-    replaced_lines = [line for line in lines_of(result.stdout)
-                      if ENVIRONMENT_CHANGE.match(line)]
+    assert names["replaced"] <= VARYING_ATTRIBUTES, str(sorted(names["replaced"]))
+    replaced_lines = [
+        line for line in lines_of(result.stdout) if ENVIRONMENT_CHANGE.match(line)
+    ]
     assert counts["replaced"] == len(replaced_lines)
 
 
@@ -569,7 +599,8 @@ def test_diff_environment_changes_only_the_process_attributes(
 
 
 def test_diff_fa_compares_two_activations_with_durations_in_microseconds(
-        two_trial_project):
+    two_trial_project,
+):
     """``-fa`` diffs the output, arguments, duration and variables
 
     The duration is labeled ``microseconds``, never ``miliseconds``: the
@@ -584,10 +615,12 @@ def test_diff_fa_compares_two_activations_with_durations_in_microseconds(
     assert "[now] The duration changed:" in lines, str(result)
     assert "microseconds" in result.stdout, str(result)
     assert "miliseconds" not in result.stdout, str(result)
-    assert re.search(r"^- \d+(\.\d+)? microseconds$", result.stdout,
-                     re.MULTILINE), str(result)
-    assert re.search(r"^\+ \d+(\.\d+)? microseconds$", result.stdout,
-                     re.MULTILINE), str(result)
+    assert re.search(r"^- \d+(\.\d+)? microseconds$", result.stdout, re.MULTILINE), str(
+        result
+    )
+    assert re.search(r"^\+ \d+(\.\d+)? microseconds$", result.stdout, re.MULTILINE), (
+        str(result)
+    )
 
 
 def test_diff_fa_debug_output(two_trial_project):
@@ -599,8 +632,7 @@ def test_diff_fa_debug_output(two_trial_project):
     none.
     """
     project = two_trial_project
-    replaced = replaced_accesses(
-        project.run("diff", "1", "2", "-f", "-t").stdout)
+    replaced = replaced_accesses(project.run("diff", "1", "2", "-f", "-t").stdout)
     assert set(replaced) == {"data2.dat", "output.csv"}
     tuples = debug_tuples(run_function_diff(project).stdout)
     assert len(tuples) == len(replaced), "\n".join(tuples)
@@ -611,9 +643,13 @@ def test_diff_fa_debug_output(two_trial_project):
         assert line.count("access(") == 2, line
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#248: now diff -fa prints a debug tuple per "
-    "replaced file access to stdout"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#248: now diff -fa prints a debug tuple per replaced file access to stdout"
+    ),
+)
 def test_diff_fa_debug_output_desired(two_trial_project):
     """``-fa`` prints no debug tuple"""
     result = run_function_diff(two_trial_project)
@@ -631,18 +667,24 @@ def test_diff_fa_with_ids_that_are_not_integers(two_trial_project):
     lines = lines_of(result.stdout)
     assert lines[0] == "[now] trial diff:", str(result)
     assert last_line(result.stdout) == (
-        "[now] The first two values, the functions' ids, must be "
-        "integers."), str(result)
+        "[now] The first two values, the functions' ids, must be integers."
+    ), str(result)
     assert "[now] Function output" not in lines, str(result)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#226: now diff -fa with ids that are not integers exits with 0; it "
-    "should be a usage error with rc 2"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#226: now diff -fa with ids that are not integers exits with 0; it "
+        "should be a usage error with rc 2"
+    ),
+)
 def test_diff_fa_with_ids_that_are_not_integers_desired(two_trial_project):
     """Ids that are not integers are a usage error: rc 2, error on stderr"""
-    result = two_trial_project.run("diff", "1", "2", "-fa", "x", "y",
-                                   expect=None, allow_stderr=True)
+    result = two_trial_project.run(
+        "diff", "1", "2", "-fa", "x", "y", expect=None, allow_stderr=True
+    )
     assert result.returncode == 2, str(result)
     assert result.stderr.strip(), str(result)
 
@@ -658,19 +700,25 @@ def test_diff_fa_with_an_id_that_names_no_function(two_trial_project):
     lines = lines_of(result.stdout)
     assert lines[0] == "[now] trial diff:", str(result)
     assert last_line(result.stdout) == (
-        "[now] Wrong input. There isn't a function with the id: {}".format(
-            missing)), str(result)
+        "[now] Wrong input. There isn't a function with the id: {}".format(missing)
+    ), str(result)
     assert "[now] Function output" not in lines, str(result)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=(
-    "#226: now diff -fa with an id that names no function exits with 0; "
-    "it should be a usage error with rc 2"))
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "#226: now diff -fa with an id that names no function exits with 0; "
+        "it should be a usage error with rc 2"
+    ),
+)
 def test_diff_fa_with_an_id_that_names_no_function_desired(two_trial_project):
     """An id that names no function is a usage error: rc 2, error on stderr"""
     project = two_trial_project
     missing = missing_function_id(project)
-    result = project.run("diff", "1", "2", "-fa", missing, missing,
-                         expect=None, allow_stderr=True)
+    result = project.run(
+        "diff", "1", "2", "-fa", missing, missing, expect=None, allow_stderr=True
+    )
     assert result.returncode == 2, str(result)
     assert result.stderr.strip(), str(result)

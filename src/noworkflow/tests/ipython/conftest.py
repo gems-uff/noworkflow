@@ -22,6 +22,7 @@ since IPython's is a singleton.
   (``support.py3compat_stand_in``). Requested before ``shell``, so that it
   is undone after the shell closes.
 """
+
 import pytest
 
 from .support import open_shell, py3compat_stand_in

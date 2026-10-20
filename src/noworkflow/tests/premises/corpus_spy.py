@@ -27,6 +27,7 @@ checkout that pytest walks. The file is not named ``test_*.py``: pytest
 never loads it as a test module, and the doctest import of it registers no
 hook.
 """
+
 from pathlib import PurePath
 
 import pytest
@@ -49,7 +50,7 @@ def _below(path, parts):
     components = path.parts
     size = len(parts)
     return any(
-        components[index:index + size] == parts
+        components[index : index + size] == parts
         for index in range(len(components) - size)
     )
 
@@ -102,5 +103,8 @@ def pytest_collection_modifyitems(session, config, items):
 def pytest_terminal_summary(terminalreporter):
     for path in _SEEN["corpus"]:
         terminalreporter.write_line("{} reached {}".format(MARKER, path))
-    terminalreporter.write_line("{} done files={} e2e={} corpus={}".format(
-        MARKER, _SEEN["files"], _SEEN["e2e"], len(_SEEN["corpus"])))
+    terminalreporter.write_line(
+        "{} done files={} e2e={} corpus={}".format(
+            MARKER, _SEEN["files"], _SEEN["e2e"], len(_SEEN["corpus"])
+        )
+    )

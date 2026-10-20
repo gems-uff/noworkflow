@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define data structures and data access functions"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import Counter, OrderedDict
@@ -10,9 +11,9 @@ from collections import Counter, OrderedDict
 
 class OrderedCounter(OrderedDict, Counter):
     """OrderedDict with default value 0"""
+
     def __repr__(self):
-        return "%s(%r)" % (self.__class__.__name__,
-                           OrderedDict(self))
+        return "%s(%r)" % (self.__class__.__name__, OrderedDict(self))
 
     def __reduce__(self):
         return self.__class__, (OrderedDict(self),)
@@ -53,17 +54,19 @@ class OrderedDefaultDict(OrderedDict):
 
 class DotDict(dict):
     """Dict that can be accessed by attributes"""
+
     def __getattr__(self, attr):
         if attr in self:
             return self[attr]
         return dict.__getattr__(self, attr)
+
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
 
 class Singleton(type):
-
     _instances = {}
+
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)

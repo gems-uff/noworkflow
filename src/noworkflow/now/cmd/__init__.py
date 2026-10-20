@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Commands and argument parsers for 'now'"""
+
 from __future__ import absolute_import, division, print_function
 
 import argparse
@@ -35,10 +36,13 @@ from .command import Command, SmartFormatter
 def main():
     """Main function"""
     from ..utils.functions import version
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=SmartFormatter, usage="")
-    parser.add_argument("-v", "--version", action="version",
-                        version="noWorkflow {}".format(version()))
+
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=SmartFormatter, usage=""
+    )
+    parser.add_argument(
+        "-v", "--version", action="version", version="noWorkflow {}".format(version())
+    )
     subparsers = parser.add_subparsers(metavar="")
     commands = [
         Run(),

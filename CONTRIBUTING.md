@@ -235,6 +235,7 @@ From the repository root, with `.venv` set up as above:
 uv run pytest                # the whole suite
 uv run pytest -n 4           # the same, in four processes (pytest-xdist)
 uv run ruff check .          # lint
+uv run ruff format .         # format (CI runs `ruff format --check .`)
 uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json   # SAST
 uv run now run script.py     # the `now` of the working tree
 ```

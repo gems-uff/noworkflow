@@ -14,6 +14,7 @@ separates its parts as well as a ``/``.
 The expected values come from the files of the checkout, which is where the
 suite imports ``noworkflow`` from.
 """
+
 import filecmp
 import os
 import warnings
@@ -46,23 +47,22 @@ def test_resource_reads_bytes_and_decodes_on_request():
     encoding is named"""
     path = RESOURCES / "rules.pl"
     assert resource("resources/rules.pl") == path.read_bytes()
-    assert resource("resources/rules.pl", "UTF-8") == path.read_text(
-        encoding="utf-8")
+    assert resource("resources/rules.pl", "UTF-8") == path.read_text(encoding="utf-8")
 
 
 def test_resource_takes_a_name_joined_with_either_separator():
     """A name built with ``os.path.join`` on Windows names the same file"""
     expected = (RESOURCES / "demo" / "1" / "steps.txt").read_bytes()
     assert resource("resources\\demo\\1\\steps.txt") == expected
-    assert resource(os.path.join("resources", "demo", "1",
-                                 "steps.txt")) == expected
+    assert resource(os.path.join("resources", "demo", "1", "steps.txt")) == expected
 
 
 def test_resource_ls_lists_the_entries_of_a_directory():
     """``resource_ls`` gives the names in a directory, as the choices of
     ``now demo`` need them"""
     assert sorted(resource_ls("resources/demo")) == sorted(
-        os.listdir(RESOURCES / "demo"))
+        os.listdir(RESOURCES / "demo")
+    )
 
 
 def test_resource_is_dir_tells_directories_from_files_and_absences():
@@ -80,10 +80,12 @@ def test_recursive_copy_copies_a_demo_byte_for_byte(tmp_path):
     recursive_copy("resources/demo/1", str(target))
 
     def tree(root):
-        return sorted(path.relative_to(root).as_posix()
-                      for path in root.rglob("*") if path.is_file())
+        return sorted(
+            path.relative_to(root).as_posix()
+            for path in root.rglob("*")
+            if path.is_file()
+        )
 
     assert tree(target) == tree(source)
-    _, mismatch, errors = filecmp.cmpfiles(
-        source, target, tree(source), shallow=False)
+    _, mismatch, errors = filecmp.cmpfiles(source, target, tree(source), shallow=False)
     assert (mismatch, errors) == ([], [])

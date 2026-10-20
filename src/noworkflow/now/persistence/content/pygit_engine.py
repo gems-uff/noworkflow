@@ -22,7 +22,7 @@ class PyGitEngine(GitContentDatabaseEngine):
     def __init__(self, config):
         super(PyGitEngine, self).__init__(config)
         self.repo = None
-    
+
     def connect(self, config):
         """Create content directory"""
         if not config.should_mock and not isdir(self.content_path):
@@ -31,7 +31,7 @@ class PyGitEngine(GitContentDatabaseEngine):
             self.create_initial_commit()
         else:
             self.repo = Repository(self.content_path)
-        
+
     @staticmethod
     def do_put(content_path, object_hashes, content, filename):
         """Perform put operation. This is used in the distributed wrapper"""
@@ -42,19 +42,17 @@ class PyGitEngine(GitContentDatabaseEngine):
     def put_attr(self, content, filename):
         """Return attributes for the do_put operation"""
         filename = self._inc_name(filename)
-        return (
-            self.content_path, self.object_hashes, content, filename
-        )
+        return (self.content_path, self.object_hashes, content, filename)
 
     def put(self, content, filename="generic"):  # pylint: disable=method-hidden
         """Put content in the content database"""
         return self.do_put(*self.put_attr(content, filename))
-    
+
     def get(self, content_hash):  # pylint: disable=method-hidden
         """Get content from the content database"""
         return_data = self.repo[content_hash].data
         return return_data
-    
+
     def find_subhash(self, content_hash):
         """Find hash in git"""
         try:
@@ -72,9 +70,11 @@ class PyGitEngine(GitContentDatabaseEngine):
         """Create a commit object"""
         references = list(self.repo.references)
 
-        master_ref = self.repo.lookup_reference(
-            self._commit_ref
-        ) if len(references) > 0 else None
+        master_ref = (
+            self.repo.lookup_reference(self._commit_ref)
+            if len(references) > 0
+            else None
+        )
 
         parents = []
         if master_ref is not None:

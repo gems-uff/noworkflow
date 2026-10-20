@@ -23,6 +23,7 @@ Known defects have a characterization of today's behavior and a
 plain Python string formatting in ``models/prov/export.py``, the same on
 every system (measured on macOS with Python 3.11 to 3.15).
 """
+
 import re
 
 import pytest
@@ -53,26 +54,26 @@ READ_ITEMS = {
 # ECHAR ::= '\' [tbnrf\"'], in an attribute list ``[name="...", ...]``
 # that closes the statement.
 STRING_LITERAL = r'"(?:[^"\\\n\r]|\\[tbnrf\\"\'])*"'
-ATTRIBUTES = re.compile(
-    r"\[\s*(?:[\w:]+=" + STRING_LITERAL + r"\s*,?\s*)*\]\)$")
+ATTRIBUTES = re.compile(r"\[\s*(?:[\w:]+=" + STRING_LITERAL + r"\s*,?\s*)*\]\)$")
 # ``used(access<N>, <collection>, -, [version:checkpoint=...])``: the use of
 # a collection by an access activity (the use of the key has no checkpoint).
 USED_COLLECTION = re.compile(
-    r"^used\((access\d+), (\w+), -, \[version:checkpoint=", re.MULTILINE)
+    r"^used\((access\d+), (\w+), -, \[version:checkpoint=", re.MULTILINE
+)
 
 COLLECTION_SHIFT = Defect(
     reason="#335: export_prov walks the "
-           "dependencies of a subscript read in (dependent, type) order, so "
-           "the access group writes version:collection before the value "
-           "group sets it: each read names the collection of the subscript "
-           "before it, and its collection is used by the next access "
-           "activity",
+    "dependencies of a subscript read in (dependent, type) order, so "
+    "the access group writes version:collection before the value "
+    "group sets it: each read names the collection of the subscript "
+    "before it, and its collection is used by the next access "
+    "activity",
     signature='version:collection=""',
 )
 UNESCAPED_QUOTES = Defect(
     reason="#336: export_prov writes values and labels "
-           "as \"{}\" without escaping a double quote or a backslash, so a "
-           "string literal of the script ends the PROV-N string early",
+    'as "{}" without escaping a double quote or a backslash, so a '
+    "string literal of the script ends the PROV-N string early",
     signature='newline="")"',
 )
 
@@ -91,14 +92,14 @@ def subscripts_prov(tmp_path_factory):
 def line_starting(text, prefix):
     """The only line of ``text`` that starts with ``prefix``"""
     lines = [line for line in text.splitlines() if line.startswith(prefix)]
-    assert len(lines) == 1, "{} lines start with {}".format(
-        len(lines), prefix)
+    assert len(lines) == 1, "{} lines start with {}".format(len(lines), prefix)
     return lines[0]
 
 
 def declared(text, entity):
-    return any(line.startswith("entity({}, ".format(entity))
-               for line in text.splitlines())
+    return any(
+        line.startswith("entity({}, ".format(entity)) for line in text.splitlines()
+    )
 
 
 def subscript_reads(project):
@@ -122,7 +123,8 @@ def subscript_reads(project):
         "AND coll_ev.id = dep.collection_id "
         "JOIN code_component AS coll ON coll.trial_id = coll_ev.trial_id "
         "AND coll.id = coll_ev.code_component_id "
-        "WHERE dep.type = 'access' AND read.mode = 'r' ORDER BY dep.id")
+        "WHERE dep.type = 'access' AND read.mode = 'r' ORDER BY dep.id"
+    )
     reads = []
     for row in rows:
         defined = project.query(
@@ -133,17 +135,26 @@ def subscript_reads(project):
             "JOIN code_component AS cc ON cc.trial_id = ev.trial_id "
             "AND cc.id = ev.code_component_id "
             "WHERE dep.type = 'assignment' AND dep.dependent_id = ?",
-            row["collection_eval"])
-        source = defined[0] if defined else {
-            "line": row["coll_line"], "name": row["coll_name"]}
+            row["collection_eval"],
+        )
+        source = (
+            defined[0]
+            if defined
+            else {"line": row["coll_line"], "name": row["coll_name"]}
+        )
         name, key = re.fullmatch(r"(\w+)\[(.*)\]", row["name"]).groups()
-        reads.append(("{}_{}@{}".format(row["line"], name, key),
-                      "{}_{}".format(source["line"], source["name"])))
+        reads.append(
+            (
+                "{}_{}@{}".format(row["line"], name, key),
+                "{}_{}".format(source["line"], source["name"]),
+            )
+        )
     return reads
 
 
 def test_export_prov_derives_a_subscript_write_and_an_augmented_assignment(
-        subscripts_prov):
+    subscripts_prov,
+):
     """``x += a[1]`` is an ``add_assign`` operation that derives the new
     ``x`` from the old one and from ``a[1]``; ``a[1] = ...`` writes key 1
     of the list defined on line 1
@@ -151,17 +162,16 @@ def test_export_prov_derives_a_subscript_write_and_an_augmented_assignment(
     _, text = subscripts_prov
     for entity in ("1_a", "5_a@1", "6_x", "7_a@1", "7_x"):
         assert declared(text, entity), entity
-    assert 'activity(add_assign1, [type="script:operation"])' in (
-        text.splitlines())
+    assert 'activity(add_assign1, [type="script:operation"])' in (text.splitlines())
     line_starting(text, "wasDerivedFrom(7_x, 6_x, add_assign1, ")
     line_starting(text, "wasDerivedFrom(7_x, 7_a@1, add_assign1, ")
     write = line_starting(text, "wasDerivedFrom(5_a@1, ")
-    assert ('version:collection="1_a", version:key="1", '
-            'version:access="w"') in write, write
+    assert ('version:collection="1_a", version:key="1", version:access="w"') in write, (
+        write
+    )
 
 
-def test_export_prov_derives_each_subscript_read_from_the_item_it_read(
-        subscripts_prov):
+def test_export_prov_derives_each_subscript_read_from_the_item_it_read(subscripts_prov):
     """A subscript read derives from the item it read, through an access
     activity, with the key of its subscript and the mode ``r``
     """
@@ -169,10 +179,8 @@ def test_export_prov_derives_each_subscript_read_from_the_item_it_read(
     assert [read for read, _ in subscript_reads(project)] == list(READ_ITEMS)
     for read, (item, key) in READ_ITEMS.items():
         assert declared(text, read) and declared(text, item), (read, item)
-        line = line_starting(
-            text, "wasDerivedFrom({}, {}, access".format(read, item))
-        assert 'version:key="{}", version:access="r"'.format(key) in line, (
-            line)
+        line = line_starting(text, "wasDerivedFrom({}, {}, access".format(read, item))
+        assert 'version:key="{}", version:access="r"'.format(key) in line, line
 
 
 def test_export_prov_of_subscript_reads(subscripts_prov):
@@ -189,8 +197,11 @@ def test_export_prov_of_subscript_reads(subscripts_prov):
     # The collections used by an access activity, in the order of the
     # export: the last one comes from the write of a[1] on line 5.
     assert USED_COLLECTION.findall(text) == [
-        ("access2", "1_a"), ("access3", "2_z"), ("access3", "1_a"),
-        ("access4", "1_a")]
+        ("access2", "1_a"),
+        ("access3", "2_z"),
+        ("access3", "1_a"),
+        ("access4", "1_a"),
+    ]
 
 
 @known_defects(COLLECTION_SHIFT)
@@ -219,8 +230,7 @@ def test_export_prov_of_a_double_quoted_string(two_trial_project):
 
     Characterization of a defect (``simulation.py`` line 14).
     """
-    text = two_trial_project.normalize(
-        two_trial_project.run("export", "prov").stdout)
+    text = two_trial_project.normalize(two_trial_project.run("export", "prov").stdout)
     assert 'label="open(path, newline="")"' in text
 
 
@@ -228,14 +238,17 @@ def test_export_prov_of_a_double_quoted_string(two_trial_project):
 def test_export_prov_of_a_double_quoted_string_desired(two_trial_project):
     """Every attribute value is a PROV-N string literal: a double quote or
     a backslash inside it is escaped"""
-    text = two_trial_project.normalize(
-        two_trial_project.run("export", "prov").stdout)
-    lines = [line for line in text.splitlines()
-             if line.endswith("])") and not line.startswith("entity(user_")]
+    text = two_trial_project.normalize(two_trial_project.run("export", "prov").stdout)
+    lines = [
+        line
+        for line in text.splitlines()
+        if line.endswith("])") and not line.startswith("entity(user_")
+    ]
     # Not vacuous: entities, derivations and members have attributes.
     assert len(lines) > 100
     bad = [line for line in lines if not ATTRIBUTES.search(line)]
     # Every line, so the signature cannot fall outside a window when
     # another system adds invalid lines before it.
     assert not bad, "{} lines with an invalid string:\n{}".format(
-        len(bad), "\n".join(bad))
+        len(bad), "\n".join(bad)
+    )

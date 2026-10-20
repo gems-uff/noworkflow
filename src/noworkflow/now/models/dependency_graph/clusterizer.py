@@ -19,6 +19,7 @@ from .node_types import AccessNode, ActivationNode, ClusterNode, EvaluationNode
 
 class Clusterizer(object):
     """Clusterize trial activations"""
+
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, trial, config=None, filter_=None, synonymer=None):
@@ -79,8 +80,7 @@ class Clusterizer(object):
 
         if not is_type:
             for member in node.evaluation.memberships_as_member:
-                self.process_evaluation(
-                    member.collection, cluster, False)
+                self.process_evaluation(member.collection, cluster, False)
 
         return node
 
@@ -90,9 +90,7 @@ class Clusterizer(object):
         if act is not None:
             return self.process_activation(act, evaluation, cluster, is_type)
 
-        return self.add_evaluation_node(
-            EvaluationNode(evaluation), cluster, is_type
-        )
+        return self.add_evaluation_node(EvaluationNode(evaluation), cluster, is_type)
 
     def _activation_node_condition(self, activation, cluster):
         """Condition for creating an activation node instead of a cluster"""
@@ -106,9 +104,7 @@ class Clusterizer(object):
                 ActivationNode(activation, evaluation), cluster, is_type
             )
         else:
-            node = self.add_cluster_node(
-                activation, evaluation, cluster, is_type
-            )
+            node = self.add_cluster_node(activation, evaluation, cluster, is_type)
 
         if node is None or not self.filter.show_accesses:
             return node
@@ -120,17 +116,19 @@ class Clusterizer(object):
         activation_accesses = activation.recursive_accesses(
             cluster.depth,
             max_depth=self.config.max_depth,
-            external=self.filter.show_external_accesses
+            external=self.filter.show_external_accesses,
         )
         for access in activation_accesses:
             access_node = self.process_access(access, cluster)
             if access_node is None:
                 continue
             acc_nid = access_node.node_id
-            access_attr = ACCESS_ATTR.update({
-                "_checkpoint": access.checkpoint,
-                "_type": "access",
-            })
+            access_attr = ACCESS_ATTR.update(
+                {
+                    "_checkpoint": access.checkpoint,
+                    "_type": "access",
+                }
+            )
             if set("r+") & set(access.mode):
                 departing_arrows[nid][acc_nid].add(access_attr)
                 arriving_arrows[acc_nid][nid].add(access_attr)
@@ -142,16 +140,14 @@ class Clusterizer(object):
     def process_access(self, access, cluster):
         """Process access and add it to cluster"""
         node, _ = self.add_node(
-            AccessNode(UniqueFileAccess((access.trial_id, access.id))),
-            cluster
+            AccessNode(UniqueFileAccess((access.trial_id, access.id))), cluster
         )
         return node
 
     def add_cluster_node(self, activation, evaluation, cluster, is_type):
         """Create new cluster"""
         node = self.add_evaluation_node(
-            ClusterNode(activation, evaluation, cluster.depth + 1), cluster,
-            is_type
+            ClusterNode(activation, evaluation, cluster.depth + 1), cluster, is_type
         )
         if isinstance(node, ClusterNode):
             self.process_cluster(node)
@@ -190,11 +186,13 @@ class Clusterizer(object):
         attributes = EMPTY_ATTR
         reference = REFERENCE_ATTR
         for dep, source, target in self.dep_iter(self.trial().dependencies):
-            attr = (reference if dep.reference else attributes)
-            dep_attributes = attr.update({
-                "_type": dep.type,
-                "_checkpoint": dep.dependent.checkpoint, # slow
-            })
+            attr = reference if dep.reference else attributes
+            dep_attributes = attr.update(
+                {
+                    "_type": dep.type,
+                    "_checkpoint": dep.dependent.checkpoint,  # slow
+                }
+            )
             departing_arrows[source][target].add(dep_attributes)
             arriving_arrows[target][source].add(dep_attributes)
 
@@ -202,13 +200,15 @@ class Clusterizer(object):
             extra = ""
             if self.config.show_timestamps:
                 extra = "\n{}".format(member.checkpoint)
-            dep_attributes = attributes.update({
-                "label": "{}{}".format(member.key, extra),
-                "_type": "member",
-                "_checkpoint": member.checkpoint,
-                "_key": member.key,
-                "_mode": member.type,
-            })
+            dep_attributes = attributes.update(
+                {
+                    "label": "{}{}".format(member.key, extra),
+                    "_type": "member",
+                    "_checkpoint": member.checkpoint,
+                    "_key": member.key,
+                    "_mode": member.type,
+                }
+            )
             departing_arrows[source][target].add(dep_attributes)
             arriving_arrows[target][source].add(dep_attributes)
 
@@ -275,14 +275,17 @@ class Clusterizer(object):
 
 class DependencyClusterizer(Clusterizer):
     """Create a dependency graph with a single cluster"""
+
     def add_cluster_node(self, activation, evaluation, cluster, is_type):
         """Create new cluster"""
         old_depth = cluster.depth
         node = self.add_evaluation_node(
-            ActivationNode(activation, evaluation), cluster, is_type,
+            ActivationNode(activation, evaluation),
+            cluster,
+            is_type,
         )
         cluster.depth += 1
-        if node is not None and self.config.max_depth != float('inf'):
+        if node is not None and self.config.max_depth != float("inf"):
             for subeval in activation.evaluations:
                 self.process_evaluation(subeval, cluster, False)
         cluster.depth = old_depth
@@ -290,13 +293,14 @@ class DependencyClusterizer(Clusterizer):
 
     def process_cluster(self, cluster):
         """Process only main cluster"""
-        no_max = self.config.max_depth == float('inf')
+        no_max = self.config.max_depth == float("inf")
         obj = self.trial() if no_max else cluster.activation
         for evaluation in obj.evaluations:
             if evaluation.id == cluster.evaluation.id:
                 continue
             self.process_evaluation(evaluation, cluster, False)
         self.config.rank(cluster)
+
 
 class ActivationClusterizer(Clusterizer):
     """Create an activation graph"""
@@ -342,6 +346,7 @@ class RetrospectiveClusterizer(Clusterizer):
             self.config.rank(cluster)
         return result
 
+
 class ProspectiveClusterizer(Clusterizer):
     """Create an activation graph"""
 
@@ -349,15 +354,22 @@ class ProspectiveClusterizer(Clusterizer):
         super(ProspectiveClusterizer, self).__init__(*args, **kwargs)
         self.clusters = []
         self.code_components_added = []
-        
+
     def check_if_function_call_was_added(self, evaluation):
-        code_component = relational.session.query(CodeComponent.m).filter(CodeComponent.m.id==evaluation.code_component_id, CodeComponent.m.trial_id==evaluation.trial_id).all()[0]
-        #if code_component.type == "call":
+        code_component = (
+            relational.session.query(CodeComponent.m)
+            .filter(
+                CodeComponent.m.id == evaluation.code_component_id,
+                CodeComponent.m.trial_id == evaluation.trial_id,
+            )
+            .all()[0]
+        )
+        # if code_component.type == "call":
         if code_component in self.code_components_added:
             return True
         self.code_components_added.append(code_component)
         return False
-    
+
     def add_node(self, node, cluster):
         """Add node to graph"""
         created = self.created
@@ -371,7 +383,9 @@ class ProspectiveClusterizer(Clusterizer):
             return None, "after"
         if nid in created:
             return node, "exists"
-        if((type(node) is not AccessNode) and self.check_if_function_call_was_added(node.evaluation)):
+        if (type(node) is not AccessNode) and self.check_if_function_call_was_added(
+            node.evaluation
+        ):
             return node, "done"
         created[nid] = (cluster, node)
         cluster.add(node)
@@ -384,7 +398,7 @@ class ProspectiveClusterizer(Clusterizer):
         created = self.created
         for activation in cluster.activation.activations:
             evaluation = activation.this_evaluation
-            #if(not self.check_if_function_call_was_added(evaluation)):
+            # if(not self.check_if_function_call_was_added(evaluation)):
             self.process_activation(activation, evaluation, cluster, False)
             for dep in chain(evaluation.dependencies, evaluation.dependents):
                 dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
@@ -399,4 +413,3 @@ class ProspectiveClusterizer(Clusterizer):
         for cluster in self.clusters:
             self.config.rank(cluster)
         return result
-

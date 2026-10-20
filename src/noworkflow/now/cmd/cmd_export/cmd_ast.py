@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now export ast'command"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
@@ -18,17 +19,17 @@ class Ast(Command):
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("trial", type=str, nargs="?",
-                help="trial id or none for last trial.")
-        add_arg("-d", "--dot", action="store_true",
-                help="output in Graphviz dot format.")
-        add_arg("-j", "--json", action="store_true",
-                help="output in json format")
-        add_arg("--dir", type=str,
-                help="set project path where is the database. Default to "
-                     "current directory")
-        add_arg("--content-engine", type=str,
-                help="set the content database engine")
+        add_arg("trial", type=str, nargs="?", help="trial id or none for last trial.")
+        add_arg(
+            "-d", "--dot", action="store_true", help="output in Graphviz dot format."
+        )
+        add_arg("-j", "--json", action="store_true", help="output in json format")
+        add_arg(
+            "--dir",
+            type=str,
+            help="set project path where is the database. Default to current directory",
+        )
+        add_arg("--content-engine", type=str, help="set the content database engine")
 
     def execute(self, args):
         persistence_config.content_engine = args.content_engine

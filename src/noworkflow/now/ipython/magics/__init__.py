@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Magics for IPython"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import defaultdict

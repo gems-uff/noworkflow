@@ -27,6 +27,7 @@ behavior and a ``_desired`` twin marked through ``known_defects``; the
 mechanisms are plain Python string formatting, the same on every system
 and Python version (measured on macOS with 3.11 to 3.15).
 """
+
 import collections
 import gc
 import re
@@ -77,25 +78,42 @@ from noworkflow.tests.models.model_rows import (
 
 RULES = Path(noworkflow.__file__).resolve().parent / "resources" / "rules.pl"
 
-MODELS = [model for model in list(ORDER) + [Remote]
-          if getattr(model, "prolog_description", None) is not None]
+MODELS = [
+    model
+    for model in list(ORDER) + [Remote]
+    if getattr(model, "prolog_description", None) is not None
+]
 # Head writes the trial id unquoted: it has its own pair of tests.
 ROW_MODELS = [model for model in MODELS if model is not Head]
 # Head and Module define a __repr__ of their own instead of the fact.
 REPR_MODELS = [model for model in MODELS if model not in (Head, Module)]
 NULLABLE = (PrologNullable, PrologNullableRepr, PrologTimestamp)
 NULLABLE_MODELS = [
-    model for model in MODELS
-    if any(isinstance(attribute, NULLABLE)
-           for attribute in model.prolog_description.attributes)
+    model
+    for model in MODELS
+    if any(
+        isinstance(attribute, NULLABLE)
+        for attribute in model.prolog_description.attributes
+    )
 ]
 # StageTagsLW stores neither column, so they are NULL in every stored row.
 UNSTORED = {"StageTags": ("variable_name", "variable_value")}
 
 # What `now export prolog` writes, in its order (trial_prolog.py).
-EXPORTED = ["trial", "tag", "argument", "module", "environment",
-            "code_component", "code_block", "activation", "evaluation",
-            "dependency", "access", "member"]
+EXPORTED = [
+    "trial",
+    "tag",
+    "argument",
+    "module",
+    "environment",
+    "code_component",
+    "code_block",
+    "activation",
+    "evaluation",
+    "dependency",
+    "access",
+    "member",
+]
 # The table of each exported predicate, and the column that names the trial.
 EXPORTED_TABLES = {
     "trial": ("trial", "id"),
@@ -149,16 +167,16 @@ GRAMMAR_CASES = [
 
 HEAD_UNQUOTED = Defect(
     reason="#353: Head.prolog_description describes "
-           "trial_id with PrologAttribute, which writes the UUID unquoted: "
-           "the fact is not valid Prolog and retract does not bind the "
-           "trial",
+    "trial_id with PrologAttribute, which writes the UUID unquoted: "
+    "the fact is not valid Prolog and retract does not bind the "
+    "trial",
     signature="non-atomic arguments in head(",
 )
 NONE_ATOM = Defect(
     reason="#353: module.fullpath and the attributes of "
-           "the collaboration models (experiment, extendedAnnotation) are "
-           "described with PrologRepr, which writes a NULL column as the "
-           "atom 'None' instead of nil",
+    "the collaboration models (experiment, extendedAnnotation) are "
+    "described with PrologRepr, which writes a NULL column as the "
+    "atom 'None' instead of nil",
     signature="is 'None', not nil",
 )
 
@@ -204,8 +222,11 @@ def rule_line_problems(text):
 def rule_clauses(text):
     """The clauses of a rules file of one clause per line, without their
     period"""
-    return [line.strip()[:-1] for line in text.split("\n")
-            if line.strip() and not line.strip().startswith("%")]
+    return [
+        line.strip()[:-1]
+        for line in text.split("\n")
+        if line.strip() and not line.strip().startswith("%")
+    ]
 
 
 def predicate_counts(clauses):
@@ -229,8 +250,9 @@ def trial_row_counts(project, trial_id):
     """``{predicate: rows of its table that belong to the trial}``"""
     return {
         predicate: project.query(
-            'SELECT COUNT(*) AS n FROM "{}" WHERE "{}" = ?'.format(
-                table, column), trial_id)[0]["n"]
+            'SELECT COUNT(*) AS n FROM "{}" WHERE "{}" = ?'.format(table, column),
+            trial_id,
+        )[0]["n"]
         for predicate, (table, column) in EXPORTED_TABLES.items()
     }
 
@@ -290,23 +312,26 @@ def test_prolog_fact_keeps_the_declared_arity(clean_store, model):
     arguments = fact_arguments(fact, description.name)
     assert arguments is not None, fact
     assert len(arguments) == arity, fact
-    assert non_atomic(arguments) == [], (
-        "non-atomic arguments in {}".format(fact))
+    assert non_atomic(arguments) == [], "non-atomic arguments in {}".format(fact)
 
 
 @pytest.mark.parametrize("model", NULLABLE_MODELS, ids=name)
 def test_prolog_fact_writes_nil_for_null_nullable_attributes(
-        clean_store, monkeypatch, model):
+    clean_store, monkeypatch, model
+):
     """Where the column behind a nullable attribute is NULL, the fact
     writes ``nil`` in its place and keeps its arity; a NULL timestamp is
     ``-1``, or ``nil`` under ``PrologTimestamp.use_nil`` (``export -t``)
     """
     description = model.prolog_description
-    nullable = {index: attribute
-                for index, attribute in enumerate(description.attributes)
-                if isinstance(attribute, NULLABLE)}
-    proxy = insert_model_row(model, nulls=[
-        attribute.attr_name for attribute in nullable.values()])
+    nullable = {
+        index: attribute
+        for index, attribute in enumerate(description.attributes)
+        if isinstance(attribute, NULLABLE)
+    }
+    proxy = insert_model_row(
+        model, nulls=[attribute.attr_name for attribute in nullable.values()]
+    )
     for use_nil in (False, True):
         monkeypatch.setattr(PrologTimestamp, "use_nil", use_nil)
         fact = description.fact(proxy)
@@ -314,8 +339,9 @@ def test_prolog_fact_writes_nil_for_null_nullable_attributes(
         assert len(arguments) == len(description.attributes), fact
         written = {index: arguments[index].strip() for index in nullable}
         assert written == {
-            index: "-1" if isinstance(attribute, PrologTimestamp)
-            and not use_nil else "nil"
+            index: "-1"
+            if isinstance(attribute, PrologTimestamp) and not use_nil
+            else "nil"
             for index, attribute in nullable.items()
         }, fact
 
@@ -329,21 +355,21 @@ def test_prolog_description_forms_agree_on_the_arity(model):
     """
     description = model.prolog_description
     size = len(description.attributes)
-    assert description.dynamic() == ":- dynamic({}/{}).".format(
-        description.name, size)
-    variables = [text.strip()
-                 for text in fact_arguments(repr(description),
-                                            description.name)]
+    assert description.dynamic() == ":- dynamic({}/{}).".format(description.name, size)
+    variables = [
+        text.strip() for text in fact_arguments(repr(description), description.name)
+    ]
     assert len(variables) == size
     assert all(VARIABLE.fullmatch(variable) for variable in variables)
     assert len(set(variables)) == size, variables
     assert "% FACT DEFINITION: {}\n".format(repr(description)) in (
-        description.comment())
+        description.comment()
+    )
     empty = fact_arguments(description.empty(), description.name)
     assert [text.strip() for text in empty] == ["0"] * size
     retract = description.retract("t'1")
     assert retract.startswith("retract(") and retract.endswith("))")
-    bound = fact_arguments(retract[len("retract("):], description.name)
+    bound = fact_arguments(retract[len("retract(") :], description.name)
     assert [text.strip() for text in bound] == [
         "'t''1'" if isinstance(attribute, PrologTrial) else "_"
         for attribute in description.attributes
@@ -369,15 +395,20 @@ def test_models_with_a_prolog_description():
     of the collaboration features); this pins that choice, it does not
     claim a defect.
     """
-    without = [name(model) for model in list(ORDER) + [Remote]
-               if model not in MODELS]
+    without = [name(model) for model in list(ORDER) + [Remote] if model not in MODELS]
     assert without == ["GraphCache"]
     exported = [model for model, _ in TrialProlog.prolog_models()]
     assert [model.prolog_description.name for model in exported] == EXPORTED
-    assert sorted(name(model) for model in MODELS
-                  if model not in exported) == [
-        "Composition", "Experiment", "ExtendedAnnotation", "Group", "Head",
-        "MemberOfGroup", "Remote", "StageTags", "User",
+    assert sorted(name(model) for model in MODELS if model not in exported) == [
+        "Composition",
+        "Experiment",
+        "ExtendedAnnotation",
+        "Group",
+        "Head",
+        "MemberOfGroup",
+        "Remote",
+        "StageTags",
+        "User",
     ]
 
 
@@ -389,8 +420,7 @@ def main_head():
     id)``, the ids read with SQL"""
     trial_id = new_trial(TrialConfig(script="main.py"), erase=True)
     Trial(trial_id).create_head()
-    rows = sql("SELECT id, trial_id FROM head WHERE script = :script",
-               script="main.py")
+    rows = sql("SELECT id, trial_id FROM head WHERE script = :script", script="main.py")
     assert len(rows) == 1
     head_id, stored = rows[0]
     assert stored == trial_id
@@ -421,10 +451,8 @@ def test_head_prolog_fact_desired(clean_store):
     head, _, trial_id = main_head()
     fact = Head.prolog_description.fact(head)
     arguments = fact_arguments(fact, "head")
-    assert non_atomic(arguments) == [], (
-        "non-atomic arguments in {}".format(fact))
-    assert [text.strip() for text in arguments] == [
-        "'main.py'", quoted(trial_id)]
+    assert non_atomic(arguments) == [], "non-atomic arguments in {}".format(fact)
+    assert [text.strip() for text in arguments] == ["'main.py'", quoted(trial_id)]
     assert quoted(trial_id) in Head.prolog_description.retract(trial_id)
 
 
@@ -448,31 +476,53 @@ def annotation_of_an_experiment():
     """An annotation of an experiment, which has no trial: ``POST
     /experiments/<id>/extendedAnnotation`` (vis/views.py)"""
     experiment = Experiment.create(ExperimentLW("experiment", "", "about"))
-    created = ExtendedAnnotation.create(ExtendedAnnotationLW(
-        None, "note", "about", "plainText", "prospective", "Experiment",
-        experiment.id, None))
+    created = ExtendedAnnotation.create(
+        ExtendedAnnotationLW(
+            None,
+            "note",
+            "about",
+            "plainText",
+            "prospective",
+            "Experiment",
+            experiment.id,
+            None,
+        )
+    )
     return ExtendedAnnotation(created.id)
 
 
 def annotation_of_a_trial():
     """An annotation of a trial, which has no experiment: ``POST
     /trials/<id>/extendedAnnotation`` (vis/views.py)"""
-    created = ExtendedAnnotation.create(ExtendedAnnotationLW(
-        None, "note", "about", "plainText", "retrospective", "Trial",
-        None, TRIAL_ID))
+    created = ExtendedAnnotation.create(
+        ExtendedAnnotationLW(
+            None, "note", "about", "plainText", "retrospective", "Trial", None, TRIAL_ID
+        )
+    )
     return ExtendedAnnotation(created.id)
 
 
 # (builder, table, column): the column the builder leaves NULL.
 MISSING_VALUES = [
-    pytest.param(module_without_fullpath, "module", "fullpath",
-                 id="module-fullpath"),
-    pytest.param(experiment_without_description, "experiment",
-                 "description", id="experiment-description"),
-    pytest.param(annotation_of_an_experiment, "extendedAnnotation",
-                 "relatedTrial", id="annotation-relatedTrial"),
-    pytest.param(annotation_of_a_trial, "extendedAnnotation",
-                 "relatedExperiment", id="annotation-relatedExperiment"),
+    pytest.param(module_without_fullpath, "module", "fullpath", id="module-fullpath"),
+    pytest.param(
+        experiment_without_description,
+        "experiment",
+        "description",
+        id="experiment-description",
+    ),
+    pytest.param(
+        annotation_of_an_experiment,
+        "extendedAnnotation",
+        "relatedTrial",
+        id="annotation-relatedTrial",
+    ),
+    pytest.param(
+        annotation_of_a_trial,
+        "extendedAnnotation",
+        "relatedExperiment",
+        id="annotation-relatedExperiment",
+    ),
 ]
 
 
@@ -480,12 +530,10 @@ def missing_value(build, table, column):
     """``(fact, argument)``: the fact of the row ``build`` makes and its
     argument for ``column``, which SQL shows NULL"""
     proxy = build()
-    nulls = sql('SELECT COUNT(*) FROM "{}" WHERE "{}" IS NULL'.format(
-        table, column))
+    nulls = sql('SELECT COUNT(*) FROM "{}" WHERE "{}" IS NULL'.format(table, column))
     assert nulls[0][0] == 1, "{}.{} is not NULL".format(table, column)
     description = type(proxy).prolog_description
-    index = [attribute.attr_name
-             for attribute in description.attributes].index(column)
+    index = [attribute.attr_name for attribute in description.attributes].index(column)
     fact = description.fact(proxy)
     arguments = fact_arguments(fact, description.name)
     assert len(arguments) == len(description.attributes), fact
@@ -505,14 +553,12 @@ def test_prolog_fact_of_a_missing_value(clean_store, build, table, column):
 
 @pytest.mark.parametrize("build, table, column", MISSING_VALUES)
 @known_defects(NONE_ATOM)
-def test_prolog_fact_of_a_missing_value_desired(
-        clean_store, build, table, column):
+def test_prolog_fact_of_a_missing_value_desired(clean_store, build, table, column):
     """A NULL column is written as ``nil``, like the nullable attributes
     of the other facts
     """
     fact, argument = missing_value(build, table, column)
-    assert argument == "nil", "{} is {}, not nil, in {}".format(
-        column, argument, fact)
+    assert argument == "nil", "{} is {}, not nil, in {}".format(column, argument, fact)
 
 
 # --- a trial's facts in Prolog ----------------------------------------------
@@ -536,17 +582,18 @@ def test_the_rule_line_scanner_flags_a_split_rule_and_an_inner_period():
     """Control: a rule split over two lines and a period inside a clause
     are flagged, comments and blank lines are not
     """
-    text = ("% a comment. With periods.\n"
-            "\n"
-            "ok(X) :- X > 0.\n"
-            "split(X) :-\n"
-            "    ok(X).\n"
-            "half(X) :- X > 0.5.\n")
+    text = (
+        "% a comment. With periods.\n"
+        "\n"
+        "ok(X) :- X > 0.\n"
+        "split(X) :-\n"
+        "    ok(X).\n"
+        "half(X) :- X > 0.5.\n"
+    )
     assert [number for number, _ in rule_line_problems(text)] == [4, 6]
 
 
-def test_trial_prolog_exports_one_fact_per_row_of_the_trial(
-        connected_two_trials):
+def test_trial_prolog_exports_one_fact_per_row_of_the_trial(connected_two_trials):
     """The facts that a trial exports are one per row of its tables, for
     each of the twelve exported predicates
 
@@ -555,17 +602,21 @@ def test_trial_prolog_exports_one_fact_per_row_of_the_trial(
     trial = Trial()
     is_last = trial.id == connected_two_trials.trials()[-1]["id"]
     assert is_last, "Trial() is not the last trial"
-    clauses = [body.strip() for kind, body
-               in prolog_statements(trial.prolog.export_text_facts())
-               if kind == "clause"]
-    declared = [DECLARATION.fullmatch(clause).group(1)
-                for clause in clauses if clause.startswith(":- dynamic(")]
+    clauses = [
+        body.strip()
+        for kind, body in prolog_statements(trial.prolog.export_text_facts())
+        if kind == "clause"
+    ]
+    declared = [
+        DECLARATION.fullmatch(clause).group(1)
+        for clause in clauses
+        if clause.startswith(":- dynamic(")
+    ]
     assert declared == EXPORTED
     counts = predicate_counts(clauses)
     expected = trial_row_counts(connected_two_trials, trial.id)
     assert set(counts) <= set(expected)
-    assert {predicate: counts[predicate] for predicate in expected} == (
-        expected)
+    assert {predicate: counts[predicate] for predicate in expected} == (expected)
     # Not vacuous: the trial has evaluations.
     assert expected["evaluation"] > 0
 
@@ -609,7 +660,8 @@ def fake_pyswip(monkeypatch):
 
 
 def test_trial_prolog_loads_its_facts_and_the_rules_into_prolog(
-        connected_two_trials, fake_pyswip):
+    connected_two_trials, fake_pyswip
+):
     """``load_cli_facts`` starts Prolog with an empty trial and
     ``load_rules(0)``, then asserts the declarations and one fact per row of
     the trial, one clause per rule of ``rules.pl`` and ``load_rules(1)``,
@@ -626,12 +678,15 @@ def test_trial_prolog_loads_its_facts_and_the_rules_into_prolog(
     assert isinstance(cli, FakeProlog)
     rules = rule_clauses(RULES.read_text(encoding="utf-8"))
     started = cli.asserted[:2] == [
-        "trial({})".format(", ".join(["0"] * TRIAL_ARITY)), "load_rules(0)"]
+        "trial({})".format(", ".join(["0"] * TRIAL_ARITY)),
+        "load_rules(0)",
+    ]
     assert started, heads(cli.asserted[:2])
-    assert cli.asserted[-len(rules) - 1:] == rules + ["load_rules(1)"]
-    loaded = cli.asserted[2:-len(rules) - 1]
+    assert cli.asserted[-len(rules) - 1 :] == rules + ["load_rules(1)"]
+    loaded = cli.asserted[2 : -len(rules) - 1]
     with_period = collections.Counter(
-        heads(clause for clause in loaded if clause.endswith(".")))
+        heads(clause for clause in loaded if clause.endswith("."))
+    )
     assert with_period == collections.Counter()
     declared = {}
     for clause in loaded:
@@ -643,12 +698,14 @@ def test_trial_prolog_loads_its_facts_and_the_rules_into_prolog(
     assert len(facts) + len(declared) == len(loaded)
     expected = trial_row_counts(connected_two_trials, trial.id)
     counts = predicate_counts(facts)
-    assert {predicate: counts[predicate] for predicate in expected} == (
-        expected)
+    assert {predicate: counts[predicate] for predicate in expected} == (expected)
     wrong_arity = collections.Counter(
-        predicate for predicate in EXPORTED for fact in facts
+        predicate
+        for predicate in EXPORTED
+        for fact in facts
         if fact.startswith(predicate + "(")
-        and len(fact_arguments(fact, predicate)) != declared[predicate])
+        and len(fact_arguments(fact, predicate)) != declared[predicate]
+    )
     assert wrong_arity == collections.Counter()
     # Prolog was asked whether the trial and the rules were loaded.
     assert len(cli.queries) == 2
@@ -672,8 +729,7 @@ def test_trial_prolog_loads_its_facts_and_the_rules_into_prolog(
 
     del cli.queries[:]
     trial.prolog.retract()
-    retracted = [re.match(r"retract\((\w+)\(", text).group(1)
-                 for text in cli.queries]
+    retracted = [re.match(r"retract\((\w+)\(", text).group(1) for text in cli.queries]
     assert retracted == EXPORTED
     unbound = [text for text in cli.queries if quoted(trial.id) not in text]
     assert unbound == []

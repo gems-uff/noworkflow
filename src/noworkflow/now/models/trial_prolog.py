@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Trial Prolog Object"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
@@ -44,6 +45,7 @@ class TrialProlog(Model):
     def prolog_models(cls, trial=None):
         """Prolog models and accessors"""
         from ..persistence.models import Trial
+
         return [
             (Trial, lambda: [trial]),
             (Tag, lambda: trial.tags),
@@ -57,14 +59,13 @@ class TrialProlog(Model):
             (Dependency, lambda: trial.dependencies),
             (FileAccess, lambda: trial.file_accesses),
             (Member, lambda: trial.members),
-
             # TODO: Check new models
-            #(Experiment, lambda: [trial.experiment] if hasattr(trial, 'experiment') and trial.experiment else []),
-            #(User, lambda: [trial.user] if hasattr(trial, 'user') and trial.user else []),
-            #(Group, lambda: [trial.user.groups] if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'groups') else []),
-            #(MemberOfGroup, lambda: list(trial.user.member_of_groups) if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'member_of_groups') else []),
-            #(ExtendedAnnotation, lambda: list(trial.extended_annotations) if hasattr(trial, 'extended_annotations') and trial.extended_annotations else []),
-            #(Remote, lambda: list(relational.session.query(Remote.m).all())),
+            # (Experiment, lambda: [trial.experiment] if hasattr(trial, 'experiment') and trial.experiment else []),
+            # (User, lambda: [trial.user] if hasattr(trial, 'user') and trial.user else []),
+            # (Group, lambda: [trial.user.groups] if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'groups') else []),
+            # (MemberOfGroup, lambda: list(trial.user.member_of_groups) if hasattr(trial, 'user') and trial.user and hasattr(trial.user, 'member_of_groups') else []),
+            # (ExtendedAnnotation, lambda: list(trial.extended_annotations) if hasattr(trial, 'extended_annotations') and trial.extended_annotations else []),
+            # (Remote, lambda: list(relational.session.query(Remote.m).all())),
         ]
 
     @classmethod
@@ -76,8 +77,7 @@ class TrialProlog(Model):
     def retract(self):
         """Remove extracted rules from swipl"""
         for cls, _ in self.models:
-            list(self.prolog_cli.query(
-                cls.prolog_description.retract(self.trial.id)))
+            list(self.prolog_cli.query(cls.prolog_description.retract(self.trial.id)))
 
     def _export_facts(self, with_doc=True):
         """Export facts from trial as a list"""
@@ -87,10 +87,12 @@ class TrialProlog(Model):
                 result.append(cls.prolog_description.comment())
             result.append(cls.prolog_description.dynamic())
             for obj in query():
-                if obj is None or not hasattr(obj, 'id'):
-                    print(f"WARNING: Skipping object of type {type(obj)} in {cls.__name__}")
+                if obj is None or not hasattr(obj, "id"):
+                    print(
+                        f"WARNING: Skipping object of type {type(obj)} in {cls.__name__}"
+                    )
                     continue
-                result.append(cls.prolog_description.fact(obj)) 
+                result.append(cls.prolog_description.fact(obj))
         return result
 
     def export_text_facts(self):
@@ -146,6 +148,7 @@ class TrialProlog(Model):
 
         if not cls.prolog_cli:
             from pyswip import Prolog
+
             cls.prolog_cli = Prolog()
             cls.prolog_cli.assertz(Trial.prolog_description.empty()[:-1])
             cls.prolog_cli.assertz("load_rules(0)")
@@ -159,7 +162,7 @@ class TrialProlog(Model):
         cache = set()
         no_cache = set()
 
-        for inst in cls.get_instances():                                         # pylint: disable=no-member
+        for inst in cls.get_instances():  # pylint: disable=no-member
             id_to_instance[inst.trial.id] = inst
             (cache if inst.use_cache else no_cache).add(inst.trial.id)
         retract_ids = no_cache - cache

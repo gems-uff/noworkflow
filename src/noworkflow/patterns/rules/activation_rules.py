@@ -42,9 +42,8 @@ def called_activation_id(trial_id, caller, called):
     """match *Called* activation by *Caller* activation
     in a given trial (*TrialId*).
     """
-    return (
-        evaluation(trial_id, called, activation_id=caller) &
-        activation(trial_id, called)
+    return evaluation(trial_id, called, activation_id=caller) & activation(
+        trial_id, called
     )
 
 
@@ -58,9 +57,8 @@ def evaluation_line_id(trial_id, id, line):
     Note: Line may match multiple lines
     """
     code_id = var("_code_id")
-    return (
-        evaluation(trial_id, id, code_component_id=code_id) &
-        code_line_id(trial_id, code_id, line)
+    return evaluation(trial_id, id, code_component_id=code_id) & code_line_id(
+        trial_id, code_id, line
     )
 
 
@@ -75,15 +73,15 @@ def map_evaluation_lines_id(trial_id, ids, lines, _binds):
     """get the *Lines* of evaluations (*Ids*)
     in a given trial (*TrialId*).
     """
+
     @create_rule
     def evaluation_line_query(id, first, last):
         """Query code_components between lines"""
         code_id = var("_code_id")
-        return (
-            code_component(trial_id, code_id, first_char_line=first,
-                           last_char_line=last) &
-            evaluation(trial_id, id, code_component_id=code_id)
-        )
+        return code_component(
+            trial_id, code_id, first_char_line=first, last_char_line=last
+        ) & evaluation(trial_id, id, code_component_id=code_id)
+
     return _bagof_append_sort(evaluation_line_query, ids, lines, _binds)
 
 
@@ -97,8 +95,11 @@ def map_evaluation_code_ids(trial_id, ids, code_ids, _binds):
     # Note: this function has a different behavior in Python and Prolog
     return _list_matcher(
         (lambda id, code_id: evaluation(trial_id, id, code_component_id=code_id)),
-        _binds, ids, code_ids
+        _binds,
+        ids,
+        code_ids,
     )
+
 
 @prolog_rule("filter_activation_ids(TrialId, Ids, ActivationIds) :-")
 @prolog_rule("    include(is_activation_id(TrialId), Ids, ActivationIds).")
@@ -122,7 +123,9 @@ def filter_activation_ids(trial_id, ids, activation_ids, _binds):
 
 
 @prolog_rule("recursive_internal_evaluations_ids(_, [], []).")
-@prolog_rule("recursive_internal_evaluations_ids(TrialId, [InfluencedActivation], Evaluations) :-")
+@prolog_rule(
+    "recursive_internal_evaluations_ids(TrialId, [InfluencedActivation], Evaluations) :-"
+)
 @prolog_rule("    bagof(X, activation_id(TrialId, InfluencedActivation, X), E1),")
 @prolog_rule("    filter_activation_ids(TrialId, E1, Activations),")
 @prolog_rule("    recursive_internal_evaluations_ids(TrialId, Activations, E2),")
@@ -148,7 +151,9 @@ def recursive_internal_evaluations_ids(trial_id, activations, evaluations, _bind
             id = _get_value(called)
             evaluations_result.append(id)
             new_evaluations = var("_evaluations")
-            new_query = recursive_internal_evaluations_ids(trial_id, [id], new_evaluations)
+            new_query = recursive_internal_evaluations_ids(
+                trial_id, [id], new_evaluations
+            )
             for _ in _apply(_binds, new_query):
                 evaluations_result.extend(_get_value(new_evaluations))
     if not _match(evaluations_result, evaluations, _binds):

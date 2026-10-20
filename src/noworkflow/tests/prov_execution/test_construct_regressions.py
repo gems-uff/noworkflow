@@ -28,6 +28,7 @@ constructs that the syntax corpus pins on their own (no ``{{``, no
 ``F``/``rf`` prefix, no string inside a field, no f-string as a call's
 only argument), so that only #160 shows.
 """
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ast
@@ -40,8 +41,12 @@ SUCCESS = "the execution of trial -1 finished successfully"
 
 def span(component):
     """Where a code component is: first and last line and column"""
-    return (component.first_char_line, component.first_char_column,
-            component.last_char_line, component.last_char_column)
+    return (
+        component.first_char_line,
+        component.first_char_column,
+        component.last_char_line,
+        component.last_char_column,
+    )
 
 
 def span_of(code, lineno, text):
@@ -66,14 +71,14 @@ class ConstructCase(CollectionTestCase):
             for comp in self.metascript.compositions_store.store.values()
             if comp.whole_id == whole.id and comp.part_id is not None
         ]
-        return sorted(found, key=lambda item: (
-            item[1] is None, item[1] or 0, item[2].id))
+        return sorted(
+            found, key=lambda item: (item[1] is None, item[1] or 0, item[2].id)
+        )
 
     def dependencies_of(self, evaluation):
         """Every dependency whose dependent is ``evaluation``"""
         store = self.metascript.dependencies_store.store
-        return [dep for dep in store.values()
-                if dep.dependent_id == evaluation.id]
+        return [dep for dep in store.values() if dep.dependent_id == evaluation.id]
 
 
 # ---------------------------------------------------------------- #160
@@ -112,8 +117,11 @@ def literal_texts(code, lineno):
 
     They hold no escape, so each value is its source text.
     """
-    return [value.value for value in joined_str(code, lineno).values
-            if isinstance(value, ast.Constant)]
+    return [
+        value.value
+        for value in joined_str(code, lineno).values
+        if isinstance(value, ast.Constant)
+    ]
 
 
 class FStringCase(ConstructCase):
@@ -128,12 +136,14 @@ class FStringCase(ConstructCase):
         """
         self.script(FSTRINGS)
         self.execute()
-        specs = {comp.part_id
-                 for comp in self.metascript.compositions_store.store.values()
-                 if comp.type == "format_spec"}
+        specs = {
+            comp.part_id
+            for comp in self.metascript.compositions_store.store.values()
+            if comp.type == "format_spec"
+        }
         return [
-            component for component
-            in self.metascript.code_components_store.store.values()
+            component
+            for component in self.metascript.code_components_store.store.values()
             if component.type == "fstring"
             and component.first_char_line == lineno
             and component.id not in specs
@@ -141,16 +151,20 @@ class FStringCase(ConstructCase):
 
     def literals(self, whole):
         """(name, span) of each literal part of ``whole``, in order"""
-        return [(part.name, span(part)) for _, _, part in self.parts(whole)
-                if part.type == "literal"]
+        return [
+            (part.name, span(part))
+            for _, _, part in self.parts(whole)
+            if part.type == "literal"
+        ]
 
     def spec(self):
         """The fvalue {name!s:>12} of line 5 and its format spec"""
         self.script(FSTRINGS)
         self.execute()
         fvalue = self.find_code_component(type="fvalue", name="{name!s:>12}")
-        return fvalue, [part for kind, _, part in self.parts(fvalue)
-                        if kind == "format_spec"][0]
+        return fvalue, [
+            part for kind, _, part in self.parts(fvalue) if kind == "format_spec"
+        ][0]
 
 
 class TestFStringParts(FStringCase):
@@ -164,23 +178,27 @@ class TestFStringParts(FStringCase):
         """
         whole = self.fstring(4)
         kinds = {"Constant": "literal", "FormattedValue": "fvalue"}
-        expected = [kinds[type(value).__name__]
-                    for value in joined_str(FSTRINGS, 4).values]
+        expected = [
+            kinds[type(value).__name__] for value in joined_str(FSTRINGS, 4).values
+        ]
         parts = self.parts(whole)
         self.assertEqual([part.type for _, _, part in parts], expected)
-        self.assertEqual([(kind, pos) for kind, pos, _ in parts],
-                         [("*values", pos) for pos in range(len(expected))])
         self.assertEqual(
-            [(part.name, span(part)) for _, _, part in parts
-             if part.type == "fvalue"],
-            [(text, span_of(FSTRINGS, 4, text))
-             for text in ("{name}", "{age}")])
+            [(kind, pos) for kind, pos, _ in parts],
+            [("*values", pos) for pos in range(len(expected))],
+        )
+        self.assertEqual(
+            [(part.name, span(part)) for _, _, part in parts if part.type == "fvalue"],
+            [(text, span_of(FSTRINGS, 4, text)) for text in ("{name}", "{age}")],
+        )
 
     def test_fstring_literal_parts_take_the_span_of_the_whole_fstring(self):
         """Each literal part is named and placed as the f-string (#160)"""
-        self.assertEqual(self.literals(self.fstring(4)),
-                         [(GREETING, span_of(FSTRINGS, 4, GREETING))]
-                         * len(literal_texts(FSTRINGS, 4)))
+        self.assertEqual(
+            self.literals(self.fstring(4)),
+            [(GREETING, span_of(FSTRINGS, 4, GREETING))]
+            * len(literal_texts(FSTRINGS, 4)),
+        )
 
     def test_format_spec_takes_the_span_of_the_whole_fstring(self):
         """A format spec is an f-string named and placed as the outer one
@@ -189,10 +207,11 @@ class TestFStringParts(FStringCase):
         fvalue uses.
         """
         fvalue, spec = self.spec()
-        self.assertEqual((spec.type, spec.name, span(spec)),
-                         ("fstring", SPEC, span_of(FSTRINGS, 5, SPEC)))
-        self.assertEqual(self.literals(spec),
-                         [(SPEC, span_of(FSTRINGS, 5, SPEC))])
+        self.assertEqual(
+            (spec.type, spec.name, span(spec)),
+            ("fstring", SPEC, span_of(FSTRINGS, 5, SPEC)),
+        )
+        self.assertEqual(self.literals(spec), [(SPEC, span_of(FSTRINGS, 5, SPEC))])
         fvalue_eval = self.find_evaluation(code_component_id=fvalue.id)
         spec_eval = self.find_evaluation(code_component_id=spec.id)
         self.assertEqual(spec_eval.repr, repr(">12"))
@@ -200,23 +219,24 @@ class TestFStringParts(FStringCase):
 
     def test_debug_specifier_text_takes_the_span_of_the_whole_fstring(self):
         """The text of an = specifier is named and placed as the f-string"""
-        self.assertEqual(self.literals(self.fstring(6)),
-                         [(DEBUG, span_of(FSTRINGS, 6, DEBUG))])
+        self.assertEqual(
+            self.literals(self.fstring(6)), [(DEBUG, span_of(FSTRINGS, 6, DEBUG))]
+        )
 
 
 class TestFStringPartsDesired(FStringCase):
     """What #160 asks for the parts of an f-string"""
 
     @known_defects(Defect(FSTRING_PARTS, GREETING))
-    def test_fstring_literal_parts_take_the_span_of_the_whole_fstring_desired(
-            self):
+    def test_fstring_literal_parts_take_the_span_of_the_whole_fstring_desired(self):
         """Desired (#160): each literal part is named and placed as its text
 
         The literals are the Constants of Python's JoinedStr.
         """
-        self.assertEqual(self.literals(self.fstring(4)),
-                         [(text, span_of(FSTRINGS, 4, text))
-                          for text in literal_texts(FSTRINGS, 4)])
+        self.assertEqual(
+            self.literals(self.fstring(4)),
+            [(text, span_of(FSTRINGS, 4, text)) for text in literal_texts(FSTRINGS, 4)],
+        )
 
     @known_defects(Defect(FSTRING_PARTS, SPEC))
     def test_format_spec_takes_the_span_of_the_whole_fstring_desired(self):
@@ -226,15 +246,14 @@ class TestFStringPartsDesired(FStringCase):
         places it at ':>12', colon included.
         """
         _, spec = self.spec()
-        self.assertEqual(self.literals(spec),
-                         [(">12", span_of(FSTRINGS, 5, ">12"))])
+        self.assertEqual(self.literals(spec), [(">12", span_of(FSTRINGS, 5, ">12"))])
 
     @known_defects(Defect(FSTRING_PARTS, DEBUG))
-    def test_debug_specifier_text_takes_the_span_of_the_whole_fstring_desired(
-            self):
+    def test_debug_specifier_text_takes_the_span_of_the_whole_fstring_desired(self):
         """Desired (#160): the text of an = specifier is 'age='"""
-        self.assertEqual(self.literals(self.fstring(6)),
-                         [("age=", span_of(FSTRINGS, 6, "age="))])
+        self.assertEqual(
+            self.literals(self.fstring(6)), [("age=", span_of(FSTRINGS, 6, "age="))]
+        )
 
 
 # ---------------------------------------------------------------- #161
@@ -248,12 +267,7 @@ YIELD_FROM = (
     "    yield result\n"
     "values = list(outer(5))\n"
 )
-GENERATOR = (
-    "# script.py\n"
-    "def inner(k):\n"
-    "    yield k\n"
-    "values = list(inner(5))\n"
-)
+GENERATOR = "# script.py\ndef inner(k):\n    yield k\nvalues = list(inner(5))\n"
 CALL_IN_BODY = (
     "# script.py\n"
     "def f(k):\n"
@@ -302,8 +316,7 @@ class YieldFromCase(ConstructCase):
         self.script(YIELD_FROM)
         self.execute()
         whole = self.find_code_component(type="yield_from")
-        return [(part.type, part.name, kind)
-                for kind, _, part in self.parts(whole)]
+        return [(part.type, part.name, kind) for kind, _, part in self.parts(whole)]
 
     def line_six(self):
         """(type, name, repr) of the evaluations of line 6, in order"""
@@ -311,8 +324,11 @@ class YieldFromCase(ConstructCase):
         self.execute()
         store = self.metascript.code_components_store.store
         return [
-            (store[evaluation.code_component_id].type,
-             store[evaluation.code_component_id].name, evaluation.repr)
+            (
+                store[evaluation.code_component_id].type,
+                store[evaluation.code_component_id].name,
+                evaluation.repr,
+            )
             for evaluation in self.metascript.evaluations_store.store.values()
             if store[evaluation.code_component_id].first_char_line == 6
         ]
@@ -324,14 +340,14 @@ class YieldFromCase(ConstructCase):
         return sorted(
             store[evaluations[dep.dependency_id].code_component_id].name
             for dep in self.dependencies_of(self.get_evaluation(name=call))
-            if dep.type == "argument")
+            if dep.type == "argument"
+        )
 
 
 class TestYieldFrom(YieldFromCase):
     """yield from, its subgenerator, and the calls a generator body makes"""
 
-    def test_generator_called_directly_binds_the_parameter_to_its_argument(
-            self):
+    def test_generator_called_directly_binds_the_parameter_to_its_argument(self):
         """Control: a generator called directly binds k to its argument
 
         Even when list() consumes it: the call inner(5) goes through
@@ -340,8 +356,7 @@ class TestYieldFrom(YieldFromCase):
         self.script(GENERATOR)
         param_k = self.get_evaluation(name="k", type="param")
         self.assertEqual(param_k.repr, "5")
-        self.assert_dependency(param_k, self.get_evaluation(name="5"),
-                               "argument", True)
+        self.assert_dependency(param_k, self.get_evaluation(name="5"), "argument", True)
         self.assertEqual(self.metascript.namespace["values"], [5])
 
     def test_call_in_a_function_binds_the_parameter_to_its_argument(self):
@@ -349,9 +364,9 @@ class TestYieldFrom(YieldFromCase):
         self.script(PLAIN_CALL)
         param_k = self.get_evaluation(name="k", type="param")
         self.assertEqual(param_k.repr, "5")
-        self.assert_dependency(param_k,
-                               self.get_evaluation(name="m", mode="r"),
-                               "argument", True)
+        self.assert_dependency(
+            param_k, self.get_evaluation(name="m", mode="r"), "argument", True
+        )
         self.assertEqual(self.metascript.namespace["values"], 6)
 
     def test_call_in_a_resumed_generator_gives_its_argument_to_list(self):
@@ -365,8 +380,7 @@ class TestYieldFrom(YieldFromCase):
         param_k = self.get_evaluation(name="k", type="param")
         self.assertEqual(param_k.repr, "5")
         self.assertEqual(self.dependencies_of(param_k), [])
-        self.assertEqual(self.arguments_of("list(outer(5))"),
-                         ["m", "outer(5)"])
+        self.assertEqual(self.arguments_of("list(outer(5))"), ["m", "outer(5)"])
         self.assertEqual(self.metascript.namespace["values"], [6])
 
     def test_yield_from_operand_has_no_code_component(self):
@@ -375,8 +389,7 @@ class TestYieldFrom(YieldFromCase):
         Python's ast has the call inner(m) as its operand, and no code
         component holds it.
         """
-        self.assertEqual(self.yield_from_parts(),
-                         [("syntax", "yield from", "*op_pos")])
+        self.assertEqual(self.yield_from_parts(), [("syntax", "yield from", "*op_pos")])
         self.assertIsNone(self.find_code_component(name="inner(m)"))
 
     def test_yield_from_is_not_evaluated(self):
@@ -399,17 +412,18 @@ class TestYieldFrom(YieldFromCase):
         """
         self.script(YIELD_FROM)
         param_k = self.get_evaluation(name="k", type="param")
-        self.assertTrue(param_k.repr.startswith("<generator object outer"),
-                        param_k.repr)
-        self.assert_dependency(param_k, self.get_evaluation(name="outer(5)"),
-                               "argument", True)
+        self.assertTrue(
+            param_k.repr.startswith("<generator object outer"), param_k.repr
+        )
+        self.assert_dependency(
+            param_k, self.get_evaluation(name="outer(5)"), "argument", True
+        )
 
 
 class TestYieldFromDesired(YieldFromCase):
     """What #161 and the resumed generator defect ask for"""
 
-    @known_defects(Defect(YIELD_FROM_OPERAND,
-                          "[('syntax', 'yield from', '*op_pos')]"))
+    @known_defects(Defect(YIELD_FROM_OPERAND, "[('syntax', 'yield from', '*op_pos')]"))
     def test_yield_from_operand_has_no_code_component_desired(self):
         """Desired (#161): the operand is a part of the yield from
 
@@ -424,14 +438,16 @@ class TestYieldFromDesired(YieldFromCase):
         Its value is the subgenerator's return value, 6.
         """
         line_six = self.line_six()
-        self.assertIn(("yield_from", "yield from inner(m)", "6"), line_six,
-                      "evaluations on line 6: {}".format(line_six))
+        self.assertIn(
+            ("yield_from", "yield from inner(m)", "6"),
+            line_six,
+            "evaluations on line 6: {}".format(line_six),
+        )
         result = self.get_evaluation(name="result", mode="w")
         self.assert_dependency(result, self.get_evaluation(type="yield_from"))
 
     @known_defects(Defect(YIELD_FROM_BINDING, "<generator object outer"))
-    def test_yield_from_binds_the_parameter_to_the_builtin_argument_desired(
-            self):
+    def test_yield_from_binds_the_parameter_to_the_builtin_argument_desired(self):
         """Desired (#161): k is 5, bound to the read of m
 
         As the controls bind a parameter to its argument. It also needs
@@ -441,22 +457,24 @@ class TestYieldFromDesired(YieldFromCase):
         self.script(YIELD_FROM)
         param_k = self.get_evaluation(name="k", type="param")
         self.assertEqual(param_k.repr, "5")
-        self.assert_dependency(param_k,
-                               self.get_evaluation(name="m", mode="r"),
-                               "argument", True)
+        self.assert_dependency(
+            param_k, self.get_evaluation(name="m", mode="r"), "argument", True
+        )
 
     @known_defects(Defect(RESUMED_CALL_ARGUMENTS, "['m', 'outer(5)']"))
-    def test_call_in_a_resumed_generator_gives_its_argument_to_list_desired(
-            self):
+    def test_call_in_a_resumed_generator_gives_its_argument_to_list_desired(self):
         """Desired: list() receives only the generator, and k is bound to m
 
         As in the control, where f(m) is made in a plain function.
         """
         self.script(RESUMED_CALL)
         self.assertEqual(self.arguments_of("list(outer(5))"), ["outer(5)"])
-        self.assert_dependency(self.get_evaluation(name="k", type="param"),
-                               self.get_evaluation(name="m", mode="r"),
-                               "argument", True)
+        self.assert_dependency(
+            self.get_evaluation(name="k", type="param"),
+            self.get_evaluation(name="m", mode="r"),
+            "argument",
+            True,
+        )
 
 
 # ---------------------------------------------------------------- #162
@@ -535,20 +553,21 @@ class ClassStatementCase(ConstructCase):
 
     def assert_explicit_store(self):
         """Base.__init__ receives 7 from Derived.__init__, and result is 7"""
-        value = self.get_evaluation(name="value", type="param",
-                                    first_char_line=3)
+        value = self.get_evaluation(name="value", type="param", first_char_line=3)
         self.assertEqual(value.repr, "7")
         self.assert_dependency(
-            value, self.get_evaluation(name="value", mode="r",
-                                       first_char_line=7), "argument", True)
+            value,
+            self.get_evaluation(name="value", mode="r", first_char_line=7),
+            "argument",
+            True,
+        )
         self.assertEqual(self.get_evaluation(name="result").repr, "7")
         self.assertEqual(self.metascript.namespace["result"], 7)
 
     def self_param(self):
         """The self param of Base.__init__, reached through super()"""
         self.script(EXPLICIT_SUPER)
-        return self.get_evaluation(name="self", type="param",
-                                   first_char_line=3)
+        return self.get_evaluation(name="self", type="param", first_char_line=3)
 
 
 class TestClassStatement(ClassStatementCase):
@@ -563,15 +582,20 @@ class TestClassStatement(ClassStatementCase):
         self.script(CLASS_KEYWORD)
         derived = self.get_evaluation(name="Derived", type="class_def")
         self.assert_dependency(
-            derived, self.get_evaluation(name="Base", mode="r"), "base")
+            derived, self.get_evaluation(name="Base", mode="r"), "base"
+        )
         self.assert_dependency(
-            derived, self.get_evaluation(name="tag", mode="r"), "argument")
+            derived, self.get_evaluation(name="tag", mode="r"), "argument"
+        )
         whole = self.find_code_component(name="Derived", type="class_def")
         self.assertEqual(
-            [(part.type, part.name, kind, pos)
-             for kind, pos, part in self.parts(whole)
-             if kind in ("*bases", "*keywords")],
-            [("name", "Base", "*bases", 0), ("name", "tag", "*keywords", 0)])
+            [
+                (part.type, part.name, kind, pos)
+                for kind, pos, part in self.parts(whole)
+                if kind in ("*bases", "*keywords")
+            ],
+            [("name", "Base", "*bases", 0), ("name", "tag", "*keywords", 0)],
+        )
 
     def test_class_keyword_reaches_init_subclass_as_the_default(self):
         """__init_subclass__ records label as its default, 'none'
@@ -602,10 +626,11 @@ class TestClassStatement(ClassStatementCase):
         """
         msg = self.collect(ZERO_ARGUMENT_SUPER)
         self.assertEqual(
-            msg.splitlines()[0],
-            "RuntimeError('super(): __class__ cell not found')")
-        self.assertIsNone(self.get_evaluation(name="value", type="param",
-                                              first_char_line=3))
+            msg.splitlines()[0], "RuntimeError('super(): __class__ cell not found')"
+        )
+        self.assertIsNone(
+            self.get_evaluation(name="value", type="param", first_char_line=3)
+        )
         self.assertNotIn("result", self.metascript.namespace)
 
     def test_method_through_super_binds_self_to_the_super_object(self):
@@ -615,11 +640,10 @@ class TestClassStatement(ClassStatementCase):
         proxy, with a reference to the call super(Derived, self).
         """
         param = self.self_param()
-        self.assertTrue(param.repr.startswith("<super: <class 'Derived'>"),
-                        param.repr)
+        self.assertTrue(param.repr.startswith("<super: <class 'Derived'>"), param.repr)
         self.assert_dependency(
-            param, self.get_evaluation(name="super(Derived, self)"),
-            "argument", True)
+            param, self.get_evaluation(name="super(Derived, self)"), "argument", True
+        )
 
     def test_classmethod_through_instance_binds_cls_to_the_instance(self):
         """The cls of a classmethod called on an instance is the instance
@@ -629,11 +653,10 @@ class TestClassStatement(ClassStatementCase):
         """
         self.script(CLASSMETHOD)
         param = self.get_evaluation(name="cls", type="param")
-        self.assertTrue(param.repr.startswith("<__main__.C object at"),
-                        param.repr)
+        self.assertTrue(param.repr.startswith("<__main__.C object at"), param.repr)
         self.assert_dependency(
-            param, self.get_evaluation(name="inst", mode="r"),
-            "argument", True)
+            param, self.get_evaluation(name="inst", mode="r"), "argument", True
+        )
         namespace = self.metascript.namespace
         self.assertIs(namespace["k"], namespace["C"])
 
@@ -648,8 +671,9 @@ class TestClassStatementDesired(ClassStatementCase):
         labels = self.labels()
         tag = self.get_evaluation(name="tag", mode="r")
         self.assertTrue(labels)
-        self.assertEqual([label.repr for label in labels],
-                         [repr("derived")] * len(labels))
+        self.assertEqual(
+            [label.repr for label in labels], [repr("derived")] * len(labels)
+        )
         for label in labels:
             self.assert_dependency(label, tag)
 
@@ -661,15 +685,13 @@ class TestClassStatementDesired(ClassStatementCase):
         self.assert_explicit_store()
 
     @known_defects(Defect(BOUND_SELF, "<super: <class 'Derived'>"))
-    def test_method_through_super_binds_self_to_the_super_object_desired(
-            self):
+    def test_method_through_super_binds_self_to_the_super_object_desired(self):
         """Desired: the self of Base.__init__ is the Derived instance"""
         param = self.self_param()
         self.assertEqual(param.repr, repr(self.metascript.namespace["item"]))
 
     @known_defects(Defect(BOUND_SELF, "<__main__.C object at"))
-    def test_classmethod_through_instance_binds_cls_to_the_instance_desired(
-            self):
+    def test_classmethod_through_instance_binds_cls_to_the_instance_desired(self):
         """Desired: the cls of a classmethod is the class, even via inst"""
         self.script(CLASSMETHOD)
         param = self.get_evaluation(name="cls", type="param")
@@ -742,8 +764,9 @@ class TestMemberLookupWithoutDict(CollectionTestCase):
         kind = self.get_evaluation(name="p.kind")
         self.assertEqual(kind.repr, repr("f"))
         self.assertEqual(self.get_evaluation(name="b").repr, repr("f"))
-        self.assert_dependency(kind, self.get_evaluation(
-            name="p", mode="r", first_char_line=10), "value")
+        self.assert_dependency(
+            kind, self.get_evaluation(name="p", mode="r", first_char_line=10), "value"
+        )
         self.assertEqual(self.metascript.namespace["b"], "f")
 
     def test_member_lookup_calls_the_script_getattr_with_dict(self):
@@ -756,8 +779,8 @@ class TestMemberLookupWithoutDict(CollectionTestCase):
         self.assertEqual(self.metascript.namespace["seen"], ["__dict__"])
         self.assertEqual(self.metascript.namespace["b"], "f")
         self.assertEqual(
-            self.get_evaluation(name="name", type="param").repr,
-            repr("__dict__"))
+            self.get_evaluation(name="name", type="param").repr, repr("__dict__")
+        )
 
     def test_member_lookup_lets_a_getattr_error_escape(self):
         """A KeyError of the script's __getattr__ stops the script (#149)"""

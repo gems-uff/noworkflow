@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%%now_prolog' magic"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
@@ -37,15 +38,16 @@ class NowProlog(IpythonCommandMagic):
     def add_arguments(self):
         super(NowProlog, self).add_arguments()
         add_arg = self.add_argument
-        add_arg("--result", type=str,
-                help="""The variable in which the result will be stored""")
-        add_arg("trials", nargs=argparse.REMAINDER,
-                help="export trial facts")
+        add_arg(
+            "--result",
+            type=str,
+            help="""The variable in which the result will be stored""",
+        )
+        add_arg("trials", nargs=argparse.REMAINDER, help="export trial facts")
 
     def execute(self, func, line, cell, magic_cls):
         formatter = DollarFormatter()
-        cell = formatter.vformat(cell, args=[],
-                                 kwargs=magic_cls.shell.user_ns.copy())
+        cell = formatter.vformat(cell, args=[], kwargs=magic_cls.shell.user_ns.copy())
         _, args = self.arguments(func, line)
         for trial_ref in args.trials:
             trial = Trial(trial_ref=trial_ref)

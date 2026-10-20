@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Generate Prospective Provenance in DOT Format"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from .analyzer import DefinitionProvenanceAnalyzer

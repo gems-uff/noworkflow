@@ -41,9 +41,8 @@ def changed_id(trial_id, id, _binds):
     in a given trial (*TrialId*).
     """
     hash1, hash2 = var("_hash1 _hash2")
-    query = (
-        access(trial_id, id, content_hash_before=hash1) &
-        access(trial_id, id, content_hash_after=hash2)
+    query = access(trial_id, id, content_hash_before=hash1) & access(
+        trial_id, id, content_hash_after=hash2
     )
     for result, binds in _apply(_binds, query):
         if hash1.bound != hash2.bound:
@@ -68,10 +67,8 @@ def hash(trial_id, name, hash, model_moment):
         return access(trial_id, name=name, content_hash_after=hash)
     if model_moment == "code_block":
         id = var("_id")
-        return (
-            code_block(trial_id, id, hash) &
-            code_component(trial_id, id, name)
-        )
+        return code_block(trial_id, id, hash) & code_component(trial_id, id, name)
+
 
 @prolog_rule("changed(TrialId, Name) :-")
 @prolog_rule("    changed_id(TrialId, Id),")
@@ -83,9 +80,8 @@ def changed(trial_id, name, _binds):
     """
     hash1, hash2 = var("_hash1 _hash2")
     id = var("_id")
-    query = (
-        access(trial_id, id, name=name, content_hash_before=hash1) &
-        access(trial_id, id, content_hash_after=hash2)
+    query = access(trial_id, id, name=name, content_hash_before=hash1) & access(
+        trial_id, id, content_hash_after=hash2
     )
     for result, binds in _apply(_binds, query):
         if hash1.bound != hash2.bound:

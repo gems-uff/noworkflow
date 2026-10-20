@@ -3,6 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Head Model"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, String, Text
@@ -43,17 +44,20 @@ class Head(AlchemyProxy):
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="SET NULL"),
         {"sqlite_autoincrement": True},
     )
-    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     script = Column(Text)
     trial_id = Column(String, index=True)
 
     # Relationship attributes (see relationships.py):
     #   trial: 1 Trial
 
-    prolog_description = PrologDescription("head", (
-        PrologRepr("script"),
-        PrologAttribute("trial_id"),
-    ))
+    prolog_description = PrologDescription(
+        "head",
+        (
+            PrologRepr("script"),
+            PrologAttribute("trial_id"),
+        ),
+    )
 
     def __repr__(self):
         return "head({0.id}, '{0.script}', {0.trial_id}).".format(self)
@@ -79,11 +83,7 @@ class Head(AlchemyProxy):
         True
         """
         session = session or relational.session
-        return proxy(
-            session.query(cls.m)
-            .filter((cls.m.script == script))
-            .first()
-        )
+        return proxy(session.query(cls.m).filter((cls.m.script == script)).first())
 
     @classmethod  # query
     def remove(cls, hid, session=None):

@@ -28,6 +28,7 @@ four characters, or ``localhost``), which names no machine. A test still
 never puts a store's environment or user id in an assertion message or a
 test id.
 """
+
 import dataclasses
 import re
 import socket
@@ -58,12 +59,16 @@ def cut_host_rules(hostname):
         tails = "|".join(re.escape(name[-size:]) for size in sizes)
         if not heads:
             continue
-        rules.append(re.compile(
-            r"(?<![A-Za-z0-9.-])(?:{})(?=\.\.\.)".format(heads),
-            re.IGNORECASE))
-        rules.append(re.compile(
-            r"(?<=\.\.\.)(?:{})(?![A-Za-z0-9-])".format(tails),
-            re.IGNORECASE))
+        rules.append(
+            re.compile(
+                r"(?<![A-Za-z0-9.-])(?:{})(?=\.\.\.)".format(heads), re.IGNORECASE
+            )
+        )
+        rules.append(
+            re.compile(
+                r"(?<=\.\.\.)(?:{})(?![A-Za-z0-9-])".format(tails), re.IGNORECASE
+            )
+        )
     return rules
 
 
@@ -127,6 +132,5 @@ def mask(value, rules, seen=None):
             names = [field.name for field in dataclasses.fields(value)]
         for name in names:
             # Also for frozen dataclasses.
-            object.__setattr__(value, name,
-                               mask(getattr(value, name), rules, seen))
+            object.__setattr__(value, name, mask(getattr(value, name), rules, seen))
     return value

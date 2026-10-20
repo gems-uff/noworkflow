@@ -32,6 +32,7 @@ serializers is in ``e2e/test_serializers_cli.py``.
 makes ``isinstance`` against ``numbers.Number`` raise, so the serializer
 raises before reaching them. Each version gets the test of what it does.
 """
+
 import re
 import sys
 from argparse import Namespace
@@ -58,21 +59,24 @@ CLASS_REPR = Defect(
     "__repr__ in the class's own namespace, written for its instances, and "
     "repr_serializer calls its original_def with the class as self, while "
     "Python formats a class with its metaclass's __repr__",
-    signature="Shape(0)")
+    signature="Shape(0)",
+)
 CONTENT_PUTS_STR = Defect(
     "#339: jsonpickle_content "
     "(persistence/serializers.py) passes the str that jsonpickle.encode "
     "returns to content.put, and both the plain engine and the in-memory "
     "mock (persistence/content/plain_engine.py, content/base.py) hash it "
     "with hashlib.sha1, which takes bytes only",
-    signature="Strings must be encoded before hashing")
+    signature="Strings must be encoded before hashing",
+)
 UNCLOSED_ANGLE_BRACKET = Defect(
     "#353: "
     "SimpleSerializer._default (persistence/serializers.py) formats an "
     "object as '<{} instance at 0x{:x}' and a named one as "
     "'<{} at 0x{:x}', without the closing '>' that its third format, "
     "'<callable at 0x{:x}>', has",
-    signature="'<C instance at 0x<id>'")
+    signature="'<C instance at 0x<id>'",
+)
 
 # A hexadecimal address, as SimpleSerializer writes id().
 ADDRESS = re.compile(r"0x[0-9a-f]+")
@@ -104,9 +108,11 @@ def empty_content(monkeypatch):
 
 # --- get_serializer ---------------------------------------------------------
 
+
 def test_get_serializer_returns_the_function_of_each_run_r_choice():
     """Each choice of ``now run -r`` selects its serializer; ``simple``
     gets the method of a new ``SimpleSerializer`` each time"""
+
     def chosen(name):
         return get_serializer(Namespace(serializer=name))
 
@@ -127,8 +133,10 @@ def test_get_serializer_falls_back_to_repr_for_an_unknown_name():
 
 # --- repr_serializer --------------------------------------------------------
 
-@pytest.mark.parametrize("value", [1, "a", [1], int, None],
-                         ids=["int", "str", "list", "class", "None"])
+
+@pytest.mark.parametrize(
+    "value", [1, "a", [1], int, None], ids=["int", "str", "list", "class", "None"]
+)
 def test_repr_serializer_formats_values_with_repr(value):
     """Values whose ``__repr__`` the script did not write get ``repr()``"""
     assert repr_serializer(value) == repr(value)
@@ -141,8 +149,10 @@ def traced_repr(original):
     function to the untransformed copy, and ``repr_serializer`` calls that
     copy, so that recording a value does not record the call.
     """
+
     def __repr__(self):
         return "TRACED"
+
     __repr__.original_def = original
     return __repr__
 
@@ -155,6 +165,7 @@ def test_repr_serializer_calls_the_original_definition_of_a_traced_repr():
     """An instance whose ``__repr__`` was traced is formatted by the
     original definition (a bound method forwards ``original_def`` from its
     function)"""
+
     class Shape:
         __repr__ = traced_repr(original_repr)
 
@@ -169,6 +180,7 @@ def test_repr_serializer_formats_a_plain_class_with_python_repr():
     """Control: a class whose metaclass is ``type`` is formatted by
     ``repr()``, although it defines a traced ``__repr__`` for its
     instances"""
+
     class Shape:
         __repr__ = traced_repr(original_repr)
 
@@ -183,11 +195,13 @@ def test_repr_serializer_class_with_another_metaclass_and_an_instance_repr():
     """Characterization: a class with another metaclass is formatted by
     the ``__repr__`` it defines for its instances, called with the class as
     ``self``, which raises when it reads an instance attribute"""
+
     class Shape(metaclass=Meta):
         __repr__ = traced_repr(original_repr)
 
-    with pytest.raises(AttributeError,
-                       match="type object 'Shape' has no attribute 'side'"):
+    with pytest.raises(
+        AttributeError, match="type object 'Shape' has no attribute 'side'"
+    ):
         repr_serializer(Shape)
 
 
@@ -196,6 +210,7 @@ def test_repr_serializer_class_with_another_metaclass_and_an_instance_repr_desir
     """A class with another metaclass is formatted by ``repr()``, as any
     class is (a class attribute keeps the instance ``__repr__`` from
     raising, so that today's wrong text shows)"""
+
     class Shape(metaclass=Meta):
         side = 0
         __repr__ = traced_repr(original_repr)
@@ -205,6 +220,7 @@ def test_repr_serializer_class_with_another_metaclass_and_an_instance_repr_desir
 
 
 # --- jsonpickle -------------------------------------------------------------
+
 
 def test_jsonpickle_serializer_encodes_with_keys(stub_jsonpickle):
     """``-r jsonpickle`` records what ``jsonpickle.encode`` returns, called
@@ -217,29 +233,38 @@ def test_jsonpickle_content_of_a_list(stub_jsonpickle, empty_content):
     """Characterization: ``-r jsonpickle_content`` passes the text that
     ``jsonpickle.encode`` returns to the content store, which raises because
     it hashes bytes only"""
-    with pytest.raises(TypeError,
-                       match="Strings must be encoded before hashing"):
+    with pytest.raises(TypeError, match="Strings must be encoded before hashing"):
         jsonpickle_content([1])
     assert stub_jsonpickle == [([1], True)]
 
 
 @known_defects(CONTENT_PUTS_STR)
-def test_jsonpickle_content_of_a_list_desired(stub_jsonpickle,
-                                              empty_content):
+def test_jsonpickle_content_of_a_list_desired(stub_jsonpickle, empty_content):
     """``-r jsonpickle_content`` records a reference to the content store,
     where the encoding of the value is kept"""
     text = jsonpickle_content([1])
     assert text.startswith(CONTENT_PREFIX), text
-    stored = content.get(text[len(CONTENT_PREFIX):])
+    stored = content.get(text[len(CONTENT_PREFIX) :])
     assert stored.decode("utf-8") == jsonpickle_stub.encode([1], keys=True)
 
 
 # --- SimpleSerializer -------------------------------------------------------
 
-@pytest.mark.parametrize("value", [
-    1, 1.5, True, None, "a'b", b"x", Ellipsis, 3 + 4j,
-], ids=["int", "float", "bool", "None", "str", "bytes", "Ellipsis",
-        "complex"])
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        1,
+        1.5,
+        True,
+        None,
+        "a'b",
+        b"x",
+        Ellipsis,
+        3 + 4j,
+    ],
+    ids=["int", "float", "bool", "None", "str", "bytes", "Ellipsis", "complex"],
+)
 def test_simple_serializer_formats_immutables_with_repr(value):
     """Numbers, text, bytes, None and Ellipsis get ``repr()``"""
     assert SimpleSerializer().serialize(value) == repr(value)
@@ -262,8 +287,7 @@ def test_simple_serializer_formats_containers_with_their_class_name():
     assert serialize({3}) == "set([3])"
     assert serialize(frozenset([3])) == "frozenset([3])"
     assert serialize(deque([1])) == "deque([1])"
-    assert serialize({"k": [1]}) == "dict([({}, list([1]))])".format(
-        repr("k"))
+    assert serialize({"k": [1]}) == "dict([({}, list([1]))])".format(repr("k"))
     assert serialize(array("i", [1, 2])) == "array(i, [1, 2])"
 
 
@@ -271,8 +295,7 @@ def test_simple_serializer_names_a_subclass_by_its_own_class():
     """A subclass of a container is named after its own class, with the
     blanks of the name turned into underscores"""
     serialize = SimpleSerializer().serialize
-    assert serialize(OrderedDict(a=1)) == "OrderedDict([({}, 1)])".format(
-        repr("a"))
+    assert serialize(OrderedDict(a=1)) == "OrderedDict([({}, 1)])".format(repr("a"))
     assert serialize(Point(1, 2)) == "Point([1, 2])"
     assert serialize(Items([1])) == "Items([1])"
     assert serialize(type("my list", (list,), {})([1])) == "my_list([1])"
@@ -290,14 +313,16 @@ def test_simple_serializer_stops_at_maxlevel():
     assert text.startswith(head), text
     # Then the cut object's closing bracket, when it has one
     # (simple-serializer-unclosed-angle-bracket), and five closings.
-    assert text[len(head):] in ("])" * 5, ">" + "])" * 5), text
+    assert text[len(head) :] in ("])" * 5, ">" + "])" * 5), text
     alone = [1]
     assert serialize(alone, maxlevel=0).startswith(
-        "<list instance at 0x{:x}".format(id(alone)))
+        "<list instance at 0x{:x}".format(id(alone))
+    )
     looped = []
     looped.append(looped)
     assert serialize(looped).startswith(
-        "list([" * 5 + "<list instance at 0x{:x}".format(id(looped)))
+        "list([" * 5 + "<list instance at 0x{:x}".format(id(looped))
+    )
 
 
 # Before Python 3.13, isinstance against an ABC (numbers.Number, one of
@@ -307,7 +332,8 @@ def test_simple_serializer_stops_at_maxlevel():
 HIDDEN_CLASS_RAISES = sys.version_info < (3, 13)
 HIDDEN_CLASS_REASON = (
     "before Python 3.13 isinstance against numbers.Number raises the "
-    "AttributeError of a hidden __class__")
+    "AttributeError of a hidden __class__"
+)
 
 
 class C:
@@ -353,7 +379,8 @@ def test_simple_serializer_formats_other_objects_by_class_and_address():
     address, without a closing ``>``"""
     obj = C()
     assert SimpleSerializer().serialize(obj) == (
-        "<C instance at 0x{:x}".format(id(obj)))
+        "<C instance at 0x{:x}".format(id(obj))
+    )
 
 
 @known_defects(UNCLOSED_ANGLE_BRACKET)
@@ -362,8 +389,9 @@ def test_simple_serializer_formats_other_objects_by_class_and_address_desired():
     ``repr`` and the serializer's own callable format are"""
     obj = C()
     text = SimpleSerializer().serialize(obj)
-    assert masked(text) == "<C instance at 0x<id>>", (
-        "written as {!r}".format(masked(text)))
+    assert masked(text) == "<C instance at 0x<id>>", "written as {!r}".format(
+        masked(text)
+    )
     assert text == "<C instance at 0x{:x}>".format(id(obj))
 
 
@@ -376,22 +404,26 @@ def test_simple_serializer_falls_back_when_an_object_hides_its_class():
     named, opaque, callable_only = Named(), Opaque(), CallableOnly()
     # The named format lacks its closing ">" like the instance format
     # (simple-serializer-unclosed-angle-bracket): accepted either way here.
-    assert serialize(named).rstrip(">") == "<the_name at 0x{:x}".format(
-        id(named))
-    assert serialize(callable_only) == "<callable at 0x{:x}>".format(
-        id(callable_only))
-    assert serialize(opaque) == "<unsupported type at 0x{:x}>".format(
-        id(opaque))
+    assert serialize(named).rstrip(">") == "<the_name at 0x{:x}".format(id(named))
+    assert serialize(callable_only) == "<callable at 0x{:x}>".format(id(callable_only))
+    assert serialize(opaque) == "<unsupported type at 0x{:x}>".format(id(opaque))
     assert serialize(HiddenList([1, 2])) == "HiddenList([1, 2])"
 
 
-@pytest.mark.skipif(not HIDDEN_CLASS_RAISES,
-                    reason="from Python 3.13 the fallbacks are reached")
-@pytest.mark.parametrize("make", [
-    Named, Opaque, CallableOnly, lambda: HiddenList([1, 2]),
-], ids=["named", "opaque", "callable", "container"])
-def test_simple_serializer_object_that_hides_its_class_before_python_3_13(
-        make):
+@pytest.mark.skipif(
+    not HIDDEN_CLASS_RAISES, reason="from Python 3.13 the fallbacks are reached"
+)
+@pytest.mark.parametrize(
+    "make",
+    [
+        Named,
+        Opaque,
+        CallableOnly,
+        lambda: HiddenList([1, 2]),
+    ],
+    ids=["named", "opaque", "callable", "container"],
+)
+def test_simple_serializer_object_that_hides_its_class_before_python_3_13(make):
     """Characterization: before Python 3.13 an object that hides its
     ``__class__`` makes the serializer raise that ``AttributeError`` at its
     first check, ``isinstance(obj, IMMUTABLE)``, before any fallback"""

@@ -24,6 +24,7 @@ names in IPython's table of pending magics (#384). Once a
 magics class has taken them it stays broken for the rest of the process,
 so they run in child Pythons, never in this one.
 """
+
 import atexit
 import builtins
 import collections
@@ -68,8 +69,14 @@ from .support import (
     run_python,
 )
 
-LINE_MAGICS = {"now_ip", "now_ls_magic", "now_restore", "now_run",
-               "now_schema", "now_set_default"}
+LINE_MAGICS = {
+    "now_ip",
+    "now_ls_magic",
+    "now_restore",
+    "now_run",
+    "now_schema",
+    "now_set_default",
+}
 CELL_MAGICS = {"now_prolog", "now_run", "now_sql"}
 
 
@@ -79,9 +86,11 @@ class Probe:
 
 def recording(function, calls):
     """``function`` that also appends its first argument to ``calls``"""
+
     def record(callback, *args, **kwargs):
         calls.append(callback)
         return function(callback, *args, **kwargs)
+
     return record
 
 
@@ -107,9 +116,15 @@ def connections_counted():
 
 def in_memory_state():
     """The objects of the in-memory stores the suite connects on import"""
-    return (relational.engine, relational._session_map, relational.db_path,
-            content.content_database_engine, persistence_config.should_mock,
-            persistence_config.base_path, persistence_config.content_engine)
+    return (
+        relational.engine,
+        relational._session_map,
+        relational.db_path,
+        content.content_database_engine,
+        persistence_config.should_mock,
+        persistence_config.base_path,
+        persistence_config.content_engine,
+    )
 
 
 def process_state():
@@ -125,24 +140,27 @@ def process_state():
         "cwd": os.getcwd(),
         # A digest: the values are this machine's.
         "environ": hashlib.sha256(
-            repr(sorted(os.environ.items())).encode()).hexdigest(),
+            repr(sorted(os.environ.items())).encode()
+        ).hexdigest(),
         "tempdir": tempfile.tempdir,
         "persistence": in_memory_state(),
         "ipython": (InteractiveShell.initialized(), get_ipython()),
-        "magic table": {kind: dict(table)
-                        for kind, table in ipython_magic.magics.items()},
+        "magic table": {
+            kind: dict(table) for kind, table in ipython_magic.magics.items()
+        },
         "builtins": set(vars(builtins)),
         "prompts and last exception": [
-            getattr(sys, name, None) for name in PROMPTS + LAST_EXCEPTION],
-        "streams": (sys.stdin, sys.stdout, sys.stderr, sys.excepthook,
-                    sys.displayhook),
+            getattr(sys, name, None) for name in PROMPTS + LAST_EXCEPTION
+        ],
+        "streams": (sys.stdin, sys.stdout, sys.stderr, sys.excepthook, sys.displayhook),
         "sys.path": list(sys.path),
         "threads": set(threading.enumerate()),
         "dot loaded": dotmagic.LOADED,
         "magics classes that took pending names": broken_magics_classes(),
         "verbose": now_io.verbose,
-        "defaults": {name: dict(model.DEFAULT)
-                     for name, model in MetaModel.__classes__.items()},
+        "defaults": {
+            name: dict(model.DEFAULT) for name, model in MetaModel.__classes__.items()
+        },
     }
 
 
@@ -158,8 +176,7 @@ def test_the_bare_shell_has_ipython_magics_only(bare_shell):
     assert not {name for name in names if name.startswith("now_")}
     assert "dot" not in names
     registry = bare_shell.ip.magics_manager.registry
-    assert {"ScriptMagics", "ExecutionMagics", "HistoryMagics"} <= set(
-        registry)
+    assert {"ScriptMagics", "ExecutionMagics", "HistoryMagics"} <= set(registry)
 
 
 def test_a_cell_gives_its_result_and_what_it_printed(bare_shell):
@@ -206,13 +223,13 @@ def test_a_cell_gives_the_now_messages_apart(bare_shell):
         "from noworkflow.now.utils.io import print_msg\n"
         "print_msg('forced', True)\n"
         "print_msg('only when verbose')\n"
-        "print('printed')")
+        "print('printed')"
+    )
     assert cell.messages == "[now] forced\n"
     assert cell.stdout == "printed\n"
 
 
-def test_the_shell_runs_in_the_project_with_the_synthetic_environment(
-        shell):
+def test_the_shell_runs_in_the_project_with_the_synthetic_environment(shell):
     """The current directory, the temporary directory, the environment
     and the persistence layer belong to the project while the shell runs
 
@@ -220,29 +237,30 @@ def test_the_shell_runs_in_the_project_with_the_synthetic_environment(
     """
     project = shell.project
     checks = {
-        "the current directory is the project":
-            same_path(os.getcwd(), project.path),
-        "tempfile writes into the project's tmp":
-            same_path(tempfile.gettempdir(), project.tmp),
-        "USER and LOGNAME are the synthetic user":
-            os.environ.get("USER") == os.environ.get("LOGNAME") == USER,
-        "HOME is the project's home":
-            same_path(os.environ.get("HOME", ""), project.home),
-        "IPYTHONDIR is in the project's home":
-            same_path(os.environ.get("IPYTHONDIR", ""),
-                      project.home / ".ipython"),
+        "the current directory is the project": same_path(os.getcwd(), project.path),
+        "tempfile writes into the project's tmp": same_path(
+            tempfile.gettempdir(), project.tmp
+        ),
+        "USER and LOGNAME are the synthetic user": os.environ.get("USER")
+        == os.environ.get("LOGNAME")
+        == USER,
+        "HOME is the project's home": same_path(
+            os.environ.get("HOME", ""), project.home
+        ),
+        "IPYTHONDIR is in the project's home": same_path(
+            os.environ.get("IPYTHONDIR", ""), project.home / ".ipython"
+        ),
         "VIRTUAL_ENV is unset": "VIRTUAL_ENV" not in os.environ,
         "PATH starts with this interpreter's directory": same_path(
-            os.environ["PATH"].split(os.pathsep)[0],
-            os.path.dirname(sys.executable)),
+            os.environ["PATH"].split(os.pathsep)[0], os.path.dirname(sys.executable)
+        ),
         "%%script finds the now of this interpreter": same_path(
-            os.path.dirname(shutil.which("now") or ""),
-            os.path.dirname(sys.executable)),
+            os.path.dirname(shutil.which("now") or ""), os.path.dirname(sys.executable)
+        ),
         "get_ipython() is the shell": get_ipython() is shell.ip,
-        "the persistence layer is on the project's store":
-            not persistence_config.should_mock
-            and same_path(persistence_config.path, project.path)
-            and (project.path / ".noworkflow" / "db.sqlite").is_file(),
+        "the persistence layer is on the project's store": not persistence_config.should_mock
+        and same_path(persistence_config.path, project.path)
+        and (project.path / ".noworkflow" / "db.sqlite").is_file(),
     }
     failed = [name for name, holds in checks.items() if not holds]
     assert failed == []
@@ -263,20 +281,23 @@ def test_now_run_records_a_trial_read_with_sql_and_with_the_models(shell):
     assert cell.success, cell.describe()
     assert "in the cell" in cell.stdout, cell.describe()
     trials = project.trials()
-    assert [(row["script"], row["status"]) for row in trials] == [
-        ("cellA", "finished")]
+    assert [(row["script"], row["status"]) for row in trials] == [("cellA", "finished")]
     trial_id = trials[0]["id"]
     assert shell.last_trial_id() == trial_id
 
     def attribute(name):
-        return [row["value"] for row in project.query(
-            "SELECT value FROM environment_attr "
-            "WHERE trial_id = ? AND name = ?", trial_id, name)]
+        return [
+            row["value"]
+            for row in project.query(
+                "SELECT value FROM environment_attr WHERE trial_id = ? AND name = ?",
+                trial_id,
+                name,
+            )
+        ]
 
     users = attribute("USER")
     synthetic = len(users) == 2 and all(user == USER for user in users)
-    assert synthetic, "{} USER attribute(s), not all {!r}".format(
-        len(users), USER)
+    assert synthetic, "{} USER attribute(s), not all {!r}".format(len(users), USER)
     homes = attribute("HOME")
     temporary = len(homes) == 1 and same_path(homes[0], project.home)
     assert temporary, "the HOME attribute is not the project's home"
@@ -284,8 +305,7 @@ def test_now_run_records_a_trial_read_with_sql_and_with_the_models(shell):
     assert listed, "now list does not show the trial"
     engine = relational.engine
     with connected_to(project.path):
-        assert [trial.id for trial in relational.session.query(
-            Trial.m)] == [trial_id]
+        assert [trial.id for trial in relational.session.query(Trial.m)] == [trial_id]
     same_engine = relational.engine is engine
     assert same_engine, "the shell's engine is not back"
     back = same_path(persistence_config.path, project.path)
@@ -299,8 +319,7 @@ def test_a_cell_over_its_time_limit_has_its_process_killed(shell):
     """
     line = command_line([sys.executable])
     with pytest.raises(pytest.fail.Exception, match="ran longer than 1 s"):
-        shell.run("%%script " + line + "\nimport time\ntime.sleep(60)",
-                  timeout=1)
+        shell.run("%%script " + line + "\nimport time\ntime.sleep(60)", timeout=1)
     assert shell.children.started and not shell.children.running()
 
 
@@ -308,14 +327,19 @@ def test_a_collection_left_behind_is_undone_and_reported(project):
     """The four opens, the injected builtins and the finder are undone
     before IPython closes, and reported as a leak once the process is back
     """
+
     def replaced_open(*args, **kwargs):
         return leaks.safeopen.std_open(*args, **kwargs)
 
     # What leaks.is_finder recognizes; it finds nothing.
-    finder = type("ProbeFinder", (), {
-        "__module__": leaks.FINDER_MODULE,
-        "find_spec": staticmethod(lambda *args, **kwargs: None),
-    })
+    finder = type(
+        "ProbeFinder",
+        (),
+        {
+            "__module__": leaks.FINDER_MODULE,
+            "find_spec": staticmethod(lambda *args, **kwargs: None),
+        },
+    )
     with pytest.raises(pytest.fail.Exception) as failed:
         with open_shell(project, extension=False):
             builtins.open = replaced_open
@@ -339,13 +363,13 @@ def test_a_collection_the_test_undoes_is_not_reported(project):
     assert "now_tag_cell" not in vars(builtins)
 
 
-def test_a_magics_class_defined_while_names_are_pending_is_reported(
-        project):
+def test_a_magics_class_defined_while_names_are_pending_is_reported(project):
     """A magics class decorated while the extension's names are pending
     takes them; closing the shell drops them from its table and reports
     the class, so no later test of the process meets it broken"""
     with pytest.raises(pytest.fail.Exception) as failed:
         with open_shell(project):
+
             @ipython_magic.magics_class
             class LateMagics(ipython_magic.Magics):
                 """Takes the names pending in IPython's table"""
@@ -369,27 +393,25 @@ def test_an_in_process_collection_defines_no_magics_class(stand_in, shell):
     would otherwise take the names and break every terminal or embedded
     shell of the process (#384).
     """
-    warmed = {"IPython.terminal.magics", "IPython.terminal.embed"} <= set(
-        sys.modules)
+    warmed = {"IPython.terminal.magics", "IPython.terminal.embed"} <= set(sys.modules)
     assert warmed, "the shell started without IPython.terminal's magics"
     before = set(magics_classes())
     cell = shell.run("%%now_run --name i1 --interactive\nx = 1")
     try:
-        defined = sorted(cls.__qualname__ for cls in magics_classes()
-                         if cls not in before)
+        defined = sorted(
+            cls.__qualname__ for cls in magics_classes() if cls not in before
+        )
         broken = [cls.__qualname__ for cls in broken_magics_classes()]
     finally:
         leaks.undo_collection()
     assert cell.success, cell.describe()
-    recorded = [(row["script"], row["status"])
-                for row in shell.project.trials()]
+    recorded = [(row["script"], row["status"]) for row in shell.project.trials()]
     assert recorded == [("i1", "finished")]
     assert defined == []
     assert broken == []
 
 
-def test_closing_the_shell_puts_the_process_back(
-        project, tmp_path, monkeypatch):
+def test_closing_the_shell_puts_the_process_back(project, tmp_path, monkeypatch):
     """After the shell and the magics, the process is as before
 
     The leak detector finds nothing, and neither does a comparison of what
@@ -409,12 +431,13 @@ def test_closing_the_shell_puts_the_process_back(
     for name in IPYTHON_BUILTINS:
         monkeypatch.delitem(vars(builtins), name, raising=False)
     registered, unregistered = [], []
-    monkeypatch.setattr(atexit, "register",
-                        recording(atexit.register, registered))
-    monkeypatch.setattr(atexit, "unregister",
-                        recording(atexit.unregister, unregistered))
-    baseline = leaks.Baseline(cwd=os.getcwd(), scan_dirs=[os.getcwd()],
-                              watched_dirs=[str(tmp_path)])
+    monkeypatch.setattr(atexit, "register", recording(atexit.register, registered))
+    monkeypatch.setattr(
+        atexit, "unregister", recording(atexit.unregister, unregistered)
+    )
+    baseline = leaks.Baseline(
+        cwd=os.getcwd(), scan_dirs=[os.getcwd()], watched_dirs=[str(tmp_path)]
+    )
     snapshot = baseline.snapshot()
     before = process_state()
     with connections_counted() as connections:
@@ -434,13 +457,11 @@ def test_closing_the_shell_puts_the_process_back(
     changed = sorted(key for key in before if after[key] != before[key])
     assert changed == []
     assert registered, "the shell registered no atexit entry"
-    left = [callback for callback in registered
-            if callback not in unregistered]
+    left = [callback for callback in registered if callback not in unregistered]
     assert left == []
 
 
-def test_real_stores_creates_a_store_and_closes_what_reconnecting_left(
-        project):
+def test_real_stores_creates_a_store_and_closes_what_reconnecting_left(project):
     """Inside ``real_stores`` connecting creates a missing store; at the end
     every connection is closed, also those of the sessions that a second
     connect dropped (as every magic does), and the in-memory stores are back
@@ -523,13 +544,20 @@ def run_pollution_child(factory, extension, *cells):
     project = NowProject(factory.mktemp("pollution"))
     report = project.root / "report.json"
     completed = run_python(
-        project, POLLUTION, report, project.home / ".ipython",
-        command_line([sys.executable]), extension, *cells)
-    normalize = Normalizer([("<PROJECT>", project.path),
-                            ("<ROOT>", project.root)])
+        project,
+        POLLUTION,
+        report,
+        project.home / ".ipython",
+        command_line([sys.executable]),
+        extension,
+        *cells,
+    )
+    normalize = Normalizer([("<PROJECT>", project.path), ("<ROOT>", project.root)])
     assert completed.returncode == 0 and report.exists(), normalize(
         "the child Python failed with return code {}\n{}".format(
-            completed.returncode, tail(completed.stderr)))
+            completed.returncode, tail(completed.stderr)
+        )
+    )
     result = json.loads(report.read_text(encoding="utf-8"))
     result["stdout"] = completed.stdout
     return result
@@ -538,8 +566,7 @@ def run_pollution_child(factory, extension, *cells):
 @pytest.fixture(scope="module", params=list(FIRST_CLASSES))
 def pollution(request, tmp_path_factory):
     """The child after ``%load_ext noworkflow``, and the cell it ran next"""
-    return request.param, run_pollution_child(
-        tmp_path_factory, "load", request.param)
+    return request.param, run_pollution_child(tmp_path_factory, "load", request.param)
 
 
 @pytest.fixture(scope="module")
@@ -566,10 +593,14 @@ def test_load_ext_breaks_the_next_magics_class(pollution, no_extension):
     assert "script ran" in no_extension["stdout"]
     assert child["load_ext"]
     assert child["pending"] == {
-        "line": sorted(LINE_MAGICS), "cell": sorted(CELL_MAGICS)}
+        "line": sorted(LINE_MAGICS),
+        "cell": sorted(CELL_MAGICS),
+    }
     assert child["ended"] == {
-        first: "AttributeError: '{}' object has no attribute 'now_run'"
-        .format(FIRST_CLASSES[first])}
+        first: "AttributeError: '{}' object has no attribute 'now_run'".format(
+            FIRST_CLASSES[first]
+        )
+    }
     assert "script ran" not in child["stdout"]
 
 

@@ -31,6 +31,7 @@ an HTML 500 that names no cause.
 that start ``now``: it records each call and answers what the test sets,
 so nothing runs and nothing is written.
 """
+
 import contextlib
 import dataclasses
 import subprocess
@@ -57,9 +58,11 @@ def vis_for(monkeypatch):
     monkeypatch.setattr(HistoryGraph, "cache", {})
     monkeypatch.setitem(app.config, "PROPAGATE_EXCEPTIONS", True)
     with contextlib.ExitStack() as stack:
+
         def connect(project):
             stack.enter_context(connected_to(project.path))
             return Vis(app.test_client(), project)
+
         yield connect
 
 
@@ -71,8 +74,7 @@ def vis(two_trial_project, vis_for):
 
 @pytest.fixture(scope="session")
 def _vis_own_store(tmp_path_factory):
-    return build_weather(NowProject(tmp_path_factory.mktemp("vis_own")),
-                         trials=2)
+    return build_weather(NowProject(tmp_path_factory.mktemp("vis_own")), trials=2)
 
 
 @pytest.fixture
@@ -100,14 +102,18 @@ class Commands:
     def __call__(self, args, **kwargs):
         self.calls.append(types.SimpleNamespace(args=args, kwargs=kwargs))
         return subprocess.CompletedProcess(
-            args, self.completed.returncode, self.completed.stdout,
-            self.completed.stderr)
+            args,
+            self.completed.returncode,
+            self.completed.stdout,
+            self.completed.stderr,
+        )
 
     @property
     def only_call(self):
         """The single call the route made"""
         assert len(self.calls) == 1, "{} calls of subprocess.run".format(
-            len(self.calls))
+            len(self.calls)
+        )
         return self.calls[0]
 
 

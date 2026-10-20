@@ -17,6 +17,7 @@ Each characterization pins today's facts and its ``_desired`` twin, in
 ``TestComprehensionConditionsDesired``, states the behavior the issue asks
 for, marked with ``known_defects``.
 """
+
 from ..collection_testcase import CollectionTestCase
 from ..helpers.defects import Defect, known_defects
 
@@ -27,20 +28,22 @@ FILTER_COUNT = Defect(
     "element, one condition per generator with an if, while the condition "
     "of a filtered for is pushed once per iteration of that for, so a for "
     "after it that produces two elements pops an empty stack",
-    signature="pop from empty list")
+    signature="pop from empty list",
+)
 FILTER_LEAK = Defect(
     "#431: Collector.comprehension_item (collector.py) pops the "
     "condition of a filtered for only when an element is produced, so a "
     "for after it that produces nothing leaves the condition on the stack "
     "and the next statement depends on it",
-    signature="('x', 'condition')")
+    signature="('x', 'condition')",
+)
 
-FILTER_THEN_FOR = ("# script.py\n"
-                   "pairs = [x + y for x in [1, 2] if x for y in [10, 20]]\n")
-FILTER_THEN_EMPTY_FOR = ("# script.py\n"
-                         "flag = 1\n"
-                         "empty = [x for x in [flag] if x for y in []]\n"
-                         "after = 5\n")
+FILTER_THEN_FOR = (
+    "# script.py\npairs = [x + y for x in [1, 2] if x for y in [10, 20]]\n"
+)
+FILTER_THEN_EMPTY_FOR = (
+    "# script.py\nflag = 1\nempty = [x for x in [flag] if x for y in []]\nafter = 5\n"
+)
 
 
 class ComprehensionConditionCase(CollectionTestCase):
@@ -52,10 +55,14 @@ class ComprehensionConditionCase(CollectionTestCase):
         components = self.metascript.code_components_store
         write = self.get_evaluation(name=name, mode="w")
         return sorted(
-            (components[evaluations[dep.dependency_id].code_component_id].name,
-             dep.type)
-            for dep in self.find_all(self.metascript.dependencies_store.store,
-                                     dependent_id=write.id))
+            (
+                components[evaluations[dep.dependency_id].code_component_id].name,
+                dep.type,
+            )
+            for dep in self.find_all(
+                self.metascript.dependencies_store.store, dependent_id=write.id
+            )
+        )
 
 
 class TestComprehensionConditions(ComprehensionConditionCase):
@@ -75,8 +82,9 @@ class TestComprehensionConditions(ComprehensionConditionCase):
         ``x`` behind, and ``after = 5`` depends on it (#431)
         """
         self.assertEqual(self.collect(FILTER_THEN_EMPTY_FOR), SUCCESS)
-        self.assertEqual(self.dependencies_of_write("after"),
-                         [("5", "assign"), ("x", "condition")])
+        self.assertEqual(
+            self.dependencies_of_write("after"), [("5", "assign"), ("x", "condition")]
+        )
 
 
 class TestComprehensionConditionsDesired(ComprehensionConditionCase):
@@ -94,5 +102,4 @@ class TestComprehensionConditionsDesired(ComprehensionConditionCase):
     def test_filtered_for_followed_by_an_empty_for_desired(self):
         """The statement after the comprehension depends only on its value"""
         self.assertEqual(self.collect(FILTER_THEN_EMPTY_FOR), SUCCESS)
-        self.assertEqual(self.dependencies_of_write("after"),
-                         [("5", "assign")])
+        self.assertEqual(self.dependencies_of_write("after"), [("5", "assign")])

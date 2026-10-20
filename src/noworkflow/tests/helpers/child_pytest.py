@@ -8,6 +8,7 @@ detector, the mask of the hostname in reports): the only way to see a
 hook act on a test is to run that test in another pytest, whose process
 state the parent does not share.
 """
+
 import os
 import subprocess
 import sys
@@ -31,10 +32,8 @@ def run_child_pytest(request, tmp_path, source, mode="fail", args=()):
     """
     conftest = request.config.rootpath / "conftest.py"
     if not conftest.is_file():
-        pytest.skip("conftest.py is not here: the suite runs outside the "
-                    "checkout")
-    suite, home, tmp = (tmp_path / "suite", tmp_path / "home",
-                        tmp_path / "tmp")
+        pytest.skip("conftest.py is not here: the suite runs outside the checkout")
+    suite, home, tmp = (tmp_path / "suite", tmp_path / "home", tmp_path / "tmp")
     for directory in (suite, home, tmp):
         directory.mkdir()
     (suite / "conftest.py").write_bytes(conftest.read_bytes())
@@ -45,8 +44,18 @@ def run_child_pytest(request, tmp_path, source, mode="fail", args=()):
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["NOW_LEAK_CHECK"] = mode
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-p", "no:cacheprovider",
-         "-p", "no:warnings", "-q"] + list(args) + ["suite"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "-p",
+            "no:warnings",
+            "-q",
+        ]
+        + list(args)
+        + ["suite"],
         cwd=str(tmp_path),
         env=env,
         stdin=subprocess.DEVNULL,
@@ -58,11 +67,14 @@ def run_child_pytest(request, tmp_path, source, mode="fail", args=()):
     left = sorted(os.listdir(suite))
     assert left == CHILD_FILES, (
         "the child pytest wrote into its suite directory: {}\n{}".format(
-            left, child_report(result)))
+            left, child_report(result)
+        )
+    )
     return result
 
 
 def child_report(result):
     """A child pytest's outcome, for assertion messages"""
     return "return code {}\n--- stdout ---\n{}\n--- stderr ---\n{}".format(
-        result.returncode, tail(result.stdout), tail(result.stderr))
+        result.returncode, tail(result.stdout), tail(result.stderr)
+    )

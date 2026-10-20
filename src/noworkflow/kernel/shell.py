@@ -1,4 +1,3 @@
-
 import os
 import sys
 from ast import PyCF_ONLY_AST
@@ -19,20 +18,16 @@ class CachingCompilerOverride(compilerop.CachingCompiler):
         self.metascript = metascript
         super(CachingCompilerOverride, self).__init__(*args, **kwargs)
 
-    def ast_parse(self, source, filename='<unknown>', symbol='exec'):
+    def ast_parse(self, source, filename="<unknown>", symbol="exec"):
         """Parse code to an AST with the current compiler flags active."""
         if self.metascript.jupyter_original:
             return super(CachingCompilerOverride, self).ast_parse(
                 source, filename, symbol
             )
 
-        tree = self.metascript.definition.parse(
-            "cell", source, filename, symbol
-        )[0]
-        return cross_compile(
-            tree, filename, symbol,
-            self.flags | PyCF_ONLY_AST, 1
-        )
+        tree = self.metascript.definition.parse("cell", source, filename, symbol)[0]
+        return cross_compile(tree, filename, symbol, self.flags | PyCF_ONLY_AST, 1)
+
 
 class OverrideShell(object):
     """Override IPython Shell to use noWorkflow"""
@@ -51,9 +46,7 @@ class OverrideShell(object):
         self.old_run_cell = self.shell.run_cell
 
         self.shell.run_cell = self.run_cell
-        compilerop.CachingCompiler = partial(
-            CachingCompilerOverride, self.metascript
-        )
+        compilerop.CachingCompiler = partial(CachingCompilerOverride, self.metascript)
         interactiveshell.CachingCompiler = compilerop.CachingCompiler
         self.shell.compile.__class__ = CachingCompilerOverride
         self.shell.compile.metascript = self.metascript
@@ -67,7 +60,11 @@ class OverrideShell(object):
         metascript.execution.configure()
 
         _, id_ = self.metascript.definition.create_code_block(
-            "", os.getcwd(), "notebook", False, False,
+            "",
+            os.getcwd(),
+            "notebook",
+            False,
+            False,
         )
         self.activation = metascript.execution.collector.start_script(
             "__main__", id_, None
@@ -86,12 +83,16 @@ class OverrideShell(object):
         metascript.definition.store_provenance()
         metascript.execution.collector.store(partial=True, status="cell")
 
-        Trial.fast_update(
-            metascript.trial_id,
-            metascript.main_id, tnow, "finished")
+        Trial.fast_update(metascript.trial_id, metascript.main_id, tnow, "finished")
 
-    def run_cell(self, raw_cell, store_history=False, silent=False,
-                 shell_futures=True, cell_id=None):
+    def run_cell(
+        self,
+        raw_cell,
+        store_history=False,
+        silent=False,
+        shell_futures=True,
+        cell_id=None,
+    ):
         """Run a complete IPython cell.
         https://github.com/ipython/ipython/blob/master/
             IPython/core/interactiveshell.py#L2561
@@ -100,8 +101,11 @@ class OverrideShell(object):
             # ToDo: variable dependency
             sys.meta_path.insert(0, self.metascript.definition.finder)
             result = self.old_run_cell(
-                raw_cell, store_history=store_history, silent=silent,
-                shell_futures=shell_futures, cell_id=cell_id
+                raw_cell,
+                store_history=store_history,
+                silent=silent,
+                shell_futures=shell_futures,
+                cell_id=cell_id,
             )
             sys.meta_path.remove(self.metascript.definition.finder)
             # ToDo: capture exception: result.error_in_exec
@@ -110,8 +114,11 @@ class OverrideShell(object):
             old_original = self.metascript.jupyter_original
             self.metascript.jupyter_original = True
             result = self.old_run_cell(
-                raw_cell, store_history=store_history, silent=silent,
-                shell_futures=shell_futures, cell_id=cell_id
+                raw_cell,
+                store_history=store_history,
+                silent=silent,
+                shell_futures=shell_futures,
+                cell_id=cell_id,
             )
             self.metascript.jupyter_original = old_original
         return result
@@ -120,8 +127,7 @@ class OverrideShell(object):
     # run_ast_nodes
     # https://github.com/ipython/ipython/blob/master/
     #   IPython/core/interactiveshell.py#L2740
-    
+
     # run_code
     # https://github.com/ipython/ipython/blob/master/
     #   IPython/core/interactiveshell.py#L2821
-    

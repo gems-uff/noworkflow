@@ -26,6 +26,7 @@ checked then, because both sides run on the same machine.
 When ``GOLDEN_ACTUAL_DIR`` is set, the actual output of every mismatch is
 also written there, under the golden's relative path (CI uploads it).
 """
+
 import ast
 import difflib
 import os
@@ -72,8 +73,7 @@ def golden_mode(config):
     mode = os.environ.get("GOLDEN", "")
     if mode not in MODES:
         raise pytest.UsageError(
-            "GOLDEN={!r}: expected one of overwrite, require or unset"
-            .format(mode)
+            "GOLDEN={!r}: expected one of overwrite, require or unset".format(mode)
         )
     return mode
 
@@ -101,8 +101,9 @@ def assert_golden(request, name, actual):
     if request.node.get_closest_marker("golden") is None:
         raise RuntimeError(
             "{} calls assert_golden without @pytest.mark.golden; the legs "
-            "that deselect goldens (-m 'not golden') would run it"
-            .format(request.node.nodeid)
+            "that deselect goldens (-m 'not golden') would run it".format(
+                request.node.nodeid
+            )
         )
     config = request.config
     mode = golden_mode(config)
@@ -116,7 +117,9 @@ def assert_golden(request, name, actual):
             message = (
                 "goldens are recorded on {} and this is {}; run them in the "
                 "reference container: GOLDEN={} {} -m golden".format(
-                    reference, current_platform(), mode or "require",
+                    reference,
+                    current_platform(),
+                    mode or "require",
                     CONTAINER,
                 )
             )
@@ -130,8 +133,9 @@ def assert_golden(request, name, actual):
     if not path.exists():
         if mode == "require":
             pytest.fail(
-                "golden {} does not exist (GOLDEN=require). Record it with: "
-                "{}".format(relative, accept_command(request)),
+                "golden {} does not exist (GOLDEN=require). Record it with: {}".format(
+                    relative, accept_command(request)
+                ),
                 pytrace=False,
             )
         write(path, actual)
@@ -143,14 +147,19 @@ def assert_golden(request, name, actual):
     actual_dir = os.environ.get("GOLDEN_ACTUAL_DIR")
     if actual_dir:
         write(Path(actual_dir) / relative, actual)
-    diff = "".join(difflib.unified_diff(
-        expected.splitlines(keepends=True), actual.splitlines(keepends=True),
-        "golden/" + relative, "actual",
-    ))
+    diff = "".join(
+        difflib.unified_diff(
+            expected.splitlines(keepends=True),
+            actual.splitlines(keepends=True),
+            "golden/" + relative,
+            "actual",
+        )
+    )
     pytest.fail(
         "the output differs from golden {}:\n{}\nIf the change is intended, "
-        "rewrite it on the reference platform and review `git diff`:\n  {}"
-        .format(relative, diff, accept_command(request)),
+        "rewrite it on the reference platform and review `git diff`:\n  {}".format(
+            relative, diff, accept_command(request)
+        ),
         pytrace=False,
     )
 
@@ -173,8 +182,10 @@ def golden_functions():
         for node in ast.walk(tree):
             if not isinstance(node, ast.FunctionDef):
                 continue
-            if any(ast.unparse(decorator).endswith("mark.golden")
-                   for decorator in node.decorator_list):
+            if any(
+                ast.unparse(decorator).endswith("mark.golden")
+                for decorator in node.decorator_list
+            ):
                 found.add((path.stem, node.name))
     return found
 
@@ -185,16 +196,16 @@ def stored_goldens(directory=None):
     if not directory.exists():
         return []
     return sorted(
-        path.relative_to(directory).as_posix()
-        for path in directory.rglob("*.txt")
+        path.relative_to(directory).as_posix() for path in directory.rglob("*.txt")
     )
 
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--update-goldens", action="store_true", default=False,
-        help="rewrite the golden files of the e2e tests (same as "
-             "GOLDEN=overwrite)",
+        "--update-goldens",
+        action="store_true",
+        default=False,
+        help="rewrite the golden files of the e2e tests (same as GOLDEN=overwrite)",
     )
 
 
@@ -229,8 +240,11 @@ def orphan_goldens(config, reporter):
     items = {}
     for nodeid, module, function in config.stash.get(GOLDEN_ITEMS, []):
         items.setdefault((module, function), []).append(nodeid)
-    complete = {key for key, nodeids in items.items()
-                if all(nodeid in ran for nodeid in nodeids)}
+    complete = {
+        key
+        for key, nodeids in items.items()
+        if all(nodeid in ran for nodeid in nodeids)
+    }
     used = config.stash.get(USED, set())
     orphans = []
     for path in stored:
@@ -263,7 +277,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     terminalreporter.section("GOLDENS", sep="=", yellow=True)
     terminalreporter.write_line(
         "{} golden file(s) that no test reads; remove them (a failure "
-        "under GOLDEN=require):".format(len(orphans)))
+        "under GOLDEN=require):".format(len(orphans))
+    )
     for path in orphans:
         terminalreporter.write_line(
-            "  git rm {}".format((golden_dir() / path).as_posix()))
+            "  git rm {}".format((golden_dir() / path).as_posix())
+        )

@@ -22,8 +22,7 @@ def code_name(trial_id, id, name, _binds):
     """Get the *Name* of a code_component or code_block (*Id*)
     in a given trial (*TrialId*)."""
     return _list_matcher(
-        (lambda id, name: code_component(trial_id, id, name)),
-        _binds, id, name
+        (lambda id, name: code_component(trial_id, id, name)), _binds, id, name
     )
 
 
@@ -38,19 +37,16 @@ def code_name(trial_id, id, name, _binds):
 def evaluation_name(trial_id, id, name, _binds):
     """Get the *Name* of an evaluation or activation (*Id*)
     in a given trial (*TrialId*)."""
+
     @create_rule
     def single_evaluation_name(id, name):
         """Get name of a single evaluation"""
         code_id = var("_")
-        return (
-            evaluation(trial_id, id, code_component_id=code_id) &
-            code_component(trial_id, code_id, name)
+        return evaluation(trial_id, id, code_component_id=code_id) & code_component(
+            trial_id, code_id, name
         )
 
-    return _list_matcher(
-        single_evaluation_name,
-        _binds, id, name
-    )
+    return _list_matcher(single_evaluation_name, _binds, id, name)
 
 
 @prolog_rule("activation_name(_, [], []).")
@@ -64,8 +60,7 @@ def activation_name(trial_id, id, name, _binds):
     """Get the *Name* of an activation (*Id*)
     in a given trial (*TrialId*)."""
     return _list_matcher(
-        (lambda id, name: activation(trial_id, id, name)),
-        _binds, id, name
+        (lambda id, name: activation(trial_id, id, name)), _binds, id, name
     )
 
 
@@ -80,9 +75,9 @@ def access_name(trial_id, id, name, _binds):
     """Get the *Name* of an access (*Id*)
     in a given trial (*TrialId*)."""
     return _list_matcher(
-        (lambda id, name: access(trial_id, id, name)),
-        _binds, id, name
+        (lambda id, name: access(trial_id, id, name)), _binds, id, name
     )
+
 
 @prolog_rule("name(TrialId, code_component, Id, Name) :-")
 @prolog_rule("    code_name(TrialId, Id, Name).")
@@ -96,14 +91,16 @@ def access_name(trial_id, id, name, _binds):
 @prolog_rule("    access_name(TrialId, Id, Name).")
 @prolog_rule("name(TrialId, trial, _, Name) :-")
 @prolog_rule("    trial(TrialId, Name, _, _, _, _, _, _, _).")
-@restrict_rule(model=[
-    "code_component",
-    "code_block",
-    "evaluation",
-    "activation",
-    "access",
-    "trial",
-])
+@restrict_rule(
+    model=[
+        "code_component",
+        "code_block",
+        "evaluation",
+        "activation",
+        "access",
+        "trial",
+    ]
+)
 @create_rule
 def name(trial_id, model, id, name):
     """Get the *Name* of a *Model* (*Id*)

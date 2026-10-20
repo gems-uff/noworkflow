@@ -91,9 +91,9 @@ def code_mode_id(trial_id, id, mode):
 @prolog_rule("mode_id(TrialId, activation, Id, Mode) :-")
 @prolog_rule("    evaluation_code_id(TrialId, Id, CodeId),")
 @prolog_rule("    code_mode_id(TrialId, CodeId, Mode).")
-@restrict_rule(model=[
-    "access", "code_component", "code_block", "evaluation", "activation"
-])
+@restrict_rule(
+    model=["access", "code_component", "code_block", "evaluation", "activation"]
+)
 @create_rule
 def mode_id(trial_id, model, id, mode):
     """match *Mode* of a *Model* (*Id*)
@@ -104,25 +104,21 @@ def mode_id(trial_id, model, id, mode):
         return code_component(trial_id, id, mode=mode)
     if model in ("evaluation", "activation"):
         code_id = var("_code_id")
-        return (
-            evaluation(trial_id, id, BLANK, code_id) &
-            code_component(trial_id, code_id, mode=mode)
+        return evaluation(trial_id, id, BLANK, code_id) & code_component(
+            trial_id, code_id, mode=mode
         )
 
 
 @prolog_rule("mode(TrialId, Model, Name, Mode) :-")
 @prolog_rule("    mode_id(TrialId, Model, Id, Mode),")
 @prolog_rule("    name(TrialId, Model, Id, Name).")
-@restrict_rule(model=[
-    "access", "code_component", "code_block", "evaluation", "activation"
-])
+@restrict_rule(
+    model=["access", "code_component", "code_block", "evaluation", "activation"]
+)
 @create_rule
 def mode(trial_id, model, name, mode):
     """match *Mode* of a *Model* by *Name*
     in a given trial (*TrialId*).
     """
     id = var("_id")
-    return (
-        mode_id(trial_id, model, id, mode) &
-        _name(trial_id, model, id, name)
-    )
+    return mode_id(trial_id, model, id, mode) & _name(trial_id, model, id, name)
