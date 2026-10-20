@@ -46,3 +46,12 @@ def print_msg(message, force=False, file=STDOUT):
     """Print message with [now] prefix when in verbose mode"""
     if verbose or force:
         print("{}{}".format(LABEL, message), file=file)
+
+
+def print_error(message, file=STDERR):
+    """Print an error message with [now] prefix on stderr
+
+    For what accompanies a non-zero exit status: the command's own output
+    and the progress lines of ``-v`` stay on stdout, through ``print_msg``.
+    """
+    print_msg(message, True, file=file)

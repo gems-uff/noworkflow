@@ -94,10 +94,11 @@ now run --message "scale 2.0" script.py data1.dat 2.0
 
 The script's own output is printed as usual. Each run is a new trial.
 
-**Always check how the trial ended:** `now run` exits with 0 even when the
-script raised or called `sys.exit(1)` (#226). A failed run prints the
-traceback after "the execution finished with an uncaught exception" and
-leaves the trial marked `[f]` (unfinished) in `now list`.
+**How the trial ended:** `now run` exits as plain Python would have for the
+script: with the code given to `sys.exit`, with 1 after an uncaught
+exception, with 0 otherwise. A failed run prints the traceback on stderr
+after "the execution finished with an uncaught exception", stores the trial
+anyway and leaves it marked `[f]` (unfinished) in `now list`.
 
 Collection options, from the cheapest to the most complete:
 
@@ -134,7 +135,7 @@ backup trial created by `now restore`.
 
 **Naming a trial**, in every command that takes one: the full id, the
 sequence key (`1`, `2`, …) or the tag (`1.1.1`). A prefix of the id names
-nothing ("Trial 6270af8d not found", printed with exit 0, #226). Without a
+nothing ("Trial 6270af8d not found" on stderr, exit 1). Without a
 trial argument, commands use the last trial. Automatic tags change their
 major number when the script's code changes and their minor number when the
 command line changes.
@@ -173,7 +174,8 @@ now diff 1 2 -fa 40 40       # add `op` or `all` after the ids to include more k
 ```
 
 `-fa` also prints a tuple per replaced file access before its report
-(#248), and with ids that do not exist it exits 0 (#226).
+(#248); ids that are not integers or name no function are a usage error
+(exit 2).
 
 ### 5. Export: `now export`
 
@@ -353,8 +355,10 @@ swipl -q -g "consult('trial2.pl'), forall(access(_, _, N, M, _, H, _, _), (write
 
 ## Limitations
 
-- Exit codes and streams: failures often exit 0 and are printed on stdout
-  (#226); read the output, not only the status.
+- Exit codes and streams: a failure exits with a non-zero status and is
+  reported on stderr (a usage error, 2; a missing store or trial, 1; `now
+  run`, the script's own status), except `now push` and `now pull`, which
+  print their failure on stdout and exit 0 (#256).
 - Interrupting a run with Ctrl-C leaves the trial unfinished, without a
   finish time (#251).
 - Only Python is traced: external processes the script starts, and the

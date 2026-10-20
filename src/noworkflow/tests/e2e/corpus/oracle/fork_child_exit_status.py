@@ -1,5 +1,4 @@
-"""The exit status of a child made by os.fork() (#375, with #226
-behind it)
+"""The exit status of a child made by os.fork() (#375)
 
 A script that checks batches of records in children made by os.fork():
 each child leaves with sys.exit(), 0 for a clean batch and 3 for a batch

@@ -48,7 +48,6 @@ import sqlalchemy.util.deprecations as sa_deprecations
 import noworkflow
 from noworkflow.now import cmd as now_cmd
 from noworkflow.now.cmd import cmd_vis
-from noworkflow.now.cmd.cmd_list import List
 from noworkflow.now.persistence import persistence_config
 from noworkflow.now.persistence.models import Trial
 from noworkflow.now.utils.io import print_msg
@@ -336,66 +335,7 @@ def test_no_module_imports_setuptools_or_pkg_resources():
     )
 
 
-# 3. argparse drops unknown arguments ------------------------------------------
-
-
-def test_unknown_arguments_are_dropped_without_error(monkeypatch):
-    """``now list --no-such-flag stray`` runs ``list`` as if they were absent
-
-    now/cmd/__init__.py calls ``parser.parse_known_args()`` and discards the
-    leftovers. The e2e tests characterize that (an unknown argument gives
-    rc 0) and keep the desired behavior, rc 2, as an xfail(strict) twin
-    under #226. Runs in-process with ``List.execute`` replaced: no store.
-    """
-    seen = []
-    monkeypatch.setattr(List, "execute", lambda self, args: seen.append(args))
-    monkeypatch.setattr(
-        sys, "argv", ["now", "list", "--no-such-flag", "stray-positional"]
-    )
-    message = (
-        "`now list --no-such-flag stray-positional` no longer runs list: "
-        "now/cmd/__init__.py stopped dropping unknown arguments ({}). Flip "
-        "the characterization of unknown arguments in "
-        "src/noworkflow/tests/e2e/test_cli.py (rc 0) into its _desired twin "
-        "(rc 2) by removing that twin's xfail(strict=True) (#226). Check "
-        "that `now run script.py --flag` still hands --flag to the script "
-        "(argparse.REMAINDER in now/cmd/cmd_run.py), then delete this premise "
-        "and its control."
-    )
-    try:
-        result = now_cmd.main()
-    except SystemExit as exc:
-        pytest.fail(message.format("SystemExit({!r})".format(exc.code)))
-    assert result is None and len(seen) == 1, message.format(
-        "main() returned {!r}, list ran {} time(s)".format(result, len(seen))
-    )
-
-
-def test_a_known_option_without_its_value_still_exits_2(monkeypatch, capsys):
-    """Control: argparse still rejects a known option given without its value
-
-    Without it, the premise above could pass because ``now`` stopped parsing
-    its options at all.
-    """
-    seen = []
-    monkeypatch.setattr(List, "execute", lambda self, args: seen.append(args))
-    monkeypatch.setattr(sys, "argv", ["now", "list", "--dir"])
-    try:
-        now_cmd.main()
-    except SystemExit as exc:
-        code = exc.code
-    else:
-        code = None
-    error = capsys.readouterr().err
-    assert code == 2 and "--dir" in error and not seen, (
-        "`now list --dir` (missing value) no longer exits 2 through argparse "
-        "(exit code {!r}, list ran {} time(s), stderr {!r}): the premise "
-        "test_unknown_arguments_are_dropped_without_error measures nothing "
-        "until this is understood (#226).".format(code, len(seen), error)
-    )
-
-
-# 4. The bundle that `now vis` serves ----------------------------------------------
+# 3. The bundle that `now vis` serves ----------------------------------------------
 
 
 @pytest.fixture(scope="module")
@@ -597,12 +537,13 @@ def test_now_vis_forwards_host_and_port_from_the_command_line(monkeypatch):
 def test_print_msg_does_not_follow_a_swapped_sys_stdout(monkeypatch):
     """print_msg writes to the stdout bound at import, not to sys.stdout
 
-    now/utils/io.py binds ``STDOUT = sys.stdout`` at import and uses it as
-    the default of ``file=``, and no caller passes ``file=``: every ``[now]``
-    message, errors included, goes to the original stdout. That is why the
-    e2e tests read ``[now]`` messages from a subprocess's stdout, and why
-    capsys and redirect_stdout cannot see them (#226 moves the errors to
-    stderr).
+    now/utils/io.py binds ``STDOUT = sys.stdout`` and ``STDERR =
+    sys.stderr`` at import and uses them as the defaults of ``file=``, so
+    every ``[now]`` message goes to the process's original streams, the
+    errors to stderr through ``print_error``, even when the traced script
+    has replaced ``sys.stdout``. That is why the e2e tests read ``[now]``
+    messages from a subprocess's streams, and why capsys and redirect_stdout
+    cannot see them.
     """
     buffer = io.StringIO()
     monkeypatch.setattr(sys, "stdout", buffer)
@@ -614,8 +555,7 @@ def test_print_msg_does_not_follow_a_swapped_sys_stdout(monkeypatch):
         "read [now] messages with capsys: remove the workarounds that existed "
         "for this (print_msg.__defaults__ patches, subprocess-only checks), "
         "and re-check the e2e assertions about which stream carries [now] "
-        "messages; if errors moved to stderr, flip their characterizations "
-        "into the _desired twins (#226).".format(captured)
+        "messages.".format(captured)
     )
 
 

@@ -23,7 +23,7 @@ import sys
 import pytest
 
 from noworkflow.now.utils import io as now_io
-from noworkflow.now.utils.io import print_msg, redirect_output
+from noworkflow.now.utils.io import print_error, print_msg, redirect_output
 
 
 @pytest.fixture
@@ -76,6 +76,31 @@ def test_print_msg_writes_to_the_stream_given_at_call_time(quiet, capfd):
     print_msg("e", True, file=sys.stderr)
     captured = capfd.readouterr()
     assert (captured.out, captured.err) == ("", "[now] e\n")
+
+
+def test_print_error_is_a_forced_message_with_the_now_label(quiet):
+    """``print_error`` prints without ``-v``, with the ``[now] `` prefix and
+    ``str()`` of its message, as ``main`` reports a ``RuntimeError``"""
+    buffer = io.StringIO()
+    print_error(RuntimeError("Trial 99 not found"), file=buffer)
+    assert buffer.getvalue() == "[now] Trial 99 not found\n"
+
+
+def test_print_error_defaults_to_the_stderr_bound_at_import():
+    """Without ``file=``, ``print_error`` writes to ``io.STDERR``, the
+    stderr bound when the module was imported, and never to the stdout
+    bound there: an error of ``now`` goes to the process's stderr even when
+    the traced script replaced ``sys.stderr``"""
+    buffer = io.StringIO()
+    old = now_io.STDERR
+    now_io.print_error.__defaults__ = (buffer,)
+    try:
+        print_error("e")
+    finally:
+        now_io.print_error.__defaults__ = (old,)
+    assert buffer.getvalue() == "[now] e\n"
+    assert print_error.__defaults__ == (now_io.STDERR,)
+    assert now_io.STDERR is not now_io.STDOUT
 
 
 def test_redirect_output_swaps_stdout_and_stderr_and_restores_them():

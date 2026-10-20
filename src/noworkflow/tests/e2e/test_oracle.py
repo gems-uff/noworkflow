@@ -636,19 +636,17 @@ FORK_EPILOGUE = Defect(
     "deployment, definition and execution store the trial again from the "
     "child (Execution.store_provenance stores it through Collector.store "
     "first, and only then prints '[now] the execution exited via "
-    "sys.exit(). Exit status: 3' on stdout; a child that exits with 0 "
+    "sys.exit(). Exit status: 3' on stderr; a child that exits with 0 "
     "stores just the same, silently); Tag.create_automatic_tag adds one "
-    "more automatic tag per child; and the child exits as `now`. The "
-    "parent stores last, and the INSERT OR REPLACE of Model.store "
-    "(persistence/models/base.py) replaces only the rows whose keys it "
-    "reaches: the rows of the child's branch (its exit activation) stay in "
-    "the parent's trial, which mixes two processes. #226 is behind it: "
-    "`now` exits with 0 whatever the script did, so the parent's waitpid "
-    "reads 0 instead of the child's 3. The oracle sees only the [now] line "
-    "and the 0: a fix of #226 alone keeps the line, so the case stays red "
-    "with this signature, and it flips once the child neither prints the "
-    "line nor exits with 0, whatever becomes of the extra tags and rows, "
-    "which the oracle does not compare",
+    "more automatic tag per child; and the child exits as `now`, with the "
+    "status it passed to sys.exit, so the parent's waitpid reads the same "
+    "codes as under plain Python. The parent stores last, and the INSERT OR "
+    "REPLACE of Model.store (persistence/models/base.py) replaces only the "
+    "rows whose keys it reaches: the rows of the child's branch (its exit "
+    "activation) stay in the parent's trial, which mixes two processes. The "
+    "oracle sees only the [now] line on stderr: the case flips once the "
+    "child no longer prints it, whatever becomes of the extra tags and "
+    "rows, which the oracle does not compare",
     signature="[now] the execution exited via sys.exit(). Exit status: 3",
 )
 IF_BODY_CONTEXT = Defect(
@@ -967,9 +965,9 @@ def test_oracle_detects_difference(project):
     stdout, one line on stderr and the content of a file, yields exactly
     those three differences (the control of the oracle)
 
-    The return code is the one channel this control cannot drive end to
-    end: ``now run`` exits 0 whatever the script does (#226), so only
-    ``test_differences_between_outcomes`` covers it.
+    The return code is covered by ``test_differences_between_outcomes`` and
+    by the cases that end through ``sys.exit`` or an uncaught exception,
+    whose status ``now run`` passes on.
     """
     project.write("control.py", CONTROL)
     plain = run_plain(project, "control.py")

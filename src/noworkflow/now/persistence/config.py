@@ -6,10 +6,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import sys
 from os.path import isdir, join
-
-from ..utils.io import print_msg
 
 PROVENANCE_DIRNAME = ".noworkflow"
 
@@ -67,14 +64,17 @@ class PersistenceConfig(object):
             obj.connect(self)
 
     def connect_existing(self, path=None):
-        """Connect to existing persistence. Exit if it does not exist."""
+        """Connect to existing persistence
+
+        Raises ``RuntimeError`` when there is none: ``now`` reports it on
+        stderr and exits with 1.
+        """
         error_msg = "there is no provenance store in the current directory"
         if path:
             self.path = path
             error_msg = "there is no provenance store in the informed directory"
         if not self._has_provenance():
-            print_msg(error_msg, True)
-            sys.exit(1)
+            raise RuntimeError(error_msg)
         self.connect()
 
     def add(self, obj):

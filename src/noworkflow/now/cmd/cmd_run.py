@@ -49,7 +49,12 @@ class ScriptArgs(argparse.Action):  # pylint: disable=too-few-public-methods
 
 
 def run(metascript, args=None):
-    """Execute noWokflow to capture provenance from script"""
+    """Execute noWokflow to capture provenance from script
+
+    Returns the exit status of the script: the one it passed to
+    ``sys.exit``, 1 after an uncaught exception, 0 otherwise. The trial is
+    stored before, whichever way the script ended.
+    """
     args = args or []
     try:
         metascript.trial_id = Trial.create(*metascript.create_trial_args())
@@ -74,6 +79,7 @@ def run(metascript, args=None):
         )
     finally:
         metascript.create_last()
+    return metascript.execution.exit_code
 
 
 class Run(Command):
@@ -227,4 +233,4 @@ class Run(Command):
         metascript.clear_namespace()
 
         # Run script
-        run(metascript, args)
+        return run(metascript, args)

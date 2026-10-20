@@ -468,14 +468,15 @@ def test_restore_by_a_hash_prefix_on_a_puregit_store_desired(puregit_store):
 
 def test_restore_by_a_file_name_prefix_on_a_plain_store(project):
     """Control: on plain, ``-i script`` (a prefix of a file name, not of a
-    hash) finds no version"""
+    hash) finds no version: ``File version not found!`` on stderr, exit 1"""
     project.write("script.py", SCRIPT)
     project.run("run", "--content-engine", "plain", "script.py")
 
     result = restore_data(project, "script", engine="plain")
 
-    assert result.returncode == 0, str(result)
-    assert result.stdout == "[now] File version not found!\n"
+    assert result.returncode == 1, str(result)
+    assert result.stdout == "", str(result)
+    assert result.stderr == "[now] File version not found!\n"
 
 
 def test_restore_by_a_file_name_prefix_on_a_puregit_store(puregit_store):
@@ -493,11 +494,12 @@ def test_restore_by_a_file_name_prefix_on_a_puregit_store(puregit_store):
 
 @known_defects(FIND_SUBHASH_NAME)
 def test_restore_by_a_file_name_prefix_on_a_puregit_store_desired(puregit_store):
-    """Desired: as on plain, no version is found"""
+    """Desired: as on plain, no version is found (``File version not
+    found!`` on stderr, exit 1), instead of a crash"""
     result = restore_data(puregit_store, "script")
 
-    assert result.returncode == 0, str(result)
-    assert result.stdout == "[now] File version not found!\n"
+    assert result.returncode == 1, str(result)
+    assert result.stderr == "[now] File version not found!\n", str(result)
 
 
 def restore_with_a_hook_in_the_store(project):

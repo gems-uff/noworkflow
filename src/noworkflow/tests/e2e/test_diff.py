@@ -658,67 +658,36 @@ def test_diff_fa_debug_output_desired(two_trial_project):
 
 
 def test_diff_fa_with_ids_that_are_not_integers(two_trial_project):
-    """Characterization: ids that are not integers end in ``exit()``, rc 0
+    """Ids that are not integers are a usage error: rc 2, argparse's error
+    on stderr naming the option, nothing on stdout
 
-    The trial diff is printed first, then the error on stdout; #226 makes it
-    a usage error.
+    Checked before the store is opened, so no diff is printed first. The
+    program name before ``diff: error:`` is argparse's: ``now`` from 3.14,
+    empty before (the top-level parser has ``usage=""``).
     """
-    result = two_trial_project.run("diff", "1", "2", "-fa", "x", "y")
-    lines = lines_of(result.stdout)
-    assert lines[0] == "[now] trial diff:", str(result)
-    assert last_line(result.stdout) == (
-        "[now] The first two values, the functions' ids, must be integers."
-    ), str(result)
-    assert "[now] Function output" not in lines, str(result)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "#226: now diff -fa with ids that are not integers exits with 0; it "
-        "should be a usage error with rc 2"
-    ),
-)
-def test_diff_fa_with_ids_that_are_not_integers_desired(two_trial_project):
-    """Ids that are not integers are a usage error: rc 2, error on stderr"""
     result = two_trial_project.run(
-        "diff", "1", "2", "-fa", "x", "y", expect=None, allow_stderr=True
+        "diff", "1", "2", "-fa", "x", "y", expect=2, allow_stderr=True
     )
-    assert result.returncode == 2, str(result)
-    assert result.stderr.strip(), str(result)
+    assert result.stdout == "", str(result)
+    assert last_line(result.stderr).endswith(
+        "diff: error: argument -fa/--function-activations: the first two "
+        "values, the functions' ids, must be integers"
+    ), str(result)
 
 
 def test_diff_fa_with_an_id_that_names_no_function(two_trial_project):
-    """Characterization: an id that names no function ends in ``exit()``
+    """An id that names no function is a usage error: rc 2, the error on
+    stderr naming the option and the id, nothing on stdout
 
-    rc 0, the trial diff and then the error on stdout; #226 makes it rc 2.
+    The ids are looked up before anything is printed.
     """
     project = two_trial_project
     missing = missing_function_id(project)
-    result = project.run("diff", "1", "2", "-fa", missing, missing)
-    lines = lines_of(result.stdout)
-    assert lines[0] == "[now] trial diff:", str(result)
-    assert last_line(result.stdout) == (
-        "[now] Wrong input. There isn't a function with the id: {}".format(missing)
-    ), str(result)
-    assert "[now] Function output" not in lines, str(result)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "#226: now diff -fa with an id that names no function exits with 0; "
-        "it should be a usage error with rc 2"
-    ),
-)
-def test_diff_fa_with_an_id_that_names_no_function_desired(two_trial_project):
-    """An id that names no function is a usage error: rc 2, error on stderr"""
-    project = two_trial_project
-    missing = missing_function_id(project)
     result = project.run(
-        "diff", "1", "2", "-fa", missing, missing, expect=None, allow_stderr=True
+        "diff", "1", "2", "-fa", missing, missing, expect=2, allow_stderr=True
     )
-    assert result.returncode == 2, str(result)
-    assert result.stderr.strip(), str(result)
+    assert result.stdout == "", str(result)
+    assert last_line(result.stderr).endswith(
+        "diff: error: argument -fa/--function-activations: Wrong input. "
+        "There isn't a function with the id: {}".format(missing)
+    ), str(result)

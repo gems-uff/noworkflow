@@ -26,10 +26,6 @@ Known defects have a characterization of today's behavior and a
   subcommand that takes no ``--url`` ignores it and runs; the argv is built
   with ``split``, so spaces in a segment become arguments; and no ``Host``
   or ``Origin`` is checked.
-- #357: the restore-file route answers 400 when
-  the output of ``now restore`` contains ``"not"``, and a successful
-  restore prints the restored path (``notes.dat``). The frontend makes the
-  same substring test on the text it receives.
 - #356: ``now vis --dir P`` serves the store of P, but the
   commands run in the server's working directory. One test reproduces it
   with the real ``now`` (skipped when the ``now`` on the PATH is not this
@@ -40,12 +36,13 @@ raises ``ValueError`` (the form's number inputs clear most of them) and an
 unknown graph mode becomes ``prospective`` (which ``now export dataflow
 -m`` rejects; the form's select never sends one); a restore of a file
 whose name has a ``/`` splits it across the route's segments
-(#365: the fix needs another URL, so no twin);
-the restore-file route names the target in its stderr message even when
-there is none (``"false"``) and answers 400 to ``File has not changed!``;
-the restore-trial route answers 200 whatever ``now`` printed.
-Nothing here depends on the Python version or the system (measured on
-macOS with Python 3.11 to 3.15; Linux and Windows not run).
+(#365: the fix needs another URL, so no twin).
+
+The two restore routes answer from the exit status of ``now restore``: 200
+when it is 0, 400 otherwise, with what it wrote on both streams as the
+text, whatever that text says (#357 was the route reading the text for
+``"not"``). Nothing here depends on the Python version or the system
+(measured on macOS with Python 3.11 to 3.15; Linux and Windows not run).
 """
 
 import os
@@ -159,13 +156,6 @@ FOREIGN_ORIGIN_DEFECT = Defect(
     reason="#220: now vis checks no Origin header, so any page open in the "
     "browser runs the /commands/* routes with a cross-site GET",
     signature="ran now for a request from a foreign Origin: 200 after 1 call(s)",
-)
-RESTORE_STATUS = Defect(
-    reason="#357: the restore-file route answers "
-    "400 whenever the output of now restore contains the substring "
-    '"not", and a successful restore prints the restored path, so '
-    'a restore into a path containing "not" is reported as failed',
-    signature="a successful restore answered 400",
 )
 VIS_COMMANDS_CWD = Defect(
     reason="#356: now vis --dir P connects the store of P "
@@ -671,14 +661,15 @@ def test_restore_trial_route_turns_its_checkboxes_into_flags(vis, commands, skip
     assert answer == {"terminal_text": PRINTED}, "the answer of the route"
 
 
-def test_restore_trial_route_answers_200_whatever_now_printed(vis, commands):
-    """Characterization: neither stderr nor the exit status count"""
-    commands.completed.stdout = NO_STORE.encode("utf-8")
-    commands.completed.stderr = b"Traceback (most recent call last):\n"
+def test_restore_trial_route_answers_400_when_now_fails(vis, commands):
+    """A ``now restore`` that exits with 1 answers 400, with both streams
+    as the text, whatever the stdout says"""
+    commands.completed.stdout = PRINTED.encode("utf-8")
+    commands.completed.stderr = NO_STORE.encode("utf-8")
     commands.completed.returncode = 1
-    answer = vis.json(restore_trial_url(first_trial(vis)))
+    answer = vis.json(restore_trial_url(first_trial(vis)), status=400)
     assert len(commands.calls) == 1, "subprocess.run calls"
-    assert answer == {"terminal_text": NO_STORE}, "the answer of the route"
+    assert answer == {"terminal_text": PRINTED + NO_STORE}, "the answer of the route"
 
 
 # now restore -f: /commands/restore/file/<trial_id>/<file_to_restore>/...
@@ -713,73 +704,63 @@ def test_restore_file_route_runs_restore_of_the_file(vis, commands, file_id, tar
 @pytest.mark.parametrize(
     "target", ["false", "restored/data1.dat"], ids=["no-target", "target"]
 )
-def test_restore_file_route_answers_400_when_now_writes_to_stderr(
-    vis, commands, target
-):
-    """Anything on stderr: 400, naming the target segment, even ``false``"""
+def test_restore_file_route_answers_400_when_now_fails(vis, commands, target):
+    """A ``now restore -f`` that exits with 1 answers 400, with what it
+    wrote on stderr as the text, whatever the target segment"""
     trial_id = first_trial(vis)
     commands.completed.stderr = b"Traceback (most recent call last):\n"
+    commands.completed.returncode = 1
     answer = vis.json(
         restore_file_url(trial_id, read_file(vis, trial_id), target=target), status=400
     )
     assert len(commands.calls) == 1, "subprocess.run calls"
-    expected = '"{}" No such file or directory'.format(target)
+    expected = "Traceback (most recent call last):\n"
     assert answer == {"terminal_text": expected}, "the answer of the route"
 
 
 @pytest.mark.parametrize(
-    "printed, status",
+    "stdout, stderr, returncode, status",
     [
-        (restored("data1.dat"), 200),
-        ("[now] File version not found!\n", 400),
-        ("[now] File has not changed!\n", 400),
+        (restored("data1.dat"), "", 0, 200),
+        ("", "[now] File version not found!\n", 1, 400),
+        ("[now] File has not changed!\n", "", 0, 200),
         (
+            "",
             "[now] Unable to restore file data1.dat due to [Errno 20] Not a "
             "directory: 'data1.dat'. Skipping it\n",
+            1,
             400,
         ),
     ],
     ids=["restored", "not-found", "unchanged", "unable"],
 )
-def test_restore_file_route_status_follows_what_restore_printed(
-    vis, commands, printed, status
+def test_restore_file_route_status_follows_the_exit_status(
+    vis, commands, stdout, stderr, returncode, status
 ):
-    """The messages of ``now restore -f``: only a restore answers 200
-
-    ``File has not changed!`` (a restore with nothing to do) answers 400
-    too: characterized, since whether it is an error is the maintainer's
-    call.
+    """The outcomes of ``now restore -f``, as it reports them: a restore
+    and a file that already had the content (``File has not changed!``,
+    #357) answer 200; a version not found and a file it could not write,
+    which exit with 1, answer 400. The text is what ``now`` wrote.
     """
     trial_id = first_trial(vis)
-    commands.completed.stdout = printed.encode("utf-8")
+    commands.completed.stdout = stdout.encode("utf-8")
+    commands.completed.stderr = stderr.encode("utf-8")
+    commands.completed.returncode = returncode
     answer = vis.json(
         restore_file_url(trial_id, read_file(vis, trial_id)), status=status
     )
-    assert answer == {"terminal_text": printed}, "the answer of the route"
+    assert answer == {"terminal_text": stdout + stderr}, "the answer of the route"
 
 
 @pytest.mark.parametrize("target", NOT_TARGETS)
 def test_restore_file_into_a_path_containing_not(vis, commands, target):
-    """Characterization (#357): 400"""
+    """A successful restore answers 200, whatever the path it names (#357)"""
     trial_id = first_trial(vis)
     commands.completed.stdout = restored(target).encode("utf-8")
     answer = vis.json(
-        restore_file_url(trial_id, read_file(vis, trial_id), target=target), status=400
+        restore_file_url(trial_id, read_file(vis, trial_id), target=target)
     )
     assert answer == {"terminal_text": restored(target)}, "the answer of the route"
-
-
-@pytest.mark.parametrize("target", NOT_TARGETS)
-@known_defects(RESTORE_STATUS)
-def test_restore_file_into_a_path_containing_not_desired(vis, commands, target):
-    """A successful restore answers 200, whatever the path it names"""
-    trial_id = first_trial(vis)
-    commands.completed.stdout = restored(target).encode("utf-8")
-    route = restore_file_url(trial_id, read_file(vis, trial_id), target=target)
-    response = vis.get(route)
-    assert response.status_code == 200, (
-        "a successful restore answered {}, GET {}".format(response.status_code, route)
-    )
 
 
 def test_restore_file_route_with_a_file_in_a_subdirectory(vis, commands):

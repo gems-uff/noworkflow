@@ -69,8 +69,8 @@ NO_TRIAL = "[now] Trial None not found\n"
 SCHEMA_WITHOUT_TRIAL = Defect(
     reason="#253: cmd_schema.prolog_text builds TrialProlog(Trial()), and "
     "Trial() raises RuntimeError('Trial None not found') in a "
-    "project without trials, which main prints with return code 0; "
-    "the descriptions and rules.pl depend on no trial",
+    "project without trials, which main reports on stderr with return "
+    "code 1; the descriptions and rules.pl depend on no trial",
     signature="[now] Trial None not found",
 )
 FULLPATH_NONE = Defect(
@@ -145,12 +145,14 @@ def module_facts_without_fullpath(project):
 
 def test_schema_prolog_in_a_project_without_trials(project):
     """In a project without trials, ``now schema prolog`` prints only
-    ``Trial None not found`` and exits 0, while ``-d`` draws the diagram
+    ``Trial None not found``, on stderr, and exits 1, while ``-d`` draws
+    the diagram
 
     Characterization of #253.
     """
-    result = project.run("schema", "prolog")
-    assert result.stdout == NO_TRIAL, str(result)
+    result = project.run("schema", "prolog", expect=1, allow_stderr=True)
+    assert result.stderr == NO_TRIAL, str(result)
+    assert result.stdout == "", str(result)
     diagram = project.run("schema", "prolog", "-d")
     assert diagram.stdout.startswith("digraph G{"), str(diagram)
     assert diagram.stdout.rstrip().endswith("}"), str(diagram)

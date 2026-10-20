@@ -254,6 +254,35 @@ def test_restore_file_writes_the_trial_version_into_the_target_creating_parent_d
     assert len(project.trials()) == 2
 
 
+def test_restore_file_of_a_version_that_does_not_exist_exits_1(project):
+    """``-f FILE -i N`` with an access number the trial never had is a
+    failure: ``File version not found!`` on stderr, return code 1, nothing
+    on stdout and nothing written"""
+    build_restore(project)
+    before = project.files()
+
+    result = project.run(
+        "restore", "1", "-f", RESULT, "-i", "99", expect=1, allow_stderr=True
+    )
+
+    assert result.stderr == "[now] File version not found!\n", str(result)
+    assert result.stdout == "", str(result)
+    assert project.files() == before
+
+
+def test_restore_file_that_already_has_the_version_exits_0(project):
+    """``-f FILE`` of the version the file already holds (its first access
+    in the last trial, which read it as it is) is nothing to do, not a
+    failure: ``File has not changed!`` on stdout, return code 0"""
+    build_restore(project)
+    before = project.files()
+
+    result = project.run("restore", "2", "-f", "data.txt")
+
+    assert result.stdout == "[now] File has not changed!\n", str(result)
+    assert project.files() == before
+
+
 def test_restore_file_onto_an_existing_target(project):
     """``-f out/sub/result.txt -t EXISTING`` with the default ``-i 1``
     takes the before-hash of the first access, which is empty for a written
@@ -962,7 +991,14 @@ def run_weather_with_dir_elsewhere(project, tmp_path):
     """
     storage = NowProject(tmp_path / "storage")
     project.copy_corpus("weather")
-    result = project.run(WEATHER_ARGS[0], "--dir", storage.path, *WEATHER_ARGS[1:])
+    result = project.run(
+        WEATHER_ARGS[0],
+        "--dir",
+        storage.path,
+        *WEATHER_ARGS[1:],
+        expect=None,
+        allow_stderr=True,
+    )
     trials = storage.trials()
     assert len(trials) == 1
     return result, trials[0]
@@ -971,12 +1007,13 @@ def run_weather_with_dir_elsewhere(project, tmp_path):
 def test_run_with_dir_elsewhere(project, tmp_path):
     """``run --dir`` puts the store directory in ``sys.path[0]`` in place of
     the script's directory, so ``simulation.py`` cannot import its sibling
-    ``simulator``: exit 0, the error on stdout, trial ``unfinished``
+    ``simulator``: exit 1, the error on stderr, trial ``unfinished``
     (#244 changes it)"""
     result, trial = run_weather_with_dir_elsewhere(project, tmp_path)
 
-    assert "ModuleNotFoundError" in result.stdout
-    assert "No module named 'simulator'" in result.stdout
+    assert result.returncode == 1, str(result)
+    assert "ModuleNotFoundError" in result.stderr, str(result)
+    assert "No module named 'simulator'" in result.stderr, str(result)
     assert trial["status"] == "unfinished"
     assert not (project.path / "output.csv").exists()
 

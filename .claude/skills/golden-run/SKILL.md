@@ -320,10 +320,10 @@ Under a minute per reader.
   `raw/`; compare the bytes of that command (`now ... | od -c`) when line
   ends matter.
 - **The compatibility verdict is the difference between the `summary.tsv` of
-  each pair**, not a return code. A store `now` cannot read makes it print
-  `[now] invalid noWorkflow database` on stdout and exit 0 with an empty
-  stderr; the script flags it (`invalid-db`), and also a `traceback` and a
-  trial reference that found nothing (`not-found`). **Upgrade:** a flag that
+  each pair**, not a return code alone. A store `now` cannot read makes it
+  print `[now] invalid noWorkflow database` on stderr and exit 1; the script
+  flags it (`invalid-db`), and also a `traceback` and a trial reference that
+  found nothing (`not-found`). **Upgrade:** a flag that
   the after side gets on the before store and the before side does not
   breaks existing stores. **Forward:** a flag that the before side gets on
   the after store and the after side does not means the previous release
@@ -406,7 +406,7 @@ uv run --no-sync python $S "$PWD/.venv/bin/now" "$R/before/stores/two_trials0" "
 
 It passes when the run prints no flag and the trial count went up by one
 (`run: ... trials N -> N+1`). A version that cannot record into an old
-project prints `invalid noWorkflow database`, exits 0 and records nothing,
+project prints `invalid noWorkflow database`, exits 1 and records nothing,
 even when every read of step 3 passed.
 
 ## The instrument, not only the system

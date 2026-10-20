@@ -193,8 +193,9 @@ in the order of the cycle.
 
 When writing something learned into a skill, the test is: **would a future
 run do something different because of this line?** The mechanism and the
-consequence pass ("`now` prints the error and may still exit with 0, so check
-the output, not the status"). *When* it was measured, in which version, which
+consequence pass ("inside `now run`, `open` is the collector's wrapper, so a
+test that runs the collector and then opens a file sees the wrapper"). *When*
+it was measured, in which version, which
 issue found it, and that the problem is already fixed do not pass: `git log`
 keeps that, and in a skill it only accumulates.
 
@@ -409,9 +410,17 @@ and what came out, in the PR.
   flag uv downloads a missing interpreter, which is an install; without
   `--isolated` it recreates `.venv` on that version and leaves it there). "It
   works here" on another Python proves nothing.
-- **`now` prints an error and may still exit with 0.** Several commands
-  report failure through `print_msg` and return normally; check the output,
-  not only the status.
+- **`now` exits with a non-zero status when it fails, and reports the
+  failure on stderr:** a usage error is argparse's (2); a failure a command
+  foresaw is a `RuntimeError` that `main` reports (1); `now run` exits with
+  the status plain Python would have given the script (the code of
+  `sys.exit`, 1 after an uncaught exception), once the trial is stored;
+  `now restore` exits with 1 when a file it was asked for was not
+  restored. The exceptions are `push` and `pull`, which still print their
+  failure (`Exporting trials failed`, `Error pushing`) on stdout and return
+  normally (#256). Everything else `now` prints, the `-v` progress lines
+  and the section headers of `show`, `list` and `diff` included, stays on
+  stdout.
 - **Two trials of the same script differ by design:** the environment table
   records the whole `os.environ`, the start time, the pid. A diff that shows
   only those is "no change". `src/noworkflow/tests/e2e/normalize.py` masks
@@ -436,8 +445,8 @@ and therefore the first suspects when an upgrade breaks something:
 - `src/noworkflow/now/collection/prov_execution/execution.py`: replaces the
   four `open`s with wrappers, injects `__noworkflow__`, `now_tag_cell` and
   `now_tag_variable` into `builtins`, and inserts a finder at the front of
-  `sys.meta_path` around the `exec` of the script. The finder is removed only
-  on the normal path; a script that raises leaves it installed.
+  `sys.meta_path` around the `exec` of the script, and removes it in a
+  `finally`, whichever way the script leaves.
 - `src/noworkflow/now/persistence/content/safeopen.py`: keeps the original
   `open`s and restores them in a context manager; also pokes at
   `__builtins__["open"]`, which is a dict or a module depending on who imports

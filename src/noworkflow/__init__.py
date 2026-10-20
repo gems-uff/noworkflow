@@ -10,6 +10,8 @@ scientific workflow management system.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import sys
+
 from noworkflow.now.cmd import main
 from noworkflow.now.utils.functions import version
 
@@ -21,6 +23,6 @@ def load_ipython_extension(ipython):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
 
 __version__ = version()

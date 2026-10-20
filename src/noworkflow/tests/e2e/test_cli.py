@@ -8,7 +8,9 @@ version flag, the help of the program, of each command and of each export
 format, the report of a missing store (its stream and its wording), the
 treatment of unknown commands and options, the report of a trial that does
 not exist, the three ways of naming a trial (id, tag, sequence key) and that
-a prefix of an id names none.
+a prefix of an id names none. A failure ``now`` foresaw (no store, no such
+trial) is reported on stderr with return code 1; a usage error is argparse's,
+with return code 2 (``main`` in now/cmd/__init__.py).
 
 The help texts are checked structurally, never as goldens: argparse wraps
 them at ``COLUMNS`` and changes their wording between Python versions, and
@@ -34,9 +36,9 @@ PACKAGE_DIR = Path(noworkflow.__file__).resolve().parent
 CMD_DIR = PACKAGE_DIR / "now" / "cmd"
 VERSION_FILE = PACKAGE_DIR / "resources" / "version.txt"
 
-# The commands that `main()` in now/cmd/__init__.py registers, in its order,
-# and the formats of `now export`; test_command_lists_match_the_source keeps
-# both lists in step with the source.
+# The commands that `build_parser()` in now/cmd/__init__.py registers, in its
+# order, and the formats of `now export`; test_command_lists_match_the_source
+# keeps both lists in step with the source.
 COMMANDS = (
     "run",
     "debug",
@@ -133,14 +135,14 @@ def assert_untouched(project):
 def test_command_lists_match_the_source():
     """COMMANDS and EXPORT_FORMATS are the commands the source registers
 
-    Read from the ``commands`` lists of ``main()`` and of
+    Read from the ``commands`` lists of ``build_parser()`` and of
     ``Export.add_arguments()``, so a command added there without being
     added here fails this test instead of going untested.
     """
     from noworkflow.now import cmd
     from noworkflow.now.cmd import cmd_export
 
-    main_classes = command_classes(CMD_DIR / "__init__.py", "main")
+    main_classes = command_classes(CMD_DIR / "__init__.py", "build_parser")
     assert [getattr(cmd, name)().cmd for name in main_classes] == list(COMMANDS)
 
     export_classes = command_classes(
@@ -197,7 +199,7 @@ def test_commands_in_the_top_level_help(project):
     reason=("#253: `import` has no help line, so `now -h` omits it"),
 )
 def test_commands_in_the_top_level_help_desired(project):
-    """The top-level help lists all 18 commands, in the order of main()"""
+    """The top-level help lists all 18 commands, in the order of build_parser()"""
     result = project.run()
     assert listed_commands(result.stdout) == list(COMMANDS)
 
@@ -221,27 +223,16 @@ def test_command_help_exits_0_on_stdout_without_a_store(project, args):
 
 @pytest.mark.parametrize("args", STORE_READERS, ids=" ".join)
 def test_store_reader_without_a_store(project, args):
-    """A store-reading command in an empty directory exits 1 with a message
+    """A store-reading command in an empty directory exits 1 with the
+    message on stderr and nothing on stdout
 
-    The message goes to stdout, through ``print_msg``; #226 moves it to
-    stderr. test_missing_store_wording pins the wording. Nothing is created
-    in the directory.
+    ``connect_existing`` raises ``RuntimeError`` (persistence/config.py),
+    which ``main`` reports. test_missing_store_wording pins the wording.
+    Nothing is created in the directory.
     """
-    result = project.run(*args, expect=1)
-    assert NO_STORE_LINE.fullmatch(result.stdout), str(result)
-    assert_untouched(project)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=("#226: print_msg writes errors to stdout"),
-)
-def test_store_reader_without_a_store_desired(project):
-    """The missing-store error goes to stderr, rc 1, and stdout stays empty"""
-    result = project.run("list", expect=1, allow_stderr=True)
+    result = project.run(*args, expect=1, allow_stderr=True)
     assert result.stdout == "", str(result)
-    assert "no provenance store" in result.stderr, str(result)
+    assert NO_STORE_LINE.fullmatch(result.stderr), str(result)
     assert_untouched(project)
 
 
@@ -252,12 +243,14 @@ def test_missing_store_wording(project):
     wording for the current directory (persistence/config.py) is never used.
     #253 changes this.
     """
-    result = project.run("list", expect=1)
-    assert result.stdout == "[now] {}\n".format(NO_STORE_THERE)
+    result = project.run("list", expect=1, allow_stderr=True)
+    assert result.stderr == "[now] {}\n".format(NO_STORE_THERE)
 
     (project.root / "other").mkdir()
-    result = project.run("list", "--dir", os.path.join("..", "other"), expect=1)
-    assert result.stdout == "[now] {}\n".format(NO_STORE_THERE)
+    result = project.run(
+        "list", "--dir", os.path.join("..", "other"), expect=1, allow_stderr=True
+    )
+    assert result.stderr == "[now] {}\n".format(NO_STORE_THERE)
 
 
 @pytest.mark.xfail(
@@ -270,23 +263,17 @@ def test_missing_store_wording(project):
     ),
 )
 def test_missing_store_wording_desired(project):
-    """Without ``--dir`` the report names the current directory; with it, not
-
-    Read from stdout and stderr together, so that #226 moving the message to
-    stderr does not change this test.
-    """
+    """Without ``--dir`` the report names the current directory; with it, not"""
     result = project.run("list", expect=1, allow_stderr=True)
-    output = result.stdout + result.stderr
-    assert NO_STORE_HERE in output, str(result)
+    assert NO_STORE_HERE in result.stderr, str(result)
 
     other = project.root / "other"
     other.mkdir()
     result = project.run(
         "list", "--dir", os.path.join("..", "other"), expect=1, allow_stderr=True
     )
-    output = result.stdout + result.stderr
-    assert "no provenance store" in output, str(result)
-    assert "current directory" not in output, str(result)
+    assert "no provenance store" in result.stderr, str(result)
+    assert "current directory" not in result.stderr, str(result)
     assert list(other.iterdir()) == [], "a file was created in --dir"
     assert_untouched(project)
 
@@ -322,63 +309,37 @@ def test_unknown_command_exits_2_listing_every_command(project):
 
 
 def test_unknown_option_after_a_command(two_trial_project):
-    """``now list --bogus`` ignores the option and lists the trials, rc 0
+    """``now list --bogus`` is an argparse error: rc 2, nothing listed
 
-    ``main`` parses with ``parse_known_args`` and drops what it does not
-    know. #226 changes this.
+    ``main`` parses with ``parse_args``: what it does not know is an error,
+    never dropped.
     """
-    project = two_trial_project
-    expected = project.run("list").stdout
-    result = project.run("list", "--bogus")
-    assert result.stdout == expected
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "#226: unknown arguments are dropped by parse_known_args instead of "
-        "failing with rc 2"
-    ),
-)
-def test_unknown_option_after_a_command_desired(two_trial_project):
-    """``now list --bogus`` is an argparse error: rc 2, nothing listed"""
-    result = two_trial_project.run("list", "--bogus", expect=None, allow_stderr=True)
-    assert result.returncode == 2, str(result)
+    result = two_trial_project.run("list", "--bogus", expect=2, allow_stderr=True)
     assert "unrecognized arguments: --bogus" in result.stderr, str(result)
     assert result.stdout == "", str(result)
 
 
 def test_unknown_option_without_a_command(project):
-    """``now --bogus`` crashes: rc 1 and an AttributeError traceback
-
-    With the option dropped and no command, the namespace has no ``func``.
-    #226 changes this.
-    """
-    result = project.run("--bogus", expect=1, allow_stderr=True)
-    assert result.stdout == ""
-    assert result.stderr.startswith("Traceback"), str(result)
-    assert result.stderr.rstrip().endswith(
-        "AttributeError: 'Namespace' object has no attribute 'func'"
-    ), str(result)
-    assert_untouched(project)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "#226: an unknown option without a command crashes with AttributeError "
-        "instead of failing with rc 2"
-    ),
-)
-def test_unknown_option_without_a_command_desired(project):
     """``now --bogus`` is an argparse error: rc 2, no traceback"""
-    result = project.run("--bogus", expect=None, allow_stderr=True)
-    assert result.returncode == 2, str(result)
+    result = project.run("--bogus", expect=2, allow_stderr=True)
     assert "Traceback" not in result.stderr, str(result)
-    assert "--bogus" in result.stderr, str(result)
+    assert "unrecognized arguments: --bogus" in result.stderr, str(result)
+    assert result.stdout == ""
     assert_untouched(project)
+
+
+def test_run_hands_the_arguments_after_the_script_to_the_script(project):
+    """Control of the two above: ``now run script.py --bogus`` is not a
+    usage error, because what follows the script is the script's argv
+
+    ``script`` takes ``argparse.REMAINDER`` in now/cmd/cmd_run.py; an
+    option before the script is still ``now``'s.
+    """
+    project.write("argv.py", "import sys\nprint(sys.argv[1:])\n")
+    result = project.run("run", "argv.py", "--bogus", "-v")
+    assert result.stdout == "['--bogus', '-v']\n", str(result)
+    result = project.run("run", "--bogus", "argv.py", expect=2, allow_stderr=True)
+    assert "unrecognized arguments: --bogus" in result.stderr, str(result)
 
 
 def test_export_without_a_format_exits_2(project):
@@ -394,46 +355,20 @@ def test_export_without_a_format_exits_2(project):
 
 
 def test_show_of_a_missing_trial(two_trial_project):
-    """``now show 99`` reports the trial as not found, on stdout, with rc 0
+    """``now show 99`` exits 1 with the message on stderr, nothing on stdout
 
-    #226 changes the code to 1 and the stream to stderr.
+    ``Trial()`` raises ``RuntimeError`` (persistence/models/trial.py), which
+    ``main`` reports.
     """
-    result = two_trial_project.run("show", "99")
-    assert result.stdout == "[now] Trial 99 not found\n"
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=("#226: 'Trial X not found' exits 0 and is printed on stdout"),
-)
-def test_show_of_a_missing_trial_desired(two_trial_project):
-    """``now show 99`` exits 1 with the message on stderr"""
-    result = two_trial_project.run("show", "99", expect=None, allow_stderr=True)
-    assert result.returncode == 1, str(result)
-    assert "Trial 99 not found" in result.stderr, str(result)
+    result = two_trial_project.run("show", "99", expect=1, allow_stderr=True)
+    assert result.stderr == "[now] Trial 99 not found\n", str(result)
     assert result.stdout == "", str(result)
 
 
 def test_diff_with_a_missing_trial(two_trial_project):
-    """``now diff 1 99`` reports trial 99 as not found, on stdout, rc 0
-
-    #226 changes the code to 1 and the stream to stderr.
-    """
-    result = two_trial_project.run("diff", "1", "99")
-    assert result.stdout == "[now] Trial 99 not found\n"
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=("#226: 'Trial X not found' exits 0 and is printed on stdout"),
-)
-def test_diff_with_a_missing_trial_desired(two_trial_project):
-    """``now diff 1 99`` exits 1 with the message on stderr"""
-    result = two_trial_project.run("diff", "1", "99", expect=None, allow_stderr=True)
-    assert result.returncode == 1, str(result)
-    assert "Trial 99 not found" in result.stderr, str(result)
+    """``now diff 1 99`` exits 1 with the message on stderr, nothing on stdout"""
+    result = two_trial_project.run("diff", "1", "99", expect=1, allow_stderr=True)
+    assert result.stderr == "[now] Trial 99 not found\n", str(result)
     assert result.stdout == "", str(result)
 
 
@@ -465,10 +400,11 @@ def test_id_tag_and_sequence_key_name_the_same_trial(two_trial_project):
 def test_unknown_id_prefix_is_not_found(two_trial_project):
     """A prefix of a trial id names no trial: only the whole id does
 
-    Reported on stdout with rc 0, like every missing trial (#226). The
-    prefix keeps the dash, so SQLite cannot read it as a sequence key.
+    Reported on stderr with rc 1, like every missing trial. The prefix
+    keeps the dash, so SQLite cannot read it as a sequence key.
     """
     project = two_trial_project
     prefix = project.trial("1")["id"][:13]
-    result = project.run("show", prefix)
-    assert result.stdout == "[now] Trial {} not found\n".format(prefix)
+    result = project.run("show", prefix, expect=1, allow_stderr=True)
+    assert result.stderr == "[now] Trial {} not found\n".format(prefix), str(result)
+    assert result.stdout == "", str(result)

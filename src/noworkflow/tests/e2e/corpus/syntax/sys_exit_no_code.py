@@ -1,4 +1,4 @@
-"""sys.exit() without a code: the script ends with status 0 (#226)"""
+"""sys.exit() without a code: the script ends with status 0"""
 import sys
 
 print("before")

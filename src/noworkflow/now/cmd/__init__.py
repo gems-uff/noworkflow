@@ -11,7 +11,7 @@ import sys
 
 import sqlalchemy
 
-from ..utils.io import print_msg
+from ..utils.io import print_error
 from .cmd_clean import Clean
 from .cmd_debug import Debug
 from .cmd_demo import Demo
@@ -33,12 +33,14 @@ from .cmd_vis import Vis
 from .command import Command, SmartFormatter
 
 
-def main():
-    """Main function"""
+def build_parser():
+    """Build the parser of ``now``, with the parser of every command"""
     from ..utils.functions import version
 
+    # prog: the usage lines and the errors say `now`, however it was started
+    # (the console script, `python -m noworkflow`).
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=SmartFormatter, usage=""
+        prog="now", description=__doc__, formatter_class=SmartFormatter, usage=""
     )
     parser.add_argument(
         "-v", "--version", action="version", version="noWorkflow {}".format(version())
@@ -66,37 +68,55 @@ def main():
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
+    return parser
 
-    if len(sys.argv) == 1:
-        sys.argv.append("-h")
 
+def main(argv=None):
+    """Run ``now`` with ``argv`` (``sys.argv[1:]`` by default); return its
+    exit status
+
+    A usage error exits with 2 through argparse. A command reports a
+    failure it foresaw by raising ``RuntimeError``: the message goes to
+    stderr and the status is 1. A command may return a status of its own
+    (``now run`` returns the script's).
+    """
+    parser = build_parser()
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if not argv:
+        argv = ["-h"]
+    args = parser.parse_args(argv)
     try:
-        args, _ = parser.parse_known_args()
-        args.func(args)
+        status = args.func(args)
     except RuntimeError as exc:
-        print_msg(exc, True)
+        print_error(exc)
+        return 1
     except sqlalchemy.exc.OperationalError:
-        print_msg("invalid noWorkflow database", True)
-        print_msg("it is probably outdated", True)
+        print_error("invalid noWorkflow database")
+        print_error("it is probably outdated")
+        return 1
+    return 0 if status is None else status
 
 
 __all__ = [
     "Command",
-    "Run",
+    "Clean",
     "Debug",
-    "List",
-    "Show",
-    "Diff",
-    "Export",
-    "Restore",
-    "Vis",
     "Demo",
-    "History",
-    "Prospective",
-    "Kernel",
+    "Diff",
+    "Evaluation",
+    "Export",
     "GC",
-    "main",
-    "Push",
-    "Pull",
+    "History",
     "Import",
+    "Kernel",
+    "List",
+    "Pull",
+    "Push",
+    "Restore",
+    "Run",
+    "Schema",
+    "Show",
+    "Vis",
+    "build_parser",
+    "main",
 ]

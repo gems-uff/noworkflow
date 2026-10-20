@@ -23,7 +23,8 @@ What the tests pin:
   ``--bg``), the magic reads the ``.last_trial`` of the previous run;
 - every ``%now_run``, one that fails included, leaves the process's
   content engine setting at the line's ``--content-engine``;
-- a cell that raises succeeds, because ``now run`` exits with 0 (#226);
+- a cell that raises fails with ``CalledProcessError``, as under ``%%script
+  python``, because ``now run`` exits with the script's status;
 - ``--interactive`` fails on a module IPython 9.17.1 no longer has (#313);
   past that import (``support.py3compat_stand_in``, on the test side
   only) the cell runs in the shell's namespace, sees its arguments and
@@ -114,12 +115,6 @@ STALE_LAST_TRIAL = Defect(
     "runs in the background (--bg returns at once), the file still names "
     "the previous run's trial",
     signature="the magic read the .last_trial of the previous run",
-)
-EXIT_STATUS = Defect(
-    "#226: `now run` exits with 0 when the script raises, so "
-    "ScriptMagics.shebang raises no CalledProcessError and the %%now_run "
-    "cell succeeds",
-    signature="the cell succeeded",
 )
 CONTENT_ENGINE = Defect(
     "#392: magics/now_run.py NowRun.execute assigns "
@@ -704,37 +699,20 @@ def test_now_run_with_out_keeps_the_output_in_a_variable(shell):
 
 
 def test_now_run_of_a_cell_that_raises(shell):
-    """A ``%%now_run`` cell that raises succeeds: ``now`` prints the
-    traceback and exits with 0, and the trial is unfinished
-    (characterization of #226)
+    """A ``%%now_run`` cell that raises fails as under ``%%script python``:
+    ``now`` exits with 1 and ``ScriptMagics.shebang`` raises
+    CalledProcessError; the trial is stored as unfinished
 
-    Control: the same cell under ``%%script python`` fails with
-    CalledProcessError.
+    Control: the same cell under ``%%script python`` fails the same way.
     """
     code = "raise ValueError('in the cell')"
     control = shell.run("%%script {}\n{}".format(command_line([sys.executable]), code))
     failed = control.error_type == "CalledProcessError"
     assert failed, control.describe()
     cell = shell.run("%%now_run --name raiser\n" + code)
-    reported = (
-        cell.success
-        and "the execution finished with an uncaught exception" in cell.stdout
-        and "ValueError: in the cell" in cell.stdout
-    )
-    assert reported, cell.describe()
-    assert wait_last_child(shell) == 0
-    assert scripts_and_statuses(shell.project) == [("raiser", "unfinished")]
-
-
-@known_defects(EXIT_STATUS)
-def test_now_run_of_a_cell_that_raises_desired(shell):
-    """A ``%%now_run`` cell that raises fails as under ``%%script python``,
-    its trial unfinished"""
-    cell = shell.run("%%now_run --name raiser\nraise ValueError('in the cell')")
-    succeeded = cell.success
-    assert not succeeded, "the cell succeeded\n" + cell.describe()
     failed = cell.error_type == "CalledProcessError"
     assert failed, cell.describe()
+    assert wait_last_child(shell) == 1
     assert scripts_and_statuses(shell.project) == [("raiser", "unfinished")]
 
 

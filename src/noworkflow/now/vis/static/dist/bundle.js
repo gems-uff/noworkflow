@@ -52977,7 +52977,9 @@ function getRestoreOrCollabCommand(serverUrl, form, modalBody) {
   }).then(function (response) {
     response.json().then(function (json) {
       form.remove();
-      if (response.status == 200 && (!json.terminal_text.includes("not") || serverUrl.includes("edit"))) {
+      // The server answers from the exit status of `now`; the text is what
+      // it printed, and may name a path that contains "not".
+      if (response.status == 200) {
         addAlert(modalBody, "alert-success", "Success!", json.terminal_text);
       } else {
         addAlert(modalBody, "alert-danger", "Error!", json.terminal_text);

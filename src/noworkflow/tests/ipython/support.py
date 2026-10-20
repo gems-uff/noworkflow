@@ -55,9 +55,10 @@ to the root leak detector, which reports it and puts it back.
 
 ``Shell.run`` runs a cell and returns a ``Cell``: its outcome and what it
 printed, captured with IPython's ``capture_output``, and apart the
-``[now]`` messages of this process: ``print_msg`` writes to the
-``sys.stdout`` of the moment ``utils/io.py`` was imported, which no
-capture of ``sys.stdout`` sees. IPython waits without a time limit for
+``[now]`` messages of this process: ``print_msg`` and ``print_error``
+write to the ``sys.stdout`` and ``sys.stderr`` of the moment
+``utils/io.py`` was imported, which no capture of the ``sys`` streams
+sees. IPython waits without a time limit for
 the process ``%%script`` starts (and so ``%now_run``'s ``now``); a cell
 that runs longer than ``timeout`` has that process killed and fails the
 test.
@@ -147,10 +148,10 @@ LAST_EXCEPTION = ("last_type", "last_value", "last_traceback", "last_exc")
 #   ``now_ipython`` builtin (``debugger_builtins``: ``from IPython import
 #   embed``), while the extension's names are pending (#384).
 # - What ``Trial()`` imports the first time it builds a trial. The magic
-#   builds the trial of an ``--interactive`` cell after the collection, and
-#   after a cell that raised the collection's import finder is still in
-#   ``sys.meta_path`` (#226): it would load these modules of noWorkflow, and
-#   the leak detector would take them for a traced script's.
+#   builds the trial of an ``--interactive`` cell after the collection;
+#   imported there, these modules of noWorkflow would get a module row of
+#   the cell's trial, which the leak detector would take for a traced
+#   script's.
 WARM_IMPORTS = (
     "IPython.terminal.embed",
     "noworkflow.now.models.dataflow_model",
@@ -465,19 +466,23 @@ def ran(shell, code, ending="ok"):
 
 @contextlib.contextmanager
 def now_messages():
-    """What ``print_msg`` writes in the block (the ``[now]`` lines)
+    """What ``print_msg`` and ``print_error`` write in the block (the
+    ``[now]`` lines)
 
-    Its ``file`` defaults to the ``sys.stdout`` of the moment
-    ``utils/io.py`` was imported; the default is swapped for a buffer, so
-    every module that imported ``print_msg`` writes there.
+    Their ``file`` defaults to the ``sys.stdout`` and the ``sys.stderr`` of
+    the moment ``utils/io.py`` was imported; both defaults are swapped for
+    one buffer, so every module that imported them writes there.
     """
     buffer = StringIO()
     saved = now_io.print_msg.__defaults__
+    saved_error = now_io.print_error.__defaults__
     now_io.print_msg.__defaults__ = saved[:-1] + (buffer,)
+    now_io.print_error.__defaults__ = (buffer,)
     try:
         yield buffer
     finally:
         now_io.print_msg.__defaults__ = saved
+        now_io.print_error.__defaults__ = saved_error
 
 
 def command_line(argv):

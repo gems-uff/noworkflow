@@ -1211,9 +1211,9 @@ def test_forked_children_that_leave_through_sys_exit(forked_exits):
     ``sys.exit`` call stays in the trial over an evaluation of the parent
     with the same id (which one depends on the numbering; never the
     child's call, which the parent does not evaluate); the child that
-    leaves through ``os._exit`` leaves nothing. Under plain Python the
-    children exit with 0, 3 and 3; under ``now`` the second one prints the
-    epilogue's line and exits with 0 (#226)
+    leaves through ``os._exit`` leaves nothing. The children exit with 0,
+    3 and 3 under plain Python and under ``now``, where the second one also
+    prints the epilogue's line on stderr
 
     Characterization of #375 on the store; the oracle case
     ``fork_child_exit_status`` pins the output. #202 records the processes
@@ -1227,11 +1227,10 @@ def test_forked_children_that_leave_through_sys_exit(forked_exits):
     assert exited, shown(project, plain)
     printed = plain.stdout == "exit codes [0, 3, 3]\n"
     assert printed, shown(project, plain)
-    exited = traced.returncode == 0 and traced.stderr == ""
+    exited = traced.returncode == 0 and traced.stdout == "exit codes [0, 3, 3]\n"
     assert exited, shown(project, traced)
-    printed = traced.stdout.splitlines() == [
+    printed = traced.stderr.splitlines() == [
         "[now] the execution exited via sys.exit(). Exit status: 3",
-        "exit codes [0, 0, 3]",
     ]
     assert printed, shown(project, traced)
     (trial,) = project.trials()

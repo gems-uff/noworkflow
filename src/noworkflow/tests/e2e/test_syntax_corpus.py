@@ -142,10 +142,6 @@ TYPE_PARAMS = (
     "#158: function_def and class_def (ast_elements.py) rebuild the "
     "definitions without type_params, so the type parameters vanish: "
 )
-SYS_EXIT_NO_CODE = (
-    "#226: sys.exit() without a code makes `ex.code > 0` raise TypeError in "
-    "Execution.collect_provenance (execution.py); "
-)
 BLACK_BOX_FALLBACK = (
     "#266: {} returns the {} uninstrumented ({}), so {} enters through "
     "the white-box-after-black-box path of new_function_def "
@@ -939,22 +935,8 @@ CASES = (
     ),
     Case(
         "sys_exit_no_code",
-        "sys.exit() without a code",
-        runs=(
-            Defect(
-                SYS_EXIT_NO_CODE + "now run crashes with return code 1 and a "
-                "traceback where Python exits with 0 and prints nothing more",
-                "'>' not supported between instances of 'NoneType' and 'int'",
-            ),
-        ),
-        transforms=(
-            Defect(
-                SYS_EXIT_NO_CODE + "now run crashes before it stores the "
-                "definition provenance, so the trial has no code_component "
-                "rows",
-                "'>' not supported between instances of 'NoneType' and 'int'",
-            ),
-        ),
+        "sys.exit() without a code, which ends the script with status 0",
+        components=(("call", 5),),
     ),
     Case(
         "global_nonlocal",

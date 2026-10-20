@@ -78,15 +78,6 @@ COLLECTION_LEFT = Defect(
     "reads it as a file (#371)",
     signature="builtins.open replaced",
 )
-FINDER_LEFT = Defect(
-    "#226: prov_execution/execution.py Execution.collect_provenance inserts "
-    "the import finder in sys.meta_path before exec and removes it only "
-    "when exec returns normally, with no try/finally: after an "
-    "--interactive cell that raised, called sys.exit() or was interrupted, "
-    "the session's later imports load through the ended trial's loaders "
-    "(prov_deployment/py3module.py)",
-    signature="import finder left in sys.meta_path",
-)
 INTERACTIVE_SWAPS = Defect(
     "#388: magics/now_run.py NowRun.execute "
     "(--interactive) swaps sys.argv and sys.path[0] (Metascript.clear_sys) "
@@ -94,11 +85,10 @@ INTERACTIVE_SWAPS = Defect(
     "builtins' dict there) and restores them after run() with no "
     "try/finally, so an exception that leaves run() skips the restores: a "
     "KeyboardInterrupt (collect_provenance catches only SystemExit and "
-    "Exception), an error of Collector.store (#371), or a sys.exit() with "
-    "no code or a string code (collect_provenance compares the code with "
-    "0 and raises TypeError, #226). It also swaps sys.modules['__main__'] "
-    "and the cells' __name__, but with the values a shell already has, so "
-    "only the three show; reached only past #313's import",
+    "Exception) or an error of Collector.store (#371). It also swaps "
+    "sys.modules['__main__'] and the cells' __name__, but with the values "
+    "a shell already has, so only the three show; reached only past #313's "
+    "import",
     signature="sys.argv swapped",
 )
 
@@ -725,14 +715,15 @@ class Raising:
 
 RAISING = {
     # BaseException: collect_provenance catches only SystemExit and
-    # Exception, so it leaves run() before the restores.
+    # Exception, so it leaves run() before the restores; the finally around
+    # the exec still removes the finder on the way out.
     "keyboard-interrupt": Raising(
         "raise KeyboardInterrupt",
         KeyboardInterrupt,
         "ongoing",
         "in Execution.collect_provenance(",
-        (ARGV, PATH0, BUILTINS, FILE, FINDER, LATER_IMPORT),
-        (INTERACTIVE_SWAPS, FINDER_LEFT),
+        (ARGV, PATH0, BUILTINS, FILE),
+        (INTERACTIVE_SWAPS,),
     ),
     # The script ends normally, and Collector.store raises: the collector's
     # os.open records the directory, and store reads it as a file (#371).
@@ -747,33 +738,28 @@ RAISING = {
         (ARGV, PATH0, BUILTINS, FILE),
         (INTERACTIVE_SWAPS,),
     ),
-    # collect_provenance compares the exit code with 0: None raises
-    # TypeError there (#226), which leaves run().
-    "sys-exit-without-code": Raising(
-        "import sys\nsys.exit()",
-        TypeError,
-        "ongoing",
-        "in Execution.collect_provenance(",
-        (ARGV, PATH0, BUILTINS, FILE, FINDER, LATER_IMPORT),
-        (INTERACTIVE_SWAPS, FINDER_LEFT),
-    ),
+    # Caught by collect_provenance: run() returns, the magic restores its
+    # swaps and returns the trial; the outcome is a [now] line on stderr.
     "sys-exit": Raising(
         "import sys\nsys.exit(3)",
         None,
         "unfinished",
         "the execution exited via sys.exit(). Exit status: 3",
-        (FILE, FINDER, LATER_IMPORT),
-        (FINDER_LEFT,),
+        (FILE,),
+        (),
     ),
     "exception": Raising(
         "1 / 0",
         None,
         "unfinished",
         "the execution finished with an uncaught exception",
-        (FILE, FINDER, LATER_IMPORT),
-        (FINDER_LEFT,),
+        (FILE,),
+        (),
     ),
 }
+# sys.exit() without a code ends the cell normally, as plain Python ends a
+# script: status 0, nothing forced on the streams.
+ENDS_NORMALLY = Raising("import sys\nsys.exit()", None, "finished", "", (FILE,), ())
 
 
 def run_raising(project, case):
@@ -819,22 +805,18 @@ def run_raising(project, case):
 
 @pytest.mark.parametrize("case", list(RAISING.values()), ids=list(RAISING))
 def test_an_interactive_cell_that_raises_leaves_its_swaps(project, case):
-    """An ``--interactive`` cell that does not end normally leaves
-    ``now_run.py``'s swaps or the collection's import finder in place,
-    and closing the shell puts them back
+    """What an ``--interactive`` cell that does not end normally leaves in
+    place, and that closing the shell puts it back
 
-    Characterization of #388 and #226, reached through
-    the stand-in for #313. The restores follow ``run()`` with no
-    try/finally: a ``KeyboardInterrupt``, an error of ``Collector.store``
-    and a ``sys.exit()`` without a code (a TypeError of
-    ``collect_provenance``) skip them (``sys.argv`` is the cell's, with
-    its two arguments, ``sys.path[0]`` the project, the cells'
+    Characterization of #388, reached through the stand-in for #313. The
+    restores follow ``run()`` with no try/finally: a ``KeyboardInterrupt``
+    and an error of ``Collector.store`` skip them (``sys.argv`` is the
+    cell's, with its two arguments, ``sys.path[0]`` the project, the cells'
     ``__builtins__`` the builtins' dict); a ``sys.exit(3)`` and an
-    exception, which ``collect_provenance`` catches, do not. All but the
-    store error leave the import finder, which loads what the session
-    imports next. Every case keeps the ``__file__`` of the cell, as ``%run
-    -i`` does. Once the shell and the stand-in are closed, the leak
-    detector finds nothing.
+    exception, which ``collect_provenance`` catches, do not. No case leaves
+    the import finder: the ``finally`` around the exec removes it. Every
+    case keeps the ``__file__`` of the cell, as ``%run -i`` does. Once the
+    shell and the stand-in are closed, the leak detector finds nothing.
     """
     baseline = leaks.Baseline(
         cwd=os.getcwd(), scan_dirs=[os.getcwd()], watched_dirs=[str(project.root)]
@@ -876,3 +858,15 @@ def test_an_interactive_cell_that_raises_restores_its_swaps_desired(project, cas
         message = "; ".join(wanted)
         expect_known_failure(case.defects, message)
         assert wanted == [], message
+
+
+def test_an_interactive_cell_that_exits_without_a_code_ends_normally(project):
+    """``sys.exit()`` in an ``--interactive`` cell is a normal end, as in a
+    script: the magic returns the trial, finished, the swaps are put back
+    and the finder is gone; only the cell's ``__file__`` stays"""
+    cell, trials, left, swapped_in = run_raising(project, ENDS_NORMALLY)
+    succeeded = cell.success
+    assert succeeded, cell.describe()
+    assert trials == [("k1", "finished")]
+    assert left == [FILE]
+    assert swapped_in == dict.fromkeys(swapped_in, False)

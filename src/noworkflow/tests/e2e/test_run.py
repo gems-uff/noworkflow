@@ -10,8 +10,12 @@ each way a script can end: normally, with an uncaught exception, through
 with a message, with a ``KeyboardInterrupt`` and through ``os._exit``, and
 when the script keeps a cursor on its own store; the usage errors of a
 missing script; and the flags ``-v``, ``-r jsonpickle``, ``-b``, ``-s`` and
-``-S``. The rule of the automatic tags is pinned here because the goldens
-of the other modules show tags.
+``-S``. ``now run`` exits as plain Python would have for the script (the
+status given to ``sys.exit``, 1 after an uncaught exception), once the
+trial is stored, and reports the failure on stderr; stdout carries the
+script's output and, with ``-v``, the progress lines. The rule of the
+automatic tags is pinned here because the goldens of the other modules show
+tags.
 
 Behavior that is a known defect has a characterization test, which pins what
 ``now`` does today, and a twin with the same name plus ``_desired``, marked
@@ -153,101 +157,61 @@ def test_run_stores_a_finished_trial_with_its_module_and_file_accesses(project):
 
 
 def test_run_script_that_raises(project):
-    """An uncaught exception is reported on stdout with return code 0 and
-    the trial is stored as unfinished (characterization; #226 changes the
-    return code and the stream)"""
+    """An uncaught exception exits with 1, the error and its traceback on
+    stderr after the script's own output on stdout, and the trial is stored
+    as unfinished, with a finish time and its tag
+
+    The traceback is the one ``Execution.collect_provenance`` formats, so it
+    starts with the ``[now]`` line that names the exception.
+    """
     project.copy_corpus("exit")
-    result = project.run("run", "raises.py")
-    lines = result.stdout.splitlines()
-    assert lines[0] == "before", str(result)
-    assert "[now] ValueError('bad value 3')" in lines, str(result)
-    assert "the execution finished with an uncaught exception." in result.stdout, str(
+    result = project.run("run", "raises.py", expect=1, allow_stderr=True)
+    assert result.stdout == "before\n", str(result)
+    lines = result.stderr.splitlines()
+    assert lines[0] == "[now] ValueError('bad value 3')", str(result)
+    assert "the execution finished with an uncaught exception." in result.stderr, str(
         result
     )
-    assert last_line(result.stdout) == "ValueError: bad value 3"
+    assert "Traceback" in result.stderr, str(result)
+    assert last_line(result.stderr) == "ValueError: bad value 3"
 
     trial = only_trial(project)
     assert trial["status"] == "unfinished"
     assert trial["finish"] is not None
     assert tag_names(project, trial) == [("AUTO", "1.1.1")]
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#226: an uncaught exception in the script should exit with 1 "
-    "and print the traceback on stderr",
-)
-def test_run_script_that_raises_desired(project):
-    """An uncaught exception exits with 1, its traceback on stderr, and the
-    trial is still stored as unfinished"""
-    project.copy_corpus("exit")
-    result = project.run("run", "raises.py", expect=None, allow_stderr=True)
-    assert result.returncode == 1, str(result)
-    assert "Traceback" in result.stderr, str(result)
-    assert last_line(result.stderr) == "ValueError: bad value 3"
-    assert only_trial(project)["status"] == "unfinished"
 
 
 def test_run_script_that_exits_with_a_code(project):
-    """``sys.exit(3)`` is reported on stdout, the status is lost (return
-    code 0) and the trial is unfinished (characterization; #226 makes
-    ``now`` exit with the script's status)"""
+    """``sys.exit(3)`` makes ``now run`` exit with 3, reported on stderr,
+    the trial stored as unfinished and tagged"""
     project.copy_corpus("exit")
-    result = project.run("run", "exit_code.py")
-    assert result.stdout == (
-        "before\n[now] the execution exited via sys.exit(). Exit status: 3\n"
-    )
+    result = project.run("run", "exit_code.py", expect=3, allow_stderr=True)
+    assert result.stdout == "before\n", str(result)
+    assert result.stderr == (
+        "[now] the execution exited via sys.exit(). Exit status: 3\n"
+    ), str(result)
 
     trial = only_trial(project)
     assert trial["status"] == "unfinished"
     assert tag_names(project, trial) == [("AUTO", "1.1.1")]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#226: `now run` should exit with the status the script passed "
-    "to sys.exit()",
-)
-def test_run_script_that_exits_with_a_code_desired(project):
-    """``sys.exit(3)`` makes ``now run`` exit with 3, the trial stored as
-    unfinished"""
-    project.copy_corpus("exit")
-    result = project.run("run", "exit_code.py", expect=None, allow_stderr=True)
-    assert result.returncode == 3, str(result)
-    assert only_trial(project)["status"] == "unfinished"
-
-
 def test_run_script_that_exits_with_a_negative_code(project):
-    """``sys.exit(-1)``, which plain Python turns into status 255, passes
-    as a successful end: return code 0, nothing on stdout besides the
-    script's output and a finished, tagged trial (characterization; the
-    collector only treats a code above 0 as a failure, and #226 makes ``now``
-    exit with the script's status)"""
+    """``sys.exit(-1)`` makes ``now run`` exit as plain Python does (255 on
+    POSIX), the trial stored as unfinished: any status but 0 is a failure"""
     project.copy_corpus("exit")
-    result = project.run("run", "exit_negative.py")
-    assert result.stdout == "before\n"
+    result = project.run(
+        "run", "exit_negative.py", expect=EXIT_MINUS_ONE, allow_stderr=True
+    )
+    assert result.stdout == "before\n", str(result)
+    assert result.stderr == (
+        "[now] the execution exited via sys.exit(). Exit status: -1\n"
+    ), str(result)
 
     trial = only_trial(project)
-    assert trial["status"] == "finished"
+    assert trial["status"] == "unfinished"
     assert trial["finish"] is not None
     assert tag_names(project, trial) == [("AUTO", "1.1.1")]
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#226: `now run` should exit with the status the script passed "
-    "to sys.exit(), and a negative code is a failure",
-)
-def test_run_script_that_exits_with_a_negative_code_desired(project):
-    """``sys.exit(-1)`` makes ``now run`` exit as plain Python does (255 on
-    POSIX), the trial stored as unfinished"""
-    project.copy_corpus("exit")
-    result = project.run("run", "exit_negative.py", expect=None, allow_stderr=True)
-    assert result.returncode == EXIT_MINUS_ONE, str(result)
-    assert only_trial(project)["status"] == "unfinished"
 
 
 def test_run_script_that_exits_with_zero(project):
@@ -265,71 +229,34 @@ def test_run_script_that_exits_with_zero(project):
 
 
 def test_run_script_that_exits_without_a_code(project):
-    """``sys.exit()`` crashes ``now`` with a TypeError (return code 1) and
-    leaves an ongoing trial with no tag and no finish time
-    (characterization; #226 fixes it)"""
+    """``sys.exit()`` is a successful end, as in plain Python: return code
+    0, empty stderr and a finished, tagged trial with a finish time"""
     project.copy_corpus("exit")
-    result = project.run("run", "exit_none.py", expect=1, allow_stderr=True)
-    assert result.stdout == "before\n"
-    assert last_line(result.stderr) == (
-        "TypeError: '>' not supported between instances of 'NoneType' and 'int'"
-    )
+    result = project.run("run", "exit_none.py")
+    assert result.stdout == "before\n", str(result)
 
-    trial = only_trial(project)
-    assert trial["status"] == "ongoing"
-    assert trial["finish"] is None
-    assert tag_names(project, trial) == []
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#226: sys.exit() without a code crashes `now run` with a "
-    "TypeError and leaves an 'ongoing' trial",
-)
-def test_run_script_that_exits_without_a_code_desired(project):
-    """``sys.exit()`` is a successful end: return code 0, empty stderr and
-    a finished, tagged trial"""
-    project.copy_corpus("exit")
-    result = project.run("run", "exit_none.py", expect=None, allow_stderr=True)
-    assert result.returncode == 0, str(result)
-    assert result.stderr == "", str(result)
     trial = only_trial(project)
     assert trial["status"] == "finished"
+    assert trial["finish"] is not None
     assert tag_names(project, trial) == [("AUTO", "1.1.1")]
 
 
 def test_run_script_that_exits_with_a_message(project):
-    """``sys.exit("message")`` crashes ``now`` with a TypeError (return
-    code 1) and leaves an ongoing trial (characterization; #226 fixes it)"""
+    """``sys.exit("message")`` exits with 1 and prints the message on
+    stderr, as Python does, before noWorkflow's own line; the trial is
+    stored as unfinished and tagged"""
     project.copy_corpus("exit")
     result = project.run("run", "exit_message.py", expect=1, allow_stderr=True)
-    assert result.stdout == "before\n"
-    assert last_line(result.stderr) == (
-        "TypeError: '>' not supported between instances of 'str' and 'int'"
-    )
+    assert result.stdout == "before\n", str(result)
+    assert result.stderr.splitlines() == [
+        "message from the script",
+        "[now] the execution exited via sys.exit(). Exit status: 1",
+    ], str(result)
 
     trial = only_trial(project)
-    assert trial["status"] == "ongoing"
-    assert trial["finish"] is None
-    assert tag_names(project, trial) == []
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#226: sys.exit() with a message crashes `now run` with a "
-    "TypeError and leaves an 'ongoing' trial",
-)
-def test_run_script_that_exits_with_a_message_desired(project):
-    """``sys.exit("message")`` exits with 1 and prints the message on
-    stderr, as Python does, and the trial is stored as unfinished"""
-    project.copy_corpus("exit")
-    result = project.run("run", "exit_message.py", expect=None, allow_stderr=True)
-    assert result.returncode == 1, str(result)
-    assert "message from the script" in result.stderr.splitlines(), str(result)
-    assert "TypeError" not in result.stderr, str(result)
-    assert only_trial(project)["status"] == "unfinished"
+    assert trial["status"] == "unfinished"
+    assert trial["finish"] is not None
+    assert tag_names(project, trial) == [("AUTO", "1.1.1")]
 
 
 def test_run_script_that_raises_keyboard_interrupt(project):
@@ -440,18 +367,19 @@ def test_run_verbose_reports_each_step_on_stdout(project):
 
 def test_run_with_the_jsonpickle_serializer_missing(project):
     """``-r jsonpickle`` without jsonpickle fails at the first value: the
-    ModuleNotFoundError is reported on stdout with return code 0, the
-    script body never runs and the trial is unfinished (characterization;
-    #226 changes the return code and the stream)"""
+    ModuleNotFoundError is reported on stderr with return code 1, the
+    script body never runs and the trial is stored as unfinished"""
     skip_unless_jsonpickle_is_missing(project)
     project.copy_corpus("weather")
-    result = project.run("run", "-r", "jsonpickle", *WEATHER_SCRIPT_ARGS)
-    lines = result.stdout.splitlines()
+    result = project.run(
+        "run", "-r", "jsonpickle", *WEATHER_SCRIPT_ARGS, expect=1, allow_stderr=True
+    )
+    lines = result.stderr.splitlines()
     # The repr of ModuleNotFoundError varies: 3.15 adds ``name=``.
     assert lines[0].startswith(
         "[now] ModuleNotFoundError(\"No module named 'jsonpickle'\""
     ), str(result)
-    assert "the execution finished with an uncaught exception." in result.stdout, str(
+    assert "the execution finished with an uncaught exception." in result.stderr, str(
         result
     )
     # From 3.15 the traceback suggests an installed module with a close
@@ -459,67 +387,23 @@ def test_run_with_the_jsonpickle_serializer_missing(project):
     assert re.fullmatch(
         r"ModuleNotFoundError: No module named 'jsonpickle'"
         r"(\. Did you mean: '\w+'\?)?",
-        last_line(result.stdout),
+        last_line(result.stderr),
     ), str(result)
     assert "rows:" not in result.stdout, str(result)
     assert not (project.path / "output.csv").exists()
-    assert only_trial(project)["status"] == "unfinished"
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#226: an error in the run (here: the jsonpickle serializer is "
-    "missing) should exit with 1 and print the error on stderr",
-)
-def test_run_with_the_jsonpickle_serializer_missing_desired(project):
-    """``-r jsonpickle`` without jsonpickle exits with 1, the error on
-    stderr, without running the script body, and the trial is stored as
-    unfinished"""
-    skip_unless_jsonpickle_is_missing(project)
-    project.copy_corpus("weather")
-    result = project.run(
-        "run", "-r", "jsonpickle", *WEATHER_SCRIPT_ARGS, expect=None, allow_stderr=True
-    )
-    assert result.returncode == 1, str(result)
-    assert last_line(result.stderr) == (
-        "ModuleNotFoundError: No module named 'jsonpickle'"
-    ), str(result)
-    assert "rows:" not in result.stdout, str(result)
     assert only_trial(project)["status"] == "unfinished"
 
 
 def test_run_bypass_modules_without_a_previous_trial(project):
-    """``-b`` on a store with no trial reports the RuntimeError on stdout
-    with return code 0, runs nothing and leaves a store with zero trials
-    (characterization; #226, errors on stderr with return code 1, changes
-    it)"""
+    """``-b`` with no previous trial is an error: return code 1, the
+    RuntimeError's message on stderr, nothing on stdout, nothing run and a
+    store with zero trials"""
     project.copy_corpus("weather")
-    result = project.run("run", "-b", *WEATHER_SCRIPT_ARGS)
-    assert result.stdout.splitlines() == [
+    result = project.run("run", "-b", *WEATHER_SCRIPT_ARGS, expect=1, allow_stderr=True)
+    assert result.stderr.splitlines() == [
         "[now] Not able to bypass modules check.",
         "    No previous trial was found",
-    ]
-    assert not (project.path / "output.csv").exists()
-    assert project.store.exists()
-    assert project.trials() == []
-
-
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="#226: an error caught by `now` (here: -b with no previous "
-    "trial) should exit with 1 and print the message on stderr",
-)
-def test_run_bypass_modules_without_a_previous_trial_desired(project):
-    """``-b`` with no previous trial is an error: return code 1, the
-    message on stderr, nothing run and a store with zero trials"""
-    project.copy_corpus("weather")
-    result = project.run(
-        "run", "-b", *WEATHER_SCRIPT_ARGS, expect=None, allow_stderr=True
-    )
-    assert result.returncode == 1, str(result)
-    assert "Not able to bypass modules check." in result.stderr, str(result)
+    ], str(result)
     assert result.stdout == "", str(result)
     assert not (project.path / "output.csv").exists()
     assert project.store.exists()
@@ -694,9 +578,8 @@ STORE_LOCKED_BY_SCRIPT = Defect(
     "through Model.store (persistence/models/base.py), fails with "
     "'database is locked' after SQLite's busy timeout, and main() in "
     "now/cmd/__init__.py catches every OperationalError, prints 'invalid "
-    "noWorkflow database' and 'it is probably outdated' on stdout and "
-    "returns: `now` exits with 0 (#226 is related) and the trial stays "
-    "'ongoing' with only its arguments",
+    "noWorkflow database' and 'it is probably outdated' on stderr and "
+    "returns 1: the trial stays 'ongoing' with only its arguments",
     signature=UNSTORED_MESSAGE[0],
 )
 
@@ -721,17 +604,16 @@ def kept_cursor(tmp_path_factory):
 def test_run_script_that_keeps_a_cursor_on_its_store(kept_cursor):
     """A script that leaves a statement on its own store unfinished keeps
     a read lock until ``now`` writes the trial: the first write fails,
-    ``now`` reports an invalid, outdated database on stdout and exits with
-    0, and the trial stays ongoing with its arguments only; the same
+    ``now`` reports an invalid, outdated database on stderr and exits with
+    1, and the trial stays ongoing with its arguments only; the same
     reading run to the end (the control) is stored whole
     (characterization of #383)"""
     project, control, result = kept_cursor
     assert control.returncode == 0 and control.stderr == "", str(control)
     assert control.stdout == "read every row: True\n", str(control)
-    assert result.returncode == 0 and result.stderr == "", str(result)
-    assert result.stdout.splitlines() == (["read one row"] + UNSTORED_MESSAGE), str(
-        result
-    )
+    assert result.returncode == 1, str(result)
+    assert result.stdout == "read one row\n", str(result)
+    assert result.stderr.splitlines() == UNSTORED_MESSAGE, str(result)
     first, second = project.trials()
     assert first["status"] == "finished"
     assert project.count("evaluation", first["id"]) > 0
@@ -748,11 +630,12 @@ def test_run_script_that_keeps_a_cursor_on_its_store(kept_cursor):
 @known_defects(STORE_LOCKED_BY_SCRIPT)
 def test_run_script_that_keeps_a_cursor_on_its_store_desired(kept_cursor):
     """The trial of a script that reads its own store is stored whole, and
-    ``now`` prints only what the script printed"""
+    ``now`` prints only what the script printed and exits with 0"""
     project, _, result = kept_cursor
+    assert result.returncode == 0 and result.stderr == "", str(result)
     assert result.stdout == "read one row\n", str(result)
     trial = project.trials()[-1]
-    assert trial["status"] == "finished"
+    assert trial["status"] == "finished", str(result)
     assert project.count("evaluation", trial["id"]) > 0
 
 

@@ -46,10 +46,11 @@ OUT/raw/vis/, OUT/masked/vis/  one file per route, named after it
 with --run:
 OUT/raw/run.txt, OUT/masked/run.txt  what ``now run`` printed
 
-Flags: ``invalid-db`` (the store did not open: ``now`` says so on stdout and
-still exits 0), ``traceback``, ``not-found`` (a trial reference that names no
-trial). The harness decodes the output with universal newlines, so a CRLF
-printed by a version never reaches raw/.
+Flags: ``invalid-db`` (the store did not open: ``now`` says so and exits 1;
+older versions said so on stdout and exited 0, so both streams are read),
+``traceback``, ``not-found`` (a trial reference that names no trial). The
+harness decodes the output with universal newlines, so a CRLF printed by a
+version never reaches raw/.
 
 Left out on purpose: ``show -e`` and ``diff -e`` (the environment of the
 machine); ``diff -a``/``-d``, which write caches into the store; ``restore``,
@@ -285,12 +286,14 @@ def slug(args):
 
 
 def flags_of(result):
+    # Both streams: the version under test may report on either.
+    output = result.stdout + result.stderr
     flags = []
-    if "invalid noWorkflow database" in result.stdout:
+    if "invalid noWorkflow database" in output:
         flags.append("invalid-db")
-    if "Traceback" in result.stdout or "Traceback" in result.stderr:
+    if "Traceback" in output:
         flags.append("traceback")
-    if re.search(r"Trial \S+ not found", result.stdout):
+    if re.search(r"Trial \S+ not found", output):
         flags.append("not-found")
     return flags
 

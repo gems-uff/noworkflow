@@ -431,16 +431,17 @@ def test_now_restore_with_the_dir_of_another_project_desired(shell):
 
 
 def test_now_restore_with_a_dir_without_a_store(shell):
-    """``%now_restore --dir`` of a directory without a store says so and
-    ends the cell with SystemExit(1), which IPython turns into a warning
-    about how to exit; the shell goes on"""
+    """``%now_restore --dir`` of a directory without a store ends the cell
+    with the ``RuntimeError`` that says so (``connect_existing`` raises
+    it; the command line reports it and exits with 1), prints no ``[now]``
+    line of its own, and the shell goes on"""
     (shell.project.root / "elsewhere").mkdir()
-    with pytest.warns(UserWarning, match="To exit: use 'exit'"):
-        cell = ran(shell, "%now_restore --dir ../elsewhere", "SystemExit: 1")
-    messages = cell.messages
-    assert messages == (
-        "[now] there is no provenance store in the informed directory\n"
+    cell = ran(
+        shell,
+        "%now_restore --dir ../elsewhere",
+        "RuntimeError: there is no provenance store in the informed directory",
     )
+    assert cell.messages == ""
     assert ran(shell, "1 + 1").result == 2
 
 

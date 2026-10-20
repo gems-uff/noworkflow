@@ -163,6 +163,18 @@ class Diff(Command):
         add_arg("--content-engine", type=str, help="set the content database engine")
 
     def execute(self, args):
+        if args.function_activations and len(args.function_activations) >= 2:
+            # A usage error, before anything is printed or read
+            try:
+                args.function_activations[0], args.function_activations[1] = (
+                    int(args.function_activations[0]),
+                    int(args.function_activations[1]),
+                )
+            except ValueError:
+                self.parser.error(
+                    "argument -fa/--function-activations: the first two values, "
+                    "the functions' ids, must be integers"
+                )
         persistence_config.content_engine = args.content_engine
         persistence_config.connect_existing(args.dir or os.getcwd())
         if args.hide_timestamps:
@@ -186,6 +198,31 @@ class Diff(Command):
             )
 
         diff = DiffModel(args.trial1, args.trial2)
+
+        functions_info = None
+        if args.function_activations and len(args.function_activations) >= 2:
+            variable_types_to_show = (
+                None
+                if len(args.function_activations) < 3
+                or (
+                    args.function_activations[2] != "op"
+                    and args.function_activations[2] != "all"
+                )
+                else args.function_activations[2]
+            )
+            # Looked up before anything is printed: an id that names no
+            # function of its trial is a usage error
+            try:
+                functions_info = self.get_diff_function_info(
+                    diff.trial1.id,
+                    diff.trial2.id,
+                    args.function_activations[0],
+                    args.function_activations[1],
+                    diff.file_accesses,
+                    variable_types_to_show,
+                )
+            except IndexError as e:
+                self.parser.error("argument -fa/--function-activations: {}".format(e))
 
         print_msg("trial diff:", True)
         print_diff_trials(diff, skip=skip_in_trial)
@@ -242,41 +279,7 @@ class Diff(Command):
             print_ted(diff, "definition")
             print()
 
-        if args.function_activations and len(args.function_activations) >= 2:
-            try:
-                args.function_activations[0], args.function_activations[1] = (
-                    int(args.function_activations[0]),
-                    int(args.function_activations[1]),
-                )
-            except ValueError:
-                print_msg(
-                    "The first two values, the functions' ids, must be integers.", True
-                )
-                exit()
-
-            variable_types_to_show = (
-                None
-                if len(args.function_activations) < 3
-                or (
-                    args.function_activations[2] != "op"
-                    and args.function_activations[2] != "all"
-                )
-                else args.function_activations[2]
-            )
-
-            try:
-                functions_info = self.get_diff_function_info(
-                    diff.trial1.id,
-                    diff.trial2.id,
-                    args.function_activations[0],
-                    args.function_activations[1],
-                    diff.file_accesses,
-                    variable_types_to_show,
-                )
-            except Exception as e:
-                print_msg(e, True)
-                exit()
-
+        if functions_info is not None:
             differ = difflib.Differ()
 
             (

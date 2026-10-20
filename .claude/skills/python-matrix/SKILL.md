@@ -99,8 +99,9 @@ never shows. A `SyntaxError` from `pyposast` becomes `Syntax error on file
 ... Skipping transformer.`, which is printed only under `now run -v`, and the
 script then runs without its definition provenance; pytest drops what a
 passing test prints anyway. Any other exception inside `pyposast` prints a
-traceback, the script does not run at all, and `now run` still exits 0. A
-test that does not inspect what was recorded passes in both cases.
+traceback on stderr and `now run` exits 1, but the script does not run at
+all, so the trial is unfinished without a line of the script's own. A test
+that does not inspect what was recorded passes in the first case.
 
 To check a construct on a version, trace a short script that uses it, from a
 scratch directory:

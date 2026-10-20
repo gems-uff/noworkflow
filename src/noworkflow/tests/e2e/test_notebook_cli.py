@@ -238,7 +238,8 @@ def test_clean_of_a_script_trial_writes_nothing(store):
     whether the trial is named by id or by sequence key and even with
     ``-o`` and ``--header``, exits with 0 and writes nothing
 
-    A trial that does not exist is reported as not found.
+    A trial that does not exist is reported as not found on stderr, with
+    exit status 1.
     """
     first = trial_ids(store)[0]
     before = store.files()
@@ -246,8 +247,8 @@ def test_clean_of_a_script_trial_writes_nothing(store):
         result = now(store, "clean", *args)
         same = result.stdout == NOT_A_NOTEBOOK.format(args[0])
         assert same, describe(store, result)
-    result = now(store, "clean", "nonexistent")
-    same = result.stdout == NOT_FOUND.format("nonexistent")
+    result = now(store, "clean", "nonexistent", expect=1, allow_stderr=True)
+    same = outcome(result) == (1, "", NOT_FOUND.format("nonexistent"))
     assert same, describe(store, result)
     assert store.files() == before
 
@@ -461,14 +462,10 @@ def test_export_ipynb_names_the_notebook_after_its_argument(store, tmp_path, for
 
 @pytest.mark.parametrize("argument", ["nonexistent", "diff:1:nonexistent"])
 def test_export_ipynb_of_a_missing_trial_writes_nothing(store, tmp_path, argument):
-    """A trial that does not exist is reported as not found, and no
-    notebook is written
-
-    The exit status is not pinned: ``now`` reports this error through
-    ``print_msg`` and returns normally.
-    """
-    result, created = export(store, tmp_path / "out", argument, expect=None)
-    same = result.stdout == NOT_FOUND.format("nonexistent")
+    """A trial that does not exist is reported as not found on stderr, with
+    exit status 1, and no notebook is written"""
+    result, created = export(store, tmp_path / "out", argument, expect=1)
+    same = outcome(result) == (1, "", NOT_FOUND.format("nonexistent"))
     assert same, describe(store, result)
     assert created == [], describe(store, result)
 

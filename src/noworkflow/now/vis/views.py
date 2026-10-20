@@ -773,11 +773,7 @@ def execute_command_restore_trial(
     if skip_files_access == "true":
         restore_command.append("-a")
 
-    sub_proccess_print = subprocess.run(
-        restore_command, capture_output=True
-    ).stdout.decode("utf-8")
-    # os.system(restore_command)
-    return jsonify(terminal_text=sub_proccess_print), 200
+    return restore_answer(subprocess.run(restore_command, capture_output=True))
 
 
 @app.route(
@@ -794,21 +790,20 @@ def execute_command_restore_file(trial_id, file_to_restore, file_id, output_path
         restore_command.append("-t")
         restore_command.append(output_path)
 
-    sub_process = subprocess.run(restore_command, capture_output=True)
+    return restore_answer(subprocess.run(restore_command, capture_output=True))
 
-    erro_string = sub_process.stderr.decode("utf-8")
-    if len(erro_string) > 0:
-        return jsonify(
-            terminal_text='"' + output_path + '" No such file or directory'
-        ), 400
 
-    sub_proccess_print = sub_process.stdout.decode("utf-8")
-    status = (
-        400
-        if ("Unable" in sub_proccess_print) or ("not" in sub_proccess_print)
-        else 200
-    )
-    return jsonify(terminal_text=sub_proccess_print), status
+def restore_answer(completed):
+    """The answer of a restore route: what ``now restore`` wrote, with 200
+    when it exited with 0 and 400 otherwise
+
+    ``now restore`` exits with 1 when a file that was asked for was not
+    restored, and reports it on stderr; the text shown to the user is
+    both streams, as a terminal would show them.
+    """
+    terminal_text = completed.stdout.decode("utf-8") + completed.stderr.decode("utf-8")
+    status = 200 if completed.returncode == 0 else 400
+    return jsonify(terminal_text=terminal_text), status
 
 
 @app.route("/commands/prov/<trial_id>")

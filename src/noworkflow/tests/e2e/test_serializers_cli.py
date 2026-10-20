@@ -21,8 +21,7 @@ assertion messages here print only the ``access`` facts.
 A known defect has a characterization of what ``now`` does today and a
 ``_desired`` twin, marked through ``known_defects``, that states what it
 should do. A twin asserts only that the run no longer fails and what it
-stores, never the return code or the stream of the error, which #226
-changes, so that each twin flips with the fix of its own defect.
+stores, so that each twin flips with the fix of its own defect.
 """
 
 from ..helpers import jsonpickle_stub, swipl
@@ -118,15 +117,14 @@ def test_run_with_the_jsonpickle_serializer_records_what_encode_returns(project)
 
 def test_run_with_the_jsonpickle_content_serializer(project):
     """Characterization: ``-r jsonpickle_content`` fails at the first value
-    with a TypeError reported on stdout and return code 0; the script body
-    never runs and the trial is unfinished (#226 changes the return code
-    and the stream)"""
-    result = run_with_stub(project, "jsonpickle_content")
-    lines = result.stdout.splitlines()
+    with a TypeError reported on stderr and return code 1; the script body
+    never runs and the trial is unfinished"""
+    result = run_with_stub(project, "jsonpickle_content", expect=1, allow_stderr=True)
+    lines = result.stderr.splitlines()
     assert lines[0] == ("[now] TypeError('Strings must be encoded before hashing')"), (
         str(result)
     )
-    assert "2" not in lines, str(result)
+    assert "2" not in result.stdout.splitlines(), str(result)
     assert only_trial(project)["status"] == "unfinished"
 
 

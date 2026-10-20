@@ -8,7 +8,8 @@ exceptions raised inside generators, comprehensions and conditional
 expressions, custom exception classes, ``assert``, ``break``/``continue``
 inside ``try``, a bare ``except`` over an ordinary exception, and
 ``except*`` with exception groups. Only caught exceptions: an uncaught one
-changes the exit status under ``now run`` (#226). The transformer does not
+ends the script, and its traceback is not compared whole (it holds
+noWorkflow's frames under ``now run``). The transformer does not
 rewrite ``raise`` or ``assert`` yet, nor evaluate the types of ``except*``
 (#77), so those statements compare plain Python with plain Python until it
 does; the code around them and their handlers are traced.

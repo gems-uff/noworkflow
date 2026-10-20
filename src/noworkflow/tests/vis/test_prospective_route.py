@@ -38,8 +38,9 @@ corpus that fail, each by one mechanism unless said otherwise:
   (``ELSE_WITHOUT_IF``).
 - ``ELSE_WITHOUT_IF`` (``while_else``): the else of a loop or of a try.
   Also ``for_multiple_targets``.
-- ``NO_COMPONENTS`` (``sys_exit_no_code``): a trial without code
-  components, which that script's ``now run`` leaves (#226).
+- ``NO_COMPONENTS`` (``os_exit``, of ``e2e/corpus/exit``): a trial without
+  code components, which a script that ends through ``os._exit`` leaves,
+  since nothing of it is stored after the exec.
 
 The 400 branch is checked through a stand-in for ``Trial``: the only
 ``ValueError`` the generator raises on purpose is for a trial without id,
@@ -73,10 +74,12 @@ SYNTAX = CORPUS / "syntax"
 ROUTE = "/trials/{}/prospective.dot"
 DIGRAPH = re.compile(r"(strict )?digraph \{")
 CONTROLS = ("if_elif_else", "with_statement")
-# sys.exit() without a code makes `now run` crash (#226), and the run that
-# fails is the subject of test_syntax_corpus.py: here any outcome goes.
-FAILING_RUN = "sys_exit_no_code"
+# A script that ends through os._exit(4): `now run` exits with 4 and stores
+# nothing after the exec (test_run.py pins that), so its trial has no code
+# components. It comes from the exit corpus, not the syntax corpus.
+FAILING_RUN = "os_exit"
 SCRIPTS = CONTROLS + ("raise_from", "try_finally", "while_else", FAILING_RUN)
+SOURCES = {FAILING_RUN: CORPUS / "exit"}
 
 UNDRAWN_FUNCTION_END = Defect(
     reason="#364: _limited "
@@ -116,9 +119,8 @@ NO_COMPONENTS = Defect(
     reason="#364: for a trial without code "
     "components, code_components (models/prospective/analyzer.py) "
     "prints a message and returns None, which create_all_nodes "
-    "iterates: TypeError; sys_exit_no_code.py reaches it because its "
-    "now run crashes before it stores the definition provenance "
-    "(#226), so the case flips when either is fixed",
+    "iterates: TypeError; os_exit.py reaches it because its now run "
+    "ends in os._exit before it stores the definition provenance",
     signature="TypeError in create_all_nodes: 'NoneType' object is not iterable",
 )
 
@@ -132,13 +134,9 @@ def _prospective_store(tmp_path_factory):
     project = NowProject(tmp_path_factory.mktemp("vis_prospective"))
     trials = {}
     for name in SCRIPTS:
-        project.write(
-            name + ".py", (SYNTAX / (name + ".py")).read_text(encoding="utf-8")
-        )
-        failing = name == FAILING_RUN
-        project.run(
-            "run", name + ".py", expect=None if failing else 0, allow_stderr=failing
-        )
+        source = SOURCES.get(name, SYNTAX) / (name + ".py")
+        project.write(name + ".py", source.read_text(encoding="utf-8"))
+        project.run("run", name + ".py", expect=4 if name == FAILING_RUN else 0)
         trials[name] = project.trials()[-1]["id"]
     assert len(set(trials.values())) == len(SCRIPTS), "one trial per script"
     return types.SimpleNamespace(project=project, trials=trials)
@@ -367,8 +365,8 @@ def test_prospective_dot_of_while_else_desired(prospective):
 
 
 def test_prospective_dot_of_a_trial_without_components_answers_500(prospective):
-    """Today the graph of the ``sys_exit_no_code.py`` trial, which has no
-    code components (#226), answers 500: TypeError in ``create_all_nodes``
+    """Today the graph of the ``os_exit.py`` trial, which has no code
+    components, answers 500: TypeError in ``create_all_nodes``
     """
     trial_id = prospective.trials[FAILING_RUN]
     assert prospective.project.count("code_component", trial_id) == 0
@@ -378,7 +376,7 @@ def test_prospective_dot_of_a_trial_without_components_answers_500(prospective):
 
 @known_defects(NO_COMPONENTS)
 def test_prospective_dot_of_a_trial_without_components_desired(prospective):
-    """The graph of the ``sys_exit_no_code.py`` trial is a DOT digraph"""
+    """The graph of the ``os_exit.py`` trial is a DOT digraph"""
     assert_digraph(prospective, FAILING_RUN)
 
 

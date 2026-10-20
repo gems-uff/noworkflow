@@ -432,14 +432,14 @@ def replay(project, steps=STEPS):
                 "run", SCRIPT, *args, allow_stderr=True, timeout=RUN_TIMEOUT
             )
         elif kind == "run-fails":
-            # `now run` exits with 0 after an uncaught exception (#226), so
-            # run_trials.sh's `|| echo` never fires; the trial's status is
-            # what the tests check.
+            # `now run` exits with 1 after the uncaught exception, which is
+            # what makes run_trials.sh's `|| echo` fire; the trial's status
+            # is what the tests check.
             result = project.run(
                 "run",
                 SCRIPT,
                 *args,
-                expect=None,
+                expect=1,
                 allow_stderr=True,
                 timeout=RUN_TIMEOUT,
             )
