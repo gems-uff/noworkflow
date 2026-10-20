@@ -17,8 +17,8 @@ def generate_prospective_prov(trial):
     Returns:
         String containing DOT format graph
     """
-    if trial.id == None:
-        raise ValueError(f"Error loading trial: {e}")
+    if trial.id is None:
+        raise ValueError("Error loading trial: the trial has no id")
 
     analyzer = DefinitionProvenanceAnalyzer(trial.id)
     return analyzer.build_prospective_graph()

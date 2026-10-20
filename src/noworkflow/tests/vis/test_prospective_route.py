@@ -41,11 +41,11 @@ corpus that fail, each by one mechanism unless said otherwise:
 - ``NO_COMPONENTS`` (``sys_exit_no_code``): a trial without code
   components, which that script's ``now run`` leaves (#226).
 
-The 400 branch is characterized through a stand-in for ``Trial``: the only
-``ValueError`` the generator raises on purpose, for a trial without id,
-formats an undefined name and raises ``NameError`` instead, and ``Trial()``
-never yields such a trial. A ``ValueError`` of the analyzer's
-``list.index`` calls would reach it; no script of the syntax corpus does.
+The 400 branch is checked through a stand-in for ``Trial``: the only
+``ValueError`` the generator raises on purpose is for a trial without id,
+and ``Trial()`` never yields such a trial. A ``ValueError`` of the
+analyzer's ``list.index`` calls would reach it too; no script of the syntax
+corpus does.
 
 Measured on macOS with Python 3.11 to 3.15, through this route and
 through ``now export prospective``: the same scripts fail the same way on
@@ -380,21 +380,20 @@ def test_prospective_dot_of_a_trial_without_components_desired(prospective):
 # --- the 400 branch -----------------------------------------------------------
 
 
-def test_prospective_dot_of_a_trial_without_id_answers_500_not_400(
+def test_prospective_dot_of_a_trial_without_id_answers_400(
         prospective, monkeypatch):
-    """Today a trial whose id is None answers 500 ``name 'e' is not
-    defined``: the guard of ``generate_prospective_prov`` formats an
-    undefined ``e`` into its ``ValueError``, so the view's 400 branch never
-    sees it
+    """A trial whose id is None answers 400 with the ``ValueError`` of the
+    guard of ``generate_prospective_prov``
 
-    Characterization only: ``Trial()`` never yields such a trial (an
-    unknown id raises ``RuntimeError``, see ``test_trial_routes.py``), so a
-    stand-in replaces it in the view.
+    ``Trial()`` never yields such a trial (an unknown id raises
+    ``RuntimeError``, see ``test_trial_routes.py``), so a stand-in replaces
+    it in the view.
     """
     monkeypatch.setattr(views, "Trial",
                         lambda tid: types.SimpleNamespace(id=None))
     response = prospective.get(ROUTE.format(prospective.trials["raise_from"]))
-    assert response.status_code == 500
+    assert response.status_code == 400
     assert response.mimetype == "text/plain"
     assert response.get_data(as_text=True) == (
-        "Unexpected error: name 'e' is not defined")
+        "Error generating prospective provenance: "
+        "Error loading trial: the trial has no id")
