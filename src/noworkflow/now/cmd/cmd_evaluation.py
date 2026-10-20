@@ -3,16 +3,14 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """"now list" command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
-from ..persistence.models import Trial
 from ..persistence import persistence_config, relational
-from ..persistence.models import Evaluation as EvaluationM, CodeComponent, Activation
+from ..persistence.models import Activation, CodeComponent, Trial
+from ..persistence.models import Evaluation as EvaluationM
 from ..persistence.models.base import proxy, proxy_gen
-
 from .command import Command
 
 

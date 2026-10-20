@@ -4,8 +4,9 @@
 # Please, consult the license terms in the LICENSE file.
 
 import gzip
-from io import StringIO as StringIO
 from io import BytesIO as IO
+from io import StringIO as StringIO
+
 
 def gzip_compress(data):
     gzip_buffer = IO()

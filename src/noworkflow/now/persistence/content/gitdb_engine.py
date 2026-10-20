@@ -4,10 +4,9 @@
 # Please, consult the license terms in the LICENSE file.
 """GitDb content database engine"""
 import hashlib
-
 from io import BytesIO
 
-from gitdb import LooseObjectDB, IStream
+from gitdb import IStream, LooseObjectDB
 
 from .pygit_engine import PyGitEngine
 

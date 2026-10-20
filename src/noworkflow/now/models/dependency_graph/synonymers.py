@@ -4,7 +4,7 @@
 # Please, consult the license terms in the LICENSE file.
 """Synonymers for dependency graph"""
 
-from .node_types import EvaluationNode, AccessNode
+from .node_types import AccessNode, EvaluationNode
 
 
 class Synonymer(object):

@@ -23,10 +23,17 @@ from noworkflow.now.models.prov.export import export_prov
 from noworkflow.now.models.prov.save_output import SaveOutput
 from noworkflow.now.persistence import relational
 from noworkflow.now.persistence.models import (
-    Experiment, ExtendedAnnotation, Group, MemberOfGroup, Trial, User,
+    Experiment,
+    ExtendedAnnotation,
+    Group,
+    MemberOfGroup,
+    Trial,
+    User,
 )
 from noworkflow.tests.helpers.models import (
-    TrialConfig, erase_database, new_trial,
+    TrialConfig,
+    erase_database,
+    new_trial,
 )
 
 USER_ID = "h\\alice"

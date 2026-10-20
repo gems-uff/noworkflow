@@ -1,9 +1,8 @@
-import io
 import builtins
 import codecs
+import io
 import os
 import threading
-
 from contextlib import contextmanager
 
 open_usage = {}

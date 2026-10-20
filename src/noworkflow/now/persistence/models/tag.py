@@ -3,21 +3,31 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Tag Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import datetime
 
-from future.utils import lmap
 from future.builtins import map as cvmap
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP
-from sqlalchemy import ForeignKeyConstraint, select, bindparam
+from future.utils import lmap
+from sqlalchemy import (
+    TIMESTAMP,
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Text,
+    bindparam,
+    select,
+)
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologTimestamp
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologRepr,
+    PrologTimestamp,
+    PrologTrial,
+)
 from .. import relational
-
 from .base import AlchemyProxy, proxy_class
 
 
@@ -123,8 +133,8 @@ class Tag(AlchemyProxy):
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
         (3, [1, 2, 1])
         """
-        from .trial import Trial
         from .code_block import CodeBlock
+        from .trial import Trial
         session = session or relational.session
         _query = select([cls.m.name]).where(
                 (Trial.m.id == cls.m.trial_id) &

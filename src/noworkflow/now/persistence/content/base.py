@@ -1,9 +1,10 @@
-import io
 import codecs
-import os
 import hashlib
+import io
+import os
 
 from . import safeopen
+
 
 class ContentDatabaseEngine(object):
     def __init__(self, config):

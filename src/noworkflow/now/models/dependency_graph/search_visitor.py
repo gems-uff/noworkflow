@@ -5,6 +5,7 @@
 """Search Visitor"""
 from .base_visitor import ClusterVisitor
 
+
 class SearchEvaluationVisitor(ClusterVisitor):
     """Search evaluation in cluster"""
 

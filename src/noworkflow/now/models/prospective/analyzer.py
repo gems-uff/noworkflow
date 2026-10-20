@@ -3,18 +3,17 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Definition provenance analyzer - builds control flow graphs"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import defaultdict
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 from .utils import (
-    SyntaxUtils,
     GraphDrawer,
-    NodeMapper,
     GraphvizWrapper,
-    ProspectiveQueries
+    NodeMapper,
+    ProspectiveQueries,
+    SyntaxUtils,
 )
 
 

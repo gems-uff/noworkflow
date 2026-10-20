@@ -5,6 +5,7 @@
 
 from .querier_options import QuerierOptions
 
+
 class NodeContext(object):
 
     def __init__(self, evaluation, checkpoint, is_activation=False, arrow=None, steps=0, options=None):

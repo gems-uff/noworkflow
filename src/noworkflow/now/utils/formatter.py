@@ -3,11 +3,12 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define formatters for usual data structures to be used on IPython"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import Counter
+
 from future.utils import lmap
+
 from .cross_version import to_unicode
 
 

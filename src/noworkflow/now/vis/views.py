@@ -3,33 +3,55 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define views for 'now vis'"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os
+import difflib
 import io
 import json
-
-from flask import render_template, jsonify, request, send_file, Response
-from io import BytesIO as IO
-
-from ..persistence.models import Trial, Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent, Dependency
-from ..persistence.lightweight import BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW
-from ..models.history import History
-from ..models.diff import Diff
-from ..models.ast.trial_ast import TrialAst
-from ..models.prospective.generate import generate_prospective_prov
-from ..persistence import relational, content
-from ..cmd.cmd_diff import Diff as DiffCMD
-from ..ipython.dotmagic import DotDisplay
+import os
 
 # Runs now for the /commands/* routes
 import subprocess  # nosec B404
-from ..utils.collab import export_bundle, import_bundle
-from ..utils.compression import gzip_compress,gzip_uncompress
-import difflib
-from zipfile import ZipFile
 from io import BytesIO
+from io import BytesIO as IO
+from zipfile import ZipFile
+
+from flask import Response, jsonify, render_template, request, send_file
+
+from ..cmd.cmd_diff import Diff as DiffCMD
+from ..ipython.dotmagic import DotDisplay
+from ..models.ast.trial_ast import TrialAst
+from ..models.diff import Diff
+from ..models.history import History
+from ..models.prospective.generate import generate_prospective_prov
+from ..persistence import content, relational
+from ..persistence.lightweight import (
+    BundleLW,
+    ExperimentLW,
+    ExtendedAnnotationLW,
+    GroupLW,
+    MemberOfGroupLW,
+    RemoteLW,
+    UserLW,
+)
+from ..persistence.models import (
+    Activation,
+    CodeComponent,
+    Dependency,
+    Evaluation,
+    Experiment,
+    ExtendedAnnotation,
+    FileAccess,
+    Group,
+    MemberOfGroup,
+    Module,
+    Remote,
+    Trial,
+    User,
+)
+from ..utils.collab import export_bundle, import_bundle
+from ..utils.compression import gzip_compress, gzip_uncompress
+
 
 class WebServer(object):
     """Flask WebServer"""

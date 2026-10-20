@@ -4,25 +4,42 @@
 # Please, consult the license terms in the LICENSE file.
 """Trial Model"""
 # pylint: disable=too-many-lines
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os
-
-import uuid
 import getpass
+import os
 import socket
-from sqlalchemy import Column, Integer,String, Text, TIMESTAMP
-from sqlalchemy import ForeignKeyConstraint, select, func, distinct
-from ...utils.prolog import PrologDescription, PrologTrial
-from ...utils.prolog import PrologTimestamp, PrologRepr
-from ...utils.prolog import PrologNullable, PrologNullableRepr
+import uuid
 
+from sqlalchemy import (
+    TIMESTAMP,
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Text,
+    distinct,
+    func,
+    select,
+)
+
+from ...utils.prolog import (
+    PrologDescription,
+    PrologNullable,
+    PrologNullableRepr,
+    PrologRepr,
+    PrologTimestamp,
+    PrologTrial,
+)
 from .. import relational
-
-from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
-from .base import is_none, proxy
-
+from .base import (
+    AlchemyProxy,
+    is_none,
+    proxy,
+    proxy_class,
+    proxy_gen,
+    query_many_property,
+)
 from .head import Head
 
 
@@ -261,10 +278,10 @@ class Trial(AlchemyProxy):
         #self._store_pk(obj)
         #self._restore_instance()
 
+        from ...models.dataflow_model import DataflowModel
         from ...models.dependency_graph.config import DependencyConfig
         from ...models.graphs.trial_graph import TrialGraph
         from ...models.trial_prolog import TrialProlog
-        from ...models.dataflow_model import DataflowModel
 
         self.dependency_config = DependencyConfig()
         self._dependency_clusterizer = None

@@ -23,8 +23,7 @@ import re
 import pytest
 
 import noworkflow
-from noworkflow.patterns import BLANK, var
-from noworkflow.patterns import rules
+from noworkflow.patterns import BLANK, rules, var
 from noworkflow.patterns.machinery import FunctionRule, Variable
 from noworkflow.patterns.rules.helpers import _create_list, _match
 from noworkflow.tests.e2e.normalize import clause_arity, prolog_statements

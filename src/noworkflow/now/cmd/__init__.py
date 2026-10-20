@@ -3,33 +3,33 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Commands and argument parsers for 'now'"""
-from __future__ import (absolute_import, print_function,
-                        division)
+from __future__ import absolute_import, division, print_function
 
 import argparse
 import sys
+
 import sqlalchemy
 
-from .command import Command, SmartFormatter
-from .cmd_run import Run
-from .cmd_debug import Debug
-from .cmd_import import Import
-from .cmd_push import Push
-from .cmd_pull import Pull
-from .cmd_list import List
-from .cmd_show import Show
-from .cmd_diff import Diff
-from .cmd_export import Export
-from .cmd_restore import Restore
-from .cmd_vis import Vis
-from .cmd_demo import Demo
-from .cmd_history import History
-from .cmd_schema import Schema
-from .cmd_kernel import Kernel
-from .cmd_gc import GC
-from .cmd_evaluation import Evaluation
-from .cmd_clean import Clean
 from ..utils.io import print_msg
+from .cmd_clean import Clean
+from .cmd_debug import Debug
+from .cmd_demo import Demo
+from .cmd_diff import Diff
+from .cmd_evaluation import Evaluation
+from .cmd_export import Export
+from .cmd_gc import GC
+from .cmd_history import History
+from .cmd_import import Import
+from .cmd_kernel import Kernel
+from .cmd_list import List
+from .cmd_pull import Pull
+from .cmd_push import Push
+from .cmd_restore import Restore
+from .cmd_run import Run
+from .cmd_schema import Schema
+from .cmd_show import Show
+from .cmd_vis import Vis
+from .command import Command, SmartFormatter
 
 
 def main():

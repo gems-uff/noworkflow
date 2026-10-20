@@ -5,7 +5,8 @@
 """Content database engine parallel generics"""
 
 def create_distributed(cls, name=None):
-    from multiprocessing import Process, JoinableQueue, cpu_count, Manager
+    from multiprocessing import JoinableQueue, Manager, Process, cpu_count
+
     from . import safeopen
     class Worker(Process):
 
@@ -78,7 +79,8 @@ def create_distributed(cls, name=None):
 
 
 def create_pool(cls, name=None):
-    from multiprocessing import cpu_count, Manager, Pool
+    from multiprocessing import Manager, Pool, cpu_count
+
     from . import safeopen
 
     class ProcessingPool(cls):

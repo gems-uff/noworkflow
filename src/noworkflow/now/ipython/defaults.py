@@ -5,6 +5,7 @@
 
 from ..persistence.models import MetaModel
 
+
 def set_default(key, value, model="*"):
     """Set a default metamodel value"""
     if isinstance(value, str) and value.isdigit():

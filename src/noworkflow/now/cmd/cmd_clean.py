@@ -3,17 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """"now list" command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
-from ..persistence.models import Trial
 from ..persistence import persistence_config
+from ..persistence.models import Trial
 from ..persistence.models.base import proxy_gen
-
-from .command import Command
 from .cmd_evaluation import add_query_arguments, query_evaluations
+from .command import Command
 
 
 class Clean(Command):
@@ -50,8 +48,8 @@ class Clean(Command):
         trial = Trial(trial_ref=args.trial)
         result = list(proxy_gen(query_evaluations(args)))
 
+        from ..models.cleaning import create_clean, create_merged_from_cells, get_cells
         from ..models.dependency_querier import PreloadedQuerierOptions
-        from ..models.cleaning import get_cells, create_clean, create_merged_from_cells
         options = PreloadedQuerierOptions(trial, visit_out=False)
        
         cells = get_cells(result, options)

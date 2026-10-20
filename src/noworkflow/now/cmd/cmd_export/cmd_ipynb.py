@@ -3,20 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now export ipynb'command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
-
-from ...persistence.models import Trial
-from ...persistence import persistence_config
-
-
-from ...models.diff import Diff as DiffModel
 from ...ipython.converter import create_ipynb
-
+from ...models.diff import Diff as DiffModel
+from ...persistence import persistence_config
+from ...persistence.models import Trial
 from ..command import Command
+
 
 class Ipynb(Command):
     """Create a notebook file for analysis"""

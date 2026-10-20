@@ -5,9 +5,9 @@
 """AST Helpers to transform nodes and explore transformations"""
 
 import ast
+from contextlib import contextmanager
 
 from .ast_elements import L
-from contextlib import contextmanager
 
 
 def ast_copy(new_node, old_node):

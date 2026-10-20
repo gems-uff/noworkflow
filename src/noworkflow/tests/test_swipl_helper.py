@@ -24,7 +24,12 @@ import pytest
 
 from noworkflow.tests.helpers import swipl
 from noworkflow.tests.helpers.swipl import (
-    UNBOUND, Compound, PrologError, quoted_atom, read_terms, solutions,
+    UNBOUND,
+    Compound,
+    PrologError,
+    quoted_atom,
+    read_terms,
+    solutions,
     swipl_or_skip,
 )
 

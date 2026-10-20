@@ -5,6 +5,7 @@
 
 from collections import defaultdict
 
+
 class QuerierOptions(object):
 
     def __init__(self, visit_activations=False, visit_arguments=True, visit_members=True, visit_out=True):

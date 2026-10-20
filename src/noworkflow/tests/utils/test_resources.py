@@ -21,7 +21,12 @@ from pathlib import Path
 
 import noworkflow
 from noworkflow.now.utils.functions import (
-    recursive_copy, resource, resource_is_dir, resource_ls, version)
+    recursive_copy,
+    resource,
+    resource_is_dir,
+    resource_ls,
+    version,
+)
 
 RESOURCES = Path(noworkflow.__file__).resolve().parent / "resources"
 

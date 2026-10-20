@@ -310,6 +310,7 @@ def row_counts():
     committed.
     """
     from sqlalchemy import func
+
     from ...now.persistence import relational
     return {
         table.name: relational.session.query(func.count()).select_from(

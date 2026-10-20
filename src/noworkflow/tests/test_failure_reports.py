@@ -41,7 +41,11 @@ import pytest
 from .e2e.normalize import usable_hostname
 from .helpers.child_pytest import run_child_pytest
 from .helpers.reports import (
-    HOSTNAME_RULES, PLACEHOLDER, hostname_rules, mask, mask_report,
+    HOSTNAME_RULES,
+    PLACEHOLDER,
+    hostname_rules,
+    mask,
+    mask_report,
 )
 
 MARK = "report-368"

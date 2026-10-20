@@ -37,10 +37,27 @@ from ...now.persistence.content.puregit_engine import PureGitEngine
 from ...now.persistence.content_database import ContentDatabase
 from ..helpers.defects import Defect, known_defects
 from .engines import (
-    CONFIGURED_EMAIL, CONFIGURED_IDENTITY, CONFIGURED_NAME, GIT_ENGINES,
-    IDENTITY, NOWORKFLOW_AUTHOR, PLAIN, PUREGIT, WINDOWS_NOT_MEASURED,
-    as_text, fingerprint, git, git_blob_hex, git_lines, git_output_on_failure,
-    git_text, open_store, provenance_of, sha1_hex, shown)
+    CONFIGURED_EMAIL,
+    CONFIGURED_IDENTITY,
+    CONFIGURED_NAME,
+    GIT_ENGINES,
+    IDENTITY,
+    NOWORKFLOW_AUTHOR,
+    PLAIN,
+    PUREGIT,
+    WINDOWS_NOT_MEASURED,
+    as_text,
+    fingerprint,
+    git,
+    git_blob_hex,
+    git_lines,
+    git_output_on_failure,
+    git_text,
+    open_store,
+    provenance_of,
+    sha1_hex,
+    shown,
+)
 
 CONTENTS = [
     pytest.param(b"", id="empty"),

@@ -6,7 +6,7 @@
 # pylint: disable=invalid-name, redefined-builtin, redefined-outer-name
 # pylint: disable=no-value-for-parameter
 
-from ..machinery import prolog_rule, create_rule, restrict_rule, var
+from ..machinery import create_rule, prolog_rule, restrict_rule, var
 from ..models import activation, code_block
 from .name_rules import name as _name
 

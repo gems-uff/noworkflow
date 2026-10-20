@@ -38,7 +38,10 @@ import re
 
 from noworkflow.patterns.machinery import BLANK, Variable
 from noworkflow.tests.helpers.defects import (  # noqa: F401  (re-exported)
-    Defect, defect_marks, expect_known_failure, known_defects,
+    Defect,
+    defect_marks,
+    expect_known_failure,
+    known_defects,
 )
 from noworkflow.tests.helpers.swipl import UNBOUND, Compound
 

@@ -52,7 +52,11 @@ from noworkflow.now.models.history import History
 from noworkflow.tests.e2e.harness import NowProject
 
 from .support import (
-    EXPERIMENT, EXPERIMENT_PREFIX, Defect, Vis, known_defects,
+    EXPERIMENT,
+    EXPERIMENT_PREFIX,
+    Defect,
+    Vis,
+    known_defects,
 )
 
 # Fields History adds to each trial's columns (HistoryGraph.graph), and the

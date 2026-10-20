@@ -5,9 +5,16 @@
 """Pattern Matching Module"""
 # pylint: disable=invalid-name
 
-from .machinery import BLANK, create_rule, restrict_rule, prolog_rule, var
-from .machinery import set_options_in_rule
+from .machinery import (
+    BLANK,
+    create_rule,
+    prolog_rule,
+    restrict_rule,
+    set_options_in_rule,
+    var,
+)
 from .models import (
+    access,
     activation,
     argument,
     code_block,
@@ -17,7 +24,6 @@ from .models import (
     environment,
     evaluation,
     member,
-    access,
     module,
     tag,
     trial,

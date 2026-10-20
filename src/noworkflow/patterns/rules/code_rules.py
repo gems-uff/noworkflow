@@ -6,9 +6,9 @@
 # pylint: disable=invalid-name, redefined-builtin, redefined-outer-name
 # pylint: disable=no-value-for-parameter
 
-from ..machinery import prolog_rule, create_rule, var
+from ..machinery import create_rule, prolog_rule, var
 from ..models import code_component
-from .helpers import between, _bagof_append_sort
+from .helpers import _bagof_append_sort, between
 
 
 @prolog_rule("code_line_id(TrialId, Id, Line) :-")

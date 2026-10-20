@@ -3,18 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """IPython Magics"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
 
-from IPython.utils.process import arg_split
 from IPython.core import magic_arguments
-from IPython.core.magic import line_magic, cell_magic, line_cell_magic
+from IPython.core.magic import cell_magic, line_cell_magic, line_magic
+from IPython.utils.process import arg_split
 
 from ...cmd import Command
 from ...utils.functions import abstract
-
 
 MAGIC_TYPES = {
     "cell": cell_magic,

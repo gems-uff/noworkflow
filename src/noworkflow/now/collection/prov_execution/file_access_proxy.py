@@ -4,8 +4,8 @@
 # Please, consult the license terms in the LICENSE file.
 """Proxy that captures content_hash_after when a write-mode file is closed"""
 
-import os
 import io
+import os
 
 from ...persistence import content
 

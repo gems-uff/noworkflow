@@ -3,10 +3,9 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define data structures and data access functions"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import OrderedDict, Counter
+from collections import Counter, OrderedDict
 
 
 class OrderedCounter(OrderedDict, Counter):

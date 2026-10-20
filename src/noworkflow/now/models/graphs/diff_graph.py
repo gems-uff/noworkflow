@@ -3,20 +3,18 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Diff Graph Module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
-
-from copy import copy
 from collections import defaultdict
+from copy import copy
 from functools import cmp_to_key
 
-from apted import meta_chained_config, Config, APTED
+from apted import APTED, Config, meta_chained_config
 from future.utils import viewitems
 
-from .trial_graph import Node
 from .structures import Graph, prepare_cache
+from .trial_graph import Node
 
 
 class NowConfig(Config):

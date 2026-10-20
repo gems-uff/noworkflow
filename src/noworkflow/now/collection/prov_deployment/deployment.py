@@ -3,9 +3,9 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Deployment provenance collector"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+import getpass
 import importlib.metadata
 import os
 import platform
@@ -13,16 +13,14 @@ import re
 import socket
 import sys
 import weakref
-import getpass
 
-from future.utils import viewitems, native_str
 from future.builtins import map as cvmap
+from future.utils import native_str, viewitems
 
-from ...utils.io import print_msg
-from ...utils.metaprofiler import meta_profiler
 from ...utils.cross_version import string
 from ...utils.functions import version
-
+from ...utils.io import print_msg
+from ...utils.metaprofiler import meta_profiler
 
 # Bound when noWorkflow starts, so that a traced script that patches
 # importlib.metadata (unittest.mock in a test suite) does not reach it

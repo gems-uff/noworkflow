@@ -7,8 +7,9 @@
 import inspect
 from functools import wraps
 from importlib.machinery import PathFinder, SourceFileLoader
-from ...persistence import content
 from pathlib import Path
+
+from ...persistence import content
 
 
 def proxy(loader, name):

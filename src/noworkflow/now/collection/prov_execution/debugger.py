@@ -3,25 +3,22 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Debugger-related functions"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # ToDo now2: check all file
-
 import atexit
 import os
+
 # Starts the programs of the now_vis() and now_notebook() builtins
 import subprocess  # nosec B404
 import sys
 import threading
 import webbrowser
-
 from argparse import Namespace
 
 from ...cmd.cmd_export.cmd_ipynb import Ipynb
 from ...persistence.models.trial import Trial
 from ...utils.io import redirect_output
-
 
 FNULL = open(os.devnull, "w")
 atexit.register(FNULL.close)

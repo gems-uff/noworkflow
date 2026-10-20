@@ -13,8 +13,7 @@ rest of the suite clean). Each characterization of a defect has a
 ``_desired`` twin that states the behavior the issue asks for, marked by
 ``known_defects``.
 """
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import builtins
 import sys

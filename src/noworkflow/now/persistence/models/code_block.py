@@ -3,20 +3,25 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Code Block Definition Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+from sqlalchemy import (
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
-from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologNullableRepr
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullableRepr,
+    PrologTrial,
+)
 from .. import relational
-
-from .base import proxy_class, AlchemyProxy
-from .base import query_many_property
+from .base import AlchemyProxy, proxy_class, query_many_property
 
 
 @proxy_class
@@ -112,8 +117,8 @@ class CodeBlock(AlchemyProxy):
 
     def mark_code(self, evaluations, options=None):
         """Mark evaluation dependencies in CodeBlock"""
-        from .evaluation import Evaluation
         from ...models.dependency_querier import DependencyQuerier
+        from .evaluation import Evaluation
         if isinstance(evaluations, Evaluation):
             evaluations = [evaluations]
         querier = DependencyQuerier(options=options)

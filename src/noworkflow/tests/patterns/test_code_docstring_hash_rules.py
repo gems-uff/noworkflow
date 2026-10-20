@@ -34,11 +34,14 @@ import collections
 
 import pytest
 
-from noworkflow.patterns import BLANK, var
-from noworkflow.patterns import rules
+from noworkflow.patterns import BLANK, rules, var
 from noworkflow.tests.helpers import swipl
 from noworkflow.tests.patterns.support import (
-    Defect, assert_rows, bindings, defect_marks, known_defects,
+    Defect,
+    assert_rows,
+    bindings,
+    defect_marks,
+    known_defects,
     normalize_prolog,
 )
 

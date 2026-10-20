@@ -46,8 +46,13 @@ import sys
 import pytest
 
 from ..persistence.engines import (
-    IDENTITY, IDENTITY_EMAIL, IDENTITY_NAME, NOWORKFLOW_AUTHOR, git_blob_hex,
-    shown)
+    IDENTITY,
+    IDENTITY_EMAIL,
+    IDENTITY_NAME,
+    NOWORKFLOW_AUTHOR,
+    git_blob_hex,
+    shown,
+)
 from .harness import last_line
 from .oracle import STDLIB_ON_ANOTHER_DRIVE, Defect, known_defects
 

@@ -3,20 +3,31 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Activation Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import timedelta
-from sqlalchemy import Column, Integer, String, Text, Float, select, join
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
-from ...utils.prolog import PrologDescription, PrologTrial
-from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+    join,
+    select,
+)
 
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologRepr,
+    PrologTrial,
+)
 from .. import relational
-
-from .base import AlchemyProxy, proxy_class
-from .base import query_many_property
+from .base import AlchemyProxy, proxy_class, query_many_property
 
 
 @proxy_class
@@ -413,8 +424,8 @@ class Activation(AlchemyProxy):
         ... ).replace("u'", "'"))
         [('a', '[1]')]
         """
-        from .evaluation import Evaluation
         from .code_component import CodeComponent
+        from .evaluation import Evaluation
 
         joined_eval = join(
             Evaluation.t, CodeComponent.t,

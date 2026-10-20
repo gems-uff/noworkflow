@@ -3,12 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight Remote"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-from ..models import Remote                        
+from ..models import Remote
 from .base import BaseLW, define_attrs
+
 
 class RemoteLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
     """Remote lightweight object"""

@@ -3,36 +3,40 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """ Define Metadata classes to be used as configuration """
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import sys
-
 from argparse import Namespace
 from datetime import datetime
 
 from future.utils import viewitems
+
 from noworkflow.now.persistence.serializers import repr_serializer
 
-from ..persistence import persistence_config, get_serializer, content
-from ..persistence.lightweight import ObjectStore, SharedObjectStore
-from ..persistence.lightweight import ModuleLW
-from ..persistence.lightweight import EnvironmentAttrLW, ArgumentLW
-from ..persistence.lightweight import CodeComponentLW, CodeBlockLW
-from ..persistence.lightweight import CompositionLW
-from ..persistence.lightweight import EvaluationLW, ActivationLW, DependencyLW
-from ..persistence.lightweight import MemberLW, FileAccessLW, StageTagsLW
-from ..persistence.lightweight import ExceptionLW
-
-
+from ..persistence import content, get_serializer, persistence_config
+from ..persistence.lightweight import (
+    ActivationLW,
+    ArgumentLW,
+    CodeBlockLW,
+    CodeComponentLW,
+    CompositionLW,
+    DependencyLW,
+    EnvironmentAttrLW,
+    EvaluationLW,
+    ExceptionLW,
+    FileAccessLW,
+    MemberLW,
+    ModuleLW,
+    ObjectStore,
+    SharedObjectStore,
+    StageTagsLW,
+)
 from ..utils import io
 from ..utils.cross_version import perf_counter
-
 from .prov_definition.definition import Definition
-from .prov_execution.execution import Execution
 from .prov_deployment.deployment import Deployment
-
+from .prov_execution.execution import Execution
 
 LAST_TRIAL = ".last_trial"
 MAIN = 0

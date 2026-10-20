@@ -37,10 +37,18 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from noworkflow.now.persistence import relational
 from noworkflow.now.persistence.lightweight import (
-    ExperimentLW, ExtendedAnnotationLW, GroupLW, MemberOfGroupLW,
+    ExperimentLW,
+    ExtendedAnnotationLW,
+    GroupLW,
+    MemberOfGroupLW,
 )
 from noworkflow.now.persistence.models import (
-    Experiment, ExtendedAnnotation, Group, MemberOfGroup, Remote, Trial,
+    Experiment,
+    ExtendedAnnotation,
+    Group,
+    MemberOfGroup,
+    Remote,
+    Trial,
 )
 from noworkflow.tests.e2e.harness import NowProject, build_weather
 from noworkflow.tests.helpers.persistence import connected_to

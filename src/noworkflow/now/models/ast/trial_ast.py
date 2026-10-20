@@ -3,15 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Trial Ast Module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
-from ...persistence import relational
-from ...persistence.models.composition import Composition
-from ...persistence.models.code_component import CodeComponent
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import ast
+import weakref
+
 from sqlalchemy import select
 
-import weakref
-import ast
+from ...persistence import relational
+from ...persistence.models.code_component import CodeComponent
+from ...persistence.models.composition import Composition
 
 
 class TrialAst(object):

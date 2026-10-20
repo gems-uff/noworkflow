@@ -3,18 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define utility functions"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import inspect
 import os
-
 from importlib import resources
-from os.path import join, dirname, exists
-from textwrap import dedent
-# Runs Graphviz's dot for run_dot below
-from subprocess import Popen, PIPE  # nosec B404
+from os.path import dirname, exists, join
 
+# Runs Graphviz's dot for run_dot below
+from subprocess import PIPE, Popen  # nosec B404
+from textwrap import dedent
 
 PACKAGE = __name__.split(".")[0]
 NOWORKFLOW_DIR = dirname(dirname(dirname(__file__)))

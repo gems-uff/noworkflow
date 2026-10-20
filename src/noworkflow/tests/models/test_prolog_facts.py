@@ -45,19 +45,34 @@ from noworkflow.now.persistence.lightweight.extendedAnnotation import (
     ExtendedAnnotationLW,
 )
 from noworkflow.now.persistence.models import (
-    ORDER, Experiment, ExtendedAnnotation, Head, Module, Remote, Trial,
+    ORDER,
+    Experiment,
+    ExtendedAnnotation,
+    Head,
+    Module,
+    Remote,
+    Trial,
 )
 from noworkflow.now.utils.prolog import (
-    PrologNullable, PrologNullableRepr, PrologTimestamp, PrologTrial,
+    PrologNullable,
+    PrologNullableRepr,
+    PrologTimestamp,
+    PrologTrial,
 )
 from noworkflow.tests.e2e.normalize import prolog_statements
 from noworkflow.tests.helpers import swipl
 from noworkflow.tests.helpers.defects import Defect, known_defects
 from noworkflow.tests.helpers.models import (
-    TrialConfig, erase_database, new_trial,
+    TrialConfig,
+    erase_database,
+    new_trial,
 )
 from noworkflow.tests.models.model_rows import (
-    ATOMIC, TRIAL_ID, fact_arguments, insert_model_row, non_atomic,
+    ATOMIC,
+    TRIAL_ID,
+    fact_arguments,
+    insert_model_row,
+    non_atomic,
 )
 
 RULES = Path(noworkflow.__file__).resolve().parent / "resources" / "rules.pl"

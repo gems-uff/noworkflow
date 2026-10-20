@@ -31,12 +31,22 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from noworkflow.now.persistence import relational
 from noworkflow.now.persistence.models import (
-    ORDER, Experiment, ExtendedAnnotation, FileAccess, Group, MemberOfGroup,
-    Remote, StageTags, Trial, User,
+    ORDER,
+    Experiment,
+    ExtendedAnnotation,
+    FileAccess,
+    Group,
+    MemberOfGroup,
+    Remote,
+    StageTags,
+    Trial,
+    User,
 )
 from noworkflow.tests.helpers.defects import Defect, known_defects
 from noworkflow.tests.helpers.models import (
-    TrialConfig, erase_database, new_trial,
+    TrialConfig,
+    erase_database,
+    new_trial,
 )
 
 UUID = re.compile(

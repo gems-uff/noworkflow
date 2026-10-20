@@ -55,8 +55,13 @@ import noworkflow
 
 from ..helpers.defects import Defect, known_defects
 from .harness import (
-    CORPUS, WEATHER_ARGS, NowProject, last_line, runs_this_interpreter,
-    same_path)
+    CORPUS,
+    WEATHER_ARGS,
+    NowProject,
+    last_line,
+    runs_this_interpreter,
+    same_path,
+)
 
 RESTORE_CORPUS = CORPUS / "restore"
 # What trial 2 of the restore store changes before it runs: an input and the

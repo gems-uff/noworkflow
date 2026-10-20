@@ -32,7 +32,9 @@ import pytest
 
 import noworkflow
 from noworkflow.tests.e2e.normalize import (
-    prolog_facts, prolog_statements, strip_prolog_predicate,
+    prolog_facts,
+    prolog_statements,
+    strip_prolog_predicate,
 )
 from noworkflow.tests.e2e.oracle import Defect, known_defects
 from noworkflow.tests.helpers import swipl

@@ -7,7 +7,7 @@
 from copy import copy
 from itertools import product
 
-from ..machinery import Variable, BLANK, var, create_rule
+from ..machinery import BLANK, Variable, create_rule, var
 
 
 @create_rule

@@ -3,19 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """"now import" command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
+from ..persistence import persistence_config
 from ..persistence.config import PersistenceConfig
 from ..persistence.content_database import ContentDatabase
-from ..persistence import persistence_config
-from ..utils.collab import export_bundle,import_bundle
-
-
 from ..persistence.models import Trial
-
+from ..utils.collab import export_bundle, import_bundle
 from .command import Command
 
 

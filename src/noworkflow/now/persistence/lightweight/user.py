@@ -3,11 +3,9 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight User"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-from ..models import User                        
+from ..models import User
 from .base import BaseLW, define_attrs
 
 

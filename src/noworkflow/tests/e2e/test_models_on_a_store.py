@@ -28,7 +28,10 @@ to 3.15).
 import pytest
 
 from noworkflow.now.persistence.models import (
-    CodeComponent, Composition, StageTags, Trial,
+    CodeComponent,
+    Composition,
+    StageTags,
+    Trial,
 )
 from noworkflow.tests.e2e.harness import USER, NowProject
 from noworkflow.tests.e2e.normalize import argument_spans

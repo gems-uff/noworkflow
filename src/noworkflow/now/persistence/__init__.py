@@ -3,8 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Persistence Module. Perform database connection, and queries"""
-from __future__ import (absolute_import, print_function,
-                        division)
+from __future__ import absolute_import, division, print_function
 
 from .config import PersistenceConfig
 from .content_database import ContentDatabase
@@ -17,8 +16,12 @@ relational = RelationalDatabase(persistence_config)                             
 
 def get_serializer(arg):                                                         # pylint: disable=unused-argument
     """Select serializer according to argument"""
-    from .serializers import jsonpickle_serializer, jsonpickle_content
-    from .serializers import repr_serializer, SimpleSerializer
+    from .serializers import (
+        SimpleSerializer,
+        jsonpickle_content,
+        jsonpickle_serializer,
+        repr_serializer,
+    )
     if arg.serializer == "jsonpickle_content":
         return jsonpickle_content
     elif arg.serializer == "jsonpickle":

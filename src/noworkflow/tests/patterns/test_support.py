@@ -16,7 +16,12 @@ from noworkflow.patterns import BLANK, var
 from noworkflow.patterns.rules import member
 from noworkflow.tests.helpers.swipl import UNBOUND, Compound
 from noworkflow.tests.patterns.support import (
-    ABSENT, Defect, assert_rows, bindings, normalize_prolog, outcome,
+    ABSENT,
+    Defect,
+    assert_rows,
+    bindings,
+    normalize_prolog,
+    outcome,
 )
 
 MATCHES = Defect("#NNN: an example mechanism", "only in the store (1)")

@@ -3,15 +3,12 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """General persistence Configurations"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
-
-from os.path import join, isdir
+from os.path import isdir, join
 
 from ..utils.io import print_msg
-
 
 PROVENANCE_DIRNAME = ".noworkflow"
 

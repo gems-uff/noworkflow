@@ -11,11 +11,11 @@ from copy import copy
 from itertools import chain, product
 
 from future.utils import viewitems, viewvalues
-from sqlalchemy.sql.expression import and_, ColumnElement
+from sqlalchemy.sql.expression import ColumnElement, and_
 
 from ..now.persistence import relational
-from ..now.utils.cross_version import zip_longest
 from ..now.persistence.models.base import proxy
+from ..now.utils.cross_version import zip_longest
 
 
 class Blank(object):

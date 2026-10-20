@@ -29,11 +29,21 @@ import pytest
 
 from ...now.persistence.content import plain_engine
 from ...now.persistence.content.parallel import (
-    NullLock, create_distributed, create_pool, create_threading)
+    NullLock,
+    create_distributed,
+    create_pool,
+    create_threading,
+)
 from ...now.persistence.content.puregit_engine import PureGitEngine
 from ..helpers.defects import Defect, known_defects
 from .engines import (
-    PUREGIT, git_blob_hex, git_text, open_store, provenance_of, sha1_hex)
+    PUREGIT,
+    git_blob_hex,
+    git_text,
+    open_store,
+    provenance_of,
+    sha1_hex,
+)
 
 # Selected by its dotted path, like the product's ThreadingPyGitEngine.
 ThreadingPureGitEngine = create_threading(PureGitEngine)

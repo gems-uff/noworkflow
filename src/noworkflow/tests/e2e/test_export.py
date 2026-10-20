@@ -51,11 +51,20 @@ import pytest
 
 from noworkflow.tests.e2e.golden import assert_golden
 from noworkflow.tests.e2e.harness import (
-    EXPORT_AST_FORMS, EXPORT_AST_PY314, EXPORT_AST_PY315, USER, NowProject,
-    export_ast_failure, last_line, runs_this_interpreter,
+    EXPORT_AST_FORMS,
+    EXPORT_AST_PY314,
+    EXPORT_AST_PY315,
+    USER,
+    NowProject,
+    export_ast_failure,
+    last_line,
+    runs_this_interpreter,
 )
 from noworkflow.tests.e2e.normalize import (
-    clause_arity, prolog_facts, prolog_statements, strip_prolog_predicate,
+    clause_arity,
+    prolog_facts,
+    prolog_statements,
+    strip_prolog_predicate,
     usable_hostname,
 )
 from noworkflow.tests.helpers.defects import Defect, known_defects

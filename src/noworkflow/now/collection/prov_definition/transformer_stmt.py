@@ -11,21 +11,40 @@ from copy import copy, deepcopy
 
 import pyposast
 
-from .ast_helpers import ReplaceContextWithLoad, ast_copy, temporary
-from .ast_helpers import select_future_imports
-
-from .ast_elements import maybe, context, raise_, now_attribute
-from .ast_elements import L, S, none, call, param, true_false, true, false
-from .ast_elements import noworkflow, double_noworkflow
-from .ast_elements import activation, function_def, class_def, try_def
-from .ast_elements import ast_num, ast_str, is_ast_str
-
-from .transformer_expr import RewriteDependencies
-from . import dependency_constants as Dependency
-from . import component_constants as Component
-
 from ...utils.cross_version import PY3, PY36
 from ...utils.functions import recgetattr
+from . import component_constants as Component
+from . import dependency_constants as Dependency
+from .ast_elements import (
+    L,
+    S,
+    activation,
+    ast_num,
+    ast_str,
+    call,
+    class_def,
+    context,
+    double_noworkflow,
+    false,
+    function_def,
+    is_ast_str,
+    maybe,
+    none,
+    now_attribute,
+    noworkflow,
+    param,
+    raise_,
+    true,
+    true_false,
+    try_def,
+)
+from .ast_helpers import (
+    ReplaceContextWithLoad,
+    ast_copy,
+    select_future_imports,
+    temporary,
+)
+from .transformer_expr import RewriteDependencies
 
 
 class RewriteAST(ast.NodeTransformer):

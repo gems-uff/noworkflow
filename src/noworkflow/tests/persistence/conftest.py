@@ -23,8 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from .engines import (
-    COMMIT_DATE, ENGINES, IDENTITY_EMAIL, IDENTITY_NAME, open_store)
+from .engines import COMMIT_DATE, ENGINES, IDENTITY_EMAIL, IDENTITY_NAME, open_store
 
 
 @dataclasses.dataclass

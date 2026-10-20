@@ -28,14 +28,25 @@ import pytest
 from noworkflow.patterns import var
 from noworkflow.patterns.machinery import Variable
 from noworkflow.patterns.rules import (
-    activation_id, called_activation_id, evaluation_line_id,
-    filter_activation_ids, is_activation_id, map_evaluation_code_ids,
-    map_evaluation_lines_id, recursive_internal_evaluations_ids,
+    activation_id,
+    called_activation_id,
+    evaluation_line_id,
+    filter_activation_ids,
+    is_activation_id,
+    map_evaluation_code_ids,
+    map_evaluation_lines_id,
+    recursive_internal_evaluations_ids,
 )
 from noworkflow.tests.helpers import swipl
 from noworkflow.tests.patterns.support import (
-    Defect, assert_rows, bindings, defect_marks, expect_known_failure,
-    known_defects, normalize_prolog, outcome,
+    Defect,
+    assert_rows,
+    bindings,
+    defect_marks,
+    expect_known_failure,
+    known_defects,
+    normalize_prolog,
+    outcome,
 )
 
 BAGOF_REASON = (

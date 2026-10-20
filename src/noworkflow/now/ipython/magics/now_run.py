@@ -3,18 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'(%)%now run' magics"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+import argparse
 import os
 import sys
-import argparse
 
 from ...cmd.cmd_run import Run, run
-from ...collection.metadata import Metascript, LAST_TRIAL
+from ...collection.metadata import LAST_TRIAL, Metascript
+from ...persistence import content, persistence_config
 from ...persistence.models import Trial
-from ...persistence import persistence_config, content
-
 from .command import IpythonCommandMagic
 
 

@@ -3,13 +3,12 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Persistence Models"""
-from __future__ import (absolute_import, print_function,
-                        division)
+from __future__ import absolute_import, division, print_function
 
 from future.utils import text_to_native_str as n
 
 # Base
-from .base import Model, MetaModel, proxy, proxy_gen
+from .base import MetaModel, Model, proxy, proxy_gen
 
 # Database Models. Not sorted: each model registers its class and its table
 # as it is imported, and the tables of a new store are created in that order.

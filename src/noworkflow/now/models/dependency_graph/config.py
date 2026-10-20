@@ -8,15 +8,25 @@
 from future.utils import viewvalues
 
 from ...utils.data import OrderedDefaultDict
-
-from .synonymers import SameSynonymer, ReferenceSynonymer
-from .synonymers import AccessNameSynonymer, JoinedSynonymer
-from .filters import FilterAccessesOut, FilterInternalsOut
-from .filters import FilterExternalAccessesOut, FilterTypesOut
-from .filters import FilterWasDerivedFrom, FilterNotFromCodeOut
-from .filters import FilterUseActivationName, FilterFuncOut
-from .filters import JoinedFilter, AcceptAllNodesFilter
+from .filters import (
+    AcceptAllNodesFilter,
+    FilterAccessesOut,
+    FilterExternalAccessesOut,
+    FilterFuncOut,
+    FilterInternalsOut,
+    FilterNotFromCodeOut,
+    FilterTypesOut,
+    FilterUseActivationName,
+    FilterWasDerivedFrom,
+    JoinedFilter,
+)
 from .node_types import EvaluationNode
+from .synonymers import (
+    AccessNameSynonymer,
+    JoinedSynonymer,
+    ReferenceSynonymer,
+    SameSynonymer,
+)
 
 
 class DependencyConfig(object):
@@ -195,11 +205,13 @@ class DependencyConfig(object):
 
     def clusterizer(self, trial, filter_=None, synonymer=None):
         """Return clusterizer based on config"""
-        from .clusterizer import Clusterizer
-        from .clusterizer import ActivationClusterizer
-        from .clusterizer import DependencyClusterizer
-        from .clusterizer import RetrospectiveClusterizer
-        from .clusterizer import ProspectiveClusterizer
+        from .clusterizer import (
+            ActivationClusterizer,
+            Clusterizer,
+            DependencyClusterizer,
+            ProspectiveClusterizer,
+            RetrospectiveClusterizer,
+        )
         cls = {
             "fineGrain": Clusterizer,
             "activation": ActivationClusterizer,

@@ -3,18 +3,26 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Code Component Definition Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy import CheckConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologNullable
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologRepr,
+    PrologTrial,
+)
 from .. import relational
-
 from .base import AlchemyProxy, proxy_class, query_one_property
 
 

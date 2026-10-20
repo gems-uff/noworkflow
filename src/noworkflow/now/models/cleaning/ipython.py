@@ -5,12 +5,12 @@
 """"This file has functions for generating a history notebook from a living IPython Kernel (without noWorkflow)"""
 
 import time
-
 from datetime import datetime
 
-from IPython import get_ipython
-from IPython.display import display, Javascript
 import nbformat as nbf
+from IPython import get_ipython
+from IPython.display import Javascript, display
+
 
 def getname():
     """Get name from Jupyter Notebook - Does not work on Jupyter Lab"""

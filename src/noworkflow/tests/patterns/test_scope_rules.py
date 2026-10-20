@@ -28,13 +28,22 @@ import pytest
 
 from noworkflow.patterns import BLANK, var
 from noworkflow.patterns.rules import (
-    code_scope_id, evaluation_scope_id, scope, scope_id,
+    code_scope_id,
+    evaluation_scope_id,
+    scope,
+    scope_id,
 )
 from noworkflow.tests.helpers import swipl
 from noworkflow.tests.helpers.swipl import Compound
 from noworkflow.tests.patterns.support import (
-    Defect, assert_rows, bindings, defect_marks, expect_known_failure,
-    known_defects, normalize_prolog, outcome,
+    Defect,
+    assert_rows,
+    bindings,
+    defect_marks,
+    expect_known_failure,
+    known_defects,
+    normalize_prolog,
+    outcome,
 )
 
 BINDING_LOST_REASON = (

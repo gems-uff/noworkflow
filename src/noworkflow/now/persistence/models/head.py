@@ -3,17 +3,13 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Head Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy import ForeignKeyConstraint
+from sqlalchemy import Column, ForeignKeyConstraint, Integer, String, Text
 
-from ...utils.prolog import PrologDescription, PrologRepr, PrologAttribute
-
+from ...utils.prolog import PrologAttribute, PrologDescription, PrologRepr
 from .. import relational
-
-from .base import AlchemyProxy, proxy_class, proxy
+from .base import AlchemyProxy, proxy, proxy_class
 
 
 @proxy_class

@@ -3,25 +3,23 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now diff' module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os
 import difflib
+import os
 
-from future.utils import viewitems, viewkeys
 from apted import APTED
-
-from ..models.diff import Diff as DiffModel
-from ..persistence import persistence_config, relational
-from ..models.graphs.diff_graph import CONFIG
-from ..utils.io import print_msg
-from ..utils.cross_version import zip_longest
-from ..persistence.models import Evaluation, Dependency, Activation, CodeComponent
-from ..models.prov.export import OPERATIONS
-from ..models.cleaning.merge import lcs
+from future.utils import viewitems, viewkeys
 from sqlalchemy import or_, true
 
+from ..models.cleaning.merge import lcs
+from ..models.diff import Diff as DiffModel
+from ..models.graphs.diff_graph import CONFIG
+from ..models.prov.export import OPERATIONS
+from ..persistence import persistence_config, relational
+from ..persistence.models import Activation, CodeComponent, Dependency, Evaluation
+from ..utils.cross_version import zip_longest
+from ..utils.io import print_msg
 from .cmd_show import print_trial_relationship
 from .command import Command
 

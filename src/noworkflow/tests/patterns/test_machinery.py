@@ -36,13 +36,20 @@ import pytest
 from noworkflow import patterns
 from noworkflow.now.persistence.models import CodeComponent
 from noworkflow.patterns import (
-    BLANK, create_rule, restrict_rule, set_options_in_rule, var,
+    BLANK,
+    create_rule,
+    restrict_rule,
+    rules,
+    set_options_in_rule,
+    var,
 )
 from noworkflow.patterns import models as pattern_models
-from noworkflow.patterns import rules
 from noworkflow.patterns.machinery import NullQuery, Variable, VariableFactory
 from noworkflow.tests.patterns.support import (
-    Defect, assert_rows, bindings, known_defects,
+    Defect,
+    assert_rows,
+    bindings,
+    known_defects,
 )
 
 ABANDONED = Defect(

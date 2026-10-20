@@ -3,20 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Tag Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import uuid
+
 from sqlalchemy import Column, String
 
-from ...utils.prolog import PrologDescription
-from ...utils.prolog import PrologRepr
-
+from ...utils.prolog import PrologDescription, PrologRepr
 from .. import relational
-
 from .base import AlchemyProxy, proxy_class
-
 
 
 def uuid_gen():

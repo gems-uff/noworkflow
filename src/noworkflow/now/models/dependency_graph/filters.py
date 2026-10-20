@@ -6,14 +6,11 @@
 
 from argparse import Namespace
 
-from ...persistence.models.base import proxy_gen, proxy
-from ...persistence.models import CodeComponent, Activation, Dependency
+from ...cmd.cmd_evaluation import query_evaluations
 from ...persistence import relational
-
-from  ...cmd.cmd_evaluation import query_evaluations
-
-from .node_types import AccessNode, ClusterNode
-from .node_types import EvaluationNode
+from ...persistence.models import Activation, CodeComponent, Dependency
+from ...persistence.models.base import proxy, proxy_gen
+from .node_types import AccessNode, ClusterNode, EvaluationNode
 
 
 class Filter(object):

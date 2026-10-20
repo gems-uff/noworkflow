@@ -1,6 +1,7 @@
 # Runs git in the puregit store's content.git
-import subprocess  # nosec B404
 import os
+import subprocess  # nosec B404
+
 
 def execute(cmd, default=None, **kwargs):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kwargs)

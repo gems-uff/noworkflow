@@ -3,22 +3,31 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """File Access Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-
 from datetime import timedelta
-from sqlalchemy import Column, Integer, String, Text, Float
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologNullable
-from ...utils.prolog import PrologNullableRepr
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologNullableRepr,
+    PrologRepr,
+    PrologTrial,
+)
 from .. import relational
-
-from .base import AlchemyProxy, proxy_class, proxy
+from .base import AlchemyProxy, proxy, proxy_class
 
 
 @proxy_class

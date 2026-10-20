@@ -5,13 +5,14 @@
 """IPython extensions to display dot files"""
 
 # Runs Graphviz, and Inkscape for PDF, to draw DOT text
-import subprocess  # nosec B404
-import platform
 import errno
-import sys
 import os
+import platform
+import subprocess  # nosec B404
+import sys
 import tempfile
 from collections import OrderedDict
+
 # Only the exception class, bound here: the tests replace the module above
 from subprocess import SubprocessError  # nosec B404
 
@@ -191,7 +192,7 @@ class DotDisplay(object):
 def load_ipython_extension(ipython):
     """Load the extension in IPython."""
     from IPython import get_ipython
-    from IPython.core.magic import Magics, magics_class, cell_magic
+    from IPython.core.magic import Magics, cell_magic, magics_class
     from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
     from IPython.utils.text import DollarFormatter
 

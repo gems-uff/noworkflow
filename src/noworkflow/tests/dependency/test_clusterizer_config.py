@@ -4,29 +4,33 @@
 # Please, consult the license terms in the LICENSE file.
 """Test clusterizer configuration"""
 
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 
+from ...now.models.dependency_graph.clusterizer import (
+    ActivationClusterizer,
+    Clusterizer,
+    DependencyClusterizer,
+    ProspectiveClusterizer,
+    RetrospectiveClusterizer,
+)
 from ...now.models.dependency_graph.config import DependencyConfig
-from ...now.models.dependency_graph.clusterizer import Clusterizer
-from ...now.models.dependency_graph.clusterizer import ActivationClusterizer
-from ...now.models.dependency_graph.clusterizer import DependencyClusterizer
-from ...now.models.dependency_graph.clusterizer import RetrospectiveClusterizer
-from ...now.models.dependency_graph.clusterizer import ProspectiveClusterizer
-from ...now.models.dependency_graph.filters import FilterTypesOut
-from ...now.models.dependency_graph.filters import FilterAccessesOut
-from ...now.models.dependency_graph.filters import FilterExternalAccessesOut
-from ...now.models.dependency_graph.filters import FilterInternalsOut
-from ...now.models.dependency_graph.filters import AcceptAllNodesFilter
-from ...now.models.dependency_graph.filters import JoinedFilter
-from ...now.models.dependency_graph.synonymers import Synonymer
-from ...now.models.dependency_graph.synonymers import AccessNameSynonymer
-from ...now.models.dependency_graph.synonymers import SameSynonymer
-from ...now.models.dependency_graph.synonymers import ReferenceSynonymer
-from ...now.models.dependency_graph.synonymers import JoinedSynonymer
-
+from ...now.models.dependency_graph.filters import (
+    AcceptAllNodesFilter,
+    FilterAccessesOut,
+    FilterExternalAccessesOut,
+    FilterInternalsOut,
+    FilterTypesOut,
+    JoinedFilter,
+)
+from ...now.models.dependency_graph.synonymers import (
+    AccessNameSynonymer,
+    JoinedSynonymer,
+    ReferenceSynonymer,
+    SameSynonymer,
+    Synonymer,
+)
 from ..collection_testcase import CollectionTestCase
 
 

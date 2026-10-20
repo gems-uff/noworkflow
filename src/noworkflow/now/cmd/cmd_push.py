@@ -6,18 +6,17 @@
 
 # requests is imported where a request is sent: every `now` imports every
 # command, and it would cost each of them its import (#426).
-import os
 import json
-from ..persistence import persistence_config
+import os
+from io import BytesIO
+from zipfile import ZipFile
+
+from ..persistence import content, persistence_config
+from ..persistence.models import Remote, Trial, User
 from ..utils.collab import export_bundle
 from ..utils.compression import gzip_compress
-
-from ..persistence.models import Trial, User, Remote
-from ..persistence import content
-
 from .command import Command
-from zipfile import ZipFile
-from io import BytesIO
+
 
 class Push(Command):
     """Send your local provenance database to a remote server and merge their data"""

@@ -3,14 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Content Database"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import importlib
 import os
-from os.path import join, isdir
-from .content.plain_engine import STANDARD_DATABASE_DIR
+from os.path import isdir, join
+
 from ..utils.io import print_msg
+from .content.plain_engine import STANDARD_DATABASE_DIR
+
 
 class ContentDatabase(object):
     """Content Database deal with storage of file content in disk"""

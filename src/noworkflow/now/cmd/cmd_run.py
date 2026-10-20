@@ -3,18 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now run' command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 import os
 import sys
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Tag, Trial, Argument
-from ..utils import io, metaprofiler
 from ..persistence import content
-
+from ..persistence.models import Argument, Tag, Trial
+from ..utils import io, metaprofiler
 from .command import Command
 
 

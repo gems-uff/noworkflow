@@ -6,14 +6,13 @@
 
 # requests is imported where a request is sent: every `now` imports every
 # command, and it would cost each of them its import (#426).
-import os
 import json
-from ..persistence import persistence_config
-from ..utils.collab import import_bundle
-from ..persistence.lightweight import BundleLW
-from ..persistence.models import Trial, Remote
-from ..persistence import content
+import os
 
+from ..persistence import content, persistence_config
+from ..persistence.lightweight import BundleLW
+from ..persistence.models import Remote, Trial
+from ..utils.collab import import_bundle
 from .command import Command
 
 

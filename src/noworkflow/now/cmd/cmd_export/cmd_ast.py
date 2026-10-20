@@ -3,18 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now export ast'command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
-
-from ...persistence.models import Trial
-from ...persistence import persistence_config
-
-
-from ..command import Command
 from ...models.ast.trial_ast import TrialAst
+from ...persistence import persistence_config
+from ...persistence.models import Trial
+from ..command import Command
+
 
 class Ast(Command):
     """Export the collected AST of a trial script to text, dot or json"""

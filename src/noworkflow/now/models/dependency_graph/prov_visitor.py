@@ -4,8 +4,8 @@
 # Please, consult the license terms in the LICENSE file.
 """Dot Cluster Visitor"""
 
-from itertools import groupby
 from collections import Counter
+from itertools import groupby
 
 from future.utils import viewitems
 

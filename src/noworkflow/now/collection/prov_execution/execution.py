@@ -3,24 +3,23 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Execution provenance collector"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+import codecs
+import io
+import os
 import sys
 import traceback
 import weakref
-import io
-import os
-import codecs
+
+from noworkflow.now.tagging.var_tagging import now_tag_cell, now_tag_variable
 
 from ...persistence import content
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
-
-from .debugger import debugger_builtins
 from .collector import Collector
+from .debugger import debugger_builtins
 
-from noworkflow.now.tagging.var_tagging import now_tag_cell, now_tag_variable
 
 class Execution(object):
     """Execution Class"""

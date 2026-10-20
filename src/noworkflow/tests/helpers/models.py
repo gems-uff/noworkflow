@@ -3,22 +3,17 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Models helpers"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-
 from datetime import datetime, timedelta
+
 from sqlalchemy import func
 
-
-
-
-from ...now.persistence.models.trial import Trial
-from ...now.persistence.models.tag import Tag
-from ...now.persistence import relational
 from ...now.collection.metadata import Metascript
-
+from ...now.persistence import relational
+from ...now.persistence.models.tag import Tag
+from ...now.persistence.models.trial import Trial
 
 trial_list = {}
 meta = None

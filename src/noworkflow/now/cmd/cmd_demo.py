@@ -3,20 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now demo' command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
+
 # Runs the `$now` steps of a packaged demo
 import subprocess  # nosec B404
 import sys
 
-from ..utils.functions import resource, resource_ls
-from ..utils.functions import recursive_copy, erase
-
-
+from ..utils.functions import erase, recursive_copy, resource, resource_ls
 from .command import Command
-
 
 DEMO = "resources/demo"
 

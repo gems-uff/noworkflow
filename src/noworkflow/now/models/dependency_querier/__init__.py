@@ -5,4 +5,4 @@
 """Trial dependency queriers"""
 
 from .querier import DependencyQuerier
-from .querier_options import QuerierOptions, PreloadedQuerierOptions
+from .querier_options import PreloadedQuerierOptions, QuerierOptions

@@ -11,17 +11,27 @@ from copy import copy
 
 import pyposast
 
-from .ast_helpers import ast_copy
-
-from .ast_elements import L, S, context, none, call, param, true
-from .ast_elements import noworkflow, double_noworkflow
-from .ast_elements import nlambda, activation, act_attribute
-from .ast_elements import ast_num, ast_str, is_ast_str
-
-from . import dependency_constants as Dependency
-from . import component_constants as Component
-
 from ...utils.cross_version import PY3, PY35
+from . import component_constants as Component
+from . import dependency_constants as Dependency
+from .ast_elements import (
+    L,
+    S,
+    act_attribute,
+    activation,
+    ast_num,
+    ast_str,
+    call,
+    context,
+    double_noworkflow,
+    is_ast_str,
+    nlambda,
+    none,
+    noworkflow,
+    param,
+    true,
+)
+from .ast_helpers import ast_copy
 
 
 class RewriteDependencies(ast.NodeTransformer):

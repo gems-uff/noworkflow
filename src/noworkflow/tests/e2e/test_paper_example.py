@@ -39,8 +39,17 @@ from noworkflow.tests.e2e.golden import assert_golden
 from noworkflow.tests.e2e.harness import NowProject, runs_this_interpreter
 from noworkflow.tests.e2e.normalize import prolog_statements
 from noworkflow.tests.e2e.paper import (
-    DATASET, DATASET_VARIABLE, PAPER_CORPUS, SCRIPT, STEPS, apply_patch,
-    labelled, parse_dot, replay, run_trials_steps, synthetic_dataset,
+    DATASET,
+    DATASET_VARIABLE,
+    PAPER_CORPUS,
+    SCRIPT,
+    STEPS,
+    apply_patch,
+    labelled,
+    parse_dot,
+    replay,
+    run_trials_steps,
+    synthetic_dataset,
     trial_sources,
 )
 

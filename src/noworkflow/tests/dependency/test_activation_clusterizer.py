@@ -3,16 +3,13 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test activation clusterizer"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from future.utils import viewitems
 
-from ...now.persistence.models import Trial
-from ...now.models.dependency_graph.attributes import ACCESS_ATTR
-from ...now.models.dependency_graph.attributes import REFERENCE_ATTR
+from ...now.models.dependency_graph.attributes import ACCESS_ATTR, REFERENCE_ATTR
 from ...now.models.dependency_graph.clusterizer import ActivationClusterizer
-
+from ...now.persistence.models import Trial
 from ..collection_testcase import CollectionTestCase, cluster
 
 

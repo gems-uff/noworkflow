@@ -28,16 +28,32 @@ import pytest
 
 from noworkflow.patterns import BLANK, var
 from noworkflow.patterns.rules import (
-    access_id, access_mode_id, code_mode_id, delete_mode, file_read,
-    file_read_id, file_written, file_written_id, mode, mode_id, param_mode,
-    read_mode, write_mode,
+    access_id,
+    access_mode_id,
+    code_mode_id,
+    delete_mode,
+    file_read,
+    file_read_id,
+    file_written,
+    file_written_id,
+    mode,
+    mode_id,
+    param_mode,
+    read_mode,
+    write_mode,
 )
 from noworkflow.tests.e2e.harness import NowProject
 from noworkflow.tests.helpers import swipl
 from noworkflow.tests.helpers.persistence import connected_to
 from noworkflow.tests.patterns.support import (
-    Defect, assert_rows, bindings, defect_marks, expect_known_failure,
-    known_defects, normalize_prolog, outcome,
+    Defect,
+    assert_rows,
+    bindings,
+    defect_marks,
+    expect_known_failure,
+    known_defects,
+    normalize_prolog,
+    outcome,
 )
 
 # The modes the rules are asked about: every combination of a base mode

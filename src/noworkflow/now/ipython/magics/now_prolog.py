@@ -3,16 +3,14 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%%now_prolog' magic"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 
 from IPython.utils.text import DollarFormatter
 
-from ...persistence.models import Trial
 from ...models.trial_prolog import TrialProlog
-
+from ...persistence.models import Trial
 from .command import IpythonCommandMagic
 
 

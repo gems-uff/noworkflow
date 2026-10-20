@@ -52,8 +52,12 @@ from werkzeug.http import http_date
 from noworkflow.tests.e2e.harness import CORPUS, WEATHER_ARGS, NowProject
 
 from .support import (
-    LOCAL_TIME_AS_GMT, NOW_RUN_UTC_OFFSET, NOW_RUN_ZONE, Defect,
-    known_defects, served_instant,
+    LOCAL_TIME_AS_GMT,
+    NOW_RUN_UTC_OFFSET,
+    NOW_RUN_ZONE,
+    Defect,
+    known_defects,
+    served_instant,
 )
 
 KINDS = ("info", "dependencies", "environment", "file_accesses")

@@ -5,14 +5,15 @@
 """Variable tagging"""
 from __future__ import annotations
 
-from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
-from noworkflow.now.models.dependency_querier import DependencyQuerier
-from noworkflow.now.persistence.lightweight.stage_tags import StageTags
-from noworkflow.now.persistence.models.base import proxy_gen
-from noworkflow.now.persistence.models import Evaluation, CodeComponent
-from noworkflow.now.persistence import relational
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
-from typing import Dict, Optional, Tuple, TYPE_CHECKING
+from noworkflow.now.models.dependency_querier import DependencyQuerier
+from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
+from noworkflow.now.persistence import relational
+from noworkflow.now.persistence.lightweight.stage_tags import StageTags
+from noworkflow.now.persistence.models import CodeComponent, Evaluation
+from noworkflow.now.persistence.models.base import proxy_gen
+
 if TYPE_CHECKING:
     from pandas import DataFrame
 

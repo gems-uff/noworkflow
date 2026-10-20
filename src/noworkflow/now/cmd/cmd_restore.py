@@ -3,24 +3,29 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now restore' command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 import os
 import sys
 import time
-
 from datetime import datetime
+
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Trial, Module, FileAccess, Tag
-from ..persistence.models import CodeComponent, CodeBlock, Argument
-from ..persistence import persistence_config, content
+from ..persistence import content, persistence_config
+from ..persistence.models import (
+    Argument,
+    CodeBlock,
+    CodeComponent,
+    FileAccess,
+    Module,
+    Tag,
+    Trial,
+)
+from ..utils.cross_version import PY2, PY34, PY35
 from ..utils.io import print_msg
-from ..utils.cross_version import PY34, PY35, PY2
-
 from .command import Command
 
 

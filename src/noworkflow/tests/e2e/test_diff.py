@@ -42,8 +42,15 @@ import pytest
 
 from noworkflow.tests.e2e.golden import assert_golden
 from noworkflow.tests.e2e.harness import (
-    CORPUS, PRESERVE_PREFIXES, WEATHER_ARGS, WEATHER_DATA2_TRIAL2, NowProject,
-    build_weather, last_line, runs_this_interpreter, sha1,
+    CORPUS,
+    PRESERVE_PREFIXES,
+    WEATHER_ARGS,
+    WEATHER_DATA2_TRIAL2,
+    NowProject,
+    build_weather,
+    last_line,
+    runs_this_interpreter,
+    sha1,
 )
 
 # One golden per flag combination of `now diff 1 2` that only reads the

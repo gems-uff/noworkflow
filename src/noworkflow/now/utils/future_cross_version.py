@@ -6,7 +6,9 @@
 # __future__ statements are allowed here
 """Provide support for both Python 2 and Python 3"""
 from __future__ import print_function
+
 import sys
+
 PY3 = sys.version_info >= (3, 0)
 
 def cross_print(*value, **kwargs):

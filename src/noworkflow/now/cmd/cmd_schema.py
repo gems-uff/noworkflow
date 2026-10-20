@@ -3,8 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now schema'command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
@@ -12,10 +11,8 @@ from sqlalchemy.schema import CreateTable
 
 from ..models.graphs.diagram import ViewRelationalDiagram
 from ..models.trial_prolog import TrialProlog
-from ..persistence.models import Trial, ORDER
 from ..persistence import persistence_config, relational
-
-
+from ..persistence.models import ORDER, Trial
 from .command import Command
 
 

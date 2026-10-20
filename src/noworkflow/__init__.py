@@ -7,8 +7,8 @@
 Supporting infrastructure to run scientific experiments without a
 scientific workflow management system.
 """
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from noworkflow.now.cmd import main
 from noworkflow.now.utils.functions import version
 

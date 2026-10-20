@@ -39,7 +39,10 @@ import tempfile
 import pytest
 
 from ..helpers.defects import (  # noqa: F401  (re-exported)
-    Defect, defect_marks, expect_known_failure, known_defects,
+    Defect,
+    defect_marks,
+    expect_known_failure,
+    known_defects,
 )
 from .harness import CORPUS, PRESERVE_PREFIXES, runs_this_interpreter
 

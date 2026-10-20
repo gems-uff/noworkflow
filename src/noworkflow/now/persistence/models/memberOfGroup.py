@@ -3,19 +3,14 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Tag Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import uuid
-from sqlalchemy import Column, String, Text
-from sqlalchemy import ForeignKeyConstraint
 
-from ...utils.prolog import PrologDescription
-from ...utils.prolog import PrologRepr
+from sqlalchemy import Column, ForeignKeyConstraint, String, Text
 
+from ...utils.prolog import PrologDescription, PrologRepr
 from .. import relational
-
 from .base import AlchemyProxy, proxy_class
 
 

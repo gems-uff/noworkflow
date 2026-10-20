@@ -3,19 +3,29 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Evaluation Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import timedelta
-from sqlalchemy import Column, Integer, String, Text, Float, true
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+    true,
+)
 
-from ...utils.prolog import PrologDescription, PrologTrial
-from ...utils.prolog import PrologAttribute, PrologNullable, PrologRepr
-
-from .base import AlchemyProxy, proxy_class, proxy
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologRepr,
+    PrologTrial,
+)
+from .base import AlchemyProxy, proxy, proxy_class
 from .dependency import Dependency
 
 

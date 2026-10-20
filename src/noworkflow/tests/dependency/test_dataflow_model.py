@@ -9,7 +9,6 @@ from ...now.models.dataflow_model import DataflowModel
 from ...now.persistence.models import Trial
 from ..collection_testcase import CollectionTestCase
 
-
 FUNCTION_SCRIPT = ("# script.py\n"
                    "def f(a):\n"
                    "    return a + 1\n"

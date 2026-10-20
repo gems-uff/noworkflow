@@ -37,7 +37,8 @@ from datetime import datetime, timedelta, timezone
 
 from noworkflow.tests.e2e.harness import clean_env
 from noworkflow.tests.helpers.defects import (  # noqa: F401  (re-exported)
-    Defect, known_defects,
+    Defect,
+    known_defects,
 )
 
 # The code of an experiment the two-trial store does not have: the prefixed

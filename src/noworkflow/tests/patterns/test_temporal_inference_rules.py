@@ -32,15 +32,30 @@ import pytest
 
 from noworkflow.patterns import var
 from noworkflow.patterns.rules import (
-    access_influence, access_influence_id, access_stack, access_stack_id,
-    activation_stack, activation_stack_id, indirect_access,
-    indirect_access_id, indirect_activation, indirect_activation_id,
-    temporal_activation_influence, temporal_activation_influence_id,
+    access_influence,
+    access_influence_id,
+    access_stack,
+    access_stack_id,
+    activation_stack,
+    activation_stack_id,
+    indirect_access,
+    indirect_access_id,
+    indirect_activation,
+    indirect_activation_id,
+    temporal_activation_influence,
+    temporal_activation_influence_id,
 )
 from noworkflow.tests.helpers import swipl
 from noworkflow.tests.patterns.support import (
-    Defect, assert_rows, bindings, defect_marks, differences,
-    expect_known_failure, known_defects, normalize_prolog, outcome,
+    Defect,
+    assert_rows,
+    bindings,
+    defect_marks,
+    differences,
+    expect_known_failure,
+    known_defects,
+    normalize_prolog,
+    outcome,
 )
 
 ROOT_CALLER_ZERO = Defect(

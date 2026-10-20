@@ -5,29 +5,35 @@
 """Execution provenance collector"""
 # pylint: disable=too-many-lines
 
+import inspect
+import os
 import sys
 import weakref
-import os
-import inspect
-
 from collections import OrderedDict
 from copy import copy
 from datetime import datetime
 from functools import wraps
 from types import GeneratorType
 
-from future.utils import viewvalues, viewkeys, viewitems, exec_
+from future.utils import exec_, viewitems, viewkeys, viewvalues
 
 from ...persistence import content
 from ...persistence.models import Trial
-from ...utils.cross_version import isiterable, PY3
-from ...utils.cross_version import cross_print, PY38
-
-from .structures import AssignAccess, Assign, Generator, FutureActivation
-from .structures import DependencyAware, Dependency, Parameter
-from .structures import MemberDependencyAware, CollectionDependencyAware
-from .structures import ConditionExceptions, WithContext
+from ...utils.cross_version import PY3, PY38, cross_print, isiterable
 from .file_access_proxy import wrap_file_access
+from .structures import (
+    Assign,
+    AssignAccess,
+    CollectionDependencyAware,
+    ConditionExceptions,
+    Dependency,
+    DependencyAware,
+    FutureActivation,
+    Generator,
+    MemberDependencyAware,
+    Parameter,
+    WithContext,
+)
 
 NOW_UNSET = "<now_unset>"
 

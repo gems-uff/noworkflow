@@ -6,10 +6,13 @@
 
 from os.path import isdir
 
-from pygit2 import init_repository
-from pygit2 import Repository
-from pygit2 import GIT_FILEMODE_BLOB, GIT_FILEMODE_TREE
-from pygit2 import Signature
+from pygit2 import (
+    GIT_FILEMODE_BLOB,
+    GIT_FILEMODE_TREE,
+    Repository,
+    Signature,
+    init_repository,
+)
 
 from .gitbase import GitContentDatabaseEngine
 from .parallel import create_distributed, create_pool, create_threading

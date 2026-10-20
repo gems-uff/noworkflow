@@ -3,17 +3,19 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Remote Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from sqlalchemy import Column, String, Integer, Boolean
+from sqlalchemy import Boolean, Column, Integer, String
 
-from ...utils.prolog import PrologDescription, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologBoolean
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologBoolean,
+    PrologDescription,
+    PrologRepr,
+)
 from .. import relational
-
 from .base import AlchemyProxy, proxy_class
+
 
 @proxy_class
 class Remote(AlchemyProxy):

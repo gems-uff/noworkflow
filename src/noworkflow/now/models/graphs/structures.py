@@ -3,9 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Intermediate Tree Structures and Graph Structures"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
 import time
@@ -13,9 +11,8 @@ import traceback
 
 from sqlalchemy import exc
 
-from ...persistence import relational, content
+from ...persistence import content, relational
 from ...persistence.models import GraphCache
-
 from ...utils.cross_version import pickle
 from ...utils.io import print_msg
 

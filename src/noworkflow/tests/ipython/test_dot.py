@@ -40,8 +40,7 @@ from noworkflow.tests.e2e.harness import NowProject, tail
 from noworkflow.tests.e2e.normalize import Normalizer
 from noworkflow.tests.helpers.defects import Defect, known_defects
 
-from .support import (
-    FOUND, MAGIC_REGISTRY, needs_dot, open_shell, ran, run_python)
+from .support import FOUND, MAGIC_REGISTRY, needs_dot, open_shell, ran, run_python
 
 INKSCAPE = FOUND["inkscape"]
 

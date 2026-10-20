@@ -1,10 +1,8 @@
 import os
-
 from os.path import isdir
-from . import git_system
-from . import safeopen
-from .gitbase import GitContentDatabaseEngine
 
+from . import git_system, safeopen
+from .gitbase import GitContentDatabaseEngine
 
 
 class PureGitEngine(GitContentDatabaseEngine):

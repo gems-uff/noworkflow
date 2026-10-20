@@ -3,10 +3,9 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Graph Cache Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from sqlalchemy import TIMESTAMP, Column, Integer, Text
 
 from .. import relational
 from .base import AlchemyProxy, proxy_class, proxy_gen

@@ -5,10 +5,10 @@
 """DrawVisitor produces a dot graph when it visits the tree"""
 
 from collections import defaultdict
+
 from future.utils import viewitems
 
 from ...utils.functions import run_dot
-
 from .base_visitor import NodeVisitor
 from .model import NowNode
 

@@ -9,8 +9,8 @@ from functools import reduce
 
 from future.utils import viewitems
 
-from .base_visitor import ClusterVisitor
 from .attributes import Attributes
+from .base_visitor import ClusterVisitor
 
 
 def escape(string, size=55):

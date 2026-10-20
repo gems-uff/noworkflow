@@ -3,22 +3,19 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Definition provenance collector. Handle multiple files/visitors"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ast
 import os
-import weakref
 import traceback
+import weakref
 
 import pyposast
 
 from ...persistence import content
-
+from ...utils.cross_version import cross_compile
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
-from ...utils.cross_version import cross_compile
-
 from .ast_helpers import debug_tree
 from .transformer_stmt import RewriteAST
 

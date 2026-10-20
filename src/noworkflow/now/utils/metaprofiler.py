@@ -7,12 +7,10 @@
 Use it to profile noWorkflow itself.
 It is disabled by deault. To enabled, change active to True
 """
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import csv
 import os
-
 from collections import defaultdict
 from datetime import datetime
 from functools import wraps

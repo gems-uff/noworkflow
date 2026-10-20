@@ -58,7 +58,9 @@ import pytest
 
 from noworkflow.now.persistence import content
 from noworkflow.tests.e2e.harness import (
-    NowProject, WEATHER_ARGS, build_weather,
+    WEATHER_ARGS,
+    NowProject,
+    build_weather,
 )
 
 from .support import Defect, Vis, known_defects

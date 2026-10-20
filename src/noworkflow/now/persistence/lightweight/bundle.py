@@ -11,6 +11,7 @@ from datetime import datetime
 # From the modules, not from the package: the package imports this module.
 from .activation import ActivationLW
 from .argument import ArgumentLW
+from .base import BaseLW
 from .code_block import CodeBlockLW
 from .code_component import CodeComponentLW
 from .composition import CompositionLW
@@ -18,13 +19,12 @@ from .dependency import DependencyLW
 from .environment_attr import EnvironmentAttrLW
 from .evaluation import EvaluationLW
 from .file_access import FileAccessLW
-from .stage_tags import StageTagsLW
 from .member import MemberLW
 from .module import ModuleLW
+from .stage_tags import StageTagsLW
 from .trial import TrialLW
 from .user import UserLW
 
-from .base import BaseLW
 
 class BundleLW(BaseLW):
     """Bundle lightweight object"""

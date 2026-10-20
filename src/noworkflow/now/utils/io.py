@@ -3,15 +3,13 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define io utility functions"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
 
 from future.utils import viewitems
 
 from .cross_version import StringIO
-
 
 LABEL = "[now] "
 verbose = False                                                                  # pylint: disable=invalid-name

@@ -3,19 +3,14 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now export prov'command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 
-
-from ...persistence.models import Trial
-from ...persistence import persistence_config
-
-
-from ..command import Command
-
 from ...models.prov.export import export_prov
+from ...persistence import persistence_config
+from ...persistence.models import Trial
+from ..command import Command
 
 
 class Prov(Command):

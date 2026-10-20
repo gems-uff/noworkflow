@@ -7,12 +7,11 @@
 # pylint: disable=no-value-for-parameter
 
 from collections import OrderedDict
-from ..machinery import prolog_rule, create_rule, var
-from ..machinery import Variable
-from ..models import evaluation, activation, code_component
-from .helpers import _apply, _match, _bagof_append_sort
-from .helpers import _list_matcher, _get_value
+
+from ..machinery import Variable, create_rule, prolog_rule, var
+from ..models import activation, code_component, evaluation
 from .code_rules import code_line_id
+from .helpers import _apply, _bagof_append_sort, _get_value, _list_matcher, _match
 
 
 @prolog_rule("is_activation_id(TrialId, Id) :-")

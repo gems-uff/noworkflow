@@ -9,8 +9,8 @@
 # pylint: disable=import-error, ungrouped-imports, no-name-in-module
 # pylint: disable=undefined-variable
 
-import sys
 import numbers
+import sys
 import time
 
 try:
@@ -44,8 +44,9 @@ else:
         import cPickle as pickle
     except ImportError:
         import pickle
-    import repr as reprlib
     from itertools import izip_longest as zip_longest
+
+    import repr as reprlib
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)
     string = (basestring,)

@@ -5,20 +5,16 @@
 """Convert database to clusterized structure"""
 
 import weakref
-
 from collections import defaultdict
 from itertools import chain
 
 from future.utils import viewitems
 
 from ...persistence import relational
-from ...persistence.models import UniqueFileAccess, CodeComponent
-
-from .attributes import EMPTY_ATTR, ACCESS_ATTR, PROPAGATED_ATTR
-from .attributes import REFERENCE_ATTR
+from ...persistence.models import CodeComponent, UniqueFileAccess
+from .attributes import ACCESS_ATTR, EMPTY_ATTR, PROPAGATED_ATTR, REFERENCE_ATTR
 from .config import DependencyConfig
-from .node_types import AccessNode
-from .node_types import ActivationNode, ClusterNode, EvaluationNode
+from .node_types import AccessNode, ActivationNode, ClusterNode, EvaluationNode
 
 
 class Clusterizer(object):

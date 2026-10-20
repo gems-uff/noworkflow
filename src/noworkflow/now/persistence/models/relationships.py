@@ -5,31 +5,29 @@
 
 from copy import copy
 
-from sqlalchemy.orm import remote, foreign
-from sqlalchemy.orm import relationship
-
-from .base import proxy_attr, proxy_gen, proxy, proxy_gen_first
+from sqlalchemy.orm import foreign, relationship, remote
 
 from .activation import Activation
 from .argument import Argument
-from .code_component import CodeComponent
+from .base import proxy, proxy_attr, proxy_gen, proxy_gen_first
 from .code_block import CodeBlock
+from .code_component import CodeComponent
 from .composition import Composition
 from .dependency import Dependency
 from .environment_attr import EnvironmentAttr
 from .evaluation import Evaluation
-from .member import Member
+from .experiment import Experiment
+from .extendedAnnotation import ExtendedAnnotation
 from .file_access import FileAccess
-
+from .group import Group
 from .head import Head
+from .member import Member
+from .memberOfGroup import MemberOfGroup
 from .module import Module
 from .tag import Tag
 from .trial import Trial
-from .experiment import Experiment
 from .user import User
-from .group import Group
-from .memberOfGroup import MemberOfGroup
-from .extendedAnnotation import ExtendedAnnotation
+
 
 def add(cls, name, relat, proxy=proxy):
     setattr(cls.m, name, relat)

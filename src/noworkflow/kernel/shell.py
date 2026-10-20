@@ -1,13 +1,11 @@
 
 import os
 import sys
-
 from ast import PyCF_ONLY_AST
 from datetime import datetime
 from functools import partial
 
-from IPython.core import compilerop
-from IPython.core import interactiveshell
+from IPython.core import compilerop, interactiveshell
 
 from ..now.collection.metadata import Metascript
 from ..now.persistence.models import Trial

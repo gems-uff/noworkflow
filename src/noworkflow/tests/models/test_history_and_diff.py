@@ -32,7 +32,9 @@ from noworkflow.now.persistence import relational
 from noworkflow.now.persistence.models import Experiment, Trial
 from noworkflow.tests.helpers.defects import Defect, known_defects
 from noworkflow.tests.helpers.models import (
-    TrialConfig, erase_database, new_trial,
+    TrialConfig,
+    erase_database,
+    new_trial,
 )
 
 HISTORY_JSON = "application/noworkflow.history+json"

@@ -5,6 +5,7 @@
 """Graphviz Wrapper"""
 from graphviz import Digraph
 
+
 class GraphvizWrapper:
     def __init__(self, trial):
         """

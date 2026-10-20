@@ -3,16 +3,13 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%%now_sql' magic"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-from future.utils import viewkeys, viewvalues, text_to_native_str
+from future.utils import text_to_native_str, viewkeys, viewvalues
 from IPython.utils.text import DollarFormatter
 
 from ...persistence import relational
 from ...utils.formatter import Table
-
 from .command import IpythonCommandMagic
 
 

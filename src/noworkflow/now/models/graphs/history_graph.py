@@ -3,23 +3,19 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """History Graph Module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
-
 from collections import OrderedDict, defaultdict, namedtuple
 
 from future.utils import viewvalues
 
-from ...persistence.models.trial import Trial
+from ...persistence import relational
 from ...persistence.models.tag import Tag
+from ...persistence.models.trial import Trial
 from ...persistence.models.user import User
 from ...utils.cross_version import zip_longest
 from .structures import Graph
-from ...persistence import relational
-
-
 
 MAXTRIALS = 1000000
 MAX_IN_GRAPH = float("inf")

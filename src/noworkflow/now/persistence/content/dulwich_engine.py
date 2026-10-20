@@ -1,16 +1,14 @@
 import os
 import time
 
-from dulwich.repo import Repo
-from dulwich.objects import Tree
-from dulwich.objects import Blob
-from dulwich.objects import Commit
-from dulwich.objects import parse_timezone
+from dulwich.objects import Blob, Commit, Tree, parse_timezone
 from dulwich.objectspec import scan_for_short_id
+from dulwich.repo import Repo
 
-from .gitbase import GitContentDatabaseEngine
-from .parallel import create_distributed, create_pool, create_threading, NullLock
 from . import safeopen
+from .gitbase import GitContentDatabaseEngine
+from .parallel import NullLock, create_distributed, create_pool, create_threading
+
 
 class DulwichEngine(GitContentDatabaseEngine):
 

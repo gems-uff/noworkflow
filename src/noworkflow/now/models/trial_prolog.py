@@ -3,23 +3,26 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Trial Prolog Object"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
 
-from ..utils.functions import resource
-
+from ..persistence.models import (
+    Activation,
+    Argument,
+    CodeBlock,
+    CodeComponent,
+    Dependency,
+    EnvironmentAttr,
+    Evaluation,
+    FileAccess,
+    Member,
+    Module,
+    Tag,
+)
 from ..persistence.models.base import Model
-from ..persistence.models import Tag, Argument
-from ..persistence.models import Module, EnvironmentAttr
-from ..persistence.models import CodeComponent, CodeBlock
-from ..persistence.models import Activation, Evaluation, Dependency
-from ..persistence.models import FileAccess
-from ..persistence.models import Member
-
+from ..utils.functions import resource
 from .graphs.diagram import ViewPrologDiagram
-
 
 RULES = "resources/rules.pl"
 

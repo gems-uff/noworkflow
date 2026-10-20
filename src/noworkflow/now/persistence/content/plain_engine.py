@@ -1,10 +1,10 @@
 import hashlib
 import os
-from os.path import join, isdir, isfile
+from os.path import isdir, isfile, join
 
+from . import safeopen
 from .base import ContentDatabaseEngine
 from .parallel import create_distributed, create_pool, create_threading
-from . import safeopen
 
 STANDARD_DATABASE_DIR = 'content'
 

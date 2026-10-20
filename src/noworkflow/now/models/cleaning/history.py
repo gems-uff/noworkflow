@@ -2,10 +2,11 @@
 # Copyright (c) 2021 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
-import nbformat as nbf
-
 from copy import copy
 from datetime import datetime
+
+import nbformat as nbf
+
 from ..dependency_querier import DependencyQuerier
 from .merge import merge_json
 

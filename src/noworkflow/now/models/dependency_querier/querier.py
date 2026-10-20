@@ -3,8 +3,9 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
-from .querier_options import QuerierOptions
 from .node_context import NodeContext
+from .querier_options import QuerierOptions
+
 
 class DependencyQuerier(object):
 

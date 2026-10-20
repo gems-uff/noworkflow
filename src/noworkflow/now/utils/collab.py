@@ -3,12 +3,42 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
-from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
-from ..persistence.lightweight import EvaluationLW,FileAccessLW,MemberLW,ModuleLW,TrialLW,BundleLW,UserLW
+from ..persistence.lightweight import (
+    ActivationLW,
+    ArgumentLW,
+    BundleLW,
+    CodeBlockLW,
+    CodeComponentLW,
+    CompositionLW,
+    DependencyLW,
+    EnvironmentAttrLW,
+    EvaluationLW,
+    FileAccessLW,
+    MemberLW,
+    ModuleLW,
+    ObjectStore,
+    TrialLW,
+    UserLW,
+)
+from ..persistence.models import (
+    Activation,
+    Argument,
+    CodeBlock,
+    CodeComponent,
+    Composition,
+    Dependency,
+    EnvironmentAttr,
+    Evaluation,
+    FileAccess,
+    Member,
+    Module,
+    StageTags,
+    Tag,
+    Trial,
+    User,
+)
 
-from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
-from ..persistence.models import FileAccess,StageTags,Member,Module,Tag, User
-from ..persistence.lightweight import ObjectStore
+
 def store_trial_from_experiment(trial,experiment,trial_store):
     trial.experiment_id=experiment
     trial_store.add_from_object(trial)

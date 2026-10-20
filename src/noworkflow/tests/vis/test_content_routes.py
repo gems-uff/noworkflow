@@ -45,7 +45,9 @@ import pytest
 from werkzeug.http import parse_options_header
 
 from noworkflow.tests.e2e.harness import (
-    WEATHER_ARGS, WEATHER_DATA2_TRIAL2, build_weather,
+    WEATHER_ARGS,
+    WEATHER_DATA2_TRIAL2,
+    build_weather,
 )
 
 from .support import EXPERIMENT, EXPERIMENT_PREFIX, Defect, known_defects

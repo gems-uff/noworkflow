@@ -3,15 +3,25 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """CodeComponent Composition Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from sqlalchemy import (
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologNullable, PrologNullableRepr
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologNullableRepr,
+    PrologRepr,
+    PrologTrial,
+)
 from .base import AlchemyProxy, proxy_class
 
 

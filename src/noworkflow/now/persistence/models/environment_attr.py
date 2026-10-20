@@ -3,14 +3,18 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Environment Attribute Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from sqlalchemy import (
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
-
+from ...utils.prolog import PrologDescription, PrologRepr, PrologTrial
 from .base import AlchemyProxy, proxy_class
 
 

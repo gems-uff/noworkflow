@@ -5,6 +5,7 @@
 """Operations to reconstruct AST trees"""
 from .model import NowNode
 
+
 def add_composition(node, composition, part=None):
     """Add composition to node"""
     if part is None:

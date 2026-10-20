@@ -3,11 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test now.cross_version module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
-from ..now.utils.cross_version import cross_compile, PY310
+
+from ..now.utils.cross_version import PY310, cross_compile
 
 
 class TestCrossVersion(unittest.TestCase):

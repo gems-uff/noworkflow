@@ -3,19 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now vis' command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+import errno
+import json
 import os
 import sys
 import tempfile
-import json
-import errno
 
 from .command import Command
-
-
-
 
 KERNEL_NAME = 'noworkflow%i' % sys.version_info[0]
 DISPLAY_NAME = 'noWorkflow %i' % sys.version_info[0]

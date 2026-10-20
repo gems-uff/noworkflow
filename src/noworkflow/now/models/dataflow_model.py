@@ -3,11 +3,9 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Dataflow Model Object"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ..persistence.models.base import Model
-
 from .dependency_graph.dot_visitor import DotVisitor
 from .dependency_graph.search_visitor import SearchEvaluationVisitor
 

@@ -3,20 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Trial Graph Module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
-
 from collections import defaultdict
 
 from future.utils import viewitems
 
 from ...utils.data import DotDict
-
-from .structures import prepare_cache
-from .structures import Graph
-
+from .structures import Graph, prepare_cache
 
 Node = DotDict  # pylint: disable=invalid-name
 

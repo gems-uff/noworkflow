@@ -28,8 +28,7 @@ constructs that the syntax corpus pins on their own (no ``{{``, no
 ``F``/``rf`` prefix, no string inside a field, no f-string as a call's
 only argument), so that only #160 shows.
 """
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ast
 

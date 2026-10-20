@@ -49,8 +49,15 @@ from noworkflow.now.ipython import dotmagic
 from noworkflow.tests.e2e.harness import WEATHER_ARGS, same_path
 
 from .support import (
-    EXPERIMENT_PREFIX, LOCAL_TIME_AS_GMT, NOW_RUN_UTC_OFFSET, NOW_RUN_ZONE,
-    Defect, Vis, known_defects, served_instant, unknown_trial_id,
+    EXPERIMENT_PREFIX,
+    LOCAL_TIME_AS_GMT,
+    NOW_RUN_UTC_OFFSET,
+    NOW_RUN_ZONE,
+    Defect,
+    Vis,
+    known_defects,
+    served_instant,
+    unknown_trial_id,
 )
 
 SCRIPT = "simulation.py"

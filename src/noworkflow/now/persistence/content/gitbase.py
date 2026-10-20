@@ -1,12 +1,10 @@
-import os
 import hashlib
-
+import os
 from collections import Counter
 
 from ...utils.cross_version import bytes_string
 from . import git_system
 from .base import ContentDatabaseEngine
-
 
 GIT_DATABASE_DIR = 'content.git'
 

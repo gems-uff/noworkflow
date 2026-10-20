@@ -6,12 +6,12 @@
 # pylint: disable=invalid-name, redefined-builtin, redefined-outer-name
 # pylint: disable=no-value-for-parameter
 
-from ..machinery import prolog_rule, create_rule, restrict_rule, var
-from ..models import evaluation, access
+from ..machinery import create_rule, prolog_rule, restrict_rule, var
+from ..models import access, evaluation
 from .helpers import _apply, _get_value, _match, member, once
-from .timestamp_rules import successor_id
 from .mode_access_rules import read_mode, write_mode
 from .name_rules import name as _name
+from .timestamp_rules import successor_id
 
 
 @prolog_rule("activation_stack_id(TrialId, Called, []) :-")

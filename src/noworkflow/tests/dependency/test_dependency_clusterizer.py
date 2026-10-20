@@ -3,20 +3,20 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test dependency clusterizer"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from future.utils import viewitems
 
-from ...now.persistence.models import Trial
-from ...now.models.dependency_graph.attributes import EMPTY_ATTR, ACCESS_ATTR
-from ...now.models.dependency_graph.attributes import PROPAGATED_ATTR
-from ...now.models.dependency_graph.attributes import REFERENCE_ATTR
+from ...now.models.dependency_graph.attributes import (
+    ACCESS_ATTR,
+    EMPTY_ATTR,
+    PROPAGATED_ATTR,
+    REFERENCE_ATTR,
+)
 from ...now.models.dependency_graph.clusterizer import DependencyClusterizer
 from ...now.models.dependency_graph.synonymers import Synonymer
-
+from ...now.persistence.models import Trial
 from ..collection_testcase import CollectionTestCase, cluster
-
 
 CLASS_ATTR = EMPTY_ATTR.update({"label": ".__class__"})
 

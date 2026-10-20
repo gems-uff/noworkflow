@@ -3,15 +3,13 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now vis' command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import threading
 import webbrowser
 
 from ..persistence import persistence_config
-
 from .command import Command
 
 
