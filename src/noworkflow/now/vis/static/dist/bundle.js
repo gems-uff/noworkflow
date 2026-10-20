@@ -78782,8 +78782,8 @@ __webpack_require__.r(__webpack_exports__);
 // significant digits p, where x is positive and p is in [1, 21] or undefined.
 // For example, formatDecimalParts(1.23) returns ["123", 0].
 function formatDecimalParts(x, p) {
-  if ((i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e")) < 0) return null; // NaN, ±Infinity
-  var i, coefficient = x.slice(0, i);
+  if (!isFinite(x) || x === 0) return null; // NaN, ±Infinity, ±0
+  var i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e"), coefficient = x.slice(0, i);
 
   // The string returned by toExponential either has the form \d\.\d+e[-+]\d+
   // (e.g., 1.2e+3) or the form \de[-+]\d+ (e.g., 1e+3).
@@ -78870,7 +78870,7 @@ var prefixExponent;
 
 /* harmony default export */ function __WEBPACK_DEFAULT_EXPORT__(x, p) {
   var d = (0,_formatDecimal_js__WEBPACK_IMPORTED_MODULE_0__.formatDecimalParts)(x, p);
-  if (!d) return x + "";
+  if (!d) return prefixExponent = undefined, x.toPrecision(p);
   var coefficient = d[0],
       exponent = d[1],
       i = exponent - (prefixExponent = Math.max(-8, Math.min(8, Math.floor(exponent / 3))) * 3) + 1,
@@ -79096,7 +79096,7 @@ var map = Array.prototype.map,
       minus = locale.minus === undefined ? "−" : locale.minus + "",
       nan = locale.nan === undefined ? "NaN" : locale.nan + "";
 
-  function newFormat(specifier) {
+  function newFormat(specifier, options) {
     specifier = (0,_formatSpecifier_js__WEBPACK_IMPORTED_MODULE_3__["default"])(specifier);
 
     var fill = specifier.fill,
@@ -79121,8 +79121,8 @@ var map = Array.prototype.map,
 
     // Compute the prefix and suffix.
     // For SI-prefix, the suffix is lazily computed.
-    var prefix = symbol === "$" ? currencyPrefix : symbol === "#" && /[boxX]/.test(type) ? "0" + type.toLowerCase() : "",
-        suffix = symbol === "$" ? currencySuffix : /[%p]/.test(type) ? percent : "";
+    var prefix = (options && options.prefix !== undefined ? options.prefix : "") + (symbol === "$" ? currencyPrefix : symbol === "#" && /[boxX]/.test(type) ? "0" + type.toLowerCase() : ""),
+        suffix = (symbol === "$" ? currencySuffix : /[%p]/.test(type) ? percent : "") + (options && options.suffix !== undefined ? options.suffix : "");
 
     // What format function should we use?
     // Is this an integer type?
@@ -79163,7 +79163,7 @@ var map = Array.prototype.map,
 
         // Compute the prefix and suffix.
         valuePrefix = (valueNegative ? (sign === "(" ? sign : minus) : sign === "-" || sign === "(" ? "" : sign) + valuePrefix;
-        valueSuffix = (type === "s" ? prefixes[8 + _formatPrefixAuto_js__WEBPACK_IMPORTED_MODULE_6__.prefixExponent / 3] : "") + valueSuffix + (valueNegative && sign === "(" ? ")" : "");
+        valueSuffix = (type === "s" && !isNaN(value) && _formatPrefixAuto_js__WEBPACK_IMPORTED_MODULE_6__.prefixExponent !== undefined ? prefixes[8 + _formatPrefixAuto_js__WEBPACK_IMPORTED_MODULE_6__.prefixExponent / 3] : "") + valueSuffix + (valueNegative && sign === "(" ? ")" : "");
 
         // Break the formatted value into the integer “value” part that can be
         // grouped, and fractional or exponential “suffix” part that is not.
@@ -79208,12 +79208,11 @@ var map = Array.prototype.map,
   }
 
   function formatPrefix(specifier, value) {
-    var f = newFormat((specifier = (0,_formatSpecifier_js__WEBPACK_IMPORTED_MODULE_3__["default"])(specifier), specifier.type = "f", specifier)),
-        e = Math.max(-8, Math.min(8, Math.floor((0,_exponent_js__WEBPACK_IMPORTED_MODULE_7__["default"])(value) / 3))) * 3,
+    var e = Math.max(-8, Math.min(8, Math.floor((0,_exponent_js__WEBPACK_IMPORTED_MODULE_7__["default"])(value) / 3))) * 3,
         k = Math.pow(10, -e),
-        prefix = prefixes[8 + e / 3];
+        f = newFormat((specifier = (0,_formatSpecifier_js__WEBPACK_IMPORTED_MODULE_3__["default"])(specifier), specifier.type = "f", specifier), {suffix: prefixes[8 + e / 3]});
     return function(value) {
-      return f(k * value) + prefix;
+      return f(k * value);
     };
   }
 
