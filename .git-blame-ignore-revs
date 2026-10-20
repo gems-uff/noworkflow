@@ -4,3 +4,6 @@
 
 # Issue #221: sort the imports with ruff
 6b350d01d05a0d4cf9d34ad35aeea8a91e019a52
+
+# Issue #222: format with ruff and normalize line endings
+9abeb18e2ca8ebfc7ed6b19f3f71380875cb40ad
