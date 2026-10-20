@@ -5,12 +5,11 @@
 
 A premise test does not check what noWorkflow should do. It pins a fact
 that some line of the repository relies on: the SQLAlchemy pin, the
-setuptools that ``[project.dependencies]`` leaves out, the lint and
-coverage exclusions of ``py2module.py``, the e2e tests that characterize
-the CLI, the committed ``bundle.js``, the documented ``now vis`` default,
-the way the suite keeps its store in memory and its corpus out of
-collection, the uv-managed Python of the CI legs, the lock export that
-``pip-audit`` reads whole, the warning filter of the suite.
+setuptools that ``[project.dependencies]`` leaves out, the e2e tests that
+characterize the CLI, the committed ``bundle.js``, the documented
+``now vis`` default, the way the suite keeps its store in memory and its
+corpus out of collection, the uv-managed Python of the CI legs, the lock
+export that ``pip-audit`` reads whole, the warning filter of the suite.
 One test per fact, named as the fact; the docstring says why the code
 depends on it, and the assert message says what to edit, and under which
 issue, when it falls.
@@ -56,7 +55,6 @@ from noworkflow.tests.e2e.harness import CORPUS, clean_env, same_path, tail
 from noworkflow.tests.premises import corpus_spy
 
 PACKAGE = Path(noworkflow.__file__).resolve().parent
-PY2MODULE = PACKAGE / "now" / "collection" / "prov_deployment" / "py2module.py"
 # Relative to the repository root (request.config.rootpath).
 BUNDLE = Path("src") / "noworkflow" / "now" / "vis" / "static" / "dist" / "bundle.js"
 ROOT_CORPUS = Path("src") / "noworkflow" / "tests" / "e2e" / "corpus"
@@ -191,22 +189,17 @@ def test_noworkflow_still_calls_sqlalchemy_apis_that_2_0_removed(monkeypatch):
 # that noWorkflow runs: its scripts (the examples, the e2e corpus) may use
 # the syntax of any Python or import anything, and no pin depends on them.
 SCAN_EXCLUDE = ("tests",)
-# Never parses as Python 3 (premise 4); its imports are Python 2's. Matched
-# by its whole relative path: another file with that name is scanned.
-SCAN_SKIP = (PY2MODULE.relative_to(PACKAGE).as_posix(),)
 MSG_SCAN = (
     "the import premises scan every module of the runtime package (tests/ "
-    "excluded), and these do not parse on Python {}: {}. If one is Python 2 "
-    "only, like py2module.py, add its path relative to the package to "
-    "SCAN_SKIP in this module; otherwise it is a defect of its own."
+    "excluded), and these do not parse on Python {}: {}. A module of the "
+    "package that does not parse is a defect of its own."
 )
 
 
 def _scanned(relative):
     """Whether the import scan reads a module, given its path under the root"""
     return not ("__pycache__" in relative.parts
-                or relative.parts[0] in SCAN_EXCLUDE
-                or relative.as_posix() in SCAN_SKIP)
+                or relative.parts[0] in SCAN_EXCLUDE)
 
 
 def _imported_names(tree):
@@ -234,7 +227,7 @@ def _imported_names(tree):
 def _import_index(root):
     """``{relative posix path: ((module, line), ...)}`` of the scanned modules
 
-    Every .py under root except SCAN_EXCLUDE and SCAN_SKIP.
+    Every .py under root except SCAN_EXCLUDE.
     """
     root = Path(root)
     index, unparsable = {}, []
@@ -270,10 +263,9 @@ def test_the_import_scanner_finds_every_form_of_import(tmp_path):
     ``import x``, ``import x.y as z``, ``from x import y`` inside a function,
     ``importlib.import_module("x")`` and ``__import__("x")`` are found;
     relative imports and other names that start with the same letters are
-    not. The tree mirrors the package: the top-level ``tests/`` and
-    py2module.py at its own path are neither read nor parsed (both hold
-    files that do not parse here), while a nested ``tests`` directory and a
-    py2module.py elsewhere are scanned. Without this, "no module imports
+    not. The tree mirrors the package: the top-level ``tests/`` is neither
+    read nor parsed (it holds a file that does not parse here), while a
+    nested ``tests`` directory is scanned. Without this, "no module imports
     setuptools" could pass because the scanner sees nothing.
     """
     files = {
@@ -283,8 +275,6 @@ def test_the_import_scanner_finds_every_form_of_import(tmp_path):
         "dynamic.py": "import importlib\nimportlib.import_module('zipp')\n",
         "builtin.py": "__import__('zipp')\n",
         "relative.py": "from .zipp import Path\nimport zippy\n",
-        SCAN_SKIP[0]: "import zipp\nprint 'Python 2'\n",
-        "other/py2module.py": "import zipp\n",
         "tests/test_scan.py": "import zipp\n",
         "tests/e2e/corpus/script.py": "import zipp\nprint 'not parsed'\n",
         "now/tests/inner.py": "import zipp\n",
@@ -298,7 +288,6 @@ def test_the_import_scanner_finds_every_form_of_import(tmp_path):
         "dotted.py": [1],
         "dynamic.py": [2],
         "now/tests/inner.py": [1],
-        "other/py2module.py": [1],
         "pkg/inner.py": [2],
         "plain.py": [1],
     }
@@ -383,41 +372,7 @@ def test_a_known_option_without_its_value_still_exits_2(monkeypatch, capsys):
         "until this is understood (#226).".format(code, len(seen), error))
 
 
-# 4. py2module.py ----------------------------------------------------------------
-
-
-def test_py2module_does_not_compile_on_python_3():
-    """prov_deployment/py2module.py is not valid Python 3
-
-    It is the Python 2 module finder (``imp``, ``pkgutil.ImpLoader``), and
-    its source has a syntax error on any version; definition.py imports it
-    only when not PY3. That is why pyproject.toml excludes it from coverage
-    (omit), ruff (extend-exclude) and bandit (exclude_dirs), why AGENTS.md
-    describes it, and why the import premises skip it. ``compile`` and not
-    an import: the result does not depend on whether ``imp`` exists, and a
-    deleted file cannot pass as an ImportError.
-    """
-    assert PY2MODULE.is_file(), (
-        "py2module.py was removed: drop its three exclusions in pyproject.toml "
-        "(coverage omit, ruff extend-exclude, bandit exclude_dirs), its "
-        "paragraph in AGENTS.md ('Patches of third-party internals'), the "
-        "not-PY3 branch that imports it in "
-        "now/collection/prov_definition/definition.py, SCAN_SKIP and this "
-        "premise.")
-    try:
-        compile(PY2MODULE.read_bytes(), str(PY2MODULE), "exec",
-                dont_inherit=True)
-    except SyntaxError:
-        return
-    pytest.fail(
-        "py2module.py compiles now. Either remove its exclusions "
-        "(pyproject.toml: coverage omit, ruff extend-exclude, bandit "
-        "exclude_dirs), its paragraph in AGENTS.md and SCAN_SKIP in this "
-        "module, or delete it together with the not-PY3 branch in "
-        "now/collection/prov_definition/definition.py.")
-
-
-# 5. The bundle that `now vis` serves ----------------------------------------------
+# 4. The bundle that `now vis` serves ----------------------------------------------
 
 
 @pytest.fixture(scope="module")
@@ -526,7 +481,7 @@ def test_the_served_bundle_does_not_say_miliseconds(served_bundle):
         "the bundle as src/frontend/development.md describes.".format(count))
 
 
-# 6. `now vis` listens on localhost:5000 by default ---------------------------------
+# 5. `now vis` listens on localhost:5000 by default ---------------------------------
 
 MSG_VIS_DEFAULT = (
     "now vis no longer listens on localhost:5000 by default ({}). "
@@ -599,7 +554,7 @@ def test_now_vis_forwards_host_and_port_from_the_command_line(monkeypatch):
         "nothing until _now_vis_run_arguments is fixed".format(called))
 
 
-# 7. print_msg does not follow sys.stdout ----------------------------------------------
+# 6. print_msg does not follow sys.stdout ----------------------------------------------
 
 
 def test_print_msg_does_not_follow_a_swapped_sys_stdout(monkeypatch):
@@ -643,7 +598,7 @@ def test_print_follows_a_swapped_sys_stdout(monkeypatch):
         "nothing".format(captured))
 
 
-# 8. Importing the test package keeps the store in memory -------------------------------
+# 7. Importing the test package keeps the store in memory -------------------------------
 
 CONNECT_THEN_MOCK = (
     "from noworkflow.now.persistence import persistence_config as config\n"
@@ -697,7 +652,7 @@ def test_connecting_before_mocking_creates_a_store_in_the_cwd(tmp_path):
             sorted(path.name for path in cwd.iterdir())))
 
 
-# 9. No corpus file reaches collection ------------------------------------------------
+# 8. No corpus file reaches collection ------------------------------------------------
 
 MSG_CORPUS = (
     "pytest reached corpus scripts during collection:\n  {}\nThe scripts "
@@ -846,7 +801,7 @@ def test_no_corpus_item_or_module_in_this_session(request):
         "\n  ".join(items + sorted(modules)))
 
 
-# 10. The CI legs run the Python that uv downloads -----------------------------
+# 9. The CI legs run the Python that uv downloads ------------------------------
 
 WORKFLOWS = Path(".github") / "workflows"
 
@@ -897,7 +852,7 @@ def test_every_workflow_that_installs_uv_requires_uv_managed_python(request):
         "the comment in ci.yml (#264).".format(", ".join(missing)))
 
 
-# 11. pip-audit reads a pylock.toml without its markers ------------------------
+# 10. pip-audit reads a pylock.toml without its markers ------------------------
 
 # One entry per kind of marker: none, one that holds on any Python 3, one
 # that holds on no Python 3, one that holds on no platform.
@@ -979,7 +934,7 @@ def test_pip_audit_skips_requirements_whose_marker_is_false(tmp_path):
                 encoding="utf-8").splitlines()]))
 
 
-# 12. The warning filter of the suite ---------------------------------------------
+# 11. The warning filter of the suite ---------------------------------------------
 
 MSG_WARNING_FILTER = (
     "A DeprecationWarning attributed to a noworkflow module no longer fails "

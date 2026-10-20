@@ -82,12 +82,3 @@ def isiterable(element):
         return False
     else:
         return True
-
-def only(*versions):
-    """Check python version"""
-    def dec(func):
-        """Check version decorator"""
-        if any(versions):
-            return func
-        return None
-    return dec

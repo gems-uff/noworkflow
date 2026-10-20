@@ -11,9 +11,8 @@ import unittest
 def only(*versions):
     """Run the test only when at least one of the version flags holds
 
-    ``cross_version.only`` returns ``None`` otherwise, which makes both
-    unittest and pytest drop the test silently. This one skips it instead,
-    so the test stays visible in the count.
+    Otherwise the test is skipped, not dropped, so it stays visible in the
+    count.
     """
     return unittest.skipUnless(
         any(versions), "not supported by this Python version")

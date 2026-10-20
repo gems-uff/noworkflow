@@ -327,8 +327,8 @@ COLLECTOR=src/noworkflow/now/collection/prov_execution
 # than it (a [tool.*] edit moves nothing).
 if git cat-file -e "$MERGE_C:uv.lock" 2>/dev/null; then DEPS=uv.lock; else DEPS=pyproject.toml; fi
 # The code AGENTS.md lists under "Patches of third-party internals", plus the
-# SQLAlchemy models and the pyposast users in prov_definition. Left out:
-# py2module.py (never runs on Python 3) and the forty-odd `future` importers.
+# SQLAlchemy models and the pyposast users in prov_definition. Left out: the
+# forty-odd `future` importers.
 PATCHED="src/noworkflow/now/collection/prov_execution/execution.py src/noworkflow/now/persistence/content/safeopen.py src/noworkflow/now/ipython src/noworkflow/now/collection/prov_deployment/deployment.py src/noworkflow/now/utils/functions.py src/noworkflow/now/persistence/relational_database.py src/noworkflow/now/persistence/models src/noworkflow/now/collection/prov_definition"
 FOUND=0
 pair() {  # pair <label> <side A> <paths A> <side B> <paths B>

@@ -17,7 +17,7 @@ from ...persistence import content
 
 from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
-from ...utils.cross_version import cross_compile, PY3
+from ...utils.cross_version import cross_compile
 
 from .ast_helpers import debug_tree
 from .transformer_stmt import RewriteAST
@@ -29,10 +29,7 @@ class Definition(object):
     def __init__(self, metascript):
         self.first = True
         self.metascript = weakref.proxy(metascript)
-        if PY3:
-            from ..prov_deployment.py3module import finder
-        else:
-            from ..prov_deployment.py2module import finder
+        from ..prov_deployment.py3module import finder
         self.finder = finder(self.metascript)
 
     def store_provenance(self):

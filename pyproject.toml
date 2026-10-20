@@ -151,19 +151,16 @@ source = ["noworkflow"]
 omit = [
     "*/noworkflow/tests/*",
     "*/noworkflow/resources/*",
-    "*/prov_deployment/py2module.py",
 ]
 patch = ["subprocess"]  # covers the `now` that the e2e harness runs in a subprocess
 
 [tool.ruff]
 target-version = "py311"
-# Not linted: py2module.py does not parse as Python 3; the rest are scripts
-# that noWorkflow traces (demo, test examples, e2e corpus, the root tests/),
-# the Examples notebooks, and material outside the package. "tests/" with
-# the slash is the root directory only; a bare "tests" would also match
-# src/noworkflow/tests and leave the test package unlinted.
+# Not linted: scripts that noWorkflow traces (demo, test examples, e2e
+# corpus, the root tests/), the Examples notebooks, and material outside the
+# package. "tests/" with the slash is the root directory only; a bare "tests"
+# would also match src/noworkflow/tests and leave the test package unlinted.
 extend-exclude = [
-    "src/noworkflow/now/collection/prov_deployment/py2module.py",
     "src/noworkflow/resources/demo",
     "src/noworkflow/tests/examples",
     "src/noworkflow/tests/e2e/corpus",
@@ -190,11 +187,10 @@ select = ["E4", "E7", "E9", "F", "W605", "B006"]
 "__init__.py" = ["F401"]
 
 [tool.bandit]
-# Tests, the traced demo scripts and the Python 2 module are not product code
-# that runs on a user's data.
+# Tests and the traced demo scripts are not product code that runs on a
+# user's data.
 exclude_dirs = [
     "src/noworkflow/tests",
     "src/noworkflow/resources/demo",
-    "src/noworkflow/now/collection/prov_deployment/py2module.py",
 ]
 skips = []

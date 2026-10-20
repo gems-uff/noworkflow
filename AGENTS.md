@@ -337,8 +337,8 @@ neither executes:
   (`now show -e`) depends on the machine; the e2e tests assert only the
   names of a few attributes and the synthetic user, never the values.
 - **What bandit does not see:** it reads the Python of `src/noworkflow`
-  without the tests, the demo scripts and `py2module.py` (`[tool.bandit]`
-  in `pyproject.toml`), and it resolves names within one file only, so a
+  without the tests and the demo scripts (`[tool.bandit]` in
+  `pyproject.toml`), and it resolves names within one file only, so a
   name imported from another module escapes it: the graph cache's
   `pickle.loads` (`models/graphs/structures.py`) takes `pickle` from
   `utils/cross_version.py`, and the B403 entries of that module are its
@@ -442,10 +442,6 @@ and therefore the first suspects when an upgrade breaks something:
   `open`s and restores them in a context manager; also pokes at
   `__builtins__["open"]`, which is a dict or a module depending on who imports
   it.
-- `src/noworkflow/now/collection/prov_deployment/py2module.py`: the Python 2
-  module finder, written against `imp`. It does not parse as Python 3 and is
-  excluded from lint, coverage and SAST; the Python 3 branch of
-  `prov_definition/definition.py` never imports it.
 - `src/noworkflow/now/ipython/magics/now_run.py`: swaps `sys.argv`,
   `sys.path[0]` and `sys.modules["__main__"]` for the shell's user module
   while the cell runs, and swaps them back by hand.
