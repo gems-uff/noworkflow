@@ -26307,7 +26307,7 @@ var reportErrorIfPathIsNotConfigured = function () {
         reportErrorIfPathIsNotConfigured = function () { };
     }
 };
-exports.version = "1.44.0";
+exports.version = "1.45.0";
 
 });
 
@@ -29454,14 +29454,15 @@ var MouseHandler = /** @class */ (function () {
             var character = editor.renderer.screenToTextCoordinates(e.x, e.y);
             var range = editor.session.selection.getRange();
             var renderer = editor.renderer;
+            if (renderer.scroller.style.cursor == "crosshair")
+                return;
             if (!range.isEmpty() && range.insideStart(character.row, character.column)) {
                 renderer.setCursorStyle("default");
             }
             else {
                 renderer.setCursorStyle("");
             }
-        }, //@ts-expect-error TODO: seems mistyping - should be boolean
-        editor);
+        });
     }
     MouseHandler.prototype.onMouseEvent = function (name, e) {
         if (!this.editor.session)
@@ -30082,12 +30083,7 @@ var BidiHandler = /** @class */ (function () {
     BidiHandler.prototype.isBidiRow = function (screenRow, docRow, splitIndex) {
         if (!this.seenBidi)
             return false;
-        if (screenRow !== this.currentRow) {
-            this.currentRow = screenRow;
-            this.updateRowLine(docRow, splitIndex);
-            this.updateBidiMap();
-        }
-        return this.bidiMap.bidiLevels;
+        return true;
     };
     BidiHandler.prototype.onChange = function (delta) {
         if (!this.seenBidi) {
@@ -30128,72 +30124,7 @@ var BidiHandler = /** @class */ (function () {
         }
         return splitIndex;
     };
-    BidiHandler.prototype.updateRowLine = function (docRow, splitIndex) {
-        if (docRow === undefined)
-            docRow = this.getDocumentRow();
-        var isLastRow = (docRow === this.session.getLength() - 1), endOfLine = isLastRow ? this.EOF : this.EOL;
-        this.wrapIndent = 0;
-        this.line = this.session.getLine(docRow);
-        this.isRtlDir = this.$isRtl || this.line.charAt(0) === this.RLE;
-        if (this.session.$useWrapMode) {
-            var splits = this.session.$wrapData[docRow];
-            if (splits) {
-                if (splitIndex === undefined)
-                    splitIndex = this.getSplitIndex();
-                if (splitIndex > 0 && splits.length) {
-                    this.wrapIndent = splits.indent;
-                    this.wrapOffset = this.wrapIndent * this.charWidths[bidiUtil.L];
-                    this.line = (splitIndex < splits.length) ?
-                        this.line.substring(splits[splitIndex - 1], splits[splitIndex]) :
-                        this.line.substring(splits[splits.length - 1]);
-                }
-                else {
-                    this.line = this.line.substring(0, splits[splitIndex]);
-                }
-                if (splitIndex == splits.length) {
-                    this.line += (this.showInvisibles) ? endOfLine : bidiUtil.DOT;
-                }
-            }
-        }
-        else {
-            this.line += this.showInvisibles ? endOfLine : bidiUtil.DOT;
-        }
-        var session = this.session, shift = 0, size;
-        this.line = this.line.replace(/\t|[\u1100-\u2029, \u202F-\uFFE6]/g, function (ch, i) {
-            if (ch === '\t' || session.isFullWidth(ch.charCodeAt(0))) {
-                size = (ch === '\t') ? session.getScreenTabSize(i + shift) : 2;
-                shift += size - 1;
-                return lang.stringRepeat(bidiUtil.DOT, size);
-            }
-            return ch;
-        });
-        if (this.isRtlDir) {
-            this.fontMetrics.$main.textContent = (this.line.charAt(this.line.length - 1) == bidiUtil.DOT) ? this.line.substr(0, this.line.length - 1) : this.line;
-            this.rtlLineOffset = this.contentWidth - this.fontMetrics.$main.getBoundingClientRect().width;
-        }
-    };
-    BidiHandler.prototype.updateBidiMap = function () {
-        var textCharTypes = [];
-        if (bidiUtil.hasBidiCharacters(this.line, textCharTypes) || this.isRtlDir) {
-            this.bidiMap = bidiUtil.doBidiReorder(this.line, textCharTypes, this.isRtlDir);
-        }
-        else {
-            this.bidiMap = {};
-        }
-    };
     BidiHandler.prototype.markAsDirty = function () {
-        this.currentRow = null;
-    };
-    BidiHandler.prototype.updateCharacterWidths = function (fontMetrics) {
-        if (this.characterWidth === fontMetrics.$characterSize.width)
-            return;
-        this.fontMetrics = fontMetrics;
-        var characterWidth = this.characterWidth = fontMetrics.$characterSize.width;
-        var bidiCharWidth = fontMetrics.$measureCharWidth("\u05d4");
-        this.charWidths[bidiUtil.L] = this.charWidths[bidiUtil.EN] = this.charWidths[bidiUtil.ON_R] = characterWidth;
-        this.charWidths[bidiUtil.R] = this.charWidths[bidiUtil.AN] = bidiCharWidth;
-        this.charWidths[bidiUtil.R_H] = bidiCharWidth * 0.45;
-        this.charWidths[bidiUtil.B] = this.charWidths[bidiUtil.RLE] = 0;
         this.currentRow = null;
     };
     BidiHandler.prototype.setShowInvisibles = function (showInvisibles) {
@@ -30222,87 +30153,6 @@ var BidiHandler = /** @class */ (function () {
             else if (isRtlDir && editor.session.getLine(row).charAt(0) !== editor.session.$bidiHandler.RLE)
                 editor.session.doc.insert({ column: 0, row: row }, editor.session.$bidiHandler.RLE);
         }
-    };
-    BidiHandler.prototype.getPosLeft = function (col) {
-        col -= this.wrapIndent;
-        var leftBoundary = (this.line.charAt(0) === this.RLE) ? 1 : 0;
-        var logicalIdx = (col > leftBoundary) ? (this.session.getOverwrite() ? col : col - 1) : leftBoundary;
-        var visualIdx = bidiUtil.getVisualFromLogicalIdx(logicalIdx, this.bidiMap), levels = this.bidiMap.bidiLevels, left = 0;
-        if (!this.session.getOverwrite() && col <= leftBoundary && levels[visualIdx] % 2 !== 0)
-            visualIdx++;
-        for (var i = 0; i < visualIdx; i++) {
-            left += this.charWidths[levels[i]];
-        }
-        if (!this.session.getOverwrite() && (col > leftBoundary) && (levels[visualIdx] % 2 === 0))
-            left += this.charWidths[levels[visualIdx]];
-        if (this.wrapIndent)
-            left += this.isRtlDir ? (-1 * this.wrapOffset) : this.wrapOffset;
-        if (this.isRtlDir)
-            left += this.rtlLineOffset;
-        return left;
-    };
-    BidiHandler.prototype.getSelections = function (startCol, endCol) {
-        var map = this.bidiMap, levels = map.bidiLevels, level, selections = [], offset = 0, selColMin = Math.min(startCol, endCol) - this.wrapIndent, selColMax = Math.max(startCol, endCol) - this.wrapIndent, isSelected = false, isSelectedPrev = false, selectionStart = 0;
-        if (this.wrapIndent)
-            offset += this.isRtlDir ? (-1 * this.wrapOffset) : this.wrapOffset;
-        for (var logIdx, visIdx = 0; visIdx < levels.length; visIdx++) {
-            logIdx = map.logicalFromVisual[visIdx];
-            level = levels[visIdx];
-            isSelected = (logIdx >= selColMin) && (logIdx < selColMax);
-            if (isSelected && !isSelectedPrev) {
-                selectionStart = offset;
-            }
-            else if (!isSelected && isSelectedPrev) {
-                selections.push({ left: selectionStart, width: offset - selectionStart });
-            }
-            offset += this.charWidths[level];
-            isSelectedPrev = isSelected;
-        }
-        if (isSelected && (visIdx === levels.length)) {
-            selections.push({ left: selectionStart, width: offset - selectionStart });
-        }
-        if (this.isRtlDir) {
-            for (var i = 0; i < selections.length; i++) {
-                selections[i].left += this.rtlLineOffset;
-            }
-        }
-        return selections;
-    };
-    BidiHandler.prototype.offsetToCol = function (posX) {
-        if (this.isRtlDir)
-            posX -= this.rtlLineOffset;
-        var logicalIdx = 0, posX = Math.max(posX, 0), offset = 0, visualIdx = 0, levels = this.bidiMap.bidiLevels, charWidth = this.charWidths[levels[visualIdx]];
-        if (this.wrapIndent)
-            posX -= this.isRtlDir ? (-1 * this.wrapOffset) : this.wrapOffset;
-        while (posX > offset + charWidth / 2) {
-            offset += charWidth;
-            if (visualIdx === levels.length - 1) {
-                charWidth = 0;
-                break;
-            }
-            charWidth = this.charWidths[levels[++visualIdx]];
-        }
-        if (visualIdx > 0 && (levels[visualIdx - 1] % 2 !== 0) && (levels[visualIdx] % 2 === 0)) {
-            if (posX < offset)
-                visualIdx--;
-            logicalIdx = this.bidiMap.logicalFromVisual[visualIdx];
-        }
-        else if (visualIdx > 0 && (levels[visualIdx - 1] % 2 === 0) && (levels[visualIdx] % 2 !== 0)) {
-            logicalIdx = 1 + ((posX > offset) ? this.bidiMap.logicalFromVisual[visualIdx]
-                : this.bidiMap.logicalFromVisual[visualIdx - 1]);
-        }
-        else if ((this.isRtlDir && visualIdx === levels.length - 1 && charWidth === 0 && (levels[visualIdx - 1] % 2 === 0))
-            || (!this.isRtlDir && visualIdx === 0 && (levels[visualIdx] % 2 !== 0))) {
-            logicalIdx = 1 + this.bidiMap.logicalFromVisual[visualIdx];
-        }
-        else {
-            if (visualIdx > 0 && (levels[visualIdx - 1] % 2 !== 0) && charWidth !== 0)
-                visualIdx--;
-            logicalIdx = this.bidiMap.logicalFromVisual[visualIdx];
-        }
-        if (logicalIdx === 0 && this.isRtlDir)
-            logicalIdx++;
-        return (logicalIdx + this.wrapIndent);
     };
     return BidiHandler;
 }());
@@ -30735,15 +30585,13 @@ var Selection = /** @class */ (function () {
     Selection.prototype.moveCursorBy = function (rows, chars) {
         var screenPos = this.session.documentToScreenPosition(this.lead.row, this.lead.column);
         var offsetX;
+        var fontMetrics = this.session.$fontMetrics;
+        var useFontMetrics = chars === 0 && rows !== 0 && fontMetrics;
         if (chars === 0) {
-            if (rows !== 0) {
-                if (this.session.$bidiHandler.isBidiRow(screenPos.row, this.lead.row)) {
-                    offsetX = this.session.$bidiHandler.getPosLeft(screenPos.column);
-                    screenPos.column = Math.round(offsetX / this.session.$bidiHandler.charWidths[0]);
-                }
-                else {
-                    offsetX = screenPos.column * this.session.$bidiHandler.charWidths[0];
-                }
+            if (useFontMetrics && this.$desiredColumn == null) {
+                offsetX = fontMetrics.textWidth(screenPos.row, screenPos.column);
+                if (isFinite(offsetX))
+                    this.$desiredColumn = offsetX / fontMetrics.config.characterWidth;
             }
             if (this.$desiredColumn)
                 screenPos.column = this.$desiredColumn;
@@ -30757,9 +30605,13 @@ var Selection = /** @class */ (function () {
             else if (rows > 0)
                 rows += widget.rowCount - (widget.rowsAbove || 0);
         }
-        var docPos = this.session.screenToDocumentPosition(screenPos.row + rows, screenPos.column, offsetX);
-        if (rows !== 0 && chars === 0 && docPos.row === this.lead.row && docPos.column === this.lead.column) {
+        var targetScreenRow = screenPos.row + rows;
+        if (useFontMetrics && this.$desiredColumn != null) {
+            offsetX = this.$desiredColumn * fontMetrics.config.characterWidth;
+            var blockCursor = fontMetrics.renderer && fontMetrics.renderer.$blockCursor;
+            screenPos.column = fontMetrics.$pixelToColumn(targetScreenRow, screenPos.column, offsetX, blockCursor, true);
         }
+        var docPos = this.session.screenToDocumentPosition(targetScreenRow, screenPos.column);
         this.moveCursorTo(docPos.row, docPos.column + chars, chars === 0);
     };
     Selection.prototype.moveCursorToPosition = function (position) {
@@ -31029,6 +30881,37 @@ var Tokenizer = /** @class */ (function () {
             });
             if (lastCapture.end != null && /^\)*$/.test(src.substr(lastCapture.end)))
                 src = src.substring(0, lastCapture.start) + src.substr(lastCapture.end);
+        }
+        var leadingLookbehind;
+        while ((leadingLookbehind = /^(?:\((?:\?:)?)*\(\?<[=!]/.exec(src))) {
+            var start = leadingLookbehind[0].length - 4;
+            var end = -1;
+            var depth = 0;
+            var inClass = false;
+            var re = /\\.|[\[\]()]/g;
+            re.lastIndex = start;
+            var m;
+            while ((m = re.exec(src))) {
+                var ch = m[0];
+                if (ch.length > 1)
+                    continue;
+                if (inClass) {
+                    inClass = ch != "]";
+                }
+                else if (ch == "[") {
+                    inClass = true;
+                }
+                else if (ch == "(") {
+                    depth++;
+                }
+                else if (ch == ")" && --depth == 0) {
+                    end = m.index + 1;
+                    break;
+                }
+            }
+            if (end == -1)
+                break;
+            src = src.substring(0, start) + src.substr(end);
         }
         if (src.charAt(0) != "^")
             src = "^" + src;
@@ -33254,9 +33137,11 @@ var SearchHighlight = /** @class */ (function () {
         var renderedMarkerRanges = {};
         var _search = session.$editor && session.$editor.$search;
         var mtSearch = _search && _search.$isMultilineSearch(session.$editor.getLastSearchOptions());
+        var docLen = session.getValue().length;
+        var cacheInvalid = docLen != this.docLen;
         for (var i = start; i <= end; i++) {
             var ranges = this.cache[i];
-            if (ranges == null || session.getValue().length != this.docLen) {
+            if (ranges == null || cacheInvalid) {
                 if (mtSearch) {
                     ranges = [];
                     var match = _search.$multiLineForward(session, this.regExp, i, end);
@@ -33290,7 +33175,7 @@ var SearchHighlight = /** @class */ (function () {
                 markerLayer.drawSingleLineMarker(html, rangeToAddMarkerTo, this.clazz, config);
             }
         }
-        this.docLen = session.getValue().length;
+        this.docLen = docLen;
     };
     return SearchHighlight;
 }());
@@ -33474,8 +33359,10 @@ var UndoManager = /** @class */ (function () {
     };
     UndoManager.prototype.fromJSON = function (json) {
         this.reset();
-        this.$undoStack = json.$undoStack;
-        this.$redoStack = json.$redoStack;
+        if (!json)
+            return;
+        this.$undoStack = json.$undoStack || [];
+        this.$redoStack = json.$redoStack || [];
     };
     UndoManager.prototype.$prettyPrint = function (delta) {
         if (delta)
@@ -35597,10 +35484,12 @@ var EditSession = /** @class */ (function () {
         if (typeof session == "string")
             session = JSON.parse(session);
         var undoManager = new UndoManager();
-        undoManager.$undoStack = session.history.$undoStack;
-        undoManager.$redoStack = session.history.$redoStack;
-        undoManager.mark = session.history.mark;
-        undoManager.$rev = session.history.rev;
+        if (session.history) {
+            undoManager.$undoStack = session.history.$undoStack || [];
+            undoManager.$redoStack = session.history.$redoStack || [];
+            undoManager.mark = session.history.mark || 0;
+            undoManager.$rev = session.history.rev || 0;
+        }
         var editSession = new EditSession(session.value);
         session.folds.forEach(function (fold) {
             editSession.addFold("...", Range.fromPoints(fold.start, fold.end));
@@ -36644,9 +36533,6 @@ var EditSession = /** @class */ (function () {
             if (c == 9) {
                 screenColumn += this.getScreenTabSize(screenColumn);
             }
-            else if (c >= 0x1100 && isFullWidth(c)) {
-                screenColumn += 2;
-            }
             else {
                 screenColumn += 1;
             }
@@ -36712,7 +36598,7 @@ var EditSession = /** @class */ (function () {
     EditSession.prototype.screenToDocumentColumn = function (screenRow, screenColumn) {
         return this.screenToDocumentPosition(screenRow, screenColumn).column;
     };
-    EditSession.prototype.screenToDocumentPosition = function (screenRow, screenColumn, offsetX) {
+    EditSession.prototype.screenToDocumentPosition = function (screenRow, screenColumn) {
         if (screenRow < 0)
             return { row: 0, column: 0 };
         var line;
@@ -36780,8 +36666,6 @@ var EditSession = /** @class */ (function () {
                 }
             }
         }
-        if (offsetX !== undefined && this.$bidiHandler.isBidiRow(row + splitIndex, docRow, splitIndex))
-            screenColumn = this.$bidiHandler.offsetToCol(offsetX);
         docColumn += this.$getStringScreenWidth(line, screenColumn - wrapIndent)[1];
         if (this.$useWrapMode && docColumn >= column)
             docColumn = column - 1;
@@ -39432,6 +39316,7 @@ var Editor = /** @class */ (function () {
             this.session.off("startOperation", this.$onStartOperation);
             this.session.off("endOperation", this.$onEndOperation);
             var selection = this.session.getSelection();
+            this.session.$fontMetrics = null;
             selection.off("changeCursor", this.$onCursorChange);
             selection.off("changeSelection", this.$onSelectionChange);
         }
@@ -39440,6 +39325,7 @@ var Editor = /** @class */ (function () {
             this.$onDocumentChange = this.onDocumentChange.bind(this);
             session.on("change", this.$onDocumentChange);
             this.renderer.setSession(session);
+            session.$fontMetrics = this.renderer.$fontMetrics;
             this.$onChangeMode = this.onChangeMode.bind(this);
             session.on("changeMode", this.$onChangeMode);
             this.$onTokenizerUpdate = this.onTokenizerUpdate.bind(this);
@@ -41335,6 +41221,24 @@ var Lines = /** @class */ (function () {
         var lineTop = session.documentToScreenRow(row, 0) * config.lineHeight;
         return lineTop - (screenPage * this.canvasHeight);
     };
+    Lines.prototype.$getCellByScreenRow = function (screenRow, config) {
+        var screenTop = config.firstRowScreen * config.lineHeight;
+        var screenPage = Math.floor(screenTop / this.canvasHeight);
+        var lineTop = screenRow * config.lineHeight - (screenPage * this.canvasHeight);
+        for (var i = this.cells.length - 1; i >= 0; i--) {
+            var cell = this.cells[i];
+            var top = parseInt(cell.element.style.top);
+            var height = parseInt(cell.element.style.height);
+            if (top <= lineTop) {
+                if (top + height < lineTop) {
+                    return null;
+                }
+                var offset = lineTop - top;
+                return { cell: cell, offset: offset };
+            }
+        }
+        return null;
+    };
     Lines.prototype.computeLineHeight = function (row, config, session) {
         return config.lineHeight * session.getRowLineCount(row);
     };
@@ -42046,6 +41950,7 @@ var Marker = /** @class */ (function () {
         if (!config)
             return;
         this.config = config;
+        this.element.style.display = "none";
         this.i = 0;
         var html;
         for (var key in this.markers) {
@@ -42060,7 +41965,7 @@ var Marker = /** @class */ (function () {
             range = range.toScreenRange(this.session);
             if (marker.renderer) {
                 var top = this.$getTop(range.start.row, config);
-                var left = this.$padding + range.start.column * config.characterWidth;
+                var left = this.$padding + config.fontMetrics.textWidth(range.start.row, range.start.column);
                 marker.renderer(html, range, left, top, config);
             }
             else if (marker.type == "fullLine") {
@@ -42083,6 +41988,7 @@ var Marker = /** @class */ (function () {
             while (this.i < this.element.childElementCount)
                 this.element.removeChild(this.element.lastChild);
         }
+        this.element.style.display = "";
     };
     Marker.prototype.$getTop = function (row, layerConfig) {
         return (row - layerConfig.firstRowScreen) * layerConfig.lineHeight;
@@ -42111,12 +42017,12 @@ var Marker = /** @class */ (function () {
         var padding = this.$padding;
         var height = config.lineHeight;
         var top = this.$getTop(range.start.row, config);
-        var left = padding + range.start.column * config.characterWidth;
+        var left = padding + config.fontMetrics.textWidth(range.start.row, range.start.column);
         extraStyle = extraStyle || "";
         if (this.session.$bidiHandler.isBidiRow(range.start.row)) {
             var range1 = range.clone();
             range1.end.row = range1.start.row;
-            range1.end.column = this.session.getLine(range1.start.row).length;
+            range1.end.column = Number.MAX_VALUE;
             this.drawBidiSingleLineMarker(stringBuilder, range1, clazz + " ace_br1 ace_start", config, null, extraStyle);
         }
         else {
@@ -42130,7 +42036,7 @@ var Marker = /** @class */ (function () {
         }
         else {
             top = this.$getTop(range.end.row, config);
-            var width = range.end.column * config.characterWidth;
+            var width = config.fontMetrics.textWidth(range.end.row, range.end.column);
             this.elt(clazz + " ace_br12", "height:" + height + "px;" +
                 "width:" + width + "px;" +
                 "top:" + top + "px;" +
@@ -42150,22 +42056,22 @@ var Marker = /** @class */ (function () {
         if (this.session.$bidiHandler.isBidiRow(range.start.row))
             return this.drawBidiSingleLineMarker(stringBuilder, range, clazz, config, extraLength, extraStyle);
         var height = config.lineHeight;
-        var width = (range.end.column + (extraLength || 0) - range.start.column) * config.characterWidth;
+        var right = config.fontMetrics.textWidth(range.start.row, range.end.column) + (extraLength || 0) * config.characterWidth;
         var top = this.$getTop(range.start.row, config);
-        var left = this.$padding + range.start.column * config.characterWidth;
+        var left = config.fontMetrics.textWidth(range.start.row, range.start.column);
         this.elt(clazz, "height:" + height + "px;" +
-            "width:" + width + "px;" +
+            "width:" + (right - left) + "px;" +
             "top:" + top + "px;" +
-            "left:" + left + "px;" + (extraStyle || ""));
+            "left:" + (this.$padding + left) + "px;" + (extraStyle || ""));
     };
     Marker.prototype.drawBidiSingleLineMarker = function (stringBuilder, range, clazz, config, extraLength, extraStyle) {
         var height = config.lineHeight, top = this.$getTop(range.start.row, config), padding = this.$padding;
-        var selections = this.session.$bidiHandler.getSelections(range.start.column, range.end.column);
-        selections.forEach(function (selection) {
+        var rects = this.config.fontMetrics.getRects(range.start, range.end);
+        rects.forEach(function (rect) {
             this.elt(clazz, "height:" + height + "px;" +
-                "width:" + (selection.width + (extraLength || 0)) + "px;" +
+                "width:" + (rect.width + (extraLength || 0)) + "px;" +
                 "top:" + top + "px;" +
-                "left:" + (padding + selection.left) + "px;" + (extraStyle || ""));
+                "left:" + (padding + rect.left) + "px;" + (extraStyle || ""));
         }, this);
     };
     Marker.prototype.drawFullLineMarker = function (stringBuilder, range, clazz, config, extraStyle) {
@@ -42447,7 +42353,7 @@ var Text = /** @class */ (function () {
     };
     Text.prototype.$renderToken = function (parent, screenColumn, token, value) {
         var self = this;
-        var re = /(\t)|( +)|([\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200f\u2028\u2029\u202F\u205F\uFEFF\uFFF9-\uFFFC\u2066\u2067\u2068\u202A\u202B\u202D\u202E\u202C\u2069\u2060\u2061\u2062\u2063\u2064\u206A\u206B\u206B\u206C\u206D\u206E\u206F]+)|(\u3000)|([\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3001-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]|[\uD800-\uDBFF][\uDC00-\uDFFF])/g;
+        var re = /(\t)|( +)|([\x00-\x1f\x80-\xa0\xad\u1680\u180E\u2000-\u200C\u200E\u200f\u2028\u2029\u202F\u205F\uFEFF\uFFF9-\uFFFC\u2066\u2067\u2068\u202A\u202B\u202D\u202E\u202C\u2069\u2060\u2061\u2062\u2063\u2064\u206A\u206B\u206B\u206C\u206D\u206E\u206F]+)|(\u3000+)/g;
         var valueFragment = this.dom.createFragment(this.element);
         var m;
         var i = 0;
@@ -42456,7 +42362,6 @@ var Text = /** @class */ (function () {
             var simpleSpace = m[2];
             var controlCharacter = m[3];
             var cjkSpace = m[4];
-            var cjk = m[5];
             if (!self.showSpaces && simpleSpace)
                 continue;
             var before = i != m.index ? value.slice(i, m.index) : "";
@@ -42489,23 +42394,26 @@ var Text = /** @class */ (function () {
                 valueFragment.appendChild(span);
             }
             else if (cjkSpace) {
-                screenColumn += 1;
-                var span = this.dom.createElement("span");
-                span.style.width = (self.config.characterWidth * 2) + "px";
-                span.className = self.showSpaces ? "ace_cjk ace_invisible ace_invisible_space" : "ace_cjk";
-                span.textContent = self.showSpaces ? self.SPACE_CHAR : cjkSpace;
-                valueFragment.appendChild(span);
-            }
-            else if (cjk) {
-                screenColumn += 1;
-                var span = this.dom.createElement("span");
-                span.style.width = (self.config.characterWidth * 2) + "px";
-                span.className = "ace_cjk";
-                span.textContent = cjk;
-                valueFragment.appendChild(span);
+                if (self.showSpaces) {
+                    var span = this.dom.createElement("span");
+                    span.className = "ace_invisible ace_invisible_space";
+                    span.textContent = lang.stringRepeat(self.CJK_SPACE_CHAR, cjkSpace.length);
+                    valueFragment.appendChild(span);
+                }
+                else {
+                    valueFragment.appendChild(this.dom.createTextNode(cjkSpace, this.element));
+                }
             }
         }
-        valueFragment.appendChild(this.dom.createTextNode(i ? value.slice(i) : value, this.element));
+        var trimmedValue = i ? value.slice(i) : value;
+        if (trimmedValue.length > 256) {
+            for (var j = 0; j < trimmedValue.length;) {
+                valueFragment.appendChild(this.dom.createTextNode(trimmedValue.slice(j, j += 256), this.element));
+            }
+        }
+        else {
+            valueFragment.appendChild(this.dom.createTextNode(trimmedValue, this.element));
+        }
         if (!isTextToken(token.type)) {
             var classes = "ace_" + token.type.replace(/\./g, " ace_");
             var span = this.dom.createElement("span");
@@ -42826,6 +42734,7 @@ Text.prototype.EOL_CHAR_CRLF = "\xa4";
 Text.prototype.EOL_CHAR = Text.prototype.EOL_CHAR_LF;
 Text.prototype.TAB_CHAR = "\u2014"; //"\u21E5";
 Text.prototype.SPACE_CHAR = "\xB7";
+Text.prototype.CJK_SPACE_CHAR = "\u30FB";
 Text.prototype.$padding = 0;
 Text.prototype.MAX_LINE_LENGTH = 10000;
 Text.prototype.showInvisibles = false;
@@ -42968,16 +42877,16 @@ var Cursor = /** @class */ (function () {
     };
     Cursor.prototype.getPixelPosition = function (position, onScreen) {
         if (!this.config || !this.session)
-            return { left: 0, top: 0 };
+            return { left: 0, top: 0, width: 0 };
         if (!position)
             position = this.session.selection.getCursor();
         var pos = this.session.documentToScreenPosition(position);
-        var cursorLeft = this.$padding + (this.session.$bidiHandler.isBidiRow(pos.row, position.row)
-            ? this.session.$bidiHandler.getPosLeft(pos.column)
-            : pos.column * this.config.characterWidth);
+        var textWidth = this.config.fontMetrics.textWidth(pos.row, pos.column);
+        var cursorLeft = this.$padding + textWidth;
         var cursorTop = (pos.row - (onScreen ? this.config.firstRowScreen : 0)) *
             this.config.lineHeight;
-        return { left: cursorLeft, top: cursorTop };
+        var cursorWidth = this.config.fontMetrics.textWidth(pos.row, pos.column + 1) - textWidth;
+        return { left: cursorLeft, top: cursorTop, width: Math.abs(cursorWidth) || this.config.characterWidth };
     };
     Cursor.prototype.isCursorInView = function (pixelPos, config) {
         return pixelPos.top >= 0 && pixelPos.top < config.maxHeight;
@@ -43004,7 +42913,7 @@ var Cursor = /** @class */ (function () {
                 else {
                     dom.setStyle(style, "display", "block");
                     dom.translate(element, pixelPos.left, pixelPos.top);
-                    dom.setStyle(style, "width", Math.round(config.characterWidth) + "px");
+                    dom.setStyle(style, "width", Math.round(pixelPos.width) + "px");
                     dom.setStyle(style, "height", config.lineHeight + "px");
                 }
             }
@@ -43465,17 +43374,36 @@ exports.RenderLoop = RenderLoop;
 
 });
 
-ace.define("ace/layer/font_metrics",["require","exports","module","ace/lib/oop","ace/lib/dom","ace/lib/lang","ace/lib/event","ace/lib/useragent","ace/lib/event_emitter"], function(require, exports, module){var oop = require("../lib/oop");
+ace.define("ace/layer/font_metrics",["require","exports","module","ace/lib/oop","ace/lib/dom","ace/lib/lang","ace/lib/event","ace/lib/event_emitter"], function(require, exports, module){var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var oop = require("../lib/oop");
 var dom = require("../lib/dom");
 var lang = require("../lib/lang");
 var event = require("../lib/event");
-var useragent = require("../lib/useragent");
 var EventEmitter = require("../lib/event_emitter").EventEmitter;
 var CHAR_COUNT = 512;
 var USE_OBSERVER = typeof ResizeObserver == "function";
 var L = 200;
 var FontMetrics = /** @class */ (function () {
-    function FontMetrics(parentEl) {
+    function FontMetrics(parentEl, textLayer, renderer) {
+        this.config = { characterWidth: 1 };
+        this.$characterSize = { width: 0, height: 0 };
+        this.textLayer = textLayer;
+        this.renderer = renderer;
         this.el = dom.createElement("div");
         this.$setMeasureNodeStyles(this.el.style, true);
         this.$main = dom.createElement("div");
@@ -43486,11 +43414,12 @@ var FontMetrics = /** @class */ (function () {
         this.el.appendChild(this.$measureNode);
         parentEl.appendChild(this.el);
         this.$measureNode.textContent = lang.stringRepeat("X", CHAR_COUNT);
-        this.$characterSize = { width: 0, height: 0 };
         if (USE_OBSERVER)
             this.$addObserver();
         else
             this.checkForSizeChanges();
+        this.textLayer.$setFontMetrics(this);
+        this.$scratchRange = document.createRange();
     }
     FontMetrics.prototype.$setMeasureNodeStyles = function (style, isRoot) {
         style.width = style.height = "auto";
@@ -43498,12 +43427,7 @@ var FontMetrics = /** @class */ (function () {
         style.visibility = "hidden";
         style.position = "absolute";
         style.whiteSpace = "pre";
-        if (useragent.isIE < 8) {
-            style["font-family"] = "inherit";
-        }
-        else {
-            style.font = "inherit";
-        }
+        style.font = "inherit";
         style.overflow = isRoot ? "hidden" : "visible";
     };
     FontMetrics.prototype.checkForSizeChanges = function (size) {
@@ -43565,6 +43489,12 @@ var FontMetrics = /** @class */ (function () {
         }
         return w;
     };
+    FontMetrics.prototype.getTextWidth = function (text) {
+        if (!text)
+            return 0;
+        this.$main.textContent = text;
+        return this.$main.clientWidth;
+    };
     FontMetrics.prototype.destroy = function () {
         clearInterval(this.$pollSizeChangesTimer);
         if (this.$observer)
@@ -43572,34 +43502,18 @@ var FontMetrics = /** @class */ (function () {
         if (this.el && this.el.parentNode)
             this.el.parentNode.removeChild(this.el);
     };
-    FontMetrics.prototype.$getZoom = function (element) {
-        if (!element || !element.parentElement)
-            return 1;
-        return (Number(window.getComputedStyle(element)["zoom"]) || 1) * this.$getZoom(element.parentElement);
-    };
     FontMetrics.prototype.$initTransformMeasureNodes = function () {
-        var t = function (t, l) {
+        var t = function (l, t) {
             return ["div", {
-                    style: "position: absolute;top:" + t + "px;left:" + l + "px;"
+                    style: "position: absolute;left:" + l + "px;top:" + t + "px;"
                 }];
         };
         this.els = dom.buildDom([t(0, 0), t(L, 0), t(0, L), t(L, L)], this.el);
     };
-    FontMetrics.prototype.transformCoordinates = function (clientPos, elPos) {
-        if (clientPos) {
-            var zoom = this.$getZoom(this.el);
-            clientPos = mul(1 / zoom, clientPos);
+    FontMetrics.prototype.getTransform = function () {
+        if (this.config.$transformData) {
+            return this.config.$transformData;
         }
-        function solve(l1, l2, r) {
-            var det = l1[1] * l2[0] - l1[0] * l2[1];
-            return [
-                (-l2[1] * r[0] + l2[0] * r[1]) / det,
-                (+l1[1] * r[0] - l1[0] * r[1]) / det
-            ];
-        }
-        function sub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
-        function add(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
-        function mul(a, b) { return [a * b[0], a * b[1]]; }
         if (!this.els)
             this.$initTransformMeasureNodes();
         function p(el) {
@@ -43611,23 +43525,400 @@ var FontMetrics = /** @class */ (function () {
         var c = p(this.els[2]);
         var d = p(this.els[3]);
         var h = solve(sub(d, b), sub(d, c), sub(add(b, c), add(d, a)));
-        var m1 = mul(1 + h[0], sub(b, a));
-        var m2 = mul(1 + h[1], sub(c, a));
+        var m1 = mul((1 + h[0]) / L, sub(b, a));
+        var m2 = mul((1 + h[1]) / L, sub(c, a));
+        var M = [
+            m1[0], m2[0], 0,
+            m1[1], m2[1], 0,
+            h[0] / L, h[1] / L, 1
+        ];
+        var detM = 1 / (M[0] * M[4] - M[3] * M[1]);
+        var MInv = [
+            M[4] * detM, -M[1] * detM, 0,
+            -M[3] * detM, M[0] * detM, 0,
+            (M[3] * M[7] - M[4] * M[6]) * detM, (M[1] * M[6] - M[0] * M[7]) * detM, 1
+        ];
+        this.config.$transformData = {
+            M: M,
+            MInv: MInv,
+            t: a
+        };
+        return this.config.$transformData;
+    };
+    FontMetrics.prototype.transformCoordinates = function (clientPos, elPos) {
+        if (!this.config.$transformData)
+            this.getTransform();
+        var tr = this.config.$transformData;
         if (elPos) {
-            var x = elPos;
-            var k = h[0] * x[0] / L + h[1] * x[1] / L + 1;
-            var ut = add(mul(x[0], m1), mul(x[1], m2));
-            return add(mul(1 / k / L, ut), a);
+            return add(project(tr.M, elPos[0], elPos[1]), tr.t);
         }
-        var u = sub(clientPos, a);
-        var f = solve(sub(m1, mul(h[0], u)), sub(m2, mul(h[1], u)), u);
-        return mul(L, f);
+        return project(tr.MInv, clientPos[0] - tr.t[0], clientPos[1] - tr.t[1]);
+    };
+    FontMetrics.prototype.recoverRect = function (transform, bbox) {
+        var M = transform.M;
+        var isAffine = Math.abs(M[6]) < 1e-10 && Math.abs(M[7]) < 1e-10;
+        var left = bbox.left, top = bbox.top, Wt = bbox.width, Ht = bbox.height;
+        left -= transform.t[0];
+        top -= transform.t[1];
+        if (isAffine) {
+            var _a = __read(M, 6), m00 = _a[0], m01 = _a[1], m02 = _a[2], m10 = _a[3], m11 = _a[4], m12 = _a[5];
+            var absM = [Math.abs(m00), Math.abs(m01), Math.abs(m10), Math.abs(m11)];
+            var delta = absM[0] * absM[3] - absM[2] * absM[1];
+            var w = void 0, h = void 0;
+            if (Math.abs(delta) < 1e-10) {
+                h = this.config && this.config.lineHeight || 0;
+                w = (Wt - absM[1] * h) / absM[0];
+            }
+            else {
+                w = (absM[3] * Wt - absM[1] * Ht) / delta;
+                h = (-absM[2] * Wt + absM[0] * Ht) / delta;
+            }
+            var detM = m00 * m11 - m01 * m10;
+            var ctx = left + Wt / 2 - m02;
+            var cty = top + Ht / 2 - m12;
+            var cx = (m11 * ctx - m01 * cty) / detM;
+            var cy = (-m10 * ctx + m00 * cty) / detM;
+            return { left: cx - w / 2, top: cy - h / 2, width: w, height: h, right: cx + w / 2, bottom: cy + h / 2 };
+        }
+        return recoverRect(transform, bbox);
+    };
+    FontMetrics.prototype.$findElementForScreenRow = function (screenRow) {
+        var textLayer = this.textLayer;
+        if (!this.config)
+            return null; // not initialized yet
+        var data = textLayer.$lines.$getCellByScreenRow(screenRow, this.config);
+        var lineElement = data && data.cell.element;
+        if (lineElement && textLayer.$useLineGroups()) {
+            var index = Math.floor(data.offset / this.config.lineHeight);
+            lineElement = lineElement.children[Math.max(index, 0)];
+        }
+        return lineElement;
+    };
+    FontMetrics.prototype.textWidth = function (screenRow, screenColumn) {
+        var lineElement = this.$findElementForScreenRow(screenRow);
+        if (!lineElement || !document.createRange) {
+            return screenColumn * this.config.characterWidth;
+        }
+        return this.$measureLineToColumn(lineElement, screenColumn);
+    };
+    FontMetrics.prototype.$measureLineToColumn = function (lineElement, screenColumn) {
+        var textLayer = this.textLayer;
+        try {
+            var position = this.$findColumnPosition(lineElement, screenColumn);
+            if (!position) {
+                return screenColumn * this.config.characterWidth;
+            }
+            this.$scratchRange.setStart(position.node, position.offset);
+            this.$scratchRange.setEnd(position.node, position.offset);
+            var rangeRect = this.$scratchRange.getBoundingClientRect();
+            if (this.renderer.$hasCssTransforms) {
+                var tr = this.getTransform();
+                var transformed = this.recoverRect(tr, rangeRect);
+                var leftOffset = this.renderer.gutterWidth + this.renderer.margin.left + this.renderer.$padding - this.renderer.scrollLeft;
+                return transformed.left - leftOffset + position.overflow * this.config.characterWidth;
+            }
+            var rect = textLayer.element.getBoundingClientRect();
+            return rangeRect.left - rect.left + position.overflow * this.config.characterWidth;
+        }
+        catch (e) {
+            console.error("Error measuring text width:", e);
+            return screenColumn * this.config.characterWidth;
+        }
+    };
+    FontMetrics.prototype.$findColumnPosition = function (lineElement, screenColumn) {
+        var walker = document.createTreeWalker(lineElement, NodeFilter.SHOW_TEXT, null);
+        var currentColumn = 0;
+        var node, lastNode;
+        while (node = walker.nextNode()) {
+            var nodeText = node.nodeValue;
+            var nodeLength = nodeText.length;
+            if (currentColumn + nodeLength >= screenColumn) {
+                return {
+                    node: node,
+                    offset: screenColumn - currentColumn,
+                    overflow: 0
+                };
+            }
+            currentColumn += nodeLength;
+            lastNode = node;
+        }
+        return lastNode && {
+            node: lastNode,
+            offset: lastNode.nodeValue.length,
+            overflow: screenColumn - currentColumn,
+        };
+    };
+    FontMetrics.prototype.$pixelToColumn = function (screenRow, screenColumnMonospace, x, blockCursor, isTextWidthCoordinate) {
+        var _this = this;
+        var scratchRange = this.$scratchRange;
+        var lineElement = this.$findElementForScreenRow(screenRow);
+        if (!lineElement || screenColumnMonospace < 0)
+            return screenColumnMonospace;
+        var hasCssTransform = this.renderer.$hasCssTransforms;
+        var tr = hasCssTransform && this.getTransform();
+        if (isTextWidthCoordinate) {
+            if (!hasCssTransform) {
+                x += this.textLayer.element.getBoundingClientRect().left;
+            }
+            else {
+                x += this.renderer.gutterWidth + this.renderer.margin.left + this.renderer.$padding - this.renderer.scrollLeft;
+            }
+        }
+        var screenColumn = 0;
+        var getRects = function (node) {
+            var rects = [];
+            if (node.nodeType === Node.TEXT_NODE) {
+                scratchRange.setStart(node, 0);
+                scratchRange.setEnd(node, node.nodeValue.length);
+                rects = Array.from(scratchRange.getClientRects());
+            }
+            else if (node.nodeType === Node.ELEMENT_NODE) {
+                rects = Array.from(node.getClientRects());
+            }
+            if (hasCssTransform) {
+                var fixedRects = [];
+                for (var i = 0; i < rects.length; i++) {
+                    var rect = rects[i];
+                    fixedRects.push(_this.recoverRect(tr, rect));
+                }
+                rects = fixedRects;
+            }
+            return rects;
+        };
+        var self = this;
+        function search(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                var textLength = node.nodeValue.length;
+                var maxDistance = Number.MAX_VALUE;
+                var index = -1;
+                var lastSignedDistance = undefined;
+                var value = node.nodeValue;
+                for (var j = 0; j <= textLength; j++) {
+                    scratchRange.setStart(node, j);
+                    scratchRange.setEnd(node, j);
+                    if (j > 0 && j < textLength && /[\uDC00-\uDFFF]/.test(value.charAt(j)) &&
+                        /[\uD800-\uDBFF]/.test(value.charAt(j - 1))) {
+                        continue;
+                    }
+                    var rect = /** @type {ReturnType<FontMetrics['recoverRect']>}*/ (scratchRange.getBoundingClientRect());
+                    if (hasCssTransform) {
+                        rect = self.recoverRect(tr, rect);
+                    }
+                    var signedDistance = x - rect.left;
+                    var d = Math.abs(signedDistance);
+                    if (d < maxDistance) {
+                        index = j;
+                        maxDistance = d;
+                        lastSignedDistance = signedDistance;
+                    }
+                }
+                if (blockCursor) {
+                    if (lastSignedDistance < 0) {
+                        index = Math.max(0, index - 1);
+                    }
+                }
+                return screenColumn = screenColumn + index;
+            }
+            else if (node.nodeType === Node.ELEMENT_NODE) {
+                var childNodes = node.childNodes;
+                for (var i = 0; i < childNodes.length; i++) {
+                    var child = childNodes[i];
+                    var rects = getRects(child);
+                    for (var j = 0; j < rects.length; j++) {
+                        var rect = rects[j];
+                        if (rect.left <= x && x <= rect.left + rect.width) {
+                            search(child);
+                            return screenColumn;
+                        }
+                    }
+                    screenColumn += child.nodeType === Node.TEXT_NODE ? child.nodeValue.length : child.textContent.length;
+                }
+            }
+        }
+        search(lineElement);
+        return screenColumn;
+    };
+    FontMetrics.prototype.getRects = function (startScreenPos, endScreenPos) {
+        var row = startScreenPos.row;
+        var textLayer = this.textLayer;
+        var lineElement = this.$findElementForScreenRow(row);
+        if (lineElement) {
+            try {
+                var p1 = this.$findColumnPosition(lineElement, startScreenPos.column);
+                var p2 = this.$findColumnPosition(lineElement, endScreenPos.column);
+                if (p1 && p2) {
+                    this.$scratchRange.setStart(p1.node, p1.offset);
+                    this.$scratchRange.setEnd(p2.node, p2.offset);
+                    var rangeRects = this.$scratchRange.getClientRects();
+                    var hasCssTransform = this.renderer && this.renderer.$hasCssTransforms;
+                    if (hasCssTransform) {
+                        var tr = this.getTransform();
+                        var rects = [];
+                        for (var i = 0; i < rangeRects.length; i++) {
+                            var rangeRect = this.recoverRect(tr, rangeRects[i]);
+                            rangeRect.right = rangeRect.left + rangeRect.width;
+                            rects.push(rangeRect);
+                        }
+                        var leftOffset = this.renderer.gutterWidth + this.renderer.margin.left + this.renderer.$padding - this.renderer.scrollLeft;
+                        var merged = mergeTouchingRects(rects).map(function (r) {
+                            return {
+                                left: r.left - leftOffset,
+                                width: r.right - r.left,
+                            };
+                        });
+                        return merged;
+                    }
+                    var rect = textLayer.element.getBoundingClientRect();
+                    var merged = mergeTouchingRects(rangeRects).map(function (r) {
+                        return {
+                            left: r.left - rect.left,
+                            width: r.right - r.left,
+                        };
+                    });
+                    return merged;
+                }
+            }
+            catch (e) {
+                console.error("Error measuring text width:", e);
+            }
+        }
+        return [{
+                left: startScreenPos.column * this.config.characterWidth,
+                width: (endScreenPos.column - startScreenPos.column) * this.config.characterWidth,
+            }];
     };
     return FontMetrics;
 }());
-FontMetrics.prototype.$characterSize = { width: 0, height: 0 };
+function mergeTouchingRects(rects) {
+    var merged = [];
+    for (var i = 0; i < rects.length; i++) {
+        var rect = rects[i];
+        var found = false;
+        for (var j = 0; j < merged.length; j++) {
+            var m = merged[j];
+            if ((m.left <= rect.left && rect.left <= m.right) ||
+                (m.left <= rect.right && rect.right <= m.right) ||
+                (rect.left <= m.left && m.right <= rect.right)) {
+                m.left = Math.min(m.left, rect.left);
+                m.right = Math.max(m.right, rect.right);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            merged.push({
+                left: rect.left,
+                right: rect.right,
+                top: rect.top,
+                height: rect.height,
+            });
+        }
+    }
+    return merged;
+}
+function solve(l1, l2, r) {
+    var det = l1[1] * l2[0] - l1[0] * l2[1];
+    return [
+        (-l2[1] * r[0] + l2[0] * r[1]) / det,
+        (+l1[1] * r[0] - l1[0] * r[1]) / det
+    ];
+}
+function sub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+function add(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
+function mul(a, b) { return [a * b[0], a * b[1]]; }
 oop.implement(FontMetrics.prototype, EventEmitter);
 exports.FontMetrics = FontMetrics;
+function recoverRect(transform, bbox) {
+    var left = bbox.left, top = bbox.top, width = bbox.width, height = bbox.height;
+    var M = transform.M;
+    left -= transform.t[0];
+    top -= transform.t[1];
+    bbox = { left: left, top: top, width: width, height: height };
+    var targets = [top, left + width, top + height, left]; // minY, maxX, maxY, minX
+    var isYAxis = [true, false, true, false]; // minY=Y, maxX=X, maxY=Y, minX=X
+    var corners = [
+        [0, 0], [1, 0], [1, 1], [0, 1]
+    ];
+    var result = null;
+    var mainMappings = [27, 57, 23, 53, 43, 9, 10, 11, 14, 37, 31, 56, 40, 41, 47];
+    for (var i = -mainMappings.length; i < 256; i++) {
+        var index = i < 0 ? mainMappings[mainMappings.length + i] : i;
+        var mappingIdx = [
+            (index >> 0) & 3,
+            (index >> 2) & 3,
+            (index >> 4) & 3,
+            (index >> 6) & 3
+        ];
+        var mapping = mappingIdx.map(function (idx) { return corners[idx]; });
+        var rows = mapping.map(function (c, j) {
+            var _a = __read(c, 2), dx = _a[0], dy = _a[1];
+            var target = targets[j];
+            var m = isYAxis[j] ? M.slice(3, 6) : M.slice(0, 3);
+            var mp = M.slice(6, 9);
+            var ax = m[0] - target * mp[0];
+            var ay = m[1] - target * mp[1];
+            return [ax, ay, dx * ax, dy * ay, target * mp[2] - m[2]];
+        });
+        var res = solve4x4(rows);
+        var result;
+        if (res) {
+            var _a = __read(res, 4), x0 = _a[0], y0 = _a[1], w = _a[2], h = _a[3];
+            if (w < 0) {
+                x0 += w;
+                w = -w;
+            }
+            if (h < 0) {
+                y0 += h;
+                h = -h;
+            }
+            if (validateSolution(M, x0, y0, w, h, bbox)) {
+                result = { left: x0, top: y0, width: w, height: h, right: x0 + w, bottom: y0 + h, mappingIdx: i };
+                break;
+            }
+        }
+    }
+    if (!result)
+        console.warn("No valid mapping found in 256 combinations.");
+    return result;
+}
+var project = function (m, px, py) {
+    var k = m[6] * px + m[7] * py + m[8];
+    return [(m[0] * px + m[1] * py + m[2]) / k, (m[3] * px + m[4] * py + m[5]) / k];
+};
+function validateSolution(M, x, y, w, h, targetBbox) {
+    var pts = [
+        [x, y], [x + w, y], [x + w, y + h], [x, y + h]
+    ];
+    return pts.every(function (p) {
+        var mapped = project(M, p[0], p[1]);
+        return targetBbox.left - 0.5 <= mapped[0] && mapped[0] <= targetBbox.left + targetBbox.width + 0.5
+            && targetBbox.top - 0.5 <= mapped[1] && mapped[1] <= targetBbox.top + targetBbox.height + 0.5;
+    });
+}
+function solve4x4(m) {
+    var _a;
+    var n = 4;
+    for (var i = 0; i < n; i++) {
+        var max = i;
+        for (var j = i + 1; j < n; j++)
+            if (Math.abs(m[j][i]) > Math.abs(m[max][i]))
+                max = j;
+        _a = __read([m[max], m[i]], 2), m[i] = _a[0], m[max] = _a[1];
+        var p = m[i][i];
+        if (Math.abs(p) < 1e-10)
+            return null;
+        for (var j = i; j <= n; j++)
+            m[i][j] /= p;
+        for (var k = 0; k < n; k++) {
+            if (k !== i) {
+                var f = m[k][i];
+                for (var j = i; j <= n; j++)
+                    m[k][j] -= f * m[i][j];
+            }
+        }
+    }
+    return m.map(function (row) { return row[n]; });
+}
 
 });
 
@@ -43842,8 +44133,7 @@ var VirtualRenderer = /** @class */ (function () {
             row: 0,
             column: 0
         };
-        this.$fontMetrics = new FontMetrics(this.container);
-        this.$textLayer.$setFontMetrics(this.$fontMetrics);
+        this.$fontMetrics = new FontMetrics(this.container, this.$textLayer, this);
         this.$textLayer.on("changeCharacterSize", function (e) {
             _self.updateCharacterSize();
             _self.onResize(true, _self.gutterWidth, _self.$size.width, _self.$size.height);
@@ -43864,12 +44154,14 @@ var VirtualRenderer = /** @class */ (function () {
             lastRow: 0,
             lineHeight: 0,
             characterWidth: 0,
+            fontMetrics: this.$fontMetrics,
             minHeight: 1,
             maxHeight: 1,
             offset: 0,
             height: 1,
             gutterOffset: 1
         };
+        this.$fontMetrics.config = this.layerConfig;
         this.scrollMargin = {
             left: 0,
             right: 0,
@@ -44190,7 +44482,7 @@ var VirtualRenderer = /** @class */ (function () {
         else {
             if (composition.useTextareaForIME) {
                 var val = this.textarea.value;
-                w = this.characterWidth * (this.session.$getStringScreenWidth(val)[0]);
+                w = this.$fontMetrics.getTextWidth(val) + 1;
             }
             else {
                 posTop += this.lineHeight + 2;
@@ -44305,8 +44597,6 @@ var VirtualRenderer = /** @class */ (function () {
             this.$textLayer.checkForSizeChanges();
         }
         this._signal("beforeRender", changes);
-        if (this.session && this.session.$bidiHandler)
-            this.session.$bidiHandler.updateCharacterWidths(this.$fontMetrics);
         var config = this.layerConfig;
         if (changes & this.CHANGE_FULL ||
             changes & this.CHANGE_SIZE ||
@@ -44324,17 +44614,9 @@ var VirtualRenderer = /** @class */ (function () {
                 }
             }
             config = this.layerConfig;
-            this.$updateScrollBarV();
-            if (changes & this.CHANGE_H_SCROLL)
-                this.$updateScrollBarH();
-            dom.translate(this.content, -this.scrollLeft, -config.offset);
-            var width = config.width + 2 * this.$padding + "px";
-            var height = config.minHeight + "px";
-            dom.setStyle(this.content.style, "width", width);
-            dom.setStyle(this.content.style, "height", height);
         }
         if (changes & this.CHANGE_H_SCROLL) {
-            dom.translate(this.content, -this.scrollLeft, -config.offset);
+            this.$updateContentTransformAndSize(config, changes);
             this.scroller.className = this.scrollLeft <= 0 ? "ace_scroller " : "ace_scroller ace_scroll-left ";
             if (this.enableKeyboardAccessibility)
                 this.scroller.className += this.keyboardFocusClassName;
@@ -44350,6 +44632,7 @@ var VirtualRenderer = /** @class */ (function () {
             this.$markerBack.update(config);
             this.$markerFront.update(config);
             this.$cursorLayer.update(config);
+            this.$updateContentTransformAndSize(config, changes);
             this.$moveTextAreaToCursor();
             this._signal("afterRender", changes);
             return;
@@ -44372,6 +44655,7 @@ var VirtualRenderer = /** @class */ (function () {
             this.$markerBack.update(config);
             this.$markerFront.update(config);
             this.$cursorLayer.update(config);
+            this.$updateContentTransformAndSize(config, changes);
             this.$moveTextAreaToCursor();
             this._signal("afterRender", changes);
             return;
@@ -44384,6 +44668,7 @@ var VirtualRenderer = /** @class */ (function () {
             if (this.$customScrollbar) {
                 this.$scrollDecorator.$updateDecorators(config);
             }
+            this.$updateContentTransformAndSize(config, changes);
         }
         else if (changes & this.CHANGE_LINES) {
             if (this.$updateLines() || (changes & this.CHANGE_GUTTER) && this.$showGutter)
@@ -44441,6 +44726,44 @@ var VirtualRenderer = /** @class */ (function () {
             this._signal("autosize");
         }
     };
+    VirtualRenderer.prototype.$updateContentTransformAndSize = function (config, changes) {
+        var sm = this.scrollMargin;
+        if (this.session && !this.session.getUseWrapMode()) {
+            var longestRendered = this.$getLongestRenderedLine();
+            if (config.width < longestRendered) {
+                config.width = longestRendered;
+            }
+        }
+        if (this.session) {
+            this.session.setScrollLeft(Math.max(-sm.left, Math.min(this.scrollLeft, config.width + 2 * this.$padding - this.$size.scrollerWidth + sm.right)));
+        }
+        dom.translate(this.content, -this.scrollLeft, -config.offset);
+        var width = config.width + 2 * this.$padding + "px";
+        var height = config.minHeight + "px";
+        dom.setStyle(this.content.style, "width", width);
+        dom.setStyle(this.content.style, "height", height);
+        this.$updateScrollBarV();
+        if (changes & this.CHANGE_H_SCROLL)
+            this.$updateScrollBarH();
+    };
+    VirtualRenderer.prototype.$getLongestRenderedLine = function () {
+        var max = 0;
+        var transform = this.$hasCssTransforms && this.$fontMetrics.getTransform();
+        var cells = this.$textLayer.$lines.cells;
+        for (var i = 0; i < cells.length; i++) {
+            var lineElement = cells[i].element;
+            this.$fontMetrics.$scratchRange.setStart(lineElement, 0);
+            this.$fontMetrics.$scratchRange.setEnd(lineElement, lineElement.childNodes.length);
+            var rect = /** @type {ReturnType<FontMetrics['recoverRect']>}*/ (this.$fontMetrics.$scratchRange.getBoundingClientRect());
+            if (this.$hasCssTransforms) {
+                rect = this.$fontMetrics.recoverRect(transform, rect) || rect;
+            }
+            var w = rect.width;
+            if (w > max)
+                max = w;
+        }
+        return max;
+    };
     VirtualRenderer.prototype.$computeLayerConfig = function () {
         var session = this.session;
         var size = this.$size;
@@ -44467,7 +44790,6 @@ var VirtualRenderer = /** @class */ (function () {
         maxHeight += scrollPastEnd;
         var sm = this.scrollMargin;
         this.session.setScrollTop(Math.max(-sm.top, Math.min(this.scrollTop, maxHeight - size.scrollerHeight + sm.bottom)));
-        this.session.setScrollLeft(Math.max(-sm.left, Math.min(this.scrollLeft, longestLine + 2 * this.$padding - size.scrollerWidth + sm.right)));
         var vScroll = !hideScrollbars && (this.$vScrollBarAlwaysVisible ||
             size.scrollerHeight - maxHeight + scrollPastEnd < 0 || this.scrollTop > sm.top);
         var vScrollChanged = vScrollBefore !== vScroll;
@@ -44513,12 +44835,14 @@ var VirtualRenderer = /** @class */ (function () {
             lastRow: lastRow,
             lineHeight: lineHeight,
             characterWidth: this.characterWidth,
+            fontMetrics: this.$fontMetrics,
             minHeight: minHeight,
             maxHeight: maxHeight,
             offset: offset,
             gutterOffset: lineHeight ? Math.max(0, Math.ceil((offset + size.height - size.scrollerHeight) / lineHeight)) : 0,
             height: this.$size.scrollerHeight
         };
+        this.$fontMetrics.config = this.layerConfig;
         if (this.session.$bidiHandler)
             this.session.$bidiHandler.setContentWidth(longestLine - this.$padding);
         return changes;
@@ -44757,44 +45081,40 @@ var VirtualRenderer = /** @class */ (function () {
     VirtualRenderer.prototype.pixelToScreenCoordinates = function (x, y) {
         var canvasPos;
         if (this.$hasCssTransforms) {
-            canvasPos = { top: 0, left: 0 };
+            canvasPos = { top: this.margin.top, left: this.gutterWidth + this.margin.left };
             var p = this.$fontMetrics.transformCoordinates([x, y]);
-            x = p[1] - this.gutterWidth - this.margin.left;
-            y = p[0];
+            x = p[0];
+            y = p[1];
         }
         else {
             canvasPos = this.scroller.getBoundingClientRect();
         }
         var offsetX = x + this.scrollLeft - canvasPos.left - this.$padding;
         var offset = offsetX / this.characterWidth;
-        var row = Math.floor((y + this.scrollTop - canvasPos.top) / this.lineHeight);
+        var row = (y + this.scrollTop - canvasPos.top) / this.lineHeight;
         var col = this.$blockCursor ? Math.floor(offset) : Math.round(offset);
+        col = this.$fontMetrics.$pixelToColumn(row, col, x, this.$blockCursor);
         return { row: row, column: col, side: offset - col > 0 ? 1 : -1, offsetX: offsetX };
     };
     VirtualRenderer.prototype.screenToTextCoordinates = function (x, y) {
-        var canvasPos;
-        if (this.$hasCssTransforms) {
-            canvasPos = { top: 0, left: 0 };
-            var p = this.$fontMetrics.transformCoordinates([x, y]);
-            x = p[1] - this.gutterWidth - this.margin.left;
-            y = p[0];
-        }
-        else {
-            canvasPos = this.scroller.getBoundingClientRect();
-        }
-        var offsetX = x + this.scrollLeft - canvasPos.left - this.$padding;
-        var offset = offsetX / this.characterWidth;
-        var col = this.$blockCursor ? Math.floor(offset) : Math.round(offset);
-        var row = (y + this.scrollTop - canvasPos.top) / this.lineHeight;
-        return this.session.screenToDocumentPosition(row, Math.max(col, 0), offsetX);
+        var screenPos = this.pixelToScreenCoordinates(x, y);
+        return this.session.screenToDocumentPosition(screenPos.row, Math.max(screenPos.column, 0));
     };
     VirtualRenderer.prototype.textToScreenCoordinates = function (row, column) {
-        var canvasPos = this.scroller.getBoundingClientRect();
         var pos = this.session.documentToScreenPosition(row, column);
-        var x = this.$padding + (this.session.$bidiHandler.isBidiRow(pos.row, row)
-            ? this.session.$bidiHandler.getPosLeft(pos.column)
-            : Math.round(pos.column * this.characterWidth));
+        var x = this.$padding + this.$fontMetrics.textWidth(pos.row, pos.column);
         var y = pos.row * this.lineHeight;
+        if (this.$hasCssTransforms) {
+            var pagePos = this.$fontMetrics.transformCoordinates(null, [
+                this.gutterWidth + this.margin.left + x - this.scrollLeft,
+                this.margin.top + y - this.scrollTop
+            ]);
+            return {
+                pageX: pagePos[0],
+                pageY: pagePos[1]
+            };
+        }
+        var canvasPos = this.scroller.getBoundingClientRect();
         return {
             pageX: canvasPos.left + x - this.scrollLeft,
             pageY: canvasPos.top + y - this.scrollTop
@@ -45811,7 +46131,7 @@ function onMouseDown(e) {
         var rectSel = [];
         var blockSelect = function () {
             var newCursor = editor.renderer.pixelToScreenCoordinates(mouseX, mouseY);
-            var cursor = session.screenToDocumentPosition(newCursor.row, newCursor.column, newCursor.offsetX);
+            var cursor = session.screenToDocumentPosition(newCursor.row, newCursor.column);
             if (isSamePoint(screenCursor, newCursor) && isSamePoint(cursor, selection.lead))
                 return;
             screenCursor = newCursor;
@@ -46057,7 +46377,8 @@ var EditSession = require("./edit_session").EditSession;
         }
         for (var i = removed.length; i--;) {
             var index = this.ranges.indexOf(removed[i]);
-            this.ranges.splice(index, 1);
+            if (index != -1)
+                this.ranges.splice(index, 1);
         }
         this._signal("removeRange", { ranges: removed });
         if (this.rangeCount === 0 && this.inMultiSelectMode) {
@@ -46131,14 +46452,10 @@ var EditSession = require("./edit_session").EditSession;
         if (xBackwards) {
             var startColumn = screenCursor.column;
             var endColumn = screenAnchor.column;
-            var startOffsetX = screenCursor.offsetX;
-            var endOffsetX = screenAnchor.offsetX;
         }
         else {
             var startColumn = screenAnchor.column;
             var endColumn = screenCursor.column;
-            var startOffsetX = screenAnchor.offsetX;
-            var endOffsetX = screenCursor.offsetX;
         }
         var yBackwards = screenCursor.row < screenAnchor.row;
         if (yBackwards) {
@@ -46157,7 +46474,7 @@ var EditSession = require("./edit_session").EditSession;
             includeEmptyLines = true;
         var docEnd;
         for (var row = startRow; row <= endRow; row++) {
-            var range = Range.fromPoints(this.session.screenToDocumentPosition(row, startColumn, startOffsetX), this.session.screenToDocumentPosition(row, endColumn, endOffsetX));
+            var range = Range.fromPoints(this.session.screenToDocumentPosition(row, startColumn), this.session.screenToDocumentPosition(row, endColumn));
             if (range.isEmpty()) {
                 if (docEnd && isSamePoint(range.end, docEnd))
                     break;
@@ -46294,32 +46611,36 @@ var Editor = require("./editor").Editor;
         selection._eventRegistry = {};
         var tmpSel = new Selection(session);
         this.inVirtualSelectionMode = true;
-        for (var i = ranges.length; i--;) {
-            if ($byLines) {
-                while (i > 0 && ranges[i].start.row == ranges[i - 1].end.row)
-                    i--;
+        try {
+            for (var i = ranges.length; i--;) {
+                if ($byLines) {
+                    while (i > 0 && ranges[i].start.row == ranges[i - 1].end.row)
+                        i--;
+                }
+                tmpSel.fromOrientedRange(ranges[i]);
+                tmpSel.index = i;
+                this.selection = session.selection = tmpSel;
+                var cmdResult = cmd.exec ? cmd.exec(this, args || {}) : cmd(this, args || {});
+                if (!result && cmdResult !== undefined)
+                    result = cmdResult;
+                tmpSel.toOrientedRange(ranges[i]);
             }
-            tmpSel.fromOrientedRange(ranges[i]);
-            tmpSel.index = i;
-            this.selection = session.selection = tmpSel;
-            var cmdResult = cmd.exec ? cmd.exec(this, args || {}) : cmd(this, args || {});
-            if (!result && cmdResult !== undefined)
-                result = cmdResult;
-            tmpSel.toOrientedRange(ranges[i]);
+            tmpSel.detach();
         }
-        tmpSel.detach();
-        this.selection = session.selection = selection;
-        this.inVirtualSelectionMode = false;
-        selection._eventRegistry = reg;
-        selection.mergeOverlappingRanges();
-        if (selection.ranges[0])
-            selection.fromOrientedRange(selection.ranges[0]);
-        var anim = this.renderer.$scrollAnimation;
-        this.onCursorChange();
-        this.onSelectionChange();
-        if (anim && anim.from == anim.to)
-            this.renderer.animateScrolling(anim.from);
-        return result;
+        finally {
+            this.selection = session.selection = selection;
+            this.inVirtualSelectionMode = false;
+            selection._eventRegistry = reg;
+            selection.mergeOverlappingRanges();
+            if (selection.ranges[0])
+                selection.fromOrientedRange(selection.ranges[0]);
+            var anim = this.renderer.$scrollAnimation;
+            this.onCursorChange();
+            this.onSelectionChange();
+            if (anim && anim.from == anim.to)
+                this.renderer.animateScrolling(anim.from);
+            return result;
+        }
     };
     this.exitMultiSelectMode = function () {
         if (!this.inMultiSelectMode || this.inVirtualSelectionMode)
@@ -46347,6 +46668,8 @@ var Editor = require("./editor").Editor;
     this.$checkMultiselectChange = function (e, anchor) {
         if (this.inMultiSelectMode && !this.inVirtualSelectionMode) {
             var range = this.multiSelect.ranges[0];
+            if (!range)
+                return;
             if (this.multiSelect.isEmpty() && anchor == this.multiSelect.anchor)
                 return;
             var pos = anchor == this.multiSelect.anchor
@@ -50003,15 +50326,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _style_bootstrap_min_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../style/bootstrap.min.css */ "./style/bootstrap.min.css");
 /* harmony import */ var d3_selection__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! d3-selection */ "../../node_modules/d3-selection/src/select.js");
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorRuntime() { "use strict"; var r = _regenerator(), e = r.m(_regeneratorRuntime), t = (Object.getPrototypeOf ? Object.getPrototypeOf(e) : e.__proto__).constructor; function n(r) { var e = "function" == typeof r && r.constructor; return !!e && (e === t || "GeneratorFunction" === (e.displayName || e.name)); } var o = { "throw": 1, "return": 2, "break": 3, "continue": 3 }; function a(r) { var e, t; return function (n) { e || (e = { stop: function stop() { return t(n.a, 2); }, "catch": function _catch() { return n.v; }, abrupt: function abrupt(r, e) { return t(n.a, o[r], e); }, delegateYield: function delegateYield(r, o, a) { return e.resultName = o, t(n.d, _regeneratorValues(r), a); }, finish: function finish(r) { return t(n.f, r); } }, t = function t(r, _t, o) { n.p = e.prev, n.n = e.next; try { return r(_t, o); } finally { e.next = n.n; } }), e.resultName && (e[e.resultName] = n.v, e.resultName = void 0), e.sent = n.v, e.next = n.n; try { return r.call(this, e); } finally { n.p = e.prev, n.n = e.next; } }; } return (_regeneratorRuntime = function _regeneratorRuntime() { return { wrap: function wrap(e, t, n, o) { return r.w(a(e), t, n, o && o.reverse()); }, isGeneratorFunction: n, mark: r.m, awrap: function awrap(r, e) { return new _OverloadYield(r, e); }, AsyncIterator: _regeneratorAsyncIterator, async: function async(r, e, t, o, u) { return (n(e) ? _regeneratorAsyncGen : _regeneratorAsync)(a(r), e, t, o, u); }, keys: _regeneratorKeys, values: _regeneratorValues }; })(); }
-function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
-function _regeneratorKeys(e) { var n = Object(e), r = []; for (var t in n) r.unshift(t); return function e() { for (; r.length;) if ((t = r.pop()) in n) return e.value = t, e.done = !1, e; return e.done = !0, e; }; }
-function _regeneratorAsync(n, e, r, t, o) { var a = _regeneratorAsyncGen(n, e, r, t, o); return a.next().then(function (n) { return n.done ? n.value : a.next(); }); }
-function _regeneratorAsyncGen(r, e, t, o, n) { return new _regeneratorAsyncIterator(_regenerator().w(r, e, t, o), n || Promise); }
-function _regeneratorAsyncIterator(t, e) { function n(r, o, i, f) { try { var c = t[r](o), u = c.value; return u instanceof _OverloadYield ? e.resolve(u.v).then(function (t) { n("next", t, i, f); }, function (t) { n("throw", t, i, f); }) : e.resolve(u).then(function (t) { c.value = t, i(c); }, function (t) { return n("throw", t, i, f); }); } catch (t) { f(t); } } var r; this.next || (_regeneratorDefine2(_regeneratorAsyncIterator.prototype), _regeneratorDefine2(_regeneratorAsyncIterator.prototype, "function" == typeof Symbol && Symbol.asyncIterator || "@asyncIterator", function () { return this; })), _regeneratorDefine2(this, "_invoke", function (t, o, i) { function f() { return new e(function (e, r) { n(t, i, e, r); }); } return r = r ? r.then(f, f) : f(); }, !0); }
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function _OverloadYield(e, d) { this.v = e, this.k = d; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
@@ -50080,14 +50396,14 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "fillAnnotations",
     value: function () {
-      var _fillAnnotations = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      var _fillAnnotations = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
         var _thiss, response, obj;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
             case 0:
               this.annotations = new Array();
               _thiss = this;
-              _context.next = 4;
+              _context.n = 1;
               return fetch(this.fetchUrl, {
                 method: 'GET',
                 // *GET, POST, PUT, DELETE, etc.
@@ -50095,17 +50411,17 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
                   'Content-Type': 'application/json'
                 }
               });
-            case 4:
-              response = _context.sent;
+            case 1:
+              response = _context.v;
               if (!(response.status == 200)) {
-                _context.next = 13;
+                _context.n = 3;
                 break;
               }
               _thiss.annotations = new Array();
-              _context.next = 9;
+              _context.n = 2;
               return response.json();
-            case 9:
-              obj = _context.sent;
+            case 2:
+              obj = _context.v;
               obj.forEach(function (item) {
                 var annt = {
                   id: item.id,
@@ -50118,15 +50434,14 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
                 };
                 _thiss.annotations.push(annt);
               });
-              _context.next = 14;
+              _context.n = 4;
               break;
-            case 13:
+            case 3:
               if (response.status != 404) {
                 this.showNode(_thiss.errorFeedback);
               }
-            case 14:
-            case "end":
-              return _context.stop();
+            case 4:
+              return _context.a(2);
           }
         }, _callee, this);
       }));
@@ -50152,10 +50467,10 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "setAnnotations",
     value: function () {
-      var _setAnnotations = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+      var _setAnnotations = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
         var _thiss, header, tBody;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
             case 0:
               _thiss = this;
               this.table.html("");
@@ -50166,15 +50481,14 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
               header.append("th").attr("scope", "col").text("provenance Type");
               header.append("th").attr("scope", "col").text("Actions");
               tBody = this.table.append("tbody");
-              _context2.next = 11;
+              _context2.n = 1;
               return this.fillAnnotations();
-            case 11:
+            case 1:
               this.annotations.forEach(function (obj) {
                 _thiss.addAnntRow(obj, tBody);
               });
-            case 12:
-            case "end":
-              return _context2.stop();
+            case 2:
+              return _context2.a(2);
           }
         }, _callee2, this);
       }));
@@ -50428,15 +50742,8 @@ function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread n
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorRuntime() { "use strict"; var r = _regenerator(), e = r.m(_regeneratorRuntime), t = (Object.getPrototypeOf ? Object.getPrototypeOf(e) : e.__proto__).constructor; function n(r) { var e = "function" == typeof r && r.constructor; return !!e && (e === t || "GeneratorFunction" === (e.displayName || e.name)); } var o = { "throw": 1, "return": 2, "break": 3, "continue": 3 }; function a(r) { var e, t; return function (n) { e || (e = { stop: function stop() { return t(n.a, 2); }, "catch": function _catch() { return n.v; }, abrupt: function abrupt(r, e) { return t(n.a, o[r], e); }, delegateYield: function delegateYield(r, o, a) { return e.resultName = o, t(n.d, _regeneratorValues(r), a); }, finish: function finish(r) { return t(n.f, r); } }, t = function t(r, _t, o) { n.p = e.prev, n.n = e.next; try { return r(_t, o); } finally { e.next = n.n; } }), e.resultName && (e[e.resultName] = n.v, e.resultName = void 0), e.sent = n.v, e.next = n.n; try { return r.call(this, e); } finally { n.p = e.prev, n.n = e.next; } }; } return (_regeneratorRuntime = function _regeneratorRuntime() { return { wrap: function wrap(e, t, n, o) { return r.w(a(e), t, n, o && o.reverse()); }, isGeneratorFunction: n, mark: r.m, awrap: function awrap(r, e) { return new _OverloadYield(r, e); }, AsyncIterator: _regeneratorAsyncIterator, async: function async(r, e, t, o, u) { return (n(e) ? _regeneratorAsyncGen : _regeneratorAsync)(a(r), e, t, o, u); }, keys: _regeneratorKeys, values: _regeneratorValues }; })(); }
-function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
-function _regeneratorKeys(e) { var n = Object(e), r = []; for (var t in n) r.unshift(t); return function e() { for (; r.length;) if ((t = r.pop()) in n) return e.value = t, e.done = !1, e; return e.done = !0, e; }; }
-function _regeneratorAsync(n, e, r, t, o) { var a = _regeneratorAsyncGen(n, e, r, t, o); return a.next().then(function (n) { return n.done ? n.value : a.next(); }); }
-function _regeneratorAsyncGen(r, e, t, o, n) { return new _regeneratorAsyncIterator(_regenerator().w(r, e, t, o), n || Promise); }
-function _regeneratorAsyncIterator(t, e) { function n(r, o, i, f) { try { var c = t[r](o), u = c.value; return u instanceof _OverloadYield ? e.resolve(u.v).then(function (t) { n("next", t, i, f); }, function (t) { n("throw", t, i, f); }) : e.resolve(u).then(function (t) { c.value = t, i(c); }, function (t) { return n("throw", t, i, f); }); } catch (t) { f(t); } } var r; this.next || (_regeneratorDefine2(_regeneratorAsyncIterator.prototype), _regeneratorDefine2(_regeneratorAsyncIterator.prototype, "function" == typeof Symbol && Symbol.asyncIterator || "@asyncIterator", function () { return this; })), _regeneratorDefine2(this, "_invoke", function (t, o, i) { function f() { return new e(function (e, r) { n(t, i, e, r); }); } return r = r ? r.then(f, f) : f(); }, !0); }
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function _OverloadYield(e, d) { this.v = e, this.k = d; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
@@ -50647,53 +50954,52 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "fetchAndRenderTables",
     value: function () {
-      var _fetchAndRenderTables = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-        var dropdownMenu, response, data;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
+      var _fetchAndRenderTables = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+        var dropdownMenu, response, data, _t;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.p = _context.n) {
             case 0:
               dropdownMenu = this.node.querySelector('#tables-dropdown');
               if (dropdownMenu) {
-                _context.next = 4;
+                _context.n = 1;
                 break;
               }
               console.error('Tables dropdown element not found');
-              return _context.abrupt("return");
-            case 4:
+              return _context.a(2);
+            case 1:
               this.showLoadingState();
               this.clearSelection();
-              _context.prev = 6;
-              _context.next = 9;
+              _context.p = 2;
+              _context.n = 3;
               return fetch('/db/tables');
-            case 9:
-              response = _context.sent;
+            case 3:
+              response = _context.v;
               if (response.ok) {
-                _context.next = 12;
+                _context.n = 4;
                 break;
               }
               throw new Error('Failed to fetch table list');
-            case 12:
-              _context.next = 14;
+            case 4:
+              _context.n = 5;
               return response.json();
-            case 14:
-              data = _context.sent;
+            case 5:
+              data = _context.v;
               this.renderTableList(data.tables);
               this.buildGraphDataFromTablesResponse(data);
               this.initializeGraph();
               this.renderGraph();
               this.dataLoaded = true;
-              _context.next = 26;
+              _context.n = 7;
               break;
-            case 22:
-              _context.prev = 22;
-              _context.t0 = _context["catch"](6);
-              console.error('Error fetching tables:', _context.t0);
+            case 6:
+              _context.p = 6;
+              _t = _context.v;
+              console.error('Error fetching tables:', _t);
               this.showErrorMessage('Failed to load database structure');
-            case 26:
-            case "end":
-              return _context.stop();
+            case 7:
+              return _context.a(2);
           }
-        }, _callee, this, [[6, 22]]);
+        }, _callee, this, [[2, 6]]);
       }));
       function fetchAndRenderTables() {
         return _fetchAndRenderTables.apply(this, arguments);
@@ -51021,37 +51327,37 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "openTableInfoTab",
     value: function () {
-      var _openTableInfoTab = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(tableName) {
-        var widget, response, details, refWidget, _iterator3, _step3, w;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+      var _openTableInfoTab = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(tableName) {
+        var widget, response, details, refWidget, _iterator3, _step3, w, _t2;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.p = _context2.n) {
             case 0:
               widget = null;
-              _context2.prev = 1;
-              _context2.next = 4;
+              _context2.p = 1;
+              _context2.n = 2;
               return fetch("/db/table/".concat(encodeURIComponent(tableName)));
-            case 4:
-              response = _context2.sent;
+            case 2:
+              response = _context2.v;
               if (response.ok) {
-                _context2.next = 7;
+                _context2.n = 3;
                 break;
               }
               throw new Error('Failed to fetch table details');
-            case 7:
-              _context2.next = 9;
+            case 3:
+              _context2.n = 4;
               return response.json();
-            case 9:
-              details = _context2.sent;
+            case 4:
+              details = _context2.v;
               widget = new TableInfoWidget(tableName, details);
-              _context2.next = 18;
+              _context2.n = 6;
               break;
-            case 13:
-              _context2.prev = 13;
-              _context2.t0 = _context2["catch"](1);
+            case 5:
+              _context2.p = 5;
+              _t2 = _context2.v;
               widget = new DatabaseTabWidget();
               widget.title.label = tableName;
-              widget.node.innerHTML = "<div style=\"color: red; padding: 10px;\">Error loading table info: ".concat(_context2.t0.message, "</div>");
-            case 18:
+              widget.node.innerHTML = "<div style=\"color: red; padding: 10px;\">Error loading table info: ".concat(_t2.message, "</div>");
+            case 6:
               refWidget = null;
               if (this.panel.widgets) {
                 _iterator3 = _createForOfIteratorHelper(this.panel.widgets());
@@ -51080,11 +51386,10 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
                 });
               }
               this.panel.activateWidget(widget);
-            case 22:
-            case "end":
-              return _context2.stop();
+            case 7:
+              return _context2.a(2);
           }
-        }, _callee2, this, [[1, 13]]);
+        }, _callee2, this, [[1, 5]]);
       }));
       function openTableInfoTab(_x) {
         return _openTableInfoTab.apply(this, arguments);
@@ -51148,10 +51453,10 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "openNewQueryTab",
     value: function () {
-      var _openNewQueryTab = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-        var selectedTables, tableNames, initialQuery, columnNames, _ref2, columnPromises, columnArrays, queryWidget;
-        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-          while (1) switch (_context4.prev = _context4.next) {
+      var _openNewQueryTab = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+        var selectedTables, tableNames, initialQuery, columnNames, _ref2, columnPromises, columnArrays, queryWidget, _t3;
+        return _regenerator().w(function (_context4) {
+          while (1) switch (_context4.p = _context4.n) {
             case 0:
               selectedTables = this.getSelectedTables();
               tableNames = this.graphData.nodes.map(function (n) {
@@ -51160,36 +51465,33 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
               initialQuery = this.getInitialQuery(selectedTables);
               columnNames = [];
               if (!(selectedTables.length > 0)) {
-                _context4.next = 16;
+                _context4.n = 4;
                 break;
               }
-              _context4.prev = 5;
+              _context4.p = 1;
               columnPromises = selectedTables.map(/*#__PURE__*/function () {
-                var _ref = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(tableName) {
+                var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(tableName) {
                   var response, details;
-                  return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-                    while (1) switch (_context3.prev = _context3.next) {
+                  return _regenerator().w(function (_context3) {
+                    while (1) switch (_context3.n) {
                       case 0:
-                        _context3.next = 2;
+                        _context3.n = 1;
                         return fetch("/db/table/".concat(encodeURIComponent(tableName)));
-                      case 2:
-                        response = _context3.sent;
+                      case 1:
+                        response = _context3.v;
                         if (!response.ok) {
-                          _context3.next = 8;
+                          _context3.n = 3;
                           break;
                         }
-                        _context3.next = 6;
+                        _context3.n = 2;
                         return response.json();
-                      case 6:
-                        details = _context3.sent;
-                        return _context3.abrupt("return", details.columns ? details.columns.map(function (col) {
+                      case 2:
+                        details = _context3.v;
+                        return _context3.a(2, details.columns ? details.columns.map(function (col) {
                           return col.name;
                         }) : []);
-                      case 8:
-                        return _context3.abrupt("return", []);
-                      case 9:
-                      case "end":
-                        return _context3.stop();
+                      case 3:
+                        return _context3.a(2, []);
                     }
                   }, _callee3);
                 }));
@@ -51197,18 +51499,18 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
                   return _ref.apply(this, arguments);
                 };
               }());
-              _context4.next = 9;
+              _context4.n = 2;
               return Promise.all(columnPromises);
-            case 9:
-              columnArrays = _context4.sent;
+            case 2:
+              columnArrays = _context4.v;
               columnNames = (_ref2 = []).concat.apply(_ref2, _toConsumableArray(columnArrays));
-              _context4.next = 16;
+              _context4.n = 4;
               break;
-            case 13:
-              _context4.prev = 13;
-              _context4.t0 = _context4["catch"](5);
-              console.warn('Failed to fetch column names:', _context4.t0);
-            case 16:
+            case 3:
+              _context4.p = 3;
+              _t3 = _context4.v;
+              console.warn('Failed to fetch column names:', _t3);
+            case 4:
               queryWidget = new _query_widget__WEBPACK_IMPORTED_MODULE_1__.QueryWidget(this.panel, tableNames, columnNames, initialQuery);
               this.panel.addInfoWidget(queryWidget, {
                 ref: this,
@@ -51216,11 +51518,10 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
               });
               this.panel.activateWidget(queryWidget);
               this.clearSelection();
-            case 20:
-            case "end":
-              return _context4.stop();
+            case 5:
+              return _context4.a(2);
           }
-        }, _callee4, this, [[5, 13]]);
+        }, _callee4, this, [[1, 3]]);
       }));
       function openNewQueryTab() {
         return _openNewQueryTab.apply(this, arguments);
@@ -51797,15 +52098,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var file_saver__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(file_saver__WEBPACK_IMPORTED_MODULE_9__);
 /* harmony import */ var _viz_js_viz__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! @viz-js/viz */ "../../node_modules/@viz-js/viz/lib/viz-standalone.mjs");
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorRuntime() { "use strict"; var r = _regenerator(), e = r.m(_regeneratorRuntime), t = (Object.getPrototypeOf ? Object.getPrototypeOf(e) : e.__proto__).constructor; function n(r) { var e = "function" == typeof r && r.constructor; return !!e && (e === t || "GeneratorFunction" === (e.displayName || e.name)); } var o = { "throw": 1, "return": 2, "break": 3, "continue": 3 }; function a(r) { var e, t; return function (n) { e || (e = { stop: function stop() { return t(n.a, 2); }, "catch": function _catch() { return n.v; }, abrupt: function abrupt(r, e) { return t(n.a, o[r], e); }, delegateYield: function delegateYield(r, o, a) { return e.resultName = o, t(n.d, _regeneratorValues(r), a); }, finish: function finish(r) { return t(n.f, r); } }, t = function t(r, _t, o) { n.p = e.prev, n.n = e.next; try { return r(_t, o); } finally { e.next = n.n; } }), e.resultName && (e[e.resultName] = n.v, e.resultName = void 0), e.sent = n.v, e.next = n.n; try { return r.call(this, e); } finally { n.p = e.prev, n.n = e.next; } }; } return (_regeneratorRuntime = function _regeneratorRuntime() { return { wrap: function wrap(e, t, n, o) { return r.w(a(e), t, n, o && o.reverse()); }, isGeneratorFunction: n, mark: r.m, awrap: function awrap(r, e) { return new _OverloadYield(r, e); }, AsyncIterator: _regeneratorAsyncIterator, async: function async(r, e, t, o, u) { return (n(e) ? _regeneratorAsyncGen : _regeneratorAsync)(a(r), e, t, o, u); }, keys: _regeneratorKeys, values: _regeneratorValues }; })(); }
-function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
-function _regeneratorKeys(e) { var n = Object(e), r = []; for (var t in n) r.unshift(t); return function e() { for (; r.length;) if ((t = r.pop()) in n) return e.value = t, e.done = !1, e; return e.done = !0, e; }; }
-function _regeneratorAsync(n, e, r, t, o) { var a = _regeneratorAsyncGen(n, e, r, t, o); return a.next().then(function (n) { return n.done ? n.value : a.next(); }); }
-function _regeneratorAsyncGen(r, e, t, o, n) { return new _regeneratorAsyncIterator(_regenerator().w(r, e, t, o), n || Promise); }
-function _regeneratorAsyncIterator(t, e) { function n(r, o, i, f) { try { var c = t[r](o), u = c.value; return u instanceof _OverloadYield ? e.resolve(u.v).then(function (t) { n("next", t, i, f); }, function (t) { n("throw", t, i, f); }) : e.resolve(u).then(function (t) { c.value = t, i(c); }, function (t) { return n("throw", t, i, f); }); } catch (t) { f(t); } } var r; this.next || (_regeneratorDefine2(_regeneratorAsyncIterator.prototype), _regeneratorDefine2(_regeneratorAsyncIterator.prototype, "function" == typeof Symbol && Symbol.asyncIterator || "@asyncIterator", function () { return this; })), _regeneratorDefine2(this, "_invoke", function (t, o, i) { function f() { return new e(function (e, r) { n(t, i, e, r); }); } return r = r ? r.then(f, f) : f(); }, !0); }
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function _OverloadYield(e, d) { this.v = e, this.k = d; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -52226,9 +52520,9 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
         }
       }).then(function (response) {
         response.json().then(/*#__PURE__*/function () {
-          var _ref = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(json) {
-            return _regeneratorRuntime().wrap(function _callee$(_context) {
-              while (1) switch (_context.prev = _context.next) {
+          var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(json) {
+            return _regenerator().w(function (_context) {
+              while (1) switch (_context.n) {
                 case 0:
                   if (response.status == 200) {
                     _this4.executeCollabCommand(modal, modalBody, "editDeleteServerUrlId", "Delete remote", "delete", json.remotes);
@@ -52236,8 +52530,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
                     console.log("Failed to get remotes");
                   }
                 case 1:
-                case "end":
-                  return _context.stop();
+                  return _context.a(2);
               }
             }, _callee);
           }));
@@ -52259,9 +52552,9 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
         }
       }).then(function (response) {
         response.json().then(/*#__PURE__*/function () {
-          var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(json) {
-            return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-              while (1) switch (_context2.prev = _context2.next) {
+          var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(json) {
+            return _regenerator().w(function (_context2) {
+              while (1) switch (_context2.n) {
                 case 0:
                   if (response.status == 200) {
                     _this5.executeCollabCommand(modal, modalBody, "editRemoteServerUrlId", "Edit remote", "edit", json.remotes);
@@ -52269,8 +52562,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
                     console.log("Failed to get remotes");
                   }
                 case 1:
-                case "end":
-                  return _context2.stop();
+                  return _context2.a(2);
               }
             }, _callee2);
           }));
@@ -52292,9 +52584,9 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
         }
       }).then(function (response) {
         response.json().then(/*#__PURE__*/function () {
-          var _ref3 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(json) {
-            return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-              while (1) switch (_context3.prev = _context3.next) {
+          var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(json) {
+            return _regenerator().w(function (_context3) {
+              while (1) switch (_context3.n) {
                 case 0:
                   if (response.status == 200) {
                     _this6.executeCollabCommand(modal, modalBody, "pushServerUrlId", "Push experiment", "push", json.remotes);
@@ -52302,8 +52594,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
                     console.log("Failed to get remotes");
                   }
                 case 1:
-                case "end":
-                  return _context3.stop();
+                  return _context3.a(2);
               }
             }, _callee3);
           }));
@@ -52325,9 +52616,9 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
         }
       }).then(function (response) {
         response.json().then(/*#__PURE__*/function () {
-          var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(json) {
-            return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-              while (1) switch (_context4.prev = _context4.next) {
+          var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(json) {
+            return _regenerator().w(function (_context4) {
+              while (1) switch (_context4.n) {
                 case 0:
                   if (response.status == 200) {
                     _this7.executeCollabCommand(modal, modalBody, "pullServerUrlId", "Pull experiment", "pull", json.remotes);
@@ -52335,8 +52626,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
                     console.log("Failed to get remotes");
                   }
                 case 1:
-                case "end":
-                  return _context4.stop();
+                  return _context4.a(2);
               }
             }, _callee4);
           }));
@@ -53462,15 +53752,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _style_bootstrap_min_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../style/bootstrap.min.css */ "./style/bootstrap.min.css");
 /* harmony import */ var d3_selection__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! d3-selection */ "../../node_modules/d3-selection/src/select.js");
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorRuntime() { "use strict"; var r = _regenerator(), e = r.m(_regeneratorRuntime), t = (Object.getPrototypeOf ? Object.getPrototypeOf(e) : e.__proto__).constructor; function n(r) { var e = "function" == typeof r && r.constructor; return !!e && (e === t || "GeneratorFunction" === (e.displayName || e.name)); } var o = { "throw": 1, "return": 2, "break": 3, "continue": 3 }; function a(r) { var e, t; return function (n) { e || (e = { stop: function stop() { return t(n.a, 2); }, "catch": function _catch() { return n.v; }, abrupt: function abrupt(r, e) { return t(n.a, o[r], e); }, delegateYield: function delegateYield(r, o, a) { return e.resultName = o, t(n.d, _regeneratorValues(r), a); }, finish: function finish(r) { return t(n.f, r); } }, t = function t(r, _t, o) { n.p = e.prev, n.n = e.next; try { return r(_t, o); } finally { e.next = n.n; } }), e.resultName && (e[e.resultName] = n.v, e.resultName = void 0), e.sent = n.v, e.next = n.n; try { return r.call(this, e); } finally { n.p = e.prev, n.n = e.next; } }; } return (_regeneratorRuntime = function _regeneratorRuntime() { return { wrap: function wrap(e, t, n, o) { return r.w(a(e), t, n, o && o.reverse()); }, isGeneratorFunction: n, mark: r.m, awrap: function awrap(r, e) { return new _OverloadYield(r, e); }, AsyncIterator: _regeneratorAsyncIterator, async: function async(r, e, t, o, u) { return (n(e) ? _regeneratorAsyncGen : _regeneratorAsync)(a(r), e, t, o, u); }, keys: _regeneratorKeys, values: _regeneratorValues }; })(); }
-function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
-function _regeneratorKeys(e) { var n = Object(e), r = []; for (var t in n) r.unshift(t); return function e() { for (; r.length;) if ((t = r.pop()) in n) return e.value = t, e.done = !1, e; return e.done = !0, e; }; }
-function _regeneratorAsync(n, e, r, t, o) { var a = _regeneratorAsyncGen(n, e, r, t, o); return a.next().then(function (n) { return n.done ? n.value : a.next(); }); }
-function _regeneratorAsyncGen(r, e, t, o, n) { return new _regeneratorAsyncIterator(_regenerator().w(r, e, t, o), n || Promise); }
-function _regeneratorAsyncIterator(t, e) { function n(r, o, i, f) { try { var c = t[r](o), u = c.value; return u instanceof _OverloadYield ? e.resolve(u.v).then(function (t) { n("next", t, i, f); }, function (t) { n("throw", t, i, f); }) : e.resolve(u).then(function (t) { c.value = t, i(c); }, function (t) { return n("throw", t, i, f); }); } catch (t) { f(t); } } var r; this.next || (_regeneratorDefine2(_regeneratorAsyncIterator.prototype), _regeneratorDefine2(_regeneratorAsyncIterator.prototype, "function" == typeof Symbol && Symbol.asyncIterator || "@asyncIterator", function () { return this; })), _regeneratorDefine2(this, "_invoke", function (t, o, i) { function f() { return new e(function (e, r) { n(t, i, e, r); }); } return r = r ? r.then(f, f) : f(); }, !0); }
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function _OverloadYield(e, d) { this.v = e, this.k = d; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
@@ -53515,14 +53798,14 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "setUsers",
     value: function () {
-      var _setUsers = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      var _setUsers = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
         var _thiss, response, obj;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
             case 0:
               _thiss = this;
               _thiss.userIn.html("");
-              _context.next = 4;
+              _context.n = 1;
               return fetch("users", {
                 method: 'GET',
                 // *GET, POST, PUT, DELETE, etc.
@@ -53530,34 +53813,33 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
                   'Content-Type': 'application/json'
                 }
               });
-            case 4:
-              response = _context.sent;
+            case 1:
+              response = _context.v;
               if (!(response.status == 200)) {
-                _context.next = 13;
+                _context.n = 3;
                 break;
               }
               _thiss.users = new Array();
-              _context.next = 9;
+              _context.n = 2;
               return response.json();
-            case 9:
-              obj = _context.sent;
+            case 2:
+              obj = _context.v;
               obj.forEach(function (item) {
                 _thiss.users.push({
                   id: item.id,
                   login: item.userLogin
                 });
               });
-              _context.next = 14;
+              _context.n = 4;
               break;
-            case 13:
+            case 3:
               this.showNode(_thiss.errorFeedback);
-            case 14:
+            case 4:
               _thiss.users.forEach(function (obj) {
                 _thiss.userIn.append("option").attr("value", obj.id).text(obj.login);
               });
-            case 15:
-            case "end":
-              return _context.stop();
+            case 5:
+              return _context.a(2);
           }
         }, _callee, this);
       }));
@@ -53575,13 +53857,13 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "setGroups",
     value: function () {
-      var _setGroups = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+      var _setGroups = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
         var _thiss, response, obj;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
             case 0:
               _thiss = this;
-              _context2.next = 3;
+              _context2.n = 1;
               return fetch("groups", {
                 method: 'GET',
                 // *GET, POST, PUT, DELETE, etc.
@@ -53589,17 +53871,17 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
                   'Content-Type': 'application/json'
                 }
               });
-            case 3:
-              response = _context2.sent;
+            case 1:
+              response = _context2.v;
               if (!(response.status == 200)) {
-                _context2.next = 12;
+                _context2.n = 3;
                 break;
               }
               _thiss.groups = new Array();
-              _context2.next = 8;
+              _context2.n = 2;
               return response.json();
-            case 8:
-              obj = _context2.sent;
+            case 2:
+              obj = _context2.v;
               obj.forEach(function (item) {
                 var group = {
                   id: item.id,
@@ -53614,17 +53896,16 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
                 });
                 _thiss.groups.push(group);
               });
-              _context2.next = 13;
+              _context2.n = 4;
               break;
-            case 12:
+            case 3:
               this.showNode(_thiss.errorFeedback);
-            case 13:
+            case 4:
               this.groups.forEach(function (obj) {
                 _thiss.addGrpRow(obj);
               });
-            case 14:
-            case "end":
-              return _context2.stop();
+            case 5:
+              return _context2.a(2);
           }
         }, _callee2, this);
       }));
@@ -53636,12 +53917,12 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "deleteGrp",
     value: function () {
-      var _deleteGrp = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(grpId) {
+      var _deleteGrp = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(grpId) {
         var response;
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
             case 0:
-              _context3.next = 2;
+              _context3.n = 1;
               return fetch("/groups/" + grpId, {
                 method: 'DELETE',
                 // *GET, POST, PUT, DELETE, etc.
@@ -53649,17 +53930,16 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
                   'Content-Type': 'application/json'
                 }
               });
-            case 2:
-              response = _context3.sent;
+            case 1:
+              response = _context3.v;
               if (response.status == 200) {
                 this.showNode(this.successFeedback);
                 this.resfreshGroups();
               } else {
                 this.showNode(this.errorFeedback);
               }
-            case 4:
-            case "end":
-              return _context3.stop();
+            case 2:
+              return _context3.a(2);
           }
         }, _callee3, this);
       }));
@@ -55387,15 +55667,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var ace_builds_src_noconflict_ext_language_tools__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ace-builds/src-noconflict/ext-language_tools */ "../../node_modules/ace-builds/src-noconflict/ext-language_tools.js");
 /* harmony import */ var ace_builds_src_noconflict_ext_language_tools__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(ace_builds_src_noconflict_ext_language_tools__WEBPACK_IMPORTED_MODULE_5__);
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorRuntime() { "use strict"; var r = _regenerator(), e = r.m(_regeneratorRuntime), t = (Object.getPrototypeOf ? Object.getPrototypeOf(e) : e.__proto__).constructor; function n(r) { var e = "function" == typeof r && r.constructor; return !!e && (e === t || "GeneratorFunction" === (e.displayName || e.name)); } var o = { "throw": 1, "return": 2, "break": 3, "continue": 3 }; function a(r) { var e, t; return function (n) { e || (e = { stop: function stop() { return t(n.a, 2); }, "catch": function _catch() { return n.v; }, abrupt: function abrupt(r, e) { return t(n.a, o[r], e); }, delegateYield: function delegateYield(r, o, a) { return e.resultName = o, t(n.d, _regeneratorValues(r), a); }, finish: function finish(r) { return t(n.f, r); } }, t = function t(r, _t, o) { n.p = e.prev, n.n = e.next; try { return r(_t, o); } finally { e.next = n.n; } }), e.resultName && (e[e.resultName] = n.v, e.resultName = void 0), e.sent = n.v, e.next = n.n; try { return r.call(this, e); } finally { n.p = e.prev, n.n = e.next; } }; } return (_regeneratorRuntime = function _regeneratorRuntime() { return { wrap: function wrap(e, t, n, o) { return r.w(a(e), t, n, o && o.reverse()); }, isGeneratorFunction: n, mark: r.m, awrap: function awrap(r, e) { return new _OverloadYield(r, e); }, AsyncIterator: _regeneratorAsyncIterator, async: function async(r, e, t, o, u) { return (n(e) ? _regeneratorAsyncGen : _regeneratorAsync)(a(r), e, t, o, u); }, keys: _regeneratorKeys, values: _regeneratorValues }; })(); }
-function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
-function _regeneratorKeys(e) { var n = Object(e), r = []; for (var t in n) r.unshift(t); return function e() { for (; r.length;) if ((t = r.pop()) in n) return e.value = t, e.done = !1, e; return e.done = !0, e; }; }
-function _regeneratorAsync(n, e, r, t, o) { var a = _regeneratorAsyncGen(n, e, r, t, o); return a.next().then(function (n) { return n.done ? n.value : a.next(); }); }
-function _regeneratorAsyncGen(r, e, t, o, n) { return new _regeneratorAsyncIterator(_regenerator().w(r, e, t, o), n || Promise); }
-function _regeneratorAsyncIterator(t, e) { function n(r, o, i, f) { try { var c = t[r](o), u = c.value; return u instanceof _OverloadYield ? e.resolve(u.v).then(function (t) { n("next", t, i, f); }, function (t) { n("throw", t, i, f); }) : e.resolve(u).then(function (t) { c.value = t, i(c); }, function (t) { return n("throw", t, i, f); }); } catch (t) { f(t); } } var r; this.next || (_regeneratorDefine2(_regeneratorAsyncIterator.prototype), _regeneratorDefine2(_regeneratorAsyncIterator.prototype, "function" == typeof Symbol && Symbol.asyncIterator || "@asyncIterator", function () { return this; })), _regeneratorDefine2(this, "_invoke", function (t, o, i) { function f() { return new e(function (e, r) { n(t, i, e, r); }); } return r = r ? r.then(f, f) : f(); }, !0); }
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function _OverloadYield(e, d) { this.v = e, this.k = d; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -55573,11 +55846,11 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
   return _createClass(QueryWidget, [{
     key: "createQueryInterface",
     value: function () {
-      var _createQueryInterface = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      var _createQueryInterface = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
         var _this4 = this;
         var container, headerRow, queryContainer;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
             case 0:
               container = this.d3node.append('div').style('display', 'flex').style('flex-direction', 'column').style('height', '100%').style('padding', '1rem').style('gap', '1rem').style('overflow-y', 'auto').style('overflow-x', 'hidden');
               headerRow = container.append('div').style('display', 'flex').style('justify-content', 'space-between').style('align-items', 'center').style('margin-bottom', '1rem').style('flex-shrink', '0');
@@ -55644,9 +55917,8 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
                 }
               }, 0);
               queryContainer.append('div').attr('id', "query-status-".concat(this.editorId)).style('min-height', '60px').style('padding', '0.5rem').style('border', '1px solid #e0e0e0').style('border-radius', '4px').style('background-color', '#f9f9f9').style('font-family', 'monospace').style('font-size', '0.9em').style('overflow-y', 'auto').style('flex-shrink', '0').style('margin-top', '1rem').text('Ready to execute queries. Use Ctrl+Enter for quick execution.');
-            case 9:
-            case "end":
-              return _context.stop();
+            case 1:
+              return _context.a(2);
           }
         }, _callee, this);
       }));
@@ -55658,34 +55930,34 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "executeQuery",
     value: function () {
-      var _executeQuery = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-        var statusArea, sql, response, data;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+      var _executeQuery = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+        var statusArea, sql, response, data, _t;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.p = _context2.n) {
             case 0:
               // const queryInput = this.node.querySelector('#query-input') as HTMLTextAreaElement;
               statusArea = this.node.querySelector("#query-status-".concat(this.editorId));
               sql = this.aceEditor ? this.aceEditor.getValue().trim() : '';
               if (statusArea) {
-                _context2.next = 4;
+                _context2.n = 1;
                 break;
               }
-              return _context2.abrupt("return");
-            case 4:
+              return _context2.a(2);
+            case 1:
               statusArea.innerHTML = '';
               statusArea.style.color = '#333';
               if (sql) {
-                _context2.next = 10;
+                _context2.n = 2;
                 break;
               }
               statusArea.textContent = 'Please enter a SQL query.';
               statusArea.style.color = '#d32f2f';
-              return _context2.abrupt("return");
-            case 10:
+              return _context2.a(2);
+            case 2:
               statusArea.textContent = 'Executing query...';
               statusArea.style.color = '#1976d2';
-              _context2.prev = 12;
-              _context2.next = 15;
+              _context2.p = 3;
+              _context2.n = 4;
               return fetch('/db/query', {
                 method: 'POST',
                 headers: {
@@ -55695,48 +55967,47 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
                   query: sql
                 })
               });
-            case 15:
-              response = _context2.sent;
-              _context2.next = 18;
+            case 4:
+              response = _context2.v;
+              _context2.n = 5;
               return response.json();
-            case 18:
-              data = _context2.sent;
+            case 5:
+              data = _context2.v;
               if (!data.error) {
-                _context2.next = 24;
+                _context2.n = 6;
                 break;
               }
               statusArea.textContent = "Error: ".concat(data.error);
               statusArea.style.color = '#d32f2f';
-              _context2.next = 33;
+              _context2.n = 9;
               break;
-            case 24:
+            case 6:
               if (!(data.rows && data.columns)) {
-                _context2.next = 31;
+                _context2.n = 8;
                 break;
               }
               statusArea.textContent = "Query executed successfully! Found ".concat(data.rows.length, " rows with ").concat(data.columns.length, " columns.");
               statusArea.style.color = '#388e3c';
-              _context2.next = 29;
+              _context2.n = 7;
               return this.displayQueryResults(sql, data.columns, data.rows);
-            case 29:
-              _context2.next = 33;
+            case 7:
+              _context2.n = 9;
               break;
-            case 31:
+            case 8:
               statusArea.textContent = 'Query executed successfully. No results returned.';
               statusArea.style.color = '#388e3c';
-            case 33:
-              _context2.next = 39;
+            case 9:
+              _context2.n = 11;
               break;
-            case 35:
-              _context2.prev = 35;
-              _context2.t0 = _context2["catch"](12);
-              statusArea.textContent = "Error executing query: ".concat(_context2.t0.message);
+            case 10:
+              _context2.p = 10;
+              _t = _context2.v;
+              statusArea.textContent = "Error executing query: ".concat(_t.message);
               statusArea.style.color = '#d32f2f';
-            case 39:
-            case "end":
-              return _context2.stop();
+            case 11:
+              return _context2.a(2);
           }
-        }, _callee2, this, [[12, 35]]);
+        }, _callee2, this, [[3, 10]]);
       }));
       function executeQuery() {
         return _executeQuery.apply(this, arguments);
@@ -55746,10 +56017,10 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "displayQueryResults",
     value: function () {
-      var _displayQueryResults = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(sql, columns, rows) {
+      var _displayQueryResults = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(sql, columns, rows) {
         var resultWidget, refWidget, _iterator2, _step2, w;
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
             case 0:
               resultWidget = new QueryResultWidget(sql, columns, rows, ++QueryWidget.count);
               refWidget = null;
@@ -55780,9 +56051,8 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
                 });
               }
               this.panel.activateWidget(resultWidget);
-            case 5:
-            case "end":
-              return _context3.stop();
+            case 1:
+              return _context3.a(2);
           }
         }, _callee3, this);
       }));
