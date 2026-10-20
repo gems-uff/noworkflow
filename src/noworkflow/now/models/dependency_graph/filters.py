@@ -10,7 +10,7 @@ from ...persistence.models.base import proxy_gen, proxy
 from ...persistence.models import CodeComponent, Activation, Dependency
 from ...persistence import relational
 
-from  ...cmd.cmd_evaluation import query_evaluations, Evaluation as EvaluationPrint
+from  ...cmd.cmd_evaluation import query_evaluations
 
 from .node_types import AccessNode, ClusterNode
 from .node_types import EvaluationNode

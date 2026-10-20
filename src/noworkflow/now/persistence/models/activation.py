@@ -10,7 +10,7 @@ from datetime import timedelta
 from sqlalchemy import Column, Integer, String, Text, Float, select, join
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
+from ...utils.prolog import PrologDescription, PrologTrial
 from ...utils.prolog import PrologAttribute, PrologRepr, PrologNullable
 
 from .. import relational

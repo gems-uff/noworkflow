@@ -6,13 +6,10 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy.schema import CreateTable
 
 from ...cmd.cmd_schema import Schema
 
 from ...utils.formatter import PrettyLines
-from ...persistence.models import ORDER
-from ...persistence import relational
 
 from .command import IpythonCommandMagic
 

@@ -3,7 +3,6 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 
-from collections import defaultdict
 from ....patterns import var
 from ....patterns.rules import name as name_
 from .querier_options import PreloadedQuerierOptions

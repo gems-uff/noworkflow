@@ -11,7 +11,7 @@ from IPython.core import compilerop
 from IPython.core import interactiveshell
 
 from ..now.collection.metadata import Metascript
-from ..now.persistence.models import Tag, Trial, Argument
+from ..now.persistence.models import Trial
 from ..now.utils.cross_version import cross_compile
 
 

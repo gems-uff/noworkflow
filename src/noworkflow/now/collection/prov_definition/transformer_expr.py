@@ -7,7 +7,6 @@ Collect definition provenance during the transformations"""
 # pylint: disable=too-many-lines
 
 import ast
-import sys
 from copy import copy
 
 import pyposast

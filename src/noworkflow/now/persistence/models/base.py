@@ -13,7 +13,6 @@ from functools import wraps
 
 from future.utils import with_metaclass, viewitems, viewvalues, viewkeys
 from sqlalchemy import Column
-from sqlalchemy.orm import relationship
 
 from .. import relational
 

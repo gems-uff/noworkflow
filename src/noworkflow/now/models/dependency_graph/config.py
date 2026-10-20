@@ -4,7 +4,6 @@
 # Please, consult the license terms in the LICENSE file.
 """Dependency graph configuration"""
 
-from collections import defaultdict
 
 from future.utils import viewvalues
 
@@ -17,7 +16,7 @@ from .filters import FilterExternalAccessesOut, FilterTypesOut
 from .filters import FilterWasDerivedFrom, FilterNotFromCodeOut
 from .filters import FilterUseActivationName, FilterFuncOut
 from .filters import JoinedFilter, AcceptAllNodesFilter
-from .node_types import ClusterNode, EvaluationNode
+from .node_types import EvaluationNode
 
 
 class DependencyConfig(object):

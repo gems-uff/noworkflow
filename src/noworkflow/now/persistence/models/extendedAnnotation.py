@@ -7,16 +7,13 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 
-from datetime import datetime
 
 import uuid
-from future.utils import lmap
-from future.builtins import map as cvmap
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP
-from sqlalchemy import ForeignKeyConstraint, select, bindparam
+from sqlalchemy import Column, String, Text
+from sqlalchemy import ForeignKeyConstraint
 
-from ...utils.prolog import PrologDescription, PrologTrial
-from ...utils.prolog import PrologRepr, PrologTimestamp
+from ...utils.prolog import PrologDescription
+from ...utils.prolog import PrologRepr
 
 from .. import relational
 

@@ -1,10 +1,8 @@
 import io
 import codecs
 import os
-import builtins
 import hashlib
 
-from contextlib import contextmanager
 from . import safeopen
 
 class ContentDatabaseEngine(object):

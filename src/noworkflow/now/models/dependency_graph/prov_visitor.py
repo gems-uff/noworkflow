@@ -4,14 +4,12 @@
 # Please, consult the license terms in the LICENSE file.
 """Dot Cluster Visitor"""
 
-from contextlib import contextmanager
 from itertools import groupby
 from collections import Counter
 
 from future.utils import viewitems
 
 from .base_visitor import ClusterVisitor
-from .attributes import Attributes
 
 
 def escape(string, size=55):

@@ -9,7 +9,7 @@
 import os
 import json
 from ..persistence import persistence_config
-from ..utils.collab import export_bundle,import_bundle
+from ..utils.collab import export_bundle
 from ..utils.compression import gzip_compress
 
 from ..persistence.models import Trial, User, Remote

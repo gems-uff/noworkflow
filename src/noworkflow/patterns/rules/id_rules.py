@@ -5,9 +5,8 @@
 """ID Rules"""
 # pylint: disable=invalid-name, redefined-builtin
 
-from ..machinery import prolog_rule, create_rule, Variable
+from ..machinery import prolog_rule, create_rule
 from ..models import evaluation
-from .helpers import _get_value, _match
 
 @prolog_rule("evaluation_code_id(TrialId, Id, CodeId) :-")
 @prolog_rule("    evaluation(TrialId, Id, _, CodeId, _, _).")

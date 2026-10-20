@@ -71,7 +71,7 @@ def main():
         args.func(args)
     except RuntimeError as exc:
         print_msg(exc, True)
-    except sqlalchemy.exc.OperationalError as exc:
+    except sqlalchemy.exc.OperationalError:
         print_msg("invalid noWorkflow database", True)
         print_msg("it is probably outdated", True)
 

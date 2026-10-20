@@ -14,18 +14,15 @@ import getpass
 import socket
 from sqlalchemy import Column, Integer,String, Text, TIMESTAMP
 from sqlalchemy import ForeignKeyConstraint, select, func, distinct
-from sqlalchemy.orm import relationship
-from ...utils.formatter import PrettyLines
 from ...utils.prolog import PrologDescription, PrologTrial
 from ...utils.prolog import PrologTimestamp, PrologRepr
 from ...utils.prolog import PrologNullable, PrologNullableRepr
 
-from .. import relational, content, persistence_config
+from .. import relational
 
 from .base import AlchemyProxy, proxy_class, query_many_property, proxy_gen
 from .base import is_none, proxy
 
-from .activation import Activation
 from .head import Head
 
 
@@ -329,7 +326,7 @@ class Trial(AlchemyProxy):
         >>> from noworkflow.tests.helpers.models import new_trial, TrialConfig
         >>> from noworkflow.tests.helpers.models import FuncConfig
         >>> from noworkflow.tests.helpers.models import AssignConfig
-        >>> from noworkflow.now.persistence.models import Trial
+        >>> from noworkflow.now.persistence.models import Activation, Trial
         >>> assign = AssignConfig()
         >>> function = FuncConfig("f", 1, 0, 2, 8)
         >>> trial_config = TrialConfig("finished")

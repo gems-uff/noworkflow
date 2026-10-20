@@ -7,7 +7,6 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import importlib.metadata
-import modulefinder
 import os
 import platform
 import re
@@ -19,9 +18,7 @@ import getpass
 from future.utils import viewitems, native_str
 from future.builtins import map as cvmap
 
-from ...persistence.models import Module
-from ...persistence import content
-from ...utils.io import print_msg, redirect_output
+from ...utils.io import print_msg
 from ...utils.metaprofiler import meta_profiler
 from ...utils.cross_version import string
 from ...utils.functions import version

@@ -20,10 +20,6 @@ from ...utils.metaprofiler import meta_profiler
 from .debugger import debugger_builtins
 from .collector import Collector
 
-from noworkflow.now.persistence.models import Evaluation, Activation
-from noworkflow.now.models.dependency_querier import DependencyQuerier
-from noworkflow.now.models.dependency_querier.node_context import NodeContext
-from noworkflow.now.models.dependency_querier.querier_options import QuerierOptions
 from noworkflow.now.tagging.var_tagging import now_tag_cell, now_tag_variable
 
 class Execution(object):

@@ -12,7 +12,6 @@ from ..persistence.models import Trial
 from ..persistence import persistence_config, relational
 from ..persistence.models import Evaluation as EvaluationM, CodeComponent, Activation
 from ..persistence.models.base import proxy, proxy_gen
-from ..utils.io import print_msg
 
 from .command import Command
 

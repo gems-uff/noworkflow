@@ -9,12 +9,10 @@ from __future__ import (absolute_import, print_function,
 from datetime import timedelta
 from sqlalchemy import Column, Integer, String, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy.orm import remote, foreign
 
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
+from ...utils.prolog import PrologDescription, PrologTrial
 from ...utils.prolog import PrologAttribute, PrologNullable, PrologRepr
-from .. import relational
 
 from .base import AlchemyProxy, proxy_class, proxy
 

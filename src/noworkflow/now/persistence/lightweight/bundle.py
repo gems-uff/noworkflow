@@ -5,13 +5,11 @@
 """Lightweight Bundle"""
 
 
-from ..models import CodeBlock
-from .. import content
 
 from . import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
 from . import EvaluationLW,FileAccessLW,StageTagsLW,MemberLW,ModuleLW,TrialLW, UserLW
 
-from .base import BaseLW, define_attrs
+from .base import BaseLW
 from datetime import datetime
 
 class BundleLW(BaseLW):

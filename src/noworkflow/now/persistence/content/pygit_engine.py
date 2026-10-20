@@ -3,11 +3,8 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """PyGit content database engine"""
-import hashlib
-import os
 
 from os.path import isdir
-from collections import defaultdict
 
 from pygit2 import init_repository
 from pygit2 import Repository

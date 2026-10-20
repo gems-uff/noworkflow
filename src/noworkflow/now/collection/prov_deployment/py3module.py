@@ -7,7 +7,6 @@
 import inspect
 from functools import wraps
 from importlib.machinery import PathFinder, SourceFileLoader
-from importlib.abc import Loader
 from ...persistence import content
 from pathlib import Path
 

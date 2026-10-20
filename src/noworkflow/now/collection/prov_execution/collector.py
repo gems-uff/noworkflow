@@ -8,12 +8,11 @@
 import sys
 import weakref
 import os
-import time
 import inspect
 
 from collections import OrderedDict
 from copy import copy
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 from types import GeneratorType
 
@@ -21,7 +20,7 @@ from future.utils import viewvalues, viewkeys, viewitems, exec_
 
 from ...persistence import content
 from ...persistence.models import Trial
-from ...utils.cross_version import IMMUTABLE, isiterable, PY3
+from ...utils.cross_version import isiterable, PY3
 from ...utils.cross_version import cross_print, PY38
 
 from .structures import AssignAccess, Assign, Generator, FutureActivation

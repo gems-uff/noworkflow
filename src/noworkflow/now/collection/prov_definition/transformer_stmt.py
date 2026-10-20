@@ -8,7 +8,6 @@ Collect definition provenance during the transformations"""
 import ast
 import os
 from copy import copy, deepcopy
-from contextlib import contextmanager
 
 import pyposast
 

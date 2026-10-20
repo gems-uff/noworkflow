@@ -9,13 +9,10 @@ from __future__ import (absolute_import, print_function,
 import os
 
 from datetime import datetime, timedelta
-from textwrap import dedent
-from sqlalchemy import select, func
-
-from collections import namedtuple
+from sqlalchemy import func
 
 
-from ...now.persistence.lightweight import ObjectStore, SharedObjectStore
+
 
 from ...now.persistence.models.trial import Trial
 from ...now.persistence.models.tag import Tag

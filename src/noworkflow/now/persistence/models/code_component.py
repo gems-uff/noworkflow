@@ -9,14 +9,13 @@ from __future__ import (absolute_import, print_function,
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 from sqlalchemy import CheckConstraint
-from sqlalchemy.orm import remote, foreign
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
 from ...utils.prolog import PrologRepr, PrologNullable
 
 from .. import relational
 
-from .base import AlchemyProxy, proxy_class, query_one_property, query_many_property
+from .base import AlchemyProxy, proxy_class, query_one_property
 
 
 @proxy_class

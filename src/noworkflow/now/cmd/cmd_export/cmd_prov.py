@@ -8,16 +8,12 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from argparse import Namespace
 
 from ...persistence.models import Trial
 from ...persistence import persistence_config
 
 
 from ..command import Command
-from ..cmd_diff import Diff
-from ..cmd_history import History
-from ..cmd_show import Show
 
 from ...models.prov.export import export_prov
 

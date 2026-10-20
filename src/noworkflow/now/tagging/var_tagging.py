@@ -13,7 +13,6 @@ from noworkflow.now.persistence.models import Evaluation, CodeComponent
 from noworkflow.now.persistence import relational
 
 from typing import Dict, Optional, Tuple, TYPE_CHECKING
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pandas import DataFrame
 

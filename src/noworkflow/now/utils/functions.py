@@ -129,7 +129,7 @@ def run_dot(code, format_='png'):
     )
     try:
         stdout, stderr = process.communicate(code.encode('utf-8'))
-    except (OSError, IOError) as err:  # pylint: disable=unused-variable
+    except (OSError, IOError):  # pylint: disable=unused-variable
         stdout, stderr = process.stdout.read(), process.stderr.read()
         process.wait()
     if process.returncode != 0:

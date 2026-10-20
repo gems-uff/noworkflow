@@ -1,4 +1,3 @@
-import re
 from ipykernel.ipkernel import IPythonKernel
 from .shell import OverrideShell
 

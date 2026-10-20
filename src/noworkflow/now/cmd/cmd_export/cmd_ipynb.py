@@ -8,13 +8,11 @@ from __future__ import (absolute_import, print_function,
 
 import os
 
-from argparse import Namespace
 
 from ...persistence.models import Trial
 from ...persistence import persistence_config
 
 
-from ...models.ast.trial_ast import TrialAst
 from ...models.diff import Diff as DiffModel
 from ...ipython.converter import create_ipynb
 

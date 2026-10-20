@@ -6,13 +6,12 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, select, bindparam
+from sqlalchemy import Column, Integer, String, Text, Boolean
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
 from ...utils.prolog import PrologAttribute, PrologNullableRepr, PrologBoolean
 
-from .. import relational
 
 from .base import AlchemyProxy, proxy_class
 

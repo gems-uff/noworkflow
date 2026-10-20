@@ -7,7 +7,6 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from ..models import Trial
-from .. import content
 
 from .base import BaseLW, define_attrs
 

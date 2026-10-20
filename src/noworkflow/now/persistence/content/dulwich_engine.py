@@ -1,9 +1,6 @@
 import os
-import hashlib
 import time
-import io
 
-from dulwich import file
 from dulwich.repo import Repo
 from dulwich.objects import Tree
 from dulwich.objects import Blob

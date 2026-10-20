@@ -12,7 +12,6 @@ import tempfile
 import json
 import errno
 
-from ..persistence import persistence_config
 from .command import Command
 
 

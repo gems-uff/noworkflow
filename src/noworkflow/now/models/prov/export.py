@@ -1,6 +1,5 @@
 from collections import Counter
 from itertools import groupby
-import sys
 
 from .save_output import SaveOutput
 

@@ -13,8 +13,8 @@ import json
 from flask import render_template, jsonify, request, send_file, Response
 from io import BytesIO as IO
 
-from ..persistence.models import Trial, Activation,Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent, Dependency
-from ..persistence.lightweight import ActivationLW, BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW, EvaluationLW
+from ..persistence.models import Trial, Activation, Experiment, ExtendedAnnotation, Group, User, MemberOfGroup, FileAccess, Module, Remote, Evaluation, CodeComponent, Dependency
+from ..persistence.lightweight import BundleLW, ExperimentLW, ExtendedAnnotationLW,GroupLW,UserLW,MemberOfGroupLW, RemoteLW
 from ..models.history import History
 from ..models.diff import Diff
 from ..models.ast.trial_ast import TrialAst
@@ -27,8 +27,6 @@ from ..ipython.dotmagic import DotDisplay
 import subprocess  # nosec B404
 from ..utils.collab import export_bundle, import_bundle
 from ..utils.compression import gzip_compress,gzip_uncompress
-from ..persistence import content
-import time
 import difflib
 from zipfile import ZipFile
 from io import BytesIO
@@ -639,7 +637,6 @@ def appendDataflowCommandWithParameters(export_command, command, parameter_value
 
 @app.route("/dataflow/evaluations/<trial_id>")
 def get_evaluations_from_trial(trial_id):
-    from sqlalchemy import or_
     evaluations_query = relational.session.query(Evaluation.m.id, CodeComponent.m.name, CodeComponent.m.first_char_line).filter(
             Evaluation.m.trial_id==trial_id, 
             Evaluation.m.code_component_id == CodeComponent.m.id, 

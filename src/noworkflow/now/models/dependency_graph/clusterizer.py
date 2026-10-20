@@ -12,7 +12,7 @@ from itertools import chain
 from future.utils import viewitems
 
 from ...persistence import relational
-from ...persistence.models import UniqueFileAccess, Evaluation, CodeComponent
+from ...persistence.models import UniqueFileAccess, CodeComponent
 
 from .attributes import EMPTY_ATTR, ACCESS_ATTR, PROPAGATED_ATTR
 from .attributes import REFERENCE_ATTR

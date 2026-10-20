@@ -8,7 +8,6 @@ from __future__ import (absolute_import, print_function,
 
 import os
 import sys
-import time
 
 from argparse import Namespace
 from datetime import datetime

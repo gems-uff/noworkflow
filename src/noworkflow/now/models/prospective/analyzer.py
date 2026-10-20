@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from collections import defaultdict
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict
 
 from .utils import (
     SyntaxUtils,

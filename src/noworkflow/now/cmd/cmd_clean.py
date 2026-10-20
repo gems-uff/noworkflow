@@ -7,12 +7,10 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-from bisect import bisect_left
 
 from ..persistence.models import Trial
 from ..persistence import persistence_config
 from ..persistence.models.base import proxy_gen
-from ..utils.io import print_msg
 
 from .command import Command
 from .cmd_evaluation import add_query_arguments, query_evaluations

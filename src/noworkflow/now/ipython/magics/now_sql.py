@@ -8,7 +8,6 @@ from __future__ import (absolute_import, print_function,
 
 
 from future.utils import viewkeys, viewvalues, text_to_native_str
-from IPython.core.display import display_javascript
 from IPython.utils.text import DollarFormatter
 
 from ...persistence import relational

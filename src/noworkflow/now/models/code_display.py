@@ -4,7 +4,6 @@
 # Please, consult the license terms in the LICENSE file.
 """Code Display Object"""
 
-import time
 
 from future.utils import viewvalues
 

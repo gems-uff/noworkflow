@@ -9,11 +9,6 @@ from __future__ import (absolute_import, print_function,
 from future.utils import viewitems
 
 from ...now.persistence.models import Trial
-from ...now.models.dependency_graph.synonymers import SameSynonymer
-from ...now.models.dependency_graph.synonymers import AccessNameSynonymer
-from ...now.models.dependency_graph.synonymers import JoinedSynonymer
-from ...now.models.dependency_graph.filters import FilterAccessesOut
-from ...now.models.dependency_graph.filters import JoinedFilter
 from ...now.models.dependency_graph.attributes import EMPTY_ATTR, ACCESS_ATTR
 from ...now.models.dependency_graph.attributes import PROPAGATED_ATTR
 from ...now.models.dependency_graph.attributes import REFERENCE_ATTR

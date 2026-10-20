@@ -10,7 +10,7 @@ from sqlalchemy import Column, Integer, String, Text, Float
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologTimestamp
+from ...utils.prolog import PrologRepr
 
 from .base import AlchemyProxy, proxy_class
 

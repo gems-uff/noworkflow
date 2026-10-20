@@ -11,7 +11,6 @@ import os
 from os.path import join, isdir
 from .content.plain_engine import STANDARD_DATABASE_DIR
 from ..utils.io import print_msg
-from .content import safeopen
 
 class ContentDatabase(object):
     """Content Database deal with storage of file content in disk"""

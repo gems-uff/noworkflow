@@ -6,8 +6,6 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-from future.utils import lmap
-from future.builtins import map as cvmap
 from sqlalchemy import Column, String, Integer, Boolean
 
 from ...utils.prolog import PrologDescription, PrologAttribute

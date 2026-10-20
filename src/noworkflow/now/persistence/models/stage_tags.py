@@ -6,19 +6,15 @@
 from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
-import os
 
-from datetime import timedelta
-from sqlalchemy import Column, Integer, String, Text, Float
+from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologTimestamp, PrologNullable
-from ...utils.prolog import PrologNullableRepr
+from ...utils.prolog import PrologRepr, PrologNullable
 
-from .. import relational
 
-from .base import AlchemyProxy, proxy_class, proxy
+from .base import AlchemyProxy, proxy_class
 
 
 @proxy_class

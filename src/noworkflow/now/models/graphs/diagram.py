@@ -52,7 +52,7 @@ def viz_white_wrap(body, char, bgcolor="white"):                                
 def viz_property(statement, properties):
     """Create properties for graphviz element"""
     if not properties:
-        return statement + ";";
+        return statement + ";"
     return statement + "[{}];".format(" ".join(properties))
 
 

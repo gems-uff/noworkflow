@@ -9,7 +9,6 @@ from io import BytesIO
 
 from gitdb import LooseObjectDB, IStream
 
-from ...utils.cross_version import StringIO
 from .pygit_engine import PyGitEngine
 
 # ToDo: implement other methods using GitDB to not depend on PyGitEngine

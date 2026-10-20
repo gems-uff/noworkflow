@@ -7,20 +7,14 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 import os
-import shutil
-from functools import reduce
 
 from ..persistence.config import PersistenceConfig
 from ..persistence.content_database import ContentDatabase
-from ..persistence.relational_database import RelationalDatabase
-from ..persistence import persistence_config, relational
+from ..persistence import persistence_config
 from ..utils.collab import export_bundle,import_bundle
 
-from ..persistence.lightweight import ActivationLW,ArgumentLW,CodeBlockLW,CodeComponentLW,CompositionLW,DependencyLW,EnvironmentAttrLW
-from ..persistence.lightweight import EvaluationLW,FileAccessLW,StageTagsLW,MemberLW,ModuleLW,TrialLW
 
-from ..persistence.models import Trial,Activation,Argument,CodeBlock,CodeComponent,Composition,Dependency,EnvironmentAttr,Evaluation
-from ..persistence.models import FileAccess,Member,Module,Tag
+from ..persistence.models import Trial
 
 from .command import Command
 

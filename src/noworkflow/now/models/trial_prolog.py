@@ -17,8 +17,6 @@ from ..persistence.models import CodeComponent, CodeBlock
 from ..persistence.models import Activation, Evaluation, Dependency
 from ..persistence.models import FileAccess
 from ..persistence.models import Member
-from ..persistence.models import Experiment, User, Group, MemberOfGroup, ExtendedAnnotation, Remote
-from ..persistence import relational
 
 from .graphs.diagram import ViewPrologDiagram
 
