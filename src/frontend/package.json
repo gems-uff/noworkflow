@@ -15,5 +15,10 @@
   "workspaces": [
     "packages/*"
   ],
+  "overrides": {
+    "nx": {
+      "undici": "~7.29.1"
+    }
+  },
   "name": "npm"
 }
