@@ -117,6 +117,14 @@ paper = [
     "imbalanced-learn",
     "pandas",
 ]
+# What the tests of the vis in a browser import (src/noworkflow/tests/
+# browser). Not in dev, so the matrix legs stay light: only the
+# `vis-browser` job of ci.yml syncs it, and without it those tests skip.
+# Playwright drives the Chrome already installed (channel "chrome"): its own
+# browsers are never downloaded.
+browser = [
+    "playwright",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -133,6 +141,7 @@ markers = [
     "golden: compares against a stored golden output",
     "slow: needs the console `now` and matplotlib",
     "paper: replays the paper's running example; needs the `paper` group, runs in the paper-example job",
+    "browser: drives the vis in Chrome; needs the `browser` group, runs in the vis-browser job",
 ]
 # A deprecation that noWorkflow's own code triggers fails the test that
 # triggers it. The exceptions, listed after it so that they take precedence,

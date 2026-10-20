@@ -172,8 +172,8 @@ jobs:
         # when tests are added; lower it only with the reason written in the PR.
         # The reference leg also runs the goldens, which every other leg
         # deselects (-m "not golden"), so its floor is the higher one. The
-        # `paper` tests are deselected on every leg and counted by the
-        # paper-example job.
+        # `paper` and `browser` tests are deselected on every leg and counted
+        # by the paper-example and vis-browser jobs.
         include:
           # Floor (requires-python = ">=3.11").
           - { os: ubuntu-latest, python: "3.11", min-tests: 2942 }
@@ -224,8 +224,9 @@ jobs:
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
       # leg (goldens/REFERENCE); elsewhere the `golden` marker is deselected.
-      # The `paper` tests run in the paper-example job, which syncs their
-      # dependency group; every leg here deselects them.
+      # The `paper` tests run in the paper-example job and the `browser` ones
+      # in the vis-browser job, which sync their dependency groups; every leg
+      # here deselects them.
       # GOLDEN=require fails a golden that nobody recorded instead of
       # skipping it, and GOLDEN_ACTUAL_DIR collects the actual output of every
       # mismatch for the artifact below.
@@ -243,9 +244,9 @@ jobs:
           set -o pipefail
           args=(-n 4)
           if [ "${{ matrix.reference }}" = "true" ]; then
-            args+=(-m "not paper" --cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
+            args+=(-m "not paper and not browser" --cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
           else
-            args+=(-m "not golden and not paper")
+            args+=(-m "not golden and not paper and not browser")
           fi
           uv run --no-sync pytest "${args[@]}" | tee pytest.log
 
@@ -257,9 +258,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           if [ "${{ matrix.reference }}" = "true" ]; then
-            repro='uv sync --locked --extra demo --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -n 4 -m "not paper"'
+            repro='uv sync --locked --extra demo --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -n 4 -m "not paper and not browser"'
           else
-            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n 4 -m "not golden and not paper"'
+            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n 4 -m "not golden and not paper and not browser"'
           fi
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" "$repro"
@@ -448,17 +449,66 @@ jobs:
           path: ${{ runner.temp }}/golden-actual
           if-no-files-found: ignore
 
+  # The vis in a browser (src/noworkflow/tests/browser): `now vis` serves a
+  # two-trial store over a real port and Playwright drives the committed
+  # bundle in headless Chrome, the only place where the JavaScript of the
+  # vis runs in CI. A job of its own because it needs the `browser`
+  # dependency group and Chrome, which the matrix legs do not install; the
+  # JavaScript does not depend on the Python version, so one leg, the
+  # reference leg's Python. Playwright drives the Chrome that setup-chrome
+  # installs (CHROME), never browsers of its own, and NOW_BROWSER=require
+  # fails a test that would skip for want of either. Blocking: it is in the
+  # needs of ci-ok.
+  vis-browser:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python 3.15
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.15"
+          enable-cache: true
+
+      - name: Install Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+        with:
+          install-dependencies: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group browser
+
+      - name: Run the browser tests
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          NOW_BROWSER: require
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m browser | tee pytest.log
+
+      # min-tests: every test of the module, none skipped here (the group
+      # and Chrome are both present, and NOW_BROWSER=require fails a skip).
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh pytest.log 11 \
+            "vis in a browser (ubuntu-latest, 3.15)" \
+            'uv sync --locked --group browser && NOW_BROWSER=require uv run --no-sync pytest -m browser'
+
   # The only status the ruleset on `main` requires: one name that stays stable
   # while jobs and matrix legs come and go. `always()` makes it run, and fail,
   # when a needed job failed; without it the job would be skipped, and a
   # skipped required check counts as passing.
   ci-ok:
     if: always() && github.event_name != 'schedule'
-    needs: [checks, test, frontend, paper-example]
+    needs: [checks, test, frontend, paper-example, vis-browser]
     runs-on: ubuntu-latest
     steps:
       - name: All required jobs passed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
-          echo "::error::checks=${{ needs.checks.result }} test=${{ needs.test.result }} frontend=${{ needs.frontend.result }} paper-example=${{ needs.paper-example.result }}"
+          echo "::error::checks=${{ needs.checks.result }} test=${{ needs.test.result }} frontend=${{ needs.frontend.result }} paper-example=${{ needs.paper-example.result }} vis-browser=${{ needs.vis-browser.result }}"
           exit 1

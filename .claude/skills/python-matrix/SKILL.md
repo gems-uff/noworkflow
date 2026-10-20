@@ -83,10 +83,11 @@ that version, not an order the others never ran.
   xpassed. CI's count (the same without the failures: the one `min-tests`
   floors and `safe-refactor` uses) drops by the failures of a red version,
   and the total does not. Locally nothing is deselected: the goldens skip off
-  the reference platform, and most `paper` tests skip without their group
-  while a few pass, so on a green version the total is CI's count plus what
-  CI reports as deselected; `-m "not golden and not paper"` gives CI's
-  number for a non-reference leg. Between versions the total stays the same
+  the reference platform, most `paper` tests skip without their group
+  while a few pass, and the `browser` tests skip without theirs or without
+  Chrome, so on a green version the total is CI's count plus what CI
+  reports as deselected; `-m "not golden and not paper and not browser"`
+  gives CI's number for a non-reference leg. Between versions the total stays the same
   and only the split moves; a total that changes is a test that disappeared.
 - **One version, one test:** `uv run --isolated --locked --no-python-downloads
   --python <v> pytest -p no:cacheprovider <node id>`. A bug specific to a

@@ -88,19 +88,20 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: "1"
         run: brew install swi-prolog
 
-      # Goldens exist for the reference leg of ci.yml only, and the `paper`
-      # tests run in its paper-example job.
+      # Goldens exist for the reference leg of ci.yml only, the `paper`
+      # tests run in its paper-example job and the `browser` ones in its
+      # vis-browser job.
       - name: Run tests
         run: |
           set -o pipefail
-          uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper" | tee pytest.log
+          uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper and not browser" | tee pytest.log
 
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" \
-            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper"'
+            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper and not browser"'
 
       # The suite runs `now` through `python -m noworkflow`; this runs the
       # installed console script from a plain directory, as in ci.yml.

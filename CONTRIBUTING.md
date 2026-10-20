@@ -195,6 +195,9 @@ Optional, each for one purpose:
   skips those tests without it. The test of the `%%now_prolog` magic needs
   `pyswip-alt` too, and skips without it. The reference-leg container and the legs
   of the `test` job of CI have it.
+- **Google Chrome**, for the tests of the vis in a browser (with the
+  `browser` dependency group); they skip without it. The `vis-browser` job
+  of CI installs it. See [The vis in a browser](#the-vis-in-a-browser).
 - **[issuefinder](https://github.com/gems-uff/issuefinder)**, cloned next to
   the checkout (`../issuefinder`), to search the existing issues before
   opening one: it finds an issue written with other words or in the other
@@ -362,6 +365,33 @@ triaged as "The paper's running example" in `AGENTS.md` says: the change
 regressed, or the paper and its package must follow it; the expectation is
 never edited to make the test pass. To replay on the real dataset, see the
 README in `src/noworkflow/tests/e2e/corpus/paper_example/`.
+
+### The vis in a browser
+
+`src/noworkflow/tests/browser/` serves a two-trial store with `now vis`
+over a real port and drives the bundle it serves in headless Chrome, with
+Playwright: the history graph, a trial and its tabs, the diff of two
+trials, the dataflow, the prospective graph, the Prolog export, the
+database graph and the SQL editor, each through the mouse and the
+keyboard. Its tests are marked `browser` and need the `browser` dependency
+group and Google Chrome, which Playwright drives in place: it never
+downloads browsers of its own. Without either they skip; the matrix legs
+of CI deselect them, and the `vis-browser` job of `ci.yml` runs them with
+`NOW_BROWSER=require`, which fails a test instead of skipping it:
+
+```bash
+uv sync --locked --group browser                          # Playwright
+uv run pytest -m browser                                  # about a minute and a half
+CHROME=/path/to/chrome NOW_BROWSER=require uv run pytest -m browser
+```
+
+`CHROME` names the executable when Chrome is not where Playwright looks
+(`channel="chrome"`). Each test starts its own `now vis` on a free port, so
+they cannot run where binding a port is refused (inside the Claude Code
+sandbox, for one). They run the bundle that `now vis` serves, the working
+tree's: after a change under `src/frontend`, rebuild it first ("The
+frontend", below). As with the `paper` group, a plain `uv sync --locked`
+removes the group from `.venv` again.
 
 ### The frontend
 

@@ -45,23 +45,35 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
 
+      # The tests of the vis in a browser depend on timing more than any
+      # other, so the trials run them too: Chrome as in the vis-browser job
+      # of ci.yml, with the `browser` group below.
+      - name: Install Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+        with:
+          install-dependencies: true
+
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked --group browser
 
       - name: Run tests
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          NOW_BROWSER: require
         run: |
           set -o pipefail
           uv run --no-sync pytest -m "not golden and not paper" | tee "test-log-trial-${{ matrix.trial }}.log"
 
-      # The non-golden floor of ci.yml: these trials deselect the goldens,
-      # which only the reference leg compares, and the paper example, which
-      # has a job of its own.
+      # The non-golden floor of ci.yml plus the vis-browser job's: these
+      # trials deselect the goldens, which only the reference leg compares,
+      # and the paper example, which has a job of its own.
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2942 \
+          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2953 \
             "trial ${{ matrix.trial }}" \
-            'uv sync --locked --python 3.15 && uv run --no-sync pytest -m "not golden and not paper"'
+            'uv sync --locked --group browser --python 3.15 && NOW_BROWSER=require uv run --no-sync pytest -m "not golden and not paper"'
 
       - name: Upload the log
         if: ${{ !cancelled() }}

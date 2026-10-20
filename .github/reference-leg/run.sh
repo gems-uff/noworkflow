@@ -19,6 +19,8 @@
 # without the extra instead, in the environment of the `paper-example` job,
 # which has no matplotlib. The tests of the paper's running
 # example run here, and their goldens are recorded here like the others.
+# The tests of the vis in a browser skip here: the image has no Chrome and
+# the venv no `browser` group (the vis-browser job of ci.yml runs them).
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
