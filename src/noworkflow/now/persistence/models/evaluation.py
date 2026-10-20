@@ -7,7 +7,7 @@ from __future__ import (absolute_import, print_function,
                         division, unicode_literals)
 
 from datetime import timedelta
-from sqlalchemy import Column, Integer, String, Text, Float
+from sqlalchemy import Column, Integer, String, Text, Float, true
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
 
@@ -191,7 +191,7 @@ class Evaluation(AlchemyProxy):
             found.add(current.id)
             current = getattr(proxy(
                 current._get_instance().dependencies_as_dependent
-                .filter(Dependency.m.reference == True)
+                .filter(Dependency.m.reference == true())
                 .first()
             ), "dependency", None)
 

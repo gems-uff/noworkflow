@@ -54,7 +54,7 @@ class Experiment(AlchemyProxy):
 
         exp = cls.t
         id=uuid_gen()
-        result = session.execute(
+        session.execute(
             exp.insert(),
             {"id": id, "name": expe.name, "description": expe.description})
 

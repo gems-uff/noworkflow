@@ -68,7 +68,7 @@ def import_bundle(bundle, experiment=None):
             main_block_code_hash=main_block[0].code_hash
         Tag.create_automatic_tag(x.id,main_block_code_hash,x.command, experiment_id=experiment)
     
-def export_bundle(trialIds,usersIds=[]):
+def export_bundle(trialIds,usersIds=()):
     #Load dependencies
     trialsToImport=[t for t in Trial.all() if t.id in trialIds ]
     actsToImport=Activation.load_by_trials(trialIds)

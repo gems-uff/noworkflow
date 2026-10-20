@@ -47,12 +47,12 @@ class Remote(AlchemyProxy):
         
         remote_in_db = session.query(Remote.m).filter(Remote.m.server_url == server_url).all()
         if(len(remote_in_db) > 0):
-            if remote_in_db[0].used == False or remote_in_db[0].used == 0:
+            if remote_in_db[0].used == 0:
                 remote_in_db[0].used = True
                 relational.session.commit()
             return remote
         
-        result = session.execute(
+        session.execute(
             remote.insert(),
             {"server_url": server_url, "name" : name, "used" : used, "hide": False})
 

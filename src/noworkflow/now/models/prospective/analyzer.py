@@ -327,7 +327,7 @@ class DefinitionProvenanceAnalyzer:
 
                 if line_exception != -1:
                     self.node_else[line_exception - 1] = self.node_else[i]
-        except:
+        except Exception:
             print('Error in try/exception linking!')
 
     def _start_node(self):

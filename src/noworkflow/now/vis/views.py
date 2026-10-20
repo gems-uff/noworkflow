@@ -516,7 +516,8 @@ def get_function_activations_from_trial(trial_id):
     for activation in function_activations:
         activation_dict = {"id": activation.id, "name": activation.name}
         activation_dict["params"] = get_function_activation_arguments(trial_id, activation.id).json["function_params"]
-        if("This function has no params" in activation_dict["params"]): activation_dict["params"] = ""
+        if("This function has no params" in activation_dict["params"]):
+            activation_dict["params"] = ""
         function_activations_array.append(activation_dict)
     return jsonify(function_activations=function_activations_array)
 
@@ -524,7 +525,8 @@ def get_function_activations_from_trial(trial_id):
 @app.route("/diff/getFunctionActivationArguments/<trial_id>/<function_id>")
 def get_function_activation_arguments(trial_id, function_id, expCode=None):
     function_arguments = relational.session.query(Dependency.m).filter(Dependency.m.trial_id==trial_id, Dependency.m.dependent_id==int(function_id), Dependency.m.type=="argument").all()
-    if len(function_arguments) < 1: return jsonify(function_params="This function has no params")
+    if len(function_arguments) < 1:
+        return jsonify(function_params="This function has no params")
     
     function_params = [relational.session.query(Evaluation.m).filter(Evaluation.m.id==argument.dependency_id, Evaluation.m.trial_id==trial_id).all()[0].repr for argument in function_arguments]
     return jsonify(function_params=function_params)
@@ -553,9 +555,12 @@ def execute_command_diff_function_activation(trial1_id, activation1_id, trial2_i
 def execute_command_restore_trial(trial_id, skip_script, skip_modules, skip_files_access):
     """Execute the command 'now restore' for a trial"""
     restore_command = ("now restore " + trial_id).split()
-    if skip_script == "true": restore_command.append("-s")
-    if skip_modules == "true": restore_command.append("-l")
-    if skip_files_access == "true": restore_command.append("-a")
+    if skip_script == "true":
+        restore_command.append("-s")
+    if skip_modules == "true":
+        restore_command.append("-l")
+    if skip_files_access == "true":
+        restore_command.append("-a")
     
     sub_proccess_print = subprocess.run(restore_command, capture_output=True).stdout.decode("utf-8")
     # os.system(restore_command)
@@ -576,7 +581,8 @@ def execute_command_restore_file(trial_id, file_to_restore, file_id, output_path
     sub_process = subprocess.run(restore_command, capture_output=True)
     
     erro_string = sub_process.stderr.decode("utf-8")    
-    if (len(erro_string) > 0): return jsonify(terminal_text="\""+ output_path +"\" No such file or directory"), 400
+    if (len(erro_string) > 0):
+        return jsonify(terminal_text="\""+ output_path +"\" No such file or directory"), 400
 
     sub_proccess_print = sub_process.stdout.decode("utf-8")
     status = 400 if ("Unable" in sub_proccess_print) or ("not" in sub_proccess_print) else 200
@@ -587,7 +593,8 @@ def execute_command_prov(trial_id):
     """Execute the command 'now export prov'"""
     prov_command = ("now export prov " + trial_id).split()
     sub_process_print = subprocess.run(prov_command, capture_output=True).stdout.decode("utf-8")
-    if "(" in sub_process_print: return jsonify(prov=sub_process_print), 200
+    if "(" in sub_process_print:
+        return jsonify(prov=sub_process_print), 200
     return jsonify(prov="No prov to export"), 400
     
 @app.route("/commands/export/<trial_id>/<rules>/<hide_timestamps>")
@@ -595,8 +602,10 @@ def execute_command_export(trial_id, rules, hide_timestamps):
     """Execute the command 'now export prolog'"""
     export_command = ("now export prolog " + trial_id).split()
     
-    if rules == "true": export_command.append("-r")
-    if hide_timestamps == "true": export_command.append("-t")
+    if rules == "true":
+        export_command.append("-r")
+    if hide_timestamps == "true":
+        export_command.append("-t")
     
     sub_process_print = subprocess.run(export_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(export=sub_process_print), 200
@@ -606,12 +615,18 @@ def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argume
     """Execute the command 'now export dataflow'"""
     dataflow_command = ("now export dataflow " + trial_id).split()
     
-    if argument_T == "true": dataflow_command.append("-T")
-    if argument_t == "true": dataflow_command.append("-t")
-    if argument_H == "true": dataflow_command.append("-H")
-    if argument_hnc == "true": dataflow_command.append("-hnc")
-    if argument_an == "true": dataflow_command.append("-an")
-    if argument_hf == "true": dataflow_command.append("-hf")
+    if argument_T == "true":
+        dataflow_command.append("-T")
+    if argument_t == "true":
+        dataflow_command.append("-t")
+    if argument_H == "true":
+        dataflow_command.append("-H")
+    if argument_hnc == "true":
+        dataflow_command.append("-hnc")
+    if argument_an == "true":
+        dataflow_command.append("-an")
+    if argument_hf == "true":
+        dataflow_command.append("-hf")
     if wdf == "true":
         dataflow_command.append("-w")
         dataflow_command.append(eid)
@@ -624,16 +639,20 @@ def execute_dataflow_export(trial_id, argument_T, argument_t, argument_H, argume
     appendDataflowCommandWithParameters(dataflow_command, "-n", name, 0, float('inf'), 55)
 
     dataflow_command.append("-m")
-    if mode in ["activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"]: dataflow_command.append(mode)
-    else: dataflow_command.append("prospective")
+    if mode in ["activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"]:
+        dataflow_command.append(mode)
+    else:
+        dataflow_command.append("prospective")
     
     sub_process_print = subprocess.run(dataflow_command, capture_output=True).stdout.decode("utf-8")
     return jsonify(dataflow=sub_process_print), 200
 
 def appendDataflowCommandWithParameters(export_command, command, parameter_value, min_value, max_value, default_value):
     export_command.append(command)
-    if int(parameter_value) > max_value or int(parameter_value) < min_value: export_command.append(str(default_value))
-    else: export_command.append(str(parameter_value))
+    if int(parameter_value) > max_value or int(parameter_value) < min_value:
+        export_command.append(str(default_value))
+    else:
+        export_command.append(str(parameter_value))
 
 @app.route("/dataflow/evaluations/<trial_id>")
 def get_evaluations_from_trial(trial_id):
@@ -645,7 +664,7 @@ def get_evaluations_from_trial(trial_id):
     
 @app.route("/collab/remotes/getall")
 def get_all_remotes():
-    return jsonify(remotes=[RemoteLW(x.id, x.server_url, x.name, x.used, x.hide).__json__() for x in Remote.all() if x.hide == False]), 200
+    return jsonify(remotes=[RemoteLW(x.id, x.server_url, x.name, x.used, x.hide).__json__() for x in Remote.all() if x.hide == 0]), 200
 
 @app.route("/collab/remotes/add/<remote_name>/<path:remote_url>", methods=['Post'])
 def add_remote(remote_name, remote_url):
@@ -655,7 +674,8 @@ def add_remote(remote_name, remote_url):
 @app.route("/collab/remotes/edit/<remote_new_name>/<path:remote_url>")
 def edit_remote(remote_new_name, remote_url):
     remote_url_list = relational.session.query(Remote.m).filter(Remote.m.server_url == remote_url).all()
-    if(len(remote_url) <= 0): return jsonify(text="Remote url " + remote_url  + " not found"), 400
+    if(len(remote_url) <= 0):
+        return jsonify(text="Remote url " + remote_url  + " not found"), 400
     remote = remote_url_list[0]
     remote.name = remote_new_name
     relational.session.commit()
@@ -664,10 +684,13 @@ def edit_remote(remote_new_name, remote_url):
 @app.route("/collab/remotes/delete/<path:remote_url>")
 def delete_remote(remote_url):
     remote_url_list = relational.session.query(Remote.m).filter(Remote.m.server_url == remote_url).all()
-    if(len(remote_url) <= 0): return jsonify(text="Remote url " + remote_url  + " not found"), 400
+    if(len(remote_url) <= 0):
+        return jsonify(text="Remote url " + remote_url  + " not found"), 400
     remote = remote_url_list[0]
-    if remote.used: remote.hide = True
-    else: relational.session.delete(remote)
+    if remote.used:
+        remote.hide = True
+    else:
+        relational.session.delete(remote)
     relational.session.commit()
     return jsonify(terminal_text="Remote "+ remote_url + " deleted successfully"), 200
 
@@ -677,11 +700,13 @@ def execute_command_push_experiment(collab_command, serverUrl):
     push_command = ("now " + collab_command + " --url " + serverUrl).split()
     
     sub_process = subprocess.run(push_command, capture_output=True)
-    if(len(sub_process.stderr)): return jsonify(terminal_text="Invalid server address"), 400
+    if(len(sub_process.stderr)):
+        return jsonify(terminal_text="Invalid server address"), 400
     
     sub_process_print = sub_process.stdout.decode("utf-8")
     status_code = 200
-    if return_json_error_invalid_experiment_id()[0].json in sub_process_print: status_code = 400       
+    if return_json_error_invalid_experiment_id()[0].json in sub_process_print:
+        status_code = 400
     
     return jsonify(terminal_text=sub_process_print), status_code
 
@@ -689,14 +714,18 @@ def execute_command_push_experiment(collab_command, serverUrl):
 def get_files_belonging_to_trial(trial_id):   
     files = []
     for file in FileAccess.all():
-        if file.trial_id  == trial_id and file.name != "nul": files.append(file.name)
+        if file.trial_id  == trial_id and file.name != "nul":
+            files.append(file.name)
     for trial in Trial.all():
-        if trial.id == trial_id: files.append(trial.script)
+        if trial.id == trial_id:
+            files.append(trial.script)
     for module in Module.all():
         if module.trial_id == trial_id:
             module_path = module.path
-            if "/" in module_path: files.append(module_path.split("/")[-1])
-            elif "\\" in module_path: files.append(module_path.split("\\")[-1])
+            if "/" in module_path:
+                files.append(module_path.split("/")[-1])
+            elif "\\" in module_path:
+                files.append(module_path.split("\\")[-1])
             # files.append(module.path.split(os.sep)[-1])
         
     return jsonify(files=files), 200

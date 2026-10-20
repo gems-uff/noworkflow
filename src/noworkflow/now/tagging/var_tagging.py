@@ -460,7 +460,10 @@ def var_tag_plot(tag_name: str):
         >>> var_tag_plot("my_tag")
     """
 
+    # pandas first: without it, the helper reports the import that no
+    # requirement of noWorkflow brings (#392), with or without matplotlib
     import pandas as pd
+    # isort: split
     import matplotlib.pyplot as plt
 
     access_list = list(

@@ -54,7 +54,7 @@ class MemberOfGroup(AlchemyProxy):
 
         UsrGrop = cls.t
         id=uuid_gen()
-        result = session.execute(
+        session.execute(
             UsrGrop.insert(),
             {"id": id, "userId": UsrGrp.userId, "groupId": UsrGrp.groupId})
 

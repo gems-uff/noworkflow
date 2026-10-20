@@ -33,7 +33,7 @@ class SyntaxUtils:
             return: string list, syntax name
             dependencies: all
         """
-        syntaxCall = types == 'call' or type == 'aug_assign'
+        syntaxCall = types == 'call' or types == 'aug_assign'
         syntaxRange = 'range(' not in block
 
         return syntaxCall and syntaxRange

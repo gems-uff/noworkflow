@@ -329,4 +329,4 @@ def proxy_class(cls):
 
 def is_none(attribute):
     """Filter SQLAlchemy attribute is None"""
-    return attribute == None                                                     # pylint: disable=singleton-comparison
+    return attribute.is_(None)

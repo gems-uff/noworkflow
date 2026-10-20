@@ -177,31 +177,16 @@ extend-exclude = [
 builtins = ["__noworkflow__"]
 
 [tool.ruff.lint]
-# Phase A: ruff's default set (E4, E7, E9, F) plus W605, blocking only the
-# rules that are already at zero. Each code in `ignore` still has occurrences;
-# Round 3 (#221) fixes them and removes the code from the list. E501 never
+# ruff's default set (E4, E7, E9, F) plus W605 and B006 (mutable argument
+# defaults), all blocking. An intended exception carries `# noqa: <code>` on
+# its line, with the reason on the line above, like `# nosec`. E501 never
 # (the formatter owns line length); no S, because bandit is the SAST.
-select = ["E4", "E7", "E9", "F", "W605"]
-ignore = [
-    "E402",  # module-import-not-at-top-of-file
-    "E701",  # multiple-statements-on-one-line-colon
-    "E703",  # useless-semicolon
-    "E711",  # none-comparison
-    "E712",  # true-false-comparison
-    "E721",  # type-comparison
-    "E722",  # bare-except
-    "E731",  # lambda-assignment
-    "F401",  # unused-import
-    "F403",  # undefined-local-with-import-star
-    "F811",  # redefined-while-unused
-    "F841",  # unused-variable
-]
+select = ["E4", "E7", "E9", "F", "W605", "B006"]
 
 [tool.ruff.lint.per-file-ignores]
 # Python 2 compatibility shim: names that only exist on Python 2, re-exports.
 "src/noworkflow/now/utils/cross_version.py" = ["F401", "F821"]
-# Package re-exports. F401 is still ignored globally; this entry keeps them
-# allowed once Round 3 (#221) removes F401 from `ignore`.
+# Package re-exports.
 "__init__.py" = ["F401"]
 
 [tool.bandit]

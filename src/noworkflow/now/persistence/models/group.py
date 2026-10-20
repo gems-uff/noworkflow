@@ -45,7 +45,7 @@ class Group(AlchemyProxy):
 
         grop = cls.t
         id=uuid_gen()
-        result = session.execute(
+        session.execute(
             grop.insert(),
             {"id": id, "name": grp.name})
 

@@ -154,8 +154,10 @@ class SharedObjectStore(ObjectStore):
         return self.cls(*args)
 
 
-def define_attrs(required, extra=[]):                                            # pylint: disable=dangerous-default-value
+def define_attrs(required, extra=None):
     """Create __slots__ by adding extra attributes to required ones"""
+    if extra is None:
+        extra = []
     slots = tuple(required + extra)
     attributes = tuple(required)
 

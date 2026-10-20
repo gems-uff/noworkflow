@@ -1235,7 +1235,7 @@ class Trial(AlchemyProxy):
             inherited_id = cls.fast_last_trial_id()
         ttrial = cls.t
         tid = uuid_gen()
-        result = session.execute(
+        session.execute(
             ttrial.insert(),
             {"id": tid, "script": script, "start": start, "command": command,
              "path": path,

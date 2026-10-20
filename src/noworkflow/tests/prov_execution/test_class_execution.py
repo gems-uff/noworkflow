@@ -446,7 +446,7 @@ class TestClassExecution(CollectionTestCase):
         ('divmod', '__divmod__', "(1, 1)", 'c', "2", True, True),
         ('divmod', '__rdivmod__', "(1, 1)", "2", 'c',  False, True),
     ])
-    def test_binary_dunder_method(self, call, method, result, p1, p2, self_first, reference):
+    def test_builtin_binary_dunder_method(self, call, method, result, p1, p2, self_first, reference):
         self.script("# script.py\n"
                     "class C(int):\n"
                     "    'cdoc'\n"
@@ -864,7 +864,6 @@ class TestClassExecution(CollectionTestCase):
         var_write_y = self.get_evaluation(name="y", mode="w")
         var_dunder_call_act = self.get_evaluation(name="__setattr__", skip=1)
         var_cf_act = self.get_evaluation(name="c.a")
-        var_b = self.get_evaluation(name="b")
         var_3 = self.get_evaluation(name="3")
 
         self.assert_type(var_inst_c, var_class_c)
@@ -953,7 +952,6 @@ class TestClassExecution(CollectionTestCase):
         var_write_y = self.get_evaluation(name="y", mode="w")
         var_dunder_call_act = self.get_evaluation(name="__setitem__", skip=1)
         var_cf_act = self.get_evaluation(name="c[1]")
-        var_b = self.get_evaluation(name="b")
         var_3 = self.get_evaluation(name="3")
         var_1 = self.get_evaluation(name="1")
 
@@ -1035,7 +1033,6 @@ class TestClassExecution(CollectionTestCase):
                     "    a = f\n"
                     "# other")
 
-        script_eval = self.get_evaluation(name="script.py")
         var_type = self.get_evaluation(name=self.rtype('type'))
         param_object_eval = self.get_evaluation(name="object", mode="r")
         var_class_c = self.get_evaluation(name="C", mode="w")

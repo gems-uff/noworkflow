@@ -188,7 +188,7 @@ def finder(metascript):
                 loader = spec.loader
                 if loader is not None:
                     if id(loader) not in loaders:
-                        if type(loader) == SourceFileLoader: 
+                        if type(loader) is SourceFileLoader: 
                             # Playing safe here: instead of using isinstance, I'm checking the actual type
                             # I don't know if the noworkflow loader supports any subtype of SourceFileLoader
                             loaders[id(loader)] = create_source_loader(metascript, loader)

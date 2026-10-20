@@ -519,7 +519,8 @@ class RewriteDependencies(ast.NodeTransformer):
 
         new_node = copy(node)
         if set_key is None:
-            set_key = lambda: ('item', ast_num(-1))
+            def set_key():
+                return ('item', ast_num(-1))
 
         self.composition_edge = (list_code_component, Component.S_ELT)
         item = self._itemize(new_node.elt, 'r', set_key)
@@ -541,8 +542,8 @@ class RewriteDependencies(ast.NodeTransformer):
         new_node.elt = item
 
         if result is None:
-            result = lambda new_node, code_id: (
-                ast_copy(double_noworkflow(
+            def result(new_node, code_id):
+                return ast_copy(double_noworkflow(
                     comp,
                     [
                         activation(),
@@ -555,7 +556,6 @@ class RewriteDependencies(ast.NodeTransformer):
                         ast_str(self.mode)
                     ]
                 ), new_node)
-            )
 
         return result(new_node, list_code_component)
 
@@ -1261,7 +1261,8 @@ class RewriteDependencies(ast.NodeTransformer):
             self.composition_edge = (list_code_component, Component.M_ELTS, index)
             if set_key is None:
                 # pylint: disable=cell-var-from-loop
-                set_key = lambda: ('item', ast_num(index))
+                def set_key():
+                    return ('item', ast_num(index))
             new_items.append(self._itemize(item, ctx, set_key))
 
         new_node.target_expr = ast.Tuple([

@@ -703,7 +703,6 @@ def ast_to_dot(node):
 
     dot = graphviz.Digraph()
     dot.attr(rankdir='TB', nodesep='0.75', ranksep='0.75')
-    root_id = node_id(node)
 
     def visit(node, parent=None):
         if not isinstance(node, ast.AST) or isinstance(node, ast.Load) or isinstance(node, ast.Store):

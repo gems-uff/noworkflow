@@ -239,6 +239,11 @@ uv run bandit -c pyproject.toml -r src/noworkflow -q -b bandit-baseline.json   #
 uv run now run script.py     # the `now` of the working tree
 ```
 
+A site that ruff flags and that is intended gets `# noqa: <code>` on its
+line, with the reason on the line above. An import block whose order
+matters, such as a package that registers what it imports in that order, goes
+between `# isort: off` and `# isort: on`, with the reason above it.
+
 A site that bandit flags and that is intended gets `# nosec Bxxx`, with the
 reason on the line above; CI refuses a `# nosec` without the test id, which
 would silence every test on its line. A real finding stays in `bandit-baseline.json`,

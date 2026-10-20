@@ -216,7 +216,8 @@ class Tag(AlchemyProxy):
             tag[0] += 1
             tag[1] = 1
             tag[2] = 1
-            if is_backup_trial: tag[1] = tag[2] = 0
+            if is_backup_trial:
+                tag[1] = tag[2] = 0
         new_tag = ".".join(cvmap(str, tag))
 
         cls.create(trial_id, "AUTO", new_tag, datetime.now(), session=session)

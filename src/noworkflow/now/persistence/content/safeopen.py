@@ -27,7 +27,7 @@ def restore_open():
         try:
             mock_builtins = __builtins__["open"]
             __builtins__["open"] = std_open
-        except:
+        except Exception:
             mock_builtins = __builtins__.open
             __builtins__.open = std_open
         yield
@@ -38,7 +38,7 @@ def restore_open():
         os.open = mock_os_open
         try:
             __builtins__["open"] = mock_builtins
-        except:
+        except Exception:
             __builtins__.open = mock_builtins
 
 def print_open():

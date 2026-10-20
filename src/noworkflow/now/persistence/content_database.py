@@ -47,13 +47,13 @@ class ContentDatabase(object):
             # Use plain directory
             engine = "plain"
         else:
-            # Use git
+            # Use git: the imports only check which library is installed
             try:
-                import pygit2
+                import pygit2  # noqa: F401
                 engine = "pygit"
             except ImportError:
                 try:
-                    import dulwich
+                    import dulwich  # noqa: F401
                     engine = "dulwich"
                 except ImportError:
                     # Use plain

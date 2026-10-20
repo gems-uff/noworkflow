@@ -11,7 +11,9 @@ from future.utils import text_to_native_str as n
 # Base
 from .base import Model, MetaModel, proxy, proxy_gen
 
-# Database Models
+# Database Models. Not sorted: each model registers its class and its table
+# as it is imported, and the tables of a new store are created in that order.
+# isort: off
 from .activation import Activation
 from .argument import Argument
 from .code_block import CodeBlock
@@ -36,6 +38,7 @@ from .memberOfGroup import MemberOfGroup
 from .remote import Remote
 
 from . import relationships
+# isort: on
 
 ORDER = [
     Trial, Head, Tag, GraphCache, Argument, # Trial

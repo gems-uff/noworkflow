@@ -71,7 +71,7 @@ class ExtendedAnnotation(AlchemyProxy):
 
         ant = cls.t
         id=uuid_gen()
-        result = session.execute(
+        session.execute(
             ant.insert(),
             {"id": id, "annotation": annt.annotation, "description": annt.description,"annotationFormat": annt.annotationFormat,"provenanceType": annt.provenanceType, "annotationLevel": annt.annotationLevel, "relatedExperiment": annt.relatedExperiment,"relatedTrial": annt.relatedTrial})
 

@@ -10,14 +10,14 @@ from .base import BaseLW, define_attrs
 
 
 
-class DepList(list):
-    """Debug depa insertion"""
+class DebugDepList(list):
+    """Debug depa insertion: bind DepList to it to print each change"""
     # pylint: disable=E1003, E1101
 
     def pop(self, *args, **kwargs):
         """Pop"""
         import inspect
-        result = super(DepList, self).pop(*args, **kwargs)
+        result = super(DebugDepList, self).pop(*args, **kwargs)
         print("pop", len(self), inspect.stack()[1][3])
         print(self)
         return result
@@ -25,14 +25,14 @@ class DepList(list):
     def append(self, *args, **kwargs):
         """Append"""
         import inspect
-        super(DepList, self).append(*args, **kwargs)
+        super(DebugDepList, self).append(*args, **kwargs)
         print("append", len(self), inspect.stack()[1][3])
         print(self)
 
     def insert(self, *args, **kwargs):
         """Insert"""
         import inspect
-        super(DepList, self).insert(*args, **kwargs)
+        super(DebugDepList, self).insert(*args, **kwargs)
         print("insert", len(self), inspect.stack()[1][3])
         print(self)
 

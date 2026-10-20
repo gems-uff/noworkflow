@@ -260,10 +260,12 @@ class Diff(Command):
             if i in lcs_variables_result_trial1 and (str(variables_list_trial1[i]) != str(variables_list_trial2[lcs_variables_result_trial1[i]])):
                 diff = differ.compare(str(variables_list_trial1[i]).splitlines(keepends=True), str(variables_list_trial2[lcs_variables_result_trial1[i]]).splitlines(keepends=True))
                 trial1_variables_that_changed.append(diff)
-            if i not in lcs_variables_result_trial1: trial1_variables_removed.append(variables_list_trial1[i])
+            if i not in lcs_variables_result_trial1:
+                trial1_variables_removed.append(variables_list_trial1[i])
         
         for j in range(len(variables_list_trial2)):
-            if j not in lcs_variables_result_trial2: trial2_variables_added.append(variables_list_trial2[j])
+            if j not in lcs_variables_result_trial2:
+                trial2_variables_added.append(variables_list_trial2[j])
                 
         return trial1_variables_that_changed, trial2_variables_added, trial1_variables_removed
 
@@ -299,7 +301,8 @@ class Diff(Command):
         function_as_evaluation_trial1 = relational.session.query(Evaluation.m).filter(Evaluation.m.trial_id==trial1_id, Evaluation.m.id==function1_id).all()
         function_as_activation_trial1 = relational.session.query(Activation.m).filter(Activation.m.trial_id==trial1_id, Activation.m.id==function1_id).all()
         
-        if (len(function_as_activation_trial1) <= 0) or (len(function_as_evaluation_trial1) <= 0): raise IndexError("Wrong input. There isn't a function with the id: "+str(function1_id))
+        if (len(function_as_activation_trial1) <= 0) or (len(function_as_evaluation_trial1) <= 0):
+            raise IndexError("Wrong input. There isn't a function with the id: "+str(function1_id))
         else:
             function_as_evaluation_trial1 = function_as_evaluation_trial1[0]
             function_as_activation_trial1 =  function_as_activation_trial1[0]
@@ -307,7 +310,8 @@ class Diff(Command):
         function_as_evaluation_trial2 = relational.session.query(Evaluation.m).filter(Evaluation.m.trial_id==trial2_id, Evaluation.m.id==function2_id).all()
         function_as_activation_trial2 = relational.session.query(Activation.m).filter(Activation.m.trial_id==trial2_id, Activation.m.id==function2_id).all()
         
-        if (len(function_as_activation_trial2) <= 0) or (len(function_as_evaluation_trial2) <= 0): raise IndexError("Wrong input. There isn't a function with the id: "+str(function2_id))
+        if (len(function_as_activation_trial2) <= 0) or (len(function_as_evaluation_trial2) <= 0):
+            raise IndexError("Wrong input. There isn't a function with the id: "+str(function2_id))
         else:
             function_as_evaluation_trial2 = function_as_evaluation_trial2[0]
             function_as_activation_trial2 =  function_as_activation_trial2[0]
@@ -317,8 +321,9 @@ class Diff(Command):
         function_trial2_arguments = relational.session.query(Dependency.m).filter(Dependency.m.trial_id==trial2_id, Dependency.m.dependent_id==function_as_evaluation_trial2.id, Dependency.m.type=="argument").all()
         
         variable_types = [CodeComponent.m.type=="name",CodeComponent.m.type=="attribute",CodeComponent.m.type=="access"]
-        if variable_types_to_show != None and variable_types_to_show.lower() == "op": [variable_types.append(CodeComponent.m.type==operation) for operation in OPERATIONS]
-        variable_types = or_(true()) if variable_types_to_show != None and variable_types_to_show.lower() == "all" else or_(*variable_types)
+        if variable_types_to_show is not None and variable_types_to_show.lower() == "op":
+            [variable_types.append(CodeComponent.m.type==operation) for operation in OPERATIONS]
+        variable_types = or_(true()) if variable_types_to_show is not None and variable_types_to_show.lower() == "all" else or_(*variable_types)
 
         function_trial1_variables = relational.session.query(Evaluation.m.id, CodeComponent.m.name, Evaluation.m.repr, CodeComponent.m.type, CodeComponent.m.first_char_line, CodeComponent.m.first_char_column).filter(
             Evaluation.m.trial_id==trial1_id, Evaluation.m.activation_id==function_as_activation_trial1.id, 
@@ -356,6 +361,8 @@ class Diff(Command):
         for file in old_set:
             if (isinstance(file, tuple)):
                 print(file)
-                if (file[0].activation_id == activation_id1 and file[1].activation_id == activation_id2): new_set.add(file)
-            elif (file.activation_id == activation_id1) or (file.activation_id == activation_id2): new_set.add(file)
+                if (file[0].activation_id == activation_id1 and file[1].activation_id == activation_id2):
+                    new_set.add(file)
+            elif (file.activation_id == activation_id1) or (file.activation_id == activation_id2):
+                new_set.add(file)
         return new_set

@@ -7,7 +7,8 @@ from __future__ import (absolute_import, print_function,
                         division)
 
 from .defaults import set_default
-from ..persistence.models import *                                               # pylint: disable=wildcard-import
+# Re-exports every model to `from noworkflow.now.ipython import *` in a notebook.
+from ..persistence.models import *  # noqa: F403  # pylint: disable=wildcard-import
 from ..persistence import persistence_config, relational, content
 from ..models.history import History
 from ..models.diff import Diff

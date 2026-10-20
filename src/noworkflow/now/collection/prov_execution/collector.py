@@ -299,7 +299,7 @@ class Collector(object):
             self.current_item = None
             activation, code_id, vcontainer, vindex, access, mode = subindex
             depa = activation.dependencies[-1]
-            value_dep = part_id = None
+            value_dep = None
             for dep in depa.dependencies:
                 if dep.mode == "value":
                     value_dep = dep
@@ -603,7 +603,7 @@ class Collector(object):
 
     def _expression(self, activation, code_id, value):
         """Capture expression after"""
-        depa = activation.dependencies.pop()
+        activation.dependencies.pop()
         #if activation.active:
         #    self.eval_dep(activation, code_id, value, mode, depa)
         return value
@@ -1054,7 +1054,6 @@ class Collector(object):
     def sub_dependency(self, dep, value, index, clone_depa):
         """Get dependency aware inside of another dependency aware"""
         # pylint: disable=too-many-locals
-        meta = self.metascript
         new_eva = None
         val = NOW_UNSET
         sub = []
@@ -1176,7 +1175,8 @@ class Collector(object):
         target_info, type_ = None, None
         try:
             target_info, type_ = target_expr
-        except ValueError: pass
+        except ValueError:
+            pass
         if type_ == "single":
             return self.assign_single(activation, assign, target_info, depa, back + 1)
         if type_ == "access":
@@ -1250,7 +1250,7 @@ class Collector(object):
         """Capture call activation"""        
         future = self.future_activation.pop()
         parent_activation = future.activation
-        parent_depa = parent_activation.dependencies.pop()
+        parent_activation.dependencies.pop()
         if future.activation.active:
             activation = self.start_activation(
                 future.name,
@@ -1310,7 +1310,7 @@ class Collector(object):
     def _decorator(self, activation, code_id, value, mode="use"):
         """Capture decorator after"""
         # pylint: disable=unused-argument, no-self-use
-        dependency_aware = activation.dependencies.pop()
+        activation.dependencies.pop()
         #ToDo: use dependency
         return value
 

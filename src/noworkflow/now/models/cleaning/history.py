@@ -34,7 +34,6 @@ def get_cells(evaluations, options=None):
     while result:
         nodes_to_visit, visited, found = querier.navigate_dependencies(result, visited=visited)
         result = []
-        component_to_visit = []
         new_cells = set()
         # Extract cells from visited evaluations
         for context in visited:

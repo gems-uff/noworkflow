@@ -1,7 +1,6 @@
 
 import os
 import sys
-import datetime
 
 from ast import PyCF_ONLY_AST
 from datetime import datetime

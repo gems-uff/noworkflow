@@ -236,10 +236,11 @@ class CodeBlock(AlchemyProxy):
 
         result = []
 
-        append = lambda attr, value, force=False: (
-            result.append("{}: {}".format(attr, value))
-            if value or force else None
-        )
+        def append(attr, value, force=False):
+            return (
+                result.append("{}: {}".format(attr, value))
+                if value or force else None
+            )
         append("Name", "{} [{}]".format(component.name, component.type))
         append("Code hash", self.code_hash, force=True)
         append("Docstring", self.docstring)

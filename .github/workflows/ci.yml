@@ -97,9 +97,8 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm audit --prefix src/frontend --package-lock-only --omit=dev --audit-level=high
 
-      # Phase A of the lint: only rules already at zero are selected; the
-      # rules that still have occurrences are listed under `ignore` in
-      # pyproject.toml and leave it in Round 3 (#221).
+      # The rules are in [tool.ruff.lint] of pyproject.toml; an intended
+      # exception carries `# noqa: <code>` with its reason on the line above.
       - name: Lint
         if: ${{ !cancelled() && steps.sync.outcome == 'success' && github.event_name != 'schedule' }}
         run: uv run --no-sync ruff check --output-format=github .

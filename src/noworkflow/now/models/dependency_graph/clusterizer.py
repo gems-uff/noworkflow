@@ -357,7 +357,8 @@ class ProspectiveClusterizer(Clusterizer):
     def check_if_function_call_was_added(self, evaluation):
         code_component = relational.session.query(CodeComponent.m).filter(CodeComponent.m.id==evaluation.code_component_id, CodeComponent.m.trial_id==evaluation.trial_id).all()[0]
         #if code_component.type == "call":
-        if code_component in self.code_components_added: return True
+        if code_component in self.code_components_added:
+            return True
         self.code_components_added.append(code_component)
         return False
     
@@ -374,7 +375,8 @@ class ProspectiveClusterizer(Clusterizer):
             return None, "after"
         if nid in created:
             return node, "exists"
-        if((type(node) is not AccessNode) and self.check_if_function_call_was_added(node.evaluation)): return node, "done"
+        if((type(node) is not AccessNode) and self.check_if_function_call_was_added(node.evaluation)):
+            return node, "done"
         created[nid] = (cluster, node)
         cluster.add(node)
         synonymer.set(node)

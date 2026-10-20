@@ -32,7 +32,8 @@ def create_trees(components_list, blocks_map, compositions_list):
     }
 
     # Transform compositions into attributes
-    function = lambda comp: nodes.get(comp.part_id)
+    def function(comp):
+        return nodes.get(comp.part_id)
     for composition in sorted_compositions:
         add_composition(nodes[composition.whole_id], composition, function)
     return nodes
@@ -43,7 +44,8 @@ def component_to_tree(component):
         return None
     node = NowNode(component, component.this_block)
 
-    function = lambda comp: component_to_tree(comp.part)
+    def function(comp):
+        return component_to_tree(comp.part)
     for composition in component.compositions_as_whole:
         add_composition(node, composition, function)
     return node

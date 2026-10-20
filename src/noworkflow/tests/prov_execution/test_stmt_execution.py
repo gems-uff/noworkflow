@@ -154,7 +154,6 @@ class TestStmtExecution(CollectionTestCase):
                     "f(a)\n"
                     "# other")
 
-        write_arg_eval = self.get_evaluation(name="arg", mode="w")
         def_arg_eval = self.get_evaluation(name="arg", mode="r")
         write_f_eval = self.get_evaluation(name="f", mode="w")
         param_x_eval = self.get_evaluation(name="x", mode="w")
@@ -963,7 +962,6 @@ class TestStmtExecution(CollectionTestCase):
                     "    a = f\n"
                     "# other")
 
-        script_eval = self.get_evaluation(name="script.py")
         read_devnull_eval = self.get_evaluation(name="devnull", mode="r")
         open_eval = self.get_evaluation(name="open(devnull, 'w')")
         write_f_eval = self.get_evaluation(name="f", mode="w")

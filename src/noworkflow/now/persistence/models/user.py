@@ -43,7 +43,7 @@ class User(AlchemyProxy):
         session = session or relational.session
 
         user = cls.t
-        result = session.execute(
+        session.execute(
             user.insert(),
             {"id": id, "userLogin": login})
 

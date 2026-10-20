@@ -123,7 +123,8 @@ def debugger_builtins(provider, namespace, metascript):
     def now_notebook(start=True):
         """Start Jupyter Notebook"""
         try:
-            import IPython
+            # Availability check: without IPython there is no notebook.
+            import IPython  # noqa: F401
             Ipynb().execute(Namespace(trial=None, dir=None))
             if start:
                 params = ["ipython", "notebook", "Current Trial.ipynb"]

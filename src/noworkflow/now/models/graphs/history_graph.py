@@ -416,7 +416,8 @@ class HistoryGraph(Graph):
         max_level = max(t.level for t in nodes)
         active_levels = [0] * (max_level + 1)
         lines = []
-        add_line = lambda *a, **kw: lines.append(_line_text(*a, **kw))
+        def add_line(*a, **kw):
+            return lines.append(_line_text(*a, **kw))
         for trial in reversed(nodes):
             active_levels[trial.level] = 1
             add_line(active_levels, trial, trial.level, width=width)

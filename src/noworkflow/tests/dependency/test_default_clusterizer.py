@@ -739,8 +739,8 @@ class TestClusterizer(CollectionTestCase):
 
         write_f_eval = self.evaluation_node(name="f", mode="w")
         write_g_eval = self.evaluation_node(name="g", mode="w")
-        read_f_eval = self.evaluation_node(name="f", mode="r")
-        read_g_eval = self.evaluation_node(name="g", mode="r")
+        self.evaluation_node(name="f", mode="r")
+        self.evaluation_node(name="g", mode="r")
         script = self.evaluation_node(name="script.py")
         var_act_f = self.evaluation_node(name="f('1')")
         var_act_g = self.evaluation_node(name="g(x)")
