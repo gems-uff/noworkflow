@@ -23,7 +23,7 @@ plausible verdict also crosses the line: it sends the PR to `golden-run`,
 |---|---|
 | `pyproject.toml`, `uv.lock`, `src/frontend/package*.json`, `.github/workflows/**` | `dependencies` |
 | A Dependabot PR | `dependencies`: never merged as it stands; a maintainer turns its branch into the tested commit (below) |
-| `src/frontend/**` | `rebuild-vis` (a browser for a view that changed) |
+| `src/frontend/**` | `rebuild-vis` (the browser tests, then "Before and after in a browser") |
 | `src/noworkflow/now/vis/**` | `rebuild-vis` ("Smoke"), then `golden-run`, step 4 |
 | `src/noworkflow/now/collection/**`, or an issue that names a Python version | `python-matrix`; also `golden-run` when what is recorded changes |
 | `src/noworkflow/now/persistence/**`, `src/noworkflow/now/models/**`, `src/noworkflow/now/cmd/**`, `src/noworkflow/patterns/**`, `src/noworkflow/resources/**` | `golden-run` |

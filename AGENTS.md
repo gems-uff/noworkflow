@@ -60,7 +60,8 @@ of date, fix it there.
   the test count at or above the floor of every leg (`min-tests` in
   `.github/workflows/ci.yml`, `pre-release.yml` and, while it exists,
   `experimental.yml`, the one in
-  `flaky.yml` and the one of the `paper-example` job; the reference leg also
+  `flaky.yml` and the ones of the `paper-example` and `vis-browser` jobs;
+  the reference leg also
   counts the goldens, which the other legs deselect), **and the floors go
   up in the same PR that adds tests**;
   `uv run ruff check .` clean; the bandit step of `checks` green, so every
@@ -224,7 +225,8 @@ disposable.
 One dependency per step, to the latest patch of the same series; **never a
 major or minor bump as a side effect** of something else. The runtime set is
 in `[project.dependencies]`, the tools in `[dependency-groups]` (with
-`paper`, what the tests of the paper's running example import), and
+`paper`, what the tests of the paper's running example import, and
+`browser`, what the tests of the vis in a browser import), and
 `uv.lock` is the truth that CI installs with `uv sync --locked`: a change to
 `pyproject.toml` without `uv lock` fails `uv lock --check` before anything
 else runs. Known advisories that a pin keeps alive are listed, with the reason
@@ -253,23 +255,34 @@ neither executes:
   (its query options run through `clean`), and `demo` outside the reference
   leg (see below). For the commands they do run, only the flags their tests
   name are covered.
-- **`now vis`:** the server itself (`now vis` as a process: `cmd_vis.py`,
-  the port, `--host`, `--dir`); the write routes (experiments, groups,
-  annotations, remotes, the collaboration import and the files it receives)
-  and push and pull against them (#256); what the `now` that the
-  `/commands/*` routes start actually does; the JavaScript. The read routes,
+- **`now vis`:** the write routes (experiments, groups, annotations,
+  remotes, the collaboration import and the files it receives) and push
+  and pull against them (#256), in the server and in the JavaScript; the
+  views the browser tests do not open (below). The read routes,
   `/db/query` included, run in process through Flask's test client
   (`src/noworkflow/tests/vis/`) on stores that `now run` builds in a
   temporary directory; the rows only push and pull create are added through
-  the models or in SQL. The `/commands/*` routes that start `now` run with
-  `subprocess.run` replaced, so only the argv they build and how they answer
-  are checked. A PDF out of `flow.pdf` is checked only where Graphviz's
-  `dot` is on the PATH, which no CI leg installs, and
-  `prospective.dot` is drawn for a handful of scripts. The `frontend` job
-  proves that the committed bundle matches the sources, that the extension
-  type-checks and that the count of `tsc` errors of the vis does not grow.
-  By hand, `golden-run` (step 4) and the smoke of `rebuild-vis` serve a
-  corpus store over a real port and fetch the routes `read_store.py` lists.
+  the models or in SQL. There the `/commands/*` routes that start `now` run
+  with `subprocess.run` replaced, so only the argv they build and how they
+  answer are checked. The JavaScript and the server as a process run only
+  in the `vis-browser` job of `ci.yml` (`src/noworkflow/tests/browser/`,
+  marked `browser`, deselected on every other leg): `now vis` on a real
+  port and the committed bundle in headless Chrome, through the history,
+  a trial, the diff, the dataflow and the Prolog export (the only places
+  where a `/commands/*` route runs a real `now`), the prospective graph,
+  the database graph and the SQL editor. What those tests do not open (the
+  modals of restore, push, pull and the remotes, the "generate prov" tab,
+  the function activation diff, the exclusion of prior provenance, the
+  downloads, the tooltips, the project page) runs nowhere. A PDF out of
+  `flow.pdf` is checked only where Graphviz's `dot` is on the PATH, which
+  no CI leg installs, and `prospective.dot` is drawn for a handful of
+  scripts. The `frontend` job proves that the committed bundle matches the
+  sources, that the extension type-checks and that the count of `tsc`
+  errors of the vis does not grow. By hand, `golden-run` (step 4) and the
+  smoke of `rebuild-vis` fetch the routes `read_store.py` lists from a
+  corpus store, and `compare_vis.mjs` of `rebuild-vis` shows everything a
+  new bundle changes against a base one, CSS and layout included, which
+  the tests do not assert.
 - **Windows and macOS:** a push runs the matrix on Ubuntu only, for every
   Python version. macOS and Windows run every version in `pre-release.yml`,
   by hand before a release. Path separators, encodings, processes and the
@@ -323,7 +336,9 @@ neither executes:
 - **Jupyter:** the magics run in an in-process IPython shell
   (`src/noworkflow/tests/ipython/`), never under a kernel: the kernel in
   `src/noworkflow/kernel/` is only imported (#315), so `now clean` never
-  meets a notebook trial, and the lab extension has no automated test.
+  meets a notebook trial, and the lab extension has no automated test:
+  only the type-check of the `frontend` job reaches it, so an update of
+  its packages (codemirror, `@jupyterlab/*`) is measured by nothing else.
   `%%now_run --interactive` gets past #313's import only through a stand-in
   of the tests. `%%dot` and the diagrams of `%now_schema` skip where
   Graphviz's `dot` is missing, `%%now_prolog` without `pyswip`, which no

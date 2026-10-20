@@ -1,6 +1,6 @@
 ---
 name: rebuild-vis
-description: Rebuilds the vis bundle (src/noworkflow/now/vis/static/dist/bundle.js) from src/frontend the way the `frontend` job of CI does, proves that a change reached it and that the bundle about to be committed is what its sources build, and smoke-tests what the working tree's `now vis` serves (compared with another version: golden-run). Use after any change under src/frontend (sources or the npm lock), on a Dependabot npm PR, after a merge that touched the frontend or the bundle, and when a change behind a vis route has to be seen served.
+description: Rebuilds the vis bundle (src/noworkflow/now/vis/static/dist/bundle.js) from src/frontend the way the `frontend` job of CI does, proves that a change reached it and that the bundle about to be committed is what its sources build, smoke-tests what the working tree's `now vis` serves (compared with another version: golden-run), runs the browser tests on the rebuilt bundle, and compares in headless Chrome what the vis draws and does with the base bundle and with the rebuilt one. Use after any change under src/frontend (sources or the npm lock), on a Dependabot npm PR, after a merge that touched the frontend or the bundle, and when a change behind a vis route has to be seen served.
 ---
 
 # Rebuilding the vis bundle
@@ -17,11 +17,13 @@ working, which the guard never does.
 ## When it enters
 
 - **A change under `src/frontend/packages/**`** (TypeScript, styles,
-  images): rebuild, and the bundle goes in the same commit as the source.
+  images): rebuild, compare in a browser, and the bundle goes in the same
+  commit as the source.
 - **A change to the npm lock or a `package.json`** (an update, by
   `dependencies`, part 3): rebuild. A package that only builds (a loader,
   lerna itself) leaves the bundle as it was; one that ships changes it.
-  Either outcome is the measurement.
+  Either outcome is the measurement, and a changed bundle goes through
+  "Before and after in a browser".
 - **A Dependabot npm PR**: never merged as it stands (`dependencies`, "A
   Dependabot PR is a signal, not the step"). On its branch, rebased on
   `main`, rebuild: a package that only builds leaves the bundle as it was;
@@ -208,23 +210,143 @@ into the store are in `golden-run`, step 4 and "Known noise".
   `127.0.0.1`. `/trials.json` needs its three parameters
   (`?script=*&execution=*&summarize=0`, as the frontend sends them); bare, it
   answers 500.
-- **A change to a view** is seen only in a browser: from the checkout and
-  outside the sandbox, `uv run --no-sync now vis -p <port> --dir
-  <scratch>/bt/two_trials0/project` (`now` is not on the PATH), open
-  `http://127.0.0.1:<port>/`, exercise the view the change touched, and write
-  in the PR what was done and what came out. There is no automated test of
-  the JavaScript. Stop the server afterwards.
+- **A change to a view, or to a package the bundle ships,** is seen only in
+  a browser: the next section.
+
+## In a browser
+
+Two tools run the JavaScript, and they answer different questions.
+
+**The browser tests** (`src/noworkflow/tests/browser/`, marked `browser`;
+"The vis in a browser" in `CONTRIBUTING.md`) assert that each view opens
+and does what its input asks: a wheel zooms, a drag pans by the distance
+dragged, a click selects or folds, a query answers, and nothing reaches the
+console. They run in the `vis-browser` job of CI against the committed
+bundle. Run them after every rebuild, before the commit, on the rebuilt
+bundle the working tree's `now vis` serves:
+
+```bash
+uv sync --locked --group browser && uv run pytest -m browser
+```
+
+(outside the sandbox: each test binds a port). A red one is a regression of
+the vis, or a test to adapt when the change altered that view on purpose,
+in the same commit. The selectors and the ways to reach each view live in
+`page_helpers.js` next to them, which the comparison below loads too.
+
+**The comparison** shows everything a new bundle changes, including what no
+test asserts: a stylesheet, a layout a few pixels off, a class, the exact
+scale of a zoom. That is what an update needs, because nobody knows in
+advance where a package will change something.
+
+## Before and after in a browser
+
+A green suite, browser tests included, says only that what the tests assert
+still holds. For an update of a package the bundle ships (`@lumino/*`, d3,
+svg-pan-zoom, `@viz-js/viz`, ace, tau-prolog, webpack and Babel, which
+write the bundle) or a change to the sources of the vis,
+`compare_vis.mjs`, in this directory, serves the store of the smoke above
+and drives the same scenario in headless Chrome with the base bundle, with
+the base bundle again (the control) and with the new one, and compares,
+step by step, the DOM, the measures of each interaction and the events.
+Its docstring has the details; what follows is when to run it and how to
+read it.
+
+**When:** every step whose build `[emitted]` the bundle, before the
+maintainer commits it, and a source change to a view, whose difference is
+then the expected one. Not when the bundle came out as it was: the same
+bundle runs the same.
+
+```bash
+node .claude/skills/rebuild-vis/compare_vis.mjs <scratch>/bt/two_trials0 <scratch>/vis-compare
+```
+
+From the root and outside the sandbox, like the smoke; about two minutes.
+By default the base is `bundle.js` at `HEAD` and the new one the working
+tree's, which is the case of a rebuild not committed yet; on a branch whose
+commit already holds the bundle, `--base` takes the bundle of `main`
+(`git show main:src/noworkflow/now/vis/static/dist/bundle.js >
+<scratch>/main.js`). The bundle is swapped inside the browser and the tracked
+file is never touched. It needs Chrome or Chromium (`--chrome`, or the
+`CHROME` variable, when it is not where the script looks) and a Node with a
+global WebSocket, 22 or later (the job's major, above, is newer); installing
+a browser is an install on the machine.
+
+**The scenario.** In phases, each on a freshly loaded page: the history
+graph (wheel zoom, drag); a trial (its graph, wheel zoom, drag, a click
+that folds a node, a fold of the information tab), the diff of the two
+trials (Shift+click), the drag of a split handle and the close of a tab;
+the dataflow (svg-pan-zoom: wheel zoom, a drag that brings a box node into
+view, a click that selects it); the prospective graph (its zoom button, a
+drag); the Prolog export and a query that tau-prolog answers; the main
+tabs, the database graph, a table's tab, the SQL editor (ace: text typed
+into it) and a query; the drag of a table. The control's noise is
+discounted line by line; the ids that differ between two runs of the same
+bundle are masked, the randomness the vis draws ids from is seeded, and
+the coordinates of the database graph are masked, because a click or a
+drag on a table reheats d3-force's simulation, whose ticks follow the
+clock (for the drag, only whether the table moved is compared).
+
+**Reading `report.txt`.** One line per step; `same` (or `same (noise N)`)
+in all three columns is the result for a dependency that should change
+nothing. Exit 0: no difference beyond the control.
+
+- **`dom DIFF`**: `diff/NN-step.diff` has base against new. A `<style #…>`
+  line is a stylesheet a package ships; a `style="… top/left/width …"` is
+  layout; a class or an attribute is how a widget renders. For a change to
+  the sources, the steps that show the changed view differ and the diff is
+  what the change meant; anything else is a finding. For an update, every
+  difference is a finding, read against the package's changelog.
+- **`measures DIFF`**: an interaction does something else (another
+  transform after a wheel, another tab current, a node that no longer
+  folds); both sides are printed. `NO NEW SNAPSHOT` with an error on the
+  new side: the step could not act with the new bundle (nothing to click,
+  a view that never came up), which is a regression unless the change
+  removed that view on purpose.
+- **`events DIFF`**: a console error, an uncaught exception, a dialog or a
+  failed request that the base did not have.
+- **`BASE FAILED`, exit 2**: the base bundle did not get through a step,
+  so the scenario no longer matches the vis (a selector or a label the
+  sources changed). Adapt the scenario with `--runs base`, which runs only
+  that bundle and writes `base/steps.json` with where each input went, in
+  the same commit as the change to the vis; nothing is concluded from a
+  comparison that did not run.
+
+Known noise, the same in every run: `http 404:
+/experiments//extendedAnnotation` (the annotation widget asks for the
+experiment the history page does not have) and `/favicon.ico`.
+
+The `.dom.txt` files and `server.log` hold the store's synthetic
+environment and its paths: read them here; what goes into the PR or the
+issue is the report and the description of a difference, as for the smoke.
+
+**What it does not reach:** the write routes (restore, push, pull, the
+remotes, experiments, groups, annotations) and their modals; the "generate
+prov" tab; the function activation diff; the exclusion of prior provenance
+in the dataflow; the downloads; the tooltips; the project page that `/` opens instead of
+the history when the store has experiments or no trial; and the Jupyter
+extension, which only `build:lib`
+type-checks (codemirror and `@jupyterlab/*` are its packages). A change to
+one of these is exercised by hand: `uv run --no-sync now vis -p <port>
+--dir <scratch>/bt/two_trials0/project` from inside that project, with
+`.venv/bin` on the `PATH` (the `/commands/*` routes run a bare `now`
+without `--dir`, #356, and answer empty otherwise), open
+`http://127.0.0.1:<port>/`, and write in the PR what was done and what came
+out. CI does not run the comparison: its result is a list of differences
+to read, not a verdict, and every intended change to a view is one.
 
 ## Commit
 
 The maintainer commits `bundle.js` with the source change — and any new
 asset the build emitted — in the same commit, never the rebuilt map. Show
-the diff, the result of the guard and of the suite (with the one failure
-above, until the commit); do not commit.
+the diff, the result of the guard, of the browser tests, of the comparison
+in a browser and of the suite (with the one failure above, until the
+commit); do not commit.
 
 ## What a rebuild does not prove
 
-- That the vis works in a browser: the smoke above, by hand.
+- That the vis works in a browser: the browser tests and the comparison
+  above, for the views they reach, and by hand for the rest.
 - That the Jupyter extension builds in full: `build:lib` is its type-check;
   `npm run build` with Jupyter in `.venv` is the full build
   (`CONTRIBUTING.md`).

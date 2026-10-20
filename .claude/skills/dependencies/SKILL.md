@@ -24,7 +24,8 @@ follows is how to apply it with the tools of this repository.
 - `[dependency-groups]`: the tools (pytest, ruff, bandit, pip-audit), in
   `dev`, which `uv sync` installs by default, and what a set of tests needs
   beyond them, in a group of its own (`paper`: the ML stack of the paper's
-  running example), which only the CI job of those tests syncs. Never in the
+  running example; `browser`: Playwright, for the tests of the vis in a
+  browser), which only the CI job of those tests syncs. Never in the
   wheel; CI installs them from the lock.
 - `[build-system]`: what builds the wheel. Its setuptools is not the runtime
   setuptools in `[project.dependencies]`; the two move independently.
@@ -477,10 +478,14 @@ its reach:
 - **The git content engines.** The suite pins `plain`; `pygit2`, `dulwich`
   and the engines over them never run in it. A hand probe with a real `now
   run` on that engine, recorded in the PR.
-- **The vis.** An npm update only shows in a browser: `rebuild-vis` rebuilds
-  the bundle and serves it, and the view the update touches is exercised
-  there by hand; the `frontend` job proves only that the committed bundle
-  matches the sources.
+- **The vis.** An npm update only shows in a browser. The browser tests
+  (the `vis-browser` job) assert that each view still opens and answers its
+  input; `rebuild-vis` runs them on the rebuilt bundle and, when it changed,
+  compares in headless Chrome what the vis draws and does with the bundle
+  of `HEAD` and with the rebuilt one ("Before and after in a browser"),
+  which shows what no test asserts; a view neither reaches is exercised by
+  hand. The `frontend` job proves only that the committed bundle matches
+  the sources.
 - **SQLAlchemy.** The ORM runs against in-memory SQLite in every test, so the
   mapped models are exercised; the file on disk and a store written by the
   previous version only through a real `now run` — `golden-run`, whose
