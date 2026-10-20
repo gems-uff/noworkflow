@@ -1,6 +1,6 @@
 ---
 name: dependencies
-description: Decides how a dependency is declared in pyproject.toml, judges whether a version pin still has a reason, and carries out an update one package at a time — uv.lock and pip-audit for Python, the npm lock and the bundle for the frontend, the SHA-pinned GitHub Actions. Use when adding a dependency, changing a version constraint, auditing the pins, handling a Dependabot PR, measuring an unreleased pyposast, or planning an update campaign.
+description: Decides how a dependency is declared in pyproject.toml, judges whether a version pin still has a reason, and carries out an update — one package at a time, or a campaign that moves the tail in batches by level and the core one package per step — with uv.lock and pip-audit for Python, the npm lock and the bundle for the frontend, the SHA-pinned GitHub Actions. Use when adding a dependency, changing a version constraint, auditing the pins, handling a Dependabot PR, measuring an unreleased pyposast, or planning or running an update campaign (the use points, the patches, the minors, the majors experiment).
 ---
 
 # Dependencies: declaring and updating
@@ -11,8 +11,9 @@ lives in the arguments of `uv lock` — never in the file.
 
 The rule of the step — one package per step, the target is the latest patch
 of the same series, a minor or major bump is a decision and never a side
-effect — is in `AGENTS.md` ("Dependencies") and is not repeated here. What
-follows is how to apply it with the tools of this repository.
+effect — is in `AGENTS.md` ("Dependencies") and is not repeated here, nor is
+its one exception, a campaign, whose procedure is "A campaign" below. What
+follows is how to apply them with the tools of this repository.
 
 ## Where things are
 
@@ -43,6 +44,9 @@ follows is how to apply it with the tools of this repository.
 - `.github/dependabot.yml`: version updates off, security updates on (part 2).
 - `lock_versions.sh`, in this skill's directory: the locked versions of a
   lock, or the difference between two (its header has the usage).
+- `use_points.py`, in this skill's directory: the lines of product code that
+  use each third-party package, and how many of them a coverage report
+  executed ("A campaign"; its docstring has the usage).
 
 ## Part 1 — Declaring in `pyproject.toml`
 
@@ -304,9 +308,147 @@ probe of "does it still import" runs isolated (part 1, question 4). A real
 a probe.
 
 Red is cheap information: abort. Green is **not** authorization for
-everything together: each package, the tools included, goes back to one step
-(`AGENTS.md`). The dev group declares only floors, so `uv lock
---upgrade-group dev` takes majors.
+everything together: what goes in as a batch, and what goes one package per
+step, is the regime of a campaign (below). The dev group declares only
+floors, so `uv lock --upgrade-group dev` takes majors.
+
+### A campaign
+
+A campaign brings both locks up to date at once: before a stretch of work
+that should start from current dependencies, or when the audits and the
+Dependabot alerts pile up. One issue (a Task) holds it, each step is a
+session that ends with a results comment there, and the steps go in this
+order: the use points, the patches, the minors, the majors.
+
+**The regime.** The rule of the step (`AGENTS.md`) holds for the core; the
+tail moves in batches.
+
+- **Core:** a package the code is built on — its use points are spread over
+  many modules, or the suite reaches few of them, or its minors carry
+  documented migrations. One package per step, to the newest minor of its
+  series, with every changelog between the locked version and the target
+  (and the upgrade guide) read first. The step is split at a minor whose
+  changelog announces a migration — an API removed, a configuration that
+  changes, a new packaging — and that minor is a step of its own.
+- **Tail:** everything else — a transitive this code never names, a dev
+  tool, a build tool whose product is compared byte for byte (Babel and the
+  loaders: the bundle is the proof). One batch per level, all the patches
+  and then all the minors, with a hard ceiling (below), the lock diff read
+  entry by entry, and bisection only when the batch goes red.
+- **A major** is never in a batch: the majors are an experiment first
+  (below), and each one that goes in is a step of its own.
+
+Which package is core is measured in the first step and written in the
+campaign's issue. A framework the code is built on stays core from one
+campaign to the next: SQLAlchemy, Flask, IPython and pyposast on the Python
+side; webpack, typescript, `@lumino/widgets`, `@jupyterlab/*`, codemirror
+and d3 on the npm side.
+
+**1. The use points.** Line coverage of noWorkflow says nothing about a
+dependency; what matters is whether the suite executes the lines that use
+it. `use_points.py`, in this directory, counts per package the lines of
+product code that load a name the package bound, and how many of them a
+coverage report executed (its docstring has what it does not count):
+
+```bash
+uv run pytest -n 4 --cov --cov-report=json:<outside>/coverage.json
+uv run --no-sync python .claude/skills/dependencies/use_points.py src/noworkflow --exclude src/noworkflow/tests src/noworkflow/resources/demo --coverage <outside>/coverage.json --detail <module> ...
+```
+
+A use point the suite never reaches is where an update breaks without a
+red: it names the hand probe of part 5 that the step owes, and where a
+characterization test should go before a core package moves. A transitive
+has no use point of its own: `uv tree --locked --universal --invert
+--package <name>` names the package through which it reaches this code,
+whose points are the ones that verify it. On the npm side no JavaScript
+runs in the suite but the browser tests, so the measure is static: the
+import sites of each package (`git grep -n "from ['\"]<name>" --
+src/frontend/packages`) and the view, or the build output, that proves it.
+
+**2. The inventory, by level.**
+
+```bash
+uv tree --locked --universal --outdated     # every locked package with a newer release, at any depth
+uv lock --upgrade --dry-run                 # what the constraints let move: the "Update" lines
+npm outdated --prefix src/frontend          # per workspace: current, wanted (the range), latest
+```
+
+A dry run that answers "Lockfile changes detected" without any `Update`
+line only reorders the `resolution-markers` and moves no version
+(`lock_versions.sh` against the base confirms it). In `npm outdated`,
+"wanted" is the newest the range admits and "latest" the newest release;
+the level of each move is read from the versions, and a "latest" beyond
+"wanted" means changing a range, which is a decision.
+
+**3. A batch at one level.** Neither tool has a level flag. In uv, one bound
+per package, all in one call — `'<name><x.y+1'` keeps a patch batch in the
+series, `'<name><x+1'` a minor batch in the major, and the fork rule of "The
+step" above applies to each bound:
+
+```bash
+uv lock --upgrade-package '<a><bound>' --upgrade-package '<b><bound>' ...
+.claude/skills/dependencies/lock_versions.sh origin/main uv.lock
+```
+
+In npm, part 3, "A batch at one level". The batch's commit lists every entry
+that moved. A lock diff with a package outside the level (a minor in a patch
+batch) is a red batch: that package's bound was missing.
+
+**4. A red batch is bisected** (delta debugging): from the base lock, redo
+the batch with the first half of its names; the half that stays red is
+halved again, until one package explains it. That package leaves the batch
+and becomes a step of its own, under the core regime; the rest of the batch
+goes in.
+
+**5. Every step**, batch or package: the suite before and after with the
+same seed (`safe-refactor`), the counts against the floors, `ruff`, `uv
+lock --check`, both audits; `rebuild-vis` for any change to the npm lock,
+with the browser tests on the rebuilt bundle and, when it changed,
+`compare_vis.mjs` against the previous step's bundle, every difference read
+against the changelog; the two checks of part 3 that no job of CI makes;
+`golden-run` when a core Python package moves; and the hand probes of part 5
+for the use points the suite does not reach. One commit per batch and one
+per core package, each message listing every entry that moved and what was
+read and measured. Each step builds on the commit of the previous one (the
+comparison in a browser takes `HEAD` as its base), and the series goes
+through a `ci-NNN` branch before `main`.
+
+**6. The majors: an experiment first,** on throwaway worktrees of `main`,
+never on the checkout: one for Python and one for npm, so that a probe's
+build never meets the suite running in the other (`git worktree add
+--detach <scratch>/<name> main`, then, in each, `uv sync --locked` with the
+groups of the checkout's `.venv`). Nothing of it is integrated as it
+stands; it ends in a report.
+
+- **Python:** relax the pin in the worktree's `pyproject.toml`, `uv lock
+  --upgrade-package <name>`, and the suite with the base's seed; group the
+  failures by the deepest exception line of each one in a JUnit report
+  (`--junitxml=<file>`). When one signature covers nearly everything, it is
+  a first layer that hides the rest: fix it on the throwaway tree, run
+  again, and repeat until what is left is either expected (a premise that
+  asserts the old series) or a real cost. Each layer and its fix go to the
+  report (the Mikado method: the goal on a throwaway tree, the
+  prerequisites recorded, back to the base). When the old series can warn
+  about what the new one removes, run the suite on the base with those
+  warnings on and a `pytest_warning_recorded` hook that writes each one's
+  file and line: the distinct sites are the surface of the migration on the
+  paths the suite executes. Last, steps 3 to 5 of `golden-run`, with the
+  worktree's `now` as the after side: whether a store of the old series
+  still opens is measured, never assumed (`AGENTS.md`).
+- **npm:** one major per probe, each from a fresh `npm ci` of the base lock:
+  its range to `^<latest>` in the `package.json` that declares it, `npm
+  install`, then the bundle build, the extension's `build:lib`, the `tsc`
+  count and the two checks of part 3. For a bundle that built and changed,
+  the browser tests with that bundle in the worktree's `static/dist/`, and
+  `compare_vis.mjs --new <the probe's bundle>` from the checkout. Read the
+  `engines` and `peerDependencies` of the new release first (`npm view
+  <name>@<version> engines peerDependencies`): another package's peer range
+  that excludes it is a prerequisite found without building.
+
+The report goes to the campaign's issue: per major, what broke, what it
+would cost and what comes first. A major that came out green and read
+becomes a step of its own; one that needs a migration becomes an issue of
+its own, with its prerequisites in the body.
 
 ### A Dependabot PR is a signal, not the step
 
@@ -421,7 +563,7 @@ minors**. An `overrides` entry in `src/frontend/package.json` forces one
 package's version wherever it appears, even outside its dependants' ranges,
 but the forced version still brings what it requires: read the lock diff the
 same way, and write the reason in the commit message (JSON has no comments).
-`npm audit fix` is a campaign, not a step.
+`npm audit fix` is neither a step nor a batch (below).
 
 Three things no lock knows, and all three reach the user:
 
@@ -446,6 +588,58 @@ copy, when `npm ls` comes back empty: `git grep -il '<name> v<version>' --
 src/frontend/packages` finds the file (retire prints the name in lower case,
 the banner usually capitalizes it), and it is replaced by hand, then
 `rebuild-vis`. A finding in `static/` is replaced or removed by hand.
+
+### A batch at one level
+
+npm has no flag that keeps an update inside a series, and a caret range
+admits minors. What works, from `src/frontend`, with every `package.json`
+range as it was at the end:
+
+- **Within the ranges:** `npm update <name>... --package-lock-only` moves
+  the named packages, and what they require, as far as the ranges admit.
+  Naming only the packages whose move is a patch ("wanted" against
+  "current" in `npm outdated`) makes the patch batch.
+- **A direct dependency held below its range:** set its range to `~x.y.z`
+  for the `npm update`, put the original range back, and run `npm install
+  --package-lock-only`: the lock records the original range and keeps the
+  version just resolved, which that range admits.
+- **A transitive held below what its dependants admit:** a temporary entry
+  with the bound in the root `devDependencies`, removed the same way.
+
+Two commands look like they bound and do not: `npm install
+<name>@<version> --no-save --package-lock-only` leaves the lock as it was,
+and `npm update <transitive>` takes the newest its dependants' ranges admit,
+whatever the level. `npm audit fix` is not a batch either: to escape an
+exact pin it downgrades the package that holds it, and it moves core
+packages along with the tail. Read its `--dry-run` as a list of fixes, and
+make the batch with `npm update`.
+
+An `overrides` entry nested under one dependant (`"<dependant>":
+{"<name>": "~x.y.z"}`) forces the version only below that dependant, where a
+top-level one would also move, or downgrade, every other copy of the
+package. It leaves when a release of the dependant requires that version on
+its own, and the commit that adds it says so.
+
+### Two checks no job of CI makes
+
+- **The bundle holds no path of the machine.** A package whose build reads
+  `import.meta.url` gets, from webpack, the `file://` URL of the module on
+  the machine that builds, and the committed bundle carries the path of the
+  checkout, home directory included; the `frontend` job fails only after the
+  push, when the path is already in the history. `rebuild-vis` ("Reading
+  `git status`") checks it after every build. A package that starts doing
+  it is held below that release, or the build resolves its CommonJS entry,
+  which does not read `import.meta`: a `resolve.alias` of `"<name>$"` to
+  `require.resolve("<name>")` in `webpack.config.js`, plus a
+  `resolve.fallback` set to `false` for each Node module that entry
+  requires (the build names them, "Can't resolve '<module>'").
+- **The Jupyter extension builds in full** when webpack, the extension's
+  builder or another of its build dependencies moves. The `frontend` job
+  only type-checks it (`build:lib`); the production build runs the bundler
+  through the builder, with plugins of its own (`rebuild-vis`, "What a
+  rebuild does not prove", has the command). The build is deterministic, so
+  its output is compared file by file with the base's; its `package.json`
+  is the extension's own, and differs only by the ranges the step changed.
 
 ## Part 4 — GitHub Actions
 

@@ -223,7 +223,11 @@ disposable.
 ## Dependencies
 
 One dependency per step, to the latest patch of the same series; **never a
-major or minor bump as a side effect** of something else. The runtime set is
+major or minor bump as a side effect** of something else. The exception is a
+campaign: the tail (transitives, tools, what the build compares byte for
+byte) moves in one batch per level with a hard ceiling, bisected when red,
+while the core still moves one package per step; the procedure is "A
+campaign" in the `dependencies` skill. The runtime set is
 in `[project.dependencies]`, the tools in `[dependency-groups]` (with
 `paper`, what the tests of the paper's running example import, and
 `browser`, what the tests of the vis in a browser import), and

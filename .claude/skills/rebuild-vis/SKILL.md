@@ -130,6 +130,19 @@ After the build, one of three:
   should not: stop. The usual causes are another Node major, or an `npm
   install` where `npm ci` was meant.
 
+**A bundle that changed holds no path of this machine.** webpack replaces
+`import.meta.url` with the `file://` URL of the module on the machine that
+builds, so a package that reads it puts the path of the checkout, home
+directory included, into the bundle about to be committed, and CI fails
+only after the push, when the path is in the history. Before the commit:
+
+```bash
+grep -c -e 'file://' -e "$HOME" src/noworkflow/now/vis/static/dist/bundle.js   # 0
+```
+
+Anything else is not committed; what to do with the package is in
+`dependencies`, part 3 ("Two checks no job of CI makes").
+
 **Until the commit, `uv run pytest` has one failure, by design:**
 `test_now_vis_serves_the_committed_bundle` compares what `now vis` serves
 with the bundle at `HEAD`, and nothing but the commit changes `HEAD`. It goes
@@ -347,8 +360,22 @@ commit); do not commit.
 
 - That the vis works in a browser: the browser tests and the comparison
   above, for the views they reach, and by hand for the rest.
-- That the Jupyter extension builds in full: `build:lib` is its type-check;
-  `npm run build` with Jupyter in `.venv` is the full build
-  (`CONTRIBUTING.md`).
+- That the Jupyter extension builds in full: `build:lib` is its type-check.
+  The production build, after the build above, with the jupyterlab of
+  `uv.lock` in an isolated environment that leaves `.venv` alone (outside
+  the sandbox):
+
+  ```bash
+  cd src/frontend/packages/labextension
+  uv run --isolated --no-project --no-python-downloads --python <version> --with "jupyterlab==<the version in uv.lock>" jupyter labextension build .
+  ```
+
+  It writes the ignored `noworkflow_labextension/labextension/`, the same
+  bytes from the same sources (`dependencies`, part 3, says when it runs
+  and how to read it). The jupyterlab of the lock warns that the command
+  is deprecated in favor of `jupyter-builder build`, and that, since the
+  extension declares the legacy `@jupyterlab/builder`, it builds against
+  the shared packages of the lowest JupyterLab that range admits; both
+  warnings stay until the extension moves to `@jupyter/builder`.
 - That the published extension (`noworkflow_labextension`) carries the
   change: it is released separately (`release`).
