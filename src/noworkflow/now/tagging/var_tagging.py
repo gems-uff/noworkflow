@@ -367,8 +367,8 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
 
     In these cases, it returns the dimension of the complex type.
 
-    If the raw flag is set to True, it returns the raw HTML output.
-    Otherwise, it returns two dictionaries.
+    If the raw flag is set to True, it returns two dictionaries.
+    Otherwise, it displays an HTML table of the differences.
 
     Args:
         trial_a (str): The identifier of the first trial.
@@ -385,7 +385,7 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
         To display the visual diff in the cell:
         >>> trial_diff("06dbf287-8ac0-44c7-b951-e56f79b4c7ee", "73f4e83e-0028-4733-9f39-d280d5b03502")
 
-        To obtain raw HTML output:
+        To obtain the two dictionaries:
         >>> dict1, dict2 = trial_diff("06dbf287-8ac0-44c7-b951-e56f79b4c7ee", "73f4e83e-0028-4733-9f39-d280d5b03502", raw=True)
     """
 
@@ -397,7 +397,7 @@ def trial_diff(trial_a: str, trial_b: str, raw: bool = False):
     if raw:
         return dict1, dict2
     else:
-        from IPython.display import HTML
+        from IPython.display import HTML, display
         plain_text_a = dict_to_text(dict1)
         plain_text_b = dict_to_text(dict2)
 

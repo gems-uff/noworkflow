@@ -161,12 +161,6 @@ INTERSECTION_UNBOUND = Defect(
     "on to use dict1 and dict2, which were never assigned",
     signature="UnboundLocalError",
 )
-DISPLAY_OUTSIDE_IPYTHON = Defect(
-    "#221: tagging/var_tagging.py trial_diff calls display() "
-    "without importing it; the name exists only in a process where an "
-    "IPython shell put it in the builtins, never in a script `now run` runs",
-    signature="name 'display' is not defined",
-)
 TAGGING_PANDAS = Defect(
     "#392: tagging/var_tagging.py var_tag_values, "
     "var_tag_plot and trial_intersection_diff import pandas, which "
@@ -597,24 +591,14 @@ def test_resume_trials_without_operations(in_tmp):
 
 
 def test_trial_diff_outside_ipython(in_tmp, capsys, monkeypatch):
-    """In a process where no IPython shell was created, such as a script
-    ``now run`` runs, showing the diff raises NameError: ``display`` is a
-    builtin only a shell adds
+    """Showing the diff needs no builtin that only an IPython shell adds
 
-    Characterization of #221.
+    In a process where no shell was created, such as a script ``now run``
+    runs, ``display`` is not a builtin; ``trial_diff`` imports it (#221).
     """
     monkeypatch.delitem(vars(builtins), "display", raising=False)
     store_operations(capsys)
-    with pytest.raises(NameError, match="'display'"):
-        var_tagging.trial_diff("A", "B")
-
-
-@known_defects(DISPLAY_OUTSIDE_IPYTHON)
-def test_trial_diff_outside_ipython_desired(in_tmp, capsys, monkeypatch):
-    """Showing the diff needs no builtin that only IPython adds"""
-    monkeypatch.delitem(vars(builtins), "display", raising=False)
-    store_operations(capsys)
-    var_tagging.trial_diff("A", "B")
+    assert var_tagging.trial_diff("A", "B") is None
 
 
 def test_trial_diff_shows_a_table_in_the_shell(bare_shell):

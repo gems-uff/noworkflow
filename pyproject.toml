@@ -203,9 +203,6 @@ ignore = [
 # Package re-exports. F401 is still ignored globally; this entry keeps them
 # allowed once Round 3 (#221) removes F401 from `ignore`.
 "__init__.py" = ["F401"]
-# A real NameError, fixed in Round 3 (#221): `display` (exists only inside
-# IPython) in var_tagging.py:445.
-"src/noworkflow/now/tagging/var_tagging.py" = ["F821"]
 
 [tool.bandit]
 # Tests, the traced demo scripts and the Python 2 module are not product code
