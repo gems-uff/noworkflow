@@ -5,8 +5,8 @@
 """Operations to work with AST reconstructed from
 CodeComponents and Compositions"""
 
-from .model import NowNode
-from .constructor import create_trees, component_to_tree
 from .base_visitor import NodeVisitor
-from .draw_visitor import DrawVisitor
 from .code_writer import CodeWriter
+from .constructor import component_to_tree, create_trees
+from .draw_visitor import DrawVisitor
+from .model import NowNode

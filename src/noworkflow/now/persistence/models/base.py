@@ -3,17 +3,15 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Model base"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
-
 from collections import OrderedDict, namedtuple
 from functools import wraps
 
-from future.utils import with_metaclass, viewitems, viewvalues, viewkeys
+from future.utils import viewitems, viewkeys, viewvalues, with_metaclass
 from sqlalchemy import Column
-from sqlalchemy.orm import relationship
 
 from .. import relational
 
@@ -24,6 +22,7 @@ class MetaModel(type):
     Keep track of all model classes and instances
     Classes must have __modelname__ defined to be tracked
     """
+
     __classes__ = {}
 
     def __new__(mcs, name, bases, attrs):
@@ -167,20 +166,24 @@ def proxy_gen_first(query):
 
 def proxy_property(func, proxy_func=proxy, doc=None):
     """Return a proxy property to a __model__ function"""
+
     @wraps(func)
     def prop(self, *args, **kwargs):
         """Proxy property"""
-        obj = self._get_instance()                                               # pylint: disable=protected-access
+        obj = self._get_instance()  # pylint: disable=protected-access
         result = func(obj, *args, **kwargs)
         return proxy_func(result)
+
     return property(prop, doc=doc)
 
 
 def proxy_attr(name, proxy_func=proxy, doc=None):
     """Return a proxy property to a __model__ attribute"""
+
     def func(self):
         """Return {}""".format(name)
         return getattr(self, name)
+
     return proxy_property(func, proxy_func=proxy_func, doc=doc)
 
 
@@ -192,8 +195,8 @@ class AlchemyProxy(Model):
 
     __alchemy_refs__ = {}
 
-    m = __model__ = None                                                         # pylint: disable=invalid-name
-    t = __table__ = None                                                         # pylint: disable=invalid-name
+    m = __model__ = None  # pylint: disable=invalid-name
+    t = __table__ = None  # pylint: disable=invalid-name
     __modelname__, __columns__ = None, []
 
     def __init__(self, obj):
@@ -214,9 +217,9 @@ class AlchemyProxy(Model):
         return self._alchemy_pk == other._alchemy_pk
 
     def __repr__(self):
-        if hasattr(self, 'prolog_description'):
-            return self.prolog_description.fact(self)                            # pylint: disable=no-member
-        return super(AlchemyProxy, self).__repr__()                              # pylint: disable=no-member
+        if hasattr(self, "prolog_description"):
+            return self.prolog_description.fact(self)  # pylint: disable=no-member
+        return super(AlchemyProxy, self).__repr__()  # pylint: disable=no-member
 
     def _store_pk(self, obj):
         self._alchemy_pk = obj.__mapper__.primary_key_from_instance(obj)
@@ -239,9 +242,7 @@ class AlchemyProxy(Model):
 
     def to_dict(self, ignore=tuple(), extra=tuple()):
         """Return object as dict"""
-        result = OrderedDict(
-            (attr, getattr(self, attr)) for attr in extra
-        )
+        result = OrderedDict((attr, getattr(self, attr)) for attr in extra)
         for key in self.__columns__:
             if key not in ignore and key not in extra:
                 result[key] = getattr(self, key)
@@ -255,17 +256,16 @@ class AlchemyProxy(Model):
             _conn = conn if conn else relational.engine.connect()
             _conn.execute(
                 cls.__model__.__table__.insert().prefix_with("OR REPLACE"),
-                *object_store.generator(partial)
+                *object_store.generator(partial),
             )
             if conn is None:
                 _conn.close()
+
     @classmethod
     def load_by_trials(cls, trial_ids_list, session=None):
         session = session or relational.session
-        return (
-            session.query(cls.m)
-            .filter((cls.m.trial_id.in_(trial_ids_list))).all()
-        )
+        return session.query(cls.m).filter((cls.m.trial_id.in_(trial_ids_list))).all()
+
     @classmethod  # query
     def all(cls, session=None):
         """Return all tuples
@@ -308,11 +308,13 @@ def proxy_class(cls):
             attributes[name] = var
         elif isinstance(var, ModelMethod):
             new_name = name
-            setattr(cls, name, proxy_attr(
-                new_name, proxy_func=var.proxy, doc=var.func.__doc__
-            ))
+            setattr(
+                cls,
+                name,
+                proxy_attr(new_name, proxy_func=var.proxy, doc=var.func.__doc__),
+            )
             attributes[new_name] = property(var.func, doc=var.func.__doc__)
-        elif name in ('__tablename__', '__table_args__'):
+        elif name in ("__tablename__", "__table_args__"):
             attributes[name] = var
 
     for name in to_remove:
@@ -330,4 +332,4 @@ def proxy_class(cls):
 
 def is_none(attribute):
     """Filter SQLAlchemy attribute is None"""
-    return attribute == None                                                     # pylint: disable=singleton-comparison
+    return attribute.is_(None)

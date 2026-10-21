@@ -3,18 +3,18 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight Remote"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from ..models import Remote                        
+from ..models import Remote
 from .base import BaseLW, define_attrs
 
-class RemoteLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
+
+class RemoteLW(BaseLW):  # pylint: disable=too-many-instance-attributes
     """Remote lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["relatedExperiment","server_url","name", "id", "used", "hide"]
+        ["relatedExperiment", "server_url", "name", "id", "used", "hide"]
     )
     nullable = set()
     model = Remote
@@ -26,13 +26,12 @@ class RemoteLW(BaseLW):                                                      # p
         self.name = name
         self.used = used
         self.hide = hide
-    
+
     def __json__(self):
         return {
-
-            'server_url': self.server_url,
-            'name': self.name,
-            'id': self.id,
-            'used': self.used,
-            'hide': self.hide
+            "server_url": self.server_url,
+            "name": self.name,
+            "id": self.id,
+            "used": self.used,
+            "hide": self.hide,
         }

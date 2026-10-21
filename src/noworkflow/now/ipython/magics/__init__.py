@@ -3,8 +3,8 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Magics for IPython"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import defaultdict
 from functools import wraps
@@ -12,15 +12,14 @@ from functools import wraps
 from IPython import get_ipython
 from IPython.core.magic import Magics, magics_class
 
-from .now_run import NowRun
 from .now_ipython import NowIpython
-from .now_set_default import NowSetDefault
-from .now_sql import NowSQL
+from .now_ls_magic import NowLsMagic
 from .now_prolog import NowProlog
 from .now_restore import NowRestore
+from .now_run import NowRun
 from .now_schema import NowSchema
-from .now_ls_magic import NowLsMagic
-
+from .now_set_default import NowSetDefault
+from .now_sql import NowSQL
 
 MAGICS = [
     ("now_run", "line_cell", NowRun),
@@ -39,7 +38,9 @@ class NoworkflowMagics(Magics):
     """Generate noWorkflow magics"""
 
     def __init__(self, shell):
-        super(NoworkflowMagics, self).__init__(shell=shell)
+        # shell is the IPython shell; passed by keyword, bandit takes it for
+        # subprocess's shell=True (B604)
+        super(NoworkflowMagics, self).__init__(shell)
         self.commands = [
             cls(command, cls.__doc__, magic_type=magic_type)
             for command, magic_type, cls in MAGICS

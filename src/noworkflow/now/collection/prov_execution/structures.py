@@ -3,24 +3,20 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Data Structures"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+from collections import defaultdict, namedtuple
 from copy import copy
-from collections import namedtuple, defaultdict
 
-
-FakeEvaluation = namedtuple(
-    "FakeEvaluation", "activation_id id")
+FakeEvaluation = namedtuple("FakeEvaluation", "activation_id id")
 FAKE = FakeEvaluation(None, None)
 
 
-AssignAccess = namedtuple(
-    "AssignAccess", "value dependency addr value_dep checkpoint")
+AssignAccess = namedtuple("AssignAccess", "value dependency addr value_dep checkpoint")
 
 
 class FutureActivation(object):
-
     def __init__(self, name, code_id, activation, func, dependency_type):
         self.name = name
         self.code_id = code_id
@@ -61,15 +57,19 @@ class Assign(namedtuple("Assign", "checkpoint value dependency")):
 
 class ConditionExceptions(object):
     """Exception factory for handling ifs transformed into tries"""
+
     # pylint: disable=too-few-public-methods
     def __init__(self):
         self.exceptions = {}
 
     def __getitem__(self, item):
         if item not in self.exceptions:
+
             class ConditionException(Exception):
                 """If body Exception"""
+
                 pass
+
             self.exceptions[item] = ConditionException
         return self.exceptions[item]
 
@@ -77,7 +77,9 @@ class ConditionExceptions(object):
 class DependencyAware(object):
     """Store dependencies of an element"""
 
-    def __init__(self, active=True, exc_handler=-1, code_id=None, maybe_activation=None):
+    def __init__(
+        self, active=True, exc_handler=-1, code_id=None, maybe_activation=None
+    ):
         self.dependencies = []
         self.extra_dependencies = []
         self.exc_handler = exc_handler
@@ -115,7 +117,7 @@ class DependencyAware(object):
                 new_dep = copy(dep)
                 for key, value in kwargs.items():
                     setattr(new_dep, key, value)
-                #new_dep.mode = mode or new_dep.mode
+                # new_dep.mode = mode or new_dep.mode
                 new_depa.add(new_dep)
         for dep in self.extra_dependencies:
             new_dep = copy(dep)
@@ -129,13 +131,10 @@ class DependencyAware(object):
     @classmethod
     def join(cls, depa_list):
         """Join list of DependencyAwares"""
-        new_depa = cls(exc_handler=float('inf'))
+        new_depa = cls(exc_handler=float("inf"))
         for e_depa in depa_list:
             new_depa.code_id = e_depa.code_id
-            new_depa.exc_handler = min(
-                new_depa.exc_handler,
-                e_depa.exc_handler
-            )
+            new_depa.exc_handler = min(new_depa.exc_handler, e_depa.exc_handler)
 
             for dep in e_depa.dependencies:
                 new_depa.add(dep)
@@ -146,18 +145,22 @@ class DependencyAware(object):
     def swap(self):
         """Swap dependencies and extra_dependencies"""
         self.dependencies, self.extra_dependencies = (
-            self.extra_dependencies, self.dependencies
+            self.extra_dependencies,
+            self.dependencies,
         )
 
     def __repr__(self):
         return "{} - {}".format(self.dependencies, self.extra_dependencies)
 
+
 class Generator(object):
     """Represent a generator"""
+
     def __init__(self):
         self.value = None
         self.evaluation = None
         self.dependency = None
+
 
 class Dependency(object):
     """Represent a dependency"""
@@ -182,13 +185,11 @@ class Dependency(object):
     def __repr__(self):
         # pylint: disable=undefined-variable
         evaluation = __noworkflow__.evaluations[self.evaluation_id]
-        code_component = __noworkflow__.code_components[
-            evaluation.code_component_id]
+        code_component = __noworkflow__.code_components[evaluation.code_component_id]
         return "{}({})".format(code_component.name, self.mode)
 
 
 class Parameter(object):
-
     def __init__(self, name, code_id, value, is_vararg=False):
         self.name = name
         self.code_id = code_id
@@ -228,7 +229,6 @@ class CollectionDependencyAware(DependencyAware):
 
 
 class WithContext(object):
-
     def __init__(self, now, context, activation, exc_handler):
         self.noworkflow = now
         self.context = context
@@ -240,6 +240,6 @@ class WithContext(object):
 
     def __exit__(self, *exc):
         result = self.context.__exit__(*exc)
-        if result: # suppressed exception:
+        if result:  # suppressed exception:
             self.noworkflow.collect_exception(self.activation, self.exc_handler)
         return result

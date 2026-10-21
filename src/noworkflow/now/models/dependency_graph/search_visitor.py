@@ -3,7 +3,9 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Search Visitor"""
+
 from .base_visitor import ClusterVisitor
+
 
 class SearchEvaluationVisitor(ClusterVisitor):
     """Search evaluation in cluster"""
@@ -26,7 +28,7 @@ class SearchEvaluationVisitor(ClusterVisitor):
     def visit_evaluation(self, node):
         if node.evaluation.id == self.evaluation_id:
             return node
-    
+
     def visit_activation(self, node):
         if node.evaluation.id == self.evaluation_id:
             return node

@@ -3,22 +3,26 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Code Block Definition Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy.orm import remote, foreign
+from sqlalchemy import (
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
-from ...utils.formatter import PrettyLines
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologNullableRepr
-
-from .. import relational, content
-
-from .base import proxy_class, AlchemyProxy
-from .base import query_many_property
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullableRepr,
+    PrologTrial,
+)
+from .. import relational
+from .base import AlchemyProxy, proxy_class, query_many_property
 
 
 @proxy_class
@@ -59,15 +63,16 @@ class CodeBlock(AlchemyProxy):
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "id"],
-                             ["code_component.trial_id",
-                              "code_component.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["trial_id", "id"],
+            ["code_component.trial_id", "code_component.id"],
+            ondelete="CASCADE",
+        ),
     )
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
     trial_id = Column(String, index=True)
     code_hash = Column(Text)
     docstring = Column(Text)
-
 
     # Relationship attributes (see relationships.py):
     #   activations: * Activation
@@ -76,17 +81,21 @@ class CodeBlock(AlchemyProxy):
     #   this_component: 1 CodeComponent
     #   trial: 1 Trial
 
-    prolog_description = PrologDescription("code_block", (
-        PrologTrial("trial_id", link="code_component.trial_id"),
-        PrologAttribute("id", link="code_component.id"),
-        PrologNullableRepr("code_hash"),
-        PrologNullableRepr("docstring"),
-    ), description=(
-        "informs that in a given trial (*TrialId*),\n"
-        "a code block (script, class, function) (*Id*) was defined\n"
-        "with content (*CodeHash*)\n"
-        "and with a *Docstring*."
-    ))
+    prolog_description = PrologDescription(
+        "code_block",
+        (
+            PrologTrial("trial_id", link="code_component.trial_id"),
+            PrologAttribute("id", link="code_component.id"),
+            PrologNullableRepr("code_hash"),
+            PrologNullableRepr("docstring"),
+        ),
+        description=(
+            "informs that in a given trial (*TrialId*),\n"
+            "a code block (script, class, function) (*Id*) was defined\n"
+            "with content (*CodeHash*)\n"
+            "and with a *Docstring*."
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         super(CodeBlock, self).__init__(*args, **kwargs)
@@ -97,6 +106,7 @@ class CodeBlock(AlchemyProxy):
         """Get content"""
         if self._content is None:
             from ...models.code_display import CodeDisplay
+
             self._content = CodeDisplay(self)
         return self._content
 
@@ -114,19 +124,22 @@ class CodeBlock(AlchemyProxy):
 
     def mark_code(self, evaluations, options=None):
         """Mark evaluation dependencies in CodeBlock"""
-        from .evaluation import Evaluation
         from ...models.dependency_querier import DependencyQuerier
+        from .evaluation import Evaluation
+
         if isinstance(evaluations, Evaluation):
             evaluations = [evaluations]
         querier = DependencyQuerier(options=options)
         nodes_to_visit, visited, found = querier.navigate_dependencies(evaluations)
-        return self.content([
-            self.content.get_mark(
-                node.evaluation.code_component, {'className': 'mark-text'}
-            )
-            for node in visited
-            if node.evaluation.code_component_id in self.content.all_components
-        ])
+        return self.content(
+            [
+                self.content.get_mark(
+                    node.evaluation.code_component, {"className": "mark-text"}
+                )
+                for node in visited
+                if node.evaluation.code_component_id in self.content.all_components
+            ]
+        )
 
     def recursive_evaluations(self):
         """Return all evaluations that occur within this code block"""
@@ -157,11 +170,14 @@ class CodeBlock(AlchemyProxy):
         [code_component(..., ..., 'a', 'global', ...).]
         """
         from .code_component import CodeComponent
-        return relational.session.query(CodeComponent.m).filter((
-            (CodeComponent.m.trial_id == self.trial_id) &
-            (CodeComponent.m.container_id == self.id) &
-            (CodeComponent.m.type == "global")
-        ))
+
+        return relational.session.query(CodeComponent.m).filter(
+            (
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.container_id == self.id)
+                & (CodeComponent.m.type == "global")
+            )
+        )
 
     @query_many_property
     def parameters(self):
@@ -179,11 +195,14 @@ class CodeBlock(AlchemyProxy):
         [code_component(..., ..., 'x', 'param', ...).]
         """
         from .code_component import CodeComponent
-        return relational.session.query(CodeComponent.m).filter((
-            (CodeComponent.m.trial_id == self.trial_id) &
-            (CodeComponent.m.container_id == self.id) &
-            (CodeComponent.m.type == "param")
-        ))
+
+        return relational.session.query(CodeComponent.m).filter(
+            (
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.container_id == self.id)
+                & (CodeComponent.m.type == "param")
+            )
+        )
 
     @query_many_property
     def calls(self):
@@ -201,11 +220,14 @@ class CodeBlock(AlchemyProxy):
         [code_component(..., ..., 'f(a)', 'call', ...).]
         """
         from .code_component import CodeComponent
-        return relational.session.query(CodeComponent.m).filter((
-            (CodeComponent.m.trial_id == self.trial_id) &
-            (CodeComponent.m.container_id == self.id) &
-            (CodeComponent.m.type == "call")
-        ))
+
+        return relational.session.query(CodeComponent.m).filter(
+            (
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.container_id == self.id)
+                & (CodeComponent.m.type == "call")
+            )
+        )
 
     def show(self, print_=lambda x, offset=0: print(x)):
         """Show code block
@@ -235,22 +257,22 @@ class CodeBlock(AlchemyProxy):
         """
         component = self.this_component
 
-
         result = []
 
-        append = lambda attr, value, force=False: (
-            result.append("{}: {}".format(attr, value))
-            if value or force else None
-        )
+        def append(attr, value, force=False):
+            return (
+                result.append("{}: {}".format(attr, value)) if value or force else None
+            )
+
         append("Name", "{} [{}]".format(component.name, component.type))
         append("Code hash", self.code_hash, force=True)
         append("Docstring", self.docstring)
 
         if component.type == "function_def":
-            append("Parameters", ", ".join(x.name for x in self.parameters))     # pylint: disable=not-an-iterable
-            append("Globals", ", ".join(x.name for x in self.globals))           # pylint: disable=not-an-iterable
-            append("Calls", ", ".join(x.name for x in self.calls))               # pylint: disable=not-an-iterable
+            append("Parameters", ", ".join(x.name for x in self.parameters))  # pylint: disable=not-an-iterable
+            append("Globals", ", ".join(x.name for x in self.globals))  # pylint: disable=not-an-iterable
+            append("Calls", ", ".join(x.name for x in self.calls))  # pylint: disable=not-an-iterable
         elif component.type == "class_def":
-            append("Arguments", ", ".join(x.name for x in self.parameters))      # pylint: disable=not-an-iterable
+            append("Arguments", ", ".join(x.name for x in self.parameters))  # pylint: disable=not-an-iterable
 
         print_("\n".join(result))

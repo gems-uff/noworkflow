@@ -3,28 +3,59 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Deployment provenance collector"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-import importlib
-import modulefinder
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import getpass
+import importlib.metadata
 import os
 import platform
+import re
 import socket
 import sys
 import weakref
-import getpass
-import pkg_resources
 
-from future.utils import viewitems, native_str
 from future.builtins import map as cvmap
+from future.utils import native_str, viewitems
 
-from ...persistence.models import Module
-from ...persistence import content
-from ...utils.io import print_msg, redirect_output
-from ...utils.metaprofiler import meta_profiler
 from ...utils.cross_version import string
 from ...utils.functions import version
+from ...utils.io import print_msg
+from ...utils.metaprofiler import meta_profiler
+
+# Bound when noWorkflow starts, so that a traced script that patches
+# importlib.metadata (unittest.mock in a test suite) does not reach it
+find_distribution = importlib.metadata.distribution
+
+
+def load_metadata_modules():
+    """Import, before any script, what reading a distribution's metadata
+    imports (importlib.metadata._adapters, email.policy and its kin)
+
+    get_version reads metadata from inside the import finder, while the
+    script runs, and a module imported there for the first time would be
+    recorded as one the script imported. Reading noWorkflow's own metadata
+    takes the same path as reading any other's.
+    """
+    try:
+        find_distribution("noworkflow").metadata
+    # Not installed as a distribution: nothing to warm, and get_version
+    # falls back to the attributes
+    except Exception:  # pylint: disable=broad-except  # nosec B110
+        pass
+
+
+load_metadata_modules()
+
+
+def distribution_key(name):
+    """A distribution name as pkg_resources compared it: case and runs of
+    "-" and "_" do not matter, dots do
+
+    importlib.metadata also folds dots (PEP 503), so the submodule
+    flask.json would find the plugin Flask-JSON.
+    """
+    return re.sub(r"[-_]+", "-", name).lower()
 
 
 class Deployment(object):
@@ -74,10 +105,18 @@ class Deployment(object):
 
         attrs.add(trial_id, "NOWORKFLOW_VERSION", version())
 
-    def add_module(self, name, version, path, code_id, transformed=False, fullpath=None):
+    def add_module(
+        self, name, version, path, code_id, transformed=False, fullpath=None
+    ):
         """Insert module into provenance store"""
         self.metascript.modules_store.add(
-            self.metascript.trial_id, name, version, path, code_id, transformed, fullpath
+            self.metascript.trial_id,
+            name,
+            version,
+            path,
+            code_id,
+            transformed,
+            fullpath,
         )
 
     def get_version(self, module):
@@ -88,9 +127,22 @@ class Deployment(object):
 
         # Check package declared module version
         try:
-            # ToDo: This is slow! Is there any alternative?
-            return pkg_resources.get_distribution(module_name).version
-        except Exception:                                                        # pylint: disable=broad-except
+            metadata = find_distribution(module_name).metadata
+            dist_name = metadata.get("Name")
+            dist_version = metadata.get("Version")
+            # Metadata that names no version is not a version; before 3.15
+            # importlib.metadata.version returns None for it instead of raising
+            if (
+                isinstance(dist_name, string)
+                and isinstance(dist_version, string)
+                and dist_version
+                and distribution_key(dist_name) == distribution_key(module_name)
+            ):
+                return native_str(dist_version)
+        # A module name is rarely a distribution's name, and broken metadata
+        # raises more than PackageNotFoundError (KeyError, UnicodeDecodeError);
+        # any failure falls back to the attributes below
+        except Exception:  # pylint: disable=broad-except  # nosec B110
             pass
 
         # Check explicitly declared module version
@@ -104,7 +156,8 @@ class Deployment(object):
                         return ".".join(cvmap(str, module_version))
                 except AttributeError:
                     pass
-        except Exception:                                                        # pylint: disable=broad-except
+        # A module whose attributes raise still gets its row, without a version
+        except Exception:  # pylint: disable=broad-except  # nosec B110
             pass
 
         # If no other option work, return None
@@ -121,7 +174,6 @@ class Deployment(object):
         """
         print_msg("  registering environment attributes")
         self._collect_environment_provenance()
-
 
     def store_provenance(self):
         """Store deployment provenance"""

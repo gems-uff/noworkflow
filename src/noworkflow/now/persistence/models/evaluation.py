@@ -3,21 +3,30 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Evaluation Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import timedelta
-from sqlalchemy import Column, Integer, String, Text, Float
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
-from sqlalchemy.orm import remote, foreign
 
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+    true,
+)
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologTimestamp
-from ...utils.prolog import PrologAttribute, PrologNullable, PrologRepr
-from .. import relational
-
-from .base import AlchemyProxy, proxy_class, proxy
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologRepr,
+    PrologTrial,
+)
+from .base import AlchemyProxy, proxy, proxy_class
 from .dependency import Dependency
 
 
@@ -78,24 +87,35 @@ class Evaluation(AlchemyProxy):
     >>> list(evaluation2.dependencies)  # doctest: +ELLIPSIS
     [evaluation(..., ..., ..., ..., ..., ...).]
     """
+
     __tablename__ = "evaluation"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "code_component_id"],
-                             ["code_component.trial_id", "code_component.id"],
-                             ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "activation_id"],
-                             ["activation.trial_id", "activation.id"],
-                             ondelete="CASCADE", use_alter=True),
-        ForeignKeyConstraint(["trial_id", "activation_id", "id"],
-                             ["evaluation.trial_id",
-                              "evaluation.member_container_activation_id",
-                              "evaluation.member_container_id"],
-                             ondelete="CASCADE", use_alter=True),
+        ForeignKeyConstraint(
+            ["trial_id", "code_component_id"],
+            ["code_component.trial_id", "code_component.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["trial_id", "activation_id"],
+            ["activation.trial_id", "activation.id"],
+            ondelete="CASCADE",
+            use_alter=True,
+        ),
+        ForeignKeyConstraint(
+            ["trial_id", "activation_id", "id"],
+            [
+                "evaluation.trial_id",
+                "evaluation.member_container_activation_id",
+                "evaluation.member_container_id",
+            ],
+            ondelete="CASCADE",
+            use_alter=True,
+        ),
     )
     trial_id = Column(String, index=True)
-    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     checkpoint = Column(Float)
     code_component_id = Column(Integer, index=True)
     activation_id = Column(Integer, index=True)
@@ -106,7 +126,7 @@ class Evaluation(AlchemyProxy):
     # Relationship attributes (see relationships.py):
     #   this_activation: 1 Activation
     #   activation: 1 Activation
-    #   dependencies_as_dependent: * Dependency 
+    #   dependencies_as_dependent: * Dependency
     #   dependencies_as_dependency: * Dependency
     #   dependencies: * Evaluation
     #   dependents: * Evaluation
@@ -116,20 +136,24 @@ class Evaluation(AlchemyProxy):
     #   collections: * Evaluation
     #   trial: 1 Trial
     #   code_component: 1 CodeComponent
-    
-    prolog_description = PrologDescription("evaluation", (
-        PrologTrial("trial_id", link="trial.id"),
-        PrologAttribute("id"),
-        PrologAttribute("checkpoint"),
-        PrologAttribute("code_component_id", link="code_component.id"),
-        PrologNullable("activation_id", link="activation.id"),
-        PrologRepr("repr"),
-        PrologNullable("member_container_id", link="evaluation.id"),
-    ), description=(
-        "informs that in a given trial (*TrialId*),\n"
-        "an evaluation *Id* of *CodeComponentId* finalized at *Checkpoint*\n"
-        "in *ActivationId*, with value *Repr*."
-    ))
+
+    prolog_description = PrologDescription(
+        "evaluation",
+        (
+            PrologTrial("trial_id", link="trial.id"),
+            PrologAttribute("id"),
+            PrologAttribute("checkpoint"),
+            PrologAttribute("code_component_id", link="code_component.id"),
+            PrologNullable("activation_id", link="activation.id"),
+            PrologRepr("repr"),
+            PrologNullable("member_container_id", link="evaluation.id"),
+        ),
+        description=(
+            "informs that in a given trial (*TrialId*),\n"
+            "an evaluation *Id* of *CodeComponentId* finalized at *Checkpoint*\n"
+            "in *ActivationId*, with value *Repr*."
+        ),
+    )
 
     @property
     def assignment_evaluation(self):
@@ -154,11 +178,15 @@ class Evaluation(AlchemyProxy):
         >>> a_read.assignment_evaluation.id == a_write.id
         True
         """
-        return getattr(proxy(
-            self._get_instance().dependencies_as_dependent
-            .filter(Dependency.m.type == "assignment")
-            .first()
-        ), "dependency", None)
+        return getattr(
+            proxy(
+                self._get_instance()
+                .dependencies_as_dependent.filter(Dependency.m.type == "assignment")
+                .first()
+            ),
+            "dependency",
+            None,
+        )
 
     @property
     def reference_evaluation(self):
@@ -191,11 +219,15 @@ class Evaluation(AlchemyProxy):
                 break
             previous = current
             found.add(current.id)
-            current = getattr(proxy(
-                current._get_instance().dependencies_as_dependent
-                .filter(Dependency.m.reference == True)
-                .first()
-            ), "dependency", None)
+            current = getattr(
+                proxy(
+                    current._get_instance()
+                    .dependencies_as_dependent.filter(Dependency.m.reference == true())
+                    .first()
+                ),
+                "dependency",
+                None,
+            )
 
         return previous
 
@@ -221,13 +253,13 @@ class Evaluation(AlchemyProxy):
 
     def was_derived_from(self, evaluations, distinguish=False):
         from ...models.dependency_querier import DependencyQuerier
+
         if isinstance(evaluations, Evaluation):
             evaluations = [evaluations]
         querier = DependencyQuerier()
-        nodes_to_visit, visited, found = querier.navigate_dependencies([self], stop_on=evaluations)
+        nodes_to_visit, visited, found = querier.navigate_dependencies(
+            [self], stop_on=evaluations
+        )
         if distinguish:
-            return {
-                evaluation: evaluation in found
-                for evaluation in evaluations
-            }
+            return {evaluation: evaluation in found for evaluation in evaluations}
         return len(found) == len(evaluations)

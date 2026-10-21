@@ -18,19 +18,20 @@ def maybe(obj, attribute):
         return None
 
 
-def L():                                                                         # pylint: disable=invalid-name
+def L():  # pylint: disable=invalid-name
     """Create Load expr context"""
     return ast.Load()
 
 
-def S():                                                                         # pylint: disable=invalid-name
+def S():  # pylint: disable=invalid-name
     """Create Store expr context"""
     return ast.Store()
 
 
-def P():                                                                         # pylint: disable=invalid-name
+def P():  # pylint: disable=invalid-name
     """Create Param expr context"""
     return ast.Param()
+
 
 def context(node):
     """Return node context as string"""
@@ -52,6 +53,7 @@ def context(node):
         result = "p"
     return result
 
+
 def none():
     """Create None object"""
     if PY3:
@@ -72,8 +74,10 @@ def false():
         return ast_name_constant(False)
     return ast.Name("False", L())
 
+
 def true_false(condition):
     return true() if condition else false()
+
 
 def call(func, args, keywords=None, star=None, kwargs=None):
     """Create call with args, keywords, star args and kwargs"""
@@ -94,10 +98,7 @@ def noworkflow(name, args, **kwargs):
     keywords = []
     for key, value in kwargs.items():
         keywords.append(ast.keyword(arg=key, value=value))
-    return call(
-        now_attribute(name),
-        args, keywords=keywords
-    )
+    return call(now_attribute(name), args, keywords=keywords)
 
 
 def double_noworkflow(name, external_args, args, **kwargs):
@@ -105,14 +106,14 @@ def double_noworkflow(name, external_args, args, **kwargs):
     first_kwargs = {}
     second_keywords = []
     for key, value in kwargs.items():
-        if key.startswith('__'):
+        if key.startswith("__"):
             second_keywords.append(ast.keyword(arg=key[2:], value=value))
         else:
             first_kwargs[key] = value
     return call(
-        noworkflow(name, external_args, **first_kwargs),
-        args, keywords=second_keywords
+        noworkflow(name, external_args, **first_kwargs), args, keywords=second_keywords
     )
+
 
 def arguments():
     """Create arguments object"""
@@ -126,6 +127,7 @@ def arguments():
         result.kw_defaults = []
     return result
 
+
 def nlambda(args=None, body=None):
     """Create lambda object"""
     if not args:
@@ -134,7 +136,6 @@ def nlambda(args=None, body=None):
             args.posonlyargs = []
     body = body or none()
     return ast.Lambda(args, body)
-
 
 
 def activation():
@@ -154,7 +155,7 @@ def param(value, annotation=None):
     return ast.Name(value, P())
 
 
-def function_def(name, args, body, decs, returns=None, cls=ast.FunctionDef):     # pylint: disable=too-many-arguments
+def function_def(name, args, body, decs, returns=None, cls=ast.FunctionDef):  # pylint: disable=too-many-arguments
     """Create function definition"""
     constructor = [name, args, body, decs]
     if PY3:

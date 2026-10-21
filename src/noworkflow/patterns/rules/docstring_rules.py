@@ -6,7 +6,7 @@
 # pylint: disable=invalid-name, redefined-builtin, redefined-outer-name
 # pylint: disable=no-value-for-parameter
 
-from ..machinery import prolog_rule, create_rule, restrict_rule, var
+from ..machinery import create_rule, prolog_rule, restrict_rule, var
 from ..models import activation, code_block
 from .name_rules import name as _name
 
@@ -28,9 +28,8 @@ def activation_docstring_id(trial_id, id, docstring):
     """get the *Docstring* of a activation (*Id*)
     in a given trial (*TrialId*)."""
     block_id = var("_block_id")
-    return (
-        activation(trial_id, id, code_block_id=block_id) &
-        code_block(trial_id, block_id, docstring=docstring)
+    return activation(trial_id, id, code_block_id=block_id) & code_block(
+        trial_id, block_id, docstring=docstring
     )
 
 
@@ -51,9 +50,8 @@ def docstring_id(trial_id, model, id, docstring):
         return code_block(trial_id, id, docstring=docstring)
     if model in ("evaluation", "activation"):
         block_id = var("_block_id")
-        return (
-            activation(trial_id, id, code_block_id=block_id) &
-            code_block(trial_id, block_id, docstring=docstring)
+        return activation(trial_id, id, code_block_id=block_id) & code_block(
+            trial_id, block_id, docstring=docstring
         )
 
 
@@ -66,7 +64,6 @@ def docstring(trial_id, model, name, docstring):
     """get the *Docstring* of a *Model* (*Name*)
     in a given trial (*TrialId*)."""
     id = var("_id")
-    return (
-        _name(trial_id, model, id, name) &
-        docstring_id(trial_id, model, id, docstring)
+    return _name(trial_id, model, id, name) & docstring_id(
+        trial_id, model, id, docstring
     )

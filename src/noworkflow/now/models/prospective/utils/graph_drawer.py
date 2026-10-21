@@ -4,20 +4,21 @@
 # Please, consult the license terms in the LICENSE file.
 """Graph Drawer"""
 
+
 class GraphDrawer:
     def __init__(self, provenance_graph):
         self.graphProv = provenance_graph
-        self.color = dict(nodes='#85CBC0',
-                          assign='#976BAA',
-                          inactive='#EBEBEB',
-                          notes='#808080',
-                          times='#FFDE6A')
-        self.shape = dict(loops='ellipse',
-                          note='note',
-                          condition='diamond',
-                          times='cds')
-        self.edges = dict(back='dashed',
-                          none='none')
+        self.color = dict(
+            nodes="#85CBC0",
+            assign="#976BAA",
+            inactive="#EBEBEB",
+            notes="#808080",
+            times="#FFDE6A",
+        )
+        self.shape = dict(
+            loops="ellipse", note="note", condition="diamond", times="cds"
+        )
+        self.edges = dict(back="dashed", none="none")
 
     def calls(self, hashing, text):
         try:
@@ -28,60 +29,56 @@ class GraphDrawer:
 
     def loops(self, hashing, text, condition):
         try:
-            self.graphProv.node(hashing + 'c',
-                                label=condition,
-                                shape=self.shape['note'],
-                                fillcolor="white",
-                                color=self.color['notes']
-                                )
-            self.graphProv.node(hashing,
-                                label=text,
-                                shape=self.shape['loops']
-                                )
-            self.graphProv.edge(hashing, hashing + 'c',
-                                style=self.edges['back'],
-                                arrowhead=self.edges['none'],
-                                color=self.color['notes']
-                                )
+            self.graphProv.node(
+                hashing + "c",
+                label=condition,
+                shape=self.shape["note"],
+                fillcolor="white",
+                color=self.color["notes"],
+            )
+            self.graphProv.node(hashing, label=text, shape=self.shape["loops"])
+            self.graphProv.edge(
+                hashing,
+                hashing + "c",
+                style=self.edges["back"],
+                arrowhead=self.edges["none"],
+                color=self.color["notes"],
+            )
             return [True, self.graphProv]
         except SystemError:
             return [False, None]
 
     def assign(self, hashing, text):
         try:
-            self.graphProv.node(hashing, label=text,
-                                fillcolor=self.color['assign'])
+            self.graphProv.node(hashing, label=text, fillcolor=self.color["assign"])
             return [True, self.graphProv]
         except SystemError:
             return [False, None]
 
     def condition(self, hashing, text, condition):
         try:
-            self.graphProv.node(hashing + 'c',
-                                label=condition,
-                                shape=self.shape['note'],
-                                fillcolor='white',
-                                color=self.color['notes']
-                                )
-            self.graphProv.node(hashing,
-                                label=text,
-                                shape=self.shape['condition']
-                                )
-            self.graphProv.edge(hashing, hashing + 'c',
-                                style=self.edges['back'],
-                                arrowhead=self.edges['none'],
-                                color=self.color['notes']
-                                )
+            self.graphProv.node(
+                hashing + "c",
+                label=condition,
+                shape=self.shape["note"],
+                fillcolor="white",
+                color=self.color["notes"],
+            )
+            self.graphProv.node(hashing, label=text, shape=self.shape["condition"])
+            self.graphProv.edge(
+                hashing,
+                hashing + "c",
+                style=self.edges["back"],
+                arrowhead=self.edges["none"],
+                color=self.color["notes"],
+            )
             return [True, self.graphProv]
         except SystemError:
             return [False, None]
 
     def imports(self, hashing, text):
         try:
-            self.graphProv.node(hashing,
-                                label=text,
-                                fillcolor=self.color['assign']
-                                )
+            self.graphProv.node(hashing, label=text, fillcolor=self.color["assign"])
             return [True, self.graphProv]
         except SystemError:
             return [False, None]
@@ -93,14 +90,11 @@ class GraphDrawer:
         :return:
         """
         try:
-            self.graphProv.node(hashing,
-                                label=text,
-                                shape=self.shape['condition']
-                                )
+            self.graphProv.node(hashing, label=text, shape=self.shape["condition"])
             return [True, self.graphProv]
         except SystemError:
             return [False, None]
 
     def mark_inactive(self, hashing):
         """Render an existing code node as not executed."""
-        self.graphProv.node(hashing, fillcolor=self.color['inactive'])
+        self.graphProv.node(hashing, fillcolor=self.color["inactive"])

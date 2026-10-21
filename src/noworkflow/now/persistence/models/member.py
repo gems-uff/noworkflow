@@ -3,15 +3,20 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Evaluation Member Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-from sqlalchemy import Column, Integer, String, Text, Float
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologTimestamp
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
+from ...utils.prolog import PrologAttribute, PrologDescription, PrologRepr, PrologTrial
 from .base import AlchemyProxy, proxy_class
 
 
@@ -60,22 +65,27 @@ class Member(AlchemyProxy):
     __tablename__ = "member"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
-        ForeignKeyConstraint(["trial_id"],
-                             ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "collection_activation_id"],
-                             ["activation.trial_id", "activation.id"],
-                             ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "member_activation_id"],
-                             ["activation.trial_id", "activation.id"],
-                             ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "collection_activation_id",
-                              "collection_id"],
-                             ["evaluation.trial_id", "evaluation.activation_id",
-                              "evaluation.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "member_activation_id",
-                              "member_id"],
-                             ["evaluation.trial_id", "evaluation.activation_id",
-                              "evaluation.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["trial_id", "collection_activation_id"],
+            ["activation.trial_id", "activation.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["trial_id", "member_activation_id"],
+            ["activation.trial_id", "activation.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["trial_id", "collection_activation_id", "collection_id"],
+            ["evaluation.trial_id", "evaluation.activation_id", "evaluation.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["trial_id", "member_activation_id", "member_id"],
+            ["evaluation.trial_id", "evaluation.activation_id", "evaluation.id"],
+            ondelete="CASCADE",
+        ),
     )
     trial_id = Column(String, index=True)
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
@@ -94,24 +104,28 @@ class Member(AlchemyProxy):
     #   collection_activation: 1 Activation
     #   collection: 1 Evaluation
 
-    prolog_description = PrologDescription("member", (
-        PrologTrial("trial_id", link="evaluation.trial_id"),
-        PrologAttribute("collection_activation_id",
-                        link="evaluation.activation_id"),
-        PrologAttribute("collection_id", link="evaluation.id"),
-        PrologAttribute("member_activation_id",
-                        link="evaluation.activation_id"),
-        PrologAttribute("member_id", link="evaluation.id"),
-        PrologRepr("key"),
-        PrologAttribute("checkpoint"),
-        PrologRepr("type"),
-    ), description=(
-        "informs that in a given trial (*trial_id*),\n"
-        "a collection evaluation (*CollectionId*),\n"
-        "in a specific activation (*CollectionActivationId*),\n"
-        "had the member evaluation (*MemberId*),\n"
-        "in another activation (*MemberActivationId*),\n"
-        "at the position *Key*,\n"
-        "after the moment *Checkpoint*,\n"
-        "by a *Type* operation."
-    ))
+    prolog_description = PrologDescription(
+        "member",
+        (
+            PrologTrial("trial_id", link="evaluation.trial_id"),
+            PrologAttribute(
+                "collection_activation_id", link="evaluation.activation_id"
+            ),
+            PrologAttribute("collection_id", link="evaluation.id"),
+            PrologAttribute("member_activation_id", link="evaluation.activation_id"),
+            PrologAttribute("member_id", link="evaluation.id"),
+            PrologRepr("key"),
+            PrologAttribute("checkpoint"),
+            PrologRepr("type"),
+        ),
+        description=(
+            "informs that in a given trial (*trial_id*),\n"
+            "a collection evaluation (*CollectionId*),\n"
+            "in a specific activation (*CollectionActivationId*),\n"
+            "had the member evaluation (*MemberId*),\n"
+            "in another activation (*MemberActivationId*),\n"
+            "at the position *Key*,\n"
+            "after the moment *Checkpoint*,\n"
+            "by a *Type* operation."
+        ),
+    )

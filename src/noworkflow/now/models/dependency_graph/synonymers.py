@@ -4,11 +4,12 @@
 # Please, consult the license terms in the LICENSE file.
 """Synonymers for dependency graph"""
 
-from .node_types import EvaluationNode, AccessNode
+from .node_types import AccessNode, EvaluationNode
 
 
 class Synonymer(object):
     """Base Synonymer class"""
+
     # pylint: disable=no-self-use
 
     def __init__(self):
@@ -167,6 +168,4 @@ class JoinedSynonymer(Synonymer):
         return node_id
 
     def __repr__(self):
-        return "JoinedSynonymer({})".format(
-            ", ".join(map(repr, self.synonymers))
-        )
+        return "JoinedSynonymer({})".format(", ".join(map(repr, self.synonymers)))

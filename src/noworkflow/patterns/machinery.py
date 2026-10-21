@@ -11,15 +11,16 @@ from copy import copy
 from itertools import chain, product
 
 from future.utils import viewitems, viewvalues
-from sqlalchemy.sql.expression import and_, ColumnElement
+from sqlalchemy.sql.expression import ColumnElement, and_
 
 from ..now.persistence import relational
-from ..now.utils.cross_version import zip_longest
 from ..now.persistence.models.base import proxy
+from ..now.utils.cross_version import zip_longest
 
 
 class Blank(object):
     """Singleton object to represent _"""
+
     # pylint: disable=too-few-public-methods
     def __repr__(self):
         return "_"
@@ -27,6 +28,7 @@ class Blank(object):
 
 class Variable(object):
     """Variable for joining matches"""
+
     # pylint: disable=too-few-public-methods
     def __init__(self, name=None):
         self.results = set()
@@ -53,6 +55,7 @@ class Variable(object):
 
 class VariableFactory(object):
     """Create variables"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self):
@@ -163,9 +166,10 @@ class BoundQuery(object):
 
 class NullQuery(BoundQuery):
     """Null query that has no results"""
+
     def iterate(self):
         """Null query"""
-        #pylint: disable=unreachable
+        # pylint: disable=unreachable
         return
         yield
 
@@ -199,13 +203,11 @@ class RuleQuery(BoundQuery):
         for pattern in self.binds:
             pattern.bound = BLANK
 
-
     def get_bound(self, result, attr):
         """Get bound value in result"""
         if attr in self.patterns:
             return self.patterns[attr].bound
         return BLANK
-
 
     def final_value(self, current):
         """Transform value"""
@@ -314,21 +316,17 @@ class GenericJoinedQuery(BoundQuery):
 
 class ModelRule(object):
     """Pattern matching rule for model"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self, model):
         self._model = model
         self._prolog = model.prolog_description
         self.__doc__ = "{}({})".format(
-            self.get_name(),
-            ', '.join(
-                attr.name
-                for attr in self._prolog.attributes
-            )
+            self.get_name(), ", ".join(attr.name for attr in self._prolog.attributes)
         )
         self._names = OrderedDict(
-            (attr.name, attr.attr_name)
-            for attr in self._prolog.attributes
+            (attr.name, attr.attr_name) for attr in self._prolog.attributes
         )
 
     def get_name(self):
@@ -346,13 +344,8 @@ class ModelRule(object):
     def __call__(self, *args, **kwargs):
         arg_iter = zip_longest(viewvalues(self._names), args, fillvalue=BLANK)
         conditions = [
-            (attr_name, value)
-            for attr_name, value in arg_iter
-            if value is not BLANK
-        ] + [
-            (self._names.get(name, BLANK), value)
-            for name, value in viewitems(kwargs)
-        ]
+            (attr_name, value) for attr_name, value in arg_iter if value is not BLANK
+        ] + [(self._names.get(name, BLANK), value) for name, value in viewitems(kwargs)]
         return ModelQuery(self, conditions)
 
     def __getattr__(self, attr):
@@ -364,15 +357,13 @@ class ModelRule(object):
 
 class FunctionRule(object):
     """Rule function"""
+
     # pylint: disable=too-few-public-methods
 
     def __init__(self, func):
         self.func = func
         all_args = inspect.getargs(func.__code__).args
-        self.args = OrderedDict(
-            (arg, i)
-            for i, arg in enumerate(all_args)
-        )
+        self.args = OrderedDict((arg, i) for i, arg in enumerate(all_args))
         self.has_binds = False
         if "_binds" in self.args:
             self.has_binds = True
@@ -413,31 +404,37 @@ def create_rule(func):
 
 def restrict_rule(**options):
     """Restrict domain of rule"""
+
     def apply_restrictions(rule):
         """Apply restrictions to rule"""
         for key, values in viewitems(options):
             rule.options[key] = values
             rule.restrictions[key] = values
         return rule
+
     return apply_restrictions
 
 
 def set_options_in_rule(**options):
     """Add pattern to domain of rule"""
+
     def apply_options(rule):
         """Apply pattern options to rule"""
         for key, values in viewitems(options):
             rule.options[key] = values
         return rule
+
     return apply_options
 
 
 def prolog_rule(line):
     """Specify prolog equivalent"""
+
     def specify(rule):
         """Apply restrictions to rule"""
         rule.prolog.insert(0, line)
         return rule
+
     return specify
 
 

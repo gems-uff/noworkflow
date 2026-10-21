@@ -3,30 +3,33 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight Cell Tags"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-from datetime import datetime
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from future.utils import viewitems
 
 from ..models import StageTags
-
 from .base import BaseLW, define_attrs
 
 
-class StageTagsLW(BaseLW):                                                      # pylint: disable=too-many-instance-attributes
+class StageTagsLW(BaseLW):  # pylint: disable=too-many-instance-attributes
     """StageTags lightweight object"""
 
     __slots__, attributes = define_attrs(
-        ["id", "trial_id", "name", "tag_name", "activation_id"],
-        ["done"]
+        ["id", "trial_id", "name", "tag_name", "activation_id"], ["done"]
     )
     nullable = {"activation_id"}
     model = StageTags
 
     def __init__(
-        self, id_, trial_id, name, tag_name=None, var_name=None, var_value=None, activation_id=-1
+        self,
+        id_,
+        trial_id,
+        name,
+        tag_name=None,
+        var_name=None,
+        var_value=None,
+        activation_id=-1,
     ):
         self.trial_id = trial_id
         self.id = id_
@@ -47,14 +50,15 @@ class StageTagsLW(BaseLW):                                                      
         return self.done
 
     def __repr__(self):
-        return ("FileAccess(id={0.id}, name={0.name}, "
-                "checkpoint={0.checkpoint}").format(self)
+        return (
+            "FileAccess(id={0.id}, name={0.name}, checkpoint={0.checkpoint}"
+        ).format(self)
 
     def __json__(self):
         return {
-            'id' : self.id,
-            'trial_id': self.trial_id,
-            'name': self.name,
-            'tag_name' : self.tag_name,
-            'activation_id': self.activation_id,
+            "id": self.id,
+            "trial_id": self.trial_id,
+            "name": self.name,
+            "tag_name": self.tag_name,
+            "activation_id": self.activation_id,
         }

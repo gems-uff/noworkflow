@@ -1,0 +1,11 @@
+--- a/credit_card_fraud.py
++++ b/credit_card_fraud.py
+@@ -10,7 +10,7 @@
+     return pd.read_csv('creditcard.csv', encoding='utf-8')
+ 
+ def get_pca():
+-    pca_components = 3
++    pca_components = 10
+     return PCA(n_components=pca_components)
+ 
+ def get_rus(random_seed):

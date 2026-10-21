@@ -3,21 +3,32 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Tag Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from datetime import datetime
 
-from future.utils import lmap
 from future.builtins import map as cvmap
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP
-from sqlalchemy import ForeignKeyConstraint, select, bindparam
+from future.utils import lmap
+from sqlalchemy import (
+    TIMESTAMP,
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Text,
+    bindparam,
+    select,
+)
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologTimestamp
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologRepr,
+    PrologTimestamp,
+    PrologTrial,
+)
 from .. import relational
-
 from .base import AlchemyProxy, proxy_class
 
 
@@ -55,21 +66,27 @@ class Tag(AlchemyProxy):
     # Relationship attributes (see relationships.py):
     #   trial: 1 Trial
 
-    prolog_description = PrologDescription("tag", (
-        PrologAttribute("id"),
-        PrologTrial("trial_id", link="trial.id"),
-        PrologRepr("type"),
-        PrologRepr("name"),
-        PrologTimestamp("timestamp"),
-    ), description=(
-        "informs that a tag (*Id*)\n"
-        "belongs to a given trial (*TrialId*),\n"
-        "has a *Type* and *Name*,\n"
-        "created at *Timestamp*."
-    ))
+    prolog_description = PrologDescription(
+        "tag",
+        (
+            PrologAttribute("id"),
+            PrologTrial("trial_id", link="trial.id"),
+            PrologRepr("type"),
+            PrologRepr("name"),
+            PrologTimestamp("timestamp"),
+        ),
+        description=(
+            "informs that a tag (*Id*)\n"
+            "belongs to a given trial (*TrialId*),\n"
+            "has a *Type* and *Name*,\n"
+            "created at *Timestamp*."
+        ),
+    )
 
     @classmethod  # query
-    def fast_load_auto_tag(cls, trial_id, code_hash, command, session=None, experiment_id=None):
+    def fast_load_auto_tag(
+        cls, trial_id, code_hash, command, session=None, experiment_id=None
+    ):
         """Find automatic by code_hash and command.
         Ignore tags on the same trial_id
 
@@ -123,23 +140,29 @@ class Tag(AlchemyProxy):
         >>> Tag.fast_load_auto_tag(trial.id, trial.code_hash, "test2")
         (3, [1, 2, 1])
         """
-        from .trial import Trial
         from .code_block import CodeBlock
+        from .trial import Trial
+
         session = session or relational.session
         _query = select([cls.m.name]).where(
-                (Trial.m.id == cls.m.trial_id) &
-                (Trial.m.id == CodeBlock.m.trial_id) &
-                (Trial.m.main_id == CodeBlock.m.id) &
-                (Trial.m.id != bindparam("trial_id")) &
-                (Trial.m.experiment_id == experiment_id) &
-                (cls.m.type == "AUTO")
-            )
+            (Trial.m.id == cls.m.trial_id)
+            & (Trial.m.id == CodeBlock.m.trial_id)
+            & (Trial.m.main_id == CodeBlock.m.id)
+            & (Trial.m.id != bindparam("trial_id"))
+            & (Trial.m.experiment_id == experiment_id)
+            & (cls.m.type == "AUTO")
+        )
 
         conditions = [
-            (1, ((CodeBlock.m.code_hash == bindparam("code_hash")) &
-                 (Trial.m.command == bindparam("command")))),
-            (2, ((CodeBlock.m.code_hash == bindparam("code_hash")))),
-            (3, True)
+            (
+                1,
+                (
+                    (CodeBlock.m.code_hash == bindparam("code_hash"))
+                    & (Trial.m.command == bindparam("command"))
+                ),
+            ),
+            (2, (CodeBlock.m.code_hash == bindparam("code_hash"))),
+            (3, True),
         ]
         info = {
             "trial_id": trial_id,
@@ -152,13 +175,21 @@ class Tag(AlchemyProxy):
             results = session.execute(_query.where(condition), info).fetchall()
             tags = [lmap(int, tag[0].split(".")) for tag in results]
             if tags:
-                #print(type_, max(tags))
+                # print(type_, max(tags))
                 return type_, max(tags)
 
         return 0, [1, 1, 1]
 
     @classmethod  # query
-    def create_automatic_tag(cls, trial_id, code_hash, command, session=None, experiment_id=None, is_backup_trial=False):
+    def create_automatic_tag(
+        cls,
+        trial_id,
+        code_hash,
+        command,
+        session=None,
+        experiment_id=None,
+        is_backup_trial=False,
+    ):
         """Create automatic tag for trial id
 
         Find maximum automatic tag by code_hash and command
@@ -205,7 +236,8 @@ class Tag(AlchemyProxy):
         """
         session = session or relational.session
         tag_type, tag = cls.fast_load_auto_tag(
-            trial_id, code_hash, command, session=session,experiment_id= experiment_id)
+            trial_id, code_hash, command, session=session, experiment_id=experiment_id
+        )
         new_tag = ""
         if tag_type == 1:
             tag[2] += 1
@@ -216,7 +248,8 @@ class Tag(AlchemyProxy):
             tag[0] += 1
             tag[1] = 1
             tag[2] = 1
-            if is_backup_trial: tag[1] = tag[2] = 0
+            if is_backup_trial:
+                tag[1] = tag[2] = 0
         new_tag = ".".join(cvmap(str, tag))
 
         cls.create(trial_id, "AUTO", new_tag, datetime.now(), session=session)
@@ -251,9 +284,10 @@ class Tag(AlchemyProxy):
         """
         # pylint: disable=too-many-arguments
         session = session or relational.session
-        result = session.execute(cls.t.insert(), dict(
-            trial_id=trial_id, type=type_, name=name, timestamp=timestamp
-        ))
+        result = session.execute(
+            cls.t.insert(),
+            dict(trial_id=trial_id, type=type_, name=name, timestamp=timestamp),
+        )
         session.commit()
         return result.lastrowid
 
@@ -287,8 +321,10 @@ class Tag(AlchemyProxy):
         model = cls.m
         session = session or relational.session
         return session.query(model).filter(model.type == "AUTO")
+
     def show(self, print_=print):
-        """Print tag information
-        """
-        print_("""\
-            Tag: {t.name} Type: {t.type}""".format(t=self))
+        """Print tag information"""
+        print_(
+            """\
+            Tag: {t.name} Type: {t.type}""".format(t=self)
+        )

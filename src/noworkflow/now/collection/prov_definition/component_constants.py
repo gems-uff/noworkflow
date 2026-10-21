@@ -31,7 +31,7 @@ AUG_ASSIGN = "aug_assign"
 AWAIT = "await"
 #  expr.visit_Await
 ATTRIBUTE = "attribute"
-#  expr.visit_Attribute 
+#  expr.visit_Attribute
 BREAK = "break"
 #  stmt.visit_Break
 CALL = "call"
@@ -102,7 +102,8 @@ NAME = "name"
 #  expr.visit_Name
 NONLOCAL = "nonlocal"
 #  stmt.visit_Nonlocal
-PASS = "pass"
+# The component type of `pass` statements, not a password
+PASS = "pass"  # nosec B105
 #  stmt.visit_Pass
 PARAM = "param"
 #  stmt.process_arg
@@ -290,5 +291,3 @@ S_VARARG = "vararg"
 #  stmt.process_parameters
 M_ITEMS = "*items"
 #  stmt.visit_WITH
-
-

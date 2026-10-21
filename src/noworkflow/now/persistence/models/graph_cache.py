@@ -3,10 +3,10 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Graph Cache Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-from sqlalchemy import Column, Integer, Text, TIMESTAMP
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+from sqlalchemy import TIMESTAMP, Column, Integer, Text
 
 from .. import relational
 from .base import AlchemyProxy, proxy_class, proxy_gen
@@ -36,11 +36,9 @@ class GraphCache(AlchemyProxy):
     """
 
     __tablename__ = "graph_cache"
-    __table_args__ = (
-        {"sqlite_autoincrement": True},
-    )
-    id = Column(Integer, primary_key=True)                                       # pylint: disable=invalid-name
-    type = Column(Text)                                                          # pylint: disable=invalid-name
+    __table_args__ = ({"sqlite_autoincrement": True},)
+    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    type = Column(Text)  # pylint: disable=invalid-name
     name = Column(Text)
     attributes = Column(Text)
     content_hash = Column(Text)
@@ -58,9 +56,9 @@ class GraphCache(AlchemyProxy):
         model = cls.m
         session = session or relational.session
         return session.query(model).filter(
-            (model.type == gtype) &
-            (model.name == name) &
-            (model.attributes == attributes)
+            (model.type == gtype)
+            & (model.name == name)
+            & (model.attributes == attributes)
         )
 
     @classmethod  # query
@@ -93,11 +91,14 @@ class GraphCache(AlchemyProxy):
         ... )  # doctest: +ELLIPSIS
         [cache(..., 'tree', 'auto').]
         """
-        return proxy_gen(cls._query_select_cache(
-            gtype, name, attributes, session=session or relational.session))
+        return proxy_gen(
+            cls._query_select_cache(
+                gtype, name, attributes, session=session or relational.session
+            )
+        )
 
     @classmethod  # query
-    def remove(cls, gtype, name, attributes, session=None, commit=False):        # pylint: disable=too-many-arguments
+    def remove(cls, gtype, name, attributes, session=None, commit=False):  # pylint: disable=too-many-arguments
         """Remove caches query by type, name and attributes
 
 
@@ -141,7 +142,7 @@ class GraphCache(AlchemyProxy):
             session.commit()
 
     @classmethod  # query
-    def create(cls, type_, name, dur, attr, hash_, session=None, commit=False):   # pylint: disable=too-many-arguments
+    def create(cls, type_, name, dur, attr, hash_, session=None, commit=False):  # pylint: disable=too-many-arguments
         """Create Cache
 
 
@@ -178,9 +179,8 @@ class GraphCache(AlchemyProxy):
         1
         """
         session = session or relational.session
-        cache = cls.m(                                                           # pylint: disable=not-callable
-            type=type_, name=name, duration=dur,
-            attributes=attr, content_hash=hash_
+        cache = cls.m(  # pylint: disable=not-callable
+            type=type_, name=name, duration=dur, attributes=attr, content_hash=hash_
         )
         session.add(cache)
         if commit:

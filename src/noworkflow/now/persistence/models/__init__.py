@@ -3,15 +3,17 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Persistence Models"""
-from __future__ import (absolute_import, print_function,
-                        division)
+
+from __future__ import absolute_import, division, print_function
 
 from future.utils import text_to_native_str as n
 
 # Base
-from .base import Model, MetaModel, proxy, proxy_gen
+from .base import MetaModel, Model, proxy, proxy_gen
 
-# Database Models
+# Database Models. Not sorted: each model registers its class and its table
+# as it is imported, and the tables of a new store are created in that order.
+# isort: off
 from .activation import Activation
 from .argument import Argument
 from .code_block import CodeBlock
@@ -36,20 +38,34 @@ from .memberOfGroup import MemberOfGroup
 from .remote import Remote
 
 from . import relationships
+# isort: on
 
 ORDER = [
-    Trial, Head, Tag, GraphCache, Argument, # Trial
-    Module, EnvironmentAttr,  # Deployment
-    CodeComponent, CodeBlock, Composition, Experiment,  # Definition
-    Evaluation, Activation, Dependency, Member,  # Execution
-    FileAccess, StageTags,  # Execution
-    Group, MemberOfGroup, User, ExtendedAnnotation,  # additional info
+    Trial,
+    Head,
+    Tag,
+    GraphCache,
+    Argument,  # Trial
+    Module,
+    EnvironmentAttr,  # Deployment
+    CodeComponent,
+    CodeBlock,
+    Composition,
+    Experiment,  # Definition
+    Evaluation,
+    Activation,
+    Dependency,
+    Member,  # Execution
+    FileAccess,
+    StageTags,  # Execution
+    Group,
+    MemberOfGroup,
+    User,
+    ExtendedAnnotation,  # additional info
 ]
 
 
-__all__ = [
-    n(x.__modelname__) for x in ORDER
-] + [
+__all__ = [n(x.__modelname__) for x in ORDER] + [
     "MetaModel",
     "Model",
     "proxy",

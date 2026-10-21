@@ -3,13 +3,13 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Prospective Provenance Queries"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ....persistence import relational
+from ....persistence.models.activation import Activation
 from ....persistence.models.code_component import CodeComponent
 from ....persistence.models.evaluation import Evaluation
-from ....persistence.models.activation import Activation
 
 
 class ProspectiveQueries:
@@ -24,12 +24,11 @@ class ProspectiveQueries:
         return (
             self.session.query(CodeComponent.m)
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.first_char_line != -1)
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.first_char_line != -1)
             )
             .order_by(
-                CodeComponent.m.first_char_line,
-                CodeComponent.m.first_char_column
+                CodeComponent.m.first_char_line, CodeComponent.m.first_char_column
             )
         )
 
@@ -38,13 +37,12 @@ class ProspectiveQueries:
         return (
             self.session.query(CodeComponent.m)
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.first_char_line >= start_line) &
-                (CodeComponent.m.last_char_line <= end_line)
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.first_char_line >= start_line)
+                & (CodeComponent.m.last_char_line <= end_line)
             )
             .order_by(
-                CodeComponent.m.first_char_line,
-                CodeComponent.m.first_char_column
+                CodeComponent.m.first_char_line, CodeComponent.m.first_char_column
             )
         )
 
@@ -53,12 +51,11 @@ class ProspectiveQueries:
         return (
             self.session.query(CodeComponent.m)
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.first_char_line >= start_line)
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.first_char_line >= start_line)
             )
             .order_by(
-                CodeComponent.m.first_char_line,
-                CodeComponent.m.first_char_column
+                CodeComponent.m.first_char_line, CodeComponent.m.first_char_column
             )
         )
 
@@ -67,8 +64,8 @@ class ProspectiveQueries:
         return (
             self.session.query(CodeComponent.m)
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.type == 'function_def')
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.type == "function_def")
             )
             .order_by(CodeComponent.m.first_char_line)
         )
@@ -78,8 +75,8 @@ class ProspectiveQueries:
         return (
             self.session.query(CodeComponent.m)
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.type == 'call')
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.type == "call")
             )
             .order_by(CodeComponent.m.first_char_line)
         )
@@ -89,9 +86,9 @@ class ProspectiveQueries:
         return (
             self.session.query(CodeComponent.m)
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.name == function_name) &
-                (CodeComponent.m.type == 'function_def')
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.name == function_name)
+                & (CodeComponent.m.type == "function_def")
             )
             .order_by(CodeComponent.m.first_char_line)
         )
@@ -102,50 +99,38 @@ class ProspectiveQueries:
         if not func_def:
             return self.session.query(CodeComponent.m).filter(False)
 
-        return self.list_lines_codes(
-            func_def.first_char_line,
-            func_def.last_char_line
-        )
+        return self.list_lines_codes(func_def.first_char_line, func_def.last_char_line)
 
     def get_arguments(self, line_number):
         """Get function arguments at a specific line"""
-        return (
-            self.session.query(CodeComponent.m)
-            .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.first_char_line == line_number) &
-                (CodeComponent.m.type == 'arguments')
-            )
+        return self.session.query(CodeComponent.m).filter(
+            (CodeComponent.m.trial_id == self.trial_id)
+            & (CodeComponent.m.first_char_line == line_number)
+            & (CodeComponent.m.type == "arguments")
         )
 
     def get_else_components(self, start_line, end_line):
         """Get else clause components in a range"""
-        return (
-            self.session.query(CodeComponent.m)
-            .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.type == 'syntax') &
-                (CodeComponent.m.name == 'else:') &
-                (CodeComponent.m.first_char_line >= start_line) &
-                (CodeComponent.m.last_char_line <= end_line)
-            )
+        return self.session.query(CodeComponent.m).filter(
+            (CodeComponent.m.trial_id == self.trial_id)
+            & (CodeComponent.m.type == "syntax")
+            & (CodeComponent.m.name == "else:")
+            & (CodeComponent.m.first_char_line >= start_line)
+            & (CodeComponent.m.last_char_line <= end_line)
         )
 
     def get_activations(self):
         """Get execution activations with timestamps"""
         return (
-            self.session.query(
-                CodeComponent.m.first_char_line,
-                Evaluation.m.checkpoint
-            )
+            self.session.query(CodeComponent.m.first_char_line, Evaluation.m.checkpoint)
             .join(
                 Evaluation.m,
-                (Evaluation.m.code_component_id == CodeComponent.m.id) &
-                (Evaluation.m.trial_id == CodeComponent.m.trial_id)
+                (Evaluation.m.code_component_id == CodeComponent.m.id)
+                & (Evaluation.m.trial_id == CodeComponent.m.trial_id),
             )
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.first_char_line != -1)
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.first_char_line != -1)
             )
             .order_by(CodeComponent.m.first_char_line)
         )
@@ -156,12 +141,12 @@ class ProspectiveQueries:
             self.session.query(CodeComponent.m.first_char_line)
             .join(
                 Evaluation.m,
-                (Evaluation.m.code_component_id == CodeComponent.m.id) &
-                (Evaluation.m.trial_id == CodeComponent.m.trial_id)
+                (Evaluation.m.code_component_id == CodeComponent.m.id)
+                & (Evaluation.m.trial_id == CodeComponent.m.trial_id),
             )
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.first_char_line != -1)
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.first_char_line != -1)
             )
             .distinct()
             .order_by(CodeComponent.m.first_char_line)
@@ -172,8 +157,8 @@ class ProspectiveQueries:
         return (
             self.session.query(Activation.m.code_block_id)
             .filter(
-                (Activation.m.trial_id == self.trial_id) &
-                (Activation.m.code_block_id.isnot(None))
+                (Activation.m.trial_id == self.trial_id)
+                & (Activation.m.code_block_id.isnot(None))
             )
             .distinct()
         )
@@ -185,17 +170,17 @@ class ProspectiveQueries:
                 CodeComponent.m.first_char_line,
                 Evaluation.m.repr,
                 CodeComponent.m.name,
-                CodeComponent.m.first_char_column
+                CodeComponent.m.first_char_column,
             )
             .join(
                 Evaluation.m,
-                (Evaluation.m.code_component_id == CodeComponent.m.id) &
-                (Evaluation.m.trial_id == CodeComponent.m.trial_id)
+                (Evaluation.m.code_component_id == CodeComponent.m.id)
+                & (Evaluation.m.trial_id == CodeComponent.m.trial_id),
             )
             .filter(
-                (CodeComponent.m.trial_id == self.trial_id) &
-                (CodeComponent.m.first_char_line != -1) &
-                (CodeComponent.m.type == 'name')
+                (CodeComponent.m.trial_id == self.trial_id)
+                & (CodeComponent.m.first_char_line != -1)
+                & (CodeComponent.m.type == "name")
             )
             .order_by(CodeComponent.m.first_char_line)
         )

@@ -6,9 +6,15 @@
 # pylint: disable=invalid-name, redefined-builtin, redefined-outer-name
 # pylint: disable=no-value-for-parameter
 
-from ..machinery import prolog_rule, create_rule, restrict_rule, var
-from ..machinery import set_options_in_rule, BLANK
-from ..models import evaluation, code_component
+from ..machinery import (
+    BLANK,
+    create_rule,
+    prolog_rule,
+    restrict_rule,
+    set_options_in_rule,
+    var,
+)
+from ..models import code_component, evaluation
 from .name_rules import name as _name
 
 
@@ -27,9 +33,8 @@ def code_scope_id(trial_id, id, type):
     if type == "project":
         return code_component(trial_id, id, container_id=None)
     container_id = var("_container_id")
-    return (
-        code_component(trial_id, id, container_id=container_id) &
-        code_component(trial_id, container_id, type=type)
+    return code_component(trial_id, id, container_id=container_id) & code_component(
+        trial_id, container_id, type=type
     )
 
 
@@ -44,9 +49,8 @@ def evaluation_scope_id(trial_id, id, type):
     Type = 'project'|'script'|'class_def'|'function_def'
     """
     code_id = var("_code_id")
-    return (
-        evaluation(trial_id, id, code_component_id=code_id) &
-        code_scope_id(trial_id, code_id, type)
+    return evaluation(trial_id, id, code_component_id=code_id) & code_scope_id(
+        trial_id, code_id, type
     )
 
 
@@ -70,6 +74,7 @@ def scope_id(trial_id, model, id, type):
     if model in ("evaluation", "activation"):
         return evaluation_scope_id(trial_id, id, type)
 
+
 @prolog_rule("scope(TrialId, Model, Name, Type) :-")
 @prolog_rule("    name(TrialId, Model, Id, Name),")
 @prolog_rule("    scope_id(TrialId, Model, Id, Type).")
@@ -81,7 +86,4 @@ def scope(trial_id, model, name, type):
     Type = 'project'|'script'|'class_def'|'function_def'
     """
     id = var("_id")
-    return (
-        _name(trial_id, model, id, name) &
-        scope_id(trial_id, model, id, type)
-    )
+    return _name(trial_id, model, id, name) & scope_id(trial_id, model, id, type)

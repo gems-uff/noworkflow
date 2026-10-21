@@ -3,24 +3,20 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """History Graph Module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-import time
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import weakref
-
 from collections import OrderedDict, defaultdict, namedtuple
 
 from future.utils import viewvalues
 
-from ...persistence.models.trial import Trial
+from ...persistence import relational
 from ...persistence.models.tag import Tag
+from ...persistence.models.trial import Trial
 from ...persistence.models.user import User
 from ...utils.cross_version import zip_longest
 from .structures import Graph
-from ...persistence import relational
-
-
 
 MAXTRIALS = 1000000
 MAX_IN_GRAPH = float("inf")
@@ -49,14 +45,18 @@ class HistoryGraph(Graph):
         """
 
         key = (
-            self.history.script, self.history.status, self.history.summarize,
-            Trial.count(None,self.history.expId)
+            self.history.script,
+            self.history.status,
+            self.history.summarize,
+            Trial.count(None, self.history.expId),
         )
-        
+
         if self.use_cache and key in self.cache:
             return self.cache[key]
 
-        tmap = self._load_trials(Trial.reverse_trials(MAXTRIALS,None,self.history.expId))
+        tmap = self._load_trials(
+            Trial.reverse_trials(MAXTRIALS, None, self.history.expId)
+        )
         graph = self._create_graph(tmap)
 
         tmap, graph = self._summarize(tmap, graph)
@@ -65,9 +65,7 @@ class HistoryGraph(Graph):
 
         nodes, scripts = self._filter_graph(tmap, graph)
 
-        edges, order, children, actual_graph = self._create_edges(
-            graph, nodes, tmap
-        )
+        edges, order, children, actual_graph = self._create_edges(graph, nodes, tmap)
 
         self._set_trials_level(tmap, scripts, order, children, actual_graph)
 
@@ -88,10 +86,19 @@ class HistoryGraph(Graph):
         # To JSON
         final = []
         for trial in result["nodes"]:
-            dic = trial.to_dict(ignore=("start", "finish"), extra=(
-                "level", "status", "tooltip", "duration_text", "code_hash",
-                "str_start", "str_finish", "display"
-            ))
+            dic = trial.to_dict(
+                ignore=("start", "finish"),
+                extra=(
+                    "level",
+                    "status",
+                    "tooltip",
+                    "duration_text",
+                    "code_hash",
+                    "str_start",
+                    "str_finish",
+                    "display",
+                ),
+            )
             final.append(dic)
         return {
             "edges": result["edges"],
@@ -117,10 +124,14 @@ class HistoryGraph(Graph):
         trial_gen -- trial generator
         """
         tmap = OrderedDict()
-        id_s=1
+        id_s = 1
         for trial in trial_gen:
-            user = relational.session.query(User.m).filter(User.m.id==trial.user_id).all()
-            trial_user = user[0].userLogin if (len(user)>0) else trial.user_id
+            user = (
+                relational.session.query(User.m)
+                .filter(User.m.id == trial.user_id)
+                .all()
+            )
+            trial_user = user[0].userLogin if (len(user) > 0) else trial.user_id
             trial.display = str(trial.id)
             trial.level = 0
             trial.tooltip = """
@@ -136,9 +147,9 @@ class HistoryGraph(Graph):
                 <br>
                 Duration: {duration}
                 """.format(duration=trial.duration_text)
-            trial.order=id_s
+            trial.order = id_s
             tmap[trial.id] = trial
-            id_s=id_s+1
+            id_s = id_s + 1
 
         return tmap
 
@@ -173,20 +184,18 @@ class HistoryGraph(Graph):
             if tag.trial_id not in trial_map:
                 continue  # Ignore filtered out
 
-            tag_node = Version(tag.name.split('.')[:2])
+            tag_node = Version(tag.name.split(".")[:2])
             trial = trial_map[tag.trial_id]
             trial.display = tag.name
             trial.tooltip = "<b> Trial {}</b><br>{}".format(
-                trial.display,
-                trial.tooltip
+                trial.display, trial.tooltip
             )
             if tag_node not in node_map:
                 node_obj = node_map[tag_node] = Node(tag_node)
 
                 parent_tag = new_tmap.get(trial.parent_id)
                 if parent_tag is not None:
-                    if (node_obj.parent_id is None or
-                            node_obj.parent_id > parent_tag.id):
+                    if node_obj.parent_id is None or node_obj.parent_id > parent_tag.id:
                         node_obj.parent_id = parent_tag.id
             else:
                 node_obj = node_map[tag_node]
@@ -212,9 +221,7 @@ class HistoryGraph(Graph):
                 if target not in new_tmap:
                     continue
                 targnode = new_tmap[target].id
-                new_graph[orignode][targnode] = min(
-                    new_graph[orignode][targnode], dist
-                )
+                new_graph[orignode][targnode] = min(new_graph[orignode][targnode], dist)
 
         return node_map, new_graph
 
@@ -296,12 +303,14 @@ class HistoryGraph(Graph):
         actual_graph = {}
 
         for source, target in self._edges(graph, nodes, script_order=order):
-            edges.append({
-                "source": trial_map[source].nid,
-                "target": trial_map[target].nid,
-                "right": 1,
-                "level": 0
-            })
+            edges.append(
+                {
+                    "source": trial_map[source].nid,
+                    "target": trial_map[target].nid,
+                    "right": 1,
+                    "level": 0,
+                }
+            )
             actual_graph[source] = target
             children[target].append(source)
 
@@ -324,8 +333,7 @@ class HistoryGraph(Graph):
         for trial in reversed(nodes):
             tid = trial.id
             target = min(
-                graph[tid],
-                key=lambda x, i=tid: float("inf") if x == i else graph[i][x]
+                graph[tid], key=lambda x, i=tid: float("inf") if x == i else graph[i][x]
             )
             if graph[tid][target] != MAX_IN_GRAPH:
                 yield (tid, target)
@@ -358,9 +366,7 @@ class HistoryGraph(Graph):
                         trial.level += 1
             elif min_id != max_id:
                 total = previous_lines[-1][0]
-                previous_lines.append(
-                    [total + level, script]
-                )
+                previous_lines.append([total + level, script])
                 for trial in scripts[script]:
                     trial.level += total
 
@@ -395,9 +401,10 @@ class HistoryGraph(Graph):
 
     def _ipython_display_(self):
         from IPython.display import display
+
         bundle = {
-            'application/noworkflow.history+json': self.graph(),
-            'text/plain': repr(self),
+            "application/noworkflow.history+json": self.graph(),
+            "text/plain": repr(self),
         }
         display(bundle, raw=True)
 
@@ -417,7 +424,10 @@ class HistoryGraph(Graph):
         max_level = max(t.level for t in nodes)
         active_levels = [0] * (max_level + 1)
         lines = []
-        add_line = lambda *a, **kw: lines.append(_line_text(*a, **kw))
+
+        def add_line(*a, **kw):
+            return lines.append(_line_text(*a, **kw))
+
         for trial in reversed(nodes):
             active_levels[trial.level] = 1
             add_line(active_levels, trial, trial.level, width=width)
@@ -435,7 +445,6 @@ class HistoryGraph(Graph):
                 active_levels[trial.level] = 0
             lines.append(_blank_text(active_levels))
 
-
         return "\n".join(lines)
 
 
@@ -450,7 +459,7 @@ class Node(object):
         self.script = ""
         self.trials = []
         self.status_letter = "*"
-        self.order=tid
+        self.order = tid
 
     def insert(self, trial):
         """Insert trial to Node"""
@@ -459,10 +468,7 @@ class Node(object):
 
     def match_status(self, status):
         """Match statuses in node"""
-        new_trials = [
-            trial for trial in self.trials
-            if trial.match_status(status)
-        ]
+        new_trials = [trial for trial in self.trials if trial.match_status(status)]
         if new_trials:
             self.trials = new_trials
             return True
@@ -470,10 +476,7 @@ class Node(object):
 
     def match_script(self, script):
         """Match scripts in node"""
-        new_trials = [
-            trial for trial in self.trials
-            if trial.match_script(script)
-        ]
+        new_trials = [trial for trial in self.trials if trial.match_script(script)]
         if new_trials:
             self.trials = new_trials
             return True
@@ -482,19 +485,19 @@ class Node(object):
     def to_dict(self, *args, **kwargs):
         """Convert to dict"""
         return {
-            'id': repr(self.id),
+            "id": repr(self.id),
             "display": repr(self.id),
-            'parent_id': repr(self.parent_id),
-            'level': self.level,
-            'trials': [x.to_dict(*args, **kwargs) for x in self.trials],
-            'status': 'finished',
+            "parent_id": repr(self.parent_id),
+            "level": self.level,
+            "trials": [x.to_dict(*args, **kwargs) for x in self.trials],
+            "status": "finished",
         }
 
     @property
     def tags(self):
         Tag = namedtuple("Tag", "name")
         return [
-            Tag("[{}]".format(", ".join(tag.name for tag in trial.tags))) 
+            Tag("[{}]".format(", ".join(tag.name for tag in trial.tags)))
             for trial in self.trials
         ]
 
@@ -513,11 +516,11 @@ class Version(object):
                 return False
             if second is None:
                 return True
-            if isinstance(first, str) and first.startswith('b'):
-                if isinstance(second, str) and second.startswith('b'):
+            if isinstance(first, str) and first.startswith("b"):
+                if isinstance(second, str) and second.startswith("b"):
                     return float(first[1:]) > float(second[1:])
                 return False
-            if isinstance(second, str) and second.startswith('b'):
+            if isinstance(second, str) and second.startswith("b"):
                 return True
             return float(first) > float(second)
 
@@ -530,7 +533,7 @@ class Version(object):
         return self.numbers == other.numbers
 
     def __repr__(self):
-        return '.'.join(map(str, self.numbers))
+        return ".".join(map(str, self.numbers))
 
     @classmethod
     def as_version(cls, number):
@@ -545,8 +548,7 @@ def _line_text(active, trial, current, moving=False, width=25):
     text = []
     for i, value in enumerate(active):
         if i == current:
-            text.append("/ " if moving else
-                        " {}".format(trial.status_letter))
+            text.append("/ " if moving else " {}".format(trial.status_letter))
         elif value:
             text.append(" |")
         else:
@@ -554,8 +556,11 @@ def _line_text(active, trial, current, moving=False, width=25):
     if moving:
         return "".join(text)
     return "{line}  {id: <4} {script: <{width}} {tags}".format(
-        line="".join(text), id=str(trial.id), script=trial.script,
-        tags=", ".join(tag.name for tag in trial.tags), width=width
+        line="".join(text),
+        id=str(trial.id),
+        script=trial.script,
+        tags=", ".join(tag.name for tag in trial.tags),
+        width=width,
     )
 
 

@@ -3,12 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%%now_restore' magic"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ...cmd import Restore
 from ...persistence import content
-
 from .command import IpythonCommandMagic
 
 
@@ -33,8 +32,7 @@ class NowRestore(IpythonCommandMagic, Restore):
 
     def add_arguments(self):
         super(NowRestore, self).add_arguments()
-        add_arg = self.add_argument
-        #add_arg("--file", action="store_true",
+        # add_arg("--file", action="store_true",
         #        help="""Restores the original script file""")
 
     def restore_script(self, trial):

@@ -3,10 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Convert code the Jupyter Notebook files"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
+
 
 def nbconvert(code):
     """Create Jupyter Notebook code
@@ -18,15 +19,17 @@ def nbconvert(code):
     """
     cells = []
     for cell in code.split("\n# <codecell>\n"):
-        cells.append({
-            "cell_type": "code",
-            "execution_count": None,
-            "metadata": {
-                "collapsed": True,
-            },
-            "outputs": [],
-            "source": [cell]
-        })
+        cells.append(
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {
+                    "collapsed": True,
+                },
+                "outputs": [],
+                "source": [cell],
+            }
+        )
     result = {
         "cells": cells,
         "nbformat": 4,
@@ -35,21 +38,18 @@ def nbconvert(code):
             "kernelspec": {
                 "display_name": "Python 2",
                 "language": "python",
-                "name": "python2"
+                "name": "python2",
             },
             "language_info": {
-                "codemirror_mode": {
-                    "name": "ipython",
-                    "version": 2
-                },
+                "codemirror_mode": {"name": "ipython", "version": 2},
                 "file_extension": ".py",
                 "mimetype": "text/x-python",
                 "name": "python",
                 "nbconvert_exporter": "python",
                 "pygments_lexer": "ipython2",
-                "version": "2.7.6"
-            }
-        }
+                "version": "2.7.6",
+            },
+        },
     }
     return result
 

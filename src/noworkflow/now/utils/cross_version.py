@@ -9,8 +9,8 @@
 # pylint: disable=import-error, ungrouped-imports, no-name-in-module
 # pylint: disable=undefined-variable
 
-import sys
 import numbers
+import sys
 import time
 
 try:
@@ -33,19 +33,20 @@ if PY3:
     import reprlib
     from itertools import zip_longest
 
-    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes,
-                 type(Ellipsis))
+    IMMUTABLE = (None.__class__, bool, numbers.Number, str, bytes, type(Ellipsis))
     string = (str, bytes)
     raw_bytes = (bytes, bytearray)
     perf_counter = time.perf_counter
 else:
     import __builtin__ as builtins
+
     try:
         import cPickle as pickle
     except ImportError:
         import pickle
-    import repr as reprlib
     from itertools import izip_longest as zip_longest
+
+    import repr as reprlib
 
     IMMUTABLE = (None.__class__, bool, numbers.Number, basestring)
     string = (basestring,)
@@ -53,6 +54,7 @@ else:
     perf_counter = time.clock
 
 cross_compile = compile
+
 
 def to_unicode(text):
     """Convert bytes to unicode"""
@@ -62,7 +64,7 @@ def to_unicode(text):
 def bytes_string(text, encode="utf-8"):
     """Return a bytes object on Python 3 and a str object on Python 2"""
     if not PY3:
-        if isinstance(text, unicode):                                            # pylint: disable=undefined-variable
+        if isinstance(text, unicode):  # pylint: disable=undefined-variable
             result = text.encode(encode)
         else:
             result = text
@@ -82,12 +84,3 @@ def isiterable(element):
         return False
     else:
         return True
-
-def only(*versions):
-    """Check python version"""
-    def dec(func):
-        """Check version decorator"""
-        if any(versions):
-            return func
-        return None
-    return dec

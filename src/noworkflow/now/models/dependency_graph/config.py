@@ -4,20 +4,28 @@
 # Please, consult the license terms in the LICENSE file.
 """Dependency graph configuration"""
 
-from collections import defaultdict
-
 from future.utils import viewvalues
 
 from ...utils.data import OrderedDefaultDict
-
-from .synonymers import SameSynonymer, ReferenceSynonymer
-from .synonymers import AccessNameSynonymer, JoinedSynonymer
-from .filters import FilterAccessesOut, FilterInternalsOut
-from .filters import FilterExternalAccessesOut, FilterTypesOut
-from .filters import FilterWasDerivedFrom, FilterNotFromCodeOut
-from .filters import FilterUseActivationName, FilterFuncOut
-from .filters import JoinedFilter, AcceptAllNodesFilter
-from .node_types import ClusterNode, EvaluationNode
+from .filters import (
+    AcceptAllNodesFilter,
+    FilterAccessesOut,
+    FilterExternalAccessesOut,
+    FilterFuncOut,
+    FilterInternalsOut,
+    FilterNotFromCodeOut,
+    FilterTypesOut,
+    FilterUseActivationName,
+    FilterWasDerivedFrom,
+    JoinedFilter,
+)
+from .node_types import EvaluationNode
+from .synonymers import (
+    AccessNameSynonymer,
+    JoinedSynonymer,
+    ReferenceSynonymer,
+    SameSynonymer,
+)
 
 
 class DependencyConfig(object):
@@ -43,7 +51,7 @@ class DependencyConfig(object):
         self.hide_not_code = False
         self.hide_func = False
         self.max_depth = float("inf")
-        self.mode = "simulation"
+        self.mode = "fineGrain"
 
     @classmethod
     def create_arguments(cls, add_arg, mode="coarseGrain"):
@@ -52,67 +60,121 @@ class DependencyConfig(object):
         Arguments:
         add_arg -- add argument function
         """
-        add_arg("-a", "--accesses", type=int, default=1, metavar="A",
-                help="R|show file accesses (default: 1)\n"
-                     "0 hides file accesses\n"
-                     "1 shows each file once (hide external accesses)\n"
-                     "2 shows each file once (show external accesses)\n"
-                     "3 shows all accesses (except external accesses)\n"
-                     "4 shows all accesses (including external accesses)")
-        add_arg("-T", "--types", action="store_true",
-                help="R|show type nodes.")
-        add_arg("-t", "--hide-timestamps", action="store_false",
-                help="hide timestamps")
-        add_arg("-H", "--hide-internals", action="store_false",
-                help="show variables and functions which name starts with a "
-                     "leading underscore")
-        add_arg("-hnc", "--hide-not-code", action="store_false",
-                help="hide evaluations that aren't from the code")
-        add_arg("-hf", "--hide-func", action="store_false",
-                help="hide func type evaluations")
-        add_arg("-an", "--activation-names", action="store_false",
-                help="display nodes with their activation names instead")
-        add_arg("-e", "--evaluations", type=int, default=1, metavar="E",
-                help="R|combine evaluation nodes (default: 1)\n"
-                     "0 does not combine evaluation nodes\n"
-                     "1 combines evaluation nodes by assignment\n"
-                     "2 combines evaluation nodes by value")
-        add_arg("-d", "--depth", type=int, default=0, metavar="D",
-                help="R|visualization depth (default: 0)\n"
-                     "0 represents infinity\n"
-                     "this parameter is ignored when the mode is \"all\"")
-        add_arg("-g", "--group", type=int, default=0, metavar="R",
-                help="R|align evalutions in the same column (default: 0)\n"
-                     "0 does no align\n"
-                     "1 aligns by line\n"
-                     "2 aligns by line and column\n"
-                     "With this option, all variables in a loop appear\n"
-                     "grouped, reducing the width of the graph.\n"
-                     "It may affect the graph legibility.\n"
-                     "The alignment is independent for each activation.\n")
-        add_arg("-m", "--mode", type=str, default=mode,
-                choices=[
-                    "activation", "coarseGrain", "looplessCoarseGrain", "fineGrain", "all"
-                ],
-                help=("R|Graph mode (default: {})\n"
-                      "'activation' presents only function activations \n"
-                      "and file accesses. Dependencies on the dataflow \n"
-                      "are clustered by depth(-d).\n"
-                       "'coarseGrain' is the same as the activation dataflow\n,"
-                       "but with the addition of parameters and variable\n"
-                       "assignment of function activations.\n"
-                      "'looplessCoarseGrain' is the same as the coarseGrain\n"
-                      "dataflow, but it doesn't repeat function activations\n"
-                      "when they're in the same line in a loop.\n"
-                      "'fineGrain' is the same as the coarseGrain dataflow\n"
-                      "with the addition of variables, all user defined evaluations\n"
-                      "and data values.\n"
-                      "'all' presents a dataflow with all evaluations and\n"
-                      "function activations. Dependencies on the dataflow are not clustered."
-                      .format(mode)))
-        add_arg("-w", "--wdf", type=int, 
-                help="shows only one evaluation and the ones that derived it\n"
-                "You must inform the evaluation's id")
+        add_arg(
+            "-a",
+            "--accesses",
+            type=int,
+            default=1,
+            metavar="A",
+            help="R|show file accesses (default: 1)\n"
+            "0 hides file accesses\n"
+            "1 shows each file once (hide external accesses)\n"
+            "2 shows each file once (show external accesses)\n"
+            "3 shows all accesses (except external accesses)\n"
+            "4 shows all accesses (including external accesses)",
+        )
+        add_arg("-T", "--types", action="store_true", help="R|show type nodes.")
+        add_arg("-t", "--hide-timestamps", action="store_false", help="hide timestamps")
+        add_arg(
+            "-H",
+            "--hide-internals",
+            action="store_false",
+            help="show variables and functions which name starts with a "
+            "leading underscore",
+        )
+        add_arg(
+            "-hnc",
+            "--hide-not-code",
+            action="store_false",
+            help="hide evaluations that aren't from the code",
+        )
+        add_arg(
+            "-hf",
+            "--hide-func",
+            action="store_false",
+            help="hide func type evaluations",
+        )
+        add_arg(
+            "-an",
+            "--activation-names",
+            action="store_false",
+            help="display nodes with their activation names instead",
+        )
+        add_arg(
+            "-e",
+            "--evaluations",
+            type=int,
+            default=1,
+            metavar="E",
+            help="R|combine evaluation nodes (default: 1)\n"
+            "0 does not combine evaluation nodes\n"
+            "1 combines evaluation nodes by assignment\n"
+            "2 combines evaluation nodes by value",
+        )
+        add_arg(
+            "-d",
+            "--depth",
+            type=int,
+            default=0,
+            metavar="D",
+            help="R|visualization depth (default: 0)\n"
+            "0 represents infinity\n"
+            'this parameter is ignored when the mode is "all"',
+        )
+        add_arg(
+            "-g",
+            "--group",
+            type=int,
+            default=0,
+            metavar="R",
+            help="R|align evalutions in the same column (default: 0)\n"
+            "0 does no align\n"
+            "1 aligns by line\n"
+            "2 aligns by line and column\n"
+            "With this option, all variables in a loop appear\n"
+            "grouped, reducing the width of the graph.\n"
+            "It may affect the graph legibility.\n"
+            "The alignment is independent for each activation.\n",
+        )
+        add_arg(
+            "-m",
+            "--mode",
+            type=str,
+            default=mode,
+            choices=[
+                "activation",
+                "coarseGrain",
+                "looplessCoarseGrain",
+                "fineGrain",
+                "all",
+            ],
+            help=(
+                "R|Graph mode (default: {})\n"
+                "'activation' presents only function activations \n"
+                "and file accesses. Dependencies on the dataflow \n"
+                "are clustered by depth(-d).\n"
+                "'coarseGrain' is the same as the activation dataflow\n,"
+                "but with the addition of parameters and variable\n"
+                "assignment of function activations.\n"
+                "'looplessCoarseGrain' is the same as the coarseGrain\n"
+                "dataflow, but it doesn't repeat function activations\n"
+                "when they're in the same line in a loop.\n"
+                "'fineGrain' is the same as the coarseGrain dataflow\n"
+                "with the addition of variables, all user defined evaluations\n"
+                "and data values.\n"
+                "'all' presents a dataflow with all evaluations and\n"
+                "function activations. Dependencies on the dataflow are not clustered.".format(
+                    mode
+                )
+            ),
+        )
+        add_arg(
+            "-w",
+            "--wdf",
+            type=int,
+            help="shows only one evaluation and the ones that derived it\n"
+            "You must inform the evaluation's id",
+        )
 
     def read_args(self, args):
         """Read config from args"""
@@ -132,8 +194,8 @@ class DependencyConfig(object):
         self.max_depth = args.depth or float("inf")
         self.rank_option = args.group
         self.mode = args.mode
-        
-        if(args.wdf):
+
+        if args.wdf:
             self.show_only_was_derived_from = True
             self.show_only_was_derived_from_trial = args.trial
             self.show_only_was_derived_from_eid = args.wdf
@@ -146,7 +208,7 @@ class DependencyConfig(object):
         for node in cluster.elements:
             if not isinstance(node, EvaluationNode):
                 continue
-            #if isinstance(node, ClusterNode):
+            # if isinstance(node, ClusterNode):
             #    continue
             if self.rank_option == 1:
                 line = node.line
@@ -182,7 +244,12 @@ class DependencyConfig(object):
         if not self.show_internals:
             filters.append(FilterInternalsOut())
         if self.show_only_was_derived_from:
-            filters.append(FilterWasDerivedFrom(self.show_only_was_derived_from_eid, self.show_only_was_derived_from_trial))
+            filters.append(
+                FilterWasDerivedFrom(
+                    self.show_only_was_derived_from_eid,
+                    self.show_only_was_derived_from_trial,
+                )
+            )
         if self.hide_not_code:
             filters.append(FilterNotFromCodeOut())
         if self.activation_names:
@@ -196,21 +263,19 @@ class DependencyConfig(object):
 
     def clusterizer(self, trial, filter_=None, synonymer=None):
         """Return clusterizer based on config"""
-        from .clusterizer import Clusterizer
-        from .clusterizer import ActivationClusterizer
-        from .clusterizer import DependencyClusterizer
-        from .clusterizer import RetrospectiveClusterizer
-        from .clusterizer import ProspectiveClusterizer
+        from .clusterizer import (
+            ActivationClusterizer,
+            Clusterizer,
+            DependencyClusterizer,
+            ProspectiveClusterizer,
+            RetrospectiveClusterizer,
+        )
+
         cls = {
             "fineGrain": Clusterizer,
             "activation": ActivationClusterizer,
             "all": DependencyClusterizer,
             "coarseGrain": RetrospectiveClusterizer,
-            "looplessCoarseGrain": ProspectiveClusterizer
+            "looplessCoarseGrain": ProspectiveClusterizer,
         }[self.mode]
-        return cls(
-            trial,
-            config=self,
-            filter_=filter_,
-            synonymer=synonymer
-        )
+        return cls(trial, config=self, filter_=filter_, synonymer=synonymer)

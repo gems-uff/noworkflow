@@ -3,17 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%now_schema' magic"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-from sqlalchemy.schema import CreateTable
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ...cmd.cmd_schema import Schema
-
 from ...utils.formatter import PrettyLines
-from ...persistence.models import ORDER
-from ...persistence import relational
-
 from .command import IpythonCommandMagic
 
 
@@ -38,14 +32,18 @@ class NowSchema(IpythonCommandMagic, Schema):
     def add_arguments(self):
         super(NowSchema, self).add_arguments()
         add_arg = self.add_argument
-        add_arg("-f", "--format", type=str.lower, default="svg",
-                choices=["svg", "png"],
-                help="Graph format for diagram export (default: svg)")
-        add_arg("-t", "--text", action="store_true",
-                help="export textual schema")
+        add_arg(
+            "-f",
+            "--format",
+            type=str.lower,
+            default="svg",
+            choices=["svg", "png"],
+            help="Graph format for diagram export (default: svg)",
+        )
+        add_arg("-t", "--text", action="store_true", help="export textual schema")
 
     def post_process(self, result, args):
-        """Transform result into image or PrettyLines"""                         # pylint: disable=no-self-use
+        """Transform result into image or PrettyLines"""  # pylint: disable=no-self-use
         if args.diagram:
             result.format = self.format
             return result

@@ -1,9 +1,8 @@
-import io
 import builtins
 import codecs
+import io
 import os
 import threading
-
 from contextlib import contextmanager
 
 open_usage = {}
@@ -12,6 +11,7 @@ std_open = open
 io_open = io.open
 codecs_open = codecs.open
 os_open = os.open
+
 
 @contextmanager
 def restore_open():
@@ -27,7 +27,7 @@ def restore_open():
         try:
             mock_builtins = __builtins__["open"]
             __builtins__["open"] = std_open
-        except:
+        except Exception:
             mock_builtins = __builtins__.open
             __builtins__.open = std_open
         yield
@@ -38,14 +38,16 @@ def restore_open():
         os.open = mock_os_open
         try:
             __builtins__["open"] = mock_builtins
-        except:
+        except Exception:
             __builtins__.open = mock_builtins
+
 
 def print_open():
     print(std_open)
     print(io_open)
     print(codecs_open.__code__.co_filename)
     print(os_open)
+
 
 @contextmanager
 def use_safe_open():
@@ -56,6 +58,7 @@ def use_safe_open():
         yield
     finally:
         open_usage[ident] = old
+
 
 def should_use_safe_open():
     ident = threading.current_thread().ident

@@ -3,21 +3,19 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Define utility functions"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import inspect
 import os
+from importlib import resources
+from os.path import dirname, exists, join
 
-from os.path import join, dirname, exists
+# Runs Graphviz's dot for run_dot below
+from subprocess import PIPE, Popen  # nosec B404
 from textwrap import dedent
-from pkg_resources import resource_string, resource_listdir, resource_isdir
-from subprocess import Popen, PIPE
 
-
-MODULE = __name__
-MODULE = MODULE[:MODULE.rfind(".")]
-MODULE = MODULE[:MODULE.rfind(".")]
+PACKAGE = __name__.split(".")[0]
 NOWORKFLOW_DIR = dirname(dirname(dirname(__file__)))
 
 
@@ -26,7 +24,7 @@ def recgetattr(obj, attrs, default=None):
     if attrs:
         return getattr(recgetattr(obj, attrs, None), cattr, default)
     return getattr(obj, cattr, default)
-    
+
 
 def wrap(string, initial="  ", other="\n  "):
     """Re-indent indented text
@@ -45,27 +43,40 @@ def wrap(string, initial="  ", other="\n  "):
     return initial + other.join(dedent(string).split("\n"))
 
 
+def resource_path(name):
+    """Traversable of a resource, named relative to the noworkflow package
+
+    The parts of name may be separated by "/" or by "\\", since now demo
+    builds names with os.path.join.
+    """
+    path = resources.files(PACKAGE)
+    for part in name.replace("\\", "/").split("/"):
+        if part:
+            path = path / part
+    return path
+
+
 def resource(filename, encoding=None):
-    """Access resource content via setuptools"""
-    content = resource_string(MODULE, filename)
+    """Access resource content via importlib.resources"""
+    content = resource_path(filename).read_bytes()
     if encoding:
         return content.decode(encoding=encoding)
     return content
 
 
 def resource_ls(path):
-    """Access resource directory via setuptools"""
-    return resource_listdir(MODULE, path)
+    """List resource directory via importlib.resources"""
+    return [entry.name for entry in resource_path(path).iterdir()]
 
 
 def resource_is_dir(path):
-    """Access resource directory via setuptools"""
-    return resource_isdir(MODULE, path)
+    """Check resource directory via importlib.resources"""
+    return resource_path(path).is_dir()
 
 
 def version():
     """Return noWorkflow version"""
-    return resource("../resources/version.txt", encoding="utf-8").strip()
+    return resource("resources/version.txt", encoding="utf-8").strip()
 
 
 def abstract():
@@ -109,17 +120,19 @@ def erase(directory, everything=False):
                 os.rmdir(path)
 
 
-def run_dot(code, format_='png'):
+def run_dot(code, format_="png"):
     """run_dot"""
-    process = Popen(
+    # Graphviz's dot from the PATH, no shell; callers pass a literal format
+    process = Popen(  # nosec B603 B607
         ["dot", "-T", format_], stdout=PIPE, stdin=PIPE, stderr=PIPE
     )
     try:
-        stdout, stderr = process.communicate(code.encode('utf-8'))
-    except (OSError, IOError) as err:  # pylint: disable=unused-variable
+        stdout, stderr = process.communicate(code.encode("utf-8"))
+    except (OSError, IOError):  # pylint: disable=unused-variable
         stdout, stderr = process.stdout.read(), process.stderr.read()
         process.wait()
     if process.returncode != 0:
-        raise RuntimeError('dot exited with error:\n[stderr]\n{0}'
-                           .format(stderr.decode('utf-8')))
+        raise RuntimeError(
+            "dot exited with error:\n[stderr]\n{0}".format(stderr.decode("utf-8"))
+        )
     return stdout

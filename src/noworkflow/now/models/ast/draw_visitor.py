@@ -5,10 +5,10 @@
 """DrawVisitor produces a dot graph when it visits the tree"""
 
 from collections import defaultdict
+
 from future.utils import viewitems
 
 from ...utils.functions import run_dot
-
 from .base_visitor import NodeVisitor
 from .model import NowNode
 
@@ -25,9 +25,7 @@ class DrawVisitor(NodeVisitor):
             value = getattr(node, attr)
             if isinstance(value, list):
                 for index, child in enumerate(value):
-                    self.graph[node][child] = "{} {}".format(
-                        index, attr
-                    )
+                    self.graph[node][child] = "{} {}".format(index, attr)
                     self.visit(child)
             elif isinstance(value, NowNode):
                 self.graph[node][value] = attr
@@ -62,15 +60,13 @@ class DrawVisitor(NodeVisitor):
             origin = add_attr(origin)
             for target, label in viewitems(targets):
                 target = add_attr(target)
-                edges.append('  {} -> {} [label="{}"]'.format(
-                    origin, target, label
-                ))
+                edges.append('  {} -> {} [label="{}"]'.format(origin, target, label))
         result.extend(edges)
         result.append("}")
         return "\n".join(result)
 
     def _repr_svg_(self):
-        return run_dot(self.dot_text, 'svg').decode('utf-8')
+        return run_dot(self.dot_text, "svg").decode("utf-8")
 
     def _repr_png_(self):
-        return run_dot(self.dot_text, 'png')
+        return run_dot(self.dot_text, "png")

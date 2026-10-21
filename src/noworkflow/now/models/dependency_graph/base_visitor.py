@@ -4,9 +4,9 @@
 # Please, consult the license terms in the LICENSE file.
 """Base Cluster Visitor"""
 
-from .node_types import AccessNode
-from .node_types import ActivationNode, ClusterNode, EvaluationNode
 from .clusterizer import Clusterizer
+from .node_types import AccessNode, ActivationNode, ClusterNode, EvaluationNode
+
 
 class ClusterVisitor(object):
     """Base Cluster Visitor"""

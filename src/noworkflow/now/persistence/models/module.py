@@ -3,17 +3,27 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Module Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, select, bindparam
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologRepr
-from ...utils.prolog import PrologAttribute, PrologNullableRepr, PrologBoolean
+from sqlalchemy import (
+    Boolean,
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
-from .. import relational
-
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologBoolean,
+    PrologDescription,
+    PrologNullableRepr,
+    PrologRepr,
+    PrologTrial,
+)
 from .base import AlchemyProxy, proxy_class
 
 
@@ -56,9 +66,11 @@ class Module(AlchemyProxy):
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "code_block_id"],
-                             ["code_block.trial_id", "code_block.id"],
-                             ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["trial_id", "code_block_id"],
+            ["code_block.trial_id", "code_block.id"],
+            ondelete="CASCADE",
+        ),
     )
     trial_id = Column(String, index=True)
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
@@ -69,29 +81,31 @@ class Module(AlchemyProxy):
     transformed = Column(Boolean)
     fullpath = Column(Text)
 
-
     # Relationship attributes (see relationships.py):
     #   code_block: 1 CodeBlock
     #   trial: 1 Trial
 
-    prolog_description = PrologDescription("module", (
-        PrologTrial("trial_id", link="trial.id"),
-        PrologAttribute("id"),
-        PrologRepr("name"),
-        PrologNullableRepr("version"),
-        PrologRepr("path"),
-        PrologNullableRepr("code_block_id", link="code_block.id"),
-        PrologBoolean("transformed"),
-        PrologRepr("fullpath"),
-    ), description=(
-        "informs that in a given trial (*TrialId*),\n"
-        "a module with *Id* and *Name* at *Version*,\n"
-        "associated with a *CodeBlockId*,\n"
-        "was stored in *Path*,\n"
-        "and *Transformed* for collection.\n"
-        "When *FullPath* is not null, it indicates the actual part of *Path* that was imported."
-    ))
-
+    prolog_description = PrologDescription(
+        "module",
+        (
+            PrologTrial("trial_id", link="trial.id"),
+            PrologAttribute("id"),
+            PrologRepr("name"),
+            PrologNullableRepr("version"),
+            PrologRepr("path"),
+            PrologNullableRepr("code_block_id", link="code_block.id"),
+            PrologBoolean("transformed"),
+            PrologRepr("fullpath"),
+        ),
+        description=(
+            "informs that in a given trial (*TrialId*),\n"
+            "a module with *Id* and *Name* at *Version*,\n"
+            "associated with a *CodeBlockId*,\n"
+            "was stored in *Path*,\n"
+            "and *Transformed* for collection.\n"
+            "When *FullPath* is not null, it indicates the actual part of *Path* that was imported."
+        ),
+    )
 
     def __key(self):
         return (self.name, self.version, self.code_hash)
@@ -160,7 +174,6 @@ class Module(AlchemyProxy):
             return self.code_block.code_hash
         return None
 
-
     def show(self, print_=print):
         """Show module
 
@@ -195,11 +208,13 @@ class Module(AlchemyProxy):
         fullpath = ""
         if self.fullpath:
             fullpath = "\n            Full path: {}".format(self.fullpath)
-        print_("""\
+        print_(
+            """\
             Name: {0.name}
             Version: {0.version}
             Path: {0.path}{1}
-            Code hash: {0.code_hash}""".format(self, fullpath))
+            Code hash: {0.code_hash}""".format(self, fullpath)
+        )
 
     def __repr__(self):
         return "module({0.id}, '{0.name}', '{0.version}').".format(self)

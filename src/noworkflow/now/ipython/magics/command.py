@@ -3,24 +3,19 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """IPython Magics"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
 
-from IPython.utils.process import arg_split
 from IPython.core import magic_arguments
-from IPython.core.magic import line_magic, cell_magic, line_cell_magic
+from IPython.core.magic import cell_magic, line_cell_magic, line_magic
+from IPython.utils.process import arg_split
 
 from ...cmd import Command
 from ...utils.functions import abstract
 
-
-MAGIC_TYPES = {
-    "cell": cell_magic,
-    "line": line_magic,
-    "line_cell": line_cell_magic
-}
+MAGIC_TYPES = {"cell": cell_magic, "line": line_magic, "line_cell": line_cell_magic}
 
 
 class IpythonCommandMagic(Command):
@@ -42,9 +37,7 @@ class IpythonCommandMagic(Command):
 
     def add_argument(self, *args, **kwargs):
         """Add argument to parser available for both IPython magic and cmd"""
-        self.args.append(
-            magic_arguments.argument(*args, **kwargs)
-        )
+        self.args.append(magic_arguments.argument(*args, **kwargs))
 
     def create_magic(self, func):
         """Create magic for command"""
@@ -56,11 +49,11 @@ class IpythonCommandMagic(Command):
         func = magic_arguments.magic_arguments()(func)
         return func
 
-    def execute(self, func, line, cell, magic_cls):                              # pylint: disable=unused-argument, no-self-use, arguments-differ
+    def execute(self, func, line, cell, magic_cls):  # pylint: disable=unused-argument, no-self-use, arguments-differ
         """Execute the command. Override on subclass"""
         abstract()
 
-    def arguments(self, func, line):                                             # pylint: disable=no-self-use
+    def arguments(self, func, line):  # pylint: disable=no-self-use
         """Get arguments from magic"""
         argv = arg_split(line, posix=not sys.platform.startswith("win"))
         args = magic_arguments.parse_argstring(func, line)

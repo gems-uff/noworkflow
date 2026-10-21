@@ -3,15 +3,26 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """CodeComponent Composition Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-from sqlalchemy import Column, Integer, String, Text
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologNullable, PrologNullableRepr
+from sqlalchemy import (
+    Column,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologNullableRepr,
+    PrologRepr,
+    PrologTrial,
+)
 from .base import AlchemyProxy, proxy_class
 
 
@@ -27,14 +38,17 @@ class Composition(AlchemyProxy):
     __tablename__ = "composition"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
-        ForeignKeyConstraint(["trial_id"],
-                             ["trial.id"], ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "part_id"],
-                             ["code_component.trial_id", "code_component.id"],
-                             ondelete="CASCADE"),
-        ForeignKeyConstraint(["trial_id", "whole_id"],
-                             ["code_component.trial_id", "code_component.id"],
-                             ondelete="CASCADE"),
+        ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["trial_id", "part_id"],
+            ["code_component.trial_id", "code_component.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["trial_id", "whole_id"],
+            ["code_component.trial_id", "code_component.id"],
+            ondelete="CASCADE",
+        ),
     )
     trial_id = Column(String, index=True)
     id = Column(Integer, index=True)  # pylint: disable=invalid-name
@@ -49,17 +63,21 @@ class Composition(AlchemyProxy):
     #   part: 1 CodeComponent
     #   whole: 1 CodeComponent
 
-    prolog_description = PrologDescription("composition", (
-        PrologTrial("trial_id", link="code_component.trial_id"),
-        PrologAttribute("whole_id", link="code_component.id"),
-        PrologAttribute("part_id", link="code_component.id"),
-        PrologRepr("type"),
-        PrologNullable("position"),
-        PrologNullableRepr("extra"),
-    ), description=(
-        "informs that in a given trial (*trial_id*),\n"
-        "a code_component (*DependentId*),\n"
-        "is a part of\n"
-        "by the value of another code_component (*WholeId*),\n"
-        "of a *Type*\n"
-    ))
+    prolog_description = PrologDescription(
+        "composition",
+        (
+            PrologTrial("trial_id", link="code_component.trial_id"),
+            PrologAttribute("whole_id", link="code_component.id"),
+            PrologAttribute("part_id", link="code_component.id"),
+            PrologRepr("type"),
+            PrologNullable("position"),
+            PrologNullableRepr("extra"),
+        ),
+        description=(
+            "informs that in a given trial (*trial_id*),\n"
+            "a code_component (*DependentId*),\n"
+            "is a part of\n"
+            "by the value of another code_component (*WholeId*),\n"
+            "of a *Type*\n"
+        ),
+    )

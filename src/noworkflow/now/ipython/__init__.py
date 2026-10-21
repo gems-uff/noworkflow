@@ -3,15 +3,17 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """IPython Module"""
-from __future__ import (absolute_import, print_function,
-                        division)
 
-from .defaults import set_default
-from ..persistence.models import *                                               # pylint: disable=wildcard-import
-from ..persistence import persistence_config, relational, content
-from ..models.history import History
-from ..models.diff import Diff
+from __future__ import absolute_import, division, print_function
+
 from ... import patterns
+from ..models.diff import Diff
+from ..models.history import History
+from ..persistence import content, persistence_config, relational
+
+# Re-exports every model to `from noworkflow.now.ipython import *` in a notebook.
+from ..persistence.models import *  # noqa: F403  # pylint: disable=wildcard-import
+from .defaults import set_default
 
 
 def init(path=None, ipython=None):
@@ -25,8 +27,10 @@ def init(path=None, ipython=None):
     """
 
     import os
-    from .magics import register_magics
+
     from .dotmagic import load_ipython_extension as load_dot
+    from .magics import register_magics
+
     load_dot(ipython)
     register_magics(ipython)
 
@@ -34,4 +38,4 @@ def init(path=None, ipython=None):
         path = os.getcwd()
     persistence_config.connect(path)
 
-    return u"ok"
+    return "ok"

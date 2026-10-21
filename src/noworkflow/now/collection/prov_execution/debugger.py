@@ -3,24 +3,23 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Debugger-related functions"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # ToDo now2: check all file
-
 import atexit
 import os
-import subprocess
+
+# Starts the programs of the now_vis() and now_notebook() builtins
+import subprocess  # nosec B404
 import sys
 import threading
 import webbrowser
-
 from argparse import Namespace
 
 from ...cmd.cmd_export.cmd_ipynb import Ipynb
 from ...persistence.models.trial import Trial
 from ...utils.io import redirect_output
-
 
 FNULL = open(os.devnull, "w")
 atexit.register(FNULL.close)
@@ -30,10 +29,11 @@ CHILDREN_PID = []
 
 def kill_children():
     """Kill debugger processes"""
-    global CHILDREN_PID                                                          # pylint: disable=global-statement
+    global CHILDREN_PID  # pylint: disable=global-statement
     for child in CHILDREN_PID:
         child.kill()
     CHILDREN_PID = []
+
 
 atexit.register(kill_children)
 
@@ -44,6 +44,7 @@ def create_debugger(pdb=None):
         with redirect_output():
             try:
                 from ipdb.__main__ import Pdb, def_colors
+
                 pdb = Pdb(def_colors)
             except ImportError:
                 from pdb import Pdb
@@ -64,15 +65,14 @@ def create_debugger(pdb=None):
     return NowDebugger
 
 
-
 def debugger_builtins(provider, namespace, metascript):
     """Define debugging functions"""
-    vis = vis_open, browser_open = [False, False]                                # pylint: disable=unused-variable
+    vis = vis_open, browser_open = [False, False]  # pylint: disable=unused-variable
 
-    def set_trace(frame=None, pdb=None):                                         # pylint: disable=unused-argument
+    def set_trace(frame=None, pdb=None):  # pylint: disable=unused-argument
         """Invoke pdb"""
         debugger = create_debugger(pdb)(provider)
-        debugger.set_trace(sys._getframe().f_back)                               # pylint: disable=protected-access
+        debugger.set_trace(sys._getframe().f_back)  # pylint: disable=protected-access
 
     def now_save():
         """Save partial provenance"""
@@ -86,7 +86,7 @@ def debugger_builtins(provider, namespace, metascript):
             trial_id = metascript.trial_id
         return Trial(trial_ref=trial_id)
 
-    def now_vis(browser="maybe", port=5000, save=True, vis=vis):                 # pylint: disable=dangerous-default-value
+    def now_vis(browser="maybe", port=5000, save=True, vis=vis):  # pylint: disable=dangerous-default-value
         """Invoke now vis"""
         vis_open, browser_open = vis
         if save:
@@ -100,10 +100,12 @@ def debugger_builtins(provider, namespace, metascript):
             print("now vis: {}".format(url))
             with redirect_output():
                 vis[0] = True
-                proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)
+                # No shell; a fixed argv except the port of the script's own now_vis() call
+                proc = subprocess.Popen(params, stdout=FNULL, stderr=FNULL)  # nosec B603
                 CHILDREN_PID.append(proc)
 
         if browser and (browser_open ^ (browser == "maybe")):
+
             def webopen(url):
                 """Workaround to redirect browser output"""
                 savout = os.dup(1)
@@ -121,7 +123,9 @@ def debugger_builtins(provider, namespace, metascript):
     def now_notebook(start=True):
         """Start Jupyter Notebook"""
         try:
-            import IPython
+            # Availability check: without IPython there is no notebook.
+            import IPython  # noqa: F401
+
             Ipynb().execute(Namespace(trial=None, dir=None))
             if start:
                 params = ["ipython", "notebook", "Current Trial.ipynb"]
@@ -139,6 +143,7 @@ def debugger_builtins(provider, namespace, metascript):
         try:
             with redirect_output():
                 from IPython import embed
+
                 namespace["now_ipython"] = embed
         except ImportError:
             namespace["now_ipython"] = lambda: "IPython not found"
@@ -153,9 +158,7 @@ def debugger_builtins(provider, namespace, metascript):
         try:
             with redirect_output():
                 from IPython import embed
+
                 namespace.now_ipython = embed
         except ImportError:
             namespace.now_ipython = lambda: "IPython not found"
-
-
-    

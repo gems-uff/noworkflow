@@ -3,19 +3,19 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test Code Block collection"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import unittest
 
-from future.utils import viewvalues, viewitems
+from future.utils import viewitems, viewvalues
 
 from ..now.collection.metadata import Metascript
 from ..now.models.ast import create_trees
 from ..now.utils.cross_version import PY3
 from .helpers import models
-
+from .helpers.leaks import undo_collection
 
 NAME = "noworkflow/tests/examples/script.py"
 
@@ -27,6 +27,18 @@ def cluster(evaluation_nid):
 
 class CollectionTestCase(unittest.TestCase):
     """Helpers to test noWorkflow collection"""
+
+    def tearDown(self):
+        """Undo what collecting provenance changes in the process
+
+        Execution.configure replaces the four ``open`` functions and adds
+        names to the builtins, and collect_provenance inserts a module finder
+        in sys.meta_path that it only removes when the script succeeds. The
+        collector restores none of that, so every test would otherwise leak
+        into the next one (the leak detector in the root conftest.py would
+        fail it).
+        """
+        undo_collection()
 
     def find_all(self, store, **kwargs):
         """Find objects in object store by kwargs attributes"""
@@ -79,27 +91,48 @@ class CollectionTestCase(unittest.TestCase):
     def execute(self, set_max_diff=True):
         """Execute script"""
         # pylint: disable=attribute-defined-outside-init
-        if not hasattr(self, 'executed'):
+        if not hasattr(self, "executed"):
             if set_max_diff:
                 self.maxDiff = None
             self.metascript.execution.collect_provenance()
-            self.assertEqual(self.metascript.execution.msg,
-                             "the execution of trial -1 finished successfully")
+            self.assertEqual(
+                self.metascript.execution.msg,
+                "the execution of trial -1 finished successfully",
+            )
             self.executed = True
+
+    def collect(self, code, **kwargs):
+        """Collect a script that may fail, as ``now run`` does
+
+        Unlike ``execute``, it does not assert that the script succeeded:
+        it returns the message of the execution. ``kwargs`` go to the
+        ``Metascript`` (for example ``coarse_granularity=True``).
+        """
+        # pylint: disable=attribute-defined-outside-init
+        self.maxDiff = None
+        self.script(code, **kwargs)
+        self.metascript.execution.collect_provenance()
+        self.executed = True
+        return self.metascript.execution.msg
 
     def clean_execution(self):
         """Clear database and execute"""
         # pylint: disable=attribute-defined-outside-init
         models.meta = self.metascript
         models.erase_database()
-        self.metascript.trial_id = models.Trial.create(**models.trial_params(
-            script=self.metascript.code,
-            path=self.metascript.path
-        ))
-        if not hasattr(self, 'executed'):
+        self.metascript.trial_id = models.Trial.create(
+            **models.trial_params(
+                script=self.metascript.code, path=self.metascript.path
+            )
+        )
+        if not hasattr(self, "executed"):
             self.metascript.execution.collect_provenance()
-            self.assertEqual(self.metascript.execution.msg,
-                             "the execution of trial {} finished successfully".format(self.metascript.trial_id))
+            self.assertEqual(
+                self.metascript.execution.msg,
+                "the execution of trial {} finished successfully".format(
+                    self.metascript.trial_id
+                ),
+            )
             self.executed = True
         self.metascript.deployment.store_provenance()
         self.metascript.definition.store_provenance()
@@ -124,37 +157,31 @@ class CollectionTestCase(unittest.TestCase):
 
     def evaluation_repr(self, evaluation):
         """Get evaluation friendly representation"""
-        component = self.metascript.code_components_store[
-            evaluation.code_component_id
-        ]
+        component = self.metascript.code_components_store[evaluation.code_component_id]
         return "{}({}:l{})".format(
             component.name, evaluation.id, component.first_char_line
         )
 
     def assert_member(self, collection, member, key):
         result = self.find_member(
-            collection_id=collection.id,
-            member_id=member.id, key=key)
+            collection_id=collection.id, member_id=member.id, key=key
+        )
         if result is None:
             self.fail(
                 "The collection {} does not have the member {} at {}".format(
-                    self.evaluation_repr(collection),
-                    self.evaluation_repr(member),
-                    key
+                    self.evaluation_repr(collection), self.evaluation_repr(member), key
                 )
             )
         return result
 
     def assert_no_member(self, collection, member, key):
         result = self.find_member(
-            collection_id=collection.id,
-            member_id=member.id, key=key)
+            collection_id=collection.id, member_id=member.id, key=key
+        )
         if result is not None:
             self.fail(
                 "The collection {} has the member {} at {}".format(
-                    self.evaluation_repr(collection),
-                    self.evaluation_repr(member),
-                    key
+                    self.evaluation_repr(collection), self.evaluation_repr(member), key
                 )
             )
         return result
@@ -165,53 +192,68 @@ class CollectionTestCase(unittest.TestCase):
         type_id = type_evaluation.id
         while eva_id is not None:
             member = self.find_member(
-                collection_id=eva_id,
-                member_id=type_id,
-                key=".__class__")
+                collection_id=eva_id, member_id=type_id, key=".__class__"
+            )
             if member:
                 return
-            dep = self.find_dependency(
-                dependent_id=eva_id,
-                reference=True)
+            dep = self.find_dependency(dependent_id=eva_id, reference=True)
             eva_id = dep.dependency_id if dep else None
 
-        self.fail("Evaluation {} does not have type {}".format(
-            self.evaluation_repr(original),
-            self.evaluation_repr(type_evaluation),
-        ))
+        self.fail(
+            "Evaluation {} does not have type {}".format(
+                self.evaluation_repr(original),
+                self.evaluation_repr(type_evaluation),
+            )
+        )
 
-    def assert_dependency(self, dependent, dependency, type_=None,
-                          reference=False, collection=None, key=None):
+    def assert_dependency(
+        self,
+        dependent,
+        dependency,
+        type_=None,
+        reference=False,
+        collection=None,
+        key=None,
+    ):
         """Check if dependency exists"""
         collection_id = getattr(collection, "id", None)
-        dep = self.find_dependency(dependent_id=dependent.id,
-                                   dependency_id=dependency.id,
-                                   collection_id=collection_id,
-                                   key=key)
+        dep = self.find_dependency(
+            dependent_id=dependent.id,
+            dependency_id=dependency.id,
+            collection_id=collection_id,
+            key=key,
+        )
         if not dep:
-            self.fail("Dependency not found {} -> {}".format(
-                self.evaluation_repr(dependent),
-                self.evaluation_repr(dependency),
-            ))
+            self.fail(
+                "Dependency not found {} -> {}".format(
+                    self.evaluation_repr(dependent),
+                    self.evaluation_repr(dependency),
+                )
+            )
         if type_ is not None:
             full_dep = self.find_dependency(
-                dependent_id=dependent.id, dependency_id=dependency.id,
-                reference=reference, type=type_,
-                collection_id=collection_id, key=key)
+                dependent_id=dependent.id,
+                dependency_id=dependency.id,
+                reference=reference,
+                type=type_,
+                collection_id=collection_id,
+                key=key,
+            )
             if not full_dep:
                 self.fail(
-                    "Dependency not found {} -({})> {}. "
-                    "Found {} with type '{}'".format(
-                        self.evaluation_repr(dependent), type_,
+                    "Dependency not found {} -({})> {}. Found {} with type '{}'".format(
+                        self.evaluation_repr(dependent),
+                        type_,
                         self.evaluation_repr(dependency),
-                        'reference' if dep.reference else 'dependency',
-                        dep.type
+                        "reference" if dep.reference else "dependency",
+                        dep.type,
                     )
                 )
 
     def pdebug(self, members=False):
         """Print current dependencies"""
         from collections import defaultdict
+
         used_evals = set()
         print()
         print("Dependencies")
@@ -225,45 +267,52 @@ class CollectionTestCase(unittest.TestCase):
             if dep.key is not None:
                 col = self.metascript.evaluations_store[dep.collection_id]
                 extra = " {}{}".format(self.evaluation_repr(col), dep.key)
-            print("  {} -({})> {}{}{}".format(
-                self.evaluation_repr(edependent), dep.type,
-                self.evaluation_repr(edependency),
-                " (R)" if dep.reference else "",
-                extra
-            ))
+            print(
+                "  {} -({})> {}{}{}".format(
+                    self.evaluation_repr(edependent),
+                    dep.type,
+                    self.evaluation_repr(edependency),
+                    " (R)" if dep.reference else "",
+                    extra,
+                )
+            )
         print("Evaluations")
         for eva in viewvalues(self.metascript.evaluations_store.store):
-            if not eva.id in used_evals:
-                print("  {}".format(
-                    self.evaluation_repr(eva),
-                ))
+            if eva.id not in used_evals:
+                print(
+                    "  {}".format(
+                        self.evaluation_repr(eva),
+                    )
+                )
         if members:
             print("Members")
             collections = defaultdict(list)
             for member in viewvalues(self.metascript.members_store.store):
                 collections[member.collection_id].append(
-                    (member.member_id, member.key, member.checkpoint))
+                    (member.member_id, member.key, member.checkpoint)
+                )
             for collection_id, members in viewitems(collections):
                 collection = self.metascript.evaluations_store[collection_id]
-                print("  {}".format(
-                    self.evaluation_repr(collection),
-                ))
+                print(
+                    "  {}".format(
+                        self.evaluation_repr(collection),
+                    )
+                )
                 for member_id, key, checkpoint in members:
                     member = self.metascript.evaluations_store[member_id]
-                    print("    {} = {} ({})".format(
-                        key,
-                        self.evaluation_repr(member),
-                        checkpoint
-                    ))
+                    print(
+                        "    {} = {} ({})".format(
+                            key, self.evaluation_repr(member), checkpoint
+                        )
+                    )
 
     def assert_no_dependency(self, dependent, dependency, type_=None):
         """Check if dependency exists"""
-        params = {'dependent_id': dependent.id, 'dependency_id': dependency}
+        params = {"dependent_id": dependent.id, "dependency_id": dependency}
         if type_ is not None:
-            params['type'] = type_
+            params["type"] = type_
         dep = self.find_dependency(**params)
         self.assertIsNone(dep)
-
 
     def rtype(self, name):
         """Create type repr according to python version"""
@@ -271,15 +320,11 @@ class CollectionTestCase(unittest.TestCase):
         keyword = "class" if PY3 else "type"
         return "<{} '{}'>".format(keyword, name)
 
-
     def script(self, code, name=NAME, **kwargs):
         """Create metascript with the desired code"""
         # pylint: disable=attribute-defined-outside-init
         self.metascript = Metascript(
-            path=name,
-            dir=os.path.dirname(name),
-            code=code,
-            **kwargs
+            path=name, dir=os.path.dirname(name), code=code, **kwargs
         )
         self.metascript.clear_namespace()
 

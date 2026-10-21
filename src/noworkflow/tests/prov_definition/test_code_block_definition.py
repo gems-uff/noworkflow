@@ -3,13 +3,12 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test Code Block collection"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+from ...now.utils.cross_version import PY35
 from ..collection_testcase import CollectionTestCase
-
-from ...now.utils.cross_version import PY35, only
+from ..helpers.versions import only
 
 
 class TestCodeBlockDefinition(CollectionTestCase):
@@ -17,9 +16,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
 
     def test_script(self):
         """Test script collection. Do not ignore comments."""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "# other")
+        self.script("# script.py\na = 2\n# other")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -38,9 +35,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
 
     def test_script_with_docstring(self):
         """Test script collection with docstring"""
-        self.script("# script.py\n"
-                    "'doc'\n"
-                    "a = 2")
+        self.script("# script.py\n'doc'\na = 2")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -59,10 +54,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
 
     def test_function_definition(self):
         """Test function definition collection"""
-        self.script("# script.py\n"
-                    "def f():\n"
-                    "    'fdoc'\n"
-                    "    pass\n")
+        self.script("# script.py\ndef f():\n    'fdoc'\n    pass\n")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -77,19 +69,13 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(function_def.container_id, script.id)
 
         function_def_block = self.metascript.code_blocks_store[function_def.id]
-        self.assertEqual(function_def_block.code,
-                         "def f():\n"
-                         "    'fdoc'\n"
-                         "    pass")
+        self.assertEqual(function_def_block.code, "def f():\n    'fdoc'\n    pass")
         self.assertEqual(function_def_block.docstring, "fdoc")
         self.assertTrue(bool(function_def_block.code_hash))
 
     def test_function_definition_with_args(self):
         """Test function definition collection with arguments"""
-        self.script("# script.py\n"
-                    "def f(x, y=False):\n"
-                    "    'fdoc'\n"
-                    "    pass\n")
+        self.script("# script.py\ndef f(x, y=False):\n    'fdoc'\n    pass\n")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -122,7 +108,7 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(var_y.last_char_column, 10)
         self.assertEqual(var_y.container_id, function_def.id)
 
-        #self.assertEqual(false.type, "literal")
+        # self.assertEqual(false.type, "literal")
         self.assertEqual(false.mode, "r")
         self.assertEqual(false.first_char_line, 2)
         self.assertEqual(false.first_char_column, 11)
@@ -131,22 +117,17 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(false.container_id, function_def.id)
 
         function_def_block = self.metascript.code_blocks_store[function_def.id]
-        self.assertEqual(function_def_block.code,
-                         "def f(x, y=False):\n"
-                         "    'fdoc'\n"
-                         "    pass")
+        self.assertEqual(
+            function_def_block.code, "def f(x, y=False):\n    'fdoc'\n    pass"
+        )
         self.assertEqual(function_def_block.docstring, "fdoc")
         self.assertTrue(bool(function_def_block.code_hash))
 
     def test_function_definition_with_decorator(self):
         """Test function definition collection with decorator"""
-        self.script("# script.py\n"
-                    "def g(x):\n"
-                    "    return x\n"
-                    "@g\n"
-                    "def f():\n"
-                    "    'fdoc'\n"
-                    "    pass\n")
+        self.script(
+            "# script.py\ndef g(x):\n    return x\n@g\ndef f():\n    'fdoc'\n    pass\n"
+        )
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -161,21 +142,14 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(function_def.container_id, script.id)
 
         function_def_block = self.metascript.code_blocks_store[function_def.id]
-        self.assertEqual(function_def_block.code,
-                         "@g\n"
-                         "def f():\n"
-                         "    'fdoc'\n"
-                         "    pass")
+        self.assertEqual(function_def_block.code, "@g\ndef f():\n    'fdoc'\n    pass")
         self.assertEqual(function_def_block.docstring, "fdoc")
         self.assertTrue(bool(function_def_block.code_hash))
 
     @only(PY35)
     def test_async_function_definition(self):
         """Test async function definition collection"""
-        self.script("# script.py\n"
-                    "async def f():\n"
-                    "    'fdoc'\n"
-                    "    pass\n")
+        self.script("# script.py\nasync def f():\n    'fdoc'\n    pass\n")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -190,19 +164,15 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(function_def.container_id, script.id)
 
         function_def_block = self.metascript.code_blocks_store[function_def.id]
-        self.assertEqual(function_def_block.code,
-                         "async def f():\n"
-                         "    'fdoc'\n"
-                         "    pass")
+        self.assertEqual(
+            function_def_block.code, "async def f():\n    'fdoc'\n    pass"
+        )
         self.assertEqual(function_def_block.docstring, "fdoc")
         self.assertTrue(bool(function_def_block.code_hash))
 
     def test_class_definition(self):
         """Test class definition collection"""
-        self.script("# script.py\n"
-                    "class C():\n"
-                    "    'cdoc'\n"
-                    "    pass\n")
+        self.script("# script.py\nclass C():\n    'cdoc'\n    pass\n")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -217,21 +187,20 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(class_def.container_id, script.id)
 
         class_def_block = self.metascript.code_blocks_store[class_def.id]
-        self.assertEqual(class_def_block.code,
-                         "class C():\n"
-                         "    'cdoc'\n"
-                         "    pass")
+        self.assertEqual(class_def_block.code, "class C():\n    'cdoc'\n    pass")
         self.assertEqual(class_def_block.docstring, "cdoc")
         self.assertTrue(bool(class_def_block.code_hash))
 
     def test_method_definition(self):
         """Test method definition collection"""
-        self.script("# script.py\n"
-                    "class C():\n"
-                    "    'cdoc'\n"
-                    "    def f(self):\n"
-                    "        'mdoc'\n"
-                    "        pass")
+        self.script(
+            "# script.py\n"
+            "class C():\n"
+            "    'cdoc'\n"
+            "    def f(self):\n"
+            "        'mdoc'\n"
+            "        pass"
+        )
         self.compile()
 
         class_def = self.find_code_component(name="C")
@@ -246,21 +215,22 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(method_def.container_id, class_def.id)
 
         method_def_block = self.metascript.code_blocks_store[method_def.id]
-        self.assertEqual(method_def_block.code,
-                         "def f(self):\n"
-                         "        'mdoc'\n"
-                         "        pass")
+        self.assertEqual(
+            method_def_block.code, "def f(self):\n        'mdoc'\n        pass"
+        )
         self.assertEqual(method_def_block.docstring, "mdoc")
         self.assertTrue(bool(method_def_block.code_hash))
 
     def test_closure_definition(self):
         """Test closure definition collection"""
-        self.script("# script.py\n"
-                    "def f():\n"
-                    "    'fdoc'\n"
-                    "    def c():\n"
-                    "        'cdoc'\n"
-                    "        pass")
+        self.script(
+            "# script.py\n"
+            "def f():\n"
+            "    'fdoc'\n"
+            "    def c():\n"
+            "        'cdoc'\n"
+            "        pass"
+        )
         self.compile()
 
         function_def = self.find_code_component(name="f")
@@ -275,19 +245,15 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(closure_def.container_id, function_def.id)
 
         closure_def_block = self.metascript.code_blocks_store[closure_def.id]
-        self.assertEqual(closure_def_block.code,
-                         "def c():\n"
-                         "        'cdoc'\n"
-                         "        pass")
+        self.assertEqual(
+            closure_def_block.code, "def c():\n        'cdoc'\n        pass"
+        )
         self.assertEqual(closure_def_block.docstring, "cdoc")
         self.assertTrue(bool(closure_def_block.code_hash))
 
     def test_class_definition_with_base(self):
         """Test class definition collection with arguments"""
-        self.script("# script.py\n"
-                    "class C(object):\n"
-                    "    'cdoc'\n"
-                    "    pass\n")
+        self.script("# script.py\nclass C(object):\n    'cdoc'\n    pass\n")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -311,20 +277,16 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(var_object.container_id, class_def.id)
 
         class_def_block = self.metascript.code_blocks_store[class_def.id]
-        self.assertEqual(class_def_block.code,
-                         "class C(object):\n"
-                         "    'cdoc'\n"
-                         "    pass")
+        self.assertEqual(class_def_block.code, "class C(object):\n    'cdoc'\n    pass")
         self.assertEqual(class_def_block.docstring, "cdoc")
         self.assertTrue(bool(class_def_block.code_hash))
 
     @only(PY35)
     def test_class_definition_with_metaclass(self):
         """Test class definition collection with arguments"""
-        self.script("# script.py\n"
-                    "class C(object, metaclass=type):\n"
-                    "    'cdoc'\n"
-                    "    pass\n")
+        self.script(
+            "# script.py\nclass C(object, metaclass=type):\n    'cdoc'\n    pass\n"
+        )
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -357,9 +319,9 @@ class TestCodeBlockDefinition(CollectionTestCase):
         self.assertEqual(var_type.container_id, class_def.id)
 
         class_def_block = self.metascript.code_blocks_store[class_def.id]
-        self.assertEqual(class_def_block.code,
-                         "class C(object, metaclass=type):\n"
-                         "    'cdoc'\n"
-                         "    pass")
+        self.assertEqual(
+            class_def_block.code,
+            "class C(object, metaclass=type):\n    'cdoc'\n    pass",
+        )
         self.assertEqual(class_def_block.docstring, "cdoc")
         self.assertTrue(bool(class_def_block.code_hash))

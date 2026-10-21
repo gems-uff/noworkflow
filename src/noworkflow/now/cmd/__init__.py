@@ -3,42 +3,48 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Commands and argument parsers for 'now'"""
-from __future__ import (absolute_import, print_function,
-                        division)
+
+from __future__ import absolute_import, division, print_function
 
 import argparse
 import sys
+
 import sqlalchemy
 
-from .command import Command, SmartFormatter
-from .cmd_run import Run
-from .cmd_debug import Debug
-from .cmd_import import Import
-from .cmd_push import Push
-from .cmd_pull import Pull
-from .cmd_list import List
-from .cmd_show import Show
-from .cmd_diff import Diff
-from .cmd_export import Export
-from .cmd_restore import Restore
-from .cmd_vis import Vis
-from .cmd_demo import Demo
-from .cmd_history import History
-from .cmd_schema import Schema
-from .cmd_kernel import Kernel
-from .cmd_gc import GC
-from .cmd_evaluation import Evaluation
+from ..utils.io import print_error
 from .cmd_clean import Clean
-from ..utils.io import print_msg
+from .cmd_debug import Debug
+from .cmd_demo import Demo
+from .cmd_diff import Diff
+from .cmd_evaluation import Evaluation
+from .cmd_export import Export
+from .cmd_gc import GC
+from .cmd_history import History
+from .cmd_import import Import
+from .cmd_kernel import Kernel
+from .cmd_list import List
+from .cmd_pull import Pull
+from .cmd_push import Push
+from .cmd_restore import Restore
+from .cmd_run import Run
+from .cmd_schema import Schema
+from .cmd_show import Show
+from .cmd_vis import Vis
+from .command import Command, SmartFormatter
 
 
-def main():
-    """Main function"""
+def build_parser():
+    """Build the parser of ``now``, with the parser of every command"""
     from ..utils.functions import version
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=SmartFormatter, usage="")
-    parser.add_argument("-v", "--version", action="version",
-                        version="noWorkflow {}".format(version()))
+
+    # prog: the usage lines and the errors say `now`, however it was started
+    # (the console script, `python -m noworkflow`).
+    parser = argparse.ArgumentParser(
+        prog="now", description=__doc__, formatter_class=SmartFormatter, usage=""
+    )
+    parser.add_argument(
+        "-v", "--version", action="version", version="noWorkflow {}".format(version())
+    )
     subparsers = parser.add_subparsers(metavar="")
     commands = [
         Run(),
@@ -62,37 +68,55 @@ def main():
     ]
     for cmd in commands:
         cmd.create_parser(subparsers)
+    return parser
 
-    if len(sys.argv) == 1:
-        sys.argv.append("-h")
 
+def main(argv=None):
+    """Run ``now`` with ``argv`` (``sys.argv[1:]`` by default); return its
+    exit status
+
+    A usage error exits with 2 through argparse. A command reports a
+    failure it foresaw by raising ``RuntimeError``: the message goes to
+    stderr and the status is 1. A command may return a status of its own
+    (``now run`` returns the script's).
+    """
+    parser = build_parser()
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if not argv:
+        argv = ["-h"]
+    args = parser.parse_args(argv)
     try:
-        args, _ = parser.parse_known_args()
-        args.func(args)
+        status = args.func(args)
     except RuntimeError as exc:
-        print_msg(exc, True)
-    except sqlalchemy.exc.OperationalError as exc:
-        print_msg("invalid noWorkflow database", True)
-        print_msg("it is probably outdated", True)
+        print_error(exc)
+        return 1
+    except sqlalchemy.exc.OperationalError:
+        print_error("invalid noWorkflow database")
+        print_error("it is probably outdated")
+        return 1
+    return 0 if status is None else status
 
 
 __all__ = [
     "Command",
-    "Run",
+    "Clean",
     "Debug",
-    "List",
-    "Show",
-    "Diff",
-    "Export",
-    "Restore",
-    "Vis",
     "Demo",
-    "History",
-    "Prospective",
-    "Kernel",
+    "Diff",
+    "Evaluation",
+    "Export",
     "GC",
-    "main",
-    "Push",
-    "Pull",
+    "History",
     "Import",
+    "Kernel",
+    "List",
+    "Pull",
+    "Push",
+    "Restore",
+    "Run",
+    "Schema",
+    "Show",
+    "Vis",
+    "build_parser",
+    "main",
 ]

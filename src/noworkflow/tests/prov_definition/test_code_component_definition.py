@@ -3,9 +3,8 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Test Code Block collection"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ..collection_testcase import CollectionTestCase
 
@@ -15,9 +14,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
 
     def test_assign_to_name(self):
         """Test assign to name"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "# other")
+        self.script("# script.py\na = 2\n# other")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -32,10 +29,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
 
     def test_assign_name_to_name(self):
         """Test assign to name"""
-        self.script("# script.py\n"
-                    "a = 2\n"
-                    "b = a\n"
-                    "# other")
+        self.script("# script.py\na = 2\nb = a\n# other")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -60,9 +54,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
 
     def test_dict_definition(self):
         """Test dict definition"""
-        self.script("# script.py\n"
-                    "x = {'a': 1, 'b': 2}\n"
-                    "# other")
+        self.script("# script.py\nx = {'a': 1, 'b': 2}\n# other")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -96,9 +88,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
 
     def test_list_definition(self):
         """Test list definition"""
-        self.script("# script.py\n"
-                    "x = [1, 2]\n"
-                    "# other")
+        self.script("# script.py\nx = [1, 2]\n# other")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -132,9 +122,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
 
     def test_tuple_definition(self):
         """Test tuple definition"""
-        self.script("# script.py\n"
-                    "x = (1, 2)\n"
-                    "# other")
+        self.script("# script.py\nx = (1, 2)\n# other")
         self.compile()
 
         script = self.find_code_component(name="script.py")
@@ -168,9 +156,7 @@ class TestCodeComponentDefinition(CollectionTestCase):
 
     def test_set_definition(self):
         """Test set definition"""
-        self.script("# script.py\n"
-                    "x = {1, 2}\n"
-                    "# other")
+        self.script("# script.py\nx = {1, 2}\n# other")
         self.compile()
 
         script = self.find_code_component(name="script.py")

@@ -3,24 +3,30 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'now restore' command"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 import os
 import sys
 import time
-
 from datetime import datetime
+
 from future.utils import viewitems
 
 from ..collection.metadata import Metascript
-from ..persistence.models import Trial, Module, FileAccess, Tag
-from ..persistence.models import CodeComponent, CodeBlock, Argument
-from ..persistence import persistence_config, content
-from ..utils.io import print_msg
-from ..utils.cross_version import PY34, PY35, PY2
-
+from ..persistence import content, persistence_config
+from ..persistence.models import (
+    Argument,
+    CodeBlock,
+    CodeComponent,
+    FileAccess,
+    Module,
+    Tag,
+    Trial,
+)
+from ..utils.cross_version import PY2, PY34, PY35
+from ..utils.io import print_error, print_msg
 from .command import Command
 
 
@@ -30,33 +36,40 @@ class Restore(Command):
     def __init__(self, *args, **kwargs):
         super(Restore, self).__init__(*args, **kwargs)
         self.print_msg = True
+        # Set when a file that was asked for could not be restored; the
+        # command goes on with the others and exits with 1 at the end.
+        self.failed = False
 
     def add_arguments(self):
         add_arg = self.add_argument
-        add_arg("trial", type=str, nargs="?",
-                help="trial id or none for last trial")
-        add_arg("--dir", type=str,
-                help="set project path where is the database. Default to "
-                     "current directory")
-        add_arg("-s", "--skip-script", action="store_true",
-                help="skip main script")
-        add_arg("-l", "--skip-local", action="store_true",
-                help="skip local modules")
-        add_arg("-a", "--skip-access", action="store_true",
-                help="skip file access")
+        add_arg("trial", type=str, nargs="?", help="trial id or none for last trial")
+        add_arg(
+            "--dir",
+            type=str,
+            help="set project path where is the database. Default to current directory",
+        )
+        add_arg("-s", "--skip-script", action="store_true", help="skip main script")
+        add_arg("-l", "--skip-local", action="store_true", help="skip local modules")
+        add_arg("-a", "--skip-access", action="store_true", help="skip file access")
 
-        add_arg("-f", "--file", nargs=argparse.REMAINDER,
-                type=str,
-                help="R|FORMAT: [-h] [-i ID] [-t TARGET] [path] \n"
-                     "Restore a file from trial. Without <ID>, it restores \n"
-                     "the first access to file. <ID> can be either the \n"
-                     "timestamp, the number of access, or the code hash \n"
-                     "<TARGET> specifies the target path (default to path)")
-        add_arg("--message", type=str, default=None,
-                help="add a message to the commit of the trial")
-        add_arg("--content-engine", type=str,
-                help="set the content database engine")
-
+        add_arg(
+            "-f",
+            "--file",
+            nargs=argparse.REMAINDER,
+            type=str,
+            help="R|FORMAT: [-h] [-i ID] [-t TARGET] [path] \n"
+            "Restore a file from trial. Without <ID>, it restores \n"
+            "the first access to file. <ID> can be either the \n"
+            "timestamp, the number of access, or the code hash \n"
+            "<TARGET> specifies the target path (default to path)",
+        )
+        add_arg(
+            "--message",
+            type=str,
+            default=None,
+            help="add a message to the commit of the trial",
+        )
+        add_arg("--content-engine", type=str, help="set the content database engine")
 
     def create_backup(self, metascript, files, args):
         """Create a backup trial"""
@@ -69,7 +82,6 @@ class Restore(Command):
         tid = metascript.trial_id
         metascript.create_arguments(args)
         metascript.arguments_store.add(tid, "restore", repr(old_id))
-
 
         for path, info in viewitems(files):
             if info["type"] == "script":
@@ -86,6 +98,7 @@ class Restore(Command):
                 try:
                     if PY35:
                         import importlib.util
+
                         spec = importlib.util.spec_from_file_location(
                             info["name"], path
                         )
@@ -93,11 +106,11 @@ class Restore(Command):
                         spec.loader.exec_module(module)
                     elif PY34:
                         from importlib.machinery import SourceFileLoader
-                        module = SourceFileLoader(
-                            info["name"], path
-                        ).load_module()
+
+                        module = SourceFileLoader(info["name"], path).load_module()
                     elif PY2:
                         import imp
+
                         module = imp.load_source(info["name"], path)
                     version = metascript.deployment.get_version(module)
                 except Exception:
@@ -112,7 +125,6 @@ class Restore(Command):
                 access.content_hash_after = info["code_hash"]
                 access.mode = "a+"
 
-
         partial = True
         Trial.fast_update(tid, metascript.main_id, datetime.now(), "backup")
         CodeComponent.store(metascript.code_components_store, partial)
@@ -122,11 +134,14 @@ class Restore(Command):
         Argument.store(arguments, partial)
         metascript.definition.store_provenance()
 
-        Tag.create_automatic_tag(tid, None, None, None, metascript.trial.experiment_id, True) # Adds a X.0.0 tag to the backup trial
+        Tag.create_automatic_tag(
+            tid, None, None, None, metascript.trial.experiment_id, True
+        )  # Adds a X.0.0 tag to the backup trial
 
-        print_msg("Backup Trial {} created".format(metascript.trial_id),
-                  self.print_msg)
-        content.commit_content(metascript.message or "Backup Trial {}".format(metascript.trial_id))
+        print_msg("Backup Trial {} created".format(metascript.trial_id), self.print_msg)
+        content.commit_content(
+            metascript.message or "Backup Trial {}".format(metascript.trial_id)
+        )
 
     def restore(self, path, code_hash, trial_id, mode="normal"):
         """Restore file with <code_hash> from <trial_id>"""
@@ -158,7 +173,8 @@ class Restore(Command):
                     msg += " from trial {}".format(trial_id)
                 msg += " due to {}. Skipping it".format(str(exc))
 
-                print_msg(msg, self.print_msg)
+                print_error(msg)
+                self.failed = True
                 return False
 
     def restore_script(self, trial):
@@ -184,6 +200,13 @@ class Restore(Command):
         return match, new_files
 
     def execute(self, args):
+        """Restore the trial, or one of its files with ``-f``
+
+        Returns 1 when something that was asked for was not restored (a
+        file version that does not exist, a file that could not be
+        written), 0 otherwise; a file that already has the content asked
+        for is nothing to do, not a failure.
+        """
         metascript = Metascript().read_restore_args(args)
         persistence_config.connect_existing(args.dir or os.getcwd())
         self.trial = trial = metascript.trial = Trial(trial_ref=args.trial)
@@ -201,40 +224,48 @@ class Restore(Command):
                 self.create_backup(metascript, new_files, args)
 
             for path, info in viewitems(restore_files):
-                self.restore(path, info["code_hash"], trial.id,
-                             mode=info["type"])
+                self.restore(path, info["code_hash"], trial.id, mode=info["type"])
 
             trial.create_head()
             content.close()
         else:
-            parser = argparse.ArgumentParser(prog="{} restore {} file".format(
-                os.path.basename(sys.argv[0]), trial.id))
+            parser = argparse.ArgumentParser(
+                prog="{} restore {} file".format(
+                    os.path.basename(sys.argv[0]), trial.id
+                )
+            )
             parser.add_argument("path", type=str)
             parser.add_argument(
-                "-i", "--id", default="1", type=str,
+                "-i",
+                "--id",
+                default="1",
+                type=str,
                 help="time ([X|]YYYY-MM-DD HH:MM:SS.ffffff), number of "
-                     "access or hash. The optional X in the time, indicates "
-                     "if we should get the content before of after the "
-                     "access: X = B means before the access, X = A means "
-                     "after. Example: 'A|2016-02-27 00:00' will query the "
-                     "file accessed at midnight, and get its content after "
-                     "the access")
+                "access or hash. The optional X in the time, indicates "
+                "if we should get the content before of after the "
+                "access: X = B means before the access, X = A means "
+                "after. Example: 'A|2016-02-27 00:00' will query the "
+                "file accessed at midnight, and get its content after "
+                "the access",
+            )
             parser.add_argument(
-                "-t", "--target", type=str,
-                help="target path (default to path)")
+                "-t", "--target", type=str, help="target path (default to path)"
+            )
 
             parsed = parser.parse_args(args.file)
 
             restore = self.find_file(args.trial, parsed.path, parsed.id)
             if not restore:
-                print_msg("File version not found!", self.print_msg)
+                print_error("File version not found!")
+                self.failed = True
             else:
                 path = parsed.target or parsed.path
                 if not self.restore(path, restore[1], None):
                     print_msg("File has not changed!", self.print_msg)
             content.close()
+        return 1 if self.failed else 0
 
-    def find_file(self, tid, path, fid):                                         # pylint: disable=no-self-use
+    def find_file(self, tid, path, fid):  # pylint: disable=no-self-use
         """Find file according to timestamp, code_hash, and number of access"""
         if sys.version_info < (3, 0):
             if tid:

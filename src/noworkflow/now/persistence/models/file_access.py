@@ -3,22 +3,32 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """File Access Model"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-
 from datetime import timedelta
-from sqlalchemy import Column, Integer, String, Text, Float
-from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint
 
-from ...utils.prolog import PrologDescription, PrologTrial, PrologAttribute
-from ...utils.prolog import PrologRepr, PrologTimestamp, PrologNullable
-from ...utils.prolog import PrologNullableRepr
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    Text,
+)
 
+from ...utils.prolog import (
+    PrologAttribute,
+    PrologDescription,
+    PrologNullable,
+    PrologNullableRepr,
+    PrologRepr,
+    PrologTrial,
+)
 from .. import relational
-
-from .base import AlchemyProxy, proxy_class, proxy
+from .base import AlchemyProxy, proxy, proxy_class
 
 
 @proxy_class
@@ -55,13 +65,15 @@ class FileAccess(AlchemyProxy):
     __tablename__ = "file_access"
     __table_args__ = (
         PrimaryKeyConstraint("trial_id", "id"),
-        ForeignKeyConstraint(["trial_id", "activation_id"],
-                             ["activation.trial_id",
-                              "activation.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["trial_id", "activation_id"],
+            ["activation.trial_id", "activation.id"],
+            ondelete="CASCADE",
+        ),
         ForeignKeyConstraint(["trial_id"], ["trial.id"], ondelete="CASCADE"),
     )
     trial_id = Column(String, index=True)
-    id = Column(Integer, index=True)                                             # pylint: disable=invalid-name
+    id = Column(Integer, index=True)  # pylint: disable=invalid-name
     name = Column(Text)
     mode = Column(Text)
     buffering = Column(Text)
@@ -74,25 +86,29 @@ class FileAccess(AlchemyProxy):
     #   activation: 1 Activation
     #   trial: 1 Trial
 
-    prolog_description = PrologDescription("access", (
-        PrologTrial("trial_id", link="activation.trial_id"),
-        PrologAttribute("id", fn=lambda obj: "f{}".format(obj.id)),
-        PrologRepr("name"),
-        PrologRepr("mode"),
-        PrologNullableRepr("content_hash_before"),
-        PrologNullableRepr("content_hash_after"),
-        PrologAttribute("checkpoint"),
-        PrologNullable("activation_id", link="activation.id"),
-    ), description=(
-        "informs that in a given trial (*TrialId*),\n"
-        "a file *Id* with *Name*\n"
-        "was accessed in a specific read or write *Mode*\n"
-        "The content of the file\n"
-        "was captured before (*ContentHashBefore*)\n"
-        "and after (*ContentHashAfter*) the access."
-        "The file was accessed at a specific *Checkpoint*\n"
-        "by a function activation (*ActivationId*)."
-    ))
+    prolog_description = PrologDescription(
+        "access",
+        (
+            PrologTrial("trial_id", link="activation.trial_id"),
+            PrologAttribute("id", fn=lambda obj: "f{}".format(obj.id)),
+            PrologRepr("name"),
+            PrologRepr("mode"),
+            PrologNullableRepr("content_hash_before"),
+            PrologNullableRepr("content_hash_after"),
+            PrologAttribute("checkpoint"),
+            PrologNullable("activation_id", link="activation.id"),
+        ),
+        description=(
+            "informs that in a given trial (*TrialId*),\n"
+            "a file *Id* with *Name*\n"
+            "was accessed in a specific read or write *Mode*\n"
+            "The content of the file\n"
+            "was captured before (*ContentHashBefore*)\n"
+            "and after (*ContentHashAfter*) the access."
+            "The file was accessed at a specific *Checkpoint*\n"
+            "by a function activation (*ActivationId*)."
+        ),
+    )
 
     @property
     def timestamp(self):
@@ -183,8 +199,8 @@ class FileAccess(AlchemyProxy):
         >>> from noworkflow.tests.helpers.models import AccessConfig
         >>> from noworkflow.now.persistence.models import Activation
         >>> access_config = AccessConfig(
-        ...     read_file="a.txt", read_hash="ab", write_file="/x/b.txt",
-        ...     write_hash_before=None)
+        ...     read_file="a.txt", read_hash="ab",
+        ...     write_file=os.path.abspath("/x/b.txt"), write_hash_before=None)
         >>> trial_id = new_trial(TrialConfig("finished"),
         ...                      access=access_config, erase=True)
 
@@ -192,14 +208,12 @@ class FileAccess(AlchemyProxy):
         >>> FileAccess((trial_id, access_config.r_access.id)).is_internal
         True
 
-        Indicate new files:
+        Indicate files outside the trial path (absolute paths, which on
+        Windows carry a drive):
         >>> FileAccess((trial_id, access_config.w_access.id)).is_internal
         False
         """
-        return (
-            (not os.path.isabs(self.name)) or
-            self.trial.path in self.name
-        )
+        return (not os.path.isabs(self.name)) or self.trial.path in self.name
 
     @classmethod  # query
     def find_by_name_and_time(cls, name, timestamp, trial=None, session=None):
@@ -247,9 +261,12 @@ class FileAccess(AlchemyProxy):
         query = (
             session.query(model)
             .filter(
-                (model.name == name)
-                # &(model.checkpoint.like(checkpoint + "%"))
-            ).order_by(model.checkpoint)
+                (
+                    model.name == name
+                    # &(model.checkpoint.like(checkpoint + "%"))
+                )
+            )
+            .order_by(model.checkpoint)
         )
         if trial:
             query = query.filter(model.trial_id == trial)
@@ -260,8 +277,7 @@ class FileAccess(AlchemyProxy):
         return None
 
     def __key(self):
-        return (self.name, self.content_hash_before, self.content_hash_after,
-                self.mode)
+        return (self.name, self.content_hash_before, self.content_hash_after, self.mode)
 
     def __hash__(self):
         return hash(self.__key())
@@ -269,9 +285,8 @@ class FileAccess(AlchemyProxy):
     def __eq__(self, other):
         if not isinstance(other, FileAccess):
             return False
-        return (
-            (self.content_hash_before == other.content_hash_before)
-            and (self.content_hash_after == other.content_hash_after)
+        return (self.content_hash_before == other.content_hash_before) and (
+            self.content_hash_after == other.content_hash_after
         )
 
     def show(self, print_=print):
@@ -318,7 +333,6 @@ class FileAccess(AlchemyProxy):
         result += """Function: {f.stack}\
             """
         print_(result.format(f=self))
-
 
 
 class UniqueFileAccess(FileAccess):

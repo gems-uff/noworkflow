@@ -3,8 +3,8 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Diff Object"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import OrderedDict
 
@@ -63,26 +63,27 @@ class Diff(Model):
 
     @property
     def trial(self):
-        """Return a tuple with information from both trials """
-        extra = ("start", "finish", "duration_text","code_hash")
+        """Return a tuple with information from both trials"""
+        extra = ("start", "finish", "duration_text", "code_hash")
         ignore = ("id",)
         return diff_dict(
-            self.trial1.to_dict(ignore=ignore, extra=extra),                     # pylint: disable=no-member
-            self.trial2.to_dict(ignore=ignore, extra=extra))                     # pylint: disable=no-member
+            self.trial1.to_dict(ignore=ignore, extra=extra),  # pylint: disable=no-member
+            self.trial2.to_dict(ignore=ignore, extra=extra),
+        )  # pylint: disable=no-member
 
     @property
     def modules(self):
         """Diff modules from trials"""
         return diff_set(
-            set(proxy_gen(self.trial1.modules)),
-            set(proxy_gen(self.trial2.modules)))
+            set(proxy_gen(self.trial1.modules)), set(proxy_gen(self.trial2.modules))
+        )
 
     @property
     def environment(self):
         """Diff environment variables"""
         return diff_set(
-            set(self.trial1.environment_attrs),
-            set(self.trial2.environment_attrs))
+            set(self.trial1.environment_attrs), set(self.trial2.environment_attrs)
+        )
 
     @property
     def file_accesses(self):
@@ -90,7 +91,8 @@ class Diff(Model):
         return diff_set(
             set(self.trial1.file_accesses),
             set(self.trial2.file_accesses),
-            create_replaced=True)
+            create_replaced=True,
+        )
 
     def _ipython_display_(self):
         """Display history graph"""
@@ -98,12 +100,8 @@ class Diff(Model):
             # pylint: disable=protected-access
             return self.graph._ipython_display_()
         from IPython.display import display
-        display({
-            'text/plain': 'Diff {}:{}'.format(
-                self.trial1.id,
-                self.trial2.id
-            )
-        })
+
+        display({"text/plain": "Diff {}:{}".format(self.trial1.id, self.trial2.id)})
 
 
 def diff_dict(before, after):
@@ -138,7 +136,7 @@ def diff_set(before, after, create_replaced=True):
         if element_removed and create_replaced:
             replaced.add((element_removed, element_added))
     if create_replaced:
-        for (element_removed, element_added) in replaced:
+        for element_removed, element_added in replaced:
             removed.discard(element_removed)
             added.discard(element_added)
 

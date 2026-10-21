@@ -1,11 +1,10 @@
-import io
 import codecs
-import os
-import builtins
 import hashlib
+import io
+import os
 
-from contextlib import contextmanager
 from . import safeopen
+
 
 class ContentDatabaseEngine(object):
     def __init__(self, config):
@@ -25,7 +24,8 @@ class ContentDatabaseEngine(object):
 
         def put(content=None, filename="generic"):
             """Mock put"""
-            hash_code = hashlib.sha1(content).hexdigest()
+            # Only the tests mock the store; the id copies the plain engine's
+            hash_code = hashlib.sha1(content, usedforsecurity=False).hexdigest()
             self.temp[hash_code] = content
             return hash_code
 

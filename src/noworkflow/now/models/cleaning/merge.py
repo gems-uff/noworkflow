@@ -3,7 +3,7 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Functions for merging notebooks"""
-import nbformat as nbf
+
 from collections import OrderedDict
 
 
@@ -18,8 +18,9 @@ def lcs(lis1, lis2, equals=lambda x, y: x == y):
             if equals(element1, element2):
                 lengths[in1 + 1][in2 + 1] = lengths[in1][in2] + 1
             else:
-                lengths[in1 + 1][in2 + 1] = \
-                    max(lengths[in1 + 1][in2], lengths[in1][in2 + 1])
+                lengths[in1 + 1][in2 + 1] = max(
+                    lengths[in1 + 1][in2], lengths[in1][in2 + 1]
+                )
     # read the substring out from the matrix
     matches1, matches2 = OrderedDict(), OrderedDict()
     len1, len2 = len(lis1), len(lis2)
@@ -38,6 +39,7 @@ def lcs(lis1, lis2, equals=lambda x, y: x == y):
 
 class Hashable(dict):
     """Hashable dict"""
+
     def __key(self):
         return tuple(sorted(self.items()))
 
@@ -48,18 +50,11 @@ class Hashable(dict):
 def create_hashable(element):
     """Create hashable object recursively"""
     if isinstance(element, dict):
-        return Hashable({
-            k: create_hashable(v)
-            for k, v in element.items()
-        })
+        return Hashable({k: create_hashable(v) for k, v in element.items()})
     if isinstance(element, (list, tuple)):
-        return tuple(
-            create_hashable(x) for x in element
-        )
+        return tuple(create_hashable(x) for x in element)
     if isinstance(element, set):
-        return frozenset(
-            create_hashable(x) for x in element
-        )
+        return frozenset(create_hashable(x) for x in element)
     return element
 
 
@@ -69,9 +64,10 @@ def next_position(new_result, cell_matches, side, old_pointer=-1):
         match = cell_matches[pointer]
         if isinstance(match[side], int):
             return pointer, match[side]
-        elif match[side] != float('inf'):
+        elif match[side] != float("inf"):
             new_result.append(match)
-    return len(cell_matches), float('inf')
+    return len(cell_matches), float("inf")
+
 
 def partial_merge(cell_matches, base_cells, side, restriction=None):
     """Merge cells from base_cells into cell_matches"""
@@ -85,8 +81,7 @@ def partial_merge(cell_matches, base_cells, side, restriction=None):
             new_result.append(tuple(new_value))
         if i == index:
             new_result.append(cell_matches[pointer])
-            pointer, index = next_position(
-                new_result, cell_matches, side, pointer)
+            pointer, index = next_position(new_result, cell_matches, side, pointer)
         if i > index:
             raise Exception("Invalid index?")
     next_position(new_result, cell_matches, side, pointer)
@@ -95,38 +90,52 @@ def partial_merge(cell_matches, base_cells, side, restriction=None):
 
 def equal_code_cells(ocode_cell, hcode_cell):
     """Compares source of jupyter cells if they both are code cells"""
-    if ocode_cell['cell_type'] != "code":
-        return False 
-    if hcode_cell['cell_type'] != "code":
+    if ocode_cell["cell_type"] != "code":
+        return False
+    if hcode_cell["cell_type"] != "code":
         return False
     return ocode_cell["source"].strip() == hcode_cell["source"].strip()
-    
 
-def merge_json(original, history, before=None, after=None, original_first=True, merge_code=False):
+
+def merge_json(
+    original, history, before=None, after=None, original_first=True, merge_code=False
+):
     """Merge notebooks"""
+    # Here, not at the top: `now diff` imports lcs, and every `now` imports
+    # every command (#426).
+    import nbformat as nbf
+
     cells = before or []
     original_cells = [create_hashable(cell) for cell in original["cells"]]
     history_cells = [create_hashable(cell) for cell in history["cells"]]
     _, matches2 = lcs(original_cells, history_cells, equal_code_cells)
     cell_matches = list(reversed(matches2.items()))
-    cell_matches.append((float('inf'), float('inf')))
+    cell_matches.append((float("inf"), float("inf")))
     if original_first:
         first_merge = partial_merge(
-            cell_matches, original_cells, 1,
-            restriction=lambda cell: merge_code or cell["cell_type"] != "code"
+            cell_matches,
+            original_cells,
+            1,
+            restriction=lambda cell: merge_code or cell["cell_type"] != "code",
         )
-        first_merge.append((float('inf'), float('inf')))
+        first_merge.append((float("inf"), float("inf")))
         final_merge = partial_merge(
-            first_merge, history_cells, 0,
+            first_merge,
+            history_cells,
+            0,
         )
     else:
         first_merge = partial_merge(
-            cell_matches, history_cells, 0,
+            cell_matches,
+            history_cells,
+            0,
         )
-        first_merge.append((float('inf'), float('inf')))
+        first_merge.append((float("inf"), float("inf")))
         final_merge = partial_merge(
-            first_merge, original_cells, 1,
-            restriction=lambda cell: merge_code or cell["cell_type"] != "code"
+            first_merge,
+            original_cells,
+            1,
+            restriction=lambda cell: merge_code or cell["cell_type"] != "code",
         )
     for hindex, oindex in final_merge:
         if hindex is None:
@@ -134,7 +143,7 @@ def merge_json(original, history, before=None, after=None, original_first=True, 
         else:
             # Use history cell even if there are matching cells
             cells.append(history["cells"][hindex])
-    
+
     if after:
         cells.extend(after)
 

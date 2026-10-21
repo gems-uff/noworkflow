@@ -3,20 +3,16 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Trial Graph Module"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import weakref
-
 from collections import defaultdict
 
 from future.utils import viewitems
 
 from ...utils.data import DotDict
-
-from .structures import prepare_cache
-from .structures import Graph
-
+from .structures import Graph, prepare_cache
 
 Node = DotDict  # pylint: disable=invalid-name
 
@@ -49,32 +45,36 @@ class Summarization(object):
         for node in self.nodes:
             for trial_id, duration in viewitems(node.duration):
                 min_duration[trial_id] = min(
-                    min_duration.get(trial_id, float('inf')), duration)
+                    min_duration.get(trial_id, float("inf")), duration
+                )
                 max_duration[trial_id] = max(
-                    max_duration.get(trial_id, float('-inf')), duration)
+                    max_duration.get(trial_id, float("-inf")), duration
+                )
                 trials.add(trial_id)
         for source_nid, targets in viewitems(self.edges):
             for target_nid, types in viewitems(targets):
                 for type_, count in viewitems(types):
-                    edges.append({
-                        'count': count,
-                        'source': source_nid,
-                        'target': target_nid,
-                        'type': type_,
-                    })
+                    edges.append(
+                        {
+                            "count": count,
+                            "source": source_nid,
+                            "target": target_nid,
+                            "type": type_,
+                        }
+                    )
         tlist = list(trials)
         if not tlist:
             tlist.append(0)
         return {
-            'root': self.root,
-            'edges': edges,
-            'min_duration': min_duration,
-            'max_duration': max_duration,
-            'colors': colors,
-            'trial1': tlist[0],
-            'trial2': tlist[-1],
-            'width': width,
-            'height': height,
+            "root": self.root,
+            "edges": edges,
+            "min_duration": min_duration,
+            "max_duration": max_duration,
+            "colors": colors,
+            "trial1": tlist[0],
+            "trial2": tlist[-1],
+            "width": width,
+            "height": height,
         }
 
     def merge(self, node, activation):
@@ -132,7 +132,7 @@ class Summarization(object):
         Insert node and create initial edge
         """
         self.root = node = self.insert_node(call, None)
-        self.add_edge(node, node, 'initial')
+        self.add_edge(node, node, "initial")
         return node
 
     def insert_call(self, call, last):
@@ -141,12 +141,12 @@ class Summarization(object):
         Insert node, create match, and create call edge
         """
         self.stack.append(last)
-        
+
         match = self.calculate_match(call)
         node = self.matches[last.index].get(match)
         if node is None:
             node = self.insert_node(call, last, match)
-            self.add_edge(last, node, 'call')
+            self.add_edge(last, node, "call")
         else:
             self.merge(node, call)
             node.caller_id = max(node.caller_id, call.caller_id)
@@ -159,7 +159,7 @@ class Summarization(object):
         """
         temp = self.stack.pop()
         if not last.has_return:
-            self.add_edge(last, temp, 'return')
+            self.add_edge(last, temp, "return")
             last.has_return = True
         return temp
 
@@ -176,7 +176,7 @@ class Summarization(object):
         else:
             self.merge(node, call)
             node.caller_id = max(node.caller_id, call.caller_id)
-        self.add_edge(last, node, 'sequence')
+        self.add_edge(last, node, "sequence")
         return node
 
     def __call__(self, preorder):
@@ -203,6 +203,7 @@ class Summarization(object):
 
 class LineNameSummarization(Summarization):
     """Summarize Activations by line and name"""
+
     # ToDo: Diff equivalent
 
     def merge(self, node, activation):
@@ -224,6 +225,7 @@ class LineNameSummarization(Summarization):
 
 class NoMatchSummarization(LineNameSummarization):
     """Create repr for all nodes. Does not summarize tree"""
+
     # ToDo: Diff equivalent
 
     def __init__(self, preorder):
@@ -237,10 +239,8 @@ class NoMatchSummarization(LineNameSummarization):
 
     def insert_node(self, activation, parent, match=None):
         """Insert node. Create base repr"""
-        node = super(NoMatchSummarization, self).insert_node(
-            activation, parent, match
-        )
-        node.repr = '{0.line}-{0.name}'.format(activation)
+        node = super(NoMatchSummarization, self).insert_node(activation, parent, match)
+        node.repr = "{0.line}-{0.name}".format(activation)
         return node
 
     def insert_call(self, call, last):
@@ -295,7 +295,7 @@ class TreeSummarization(NoMatchSummarization):
         while stack:
             current = stack.pop()
             for index, child in enumerate(current.children):
-                self.add_edge(current, child, 'call', index)
+                self.add_edge(current, child, "call", index)
                 stack.append(child)
         return result
 
@@ -318,14 +318,16 @@ class DefinitionSummarization(LineNameSummarization):
     def __call__(self, preorder):
         relationship = self.compositions
         for node in preorder:
-            if node.type == 'script':
+            if node.type == "script":
                 self.root = self.insert_node(node, None)
                 continue
-            elif node.type != 'syntax':
+            elif node.type != "syntax":
                 for relation in relationship:
                     if node.id == relation.part_id:
                         find = next(
-                            (n for n in self.nodes if n.node_id == relation.whole_id), None)
+                            (n for n in self.nodes if n.node_id == relation.whole_id),
+                            None,
+                        )
                         self.insert_node(node, find)
                         relationship.remove(relation)
                         break
@@ -333,7 +335,7 @@ class DefinitionSummarization(LineNameSummarization):
         while stack:
             current = stack.pop()
             for index, child in enumerate(current.children):
-                self.add_edge(current, child, 'call', index)
+                self.add_edge(current, child, "call", index)
                 stack.append(child)
         return self
 
@@ -354,18 +356,57 @@ class DefinitionSummarization(LineNameSummarization):
             has_return=False,
         )
 
-        if code_component.type in {'list', 'tuple', 'dict', 'set', 'expr',
-                                     'for', 'while' 'if', 'with', 'uadd', 'usub',
-                                     'not', 'invert', 'and', 'or' 'add', 'sub',
-                                     'mult', 'matmult', 'div', 'mod', 'pow', 'lshift',
-                                     'rshift', 'bitor', 'bitxor', 'bitand', 'floordiv',
-                                     'lambda_def', 'return', 'yield', 'yield_from',
-                                     any(t in ['eq', 'noteq', 'lt', 'lte', 'gt', 'gte', 'is', 'isnot',
-                                         'in', 'notin'] for t in code_component.type.split('.'))
-                                     }:
+        if code_component.type in {
+            "list",
+            "tuple",
+            "dict",
+            "set",
+            "expr",
+            "for",
+            "whileif",
+            "with",
+            "uadd",
+            "usub",
+            "not",
+            "invert",
+            "and",
+            "oradd",
+            "sub",
+            "mult",
+            "matmult",
+            "div",
+            "mod",
+            "pow",
+            "lshift",
+            "rshift",
+            "bitor",
+            "bitxor",
+            "bitand",
+            "floordiv",
+            "lambda_def",
+            "return",
+            "yield",
+            "yield_from",
+            any(
+                t
+                in [
+                    "eq",
+                    "noteq",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                    "is",
+                    "isnot",
+                    "in",
+                    "notin",
+                ]
+                for t in code_component.type.split(".")
+            ),
+        }:
             node.name = code_component.type + " <br> ‎"
-        elif code_component.type == 'attribute':
-            node.name = code_component.name.split('.')[1]
+        elif code_component.type == "attribute":
+            node.name = code_component.name.split(".")[1]
 
         trial_id = code_component.trial_id
         if trial_id not in node.trial_ids:
@@ -387,13 +428,14 @@ class DefinitionSummarization(LineNameSummarization):
         return node
 
 
-cache = prepare_cache(                                                           # pylint: disable=invalid-name
-    lambda self, *args, **kwargs: "trial {}".format(self.trial.id))
+cache = prepare_cache(  # pylint: disable=invalid-name
+    lambda self, *args, **kwargs: "trial {}".format(self.trial.id)
+)
 
 
 class TrialGraph(Graph):
     """Trial Graph Class
-       Present trial graph on Jupyter"""
+    Present trial graph on Jupyter"""
 
     def __init__(self, trial):
         self.trial = weakref.proxy(trial)
@@ -407,14 +449,16 @@ class TrialGraph(Graph):
             1: self.no_match,
             2: self.exact_match,
             3: self.namespace_match,
-            4: self.definition_tree
+            4: self.definition_tree,
         }
 
     def result(self, summarization):
         """Get summarization graph result"""
-        return self.trial.finished, summarization.graph(
-            {self.trial.id: 0}, self.width, self.height
-        ), summarization.nodes
+        return (
+            self.trial.finished,
+            summarization.graph({self.trial.id: 0}, self.width, self.height),
+            summarization.nodes,
+        )
 
     @cache("tree")
     def tree(self):
@@ -440,12 +484,19 @@ class TrialGraph(Graph):
     def definition_tree(self):
         """Convert tree structure into dict tree structure based from code_components"""
         from ...persistence.models.code_component import CodeComponent
-        return self.result(DefinitionSummarization(self.trial.code_components, CodeComponent.ast_compositions(self.trial.id)))
+
+        return self.result(
+            DefinitionSummarization(
+                self.trial.code_components,
+                CodeComponent.ast_compositions(self.trial.id),
+            )
+        )
 
     def _ipython_display_(self):
         from IPython.display import display
+
         bundle = {
-            'application/noworkflow.trial+json': self._modes[self.mode]()[1],
-            'text/plain': 'Trial {}'.format(self.trial.id),
+            "application/noworkflow.trial+json": self._modes[self.mode]()[1],
+            "text/plain": "Trial {}".format(self.trial.id),
         }
         display(bundle, raw=True)

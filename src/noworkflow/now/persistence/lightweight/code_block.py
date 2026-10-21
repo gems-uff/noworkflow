@@ -3,12 +3,11 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """Lightweight Code Block"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
 
-from ..models import CodeBlock
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from .. import content
-
+from ..models import CodeBlock
 from .base import BaseLW, define_attrs
 
 
@@ -22,14 +21,16 @@ class CodeBlockLW(BaseLW):
     nullable = set()
     model = CodeBlock
 
-    def __init__(self, id_, trial_id, code, binary, docstring, filename, code_hash=None):
+    def __init__(
+        self, id_, trial_id, code, binary, docstring, filename, code_hash=None
+    ):
         # pylint: disable=too-many-arguments
         self.trial_id = trial_id
         self.id = id_  # pylint: disable=invalid-name
         self.code = code
         bin_code = code if binary else code.encode("utf-8")
         if code_hash:
-            self.code_hash=code_hash
+            self.code_hash = code_hash
         else:
             self.code_hash = content.put(bin_code, filename)
 
@@ -44,9 +45,9 @@ class CodeBlockLW(BaseLW):
 
     def __json__(self):
         return {
-            'trial_id': self.trial_id,
-            'id': self.id,
-            'code': self.code,
-            'code_hash': self.code_hash,
-            'docstring': self.docstring
+            "trial_id": self.trial_id,
+            "id": self.id,
+            "code": self.code,
+            "code_hash": self.code_hash,
+            "docstring": self.docstring,
         }

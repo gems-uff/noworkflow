@@ -6,13 +6,15 @@
 # pylint: disable=invalid-name, redefined-builtin, redefined-outer-name
 # pylint: disable=no-value-for-parameter
 
-from ..machinery import prolog_rule, create_rule, var
+from ..machinery import create_rule, prolog_rule, var
 from ..models import code_component
-from .helpers import between, _bagof_append_sort
+from .helpers import _bagof_append_sort, between
 
 
 @prolog_rule("code_line_id(TrialId, Id, Line) :-")
-@prolog_rule("    code_component(TrialId, Id, _, _, _, FirstCharLine, _, LastCharLine, _, _),")
+@prolog_rule(
+    "    code_component(TrialId, Id, _, _, _, FirstCharLine, _, LastCharLine, _, _),"
+)
 @prolog_rule("    between(FirstCharLine, LastCharLine, Line).")
 @create_rule
 def code_line_id(trial_id, id, line, _binds):
@@ -21,11 +23,9 @@ def code_line_id(trial_id, id, line, _binds):
     Note: Line may match multiple lines
     """
     first, last = var("_first _last")
-    return (
-        code_component(trial_id, id, first_char_line=first,
-                       last_char_line=last) &
-        between(first, last, line)
-    )
+    return code_component(
+        trial_id, id, first_char_line=first, last_char_line=last
+    ) & between(first, last, line)
 
 
 @prolog_rule("map_code_lines_id(_, [], []).")
@@ -39,10 +39,10 @@ def map_code_lines_id(trial_id, ids, lines, _binds):
     """get the *Lines* of code components (*Ids*)
     in a given trial (*TrialId*).
     """
+
     @create_rule
     def code_line_query(id, first, last):
         """Query code_components between lines"""
-        return code_component(
-            trial_id, id, first_char_line=first, last_char_line=last
-        )
+        return code_component(trial_id, id, first_char_line=first, last_char_line=last)
+
     return _bagof_append_sort(code_line_query, ids, lines, _binds)

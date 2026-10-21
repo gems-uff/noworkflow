@@ -4,38 +4,46 @@
 # Please, consult the license terms in the LICENSE file.
 """Test clusterizer configuration"""
 
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
+import argparse
+
+from ...now.models.dependency_graph.clusterizer import (
+    ActivationClusterizer,
+    Clusterizer,
+    DependencyClusterizer,
+    ProspectiveClusterizer,
+    RetrospectiveClusterizer,
+)
 from ...now.models.dependency_graph.config import DependencyConfig
-from ...now.models.dependency_graph.clusterizer import Clusterizer
-from ...now.models.dependency_graph.clusterizer import ActivationClusterizer
-from ...now.models.dependency_graph.clusterizer import DependencyClusterizer
-from ...now.models.dependency_graph.clusterizer import RetrospectiveClusterizer
-from ...now.models.dependency_graph.clusterizer import ProspectiveClusterizer
-from ...now.models.dependency_graph.filters import FilterTypesOut
-from ...now.models.dependency_graph.filters import FilterAccessesOut
-from ...now.models.dependency_graph.filters import FilterExternalAccessesOut
-from ...now.models.dependency_graph.filters import FilterInternalsOut
-from ...now.models.dependency_graph.filters import AcceptAllNodesFilter
-from ...now.models.dependency_graph.filters import JoinedFilter
-from ...now.models.dependency_graph.synonymers import Synonymer
-from ...now.models.dependency_graph.synonymers import AccessNameSynonymer
-from ...now.models.dependency_graph.synonymers import SameSynonymer
-from ...now.models.dependency_graph.synonymers import ReferenceSynonymer
-from ...now.models.dependency_graph.synonymers import JoinedSynonymer
-
+from ...now.models.dependency_graph.filters import (
+    AcceptAllNodesFilter,
+    FilterAccessesOut,
+    FilterExternalAccessesOut,
+    FilterInternalsOut,
+    FilterTypesOut,
+    JoinedFilter,
+)
+from ...now.models.dependency_graph.synonymers import (
+    AccessNameSynonymer,
+    JoinedSynonymer,
+    ReferenceSynonymer,
+    SameSynonymer,
+    Synonymer,
+)
 from ..collection_testcase import CollectionTestCase
 
 
 class TrialMock(object):
     """Mock trial"""
+
     # pylint: disable=too-few-public-methods
     initial_activation = None
 
 
 class TestClusterizerConfig(CollectionTestCase):
     """Test Clusterizer Configuration"""
+
     # pylint: disable=missing-docstring
     # pylint: disable=invalid-name
     # pylint: disable=too-many-public-methods
@@ -100,7 +108,7 @@ class TestClusterizerConfig(CollectionTestCase):
         config.show_external_files = True
         self.assertEqual(
             FilterExternalAccessesOut,
-            type(config.filter([FilterExternalAccessesOut()]))
+            type(config.filter([FilterExternalAccessesOut()])),
         )
 
     def test_default_synonymer_combine_accesses(self):
@@ -134,48 +142,42 @@ class TestClusterizerConfig(CollectionTestCase):
         config = DependencyConfig()
         config.combine_accesses = False
         config.combine_assignments = False
-        self.assertEqual(
-            SameSynonymer,
-            type(config.synonymer([SameSynonymer()]))
-        )
+        self.assertEqual(SameSynonymer, type(config.synonymer([SameSynonymer()])))
+
+    def test_default_mode_is_fine_grain(self):
+        # trial.dot and the flow.pdf of the vis use DependencyConfig()
+        # without parsing arguments; the default must stay a mode that
+        # `now export dataflow -m` accepts.
+        config = DependencyConfig()
+        parser = argparse.ArgumentParser()
+        DependencyConfig.create_arguments(parser.add_argument)
+        self.assertEqual("fineGrain", config.mode)
+        self.assertEqual(config.mode, parser.parse_args(["-m", config.mode]).mode)
+        self.assertEqual(Clusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_fine_grain(self):
         config = DependencyConfig()
         config.mode = "fineGrain"
-        self.assertEqual(
-            Clusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
+        self.assertEqual(Clusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_activation(self):
         config = DependencyConfig()
         config.mode = "activation"
-        self.assertEqual(
-            ActivationClusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
+        self.assertEqual(ActivationClusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_all(self):
         config = DependencyConfig()
         config.mode = "all"
-        self.assertEqual(
-            DependencyClusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
+        self.assertEqual(DependencyClusterizer, type(config.clusterizer(TrialMock())))
 
     def test_mode_coarse_grain(self):
         config = DependencyConfig()
         config.mode = "coarseGrain"
         self.assertEqual(
-            RetrospectiveClusterizer,
-            type(config.clusterizer(TrialMock()))
+            RetrospectiveClusterizer, type(config.clusterizer(TrialMock()))
         )
-        
+
     def test_mode_loopless_coarse_grain(self):
         config = DependencyConfig()
         config.mode = "looplessCoarseGrain"
-        self.assertEqual(
-            ProspectiveClusterizer,
-            type(config.clusterizer(TrialMock()))
-        )
-
+        self.assertEqual(ProspectiveClusterizer, type(config.clusterizer(TrialMock())))

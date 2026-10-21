@@ -1,0 +1,85 @@
+name: Flaky tests (multi-trial)
+
+# Ten independent runs of the suite on the reference leg, each in its own
+# random order (pytest-randomly). A test that fails in some trials and not in
+# others depends on timing or on the order of the tests; the seed in each
+# trial's summary reproduces that order.
+on:
+  workflow_dispatch:
+
+# No job writes to the repository: only checkout, setup and artifact upload.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+# The CPython that uv downloads, never the runner's: see ci.yml.
+env:
+  UV_MANAGED_PYTHON: "1"
+
+jobs:
+  flaky-tests:
+    name: Trial ${{ matrix.trial }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        trial: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # The reference leg's Python: it moves with `reference` in ci.yml.
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.15"
+          enable-cache: true
+
+      # The packages of the `test` job in ci.yml: without swipl the patterns
+      # and Prolog-fact tests skip, without Graphviz the tests that run `dot`,
+      # and no trial would repeat them.
+      - name: Install SWI-Prolog and Graphviz
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz
+
+      # The tests of the vis in a browser depend on timing more than any
+      # other, so the trials run them too: Chrome as in the vis-browser job
+      # of ci.yml, with the `browser` group below.
+      - name: Install Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+        with:
+          install-dependencies: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group browser
+
+      - name: Run tests
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          NOW_BROWSER: require
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m "not golden and not paper and not engines" | tee "test-log-trial-${{ matrix.trial }}.log"
+
+      # The non-golden floor of ci.yml plus the vis-browser job's: these
+      # trials deselect the goldens, which only the reference leg compares,
+      # and the paper example and the optional content engines, which have
+      # jobs of their own.
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2960 \
+            "trial ${{ matrix.trial }}" \
+            'uv sync --locked --group browser --python 3.15 && NOW_BROWSER=require uv run --no-sync pytest -m "not golden and not paper and not engines"'
+
+      - name: Upload the log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-trial-${{ matrix.trial }}
+          path: test-log-trial-${{ matrix.trial }}.log

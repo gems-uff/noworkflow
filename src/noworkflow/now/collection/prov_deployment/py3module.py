@@ -7,23 +7,25 @@
 import inspect
 from functools import wraps
 from importlib.machinery import PathFinder, SourceFileLoader
-from importlib.abc import Loader
-from ...persistence import content
 from pathlib import Path
+
+from ...persistence import content
 
 
 def proxy(loader, name):
     attr = getattr(loader, name)
     if callable(attr):
+
         @wraps(attr)
         def wrapper(self, *args, **kwargs):
             return getattr(loader, name)(*args, **kwargs)
+
         return wrapper
-    
+
     @property
     def attribute(self):
         return getattr(loader, name)
-    
+
     @attribute.setter
     def attribute(self, new_value):
         setattr(loader, name, new_value)
@@ -31,8 +33,9 @@ def proxy(loader, name):
     @attribute.deleter
     def attribute(self):
         delattr(loader, name)
+
     return attribute
-    
+
 
 def find_file_in_path(path):
     while not path.is_file():
@@ -44,15 +47,15 @@ def find_file_in_path(path):
 
 def create_generic_loader(metascript, loader):
 
-    if hasattr(loader, 'exec_module'):  # new module format
-        class GenericLoader(type(loader)):
+    if hasattr(loader, "exec_module"):  # new module format
 
+        class GenericLoader(type(loader)):
             def __init__(self):
                 pass
 
             def __getattr__(self, attr):
                 return getattr(loader, attr)
-            
+
             def create_module(self, spec):
                 return loader.create_module(spec)
 
@@ -73,19 +76,19 @@ def create_generic_loader(metascript, loader):
                             source_path,
                             id_,
                             False,
-                            None
+                            None,
                         )
                     else:
                         loader.exec_module(module)
     else:
-        class GenericLoader(type(loader)):
 
+        class GenericLoader(type(loader)):
             def __init__(self):
                 pass
 
             def __getattr__(self, attr):
                 return getattr(loader, attr)
-            
+
             def load_module(self, fullname):
                 with content.use_safe_open():
                     module = loader.load_module(fullname)
@@ -110,16 +113,20 @@ def create_generic_loader(metascript, loader):
                                     module_path = str(module_file_path)
                             else:
                                 id_ = metascript.definition.create_code_block(
-                                    b"<noWorkflow: unable to load>", str(module_path), "module", True, False
+                                    b"<noWorkflow: unable to load>",
+                                    str(module_path),
+                                    "module",
+                                    True,
+                                    False,
                                 )[1]
-                        
+
                         metascript.deployment.add_module(
                             module.__name__,
                             metascript.deployment.get_version(module),
                             module_path,
                             id_,
                             False,
-                            fullpath
+                            fullpath,
                         )
                     return module
 
@@ -130,7 +137,6 @@ def create_generic_loader(metascript, loader):
 def create_source_loader(metascript, loader):
 
     class SourceLoader(type(loader)):
-
         def __init__(self):
             pass
 
@@ -151,8 +157,9 @@ def create_source_loader(metascript, loader):
                     code, id_, transformed = metascript.definition.collect(
                         None, source_path, "exec"
                     )
-                    exec(code, module.__dict__)
-                    create_module = True # Override bypass_modules
+                    # Runs, instrumented, the module that the script's import would run anyway
+                    exec(code, module.__dict__)  # nosec B102
+                    create_module = True  # Override bypass_modules
                 else:
                     if create_module:
                         transformed = False
@@ -169,11 +176,12 @@ def create_source_loader(metascript, loader):
                         source_path,
                         id_,
                         transformed,
-                        None
+                        None,
                     )
 
     instance = SourceLoader()
     return instance
+
 
 def finder(metascript):
     loaders = {}
@@ -188,19 +196,22 @@ def finder(metascript):
                 loader = spec.loader
                 if loader is not None:
                     if id(loader) not in loaders:
-                        if type(loader) == SourceFileLoader: 
+                        if type(loader) is SourceFileLoader:
                             # Playing safe here: instead of using isinstance, I'm checking the actual type
                             # I don't know if the noworkflow loader supports any subtype of SourceFileLoader
-                            loaders[id(loader)] = create_source_loader(metascript, loader)
+                            loaders[id(loader)] = create_source_loader(
+                                metascript, loader
+                            )
                         else:
-                            loaders[id(loader)] = create_generic_loader(metascript, loader)
+                            loaders[id(loader)] = create_generic_loader(
+                                metascript, loader
+                            )
                     spec.loader = loaders[id(loader)]
                 else:
                     # Namespace package, builtin module, or direct module execution
                     # ToDo: check if we check collect this type of module
                     pass
 
-
                 return spec
-            
+
     return Finder

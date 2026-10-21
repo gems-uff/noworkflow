@@ -3,8 +3,8 @@
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
 """'%now_ls_magic' magic"""
-from __future__ import (absolute_import, print_function,
-                        division, unicode_literals)
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from ...utils.formatter import PrettyLines
 from .command import IpythonCommandMagic
@@ -16,9 +16,11 @@ class NowLsMagic(IpythonCommandMagic):
     def execute(self, func, line, cell, magic_cls):
         cline, ccell = "%", "%%"
         magics = magic_cls.now_magics
-        out = ["Line magics:",
-               cline + ("  " + cline).join(sorted(magics["line"])),
-               "",
-               "Cell magics:",
-               ccell + ("  " + ccell).join(sorted(magics["cell"]))]
+        out = [
+            "Line magics:",
+            cline + ("  " + cline).join(sorted(magics["line"])),
+            "",
+            "Cell magics:",
+            ccell + ("  " + ccell).join(sorted(magics["cell"])),
+        ]
         return PrettyLines(out)
