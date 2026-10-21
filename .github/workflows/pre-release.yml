@@ -38,9 +38,9 @@ jobs:
         # turns UTF-8 mode on by default (PEP 686), so the Windows legs read
         # files differently below and from 3.15.
         include:
-          - { os: ubuntu-latest, min-tests: 2942, workers: 4 }
-          - { os: macos-latest, min-tests: 2942, workers: 3 }
-          - { os: windows-latest, min-tests: 2942, workers: 0, warn-encoding: "1" }
+          - { os: ubuntu-latest, min-tests: 2944, workers: 4 }
+          - { os: macos-latest, min-tests: 2944, workers: 3 }
+          - { os: windows-latest, min-tests: 2944, workers: 0, warn-encoding: "1" }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     env:
@@ -94,14 +94,14 @@ jobs:
       - name: Run tests
         run: |
           set -o pipefail
-          uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper and not browser" | tee pytest.log
+          uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper and not browser and not engines" | tee pytest.log
 
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" \
-            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper and not browser"'
+            'uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n ${{ matrix.workers }} -m "not golden and not paper and not browser and not engines"'
 
       # The suite runs `now` through `python -m noworkflow`; this runs the
       # installed console script from a plain directory, as in ci.yml.

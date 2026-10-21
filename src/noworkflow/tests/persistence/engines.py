@@ -8,9 +8,15 @@ says, independently of the engine, what its store holds: the directory
 ``connect`` creates under ``.noworkflow``, the hash the store format gives a
 content, how to read a stored content back without the engine (a file for
 plain, the test's own ``git`` for the git engines) and what ``get`` raises
-for a hash that was never put. The contract tests run over ``ENGINES``;
-#255 adds dulwich and pygit with one line each, and an engine whose module
-or binary is missing is skipped with a reason.
+for a hash that was never put, and the defects known in it. The contract
+tests run over ``ENGINES`` through ``contract``; an engine whose module or
+binary is missing is skipped with a reason.
+
+The optional engines (dulwich, pygit and gitdb, whose modules only the
+``engines`` dependency group installs) carry the ``engines`` mark: only the
+``engines`` job of CI syncs that group and runs them, and every other leg
+deselects them. With ``NOW_ENGINES=require``, as that job sets, a missing
+module fails the test instead of skipping it.
 
 Stores are connected through the product's route (``open_store``): a
 ``PersistenceConfig`` of the test's own, ``ContentDatabase(config)``, the
@@ -33,6 +39,7 @@ import pytest
 
 from ...now.persistence.config import PROVENANCE_DIRNAME, PersistenceConfig
 from ...now.persistence.content_database import ContentDatabase
+from ..helpers.defects import Defect, parametrize_known_defects
 
 # Every git the tests run themselves is bounded by this timeout (seconds).
 GIT_TIMEOUT = 30
@@ -58,6 +65,9 @@ WINDOWS_NOT_MEASURED = pytest.mark.skipif(
     reason="not measured on Windows: the git engines build "
     "tree paths with os.sep, and git gc goes through shell=True",
 )
+# NOW_ENGINES=require (the `engines` job of ci.yml) fails a test that would
+# skip because the module of its engine is missing.
+REQUIRE_ENGINES = os.environ.get("NOW_ENGINES") == "require"
 
 
 def sha1_hex(content):
@@ -172,7 +182,10 @@ class EngineSpec:
     bytes, read without the engine; ``stored_hashes(provenance)`` every
     content the store holds; ``missing_error`` what ``get`` raises for a hash
     never put. ``requires_binary`` and ``requires_module`` skip the engine
-    where they are missing; ``git`` marks a store that is a git repository.
+    where they are missing, and an engine with ``requires_module`` is one of
+    the optional engines; ``git`` marks a store that is a git repository.
+    ``defects`` pairs a clause of the contract (the label a contract test
+    names, ``contract``) with a ``Defect`` of this engine in it.
     """
 
     name: str
@@ -184,9 +197,19 @@ class EngineSpec:
     requires_binary: str = None
     requires_module: str = None
     git: bool = False
+    defects: tuple = ()
 
     def __str__(self):
         return self.name
+
+    def param(self):
+        """This engine as a ``pytest.param``, marked ``engines`` if optional"""
+        marks = [pytest.mark.engines] if self.requires_module else []
+        return pytest.param(self, id=self.name, marks=marks)
+
+    def defects_in(self, clauses):
+        """The known defects of this engine in any of ``clauses``"""
+        return tuple(defect for clause, defect in self.defects if clause in clauses)
 
     def skip_if_unavailable(self):
         """Skip the test when the engine cannot run on this machine"""
@@ -200,11 +223,12 @@ class EngineSpec:
             self.requires_module
             and importlib.util.find_spec(self.requires_module) is None
         ):
-            pytest.skip(
-                "the {} engine needs the {} module".format(
-                    self.name, self.requires_module
-                )
+            message = "the {} engine needs the {} module (the engines group)".format(
+                self.name, self.requires_module
             )
+            if REQUIRE_ENGINES:
+                pytest.fail(message + ", and NOW_ENGINES=require")
+            pytest.skip(message)
 
 
 PLAIN = EngineSpec(
@@ -220,8 +244,59 @@ PUREGIT = EngineSpec(
     requires_binary="git",
     git=True,
 )
-ENGINES = (PLAIN, PUREGIT)
+# DulwichEngine.get and find_subhash, as today's dulwich runs them.
+DULWICH_GET_TEXT = Defect(
+    "#438: DulwichEngine.get returns dulwich's as_pretty_string(), the "
+    "content decoded as UTF-8 with the invalid bytes replaced, where every "
+    "other engine returns the bytes",
+    signature="get returned str",
+)
+DULWICH_FIND_SUBHASH = Defect(
+    "#448: DulwichEngine.find_subhash calls dulwich's scan_for_short_id "
+    "without the object type it requires, and catches only KeyError",
+    signature="scan_for_short_id() missing 1 required positional argument: 'tp'",
+)
+DULWICH = EngineSpec(
+    "dulwich",
+    "content.git",
+    git_blob_hex,
+    read_git,
+    git_blobs,
+    KeyError,
+    requires_binary="git",
+    requires_module="dulwich",
+    git=True,
+    defects=(("get", DULWICH_GET_TEXT), ("find_subhash", DULWICH_FIND_SUBHASH)),
+)
+ENGINES = (PLAIN, PUREGIT, DULWICH)
 GIT_ENGINES = tuple(spec for spec in ENGINES if spec.git)
+OPTIONAL_ENGINES = tuple(spec for spec in ENGINES if spec.requires_module)
+
+
+def contract(*clauses, specs=ENGINES):
+    """Run a test over ``specs`` (every engine by default) as ``engine_spec``
+
+    ``clauses`` label what the test exercises (``"get"``,
+    ``"find_subhash"``...): an engine whose ``defects`` name one of them is
+    ``xfail(strict=True)`` there, and its failure must carry the defect's
+    signature; every other engine must pass. The test takes
+    ``engine_spec``.
+    """
+    return parametrize_known_defects(
+        "engine_spec",
+        [spec.param() for spec in specs],
+        lambda spec: spec.defects_in(clauses),
+        indirect=True,
+    )
+
+
+def read_back(engine, content_hash):
+    """``engine.get(content_hash)``, which must be bytes"""
+    content = engine.get(content_hash)
+    assert isinstance(content, bytes), "get returned {}: {!r}".format(
+        type(content).__name__, content[:40]
+    )
+    return content
 
 
 def open_store(project, content_engine):
@@ -245,10 +320,16 @@ def provenance_of(project):
 
 
 def as_text(value):
-    """``find_subhash``'s result as text: puregit returns bytes"""
+    """An id an engine returned, as text
+
+    puregit's ``find_subhash`` returns bytes, dulwich's ``commit_content``
+    bytes and pygit's a pygit2 ``Oid``; None stays None.
+    """
     if isinstance(value, bytes):
         return value.decode("utf-8")
-    return value
+    if value is None or isinstance(value, str):
+        return value
+    return str(value)
 
 
 def fingerprint(directory):

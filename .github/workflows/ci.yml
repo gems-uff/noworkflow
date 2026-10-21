@@ -172,20 +172,20 @@ jobs:
         # when tests are added; lower it only with the reason written in the PR.
         # The reference leg also runs the goldens, which every other leg
         # deselects (-m "not golden"), so its floor is the higher one. The
-        # `paper` and `browser` tests are deselected on every leg and counted
-        # by the paper-example and vis-browser jobs.
+        # `paper`, `browser` and `engines` tests are deselected on every leg
+        # and counted by the paper-example, vis-browser and engines jobs.
         include:
           # Floor (requires-python = ">=3.11").
-          - { os: ubuntu-latest, python: "3.11", min-tests: 2942 }
-          - { os: ubuntu-latest, python: "3.12", min-tests: 2942 }
-          - { os: ubuntu-latest, python: "3.13", min-tests: 2942 }
-          - { os: ubuntu-latest, python: "3.14", min-tests: 2942 }
+          - { os: ubuntu-latest, python: "3.11", min-tests: 2944 }
+          - { os: ubuntu-latest, python: "3.12", min-tests: 2944 }
+          - { os: ubuntu-latest, python: "3.13", min-tests: 2944 }
+          - { os: ubuntu-latest, python: "3.14", min-tests: 2944 }
           # Reference leg: Linux on the newest blocking version, the only one
           # with coverage and with goldens, which depend on the system and on
           # the Python version. Moving it means regenerating the goldens, and
           # the Python of the `checks` and `paper-example` jobs and of
           # flaky.yml moves with it.
-          - { os: ubuntu-latest, python: "3.15", min-tests: 2970, reference: true }
+          - { os: ubuntu-latest, python: "3.15", min-tests: 2972, reference: true }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     steps:
@@ -224,9 +224,9 @@ jobs:
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
       # leg (goldens/REFERENCE); elsewhere the `golden` marker is deselected.
-      # The `paper` tests run in the paper-example job and the `browser` ones
-      # in the vis-browser job, which sync their dependency groups; every leg
-      # here deselects them.
+      # The `paper` tests run in the paper-example job, the `browser` ones in
+      # the vis-browser job and the `engines` ones in the engines job, which
+      # sync their dependency groups; every leg here deselects them.
       # GOLDEN=require fails a golden that nobody recorded instead of
       # skipping it, and GOLDEN_ACTUAL_DIR collects the actual output of every
       # mismatch for the artifact below.
@@ -244,9 +244,9 @@ jobs:
           set -o pipefail
           args=(-n 4)
           if [ "${{ matrix.reference }}" = "true" ]; then
-            args+=(-m "not paper and not browser" --cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
+            args+=(-m "not paper and not browser and not engines" --cov "--cov-report=xml:$GITHUB_WORKSPACE/coverage.xml")
           else
-            args+=(-m "not golden and not paper and not browser")
+            args+=(-m "not golden and not paper and not browser and not engines")
           fi
           uv run --no-sync pytest "${args[@]}" | tee pytest.log
 
@@ -258,9 +258,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           if [ "${{ matrix.reference }}" = "true" ]; then
-            repro='uv sync --locked --extra demo --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -n 4 -m "not paper and not browser"'
+            repro='uv sync --locked --extra demo --python ${{ matrix.python }} && GOLDEN=require uv run --no-sync pytest -n 4 -m "not paper and not browser and not engines"'
           else
-            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n 4 -m "not golden and not paper and not browser"'
+            repro='uv sync --locked --python ${{ matrix.python }} && uv run --no-sync pytest -n 4 -m "not golden and not paper and not browser and not engines"'
           fi
           bash .github/scripts/pytest-summary.sh pytest.log "${{ matrix.min-tests }}" \
             "${{ matrix.os }}, ${{ matrix.python }}" "$repro"
@@ -498,17 +498,62 @@ jobs:
             "vis in a browser (ubuntu-latest, 3.15)" \
             'uv sync --locked --group browser && NOW_BROWSER=require uv run --no-sync pytest -m browser'
 
+  # The optional content engines (dulwich, pygit2, gitdb), the only place
+  # where they run: the tests marked `engines` (the contract tests of
+  # tests/persistence on each of them and e2e/test_optional_engine_stores.py),
+  # with the `engines` dependency group, which the matrix legs do not sync.
+  # Only those tests: once pygit2 or dulwich imports, every new store without
+  # --content-engine takes its engine (define_engine), which the rest of the
+  # suite does not expect; with pygit2 that is the distributed engine, whose
+  # close() never returns under forkserver, Linux's default from 3.14
+  # (#334). Python 3.14, not the reference leg's: pygit2 publishes no wheel
+  # for 3.15 yet (the `engines` group in pyproject.toml), and the tests of
+  # pygit and gitdb would skip there. git is on the runner image; the tests
+  # read the stores with it. NOW_ENGINES=require fails a test that would skip
+  # for want of a module. Blocking: it is in the needs of ci-ok.
+  engines:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python 3.14
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group engines
+
+      - name: Run the engine tests
+        env:
+          NOW_ENGINES: require
+        run: |
+          set -o pipefail
+          uv run --no-sync pytest -m engines | tee pytest.log
+
+      # min-tests: every test marked `engines`, none skipped here (the group
+      # and git are both present, and NOW_ENGINES=require fails a skip).
+      - name: Record the test count and the seed
+        if: ${{ !cancelled() }}
+        run: |
+          bash .github/scripts/pytest-summary.sh pytest.log 33 \
+            "optional content engines (ubuntu-latest, 3.14)" \
+            'uv sync --locked --group engines --python 3.14 && NOW_ENGINES=require uv run --no-sync pytest -m engines'
+
   # The only status the ruleset on `main` requires: one name that stays stable
   # while jobs and matrix legs come and go. `always()` makes it run, and fail,
   # when a needed job failed; without it the job would be skipped, and a
   # skipped required check counts as passing.
   ci-ok:
     if: always() && github.event_name != 'schedule'
-    needs: [checks, test, frontend, paper-example, vis-browser]
+    needs: [checks, test, frontend, paper-example, vis-browser, engines]
     runs-on: ubuntu-latest
     steps:
       - name: All required jobs passed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
-          echo "::error::checks=${{ needs.checks.result }} test=${{ needs.test.result }} frontend=${{ needs.frontend.result }} paper-example=${{ needs.paper-example.result }} vis-browser=${{ needs.vis-browser.result }}"
+          echo "::error::checks=${{ needs.checks.result }} test=${{ needs.test.result }} frontend=${{ needs.frontend.result }} paper-example=${{ needs.paper-example.result }} vis-browser=${{ needs.vis-browser.result }} engines=${{ needs.engines.result }}"
           exit 1

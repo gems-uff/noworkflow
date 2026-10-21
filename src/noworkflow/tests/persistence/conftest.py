@@ -13,9 +13,12 @@ read it when they are built), and every commit gets the synthetic identity
 and a fixed date. Without the identity, a commit records the user's real
 name and address on macOS and fails on a Linux machine without one.
 
-``engine`` connects a store of the engine ``engine_spec`` names (one per
-entry of ``engines.ENGINES``) in ``project_dir``, through the product's
-route, and closes it afterwards.
+``engine`` connects a store of the engine ``engine_spec`` names in
+``project_dir``, through the product's route, and closes it afterwards.
+``engine_spec`` has no default: a test names its engines with
+``engines.contract`` (or parametrizes ``engine_spec`` indirectly with
+``EngineSpec.param()``), so that every engine of a test is chosen with its
+known defects and its ``engines`` mark.
 """
 
 import dataclasses
@@ -24,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from .engines import COMMIT_DATE, ENGINES, IDENTITY_EMAIL, IDENTITY_NAME, open_store
+from .engines import COMMIT_DATE, IDENTITY_EMAIL, IDENTITY_NAME, open_store
 
 
 @dataclasses.dataclass
@@ -65,9 +68,13 @@ def isolated_git(tmp_path, monkeypatch):
     return GitEnvironment(tmp_path, home, global_config)
 
 
-@pytest.fixture(params=ENGINES, ids=str)
+@pytest.fixture
 def engine_spec(request):
-    """One of ``engines.ENGINES``, skipped where it cannot run"""
+    """The engine a test is parametrized with, skipped where it cannot run"""
+    if not hasattr(request, "param"):
+        raise pytest.UsageError(
+            "{} uses engine_spec without engines.contract".format(request.node.nodeid)
+        )
     spec = request.param
     spec.skip_if_unavailable()
     return spec
