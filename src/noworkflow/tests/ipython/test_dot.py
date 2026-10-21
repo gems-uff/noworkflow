@@ -14,14 +14,14 @@ file descriptor 2: missing wherever only ``sys.stderr`` is captured (this
 shell, ``%%capture``, a Windows kernel), while ipykernel on Linux and
 macOS forwards that descriptor to the cell.
 
-No leg of CI installs Graphviz: the tests that run it skip without
-``dot`` (``support.needs_dot``), and the same paths also run everywhere
-against a fake ``Popen`` that answers as Graphviz does. The ``dot`` and
-``txt`` formats, the fallback for a missing program and the registration
-need no Graphviz.
+The tests that run Graphviz skip without ``dot`` (``support.needs_dot``):
+the Linux and macOS legs of CI install it, the Windows legs do not. The
+same paths also run everywhere against a fake ``Popen`` that answers as
+Graphviz does. The ``dot`` and ``txt`` formats, the fallback for a missing
+program and the registration need no Graphviz.
 
 The PDF formats (``pdf``, ``ink.pdf`` and ``--save <name>.pdf``) convert
-Graphviz's SVG with Inkscape, which no leg installs either: a fake
+Graphviz's SVG with Inkscape, which no leg installs: a fake
 ``check_call`` that answers as Inkscape 1.4.4 does runs everywhere, and one
 test runs the installed Inkscape where there is one. A conversion that fails
 or writes nothing falls back to Graphviz's PDF, or, under ``ink.pdf``, which

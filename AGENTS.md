@@ -281,8 +281,8 @@ neither executes:
   the function activation diff, the exclusion of prior provenance, the
   downloads, the tooltips, the project page) runs nowhere. A PDF out of
   `flow.pdf` is checked only where Graphviz's `dot` is on the PATH, which
-  no CI leg installs, and `prospective.dot` is drawn for a handful of
-  scripts. The `frontend` job proves that the committed bundle matches the
+  the Linux and macOS legs install and the Windows legs do not, and
+  `prospective.dot` is drawn for a handful of scripts. The `frontend` job proves that the committed bundle matches the
   sources, that the extension type-checks and that the count of `tsc`
   errors of the vis does not grow. By hand, `golden-run` (step 4) and the
   smoke of `rebuild-vis` fetch the routes `read_store.py` lists from a
@@ -353,7 +353,8 @@ neither executes:
   its packages (codemirror, `@jupyterlab/*`) is measured by nothing else.
   `%%now_run --interactive` gets past #313's import only through a stand-in
   of the tests. `%%dot` and the diagrams of `%now_schema` skip where
-  Graphviz's `dot` is missing, `%%now_prolog` without `pyswip`, which no
+  Graphviz's `dot` is missing (the Windows legs of `pre-release.yml`),
+  `%%now_prolog` without `pyswip`, which no
   leg installs, and the tagging helpers that import pandas where the
   `paper` group is not synced (it is in the reference container only).
 - **`push`, `pull`, `demo`:** a remote server and the demo projects are

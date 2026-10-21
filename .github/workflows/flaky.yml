@@ -38,12 +38,13 @@ jobs:
           python-version: "3.15"
           enable-cache: true
 
-      # The package of the `test` job in ci.yml: without swipl the patterns
-      # and Prolog-fact tests skip, and no trial would repeat them.
-      - name: Install SWI-Prolog
+      # The packages of the `test` job in ci.yml: without swipl the patterns
+      # and Prolog-fact tests skip, without Graphviz the tests that run `dot`,
+      # and no trial would repeat them.
+      - name: Install SWI-Prolog and Graphviz
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz
 
       # The tests of the vis in a browser depend on timing more than any
       # other, so the trials run them too: Chrome as in the vis-browser job

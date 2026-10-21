@@ -72,21 +72,22 @@ jobs:
           echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
           echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
 
-      # SWI-Prolog on the Linux and macOS legs, as in ci.yml: without swipl
-      # the patterns tests and the Prolog-fact tests skip, as they do on the
-      # Windows legs.
-      - name: Install SWI-Prolog (Linux)
+      # SWI-Prolog and Graphviz on the Linux and macOS legs, as in ci.yml:
+      # without swipl the patterns tests and the Prolog-fact tests skip, and
+      # without `dot` the tests that run Graphviz, as they do on the Windows
+      # legs.
+      - name: Install SWI-Prolog and Graphviz (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz
 
-      - name: Install SWI-Prolog (macOS)
+      - name: Install SWI-Prolog and Graphviz (macOS)
         if: runner.os == 'macOS'
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
           HOMEBREW_NO_INSTALL_CLEANUP: "1"
-        run: brew install swi-prolog
+        run: brew install swi-prolog graphviz
 
       # Goldens exist for the reference leg of ci.yml only, the `paper`
       # tests run in its paper-example job and the `browser` ones in its

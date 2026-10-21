@@ -216,10 +216,12 @@ jobs:
       # rules.pl over the `now export prolog -r` of that leg's Python, and the
       # Prolog-fact tests read exports back; without swipl they skip. The
       # package of the paper-example job and of the reference container.
-      - name: Install SWI-Prolog
+      # Graphviz too: the tests of run_dot, of %%dot, of the %now_schema
+      # diagrams and of flow.pdf run the real `dot` and skip without it.
+      - name: Install SWI-Prolog and Graphviz
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz
 
       # The root conftest.py runs the session from a scratch directory, so the
       # coverage path must be absolute. Goldens only exist for the reference
