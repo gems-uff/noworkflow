@@ -620,6 +620,14 @@ top-level one would also move, or downgrade, every other copy of the
 package. It leaves when a release of the dependant requires that version on
 its own, and the commit that adds it says so.
 
+A new major that npm nests under one workspace, because another package
+keeps the old one at the root, is not necessarily the copy that runs: a
+command of a script resolves from the `.bin` directories on its path, the
+root's included. Ask the tool from that workspace (`npx <command>
+--version`, run in `packages/<name>`). webpack-cli hands over to the copy
+local to the working directory by itself; a tool that does not runs the
+root's.
+
 ### Two checks no job of CI makes
 
 - **The bundle holds no path of the machine.** A package whose build reads
@@ -637,9 +645,12 @@ its own, and the commit that adds it says so.
   builder or another of its build dependencies moves. The `frontend` job
   only type-checks it (`build:lib`); the production build runs the bundler
   through the builder, with plugins of its own (`rebuild-vis`, "What a
-  rebuild does not prove", has the command). The build is deterministic, so
-  its output is compared file by file with the base's; its `package.json`
-  is the extension's own, and differs only by the ranges the step changed.
+  rebuild does not prove", has the command). The build is deterministic
+  within one checkout, so its output is compared file by file with the
+  base's, built in the same checkout: the id of the entry module in
+  `remoteEntry.*.js` comes from its path, and a base built in another
+  worktree differs there and only there. Its `package.json` is the
+  extension's own, and differs only by the ranges the step changed.
 
 ## Part 4 — GitHub Actions
 

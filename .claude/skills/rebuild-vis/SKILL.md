@@ -371,8 +371,8 @@ commit); do not commit.
   ```
 
   It writes the ignored `noworkflow_labextension/labextension/`, the same
-  bytes from the same sources (`dependencies`, part 3, says when it runs
-  and how to read it). The jupyterlab of the lock warns that the command
+  bytes from the same sources in the same checkout (`dependencies`, part
+  3, says when it runs and how to read it). The jupyterlab of the lock warns that the command
   is deprecated in favor of `jupyter-builder build`, and that, since the
   extension declares the legacy `@jupyterlab/builder`, it builds against
   the shared packages of the lowest JupyterLab that range admits; both
