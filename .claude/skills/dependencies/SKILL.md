@@ -26,7 +26,8 @@ follows is how to apply them with the tools of this repository.
   `dev`, which `uv sync` installs by default, and what a set of tests needs
   beyond them, in a group of its own (`paper`: the ML stack of the paper's
   running example; `browser`: Playwright, for the tests of the vis in a
-  browser), which only the CI job of those tests syncs. Never in the
+  browser; `engines`: dulwich, pygit2 and gitdb, for the tests of the
+  optional content engines), which only the CI job of those tests syncs. Never in the
   wheel; CI installs them from the lock.
 - `[build-system]`: what builds the wheel. Its setuptools is not the runtime
   setuptools in `[project.dependencies]`; the two move independently.
@@ -102,12 +103,13 @@ it can go.
   candidate for an extra. The bare runtime name is the status quo and stays;
   moving a command's package to an extra is a product decision for an issue,
   and an audit only lists the candidates.
-- A module that imports a package no declaration covers — the git content
-  engines in `src/noworkflow/now/persistence/content/` import `pygit2` and
-  `dulwich`; the magics import IPython, declared only in the extras — is
-  the same kind of product decision: an extra, a runtime dependency, or a
-  documented "install it yourself". Write the decision in an issue, not in
-  a guess.
+- A module that imports a package no declaration of `[project]` covers —
+  the git content engines in `src/noworkflow/now/persistence/content/`
+  import `pygit2`, `dulwich` and `gitdb`, which only the `engines` test
+  group declares; the magics import IPython, declared only in the extras —
+  is the same kind of product decision: an extra, a runtime dependency, or
+  a documented "install it yourself". A test group answers for the tests,
+  never for the user. Write the decision in an issue, not in a guess.
 - A test-only package in `[project.dependencies]` exists because the tests
   ship inside the wheel (`src/noworkflow/tests`). The reason belongs next to
   it as a comment; it leaves with the tests.
@@ -680,9 +682,16 @@ The suite imports `noworkflow` and runs in-process against in-memory stores
 (`AGENTS.md`, "Blind spots of the suite"). After an update, what stays out of
 its reach:
 
-- **The git content engines.** The suite pins `plain`; `pygit2`, `dulwich`
-  and the engines over them never run in it. A hand probe with a real `now
-  run` on that engine, recorded in the PR.
+- **The optional content engines.** The suite pins `plain`; `dulwich`,
+  `pygit2` and `gitdb` run only in the `engines` job, which syncs the
+  `engines` group on one Python (the job's comment in `ci.yml` says
+  which) and runs the tests marked `engines`: the contract on each engine
+  and a round trip through the CLI. An update of one of them runs those
+  tests in an isolated environment, which leaves `.venv` without the
+  group (`uv run --isolated --locked --no-python-downloads --python
+  <the job's> --group engines pytest -m engines`); on the other Pythons,
+  and for the distributed `pygit`, a hand probe with a real `now run`,
+  recorded in the PR.
 - **The vis.** An npm update only shows in a browser. The browser tests
   (the `vis-browser` job) assert that each view still opens and answers its
   input; `rebuild-vis` runs them on the rebuilt bundle and, when it changed,

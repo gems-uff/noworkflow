@@ -29,6 +29,7 @@ from pathlib import Path
 import pytest
 
 from ..helpers.persistence import connected_to
+from ..persistence.engines import IDENTITY_EMAIL, IDENTITY_NAME
 from .normalize import Normalizer
 
 E2E_DIR = Path(__file__).resolve().parent
@@ -318,8 +319,9 @@ class NowProject:
         """The bytes the plain content engine stored under a hash
 
         A new store uses a git engine when pygit2 or dulwich is importable
-        (``persistence/content_database.py``); ``uv.lock`` has neither, but a
-        ``NOW_E2E_CMD`` installation may.
+        (``persistence/content_database.py``); only the ``engines`` job of
+        CI installs them, and runs none of the tests that call this, but a
+        ``NOW_E2E_CMD`` installation may have them.
         """
         path = self.store / "content" / content_hash[:2] / content_hash[2:]
         if not path.exists() and not (self.store / "content").is_dir():
@@ -398,6 +400,31 @@ def build_weather(project, trials=1):
     if trials > 1:
         project.write("data2.dat", WEATHER_DATA2_TRIAL2)
         project.run(*WEATHER_ARGS)
+    return project
+
+
+def synthetic_git(project):
+    """Give the git of ``project``'s ``now`` the tests' identity, and no
+    configuration of the machine's
+
+    An empty global configuration, the system one ignored, and the
+    synthetic author and committer of ``persistence/engines.py``: without
+    them a commit of the puregit engine records the user's real identity
+    (macOS) or fails (a Linux machine without one, #327). ``clean_env``
+    sets no git variable, so a test of a git store calls this.
+    """
+    config = project.root / "gitconfig"
+    config.write_text("", encoding="utf-8")
+    project.env.update(
+        {
+            "GIT_CONFIG_GLOBAL": str(config),
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_AUTHOR_NAME": IDENTITY_NAME,
+            "GIT_AUTHOR_EMAIL": IDENTITY_EMAIL,
+            "GIT_COMMITTER_NAME": IDENTITY_NAME,
+            "GIT_COMMITTER_EMAIL": IDENTITY_EMAIL,
+        }
+    )
     return project
 
 

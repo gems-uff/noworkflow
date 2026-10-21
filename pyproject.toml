@@ -125,6 +125,20 @@ paper = [
 browser = [
     "playwright",
 ]
+# The optional content engines (src/noworkflow/now/persistence/content/),
+# which no declaration of [project] covers: the tests marked `engines`
+# import them. Only the `engines` job of ci.yml syncs this group, and only
+# those tests run with it: once one of these imports, every new store without
+# --content-engine takes its engine (define_engine), which the rest of the
+# suite does not expect (#255). Without it those tests skip.
+engines = [
+    "dulwich",
+    # <3.15: pygit2 publishes no wheel for 3.15 yet, and its build needs the
+    # libgit2 headers (an install on the machine); the engines job runs on
+    # 3.14. The marker leaves when a wheel for 3.15 exists.
+    "pygit2; python_version < '3.15'",
+    "gitdb",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -142,6 +156,7 @@ markers = [
     "slow: needs the console `now` and matplotlib",
     "paper: replays the paper's running example; needs the `paper` group, runs in the paper-example job",
     "browser: drives the vis in Chrome; needs the `browser` group, runs in the vis-browser job",
+    "engines: runs an optional content engine; needs the `engines` group, runs in the engines job",
 ]
 # A deprecation that noWorkflow's own code triggers fails the test that
 # triggers it. The exceptions, listed after it so that they take precedence,

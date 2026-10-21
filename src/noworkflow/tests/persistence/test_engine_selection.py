@@ -12,14 +12,16 @@ plain store adds a second content database. ``listAll``, which ``now
 push``, ``now pull``, ``now import`` and the vis consume as a list of
 hashes, walks the plain layout even on a git store.
 
-The tests whose outcome depends on what is installed (pygit2 or dulwich
-change the guess) skip where either module is importable; #255 covers those
-engines. Each defect has a characterization and a ``_desired`` twin.
+The guess depends on what is installed. The tests of a store without
+optional engines hide pygit2 and dulwich (``None`` in ``sys.modules`` makes
+their import raise ImportError), so they run wherever they are installed;
+the tests of the guess with one of them need it, and are marked
+``engines``. Each defect has a characterization and a ``_desired`` twin.
 """
 
-import importlib.util
 import os
 import subprocess
+import sys
 
 import pytest
 
@@ -28,17 +30,23 @@ from ...now.persistence.content.plain_engine import PlainEngine
 from ...now.persistence.content.puregit_engine import PureGitEngine
 from ...now.persistence.content_database import ContentDatabase
 from ..helpers.defects import Defect, known_defects
-from .engines import PUREGIT, open_store, provenance_of
+from .engines import DULWICH, PUREGIT, PYGIT, open_store, provenance_of
 
-OPTIONAL_ENGINES = [
-    name for name in ("pygit2", "dulwich") if importlib.util.find_spec(name) is not None
-]
-WITHOUT_OPTIONAL_ENGINES = pytest.mark.skipif(
-    bool(OPTIONAL_ENGINES),
-    reason="{} importable: define_engine prefers it for a new store (#255)".format(
-        ", ".join(OPTIONAL_ENGINES)
-    ),
-)
+# The modules whose import define_engine tries for a new store, in order.
+GUESSED_MODULES = ("pygit2", "dulwich")
+
+
+def hide_modules(monkeypatch, *names):
+    """Make ``import <name>`` raise ImportError for the test's duration"""
+    for name in names:
+        monkeypatch.setitem(sys.modules, name, None)
+
+
+@pytest.fixture
+def without_optional_engines(monkeypatch):
+    """A process where neither pygit2 nor dulwich imports"""
+    hide_modules(monkeypatch, *GUESSED_MODULES)
+
 
 ENGINE_NOT_DETECTED = (
     "#332: define_engine guesses the engine "
@@ -102,13 +110,44 @@ def test_a_store_with_a_content_directory_reopens_as_plain(project_dir):
     assert reopened.get(content_hash) == b"a\n"
 
 
-@WITHOUT_OPTIONAL_ENGINES
+@pytest.mark.usefixtures("without_optional_engines")
 def test_a_new_store_without_optional_engines_uses_plain(project_dir):
     """Without a name, pygit2 or dulwich, a new store is plain"""
     database = open_store(project_dir, None)
 
     assert type(database.content_database_engine) is PlainEngine
     assert os.listdir(provenance_of(project_dir)) == ["content"]
+
+
+@pytest.mark.engines
+def test_a_new_store_with_pygit2_gets_the_distributed_pygit_engine(project_dir):
+    """Without a name, a new store gets ``DistributedPyGitEngine`` when
+    pygit2 imports, the engine whose ``close()`` never returns after a
+    ``put`` under spawn or forkserver (#334); the test never puts, and
+    shuts down the engine's ``Manager`` process"""
+    PYGIT.skip_if_unavailable()
+    database = open_store(project_dir, None)
+    engine = database.content_database_engine
+    try:
+        assert type(engine).__name__ == "DistributedPyGitEngine"
+        assert os.listdir(provenance_of(project_dir)) == ["content.git"]
+    finally:
+        engine.manager.shutdown()
+
+
+@pytest.mark.engines
+def test_a_new_store_with_dulwich_and_without_pygit2_gets_dulwich(
+    project_dir, monkeypatch
+):
+    """Without a name, a new store gets ``DulwichEngine`` when dulwich
+    imports and pygit2 does not"""
+    DULWICH.skip_if_unavailable()
+    hide_modules(monkeypatch, "pygit2")
+
+    database = open_store(project_dir, None)
+
+    assert type(database.content_database_engine).__name__ == "DulwichEngine"
+    assert os.listdir(provenance_of(project_dir)) == ["content.git"]
 
 
 def test_connect_defines_the_engine_when_the_path_was_set_before(project_dir):
@@ -178,7 +217,7 @@ def test_puregit_list_all_lists_the_repository_files_desired(project_dir):
     assert content_hash in database.listAll()
 
 
-@WITHOUT_OPTIONAL_ENGINES
+@pytest.mark.usefixtures("without_optional_engines")
 def test_puregit_store_reopened_without_an_engine_name(project_dir):
     """A puregit store opened without ``--content-engine`` gets the plain
     engine, which adds an empty ``content/``, and its content is not
@@ -196,7 +235,7 @@ def test_puregit_store_reopened_without_an_engine_name(project_dir):
         reopened.get(content_hash)
 
 
-@WITHOUT_OPTIONAL_ENGINES
+@pytest.mark.usefixtures("without_optional_engines")
 @known_defects(PUREGIT_STORE_AS_PLAIN)
 def test_puregit_store_reopened_without_an_engine_name_desired(project_dir):
     """Desired: the store is read with the engine that wrote it"""

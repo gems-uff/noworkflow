@@ -60,7 +60,8 @@ of date, fix it there.
   the test count at or above the floor of every leg (`min-tests` in
   `.github/workflows/ci.yml`, `pre-release.yml` and, while it exists,
   `experimental.yml`, the one in
-  `flaky.yml` and the ones of the `paper-example` and `vis-browser` jobs;
+  `flaky.yml` and the ones of the `paper-example`, `vis-browser` and
+  `engines` jobs;
   the reference leg also
   counts the goldens, which the other legs deselect), **and the floors go
   up in the same PR that adds tests**;
@@ -229,8 +230,9 @@ byte) moves in one batch per level with a hard ceiling, bisected when red,
 while the core still moves one package per step; the procedure is "A
 campaign" in the `dependencies` skill. The runtime set is
 in `[project.dependencies]`, the tools in `[dependency-groups]` (with
-`paper`, what the tests of the paper's running example import, and
-`browser`, what the tests of the vis in a browser import), and
+`paper`, what the tests of the paper's running example import,
+`browser`, what the tests of the vis in a browser import, and `engines`,
+the optional content engines), and
 `uv.lock` is the truth that CI installs with `uv sync --locked`: a change to
 `pyproject.toml` without `uv lock` fails `uv lock --check` before anything
 else runs. Known advisories that a pin keeps alive are listed, with the reason
@@ -279,8 +281,8 @@ neither executes:
   the function activation diff, the exclusion of prior provenance, the
   downloads, the tooltips, the project page) runs nowhere. A PDF out of
   `flow.pdf` is checked only where Graphviz's `dot` is on the PATH, which
-  no CI leg installs, and `prospective.dot` is drawn for a handful of
-  scripts. The `frontend` job proves that the committed bundle matches the
+  the Linux and macOS legs install and the Windows legs do not, and
+  `prospective.dot` is drawn for a handful of scripts. The `frontend` job proves that the committed bundle matches the
   sources, that the extension type-checks and that the count of `tsc`
   errors of the vis does not grow. By hand, `golden-run` (step 4) and the
   smoke of `rebuild-vis` fetch the routes `read_store.py` lists from a
@@ -326,11 +328,17 @@ neither executes:
   `paper-example` job replays it on Linux with the reference leg's Python
   only; the claims that depend on noWorkflow's numbering, and its goldens,
   are skipped anywhere else, and no other leg runs it at all.
-- **The optional content engines** (`pygit`, `gitdb`, `dulwich`): the
-  contract tests of `src/noworkflow/tests/persistence/` run `plain` and
-  `puregit` (which calls the `git` binary) and the in-process suite pins
-  `plain`; the others open a git repository on connect and run nowhere
-  (#255), and neither do the process-based wrappers of `parallel.py`.
+- **The optional content engines** (`dulwich`, `pygit`, `gitdb`): only the
+  `engines` job of `ci.yml` installs them (the `engines` group) and runs
+  the tests marked `engines`, the contract tests of
+  `src/noworkflow/tests/persistence/` on each of them and
+  `e2e/test_optional_engine_stores.py`, on Linux with Python 3.14 alone
+  (pygit2 has no wheel for 3.15 yet); no other Python and no other system
+  runs them. The rest of the suite never runs with them installed: a new
+  store without `--content-engine` would take one of theirs, and the
+  in-process suite pins `plain`. The `pygit` name selects the distributed
+  engine, which runs nowhere, and neither do the other process-based
+  wrappers of `parallel.py` (#334); the tests run `sequential_pygit`.
 - **`rules.pl` without SWI-Prolog:** the patterns tests compare each rule
   with its `rules.pl` twin over `now export prolog -r`, and the Prolog-fact
   tests read exports back, only where `swipl` is on the PATH; they skip
@@ -345,7 +353,8 @@ neither executes:
   its packages (codemirror, `@jupyterlab/*`) is measured by nothing else.
   `%%now_run --interactive` gets past #313's import only through a stand-in
   of the tests. `%%dot` and the diagrams of `%now_schema` skip where
-  Graphviz's `dot` is missing, `%%now_prolog` without `pyswip`, which no
+  Graphviz's `dot` is missing (the Windows legs of `pre-release.yml`),
+  `%%now_prolog` without `pyswip`, which no
   leg installs, and the tagging helpers that import pandas where the
   `paper` group is not synced (it is in the reference container only).
 - **`push`, `pull`, `demo`:** a remote server and the demo projects are

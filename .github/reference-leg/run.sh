@@ -15,7 +15,8 @@
 # between runs; `.venv` of the host is never touched. PYTHONPYCACHEPREFIX
 # keeps the host's __pycache__ (compiled with host paths) out of the run.
 # The venv has the `demo` extra (as the reference leg of CI) and the `paper`
-# group, and the image has SWI-Prolog for the paper's query. `-m paper` runs
+# group, and the image has SWI-Prolog for the paper's query and Graphviz for
+# the tests that run `dot`, as the legs of CI. `-m paper` runs
 # without the extra instead, in the environment of the `paper-example` job,
 # which has no matplotlib. The tests of the paper's running
 # example run here, and their goldens are recorded here like the others.

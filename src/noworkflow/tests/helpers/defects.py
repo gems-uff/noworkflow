@@ -121,3 +121,33 @@ def known_defects(*defects):
         return wrapper
 
     return decorate
+
+
+def parametrize_known_defects(argname, params, defects_of, indirect=False):
+    """Parametrize a test whose known defects depend on the parameter
+
+    ``params`` are ``pytest.param`` values of ``argname``, and
+    ``defects_of(value)`` gives the defects of the test with that value.
+    Each parameter gets the marks of its own defects, and the call is held
+    to their signatures, as ``known_defects`` does for the whole test; a
+    parameter without a defect that applies must pass. The test takes
+    ``argname`` as an argument, so that the call sees its value.
+    """
+
+    def decorate(test):
+        @functools.wraps(test)
+        def wrapper(*args, **kwargs):
+            defects = defects_of(kwargs[argname])
+            return known_defects(*defects)(test)(*args, **kwargs)
+
+        marked = [
+            pytest.param(
+                *param.values,
+                id=param.id,
+                marks=[*param.marks, *defect_marks(defects_of(param.values[0]))],
+            )
+            for param in params
+        ]
+        return pytest.mark.parametrize(argname, marked, indirect=indirect)(wrapper)
+
+    return decorate

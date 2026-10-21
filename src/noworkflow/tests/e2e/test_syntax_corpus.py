@@ -792,6 +792,30 @@ CASES = (
         ),
     ),
     Case(
+        "class_in_function",
+        "class statements inside a function and a method, one nested in "
+        "another, and a class body that reads a parameter of its function",
+        components=(
+            ("class_def", 8, "Inner"),
+            ("class_def", 19, "InMethod"),
+            ("class_def", 26, "A"),
+            ("class_def", 27, "B"),
+        ),
+        runs=(
+            Defect(
+                "#354: the transformer writes `__now_activation__ = "
+                "start_class(__now_activation__, ...)` into the class body, "
+                "and a name that a class body assigns is looked up in the "
+                "class namespace and then in the globals, skipping the "
+                "enclosing function, so Collector.start_class (collector.py) "
+                "receives the module's activation; the class decorator then "
+                "pops from the empty dependency list of the function's "
+                "activation: IndexError, and the script never finishes",
+                "pop from empty list",
+            ),
+        ),
+    ),
+    Case(
         "class_slots",
         "__slots__ as a tuple and as a single string",
         components=(

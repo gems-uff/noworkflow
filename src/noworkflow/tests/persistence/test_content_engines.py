@@ -3,14 +3,18 @@
 # Please, consult the license terms in the LICENSE file.
 """The content engines: the store contract and what each engine does
 
-The contract tests run over every engine of ``engines.ENGINES`` (plain and
-puregit today; #255 adds dulwich and pygit with one line each). What they
+The contract tests run over every engine of ``engines.ENGINES`` (plain,
+puregit, and the optional dulwich, pygit and gitdb, which only the
+``engines`` job of CI installs), through ``engines.contract``. What they
 expect comes from outside the engine: the hash of the store format
 (``hashlib.sha1`` for plain, git's blob formula for the git engines, checked
 against ``git hash-object``), the bytes read back from the store by the
-test itself (a file for plain, the test's own ``git`` for puregit) and the
-bytes the test put. Every store is new, in ``tmp_path``, behind a git that
-reads nothing of the machine (``conftest.isolated_git``).
+test itself (a file for plain, the test's own ``git`` for the git engines)
+and the bytes the test put. Every store is new, in ``tmp_path``, behind a
+git that reads nothing of the machine (``conftest.isolated_git``). A known
+defect of one engine in a clause of the contract is declared in that
+engine's spec, and the contract test is ``xfail(strict=True)`` there only,
+held to the defect's signature.
 
 The rest characterizes what one engine does today: puregit's commits, its
 tree paths, its ``gc`` and ``find_subhash``, the plain engine's no-ops and
@@ -41,13 +45,19 @@ from .engines import (
     CONFIGURED_EMAIL,
     CONFIGURED_IDENTITY,
     CONFIGURED_NAME,
+    DULWICH,
     GIT_ENGINES,
+    GITDB,
     IDENTITY,
+    NAMED_TREE_ENGINES,
     NOWORKFLOW_AUTHOR,
+    OPTIONAL_ENGINES,
     PLAIN,
     PUREGIT,
+    PYGIT,
     WINDOWS_NOT_MEASURED,
     as_text,
+    contract,
     fingerprint,
     git,
     git_blob_hex,
@@ -56,6 +66,7 @@ from .engines import (
     git_text,
     open_store,
     provenance_of,
+    read_back,
     sha1_hex,
     shown,
 )
@@ -66,10 +77,9 @@ CONTENTS = [
     pytest.param(b"a\r\nb\x00\xff\xfe\n", id="binary"),
     pytest.param(bytes(range(256)) * 400, id="100KiB"),
 ]
-# The git engines only: dulwich and pygit inherit gitbase's gc(aggressive).
-GIT_SPECS = pytest.mark.parametrize("engine_spec", GIT_ENGINES, ids=str, indirect=True)
-PUREGIT_ONLY = pytest.mark.parametrize("engine_spec", [PUREGIT], ids=str, indirect=True)
-PLAIN_ONLY = pytest.mark.parametrize("engine_spec", [PLAIN], ids=str, indirect=True)
+GIT_SPECS = contract(specs=GIT_ENGINES)
+PUREGIT_ONLY = pytest.mark.parametrize("engine_spec", [PUREGIT.param()], indirect=True)
+PLAIN_ONLY = pytest.mark.parametrize("engine_spec", [PLAIN.param()], indirect=True)
 # A missing hash: no sha1 of a content starts with 40 zeros.
 MISSING = "0" * 40
 # A real SHA-1 collision: the first 320 bytes of shattered-1.pdf and
@@ -295,6 +305,7 @@ def loose_and_packed(repository):
 # ---------------------------------------------------------------------------
 
 
+@contract()
 @pytest.mark.usefixtures("engine")
 def test_connect_creates_only_the_engine_directory(engine_spec, project_dir):
     """``connect`` creates the engine's directory under ``.noworkflow`` and
@@ -313,6 +324,7 @@ def test_connect_creates_only_the_engine_directory(engine_spec, project_dir):
         assert git_text("rev-parse", "--is-bare-repository", cwd=repository) == "true"
 
 
+@contract()
 @pytest.mark.parametrize("content", CONTENTS)
 def test_put_returns_the_hash_the_store_format_defines(
     engine, engine_spec, project_dir, content
@@ -334,15 +346,17 @@ def test_git_blob_formula_matches_git_hash_object(isolated_git):
         ) == git_blob_hex(content), param.id
 
 
+@contract("get")
 @pytest.mark.parametrize("content", CONTENTS)
-def test_get_returns_the_bytes_put(engine, project_dir, content):
+def test_get_returns_the_bytes_put(engine, engine_spec, project_dir, content):
     """``get`` of the hash ``put`` returned gives the bytes back, byte for
     byte"""
     content_hash = engine.put(content, str(project_dir / "f.txt"))
 
-    assert engine.get(content_hash) == content
+    assert read_back(engine, content_hash) == content
 
 
+@contract()
 def test_put_of_the_same_content_twice_stores_one_copy(
     engine, engine_spec, project_dir
 ):
@@ -355,6 +369,7 @@ def test_put_of_the_same_content_twice_stores_one_copy(
     assert engine_spec.stored_hashes(provenance_of(project_dir)) == [first]
 
 
+@contract()
 def test_put_stores_the_content_in_the_store_format(engine, engine_spec, project_dir):
     """The content is where the store format puts it: content/<h[:2]>/<h[2:]>
     for plain, a blob that the test's own ``git cat-file`` reads for the git
@@ -366,14 +381,17 @@ def test_put_stores_the_content_in_the_store_format(engine, engine_spec, project
     )
 
 
+@contract()
 def test_get_of_a_missing_hash_raises(engine, engine_spec):
     """``get`` of a hash never put raises: FileNotFoundError on plain,
-    CalledProcessError on puregit (git prints "Not a valid object name")"""
+    CalledProcessError on puregit (git prints "Not a valid object name"),
+    KeyError on the engines that read the repository in process"""
     with pytest.raises(engine_spec.missing_error):
         engine.get(MISSING)
 
 
-def test_find_subhash_resolves_a_unique_prefix(engine, project_dir):
+@contract("find_subhash")
+def test_find_subhash_resolves_a_unique_prefix(engine, engine_spec, project_dir):
     """``find_subhash`` of the first 8 characters of a committed hash names
     that hash"""
     content_hash = engine.put(b"hello\n", str(project_dir / "a.txt"))
@@ -382,7 +400,8 @@ def test_find_subhash_resolves_a_unique_prefix(engine, project_dir):
     assert as_text(engine.find_subhash(content_hash[:8])) == content_hash
 
 
-def test_find_subhash_of_a_missing_prefix_is_none(engine, project_dir):
+@contract("find_subhash")
+def test_find_subhash_of_a_missing_prefix_is_none(engine, engine_spec, project_dir):
     """``find_subhash`` of a prefix that no stored hash has is None"""
     content_hash = engine.put(b"hello\n", str(project_dir / "a.txt"))
     engine.commit_content("m")
@@ -391,13 +410,27 @@ def test_find_subhash_of_a_missing_prefix_is_none(engine, project_dir):
     assert engine.find_subhash(prefix) is None
 
 
+@contract("find_subhash", "revision name")
+def test_find_subhash_of_a_revision_name_is_none(engine, engine_spec, project_dir):
+    """``find_subhash("master")`` is None: no content hash starts with
+    "master", and ``now restore -i`` hands any id of 6 characters or more to
+    it. The name of the branch every git store commits to is not a content"""
+    engine.put(b"hello\n", str(project_dir / "a.txt"))
+    engine.commit_content("m")
+
+    found = engine.find_subhash("master")
+
+    assert found is None, "find_subhash('master') gave {!r}".format(found)
+
+
+@contract("find_subhash", "ambiguous prefix")
 def test_find_subhash_with_an_ambiguous_prefix_returns_one_of_the_matches(
     engine, engine_spec, project_dir
 ):
     """A prefix that two stored hashes share gives one of them, without an
     error; which one follows the file system (plain) or rev-list (puregit),
     so the test never names it. Whether git's "ambiguous" error is the
-    right answer is a product question, not a defect"""
+    right answer is a product question; a crash is not"""
     first, second = contents_sharing_a_prefix(engine_spec.blob_hash)
     hashes = {
         engine.put(first, str(project_dir / "first.txt")),
@@ -409,6 +442,7 @@ def test_find_subhash_with_an_ambiguous_prefix_returns_one_of_the_matches(
     assert as_text(engine.find_subhash(prefix)) in hashes
 
 
+@contract("get")
 def test_commit_content_keeps_every_content_readable(
     engine, engine_spec, project_dir, isolated_git
 ):
@@ -427,7 +461,9 @@ def test_commit_content_keeps_every_content_readable(
 
     engine.commit_content("m")
 
-    assert {content_hash: engine.get(content_hash) for content_hash in hashes} == hashes
+    assert {
+        content_hash: read_back(engine, content_hash) for content_hash in hashes
+    } == hashes
 
 
 # ---------------------------------------------------------------------------
@@ -508,6 +544,15 @@ def test_gc_with_aggressive(engine, engine_spec):
         engine.gc(aggressive=True)
 
     assert "unexpected keyword argument 'aggressive'" in str(raised.value)
+
+
+@WINDOWS_NOT_MEASURED
+@contract(specs=OPTIONAL_ENGINES)
+def test_gitbase_gc_accepts_aggressive(engine, engine_spec):
+    """The optional engines inherit gitbase's ``gc(aggressive=False)``, so
+    ``gc(aggressive=True)`` runs and returns None (git_system drops the
+    flag, #224: ``test_git_gc_drops_its_flags``)"""
+    assert engine.gc(aggressive=True) is None
 
 
 @pytest.mark.parametrize("engine_spec", [PLAIN, PUREGIT], ids=str, indirect=True)
@@ -684,7 +729,7 @@ def test_plain_tells_apart_two_contents_that_share_a_sha1_desired(engine, projec
     assert engine.get(first) == SHATTERED_1
 
 
-@GIT_SPECS
+@contract("get", specs=GIT_ENGINES)
 def test_git_tells_apart_two_contents_that_share_a_sha1(
     engine, engine_spec, project_dir
 ):
@@ -704,7 +749,10 @@ def test_git_tells_apart_two_contents_that_share_a_sha1(
         engine_spec.read_stored(provenance, content_hash)
         for content_hash in (first, second)
     ] == [SHATTERED_1, SHATTERED_2]
-    assert [engine.get(first), engine.get(second)] == [SHATTERED_1, SHATTERED_2]
+    assert [read_back(engine, first), read_back(engine, second)] == [
+        SHATTERED_1,
+        SHATTERED_2,
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -715,7 +763,7 @@ def test_git_tells_apart_two_contents_that_share_a_sha1(
 @GIT_SPECS
 @pytest.mark.usefixtures("engine")
 def test_git_connect_records_an_initial_commit_with_the_empty_tree(
-    project_dir, isolated_git
+    engine_spec, project_dir, isolated_git
 ):
     """``connect`` makes master an initial commit: no parent, the empty tree
     (as the test's own git computes it), "Initial Commit", by Noworkflow"""
@@ -747,12 +795,13 @@ def test_git_reconnect_keeps_the_history(engine_spec, project_dir):
 
 
 @WINDOWS_NOT_MEASURED
-@GIT_SPECS
+@contract(specs=NAMED_TREE_ENGINES)
 def test_git_commit_content_records_a_commit_of_the_files_put(
     engine, engine_spec, project_dir
 ):
-    """``commit_content`` returns the new master: a commit whose parent is
-    the previous master, whose message is the one passed, and whose tree
+    """``commit_content`` returns the new master (its id as text, bytes or
+    a pygit2 ``Oid``, by engine: no caller reads it): a commit whose parent
+    is the previous master, whose message is the one passed, and whose tree
     maps the project-relative paths to git's blob ids of the contents (a
     repeated name gets " - v2"); its author is Noworkflow"""
     repository = git_store(project_dir)
@@ -764,7 +813,7 @@ def test_git_commit_content_records_a_commit_of_the_files_put(
         engine_spec.blob_hash(content) for content in (b"a1\n", b"a2\n", b"b\n")
     )
 
-    commit = engine.commit_content("Trial T")
+    commit = as_text(engine.commit_content("Trial T"))
 
     assert commit == master_of(repository)
     assert git_text("cat-file", "-t", commit, cwd=repository) == "commit"
@@ -780,13 +829,18 @@ def test_git_commit_content_records_a_commit_of_the_files_put(
 
 
 @GIT_SPECS
-def test_git_commit_content_with_an_empty_message(engine, project_dir):
-    """``commit_content("")`` records the message "<empty>" """
+def test_git_commit_content_with_an_empty_message(engine, engine_spec, project_dir):
+    """``commit_content("")`` records the message "<empty>" on puregit
+    (``git_system.commit_tree`` puts it in place of an empty one) and the
+    empty message on the engines that write the commit object themselves"""
     engine.put(b"a\n", str(project_dir / "a.txt"))
 
     commit = engine.commit_content("")
 
-    assert commit_fields(git_store(project_dir), commit)["subject"] == ("<empty>")
+    expected = "<empty>" if engine_spec is PUREGIT else ""
+    assert commit_fields(git_store(project_dir), as_text(commit))["subject"] == (
+        expected
+    )
 
 
 @PUREGIT_ONLY
@@ -843,8 +897,8 @@ def test_puregit_shortens_names_longer_than_4096_characters(engine, project_dir)
 
 
 @WINDOWS_NOT_MEASURED
-@GIT_SPECS
-def test_git_gc_packs_the_loose_objects(engine, project_dir):
+@contract("get", specs=GIT_ENGINES)
+def test_git_gc_packs_the_loose_objects(engine, engine_spec, project_dir):
     """``gc()`` packs every loose object (``git count-objects`` before and
     after), and every committed content still reads back"""
     repository = git_store(project_dir)
@@ -861,7 +915,9 @@ def test_git_gc_packs_the_loose_objects(engine, project_dir):
     engine.gc()
 
     assert loose_and_packed(repository) == (0, loose)
-    assert {content_hash: engine.get(content_hash) for content_hash in hashes} == hashes
+    assert {
+        content_hash: read_back(engine, content_hash) for content_hash in hashes
+    } == hashes
 
 
 @WINDOWS_NOT_MEASURED
@@ -883,6 +939,103 @@ def test_puregit_gc_prunes_content_that_was_never_committed(engine, project_dir)
     assert engine.get(committed) == b"committed\n"
     with pytest.raises(subprocess.CalledProcessError):
         engine.get(uncommitted)
+
+
+# ---------------------------------------------------------------------------
+# dulwich: what get and find_subhash do today (the contract's twins are the
+# get and find_subhash contract tests, xfail on dulwich)
+# ---------------------------------------------------------------------------
+
+DULWICH_ONLY = pytest.mark.parametrize("engine_spec", [DULWICH.param()], indirect=True)
+
+
+@DULWICH_ONLY
+def test_dulwich_get_returns_the_content_decoded_as_text(engine, project_dir):
+    """``get`` returns text, the content decoded as UTF-8 with each invalid
+    byte replaced by U+FFFD, so a binary content does not come back (#438;
+    the twin is ``test_get_returns_the_bytes_put[...-dulwich]``)"""
+    content = b"a\r\nb\x00\xff\xfe\n"
+    content_hash = engine.put(content, str(project_dir / "f.txt"))
+
+    assert engine.get(content_hash) == "a\r\nb\x00\ufffd\ufffd\n"
+
+
+@DULWICH_ONLY
+def test_dulwich_find_subhash_raises_type_error(engine, project_dir):
+    """``find_subhash`` of any prefix raises TypeError: dulwich's
+    ``scan_for_short_id`` requires the type of the object (#448; the twins
+    are the ``find_subhash`` contract tests)"""
+    content_hash = engine.put(b"hello\n", str(project_dir / "a.txt"))
+    engine.commit_content("m")
+
+    with pytest.raises(TypeError) as raised:
+        engine.find_subhash(content_hash[:8])
+
+    assert str(raised.value) == (
+        "scan_for_short_id() missing 1 required positional argument: 'tp'"
+    )
+
+
+# ---------------------------------------------------------------------------
+# pygit: what find_subhash does today (the twins are the find_subhash
+# contract tests on ambiguous prefixes and revision names)
+# ---------------------------------------------------------------------------
+
+PYGIT_FAMILY = pytest.mark.parametrize(
+    "engine_spec", [PYGIT.param(), GITDB.param()], indirect=True
+)
+
+
+@PYGIT_FAMILY
+def test_pygit_find_subhash_resolves_revision_names(engine, project_dir):
+    """``find_subhash`` of ``master`` or ``HEAD`` gives the id of the
+    store's last commit: it looks the prefix up as a revision (#448)"""
+    engine.put(b"hello\n", str(project_dir / "a.txt"))
+    engine.commit_content("m")
+    last = master_of(git_store(project_dir))
+
+    assert [engine.find_subhash(name) for name in ("master", "HEAD")] == [last, last]
+
+
+@PYGIT_FAMILY
+def test_pygit_find_subhash_of_an_ambiguous_prefix_raises(
+    engine, engine_spec, project_dir
+):
+    """A prefix that two stored hashes share raises pygit2's AmbiguousError,
+    which ``find_subhash`` does not catch (#448)"""
+    first, second = contents_sharing_a_prefix(engine_spec.blob_hash)
+    hashes = {
+        engine.put(first, str(project_dir / "first.txt")),
+        engine.put(second, str(project_dir / "second.txt")),
+    }
+    engine.commit_content("m")
+
+    with pytest.raises(Exception) as raised:
+        engine.find_subhash(min(hashes)[:4])
+
+    assert type(raised.value).__name__ == "AmbiguousError"
+    assert "ambiguous OID prefix" in str(raised.value)
+
+
+@WINDOWS_NOT_MEASURED
+@pytest.mark.parametrize("engine_spec", [GITDB.param()], indirect=True)
+def test_gitdb_names_each_tree_entry_by_the_sha1_of_its_name(engine, project_dir):
+    """gitdb's commit tree is flat: each entry is named by the sha1 of the
+    name the other git engines give the file (project-relative, " - v2"
+    for a repeated one), and holds the content's blob id"""
+    names = ["a.txt", "a.txt - v2", os.path.join("sub", "b.txt")]
+    hashes = [
+        engine.put(b"a1\n", str(project_dir / "a.txt")),
+        engine.put(b"a2\n", str(project_dir / "a.txt")),
+        engine.put(b"b\n", str(project_dir / "sub" / "b.txt")),
+    ]
+
+    commit = as_text(engine.commit_content("Trial T"))
+
+    assert tree_of(git_store(project_dir), commit) == {
+        sha1_hex(name.encode("utf-8")): content_hash
+        for name, content_hash in zip(names, hashes)
+    }
 
 
 # ---------------------------------------------------------------------------

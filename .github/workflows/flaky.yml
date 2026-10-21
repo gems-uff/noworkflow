@@ -38,12 +38,13 @@ jobs:
           python-version: "3.15"
           enable-cache: true
 
-      # The package of the `test` job in ci.yml: without swipl the patterns
-      # and Prolog-fact tests skip, and no trial would repeat them.
-      - name: Install SWI-Prolog
+      # The packages of the `test` job in ci.yml: without swipl the patterns
+      # and Prolog-fact tests skip, without Graphviz the tests that run `dot`,
+      # and no trial would repeat them.
+      - name: Install SWI-Prolog and Graphviz
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox
+          sudo apt-get install -y -qq --no-install-recommends swi-prolog-nox graphviz
 
       # The tests of the vis in a browser depend on timing more than any
       # other, so the trials run them too: Chrome as in the vis-browser job
@@ -63,17 +64,18 @@ jobs:
           NOW_BROWSER: require
         run: |
           set -o pipefail
-          uv run --no-sync pytest -m "not golden and not paper" | tee "test-log-trial-${{ matrix.trial }}.log"
+          uv run --no-sync pytest -m "not golden and not paper and not engines" | tee "test-log-trial-${{ matrix.trial }}.log"
 
       # The non-golden floor of ci.yml plus the vis-browser job's: these
       # trials deselect the goldens, which only the reference leg compares,
-      # and the paper example, which has a job of its own.
+      # and the paper example and the optional content engines, which have
+      # jobs of their own.
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2953 \
+          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2960 \
             "trial ${{ matrix.trial }}" \
-            'uv sync --locked --group browser --python 3.15 && NOW_BROWSER=require uv run --no-sync pytest -m "not golden and not paper"'
+            'uv sync --locked --group browser --python 3.15 && NOW_BROWSER=require uv run --no-sync pytest -m "not golden and not paper and not engines"'
 
       - name: Upload the log
         if: ${{ !cancelled() }}

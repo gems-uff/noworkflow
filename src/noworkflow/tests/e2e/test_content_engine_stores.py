@@ -48,13 +48,11 @@ import pytest
 
 from ..persistence.engines import (
     IDENTITY,
-    IDENTITY_EMAIL,
-    IDENTITY_NAME,
     NOWORKFLOW_AUTHOR,
     git_blob_hex,
     shown,
 )
-from .harness import last_line
+from .harness import last_line, synthetic_git
 from .oracle import STDLIB_ON_ANOTHER_DRIVE, Defect, known_defects
 
 pytestmark = pytest.mark.skipif(
@@ -181,18 +179,7 @@ def loose_and_packed(project):
 @pytest.fixture
 def puregit_project(project):
     """``project`` with a synthetic git identity and configuration"""
-    config = project.root / "gitconfig"
-    config.write_text("", encoding="utf-8")
-    project.env.update(
-        {
-            "GIT_CONFIG_GLOBAL": str(config),
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_AUTHOR_NAME": IDENTITY_NAME,
-            "GIT_AUTHOR_EMAIL": IDENTITY_EMAIL,
-            "GIT_COMMITTER_NAME": IDENTITY_NAME,
-            "GIT_COMMITTER_EMAIL": IDENTITY_EMAIL,
-        }
-    )
+    synthetic_git(project)
     project.write("script.py", SCRIPT)
     return project
 

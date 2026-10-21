@@ -6,7 +6,7 @@
 FROM --platform=linux/amd64 ubuntu:24.04
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates git build-essential swi-prolog-nox \
+ && apt-get install -y --no-install-recommends ca-certificates git build-essential swi-prolog-nox graphviz \
  && rm -rf /var/lib/apt/lists/*
 
 # CI installs the latest uv too (setup-uv without a version).
