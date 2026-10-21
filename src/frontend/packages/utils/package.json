@@ -44,5 +44,7 @@
     "url": "https://github.com/gems-uff/noworkflow/issues"
   },
   "homepage": "http://gems-uff.github.io/noworkflow",
-  "outputs": ["lib"]
+  "outputs": [
+    "lib"
+  ]
 }

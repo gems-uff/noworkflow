@@ -1,9 +1,8 @@
 /**
-  * HistoryNodeData represents either a trial or a summarized version node
-  * Some attributes exist only when it is a trial
-  */
-export
-interface HistoryNodeData {
+ * HistoryNodeData represents either a trial or a summarized version node
+ * Some attributes exist only when it is a trial
+ */
+export interface HistoryNodeData {
   /* Shared attribute */
   id: number;
   display: string;
@@ -15,8 +14,7 @@ interface HistoryNodeData {
   trials?: HistoryNodeData[];
 }
 
-export
-interface HistoryTrialNodeData extends HistoryNodeData {
+export interface HistoryTrialNodeData extends HistoryNodeData {
   /* Trial attributes */
   script: string;
   command: string;
@@ -26,23 +24,21 @@ interface HistoryTrialNodeData extends HistoryNodeData {
   main_id: number;
 
   /* Extra */
-  code_hash:string;
+  code_hash: string;
   duration_text: string;
   tooltip: string;
   str_start: string;
   str_finish: string;
 }
 
-export
-interface HistoryEdgeData {
+export interface HistoryEdgeData {
   level: number;
   right: number;
   source: number;
   target: number;
 }
 
-export
-interface HistoryGraphData {
+export interface HistoryGraphData {
   edges: HistoryEdgeData[];
   nodes: HistoryNodeData[];
   scripts: string[];
@@ -50,8 +46,7 @@ interface HistoryGraphData {
   height: number;
 }
 
-export
-interface VisibleHistoryNode {
+export interface VisibleHistoryNode {
   id: number;
   x: number;
   y: number;
@@ -66,8 +61,7 @@ interface VisibleHistoryNode {
   tooltip?: string;
 }
 
-export
-interface VisibleHistoryEdge {
+export interface VisibleHistoryEdge {
   id: string;
   level: number;
   right: number;

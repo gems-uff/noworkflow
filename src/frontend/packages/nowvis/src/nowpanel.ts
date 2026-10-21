@@ -1,40 +1,37 @@
-import {DockPanel, Widget, DockLayout} from '@lumino/widgets';
+import { DockPanel, Widget, DockLayout } from '@lumino/widgets';
 
-
-export
-interface VisWidget extends Widget {
+export interface VisWidget extends Widget {
   nowVis?: string;
 }
 
-
-export
-interface FindResult {
+export interface FindResult {
   area: DockLayout.AreaConfig | null;
   index: number;
 }
 
-
-export
-function findInLayout(area: DockLayout.AreaConfig | null, widget: Widget): FindResult | null {
+export function findInLayout(
+  area: DockLayout.AreaConfig | null,
+  widget: Widget
+): FindResult | null {
   if (area == null || area.type == 'tab-area') {
     return null;
   }
-  var splitconfig: DockLayout.ISplitAreaConfig = area;
-  var result: FindResult | null = null;
+  const splitconfig: DockLayout.ISplitAreaConfig = area;
+  let result: FindResult | null = null;
   splitconfig.children.every((child, index) => {
     if (child.type == 'tab-area') {
-      var tabconfig: DockLayout.ITabAreaConfig = child;
-      for (var tabwidget of tabconfig.widgets) {
+      const tabconfig: DockLayout.ITabAreaConfig = child;
+      for (const tabwidget of tabconfig.widgets) {
         if (tabwidget == widget) {
           result = {
             area: area,
             index: index
-          }
+          };
           return false;
         }
       }
     } else {
-      var temp = findInLayout(child, widget);
+      const temp = findInLayout(child, widget);
       if (temp) {
         result = temp;
         return false;
@@ -45,125 +42,125 @@ function findInLayout(area: DockLayout.AreaConfig | null, widget: Widget): FindR
   return result;
 }
 
-
-export
-class NowVisPanel extends DockPanel {
-
+export class NowVisPanel extends DockPanel {
   addMainWidget(widget: Widget, options: DockLayout.IAddOptions = {}): void {
     if (options.ref) {
-      if ((options.ref as VisWidget).nowVis != "main") {
+      if ((options.ref as VisWidget).nowVis != 'main') {
         console.log("Warning: options.ref is not 'main'");
       }
     } else {
-      for (let w of this.widgets()) {
-        let wnow = w as VisWidget;
-        if (wnow.nowVis == "main") {
+      for (const w of this.widgets()) {
+        const wnow = w as VisWidget;
+        if (wnow.nowVis == 'main') {
           options.ref = w;
         }
       }
     }
-    (widget as VisWidget).nowVis = "main";
+    (widget as VisWidget).nowVis = 'main';
     this.addWidget(widget, options);
   }
 
   addGraphWidget(widget: Widget, options: DockLayout.IAddOptions = {}): void {
-    var operation: string = "none";
+    let operation: string = 'none';
     if (options.ref) {
-      if ((options.ref as VisWidget).nowVis != "graph") {
+      if ((options.ref as VisWidget).nowVis != 'graph') {
         console.log("Warning: options.ref is not 'graph'");
       }
     } else {
-      for (let w of this.widgets()) {
-        let wnow = w as VisWidget;
-        if (wnow.nowVis == "main" && !options.ref) {
+      for (const w of this.widgets()) {
+        const wnow = w as VisWidget;
+        if (wnow.nowVis == 'main' && !options.ref) {
           options.ref = w;
-          options.mode = "split-bottom";
-          operation = "main";
-        } else if ((wnow.nowVis == "info") && (operation != "graph")) {
+          options.mode = 'split-bottom';
+          operation = 'main';
+        } else if (wnow.nowVis == 'info' && operation != 'graph') {
           options.ref = w;
-          options.mode = "split-left";
-          operation = "info";
-        } else if (wnow.nowVis == "graph") {
+          options.mode = 'split-left';
+          operation = 'info';
+        } else if (wnow.nowVis == 'graph') {
           options.ref = w;
-          options.mode = "tab-after";
-          operation = "graph";
+          options.mode = 'tab-after';
+          operation = 'graph';
         }
-      };
+      }
     }
-    (widget as VisWidget).nowVis = "graph";
+    (widget as VisWidget).nowVis = 'graph';
     this.addWidget(widget, options);
 
-    if (operation == "main") {
+    if (operation == 'main') {
       var layout = this.saveLayout();
       var sublayout = findInLayout(layout.main, widget);
       if (sublayout) {
-        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig).sizes;
-        sizes[0] = 0.20;
-        sizes[1] = 0.80;
+        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig)
+          .sizes;
+        sizes[0] = 0.2;
+        sizes[1] = 0.8;
         this.restoreLayout(layout);
       }
     }
 
-    if (operation == "info") {
+    if (operation == 'info') {
       var layout = this.saveLayout();
       var sublayout = findInLayout(layout.main, widget);
       if (sublayout) {
-        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig).sizes;
-        sizes[0] = 0.80;
-        sizes[1] = 0.20;
+        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig)
+          .sizes;
+        sizes[0] = 0.8;
+        sizes[1] = 0.2;
         this.restoreLayout(layout);
       }
     }
   }
 
   addInfoWidget(widget: Widget, options: DockLayout.IAddOptions = {}): void {
-    var operation: string = "none";
+    let operation: string = 'none';
     if (options.ref) {
-      if ((options.ref as VisWidget).nowVis != "info") {
+      if ((options.ref as VisWidget).nowVis != 'info') {
         console.log("Warning: options.ref is not 'info'");
       }
     } else {
-      for (let w of this.widgets()) {
-        let wnow = w as VisWidget;
-        if (wnow.nowVis == "main" && !options.ref) {
+      for (const w of this.widgets()) {
+        const wnow = w as VisWidget;
+        if (wnow.nowVis == 'main' && !options.ref) {
           options.ref = w;
-          options.mode = "split-bottom";
-          operation = "main";
-        } else if ((wnow.nowVis == "graph") && (operation != "info")) {
+          options.mode = 'split-bottom';
+          operation = 'main';
+        } else if (wnow.nowVis == 'graph' && operation != 'info') {
           options.ref = w;
-          options.mode = "split-right";
-          operation = "graph";
-        } else if (wnow.nowVis == "info") {
+          options.mode = 'split-right';
+          operation = 'graph';
+        } else if (wnow.nowVis == 'info') {
           options.ref = w;
-          options.mode = "tab-after";
-          operation = "info";
+          options.mode = 'tab-after';
+          operation = 'info';
         }
-      };
+      }
     }
-    (widget as VisWidget).nowVis = "info";
+    (widget as VisWidget).nowVis = 'info';
     this.addWidget(widget, options);
 
-    if (operation == "main") {
+    if (operation == 'main') {
       var layout = this.saveLayout();
       var sublayout = findInLayout(layout.main, widget);
       if (sublayout) {
-        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig).sizes;
-        sizes[0] = 0.20;
-        sizes[1] = 0.80;
+        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig)
+          .sizes;
+        sizes[0] = 0.2;
+        sizes[1] = 0.8;
         this.restoreLayout(layout);
       }
     }
 
-    if (operation == "graph") {
+    if (operation == 'graph') {
       var layout = this.saveLayout();
       var sublayout = findInLayout(layout.main, widget);
       if (sublayout) {
-        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig).sizes;
-        sizes[0] = 0.80;
-        sizes[1] = 0.20;
+        var sizes: number[] = (sublayout.area as DockLayout.ISplitAreaConfig)
+          .sizes;
+        sizes[0] = 0.8;
+        sizes[1] = 0.2;
         this.restoreLayout(layout);
       }
     }
   }
-
 }

@@ -1,16 +1,13 @@
-import {
-  HierarchyPointNode as d3_HierarchyPointNode,
-} from 'd3-hierarchy';
+import { HierarchyPointNode as d3_HierarchyPointNode } from 'd3-hierarchy';
 
-export
-interface TrialNodeData {
-  activations: { [trial: string]: number; }[];
+export interface TrialNodeData {
+  activations: { [trial: string]: number }[];
   children: TrialNodeData[];
   children_index: number; // Position in parent list
-  duration: { [trial: string]: number; };
+  duration: { [trial: string]: number };
   full_tooltip: boolean;
   name: string;
-  tooltip: { [trial: string]: string; };
+  tooltip: { [trial: string]: string };
   trial_ids: number[];
 
   // Do not use it
@@ -24,27 +21,24 @@ interface TrialNodeData {
   y0?: number;
 }
 
-export
-interface TrialEdgeData {
-  count: { [trial: string]: number; };
+export interface TrialEdgeData {
+  count: { [trial: string]: number };
   source: number;
   target: number;
   type: number;
 }
 
-export
-interface TrialGraphData {
+export interface TrialGraphData {
   root: TrialNodeData;
   edges: TrialEdgeData[];
-  max_duration: { [trial: string]: number; };
-  min_duration: { [trial: string]: number; };
-  colors: { [trial: string]: number; };
+  max_duration: { [trial: string]: number };
+  min_duration: { [trial: string]: number };
+  colors: { [trial: string]: number };
   trial1: number;
   trial2: number;
 }
 
-export
-interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
+export interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
   _children?: d3_HierarchyPointNode<TrialNodeData>[];
   children?: this[];
   dy?: number;
@@ -52,17 +46,15 @@ interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
   y0?: number;
 }
 
-export
-interface VisibleTrialEdge {
-  count: { [trial: string]: string; };
+export interface VisibleTrialEdge {
+  count: { [trial: string]: string };
   source: VisibleTrialNode;
   target: VisibleTrialNode;
   type: string;
   id: string;
 }
 
-export
-interface ActivationData {
+export interface ActivationData {
   id: string;
   hash: string;
   name: string;

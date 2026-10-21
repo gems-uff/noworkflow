@@ -1,11 +1,9 @@
 import {
   Selection as d3_Selection,
-  BaseType as d3_BaseType,
+  BaseType as d3_BaseType
 } from 'd3-selection';
 
-
-export
-interface ModuleData {
+export interface ModuleData {
   name: string;
   version: string;
   path: string;
@@ -16,26 +14,21 @@ interface ModuleData {
   trial_id?: number;
 }
 
-export
-interface ModuleListData {
+export interface ModuleListData {
   all: ModuleData[];
   trial_path: string;
 }
 
-export
-interface EnvironmentItemData {
+export interface EnvironmentItemData {
   name: string;
   value: string;
 }
 
-export
-interface EnvironmentData {
+export interface EnvironmentData {
   all: EnvironmentItemData[];
 }
 
-
-export
-interface FileAccessData {
+export interface FileAccessData {
   name: string;
   mode: string;
   buffering: string;
@@ -47,14 +40,12 @@ interface FileAccessData {
   trial_id?: number;
 }
 
-export
-interface FileAccessListData {
+export interface FileAccessListData {
   file_accesses: FileAccessData[];
   trial_path: string;
 }
 
-export
-interface TrialInfoData {
+export interface TrialInfoData {
   id?: string;
   display?: string;
   code_hash?: string;
@@ -65,15 +56,13 @@ interface TrialInfoData {
   arguments?: string;
 }
 
-export
-interface DiffInfoData {
+export interface DiffInfoData {
   trial1: TrialInfoData;
   trial2: TrialInfoData;
   trial: TrialInfoData;
 }
 
-export
-interface DiffModuleData {
+export interface DiffModuleData {
   modules_added: ModuleData[];
   modules_removed: ModuleData[];
   modules_replaced: ModuleData[][];
@@ -81,15 +70,13 @@ interface DiffModuleData {
   t2_path: string;
 }
 
-export
-interface DiffEnvironmentData {
+export interface DiffEnvironmentData {
   env_added: EnvironmentItemData[];
   env_removed: EnvironmentItemData[];
   env_replaced: EnvironmentItemData[][];
 }
 
-export
-interface DiffAccessData {
+export interface DiffAccessData {
   fa_added: FileAccessData[];
   fa_removed: FileAccessData[];
   fa_replaced: FileAccessData[][];
@@ -97,8 +84,7 @@ interface DiffAccessData {
   t2_path: string;
 }
 
-export
-interface FilterObject {
+export interface FilterObject {
   filterdiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
   valid: any;
   on_change: (filterfn: () => void) => void;
