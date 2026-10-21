@@ -10,7 +10,8 @@ read-only afterwards: ``simulation.py``, on which the five modes work and
 whose ``-w`` graphs are checked against the whole graph of the same mode
 (the clustered modes crash with ``-w`` on one of its writes, #200), and the
 two scripts that crash the clustered modes without ``-w``
-(#242). ``export ast`` fails on recent Pythons: the
+(#242); a store of its own holds the script of #258, whose ``-w`` on a
+parameter fineGrain leaves out. ``export ast`` fails on recent Pythons: the
 text and ``-j`` forms from 3.14 (#241), every form from
 3.15 (#241); ``harness.export_ast_failure`` says which form
 fails where. ``export ipynb`` writes a notebook into the current directory,
@@ -139,6 +140,13 @@ CALL_REASON = (
     "(looplessCoarseGrain)"
 )
 KEY_ERROR = re.compile(r"KeyError: 'e_\d+'")
+# The script of #258: the parameter `x` is an evaluation inside the
+# activation of `f`.
+PARAMETER_SCRIPT = "def f(x):\n    pass\n\nf(1)\n"
+PARAMETER_REASON = (
+    "#258: `export dataflow -m fineGrain -w` on an evaluation inside a "
+    "function draws neither it nor the activation that holds it"
+)
 # Scripts whose text writes a double quote or a backslash into a label
 # (#401), each run in a project of its own.
 ESCAPED_QUOTE_SCRIPT = 'print("say \\"hi\\"")\n'
@@ -331,6 +339,25 @@ def written_evaluation(project, variable):
         variable,
     )
     assert len(rows) == 1, "{} writes of {!r}".format(len(rows), variable)
+    return rows[0]["id"]
+
+
+def evaluation_of(project, kind, name):
+    """Id of the one evaluation of the code component ``kind``/``name`` in
+    the last trial
+    """
+    trial_id = project.trials()[-1]["id"]
+    rows = project.query(
+        "SELECT evaluation.id FROM evaluation JOIN code_component "
+        "ON code_component.id = evaluation.code_component_id "
+        "AND code_component.trial_id = evaluation.trial_id "
+        "WHERE evaluation.trial_id = ? AND code_component.type = ? "
+        "AND code_component.name = ?",
+        trial_id,
+        kind,
+        name,
+    )
+    assert len(rows) == 1, "{} evaluations of {} {!r}".format(len(rows), kind, name)
     return rows[0]["id"]
 
 
@@ -953,6 +980,80 @@ def test_export_dataflow_reads_as_dot_in_each_mode(dataflow_project, mode):
     graph = DotGraph(result.stdout)
     assert "input.txt" in drawn_labels(graph).values(), str(result)
     assert graph.edges, str(result)
+
+
+@pytest.fixture(scope="module")
+def _parameter_store(tmp_path_factory):
+    project = NowProject(tmp_path_factory.mktemp("parameter"))
+    project.write("script.py", PARAMETER_SCRIPT)
+    project.run("run", "script.py")
+    return project
+
+
+@pytest.fixture
+def parameter_project(_parameter_store):
+    """``PARAMETER_SCRIPT`` after one run, with the evaluation ids of the
+    parameter ``x`` and of the call ``f(1)``, whose activation holds it:
+    read-only
+    """
+    for _ in read_only(_parameter_store):
+        yield (
+            _parameter_store,
+            evaluation_of(_parameter_store, "param", "x"),
+            evaluation_of(_parameter_store, "call", "f(1)"),
+        )
+
+
+def wdf_graph(project, mode, eid):
+    """``export dataflow -m <mode> -w <eid>``, which must print a whole DOT
+    graph, read by ``DotGraph``
+    """
+    result = project.run("export", "dataflow", "-m", mode, "-w", eid)
+    assert_digraph(result)
+    return DotGraph(result.stdout), result
+
+
+def test_export_dataflow_wdf_of_a_parameter_in_all_mode(parameter_project):
+    """``-m all -w <x>`` draws the parameter ``x`` that ``-w`` names
+
+    Control for #258: the evaluation is drawable, so what leaves it out of
+    fineGrain is the filter of ``-w``.
+    """
+    project, parameter, _ = parameter_project
+    graph, result = wdf_graph(project, "all", parameter)
+    assert "e_{}".format(parameter) in graph.nodes, str(result)
+
+
+def test_export_dataflow_wdf_of_a_parameter_in_fine_grain(parameter_project):
+    """``-m fineGrain -w <x>`` exits 0 and draws neither the parameter ``x``
+    that ``-w`` names nor the activation of ``f`` that holds it
+
+    Characterization of #258: ``FilterWasDerivedFrom.__contains__``
+    (``dependency_graph/filters.py``) judges an ``ActivationNode``, a
+    subclass of ``EvaluationNode``, by the evaluation of its call alone,
+    which did not derive ``x``, so the activation of ``f`` and everything
+    inside it are left out.
+    """
+    project, parameter, call = parameter_project
+    graph, result = wdf_graph(project, "fineGrain", parameter)
+    assert graph.nodes, str(result)
+    assert "e_{}".format(parameter) not in graph.nodes, str(result)
+    subgraphs = [name for name, _ in graph.subgraphs]
+    assert "cluster_{}".format(call) not in subgraphs, str(result)
+
+
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason=PARAMETER_REASON)
+def test_export_dataflow_wdf_of_a_parameter_in_fine_grain_desired(
+    parameter_project,
+):
+    """``-m fineGrain -w <x>`` draws the parameter ``x`` inside the
+    activation of ``f``
+    """
+    project, parameter, call = parameter_project
+    graph, result = wdf_graph(project, "fineGrain", parameter)
+    assert "e_{}".format(parameter) in graph.nodes, str(result)
+    subgraphs = [name for name, _ in graph.subgraphs]
+    assert "cluster_{}".format(call) in subgraphs, str(result)
 
 
 def test_export_dataflow_of_a_string_literal_with_an_escaped_quote(project):
