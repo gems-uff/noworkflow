@@ -8,25 +8,16 @@
 // .stylelintrc.json), and the three tools are declared in package.json here.
 const js = require('@eslint/js');
 const tsPlugin = require('@typescript-eslint/eslint-plugin');
-const tsParser = require('@typescript-eslint/parser');
 const prettierRecommended = require('eslint-plugin-prettier/recommended');
 
 const typescript = ['**/*.ts', '**/*.tsx'];
 
-// The parser and the plugin, eslint-recommended (core rules that TypeScript
-// makes redundant, off) and recommended: the plugin's eslintrc configurations,
-// since version 6 has no flat ones.
-const tsRecommended = [
-  {
-    files: typescript,
-    languageOptions: { parser: tsParser, sourceType: 'module' },
-    plugins: { '@typescript-eslint': tsPlugin },
-    rules: {
-      ...tsPlugin.configs['eslint-recommended'].overrides[0].rules,
-      ...tsPlugin.configs.recommended.rules
-    }
-  }
-];
+// base (the parser and the plugin), eslint-recommended (core rules that
+// TypeScript makes redundant, off) and recommended.
+const tsRecommended = tsPlugin.configs['flat/recommended'].map(config => ({
+  ...config,
+  files: typescript
+}));
 
 module.exports = [
   {
@@ -59,11 +50,7 @@ module.exports = [
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/no-use-before-define': 'off',
-      '@typescript-eslint/quotes': [
-        'error',
-        'single',
-        { avoidEscape: true, allowTemplateLiterals: false }
-      ],
+      // No quotes rule: prettier imposes single quotes (.prettierrc.json).
       curly: ['error', 'all'],
       eqeqeq: 'error',
       'prefer-arrow-callback': 'error'
