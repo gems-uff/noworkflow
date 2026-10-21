@@ -448,8 +448,11 @@ bash .github/scripts/tsc-baseline.sh "$(sed -n 's/.*tsc-baseline.sh \([0-9]*\).*
 When a change removes errors, lower the number in the `frontend` job of
 `.github/workflows/ci.yml` to the new count in the same commit.
 
-The same job lints the Jupyter extension (stylelint, prettier and eslint,
-configured in its `package.json`). From `src/frontend`, `npm run lint:check
+The same job lints the Jupyter extension with stylelint, prettier and
+eslint. The three are declared in `src/frontend/package.json` and
+configured next to it (`eslint.config.js`, `.prettierrc.json`,
+`.stylelintrc.json`), for every package of the workspace; the vis packages
+are not linted yet (#455). From `src/frontend`, `npm run lint:check
 --workspace=@noworkflow/labextension` is what it runs, and `npm run lint
 --workspace=@noworkflow/labextension` fixes what the three can fix.
 
