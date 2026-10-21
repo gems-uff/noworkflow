@@ -38,9 +38,9 @@ jobs:
         # turns UTF-8 mode on by default (PEP 686), so the Windows legs read
         # files differently below and from 3.15.
         include:
-          - { os: ubuntu-latest, min-tests: 2949, workers: 4 }
-          - { os: macos-latest, min-tests: 2949, workers: 3 }
-          - { os: windows-latest, min-tests: 2949, workers: 0, warn-encoding: "1" }
+          - { os: ubuntu-latest, min-tests: 2955, workers: 4 }
+          - { os: macos-latest, min-tests: 2955, workers: 3 }
+          - { os: windows-latest, min-tests: 2955, workers: 0, warn-encoding: "1" }
     name: test (${{ matrix.os }}, ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     env:

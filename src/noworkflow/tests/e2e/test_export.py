@@ -69,7 +69,11 @@ from noworkflow.tests.e2e.normalize import (
     strip_prolog_predicate,
     usable_hostname,
 )
-from noworkflow.tests.helpers.defects import Defect, known_defects
+from noworkflow.tests.helpers.defects import (
+    Defect,
+    known_defects,
+    parametrize_known_defects,
+)
 
 # --- export prolog ----------------------------------------------------------
 
@@ -240,6 +244,43 @@ PROSPECTIVE_LABEL = Defect(
     "leaves in place",
     signature="DotSyntaxWarning: expect syntax error scanning invalid quoted string",
 )
+# An `if` or a `for` whose last line holds no node the prospective graph
+# draws (#451): `assert`, `del` and `raise` are not drawn, and under
+# `now run -cg` no assignment is a code component, so every `if` whose
+# body ends in one is such a block. `(script, run flags, label of the
+# block's node, exception)`.
+UNDRAWN_BLOCK_END = {
+    "if_assert": (
+        "flag = True\nif flag:\n    assert flag\n",
+        (),
+        "2: if",
+        "IndexError: list index out of range",
+    ),
+    "for_assert": (
+        "for i in range(1):\n    assert i == 0\n",
+        (),
+        "1: for",
+        "TypeError: list indices must be integers or slices, not NoneType",
+    ),
+    "if_coarse_granularity": (
+        "flag = True\nif flag:\n    done = 1\n",
+        ("-cg",),
+        "2: if",
+        "IndexError: list index out of range",
+    ),
+}
+UNDRAWN_BLOCK_END_REASON = (
+    "#451: DefinitionProvenanceAnalyzer looks up, among the nodes it "
+    "drew, the one that starts on the last line of each block "
+    "(SyntaxUtils.get_index_array over self.start): when no drawn node "
+    "starts there, _create_condition_node indexes an empty list for an if "
+    "and _get_call_ends indexes a list with None for a for"
+)
+
+
+def undrawn_block_end_defects(case):
+    return [Defect(UNDRAWN_BLOCK_END_REASON, signature=UNDRAWN_BLOCK_END[case][3])]
+
 
 # --- export ipynb -----------------------------------------------------------
 
@@ -1345,6 +1386,43 @@ def test_export_prospective_of_a_condition_ending_in_a_backslash_desired(project
     assert condition == CUT_CONDITION or same_expression(condition, WHOLE_CONDITION), (
         result.stdout
     )
+
+
+@pytest.mark.parametrize("case", sorted(UNDRAWN_BLOCK_END))
+def test_export_prospective_of_a_block_ending_in_an_undrawn_statement(project, case):
+    """``export prospective`` of an ``if`` or a ``for`` whose last line
+    holds no drawn node exits 1 with a traceback and prints no graph
+    (#451 changes it)
+    """
+    script, flags, _, exception = UNDRAWN_BLOCK_END[case]
+    project.write("script.py", script)
+    project.run("run", *flags, "script.py")
+
+    result = project.run("export", "prospective", expect=1, allow_stderr=True)
+
+    assert last_line(result.stderr) == exception, str(result)
+    assert "digraph" not in result.stdout, str(result)
+
+
+@parametrize_known_defects(
+    "case",
+    [pytest.param(case, id=case) for case in sorted(UNDRAWN_BLOCK_END)],
+    undrawn_block_end_defects,
+)
+def test_export_prospective_of_a_block_ending_in_an_undrawn_statement_desired(
+    project, case
+):
+    """``export prospective`` of an ``if`` or a ``for`` whose last line
+    holds no drawn node prints a graph that draws the block"""
+    script, flags, label, _ = UNDRAWN_BLOCK_END[case]
+    project.write("script.py", script)
+    project.run("run", *flags, "script.py")
+
+    result = project.run("export", "prospective", expect=None, allow_stderr=True)
+
+    assert result.returncode == 0, str(result)
+    assert result.stderr == "", str(result)
+    assert label in drawn_labels(DotGraph(result.stdout)).values(), result.stdout
 
 
 # --- export ipynb -----------------------------------------------------------
