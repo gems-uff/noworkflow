@@ -228,7 +228,9 @@ The extras of `pyproject.toml` stay out of `.venv` unless named: add
 skip without it (the reference leg of CI and its container sync it), and `--extra notebook` (Jupyter) for the full frontend
 build (see "The frontend"). The same goes for the `paper` dependency group:
 `--group paper` adds what the tests of the paper's running example need
-(see [The paper's running example](#the-papers-running-example)).
+(see [The paper's running example](#the-papers-running-example)). The
+`engines` group is the exception: it never goes into `.venv` (see [The
+optional content engines](#the-optional-content-engines)).
 
 ## Running locally
 
@@ -392,6 +394,28 @@ sandbox, for one). They run the bundle that `now vis` serves, the working
 tree's: after a change under `src/frontend`, rebuild it first ("The
 frontend", below). As with the `paper` group, a plain `uv sync --locked`
 removes the group from `.venv` again.
+
+### The optional content engines
+
+Besides `plain` and `puregit`, a store can keep its content with dulwich,
+pygit2 or gitdb (`--content-engine dulwich`, `sequential_pygit`, `gitdb`).
+`src/noworkflow/tests/persistence/test_content_engines.py` runs the same
+contract on every engine, and `src/noworkflow/tests/e2e/test_optional_engine_stores.py`
+runs `now` on a store of each optional one. Their tests are marked
+`engines` and need the `engines` dependency group; without it they skip,
+the matrix legs of CI deselect them, and the `engines` job of `ci.yml` runs
+them with `NOW_ENGINES=require`, which fails a test instead of skipping it.
+
+Never sync the group into `.venv`: once pygit2 or dulwich imports, every
+new store without `--content-engine` takes its engine, and the rest of the
+suite, which expects `plain`, fails or hangs. Run the engine tests in an
+isolated environment instead, on the Python of the `engines` job (pygit2
+has no wheel for the newest one yet):
+
+```bash
+python=$(sed -n '/^  engines:/,/^  [a-z]/s/.*python-version: "\([0-9.]*\)".*/\1/p' .github/workflows/ci.yml)
+NOW_ENGINES=require uv run --isolated --locked --python "$python" --group engines pytest -m engines
+```
 
 ### The frontend
 

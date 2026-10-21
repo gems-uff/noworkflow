@@ -319,8 +319,9 @@ class NowProject:
         """The bytes the plain content engine stored under a hash
 
         A new store uses a git engine when pygit2 or dulwich is importable
-        (``persistence/content_database.py``); ``uv.lock`` has neither, but a
-        ``NOW_E2E_CMD`` installation may.
+        (``persistence/content_database.py``); only the ``engines`` job of
+        CI installs them, and runs none of the tests that call this, but a
+        ``NOW_E2E_CMD`` installation may have them.
         """
         path = self.store / "content" / content_hash[:2] / content_hash[2:]
         if not path.exists() and not (self.store / "content").is_dir():
