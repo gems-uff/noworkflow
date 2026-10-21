@@ -448,6 +448,11 @@ bash .github/scripts/tsc-baseline.sh "$(sed -n 's/.*tsc-baseline.sh \([0-9]*\).*
 When a change removes errors, lower the number in the `frontend` job of
 `.github/workflows/ci.yml` to the new count in the same commit.
 
+The same job lints the Jupyter extension (stylelint, prettier and eslint,
+configured in its `package.json`). From `src/frontend`, `npm run lint:check
+--workspace=@noworkflow/labextension` is what it runs, and `npm run lint
+--workspace=@noworkflow/labextension` fixes what the three can fix.
+
 `npm run build` builds every package, the Jupyter extension included, and
 that one calls `jupyter labextension build`. It fails with
 `jupyter: command not found` unless Jupyter is in `.venv` (`uv sync --locked

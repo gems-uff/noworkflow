@@ -70,6 +70,7 @@ cd src/frontend
 npm ci --no-audit --no-fund
 npx lerna run build --scope=@noworkflow/nowvis --include-dependencies
 npx lerna run build:lib --scope=@noworkflow/labextension
+npm run lint:check --workspace=@noworkflow/labextension
 git restore ../noworkflow/now/vis/static/dist/bundle.js.map
 cd ../.. && git status --short
 bash .github/scripts/tsc-baseline.sh "$(sed -n 's/.*tsc-baseline.sh \([0-9]*\).*/\1/p' .github/workflows/ci.yml)"

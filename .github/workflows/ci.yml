@@ -375,6 +375,12 @@ jobs:
       - name: Type-check the lab extension
         run: npx lerna run build:lib --scope=@noworkflow/labextension
 
+      # stylelint, prettier and eslint of the Jupyter extension, as its
+      # package.json configures them (#422). `npm run lint` fixes what they
+      # can. The other packages join once #455 brings them to zero.
+      - name: Lint the lab extension
+        run: npm run lint:check --workspace=@noworkflow/labextension
+
       - name: Committed bundle matches the sources
         run: |
           bundle=../noworkflow/now/vis/static/dist/bundle.js

@@ -283,7 +283,7 @@ neither executes:
   `flow.pdf` is checked only where Graphviz's `dot` is on the PATH, which
   the Linux and macOS legs install and the Windows legs do not, and
   `prospective.dot` is drawn for a handful of scripts. The `frontend` job proves that the committed bundle matches the
-  sources, that the extension type-checks and that the count of `tsc`
+  sources, that the extension type-checks and lints clean and that the count of `tsc`
   errors of the vis does not grow. By hand, `golden-run` (step 4) and the
   smoke of `rebuild-vis` fetch the routes `read_store.py` lists from a
   corpus store, and `compare_vis.mjs` of `rebuild-vis` shows everything a
@@ -349,7 +349,7 @@ neither executes:
   (`src/noworkflow/tests/ipython/`), never under a kernel: the kernel in
   `src/noworkflow/kernel/` is only imported (#315), so `now clean` never
   meets a notebook trial, and the lab extension has no automated test:
-  only the type-check of the `frontend` job reaches it, so an update of
+  only the type-check and the lint of the `frontend` job reach it, so an update of
   its packages (codemirror, `@jupyterlab/*`) is measured by nothing else.
   `%%now_run --interactive` gets past #313's import only through a stand-in
   of the tests. `%%dot` and the diagrams of `%now_schema` skip where

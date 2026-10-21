@@ -1,8 +1,8 @@
-import { IRenderMime } from "@jupyterlab/rendermime-interfaces";
-import { Message } from "@lumino/messaging";
-import { Widget } from "@lumino/widgets";
-import { TrialGraph, TrialGraphData } from "@noworkflow/trial";
-import { makeid } from "@noworkflow/utils";
+import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
+import { Message } from '@lumino/messaging';
+import { Widget } from '@lumino/widgets';
+import { TrialGraph, TrialGraphData } from '@noworkflow/trial';
+import { makeid } from '@noworkflow/utils';
 
 /**
  * A widget for rendering data, for usage with rendermime.
@@ -16,7 +16,7 @@ export class RenderedTrial extends Widget implements IRenderMime.IRenderer {
     this._mimeType = options.mimeType;
     this.addClass('jp-RenderedNowTrial');
     this.div = document.createElement('div');
-    
+
     this.node.appendChild(this.div);
   }
 
@@ -25,13 +25,13 @@ export class RenderedTrial extends Widget implements IRenderMime.IRenderer {
    */
   renderModel(model: IRenderMime.IMimeModel): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      let data = model.data[this._mimeType] as any | TrialGraphData;
+      const data = model.data[this._mimeType] as any | TrialGraphData;
       this.graph = new TrialGraph('trial-' + makeid(), this.div, {
         width: data.width,
         height: data.height,
         genDataflow: false
       });
-      this.graph.load(data, data.trial1, data.trial2)
+      this.graph.load(data, data.trial1, data.trial2);
       this.update();
       resolve();
     });
@@ -57,9 +57,9 @@ export class RenderedTrial extends Widget implements IRenderMime.IRenderer {
   protected onUpdateRequest(msg: Message): void {
     // Update size after update
     if (this.isVisible && this.graph) {
-      let width =  this.node.getBoundingClientRect().width - 24;
+      const width = this.node.getBoundingClientRect().width - 24;
       this.graph.config.width = width;
-      this.div.style.width = width + "px";
+      this.div.style.width = width + 'px';
       this.graph.updateWindow();
     }
   }

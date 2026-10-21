@@ -5,9 +5,12 @@ import { historyFactory } from './historyrenderer';
 import { trialFactory } from './trialrenderer';
 import { codeFactory } from './coderenderer';
 
-
 const TYPES: {
-  [key: string]: { name: string; extensions: string[]; factory: IRenderMime.IRendererFactory };
+  [key: string]: {
+    name: string;
+    extensions: string[];
+    factory: IRenderMime.IRendererFactory;
+  };
 } = {
   'application/noworkflow.history+json': {
     name: 'noWorkflow History',
@@ -25,7 +28,6 @@ const TYPES: {
     factory: codeFactory
   }
 };
-
 
 /**
  * Extension definition.

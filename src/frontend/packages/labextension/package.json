@@ -40,15 +40,15 @@
     "clean:lintcache": "rimraf .eslintcache .stylelintcache",
     "clean:labextension": "rimraf noworkflow_labextension/labextension noworkflow_labextension/_version.py",
     "clean:all": "npm run clean:lib && npm run clean:labextension && npm run clean:lintcache",
-    "eslint": "npm run eslint:check --fix",
+    "eslint": "npm run eslint:check -- --fix",
     "eslint:check": "eslint . --cache --ext .ts,.tsx",
     "install:extension": "npm run build",
     "lint": "npm run stylelint && npm run prettier && npm run eslint",
     "lint:check": "npm run stylelint:check && npm run prettier:check && npm run eslint:check",
-    "prettier": "npm run prettier:base --write --list-different",
+    "prettier": "npm run prettier:base -- --write --list-different",
     "prettier:base": "prettier \"**/*{.ts,.tsx,.js,.jsx,.css,.json,.md}\"",
-    "prettier:check": "npm run prettier:base --check",
-    "stylelint": "npm run stylelint:check --fix",
+    "prettier:check": "npm run prettier:base -- --check",
+    "stylelint": "npm run stylelint:check -- --fix",
     "stylelint:check": "stylelint --cache \"style/**/*.css\"",
     "watch": "run-p watch:src watch:labextension",
     "watch:src": "tsc -w --sourceMap",
@@ -164,15 +164,7 @@
     "singleQuote": true,
     "trailingComma": "none",
     "arrowParens": "avoid",
-    "endOfLine": "auto",
-    "overrides": [
-      {
-        "files": "package.json",
-        "options": {
-          "tabWidth": 4
-        }
-      }
-    ]
+    "endOfLine": "auto"
   },
   "stylelint": {
     "extends": [
@@ -185,6 +177,7 @@
     ],
     "rules": {
       "csstree/validator": true,
+      "import-notation": "string",
       "property-no-vendor-prefix": null,
       "selector-class-pattern": "^([a-z][A-z\\d]*)(-[A-z\\d]+)*$",
       "selector-no-vendor-prefix": null,
