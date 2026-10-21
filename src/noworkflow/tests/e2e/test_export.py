@@ -1244,13 +1244,14 @@ def test_export_ast_in_each_form(two_trial_project, form):
 @pytest.mark.parametrize("form", AST_FORMS)
 def test_export_ast_in_each_form_desired(two_trial_project, form):
     """``export ast`` prints the tree of the last trial as ``ast.dump``
-    text, as a dict keyed by the trial id (``-j``) or as a DOT graph (``-d``)
+    text indented by two spaces, as a dict keyed by the trial id (``-j``)
+    or as a DOT graph (``-d``)
     """
     skip_unless_same_python(two_trial_project)
     result = two_trial_project.run("export", "ast", *EXPORT_AST_FORMS[form])
     output = result.stdout
     if form == "text":
-        assert output.startswith("Module("), str(result)
+        assert output.startswith("Module(\n  body=[\n    "), str(result)
     elif form == "json":
         trial_id = two_trial_project.trials()[-1]["id"]
         data = ast.literal_eval(output)
