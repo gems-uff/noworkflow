@@ -268,7 +268,37 @@ DULWICH = EngineSpec(
     git=True,
     defects=(("get", DULWICH_GET_TEXT), ("find_subhash", DULWICH_FIND_SUBHASH)),
 )
-ENGINES = (PLAIN, PUREGIT, DULWICH)
+# PyGitEngine.find_subhash looks the prefix up as a revision.
+PYGIT_AMBIGUOUS_PREFIX = Defect(
+    "#448: PyGitEngine.find_subhash looks the prefix up with pygit2's "
+    "revparse_single and catches only KeyError, and a prefix that two "
+    "objects share raises pygit2.AmbiguousError",
+    signature="ambiguous OID prefix",
+)
+PYGIT_REVISION_NAME = Defect(
+    "#448: PyGitEngine.find_subhash looks the prefix up with pygit2's "
+    "revparse_single, which resolves any revision: master and HEAD give the "
+    "id of the store's last commit",
+    signature="find_subhash('master') gave",
+)
+# "pygit" selects DistributedPyGitEngine, whose close() never returns under
+# spawn or forkserver (#334); the contract runs the sequential engine.
+PYGIT = EngineSpec(
+    "sequential_pygit",
+    "content.git",
+    git_blob_hex,
+    read_git,
+    git_blobs,
+    KeyError,
+    requires_binary="git",
+    requires_module="pygit2",
+    git=True,
+    defects=(
+        ("ambiguous prefix", PYGIT_AMBIGUOUS_PREFIX),
+        ("revision name", PYGIT_REVISION_NAME),
+    ),
+)
+ENGINES = (PLAIN, PUREGIT, DULWICH, PYGIT)
 GIT_ENGINES = tuple(spec for spec in ENGINES if spec.git)
 OPTIONAL_ENGINES = tuple(spec for spec in ENGINES if spec.requires_module)
 

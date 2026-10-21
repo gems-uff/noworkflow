@@ -52,6 +52,7 @@ from .engines import (
     OPTIONAL_ENGINES,
     PLAIN,
     PUREGIT,
+    PYGIT,
     WINDOWS_NOT_MEASURED,
     as_text,
     contract,
@@ -407,7 +408,7 @@ def test_find_subhash_of_a_missing_prefix_is_none(engine, engine_spec, project_d
     assert engine.find_subhash(prefix) is None
 
 
-@contract("find_subhash")
+@contract("find_subhash", "revision name")
 def test_find_subhash_of_a_revision_name_is_none(engine, engine_spec, project_dir):
     """``find_subhash("master")`` is None: no content hash starts with
     "master", and ``now restore -i`` hands any id of 6 characters or more to
@@ -971,6 +972,45 @@ def test_dulwich_find_subhash_raises_type_error(engine, project_dir):
     assert str(raised.value) == (
         "scan_for_short_id() missing 1 required positional argument: 'tp'"
     )
+
+
+# ---------------------------------------------------------------------------
+# pygit: what find_subhash does today (the twins are the find_subhash
+# contract tests on ambiguous prefixes and revision names)
+# ---------------------------------------------------------------------------
+
+PYGIT_FAMILY = pytest.mark.parametrize("engine_spec", [PYGIT.param()], indirect=True)
+
+
+@PYGIT_FAMILY
+def test_pygit_find_subhash_resolves_revision_names(engine, project_dir):
+    """``find_subhash`` of ``master`` or ``HEAD`` gives the id of the
+    store's last commit: it looks the prefix up as a revision (#448)"""
+    engine.put(b"hello\n", str(project_dir / "a.txt"))
+    engine.commit_content("m")
+    last = master_of(git_store(project_dir))
+
+    assert [engine.find_subhash(name) for name in ("master", "HEAD")] == [last, last]
+
+
+@PYGIT_FAMILY
+def test_pygit_find_subhash_of_an_ambiguous_prefix_raises(
+    engine, engine_spec, project_dir
+):
+    """A prefix that two stored hashes share raises pygit2's AmbiguousError,
+    which ``find_subhash`` does not catch (#448)"""
+    first, second = contents_sharing_a_prefix(engine_spec.blob_hash)
+    hashes = {
+        engine.put(first, str(project_dir / "first.txt")),
+        engine.put(second, str(project_dir / "second.txt")),
+    }
+    engine.commit_content("m")
+
+    with pytest.raises(Exception) as raised:
+        engine.find_subhash(min(hashes)[:4])
+
+    assert type(raised.value).__name__ == "AmbiguousError"
+    assert "ambiguous OID prefix" in str(raised.value)
 
 
 # ---------------------------------------------------------------------------

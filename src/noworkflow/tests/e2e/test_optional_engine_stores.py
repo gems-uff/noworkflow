@@ -19,7 +19,8 @@ The round trip of each engine, as a user meets it:
   (the engine writes the commit object itself, so no git identity is
   read: ``synthetic_git`` is only a guard);
 - ``now show -f`` lists the file the script wrote;
-- ``now restore -i <prefix>`` restores a version by a prefix of its hash;
+- ``now restore -i <prefix>`` restores a version by a prefix of its hash,
+  and finds no version for ``-i master``, which is no hash;
 - ``now restore`` puts back a script that changed;
 - ``now gc`` packs the loose objects, through the test's ``git``.
 
@@ -41,6 +42,7 @@ from ..persistence.engines import (
     DULWICH,
     NOWORKFLOW_AUTHOR,
     OPTIONAL_ENGINES,
+    PYGIT,
     git_blob_hex,
     shown,
 )
@@ -70,9 +72,18 @@ RESTORE_BY_PREFIX = Defect(
     "without the object type it requires",
     signature="scan_for_short_id() missing 1 required positional argument: 'tp'",
 )
+RESTORE_A_COMMIT = Defect(
+    "#448: PyGitEngine.find_subhash resolves master as a revision, the id of "
+    "the store's last commit, and get fails on the commit",
+    signature="'_pygit2.Commit' object has no attribute 'data'",
+)
 # The known defects of each engine in a test, by the test's name.
 ENGINE_DEFECTS = {
     "test_restore_by_a_hash_prefix_desired": {"dulwich": (RESTORE_BY_PREFIX,)},
+    "test_restore_by_a_revision_name_desired": {
+        "dulwich": (RESTORE_BY_PREFIX,),
+        "sequential_pygit": (RESTORE_A_COMMIT,),
+    },
     "test_restore_of_a_changed_script_desired": {"dulwich": (RESTORE_EMPTIES,)},
 }
 
@@ -93,6 +104,7 @@ def over_engines(specs=OPTIONAL_ENGINES):
 
 
 ONLY_DULWICH = pytest.mark.parametrize("engine_spec", [DULWICH.param()])
+PYGIT_FAMILY = pytest.mark.parametrize("engine_spec", [PYGIT.param()])
 
 
 @pytest.fixture
@@ -189,8 +201,9 @@ def test_show_lists_the_file_the_trial_wrote(engine_store, engine_spec):
 # ---------------------------------------------------------------------------
 
 
-def restore_by_prefix(project, engine):
-    """``now restore 1 -f data.txt -i <8 hex of its blob id> -t out.txt``"""
+def restore_by_prefix(project, engine, file_id=None):
+    """``now restore 1 -f data.txt -i <file_id> -t out.txt``, by default
+    with 8 hex of the file's blob id"""
     return project.run(
         "restore",
         "1",
@@ -199,7 +212,7 @@ def restore_by_prefix(project, engine):
         "-f",
         "data.txt",
         "-i",
-        git_blob_hex(DATA)[:8],
+        file_id or git_blob_hex(DATA)[:8],
         "-t",
         "out.txt",
         expect=None,
@@ -228,6 +241,30 @@ def test_restore_by_a_hash_prefix_desired(engine_store, engine_spec):
     assert result.returncode == 0, str(result)
     assert result.stdout == "[now] File out.txt restored\n", str(result)
     assert (engine_store.path / "out.txt").read_bytes() == DATA
+
+
+@PYGIT_FAMILY
+def test_restore_by_a_revision_name(engine_store, engine_spec):
+    """On pygit, ``-i master`` (6 characters, so restore asks
+    ``find_subhash``) resolves to the store's last commit, and the ``get``
+    of a commit exits 1 with an AttributeError (#448); nothing is written"""
+    result = restore_by_prefix(engine_store, engine_spec.name, "master")
+
+    assert result.returncode == 1, str(result)
+    assert last_line(result.stderr) == (
+        "AttributeError: '_pygit2.Commit' object has no attribute 'data'"
+    )
+    assert not (engine_store.path / "out.txt").exists()
+
+
+@over_engines()
+def test_restore_by_a_revision_name_desired(engine_store, engine_spec):
+    """``-i master`` finds no version, as on plain: ``File version not
+    found!`` on stderr, exit 1"""
+    result = restore_by_prefix(engine_store, engine_spec.name, "master")
+
+    assert result.returncode == 1, str(result)
+    assert result.stderr == "[now] File version not found!\n", str(result)
 
 
 def restore_changed_script(project, engine):

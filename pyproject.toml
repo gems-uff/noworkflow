@@ -133,6 +133,10 @@ browser = [
 # suite does not expect (#255). Without it those tests skip.
 engines = [
     "dulwich",
+    # <3.15: pygit2 publishes no wheel for 3.15 yet, and its build needs the
+    # libgit2 headers (an install on the machine); the engines job runs on
+    # 3.14. The marker leaves when a wheel for 3.15 exists.
+    "pygit2; python_version < '3.15'",
 ]
 
 [tool.pytest.ini_options]
