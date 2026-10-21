@@ -137,6 +137,7 @@ engines = [
     # libgit2 headers (an install on the machine); the engines job runs on
     # 3.14. The marker leaves when a wheel for 3.15 exists.
     "pygit2; python_version < '3.15'",
+    "gitdb",
 ]
 
 [tool.pytest.ini_options]

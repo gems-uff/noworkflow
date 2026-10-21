@@ -47,7 +47,9 @@ from .engines import (
     CONFIGURED_NAME,
     DULWICH,
     GIT_ENGINES,
+    GITDB,
     IDENTITY,
+    NAMED_TREE_ENGINES,
     NOWORKFLOW_AUTHOR,
     OPTIONAL_ENGINES,
     PLAIN,
@@ -793,7 +795,7 @@ def test_git_reconnect_keeps_the_history(engine_spec, project_dir):
 
 
 @WINDOWS_NOT_MEASURED
-@GIT_SPECS
+@contract(specs=NAMED_TREE_ENGINES)
 def test_git_commit_content_records_a_commit_of_the_files_put(
     engine, engine_spec, project_dir
 ):
@@ -979,7 +981,9 @@ def test_dulwich_find_subhash_raises_type_error(engine, project_dir):
 # contract tests on ambiguous prefixes and revision names)
 # ---------------------------------------------------------------------------
 
-PYGIT_FAMILY = pytest.mark.parametrize("engine_spec", [PYGIT.param()], indirect=True)
+PYGIT_FAMILY = pytest.mark.parametrize(
+    "engine_spec", [PYGIT.param(), GITDB.param()], indirect=True
+)
 
 
 @PYGIT_FAMILY
@@ -1011,6 +1015,27 @@ def test_pygit_find_subhash_of_an_ambiguous_prefix_raises(
 
     assert type(raised.value).__name__ == "AmbiguousError"
     assert "ambiguous OID prefix" in str(raised.value)
+
+
+@WINDOWS_NOT_MEASURED
+@pytest.mark.parametrize("engine_spec", [GITDB.param()], indirect=True)
+def test_gitdb_names_each_tree_entry_by_the_sha1_of_its_name(engine, project_dir):
+    """gitdb's commit tree is flat: each entry is named by the sha1 of the
+    name the other git engines give the file (project-relative, " - v2"
+    for a repeated one), and holds the content's blob id"""
+    names = ["a.txt", "a.txt - v2", os.path.join("sub", "b.txt")]
+    hashes = [
+        engine.put(b"a1\n", str(project_dir / "a.txt")),
+        engine.put(b"a2\n", str(project_dir / "a.txt")),
+        engine.put(b"b\n", str(project_dir / "sub" / "b.txt")),
+    ]
+
+    commit = as_text(engine.commit_content("Trial T"))
+
+    assert tree_of(git_store(project_dir), commit) == {
+        sha1_hex(name.encode("utf-8")): content_hash
+        for name, content_hash in zip(names, hashes)
+    }
 
 
 # ---------------------------------------------------------------------------

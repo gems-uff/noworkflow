@@ -40,10 +40,12 @@ import pytest
 from ..helpers.defects import Defect, parametrize_known_defects
 from ..persistence.engines import (
     DULWICH,
+    GITDB,
     NOWORKFLOW_AUTHOR,
     OPTIONAL_ENGINES,
     PYGIT,
     git_blob_hex,
+    sha1_hex,
     shown,
 )
 from .harness import last_line, synthetic_git
@@ -72,6 +74,12 @@ RESTORE_BY_PREFIX = Defect(
     "without the object type it requires",
     signature="scan_for_short_id() missing 1 required positional argument: 'tp'",
 )
+ENGINE_FILES = Defect(
+    "#449: GitDBPyGitEngine.do_put stores the blob with gitdb outside "
+    "safeopen.use_safe_open(), so the collector's os.open records gitdb's "
+    "temporary file as an access of the trial",
+    signature="content.git/objects/obj",
+)
 RESTORE_A_COMMIT = Defect(
     "#448: PyGitEngine.find_subhash resolves master as a revision, the id of "
     "the store's last commit, and get fails on the commit",
@@ -79,10 +87,12 @@ RESTORE_A_COMMIT = Defect(
 )
 # The known defects of each engine in a test, by the test's name.
 ENGINE_DEFECTS = {
+    "test_a_run_records_only_the_files_the_script_opened": {"gitdb": (ENGINE_FILES,)},
     "test_restore_by_a_hash_prefix_desired": {"dulwich": (RESTORE_BY_PREFIX,)},
     "test_restore_by_a_revision_name_desired": {
         "dulwich": (RESTORE_BY_PREFIX,),
         "sequential_pygit": (RESTORE_A_COMMIT,),
+        "gitdb": (RESTORE_A_COMMIT,),
     },
     "test_restore_of_a_changed_script_desired": {"dulwich": (RESTORE_EMPTIES,)},
 }
@@ -104,7 +114,7 @@ def over_engines(specs=OPTIONAL_ENGINES):
 
 
 ONLY_DULWICH = pytest.mark.parametrize("engine_spec", [DULWICH.param()])
-PYGIT_FAMILY = pytest.mark.parametrize("engine_spec", [PYGIT.param()])
+PYGIT_FAMILY = pytest.mark.parametrize("engine_spec", [PYGIT.param(), GITDB.param()])
 
 
 @pytest.fixture
@@ -153,18 +163,13 @@ def loose_and_packed(project):
 
 @over_engines()
 def test_a_run_commits_the_trial(engine_store, engine_spec):
-    """``now run`` creates ``content.git`` (no ``content/``), records the
-    file under git's blob id, and commits the trial on master after the
-    initial commit, by Noworkflow as author and committer; the tree holds
-    the script and the file it wrote"""
+    """``now run`` creates ``content.git`` (no ``content/``) and commits the
+    trial on master after the initial commit, by Noworkflow as author and
+    committer; the tree holds the script and the file it wrote under git's
+    blob ids, each named by its path (by the sha1 of its path on gitdb)"""
     trial = engine_store.trials()[0]
-    accesses = engine_store.query(
-        "SELECT name, content_hash_after FROM file_access WHERE trial_id = ?",
-        trial["id"],
-    )
 
     assert sorted(os.listdir(engine_store.store)) == ["content.git", "db.sqlite"]
-    assert accesses == [{"name": "data.txt", "content_hash_after": git_blob_hex(DATA)}]
     log = [
         (subject, shown(author), shown(committer))
         for subject, author, committer in (
@@ -181,10 +186,64 @@ def test_a_run_commits_the_trial(engine_store, engine_spec):
         ("Trial {}".format(trial["id"]), NOWORKFLOW_AUTHOR, NOWORKFLOW_AUTHOR),
         ("Initial Commit", NOWORKFLOW_AUTHOR, NOWORKFLOW_AUTHOR),
     ]
+
+    def entry(name):
+        if engine_spec is GITDB:
+            return sha1_hex(name.encode("utf-8"))
+        return name
+
     assert set(store_git(engine_store, "ls-tree", "-r", "refs/heads/master")) == {
-        "100644 blob {}\tdata.txt".format(git_blob_hex(DATA)),
-        "100644 blob {}\tscript.py".format(git_blob_hex(SCRIPT.encode("utf-8"))),
+        "100644 blob {}\t{}".format(git_blob_hex(DATA), entry("data.txt")),
+        "100644 blob {}\t{}".format(
+            git_blob_hex(SCRIPT.encode("utf-8")), entry("script.py")
+        ),
     }
+
+
+def file_accesses(project):
+    """``(name, mode, content_hash_after)`` of the first trial's file
+    accesses, with the project's path as ``<PROJECT>``"""
+    return [
+        (
+            row["name"].replace(str(project.path), "<PROJECT>"),
+            row["mode"],
+            row["content_hash_after"],
+        )
+        for row in project.query(
+            "SELECT name, mode, content_hash_after FROM file_access "
+            "WHERE trial_id = ? ORDER BY id",
+            project.trials()[0]["id"],
+        )
+    ]
+
+
+@over_engines()
+def test_a_run_records_only_the_files_the_script_opened(engine_store, engine_spec):
+    """The trial records one file access, the file the script wrote, under
+    git's blob id"""
+    accesses = file_accesses(engine_store)
+
+    assert accesses == [("data.txt", "wb", git_blob_hex(DATA))], (
+        "the trial recorded {}".format(accesses)
+    )
+
+
+@pytest.mark.parametrize("engine_spec", [GITDB.param()])
+def test_a_gitdb_run_records_the_engines_temporary_files(engine_store, engine_spec):
+    """On gitdb, the trial also records one access per content stored: the
+    temporary file gitdb's ``tempfile.mkstemp`` opens under the store's
+    ``objects/``, through the collector's ``os.open`` (#449), named with a
+    leading ``//``, mode ``r`` and no hash"""
+    accesses = file_accesses(engine_store)
+    temporary = [access for access in accesses if access[0] != "data.txt"]
+
+    assert ("data.txt", "wb", git_blob_hex(DATA)) in accesses
+    assert len(temporary) == 2, accesses
+    for name, mode, content_hash in temporary:
+        directory, base = name.rsplit("/", 1)
+        assert directory == "/<PROJECT>/.noworkflow/content.git/objects"
+        assert base.startswith("obj")
+        assert (mode, content_hash) == ("r", None)
 
 
 @over_engines()

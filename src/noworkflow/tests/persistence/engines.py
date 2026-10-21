@@ -181,8 +181,8 @@ class EngineSpec:
     hash of the store format; ``read_stored(provenance, hash)`` the stored
     bytes, read without the engine; ``stored_hashes(provenance)`` every
     content the store holds; ``missing_error`` what ``get`` raises for a hash
-    never put. ``requires_binary`` and ``requires_module`` skip the engine
-    where they are missing, and an engine with ``requires_module`` is one of
+    never put. ``requires_binary`` and ``requires_modules`` skip the engine
+    where one is missing, and an engine with ``requires_modules`` is one of
     the optional engines; ``git`` marks a store that is a git repository.
     ``defects`` pairs a clause of the contract (the label a contract test
     names, ``contract``) with a ``Defect`` of this engine in it.
@@ -195,7 +195,7 @@ class EngineSpec:
     stored_hashes: typing.Callable
     missing_error: type
     requires_binary: str = None
-    requires_module: str = None
+    requires_modules: tuple = ()
     git: bool = False
     defects: tuple = ()
 
@@ -204,7 +204,7 @@ class EngineSpec:
 
     def param(self):
         """This engine as a ``pytest.param``, marked ``engines`` if optional"""
-        marks = [pytest.mark.engines] if self.requires_module else []
+        marks = [pytest.mark.engines] if self.requires_modules else []
         return pytest.param(self, id=self.name, marks=marks)
 
     def defects_in(self, clauses):
@@ -219,12 +219,14 @@ class EngineSpec:
                     self.name, self.requires_binary
                 )
             )
-        if (
-            self.requires_module
-            and importlib.util.find_spec(self.requires_module) is None
-        ):
-            message = "the {} engine needs the {} module (the engines group)".format(
-                self.name, self.requires_module
+        missing = [
+            module
+            for module in self.requires_modules
+            if importlib.util.find_spec(module) is None
+        ]
+        if missing:
+            message = "the {} engine needs {} (the engines group)".format(
+                self.name, ", ".join(missing)
             )
             if REQUIRE_ENGINES:
                 pytest.fail(message + ", and NOW_ENGINES=require")
@@ -264,7 +266,7 @@ DULWICH = EngineSpec(
     git_blobs,
     KeyError,
     requires_binary="git",
-    requires_module="dulwich",
+    requires_modules=("dulwich",),
     git=True,
     defects=(("get", DULWICH_GET_TEXT), ("find_subhash", DULWICH_FIND_SUBHASH)),
 )
@@ -291,16 +293,33 @@ PYGIT = EngineSpec(
     git_blobs,
     KeyError,
     requires_binary="git",
-    requires_module="pygit2",
+    requires_modules=("pygit2",),
     git=True,
     defects=(
         ("ambiguous prefix", PYGIT_AMBIGUOUS_PREFIX),
         ("revision name", PYGIT_REVISION_NAME),
     ),
 )
-ENGINES = (PLAIN, PUREGIT, DULWICH, PYGIT)
+# GitDBPyGitEngine writes blobs with gitdb and does the rest as PyGitEngine,
+# whose module it imports; it names each tree entry by the sha1 of the
+# file's name.
+GITDB = EngineSpec(
+    "gitdb",
+    "content.git",
+    git_blob_hex,
+    read_git,
+    git_blobs,
+    KeyError,
+    requires_binary="git",
+    requires_modules=("gitdb", "pygit2"),
+    git=True,
+    defects=PYGIT.defects,
+)
+ENGINES = (PLAIN, PUREGIT, DULWICH, PYGIT, GITDB)
 GIT_ENGINES = tuple(spec for spec in ENGINES if spec.git)
-OPTIONAL_ENGINES = tuple(spec for spec in ENGINES if spec.requires_module)
+OPTIONAL_ENGINES = tuple(spec for spec in ENGINES if spec.requires_modules)
+# The git engines whose commit trees name each file by its path.
+NAMED_TREE_ENGINES = tuple(spec for spec in GIT_ENGINES if spec is not GITDB)
 
 
 def contract(*clauses, specs=ENGINES):
