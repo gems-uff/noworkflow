@@ -305,8 +305,8 @@ SELECT sequence_key, script, status FROM trial
 - `%now_run` and `%%now_run` (the cell's code) return the trial they
   recorded; `%%now_run --interactive` runs the cell in the notebook's
   namespace, so it shares its variables. With `--bg`, or when `now` is
-  not found, they return the previous run's trial (#387): load the new
-  one with `nip.Trial()` once the run ends.
+  not found, they return `None`: load the trial with `nip.Trial()` once
+  the run ends.
 - After `%now_run --dir OTHER`, the notebook is connected to OTHER's store
   (`nip.Trial()`, `%now_sql` and the rest read it) until a `%now_run`
   runs elsewhere; a trial kept from another store then raises a

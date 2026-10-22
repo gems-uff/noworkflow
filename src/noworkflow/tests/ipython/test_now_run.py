@@ -20,12 +20,13 @@ What the tests pin:
   connected to it; the next ``%now_run`` without ``--dir`` connects back
   to the current directory, and a trial of the other store then says
   where it belongs when it reads its relations;
+- when no new trial was written (``now`` not found, ``--bg``), the magic
+  returns no trial, never the previous run's (#387);
 - a line that names no script fails with an IndexError; a directory or an
   option value with a space is cut in two, and a quoted ``--dir`` keeps
   its quotes: the magic connects to it as a path relative to the current
   directory, where it creates a store; the ``now`` that runs is the
-  first one on PATH; when no new trial was written (``now`` not found,
-  ``--bg``), the magic reads the ``.last_trial`` of the previous run;
+  first one on PATH;
 - every ``%now_run``, one that fails included, leaves the process's
   content engine setting at the line's ``--content-engine``;
 - a cell that raises fails with ``CalledProcessError``, as under ``%%script
@@ -103,14 +104,6 @@ NOW_FROM_PATH = Defect(
     "first, another installation's included",
     signature="another now on PATH",
 )
-STALE_LAST_TRIAL = Defect(
-    "#387: magics/now_run.py NowRun.execute reads "
-    "<dir>/.last_trial whatever ScriptMagics.shebang did: when `now` cannot "
-    'be started (shebang prints "Couldn\'t find program" and returns) or '
-    "runs in the background (--bg returns at once), the file still names "
-    "the previous run's trial",
-    signature="the magic read the .last_trial of the previous run",
-)
 CONTENT_ENGINE = Defect(
     "#392: magics/now_run.py NowRun.execute assigns "
     "persistence_config.content_engine = args.content_engine (None when "
@@ -158,6 +151,7 @@ empty_path = pytest.mark.skipif(
 )
 # What the magic prints when no new trial was written.
 NO_TRIAL = "No trial was stored"
+IN_BACKGROUND = "The trial is stored when the run in the background ends"
 
 
 def scripts_and_statuses(project):
@@ -587,9 +581,9 @@ def test_now_run_with_another_now_first_on_path_desired(shell, form):
 @empty_path
 def test_now_run_when_now_cannot_start(shell):
     """When ``now`` is not on PATH, ``%now_run`` prints that it could not
-    find it, the cell still succeeds, and the magic returns the trial the
-    ``.last_trial`` of the previous run names (characterization of #387)
-    """
+    find it and that no trial was stored, the cell still succeeds (as
+    ``%%script`` does when it cannot find its program), and the magic
+    returns no trial, never the previous run's (#387)"""
     project = shell.project
     project.write("script.py", RAN)
     shell.ok("%now_run script.py")
@@ -597,42 +591,21 @@ def test_now_run_when_now_cannot_start(shell):
     empty = project.root / "empty"
     empty.mkdir()
     cell = run_with_path(shell, "trial = %now_run script.py", empty)
-    missing = cell.success and "Couldn't find program: 'now'" in cell.stdout
+    missing = (
+        cell.success
+        and "Couldn't find program: 'now'" in cell.stdout
+        and NO_TRIAL in cell.stdout
+    )
     assert missing, cell.describe()
-    stale = getattr(shell.user_ns.get("trial"), "id", None) == previous
-    assert stale, cell.describe()
+    stale = previous in cell.stdout or shell.user_ns.get("trial") is not None
+    assert not stale, cell.describe()
     assert trial_count(project) == 1
 
 
-@empty_path
-@known_defects(STALE_LAST_TRIAL)
-def test_now_run_when_now_cannot_start_desired(shell):
-    """When ``now`` cannot start, ``%now_run`` never hands the previous
-    run's trial back
-
-    Whether the cell should fail as well is not stated here: ``%%script``
-    itself succeeds when it cannot find its program.
-    """
-    project = shell.project
-    project.write("script.py", RAN)
-    shell.ok("%now_run script.py")
-    previous = shell.last_trial_id()
-    empty = project.root / "empty"
-    empty.mkdir()
-    cell = run_with_path(shell, "trial = %now_run script.py", empty)
-    stale = (
-        previous in cell.stdout
-        or getattr(shell.user_ns.get("trial"), "id", None) == previous
-    )
-    assert not stale, (
-        "the magic read the .last_trial of the previous run\n" + cell.describe()
-    )
-
-
 def test_now_run_in_the_background(shell):
-    """``%now_run --bg`` returns while ``now run`` goes on, and returns the
-    trial the ``.last_trial`` of the previous run names; the trial of the
-    background run is recorded once it ends (characterization of #387)
+    """``%now_run --bg`` returns while ``now run`` goes on, with no trial
+    and a line that says when it will be stored, never the previous run's
+    (#387); the trial of the background run is recorded once it ends
 
     The script waits for ``go``, which the test creates after the cell, so
     the background run cannot write ``.last_trial`` before the magic reads
@@ -646,35 +619,16 @@ def test_now_run_in_the_background(shell):
     cell = ran(shell, "trial = %now_run --bg gated.py")
     (project.path / "go").write_text("", encoding="utf-8")
     returncode = wait_last_child(shell)
-    stale = getattr(shell.user_ns.get("trial"), "id", None) == previous
-    assert stale, cell.describe()
+    said = IN_BACKGROUND in cell.stdout
+    assert said, cell.describe()
+    stale = previous in cell.stdout or shell.user_ns.get("trial") is not None
+    assert not stale, cell.describe()
     assert returncode == 0
     assert scripts_and_statuses(project) == [
         ("script.py", "finished"),
         ("gated.py", "finished"),
     ]
     assert shell.last_trial_id() == trial_ids(project)[1]
-
-
-@known_defects(STALE_LAST_TRIAL)
-def test_now_run_in_the_background_desired(shell):
-    """``%now_run --bg`` hands back no trial before its run ends, and never
-    the previous run's"""
-    project = shell.project
-    project.write("script.py", RAN)
-    project.write("gated.py", GATED)
-    shell.ok("%now_run script.py")
-    previous = shell.last_trial_id()
-    cell = shell.run("trial = %now_run --bg gated.py")
-    (project.path / "go").write_text("", encoding="utf-8")
-    wait_last_child(shell)
-    stale = (
-        previous in cell.stdout
-        or getattr(shell.user_ns.get("trial"), "id", None) == previous
-    )
-    assert not stale, (
-        "the magic read the .last_trial of the previous run\n" + cell.describe()
-    )
 
 
 def test_now_run_with_out_keeps_the_output_in_a_variable(shell):

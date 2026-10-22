@@ -29,7 +29,9 @@ class NowRun(IpythonCommandMagic, Run):
     The magic returns the trial of the run, read from the store of --dir
     (the current directory without it). The notebook stays connected to
     that store afterwards: Trial(), %now_sql and the other magics read it
-    until the next %now_run connects to another.
+    until the next %now_run connects to another. With --bg, or when `now`
+    cannot start, no trial is returned: load it with Trial() once the run
+    ends.
 
     Examples
     --------
@@ -180,12 +182,23 @@ class NowRun(IpythonCommandMagic, Run):
             script=filename,
             params=" ".join(params),
         )
+        last_trial_path = os.path.join(directory, LAST_TRIAL)
+        previous = read_last_trial(last_trial_path)
         script = magic_cls.shell.find_cell_magic("script").__self__
         script.shebang(cmd, "")
 
-        trial_id = read_last_trial(os.path.join(directory, LAST_TRIAL))
-        if trial_id is None:
-            print("No trial was stored")
+        # A .last_trial that still names the trial it named before the run
+        # was not written by this run: `now` could not start, or it still
+        # runs in the background
+        trial_id = read_last_trial(last_trial_path)
+        if trial_id is None or trial_id == previous:
+            if args.bg:
+                print(
+                    "The trial is stored when the run in the background ends; "
+                    "load it then with Trial()"
+                )
+            else:
+                print("No trial was stored")
             return None
         try:
             return Trial(trial_id)
