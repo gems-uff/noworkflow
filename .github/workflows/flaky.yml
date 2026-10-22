@@ -73,7 +73,7 @@ jobs:
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2966 \
+          bash .github/scripts/pytest-summary.sh "test-log-trial-${{ matrix.trial }}.log" 2965 \
             "trial ${{ matrix.trial }}" \
             'uv sync --locked --group browser --python 3.15 && NOW_BROWSER=require uv run --no-sync pytest -m "not golden and not paper and not engines"'
 

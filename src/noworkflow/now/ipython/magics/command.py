@@ -9,13 +9,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import sys
 
 from IPython.core import magic_arguments
-from IPython.core.magic import cell_magic, line_cell_magic, line_magic
 from IPython.utils.process import arg_split
 
 from ...cmd import Command
 from ...utils.functions import abstract
-
-MAGIC_TYPES = {"cell": cell_magic, "line": line_magic, "line_cell": line_cell_magic}
 
 
 class IpythonCommandMagic(Command):
@@ -40,10 +37,16 @@ class IpythonCommandMagic(Command):
         self.args.append(magic_arguments.argument(*args, **kwargs))
 
     def create_magic(self, func):
-        """Create magic for command"""
+        """Create magic for command
+
+        The function is registered by ``NoworkflowMagics._generate_magics``,
+        which writes it into the instance's table. IPython's ``line_magic``
+        and ``cell_magic`` markers are not applied: called at run time, they
+        record the name in IPython's module-level table of pending magics,
+        which the next ``@magics_class`` in the process takes (#384).
+        """
         func.__name__ = str(self.magic)
         func.__doc__ = self.docstring
-        func = MAGIC_TYPES[self.magic_type](self.magic)(func)
         for arg in self.args:
             func = arg(func)
         func = magic_arguments.magic_arguments()(func)

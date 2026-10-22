@@ -12,17 +12,18 @@ environment (so the ``now`` that ``%now_run`` starts records
 ``nowtest``), a ``%now_run`` trial is read with SQL, by ``now`` and
 through the models, a cell whose process outlives its time limit is
 killed, a collection left behind is reported, a magics class defined
-while the extension's names are pending is repaired and reported, an
+while a name is pending in IPython's table is repaired and reported, an
 in-process collection defines no magics class, ``real_stores`` closes
 every connection, and closing the shell puts the process back as it was:
 what the root leak detector watches, the in-memory stores, IPython's
 singleton, magic table and magics classes, the threads, the ``atexit``
 entries, the environment.
 
-The last two tests characterize ``%load_ext noworkflow`` leaving its
-names in IPython's table of pending magics (#384). Once a
-magics class has taken them it stays broken for the rest of the process,
-so they run in child Pythons, never in this one.
+The last tests pin that ``%load_ext noworkflow`` and ``%reload_ext
+noworkflow`` leave IPython's table of pending magics as they found it,
+so the next magics class of the process can be created (#384). Had a
+magics class taken the names, it would stay broken for the rest of the
+process, so they run in child Pythons, never in this one.
 """
 
 import atexit
@@ -52,13 +53,11 @@ from noworkflow.now.utils import io as now_io
 from noworkflow.tests.e2e.harness import USER, NowProject, same_path, tail
 from noworkflow.tests.e2e.normalize import Normalizer
 from noworkflow.tests.helpers import leaks
-from noworkflow.tests.helpers.defects import known_defects
 from noworkflow.tests.helpers.persistence import connected_to, real_stores
 
 from .support import (
     IPYTHON_BUILTINS,
     LAST_EXCEPTION,
-    MAGIC_REGISTRY,
     PROMPTS,
     broken_magics_classes,
     command_line,
@@ -363,21 +362,44 @@ def test_a_collection_the_test_undoes_is_not_reported(project):
     assert "now_tag_cell" not in vars(builtins)
 
 
+def test_a_magics_class_defined_after_load_ext_takes_nothing(shell):
+    """After ``%load_ext noworkflow`` no name is pending in IPython's table,
+    and a magics class decorated then defines only its own magics (#384)"""
+    pending = {kind: dict(table) for kind, table in ipython_magic.magics.items()}
+
+    @ipython_magic.magics_class
+    class LateMagics(ipython_magic.Magics):
+        """Defines no magic of its own"""
+
+    assert pending == {"line": {}, "cell": {}}
+    assert names_taken(LateMagics) == []
+    assert LateMagics.magics == {"line": {}, "cell": {}}
+
+
 def test_a_magics_class_defined_while_names_are_pending_is_reported(project):
-    """A magics class decorated while the extension's names are pending
-    takes them; closing the shell drops them from its table and reports
-    the class, so no later test of the process meets it broken"""
+    """A magics class decorated while a name is pending in IPython's table
+    takes it; closing the shell drops it from its table and reports the
+    class, so no later test of the process meets it broken
+
+    The name is left pending as ``%load_ext noworkflow`` did until #384: a
+    ``line_magic`` marker applied outside a class body.
+    """
     with pytest.raises(pytest.fail.Exception) as failed:
         with open_shell(project):
 
+            def pending(self, line):
+                """Never defined in the class that takes it"""
+
+            ipython_magic.line_magic("now_pending")(pending)
+
             @ipython_magic.magics_class
             class LateMagics(ipython_magic.Magics):
-                """Takes the names pending in IPython's table"""
+                """Takes the name pending in IPython's table"""
 
             taken = names_taken(LateMagics)
     message = str(failed.value)
-    assert taken == sorted(LINE_MAGICS | CELL_MAGICS)
-    assert "LateMagics took the pending magics now_ip" in message
+    assert taken == ["now_pending"]
+    assert "LateMagics took the pending magics now_pending" in message
     assert names_taken(LateMagics) == []
     assert LateMagics not in broken_magics_classes()
     assert not InteractiveShell.initialized()
@@ -385,13 +407,13 @@ def test_a_magics_class_defined_while_names_are_pending_is_reported(project):
 
 def test_an_in_process_collection_defines_no_magics_class(stand_in, shell):
     """What an ``--interactive`` collection imports that defines magics
-    classes is imported before the extension loads: the cell defines none
-    while the extension's names are pending
+    classes is imported when the shell starts: the cell defines none, and
+    none of the process takes a pending name
 
     ``Execution.configure`` imports ``IPython.terminal.embed`` (the
-    ``now_ipython`` builtin), whose TerminalMagics and EmbeddedMagics
-    would otherwise take the names and break every terminal or embedded
-    shell of the process (#384).
+    ``now_ipython`` builtin), which defines TerminalMagics and
+    EmbeddedMagics; ``warm_up`` imports it first, so that every test sees
+    the same process whichever ran an ``--interactive`` cell first.
     """
     warmed = {"IPython.terminal.magics", "IPython.terminal.embed"} <= set(sys.modules)
     assert warmed, "the shell started without IPython.terminal's magics"
@@ -505,6 +527,7 @@ report, ipython_dir, program, extension = sys.argv[1:5]
 CELLS = {
     "script": "%%script " + program + "\nprint('script', 'ran')",
     "history": "%history -n -l 1",
+    "reload": "%reload_ext noworkflow",
     "own-class": (
         "from IPython.core.magic import Magics, line_magic, magics_class\n"
         "@magics_class\n"
@@ -576,43 +599,34 @@ def no_extension(tmp_path_factory):
     return run_pollution_child(tmp_path_factory, "skip", *FIRST_CLASSES)
 
 
-def test_load_ext_breaks_the_next_magics_class(pollution, no_extension):
-    """``%load_ext noworkflow`` leaves nine entries pending in IPython's
-    table (eight magics: ``now_run`` is a line and a cell magic), and the
-    next magics class decorated in the process takes them and cannot be
-    created: ScriptMagics (``%%script``, which ``%now_run`` runs through),
-    HistoryMagics (``%history``) or a user's own class, whichever comes
-    first
+def test_load_ext_leaves_the_next_magics_class_working(pollution, no_extension):
+    """After ``%load_ext noworkflow`` IPython's table of pending magics is
+    as without the extension (empty), and the next magics class decorated
+    in the process works: ScriptMagics (``%%script``, which ``%now_run``
+    runs through), HistoryMagics (``%history``) or a user's own class,
+    whichever comes first (#384)
 
-    Characterization of #384. Control: without the
-    extension nothing is pending and the three cells run.
+    Control: without the extension nothing is pending and the three cells
+    run.
     """
     first, child = pollution
     assert no_extension["pending"] == {"line": [], "cell": []}
     assert no_extension["ended"] == dict.fromkeys(FIRST_CLASSES, "ok")
     assert "script ran" in no_extension["stdout"]
     assert child["load_ext"]
-    assert child["pending"] == {
-        "line": sorted(LINE_MAGICS),
-        "cell": sorted(CELL_MAGICS),
-    }
-    assert child["ended"] == {
-        first: "AttributeError: '{}' object has no attribute 'now_run'".format(
-            FIRST_CLASSES[first]
-        )
-    }
-    assert "script ran" not in child["stdout"]
-
-
-@known_defects(MAGIC_REGISTRY)
-def test_load_ext_leaves_the_next_magics_class_working_desired(pollution):
-    """After ``%load_ext noworkflow`` no name is pending in IPython's
-    table, and ``%%script``, ``%history`` and a user's own magics class
-    work"""
-    first, child = pollution
-    assert child["load_ext"]
+    assert child["pending"] == no_extension["pending"]
     ended = child["ended"][first]
     assert ended == "ok", "{} failed: {}".format(first, ended)
     printed = first != "script" or "script ran" in child["stdout"]
     assert printed, "%%script printed nothing"
-    assert child["pending"] == {"line": [], "cell": []}
+
+
+def test_reload_ext_leaves_the_next_magics_class_working(tmp_path_factory):
+    """After ``%load_ext noworkflow`` and ``%reload_ext noworkflow``, the
+    magics classes decorated next work: ``%%script``, ``%history`` and a
+    user's own class (#384)"""
+    child = run_pollution_child(tmp_path_factory, "load", "reload", *FIRST_CLASSES)
+    assert child["load_ext"]
+    expected = dict.fromkeys(["reload", *FIRST_CLASSES], "ok")
+    assert child["ended"] == expected
+    assert "script ran" in child["stdout"]
