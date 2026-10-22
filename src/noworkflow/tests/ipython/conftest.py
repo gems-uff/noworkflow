@@ -17,15 +17,15 @@ A test that needs a second shell, or a shell that ends before the test
 does, calls ``support.open_shell(project)`` itself: one shell at a time,
 since IPython's is a singleton.
 
-- ``stand_in``: the test-side ``IPython.utils.py3compat`` that takes
-  ``%%now_run --interactive`` past #313's import
-  (``support.py3compat_stand_in``). Requested before ``shell``, so that it
-  is undone after the shell closes.
+- ``argv_kept``: ``sys.argv`` and ``sys.path[0]`` put back after the
+  test, which an ``--interactive`` cell that does not end normally leaves
+  swapped (#388; ``support.argv_and_path0_kept``). Requested before
+  ``shell``, so that it is undone after the shell closes.
 """
 
 import pytest
 
-from .support import open_shell, py3compat_stand_in
+from .support import argv_and_path0_kept, open_shell
 
 
 @pytest.fixture
@@ -43,8 +43,7 @@ def bare_shell(project):
 
 
 @pytest.fixture
-def stand_in():
-    """``IPython.utils.py3compat`` as ``now_run.py`` imports it, test side
-    only (#313)"""
-    with py3compat_stand_in() as module:
-        yield module
+def argv_kept():
+    """``sys.argv`` and ``sys.path[0]`` put back after the test (#388)"""
+    with argv_and_path0_kept():
+        yield

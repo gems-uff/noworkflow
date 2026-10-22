@@ -71,9 +71,7 @@ use ``Cell.describe()``, which masks it with the paths, never a trial or
 a raw output, and the repr of a ``Cell``, which pytest prints when a cell
 appears in a failing assertion, is masked too.
 
-``%%now_run --interactive`` fails on an import today (#313):
-``py3compat_stand_in`` gets past it on the test side only. The known
-defects that more than one module pins are defined here, once.
+The known defects that more than one module pins are defined here, once.
 """
 
 import asyncio
@@ -92,7 +90,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import types
 from io import StringIO
 from pathlib import Path
 
@@ -110,7 +107,6 @@ from noworkflow.now.utils import io as now_io
 from noworkflow.tests.e2e.harness import clean_env, tail
 from noworkflow.tests.e2e.normalize import Normalizer
 from noworkflow.tests.helpers import leaks
-from noworkflow.tests.helpers.defects import Defect
 from noworkflow.tests.helpers.persistence import real_stores
 
 # Seconds a cell may run, as long as the harness lets `now` run, and
@@ -161,16 +157,6 @@ WARM_IMPORTS = (
     "noworkflow.now.models.dependency_graph.config",
     "noworkflow.now.models.graphs.trial_graph",
     "noworkflow.now.models.trial_prolog",
-)
-
-# Known defects that more than one module pins.
-INTERACTIVE_IMPORT = Defect(
-    "#313: magics/now_run.py NowRun.execute imports builtin_mod from "
-    "IPython.utils.py3compat for --interactive, a module IPython 9.17.1 "
-    "(uv.lock) no longer has (9.15.0 still had it), so the cell fails "
-    "before it swaps anything or creates its trial",
-    signature="No module named 'IPython.utils.py3compat'",
-    condition=importlib.util.find_spec("IPython.utils.py3compat") is None,
 )
 
 
@@ -774,25 +760,6 @@ def argv_and_path0_kept():
     finally:
         sys.argv = argv
         sys.path[0] = path0
-
-
-@contextlib.contextmanager
-def py3compat_stand_in():
-    """``IPython.utils.py3compat`` as ``now_run.py`` imports it, test side
-    only
-
-    The module left IPython (#313); the stand-in holds ``builtin_mod``,
-    the only name the magic takes from it, as IPython's held the builtins
-    module, so ``%%now_run --interactive`` runs past the import. No module
-    of noWorkflow changes. ``sys.argv`` and ``sys.path[0]`` are put back
-    with it (``argv_and_path0_kept``). Entered before a shell opens, so
-    that it is undone after the shell closes.
-    """
-    stand_in = types.ModuleType("IPython.utils.py3compat")
-    stand_in.builtin_mod = builtins
-    with argv_and_path0_kept(), pytest.MonkeyPatch.context() as patch:
-        patch.setitem(sys.modules, stand_in.__name__, stand_in)
-        yield stand_in
 
 
 def run_python(project, code, *args, timeout=CELL_TIMEOUT):

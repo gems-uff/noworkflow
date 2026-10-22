@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
+import builtins
 import os
 import sys
 
@@ -24,6 +25,11 @@ class NowRun(IpythonCommandMagic, Run):
     Otherwise, it will run in a subprocess, using the %%script magic.
 
     Please look at %%script? to understand --proc, --bg, --out and --err.
+
+    The magic returns the trial of the run, read from the store of --dir
+    (the current directory without it). The notebook stays connected to
+    that store afterwards: Trial(), %now_sql and the other magics read it
+    until the next %now_run connects to another.
 
     Examples
     --------
@@ -120,71 +126,78 @@ class NowRun(IpythonCommandMagic, Run):
         params = args.params
         if params:
             argv = argv[: -len(params)]
-        # Create tmp file
+        # The notebook stays connected to the store of this run, so that the
+        # trial the magic returns, and every later query, read that store
         directory = args.dir or os.path.abspath(os.path.curdir)
-        original_path = persistence_config.path
         persistence_config.content_engine = args.content_engine
+        persistence_config.connect(directory)
+
+        if cell:
+            filename = magic_cls.shell.mktempfile(data=cell, prefix="now_run_")
+        else:
+            filename = params[0]
+            params = params[1:]
+
+        metascript = Metascript().read_ipython_args(
+            args,
+            directory,
+            filename,
+            [filename] + params,
+            not args.interactive,
+            cmd=line,
+        )
+
+        if args.interactive:
+            user_ns = magic_cls.shell.user_ns
+            save__name__ = user_ns["__name__"]
+            save__builtins__ = user_ns.get("__builtins__", builtins)
+            save__main__ = sys.modules["__main__"]
+            save__argv__ = sys.argv
+            save__path__ = sys.path[0]
+
+            metascript.namespace = user_ns
+
+            metascript.clear_namespace(erase=False)
+            metascript.clear_sys()
+            sys.modules["__main__"] = magic_cls.shell.user_module
+            run(metascript, args)
+
+            user_ns["__name__"] = save__name__
+            user_ns["__builtins__"] = save__builtins__
+            sys.argv = save__argv__
+            sys.path[0] = save__path__
+            sys.modules["__main__"] = save__main__
+            try:
+                return Trial(metascript.trial_id)
+            except Exception as exc:  # pylint: disable=broad-except
+                print("Failed", exc)
+                return None
+
+        # Set execution line
+        cmd = ("now run --create_last {directory} {args} {script} {params}").format(
+            directory="" if args.dir else "--dir {}".format(directory),
+            args=" ".join(argv),
+            script=filename,
+            params=" ".join(params),
+        )
+        script = magic_cls.shell.find_cell_magic("script").__self__
+        script.shebang(cmd, "")
+
+        trial_id = read_last_trial(os.path.join(directory, LAST_TRIAL))
+        if trial_id is None:
+            print("No trial was stored")
+            return None
         try:
-            persistence_config.connect(directory)
+            return Trial(trial_id)
+        except Exception as exc:  # pylint: disable=broad-except
+            print("Failed", exc)
+            return None
 
-            if cell:
-                filename = magic_cls.shell.mktempfile(data=cell, prefix="now_run_")
-            else:
-                filename = params[0]
-                params = params[1:]
 
-            metascript = Metascript().read_ipython_args(
-                args,
-                directory,
-                filename,
-                [filename] + params,
-                not args.interactive,
-                cmd=line,
-            )
-
-            if args.interactive:
-                from IPython.utils.py3compat import builtin_mod
-
-                save__name__ = magic_cls.shell.user_ns["__name__"]
-                save__main__ = sys.modules["__main__"]
-                save__argv__ = sys.argv
-                save__path__ = sys.path[0]
-
-                metascript.namespace = magic_cls.shell.user_ns
-
-                metascript.clear_namespace(erase=False)
-                metascript.clear_sys()
-                sys.modules["__main__"] = magic_cls.shell.user_module
-                run(metascript, args)
-
-                magic_cls.shell.user_ns["__name__"] = save__name__
-                magic_cls.shell.user_ns["__builtins__"] = builtin_mod
-                sys.argv = save__argv__
-                sys.path[0] = save__path__
-                sys.modules["__main__"] = save__main__
-                try:
-                    return Trial(metascript.trial_id)
-                except Exception as exc:  # pylint: disable=broad-except
-                    print("Failed", exc)
-            else:
-                # Set execution line
-                cmd = (
-                    "now run --create_last {directory} {args} {script} {params}"
-                ).format(
-                    directory="" if args.dir else "--dir {}".format(directory),
-                    args=" ".join(argv),
-                    script=filename,
-                    params=" ".join(params),
-                )
-                script = magic_cls.shell.find_cell_magic("script").__self__
-                script.shebang(cmd, "")
-                # tmp_dir = os.path.dirname(filename)
-
-                try:
-                    last_trial_dir = os.path.join(directory, LAST_TRIAL)
-                    with content.std_open(last_trial_dir, "r") as last:
-                        return Trial(int(last.read()))
-                except Exception as exc:  # pylint: disable=broad-except
-                    print("Failed", exc)
-        finally:
-            persistence_config.connect(original_path)
+def read_last_trial(path):
+    """The trial id that ``.last_trial`` at ``path`` names, or None"""
+    try:
+        with content.std_open(path, "r") as last:
+            return last.read().strip() or None
+    except FileNotFoundError:
+        return None

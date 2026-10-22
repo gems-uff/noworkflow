@@ -18,10 +18,7 @@ can hide: the control's output is also checked against its fixed text.
 
 ``%%now_run`` runs its collection in a ``now`` process; with
 ``--interactive`` it runs it in the shell's own process and namespace,
-which is where a collection can leave something behind, but today that
-fails before running anything (#313). The tests that need more get past
-the import with a stand-in module for ``IPython.utils.py3compat``
-(``support.py3compat_stand_in``), on the test side only. This module is
+which is where a collection can leave something behind. This module is
 the one home of the ``--interactive`` scenarios: the plain cell after two
 of them, what a cell that succeeds leaves installed, and what one that
 raises, exits or cannot store its trial leaves swapped
@@ -58,11 +55,9 @@ from noworkflow.tests.helpers.defects import (
 )
 
 from .support import (
-    INTERACTIVE_IMPORT,
     argv_and_path0_kept,
     collection_leftovers,
     open_shell,
-    py3compat_stand_in,
 )
 
 COLLECTION_LEFT = Defect(
@@ -87,8 +82,7 @@ INTERACTIVE_SWAPS = Defect(
     "KeyboardInterrupt (collect_provenance catches only SystemExit and "
     "Exception) or an error of Collector.store (#371). It also swaps "
     "sys.modules['__main__'] and the cells' __name__, but with the values "
-    "a shell already has, so only the three show; reached only past #313's "
-    "import",
+    "a shell already has, so only the three show",
     signature="sys.argv swapped",
 )
 
@@ -243,12 +237,6 @@ LATER_CELL = (
     "text = pathlib.Path('later.txt').read_text(encoding='utf-8')"
 )
 LATER_CONTENT = b"written later\n"
-
-# The #313 characterization holds only where IPython lacks the module.
-lacks_py3compat = pytest.mark.skipif(
-    not INTERACTIVE_IMPORT.condition,
-    reason="this IPython still has IPython.utils.py3compat",
-)
 
 
 def printed(cell, text=""):
@@ -418,15 +406,14 @@ class AfterInteractive:
     files: dict
 
 
-def interactive_then_plain(project, stand_in):
+def interactive_then_plain(project):
     """Run the two ``--interactive`` cells, then the plain cell
 
-    With ``stand_in``, past #313's import. The collection is undone, and
-    the shell closed, before the project's files are read: ``files``
-    reads them with ``io.open``, which the collection may leave wrapped.
+    The collection is undone, and the shell closed, before the project's
+    files are read: ``files`` reads them with ``io.open``, which the
+    collection may leave wrapped.
     """
-    kept = py3compat_stand_in() if stand_in else argv_and_path0_kept()
-    with kept, open_shell(project) as shell:
+    with argv_and_path0_kept(), open_shell(project) as shell:
         functions = process_functions()
         argv, path0 = list(sys.argv), sys.path[0]
         shell.run(INTERACTIVE_SETUP)
@@ -509,62 +496,12 @@ def test_cells_after_two_now_run_cells_behave_as_in_plain_ipython(project):
         assert replaced == []
 
 
-@lacks_py3compat
-def test_interactive_cells_fail_and_leave_the_next_cell_untouched(project):
-    """Two ``%%now_run --interactive`` cells fail before running their
-    code, and the plain cell after them does what it does in plain IPython
-
-    Characterization of #313: the magic imports ``IPython.utils.py3compat``,
-    which IPython no longer has. The import comes before any swap and
-    before the trial is created: no trial, nothing in the namespace,
-    nothing the leak detector watches left, nothing the plain cell sees.
-    """
-    control, control_files = plain_ipython(project.root / "control")
-    with open_shell(project) as shell:
-        argv, path0 = list(sys.argv), sys.path[0]
-        shell.run(INTERACTIVE_SETUP)
-        for code, _ in INTERACTIVE_CELLS:
-            cell = shell.run(code)
-            failed = cell.error_text == (
-                "ModuleNotFoundError: No module named 'IPython.utils.py3compat'"
-            )
-            assert failed, cell.describe()
-        executed = defined(shell, "c") is not None
-        assert not executed, "the code of the first cell ran"
-        assert trials_of(project) == []
-        before = store_state(project)
-        cell = shell.run(PLAIN_CELL)
-        after = store_state(project)
-        differences = plain_cell_differences(
-            cell, project.files(), control, control_files
-        )
-        assert differences == [], compared(cell, control)
-        assert after == before
-        left = collection_leftovers() + swaps_left(shell, argv, path0)
-        assert left == []
-
-
-@known_defects(INTERACTIVE_IMPORT, COLLECTION_LEFT)
-def test_interactive_cells_run_and_leave_the_next_cell_untouched_desired(project):
-    """Two ``%%now_run --interactive`` cells run in the shell's namespace,
-    each records its trial, and the plain cell after them does what it
-    does in plain IPython
-
-    The same output, files and outcome as in a shell without the
-    extension, nothing gained by the store, nothing of the collections
-    left in the process, no function that starts a process replaced.
-    """
-    control, control_files = plain_ipython(project.root / "control")
-    run = interactive_then_plain(project, stand_in=False)
-    as_plain_ipython(run, control, control_files)
-
-
 def test_cells_after_two_interactive_cells_meet_the_collection_left(project):
-    """Past #313's import, two ``--interactive`` cells run and record
-    their trials, and the plain cell after them meets their collection,
-    still installed in the notebook's process
+    """Two ``--interactive`` cells run and record their trials, and the
+    plain cell after them meets their collection, still installed in the
+    notebook's process
 
-    Characterization of #250, through the stand-in for #313; the net for
+    Characterization of #250; the net for
     #202 in a long-lived process, the only mode where the collector runs
     in the notebook's own process. The four opens are still the
     collector's, its names stay in the builtins, and the ``__file__`` of
@@ -578,7 +515,7 @@ def test_cells_after_two_interactive_cells_meet_the_collection_left(project):
     ended.
     """
     control, control_files = plain_ipython(project.root / "control")
-    run = interactive_then_plain(project, stand_in=True)
+    run = interactive_then_plain(project)
     for cell, (_, text) in zip(run.cells, INTERACTIVE_CELLS):
         succeeded = printed(cell, text)
         assert succeeded, cell.describe()
@@ -605,23 +542,22 @@ def test_cells_after_two_interactive_cells_meet_the_collection_left(project):
 
 @known_defects(COLLECTION_LEFT)
 def test_cells_after_two_interactive_cells_behave_as_in_plain_ipython_desired(project):
-    """Past #313's import, two ``--interactive`` cells run and record
-    their trials, and the plain cell after them does what it does in
-    plain IPython: nothing of the collections left in the process, the
-    same output, files and outcome, nothing gained by the store, no
-    function that starts a process replaced
+    """Two ``--interactive`` cells run and record their trials, and the
+    plain cell after them does what it does in plain IPython: nothing of
+    the collections left in the process, the same output, files and
+    outcome, nothing gained by the store, no function that starts a
+    process replaced
     """
     control, control_files = plain_ipython(project.root / "control")
-    run = interactive_then_plain(project, stand_in=True)
+    run = interactive_then_plain(project)
     as_plain_ipython(run, control, control_files)
 
 
-def test_an_interactive_cell_leaves_the_collection_installed(stand_in, shell):
+def test_an_interactive_cell_leaves_the_collection_installed(argv_kept, shell):
     """After an ``--interactive`` cell that succeeds, the collection stays
     installed in the shell's process
 
-    Characterization of #250 under the magic, reached through the stand-in
-    for #313: the four opens are still the collector's wrappers, its nine
+    Characterization of #250 under the magic: the four opens are still the collector's wrappers, its nine
     names stay in the builtins, its root activation stays active, and what
     a later cell reads through ``io.open`` (pathlib) is recorded: its
     content is written into the store, under a trial that ended (the rows
@@ -660,7 +596,7 @@ def test_an_interactive_cell_leaves_the_collection_installed(stand_in, shell):
 
 
 @known_defects(COLLECTION_LEFT)
-def test_an_interactive_cell_puts_the_collection_away_desired(stand_in, shell):
+def test_an_interactive_cell_puts_the_collection_away_desired(argv_kept, shell):
     """After an ``--interactive`` cell that succeeds, the process is the
     notebook's again
 
@@ -766,13 +702,14 @@ def run_raising(project, case):
     """Run ``case`` as an ``--interactive`` cell; what it left, and how
 
     The cell takes two arguments; a cell after it imports ``colorsys``
-    anew. The shell and the stand-in are closed before returning, the
+    anew. The shell is closed, and ``sys.argv`` and ``sys.path[0]`` put
+    back, before returning, the
     collection undone. Returns the cell, the trials, what stayed
     (``swaps_left``, the finder, the loader of the later import) and, as
     booleans, whether what stands in ``sys`` and in the namespace is the
     cell's, all measured right after the cell.
     """
-    with py3compat_stand_in():
+    with argv_and_path0_kept():
         with open_shell(project) as shell:
             argv, path0 = list(sys.argv), sys.path[0]
             cell = shell.run("%%now_run --name k1 --interactive 7 8\n" + case.code)
@@ -808,7 +745,7 @@ def test_an_interactive_cell_that_raises_leaves_its_swaps(project, case):
     """What an ``--interactive`` cell that does not end normally leaves in
     place, and that closing the shell puts it back
 
-    Characterization of #388, reached through the stand-in for #313. The
+    Characterization of #388. The
     restores follow ``run()`` with no try/finally: a ``KeyboardInterrupt``
     and an error of ``Collector.store`` skip them (``sys.argv`` is the
     cell's, with its two arguments, ``sys.path[0]`` the project, the cells'
@@ -816,7 +753,8 @@ def test_an_interactive_cell_that_raises_leaves_its_swaps(project, case):
     exception, which ``collect_provenance`` catches, do not. No case leaves
     the import finder: the ``finally`` around the exec removes it. Every
     case keeps the ``__file__`` of the cell, as ``%run -i`` does. Once the
-    shell and the stand-in are closed, the leak detector finds nothing.
+    shell is closed and ``sys.argv`` and ``sys.path[0]`` are put back, the
+    leak detector finds nothing.
     """
     baseline = leaks.Baseline(
         cwd=os.getcwd(), scan_dirs=[os.getcwd()], watched_dirs=[str(project.root)]

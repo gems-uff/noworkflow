@@ -352,8 +352,7 @@ neither executes:
   meets a notebook trial, and the lab extension has no automated test:
   only the type-check and the lint of the `frontend` job reach it, so an update of
   its packages (codemirror, `@jupyterlab/*`) is measured by nothing else.
-  `%%now_run --interactive` gets past #313's import only through a stand-in
-  of the tests. `%%dot` and the diagrams of `%now_schema` skip where
+  `%%dot` and the diagrams of `%now_schema` skip where
   Graphviz's `dot` is missing (the Windows legs of `pre-release.yml`),
   `%%now_prolog` without `pyswip`, which no
   leg installs, and the tagging helpers that import pandas where the

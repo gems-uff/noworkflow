@@ -405,7 +405,7 @@ def test_a_magics_class_defined_while_names_are_pending_is_reported(project):
     assert not InteractiveShell.initialized()
 
 
-def test_an_in_process_collection_defines_no_magics_class(stand_in, shell):
+def test_an_in_process_collection_defines_no_magics_class(argv_kept, shell):
     """What an ``--interactive`` collection imports that defines magics
     classes is imported when the shell starts: the cell defines none, and
     none of the process takes a pending name

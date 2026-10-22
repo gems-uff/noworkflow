@@ -289,8 +289,8 @@ now pull --url http://host:5000/experiments/<id>
 %load_ext noworkflow
 nip = %now_ip                          # the module noworkflow.now.ipython
 
-%now_run simulation.py data1.dat data2.dat   # records a trial (needs `now` on the PATH of the notebook server)
-trial = nip.Trial()                    # the last trial; nip.Trial(2) by sequence key, tag or id
+trial = %now_run simulation.py data1.dat data2.dat   # records and returns a trial (needs `now` on the PATH of the notebook server)
+last = nip.Trial()                     # the last trial; nip.Trial(2) by sequence key, tag or id
 history = nip.History()
 diff = nip.Diff(1, 2)
 ```
@@ -302,11 +302,15 @@ SELECT sequence_key, script, status FROM trial
 
 - With the `noworkflow_labextension` package, `trial`, `history` and `diff`
   display as graphs in Jupyter Lab and Notebook 7+.
-- `%now_run` records the trial but returns `None` and prints "Failed
-  invalid literal for int()" (#313); take the trial from `nip.Trial()`.
-  `%%now_run` does the same with the cell's code, and
-  `%%now_run --interactive`, which shares variables with the notebook,
-  fails with `ModuleNotFoundError` (#313).
+- `%now_run` and `%%now_run` (the cell's code) return the trial they
+  recorded; `%%now_run --interactive` runs the cell in the notebook's
+  namespace, so it shares its variables. With `--bg`, or when `now` is
+  not found, they return the previous run's trial (#387): load the new
+  one with `nip.Trial()` once the run ends.
+- After `%now_run --dir OTHER`, the notebook is connected to OTHER's store
+  (`nip.Trial()`, `%now_sql` and the rest read it) until a `%now_run`
+  runs elsewhere; a trial kept from another store then raises a
+  `RuntimeError` naming its store instead of reading this one.
 - `%%now_sql` fails without `--result` (#314); with it, the variable holds
   the rows.
 - `src = %now_restore 1` restores trial 1's files and returns its script.
