@@ -53,7 +53,6 @@ import subprocess
 import tempfile
 import time
 import typing
-import warnings
 
 import pytest
 
@@ -62,9 +61,7 @@ SKIP_REASON = "SWI-Prolog (swipl) is not on the PATH"
 # The process timeout is the time limit inside Prolog plus this margin, for
 # loading the facts and starting the process.
 PROCESS_MARGIN = 30
-# Seconds a process that wrote its last line gets to exit before it is
-# killed, and how often the wait looks at the output in the meantime.
-EXIT_GRACE = 2
+# How often the wait looks at the output while the process runs.
 WAIT_SLICE = 0.2
 VARIABLE_NAME = re.compile(r"[A-Z_][A-Za-z0-9_]*\Z")
 
@@ -404,33 +401,27 @@ def _run(job, body, timeout):
 def _wait(process, output, timeout):
     """Wait for ``swipl``; return (stderr, exit status or None)
 
-    None when the process was killed: at ``timeout``, or ``EXIT_GRACE``
-    seconds after it wrote ``{"done":true}`` without exiting. Ubuntu's
-    SWI-Prolog 9 sometimes blocks in the ``halt`` that follows a goal run
-    under ``call_with_time_limit``; its output is complete then, so the
-    callers take it, and a warning says that the process had to be killed.
+    None when the process was killed: at ``timeout``, or as soon as the
+    wait sees ``{"done":true}`` while the process still runs. Nothing after
+    that line counts, and the ``halt`` that follows may never return: at
+    halt, library(time) tells its scheduler thread to stop by setting a
+    flag without taking its mutex, then takes the mutex to wake the thread.
+    A scheduler that is awake at that moment (woken by the removal of the
+    alarm of ``call_with_time_limit``, or by an alarm still installed)
+    sees the flag, leaves its loop with the mutex held and exits, and
+    ``halt`` waits for that mutex forever. Measured with Ubuntu's
+    ``swi-prolog-nox`` on x86_64; the code is the same in SWI-Prolog 10.
     """
     deadline = time.monotonic() + timeout
-    done_at = None
     while True:
         try:
             _, stderr = process.communicate(timeout=WAIT_SLICE)
             return stderr, process.returncode
         except subprocess.TimeoutExpired:
             pass
-        now = time.monotonic()
-        if done_at is None and _finished(output):
-            done_at = now
-        late = done_at is not None and now - done_at > EXIT_GRACE
-        if late or now > deadline:
+        if _finished(output) or time.monotonic() > deadline:
             process.kill()
             _, stderr = process.communicate()
-            if late:
-                warnings.warn(
-                    "swipl wrote its whole output and did not exit within "
-                    "{} s; killed".format(EXIT_GRACE),
-                    RuntimeWarning,
-                )
             return stderr, None
 
 
@@ -485,8 +476,9 @@ def solutions(facts_path, goal, variables, time_limit=10, inference_limit=5_000_
     runs). Keep ``time_limit`` small for a goal that is known to hang, so
     that its test stays fast. Never call ``halt`` in the goal: SWI-Prolog 10
     turns it into an error that ends the process, while 9 (Ubuntu's
-    ``swi-prolog-nox``) blocks under ``call_with_time_limit`` until the
-    process timeout.
+    ``swi-prolog-nox``) halts with the alarm of ``call_with_time_limit``
+    still installed and can block there (see ``_wait``) until the process
+    timeout, since the driver never wrote its last line.
 
     Skips the test when ``swipl`` is not on the PATH.
     """
