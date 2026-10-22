@@ -864,6 +864,7 @@ CASES = (
         case("distribution_finder.py", defects=(DISTRIBUTION_LOOKUP,)),
         case("duplicate_distributions.py", defects=(DISTRIBUTIONS_LISTED_TWICE,)),
         case("setuptools_vendor_path.py"),
+        case("directories_and_temporary_files.py"),
     ]
 )
 

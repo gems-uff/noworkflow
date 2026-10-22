@@ -39,13 +39,12 @@ import builtins
 import contextlib
 import dataclasses
 import os
-import shutil
 import subprocess
 import sys
 
 import pytest
 
-from noworkflow.tests.e2e.harness import NowProject, same_path, sha1
+from noworkflow.tests.e2e.harness import NowProject, same_path
 from noworkflow.tests.helpers import leaks
 from noworkflow.tests.helpers.defects import (
     Defect,
@@ -68,9 +67,7 @@ COLLECTION_LEFT = Defect(
     "cell's trial ends: its root activation stays active, so what later "
     "cells open through those four functions is recorded and its content "
     "written into the store (a cell's bare open is IPython's own, which "
-    "they do not wrap), and a later os.open of a directory, as "
-    "shutil.rmtree does, raises IsADirectoryError, because the wrapper "
-    "reads it as a file (#371)",
+    "they do not wrap)",
     signature="builtins.open replaced",
 )
 INTERACTIVE_SWAPS = Defect(
@@ -205,12 +202,6 @@ PLAIN_CONTENTS = {
 # IPython's own %run -i.
 WITHOUT_FILE = "__file__ defined: False\n"
 WITH_FILE = "__file__ defined: True\n"
-# shutil.rmtree removes a tree through os.open where the system lets it
-# open directories relative to a descriptor (Linux, macOS); elsewhere
-# (Windows) it never calls os.open.
-RMTREE_USES_OS_OPEN = getattr(shutil.rmtree, "avoids_symlink_attacks", False)
-REMOVED = "rmtree removed the tree: True\n"
-NOT_REMOVED = "rmtree failed: IsADirectoryError\nrmtree removed the tree: False\n"
 
 # Two %%now_run cells in a row; the second one takes an argument.
 NOW_RUN_CELLS = (
@@ -507,12 +498,10 @@ def test_cells_after_two_interactive_cells_meet_the_collection_left(project):
     collector's, its names stay in the builtins, and the ``__file__`` of
     the cells stays in the namespace (as after ``%run -i``). The plain
     cell succeeds and its child process does what it does in plain
-    IPython, and no function that starts a process is replaced; but
-    ``shutil.rmtree``, where it opens directories with ``os.open``, fails
-    with IsADirectoryError and leaves the tree (the wrapper reads the
-    directory as a file, #371), and what the cell writes and reads through
-    the wrapped opens reaches the store's content, under trials that
-    ended.
+    IPython (``shutil.rmtree`` included, which opens directories with the
+    wrapped ``os.open``), and no function that starts a process is
+    replaced; but what the cell writes and reads through the wrapped opens
+    reaches the store's content, under trials that ended.
     """
     control, control_files = plain_ipython(project.root / "control")
     run = interactive_then_plain(project)
@@ -525,9 +514,6 @@ def test_cells_after_two_interactive_cells_meet_the_collection_left(project):
     plain = run.plain
     expected = control.stdout.replace(WITHOUT_FILE, WITH_FILE)
     expected_files = dict(control_files)
-    if RMTREE_USES_OS_OPEN:
-        expected = expected.replace(REMOVED, NOT_REMOVED)
-        expected_files["cell_tree/sub/leaf.txt"] = sha1(b"leaf\n")
     as_measured = (
         printed(plain) and plain.stdout == expected and plain.stderr == control.stderr
     )
@@ -661,14 +647,11 @@ RAISING = {
         (ARGV, PATH0, BUILTINS, FILE),
         (INTERACTIVE_SWAPS,),
     ),
-    # The script ends normally, and Collector.store raises: the collector's
-    # os.open records the directory, and store reads it as a file (#371).
-    # Once #371 is fixed, this case needs another way to make store fail.
+    # The script ends normally, and Collector.store raises: the cell takes
+    # away the store of the file accesses, which store reads at the end.
     "store-error": Raising(
-        "import os\nos.mkdir('folder')\ntry:\n"
-        "    os.close(os.open('folder', os.O_RDONLY))\n"
-        "except OSError:\n    pass",
-        OSError,
+        "__noworkflow__.metascript.file_accesses_store = None",
+        AttributeError,
         "ongoing",
         "in Collector.store(",
         (ARGV, PATH0, BUILTINS, FILE),

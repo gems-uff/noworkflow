@@ -203,8 +203,11 @@ class Collector(object):
             file_access = self.file_accesses.add_object(
                 self.trial_id, name, self.get_time()
             )
-            if os.path.exists(name):
-                # Read previous content if file exists
+            if os.path.isfile(name):
+                # Read previous content if a regular file exists: a
+                # directory (os.open of one, as shutil.rmtree does, or the
+                # directory tempfile names in the open of a temporary file),
+                # a pipe or a device has no content to read here
                 with content.std_open(name, "rb") as fil:
                     file_access.content_hash_before = content.put(fil.read(), name)
             file_access.activation_id = activation.id
@@ -519,7 +522,7 @@ class Collector(object):
             # Do not overwrite a content_hash_after already captured by a
             # FileAccessProxy on close()/__exit__ (write-mode files). Only
             # fill it here when still unset (e.g. read-mode accesses).
-            if file_access.content_hash_after is None and os.path.exists(
+            if file_access.content_hash_after is None and os.path.isfile(
                 file_access.name
             ):
                 with content.std_open(file_access.name, "rb") as fil:
@@ -2331,7 +2334,7 @@ class Collector(object):
                         os.fsync(fil.fileno())
                     except (OSError, ValueError):
                         pass
-                if os.path.exists(file_access.name):
+                if os.path.isfile(file_access.name):
                     with content.std_open(file_access.name, "rb") as cfil:
                         file_access.content_hash_after = content.put(
                             cfil.read(), file_access.name

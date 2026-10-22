@@ -114,9 +114,7 @@ FORK_BLOBS = Defect(
     "#379: the open wrappers that Execution.configure "
     "(execution.py) installs survive into a child of os.fork; in the "
     "child, Collector.new_open and Collector.close_activation "
-    "(collector.py) put the content of each existing file it opens "
-    "(os.devnull too, through the wrapped os.open of "
-    "multiprocessing.util._close_stdin, when the child has a stdin), and "
+    "(collector.py) put the content of each regular file it opens, and "
     "FileAccessProxy._capture_after puts what it writes; the content "
     "engine writes each blob at once (plain into .noworkflow/content, "
     "puregit as loose objects), while the FileAccess objects that would "
@@ -947,15 +945,15 @@ def test_call_that_raises_desired(stores):
             )
 
 
-# What the fork's child opened: its input, its output and os.devnull, empty.
-FORK_CHILD_BLOBS = {sha1(data) for data in (CHILD_INPUT, CHILD_OUTPUT, b"")}
+# What the fork's child opened: its input and its output. It opens os.devnull
+# too, which is not a regular file, so the wrapper does not read it (#371).
+FORK_CHILD_BLOBS = {sha1(data) for data in (CHILD_INPUT, CHILD_OUTPUT)}
 
 
 @POSIX_FORK
 def test_fork_child_content_blobs(stores):
     """The forked child writes into the parent's content store the content
-    of its input, of its output and of os.devnull (its stdin is
-    /dev/null under the harness), which no row names: exactly these three
+    of its input and of its output, which no row names: exactly these two
 
     Characterization of #379. #202 changes what is recorded of a
     child process on purpose; if it names these blobs, its pull request
