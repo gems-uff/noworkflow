@@ -2,10 +2,10 @@
  * Create diagonal line between two nodes
  */
 export function diagonal(s: any, d: any): string {
-  if (s.dy == undefined) {
+  if (s.dy == null) {
     s.dy = 0;
   }
-  if (d.dy == undefined) {
+  if (d.dy == null) {
     d.dy = 0;
   }
   const path = `M ${s.x} ${s.y + s.dy}

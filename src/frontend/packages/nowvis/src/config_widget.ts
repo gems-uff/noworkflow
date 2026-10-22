@@ -9,7 +9,7 @@ import {
 import { BaseActivationGraphWidget } from './graph/base_activation_graph';
 
 export class ConfigWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
   static createNode(): HTMLElement {
     const node = document.createElement('div');

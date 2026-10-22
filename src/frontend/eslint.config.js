@@ -52,7 +52,8 @@ module.exports = [
       '@typescript-eslint/no-use-before-define': 'off',
       // No quotes rule: prettier imposes single quotes (.prettierrc.json).
       curly: ['error', 'all'],
-      eqeqeq: 'error',
+      // `x == null` is the idiom that covers null and undefined at once.
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
       'prefer-arrow-callback': 'error'
     }
   }

@@ -1,8 +1,8 @@
 /**
- * HistoryNodeData represents either a trial or a summarized version node
+ * IHistoryNodeData represents either a trial or a summarized version node
  * Some attributes exist only when it is a trial
  */
-export interface HistoryNodeData {
+export interface IHistoryNodeData {
   /* Shared attribute */
   id: number;
   display: string;
@@ -10,11 +10,11 @@ export interface HistoryNodeData {
   level: number;
   status: string;
 
-  /* Only when HistoryNodeData acts as a summarized node */
-  trials?: HistoryNodeData[];
+  /* Only when IHistoryNodeData acts as a summarized node */
+  trials?: IHistoryNodeData[];
 }
 
-export interface HistoryTrialNodeData extends HistoryNodeData {
+export interface IHistoryTrialNodeData extends IHistoryNodeData {
   /* Trial attributes */
   script: string;
   command: string;
@@ -31,40 +31,40 @@ export interface HistoryTrialNodeData extends HistoryNodeData {
   str_finish: string;
 }
 
-export interface HistoryEdgeData {
+export interface IHistoryEdgeData {
   level: number;
   right: number;
   source: number;
   target: number;
 }
 
-export interface HistoryGraphData {
-  edges: HistoryEdgeData[];
-  nodes: HistoryNodeData[];
+export interface IHistoryGraphData {
+  edges: IHistoryEdgeData[];
+  nodes: IHistoryNodeData[];
   scripts: string[];
   width: number;
   height: number;
 }
 
-export interface VisibleHistoryNode {
+export interface IVisibleHistoryNode {
   id: number;
   x: number;
   y: number;
   title: string;
   display: string;
-  info: HistoryNodeData;
+  info: IHistoryNodeData;
   radius: number;
   gradient: boolean;
   status: string;
 
-  trials?: HistoryNodeData[];
+  trials?: IHistoryNodeData[];
   tooltip?: string;
 }
 
-export interface VisibleHistoryEdge {
+export interface IVisibleHistoryEdge {
   id: string;
   level: number;
   right: number;
-  source: VisibleHistoryNode;
-  target: VisibleHistoryNode;
+  source: IVisibleHistoryNode;
+  target: IVisibleHistoryNode;
 }

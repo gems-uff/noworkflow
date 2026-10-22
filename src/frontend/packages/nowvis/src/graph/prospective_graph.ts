@@ -8,14 +8,11 @@ import { Widget } from '@lumino/widgets';
 import { instance } from '@viz-js/viz';
 import * as fs from 'file-saver';
 
-declare let require: any;
-const svgPanZoom = require('svg-pan-zoom');
-
 export class ProspectiveGraphWidget extends Widget {
   name: string;
   cls: string;
   trialId: string;
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   dotContent: string | null;
   currentZoom: number;
   originalViewBox: {

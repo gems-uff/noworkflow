@@ -6,14 +6,17 @@ import {
 
 import { Widget } from '@lumino/widgets';
 
-import { VisibleHistoryNode, HistoryTrialNodeData } from '@noworkflow/history';
+import {
+  IVisibleHistoryNode,
+  IHistoryTrialNodeData
+} from '@noworkflow/history';
 import { json } from '@noworkflow/utils';
 
 import {
-  ModuleListData,
-  EnvironmentData,
-  FileAccessListData,
-  FilterObject
+  IModuleListData,
+  IEnvironmentData,
+  IFileAccessListData,
+  IFilterObject
 } from './structures';
 
 import { ModulesInfoWidget } from './modules_info';
@@ -22,16 +25,16 @@ import { FileAccessesInfoWidget } from './file_accesses_info';
 import { AnnontationWidget } from '../annotation_widget';
 
 export class TrialInfoWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  trial: VisibleHistoryNode;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  trial: IVisibleHistoryNode;
   annontationWidget: AnnontationWidget;
 
   static createNode(
-    trial: VisibleHistoryNode,
+    trial: IVisibleHistoryNode,
     annontationWidget: AnnontationWidget
   ): HTMLElement {
     const node = document.createElement('div');
-    const info = trial.info as HistoryTrialNodeData;
+    const info = trial.info as IHistoryTrialNodeData;
 
     const d3node = d3_select(node);
 
@@ -118,7 +121,10 @@ export class TrialInfoWidget extends Widget {
     return node;
   }
 
-  constructor(trial: VisibleHistoryNode, annontationWidget: AnnontationWidget) {
+  constructor(
+    trial: IVisibleHistoryNode,
+    annontationWidget: AnnontationWidget
+  ) {
     super({ node: TrialInfoWidget.createNode(trial, annontationWidget) });
     this.trial = trial;
     this.d3node = d3_select(this.node);
@@ -134,7 +140,7 @@ export class TrialInfoWidget extends Widget {
   }
 
   static createFold(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     title: string
   ) {
     const fold = parent.append('div').classed('fold', true);
@@ -157,8 +163,8 @@ export class TrialInfoWidget extends Widget {
   }
 
   static createFilterFold(
-    fold: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    filter: FilterObject
+    fold: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    filter: IFilterObject
   ) {
     filter.filterdiv
       .classed('info-filter', true)
@@ -190,7 +196,7 @@ export class TrialInfoWidget extends Widget {
       'Modules',
       sub,
       ModulesInfoWidget.url(this.trial.title),
-      (data: ModuleListData) => {
+      (data: IModuleListData) => {
         const modules = this.d3node.select('.modules').html('');
         if (data.all.length > 0) {
           const fold = TrialInfoWidget.createFold(modules, 'Modules');
@@ -213,7 +219,7 @@ export class TrialInfoWidget extends Widget {
       'Environment',
       sub,
       EnvironmentInfoWidget.url(this.trial.title),
-      (data: EnvironmentData) => {
+      (data: IEnvironmentData) => {
         const environment = this.d3node.select('.environment').html('');
 
         const fold = TrialInfoWidget.createFold(environment, 'Environment');
@@ -234,7 +240,7 @@ export class TrialInfoWidget extends Widget {
       'File Accesses',
       sub,
       FileAccessesInfoWidget.url(this.trial.title),
-      (data: FileAccessListData) => {
+      (data: IFileAccessListData) => {
         const accesses = this.d3node.select('.file-accesses').html('');
 
         if (data.file_accesses.length > 0) {

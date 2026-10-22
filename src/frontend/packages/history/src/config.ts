@@ -4,15 +4,15 @@ import {
 } from 'd3-selection';
 
 import { HistoryGraph } from './graph';
-import { VisibleHistoryNode } from './structures';
+import { IVisibleHistoryNode } from './structures';
 
-export interface HistoryConfig {
-  customSelectNode: (g: HistoryGraph, d: VisibleHistoryNode) => boolean;
-  customCtrlClick: (g: HistoryGraph, d: VisibleHistoryNode) => boolean;
+export interface IHistoryConfig {
+  customSelectNode: (g: HistoryGraph, d: IVisibleHistoryNode) => boolean;
+  customCtrlClick: (g: HistoryGraph, d: IVisibleHistoryNode) => boolean;
   customSize: (g: HistoryGraph) => number[];
   customForm: (
     g: HistoryGraph,
-    form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) => void;
   customWindowTabCommand: (
     trialIdSimplified: string,
@@ -36,8 +36,8 @@ export interface HistoryConfig {
   useTooltip: boolean;
 }
 
-export interface HistoryState {
-  selectedNode: VisibleHistoryNode | null;
-  mouseDownNode: VisibleHistoryNode | null;
+export interface IHistoryState {
+  selectedNode: IVisibleHistoryNode | null;
+  mouseDownNode: IVisibleHistoryNode | null;
   justScale: boolean;
 }

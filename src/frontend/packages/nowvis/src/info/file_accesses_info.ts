@@ -6,25 +6,25 @@ import {
 
 import { Widget } from '@lumino/widgets';
 
-import { FileAccessData, FilterObject } from './structures';
+import { IFileAccessData, IFilterObject } from './structures';
 
 export class FileAccessesInfoWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
   static url(trialId: string) {
     return 'trials/' + trialId + '/file_accesses.json';
   }
 
   static createFilterDiv(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
     return parent.append('div');
   }
 
   static createFilter(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     default_local: string = '0'
-  ): FilterObject {
+  ): IFilterObject {
     const filterdiv = this.createFilterDiv(parent);
 
     const text_filter = filterdiv
@@ -82,7 +82,7 @@ export class FileAccessesInfoWidget extends Widget {
 
     return {
       filterdiv: filterdiv,
-      valid: (local: string, element: FileAccessData) => {
+      valid: (local: string, element: IFileAccessData) => {
         const stext = text_filter.property('value').toLowerCase();
         const smode = mode_filter.property('value').toLowerCase();
         const shash = Number(select_hash.property('value'));
@@ -97,38 +97,38 @@ export class FileAccessesInfoWidget extends Widget {
         };
 
         const check_hash = () => {
-          if ((shash & 1) == 1 && element.content_hash_before == null) {
+          if ((shash & 1) === 1 && element.content_hash_before == null) {
             return false;
           }
-          if ((shash & 2) == 2 && element.content_hash_after == null) {
+          if ((shash & 2) === 2 && element.content_hash_after == null) {
             return false;
           }
-          if (shash == 1) {
+          if (shash === 1) {
             return element.content_hash_after == null;
           }
-          if (shash == 2) {
+          if (shash === 2) {
             return element.content_hash_before == null;
           }
-          if (shash == 3) {
-            return element.content_hash_before != element.content_hash_after;
+          if (shash === 3) {
+            return element.content_hash_before !== element.content_hash_after;
           }
-          if (shash == 4) {
-            return element.content_hash_before == element.content_hash_after;
+          if (shash === 4) {
+            return element.content_hash_before === element.content_hash_after;
           }
           return true;
         };
 
         const check_local = () => {
-          if (slocal == 0) {
+          if (slocal === 0) {
             return true;
           }
           if (!/^((\/)|(\w+:\\))/.test(element.name)) {
-            return slocal == 1;
+            return slocal === 1;
           } // not absolute path
           if (element.name.startsWith(local)) {
-            return slocal == 1;
+            return slocal === 1;
           }
-          return slocal != 1;
+          return slocal !== 1;
         };
 
         return check_text() && check_mode() && check_hash() && check_local();
@@ -144,11 +144,11 @@ export class FileAccessesInfoWidget extends Widget {
   }
 
   static createList(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    data: FileAccessData[],
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    data: IFileAccessData[],
     trial_path: string,
     default_local: string = '0'
-  ): FilterObject {
+  ): IFilterObject {
     const filter = FileAccessesInfoWidget.createFilter(parent, default_local);
 
     const list = parent.append('ul').classed('fac-list', true);
@@ -215,7 +215,7 @@ export class FileAccessesInfoWidget extends Widget {
 
   static createNode(
     trialDisplay: string,
-    data: FileAccessData[],
+    data: IFileAccessData[],
     trial_path: string,
     default_local: string = '0'
   ): HTMLElement {
@@ -241,7 +241,7 @@ export class FileAccessesInfoWidget extends Widget {
 
   constructor(
     trialDisplay: string,
-    data: FileAccessData[],
+    data: IFileAccessData[],
     trial_path: string,
     default_local: string = '0'
   ) {

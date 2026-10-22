@@ -6,17 +6,17 @@ import {
 
 import { Widget } from '@lumino/widgets';
 
-import { EnvironmentItemData, FilterObject } from './structures';
+import { IEnvironmentItemData, IFilterObject } from './structures';
 
 export class EnvironmentInfoWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
   static url(trialId: string) {
     return 'trials/' + trialId + '/environment.json';
   }
 
   static createItem(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     key: string,
     value: string
   ): void {
@@ -29,15 +29,15 @@ export class EnvironmentInfoWidget extends Widget {
   }
 
   static createFilterDiv(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
     return parent.append('div');
   }
 
   static createFilter(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     default_local: string = '0'
-  ): FilterObject {
+  ): IFilterObject {
     const filterdiv = this.createFilterDiv(parent);
 
     const text_filter = filterdiv.append('input').attr('type', 'search');
@@ -59,7 +59,7 @@ export class EnvironmentInfoWidget extends Widget {
 
     return {
       filterdiv: filterdiv,
-      valid: (element: EnvironmentItemData) => {
+      valid: (element: IEnvironmentItemData) => {
         const stext = text_filter.property('value').toLowerCase();
         const slocal = Number(select_local.property('value'));
 
@@ -71,7 +71,7 @@ export class EnvironmentInfoWidget extends Widget {
         };
 
         const check_local = () => {
-          if (slocal == 0) {
+          if (slocal === 0) {
             return true;
           }
           switch (element.name) {
@@ -85,9 +85,9 @@ export class EnvironmentInfoWidget extends Widget {
             case 'HOSTNAME':
             case 'ARCH':
             case 'PROCESSOR':
-              return slocal == 1;
+              return slocal === 1;
             default:
-              return slocal != 1;
+              return slocal !== 1;
           }
         };
 
@@ -102,10 +102,10 @@ export class EnvironmentInfoWidget extends Widget {
   }
 
   static createList(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    data: EnvironmentItemData[],
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    data: IEnvironmentItemData[],
     default_local: string = '0'
-  ): FilterObject {
+  ): IFilterObject {
     const filter = EnvironmentInfoWidget.createFilter(parent, default_local);
     const list = parent.append('ul').classed('env-list', true);
 
@@ -123,7 +123,7 @@ export class EnvironmentInfoWidget extends Widget {
 
   static createNode(
     trialDisplay: string,
-    data: EnvironmentItemData[],
+    data: IEnvironmentItemData[],
     default_local: string = '0'
   ): HTMLElement {
     const node = document.createElement('div');
@@ -148,7 +148,7 @@ export class EnvironmentInfoWidget extends Widget {
 
   constructor(
     trialDisplay: string,
-    data: EnvironmentItemData[],
+    data: IEnvironmentItemData[],
     default_local: string = '0'
   ) {
     super({

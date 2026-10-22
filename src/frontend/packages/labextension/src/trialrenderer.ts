@@ -1,7 +1,7 @@
 import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 import { Message } from '@lumino/messaging';
 import { Widget } from '@lumino/widgets';
-import { TrialGraph, TrialGraphData } from '@noworkflow/trial';
+import { TrialGraph, ITrialGraphData } from '@noworkflow/trial';
 import { makeid } from '@noworkflow/utils';
 
 /**
@@ -25,7 +25,7 @@ export class RenderedTrial extends Widget implements IRenderMime.IRenderer {
    */
   renderModel(model: IRenderMime.IMimeModel): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const data = model.data[this._mimeType] as any | TrialGraphData;
+      const data = model.data[this._mimeType] as any | ITrialGraphData;
       this.graph = new TrialGraph('trial-' + makeid(), this.div, {
         width: data.width,
         height: data.height,

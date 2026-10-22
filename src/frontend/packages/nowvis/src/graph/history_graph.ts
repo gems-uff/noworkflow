@@ -4,13 +4,13 @@ import {
   BaseType as d3_BaseType
 } from 'd3-selection';
 
-import { DockPanel, Widget } from '@lumino/widgets';
+import { Widget } from '@lumino/widgets';
 
 import {
   HistoryGraph,
-  VisibleHistoryNode,
-  HistoryGraphData,
-  HistoryConfig
+  IVisibleHistoryNode,
+  IHistoryGraphData,
+  IHistoryConfig
 } from '@noworkflow/history';
 
 import { json, makeid } from '@noworkflow/utils';
@@ -31,19 +31,18 @@ import { instance } from '@viz-js/viz';
 declare let require: any;
 const pl = require('tau-prolog');
 const svgPanZoom = require('svg-pan-zoom');
-('svg-pan-zoom');
 
 export class HistoryWidget extends Widget {
   name: string;
   expId: string;
   cls: string;
   graph: HistoryGraph;
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   config: ConfigWidget;
   annontationWidget: AnnontationWidget;
-  rightClickMenu: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>;
+  rightClickMenu: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>;
   functionDiffWindow = functionDiffWindow;
 
   static url(script = '*', execution = '*', summarize = false) {
@@ -168,7 +167,7 @@ export class HistoryWidget extends Widget {
     this.cls = cls;
   }
 
-  setGraph(data: HistoryGraphData, config: any = {}) {
+  setGraph(data: IHistoryGraphData, config: any = {}) {
     const sub = this.node.getElementsByClassName('sub-content')[0];
     sub.innerHTML = '';
     this.graph = new HistoryGraph(this.cls, sub, config);
@@ -182,11 +181,11 @@ export class HistoryWidget extends Widget {
       'History',
       sub,
       HistoryWidget.url(script, execution, summarize),
-      (data: HistoryGraphData) => {
+      (data: IHistoryGraphData) => {
         this.setGraph(data, {
           width: this.node.getBoundingClientRect().width - 24,
           height: this.node.getBoundingClientRect().height - 24,
-          customCtrlClick: (g: HistoryGraph, d: VisibleHistoryNode) => {
+          customCtrlClick: (g: HistoryGraph, d: IVisibleHistoryNode) => {
             const redTrial = g.state.selectedNode;
             if (redTrial == null) {
               return true;
@@ -247,7 +246,7 @@ export class HistoryWidget extends Widget {
             parentDock.activateWidget(trialExportWidget);
             return true;
           },
-          customSelectNode: (g: HistoryGraph, d: VisibleHistoryNode) => {
+          customSelectNode: (g: HistoryGraph, d: IVisibleHistoryNode) => {
             const trialGraphWidget = new TrialGraphWidget(
               'Trial ' + d.display,
               'trial-' + d.title + makeid(),
@@ -276,7 +275,7 @@ export class HistoryWidget extends Widget {
           },
           customForm: (
             graph: HistoryGraph,
-            form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+            form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
           ) => {
             // Toggle Tooltips
             const filterDiv = this.d3node.select('.history-content .filter');
@@ -460,15 +459,14 @@ export class HistoryWidget extends Widget {
   }
 
   buildProspectiveCommand() {
-    const self = this;
     this.rightClickMenu
       .append('a')
       .classed('dropdown-item', true)
       .attr('href', '#')
       .attr('id', 'prospective-option')
       .text('generate prospective graph')
-      .on('click', function () {
-        const parent = this.parentNode as Element;
+      .on('click', (event: MouseEvent) => {
+        const parent = (event.currentTarget as Element).parentNode as Element;
         const trialId = parent.getAttribute('selected-trial');
         const trialDisplay = parent.getAttribute('selected-trial-simplified');
 
@@ -481,7 +479,7 @@ export class HistoryWidget extends Widget {
           'prospective-' + trialId + makeid(),
           trialId
         );
-        const parentDock: NowVisPanel = self.parent as NowVisPanel;
+        const parentDock: NowVisPanel = this.parent as NowVisPanel;
 
         parentDock.addGraphWidget(prospectiveGraphWidget);
         parentDock.activateWidget(prospectiveGraphWidget);
@@ -490,20 +488,18 @@ export class HistoryWidget extends Widget {
   }
 
   buildTrialFunctionDiffCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>,
     functionDiffWindow: any
   ) {
-    const self = this;
-
     this.rightClickMenu
       .append('a')
       .classed('dropdown-item', true)
       .attr('href', '#')
       .attr('id', 'trial-function-diff-option')
       .text('function activation diff')
-      .on('click', function () {
-        const parent = this.parentNode as Element;
+      .on('click', (event: MouseEvent) => {
+        const parent = (event.currentTarget as Element).parentNode as Element;
         const trialId = parent.getAttribute('selected-trial') ?? '';
 
         buildTrialFunctionDiffModal(
@@ -512,49 +508,47 @@ export class HistoryWidget extends Widget {
           parent,
           trialId,
           functionDiffWindow,
-          self
+          this
         );
       });
   }
 
   buildDataflowCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
-    const self = this;
     this.rightClickMenu
       .append('a')
       .classed('dropdown-item', true)
       .attr('href', '#')
       .attr('id', 'dataflow-option')
       .text('generate dataflow')
-      .on('click', function () {
-        const parent = this.parentNode as Element;
+      .on('click', (event: MouseEvent) => {
+        const parent = (event.currentTarget as Element).parentNode as Element;
         const trialId = parent.getAttribute('selected-trial') ?? '';
 
         buildDataflowModal(
           modal,
           modalBody,
           parent,
-          self.graph.config,
+          this.graph.config,
           trialId
         );
       });
   }
 
   buildExportPrologCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
-    const self = this;
     this.rightClickMenu
       .append('a')
       .classed('dropdown-item', true)
       .attr('href', '#')
       .attr('id', 'export-option')
       .text('generate prolog')
-      .on('click', function () {
-        const parent = this.parentNode as Element;
+      .on('click', (event: MouseEvent) => {
+        const parent = (event.currentTarget as Element).parentNode as Element;
         const trialId = parent.getAttribute('selected-trial');
         const exportUrl = '/commands/export/' + trialId;
         const exportWindowId = 'Export window ' + trialId;
@@ -563,7 +557,7 @@ export class HistoryWidget extends Widget {
           modal,
           modalBody,
           exportUrl,
-          self.graph.config,
+          this.graph.config,
           parent,
           exportWindowId,
           trialId
@@ -572,15 +566,14 @@ export class HistoryWidget extends Widget {
   }
 
   buildProvCommand() {
-    const self = this;
     this.rightClickMenu
       .append('a')
       .classed('dropdown-item', true)
       .attr('href', '#')
       .attr('id', 'prov-option')
       .text('generate prov')
-      .on('click', function () {
-        const parent = this.parentNode as Element;
+      .on('click', (event: MouseEvent) => {
+        const parent = (event.currentTarget as Element).parentNode as Element;
         const trialId = parent.getAttribute('selected-trial');
         const provWindowId = 'Prov window ' + trialId;
 
@@ -597,14 +590,14 @@ export class HistoryWidget extends Widget {
           }
         }).then(response => {
           response.json().then(json => {
-            self.graph.config.customWindowTabCommand(
+            this.graph.config.customWindowTabCommand(
               parent.getAttribute('selected-trial-simplified')!,
               provWindowId,
               'Prov'
             );
             const provWindow = d3_select(document.getElementById(provWindowId));
 
-            if (response.status == 200) {
+            if (response.status === 200) {
               provWindow.style('overflow-y', 'auto');
               const prov_lines = json.prov.split('\n');
               for (const line in prov_lines) {
@@ -619,8 +612,8 @@ export class HistoryWidget extends Widget {
   }
 
   private buildRestoreFileCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
     this.rightClickMenu
       .append('a')
@@ -648,7 +641,7 @@ export class HistoryWidget extends Widget {
             let submitButton;
             let form: d3_Selection<
               HTMLFormElement,
-              {},
+              unknown,
               HTMLElement | null,
               any
             >;
@@ -732,8 +725,8 @@ export class HistoryWidget extends Widget {
   }
 
   private buildRestoreTrialCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
     this.rightClickMenu
       .append('a')
@@ -747,7 +740,12 @@ export class HistoryWidget extends Widget {
         changeTitle(parent, 'Restore trial ');
 
         let submitButton;
-        let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+        let form: d3_Selection<
+          HTMLFormElement,
+          unknown,
+          HTMLElement | null,
+          any
+        >;
 
         showModal(modal);
 
@@ -799,14 +797,14 @@ export class HistoryWidget extends Widget {
   }
 
   private buildAddRemote(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
     document.getElementById('exampleModalTitle')!.textContent =
       'Add new remote';
 
     let submitButton;
-    let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+    let form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>;
 
     showModal(modal);
 
@@ -839,7 +837,7 @@ export class HistoryWidget extends Widget {
       }).then(response => {
         response.json().then(json => {
           form.remove();
-          if (response.status == 200) {
+          if (response.status === 200) {
             addAlert(
               modalBody,
               'alert-success',
@@ -855,8 +853,8 @@ export class HistoryWidget extends Widget {
   }
 
   private buildDeleteRemote(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
     fetch('/collab/remotes/getall', {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -865,7 +863,7 @@ export class HistoryWidget extends Widget {
       }
     }).then(response => {
       response.json().then(async json => {
-        if (response.status == 200) {
+        if (response.status === 200) {
           this.executeCollabCommand(
             modal,
             modalBody,
@@ -882,8 +880,8 @@ export class HistoryWidget extends Widget {
   }
 
   private buildEditRemote(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
     fetch('/collab/remotes/getall', {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -892,7 +890,7 @@ export class HistoryWidget extends Widget {
       }
     }).then(response => {
       response.json().then(async json => {
-        if (response.status == 200) {
+        if (response.status === 200) {
           this.executeCollabCommand(
             modal,
             modalBody,
@@ -909,8 +907,8 @@ export class HistoryWidget extends Widget {
   }
 
   private buildPushCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
     fetch('/collab/remotes/getall', {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -919,7 +917,7 @@ export class HistoryWidget extends Widget {
       }
     }).then(response => {
       response.json().then(async json => {
-        if (response.status == 200) {
+        if (response.status === 200) {
           this.executeCollabCommand(
             modal,
             modalBody,
@@ -936,8 +934,8 @@ export class HistoryWidget extends Widget {
   }
 
   private buildPullCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
   ) {
     fetch('/collab/remotes/getall', {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -946,7 +944,7 @@ export class HistoryWidget extends Widget {
       }
     }).then(response => {
       response.json().then(async json => {
-        if (response.status == 200) {
+        if (response.status === 200) {
           this.executeCollabCommand(
             modal,
             modalBody,
@@ -963,8 +961,8 @@ export class HistoryWidget extends Widget {
   }
 
   private executeCollabCommand(
-    modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+    modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>,
     serverUrlId: string,
     title: string,
     command: string,
@@ -973,11 +971,16 @@ export class HistoryWidget extends Widget {
     document.getElementById('exampleModalTitle')!.textContent = title;
 
     let submitButton;
-    let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+    let form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>;
 
     showModal(modal);
 
-    let select: d3_Selection<HTMLSelectElement, {}, HTMLElement | null, any>;
+    let select: d3_Selection<
+      HTMLSelectElement,
+      unknown,
+      HTMLElement | null,
+      any
+    >;
 
     if (modalBody) {
       form = modalBody.append('form').attr('onsubmit', 'return false;');
@@ -1005,7 +1008,7 @@ export class HistoryWidget extends Widget {
       });
 
       form.append('br');
-      if (command == 'edit') {
+      if (command === 'edit') {
         createFormTextInput(form, 'inputEditRemoteName', 'Remote new name: ');
       }
       submitButton = form
@@ -1018,7 +1021,7 @@ export class HistoryWidget extends Widget {
       const serverUrl = select.node()!.value;
 
       let collabCommandUrl = '/commands/' + command + '/' + serverUrl;
-      if (command == 'edit') {
+      if (command === 'edit') {
         collabCommandUrl =
           '/collab/remotes/edit/' +
           (<HTMLInputElement>document.getElementById('inputEditRemoteName'))
@@ -1026,7 +1029,7 @@ export class HistoryWidget extends Widget {
           '/' +
           serverUrl;
       }
-      if (command == 'delete') {
+      if (command === 'delete') {
         collabCommandUrl = '/collab/remotes/delete/' + serverUrl;
       }
 
@@ -1036,8 +1039,8 @@ export class HistoryWidget extends Widget {
 }
 
 function buildTrialFunctionDiffModal(
-  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+  modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+  modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>,
   parent: Element,
   trialId: string,
   functionDiffWindow: any,
@@ -1180,7 +1183,7 @@ function buildTrialFunctionDiffModal(
   function getSecondTrialFunctionActivations(
     secondTrialSelectActivation: d3_Selection<
       HTMLSelectElement,
-      {},
+      unknown,
       HTMLElement | null,
       any
     >
@@ -1214,16 +1217,16 @@ function buildTrialFunctionDiffModal(
 }
 
 function buildExportPrologModal(
-  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+  modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+  modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>,
   exportUrl: string,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   parent: Element,
   exportWindowId: string,
   trialId: string | null
 ) {
   let submitButton;
-  let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+  let form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>;
   document.getElementById('exampleModalTitle')!.textContent = 'Prolog';
 
   showModal(modal);
@@ -1261,7 +1264,7 @@ function buildExportPrologModal(
 
 function buildExportPrologTab(
   exportUrl: string,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   parent: Element,
   exportWindowId: string,
   trialId: string | null
@@ -1280,7 +1283,7 @@ function buildExportPrologTab(
     }
   }).then((response: any) => {
     response.json().then((json: any) => {
-      if (response.status == 200) {
+      if (response.status === 200) {
         config.customWindowTabCommand(
           parent.getAttribute('selected-trial-simplified')!,
           exportWindowId,
@@ -1288,19 +1291,23 @@ function buildExportPrologTab(
         );
         const exportWindow = d3_select(document.getElementById(exportWindowId));
 
-        const form: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any> =
-          (
-            exportWindow
-              .append('form')
-              .attr('onsubmit', 'return false;') as d3_Selection<
-              HTMLFormElement,
-              {},
-              HTMLElement | null,
-              any
-            >
-          )
-            .append('div')
-            .classed('form-row', true);
+        const form: d3_Selection<
+          HTMLDivElement,
+          unknown,
+          HTMLElement | null,
+          any
+        > = (
+          exportWindow
+            .append('form')
+            .attr('onsubmit', 'return false;') as d3_Selection<
+            HTMLFormElement,
+            unknown,
+            HTMLElement | null,
+            any
+          >
+        )
+          .append('div')
+          .classed('form-row', true);
         createFormTextInput(
           form,
           'exportPrologProgram' + trialId,
@@ -1327,7 +1334,7 @@ function buildExportPrologTab(
         const prologSession = pl.create(1000);
 
         const answerCallback = (answer: any, answerString: string) => {
-          if (answer == false) {
+          if (answer === false) {
             const answerCardTextId = 'Answers prolog card text ' + trialId;
             let answerCardText = document.getElementById(answerCardTextId)
               ? d3_select(document.getElementById(answerCardTextId))
@@ -1394,7 +1401,7 @@ function buildExportPrologTab(
 }
 
 function scrollableModal(
-  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+  modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
 ) {
   const modalDialog = (
     document.getElementsByClassName(
@@ -1408,13 +1415,13 @@ function scrollableModal(
 
 function getDataflow(
   response: any,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   parent: Element,
   dataflowWindowId: string,
   dataflowUrl: string
 ) {
   response.json().then((json: any) => {
-    if (response.status == 200) {
+    if (response.status === 200) {
       const trialIdSimplified = parent.getAttribute(
         'selected-trial-simplified'
       )!;
@@ -1456,8 +1463,8 @@ function getDataflow(
           const presentNode: Element | undefined =
             svgElement.children[0].children[0].children[nodeIndex];
           if (
-            presentNode.getAttribute('class') == 'node' &&
-            presentNode.children[1].tagName.toLowerCase() == 'polygon'
+            presentNode.getAttribute('class') === 'node' &&
+            presentNode.children[1].tagName.toLowerCase() === 'polygon'
           ) {
             const presentNodeSelection = d3_select(presentNode);
 
@@ -1485,8 +1492,8 @@ function getDataflow(
               }
             });
           } else if (
-            presentNode.getAttribute('class') == 'edge' &&
-            presentNode.children[1].tagName.toLowerCase() == 'path'
+            presentNode.getAttribute('class') === 'edge' &&
+            presentNode.children[1].tagName.toLowerCase() === 'path'
           ) {
             const presentNodeSelection = d3_select(presentNode);
 
@@ -1563,7 +1570,7 @@ function deletePriorNodes(
   presentNode: Element,
   viz: any,
   dataflowUrl: string,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   trialIdSimplified: string,
   presentWindowId: string
 ) {
@@ -1641,7 +1648,7 @@ function getDataflowWindowExcludeSomeProvenance(
   presentWindowId: string,
   newWindowId: string,
   trialIdSimplified: string,
-  config: HistoryConfig
+  config: IHistoryConfig
 ) {
   const excludingProvenanceWindowId = chooseDataflowExcludedProvenanceWindowId(
     presentWindowId,
@@ -1673,7 +1680,7 @@ function dataflowAMinusDataflowB(
   excludingProvenanceWindow: HTMLElement | null,
   viz: any,
   dataflowUrl: string,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   lastEvaluationId: number
 ) {
   //SET MINUS OPERATION A-B "The set A−B consists of elements that are in A but not in B. For example if A={1,2,3} and B={3,5}, then A−B={1,2}."
@@ -1733,7 +1740,7 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(
   dataflowUrl: string,
   newDataflowString: any,
   excludingProvenanceWindow: HTMLElement | null,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   lastEvaluationId: number
 ) {
   let selectedEdge: Element | undefined;
@@ -1746,8 +1753,8 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(
     const selectedNode: Element =
       svgElement.children[0].children[0].children[nodeIndex];
     if (
-      selectedNode.getAttribute('class') == 'node' &&
-      selectedNode.children[1].tagName.toLowerCase() == 'polygon'
+      selectedNode.getAttribute('class') === 'node' &&
+      selectedNode.children[1].tagName.toLowerCase() === 'polygon'
     ) {
       const selectedNodeSelection = d3_select(selectedNode);
 
@@ -1767,8 +1774,8 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(
         }
       });
     } else if (
-      selectedNode.getAttribute('class') == 'edge' &&
-      selectedNode.children[1].tagName.toLowerCase() == 'path'
+      selectedNode.getAttribute('class') === 'edge' &&
+      selectedNode.children[1].tagName.toLowerCase() === 'path'
     ) {
       const selectedNodeSelection = d3_select(selectedNode);
 
@@ -1791,7 +1798,7 @@ function deletePriorNodesAfterDeletingPriorNodes(
   dataflowUrl: string,
   newDataflowString: any,
   excludingProvenanceWindow: HTMLElement | null,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   lastEvaluationId: number
 ) {
   const selectedNodeOrderEvaluationTitle = selectedNode.children[0].innerHTML;
@@ -1799,7 +1806,7 @@ function deletePriorNodesAfterDeletingPriorNodes(
     selectedNodeOrderEvaluationTitle.replace('e_', '')
   );
 
-  if (lastEvaluationId == selectedEvaluationOrder) {
+  if (lastEvaluationId === selectedEvaluationOrder) {
     window.alert("You can't remove everything.");
     return undefined;
   }
@@ -1899,7 +1906,7 @@ function removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(
 
       indexOfDataflowLineToRemove = newDataflow.findIndex(
         (dataflowLine: string) => {
-          return dataflowLine.replace(/\[[^\]]*\]/, '') == lineToRemove;
+          return dataflowLine.replace(/\[[^\]]*\]/, '') === lineToRemove;
         }
       );
     } else {
@@ -1951,15 +1958,15 @@ function addsDeletedNodeSettingsAndChecksIfDataflowIsAligned(
 }
 
 function buildDataflowModal(
-  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>,
+  modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+  modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>,
   parent: Element,
-  config: HistoryConfig,
+  config: IHistoryConfig,
   trialId: string
 ) {
   let submitButton;
   let evaluationList;
-  let form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>;
+  let form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>;
   document.getElementById('exampleModalTitle')!.textContent = 'Dataflow';
 
   fetch('/dataflow/evaluations/' + trialId, {
@@ -2232,7 +2239,7 @@ function buildDataflowModal(
 function addsAutocompleteToDataflowWDF(
   dataflowEvaluationInput: d3_Selection<
     HTMLDivElement,
-    {},
+    unknown,
     HTMLElement | null,
     any
   >,
@@ -2252,7 +2259,7 @@ function addsAutocompleteToDataflowWDF(
 
     let suggestions: any[];
 
-    if (input == '') {
+    if (input === '') {
       autocompleteSuggestionsResults.setAttribute('style', '');
       evaluationInputHint.style.opacity = '1';
       suggestions = [];
@@ -2391,8 +2398,8 @@ function dataflowButtons(
 
 function getRestoreOrCollabCommand(
   serverUrl: string,
-  form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>,
-  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+  form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>,
+  modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
 ) {
   fetch(serverUrl, {
     method: 'GET', // *GET, POST, PUT, DELETE, etc.
@@ -2404,7 +2411,7 @@ function getRestoreOrCollabCommand(
       form.remove();
       // The server answers from the exit status of `now`; the text is what
       // it printed, and may name a path that contains "not".
-      if (response.status == 200) {
+      if (response.status === 200) {
         addAlert(modalBody, 'alert-success', 'Success!', json.terminal_text);
       } else {
         addAlert(modalBody, 'alert-danger', 'Error!', json.terminal_text);
@@ -2420,8 +2427,8 @@ function changeTitle(parent: Element, commandTitle: string) {
 }
 
 function cleanModalBodyAndClose(
-  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-  modalBody: d3_Selection<HTMLDivElement, {}, HTMLElement | null, any>
+  modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+  modalBody: d3_Selection<HTMLDivElement, unknown, HTMLElement | null, any>
 ) {
   document.getElementsByClassName('modal-body')[0].textContent = '';
   modalBody.style('height', null);
@@ -2429,7 +2436,7 @@ function cleanModalBodyAndClose(
 }
 
 function addAlert(
-  div: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+  div: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
   alertType: string,
   title: string,
   text: string
@@ -2452,7 +2459,7 @@ function addAlert(
 }
 
 function createFormCheckInput(
-  form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>,
+  form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>,
   checkInputId: string,
   text: string
 ) {
@@ -2473,7 +2480,7 @@ function createFormCheckInput(
 function createFormTextInput(
   form: d3_Selection<
     HTMLFormElement | HTMLDivElement,
-    {},
+    unknown,
     HTMLElement | null,
     any
   >,
@@ -2501,7 +2508,7 @@ function createFormTextInput(
 }
 
 function createFormSelectInput(
-  form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>,
+  form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>,
   selectId: string,
   selectText: string,
   minOptionNumber: number,
@@ -2538,14 +2545,14 @@ function createFormSelectInput(
       ? optionsLabels[optionNumber]
       : optionNumber;
     const input = selectInput.append('option').text(inputLabel);
-    if (defaultOption && optionNumber == defaultOption) {
+    if (defaultOption && optionNumber === defaultOption) {
       input.attr('selected', 'selected');
     }
   }
 }
 
 function createFormNumberInput(
-  form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>,
+  form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>,
   id: string,
   text: string,
   minValue: number,
@@ -2593,7 +2600,7 @@ function getTextInputFormByID(id: string, replace?: boolean) {
 }
 
 function hideModal(
-  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+  modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
 ) {
   if (modal) {
     modal
@@ -2605,7 +2612,7 @@ function hideModal(
 }
 
 function showModal(
-  modal: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+  modal: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
 ) {
   if (modal) {
     modal

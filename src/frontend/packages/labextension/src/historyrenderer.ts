@@ -1,7 +1,7 @@
 import { IRenderMime } from '@jupyterlab/rendermime-interfaces';
 import { Message } from '@lumino/messaging';
 import { Widget } from '@lumino/widgets';
-import { HistoryGraph, HistoryGraphData } from '@noworkflow/history';
+import { HistoryGraph, IHistoryGraphData } from '@noworkflow/history';
 import { makeid } from '@noworkflow/utils';
 
 /**
@@ -25,7 +25,7 @@ export class RenderedHistory extends Widget implements IRenderMime.IRenderer {
    */
   renderModel(model: IRenderMime.IMimeModel): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const data = model.data[this._mimeType] as any | HistoryGraphData;
+      const data = model.data[this._mimeType] as any | IHistoryGraphData;
       this.graph = new HistoryGraph('history-' + makeid(), this.div, {
         width: data.width,
         height: data.height,

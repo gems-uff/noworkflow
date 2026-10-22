@@ -18,12 +18,12 @@ interface IAnnotation {
   relatedExperiment: string;
 }
 export class AnnontationWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  tBody: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  table: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  successFeedback: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  errorFeedback: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  anntTitle: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  tBody: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  table: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  successFeedback: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  errorFeedback: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  anntTitle: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   expId: string;
   trialId: string;
   fetchUrl: string;
@@ -72,15 +72,14 @@ export class AnnontationWidget extends Widget {
   }
   async fillAnnotations() {
     this.annotations = new Array<IAnnotation>();
-    const _thiss = this;
     const response = await fetch(this.fetchUrl, {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
       headers: {
         'Content-Type': 'application/json'
       }
     });
-    if (response.status == 200) {
-      _thiss.annotations = new Array<IAnnotation>();
+    if (response.status === 200) {
+      this.annotations = new Array<IAnnotation>();
       const obj = await response.json();
 
       obj.forEach((item: any) => {
@@ -94,17 +93,17 @@ export class AnnontationWidget extends Widget {
           relatedExperiment: item.relatedExperiment
         };
 
-        _thiss.annotations.push(annt);
+        this.annotations.push(annt);
       });
     } else {
-      if (response.status != 404) {
-        this.showNode(_thiss.errorFeedback);
+      if (response.status !== 404) {
+        this.showNode(this.errorFeedback);
       }
     }
   }
   addAnntRow(
     annt: IAnnotation,
-    tBody: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    tBody: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
     const item = tBody.append('tr');
     item.append('th').attr('scope', 'row').text(annt.id);
@@ -124,8 +123,6 @@ export class AnnontationWidget extends Widget {
     });
   }
   async setAnnotations() {
-    const _thiss = this;
-
     this.table.html('');
     const header = this.table.append('thead').append('tr');
 
@@ -139,11 +136,11 @@ export class AnnontationWidget extends Widget {
     await this.fillAnnotations();
 
     this.annotations.forEach((obj: any) => {
-      _thiss.addAnntRow(obj, tBody);
+      this.addAnntRow(obj, tBody);
     });
   }
   addFormInput(
-    form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     fieldId: string,
     fieldLabel: string,
     fieldType: string
@@ -160,12 +157,11 @@ export class AnnontationWidget extends Widget {
     return inp;
   }
   addFeedBackinfo(
-    baseNode: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    baseNode: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
     txt: string,
     desc: string
   ) {
-    const _thiss = this;
     const feedbackNode = baseNode
       .append('div')
       .classed('alert', true)
@@ -183,18 +179,18 @@ export class AnnontationWidget extends Widget {
       .attr('data-dismiss', 'alert')
       .text('x')
       .on('click', () => {
-        _thiss.hideNode(feedbackNode);
+        this.hideNode(feedbackNode);
       });
     return feedbackNode;
   }
-  hideNode(node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  hideNode(node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>) {
     node.classed('d-none', true);
   }
-  showNode(node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  showNode(node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>) {
     node.classed('d-none', false);
   }
   getValueFromSelect(
-    node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     defaultVale: string
   ): string {
     let option = defaultVale;
@@ -206,9 +202,8 @@ export class AnnontationWidget extends Widget {
     return option;
   }
   createAddGroupForm(
-    projectsDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    projectsDiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
-    const _thiss = this;
     const inputsDiv = projectsDiv.append('div');
     const descIn = this.addFormInput(
       inputsDiv,
@@ -272,49 +267,46 @@ export class AnnontationWidget extends Widget {
     inputsDiv.classed('d-none', true);
 
     confimButton.on('click', () => {
-      const annotationFormat = _thiss.getValueFromSelect(
+      const annotationFormat = this.getValueFromSelect(
         annotationFormatIn,
         'plainText'
       );
-      const provenanceType = _thiss.getValueFromSelect(
-        provenanceTypeIn,
-        'Other'
-      );
+      const provenanceType = this.getValueFromSelect(provenanceTypeIn, 'Other');
 
-      _thiss.hideNode(_thiss.errorFeedback);
-      _thiss.hideNode(_thiss.successFeedback);
+      this.hideNode(this.errorFeedback);
+      this.hideNode(this.successFeedback);
 
       const newAnnotation = <IAnnotation>{
         annotation: annotationIn.property('value'),
         description: descIn.property('value'),
         annotationFormat: annotationFormat,
-        annotationLevel: _thiss.annotationLevel,
+        annotationLevel: this.annotationLevel,
         provenanceType: provenanceType
       };
 
-      fetch(_thiss.fetchUrl, {
+      fetch(this.fetchUrl, {
         method: 'POST', // *GET, POST, PUT, DELETE, etc.
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(newAnnotation) // body data type must match "Content-Type" header
       }).then(response => {
-        if (response.status == 201) {
+        if (response.status === 201) {
           response.json().then(obj => {
-            _thiss.showNode(_thiss.successFeedback);
-            _thiss.hideNode(inputsDiv);
-            _thiss.showNode(addAnntButton);
-            _thiss.setAnnotations();
+            this.showNode(this.successFeedback);
+            this.hideNode(inputsDiv);
+            this.showNode(addAnntButton);
+            this.setAnnotations();
           });
         } else {
-          _thiss.showNode(_thiss.errorFeedback);
+          this.showNode(this.errorFeedback);
         }
       });
     });
 
     addAnntButton.on('click', () => {
-      _thiss.showNode(inputsDiv);
-      _thiss.hideNode(addAnntButton);
+      this.showNode(inputsDiv);
+      this.hideNode(addAnntButton);
     });
   }
 

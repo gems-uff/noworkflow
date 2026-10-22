@@ -22,36 +22,36 @@ import * as fs from 'file-saver';
 
 import { wrap, diagonal } from '@noworkflow/utils';
 
-import { TrialConfig } from './config';
-import { VisibleTrialNode, VisibleTrialEdge } from './structures';
+import { ITrialConfig } from './config';
+import { IVisibleTrialNode, IVisibleTrialEdge } from './structures';
 import {
-  TrialGraphData,
-  TrialNodeData,
-  TrialEdgeData,
-  ActivationData
+  ITrialGraphData,
+  ITrialNodeData,
+  ITrialEdgeData,
+  IActivationData
 } from './structures';
 
 import { D3ZoomEvent } from 'd3';
 
 export class TrialGraph {
   i: number;
-  config: TrialConfig;
+  config: ITrialConfig;
   transform: any;
 
-  div: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  svg: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  g: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  div: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  svg: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  g: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   zoom: any;
-  tooltipDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  tooltipDiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
-  tree: d3_TreeLayout<{}>;
+  tree: d3_TreeLayout<unknown>;
 
-  root: VisibleTrialNode;
+  root: IVisibleTrialNode;
 
   graphId: string;
-  nodes: d3_HierarchyPointNode<{}>[];
-  alledges: TrialEdgeData[];
+  nodes: d3_HierarchyPointNode<unknown>[];
+  alledges: ITrialEdgeData[];
 
   t1: string;
   t2: string;
@@ -60,7 +60,7 @@ export class TrialGraph {
   totalDuration: { [trial: string]: number };
   maxTotalDuration: number;
   colors: { [trial: string]: number };
-  activationStorage: { [aid: string]: ActivationData };
+  activationStorage: { [aid: string]: IActivationData };
   showDiffFunction: any;
   nowVisPanel: any;
 
@@ -78,15 +78,15 @@ export class TrialGraph {
 
     this.i = 0;
 
-    const defaultConfig: TrialConfig = {
+    const defaultConfig: ITrialConfig = {
       customSize: function (g: TrialGraph) {
         return [g.config.width, g.config.height];
       },
-      customMouseOver: (g: TrialGraph, d: VisibleTrialNode) => false,
-      customMouseOut: (g: TrialGraph, d: VisibleTrialNode) => false,
+      customMouseOver: (g: TrialGraph, d: IVisibleTrialNode) => false,
+      customMouseOut: (g: TrialGraph, d: IVisibleTrialNode) => false,
       customForm: (
         g: TrialGraph,
-        form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+        form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
       ) => null,
       customLoadTooltip: (
         g: TrialGraph,
@@ -150,7 +150,7 @@ export class TrialGraph {
       .attr('transform', 'translate(0,0)')
       .classed('TrialGraph', true);
 
-    this.tree = d3_tree<VisibleTrialNode>().nodeSize([
+    this.tree = d3_tree<IVisibleTrialNode>().nodeSize([
       this.config.nodeSizeX,
       this.config.nodeSizeY
     ]);
@@ -176,7 +176,7 @@ export class TrialGraph {
     this.activationStorage = {};
   }
 
-  init(data: TrialGraphData, t1: string, t2: string) {
+  init(data: ITrialGraphData, t1: string, t2: string) {
     this.t1 = t1;
     this.t2 = t2;
 
@@ -202,7 +202,7 @@ export class TrialGraph {
 
     this.root = d3_hierarchy(data.root, d => {
       return d.children;
-    }) as VisibleTrialNode;
+    }) as IVisibleTrialNode;
     this.root.x0 = 0;
     this.root.y0 = this.config.width / 2;
 
@@ -210,8 +210,9 @@ export class TrialGraph {
     this.update(this.root);
   }
 
-  createToolbar(form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
-    const self = this;
+  createToolbar(
+    form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
+  ) {
     form = form.append('div').classed('buttons buttonsGraph', true);
     this.config.customForm(this, form);
     // Reset zoom
@@ -306,12 +307,12 @@ export class TrialGraph {
       });
 
     // Set distances
-    const setDistances = function () {
-      self.config.nodeSizeX = distanceX.property('value');
-      self.config.nodeSizeY = distanceY.property('value');
-      self.wrapText();
-      self.tree.nodeSize([self.config.nodeSizeX, self.config.nodeSizeY]);
-      self.update(self.root);
+    const setDistances = () => {
+      this.config.nodeSizeX = distanceX.property('value');
+      this.config.nodeSizeY = distanceY.property('value');
+      this.wrapText();
+      this.tree.nodeSize([this.config.nodeSizeX, this.config.nodeSizeY]);
+      this.update(this.root);
     };
 
     // Set Distance X
@@ -381,7 +382,7 @@ export class TrialGraph {
       .style('display', 'none');
   }
 
-  load(data: TrialGraphData, t1: string, t2: string) {
+  load(data: ITrialGraphData, t1: string, t2: string) {
     this.init(data, t1, t2);
     this.updateWindow();
   }
@@ -404,7 +405,7 @@ export class TrialGraph {
     this.svg.attr('width', size[0]).attr('height', size[1]);
   }
 
-  update(source: VisibleTrialNode) {
+  update(source: IVisibleTrialNode) {
     const treeData = this.tree(this.root);
     this.nodes = treeData.descendants();
 
@@ -412,28 +413,28 @@ export class TrialGraph {
       return d.id || (d.id = ++this.i);
     });
 
-    const validNodes: { [key: string]: VisibleTrialNode } = {};
-    this.nodes.forEach((node: VisibleTrialNode) => {
+    const validNodes: { [key: string]: IVisibleTrialNode } = {};
+    this.nodes.forEach((node: IVisibleTrialNode) => {
       validNodes[node.data.index] = node;
     });
-    const edges: VisibleTrialEdge[] = this.alledges
-      .filter((edge: TrialEdgeData) => {
-        const source: VisibleTrialNode = validNodes[edge.source];
-        const target: VisibleTrialNode = validNodes[edge.target];
+    const edges: IVisibleTrialEdge[] = this.alledges
+      .filter((edge: ITrialEdgeData) => {
+        const source: IVisibleTrialNode = validNodes[edge.source];
+        const target: IVisibleTrialNode = validNodes[edge.target];
 
-        if (source == undefined || target == undefined) {
+        if (source == null || target == null) {
           return false;
         }
         return true;
       })
       .map(edge => {
-        const source: VisibleTrialNode = validNodes[edge.source];
-        const target: VisibleTrialNode = validNodes[edge.target];
+        const source: IVisibleTrialNode = validNodes[edge.source];
+        const target: IVisibleTrialNode = validNodes[edge.target];
         const copy: any = { ...edge };
         copy.id = edge.source + '-' + edge.target;
         copy.source = source;
         copy.target = target;
-        return copy as VisibleTrialEdge;
+        return copy as IVisibleTrialEdge;
       });
 
     this.updateNodes(source, node);
@@ -441,7 +442,7 @@ export class TrialGraph {
     this.updateLinkLabels(edges);
 
     // Store old positions for transition
-    this.nodes.forEach((d: VisibleTrialNode, i: number) => {
+    this.nodes.forEach((d: IVisibleTrialNode, i: number) => {
       d.x0 = d.x;
       d.y0 = d.y;
     });
@@ -488,7 +489,7 @@ export class TrialGraph {
       .call(wrap, this.config.nodeSizeX);
   }
 
-  private calculateColor(d: TrialNodeData, trial_id: string): any {
+  private calculateColor(d: ITrialNodeData, trial_id: string): any {
     const proportion = Math.round(
       255 * (1.0 - d.duration[trial_id] / this.maxTotalDuration)
     );
@@ -565,7 +566,7 @@ export class TrialGraph {
       const trial = trial_ids[i];
 
       if (showModal) {
-        const trialNumber = i == 0 ? 'first' : 'second';
+        const trialNumber = i === 0 ? 'first' : 'second';
         modalBody!
           .append('span')
           .text('Select the ' + trialNumber + ' trial activation: ');
@@ -667,8 +668,7 @@ export class TrialGraph {
     this.tooltipDiv.classed('hidden', true);
   }
 
-  private showTooltip(event: MouseEvent, d: TrialNodeData, trial_id: string) {
-    const self = this;
+  private showTooltip(event: MouseEvent, d: ITrialNodeData, trial_id: string) {
     this.tooltipDiv.classed('hidden', false);
     this.tooltipDiv.transition().duration(200).style('opacity', 0.9);
     if (this.config.queryTooltip) {
@@ -680,16 +680,16 @@ export class TrialGraph {
         .style('left', event.pageX - 3 + 'px')
         .style('top', event.pageY - 28 + 'px');
       while (match != null) {
-        var div = document.createElement('div');
+        const div = document.createElement('div');
         //var div2 = document.createElement("div");
         this.tooltipDiv.append(() => div);
         //this.tooltipDiv.append(() => div2);
         const aid = match[2];
-        if (aid in self.activationStorage) {
+        if (aid in this.activationStorage) {
           this.updateTooltipDiv(aid, div);
         } else {
-          self.config.customLoadTooltip(
-            self,
+          this.config.customLoadTooltip(
+            this,
             div,
             match[0],
             match[1],
@@ -709,7 +709,7 @@ export class TrialGraph {
   updateTooltipDiv(activationId: string, div: Element) {
     const data = this.activationStorage[activationId];
     let title = data.id + ' - ' + data.name;
-    if (data.hash != '') {
+    if (data.hash !== '') {
       title =
         '<a href="/trials/files/' +
         data.hash +
@@ -763,18 +763,18 @@ export class TrialGraph {
       .attr('d', 'M0,-5L10,0L0,5');
   }
 
-  private defaultNodeStroke(d: VisibleTrialNode) {
+  private defaultNodeStroke(d: IVisibleTrialNode) {
     const color = this.colors[d.data.trial_ids[0]];
-    if (d.data.trial_ids.length > 1 || color == 0) {
+    if (d.data.trial_ids.length > 1 || color === 0) {
       return '#000';
     }
-    if (color == 1) {
+    if (color === 1) {
       return 'red';
     }
     return 'green';
   }
 
-  private nodeClick(d: VisibleTrialNode) {
+  private nodeClick(d: IVisibleTrialNode) {
     if (d.children) {
       d._children = d.children;
       delete d.children;
@@ -785,44 +785,43 @@ export class TrialGraph {
     this.update(d);
   }
 
-  private updateNodes(source: VisibleTrialNode, node: any) {
-    const self = this;
+  private updateNodes(source: IVisibleTrialNode, node: any) {
     const nodeEnter = node
       .enter()
       .append('g')
-      .attr('id', (d: VisibleTrialNode) => {
+      .attr('id', (d: IVisibleTrialNode) => {
         return 'node-' + this.graphId + '-' + d.data.index;
       })
       .attr('class', 'node')
       .attr('cursor', 'pointer')
-      .attr('transform', (d: VisibleTrialNode) => {
+      .attr('transform', (d: IVisibleTrialNode) => {
         return 'translate(' + source.x + ',' + source.y + ')';
       })
-      .on('click', (event: MouseEvent, d: VisibleTrialNode) => {
+      .on('click', (event: MouseEvent, d: IVisibleTrialNode) => {
         const activations = d.data.activations;
         if (event.ctrlKey && Object.keys(activations).length > 1) {
-          self.getFunctionDiff(activations, d.data.trial_ids);
+          this.getFunctionDiff(activations, d.data.trial_ids);
         } else {
           this.nodeClick(d);
         }
       })
-      .on('mouseover', (event: MouseEvent, d: VisibleTrialNode) => {
-        if (self.config.useTooltip) {
-          self.closeTooltip();
+      .on('mouseover', (event: MouseEvent, d: IVisibleTrialNode) => {
+        if (this.config.useTooltip) {
+          this.closeTooltip();
           if (d3_pointers(event)[0][0] < 10) {
-            self.showTooltip(event, d.data, self.t1);
+            this.showTooltip(event, d.data, this.t1);
           } else {
-            self.showTooltip(event, d.data, self.t2);
+            this.showTooltip(event, d.data, this.t2);
           }
         }
-        self.config.customMouseOver(self, d);
+        this.config.customMouseOver(this, d);
         return false;
       })
-      .on('mouseout', (event: MouseEvent, d: VisibleTrialNode) => {
-        self.config.customMouseOut(self, d);
+      .on('mouseout', (event: MouseEvent, d: IVisibleTrialNode) => {
+        this.config.customMouseOut(this, d);
       });
 
-    /* nodeEnter.attr("activations_ids", (d:VisibleTrialNode)=>{
+    /* nodeEnter.attr("activations_ids", (d:IVisibleTrialNode)=>{
       let activations = d.data.activations;
       let attrValue = "";
       for(let trial in activations){
@@ -841,10 +840,10 @@ export class TrialGraph {
       .attr('ry', 1e-6)
       .attr('width', 1e-6)
       .attr('height', 1e-6)
-      .attr('stroke', (d: VisibleTrialNode) => this.defaultNodeStroke(d))
+      .attr('stroke', (d: IVisibleTrialNode) => this.defaultNodeStroke(d))
       .attr('stroke-width', '3px')
-      .attr('fill', (d: VisibleTrialNode) => {
-        if (d.data.trial_ids.length == 1) {
+      .attr('fill', (d: IVisibleTrialNode) => {
+        if (d.data.trial_ids.length === 1) {
           return this.calculateColor(d.data, this.t1);
         }
         const grad = this.svg
@@ -878,7 +877,7 @@ export class TrialGraph {
       .attr('y', 24)
       .attr('x', 10)
       .attr('text-anchor', 'middle')
-      .each(function (d: VisibleTrialNode) {
+      .each(function (d: IVisibleTrialNode) {
         const textLabel = d3_select(this);
         const name = d.data.name.split('<br>');
         if (name.length > 1) {
@@ -902,7 +901,7 @@ export class TrialGraph {
     nodeEnter
       .append('path')
       .attr('stroke', '#000')
-      .attr('d', (d: VisibleTrialNode) => {
+      .attr('d', (d: IVisibleTrialNode) => {
         if (d.data.trial_ids.length > 1) {
           return 'M10,' + 0 + 'L10,' + 20;
         }
@@ -916,12 +915,12 @@ export class TrialGraph {
     nodeUpdate
       .transition()
       .duration(this.config.duration)
-      .attr('transform', (d: VisibleTrialNode) => {
+      .attr('transform', (d: IVisibleTrialNode) => {
         const color = this.colors[d.data.trial_ids[0]];
         d.dy = 0;
-        if (color == 1) {
+        if (color === 1) {
           d.dy = -40;
-        } else if (color == 2) {
+        } else if (color === 2) {
           d.dy = 40;
         }
         return 'translate(' + (d.x - 10) + ',' + (d.y + d.dy - 10) + ')';
@@ -934,10 +933,10 @@ export class TrialGraph {
       .attr('height', 20)
       .attr('rx', 20)
       .attr('ry', 20)
-      .attr('rx', (d: VisibleTrialNode) => {
+      .attr('rx', (d: IVisibleTrialNode) => {
         return d._children ? 0 : 20;
       })
-      .attr('ry', (d: VisibleTrialNode) => {
+      .attr('ry', (d: IVisibleTrialNode) => {
         return d._children ? 0 : 20;
       })
       .attr('cursor', 'pointer');
@@ -947,7 +946,7 @@ export class TrialGraph {
       .exit()
       .transition()
       .duration(this.config.duration)
-      .attr('transform', (d: VisibleTrialNode) => {
+      .attr('transform', (d: IVisibleTrialNode) => {
         return 'translate(' + source.x + ',' + source.y + ')';
       })
       .remove();
@@ -964,27 +963,27 @@ export class TrialGraph {
     nodeExit.select('text').style('fill-opacity', 1e-6);
   }
 
-  private updateLinks(source: VisibleTrialNode, edges: VisibleTrialEdge[]) {
+  private updateLinks(source: IVisibleTrialNode, edges: IVisibleTrialEdge[]) {
     const link = this.g
-      .selectAll<SVGPathElement, VisibleTrialEdge[]>('path.link')
-      .data(edges, (d: VisibleTrialEdge) => d.id);
+      .selectAll<SVGPathElement, IVisibleTrialEdge[]>('path.link')
+      .data(edges, (d: IVisibleTrialEdge) => d.id);
 
     // Enter any new links at the parent's previous position.
     const linkEnter = link
       .enter()
       .insert('path', 'g')
       .attr('class', 'link')
-      .attr('id', (d: VisibleTrialEdge, i: number) => {
+      .attr('id', (d: IVisibleTrialEdge, i: number) => {
         return 'pathId-' + this.graphId + '-' + d.id;
       })
       .attr('fill', 'none')
       .attr('stroke-width', '1.5px')
-      .attr('d', (d: VisibleTrialEdge) => {
+      .attr('d', (d: IVisibleTrialEdge) => {
         const o = { y: source.y0, x: source.x0 };
-        if (d.source.dy == undefined) {
+        if (d.source.dy == null) {
           d.source.dy = 0;
         }
-        if (d.target.dy == undefined) {
+        if (d.target.dy == null) {
           d.target.dy = 0;
         }
 
@@ -996,7 +995,7 @@ export class TrialGraph {
           y2 = d.target.y + d.target.dy,
           dx = x2 - x1,
           dy = y2 - y1;
-        if (d.type === 'initial' || d.type === 'call' || d.type == 'return') {
+        if (d.type === 'initial' || d.type === 'call' || d.type === 'return') {
           // Initial
           return diagonal(o, o);
         } else if (dx === 0 && dy === 0) {
@@ -1009,37 +1008,37 @@ export class TrialGraph {
         //return diagonal(d.source, d.target);
         return diagonal(o, o);
       })
-      .attr('marker-end', (d: VisibleTrialEdge) => {
+      .attr('marker-end', (d: IVisibleTrialEdge) => {
         let count = 0;
         for (const trial_id in d.count) {
-          if (trial_id == this.t1.toString()) {
+          if (trial_id === this.t1.toString()) {
             count += 1;
           }
-          if (trial_id == this.t2.toString()) {
+          if (trial_id === this.t2.toString()) {
             count += 2;
           }
         }
-        if (count == 0 || count == 3) {
+        if (count === 0 || count === 3) {
           // Single trial or diff
           return 'url(#' + this.graphId + '-end)';
         }
-        if (count == 1) {
+        if (count === 1) {
           // First trial
           return 'url(#' + this.graphId + '-endbefore)';
         }
-        if (count == 2) {
+        if (count === 2) {
           // Second trial
           return 'url(#' + this.graphId + '-endafter)';
         }
         return '';
       })
-      .attr('stroke', (d: VisibleTrialEdge) => {
+      .attr('stroke', (d: IVisibleTrialEdge) => {
         if (d.type === 'sequence') {
           return '#07F';
         }
         return '#666';
       })
-      .attr('stroke-dasharray', (d: VisibleTrialEdge) => {
+      .attr('stroke-dasharray', (d: IVisibleTrialEdge) => {
         if (d.type === 'return') {
           return '10,2';
         }
@@ -1052,21 +1051,21 @@ export class TrialGraph {
     linkUpdate
       .transition()
       .duration(this.config.duration)
-      .attr('d', (d: VisibleTrialEdge) => {
-        if (d.source.dy == undefined) {
+      .attr('d', (d: IVisibleTrialEdge) => {
+        if (d.source.dy == null) {
           d.source.dy = 0;
         }
-        if (d.target.dy == undefined) {
+        if (d.target.dy == null) {
           d.target.dy = 0;
         }
 
-        let sd = d.source.data,
-          td = d.target.data,
-          x1 = d.source.x,
+        const sd = d.source.data,
+          td = d.target.data;
+        let x1 = d.source.x,
           y1 = d.source.y + d.source.dy,
           x2 = d.target.x,
-          y2 = d.target.y + d.target.dy,
-          dx = x2 - x1,
+          y2 = d.target.y + d.target.dy;
+        const dx = x2 - x1,
           dy = y2 - y1,
           theta = Math.atan(dx / dy),
           phi = Math.atan(dy / dx),
@@ -1081,7 +1080,7 @@ export class TrialGraph {
           // Initial
           return `M ${x2 - 20},${y2 - 20}
             L ${x2 - r / 2.0},${y2 - r / 2.0}`;
-        } else if (d.type === 'call' || d.type == 'return') {
+        } else if (d.type === 'call' || d.type === 'return') {
           // Call/Return
           x1 += m1 * sin_theta;
           x2 += m2 * cos_phi;
@@ -1104,14 +1103,14 @@ export class TrialGraph {
             A 15,20
               -45,1,1
               ${x2 + 5},${y2 + 8}`;
-        } else if (sd.parent_index == td.parent_index) {
+        } else if (sd.parent_index === td.parent_index) {
           // Same caller
-          if (dy === 0 && sd.children_index == td.children_index - 1) {
+          if (dy === 0 && sd.children_index === td.children_index - 1) {
             // Immediate sequence
             return `M ${x1}, ${y1}
               L ${x2 + m2 * cos_phi}, ${y2}`;
           } else {
-            let sign = -1;
+            let sign: number;
             if (y1 < y2) {
               x1 += m1 * sin_theta;
               y1 += m1 * cos_theta;
@@ -1150,16 +1149,16 @@ export class TrialGraph {
     // Remove any exiting links
     link
       .exit() //.transition()
-      .attr('d', (d: VisibleTrialEdge) => {
+      .attr('d', (d: IVisibleTrialEdge) => {
         return diagonal(d.source, d.target);
       })
       .remove(); // linkExit
   }
 
-  private updateLinkLabels(edges: VisibleTrialEdge[]) {
+  private updateLinkLabels(edges: IVisibleTrialEdge[]) {
     const labelPath = this.g
-      .selectAll<SVGTextPathElement, VisibleTrialEdge>('.label_text')
-      .data(edges, (d: VisibleTrialEdge) => d.id);
+      .selectAll<SVGTextPathElement, IVisibleTrialEdge>('.label_text')
+      .data(edges, (d: IVisibleTrialEdge) => d.id);
 
     const labelEnter = labelPath
       .enter()
@@ -1170,25 +1169,25 @@ export class TrialGraph {
       .attr('pointer-events', 'none')
       .attr('fill', '#000')
       .attr('text-anchor', 'middle')
-      .attr('dx', (d: VisibleTrialEdge) => {
-        if (d.source.x == d.target.x) {
+      .attr('dx', (d: IVisibleTrialEdge) => {
+        if (d.source.x === d.target.x) {
           return 29;
         }
         return (Math.abs(d.source.x - d.target.x) - 10) / 2;
       })
       .attr('dy', -3)
-      .attr('id', (d: VisibleTrialEdge, i: number) => {
+      .attr('id', (d: IVisibleTrialEdge, i: number) => {
         return 'pathlabel-' + this.graphId + '-' + d.id;
       })
       .append('textPath')
-      .attr('xlink:href', (d: VisibleTrialEdge, i: number) => {
+      .attr('xlink:href', (d: IVisibleTrialEdge, i: number) => {
         return '#pathId-' + this.graphId + '-' + d.id;
       })
-      .text((d: VisibleTrialEdge) => {
+      .text((d: IVisibleTrialEdge) => {
         if (d.type === 'initial') {
           return '';
         }
-        if (this.t1 == this.t2 || !d.count[this.t2]) {
+        if (this.t1 === this.t2 || !d.count[this.t2]) {
           return d.count[this.t1].toString();
         } else if (!d.count[this.t1]) {
           return d.count[this.t2].toString();

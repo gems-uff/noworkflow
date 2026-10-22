@@ -28,10 +28,10 @@ function main(): void {
 
   const mainpanel = new NowVisPanel();
   mainpanel.id = 'main';
-  if (server == 'True') {
+  if (server === 'True') {
     const projectWidget = new ProjectWidget(experiments);
     const groupWidget = new GroupWidget();
-    var databaseWidget = new DatabaseWidget(mainpanel);
+    const databaseWidget = new DatabaseWidget(mainpanel);
 
     mainpanel.addMainWidget(projectWidget);
     mainpanel.addMainWidget(groupWidget);
@@ -46,7 +46,7 @@ function main(): void {
       selectedExp,
       annotationn
     );
-    var databaseWidget = new DatabaseWidget(mainpanel);
+    const databaseWidget = new DatabaseWidget(mainpanel);
 
     mainpanel.addMainWidget(history);
     mainpanel.addMainWidget(config);

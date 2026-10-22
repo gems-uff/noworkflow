@@ -1,8 +1,4 @@
-import {
-  select as d3_select,
-  Selection as d3_Selection,
-  BaseType as d3_BaseType
-} from 'd3-selection';
+import { select as d3_select, Selection as d3_Selection } from 'd3-selection';
 
 import { NowVisPanel } from '../nowpanel';
 import { Widget } from '@lumino/widgets';
@@ -235,7 +231,7 @@ export function functionDiffWindow(
 
     const differentAttributes = [];
     for (const attr in jsonVariable1) {
-      if (jsonVariable1[attr] != jsonVariable2[attr]) {
+      if (jsonVariable1[attr] !== jsonVariable2[attr]) {
         differentAttributes.push(attr.toString());
       }
     }
@@ -333,13 +329,13 @@ export function functionDiffWindow(
 
   ['output', 'arguments', 'duration', 'variables'].forEach(property => {
     const didntChange =
-      JSON.stringify(functionDiffJson[property + '_function_trial1']) ==
+      JSON.stringify(functionDiffJson[property + '_function_trial1']) ===
       JSON.stringify(functionDiffJson[property + '_function_trial2']);
     const changeText = didntChange
       ? 'The ' + property + " didn't change"
       : 'The ' + property + ' changed:';
     let textChangeTitle;
-    if (property != 'variables') {
+    if (property !== 'variables') {
       textChangeTitle = functionDiffWindow
         .append('p')
         .attr('style', 'font-weight:bold;')
@@ -347,7 +343,7 @@ export function functionDiffWindow(
     }
 
     if (changeText.includes('changed')) {
-      if (property == 'duration') {
+      if (property === 'duration') {
         functionDiffJson[property + '_function_trial1'] =
           Number(functionDiffJson[property + '_function_trial1']).toFixed(2) +
           ' microseconds';
@@ -363,7 +359,7 @@ export function functionDiffWindow(
           'diff-function-' + property + '-span-' + crypto.randomUUID()
         );
 
-      if (property != 'variables') {
+      if (property !== 'variables') {
         addHideShowButton(
           textChangeTitle,
           'hide-and-show-button-' + property,
@@ -371,7 +367,7 @@ export function functionDiffWindow(
         );
       }
 
-      if (property == 'variables') {
+      if (property === 'variables') {
         const buttonDiv = functionDiffWindow
           .append('div')
           .attr('id', 'div-diff-function-variables-filter')
@@ -472,7 +468,7 @@ export function functionDiffWindow(
           functionDiffJson['trial2_variables_added'],
           functionDiffJson['trial1_variables_removed']
         );
-      } else if (property == 'arguments') {
+      } else if (property === 'arguments') {
         const symDifference = functionDiffJson[property + '_function_trial1']
           .filter(
             (x: any) =>

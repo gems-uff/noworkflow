@@ -8,7 +8,7 @@ import { json } from '@noworkflow/utils';
 
 import { BaseActivationGraphWidget } from './base_activation_graph';
 
-import { TrialGraphData } from '@noworkflow/trial';
+import { ITrialGraphData } from '@noworkflow/trial';
 
 export class DiffGraphWidget extends BaseActivationGraphWidget {
   showDiffFunction: any;
@@ -36,7 +36,7 @@ export class DiffGraphWidget extends BaseActivationGraphWidget {
 
   static createForm(
     name: string,
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ): void {}
 
   constructor(
@@ -79,7 +79,7 @@ export class DiffGraphWidget extends BaseActivationGraphWidget {
       'Diff',
       sub,
       DiffGraphWidget.url(this.t1, this.t2, selectedGraph, useCache),
-      (data: TrialGraphData) => {
+      (data: ITrialGraphData) => {
         const selectorDiv = this.d3node.select('.trial-content .graphselector');
 
         const useCacheDiv = selectorDiv.select('.use-cache');

@@ -6,25 +6,25 @@ import {
 
 import { Widget } from '@lumino/widgets';
 
-import { ModuleData, FilterObject } from './structures';
+import { IModuleData, IFilterObject } from './structures';
 
 export class ModulesInfoWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
   static url(trialId: string) {
     return 'trials/' + trialId + '/dependencies.json';
   }
 
   static createFilterDiv(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
     return parent.append('div');
   }
 
   static createFilter(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     default_local: string = '0'
-  ): FilterObject {
+  ): IFilterObject {
     const filterdiv = this.createFilterDiv(parent);
 
     const text_filter = filterdiv.append('input').attr('type', 'search');
@@ -63,7 +63,7 @@ export class ModulesInfoWidget extends Widget {
 
     return {
       filterdiv: filterdiv,
-      valid: (local: string, element: ModuleData) => {
+      valid: (local: string, element: IModuleData) => {
         const stext = text_filter.property('value').toLowerCase();
         const sversion = select_version.property('value');
         const slocal = Number(select_local.property('value'));
@@ -73,32 +73,32 @@ export class ModulesInfoWidget extends Widget {
         };
 
         const check_version = () => {
-          if (sversion == 'both') {
+          if (sversion === 'both') {
             return true;
           }
-          if (sversion == '1') {
+          if (sversion === '1') {
             return element.version != null;
           }
-          if (sversion == '0') {
+          if (sversion === '0') {
             return element.version == null;
           }
           return false;
         };
 
         const check_local = () => {
-          if (slocal == 0) {
+          if (slocal === 0) {
             return true;
           }
           if (element.path == null) {
-            return slocal != 1;
+            return slocal !== 1;
           }
           if (!/^((\/)|(\w+:\\))/.test(element.path)) {
-            return slocal == 1;
+            return slocal === 1;
           } // not absolute path
           if (element.path.startsWith(local)) {
-            return slocal == 1;
+            return slocal === 1;
           }
-          return slocal != 1;
+          return slocal !== 1;
         };
 
         return check_text() && check_version() && check_local();
@@ -113,11 +113,11 @@ export class ModulesInfoWidget extends Widget {
   }
 
   static createList(
-    parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    data: ModuleData[],
+    parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    data: IModuleData[],
     trial_path: string,
     default_local: string = '0'
-  ): FilterObject {
+  ): IFilterObject {
     const filter = ModulesInfoWidget.createFilter(parent, default_local);
 
     const list = parent.append('ul').classed('mod-list', true);
@@ -146,7 +146,7 @@ export class ModulesInfoWidget extends Widget {
 
   static createNode(
     trialDisplay: string,
-    data: ModuleData[],
+    data: IModuleData[],
     trial_path: string
   ): HTMLElement {
     const node = document.createElement('div');
@@ -169,7 +169,7 @@ export class ModulesInfoWidget extends Widget {
     return node;
   }
 
-  constructor(trialDisplay: string, data: ModuleData[], trial_path: string) {
+  constructor(trialDisplay: string, data: IModuleData[], trial_path: string) {
     super({
       node: ModulesInfoWidget.createNode(trialDisplay, data, trial_path)
     });

@@ -16,44 +16,44 @@ import { zoom as d3_zoom, zoomIdentity as d3_zoomIdentity } from 'd3-zoom';
 
 import * as fs from 'file-saver';
 
-import { HistoryConfig, HistoryState } from './config';
-import { VisibleHistoryNode, VisibleHistoryEdge } from './structures';
+import { IHistoryConfig, IHistoryState } from './config';
+import { IVisibleHistoryNode, IVisibleHistoryEdge } from './structures';
 import {
-  HistoryGraphData,
-  HistoryNodeData,
-  HistoryTrialNodeData
+  IHistoryGraphData,
+  IHistoryNodeData,
+  IHistoryTrialNodeData
 } from './structures';
 import { D3ZoomEvent } from 'd3';
 
 export class HistoryGraph {
-  config: HistoryConfig;
-  state: HistoryState;
+  config: IHistoryConfig;
+  state: IHistoryState;
   graphId: string;
   zoom: any;
   transform: any;
   i: number;
 
-  div: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  tooltipDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  svg: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  g: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  hintElement: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  div: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  tooltipDiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  svg: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  g: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  hintElement: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
-  nodes: VisibleHistoryNode[] = [];
-  versionNodes: VisibleHistoryNode[] = [];
-  edges: VisibleHistoryEdge[] = [];
+  nodes: IVisibleHistoryNode[] = [];
+  versionNodes: IVisibleHistoryNode[] = [];
+  edges: IVisibleHistoryEdge[] = [];
   maxX: number = 0;
   maxY: number = 0;
   maxId: number = 0;
 
   constructor(graphId: string, div: any, config: any = {}) {
     this.i = 0;
-    const defaultConfig: HistoryConfig = {
-      customSelectNode: (g: HistoryGraph, d: VisibleHistoryNode) => false,
-      customCtrlClick: (g: HistoryGraph, d: VisibleHistoryNode) => false,
+    const defaultConfig: IHistoryConfig = {
+      customSelectNode: (g: HistoryGraph, d: IVisibleHistoryNode) => false,
+      customCtrlClick: (g: HistoryGraph, d: IVisibleHistoryNode) => false,
       customForm: (
         g: HistoryGraph,
-        form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+        form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
       ) => null,
       customSize: (g: HistoryGraph) => [g.config.width, g.config.height],
       customWindowTabCommand: (
@@ -133,7 +133,7 @@ export class HistoryGraph {
   }
 
   createToolbar(
-    form: d3_Selection<HTMLFormElement, {}, HTMLElement | null, any>
+    form: d3_Selection<HTMLFormElement, unknown, HTMLElement | null, any>
   ) {
     const formdiv = form.append('div').classed('buttons', true);
     this.config.customForm(this, formdiv);
@@ -231,30 +231,30 @@ export class HistoryGraph {
       .style('pointer-events', 'none');
   }
 
-  load(data: HistoryGraphData): VisibleHistoryNode[] {
-    const nodes: VisibleHistoryNode[] = [],
-      otherNodes: VisibleHistoryNode[] = [],
-      edges: VisibleHistoryEdge[] = [],
+  load(data: IHistoryGraphData): IVisibleHistoryNode[] {
+    const nodes: IVisibleHistoryNode[] = [],
+      otherNodes: IVisibleHistoryNode[] = [],
+      edges: IVisibleHistoryEdge[] = [],
       spacing = this.config.spacing,
       margin = this.config.margin;
-    let spacing2 = 2 * spacing,
+    const spacing2 = 2 * spacing,
       spacing4 = 4 * spacing,
       start = margin,
-      max = 0,
+      last = data.nodes.length - 1;
+    let max = 0,
       id = 0,
-      last = data.nodes.length - 1,
       tid = 0,
       useVersion = false;
 
     const levels = [];
-    for (var i = 0; i <= last; i++) {
-      const node: HistoryNodeData = data.nodes[i];
+    for (let i = 0; i <= last; i++) {
+      const node: IHistoryNodeData = data.nodes[i];
       let previous: any = levels[node.level];
-      if (previous == undefined) {
+      if (previous == null) {
         previous = -1;
       }
       let trials = node.trials;
-      if (trials == undefined) {
+      if (trials == null) {
         trials = [];
       }
       levels[node.level] = Math.max(previous, trials.length);
@@ -262,16 +262,16 @@ export class HistoryGraph {
 
     const levelsy = [];
     let current = margin;
-    for (var i = 0; i <= levels.length; i++) {
+    for (let i = 0; i <= levels.length; i++) {
       levelsy[i] = current;
       current += spacing2 + levels[i] * spacing2;
     }
 
-    for (var i = 0; i <= last; i++) {
-      const node: HistoryNodeData = data.nodes[i];
+    for (let i = 0; i <= last; i++) {
+      const node: IHistoryNodeData = data.nodes[i];
       const x: number = start + spacing4 * id;
       const y: number = levelsy[node.level];
-      const new_node: VisibleHistoryNode = {
+      const new_node: IVisibleHistoryNode = {
         id: id,
         display: node.display,
         x: x,
@@ -287,9 +287,9 @@ export class HistoryGraph {
       if (typeof node.trials !== 'undefined') {
         useVersion = true;
         for (let j = 0; j < node.trials.length; j++) {
-          const trialNode: HistoryTrialNodeData = node.trials[
+          const trialNode: IHistoryTrialNodeData = node.trials[
             j
-          ] as HistoryTrialNodeData;
+          ] as IHistoryTrialNodeData;
           const ny = y + (j + 1) * spacing2 + spacing;
           otherNodes.push({
             id: tid,
@@ -307,7 +307,7 @@ export class HistoryGraph {
           max = Math.max(max, y);
         }
       } else {
-        new_node.tooltip = (node as HistoryTrialNodeData).tooltip;
+        new_node.tooltip = (node as IHistoryTrialNodeData).tooltip;
       }
       max = Math.max(max, y);
       this.maxX = x;
@@ -317,13 +317,13 @@ export class HistoryGraph {
     this.maxY = max;
     this.maxId = Math.max(tid, id);
 
-    for (var i = 0; i < data.edges.length; i++) {
+    for (let i = 0; i < data.edges.length; i++) {
       const edge: any = { ...data.edges[i] };
       edge.id = edge.source + '-' + edge.target;
       edge.source = nodes[edge.source];
       edge.target = nodes[edge.target];
-      if (edge.source != edge.target) {
-        edges.push(edge as VisibleHistoryEdge);
+      if (edge.source !== edge.target) {
+        edges.push(edge as IVisibleHistoryEdge);
       }
     }
 
@@ -387,7 +387,7 @@ export class HistoryGraph {
     this.state.justScale = false;
   }
 
-  selectNode(node: VisibleHistoryNode): void {
+  selectNode(node: IVisibleHistoryNode): void {
     this.state.selectedNode = node;
     this.config.customSelectNode(this, node);
     this.svg
@@ -398,7 +398,7 @@ export class HistoryGraph {
 
   selectTrial(trialId: string) {
     for (const node of this.nodes) {
-      if (node.title == trialId) {
+      if (node.title === trialId) {
         this.selectNode(node);
         return;
       }
@@ -443,7 +443,7 @@ export class HistoryGraph {
     this.tooltipDiv.classed('hidden', true);
   }
 
-  private showTooltip(event: MouseEvent, d: VisibleHistoryNode) {
+  private showTooltip(event: MouseEvent, d: IVisibleHistoryNode) {
     if (typeof d.tooltip === 'undefined') {
       return;
     }
@@ -478,7 +478,7 @@ export class HistoryGraph {
   private unselectNode(): void {
     this.g
       .selectAll('g.node')
-      .filter((cd: VisibleHistoryNode) => {
+      .filter((cd: IVisibleHistoryNode) => {
         if (this.state.selectedNode == null) {
           return false;
         }
@@ -492,8 +492,8 @@ export class HistoryGraph {
 
   private nodeMouseDown(
     event: MouseEvent,
-    d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    d: VisibleHistoryNode
+    d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    d: IVisibleHistoryNode
   ): void {
     event.stopPropagation();
     this.state.mouseDownNode = d;
@@ -502,8 +502,8 @@ export class HistoryGraph {
 
   private nodeMouseUp(
     event: MouseEvent,
-    d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    d: VisibleHistoryNode
+    d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    d: IVisibleHistoryNode
   ): void {
     event.stopPropagation();
     if (!this.state.mouseDownNode) {
@@ -540,19 +540,19 @@ export class HistoryGraph {
       .enter()
       .append('g')
       .classed('version', true)
-      .attr('attr-trialid', (d: VisibleHistoryNode) => d.title)
-      .attr('transform', (d: VisibleHistoryNode) => {
+      .attr('attr-trialid', (d: IVisibleHistoryNode) => d.title)
+      .attr('transform', (d: IVisibleHistoryNode) => {
         return 'translate(' + 0 + ',' + 0 + ')';
       });
 
     // Circle for new nodes
     nodeEnter
       .append('rect')
-      .attr('transform', (d: VisibleHistoryNode) => {
+      .attr('transform', (d: IVisibleHistoryNode) => {
         return 'translate(' + d.x + ',' + d.y + ')';
       })
-      .attr('width', (d: VisibleHistoryNode) => 2 * d.radius)
-      .attr('height', (d: VisibleHistoryNode) => 2 * d.radius)
+      .attr('width', (d: IVisibleHistoryNode) => 2 * d.radius)
+      .attr('height', (d: IVisibleHistoryNode) => 2 * d.radius)
       .attr('rx', 0)
       .attr('ry', 0)
       //.attr('r', )
@@ -568,15 +568,15 @@ export class HistoryGraph {
       .attr('font-family', 'sans-serif')
       .attr('font-size', this.config.fontSize + 'px')
       .attr('pointer-events', 'none')
-      .attr('x', (d: VisibleHistoryNode) => d.radius)
-      .attr('y', (d: VisibleHistoryNode) => d.radius + 4)
+      .attr('x', (d: IVisibleHistoryNode) => d.radius)
+      .attr('y', (d: IVisibleHistoryNode) => d.radius + 4)
       .attr('stroke', '#000')
       .attr('text-anchor', 'middle')
       //.attr('font-weight', 'bold')
-      .attr('transform', (d: VisibleHistoryNode) => {
+      .attr('transform', (d: IVisibleHistoryNode) => {
         return 'translate(' + d.x + ',' + d.y + ')';
       })
-      .text((d: VisibleHistoryNode) => d.display);
+      .text((d: IVisibleHistoryNode) => d.display);
 
     nodeEnter.merge(nodes); // nodeUpdate
 
@@ -584,37 +584,36 @@ export class HistoryGraph {
   }
 
   private updateNodes(nodes: any) {
-    const self = this;
     const nodeEnter = nodes
       .enter()
       .append('g')
       .classed('node', true)
-      .attr('attr-trialid', (d: VisibleHistoryNode) => d.title)
+      .attr('attr-trialid', (d: IVisibleHistoryNode) => d.title)
       .attr('cursor', 'pointer')
-      .attr('transform', (d: VisibleHistoryNode) => {
+      .attr('transform', (d: IVisibleHistoryNode) => {
         return 'translate(' + 0 + ',' + 0 + ')';
       });
 
     // Circle for new nodes
     nodeEnter
       .append('rect')
-      .attr('transform', (d: VisibleHistoryNode) => {
+      .attr('transform', (d: IVisibleHistoryNode) => {
         return 'translate(' + d.x + ',' + d.y + ')';
       })
       .attr('cursor', 'pointer')
-      .attr('title', (d: VisibleHistoryNode) => d.info.display)
-      .attr('width', (d: VisibleHistoryNode) => 2 * d.radius)
-      .attr('height', (d: VisibleHistoryNode) => 2 * d.radius)
-      .attr('rx', (d: VisibleHistoryNode) => 2 * d.radius)
-      .attr('ry', (d: VisibleHistoryNode) => 2 * d.radius)
+      .attr('title', (d: IVisibleHistoryNode) => d.info.display)
+      .attr('width', (d: IVisibleHistoryNode) => 2 * d.radius)
+      .attr('height', (d: IVisibleHistoryNode) => 2 * d.radius)
+      .attr('rx', (d: IVisibleHistoryNode) => 2 * d.radius)
+      .attr('ry', (d: IVisibleHistoryNode) => 2 * d.radius)
       //.attr('r', )
       .attr('stroke', '#000')
       .attr('stroke-width', '2.5px')
-      .attr('fill', (d: VisibleHistoryNode) => {
+      .attr('fill', (d: IVisibleHistoryNode) => {
         // Use the sequential node id (d.id), not parseInt(d.title): trial ids are
         // UUIDs in noWorkflow 2.x, so parseInt(title) yields 0/NaN and washes the
         // gradient toward white (hiding failed/backup trials in the summarized graph).
-        const proportion = Math.round(200 * (1.0 - d.id / self.maxId) + 50);
+        const proportion = Math.round(200 * (1.0 - d.id / this.maxId) + 50);
         if (d.status === 'unfinished') {
           return d.gradient
             ? d3_rgb(255, proportion, proportion, 255).toString()
@@ -632,31 +631,34 @@ export class HistoryGraph {
         }
         return '#666';
       })
-      .attr('stroke', function (d: VisibleHistoryNode) {
+      .attr('stroke', function (d: IVisibleHistoryNode) {
         return d3_select(this).classed('selected')
           ? 'rgb(200, 238, 241)'
           : '#000';
       })
       .attr('stroke-width', '2.5px')
-      .on('mousedown', function (event: MouseEvent, d: VisibleHistoryNode) {
-        self.nodeMouseDown(event, d3_select(this), d);
+      .on('mousedown', (event: MouseEvent, d: IVisibleHistoryNode) => {
+        this.nodeMouseDown(event, d3_select(event.currentTarget as Element), d);
       })
-      .on('click', function (event: MouseEvent, d: VisibleHistoryNode) {
-        self.nodeMouseUp(event, d3_select(this), d);
+      .on('click', (event: MouseEvent, d: IVisibleHistoryNode) => {
+        this.nodeMouseUp(event, d3_select(event.currentTarget as Element), d);
       })
-      .on('mouseover', function (event: MouseEvent, d: VisibleHistoryNode) {
-        if (!self.state.mouseDownNode && self.config.useTooltip) {
-          self.closeTooltip();
-          self.showTooltip(event, d);
+      .on('mouseover', (event: MouseEvent, d: IVisibleHistoryNode) => {
+        if (!this.state.mouseDownNode && this.config.useTooltip) {
+          this.closeTooltip();
+          this.showTooltip(event, d);
         }
-        d3_select(this).attr('stroke', 'rgb(200, 238, 241)');
+        d3_select(event.currentTarget as Element).attr(
+          'stroke',
+          'rgb(200, 238, 241)'
+        );
       })
-      .on('mouseout', function (event: MouseEvent, d: VisibleHistoryNode) {
-        d3_select(this).attr('stroke', (d: VisibleHistoryNode) => {
-          return d3_select(this).classed('selected')
-            ? 'rgb(200, 238, 241)'
-            : '#000';
-        });
+      .on('mouseout', (event: MouseEvent) => {
+        const node = d3_select(event.currentTarget as Element);
+        node.attr(
+          'stroke',
+          node.classed('selected') ? 'rgb(200, 238, 241)' : '#000'
+        );
       })
       .classed('custom-menu', true);
 
@@ -666,15 +668,15 @@ export class HistoryGraph {
       .attr('font-family', 'sans-serif')
       .attr('font-size', this.config.fontSize + 'px')
       .attr('pointer-events', 'none')
-      .attr('x', (d: VisibleHistoryNode) => d.radius)
-      .attr('y', (d: VisibleHistoryNode) => d.radius + 4)
+      .attr('x', (d: IVisibleHistoryNode) => d.radius)
+      .attr('y', (d: IVisibleHistoryNode) => d.radius + 4)
       .attr('stroke', '#000')
       .attr('text-anchor', 'middle')
       //.attr('font-weight', 'bold')
-      .attr('transform', (d: VisibleHistoryNode) => {
+      .attr('transform', (d: IVisibleHistoryNode) => {
         return 'translate(' + d.x + ',' + d.y + ')';
       })
-      .text((d: VisibleHistoryNode) => (d.gradient ? '' : d.display));
+      .text((d: IVisibleHistoryNode) => (d.gradient ? '' : d.display));
 
     nodeEnter.merge(nodes); // nodeUpdate
 
@@ -695,7 +697,7 @@ export class HistoryGraph {
       .attr('stroke-width', '4px');
 
     linkEnter
-      .attr('d', (d: VisibleHistoryEdge) => {
+      .attr('d', (d: IVisibleHistoryEdge) => {
         const deltaX = d.target.x - d.source.x,
           deltaY = d.target.y - d.source.y,
           dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
@@ -722,10 +724,10 @@ export class HistoryGraph {
             ${targetX + this.config.moveX / 2} ${sourceY}
             ${targetX}, ${targetY}`;
       })
-      .attr('marker-end', (d: VisibleHistoryEdge) => {
+      .attr('marker-end', (d: IVisibleHistoryEdge) => {
         return d.right ? 'url(#end-arrow)' : '';
       })
-      .attr('stroke', (d: VisibleHistoryEdge) => {
+      .attr('stroke', (d: IVisibleHistoryEdge) => {
         return d3_rgb(colors(d.level.toString())).darker().toString();
       });
     // Update
@@ -758,7 +760,7 @@ export class HistoryGraph {
         if (rightClickMenu) {
           rightClickMenu.setAttribute(
             'selected-trial',
-            target.parentElement?.getAttribute('attr-trialid')!
+            target.parentElement?.getAttribute('attr-trialid') ?? ''
           );
           rightClickMenu.setAttribute(
             'selected-trial-simplified',

@@ -14,10 +14,10 @@ interface IExperiment {
 }
 
 export class ProjectWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  expTBody: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  successFeedback: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  errorFeedback: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  expTBody: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  successFeedback: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  errorFeedback: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   experiments: Array<IExperiment>;
 
   static createNode(): HTMLElement {
@@ -66,7 +66,7 @@ export class ProjectWidget extends Widget {
       });
   }
   addFormInput(
-    form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     fieldId: string,
     fieldLabel: string,
     fieldType: string
@@ -83,12 +83,11 @@ export class ProjectWidget extends Widget {
     return inp;
   }
   addFeedBackinfo(
-    baseNode: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    baseNode: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
     txt: string,
     desc: string
   ) {
-    const _thiss = this;
     const feedbackNode = baseNode
       .append('div')
       .classed('alert', true)
@@ -106,14 +105,14 @@ export class ProjectWidget extends Widget {
       .attr('data-dismiss', 'alert')
       .text('x')
       .on('click', () => {
-        _thiss.hideNode(feedbackNode);
+        this.hideNode(feedbackNode);
       });
     return feedbackNode;
   }
-  hideNode(node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  hideNode(node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>) {
     node.classed('d-none', true);
   }
-  showNode(node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  showNode(node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>) {
     node.classed('d-none', false);
   }
   setNode() {
@@ -187,8 +186,8 @@ export class ProjectWidget extends Widget {
     inputsDiv.classed('d-none', true);
 
     confimButton.on('click', () => {
-      _thiss.hideNode(_thiss.errorFeedback);
-      _thiss.hideNode(_thiss.successFeedback);
+      this.hideNode(this.errorFeedback);
+      this.hideNode(this.successFeedback);
       const newExp = <IExperiment>{
         name: nameIn.property('value'),
         description: descIn.property('value')
@@ -200,27 +199,26 @@ export class ProjectWidget extends Widget {
         },
         body: JSON.stringify(newExp) // body data type must match "Content-Type" header
       }).then(response => {
-        if (response.status == 201) {
+        if (response.status === 201) {
           response.json().then(obj => {
             newExp.id = obj.id;
-            _thiss.addExpRow(newExp);
-            _thiss.hideNode(inputsDiv);
-            _thiss.showNode(addExpButton);
-            _thiss.showNode(_thiss.successFeedback);
+            this.addExpRow(newExp);
+            this.hideNode(inputsDiv);
+            this.showNode(addExpButton);
+            this.showNode(this.successFeedback);
           });
         } else {
-          _thiss.showNode(_thiss.errorFeedback);
+          this.showNode(this.errorFeedback);
         }
       });
     });
-    var _thiss = this;
     addExpButton.on('click', () => {
-      _thiss.showNode(inputsDiv);
-      _thiss.hideNode(addExpButton);
+      this.showNode(inputsDiv);
+      this.hideNode(addExpButton);
     });
 
     this.experiments.forEach(obj => {
-      _thiss.addExpRow(obj);
+      this.addExpRow(obj);
     });
   }
 }

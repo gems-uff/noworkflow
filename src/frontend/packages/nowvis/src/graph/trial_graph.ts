@@ -10,7 +10,7 @@ import { json } from '@noworkflow/utils';
 
 import { BaseActivationGraphWidget } from './base_activation_graph';
 
-import { TrialGraph, TrialGraphData } from '@noworkflow/trial';
+import { TrialGraph, ITrialGraphData } from '@noworkflow/trial';
 
 export class TrialGraphWidget extends BaseActivationGraphWidget {
   name: string;
@@ -18,7 +18,7 @@ export class TrialGraphWidget extends BaseActivationGraphWidget {
   t1: string;
   t2: string;
   graph: TrialGraph;
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
   static url(trialId: string, selectedGraph: string, useCache: boolean) {
     const cache = useCache ? '1' : '0';
@@ -45,7 +45,7 @@ export class TrialGraphWidget extends BaseActivationGraphWidget {
     this.t2 = t2;
   }
 
-  setGraph(data: TrialGraphData, config: any = {}) {
+  setGraph(data: ITrialGraphData, config: any = {}) {
     const sub = this.node.getElementsByClassName('sub-content')[0];
     sub.innerHTML = '';
     this.graph = new TrialGraph(this.cls, sub, config);
@@ -56,7 +56,7 @@ export class TrialGraphWidget extends BaseActivationGraphWidget {
     selectedGraph: string = 'namespace_match',
     useCache: boolean = true,
     genDataflow: boolean = true,
-    data: TrialGraphData
+    data: ITrialGraphData
   ) {
     const result = super.graphDefinition(
       selectedGraph,
@@ -65,7 +65,7 @@ export class TrialGraphWidget extends BaseActivationGraphWidget {
       data
     );
     return Object.assign({}, result, {
-      queryTooltip: selectedGraph != 'definition_tree'
+      queryTooltip: selectedGraph !== 'definition_tree'
     });
   }
 
@@ -75,7 +75,7 @@ export class TrialGraphWidget extends BaseActivationGraphWidget {
       'Trial',
       sub,
       TrialGraphWidget.url(this.t1, selectedGraph, useCache),
-      (data: TrialGraphData) => {
+      (data: ITrialGraphData) => {
         this.configureGraph(selectedGraph, useCache, true, data);
       }
     );

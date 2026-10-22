@@ -21,12 +21,12 @@ interface IGroup {
 }
 
 export class GroupWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  tBody: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  successFeedback: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  errorFeedback: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  userIn: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
-  addMemberForm: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  tBody: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  successFeedback: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  errorFeedback: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  userIn: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
+  addMemberForm: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   groups: Array<IGroup>;
   users: Array<IUser>;
   currentGroup: string;
@@ -53,30 +53,29 @@ export class GroupWidget extends Widget {
     }
   }
   async setUsers() {
-    const _thiss = this;
-    _thiss.userIn.html('');
+    this.userIn.html('');
     const response = await fetch('users', {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
       headers: {
         'Content-Type': 'application/json'
       }
     });
-    if (response.status == 200) {
-      _thiss.users = new Array<IUser>();
+    if (response.status === 200) {
+      this.users = new Array<IUser>();
 
       const obj = await response.json();
 
       obj.forEach((item: any) => {
-        _thiss.users.push(<IUser>{
+        this.users.push(<IUser>{
           id: item.id,
           login: item.userLogin
         });
       });
     } else {
-      this.showNode(_thiss.errorFeedback);
+      this.showNode(this.errorFeedback);
     }
-    _thiss.users.forEach((obj: IUser) => {
-      _thiss.userIn.append('option').attr('value', obj.id).text(obj.login);
+    this.users.forEach((obj: IUser) => {
+      this.userIn.append('option').attr('value', obj.id).text(obj.login);
     });
   }
   resfreshGroups() {
@@ -84,15 +83,14 @@ export class GroupWidget extends Widget {
     this.setGroups();
   }
   async setGroups() {
-    const _thiss = this;
     const response = await fetch('groups', {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
       headers: {
         'Content-Type': 'application/json'
       }
     });
-    if (response.status == 200) {
-      _thiss.groups = new Array<IGroup>();
+    if (response.status === 200) {
+      this.groups = new Array<IGroup>();
 
       const obj = await response.json();
 
@@ -108,14 +106,14 @@ export class GroupWidget extends Widget {
             login: user.userLogin
           });
         });
-        _thiss.groups.push(group);
+        this.groups.push(group);
       });
     } else {
-      this.showNode(_thiss.errorFeedback);
+      this.showNode(this.errorFeedback);
     }
 
     this.groups.forEach((obj: any) => {
-      _thiss.addGrpRow(obj);
+      this.addGrpRow(obj);
     });
   }
   async deleteGrp(grpId: string) {
@@ -125,7 +123,7 @@ export class GroupWidget extends Widget {
         'Content-Type': 'application/json'
       }
     });
-    if (response.status == 200) {
+    if (response.status === 200) {
       this.showNode(this.successFeedback);
       this.resfreshGroups();
     } else {
@@ -133,7 +131,6 @@ export class GroupWidget extends Widget {
     }
   }
   addGrpRow(grp: IGroup) {
-    const _thiss = this;
     const item = this.tBody.append('tr');
     item.append('th').attr('scope', 'row').text(grp.id);
     item.append('td').text(grp.name);
@@ -149,8 +146,8 @@ export class GroupWidget extends Widget {
       .attr('type', 'submit')
       .text('Add User');
     addMemberButton.on('click', () => {
-      _thiss.showNode(_thiss.addMemberForm);
-      _thiss.currentGroup = grp.id;
+      this.showNode(this.addMemberForm);
+      this.currentGroup = grp.id;
     });
     const deleteGroupButton = actions
       .append('button')
@@ -161,13 +158,13 @@ export class GroupWidget extends Widget {
       if (
         confirm('Are you sure you want to delete group: ' + grp.name + ' ?')
       ) {
-        _thiss.deleteGrp(grp.id);
+        this.deleteGrp(grp.id);
       }
     });
     deleteGroupButton.style('margin-left', 4);
   }
   addFormInput(
-    form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     fieldId: string,
     fieldLabel: string,
     fieldType: string
@@ -184,12 +181,11 @@ export class GroupWidget extends Widget {
     return inp;
   }
   addFeedBackinfo(
-    baseNode: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    baseNode: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
     txt: string,
     desc: string
   ) {
-    const _thiss = this;
     const feedbackNode = baseNode
       .append('div')
       .classed('alert', true)
@@ -207,20 +203,19 @@ export class GroupWidget extends Widget {
       .attr('data-dismiss', 'alert')
       .text('x')
       .on('click', () => {
-        _thiss.hideNode(feedbackNode);
+        this.hideNode(feedbackNode);
       });
     return feedbackNode;
   }
-  hideNode(node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  hideNode(node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>) {
     node.classed('d-none', true);
   }
-  showNode(node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>) {
+  showNode(node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>) {
     node.classed('d-none', false);
   }
   createAddGroupForm(
-    projectsDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    projectsDiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
-    const _thiss = this;
     const inputsDiv = projectsDiv.append('div');
     const nameIn = this.addFormInput(
       inputsDiv,
@@ -242,8 +237,8 @@ export class GroupWidget extends Widget {
     inputsDiv.classed('d-none', true);
 
     confimButton.on('click', () => {
-      _thiss.hideNode(_thiss.errorFeedback);
-      _thiss.hideNode(_thiss.successFeedback);
+      this.hideNode(this.errorFeedback);
+      this.hideNode(this.successFeedback);
       const newGrp = <IGroup>{
         name: nameIn.property('value'),
         members: new Array<IUser>()
@@ -255,31 +250,30 @@ export class GroupWidget extends Widget {
         },
         body: JSON.stringify(newGrp) // body data type must match "Content-Type" header
       }).then(response => {
-        if (response.status == 201) {
+        if (response.status === 201) {
           response.json().then(obj => {
             newGrp.id = obj.id;
-            _thiss.addGrpRow(newGrp);
-            _thiss.hideNode(inputsDiv);
-            _thiss.showNode(addGrpButton);
-            _thiss.showNode(_thiss.successFeedback);
+            this.addGrpRow(newGrp);
+            this.hideNode(inputsDiv);
+            this.showNode(addGrpButton);
+            this.showNode(this.successFeedback);
           });
         } else {
-          _thiss.showNode(_thiss.errorFeedback);
+          this.showNode(this.errorFeedback);
         }
       });
     });
 
     addGrpButton.on('click', () => {
-      _thiss.showNode(inputsDiv);
-      _thiss.hideNode(addGrpButton);
+      this.showNode(inputsDiv);
+      this.hideNode(addGrpButton);
     });
   }
   createAddMemberForm(
-    projectsDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    projectsDiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
-    const _thiss = this;
-    _thiss.addMemberForm = projectsDiv.append('div');
-    const inputsDiv = _thiss.addMemberForm;
+    this.addMemberForm = projectsDiv.append('div');
+    const inputsDiv = this.addMemberForm;
     this.userIn = this.addFormInput(
       inputsDiv,
       'groupUsersInput',
@@ -294,36 +288,36 @@ export class GroupWidget extends Widget {
       .text('Confirm');
 
     confimButton.on('click', () => {
-      _thiss.hideNode(_thiss.errorFeedback);
-      _thiss.hideNode(_thiss.successFeedback);
+      this.hideNode(this.errorFeedback);
+      this.hideNode(this.successFeedback);
 
-      const select = _thiss.userIn.node() as HTMLSelectElement;
+      const select = this.userIn.node() as HTMLSelectElement;
       if (select != null) {
         const option = select.options[select.selectedIndex];
 
         const newGrp = <IAddMember>{
           userId: option.value
         };
-        fetch('groups/' + _thiss.currentGroup + '/users', {
+        fetch('groups/' + this.currentGroup + '/users', {
           method: 'POST', // *GET, POST, PUT, DELETE, etc.
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(newGrp) // body data type must match "Content-Type" header
         }).then(response => {
-          if (response.status == 201) {
+          if (response.status === 201) {
             response.json().then(obj => {
-              _thiss.hideNode(_thiss.addMemberForm);
-              _thiss.showNode(_thiss.successFeedback);
-              _thiss.resfreshGroups();
+              this.hideNode(this.addMemberForm);
+              this.showNode(this.successFeedback);
+              this.resfreshGroups();
             });
           } else {
-            _thiss.showNode(_thiss.errorFeedback);
+            this.showNode(this.errorFeedback);
           }
         });
       }
     });
-    _thiss.hideNode(_thiss.addMemberForm);
+    this.hideNode(this.addMemberForm);
   }
   setNode() {
     const content = this.d3node.append('div').classed('config-content', true);

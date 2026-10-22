@@ -2,14 +2,14 @@ import { select as d3_select } from 'd3-selection';
 
 export function wrap(text: any, width: number) {
   text.each(function () {
-    let text = d3_select(this),
+    const text = d3_select(this),
       words = text.text().split(/(?=_)/).reverse(),
-      word,
-      line: string[] = [],
-      lineNumber = 0,
       lineHeight = 1.1, // ems
       y = text.attr('y'),
-      dy = parseFloat(text.attr('dy')),
+      dy = parseFloat(text.attr('dy'));
+    let word,
+      line: string[] = [],
+      lineNumber = 0,
       tspan = text
         .text(null)
         .append('tspan')

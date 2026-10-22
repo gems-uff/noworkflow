@@ -4,15 +4,15 @@ import {
 } from 'd3-selection';
 
 import { TrialGraph } from './graph';
-import { VisibleTrialNode } from './structures';
+import { IVisibleTrialNode } from './structures';
 
-export interface TrialConfig {
+export interface ITrialConfig {
   customSize: (g: TrialGraph) => number[];
-  customMouseOver: (g: TrialGraph, d: VisibleTrialNode) => boolean;
-  customMouseOut: (g: TrialGraph, d: VisibleTrialNode) => boolean;
+  customMouseOver: (g: TrialGraph, d: IVisibleTrialNode) => boolean;
+  customMouseOut: (g: TrialGraph, d: IVisibleTrialNode) => boolean;
   customForm: (
     g: TrialGraph,
-    form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) => void;
   customLoadTooltip: (
     g: TrialGraph,

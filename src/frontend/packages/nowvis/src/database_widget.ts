@@ -20,28 +20,28 @@ import { drag } from 'd3-drag';
 import { NowVisPanel } from './nowpanel';
 import { QueryWidget, QueryResultWidget } from './query_widget';
 
-interface TableNode extends SimulationNodeDatum {
+interface ITableNode extends SimulationNodeDatum {
   id: string;
   name: string;
   selected?: boolean;
 }
 
-interface TableLink extends SimulationLinkDatum<TableNode> {
-  source: string | TableNode;
-  target: string | TableNode;
+interface ITableLink extends SimulationLinkDatum<ITableNode> {
+  source: string | ITableNode;
+  target: string | ITableNode;
   sourceColumn: string;
   targetColumn: string;
 }
 
-interface DatabaseGraphData {
-  nodes: TableNode[];
-  links: TableLink[];
+interface IDatabaseGraphData {
+  nodes: ITableNode[];
+  links: ITableLink[];
 }
 
 export class DatabaseTabWidget extends Widget {}
 
 export class TableInfoWidget extends DatabaseTabWidget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   constructor(tableName: string, details: any) {
     super({ node: TableInfoWidget.createNode(tableName, details) });
     this.title.label = tableName;
@@ -199,9 +199,9 @@ export class TableInfoWidget extends DatabaseTabWidget {
 
 export class DatabaseWidget extends Widget {
   panel: NowVisPanel;
-  graphData: DatabaseGraphData = { nodes: [], links: [] };
+  graphData: IDatabaseGraphData = { nodes: [], links: [] };
   simulation: any;
-  svg: d3_Selection<SVGSVGElement, {}, HTMLElement | null, any>;
+  svg: d3_Selection<SVGSVGElement, unknown, HTMLElement | null, any>;
   color: any;
   dataLoaded: boolean = false;
   selectedNodes: Set<string> = new Set();
@@ -534,7 +534,7 @@ export class DatabaseWidget extends Widget {
       .attr('height', height)
       .style('background', '#f9f9f9') as d3_Selection<
       SVGSVGElement,
-      {},
+      unknown,
       HTMLElement | null,
       any
     >;
@@ -686,12 +686,11 @@ export class DatabaseWidget extends Widget {
     });
 
     node.call((selection: any) => {
-      const widget = this;
       selection
-        .on('mouseover', function (event: any, d: any) {
-          const isSelected = widget.selectedNodes.has(d.id);
+        .on('mouseover', (event: MouseEvent, d: any) => {
+          const isSelected = this.selectedNodes.has(d.id);
 
-          d3_select(this)
+          d3_select(event.currentTarget as Element)
             .select('circle')
             .attr('stroke-width', isSelected ? 6 : 4)
             .attr('stroke', isSelected ? '#ff8c00' : '#333');
@@ -750,7 +749,7 @@ export class DatabaseWidget extends Widget {
                   (targetId === d.id && sourceId === nodeData.id)
                 );
               });
-              const isNodeSelected = widget.selectedNodes.has(nodeData.id);
+              const isNodeSelected = this.selectedNodes.has(nodeData.id);
               return isNodeSelected ? 6 : isConnected ? 4 : 3;
             })
             .attr('stroke', (nodeData: any) => {
@@ -768,7 +767,7 @@ export class DatabaseWidget extends Widget {
                   (targetId === d.id && sourceId === nodeData.id)
                 );
               });
-              const isNodeSelected = widget.selectedNodes.has(nodeData.id);
+              const isNodeSelected = this.selectedNodes.has(nodeData.id);
               return isConnected
                 ? '#87CEEB'
                 : isNodeSelected
@@ -777,7 +776,7 @@ export class DatabaseWidget extends Widget {
             });
         })
         .on('mouseout', () => {
-          widget.updateSelection();
+          this.updateSelection();
 
           link
             .attr('stroke-opacity', 0.6)
@@ -834,17 +833,18 @@ export class DatabaseWidget extends Widget {
       return;
     }
 
-    const widget = this;
-    this.svg.selectAll('.node').each(function (d: any) {
-      const nodeElement = d3_select(this);
-      const isSelected = widget.selectedNodes.has(d.id);
+    this.svg
+      .selectAll('.node')
+      .each((d: any, i: number, nodes: ArrayLike<d3_BaseType>) => {
+        const nodeElement = d3_select(nodes[i]);
+        const isSelected = this.selectedNodes.has(d.id);
 
-      nodeElement
-        .select('circle')
-        .attr('stroke', isSelected ? '#ff8c00' : '#fff')
-        .attr('stroke-width', isSelected ? 6 : 3)
-        .attr('stroke-dasharray', 'none');
-    });
+        nodeElement
+          .select('circle')
+          .attr('stroke', isSelected ? '#ff8c00' : '#fff')
+          .attr('stroke-width', isSelected ? 6 : 3)
+          .attr('stroke-dasharray', 'none');
+      });
 
     const newQueryBtn = this.node.querySelector(
       '#new-query-btn'
@@ -953,7 +953,7 @@ export class DatabaseWidget extends Widget {
   }
 
   async openTableInfoTab(tableName: string) {
-    let widget: Widget | null = null;
+    let widget: Widget;
     try {
       const response = await fetch(
         `/db/table/${encodeURIComponent(tableName)}`
@@ -1012,8 +1012,8 @@ export class DatabaseWidget extends Widget {
 
       for (const link of this.graphData.links) {
         console.log(link.source, link.target);
-        const sourceTable = (link.source as TableNode).id;
-        const targetTable = (link.target as TableNode).id;
+        const sourceTable = (link.source as ITableNode).id;
+        const targetTable = (link.target as ITableNode).id;
 
         if (sourceTable === currentTable && usedTables.has(targetTable)) {
           joins.push(

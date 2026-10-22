@@ -12,6 +12,8 @@ import 'ace-builds/src-noconflict/mode-sql';
 import 'ace-builds/src-noconflict/ext-language_tools';
 
 declare global {
+  // The augmentation must carry the name of the DOM type it extends.
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   interface Window {
     ace: any;
   }
@@ -20,7 +22,7 @@ declare global {
 export class DatabaseTabWidget extends Widget {}
 
 export class QueryResultWidget extends DatabaseTabWidget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   private columns: string[];
   private rows: any[];
   private query: string;
@@ -203,7 +205,7 @@ export class QueryResultWidget extends DatabaseTabWidget {
 export class QueryWidget extends Widget {
   private panel: NowVisPanel;
   private static count: number = 0;
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   private aceEditor: any; // Ace editor instance
   private tableNames: string[] = [];
   private columnNames: string[] = [];
@@ -291,7 +293,6 @@ export class QueryWidget extends Widget {
       .style('flex', '1');
 
     setTimeout(() => {
-      // @ts-ignore
       this.aceEditor = window.ace.edit(this.editorId);
       this.aceEditor.setTheme('ace/theme/textmate');
       this.aceEditor.session.setMode('ace/mode/sql');

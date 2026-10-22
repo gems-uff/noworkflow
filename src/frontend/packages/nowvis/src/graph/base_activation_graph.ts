@@ -6,7 +6,11 @@ import {
 
 import { Widget } from '@lumino/widgets';
 
-import { TrialGraph, TrialGraphData, ActivationData } from '@noworkflow/trial';
+import {
+  TrialGraph,
+  ITrialGraphData,
+  IActivationData
+} from '@noworkflow/trial';
 
 import { json } from '@noworkflow/utils';
 
@@ -16,11 +20,11 @@ export class BaseActivationGraphWidget extends Widget {
   t1: string;
   t2: string;
   graph: TrialGraph;
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
 
   static graphTypeForm(
     name: string,
-    selectorDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    selectorDiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
     const graphType = selectorDiv.append('div').classed('graph-attr', true);
 
@@ -83,7 +87,7 @@ export class BaseActivationGraphWidget extends Widget {
 
   static useCacheForm(
     name: string,
-    selectorDiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+    selectorDiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
   ) {
     const useCache = selectorDiv.append('div').classed('graph-attr', true);
 
@@ -107,7 +111,7 @@ export class BaseActivationGraphWidget extends Widget {
     name: string,
     fn: (
       name: string,
-      parent: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+      parent: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
     ) => void = parent => null
   ): HTMLElement {
     const node = document.createElement('div');
@@ -141,7 +145,7 @@ export class BaseActivationGraphWidget extends Widget {
   }
 
   setGraph(
-    data: TrialGraphData,
+    data: ITrialGraphData,
     config: any = {},
     showDiffFunction?: any,
     nowVisPanel?: any
@@ -162,14 +166,14 @@ export class BaseActivationGraphWidget extends Widget {
     selectedGraph: string = 'namespace_match',
     useCache: boolean = true,
     genDataflow: boolean = true,
-    data: TrialGraphData
+    data: ITrialGraphData
   ) {
     return {
       width: this.node.getBoundingClientRect().width - 24,
       height: this.node.getBoundingClientRect().height - 24,
       customForm: (
         graph: TrialGraph,
-        form: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>
+        form: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>
       ) => {
         // Toggle Tooltips
         const selectorDiv = this.d3node.select('.trial-content .graphselector');
@@ -223,7 +227,7 @@ export class BaseActivationGraphWidget extends Widget {
       ) => {
         const url = '/trials/' + trialid + '/activations/' + aid + '.json';
         function createResponse(activationId: string, div2: Element) {
-          return function (data: ActivationData) {
+          return function (data: IActivationData) {
             g.activationStorage[activationId] = data;
             g.updateTooltipDiv(activationId, div2);
           };
@@ -239,7 +243,7 @@ export class BaseActivationGraphWidget extends Widget {
     selectedGraph: string = 'namespace_match',
     useCache: boolean = true,
     genDataflow: boolean = true,
-    data: TrialGraphData,
+    data: ITrialGraphData,
     showDiffFunction?: any,
     nowVisPanel?: any
   ) {

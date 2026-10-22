@@ -3,7 +3,7 @@ import {
   BaseType as d3_BaseType
 } from 'd3-selection';
 
-export interface ModuleData {
+export interface IModuleData {
   name: string;
   version: string;
   path: string;
@@ -14,21 +14,21 @@ export interface ModuleData {
   trial_id?: number;
 }
 
-export interface ModuleListData {
-  all: ModuleData[];
+export interface IModuleListData {
+  all: IModuleData[];
   trial_path: string;
 }
 
-export interface EnvironmentItemData {
+export interface IEnvironmentItemData {
   name: string;
   value: string;
 }
 
-export interface EnvironmentData {
-  all: EnvironmentItemData[];
+export interface IEnvironmentData {
+  all: IEnvironmentItemData[];
 }
 
-export interface FileAccessData {
+export interface IFileAccessData {
   name: string;
   mode: string;
   buffering: string;
@@ -40,12 +40,12 @@ export interface FileAccessData {
   trial_id?: number;
 }
 
-export interface FileAccessListData {
-  file_accesses: FileAccessData[];
+export interface IFileAccessListData {
+  file_accesses: IFileAccessData[];
   trial_path: string;
 }
 
-export interface TrialInfoData {
+export interface ITrialInfoData {
   id?: string;
   display?: string;
   code_hash?: string;
@@ -56,36 +56,36 @@ export interface TrialInfoData {
   arguments?: string;
 }
 
-export interface DiffInfoData {
-  trial1: TrialInfoData;
-  trial2: TrialInfoData;
-  trial: TrialInfoData;
+export interface IDiffInfoData {
+  trial1: ITrialInfoData;
+  trial2: ITrialInfoData;
+  trial: ITrialInfoData;
 }
 
-export interface DiffModuleData {
-  modules_added: ModuleData[];
-  modules_removed: ModuleData[];
-  modules_replaced: ModuleData[][];
+export interface IDiffModuleData {
+  modules_added: IModuleData[];
+  modules_removed: IModuleData[];
+  modules_replaced: IModuleData[][];
   t1_path: string;
   t2_path: string;
 }
 
-export interface DiffEnvironmentData {
-  env_added: EnvironmentItemData[];
-  env_removed: EnvironmentItemData[];
-  env_replaced: EnvironmentItemData[][];
+export interface IDiffEnvironmentData {
+  env_added: IEnvironmentItemData[];
+  env_removed: IEnvironmentItemData[];
+  env_replaced: IEnvironmentItemData[][];
 }
 
-export interface DiffAccessData {
-  fa_added: FileAccessData[];
-  fa_removed: FileAccessData[];
-  fa_replaced: FileAccessData[][];
+export interface IDiffAccessData {
+  fa_added: IFileAccessData[];
+  fa_removed: IFileAccessData[];
+  fa_replaced: IFileAccessData[][];
   t1_path: string;
   t2_path: string;
 }
 
-export interface FilterObject {
-  filterdiv: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+export interface IFilterObject {
+  filterdiv: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   valid: any;
   on_change: (filterfn: () => void) => void;
 }

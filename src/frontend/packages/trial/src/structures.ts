@@ -1,8 +1,8 @@
 import { HierarchyPointNode as d3_HierarchyPointNode } from 'd3-hierarchy';
 
-export interface TrialNodeData {
+export interface ITrialNodeData {
   activations: { [trial: string]: number }[];
-  children: TrialNodeData[];
+  children: ITrialNodeData[];
   children_index: number; // Position in parent list
   duration: { [trial: string]: number };
   full_tooltip: boolean;
@@ -21,16 +21,16 @@ export interface TrialNodeData {
   y0?: number;
 }
 
-export interface TrialEdgeData {
+export interface ITrialEdgeData {
   count: { [trial: string]: number };
   source: number;
   target: number;
   type: number;
 }
 
-export interface TrialGraphData {
-  root: TrialNodeData;
-  edges: TrialEdgeData[];
+export interface ITrialGraphData {
+  root: ITrialNodeData;
+  edges: ITrialEdgeData[];
   max_duration: { [trial: string]: number };
   min_duration: { [trial: string]: number };
   colors: { [trial: string]: number };
@@ -38,23 +38,23 @@ export interface TrialGraphData {
   trial2: number;
 }
 
-export interface VisibleTrialNode extends d3_HierarchyPointNode<TrialNodeData> {
-  _children?: d3_HierarchyPointNode<TrialNodeData>[];
+export interface IVisibleTrialNode extends d3_HierarchyPointNode<ITrialNodeData> {
+  _children?: d3_HierarchyPointNode<ITrialNodeData>[];
   children?: this[];
   dy?: number;
   x0?: number;
   y0?: number;
 }
 
-export interface VisibleTrialEdge {
+export interface IVisibleTrialEdge {
   count: { [trial: string]: string };
-  source: VisibleTrialNode;
-  target: VisibleTrialNode;
+  source: IVisibleTrialNode;
+  target: IVisibleTrialNode;
   type: string;
   id: string;
 }
 
-export interface ActivationData {
+export interface IActivationData {
   id: string;
   hash: string;
   name: string;

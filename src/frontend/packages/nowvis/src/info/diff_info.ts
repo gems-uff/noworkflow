@@ -9,14 +9,14 @@ import { Widget } from '@lumino/widgets';
 import { json } from '@noworkflow/utils';
 
 import {
-  ModuleData,
-  FileAccessData,
-  EnvironmentItemData,
-  DiffInfoData,
-  DiffModuleData,
-  DiffEnvironmentData,
-  DiffAccessData,
-  FilterObject
+  IModuleData,
+  IFileAccessData,
+  IEnvironmentItemData,
+  IDiffInfoData,
+  IDiffModuleData,
+  IDiffEnvironmentData,
+  IDiffAccessData,
+  IFilterObject
 } from './structures';
 
 import { ModulesInfoWidget } from './modules_info';
@@ -25,7 +25,7 @@ import { FileAccessesInfoWidget } from './file_accesses_info';
 import { TrialInfoWidget } from './trial_info';
 
 export class DiffInfoWidget extends Widget {
-  d3node: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>;
+  d3node: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>;
   display1: string;
   display2: string;
 
@@ -78,7 +78,7 @@ export class DiffInfoWidget extends Widget {
       'Info',
       sub,
       DiffInfoWidget.url(trial1, trial2),
-      (data: DiffInfoData) => {
+      (data: IDiffInfoData) => {
         this.createMain(data);
         this.loadModules(trial1, trial2);
         this.loadEnvironment(trial1, trial2);
@@ -87,7 +87,7 @@ export class DiffInfoWidget extends Widget {
     );
   }
 
-  createMain(data: DiffInfoData) {
+  createMain(data: IDiffInfoData) {
     const trial = data.trial;
     const trial1 = data.trial1;
     const trial2 = data.trial2;
@@ -113,7 +113,7 @@ export class DiffInfoWidget extends Widget {
       .text('Trial ' + this.display2);
 
     // Code hash
-    if (trial.code_hash == undefined) {
+    if (trial.code_hash == null) {
       main
         .append('h3')
         .classed('hash', true)
@@ -140,7 +140,7 @@ export class DiffInfoWidget extends Widget {
       trial2.duration_text
     );
 
-    if (trial.arguments == undefined) {
+    if (trial.arguments == null) {
       if (trial1.arguments) {
         const attr = main.append('span').classed('attr', true);
         attr.append('span').classed('desc', true).text('Arguments: ');
@@ -166,7 +166,7 @@ export class DiffInfoWidget extends Widget {
     content.append('div').classed('file-accesses', true);
   }
 
-  filter_trial(filter: FilterObject, filterfn: (strial: number) => void) {
+  filter_trial(filter: IFilterObject, filterfn: (strial: number) => void) {
     const select_trial = filter.filterdiv.append('select');
     select_trial
       .append('option')
@@ -204,7 +204,7 @@ export class DiffInfoWidget extends Widget {
       'Modules',
       sub,
       DiffInfoWidget.modules_url(trial1, trial2),
-      (data: DiffModuleData) => {
+      (data: IDiffModuleData) => {
         const modules = this.d3node.select('.modules').html('');
         if (
           data.modules_added.length > 0 ||
@@ -219,16 +219,16 @@ export class DiffInfoWidget extends Widget {
           const ul = foldable.append('ul').classed('mod-list', true);
           this.filter_trial(filter, (strial: number) => {
             ul.html('');
-            if ((strial & 1) == 1) {
-              for (var element of data.modules_removed) {
+            if ((strial & 1) === 1) {
+              for (const element of data.modules_removed) {
                 if (!filter.valid(data.t1_path, element)) {
                   continue;
                 }
                 this.mod_li(ul, 'libefore', element);
               }
             }
-            if ((strial & 2) == 2) {
-              for (var element of data.modules_added) {
+            if ((strial & 2) === 2) {
+              for (const element of data.modules_added) {
                 if (!filter.valid(data.t2_path, element)) {
                   continue;
                 }
@@ -283,7 +283,7 @@ export class DiffInfoWidget extends Widget {
       'Environment',
       sub,
       DiffInfoWidget.environment_url(trial1, trial2),
-      (data: DiffEnvironmentData) => {
+      (data: IDiffEnvironmentData) => {
         const environment = this.d3node.select('.environment').html('');
         if (
           data.env_added.length > 0 ||
@@ -298,16 +298,16 @@ export class DiffInfoWidget extends Widget {
           const ul = foldable.append('ul').classed('env-list', true);
           this.filter_trial(filter, (strial: number) => {
             ul.html('');
-            if ((strial & 1) == 1) {
-              for (var element of data.env_removed) {
+            if ((strial & 1) === 1) {
+              for (const element of data.env_removed) {
                 if (!filter.valid(element)) {
                   continue;
                 }
                 this.env_li(ul, 'dbefore', element);
               }
             }
-            if ((strial & 2) == 2) {
-              for (var element of data.env_added) {
+            if ((strial & 2) === 2) {
+              for (const element of data.env_added) {
                 if (!filter.valid(element)) {
                   continue;
                 }
@@ -338,7 +338,7 @@ export class DiffInfoWidget extends Widget {
       'File Accesses',
       sub,
       DiffInfoWidget.accesses_url(trial1, trial2),
-      (data: DiffAccessData) => {
+      (data: IDiffAccessData) => {
         const accesses = this.d3node.select('.file-accesses').html('');
         if (
           data.fa_added.length > 0 ||
@@ -354,16 +354,16 @@ export class DiffInfoWidget extends Widget {
           this.filter_trial(filter, (strial: number) => {
             ul.html('');
 
-            if ((strial & 1) == 1) {
-              for (var element of data.fa_removed) {
+            if ((strial & 1) === 1) {
+              for (const element of data.fa_removed) {
                 if (!filter.valid(data.t1_path, element)) {
                   continue;
                 }
                 this.fa_li(ul, 'libefore', element);
               }
             }
-            if ((strial & 2) == 2) {
-              for (var element of data.fa_added) {
+            if ((strial & 2) === 2) {
+              for (const element of data.fa_added) {
                 if (!filter.valid(data.t2_path, element)) {
                   continue;
                 }
@@ -424,13 +424,13 @@ export class DiffInfoWidget extends Widget {
   }
 
   private info(
-    main: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    main: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
     label: string,
     value1: any,
     value2: any
   ) {
-    if (value1 == value2) {
+    if (value1 === value2) {
       const attr = main.append('span').classed('attr', true);
       attr
         .append('span')
@@ -455,9 +455,9 @@ export class DiffInfoWidget extends Widget {
   }
 
   private mod_li(
-    element: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    element: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
-    mod: ModuleData
+    mod: IModuleData
   ) {
     const li = element.append('li').classed(cls, true);
 
@@ -474,8 +474,8 @@ export class DiffInfoWidget extends Widget {
   }
 
   private env_field(
-    element: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    env: EnvironmentItemData
+    element: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    env: IEnvironmentItemData
   ) {
     element.append('span').classed('key', true).text(env.name);
 
@@ -485,17 +485,17 @@ export class DiffInfoWidget extends Widget {
   }
 
   private env_li(
-    element: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    element: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
-    env: EnvironmentItemData
+    env: IEnvironmentItemData
   ) {
     this.env_field(element.append('li').classed(cls, true), env);
   }
 
   private env_cli(
-    element: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
-    rem: EnvironmentItemData,
-    add: EnvironmentItemData
+    element: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
+    rem: IEnvironmentItemData,
+    add: IEnvironmentItemData
   ) {
     const li = element.append('li');
     this.env_field(li.append('div').classed('dbefore', true), rem);
@@ -503,7 +503,7 @@ export class DiffInfoWidget extends Widget {
   }
 
   private fa_field(
-    element: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    element: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
     title: string,
     value: string
@@ -512,9 +512,9 @@ export class DiffInfoWidget extends Widget {
   }
 
   private fa_li(
-    element: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    element: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
-    fa: FileAccessData
+    fa: IFileAccessData
   ) {
     const li = element.append('li').classed(cls, true);
 
@@ -541,13 +541,13 @@ export class DiffInfoWidget extends Widget {
   }
 
   private fa_cfield(
-    element: d3_Selection<d3_BaseType, {}, HTMLElement | null, any>,
+    element: d3_Selection<d3_BaseType, unknown, HTMLElement | null, any>,
     cls: string,
     title: string,
     v1: string,
     v2: string
   ) {
-    if (v1 == v2) {
+    if (v1 === v2) {
       this.fa_field(element, cls, title, v1);
     } else {
       this.fa_field(element, cls + ' dbefore', title, v1);

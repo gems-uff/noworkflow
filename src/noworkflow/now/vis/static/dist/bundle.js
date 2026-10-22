@@ -50823,12 +50823,12 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
     key: "fillAnnotations",
     value: function () {
       var _fillAnnotations = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var _thiss, response, obj;
+        var _this2 = this;
+        var response, obj;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
               this.annotations = new Array();
-              _thiss = this;
               _context.n = 1;
               return fetch(this.fetchUrl, {
                 method: 'GET',
@@ -50839,11 +50839,11 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context.v;
-              if (!(response.status == 200)) {
+              if (!(response.status === 200)) {
                 _context.n = 3;
                 break;
               }
-              _thiss.annotations = new Array();
+              this.annotations = new Array();
               _context.n = 2;
               return response.json();
             case 2:
@@ -50858,13 +50858,13 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
                   relatedTrial: item.relatedTrial,
                   relatedExperiment: item.relatedExperiment
                 };
-                _thiss.annotations.push(annt);
+                _this2.annotations.push(annt);
               });
               _context.n = 4;
               break;
             case 3:
-              if (response.status != 404) {
-                this.showNode(_thiss.errorFeedback);
+              if (response.status !== 404) {
+                this.showNode(this.errorFeedback);
               }
             case 4:
               return _context.a(2);
@@ -50894,11 +50894,11 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
     key: "setAnnotations",
     value: function () {
       var _setAnnotations = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        var _thiss, header, tBody;
+        var _this3 = this;
+        var header, tBody;
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
             case 0:
-              _thiss = this;
               this.table.html('');
               header = this.table.append('thead').append('tr');
               header.append('th').attr('scope', 'col').text('id');
@@ -50911,7 +50911,7 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
               return this.fillAnnotations();
             case 1:
               this.annotations.forEach(function (obj) {
-                _thiss.addAnntRow(obj, tBody);
+                _this3.addAnntRow(obj, tBody);
               });
             case 2:
               return _context2.a(2);
@@ -50936,11 +50936,11 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addFeedBackinfo",
     value: function addFeedBackinfo(baseNode, cls, txt, desc) {
-      var _thiss = this;
+      var _this4 = this;
       var feedbackNode = baseNode.append('div').classed('alert', true).classed(cls, true).classed('alert-dismissible', true).classed('fade', true).classed('show', true);
       feedbackNode.append('strong').text(txt);
       feedbackNode.append('span').text(' ' + desc).append('button').attr('type', 'button').classed('close', true).attr('data-dismiss', 'alert').text('x').on('click', function () {
-        _thiss.hideNode(feedbackNode);
+        _this4.hideNode(feedbackNode);
       });
       return feedbackNode;
     }
@@ -50967,7 +50967,7 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createAddGroupForm",
     value: function createAddGroupForm(projectsDiv) {
-      var _thiss = this;
+      var _this5 = this;
       var inputsDiv = projectsDiv.append('div');
       var descIn = this.addFormInput(inputsDiv, 'descriptionAnntInput', 'Description', 'textarea');
       var annotationIn = this.addFormInput(inputsDiv, 'annotationNameInput', 'Annotation', 'textarea');
@@ -50987,18 +50987,18 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
       var addAnntButton = projectsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Add Annotation');
       inputsDiv.classed('d-none', true);
       confimButton.on('click', function () {
-        var annotationFormat = _thiss.getValueFromSelect(annotationFormatIn, 'plainText');
-        var provenanceType = _thiss.getValueFromSelect(provenanceTypeIn, 'Other');
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
+        var annotationFormat = _this5.getValueFromSelect(annotationFormatIn, 'plainText');
+        var provenanceType = _this5.getValueFromSelect(provenanceTypeIn, 'Other');
+        _this5.hideNode(_this5.errorFeedback);
+        _this5.hideNode(_this5.successFeedback);
         var newAnnotation = {
           annotation: annotationIn.property('value'),
           description: descIn.property('value'),
           annotationFormat: annotationFormat,
-          annotationLevel: _thiss.annotationLevel,
+          annotationLevel: _this5.annotationLevel,
           provenanceType: provenanceType
         };
-        fetch(_thiss.fetchUrl, {
+        fetch(_this5.fetchUrl, {
           method: 'POST',
           // *GET, POST, PUT, DELETE, etc.
           headers: {
@@ -51006,21 +51006,21 @@ var AnnontationWidget = /*#__PURE__*/function (_Widget) {
           },
           body: JSON.stringify(newAnnotation) // body data type must match "Content-Type" header
         }).then(function (response) {
-          if (response.status == 201) {
+          if (response.status === 201) {
             response.json().then(function (obj) {
-              _thiss.showNode(_thiss.successFeedback);
-              _thiss.hideNode(inputsDiv);
-              _thiss.showNode(addAnntButton);
-              _thiss.setAnnotations();
+              _this5.showNode(_this5.successFeedback);
+              _this5.hideNode(inputsDiv);
+              _this5.showNode(addAnntButton);
+              _this5.setAnnotations();
             });
           } else {
-            _thiss.showNode(_thiss.errorFeedback);
+            _this5.showNode(_this5.errorFeedback);
           }
         });
       });
       addAnntButton.on('click', function () {
-        _thiss.showNode(inputsDiv);
-        _thiss.hideNode(addAnntButton);
+        _this5.showNode(inputsDiv);
+        _this5.hideNode(addAnntButton);
       });
     }
   }, {
@@ -51600,10 +51600,9 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
         });
       });
       node.call(function (selection) {
-        var widget = _this4;
         selection.on('mouseover', function (event, d) {
-          var isSelected = widget.selectedNodes.has(d.id);
-          (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(this).select('circle').attr('stroke-width', isSelected ? 6 : 4).attr('stroke', isSelected ? '#ff8c00' : '#333');
+          var isSelected = _this4.selectedNodes.has(d.id);
+          (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(event.currentTarget).select('circle').attr('stroke-width', isSelected ? 6 : 4).attr('stroke', isSelected ? '#ff8c00' : '#333');
           link.attr('stroke-opacity', function (linkData) {
             var sourceId = _typeof(linkData.source) === 'object' ? linkData.source.id : linkData.source;
             var targetId = _typeof(linkData.target) === 'object' ? linkData.target.id : linkData.target;
@@ -51623,7 +51622,7 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
               var targetId = _typeof(linkData.target) === 'object' ? linkData.target.id : linkData.target;
               return sourceId === d.id && targetId === nodeData.id || targetId === d.id && sourceId === nodeData.id;
             });
-            var isNodeSelected = widget.selectedNodes.has(nodeData.id);
+            var isNodeSelected = _this4.selectedNodes.has(nodeData.id);
             return isNodeSelected ? 6 : isConnected ? 4 : 3;
           }).attr('stroke', function (nodeData) {
             var isConnected = link.data().some(function (linkData) {
@@ -51631,11 +51630,11 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
               var targetId = _typeof(linkData.target) === 'object' ? linkData.target.id : linkData.target;
               return sourceId === d.id && targetId === nodeData.id || targetId === d.id && sourceId === nodeData.id;
             });
-            var isNodeSelected = widget.selectedNodes.has(nodeData.id);
+            var isNodeSelected = _this4.selectedNodes.has(nodeData.id);
             return isConnected ? '#87CEEB' : isNodeSelected ? '#ff8c00' : '#fff';
           });
         }).on('mouseout', function () {
-          widget.updateSelection();
+          _this4.updateSelection();
           link.attr('stroke-opacity', 0.6).attr('stroke-width', 2).attr('stroke', '#999');
         });
       });
@@ -51682,13 +51681,13 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "updateSelection",
     value: function updateSelection() {
+      var _this5 = this;
       if (!this.svg) {
         return;
       }
-      var widget = this;
-      this.svg.selectAll('.node').each(function (d) {
-        var nodeElement = (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(this);
-        var isSelected = widget.selectedNodes.has(d.id);
+      this.svg.selectAll('.node').each(function (d, i, nodes) {
+        var nodeElement = (0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(nodes[i]);
+        var isSelected = _this5.selectedNodes.has(d.id);
         nodeElement.select('circle').attr('stroke', isSelected ? '#ff8c00' : '#fff').attr('stroke-width', isSelected ? 6 : 3).attr('stroke-dasharray', 'none');
       });
       var newQueryBtn = this.node.querySelector('#new-query-btn');
@@ -51723,16 +51722,16 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
   }, {
     key: "selectTables",
     value: function selectTables(tableNames) {
-      var _this5 = this;
+      var _this6 = this;
       tableNames.forEach(function (name) {
-        _this5.selectedNodes.add(name);
+        _this6.selectedNodes.add(name);
       });
       this.updateSelection();
     }
   }, {
     key: "renderTableList",
     value: function renderTableList(tables) {
-      var _this6 = this;
+      var _this7 = this;
       var dropdownMenu = this.node.querySelector('#tables-dropdown');
       if (!dropdownMenu) {
         console.error('Tables dropdown element not found in renderTableList');
@@ -51751,9 +51750,9 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
         }).on('mouseout', function () {
           ;(0,d3_selection__WEBPACK_IMPORTED_MODULE_1__["default"])(this).style('background-color', 'transparent');
         }).on('click', function () {
-          _this6.openTableInfoTab(tableName);
+          _this7.openTableInfoTab(tableName);
           dropdownMenu.style.display = 'none';
-          var dropdownButton = _this6.node.querySelector('[data-toggle="dropdown"]');
+          var dropdownButton = _this7.node.querySelector('[data-toggle="dropdown"]');
           if (dropdownButton) {
             dropdownButton.setAttribute('aria-expanded', 'false');
           }
@@ -51770,32 +51769,31 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.p = _context2.n) {
             case 0:
-              widget = null;
-              _context2.p = 1;
-              _context2.n = 2;
+              _context2.p = 0;
+              _context2.n = 1;
               return fetch("/db/table/".concat(encodeURIComponent(tableName)));
-            case 2:
+            case 1:
               response = _context2.v;
               if (response.ok) {
-                _context2.n = 3;
+                _context2.n = 2;
                 break;
               }
               throw new Error('Failed to fetch table details');
-            case 3:
-              _context2.n = 4;
+            case 2:
+              _context2.n = 3;
               return response.json();
-            case 4:
+            case 3:
               details = _context2.v;
               widget = new TableInfoWidget(tableName, details);
-              _context2.n = 6;
+              _context2.n = 5;
               break;
-            case 5:
-              _context2.p = 5;
+            case 4:
+              _context2.p = 4;
               _t2 = _context2.v;
               widget = new DatabaseTabWidget();
               widget.title.label = tableName;
               widget.node.innerHTML = "<div style=\"color: red; padding: 10px;\">Error loading table info: ".concat(_t2.message, "</div>");
-            case 6:
+            case 5:
               refWidget = null;
               if (this.panel.widgets) {
                 _iterator3 = _createForOfIteratorHelper(this.panel.widgets());
@@ -51824,10 +51822,10 @@ var DatabaseWidget = /*#__PURE__*/function (_Widget2) {
                 });
               }
               this.panel.activateWidget(widget);
-            case 7:
+            case 6:
               return _context2.a(2);
           }
-        }, _callee2, this, [[1, 5]]);
+        }, _callee2, this, [[0, 4]]);
       }));
       function openTableInfoTab(_x) {
         return _openTableInfoTab.apply(this, arguments);
@@ -52333,7 +52331,7 @@ function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
     var jsonVariable2 = JSON.parse(variable2.replace(/"'/g, '"').replace(/'"/g, '"').replace(/'/g, '"'));
     var differentAttributes = [];
     for (var attr in jsonVariable1) {
-      if (jsonVariable1[attr] != jsonVariable2[attr]) {
+      if (jsonVariable1[attr] !== jsonVariable2[attr]) {
         differentAttributes.push(attr.toString());
       }
     }
@@ -52384,22 +52382,22 @@ function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
     });
   }
   ['output', 'arguments', 'duration', 'variables'].forEach(function (property) {
-    var didntChange = JSON.stringify(functionDiffJson[property + '_function_trial1']) == JSON.stringify(functionDiffJson[property + '_function_trial2']);
+    var didntChange = JSON.stringify(functionDiffJson[property + '_function_trial1']) === JSON.stringify(functionDiffJson[property + '_function_trial2']);
     var changeText = didntChange ? 'The ' + property + " didn't change" : 'The ' + property + ' changed:';
     var textChangeTitle;
-    if (property != 'variables') {
+    if (property !== 'variables') {
       textChangeTitle = functionDiffWindow.append('p').attr('style', 'font-weight:bold;').text(changeText);
     }
     if (changeText.includes('changed')) {
-      if (property == 'duration') {
+      if (property === 'duration') {
         functionDiffJson[property + '_function_trial1'] = Number(functionDiffJson[property + '_function_trial1']).toFixed(2) + ' microseconds';
         functionDiffJson[property + '_function_trial2'] = Number(functionDiffJson[property + '_function_trial2']).toFixed(2) + ' microseconds';
       }
       var spanProperty = functionDiffWindow.append('span').attr('id', 'diff-function-' + property + '-span-' + crypto.randomUUID());
-      if (property != 'variables') {
+      if (property !== 'variables') {
         addHideShowButton(textChangeTitle, 'hide-and-show-button-' + property, spanProperty.attr('id'));
       }
-      if (property == 'variables') {
+      if (property === 'variables') {
         var buttonDiv = functionDiffWindow.append('div').attr('id', 'div-diff-function-variables-filter').lower();
         buttonDiv.append('span').classed('toollink', true).attr('id', 'filter-' + windowIdAndTitle + '-variables-default').attr('href', '#').attr('title', 'Show only name, attribute, and access variables').on('click', function () {
           var trial1ChangedVariablesFiltered = filterVariablesArray(functionDiffJson['trial1_variables_that_changed'], false);
@@ -52420,7 +52418,7 @@ function functionDiffWindow(functionDiffJson, windowIdAndTitle, parentDock) {
           writeHTMLDiffVariables(spanProperty, functionDiffJson['trial1_variables_that_changed'], functionDiffJson['trial2_variables_added'], functionDiffJson['trial1_variables_removed']);
         }).append('i').classed('fa fa-code', true).append('span').style('margin-right', '10px').text('Show all variables');
         writeHTMLDiffVariables(spanProperty, functionDiffJson['trial1_variables_that_changed'], functionDiffJson['trial2_variables_added'], functionDiffJson['trial1_variables_removed']);
-      } else if (property == 'arguments') {
+      } else if (property === 'arguments') {
         var symDifference = functionDiffJson[property + '_function_trial1'].filter(function (x) {
           return !functionDiffJson[property + '_function_trial2'].includes(x);
         }).concat(functionDiffJson[property + '_function_trial2'].filter(function (x) {
@@ -52583,7 +52581,6 @@ function _toPrimitive(t, e) { if ("object" != _typeof(t) || !t) return t; var r;
 
 var pl = __webpack_require__(/*! tau-prolog */ "../../node_modules/tau-prolog/modules/core.js");
 var svgPanZoom = __webpack_require__(/*! svg-pan-zoom */ "../../node_modules/svg-pan-zoom/src/browserify.js");
-'svg-pan-zoom';
 var HistoryWidget = /*#__PURE__*/function (_Widget) {
   function HistoryWidget(config, name, cls, expId, annontationWidget) {
     var _this;
@@ -52777,16 +52774,16 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildProspectiveCommand",
     value: function buildProspectiveCommand() {
-      var self = this;
-      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'prospective-option').text('generate prospective graph').on('click', function () {
-        var parent = this.parentNode;
+      var _this4 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'prospective-option').text('generate prospective graph').on('click', function (event) {
+        var parent = event.currentTarget.parentNode;
         var trialId = parent.getAttribute('selected-trial');
         var trialDisplay = parent.getAttribute('selected-trial-simplified');
         if (!trialId) {
           return;
         }
         var prospectiveGraphWidget = new _graph_prospective_graph__WEBPACK_IMPORTED_MODULE_8__.ProspectiveGraphWidget('Prospective ' + trialDisplay, 'prospective-' + trialId + (0,_noworkflow_utils__WEBPACK_IMPORTED_MODULE_3__.makeid)(), trialId);
-        var parentDock = self.parent;
+        var parentDock = _this4.parent;
         parentDock.addGraphWidget(prospectiveGraphWidget);
         parentDock.activateWidget(prospectiveGraphWidget);
         prospectiveGraphWidget.load();
@@ -52795,43 +52792,43 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildTrialFunctionDiffCommand",
     value: function buildTrialFunctionDiffCommand(modal, modalBody, functionDiffWindow) {
-      var self = this;
-      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'trial-function-diff-option').text('function activation diff').on('click', function () {
+      var _this5 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'trial-function-diff-option').text('function activation diff').on('click', function (event) {
         var _parent$getAttribute;
-        var parent = this.parentNode;
+        var parent = event.currentTarget.parentNode;
         var trialId = (_parent$getAttribute = parent.getAttribute('selected-trial')) !== null && _parent$getAttribute !== void 0 ? _parent$getAttribute : '';
-        buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, functionDiffWindow, self);
+        buildTrialFunctionDiffModal(modal, modalBody, parent, trialId, functionDiffWindow, _this5);
       });
     }
   }, {
     key: "buildDataflowCommand",
     value: function buildDataflowCommand(modal, modalBody) {
-      var self = this;
-      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'dataflow-option').text('generate dataflow').on('click', function () {
+      var _this6 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'dataflow-option').text('generate dataflow').on('click', function (event) {
         var _parent$getAttribute2;
-        var parent = this.parentNode;
+        var parent = event.currentTarget.parentNode;
         var trialId = (_parent$getAttribute2 = parent.getAttribute('selected-trial')) !== null && _parent$getAttribute2 !== void 0 ? _parent$getAttribute2 : '';
-        buildDataflowModal(modal, modalBody, parent, self.graph.config, trialId);
+        buildDataflowModal(modal, modalBody, parent, _this6.graph.config, trialId);
       });
     }
   }, {
     key: "buildExportPrologCommand",
     value: function buildExportPrologCommand(modal, modalBody) {
-      var self = this;
-      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'export-option').text('generate prolog').on('click', function () {
-        var parent = this.parentNode;
+      var _this7 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'export-option').text('generate prolog').on('click', function (event) {
+        var parent = event.currentTarget.parentNode;
         var trialId = parent.getAttribute('selected-trial');
         var exportUrl = '/commands/export/' + trialId;
         var exportWindowId = 'Export window ' + trialId;
-        buildExportPrologModal(modal, modalBody, exportUrl, self.graph.config, parent, exportWindowId, trialId);
+        buildExportPrologModal(modal, modalBody, exportUrl, _this7.graph.config, parent, exportWindowId, trialId);
       });
     }
   }, {
     key: "buildProvCommand",
     value: function buildProvCommand() {
-      var self = this;
-      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'prov-option').text('generate prov').on('click', function () {
-        var parent = this.parentNode;
+      var _this8 = this;
+      this.rightClickMenu.append('a').classed('dropdown-item', true).attr('href', '#').attr('id', 'prov-option').text('generate prov').on('click', function (event) {
+        var parent = event.currentTarget.parentNode;
         var trialId = parent.getAttribute('selected-trial');
         var provWindowId = 'Prov window ' + trialId;
         if (document.getElementById(provWindowId)) {
@@ -52846,9 +52843,9 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
           }
         }).then(function (response) {
           response.json().then(function (json) {
-            self.graph.config.customWindowTabCommand(parent.getAttribute('selected-trial-simplified'), provWindowId, 'Prov');
+            _this8.graph.config.customWindowTabCommand(parent.getAttribute('selected-trial-simplified'), provWindowId, 'Prov');
             var provWindow = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(provWindowId));
-            if (response.status == 200) {
+            if (response.status === 200) {
               provWindow.style('overflow-y', 'auto');
               var prov_lines = json.prov.split('\n');
               for (var line in prov_lines) {
@@ -52960,7 +52957,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
         }).then(function (response) {
           response.json().then(function (json) {
             form.remove();
-            if (response.status == 200) {
+            if (response.status === 200) {
               addAlert(modalBody, 'alert-success', 'Success!', json.terminal_text);
             } else {
               addAlert(modalBody, 'alert-danger', 'Error!', '');
@@ -52972,7 +52969,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildDeleteRemote",
     value: function buildDeleteRemote(modal, modalBody) {
-      var _this4 = this;
+      var _this9 = this;
       fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
@@ -52985,8 +52982,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context) {
               while (1) switch (_context.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this4.executeCollabCommand(modal, modalBody, 'editDeleteServerUrlId', 'Delete remote', 'delete', json.remotes);
+                  if (response.status === 200) {
+                    _this9.executeCollabCommand(modal, modalBody, 'editDeleteServerUrlId', 'Delete remote', 'delete', json.remotes);
                   } else {
                     console.log('Failed to get remotes');
                   }
@@ -53004,7 +53001,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildEditRemote",
     value: function buildEditRemote(modal, modalBody) {
-      var _this5 = this;
+      var _this0 = this;
       fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
@@ -53017,8 +53014,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context2) {
               while (1) switch (_context2.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this5.executeCollabCommand(modal, modalBody, 'editRemoteServerUrlId', 'Edit remote', 'edit', json.remotes);
+                  if (response.status === 200) {
+                    _this0.executeCollabCommand(modal, modalBody, 'editRemoteServerUrlId', 'Edit remote', 'edit', json.remotes);
                   } else {
                     console.log('Failed to get remotes');
                   }
@@ -53036,7 +53033,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildPushCommand",
     value: function buildPushCommand(modal, modalBody) {
-      var _this6 = this;
+      var _this1 = this;
       fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
@@ -53049,8 +53046,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context3) {
               while (1) switch (_context3.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this6.executeCollabCommand(modal, modalBody, 'pushServerUrlId', 'Push experiment', 'push', json.remotes);
+                  if (response.status === 200) {
+                    _this1.executeCollabCommand(modal, modalBody, 'pushServerUrlId', 'Push experiment', 'push', json.remotes);
                   } else {
                     console.log('Failed to get remotes');
                   }
@@ -53068,7 +53065,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "buildPullCommand",
     value: function buildPullCommand(modal, modalBody) {
-      var _this7 = this;
+      var _this10 = this;
       fetch('/collab/remotes/getall', {
         method: 'GET',
         // *GET, POST, PUT, DELETE, etc.
@@ -53081,8 +53078,8 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
             return _regenerator().w(function (_context4) {
               while (1) switch (_context4.n) {
                 case 0:
-                  if (response.status == 200) {
-                    _this7.executeCollabCommand(modal, modalBody, 'pullServerUrlId', 'Pull experiment', 'pull', json.remotes);
+                  if (response.status === 200) {
+                    _this10.executeCollabCommand(modal, modalBody, 'pullServerUrlId', 'Pull experiment', 'pull', json.remotes);
                   } else {
                     console.log('Failed to get remotes');
                   }
@@ -53120,7 +53117,7 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
           remoteURLText.text(select.node().value);
         });
         form.append('br');
-        if (command == 'edit') {
+        if (command === 'edit') {
           createFormTextInput(form, 'inputEditRemoteName', 'Remote new name: ');
         }
         submitButton = form.append('button').classed('btn btn-primary mb-2', true).text(title);
@@ -53128,10 +53125,10 @@ var HistoryWidget = /*#__PURE__*/function (_Widget) {
       (_submitButton4 = submitButton) === null || _submitButton4 === void 0 || _submitButton4.on('click', function () {
         var serverUrl = select.node().value;
         var collabCommandUrl = '/commands/' + command + '/' + serverUrl;
-        if (command == 'edit') {
+        if (command === 'edit') {
           collabCommandUrl = '/collab/remotes/edit/' + document.getElementById('inputEditRemoteName').value + '/' + serverUrl;
         }
-        if (command == 'delete') {
+        if (command === 'delete') {
           collabCommandUrl = '/collab/remotes/delete/' + serverUrl;
         }
         getRestoreOrCollabCommand(collabCommandUrl, form, modalBody);
@@ -53293,7 +53290,7 @@ function buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId
     }
   }).then(function (response) {
     response.json().then(function (json) {
-      if (response.status == 200) {
+      if (response.status === 200) {
         config.customWindowTabCommand(parent.getAttribute('selected-trial-simplified'), exportWindowId, 'Prolog');
         var exportWindow = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(exportWindowId));
         var form = exportWindow.append('form').attr('onsubmit', 'return false;').append('div').classed('form-row', true);
@@ -53303,7 +53300,7 @@ function buildExportPrologTab(exportUrl, config, parent, exportWindowId, trialId
         document.getElementById('exportPrologProgram' + trialId).value = json["export"];
         var prologSession = pl.create(1000);
         var _answerCallback = function answerCallback(answer, answerString) {
-          if (answer == false) {
+          if (answer === false) {
             var answerCardTextId = 'Answers prolog card text ' + trialId;
             var answerCardText = document.getElementById(answerCardTextId) ? (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(document.getElementById(answerCardTextId)) : null;
             if (answerCardText == null) {
@@ -53357,7 +53354,7 @@ function scrollableModal(modalBody) {
 }
 function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
   response.json().then(function (json) {
-    if (response.status == 200) {
+    if (response.status === 200) {
       var trialIdSimplified = parent.getAttribute('selected-trial-simplified');
       config.customWindowTabCommand(trialIdSimplified, dataflowWindowId, 'Dataflow');
       console.log(json.dataflow);
@@ -53378,7 +53375,7 @@ function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
         });
         var _loop = function _loop(nodeIndex) {
           var presentNode = svgElement.children[0].children[0].children[nodeIndex];
-          if (presentNode.getAttribute('class') == 'node' && presentNode.children[1].tagName.toLowerCase() == 'polygon') {
+          if (presentNode.getAttribute('class') === 'node' && presentNode.children[1].tagName.toLowerCase() === 'polygon') {
             var presentNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(presentNode);
             presentNodeSelection.style('cursor', 'pointer');
             presentNodeSelection.on('click', function (event) {
@@ -53392,7 +53389,7 @@ function getDataflow(response, config, parent, dataflowWindowId, dataflowUrl) {
                 selectedNode.children[1].setAttribute('stroke', 'red');
               }
             });
-          } else if (presentNode.getAttribute('class') == 'edge' && presentNode.children[1].tagName.toLowerCase() == 'path') {
+          } else if (presentNode.getAttribute('class') === 'edge' && presentNode.children[1].tagName.toLowerCase() === 'path') {
             var _presentNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(presentNode);
             _presentNodeSelection.style('cursor', 'pointer');
             _presentNodeSelection.on('click', function () {
@@ -53502,7 +53499,7 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz
   var selectedEdge;
   var _loop2 = function _loop2(nodeIndex) {
     var selectedNode = svgElement.children[0].children[0].children[nodeIndex];
-    if (selectedNode.getAttribute('class') == 'node' && selectedNode.children[1].tagName.toLowerCase() == 'polygon') {
+    if (selectedNode.getAttribute('class') === 'node' && selectedNode.children[1].tagName.toLowerCase() === 'polygon') {
       var selectedNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(selectedNode);
       selectedNodeSelection.style('cursor', 'pointer');
       selectedNodeSelection.on('click', function (event) {
@@ -53510,7 +53507,7 @@ function addsOptionToDeletePriorNodesToDeletedPriorNodesDataflow(svgElement, viz
           deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl, newDataflowString, excludingProvenanceWindow, config, lastEvaluationId);
         }
       });
-    } else if (selectedNode.getAttribute('class') == 'edge' && selectedNode.children[1].tagName.toLowerCase() == 'path') {
+    } else if (selectedNode.getAttribute('class') === 'edge' && selectedNode.children[1].tagName.toLowerCase() === 'path') {
       var _selectedNodeSelection = (0,d3_selection__WEBPACK_IMPORTED_MODULE_0__["default"])(selectedNode);
       _selectedNodeSelection.style('cursor', 'pointer');
       _selectedNodeSelection.on('click', function () {
@@ -53530,7 +53527,7 @@ function deletePriorNodesAfterDeletingPriorNodes(selectedNode, viz, dataflowUrl,
   var _excludingProvenanceW;
   var selectedNodeOrderEvaluationTitle = selectedNode.children[0].innerHTML;
   var selectedEvaluationOrder = Number(selectedNodeOrderEvaluationTitle.replace('e_', ''));
-  if (lastEvaluationId == selectedEvaluationOrder) {
+  if (lastEvaluationId === selectedEvaluationOrder) {
     window.alert("You can't remove everything.");
     return undefined;
   }
@@ -53581,7 +53578,7 @@ function removesLinesInDataflowFirstEvaluationFromDataflowLastEvaluation(linesDa
     if (linesDataflowB[i].includes('->') && linesDataflowB[i].includes('[')) {
       var lineToRemove = linesDataflowB[i].replace(/\[[^\]]*\]/, '');
       indexOfDataflowLineToRemove = newDataflow.findIndex(function (dataflowLine) {
-        return dataflowLine.replace(/\[[^\]]*\]/, '') == lineToRemove;
+        return dataflowLine.replace(/\[[^\]]*\]/, '') === lineToRemove;
       });
     } else {
       indexOfDataflowLineToRemove = newDataflow.indexOf(linesDataflowB[i]);
@@ -53708,7 +53705,7 @@ function addsAutocompleteToDataflowWDF(dataflowEvaluationInput, dataflowTextInpu
     var evaluationInputHint = document.getElementById('dataflowSelectEvaluationHelp');
     autocompleteSuggestionsResults.innerHTML = '';
     var suggestions;
-    if (input == '') {
+    if (input === '') {
       autocompleteSuggestionsResults.setAttribute('style', '');
       evaluationInputHint.style.opacity = '1';
       suggestions = [];
@@ -53780,7 +53777,7 @@ function getRestoreOrCollabCommand(serverUrl, form, modalBody) {
       form.remove();
       // The server answers from the exit status of `now`; the text is what
       // it printed, and may name a path that contains "not".
-      if (response.status == 200) {
+      if (response.status === 200) {
         addAlert(modalBody, 'alert-success', 'Success!', json.terminal_text);
       } else {
         addAlert(modalBody, 'alert-danger', 'Error!', json.terminal_text);
@@ -53829,7 +53826,7 @@ function createFormSelectInput(form, selectId, selectText, minOptionNumber, maxO
   for (var optionNumber = minOptionNumber; optionNumber <= maxOptionNumber; optionNumber++) {
     var inputLabel = optionsLabels ? optionsLabels[optionNumber] : optionNumber;
     var input = selectInput.append('option').text(inputLabel);
-    if (defaultOption && optionNumber == defaultOption) {
+    if (defaultOption && optionNumber === defaultOption) {
       input.attr('selected', 'selected');
     }
   }
@@ -53899,7 +53896,6 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
 
 
 
-var svgPanZoom = __webpack_require__(/*! svg-pan-zoom */ "../../node_modules/svg-pan-zoom/src/browserify.js");
 var ProspectiveGraphWidget = /*#__PURE__*/function (_Widget) {
   function ProspectiveGraphWidget(name, cls, trialId) {
     var _this;
@@ -54208,7 +54204,7 @@ var TrialGraphWidget = /*#__PURE__*/function (_BaseActivationGraphW) {
       var data = arguments.length > 3 ? arguments[3] : undefined;
       var result = _superPropGet(TrialGraphWidget, "graphDefinition", this, 3)([selectedGraph, useCache, genDataflow, data]);
       return Object.assign({}, result, {
-        queryTooltip: selectedGraph != 'definition_tree'
+        queryTooltip: selectedGraph !== 'definition_tree'
       });
     }
   }, {
@@ -54304,12 +54300,12 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
     key: "setUsers",
     value: function () {
       var _setUsers = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var _thiss, response, obj;
+        var _this2 = this;
+        var response, obj;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
-              _thiss = this;
-              _thiss.userIn.html('');
+              this.userIn.html('');
               _context.n = 1;
               return fetch('users', {
                 method: 'GET',
@@ -54320,17 +54316,17 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context.v;
-              if (!(response.status == 200)) {
+              if (!(response.status === 200)) {
                 _context.n = 3;
                 break;
               }
-              _thiss.users = new Array();
+              this.users = new Array();
               _context.n = 2;
               return response.json();
             case 2:
               obj = _context.v;
               obj.forEach(function (item) {
-                _thiss.users.push({
+                _this2.users.push({
                   id: item.id,
                   login: item.userLogin
                 });
@@ -54338,10 +54334,10 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               _context.n = 4;
               break;
             case 3:
-              this.showNode(_thiss.errorFeedback);
+              this.showNode(this.errorFeedback);
             case 4:
-              _thiss.users.forEach(function (obj) {
-                _thiss.userIn.append('option').attr('value', obj.id).text(obj.login);
+              this.users.forEach(function (obj) {
+                _this2.userIn.append('option').attr('value', obj.id).text(obj.login);
               });
             case 5:
               return _context.a(2);
@@ -54363,11 +54359,11 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
     key: "setGroups",
     value: function () {
       var _setGroups = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        var _thiss, response, obj;
+        var _this3 = this;
+        var response, obj;
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
             case 0:
-              _thiss = this;
               _context2.n = 1;
               return fetch('groups', {
                 method: 'GET',
@@ -54378,11 +54374,11 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context2.v;
-              if (!(response.status == 200)) {
+              if (!(response.status === 200)) {
                 _context2.n = 3;
                 break;
               }
-              _thiss.groups = new Array();
+              this.groups = new Array();
               _context2.n = 2;
               return response.json();
             case 2:
@@ -54399,15 +54395,15 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
                     login: user.userLogin
                   });
                 });
-                _thiss.groups.push(group);
+                _this3.groups.push(group);
               });
               _context2.n = 4;
               break;
             case 3:
-              this.showNode(_thiss.errorFeedback);
+              this.showNode(this.errorFeedback);
             case 4:
               this.groups.forEach(function (obj) {
-                _thiss.addGrpRow(obj);
+                _this3.addGrpRow(obj);
               });
             case 5:
               return _context2.a(2);
@@ -54437,7 +54433,7 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
               });
             case 1:
               response = _context3.v;
-              if (response.status == 200) {
+              if (response.status === 200) {
                 this.showNode(this.successFeedback);
                 this.resfreshGroups();
               } else {
@@ -54456,7 +54452,7 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addGrpRow",
     value: function addGrpRow(grp) {
-      var _thiss = this;
+      var _this4 = this;
       var item = this.tBody.append('tr');
       item.append('th').attr('scope', 'row').text(grp.id);
       item.append('td').text(grp.name);
@@ -54468,13 +54464,13 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
       var actions = item.append('td');
       var addMemberButton = actions.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Add User');
       addMemberButton.on('click', function () {
-        _thiss.showNode(_thiss.addMemberForm);
-        _thiss.currentGroup = grp.id;
+        _this4.showNode(_this4.addMemberForm);
+        _this4.currentGroup = grp.id;
       });
       var deleteGroupButton = actions.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Delete Group');
       deleteGroupButton.on('click', function () {
         if (confirm('Are you sure you want to delete group: ' + grp.name + ' ?')) {
-          _thiss.deleteGrp(grp.id);
+          _this4.deleteGrp(grp.id);
         }
       });
       deleteGroupButton.style('margin-left', 4);
@@ -54492,11 +54488,11 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addFeedBackinfo",
     value: function addFeedBackinfo(baseNode, cls, txt, desc) {
-      var _thiss = this;
+      var _this5 = this;
       var feedbackNode = baseNode.append('div').classed('alert', true).classed(cls, true).classed('alert-dismissible', true).classed('fade', true).classed('show', true);
       feedbackNode.append('strong').text(txt);
       feedbackNode.append('span').text(' ' + desc).append('button').attr('type', 'button').classed('close', true).attr('data-dismiss', 'alert').text('x').on('click', function () {
-        _thiss.hideNode(feedbackNode);
+        _this5.hideNode(feedbackNode);
       });
       return feedbackNode;
     }
@@ -54513,15 +54509,15 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "createAddGroupForm",
     value: function createAddGroupForm(projectsDiv) {
-      var _thiss = this;
+      var _this6 = this;
       var inputsDiv = projectsDiv.append('div');
       var nameIn = this.addFormInput(inputsDiv, 'groupNameInput', 'Name: ', 'input');
       var confimButton = inputsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Confirm');
       var addGrpButton = projectsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Add Group');
       inputsDiv.classed('d-none', true);
       confimButton.on('click', function () {
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
+        _this6.hideNode(_this6.errorFeedback);
+        _this6.hideNode(_this6.successFeedback);
         var newGrp = {
           name: nameIn.property('value'),
           members: new Array()
@@ -54534,42 +54530,42 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
           },
           body: JSON.stringify(newGrp) // body data type must match "Content-Type" header
         }).then(function (response) {
-          if (response.status == 201) {
+          if (response.status === 201) {
             response.json().then(function (obj) {
               newGrp.id = obj.id;
-              _thiss.addGrpRow(newGrp);
-              _thiss.hideNode(inputsDiv);
-              _thiss.showNode(addGrpButton);
-              _thiss.showNode(_thiss.successFeedback);
+              _this6.addGrpRow(newGrp);
+              _this6.hideNode(inputsDiv);
+              _this6.showNode(addGrpButton);
+              _this6.showNode(_this6.successFeedback);
             });
           } else {
-            _thiss.showNode(_thiss.errorFeedback);
+            _this6.showNode(_this6.errorFeedback);
           }
         });
       });
       addGrpButton.on('click', function () {
-        _thiss.showNode(inputsDiv);
-        _thiss.hideNode(addGrpButton);
+        _this6.showNode(inputsDiv);
+        _this6.hideNode(addGrpButton);
       });
     }
   }, {
     key: "createAddMemberForm",
     value: function createAddMemberForm(projectsDiv) {
-      var _thiss = this;
-      _thiss.addMemberForm = projectsDiv.append('div');
-      var inputsDiv = _thiss.addMemberForm;
+      var _this7 = this;
+      this.addMemberForm = projectsDiv.append('div');
+      var inputsDiv = this.addMemberForm;
       this.userIn = this.addFormInput(inputsDiv, 'groupUsersInput', 'User', 'select');
       var confimButton = inputsDiv.append('button').classed('btn btn-primary', true).attr('type', 'submit').text('Confirm');
       confimButton.on('click', function () {
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
-        var select = _thiss.userIn.node();
+        _this7.hideNode(_this7.errorFeedback);
+        _this7.hideNode(_this7.successFeedback);
+        var select = _this7.userIn.node();
         if (select != null) {
           var option = select.options[select.selectedIndex];
           var newGrp = {
             userId: option.value
           };
-          fetch('groups/' + _thiss.currentGroup + '/users', {
+          fetch('groups/' + _this7.currentGroup + '/users', {
             method: 'POST',
             // *GET, POST, PUT, DELETE, etc.
             headers: {
@@ -54577,19 +54573,19 @@ var GroupWidget = /*#__PURE__*/function (_Widget) {
             },
             body: JSON.stringify(newGrp) // body data type must match "Content-Type" header
           }).then(function (response) {
-            if (response.status == 201) {
+            if (response.status === 201) {
               response.json().then(function (obj) {
-                _thiss.hideNode(_thiss.addMemberForm);
-                _thiss.showNode(_thiss.successFeedback);
-                _thiss.resfreshGroups();
+                _this7.hideNode(_this7.addMemberForm);
+                _this7.showNode(_this7.successFeedback);
+                _this7.resfreshGroups();
               });
             } else {
-              _thiss.showNode(_thiss.errorFeedback);
+              _this7.showNode(_this7.errorFeedback);
             }
           });
         }
       });
-      _thiss.hideNode(_thiss.addMemberForm);
+      this.hideNode(this.addMemberForm);
     }
   }, {
     key: "setNode",
@@ -54712,7 +54708,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
       h1.append('span').classed('dafter', true).text('Trial ' + this.display2);
 
       // Code hash
-      if (trial.code_hash == undefined) {
+      if (trial.code_hash == null) {
         main.append('h3').classed('hash', true).text(trial1.code_hash || '');
       } else {
         main.append('h3').classed('hash dbefore', true).text(trial.code_hash[0] || '');
@@ -54723,7 +54719,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
       this.info(main, 'start', 'Start', trial1.start, trial2.start);
       this.info(main, 'finish', 'Finish', trial1.finish, trial2.finish);
       this.info(main, 'duration', 'Duration', trial1.duration_text, trial2.duration_text);
-      if (trial.arguments == undefined) {
+      if (trial.arguments == null) {
         if (trial1.arguments) {
           var attr = main.append('span').classed('attr', true);
           attr.append('span').classed('desc', true).text('Arguments: ');
@@ -54776,7 +54772,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
           var ul = foldable.append('ul').classed('mod-list', true);
           _this3.filter_trial(filter, function (strial) {
             ul.html('');
-            if ((strial & 1) == 1) {
+            if ((strial & 1) === 1) {
               var _iterator = _createForOfIteratorHelper(data.modules_removed),
                 _step;
               try {
@@ -54793,16 +54789,16 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                 _iterator.f();
               }
             }
-            if ((strial & 2) == 2) {
+            if ((strial & 2) === 2) {
               var _iterator2 = _createForOfIteratorHelper(data.modules_added),
                 _step2;
               try {
                 for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-                  var element = _step2.value;
-                  if (!filter.valid(data.t2_path, element)) {
+                  var _element = _step2.value;
+                  if (!filter.valid(data.t2_path, _element)) {
                     continue;
                   }
-                  _this3.mod_li(ul, 'liafter', element);
+                  _this3.mod_li(ul, 'liafter', _element);
                 }
               } catch (err) {
                 _iterator2.e(err);
@@ -54855,7 +54851,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
           var ul = foldable.append('ul').classed('env-list', true);
           _this4.filter_trial(filter, function (strial) {
             ul.html('');
-            if ((strial & 1) == 1) {
+            if ((strial & 1) === 1) {
               var _iterator4 = _createForOfIteratorHelper(data.env_removed),
                 _step4;
               try {
@@ -54872,16 +54868,16 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                 _iterator4.f();
               }
             }
-            if ((strial & 2) == 2) {
+            if ((strial & 2) === 2) {
               var _iterator5 = _createForOfIteratorHelper(data.env_added),
                 _step5;
               try {
                 for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                  var element = _step5.value;
-                  if (!filter.valid(element)) {
+                  var _element2 = _step5.value;
+                  if (!filter.valid(_element2)) {
                     continue;
                   }
-                  _this4.env_li(ul, 'dafter', element);
+                  _this4.env_li(ul, 'dafter', _element2);
                 }
               } catch (err) {
                 _iterator5.e(err);
@@ -54927,7 +54923,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
           var ul = foldable.append('ul').classed('fac-list', true);
           _this5.filter_trial(filter, function (strial) {
             ul.html('');
-            if ((strial & 1) == 1) {
+            if ((strial & 1) === 1) {
               var _iterator7 = _createForOfIteratorHelper(data.fa_removed),
                 _step7;
               try {
@@ -54944,16 +54940,16 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
                 _iterator7.f();
               }
             }
-            if ((strial & 2) == 2) {
+            if ((strial & 2) === 2) {
               var _iterator8 = _createForOfIteratorHelper(data.fa_added),
                 _step8;
               try {
                 for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-                  var element = _step8.value;
-                  if (!filter.valid(data.t2_path, element)) {
+                  var _element3 = _step8.value;
+                  if (!filter.valid(data.t2_path, _element3)) {
                     continue;
                   }
-                  _this5.fa_li(ul, 'liafter', element);
+                  _this5.fa_li(ul, 'liafter', _element3);
                 }
               } catch (err) {
                 _iterator8.e(err);
@@ -54996,7 +54992,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "info",
     value: function info(main, cls, label, value1, value2) {
-      if (value1 == value2) {
+      if (value1 === value2) {
         var attr = main.append('span').classed('attr', true);
         attr.append('span').classed('desc', true).text(label + ': ');
         attr.append('span').classed(cls, true).text(value1);
@@ -55058,7 +55054,7 @@ var DiffInfoWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "fa_cfield",
     value: function fa_cfield(element, cls, title, v1, v2) {
-      if (v1 == v2) {
+      if (v1 === v2) {
         this.fa_field(element, cls, title, v1);
       } else {
         this.fa_field(element, cls + ' dbefore', title, v1);
@@ -55186,7 +55182,7 @@ var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
             return element.name.toLowerCase().indexOf(stext) >= 0 || element.value.toLowerCase().indexOf(stext) >= 0;
           };
           var check_local = function check_local() {
-            if (slocal == 0) {
+            if (slocal === 0) {
               return true;
             }
             switch (element.name) {
@@ -55200,9 +55196,9 @@ var EnvironmentInfoWidget = /*#__PURE__*/function (_Widget) {
               case 'HOSTNAME':
               case 'ARCH':
               case 'PROCESSOR':
-                return slocal == 1;
+                return slocal === 1;
               default:
-                return slocal != 1;
+                return slocal !== 1;
             }
           };
           return check_text() && check_local();
@@ -55347,37 +55343,37 @@ var FileAccessesInfoWidget = /*#__PURE__*/function (_Widget) {
             return element.mode.toLowerCase().indexOf(smode) >= 0;
           };
           var check_hash = function check_hash() {
-            if ((shash & 1) == 1 && element.content_hash_before == null) {
+            if ((shash & 1) === 1 && element.content_hash_before == null) {
               return false;
             }
-            if ((shash & 2) == 2 && element.content_hash_after == null) {
+            if ((shash & 2) === 2 && element.content_hash_after == null) {
               return false;
             }
-            if (shash == 1) {
+            if (shash === 1) {
               return element.content_hash_after == null;
             }
-            if (shash == 2) {
+            if (shash === 2) {
               return element.content_hash_before == null;
             }
-            if (shash == 3) {
-              return element.content_hash_before != element.content_hash_after;
+            if (shash === 3) {
+              return element.content_hash_before !== element.content_hash_after;
             }
-            if (shash == 4) {
-              return element.content_hash_before == element.content_hash_after;
+            if (shash === 4) {
+              return element.content_hash_before === element.content_hash_after;
             }
             return true;
           };
           var check_local = function check_local() {
-            if (slocal == 0) {
+            if (slocal === 0) {
               return true;
             }
             if (!/^((\/)|(\w+:\\))/.test(element.name)) {
-              return slocal == 1;
+              return slocal === 1;
             } // not absolute path
             if (element.name.startsWith(local)) {
-              return slocal == 1;
+              return slocal === 1;
             }
-            return slocal != 1;
+            return slocal !== 1;
           };
           return check_text() && check_mode() && check_hash() && check_local();
         },
@@ -55529,31 +55525,31 @@ var ModulesInfoWidget = /*#__PURE__*/function (_Widget) {
             return element.name.toLowerCase().indexOf(stext) >= 0;
           };
           var check_version = function check_version() {
-            if (sversion == 'both') {
+            if (sversion === 'both') {
               return true;
             }
-            if (sversion == '1') {
+            if (sversion === '1') {
               return element.version != null;
             }
-            if (sversion == '0') {
+            if (sversion === '0') {
               return element.version == null;
             }
             return false;
           };
           var check_local = function check_local() {
-            if (slocal == 0) {
+            if (slocal === 0) {
               return true;
             }
             if (element.path == null) {
-              return slocal != 1;
+              return slocal !== 1;
             }
             if (!/^((\/)|(\w+:\\))/.test(element.path)) {
-              return slocal == 1;
+              return slocal === 1;
             } // not absolute path
             if (element.path.startsWith(local)) {
-              return slocal == 1;
+              return slocal === 1;
             }
-            return slocal != 1;
+            return slocal !== 1;
           };
           return check_text() && check_version() && check_local();
         },
@@ -55816,20 +55812,20 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 ;
 function findInLayout(area, widget) {
-  if (area == null || area.type == 'tab-area') {
+  if (area == null || area.type === 'tab-area') {
     return null;
   }
   var splitconfig = area;
   var result = null;
   splitconfig.children.every(function (child, index) {
-    if (child.type == 'tab-area') {
+    if (child.type === 'tab-area') {
       var tabconfig = child;
       var _iterator = _createForOfIteratorHelper(tabconfig.widgets),
         _step;
       try {
         for (_iterator.s(); !(_step = _iterator.n()).done;) {
           var tabwidget = _step.value;
-          if (tabwidget == widget) {
+          if (tabwidget === widget) {
             result = {
               area: area,
               index: index
@@ -55864,7 +55860,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
     value: function addMainWidget(widget) {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       if (options.ref) {
-        if (options.ref.nowVis != 'main') {
+        if (options.ref.nowVis !== 'main') {
           console.log("Warning: options.ref is not 'main'");
         }
       } else {
@@ -55874,7 +55870,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
             var w = _step2.value;
             var wnow = w;
-            if (wnow.nowVis == 'main') {
+            if (wnow.nowVis === 'main') {
               options.ref = w;
             }
           }
@@ -55893,7 +55889,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var operation = 'none';
       if (options.ref) {
-        if (options.ref.nowVis != 'graph') {
+        if (options.ref.nowVis !== 'graph') {
           console.log("Warning: options.ref is not 'graph'");
         }
       } else {
@@ -55903,15 +55899,15 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
             var w = _step3.value;
             var wnow = w;
-            if (wnow.nowVis == 'main' && !options.ref) {
+            if (wnow.nowVis === 'main' && !options.ref) {
               options.ref = w;
               options.mode = 'split-bottom';
               operation = 'main';
-            } else if (wnow.nowVis == 'info' && operation != 'graph') {
+            } else if (wnow.nowVis === 'info' && operation !== 'graph') {
               options.ref = w;
               options.mode = 'split-left';
               operation = 'info';
-            } else if (wnow.nowVis == 'graph') {
+            } else if (wnow.nowVis === 'graph') {
               options.ref = w;
               options.mode = 'tab-after';
               operation = 'graph';
@@ -55925,7 +55921,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
       }
       widget.nowVis = 'graph';
       this.addWidget(widget, options);
-      if (operation == 'main') {
+      if (operation === 'main') {
         var layout = this.saveLayout();
         var sublayout = findInLayout(layout.main, widget);
         if (sublayout) {
@@ -55935,14 +55931,14 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           this.restoreLayout(layout);
         }
       }
-      if (operation == 'info') {
-        var layout = this.saveLayout();
-        var sublayout = findInLayout(layout.main, widget);
-        if (sublayout) {
-          var sizes = sublayout.area.sizes;
-          sizes[0] = 0.8;
-          sizes[1] = 0.2;
-          this.restoreLayout(layout);
+      if (operation === 'info') {
+        var _layout = this.saveLayout();
+        var _sublayout = findInLayout(_layout.main, widget);
+        if (_sublayout) {
+          var _sizes = _sublayout.area.sizes;
+          _sizes[0] = 0.8;
+          _sizes[1] = 0.2;
+          this.restoreLayout(_layout);
         }
       }
     }
@@ -55952,7 +55948,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var operation = 'none';
       if (options.ref) {
-        if (options.ref.nowVis != 'info') {
+        if (options.ref.nowVis !== 'info') {
           console.log("Warning: options.ref is not 'info'");
         }
       } else {
@@ -55962,15 +55958,15 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
             var w = _step4.value;
             var wnow = w;
-            if (wnow.nowVis == 'main' && !options.ref) {
+            if (wnow.nowVis === 'main' && !options.ref) {
               options.ref = w;
               options.mode = 'split-bottom';
               operation = 'main';
-            } else if (wnow.nowVis == 'graph' && operation != 'info') {
+            } else if (wnow.nowVis === 'graph' && operation !== 'info') {
               options.ref = w;
               options.mode = 'split-right';
               operation = 'graph';
-            } else if (wnow.nowVis == 'info') {
+            } else if (wnow.nowVis === 'info') {
               options.ref = w;
               options.mode = 'tab-after';
               operation = 'info';
@@ -55984,7 +55980,7 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
       }
       widget.nowVis = 'info';
       this.addWidget(widget, options);
-      if (operation == 'main') {
+      if (operation === 'main') {
         var layout = this.saveLayout();
         var sublayout = findInLayout(layout.main, widget);
         if (sublayout) {
@@ -55994,14 +55990,14 @@ var NowVisPanel = /*#__PURE__*/function (_DockPanel) {
           this.restoreLayout(layout);
         }
       }
-      if (operation == 'graph') {
-        var layout = this.saveLayout();
-        var sublayout = findInLayout(layout.main, widget);
-        if (sublayout) {
-          var sizes = sublayout.area.sizes;
-          sizes[0] = 0.8;
-          sizes[1] = 0.2;
-          this.restoreLayout(layout);
+      if (operation === 'graph') {
+        var _layout2 = this.saveLayout();
+        var _sublayout2 = findInLayout(_layout2.main, widget);
+        if (_sublayout2) {
+          var _sizes2 = _sublayout2.area.sizes;
+          _sizes2[0] = 0.8;
+          _sizes2[1] = 0.2;
+          this.restoreLayout(_layout2);
         }
       }
     }
@@ -56089,11 +56085,11 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "addFeedBackinfo",
     value: function addFeedBackinfo(baseNode, cls, txt, desc) {
-      var _thiss = this;
+      var _this2 = this;
       var feedbackNode = baseNode.append('div').classed('alert', true).classed(cls, true).classed('alert-dismissible', true).classed('fade', true).classed('show', true);
       feedbackNode.append('strong').text(txt);
       feedbackNode.append('span').text(' ' + desc).append('button').attr('type', 'button').classed('close', true).attr('data-dismiss', 'alert').text('x').on('click', function () {
-        _thiss.hideNode(feedbackNode);
+        _this2.hideNode(feedbackNode);
       });
       return feedbackNode;
     }
@@ -56110,6 +56106,7 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
   }, {
     key: "setNode",
     value: function setNode() {
+      var _this3 = this;
       var content = this.d3node.append('div').classed('config-content', true);
       var projectsDiv = content.append('div');
       projectsDiv.append('h2').text('Experiments:');
@@ -56132,8 +56129,8 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
       this.expTBody = table.append('tbody');
       inputsDiv.classed('d-none', true);
       confimButton.on('click', function () {
-        _thiss.hideNode(_thiss.errorFeedback);
-        _thiss.hideNode(_thiss.successFeedback);
+        _this3.hideNode(_this3.errorFeedback);
+        _this3.hideNode(_this3.successFeedback);
         var newExp = {
           name: nameIn.property('value'),
           description: descIn.property('value')
@@ -56146,26 +56143,25 @@ var ProjectWidget = /*#__PURE__*/function (_Widget) {
           },
           body: JSON.stringify(newExp) // body data type must match "Content-Type" header
         }).then(function (response) {
-          if (response.status == 201) {
+          if (response.status === 201) {
             response.json().then(function (obj) {
               newExp.id = obj.id;
-              _thiss.addExpRow(newExp);
-              _thiss.hideNode(inputsDiv);
-              _thiss.showNode(addExpButton);
-              _thiss.showNode(_thiss.successFeedback);
+              _this3.addExpRow(newExp);
+              _this3.hideNode(inputsDiv);
+              _this3.showNode(addExpButton);
+              _this3.showNode(_this3.successFeedback);
             });
           } else {
-            _thiss.showNode(_thiss.errorFeedback);
+            _this3.showNode(_this3.errorFeedback);
           }
         });
       });
-      var _thiss = this;
       addExpButton.on('click', function () {
-        _thiss.showNode(inputsDiv);
-        _thiss.hideNode(addExpButton);
+        _this3.showNode(inputsDiv);
+        _this3.hideNode(addExpButton);
       });
       this.experiments.forEach(function (obj) {
-        _thiss.addExpRow(obj);
+        _this3.addExpRow(obj);
       });
     }
   }], [{
@@ -56399,7 +56395,6 @@ var QueryWidget = /*#__PURE__*/function (_Widget2) {
               queryContainer.append('label').attr('for', this.editorId).text('Enter your SQL query:').style('font-weight', 'bold').style('margin-bottom', '0.5rem');
               queryContainer.append('div').attr('id', this.editorId).style('width', '100%').style('min-height', '140px').style('max-height', '30vh').style('border', '1px solid #ccc').style('border-radius', '4px').style('font-size', '1em').style('flex', '1');
               setTimeout(function () {
-                // @ts-ignore
                 _this4.aceEditor = window.ace.edit(_this4.editorId);
                 _this4.aceEditor.setTheme('ace/theme/textmate');
                 _this4.aceEditor.session.setMode('ace/mode/sql');
@@ -70840,27 +70835,28 @@ class HistoryGraph {
     }
     load(data) {
         const nodes = [], otherNodes = [], edges = [], spacing = this.config.spacing, margin = this.config.margin;
-        let spacing2 = 2 * spacing, spacing4 = 4 * spacing, start = margin, max = 0, id = 0, last = data.nodes.length - 1, tid = 0, useVersion = false;
+        const spacing2 = 2 * spacing, spacing4 = 4 * spacing, start = margin, last = data.nodes.length - 1;
+        let max = 0, id = 0, tid = 0, useVersion = false;
         const levels = [];
-        for (var i = 0; i <= last; i++) {
+        for (let i = 0; i <= last; i++) {
             const node = data.nodes[i];
             let previous = levels[node.level];
-            if (previous == undefined) {
+            if (previous == null) {
                 previous = -1;
             }
             let trials = node.trials;
-            if (trials == undefined) {
+            if (trials == null) {
                 trials = [];
             }
             levels[node.level] = Math.max(previous, trials.length);
         }
         const levelsy = [];
         let current = margin;
-        for (var i = 0; i <= levels.length; i++) {
+        for (let i = 0; i <= levels.length; i++) {
             levelsy[i] = current;
             current += spacing2 + levels[i] * spacing2;
         }
-        for (var i = 0; i <= last; i++) {
+        for (let i = 0; i <= last; i++) {
             const node = data.nodes[i];
             const x = start + spacing4 * id;
             const y = levelsy[node.level];
@@ -70907,12 +70903,12 @@ class HistoryGraph {
         max += spacing2;
         this.maxY = max;
         this.maxId = Math.max(tid, id);
-        for (var i = 0; i < data.edges.length; i++) {
+        for (let i = 0; i < data.edges.length; i++) {
             const edge = Object.assign({}, data.edges[i]);
             edge.id = edge.source + '-' + edge.target;
             edge.source = nodes[edge.source];
             edge.target = nodes[edge.target];
-            if (edge.source != edge.target) {
+            if (edge.source !== edge.target) {
                 edges.push(edge);
             }
         }
@@ -70971,7 +70967,7 @@ class HistoryGraph {
     }
     selectTrial(trialId) {
         for (const node of this.nodes) {
-            if (node.title == trialId) {
+            if (node.title === trialId) {
                 this.selectNode(node);
                 return;
             }
@@ -71130,7 +71126,6 @@ class HistoryGraph {
         nodes.exit().remove(); // nodeExit
     }
     updateNodes(nodes) {
-        const self = this;
         const nodeEnter = nodes
             .enter()
             .append('g')
@@ -71159,7 +71154,7 @@ class HistoryGraph {
             // Use the sequential node id (d.id), not parseInt(d.title): trial ids are
             // UUIDs in noWorkflow 2.x, so parseInt(title) yields 0/NaN and washes the
             // gradient toward white (hiding failed/backup trials in the summarized graph).
-            const proportion = Math.round(200 * (1.0 - d.id / self.maxId) + 50);
+            const proportion = Math.round(200 * (1.0 - d.id / this.maxId) + 50);
             if (d.status === 'unfinished') {
                 return d.gradient
                     ? (0, d3_color_1.rgb)(255, proportion, proportion, 255).toString()
@@ -71183,25 +71178,22 @@ class HistoryGraph {
                 : '#000';
         })
             .attr('stroke-width', '2.5px')
-            .on('mousedown', function (event, d) {
-            self.nodeMouseDown(event, (0, d3_selection_1.select)(this), d);
+            .on('mousedown', (event, d) => {
+            this.nodeMouseDown(event, (0, d3_selection_1.select)(event.currentTarget), d);
         })
-            .on('click', function (event, d) {
-            self.nodeMouseUp(event, (0, d3_selection_1.select)(this), d);
+            .on('click', (event, d) => {
+            this.nodeMouseUp(event, (0, d3_selection_1.select)(event.currentTarget), d);
         })
-            .on('mouseover', function (event, d) {
-            if (!self.state.mouseDownNode && self.config.useTooltip) {
-                self.closeTooltip();
-                self.showTooltip(event, d);
+            .on('mouseover', (event, d) => {
+            if (!this.state.mouseDownNode && this.config.useTooltip) {
+                this.closeTooltip();
+                this.showTooltip(event, d);
             }
-            (0, d3_selection_1.select)(this).attr('stroke', 'rgb(200, 238, 241)');
+            (0, d3_selection_1.select)(event.currentTarget).attr('stroke', 'rgb(200, 238, 241)');
         })
-            .on('mouseout', function (event, d) {
-            (0, d3_selection_1.select)(this).attr('stroke', (d) => {
-                return (0, d3_selection_1.select)(this).classed('selected')
-                    ? 'rgb(200, 238, 241)'
-                    : '#000';
-            });
+            .on('mouseout', (event) => {
+            const node = (0, d3_selection_1.select)(event.currentTarget);
+            node.attr('stroke', node.classed('selected') ? 'rgb(200, 238, 241)' : '#000');
         })
             .classed('custom-menu', true);
         nodeEnter
@@ -71275,13 +71267,13 @@ class HistoryGraph {
         const rightClickMenu = document.getElementById('context-menu');
         // Set up an event handler for the documnt right click
         document.addEventListener('contextmenu', event => {
-            var _a;
+            var _a, _b;
             //open right click menu
             const target = event.target;
             if (target && target.classList.contains('custom-menu')) {
                 event.preventDefault();
                 if (rightClickMenu) {
-                    rightClickMenu.setAttribute('selected-trial', (_a = target.parentElement) === null || _a === void 0 ? void 0 : _a.getAttribute('attr-trialid'));
+                    rightClickMenu.setAttribute('selected-trial', (_b = (_a = target.parentElement) === null || _a === void 0 ? void 0 : _a.getAttribute('attr-trialid')) !== null && _b !== void 0 ? _b : '');
                     rightClickMenu.setAttribute('selected-trial-simplified', target.getAttribute('title'));
                     rightClickMenu.style.top = (event.pageY - 10).toString();
                     rightClickMenu.style.left = (event.pageX - 90).toString();
@@ -71475,7 +71467,6 @@ class TrialGraph {
         this.update(this.root);
     }
     createToolbar(form) {
-        const self = this;
         form = form.append('div').classed('buttons buttonsGraph', true);
         this.config.customForm(this, form);
         // Reset zoom
@@ -71566,12 +71557,12 @@ class TrialGraph {
                 .attr('font-size', this.config.labelFontSize);
         });
         // Set distances
-        const setDistances = function () {
-            self.config.nodeSizeX = distanceX.property('value');
-            self.config.nodeSizeY = distanceY.property('value');
-            self.wrapText();
-            self.tree.nodeSize([self.config.nodeSizeX, self.config.nodeSizeY]);
-            self.update(self.root);
+        const setDistances = () => {
+            this.config.nodeSizeX = distanceX.property('value');
+            this.config.nodeSizeY = distanceY.property('value');
+            this.wrapText();
+            this.tree.nodeSize([this.config.nodeSizeX, this.config.nodeSizeY]);
+            this.update(this.root);
         };
         // Set Distance X
         const distanceXToggle = form
@@ -71665,7 +71656,7 @@ class TrialGraph {
             .filter((edge) => {
             const source = validNodes[edge.source];
             const target = validNodes[edge.target];
-            if (source == undefined || target == undefined) {
+            if (source == null || target == null) {
                 return false;
             }
             return true;
@@ -71787,7 +71778,7 @@ class TrialGraph {
         for (let i = 0; i < trial_ids.length; i++) {
             const trial = trial_ids[i];
             if (showModal) {
-                const trialNumber = i == 0 ? 'first' : 'second';
+                const trialNumber = i === 0 ? 'first' : 'second';
                 modalBody
                     .append('span')
                     .text('Select the ' + trialNumber + ' trial activation: ');
@@ -71877,7 +71868,6 @@ class TrialGraph {
         this.tooltipDiv.classed('hidden', true);
     }
     showTooltip(event, d, trial_id) {
-        const self = this;
         this.tooltipDiv.classed('hidden', false);
         this.tooltipDiv.transition().duration(200).style('opacity', 0.9);
         if (this.config.queryTooltip) {
@@ -71889,16 +71879,16 @@ class TrialGraph {
                 .style('left', event.pageX - 3 + 'px')
                 .style('top', event.pageY - 28 + 'px');
             while (match != null) {
-                var div = document.createElement('div');
+                const div = document.createElement('div');
                 //var div2 = document.createElement("div");
                 this.tooltipDiv.append(() => div);
                 //this.tooltipDiv.append(() => div2);
                 const aid = match[2];
-                if (aid in self.activationStorage) {
+                if (aid in this.activationStorage) {
                     this.updateTooltipDiv(aid, div);
                 }
                 else {
-                    self.config.customLoadTooltip(self, div, match[0], match[1], match[2]);
+                    this.config.customLoadTooltip(this, div, match[0], match[1], match[2]);
                 }
                 match = regexp.exec(string);
             }
@@ -71913,7 +71903,7 @@ class TrialGraph {
     updateTooltipDiv(activationId, div) {
         const data = this.activationStorage[activationId];
         let title = data.id + ' - ' + data.name;
-        if (data.hash != '') {
+        if (data.hash !== '') {
             title =
                 '<a href="/trials/files/' +
                     data.hash +
@@ -71967,10 +71957,10 @@ class TrialGraph {
     }
     defaultNodeStroke(d) {
         const color = this.colors[d.data.trial_ids[0]];
-        if (d.data.trial_ids.length > 1 || color == 0) {
+        if (d.data.trial_ids.length > 1 || color === 0) {
             return '#000';
         }
-        if (color == 1) {
+        if (color === 1) {
             return 'red';
         }
         return 'green';
@@ -71987,7 +71977,6 @@ class TrialGraph {
         this.update(d);
     }
     updateNodes(source, node) {
-        const self = this;
         const nodeEnter = node
             .enter()
             .append('g')
@@ -72002,29 +71991,29 @@ class TrialGraph {
             .on('click', (event, d) => {
             const activations = d.data.activations;
             if (event.ctrlKey && Object.keys(activations).length > 1) {
-                self.getFunctionDiff(activations, d.data.trial_ids);
+                this.getFunctionDiff(activations, d.data.trial_ids);
             }
             else {
                 this.nodeClick(d);
             }
         })
             .on('mouseover', (event, d) => {
-            if (self.config.useTooltip) {
-                self.closeTooltip();
+            if (this.config.useTooltip) {
+                this.closeTooltip();
                 if ((0, d3_selection_1.pointers)(event)[0][0] < 10) {
-                    self.showTooltip(event, d.data, self.t1);
+                    this.showTooltip(event, d.data, this.t1);
                 }
                 else {
-                    self.showTooltip(event, d.data, self.t2);
+                    this.showTooltip(event, d.data, this.t2);
                 }
             }
-            self.config.customMouseOver(self, d);
+            this.config.customMouseOver(this, d);
             return false;
         })
             .on('mouseout', (event, d) => {
-            self.config.customMouseOut(self, d);
+            this.config.customMouseOut(this, d);
         });
-        /* nodeEnter.attr("activations_ids", (d:VisibleTrialNode)=>{
+        /* nodeEnter.attr("activations_ids", (d:IVisibleTrialNode)=>{
           let activations = d.data.activations;
           let attrValue = "";
           for(let trial in activations){
@@ -72045,7 +72034,7 @@ class TrialGraph {
             .attr('stroke', (d) => this.defaultNodeStroke(d))
             .attr('stroke-width', '3px')
             .attr('fill', (d) => {
-            if (d.data.trial_ids.length == 1) {
+            if (d.data.trial_ids.length === 1) {
                 return this.calculateColor(d.data, this.t1);
             }
             const grad = this.svg
@@ -72116,10 +72105,10 @@ class TrialGraph {
             .attr('transform', (d) => {
             const color = this.colors[d.data.trial_ids[0]];
             d.dy = 0;
-            if (color == 1) {
+            if (color === 1) {
                 d.dy = -40;
             }
-            else if (color == 2) {
+            else if (color === 2) {
                 d.dy = 40;
             }
             return 'translate(' + (d.x - 10) + ',' + (d.y + d.dy - 10) + ')';
@@ -72173,14 +72162,14 @@ class TrialGraph {
             .attr('stroke-width', '1.5px')
             .attr('d', (d) => {
             const o = { y: source.y0, x: source.x0 };
-            if (d.source.dy == undefined) {
+            if (d.source.dy == null) {
                 d.source.dy = 0;
             }
-            if (d.target.dy == undefined) {
+            if (d.target.dy == null) {
                 d.target.dy = 0;
             }
             const ox = source.x0 || 0, oy = source.y0 || 0, x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy, dx = x2 - x1, dy = y2 - y1;
-            if (d.type === 'initial' || d.type === 'call' || d.type == 'return') {
+            if (d.type === 'initial' || d.type === 'call' || d.type === 'return') {
                 // Initial
                 return (0, utils_1.diagonal)(o, o);
             }
@@ -72197,22 +72186,22 @@ class TrialGraph {
             .attr('marker-end', (d) => {
             let count = 0;
             for (const trial_id in d.count) {
-                if (trial_id == this.t1.toString()) {
+                if (trial_id === this.t1.toString()) {
                     count += 1;
                 }
-                if (trial_id == this.t2.toString()) {
+                if (trial_id === this.t2.toString()) {
                     count += 2;
                 }
             }
-            if (count == 0 || count == 3) {
+            if (count === 0 || count === 3) {
                 // Single trial or diff
                 return 'url(#' + this.graphId + '-end)';
             }
-            if (count == 1) {
+            if (count === 1) {
                 // First trial
                 return 'url(#' + this.graphId + '-endbefore)';
             }
-            if (count == 2) {
+            if (count === 2) {
                 // Second trial
                 return 'url(#' + this.graphId + '-endafter)';
             }
@@ -72237,19 +72226,21 @@ class TrialGraph {
             .transition()
             .duration(this.config.duration)
             .attr('d', (d) => {
-            if (d.source.dy == undefined) {
+            if (d.source.dy == null) {
                 d.source.dy = 0;
             }
-            if (d.target.dy == undefined) {
+            if (d.target.dy == null) {
                 d.target.dy = 0;
             }
-            let sd = d.source.data, td = d.target.data, x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy, dx = x2 - x1, dy = y2 - y1, theta = Math.atan(dx / dy), phi = Math.atan(dy / dx), r = 10 + 2, sin_theta = r * Math.sin(theta), cos_theta = r * Math.cos(theta), sin_phi = r * Math.sin(phi), cos_phi = r * Math.cos(phi), m1 = y2 > y1 ? 1 : -1, m2 = x2 > x1 ? -1 : 1;
+            const sd = d.source.data, td = d.target.data;
+            let x1 = d.source.x, y1 = d.source.y + d.source.dy, x2 = d.target.x, y2 = d.target.y + d.target.dy;
+            const dx = x2 - x1, dy = y2 - y1, theta = Math.atan(dx / dy), phi = Math.atan(dy / dx), r = 10 + 2, sin_theta = r * Math.sin(theta), cos_theta = r * Math.cos(theta), sin_phi = r * Math.sin(phi), cos_phi = r * Math.cos(phi), m1 = y2 > y1 ? 1 : -1, m2 = x2 > x1 ? -1 : 1;
             if (d.type === 'initial') {
                 // Initial
                 return `M ${x2 - 20},${y2 - 20}
             L ${x2 - r / 2.0},${y2 - r / 2.0}`;
             }
-            else if (d.type === 'call' || d.type == 'return') {
+            else if (d.type === 'call' || d.type === 'return') {
                 // Call/Return
                 x1 += m1 * sin_theta;
                 x2 += m2 * cos_phi;
@@ -72275,15 +72266,15 @@ class TrialGraph {
               -45,1,1
               ${x2 + 5},${y2 + 8}`;
             }
-            else if (sd.parent_index == td.parent_index) {
+            else if (sd.parent_index === td.parent_index) {
                 // Same caller
-                if (dy === 0 && sd.children_index == td.children_index - 1) {
+                if (dy === 0 && sd.children_index === td.children_index - 1) {
                     // Immediate sequence
                     return `M ${x1}, ${y1}
               L ${x2 + m2 * cos_phi}, ${y2}`;
                 }
                 else {
-                    let sign = -1;
+                    let sign;
                     if (y1 < y2) {
                         x1 += m1 * sin_theta;
                         y1 += m1 * cos_theta;
@@ -72344,7 +72335,7 @@ class TrialGraph {
             .attr('fill', '#000')
             .attr('text-anchor', 'middle')
             .attr('dx', (d) => {
-            if (d.source.x == d.target.x) {
+            if (d.source.x === d.target.x) {
                 return 29;
             }
             return (Math.abs(d.source.x - d.target.x) - 10) / 2;
@@ -72361,7 +72352,7 @@ class TrialGraph {
             if (d.type === 'initial') {
                 return '';
             }
-            if (this.t1 == this.t2 || !d.count[this.t2]) {
+            if (this.t1 === this.t2 || !d.count[this.t2]) {
                 return d.count[this.t1].toString();
             }
             else if (!d.count[this.t1]) {
@@ -72443,10 +72434,10 @@ exports.diagonal = diagonal;
  * Create diagonal line between two nodes
  */
 function diagonal(s, d) {
-    if (s.dy == undefined) {
+    if (s.dy == null) {
         s.dy = 0;
     }
-    if (d.dy == undefined) {
+    if (d.dy == null) {
         d.dy = 0;
     }
     const path = `M ${s.x} ${s.y + s.dy}
@@ -72525,8 +72516,9 @@ exports.wrap = wrap;
 const d3_selection_1 = __webpack_require__(/*! d3-selection */ "../../node_modules/d3-selection/src/index.js");
 function wrap(text, width) {
     text.each(function () {
-        let text = (0, d3_selection_1.select)(this), words = text.text().split(/(?=_)/).reverse(), word, line = [], lineNumber = 0, lineHeight = 1.1, // ems
-        y = text.attr('y'), dy = parseFloat(text.attr('dy')), tspan = text
+        const text = (0, d3_selection_1.select)(this), words = text.text().split(/(?=_)/).reverse(), lineHeight = 1.1, // ems
+        y = text.attr('y'), dy = parseFloat(text.attr('dy'));
+        let word, line = [], lineNumber = 0, tspan = text
             .text(null)
             .append('tspan')
             .attr('x', 10)
@@ -74469,7 +74461,6 @@ var ___CSS_LOADER_EXPORT___ = _nowvis_node_modules_css_loader_dist_runtime_api_j
 // Module
 ___CSS_LOADER_EXPORT___.push([module.id, `.history-toolbar {
   float: left;
-  overflow: none;
   z-index: 3;
   position: absolute;
 }
@@ -74512,7 +74503,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.history-toolbar {
 .history-toolbar .buttons > a.toollink:active {
   color: blue;
 }
-`, "",{"version":3,"sources":["webpack://./../history/style/index.css"],"names":[],"mappings":"AAAA;EACE,WAAW;EACX,cAAc;EACd,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,YAAY;EACZ,qBAAqB;EACrB,gBAAgB;AAClB;;AAEA;EACE,YAAY;AACd;;AAEA;EACE,aAAa;AACf;;AAEA;;EAEE,qBAAqB;AACvB;;AAEA;EACE,qBAAqB;EACrB,YAAY;EACZ,eAAe;AACjB;;AAEA;EACE,WAAW;AACb;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".history-toolbar {\n  float: left;\n  overflow: none;\n  z-index: 3;\n  position: absolute;\n}\n\n.history-toolbar .buttons {\n  height: 30px;\n  display: inline-block;\n  margin-left: 8px;\n}\n\n.history-toolbar .buttons > input {\n  height: 30px;\n}\n\n.history-toolbar .buttons > input[type='checkbox'] {\n  display: none;\n}\n\n.history-toolbar .buttons > label,\n.history-toolbar > div > a {\n  margin: 8px 8px 8px 0;\n}\n\n.history-toolbar .buttons > input[type='checkbox'] + label {\n  display: inline-block;\n  color: black;\n  cursor: pointer;\n}\n\n.history-toolbar .buttons > input[type='checkbox']:checked + label {\n  color: blue;\n}\n\n.history-toolbar .buttons > a.toollink,\n.history-toolbar .buttons > a.toollink:link,\n.history-toolbar .buttons > a.toollink:visited {\n  color: black;\n}\n\n.history-toolbar .buttons > a.toollink:active {\n  color: blue;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../history/style/index.css"],"names":[],"mappings":"AAAA;EACE,WAAW;EACX,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,YAAY;EACZ,qBAAqB;EACrB,gBAAgB;AAClB;;AAEA;EACE,YAAY;AACd;;AAEA;EACE,aAAa;AACf;;AAEA;;EAEE,qBAAqB;AACvB;;AAEA;EACE,qBAAqB;EACrB,YAAY;EACZ,eAAe;AACjB;;AAEA;EACE,WAAW;AACb;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".history-toolbar {\n  float: left;\n  z-index: 3;\n  position: absolute;\n}\n\n.history-toolbar .buttons {\n  height: 30px;\n  display: inline-block;\n  margin-left: 8px;\n}\n\n.history-toolbar .buttons > input {\n  height: 30px;\n}\n\n.history-toolbar .buttons > input[type='checkbox'] {\n  display: none;\n}\n\n.history-toolbar .buttons > label,\n.history-toolbar > div > a {\n  margin: 8px 8px 8px 0;\n}\n\n.history-toolbar .buttons > input[type='checkbox'] + label {\n  display: inline-block;\n  color: black;\n  cursor: pointer;\n}\n\n.history-toolbar .buttons > input[type='checkbox']:checked + label {\n  color: blue;\n}\n\n.history-toolbar .buttons > a.toollink,\n.history-toolbar .buttons > a.toollink:link,\n.history-toolbar .buttons > a.toollink:visited {\n  color: black;\n}\n\n.history-toolbar .buttons > a.toollink:active {\n  color: blue;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74542,7 +74533,6 @@ var ___CSS_LOADER_EXPORT___ = _nowvis_node_modules_css_loader_dist_runtime_api_j
 ___CSS_LOADER_EXPORT___.push([module.id, `.trial-toolbar {
   margin: 5px;
   float: left;
-  overflow: none;
   width: 375px;
   height: 30px;
   z-index: 3;
@@ -74582,7 +74572,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.trial-toolbar {
 .trial-toolbar a.toollink:active {
   color: blue;
 }
-`, "",{"version":3,"sources":["webpack://./../trial/style/index.css"],"names":[],"mappings":"AAAA;EACE,WAAW;EACX,WAAW;EACX,cAAc;EACd,YAAY;EACZ,YAAY;EACZ,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,YAAY;AACd;;AAEA;EACE,aAAa;AACf;;AAEA;;EAEE,iBAAiB;EACjB,eAAe;AACjB;;AAEA;EACE,qBAAqB;EACrB,YAAY;EACZ,eAAe;AACjB;;AAEA;EACE,WAAW;AACb;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".trial-toolbar {\n  margin: 5px;\n  float: left;\n  overflow: none;\n  width: 375px;\n  height: 30px;\n  z-index: 3;\n  position: absolute;\n}\n\n.trial-toolbar input {\n  height: 30px;\n}\n\n.trial-toolbar input[type='checkbox'] {\n  display: none;\n}\n\n.trial-toolbar label,\n.trial-toolbar a {\n  margin-right: 8px;\n  margin-top: 8px;\n}\n\n.trial-toolbar input[type='checkbox'] + label {\n  display: inline-block;\n  color: black;\n  cursor: pointer;\n}\n\n.trial-toolbar input[type='checkbox']:checked + label {\n  color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active {\n  color: blue;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./../trial/style/index.css"],"names":[],"mappings":"AAAA;EACE,WAAW;EACX,WAAW;EACX,YAAY;EACZ,YAAY;EACZ,UAAU;EACV,kBAAkB;AACpB;;AAEA;EACE,YAAY;AACd;;AAEA;EACE,aAAa;AACf;;AAEA;;EAEE,iBAAiB;EACjB,eAAe;AACjB;;AAEA;EACE,qBAAqB;EACrB,YAAY;EACZ,eAAe;AACjB;;AAEA;EACE,WAAW;AACb;;AAEA;;;EAGE,YAAY;AACd;;AAEA;EACE,WAAW;AACb","sourcesContent":[".trial-toolbar {\n  margin: 5px;\n  float: left;\n  width: 375px;\n  height: 30px;\n  z-index: 3;\n  position: absolute;\n}\n\n.trial-toolbar input {\n  height: 30px;\n}\n\n.trial-toolbar input[type='checkbox'] {\n  display: none;\n}\n\n.trial-toolbar label,\n.trial-toolbar a {\n  margin-right: 8px;\n  margin-top: 8px;\n}\n\n.trial-toolbar input[type='checkbox'] + label {\n  display: inline-block;\n  color: black;\n  cursor: pointer;\n}\n\n.trial-toolbar input[type='checkbox']:checked + label {\n  color: blue;\n}\n\n.trial-toolbar a.toollink,\n.trial-toolbar a.toollink:link,\n.trial-toolbar a.toollink:visited {\n  color: black;\n}\n\n.trial-toolbar a.toollink:active {\n  color: blue;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74720,9 +74710,6 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.history-content,
   margin: 4px 8px;
 }
 
-.history-content .filter {
-}
-
 .history-content .filter input,
 .history-content .filter label {
   vertical-align: top;
@@ -74744,7 +74731,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.history-content,
   width: 170px;
   margin-right: 5px;
 }
-`, "",{"version":3,"sources":["webpack://./style/history.css"],"names":[],"mappings":"AAEA;;;EAGE,2BAA2B;AAC7B;;AAEA;EACE,eAAe;AACjB;;AAEA;AACA;;AAEA;;EAEE,mBAAmB;EACnB,qBAAqB;AACvB;;AAEA;EACE,qBAAqB;EACrB,iBAAiB;AACnB;;AAEA;;EAEE,sBAAsB;EACtB,qBAAqB;AACvB;;AAEA;EACE,YAAY;EACZ,iBAAiB;AACnB","sourcesContent":["@import '~@noworkflow/history/style/index.css';\n\n.history-content,\n.history-content .sub-content,\n.history-content .sub-content > div {\n  overflow: hidden !important;\n}\n\n.history-content .filter .internal {\n  margin: 4px 8px;\n}\n\n.history-content .filter {\n}\n\n.history-content .filter input,\n.history-content .filter label {\n  vertical-align: top;\n  display: inline-block;\n}\n\n.history-content .graph-attr {\n  display: inline-block;\n  margin-right: 5px;\n}\n\n.history-content .graph-attr input,\n.history-content .graph-attr label {\n  vertical-align: middle;\n  display: inline-block;\n}\n\n.history-content .select-style {\n  width: 170px;\n  margin-right: 5px;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./style/history.css"],"names":[],"mappings":"AAEA;;;EAGE,2BAA2B;AAC7B;;AAEA;EACE,eAAe;AACjB;;AAEA;;EAEE,mBAAmB;EACnB,qBAAqB;AACvB;;AAEA;EACE,qBAAqB;EACrB,iBAAiB;AACnB;;AAEA;;EAEE,sBAAsB;EACtB,qBAAqB;AACvB;;AAEA;EACE,YAAY;EACZ,iBAAiB;AACnB","sourcesContent":["@import '~@noworkflow/history/style/index.css';\n\n.history-content,\n.history-content .sub-content,\n.history-content .sub-content > div {\n  overflow: hidden !important;\n}\n\n.history-content .filter .internal {\n  margin: 4px 8px;\n}\n\n.history-content .filter input,\n.history-content .filter label {\n  vertical-align: top;\n  display: inline-block;\n}\n\n.history-content .graph-attr {\n  display: inline-block;\n  margin-right: 5px;\n}\n\n.history-content .graph-attr input,\n.history-content .graph-attr label {\n  vertical-align: middle;\n  display: inline-block;\n}\n\n.history-content .select-style {\n  width: 170px;\n  margin-right: 5px;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74831,8 +74818,6 @@ a.link-button {
   border-color: #e6e6e6 #e6e6e6 #bfbfbf;
   border-color: rgb(0 0 0 / 10%) rgb(0 0 0 / 10%) rgb(0 0 0 / 25%);
   border-bottom-color: #b3b3b3;
-  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffffff',endColorstr='#ffe6e6e6',GradientType=0);
-  filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
   -webkit-box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 20%),
     0 1px 2px rgb(0 0 0 / 5%);
@@ -74900,7 +74885,7 @@ a.link-button:active {
   width: 250px;
   margin: 7px 0;
 }
-`, "",{"version":3,"sources":["webpack://./style/index.css"],"names":[],"mappings":"AAOA;EACE,wCAAwC;AAC1C;;AAEA;EACE,eAAe;AACjB;;AAEA,gBAAgB;;AAEhB;EACE,qBAAqB;EACrB,qBAAqB;EACrB,cAAc;;EAEd,uBAAuB;EACvB,gBAAgB;EAChB,eAAe;EACf,YAAY;EACZ,iBAAiB;EACjB,WAAW;EACX,kBAAkB;EAClB,6CAA6C;EAC7C,sBAAsB;EACtB,eAAe;EACf,yBAAyB;EACzB,0DAA0D;EAC1D;;;;;;GAMC;EACD,6DAA6D;EAC7D,wDAAwD;EACxD,2DAA2D;EAC3D,2BAA2B;EAC3B,sBAAsB;EACtB,qCAAqC;EACrC,gEAAgE;EAChE,4BAA4B;EAC5B,oHAAoH;EACpH,iEAAiE;EACjE;;6BAE2B;EAC3B;;6BAE2B;EAC3B;;6BAE2B;AAC7B;;AAEA;EACE,sBAAsB;EACtB,UAAU;EACV;;6BAE2B;EAC3B;;6BAE2B;EAC3B;;6BAE2B;EAC3B,yBAAyB;AAC3B;;AAEA;EACE,gBAAgB;EAChB,aAAa;EACb,cAAc;EACd,iBAAiB;EACjB,aAAa;EACb,gBAAgB;EAChB,8BAA8B;EAC9B,iCAAiC;EACjC,4BAA4B;EAC5B,yBAAyB;EACzB,2DAA2D;EAC3D,8DAA8D;EAC9D,yDAAyD;EACzD,sDAAsD;AACxD;;AAEA;EACE,8BAA8B;EAC9B,iCAAiC;EACjC,4BAA4B;EAC5B,yBAAyB;EACzB,wCAAwC;EACxC,2CAA2C;EAC3C,sCAAsC;EACtC,mCAAmC;;EAEnC;uBACqB;AACvB;;AAEA;EACE,8BAA8B;AAChC;;AAEA;;EAEE,cAAc;EACd,YAAY;EACZ,aAAa;AACf","sourcesContent":["@import '~@noworkflow/utils/style/shared.css';\n@import '~@noworkflow/history/style/index.css';\n@import '~@noworkflow/trial/style/index.css';\n@import './panel.css';\n@import './history.css';\n@import './trial.css';\n\nbody {\n  font-family: Verdana, Geneva, sans-serif;\n}\n\n.loading {\n  font-size: 40px;\n}\n\n/* Link Button */\n\na.link-button {\n  text-decoration: none;\n  display: inline-block;\n  padding: 4px 0;\n\n  /* padding: 4px 12px; */\n  margin-bottom: 0;\n  font-size: 14px;\n  width: 100px;\n  line-height: 15px;\n  color: #333;\n  text-align: center;\n  text-shadow: 0 1px 1px rgb(255 255 255 / 75%);\n  vertical-align: middle;\n  cursor: pointer;\n  background-color: #f5f5f5;\n  background-image: -moz-linear-gradient(top, #fff, #e6e6e6);\n  background-image: -webkit-gradient(\n    linear,\n    0 0,\n    0 100%,\n    from(#fff),\n    to(#e6e6e6)\n  );\n  background-image: -webkit-linear-gradient(top, #fff, #e6e6e6);\n  background-image: -o-linear-gradient(top, #fff, #e6e6e6);\n  background-image: linear-gradient(to bottom, #fff, #e6e6e6);\n  background-repeat: repeat-x;\n  border: 1px solid #ccc;\n  border-color: #e6e6e6 #e6e6e6 #bfbfbf;\n  border-color: rgb(0 0 0 / 10%) rgb(0 0 0 / 10%) rgb(0 0 0 / 25%);\n  border-bottom-color: #b3b3b3;\n  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffffff',endColorstr='#ffe6e6e6',GradientType=0);\n  filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);\n  -webkit-box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  -moz-box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n}\n\na.link-button:active {\n  background-image: none;\n  outline: 0;\n  -webkit-box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  -moz-box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  background-color: #e0e0e0;\n}\n\n.hide-toolbar {\n  overflow: hidden;\n  max-height: 0;\n  padding-top: 0;\n  padding-bottom: 0;\n  margin-top: 0;\n  margin-bottom: 0;\n  -moz-transition-duration: 0.3s;\n  -webkit-transition-duration: 0.3s;\n  -o-transition-duration: 0.3s;\n  transition-duration: 0.3s;\n  -moz-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  -webkit-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  -o-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n}\n\n.show-toolbar {\n  -moz-transition-duration: 0.3s;\n  -webkit-transition-duration: 0.3s;\n  -o-transition-duration: 0.3s;\n  transition-duration: 0.3s;\n  -moz-transition-timing-function: ease-in;\n  -webkit-transition-timing-function: ease-in;\n  -o-transition-timing-function: ease-in;\n  transition-timing-function: ease-in;\n\n  /* max-height: 1000px;\n    overflow: hidden; */\n}\n\n.visible {\n  border-bottom: 1px solid black;\n}\n\n.info-filter input,\n.info-filter select {\n  display: block;\n  width: 250px;\n  margin: 7px 0;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./style/index.css"],"names":[],"mappings":"AAOA;EACE,wCAAwC;AAC1C;;AAEA;EACE,eAAe;AACjB;;AAEA,gBAAgB;;AAEhB;EACE,qBAAqB;EACrB,qBAAqB;EACrB,cAAc;;EAEd,uBAAuB;EACvB,gBAAgB;EAChB,eAAe;EACf,YAAY;EACZ,iBAAiB;EACjB,WAAW;EACX,kBAAkB;EAClB,6CAA6C;EAC7C,sBAAsB;EACtB,eAAe;EACf,yBAAyB;EACzB,0DAA0D;EAC1D;;;;;;GAMC;EACD,6DAA6D;EAC7D,wDAAwD;EACxD,2DAA2D;EAC3D,2BAA2B;EAC3B,sBAAsB;EACtB,qCAAqC;EACrC,gEAAgE;EAChE,4BAA4B;EAC5B;;6BAE2B;EAC3B;;6BAE2B;EAC3B;;6BAE2B;AAC7B;;AAEA;EACE,sBAAsB;EACtB,UAAU;EACV;;6BAE2B;EAC3B;;6BAE2B;EAC3B;;6BAE2B;EAC3B,yBAAyB;AAC3B;;AAEA;EACE,gBAAgB;EAChB,aAAa;EACb,cAAc;EACd,iBAAiB;EACjB,aAAa;EACb,gBAAgB;EAChB,8BAA8B;EAC9B,iCAAiC;EACjC,4BAA4B;EAC5B,yBAAyB;EACzB,2DAA2D;EAC3D,8DAA8D;EAC9D,yDAAyD;EACzD,sDAAsD;AACxD;;AAEA;EACE,8BAA8B;EAC9B,iCAAiC;EACjC,4BAA4B;EAC5B,yBAAyB;EACzB,wCAAwC;EACxC,2CAA2C;EAC3C,sCAAsC;EACtC,mCAAmC;;EAEnC;uBACqB;AACvB;;AAEA;EACE,8BAA8B;AAChC;;AAEA;;EAEE,cAAc;EACd,YAAY;EACZ,aAAa;AACf","sourcesContent":["@import '~@noworkflow/utils/style/shared.css';\n@import '~@noworkflow/history/style/index.css';\n@import '~@noworkflow/trial/style/index.css';\n@import './panel.css';\n@import './history.css';\n@import './trial.css';\n\nbody {\n  font-family: Verdana, Geneva, sans-serif;\n}\n\n.loading {\n  font-size: 40px;\n}\n\n/* Link Button */\n\na.link-button {\n  text-decoration: none;\n  display: inline-block;\n  padding: 4px 0;\n\n  /* padding: 4px 12px; */\n  margin-bottom: 0;\n  font-size: 14px;\n  width: 100px;\n  line-height: 15px;\n  color: #333;\n  text-align: center;\n  text-shadow: 0 1px 1px rgb(255 255 255 / 75%);\n  vertical-align: middle;\n  cursor: pointer;\n  background-color: #f5f5f5;\n  background-image: -moz-linear-gradient(top, #fff, #e6e6e6);\n  background-image: -webkit-gradient(\n    linear,\n    0 0,\n    0 100%,\n    from(#fff),\n    to(#e6e6e6)\n  );\n  background-image: -webkit-linear-gradient(top, #fff, #e6e6e6);\n  background-image: -o-linear-gradient(top, #fff, #e6e6e6);\n  background-image: linear-gradient(to bottom, #fff, #e6e6e6);\n  background-repeat: repeat-x;\n  border: 1px solid #ccc;\n  border-color: #e6e6e6 #e6e6e6 #bfbfbf;\n  border-color: rgb(0 0 0 / 10%) rgb(0 0 0 / 10%) rgb(0 0 0 / 25%);\n  border-bottom-color: #b3b3b3;\n  -webkit-box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  -moz-box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  box-shadow:\n    inset 0 1px 0 rgb(255 255 255 / 20%),\n    0 1px 2px rgb(0 0 0 / 5%);\n}\n\na.link-button:active {\n  background-image: none;\n  outline: 0;\n  -webkit-box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  -moz-box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  box-shadow:\n    inset 0 2px 4px rgb(0 0 0 / 15%),\n    0 1px 2px rgb(0 0 0 / 5%);\n  background-color: #e0e0e0;\n}\n\n.hide-toolbar {\n  overflow: hidden;\n  max-height: 0;\n  padding-top: 0;\n  padding-bottom: 0;\n  margin-top: 0;\n  margin-bottom: 0;\n  -moz-transition-duration: 0.3s;\n  -webkit-transition-duration: 0.3s;\n  -o-transition-duration: 0.3s;\n  transition-duration: 0.3s;\n  -moz-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  -webkit-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  -o-transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);\n}\n\n.show-toolbar {\n  -moz-transition-duration: 0.3s;\n  -webkit-transition-duration: 0.3s;\n  -o-transition-duration: 0.3s;\n  transition-duration: 0.3s;\n  -moz-transition-timing-function: ease-in;\n  -webkit-transition-timing-function: ease-in;\n  -o-transition-timing-function: ease-in;\n  transition-timing-function: ease-in;\n\n  /* max-height: 1000px;\n    overflow: hidden; */\n}\n\n.visible {\n  border-bottom: 1px solid black;\n}\n\n.info-filter input,\n.info-filter select {\n  display: block;\n  width: 250px;\n  margin: 7px 0;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -74961,20 +74946,17 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.p-TabBar {
 
 .p-TabBar-tab.p-mod-current {
   background: white;
-}
-
-.p-TabBar-tab:hover:not(.p-mod-current) {
-  background: #f0f0f0;
+  min-height: 23px;
+  max-height: 23px;
+  transform: translateY(1px);
 }
 
 .p-TabBar-tab:first-child {
   margin-left: 0;
 }
 
-.p-TabBar-tab.p-mod-current {
-  min-height: 23px;
-  max-height: 23px;
-  transform: translateY(1px);
+.p-TabBar-tab:hover:not(.p-mod-current) {
+  background: #f0f0f0;
 }
 
 .p-TabBar-tabIcon,
@@ -74989,7 +74971,7 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.p-TabBar {
 
 .p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon::before {
   content: '\\f00d';
-  font-family: FontAwesome;
+  font-family: FontAwesome, sans-serif;
 }
 
 .p-TabBar-tab.p-mod-drag-image {
@@ -75160,7 +75142,7 @@ body {
   margin-left: 3px;
   vertical-align: middle;
 }
-`, "",{"version":3,"sources":["webpack://./style/panel.css"],"names":[],"mappings":"AAEA;EACE,gBAAgB;EAChB,gBAAgB;AAClB;;AAEA;EACE,YAAY;EACZ,aAAa;EACb,qBAAqB;EACrB,gCAAgC;AAClC;;AAEA;EACE,eAAe;EACf,mBAAmB;EACnB,yBAAyB;EACzB,mBAAmB;EACnB;;;cAGY;EACZ,eAAe;EACf,gBAAgB;EAChB,gBAAgB;EAChB,eAAe;EACf,iBAAiB;EACjB,iBAAiB;AACnB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,mBAAmB;AACrB;;AAEA;EACE,cAAc;AAChB;;AAEA;EACE,gBAAgB;EAChB,gBAAgB;EAChB,0BAA0B;AAC5B;;AAEA;;;EAGE,qBAAqB;AACvB;;AAEA;EACE,gBAAgB;AAClB;;AAEA;EACE,gBAAgB;EAChB,wBAAwB;AAC1B;;AAEA;EACE,gBAAgB;EAChB,gBAAgB;EAChB,gBAAgB;EAChB,YAAY;EACZ,wCAAwC;EACxC,4CAA4C;AAC9C;;AAEA;EACE,kCAAkC;EAClC,wBAAwB;EACxB,6CAA6C;EAC7C,0BAA0B;EAC1B,gCAAgC;AAClC;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,aAAa;EACb,sBAAsB;EACtB,YAAY;EACZ,yBAAyB;EACzB,gBAAgB;EAChB,iBAAiB;EACjB,wCAAwC;AAC1C;;AAEA;EACE,cAAc;EACd,cAAc;AAChB;;AAEA;EACE,aAAa;EACb,sBAAsB;EACtB,kBAAkB;EAClB,QAAQ;EACR,SAAS;EACT,UAAU;EACV,gBAAgB;AAClB;;AAEA;EACE,cAAc;AAChB;;AAEA;EACE,WAAW;EACX,eAAe;AACjB;;AAEA;EACE,SAAS;AACX;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,cAAc;EACd,aAAa;AACf;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,gBAAgB;EAChB,cAAc;AAChB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,oBAAoB;EACpB,YAAY;EACZ,kBAAkB;AACpB;;AAEA;;;EAGE,UAAU;EACV,SAAS;EACT,qBAAqB;AACvB;;AAEA;;EAEE,4BAA4B;EAC5B,eAAe;EACf,gBAAgB;AAClB;;AAEA;EACE,WAAW;EACX,gBAAgB;AAClB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;;;EAGE,YAAY;EACZ,iBAAiB;AACnB;;AAEA;EACE,WAAW;AACb;;AAEA;EACE,eAAe;EACf,WAAW;AACb;;AAEA;EACE,qBAAqB;AACvB;;AAEA;EACE,uBAAuB;AACzB;;AAEA;EACE,qBAAqB;EACrB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,uBAAuB;EACvB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,qCAAqC;EACrC,qBAAqB;AACvB;;AAEA;EACE,uCAAuC;EACvC,uBAAuB;AACzB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,sBAAsB;AACxB","sourcesContent":["@import '~@lumino/default-theme/style/index.css';\n\n.p-TabBar {\n  min-height: 24px;\n  max-height: 24px;\n}\n\n.p-TabBar-content {\n  min-width: 0;\n  min-height: 0;\n  align-items: flex-end;\n  border-bottom: 1px solid #c0c0c0;\n}\n\n.p-TabBar-tab {\n  padding: 0 10px;\n  background: #e5e5e5;\n  border: 1px solid #c0c0c0;\n  border-bottom: none;\n  font:\n    12px Helvetica,\n    Arial,\n    sans-serif;\n  flex: 0 1 180px;\n  min-height: 20px;\n  max-height: 20px;\n  min-width: 35px;\n  margin-left: -1px;\n  line-height: 20px;\n}\n\n.p-TabBar-tab.p-mod-current {\n  background: white;\n}\n\n.p-TabBar-tab:hover:not(.p-mod-current) {\n  background: #f0f0f0;\n}\n\n.p-TabBar-tab:first-child {\n  margin-left: 0;\n}\n\n.p-TabBar-tab.p-mod-current {\n  min-height: 23px;\n  max-height: 23px;\n  transform: translateY(1px);\n}\n\n.p-TabBar-tabIcon,\n.p-TabBar-tabLabel,\n.p-TabBar-tabCloseIcon {\n  display: inline-block;\n}\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon {\n  margin-left: 4px;\n}\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon::before {\n  content: '\\f00d';\n  font-family: FontAwesome;\n}\n\n.p-TabBar-tab.p-mod-drag-image {\n  min-height: 23px;\n  max-height: 23px;\n  min-width: 125px;\n  border: none;\n  box-shadow: 1px 1px 2px rgb(0 0 0 / 30%);\n  transform: translateX(-40%) translateY(-58%);\n}\n\n.p-DockPanel-overlay {\n  background: rgb(255 255 255 / 60%);\n  border: 1px dashed black;\n  transition-property: top, left, right, bottom;\n  transition-duration: 150ms;\n  transition-timing-function: ease;\n}\n\n.content {\n  min-width: 50px;\n  min-height: 50px;\n  display: flex;\n  flex-direction: column;\n  padding: 8px;\n  border: 1px solid #c0c0c0;\n  border-top: none;\n  background: white;\n  box-shadow: 1px 1px 2px rgb(0 0 0 / 20%);\n}\n\n.content > div {\n  flex: 1 1 auto;\n  overflow: auto;\n}\n\nbody {\n  display: flex;\n  flex-direction: column;\n  position: absolute;\n  inset: 0;\n  margin: 0;\n  padding: 0;\n  overflow: hidden;\n}\n\n#main {\n  flex: 1 1 auto;\n}\n\n.side-info {\n  margin: 5px;\n  font-size: 14px;\n}\n\n.side-info .main h1 {\n  margin: 0;\n}\n\n.side-info .main h3 {\n  margin: 0 0 8px;\n}\n\n.side-info .attr {\n  display: block;\n  margin: 3px 0;\n}\n\n.side-info .desc {\n  font-weight: bold;\n}\n\n.side-info .fold {\n  margin-top: 15px;\n  font-size: 2em;\n}\n\n.side-info .fold:hover {\n  cursor: pointer;\n}\n\n.side-info .fold span {\n  padding-left: 7px;\n}\n\n.side-info .show-all {\n  color: rgb(50 38 41);\n  float: right;\n  margin-right: 10px;\n}\n\n.side-info ul.mod-list,\n.side-info ul.env-list,\n.side-info ul.fac-list {\n  padding: 0;\n  margin: 0;\n  list-style-type: none;\n}\n\n.side-info ul.mod-list li,\n.side-info ul.fac-list li {\n  border-left: 3px solid black;\n  margin: 6px 4px;\n  padding: 1px 3px;\n}\n\n.side-info ul.env-list li {\n  margin: 3px;\n  font-size: 0.8em;\n}\n\n.side-info ul.env-list li .key {\n  font-weight: bold;\n}\n\n.side-info ul.mod-list li .version,\n.side-info ul.fac-list li .mode,\n.side-info ul.fac-list li .buffering {\n  float: right;\n  margin-left: 20px;\n}\n\n.side-info .clear {\n  clear: both;\n}\n\n.hash {\n  font-size: 12px;\n  color: #666;\n}\n\n.dbefore {\n  color: red !important;\n}\n\n.dafter {\n  color: green !important;\n}\n\n.dbefore::before {\n  color: red !important;\n  content: ' - ';\n  font-family: 'Courier New', Courier, monospace;\n}\n\n.dafter::before {\n  color: green !important;\n  content: ' + ';\n  font-family: 'Courier New', Courier, monospace;\n}\n\n.libefore {\n  border-left: 3px solid red !important;\n  color: red !important;\n}\n\n.liafter {\n  border-left: 3px solid green !important;\n  color: green !important;\n}\n\n.connection-error:hover {\n  cursor: pointer;\n}\n\n.error-text {\n  font-size: 15px;\n  margin-left: 3px;\n  vertical-align: middle;\n}\n"],"sourceRoot":""}]);
+`, "",{"version":3,"sources":["webpack://./style/panel.css"],"names":[],"mappings":"AAEA;EACE,gBAAgB;EAChB,gBAAgB;AAClB;;AAEA;EACE,YAAY;EACZ,aAAa;EACb,qBAAqB;EACrB,gCAAgC;AAClC;;AAEA;EACE,eAAe;EACf,mBAAmB;EACnB,yBAAyB;EACzB,mBAAmB;EACnB;;;cAGY;EACZ,eAAe;EACf,gBAAgB;EAChB,gBAAgB;EAChB,eAAe;EACf,iBAAiB;EACjB,iBAAiB;AACnB;;AAEA;EACE,iBAAiB;EACjB,gBAAgB;EAChB,gBAAgB;EAChB,0BAA0B;AAC5B;;AAEA;EACE,cAAc;AAChB;;AAEA;EACE,mBAAmB;AACrB;;AAEA;;;EAGE,qBAAqB;AACvB;;AAEA;EACE,gBAAgB;AAClB;;AAEA;EACE,gBAAgB;EAChB,oCAAoC;AACtC;;AAEA;EACE,gBAAgB;EAChB,gBAAgB;EAChB,gBAAgB;EAChB,YAAY;EACZ,wCAAwC;EACxC,4CAA4C;AAC9C;;AAEA;EACE,kCAAkC;EAClC,wBAAwB;EACxB,6CAA6C;EAC7C,0BAA0B;EAC1B,gCAAgC;AAClC;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,aAAa;EACb,sBAAsB;EACtB,YAAY;EACZ,yBAAyB;EACzB,gBAAgB;EAChB,iBAAiB;EACjB,wCAAwC;AAC1C;;AAEA;EACE,cAAc;EACd,cAAc;AAChB;;AAEA;EACE,aAAa;EACb,sBAAsB;EACtB,kBAAkB;EAClB,QAAQ;EACR,SAAS;EACT,UAAU;EACV,gBAAgB;AAClB;;AAEA;EACE,cAAc;AAChB;;AAEA;EACE,WAAW;EACX,eAAe;AACjB;;AAEA;EACE,SAAS;AACX;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,cAAc;EACd,aAAa;AACf;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,gBAAgB;EAChB,cAAc;AAChB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;EACE,oBAAoB;EACpB,YAAY;EACZ,kBAAkB;AACpB;;AAEA;;;EAGE,UAAU;EACV,SAAS;EACT,qBAAqB;AACvB;;AAEA;;EAEE,4BAA4B;EAC5B,eAAe;EACf,gBAAgB;AAClB;;AAEA;EACE,WAAW;EACX,gBAAgB;AAClB;;AAEA;EACE,iBAAiB;AACnB;;AAEA;;;EAGE,YAAY;EACZ,iBAAiB;AACnB;;AAEA;EACE,WAAW;AACb;;AAEA;EACE,eAAe;EACf,WAAW;AACb;;AAEA;EACE,qBAAqB;AACvB;;AAEA;EACE,uBAAuB;AACzB;;AAEA;EACE,qBAAqB;EACrB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,uBAAuB;EACvB,cAAc;EACd,8CAA8C;AAChD;;AAEA;EACE,qCAAqC;EACrC,qBAAqB;AACvB;;AAEA;EACE,uCAAuC;EACvC,uBAAuB;AACzB;;AAEA;EACE,eAAe;AACjB;;AAEA;EACE,eAAe;EACf,gBAAgB;EAChB,sBAAsB;AACxB","sourcesContent":["@import '~@lumino/default-theme/style/index.css';\n\n.p-TabBar {\n  min-height: 24px;\n  max-height: 24px;\n}\n\n.p-TabBar-content {\n  min-width: 0;\n  min-height: 0;\n  align-items: flex-end;\n  border-bottom: 1px solid #c0c0c0;\n}\n\n.p-TabBar-tab {\n  padding: 0 10px;\n  background: #e5e5e5;\n  border: 1px solid #c0c0c0;\n  border-bottom: none;\n  font:\n    12px Helvetica,\n    Arial,\n    sans-serif;\n  flex: 0 1 180px;\n  min-height: 20px;\n  max-height: 20px;\n  min-width: 35px;\n  margin-left: -1px;\n  line-height: 20px;\n}\n\n.p-TabBar-tab.p-mod-current {\n  background: white;\n  min-height: 23px;\n  max-height: 23px;\n  transform: translateY(1px);\n}\n\n.p-TabBar-tab:first-child {\n  margin-left: 0;\n}\n\n.p-TabBar-tab:hover:not(.p-mod-current) {\n  background: #f0f0f0;\n}\n\n.p-TabBar-tabIcon,\n.p-TabBar-tabLabel,\n.p-TabBar-tabCloseIcon {\n  display: inline-block;\n}\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon {\n  margin-left: 4px;\n}\n\n.p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon::before {\n  content: '\\f00d';\n  font-family: FontAwesome, sans-serif;\n}\n\n.p-TabBar-tab.p-mod-drag-image {\n  min-height: 23px;\n  max-height: 23px;\n  min-width: 125px;\n  border: none;\n  box-shadow: 1px 1px 2px rgb(0 0 0 / 30%);\n  transform: translateX(-40%) translateY(-58%);\n}\n\n.p-DockPanel-overlay {\n  background: rgb(255 255 255 / 60%);\n  border: 1px dashed black;\n  transition-property: top, left, right, bottom;\n  transition-duration: 150ms;\n  transition-timing-function: ease;\n}\n\n.content {\n  min-width: 50px;\n  min-height: 50px;\n  display: flex;\n  flex-direction: column;\n  padding: 8px;\n  border: 1px solid #c0c0c0;\n  border-top: none;\n  background: white;\n  box-shadow: 1px 1px 2px rgb(0 0 0 / 20%);\n}\n\n.content > div {\n  flex: 1 1 auto;\n  overflow: auto;\n}\n\nbody {\n  display: flex;\n  flex-direction: column;\n  position: absolute;\n  inset: 0;\n  margin: 0;\n  padding: 0;\n  overflow: hidden;\n}\n\n#main {\n  flex: 1 1 auto;\n}\n\n.side-info {\n  margin: 5px;\n  font-size: 14px;\n}\n\n.side-info .main h1 {\n  margin: 0;\n}\n\n.side-info .main h3 {\n  margin: 0 0 8px;\n}\n\n.side-info .attr {\n  display: block;\n  margin: 3px 0;\n}\n\n.side-info .desc {\n  font-weight: bold;\n}\n\n.side-info .fold {\n  margin-top: 15px;\n  font-size: 2em;\n}\n\n.side-info .fold:hover {\n  cursor: pointer;\n}\n\n.side-info .fold span {\n  padding-left: 7px;\n}\n\n.side-info .show-all {\n  color: rgb(50 38 41);\n  float: right;\n  margin-right: 10px;\n}\n\n.side-info ul.mod-list,\n.side-info ul.env-list,\n.side-info ul.fac-list {\n  padding: 0;\n  margin: 0;\n  list-style-type: none;\n}\n\n.side-info ul.mod-list li,\n.side-info ul.fac-list li {\n  border-left: 3px solid black;\n  margin: 6px 4px;\n  padding: 1px 3px;\n}\n\n.side-info ul.env-list li {\n  margin: 3px;\n  font-size: 0.8em;\n}\n\n.side-info ul.env-list li .key {\n  font-weight: bold;\n}\n\n.side-info ul.mod-list li .version,\n.side-info ul.fac-list li .mode,\n.side-info ul.fac-list li .buffering {\n  float: right;\n  margin-left: 20px;\n}\n\n.side-info .clear {\n  clear: both;\n}\n\n.hash {\n  font-size: 12px;\n  color: #666;\n}\n\n.dbefore {\n  color: red !important;\n}\n\n.dafter {\n  color: green !important;\n}\n\n.dbefore::before {\n  color: red !important;\n  content: ' - ';\n  font-family: 'Courier New', Courier, monospace;\n}\n\n.dafter::before {\n  color: green !important;\n  content: ' + ';\n  font-family: 'Courier New', Courier, monospace;\n}\n\n.libefore {\n  border-left: 3px solid red !important;\n  color: red !important;\n}\n\n.liafter {\n  border-left: 3px solid green !important;\n  color: green !important;\n}\n\n.connection-error:hover {\n  cursor: pointer;\n}\n\n.error-text {\n  font-size: 15px;\n  margin-left: 3px;\n  vertical-align: middle;\n}\n"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -92677,7 +92659,7 @@ function main() {
   }
   var mainpanel = new _nowpanel__WEBPACK_IMPORTED_MODULE_2__.NowVisPanel();
   mainpanel.id = 'main';
-  if (server == 'True') {
+  if (server === 'True') {
     var projectWidget = new _project_widget__WEBPACK_IMPORTED_MODULE_4__.ProjectWidget(experiments);
     var groupWidget = new _group_widget__WEBPACK_IMPORTED_MODULE_5__.GroupWidget();
     var databaseWidget = new _database_widget__WEBPACK_IMPORTED_MODULE_8__.DatabaseWidget(mainpanel);
@@ -92688,11 +92670,11 @@ function main() {
     var config = new _config_widget__WEBPACK_IMPORTED_MODULE_3__.ConfigWidget();
     var annotationn = new _annotation_widget__WEBPACK_IMPORTED_MODULE_7__.AnnontationWidget(selectedExp);
     var history = new _graph_history_graph__WEBPACK_IMPORTED_MODULE_6__.HistoryWidget(config, 'History', 'History', selectedExp, annotationn);
-    var databaseWidget = new _database_widget__WEBPACK_IMPORTED_MODULE_8__.DatabaseWidget(mainpanel);
+    var _databaseWidget = new _database_widget__WEBPACK_IMPORTED_MODULE_8__.DatabaseWidget(mainpanel);
     mainpanel.addMainWidget(history);
     mainpanel.addMainWidget(config);
     mainpanel.addMainWidget(annotationn);
-    mainpanel.addMainWidget(databaseWidget);
+    mainpanel.addMainWidget(_databaseWidget);
     history.load();
   }
   _lumino_widgets__WEBPACK_IMPORTED_MODULE_1__.Widget.attach(mainpanel, document.body);

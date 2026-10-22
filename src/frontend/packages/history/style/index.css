@@ -1,6 +1,5 @@
 .history-toolbar {
   float: left;
-  overflow: none;
   z-index: 3;
   position: absolute;
 }
