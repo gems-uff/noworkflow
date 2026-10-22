@@ -503,7 +503,7 @@ jobs:
       - name: Record the test count and the seed
         if: ${{ !cancelled() }}
         run: |
-          bash .github/scripts/pytest-summary.sh pytest.log 11 \
+          bash .github/scripts/pytest-summary.sh pytest.log 16 \
             "vis in a browser (ubuntu-latest, 3.15)" \
             'uv sync --locked --group browser && NOW_BROWSER=require uv run --no-sync pytest -m browser'
 

@@ -198,6 +198,12 @@ class Vis:
         self.page.mouse.wheel(0, delta_y)
         self.settle()
 
+    def hover(self, target):
+        """Move the pointer onto ``target`` and wait for what it reveals"""
+        point = self.at(target)
+        self.page.mouse.move(point["x"], point["y"], steps=4)
+        self.settle()
+
     def type(self, text):
         self.page.keyboard.insert_text(text)
 
