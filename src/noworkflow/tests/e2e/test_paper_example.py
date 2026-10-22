@@ -20,9 +20,18 @@ dataflows, the prospective graph) is compared on the reference platform
 only (``goldens/REFERENCE``), like the goldens. With ``NOW_PAPER_DATASET``
 pointing at the real dataset the same tests run on it, the goldens
 excepted.
+
+The store drops the file accesses inside the harness's temporary directory
+(``drop_temporary_accesses``), a normalization the maintainer chose: from
+Python 3.15.1 on, on Linux, ``multiprocessing`` probes that directory when
+scikit-learn asks for its default start method (gh-155717), and each trial
+records the probe, a temporary file under a random name and the directory
+itself. noWorkflow records them as it records every open of the process;
+the paper shows the history without them.
 """
 
 import ast
+import contextlib
 import dataclasses
 import hashlib
 import importlib.util
@@ -30,6 +39,7 @@ import json
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 
@@ -507,6 +517,35 @@ class PaperStore:
         )
 
 
+def drop_temporary_accesses(project):
+    """Delete the file accesses inside the project's temporary directory
+
+    See the module docstring: Python's own probe of ``$TMPDIR`` from 3.15.1
+    on, which the paper's history predates. A file access is keyed by its
+    trial and its id, and no other table refers to one, so the rest of the
+    store stays as recorded. Relative names are the project's.
+    """
+    tmp = os.path.realpath(str(project.tmp))
+
+    def temporary(name):
+        path = os.path.realpath(os.path.join(str(project.path), name))
+        return path == tmp or path.startswith(tmp + os.sep)
+
+    database = project.store / "db.sqlite"
+    with contextlib.closing(sqlite3.connect(str(database))) as connection:
+        keys = [
+            (trial_id, access_id)
+            for trial_id, access_id, name in connection.execute(
+                "SELECT trial_id, id, name FROM file_access"
+            )
+            if temporary(name)
+        ]
+        with connection:
+            connection.executemany(
+                "DELETE FROM file_access WHERE trial_id = ? AND id = ?", keys
+            )
+
+
 @pytest.fixture(scope="module")
 def paper_store(tmp_path_factory):
     """The trial history of run_trials.sh, built once for the module
@@ -527,6 +566,7 @@ def paper_store(tmp_path_factory):
             )
     project = NowProject(tmp_path_factory.mktemp("paper_example"))
     replay(project)
+    drop_temporary_accesses(project)
     count = len(project.trials())
     restored = {}
     for tag in ("1.1.1", "6.1.1"):
