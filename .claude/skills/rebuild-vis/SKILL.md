@@ -70,7 +70,7 @@ cd src/frontend
 npm ci --no-audit --no-fund
 npx lerna run build --scope=@noworkflow/nowvis --include-dependencies
 npx lerna run build:lib --scope=@noworkflow/labextension
-npm run lint:check --workspace=@noworkflow/labextension
+npm run lint:check
 git restore ../noworkflow/now/vis/static/dist/bundle.js.map
 cd ../.. && git status --short
 bash .github/scripts/tsc-baseline.sh "$(sed -n 's/.*tsc-baseline.sh \([0-9]*\).*/\1/p' .github/workflows/ci.yml)"
@@ -164,6 +164,27 @@ git diff -U0 -- src/noworkflow/now/vis/static/dist/bundle.js                    
 and the string it replaced the other way round. A count that did not move
 means the package is not in the build's scope or the module is not imported
 by `nowvis`.
+
+**Reading the whole diff.** A change to many sources (a lint pass, a
+rename) gives a textual diff of the bundle in the hundreds of hunks, most
+of them quotes, comments and babel's renumbering of its `_thisN` and
+`_contextN` temporaries. `normalize_bundle.mjs`, in this directory, splits
+a bundle into its webpack modules and regenerates each one with babel,
+comments and raw literals dropped and that numbering masked:
+
+```bash
+git show HEAD:src/noworkflow/now/vis/static/dist/bundle.js > <scratch>/base.js
+node .claude/skills/rebuild-vis/normalize_bundle.mjs <scratch>/base.js <scratch>/norm-base
+node .claude/skills/rebuild-vis/normalize_bundle.mjs src/noworkflow/now/vis/static/dist/bundle.js <scratch>/norm-new
+diff -rq <scratch>/norm-base <scratch>/norm-new          # the modules that differ
+diff -u <scratch>/norm-base/<module> <scratch>/norm-new/<module>
+```
+
+Every line left is a change of the generated code, and each one must be
+explained by the change to the sources; a line it does not explain is a
+finding. The CSS modules show the stylesheet as text, so a change to a
+`.css` reads there too. The script needs the `node_modules` of
+`src/frontend`.
 
 ## The guard, locally
 

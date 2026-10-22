@@ -283,7 +283,8 @@ neither executes:
   `flow.pdf` is checked only where Graphviz's `dot` is on the PATH, which
   the Linux and macOS legs install and the Windows legs do not, and
   `prospective.dot` is drawn for a handful of scripts. The `frontend` job proves that the committed bundle matches the
-  sources, that the extension type-checks and lints clean and that the count of `tsc`
+  sources, that the extension type-checks, that every frontend package
+  lints clean (stylelint, prettier, eslint) and that the count of `tsc`
   errors of the vis does not grow. By hand, `golden-run` (step 4) and the
   smoke of `rebuild-vis` fetch the routes `read_store.py` lists from a
   corpus store, and `compare_vis.mjs` of `rebuild-vis` shows everything a

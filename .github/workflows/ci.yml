@@ -375,12 +375,11 @@ jobs:
       - name: Type-check the lab extension
         run: npx lerna run build:lib --scope=@noworkflow/labextension
 
-      # stylelint, prettier and eslint of the Jupyter extension (#422), as
-      # src/frontend configures them for every package (#453). `npm run lint`
-      # fixes what they can. The other packages join once #455 brings them
-      # to zero.
-      - name: Lint the lab extension
-        run: npm run lint:check --workspace=@noworkflow/labextension
+      # stylelint, prettier and eslint of every package of the workspace (the
+      # vis, the shared packages and the Jupyter extension), as src/frontend
+      # configures them. `npm run lint` fixes what they can.
+      - name: Lint the frontend
+        run: npm run lint:check
 
       - name: Committed bundle matches the sources
         run: |
@@ -400,7 +399,7 @@ jobs:
       # runs whatever the bundle comparison said.
       - name: Type-check the vis (baseline)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: bash ../../.github/scripts/tsc-baseline.sh 4
+        run: bash ../../.github/scripts/tsc-baseline.sh 1
 
   # The running example of the noWorkflow 2 paper (#257), replayed from
   # src/noworkflow/tests/e2e/corpus/paper_example: a red here means the tool
