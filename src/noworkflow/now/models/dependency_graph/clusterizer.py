@@ -2,6 +2,7 @@
 # Copyright (c) 2017 Polytechnic Institute of New York University.
 # This file is part of noWorkflow.
 # Please, consult the license terms in the LICENSE file.
+
 """Convert database to clusterized structure"""
 
 import weakref
@@ -77,7 +78,6 @@ class Clusterizer(object):
 
         for member in node.evaluation.memberships_as_collection:
             self.process_evaluation(member.member, cluster, True)
-
         if not is_type:
             for member in node.evaluation.memberships_as_member:
                 self.process_evaluation(member.collection, cluster, False)
@@ -89,7 +89,6 @@ class Clusterizer(object):
         act = evaluation.this_activation
         if act is not None:
             return self.process_activation(act, evaluation, cluster, is_type)
-
         return self.add_evaluation_node(EvaluationNode(evaluation), cluster, is_type)
 
     def _activation_node_condition(self, activation, cluster):
@@ -105,11 +104,10 @@ class Clusterizer(object):
             )
         else:
             node = self.add_cluster_node(activation, evaluation, cluster, is_type)
-
         if node is None or not self.filter.show_accesses:
             return node
 
-        # Add acesses
+        # Add accesses
         departing_arrows = self.departing_arrows
         arriving_arrows = self.arriving_arrows
         nid = node.node_id
@@ -231,7 +229,6 @@ class Clusterizer(object):
                     attrs = attr_arriving | attr_departing | {PROPAGATED_ATTR}
                     departing_arrows[source][target] |= attrs
                     arriving_arrows[target][source] |= attrs
-
             del arriving_arrows[nid]
             for target, attr_departing in viewitems(departing_arrows[nid]):
                 for source, attr_arriving in viewitems(arriving_arrows[nid]):
@@ -334,6 +331,8 @@ class RetrospectiveClusterizer(Clusterizer):
             self.process_activation(activation, evaluation, cluster, False)
             for dep in chain(evaluation.dependencies, evaluation.dependents):
                 dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
+                if dep_act_node_id not in created:
+                    continue
                 dep_cluster = created[dep_act_node_id][1]
                 if not isinstance(dep_cluster, ClusterNode):
                     continue
@@ -402,6 +401,8 @@ class ProspectiveClusterizer(Clusterizer):
             self.process_activation(activation, evaluation, cluster, False)
             for dep in chain(evaluation.dependencies, evaluation.dependents):
                 dep_act_node_id = EvaluationNode.get_node_id(dep.activation_id)
+                if dep_act_node_id not in created:
+                    continue
                 dep_cluster = created[dep_act_node_id][1]
                 if not isinstance(dep_cluster, ClusterNode):
                     continue

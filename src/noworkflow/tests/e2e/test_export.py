@@ -1008,6 +1008,143 @@ def test_export_dataflow_of_nested_and_repeated_calls_in_the_other_modes(
     assert_digraph(result)
 
 
+# --- what the clustered modes draw once they stop crashing (#200, #242) -----
+
+# Scripts on which skipping the activations missing from `created` (#450)
+# turns the KeyError of #200 or #242 into a graph that omits provenance.
+CLUSTERED_SCRIPTS = {
+    "arguments": (
+        "def double(v):\n"
+        "    return v * 2\n"
+        "\n"
+        "def f3(a, b, c):\n"
+        "    return a + b + c\n"
+        "\n"
+        "w = f3(double(1), double(2), double(3))\n"
+    ),
+    "nested_repeated": (
+        "def add_one(x):\n"
+        "    return x + 1\n"
+        "\n"
+        "def increment(x):\n"
+        "    return add_one(x)\n"
+        "\n"
+        "total = 0\n"
+        "for i in range(3):\n"
+        "    total += increment(i)\n"
+    ),
+    "mapped": ("def sq(x):\n    return x * x\n\nys = list(map(sq, [5]))\n"),
+    "late_call": (
+        "def helper():\n"
+        "    pass\n"
+        "\n"
+        "def step(i):\n"
+        "    if i > 1:\n"
+        "        helper()\n"
+        "\n"
+        "for i in range(3):\n"
+        "    step(i)\n"
+    ),
+}
+
+
+@pytest.fixture(scope="module")
+def _clustered_stores(tmp_path_factory):
+    stores = {}
+    for name, script in CLUSTERED_SCRIPTS.items():
+        project = NowProject(tmp_path_factory.mktemp(name))
+        project.write("script.py", script)
+        project.run("run", "script.py")
+        stores[name] = project
+    return stores
+
+
+@pytest.fixture
+def clustered_projects(_clustered_stores):
+    """``{name: project}`` for ``CLUSTERED_SCRIPTS``: read-only"""
+    for _ in read_only(*_clustered_stores.values()):
+        yield _clustered_stores
+
+
+def clustered_graph(project, *args):
+    """``export dataflow <args>``, which must print a whole DOT graph, read
+    by ``DotGraph``
+    """
+    result = project.run("export", "dataflow", *args)
+    assert_digraph(result)
+    return DotGraph(result.stdout), result
+
+
+@pytest.mark.parametrize("mode_args", WDF_CRASHES)
+def test_export_dataflow_wdf_draws_an_evaluation_inside_a_function(
+    dataflow_project, mode_args
+):
+    """``-w`` on ``a + b``, inside ``run_simulation``, draws that evaluation
+    in the cluster of ``run_simulation``, as ``-m all -w`` draws it
+    """
+    eid = evaluation_of(dataflow_project, "add", "a + b")
+    graph, result = clustered_graph(dataflow_project, *mode_args, "-w", eid)
+    assert "e_{}".format(eid) in graph.nodes, str(result)
+    assert "run_simulation" in drawn_cluster_labels(graph), str(result)
+
+
+@pytest.mark.parametrize("mode_args", WDF_CRASHES)
+def test_export_dataflow_wdf_draws_a_module_level_write(dataflow_project, mode_args):
+    """``-w`` on the write of ``data_b``, at module level, draws it, as
+    fineGrain does
+    """
+    eid = written_evaluation(dataflow_project, "data_b")
+    graph, result = clustered_graph(dataflow_project, *mode_args, "-w", eid)
+    assert "e_{}".format(eid) in graph.nodes, str(result)
+
+
+def test_export_dataflow_draws_every_parameter_of_a_call_with_nested_arguments(
+    clustered_projects,
+):
+    """coarseGrain draws the three parameters of ``f3(double(1), double(2),
+    double(3))``, whichever argument comes first
+    """
+    project = clustered_projects["arguments"]
+    graph, result = clustered_graph(project, "-m", "coarseGrain")
+    for name in ("a", "b", "c"):
+        eid = evaluation_of(project, "param", name)
+        assert "e_{}".format(eid) in graph.nodes, "no {}\n{}".format(name, result)
+
+
+def test_export_dataflow_loopless_draws_a_repeated_call_with_a_nested_call(
+    clustered_projects,
+):
+    """looplessCoarseGrain draws a call site that runs three times and
+    calls another function, as coarseGrain does
+    """
+    clustered_graph(clustered_projects["nested_repeated"], "-m", "looplessCoarseGrain")
+
+
+def test_export_dataflow_loopless_draws_a_function_called_from_c_code(
+    clustered_projects,
+):
+    """looplessCoarseGrain draws the activation of ``sq``, which ``map``
+    calls, as coarseGrain does
+    """
+    graph, result = clustered_graph(
+        clustered_projects["mapped"], "-m", "looplessCoarseGrain"
+    )
+    assert "sq" in drawn_cluster_labels(graph), str(result)
+
+
+def test_export_dataflow_loopless_declares_every_node_its_edges_join(
+    clustered_projects,
+):
+    """looplessCoarseGrain declares every node an edge joins, for a function
+    called only in a later iteration of a loop
+    """
+    graph, result = clustered_graph(
+        clustered_projects["late_call"], "-m", "looplessCoarseGrain"
+    )
+    joined = {node for tail, head, _ in graph.edges for node in (tail, head)}
+    assert joined - set(graph.nodes) == set(), str(result)
+
+
 @pytest.mark.parametrize("mode", DATAFLOW_MODES)
 def test_export_dataflow_reads_as_dot_in_each_mode(dataflow_project, mode):
     """``DotGraph`` reads the graph of each mode of ``simulation.py``, and
