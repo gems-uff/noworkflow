@@ -30,6 +30,7 @@ import atexit
 import builtins
 import collections
 import contextlib
+import gc
 import hashlib
 import json
 import os
@@ -47,7 +48,12 @@ from sqlalchemy import event
 from sqlalchemy.pool import Pool
 
 from noworkflow.now.ipython import dotmagic
-from noworkflow.now.persistence import content, persistence_config, relational
+from noworkflow.now.persistence import (
+    content,
+    persistence_config,
+    relational,
+    relational_database,
+)
 from noworkflow.now.persistence.models import MetaModel, Trial
 from noworkflow.now.utils import io as now_io
 from noworkflow.tests.e2e.harness import USER, NowProject, same_path, tail
@@ -95,8 +101,19 @@ def recording(function, calls):
 
 @contextlib.contextmanager
 def connections_counted():
-    """Count the connections every SQLAlchemy pool checks out and in"""
+    """Count the connections checked out of, and into, the pools of the
+    SQLAlchemy engines created inside the block
+
+    The listeners go on each engine ``relational_database.create_engine``
+    returns inside, never on the ``Pool`` class: a connection an earlier
+    test checked out of an engine of its own and dropped without closing
+    goes back to its pool when the garbage collector reaches it, and on
+    the class that checkin, with no checkout inside the block, would
+    count here (#462). The listeners die with the engines, which
+    ``real_stores`` disposes.
+    """
     counts = collections.Counter()
+    saved_create_engine = relational_database.create_engine
 
     def checkout(*args):
         counts["out"] += 1
@@ -104,13 +121,17 @@ def connections_counted():
     def checkin(*args):
         counts["in"] += 1
 
-    event.listen(Pool, "checkout", checkout)
-    event.listen(Pool, "checkin", checkin)
+    def create_engine(*args, **kwargs):
+        engine = saved_create_engine(*args, **kwargs)
+        event.listen(engine, "checkout", checkout)
+        event.listen(engine, "checkin", checkin)
+        return engine
+
+    relational_database.create_engine = create_engine
     try:
         yield counts
     finally:
-        event.remove(Pool, "checkout", checkout)
-        event.remove(Pool, "checkin", checkin)
+        relational_database.create_engine = saved_create_engine
 
 
 def in_memory_state():
@@ -481,6 +502,44 @@ def test_closing_the_shell_puts_the_process_back(project, tmp_path, monkeypatch)
     assert registered, "the shell registered no atexit entry"
     left = [callback for callback in registered if callback not in unregistered]
     assert left == []
+
+
+def test_a_connection_dropped_before_the_shell_is_not_counted(project):
+    """A connection an earlier test checked out of an engine of its own and
+    dropped without closing goes back to its pool when the garbage
+    collector reaches it, while the shell is open here: the count of the
+    shell's connections stays balanced (#462)
+
+    Control: a listener on the ``Pool`` class sees that checkin.
+    """
+    seen = collections.Counter()
+
+    def checkin(*args):
+        seen["in"] += 1
+
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        with real_stores():
+            persistence_config.connect(str(project.path))
+            # Only the collector frees a cycle; the connection goes back
+            # to its pool (and closes) when it does.
+            dropped = [relational.engine.raw_connection()]
+            dropped.append(dropped)
+            del dropped
+        event.listen(Pool, "checkin", checkin)
+        with connections_counted() as connections:
+            with open_shell(project) as shell:
+                shell.ok("%%now_sql\nSELECT id FROM trial")
+                gc.collect()
+                assert seen["in"] == connections["in"] + 1
+        assert connections["out"] > 0
+        assert connections["out"] == connections["in"]
+    finally:
+        if enabled:
+            gc.enable()
+        if event.contains(Pool, "checkin", checkin):
+            event.remove(Pool, "checkin", checkin)
 
 
 def test_real_stores_creates_a_store_and_closes_what_reconnecting_left(project):
