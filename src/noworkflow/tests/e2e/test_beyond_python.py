@@ -25,7 +25,7 @@ Structural assertions only, no goldens: a golden of a command that still
 fails cannot be recorded. With ``NOW_PAPER_DATASET`` pointing at the real
 dataset the same tests run on it.
 
-The claims that only #204 to #207 and #461 can satisfy are ``_desired``
+The claims that only #205 to #207 and #461 can satisfy are ``_desired``
 twins, marked ``xfail(strict=True)`` through ``known_defects`` with the
 issue, the mechanism and the signature of today's failure (measured on
 this tree). The issue that makes a twin pass removes the mark in the same
@@ -36,9 +36,6 @@ rewrites the ``Defect``'s signature. The map:
 twin                                                                 passes signature
                                                                      with   changes
 ==================================================================== ====== =========
-test_diff_f_pairs_pred_csv_by_name_and_mode_desired                  #204
-test_diff_content_prints_the_unified_diff_of_model_r_desired         #204
-test_diff_m_prints_the_code_hash_change_of_the_recompiled_..._desired #204
 test_restore_f_of_the_compiled_binary_keeps_it_executable_desired    #205 (#246)
 test_strace_tracer_records_the_file_model_r_sources_desired          #206
 test_rdtlite_file_entities_become_accesses_of_the_launch_desired     #207
@@ -61,12 +58,15 @@ The claims of #203 (``Rscript``, ``cc`` and the compiled ``metrics`` in
 the module table, with the real path, the hash of the binary and a
 probed version for the first two; ``now show -m``; the new hash of the
 rebuilt binary in 1.1.3) passed with it and lost their marks and their
-suffix. The module row of ``metrics`` changed two twins' failures: ``now
-diff 1.1.2 1.1.3 -m`` now pairs the two rows of ``metrics`` as replaced
-but prints no code hash (#204), and ``now restore 1.1.3 -f metrics``
-finds the binary through its module row, the local module that
-``Trial.iterate_accesses`` yields before the accesses, and writes its
-bytes back without the executable bit (#205).
+suffix. The module row of ``metrics`` changed a twin's failure: ``now
+restore 1.1.3 -f metrics`` finds the binary through its module row, the
+local module that ``Trial.iterate_accesses`` yields before the accesses,
+and writes its bytes back without the executable bit (#205).
+
+The claims of #204 (``now diff -f`` pairs the two accesses to
+``pred.csv`` by mode, ``--content`` prints the unified diff of
+``model.R``, and ``-m`` the code hash of the rebuilt binary) passed with
+it and lost their marks and their suffix.
 
 The two rdtLite tests run a fourth trial of their own, the wrapper of
 ``corpus/beyond_python/rdtlite`` (``model.R`` under rdtLite's
@@ -160,36 +160,6 @@ SHOW_MODULES = "[now] this trial depends on the following modules:"
 def read_kind(mode):
     """A mode as the section states it: a read is ``r``, binary or not"""
     return "r" if mode in ("r", "rb") else mode
-
-
-def diff_pairs_by_name_alone(signature):
-    """#204 (#360): `now diff -f` pairs the replaced accesses by name"""
-    return Defect(
-        "#204 (#360): models/diff.py diff_set pairs a removed and an "
-        "added access by name alone, so a file written by one launch and "
-        "read by another is paired across modes",
-        signature=signature,
-    )
-
-
-def no_content_option(signature):
-    """#204: `now diff` has no --content option yet"""
-    return Defect(
-        "#204: `now diff` (cmd/cmd_diff.py) has no --content option; "
-        "argparse resolves the prefix --content to --content-engine, "
-        "which wants a value",
-        signature=signature,
-    )
-
-
-def diff_m_hides_the_hash(signature):
-    """#204: `now diff -m` prints no code hash change"""
-    return Defect(
-        "#204: print_replaced_attributes in cmd/cmd_diff.py walks "
-        "Module.to_dict(), which has no code_hash, so a module replaced "
-        "by one with another hash prints no change",
-        signature=signature,
-    )
 
 
 def restore_loses_the_bit(signature):
@@ -934,10 +904,7 @@ def test_the_recompiled_binary_changes_its_code_hash_in_1_1_3(case):
 # --- Section 6.4: the diffs (#204) -----------------------------------------
 
 
-@known_defects(
-    diff_pairs_by_name_alone("pred.csv in replaced 2 times, added 0, removed 1")
-)
-def test_diff_f_pairs_pred_csv_by_name_and_mode_desired(case):
+def test_diff_f_pairs_pred_csv_by_name_and_mode(case):
     """Figure A: in `now diff 1.1.1 1.1.2 -f` pred.csv, written by Rscript
     and read by ./metrics in both trials, is replaced twice, the write
     with the write and the read with the read: no "Mode changed" line,
@@ -960,8 +927,7 @@ def test_diff_f_pairs_pred_csv_by_name_and_mode_desired(case):
     assert modes == [False, False], stdout
 
 
-@known_defects(no_content_option("argument --content-engine: expected one argument"))
-def test_diff_content_prints_the_unified_diff_of_model_r_desired(case):
+def test_diff_content_prints_the_unified_diff_of_model_r(case):
     """Figure A: `now diff 1.1.1 1.1.2 -f --content` prints, under the
     replaced model.R, the unified diff of its two versions: the threshold
     line removed and added"""
@@ -971,12 +937,43 @@ def test_diff_content_prints_the_unified_diff_of_model_r_desired(case):
         assert expected in lines, "no {!r} line in:\n{}".format(expected, stdout)
 
 
-@known_defects(
-    diff_m_hides_the_hash(
-        "now diff 1.1.2 1.1.3 -m: metrics replaced with the changes ['Trial id']"
-    )
-)
-def test_diff_m_prints_the_code_hash_change_of_the_recompiled_binary_desired(case):
+def raw_blocks(stdout, name):
+    """The lines of each ``Name: <name>`` block of ``now diff``, in order,
+    unstripped: a block ends at the next ``Name:`` or ``[now]`` line"""
+    found, current = [], None
+    for line in stdout.splitlines():
+        if line.startswith(("  Name: ", "[now] ")):
+            current = [] if line == "  Name: " + name else None
+            if current is not None:
+                found.append(current)
+        elif current is not None:
+            current.append(line)
+    return found
+
+
+def test_diff_content_shows_the_change_of_pred_csv_once(case):
+    """Figure A: under `now diff 1.1.1 1.1.2 -f --content` the write of
+    pred.csv by Rscript, the first of its two accesses, gets the diff of
+    the two versions written; its read by ./metrics, the same change, a
+    line that points to it; and prepared.csv, which the first trial
+    created and the second overwrote, a line for the file the first trial
+    did not have before its write, not the whole dataset"""
+    stdout = case.run("diff", "1.1.1", "1.1.2", "-f", "--content").stdout
+    write, read = raw_blocks(stdout, "pred.csv")
+    assert "--- pred.csv (trial 1.1.1, after)" in write, "\n".join(write)
+    assert "+++ pred.csv (trial 1.1.2, after)" in write, "\n".join(write)
+    assert [line for line in read if not line.startswith("    ")] == [
+        "Content changed as shown above for pred.csv",
+        "",
+    ], "\n".join(read)
+    (prepared,) = raw_blocks(stdout, "prepared.csv")
+    assert [line for line in prepared if not line.startswith("    ")] == [
+        "No file before the access in trial 1.1.1",
+        "",
+    ], "\n".join(prepared)
+
+
+def test_diff_m_prints_the_code_hash_change_of_the_recompiled_binary(case):
     """Figure B: `now diff 1.1.2 1.1.3 -m` reports the module metrics
     replaced, with its code hash changed from the binary of 1.1.2 to the
     one of 1.1.3; no module added or removed"""

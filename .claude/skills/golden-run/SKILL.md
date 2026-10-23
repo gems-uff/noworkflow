@@ -482,10 +482,12 @@ Differences that are not the change:
   Python (below).
 - Every hashed image the bundle names is served as JavaScript text, not as
   an image (`BAD magic` in `raw/vis/assets.txt`, on both sides, #263).
-- On 3.11 the order of the blocks `now diff` prints can change from run to
-  run (`AGENTS.md`, "Reproduction traps"): a `diff` golden or a `diff` output
-  whose only change is a block that moved is noise there. Run the A/A
-  several times on 3.11 before trusting it.
+- A before side older than the tree may print the blocks of `now diff` in
+  the iteration order of a set (#248). Under the harness's fixed hash seed
+  that order is stable from 3.12 on; on 3.11 it can change from run to
+  run, and outside the harness on any version. A `diff` golden or output
+  of such a side whose only change is a block that moved is noise; run the
+  A/A several times on 3.11 before trusting it.
 - Where `now export ast -d` works (before 3.15), it names its nodes after
   `id()` of the AST node: two reads of the same store differ in `raw/` and
   agree in `masked/`.

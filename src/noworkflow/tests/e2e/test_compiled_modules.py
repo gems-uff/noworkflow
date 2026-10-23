@@ -19,9 +19,11 @@ of the file differ per platform, Python version and build, so none of
 them is written here.
 
 #203 added the executable of a launched process and the libraries that
-``ctypes`` loads (from the ``ctypes.dlopen`` audit event) to this table,
-and #204 changes what ``now diff -m`` reports when a module's code hash
-changes: its commit revisits these tests on purpose.
+``ctypes`` loads (from the ``ctypes.dlopen`` audit event) to this table.
+#204 made ``now diff -m`` print the code hash of a replaced module; the
+pair of trials here imports the same file, so the module sections they
+pin are the same, and the code hash line is tested in ``test_diff.py``
+(a local module) and ``test_beyond_python.py`` (a rebuilt program).
 
 The extension module of each system, and how to redo the choice for a new
 interpreter:
@@ -320,9 +322,9 @@ def test_show_modules_lists_the_extension_module(extension_project, extension_fi
 
 def test_diff_modules_between_two_trials_of_the_same_script(extension_project):
     """``now diff 1 2 -m`` on two trials that imported the same
-    ``EXTENSION`` reports no module added, removed or replaced (#204
-    changes what a code hash change prints, which this pair does not
-    have)"""
+    ``EXTENSION`` reports no module added, removed or replaced: the same
+    file has the same code hash, the attribute ``-m`` prints first for a
+    replaced module (#204)"""
     result = run_now(extension_project, "diff", "1", "2", "-m")
     assert_lines(
         extension_project,

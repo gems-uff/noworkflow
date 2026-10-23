@@ -6,9 +6,10 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import OrderedDict
+import difflib
+from collections import OrderedDict, defaultdict
 
-from future.utils import viewkeys
+from future.utils import viewitems, viewkeys
 
 from ..persistence.models.base import Model, proxy_gen
 from ..persistence.models.trial import Trial
@@ -116,28 +117,137 @@ def diff_dict(before, after):
     return result
 
 
+def pairing_order(element):
+    """The order in which the elements of one name are paired: by
+    checkpoint, for the elements that have one (file accesses), then by id
+    """
+    checkpoint = getattr(element, "checkpoint", None)
+    return (
+        0.0 if checkpoint is None else checkpoint,
+        getattr(element, "id", None) or 0,
+    )
+
+
 def diff_set(before, after, create_replaced=True):
     """Compare sets to get additions, removals and replacements
 
     Return 3 sets:
     added -- objects present in second set, but not present in first set
     removed -- objects present in first set, but not present in second set
-    replaced -- objects that have the same name in both sets, but are different
+    replaced -- pairs (removed, added) of objects that have the same name in
+                both sets, but are different
+
+    The pairs are one to one: each removed object is paired with at most
+    one added object of its name, first with one of the same mode (file
+    accesses), then with any that is left, in checkpoint order in both
+    passes (#360). An object left without a partner stays added or
+    removed. Neither pass depends on the iteration order of the sets.
     """
     removed = before - after
     added = after - before
     replaced = set()
+    if not create_replaced:
+        return (added, removed, replaced)
 
-    removed_by_name = {}
-    for element_removed in removed:
-        removed_by_name[element_removed.name] = element_removed
-    for element_added in added:
-        element_removed = removed_by_name.get(element_added.name)
-        if element_removed and create_replaced:
-            replaced.add((element_removed, element_added))
-    if create_replaced:
-        for element_removed, element_added in replaced:
-            removed.discard(element_removed)
-            added.discard(element_added)
+    removed_by_name = defaultdict(list)
+    for element in sorted(removed, key=pairing_order):
+        removed_by_name[element.name].append(element)
+    added_by_name = defaultdict(list)
+    for element in sorted(added, key=pairing_order):
+        added_by_name[element.name].append(element)
+
+    for name, candidates in viewitems(added_by_name):
+        olds = removed_by_name.get(name)
+        if not olds:
+            continue
+        for same_mode in (True, False):
+            for element_removed in list(olds):
+                for element_added in candidates:
+                    if same_mode and getattr(element_removed, "mode", None) != (
+                        getattr(element_added, "mode", None)
+                    ):
+                        continue
+                    replaced.add((element_removed, element_added))
+                    olds.remove(element_removed)
+                    candidates.remove(element_added)
+                    break
+    for element_removed, element_added in replaced:
+        removed.discard(element_removed)
+        added.discard(element_added)
 
     return (added, removed, replaced)
+
+
+def diff_order(element):
+    """The order in which ``now diff`` prints the elements of a diff: by
+    name, then in the order they are paired (the accesses to one file in
+    the order of the trial)"""
+    return (element.name,) + pairing_order(element)
+
+
+def in_diff_order(added, removed, replaced):
+    """``(added, removed, replaced)`` of ``diff_set`` as lists in
+    ``diff_order``, a pair by its removed element, then its added one
+
+    The sets iterate in the order of their hashes, which hold strings,
+    randomized per process unless PYTHONHASHSEED fixes them, and None,
+    whose hash comes from its address before Python 3.12: printed as they
+    iterate, two runs of the same ``now diff`` gave the blocks in two
+    orders (#248).
+    """
+    return (
+        sorted(added, key=diff_order),
+        sorted(removed, key=diff_order),
+        sorted(replaced, key=lambda pair: (diff_order(pair[0]), diff_order(pair[1]))),
+    )
+
+
+# A version whose first bytes hold a NUL is shown as binary, as git does
+BINARY_PROBE = 8192
+# The longest unified diff `now diff --content` prints for one version
+DIFF_MAX_LINES = 200
+
+
+def is_binary(data):
+    """Whether ``data`` (bytes) is shown as binary: a NUL byte in its first
+    ``BINARY_PROBE`` bytes, or no UTF-8 text"""
+    if b"\0" in data[:BINARY_PROBE]:
+        return True
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return True
+    return False
+
+
+def unified_text_diff(name, label1, data1, label2, data2, max_lines=DIFF_MAX_LINES):
+    """The lines of the unified diff between two versions of the file
+    ``name``, or None when either one is binary
+
+    ``data1`` and ``data2`` are bytes, or None for no file, which compares
+    as an empty one. The headers read ``name (label)``. Above ``max_lines``
+    the diff is cut, and a last line says how many lines were left out.
+    """
+    texts = []
+    for data in (data1, data2):
+        data = data or b""
+        if is_binary(data):
+            return None
+        texts.append(data.decode("utf-8").splitlines())
+    lines = list(
+        difflib.unified_diff(
+            texts[0],
+            texts[1],
+            fromfile="{} ({})".format(name, label1),
+            tofile="{} ({})".format(name, label2),
+            lineterm="",
+        )
+    )
+    if len(lines) > max_lines:
+        left_out = len(lines) - max_lines
+        lines = lines[:max_lines]
+        lines.append(
+            "[{} more lines: `now restore <trial> -f {} -t <path>` writes a "
+            "whole version]".format(left_out, name)
+        )
+    return lines

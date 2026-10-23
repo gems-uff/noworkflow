@@ -17,12 +17,10 @@
 
 
 [now] 2 file accesses replaced:
-  Name: output.csv
-    Content hash before changed from <None> to a37ae01a07d32a45e6be38a00e6710057555da91
-    Content hash after changed from a37ae01a07d32a45e6be38a00e6710057555da91 to d239a3eb6cb4099516384ae6ea29a315779254ac
-    Checkpoint changed from <CHECKPOINT> to <CHECKPOINT>
-
   Name: data2.dat
     Content hash before changed from 4dd8604680ac6916ac4079e744624c37b457c03f to 3953b079a91c30410014989825e69f689768db03
     Content hash after changed from 4dd8604680ac6916ac4079e744624c37b457c03f to 3953b079a91c30410014989825e69f689768db03
-    Checkpoint changed from <CHECKPOINT> to <CHECKPOINT>
+
+  Name: output.csv
+    Content hash before changed from <None> to a37ae01a07d32a45e6be38a00e6710057555da91
+    Content hash after changed from a37ae01a07d32a45e6be38a00e6710057555da91 to d239a3eb6cb4099516384ae6ea29a315779254ac

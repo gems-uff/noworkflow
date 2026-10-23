@@ -210,6 +210,12 @@ $ now diff [trial1] [trial2]
 ```
 where *[trial1]* and *[trial2]* are the trial ids to be compared. It has options to compare modules (*-m*), environment (*-e*), file accesses (*-f*). It has also an option to present a brief diff, instead of a full diff (*--brief*). To see more optional arguments, run "now diff -h".
 
+A module, or a program a trial launched, whose code changed between the trials is listed as replaced with its code hash before and after. A file accessed in both trials whose content changed is listed as replaced with its content hashes; when a file is accessed more than once, the accesses are paired by mode and in the order they happened. With *--content*, which needs *-f* (or *-fa*), `now diff` also prints, under each replaced file access, the unified diff of the two versions it keeps in the content database, such as the lines of an R script edited between two trials:
+```bash
+$ now diff [trial1] [trial2] -f --content
+```
+A binary file gets one line saying that its content differs, a side where the file did not exist gets a line instead of the whole content of the other, and a diff longer than 200 lines is cut, with a hint to restore a whole version with `now restore`.
+
 The *-fa* option compares two function activations instead of whole trials, taking the database ids of the activations in the same order as the trials:
 ```bash
 $ now diff [trial1] [trial2] -fa 57 65

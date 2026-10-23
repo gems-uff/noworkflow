@@ -19,9 +19,9 @@ blind. This module pins both sides.
   ``diff -a`` and ``-d`` that write the graph cache, and two stores of the
   dataflow corpus the dataflow exports, as in the goldens. ``export ast``
   is an expected failure in the forms that crash on this Python
-  (``harness.export_ast_failure``). Before Python 3.12, and under a
-  ``NOW_E2E_CMD`` of unknown version, the replaced blocks of ``now diff``
-  are compared in sorted order (#248).
+  (``harness.export_ast_failure``). Under a ``NOW_E2E_CMD`` of unknown
+  version, which may predate the fix of #248, the replaced blocks of ``now
+  diff`` are compared in sorted order.
   Rewriting every volatile token of a real output as another run would
   (``perturb``) does not change its normalized form either.
 - Negative controls: content hashes, sequence keys, tags and line numbers
@@ -100,14 +100,13 @@ DATAFLOW_MODES = (
     "fineGrain",
     "all",
 )
-# #248: `now diff` prints the replaced modules, file accesses
-# and environment attributes in the order of a set of pairs
-# (models/diff.py, diff_set). The pairs hash tuples that may hold None, and
-# before Python 3.12 hash(None) comes from the address of None, which ASLR
-# moves: two runs print the blocks in different orders. The version of
-# another installation (NOW_E2E_CMD) is unknown, so it is compared the same
-# way.
-DIFF_SET_ORDER_VARIES = sys.version_info < (3, 12) or not runs_this_interpreter()
+# Before #248 was fixed, `now diff` printed the replaced modules, file
+# accesses and environment attributes in the iteration order of a set of
+# pairs (models/diff.py, diff_set), which changed with the hash seed and,
+# before Python 3.12, with the address of None. This tree prints them in one
+# order; the version of another installation (NOW_E2E_CMD) is unknown, so
+# its blocks are compared sorted.
+DIFF_SET_ORDER_VARIES = not runs_this_interpreter()
 # A `now diff` header whose blocks come from diff_set.
 REPLACED_HEADER = re.compile(r"\[now\] \d+ [\w ]+ replaced:")
 
@@ -181,7 +180,7 @@ def output(project, args):
 
 def sorted_replaced_blocks(text):
     """``text`` with the blocks under each ``[now] N ... replaced:`` header
-    in sorted order (#248)
+    in sorted order, for a ``now`` that may predate the fix of #248
 
     A block starts at a line indented by two spaces (``  Name: ...``,
     ``  Environment attribute ...``) and takes the deeper lines after it.

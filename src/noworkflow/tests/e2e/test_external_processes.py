@@ -719,9 +719,11 @@ def test_child_file_accesses_are_recorded_with_the_launch(stores, kind):
     launch; the launch carries the child's files, named as its command
     line names them: ``child.py`` and ``child_in.txt`` read, with the
     same hash before and after, and ``child_out.txt`` written, with no
-    content before and the child's output after (#202). The child of the
-    fork, which is not a launch, leaves no row: its files are out of
-    scope (#375, #379).
+    content before and the child's output after (#202). The stack of the
+    parent's read ends at its ``open``, and the stack of each file of the
+    launch at the call that started the process, with no ``open`` after
+    it (#204). The child of the fork, which is not a launch, leaves no
+    row: its files are out of scope (#375, #379).
     """
     project = stores(KINDS[kind].script)
     assert (project.path / "child_out.txt").read_bytes() == CHILD_OUTPUT
@@ -745,6 +747,7 @@ def test_child_file_accesses_are_recorded_with_the_launch(stores, kind):
             and access.activation.caller.id == script.id
         )
         assert by_open, "the access is not made by an open of the script"
+        assert access.stack == "open"
         hashed = (
             access.content_hash_before == parent_input
             and access.content_hash_after == parent_input
@@ -774,6 +777,8 @@ def test_child_file_accesses_are_recorded_with_the_launch(stores, kind):
                 "child_in.txt": ("r", sha1(CHILD_INPUT), sha1(CHILD_INPUT)),
                 "child_out.txt": ("w", None, sha1(CHILD_OUTPUT)),
             }
+            stacks = {name: accesses[name].stack for name in CHILD_FILES}
+            assert stacks == dict.fromkeys(CHILD_FILES, launch)
     rows = project.query(
         "SELECT name, mode FROM file_access WHERE trial_id = ? ORDER BY id",
         trial_id,

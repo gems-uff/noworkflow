@@ -476,9 +476,7 @@ and what came out, in the PR.
   records the whole `os.environ`, the start time, the pid. A diff that shows
   only those is "no change". `src/noworkflow/tests/e2e/normalize.py` masks
   what differs between two identical runs; anything it leaves is a real
-  difference, with one known exception: on Python 3.11 the order of the
-  blocks `now diff` prints can change from run to run (#248: it iterates
-  sets whose hash includes `None`, which is address-based before 3.12).
+  difference.
 - **`now demo` depends on `sys.argv[0]` being the console script:** it calls
   `now` through the shell with that path (`src/noworkflow/now/cmd/cmd_demo.py`).
   Through `python -m noworkflow` or from a test, `sys.argv[0]` is something
@@ -572,7 +570,7 @@ C program, in `beyond-python/` of the package and in
 `src/noworkflow/tests/e2e/corpus/beyond_python/` here, replayed by
 `src/noworkflow/tests/e2e/test_beyond_python.py` (#459) in the same job.
 Its tests need `Rscript` and `cc` and skip without them (the job sets
-`NOW_RSCRIPT=require`). The claims that only #204 to #207 and #461 can
+`NOW_RSCRIPT=require`). The claims that only #205 to #207 and #461 can
 satisfy are `_desired` twins, `xfail(strict=True)` through
 `known_defects` with the signature of today's failure; the issue that
 makes one pass removes the mark in its own commit, and the issue that

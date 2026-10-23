@@ -46,9 +46,9 @@ The tests need `Rscript` and `cc` on the PATH and skip without them;
 `NOW_RSCRIPT=require` fails instead of skipping (the `paper-example` job
 of CI sets it). The two claims of the fourth trial need the rdtLite
 package in R (`install.packages("rdtLite")`) and skip without it, in CI
-too. The test of each claim that only #203, #204, #205, #206, #207 or
-#461 can satisfy is a `_desired` twin marked `xfail(strict=True)` until
-that issue lands; the module docstring has the map.
+too. The test of each claim that only #205, #206, #207 or #461 can
+satisfy is a `_desired` twin marked `xfail(strict=True)` until that issue
+lands; the module docstring has the map.
 
 The Kaggle dataset is not committed. The replay writes a small synthetic
 `creditcard.csv` with the same columns (`synthetic_dataset` in

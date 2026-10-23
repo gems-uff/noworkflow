@@ -159,7 +159,8 @@ now show -e 2          # the environment — sensitive, see above
 now diff 1 2                 # what changed in the trial itself: times, command, parent
 now diff 1 2 -f --brief      # a table of files added, removed and changed
 now diff 1 2 -f              # per file: content hashes before and after
-now diff 1 2 -m              # modules added, removed and replaced
+now diff 1 2 -f --content    # ... and the unified diff of each changed file
+now diff 1 2 -m              # modules added, removed and replaced, with their code hash
 now diff 1 2 -a              # the tree edit distance between the two activation trees
 now diff 1 2 -t              # hide the timestamps
 ```
@@ -174,9 +175,11 @@ sqlite3 -readonly .noworkflow/db.sqlite "SELECT t.sequence_key, a.id, a.name
 now diff 1 2 -fa 40 40       # add `op` or `all` after the ids to include more kinds of variable
 ```
 
-`-fa` also prints a tuple per replaced file access before its report
-(#248); ids that are not integers or name no function are a usage error
-(exit 2).
+Ids that are not integers or name no function are a usage error (exit
+2), and so is `--content` without `-f` or `-fa`, or with `--brief`. Two
+accesses to one file in a trial (a write and a read back) are paired with
+the accesses of the same mode in the other trial, in the order they
+happened; each section lists its blocks by name.
 
 ### 5. Export: `now export`
 
@@ -330,7 +333,8 @@ now diff 1 3 -f --brief
 ```
 
 **Find out why a result changed between two runs.** `now diff A B -f
---brief` says which inputs changed content; `now diff A B -m` which modules;
+--brief` says which inputs changed content, and `-f --content` how;
+`now diff A B -m` which modules and programs;
 `now diff A B` whether the command line changed; then `-fa` on the function
 that computes the result shows its arguments and output side by side.
 
